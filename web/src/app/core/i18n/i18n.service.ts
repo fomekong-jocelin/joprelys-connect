@@ -87,6 +87,19 @@ const FR: TranslationDictionary = {
   'patients.medicalInfo': 'Informations Medicales',
   'patients.emergencyContact': "Contact d'urgence",
   'patients.status': 'Statut',
+  'vitals.title': 'Saisie des Constantes Vitales',
+  'vitals.temp': 'Température (°C)',
+  'vitals.weight': 'Poids (kg)',
+  'vitals.height': 'Taille (cm)',
+  'vitals.pulse': 'Pouls (bpm)',
+  'vitals.systolic': 'Systolique (mmHg)',
+  'vitals.diastolic': 'Diastolique (mmHg)',
+  'vitals.spo2': 'SpO2 (%)',
+  'vitals.glycemia': 'Glycémie (g/L)',
+  'vitals.resp': 'Fréquence Respiratoire (c/min)',
+  'vitals.bmi': 'IMC calculé',
+  'vitals.save': 'Enregistrer les constantes',
+  'vitals.saving': 'Enregistrement...',
 };
 
 const EN: TranslationDictionary = {
@@ -173,6 +186,19 @@ const EN: TranslationDictionary = {
   'patients.medicalInfo': 'Medical Information',
   'patients.emergencyContact': 'Emergency Contact',
   'patients.status': 'Status',
+  'vitals.title': 'Enter Vital Signs',
+  'vitals.temp': 'Temperature (°C)',
+  'vitals.weight': 'Weight (kg)',
+  'vitals.height': 'Height (cm)',
+  'vitals.pulse': 'Pulse (bpm)',
+  'vitals.systolic': 'Systolic (mmHg)',
+  'vitals.diastolic': 'Diastolic (mmHg)',
+  'vitals.spo2': 'SpO2 (%)',
+  'vitals.glycemia': 'Glycemia (g/L)',
+  'vitals.resp': 'Respiratory Rate (c/min)',
+  'vitals.bmi': 'Calculated BMI',
+  'vitals.save': 'Save Vitals',
+  'vitals.saving': 'Saving...',
 };
 
 @Injectable({

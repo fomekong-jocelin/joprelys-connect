@@ -223,4 +223,80 @@ public class VisitControllerTest {
 				.header("Authorization", "Bearer " + tokenAgentA))
 				.andExpect(status().isForbidden());
 	}
+
+	@Test
+	void givenActiveVisit_whenSaveVitals_thenSuccessWithBmi() throws Exception {
+		// Create visit in Tenant A
+		com.joprelys.backend.auth.security.TenantContext.setTenantId(orgA.getId());
+		VisitEntity visit = new VisitEntity(patientA, "VIS-A", "Motif A", "Tri");
+		visit = visitRepository.save(visit);
+		com.joprelys.backend.auth.security.TenantContext.clear();
+
+		String jsonRequest = """
+				{
+					"temperature": 37.5,
+					"weight": 70.0,
+					"height": 175,
+					"pulse": 80,
+					"systolic": 120,
+					"diastolic": 80,
+					"spo2": 98,
+					"glycemia": 0.95,
+					"respiratoryRate": 16
+				}
+				""";
+
+		mockMvc.perform(post("/api/visits/" + visit.getId() + "/vitals")
+				.header("Authorization", "Bearer " + tokenAgentA)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(jsonRequest))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.temperature").value(37.5))
+				.andExpect(jsonPath("$.weight").value(70.0))
+				.andExpect(jsonPath("$.bmi").value(22.86)); // 70 / 1.75^2 = 22.857... -> 22.86
+	}
+
+	@Test
+	void givenActiveVisit_whenSaveVitalsWithInvalidBounds_thenBadRequest() throws Exception {
+		// Create visit in Tenant A
+		com.joprelys.backend.auth.security.TenantContext.setTenantId(orgA.getId());
+		VisitEntity visit = new VisitEntity(patientA, "VIS-A", "Motif A", "Tri");
+		visit = visitRepository.save(visit);
+		com.joprelys.backend.auth.security.TenantContext.clear();
+
+		String jsonRequest = """
+				{
+					"temperature": 46.0,
+					"weight": 70.0,
+					"height": 175
+				}
+				""";
+
+		mockMvc.perform(post("/api/visits/" + visit.getId() + "/vitals")
+				.header("Authorization", "Bearer " + tokenAgentA)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(jsonRequest))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("La température doit être inférieure ou égale à 45°C.")));
+	}
+
+	@Test
+	void givenVisitWithVitals_whenGetVitals_thenSuccess() throws Exception {
+		// Create visit in Tenant A
+		com.joprelys.backend.auth.security.TenantContext.setTenantId(orgA.getId());
+		VisitEntity visit = new VisitEntity(patientA, "VIS-A", "Motif A", "Tri");
+		visit = visitRepository.save(visit);
+
+		com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity vitals =
+				new com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity(visit, 36.8, 65.0, 170, 72, 110, 70, 99, 0.85, 14, 22.49);
+		visit.setVitals(vitals);
+		visitRepository.save(visit);
+		com.joprelys.backend.auth.security.TenantContext.clear();
+
+		mockMvc.perform(get("/api/visits/" + visit.getId() + "/vitals")
+				.header("Authorization", "Bearer " + tokenAgentA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.temperature").value(36.8))
+				.andExpect(jsonPath("$.bmi").value(22.49));
+	}
 }

@@ -4,6 +4,7 @@ import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
+import com.joprelys.backend.visit.infrastructure.persistence.VitalsRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,13 +20,17 @@ public class VisitService {
 	private final PatientRepository patientRepository;
 	private final VisitNumberGenerator visitNumberGenerator;
 
+	private final VitalsRepository vitalsRepository;
+
 	public VisitService(
 			VisitRepository visitRepository,
 			PatientRepository patientRepository,
-			VisitNumberGenerator visitNumberGenerator) {
+			VisitNumberGenerator visitNumberGenerator,
+			VitalsRepository vitalsRepository) {
 		this.visitRepository = visitRepository;
 		this.patientRepository = patientRepository;
 		this.visitNumberGenerator = visitNumberGenerator;
+		this.vitalsRepository = vitalsRepository;
 	}
 
 	@Transactional
@@ -61,5 +66,48 @@ public class VisitService {
 	@Transactional(readOnly = true)
 	public List<VisitEntity> getActiveVisits() {
 		return visitRepository.findActiveVisits();
+	}
+
+	@Transactional
+	public com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity saveVitals(UUID visitId, com.joprelys.backend.visit.api.SaveVitalsRequest request) {
+		VisitEntity visit = visitRepository.findById(visitId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
+
+		if (!"EN_COURS".equals(visit.getStatus())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Les constantes ne peuvent être saisies que sur une visite active.");
+		}
+
+		Double bmi = null;
+		if (request.weight() != null && request.height() != null && request.height() > 0) {
+			double rawBmi = request.weight() / Math.pow(request.height() / 100.0, 2);
+			bmi = Math.round(rawBmi * 100.0) / 100.0;
+		}
+
+		com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity vitals = vitalsRepository.findByVisitId(visitId)
+				.orElseGet(() -> {
+					var v = new com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity(visit, null, null, null, null, null, null, null, null, null, null);
+					return v;
+				});
+
+		vitals.setTemperature(request.temperature());
+		vitals.setWeight(request.weight());
+		vitals.setHeight(request.height());
+		vitals.setPulse(request.pulse());
+		vitals.setSystolic(request.systolic());
+		vitals.setDiastolic(request.diastolic());
+		vitals.setSpo2(request.spo2());
+		vitals.setGlycemia(request.glycemia());
+		vitals.setRespiratoryRate(request.respiratoryRate());
+		vitals.setBmi(bmi);
+
+		return vitalsRepository.save(vitals);
+	}
+
+	@Transactional(readOnly = true)
+	public java.util.Optional<com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity> getVitals(UUID visitId) {
+		if (!visitRepository.existsById(visitId)) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable.");
+		}
+		return vitalsRepository.findByVisitId(visitId);
 	}
 }

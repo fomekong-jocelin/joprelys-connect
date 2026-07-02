@@ -50,6 +50,9 @@ public class VisitEntity {
 	@Column(name = "closed_at")
 	private Instant closedAt;
 
+	@jakarta.persistence.OneToOne(mappedBy = "visit", cascade = jakarta.persistence.CascadeType.ALL, fetch = FetchType.LAZY)
+	private VitalsEntity vitals;
+
 	protected VisitEntity() {
 	}
 
@@ -144,5 +147,13 @@ public class VisitEntity {
 
 	public void setClosedAt(Instant closedAt) {
 		this.closedAt = closedAt;
+	}
+
+	public VitalsEntity getVitals() {
+		return vitals;
+	}
+
+	public void setVitals(VitalsEntity vitals) {
+		this.vitals = vitals;
 	}
 }

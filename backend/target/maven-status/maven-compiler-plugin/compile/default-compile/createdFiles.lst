@@ -3,7 +3,9 @@ com\joprelys\backend\auth\config\TimeConfig.class
 com\joprelys\backend\auth\api\MissingBearerTokenException.class
 com\joprelys\backend\patient\application\PatientService.class
 com\joprelys\backend\clinic\infrastructure\persistence\OrganizationRepository.class
+com\joprelys\backend\visit\api\SaveVitalsRequest.class
 com\joprelys\backend\visit\infrastructure\persistence\VisitEntity.class
+com\joprelys\backend\visit\infrastructure\persistence\VitalsRepository.class
 com\joprelys\backend\auth\infrastructure\persistence\AuthAuditEventEntity.class
 com\joprelys\backend\auth\security\JwtService.class
 com\joprelys\backend\visit\api\VisitResponse.class
@@ -11,6 +13,7 @@ com\joprelys\backend\patient\api\PatientResponse.class
 com\joprelys\backend\auth\security\JwtService$CreatedToken.class
 com\joprelys\backend\patient\api\PatientController.class
 com\joprelys\backend\clinic\api\CreateOrganizationRequest.class
+com\joprelys\backend\visit\api\VitalsResponse.class
 com\joprelys\backend\auth\config\JwtProperties.class
 com\joprelys\backend\visit\api\CreateVisitRequest.class
 com\joprelys\backend\visit\infrastructure\persistence\VisitRepository.class
@@ -30,6 +33,7 @@ com\joprelys\backend\auth\infrastructure\persistence\AuthAuditEventRepository.cl
 com\joprelys\backend\auth\security\JwtClaims.class
 com\joprelys\backend\visit\api\VisitController.class
 com\joprelys\backend\clinic\infrastructure\persistence\TenantIdentifierResolver.class
+com\joprelys\backend\visit\infrastructure\persistence\VitalsEntity.class
 com\joprelys\backend\auth\infrastructure\persistence\UserAccountRepository.class
 com\joprelys\backend\auth\api\LoginResponse.class
 com\joprelys\backend\auth\config\SecurityConfig.class

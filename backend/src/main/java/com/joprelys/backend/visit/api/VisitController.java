@@ -43,4 +43,19 @@ public class VisitController {
 		var visit = visitService.closeVisit(id);
 		return VisitResponse.fromEntity(visit);
 	}
+
+	@PostMapping("/{id}/vitals")
+	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	public VitalsResponse saveVitals(@PathVariable UUID id, @Valid @RequestBody SaveVitalsRequest request) {
+		var vitals = visitService.saveVitals(id, request);
+		return VitalsResponse.fromEntity(vitals);
+	}
+
+	@GetMapping("/{id}/vitals")
+	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	public VitalsResponse getVitals(@PathVariable UUID id) {
+		return visitService.getVitals(id)
+				.map(VitalsResponse::fromEntity)
+				.orElse(null);
+	}
 }

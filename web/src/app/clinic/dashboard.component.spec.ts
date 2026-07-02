@@ -51,4 +51,20 @@ describe('DashboardComponent', () => {
   it('should load active visits on init if clinical role', () => {
     expect(mockVisitApi.getActiveVisits).toHaveBeenCalled();
   });
+
+  it('should calculate BMI correctly when weight and height are provided', () => {
+    component.vitalsWeight = 70;
+    component.vitalsHeight = 175;
+    expect(component.computedBmi).toBe(22.86); // 70 / 1.75^2 = 22.857 -> 22.86
+  });
+
+  it('should return null BMI if height or weight is missing', () => {
+    component.vitalsWeight = undefined;
+    component.vitalsHeight = 175;
+    expect(component.computedBmi).toBeNull();
+
+    component.vitalsWeight = 70;
+    component.vitalsHeight = undefined;
+    expect(component.computedBmi).toBeNull();
+  });
 });

@@ -14,7 +14,8 @@ public record VisitResponse(
 		String orientation,
 		String status,
 		Instant createdAt,
-		Instant closedAt
+		Instant closedAt,
+		VitalsResponse vitals
 ) {
 	public static VisitResponse fromEntity(VisitEntity entity) {
 		return new VisitResponse(
@@ -27,7 +28,8 @@ public record VisitResponse(
 				entity.getOrientation(),
 				entity.getStatus(),
 				entity.getCreatedAt(),
-				entity.getClosedAt()
+				entity.getClosedAt(),
+				VitalsResponse.fromEntity(entity.getVitals())
 		);
 	}
 }

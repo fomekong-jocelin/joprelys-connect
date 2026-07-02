@@ -1,3 +1,16 @@
+export interface Vitals {
+  temperature?: number;
+  weight?: number;
+  height?: number;
+  pulse?: number;
+  systolic?: number;
+  diastolic?: number;
+  spo2?: number;
+  glycemia?: number;
+  respiratoryRate?: number;
+  bmi?: number;
+}
+
 export interface Visit {
   id: string;
   visitNumber: string;
@@ -9,6 +22,7 @@ export interface Visit {
   status: string;
   createdAt: string;
   closedAt?: string;
+  vitals?: Vitals;
 }
 
 export interface CreateVisitRequest {
