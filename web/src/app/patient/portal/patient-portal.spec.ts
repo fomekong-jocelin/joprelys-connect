@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { PatientProfileCardComponent } from './components/patient-profile-card.component';
 import { PatientVisitsListComponent } from './components/patient-visits-list.component';
 import { PatientPortalService, PatientPortalMeResponse } from './services/patient-portal.service';
+import { PatientAuditListComponent } from './components/patient-audit-list.component';
 
 const MOCK_PATIENT: PatientPortalMeResponse = {
   id: 'patient-id-123',
@@ -68,6 +69,47 @@ describe('PatientVisitsListComponent', () => {
   });
 });
 
+describe('PatientAuditListComponent', () => {
+  let httpTesting: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [PatientAuditListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        PatientPortalService
+      ]
+    });
+    httpTesting = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpTesting.verify();
+  });
+
+  it('should fetch and display audit logs list', () => {
+    const fixture = TestBed.createComponent(PatientAuditListComponent);
+    fixture.detectChanges();
+
+    const mockLogs = [
+      { id: 'log-1', action: 'EMERGENCY_ACCESS', reason: 'Arrêt cardiaque', ipAddress: '127.0.0.1', userAgent: 'Chrome', status: 'SUCCESS', createdAt: '2026-07-02T12:00:00Z', organizationName: 'Clinique Test A' }
+    ];
+
+    const req = httpTesting.expectOne('/api/patient/audit-logs');
+    expect(req.request.method).toBe('GET');
+    req.flush(mockLogs);
+
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.textContent).toContain('Clinique Test A');
+    expect(element.textContent).toContain('Urgence (Brise-Glace)');
+    expect(element.textContent).toContain('Arrêt cardiaque');
+    expect(element.textContent).toContain('SUCCESS');
+  });
+});
+
 describe('PatientPortalService', () => {
   let service: PatientPortalService;
   let httpTesting: HttpTestingController;
@@ -117,5 +159,21 @@ describe('PatientPortalService', () => {
     const postReq = httpTesting.expectOne('/api/patient/consents/org-2?status=ACTIVE');
     expect(postReq.request.method).toBe('POST');
     postReq.flush(null);
+  });
+
+  it('should call getAuditLogs and return patient audit logs list', () => {
+    const mockLogs = [
+      { id: 'log-1', action: 'EMERGENCY_ACCESS', reason: 'Arrêt cardio', ipAddress: '127.0.0.1', userAgent: 'Chrome', status: 'SUCCESS', createdAt: '2026-07-02T12:00:00Z', organizationName: 'Clinique Test A' }
+    ];
+
+    service.getAuditLogs().subscribe((data) => {
+      expect(data.length).toBe(1);
+      expect(data[0].action).toBe('EMERGENCY_ACCESS');
+      expect(data[0].organizationName).toBe('Clinique Test A');
+    });
+
+    const req = httpTesting.expectOne('/api/patient/audit-logs');
+    expect(req.request.method).toBe('GET');
+    req.flush(mockLogs);
   });
 });

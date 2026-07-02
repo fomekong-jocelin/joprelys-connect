@@ -6,6 +6,7 @@ import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository
 import com.joprelys.backend.visit.application.DocumentService;
 import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentRepository;
+import com.joprelys.backend.audit.application.AuditService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -33,6 +34,7 @@ public class PatientPortalController {
     private final DocumentService documentService;
     private final com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository organizationRepository;
     private final com.joprelys.backend.patient.infrastructure.persistence.PatientConsentRepository patientConsentRepository;
+    private final AuditService auditService;
 
     public PatientPortalController(
             PatientRepository patientRepository,
@@ -40,13 +42,15 @@ public class PatientPortalController {
             MedicalDocumentRepository medicalDocumentRepository,
             DocumentService documentService,
             com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository organizationRepository,
-            com.joprelys.backend.patient.infrastructure.persistence.PatientConsentRepository patientConsentRepository) {
+            com.joprelys.backend.patient.infrastructure.persistence.PatientConsentRepository patientConsentRepository,
+            AuditService auditService) {
         this.patientRepository = patientRepository;
         this.consultationRepository = consultationRepository;
         this.medicalDocumentRepository = medicalDocumentRepository;
         this.documentService = documentService;
         this.organizationRepository = organizationRepository;
         this.patientConsentRepository = patientConsentRepository;
+        this.auditService = auditService;
     }
 
     @GetMapping("/me")
@@ -169,6 +173,42 @@ public class PatientPortalController {
         consent.setStatus(status);
         patientConsentRepository.save(consent);
     }
+
+    @GetMapping("/audit-logs")
+    public List<PatientAuditLogDto> getAuditLogs(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié.");
+        }
+
+        PatientEntity patient = patientRepository.findByGlobalPatientNumber(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dossier patient introuvable."));
+
+        return auditService.getPatientLogs(patient.getId()).stream()
+                .map(log -> new PatientAuditLogDto(
+                        log.getId(),
+                        log.getAction(),
+                        log.getReason(),
+                        log.getIpAddress(),
+                        log.getUserAgent(),
+                        log.getStatus(),
+                        log.getCreatedAt(),
+                        log.getActorOrganizationId() != null ? organizationRepository.findById(log.getActorOrganizationId())
+                                .map(org -> org.getName())
+                                .orElse("Établissement inconnu") : "N/A"
+                ))
+                .toList();
+    }
 }
 
 record PatientConsentDto(UUID organizationId, String organizationName, String status, boolean isCreator) {}
+
+record PatientAuditLogDto(
+        UUID id,
+        String action,
+        String reason,
+        String ipAddress,
+        String userAgent,
+        String status,
+        java.time.Instant createdAt,
+        String organizationName
+) {}

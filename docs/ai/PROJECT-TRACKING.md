@@ -8,7 +8,7 @@
 |---|---|
 | Dernière mise à jour | 2026-07-02 |
 | Responsable mise à jour | Antigravity |
-| État global | En cours (Sprint 0003 — STORY-0104, STORIES 0602/0603/0604, EPIC-0007, STORY-0801 et STORY-0803 terminés, STORIES 0501/0502/0503/0504/0601 en REVIEW) |
+| État global | En cours (Sprint 0003 — STORY-0104, STORIES 0602/0603/0604, EPIC-0007, STORY-0801 et STORY-0803 terminés, STORY-0804 en cours, STORIES 0501/0502/0503/0504/0601 en REVIEW) |
 | Risques majeurs | Aucun risque technique ou environnemental bloquant. Stratégie de build et tests hors réseau validée. |
 | Prochaine priorité | Entamer la finalisation/review des stories en REVIEW de l'EPIC-0005 (Prescription) et la validation finale de la STORY-0601 (Génération PDF). |
 | Sprint courant | SPRINT-0003 |
@@ -60,7 +60,7 @@
 | STORY-0801 | PAT_PORTAL | User Story | Espace patient sécurisé et historique personnel | Full-stack | DONE | P1 | 5 | Intermédiaire | 1.2j | 1.8j | 3j | Antigravity | Lead | SPRINT-0003 | 0.9j | Aucun | Moyen | 2026-07-02 |
 | STORY-0802 | PAT_PORTAL | User Story | Téléchargement sécurisé de ses propres ordonnances | Full-stack | BACKLOG | P1 | 2 | Junior | 0.5j | 0.8j | 1.2j | À assigner | Lead | À planifier | 0j | Cadrage initial réalisé | Faible | 2026-07-02 |
 | STORY-0803 | PAT_PORTAL | User Story | Gestion des consentements d'accès du DPU | Full-stack | DONE | P0 | 8 | Senior | 2.5j | 4j | 6j | Antigravity | Lead | SPRINT-0003 | 0.9j | Aucun | Fort | 2026-07-02 |
-| STORY-0804 | PAT_PORTAL | User Story | Journal de traçabilité des consultations du DPU | Full-stack | BACKLOG | P2 | 3 | Intermédiaire | 0.8j | 1.4j | 1.8j | À assigner | Lead | À planifier | 0j | Cadrage initial réalisé | Faible | 2026-07-02 |
+| STORY-0804 | PAT_PORTAL | User Story | Journal de traçabilité des consultations du DPU | Full-stack | IN_PROGRESS | P2 | 3 | Intermédiaire | 0.8j | 1.4j | 1.8j | Antigravity | Lead | SPRINT-0003 | 0.05j | Implémentation en cours | Faible | 2026-07-02 |
 
 ## Statuts autorisés
 

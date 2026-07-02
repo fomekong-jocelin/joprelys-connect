@@ -4,11 +4,12 @@ import { PatientProfileCardComponent } from './components/patient-profile-card.c
 import { PatientVisitsListComponent } from './components/patient-visits-list.component';
 import { PatientPortalMeResponse, PatientPortalService } from './services/patient-portal.service';
 import { PatientConsentsListComponent } from './components/patient-consents-list.component';
+import { PatientAuditListComponent } from './components/patient-audit-list.component';
 
 @Component({
   selector: 'app-patient-dashboard',
   standalone: true,
-  imports: [AppShellComponent, PatientProfileCardComponent, PatientVisitsListComponent, PatientConsentsListComponent],
+  imports: [AppShellComponent, PatientProfileCardComponent, PatientVisitsListComponent, PatientConsentsListComponent, PatientAuditListComponent],
   template: `
     <app-shell>
       <div class="app-container py-8 flex flex-col gap-6">
@@ -94,8 +95,8 @@ import { PatientConsentsListComponent } from './components/patient-consents-list
               <div class="flex-1 min-w-0">
                 <div class="flex items-center justify-between gap-2">
                   <h4 class="font-display font-bold text-sm text-[var(--text-primary)]">Sécurité & Audit</h4>
-                  <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-[var(--radius-brand-xs)] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    Bientôt
+                  <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-[var(--radius-brand-xs)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] uppercase tracking-wide">
+                    Suivi
                   </span>
                 </div>
                 <p class="text-xs text-[var(--text-secondary)] mt-1">Suivez les accès et les consultations de votre DPU.</p>
@@ -116,17 +117,7 @@ import { PatientConsentsListComponent } from './components/patient-consents-list
               } @else if (activeTab() === 'consents') {
                 <app-patient-consents-list />
               } @else if (activeTab() === 'audit') {
-                <div class="ui-card p-6 flex flex-col items-center justify-center text-center py-12">
-                  <div class="p-3 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 mb-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <h4 class="font-display font-bold text-sm text-[var(--text-primary)]">Journal de traçabilité</h4>
-                  <p class="text-xs text-[var(--text-secondary)] mt-1 max-w-sm">
-                    Cette fonctionnalité vous permettra de suivre précisément tous les accès des praticiens de santé à vos données médicales. Elle sera disponible prochainement.
-                  </p>
-                </div>
+                <app-patient-audit-list />
               }
             </div>
           </div>

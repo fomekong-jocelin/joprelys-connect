@@ -80,6 +80,10 @@ export class PatientPortalService {
   updateConsent(orgId: string, status: string): Observable<void> {
     return this.http.post<void>(`/api/patient/consents/${orgId}?status=${status}`, {});
   }
+
+  getAuditLogs(): Observable<PatientAuditLog[]> {
+    return this.http.get<PatientAuditLog[]>('/api/patient/audit-logs');
+  }
 }
 
 export interface PatientConsent {
@@ -87,4 +91,15 @@ export interface PatientConsent {
   organizationName: string;
   status: string;
   isCreator: boolean;
+}
+
+export interface PatientAuditLog {
+  id: string;
+  action: string;
+  reason: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  status: string;
+  createdAt: string;
+  organizationName: string;
 }

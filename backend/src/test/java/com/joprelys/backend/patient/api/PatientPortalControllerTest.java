@@ -15,6 +15,7 @@ import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentEnti
 import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
+import com.joprelys.backend.audit.application.AuditService;
 import java.time.LocalDate;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,6 +56,9 @@ public class PatientPortalControllerTest {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private AuditService auditService;
+
     private OrganizationEntity orgA;
     private OrganizationEntity orgB;
     private PatientEntity patientA;
@@ -65,6 +69,7 @@ public class PatientPortalControllerTest {
 
     @BeforeEach
     void setUp() {
+        jdbcTemplate.update("DELETE FROM audit_logs");
         jdbcTemplate.update("DELETE FROM emergency_access_authorizations");
         jdbcTemplate.update("DELETE FROM patient_consents");
         jdbcTemplate.update("DELETE FROM medical_documents");
@@ -287,5 +292,29 @@ public class PatientPortalControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fullName").value("Jean Patient A"))
                 .andExpect(jsonPath("$.emergencyAccessActive").value(true));
+    }
+
+    @Test
+    void givenPatient_whenGetAuditLogs_thenReturnsLogsList() throws Exception {
+        auditService.log(
+                UUID.randomUUID(),
+                orgA.getId(),
+                patientA.getId(),
+                "PATIENT",
+                patientA.getId(),
+                "VIEW_PORTAL_DASHBOARD",
+                "Consultation de l'espace patient",
+                "127.0.0.1",
+                "Mozilla/5.0",
+                "SUCCESS"
+        );
+
+        mockMvc.perform(get("/api/patient/audit-logs")
+                .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].action").value("VIEW_PORTAL_DASHBOARD"))
+                .andExpect(jsonPath("$[0].reason").value("Consultation de l'espace patient"))
+                .andExpect(jsonPath("$[0].organizationName").value("Clinique Test A"));
     }
 }
