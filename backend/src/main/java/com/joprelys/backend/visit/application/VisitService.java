@@ -77,10 +77,11 @@ public class VisitService {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Les constantes ne peuvent être saisies que sur une visite active.");
 		}
 
-		Double bmi = null;
+		java.math.BigDecimal bmi = null;
 		if (request.weight() != null && request.height() != null && request.height() > 0) {
-			double rawBmi = request.weight() / Math.pow(request.height() / 100.0, 2);
-			bmi = Math.round(rawBmi * 100.0) / 100.0;
+			double heightM = request.height() / 100.0;
+			double rawBmi = request.weight().doubleValue() / (heightM * heightM);
+			bmi = java.math.BigDecimal.valueOf(rawBmi).setScale(2, java.math.RoundingMode.HALF_UP);
 		}
 
 		com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity vitals = vitalsRepository.findByVisitId(visitId)

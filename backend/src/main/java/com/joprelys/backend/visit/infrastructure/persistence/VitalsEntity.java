@@ -9,6 +9,7 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -23,11 +24,11 @@ public class VitalsEntity {
 	@JoinColumn(name = "visit_id", nullable = false, unique = true)
 	private VisitEntity visit;
 
-	@Column(name = "temperature", columnDefinition = "decimal(3,1)")
-	private Double temperature;
+	@Column(name = "temperature", precision = 3, scale = 1)
+	private BigDecimal temperature;
 
-	@Column(name = "weight", columnDefinition = "decimal(4,1)")
-	private Double weight;
+	@Column(name = "weight", precision = 4, scale = 1)
+	private BigDecimal weight;
 
 	@Column(name = "height")
 	private Integer height;
@@ -44,14 +45,14 @@ public class VitalsEntity {
 	@Column(name = "spo2")
 	private Integer spo2;
 
-	@Column(name = "glycemia", columnDefinition = "decimal(3,2)")
-	private Double glycemia;
+	@Column(name = "glycemia", precision = 3, scale = 2)
+	private BigDecimal glycemia;
 
 	@Column(name = "respiratory_rate")
 	private Integer respiratoryRate;
 
-	@Column(name = "bmi", columnDefinition = "decimal(4,2)")
-	private Double bmi;
+	@Column(name = "bmi", precision = 4, scale = 2)
+	private BigDecimal bmi;
 
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
@@ -64,16 +65,16 @@ public class VitalsEntity {
 
 	public VitalsEntity(
 			VisitEntity visit,
-			Double temperature,
-			Double weight,
+			BigDecimal temperature,
+			BigDecimal weight,
 			Integer height,
 			Integer pulse,
 			Integer systolic,
 			Integer diastolic,
 			Integer spo2,
-			Double glycemia,
+			BigDecimal glycemia,
 			Integer respiratoryRate,
-			Double bmi) {
+			BigDecimal bmi) {
 		this.id = UUID.randomUUID();
 		this.visit = visit;
 		this.temperature = temperature;
@@ -112,19 +113,19 @@ public class VitalsEntity {
 		this.visit = visit;
 	}
 
-	public Double getTemperature() {
+	public BigDecimal getTemperature() {
 		return temperature;
 	}
 
-	public void setTemperature(Double temperature) {
+	public void setTemperature(BigDecimal temperature) {
 		this.temperature = temperature;
 	}
 
-	public Double getWeight() {
+	public BigDecimal getWeight() {
 		return weight;
 	}
 
-	public void setWeight(Double weight) {
+	public void setWeight(BigDecimal weight) {
 		this.weight = weight;
 	}
 
@@ -168,11 +169,11 @@ public class VitalsEntity {
 		this.spo2 = spo2;
 	}
 
-	public Double getGlycemia() {
+	public BigDecimal getGlycemia() {
 		return glycemia;
 	}
 
-	public void setGlycemia(Double glycemia) {
+	public void setGlycemia(BigDecimal glycemia) {
 		this.glycemia = glycemia;
 	}
 
@@ -184,11 +185,11 @@ public class VitalsEntity {
 		this.respiratoryRate = respiratoryRate;
 	}
 
-	public Double getBmi() {
+	public BigDecimal getBmi() {
 		return bmi;
 	}
 
-	public void setBmi(Double bmi) {
+	public void setBmi(BigDecimal bmi) {
 		this.bmi = bmi;
 	}
 

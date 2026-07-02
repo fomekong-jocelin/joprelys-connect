@@ -288,7 +288,19 @@ public class VisitControllerTest {
 		visit = visitRepository.save(visit);
 
 		com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity vitals =
-				new com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity(visit, 36.8, 65.0, 170, 72, 110, 70, 99, 0.85, 14, 22.49);
+				new com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity(
+						visit,
+						java.math.BigDecimal.valueOf(36.8),
+						java.math.BigDecimal.valueOf(65.0),
+						170,
+						72,
+						110,
+						70,
+						99,
+						java.math.BigDecimal.valueOf(0.85),
+						14,
+						java.math.BigDecimal.valueOf(22.49)
+				);
 		visit.setVitals(vitals);
 		visitRepository.save(visit);
 		com.joprelys.backend.auth.security.TenantContext.clear();

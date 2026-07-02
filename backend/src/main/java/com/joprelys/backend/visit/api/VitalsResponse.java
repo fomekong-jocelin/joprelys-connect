@@ -1,18 +1,19 @@
 package com.joprelys.backend.visit.api;
 
 import com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity;
+import java.math.BigDecimal;
 
 public record VitalsResponse(
-		Double temperature,
-		Double weight,
+		BigDecimal temperature,
+		BigDecimal weight,
 		Integer height,
 		Integer pulse,
 		Integer systolic,
 		Integer diastolic,
 		Integer spo2,
-		Double glycemia,
+		BigDecimal glycemia,
 		Integer respiratoryRate,
-		Double bmi
+		BigDecimal bmi
 ) {
 	public static VitalsResponse fromEntity(VitalsEntity entity) {
 		if (entity == null) return null;
