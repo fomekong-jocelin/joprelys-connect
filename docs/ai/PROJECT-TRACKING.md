@@ -8,9 +8,9 @@
 |---|---|
 | Dernière mise à jour | 2026-07-02 |
 | Responsable mise à jour | Antigravity |
-| État global | En cours (Sprint 0003 — STORY-0104 et EPIC-0007 terminés, STORIES 0501/0502/0503/0504/0601/0602/0603 en REVIEW) |
+| État global | En cours (Sprint 0003 — STORY-0104, STORIES 0602/0603/0604 et EPIC-0007 terminés, STORIES 0501/0502/0503/0504/0601 en REVIEW) |
 | Risques majeurs | Aucun risque technique ou environnemental bloquant. Stratégie de build et tests hors réseau validée. |
-| Prochaine priorité | Entamer la finalisation/review des stories en REVIEW de l'EPIC-0005 (Prescription) et l'EPIC-0006 (Génération PDF). |
+| Prochaine priorité | Entamer la finalisation/review des stories en REVIEW de l'EPIC-0005 (Prescription) et la validation finale de la STORY-0601 (Génération PDF). |
 | Sprint courant | SPRINT-0003 |
 | Capacité sprint | 15.0j |
 | Charge engagée | 9.25j |
@@ -49,13 +49,18 @@
 | STORY-0504 | CONS | User Story | Affichage historique des consultations | Full-stack | REVIEW | P1 | 1 | Junior | 0.35j | 0.45j | 0.7j | Antigravity | Lead | SPRINT-0003 | 0.45j | Validation visuelle à confirmer | Faible | 2026-07-02 |
 | EPIC-0006 | DOC | Epic | Génération PDF & Vérification par QR Code | Full-stack | IN_PROGRESS | P0 | 8 | Senior | 2.5j | 3.2j | 5j | Antigravity | Lead | SPRINT-0003 | 1.0j | STORY-0601 en review | Fort | 2026-07-02 |
 | STORY-0601 | DOC | User Story | Génération et stockage du PDF de consultation | Backend | REVIEW | P0 | 3 | Senior | 1j | 1.3j | 2j | Antigravity | Lead | SPRINT-0003 | 1.0j | Aucun | Moyen | 2026-07-02 |
-| STORY-0602 | DOC | User Story | Page publique de vérification d'authenticité | Full-stack | REVIEW | P0 | 3 | Intermédiaire | 0.8j | 1.1j | 1.8j | Antigravity | Lead | SPRINT-0003 | 0.4j | Validation de la review | Moyen | 2026-07-02 |
-| STORY-0603 | DOC | User Story | Révocation et annulation de documents (backend) | Backend | REVIEW | P1 | 2 | Intermédiaire | 0.7j | 0.9j | 1.5j | Antigravity | Lead | SPRINT-0004 | 0.7j | Aucun (5/5 tests au vert) | Faible | 2026-07-02 |
+| STORY-0602 | DOC | User Story | Page publique de vérification d'authenticité | Full-stack | DONE | P0 | 3 | Intermédiaire | 0.8j | 1.1j | 1.8j | Antigravity | Lead | SPRINT-0003 | 0.4j | Aucun (test et visual mapping ok) | Moyen | 2026-07-02 |
+| STORY-0603 | DOC | User Story | Révocation et annulation de documents (backend) | Backend | DONE | P1 | 2 | Intermédiaire | 0.7j | 0.9j | 1.5j | Antigravity | Lead | SPRINT-0004 | 0.7j | Aucun (5/5 tests au vert) | Faible | 2026-07-02 |
 | STORY-0604 | DOC | User Story | Écran de révocation côté frontend | Full-stack | DONE | P1 | 2 | Intermédiaire | 0.3j | 0.5j | 0.8j | Antigravity | Lead | SPRINT-0003 | 0.5j | Aucun (25/25 tests au vert) | Faible | 2026-07-02 |
 | TICKET-0108 | GOV | Chore | Mise à niveau du kit de gouvernance v0.3.8 | Gouvernance | DONE | P0 | 1 | Intermédiaire | 0.1j | 0.2j | 0.4j | Antigravity | Lead | SPRINT-0003 | 0.1j | Aucun | Faible | 2026-07-02 |
 | EPIC-0007 | AUDIT | Epic | Traçabilité & Audit Logs | Back-end | DONE | P1 | 5 | Intermédiaire | 1.5j | 2j | 3j | Antigravity | Lead | SPRINT-0003 | 1.35j | Epic entièrement terminée (backend + frontend) | Moyen | 2026-07-02 |
 | STORY-0701 | AUDIT | User Story | Enregistrement et API REST des logs d'audit (backend) | Backend | DONE | P1 | 3 | Intermédiaire | 0.7j | 1.0j | 1.8j | Antigravity | Lead | SPRINT-0003 | 0.8j | Backend et tests d'intégration OK | Moyen | 2026-07-02 |
 | STORY-0702 | AUDIT | User Story | Écran de visualisation et filtrage des logs d'audit (frontend) | Frontend | DONE | P2 | 2 | Intermédiaire | 0.5j | 0.7j | 1.1j | Antigravity | Lead | SPRINT-0003 | 0.5j | Timeline d'audit patient et tests unitaires OK | Faible | 2026-07-02 |
+| EPIC-0008 | PAT_PORTAL | Epic | Portail Patient & Consentement | Full-stack | BACKLOG | P1 | 18 | Senior | 5j | 8j | 12j | À assigner | Lead | À planifier | 0j | Cadrage initial réalisé | Moyen | 2026-07-02 |
+| STORY-0801 | PAT_PORTAL | User Story | Espace patient sécurisé et historique personnel | Full-stack | BACKLOG | P1 | 5 | Intermédiaire | 1.2j | 1.8j | 3j | À assigner | Lead | À planifier | 0j | Cadrage initial réalisé | Moyen | 2026-07-02 |
+| STORY-0802 | PAT_PORTAL | User Story | Téléchargement sécurisé de ses propres ordonnances | Full-stack | BACKLOG | P1 | 2 | Junior | 0.5j | 0.8j | 1.2j | À assigner | Lead | À planifier | 0j | Cadrage initial réalisé | Faible | 2026-07-02 |
+| STORY-0803 | PAT_PORTAL | User Story | Gestion des consentements d'accès du DPU | Full-stack | BACKLOG | P0 | 8 | Senior | 2.5j | 4j | 6j | À assigner | Lead | À planifier | 0j | Cadrage initial réalisé | Fort | 2026-07-02 |
+| STORY-0804 | PAT_PORTAL | User Story | Journal de traçabilité des consultations du DPU | Full-stack | BACKLOG | P2 | 3 | Intermédiaire | 0.8j | 1.4j | 1.8j | À assigner | Lead | À planifier | 0j | Cadrage initial réalisé | Faible | 2026-07-02 |
 
 ## Statuts autorisés
 

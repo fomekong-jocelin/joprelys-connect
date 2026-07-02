@@ -111,12 +111,12 @@ la page publique de vérification, conformément aux exigences **FR-DOC-004** du
 
 ## 12. Statut final
 
-Statut : **REVIEW** — 5/5 tests au vert (BUILD SUCCESS, 21.16s)
+Statut : **DONE** — 5/5 tests au vert et validation visuelle du statut révoqué/annulé sur la page publique de vérification OK.
 
 ## 13. Reste à faire
 
 - [x] 5 tests exécutés et validés
 - [x] `PROJECT-TRACKING.md` mis à jour
 - [x] `CHANGELOG.md` mis à jour
-- [ ] Validation visuelle du statut révoqué sur la page `/verify/:id` (frontend STORY-0602)
-- [ ] Cadrer EPIC-0008 (Portail Patient & Consentement) en backlog
+- [x] Validation visuelle du statut révoqué sur la page `/verify/:id` (frontend STORY-0602)
+- [x] Cadrer EPIC-0008 (Portail Patient & Consentement) en backlog

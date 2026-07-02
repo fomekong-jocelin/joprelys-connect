@@ -63,7 +63,7 @@ interface VerificationMetadata {
                   <h2 class="text-xl md:text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
                     {{ i18n.t('verify.status.valid') }}
                   </h2>
-                } @else if (status() === 'REVOKED' || status() === 'REPLACED') {
+                } @else if (status() === 'REVOKED' || status() === 'REVOQUE' || status() === 'REPLACED') {
                   <!-- Warning/Notice State (Revoked or Replaced) -->
                   <div class="relative">
                     <div class="absolute inset-0 bg-amber-500/20 rounded-full blur-xl animate-pulse"></div>
@@ -74,7 +74,20 @@ interface VerificationMetadata {
                     </div>
                   </div>
                   <h2 class="text-xl md:text-2xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
-                    {{ status() === 'REVOKED' ? i18n.t('verify.status.revoked') : i18n.t('verify.status.replaced') }}
+                    {{ (status() === 'REVOKED' || status() === 'REVOQUE') ? i18n.t('verify.status.revoked') : i18n.t('verify.status.replaced') }}
+                  </h2>
+                } @else if (status() === 'CANCELLED' || status() === 'ANNULE') {
+                  <!-- Cancelled State (Red / Rose warning) -->
+                  <div class="relative">
+                    <div class="absolute inset-0 bg-rose-500/20 rounded-full blur-xl animate-pulse"></div>
+                    <div class="relative w-20 h-20 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30 rounded-full flex items-center justify-center">
+                      <svg class="w-10 h-10 animate-[scaleIn_0.3s_ease-out]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <h2 class="text-xl md:text-2xl font-black text-rose-600 dark:text-rose-400 tracking-tight">
+                    {{ i18n.t('verify.status.cancelled') }}
                   </h2>
                 } @else {
                   <!-- Error State (Invalid/Not found) -->
@@ -196,7 +209,7 @@ export class VerificationComponent implements OnInit {
   readonly i18n = inject(I18nService);
 
   readonly isLoading = signal(true);
-  readonly status = signal<'VALID' | 'REVOKED' | 'REPLACED' | 'INVALID'>('INVALID');
+  readonly status = signal<'VALID' | 'REVOKED' | 'REVOQUE' | 'REPLACED' | 'CANCELLED' | 'ANNULE' | 'INVALID'>('INVALID');
   readonly metadata = signal<VerificationMetadata | null>(null);
 
   ngOnInit(): void {

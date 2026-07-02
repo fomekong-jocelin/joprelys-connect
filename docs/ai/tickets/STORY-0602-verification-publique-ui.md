@@ -78,8 +78,5 @@ Cette user story consiste à concevoir et implémenter la page web publique de v
 - [x] Spécification fonctionnelle créée : `docs/features/pdf/FUNCTIONAL-SPEC.md`
 - [x] Spécification technique créée : `docs/features/pdf/TECHNICAL-DESIGN.md`
 
-## 12. Reste à faire
-- Aucun.
-
 ## 13. Statut final
-Statut : REVIEW
+Statut : DONE
