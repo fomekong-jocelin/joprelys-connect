@@ -8,6 +8,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- Création du fichier de Design System centralisé [DESIGN.md](file:///C:/MES-APPLICATIONS/joprelys-connect/DESIGN.md) à la racine pour standardiser les tokens (couleurs, typographie, espacements, radius) et les règles UI (Tailwind CSS v4 CSS-first).
+- Cadrage et raffinement de la première User Story [STORY-0801](file:///C:/MES-APPLICATIONS/joprelys-connect/docs/ai/tickets/STORY-0801-espace-patient.md) (Espace patient sécurisé et historique personnel) avec rédaction de sa spécification fonctionnelle et de son architecture technique.
 - Mise à jour de `VerificationComponent` (page publique de vérification d'authenticité) pour prendre en compte et afficher correctement les statuts révoqués (`REVOQUE` / `REVOKED`) et annulés (`ANNULE` / `CANCELLED`) du document médical avec des styles et des libellés adaptés (STORY-0602 / STORY-0603).
 - Cadrage initial de l'`EPIC-0008` (Portail Patient & Consentement) avec documentation de l'objectif, du périmètre et rédaction des 4 user stories associées (STORY-0603).
 - Refactoring majeur de l'écran de détail du patient `PatientDetailComponent` avec un design à 3 onglets (Fiche Patient, Dossier Médical, Journal d'Audit) conforme à Material Design 3 pour éliminer la surcharge cognitive.
