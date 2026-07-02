@@ -45,8 +45,13 @@ export const routes: Routes = [
     loadComponent: () => import('./consultation/verification.component').then(m => m.VerificationComponent),
   },
   {
+    path: 'forgot-password',
+    loadComponent: () => import('./auth/forgot-password.component').then((module) => module.ForgotPasswordComponent),
+  },
+  {
     path: 'patient/login',
-    loadComponent: () => import('./patient/portal/patient-login.component').then(m => m.PatientLoginComponent),
+    redirectTo: '',
+    pathMatch: 'full',
   },
   {
     path: 'patient/dashboard',

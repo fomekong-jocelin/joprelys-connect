@@ -22,7 +22,7 @@ export class OrganizationListComponent implements OnInit {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
-  // --- Formulaire création clinique ---
+  // --- Formulaire création/édition clinique ---
   readonly name = signal('');
   readonly email = signal('');
   readonly phone = signal('');
@@ -31,6 +31,10 @@ export class OrganizationListComponent implements OnInit {
   readonly formLoading = signal(false);
   readonly formError = signal<string | null>(null);
   readonly showCreateForm = signal(false);
+
+  // --- Organisation Sélectionnée (Détails & Édition) ---
+  readonly selectedOrg = signal<Organization | null>(null);
+  readonly isEditingSelectedOrg = signal(false);
 
   // --- Formulaire création admin clinique ---
   readonly adminTargetOrg = signal<Organization | null>(null);
@@ -103,7 +107,15 @@ export class OrganizationListComponent implements OnInit {
     const nextStatus = org.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
     this.api.updateStatus(org.id, nextStatus).subscribe({
       next: (updated) => {
-        this.list.update(items => items.map(item => item.id === org.id ? updated : item));
+        const fullUpdated: Organization = {
+          ...updated,
+          adminEmail: org.adminEmail,
+          adminDisplayName: org.adminDisplayName
+        };
+        this.list.update(items => items.map(item => item.id === org.id ? fullUpdated : item));
+        if (this.selectedOrg()?.id === org.id) {
+          this.selectedOrg.set(fullUpdated);
+        }
       },
       error: () => {
         this.error.set(this.i18n.t('organizations.statusError'));
@@ -113,6 +125,7 @@ export class OrganizationListComponent implements OnInit {
 
   toggleCreateForm(): void {
     this.showCreateForm.update((visible) => !visible);
+    this.selectedOrg.set(null);
     if (this.showCreateForm()) {
       return;
     }
@@ -173,6 +186,78 @@ export class OrganizationListComponent implements OnInit {
     this.formError.set(null);
   }
 
+  // --- Sélection clinique (Tiroir) ---
+
+  selectOrg(org: Organization): void {
+    this.selectedOrg.set(org);
+    this.isEditingSelectedOrg.set(false);
+    this.formError.set(null);
+    this.showCreateForm.set(false);
+  }
+
+  closeDrawer(): void {
+    this.selectedOrg.set(null);
+    this.isEditingSelectedOrg.set(false);
+    this.formError.set(null);
+  }
+
+  startEditing(): void {
+    const org = this.selectedOrg();
+    if (!org) return;
+    this.name.set(org.name);
+    this.email.set(org.email);
+    this.phone.set(org.phone || '');
+    this.address.set(org.address || '');
+    this.city.set(org.city);
+    this.isEditingSelectedOrg.set(true);
+    this.formError.set(null);
+  }
+
+  cancelEditing(): void {
+    this.isEditingSelectedOrg.set(false);
+    this.formError.set(null);
+  }
+
+  submitUpdate(): void {
+    this.formError.set(null);
+    const org = this.selectedOrg();
+    if (!org) return;
+
+    if (!this.name().trim() || !this.email().trim() || !this.city().trim()) {
+      this.formError.set(this.i18n.t('organizations.requiredFields'));
+      return;
+    }
+
+    this.formLoading.set(true);
+    this.api.update(org.id, {
+      name: this.name().trim(),
+      email: this.email().trim(),
+      phone: this.phone().trim(),
+      address: this.address().trim(),
+      city: this.city().trim()
+    }).subscribe({
+      next: (res) => {
+        const updated: Organization = {
+          ...res,
+          adminEmail: org.adminEmail,
+          adminDisplayName: org.adminDisplayName
+        };
+        this.list.update(items => items.map(item => item.id === org.id ? updated : item));
+        this.selectedOrg.set(updated);
+        this.formLoading.set(false);
+        this.isEditingSelectedOrg.set(false);
+      },
+      error: (err) => {
+        this.formLoading.set(false);
+        if (err.status === 409) {
+          this.formError.set(this.i18n.t('organizations.duplicateEmail'));
+        } else {
+          this.formError.set(err.error?.detail || "Erreur lors de la mise à jour");
+        }
+      }
+    });
+  }
+
   // --- Gestion du formulaire Admin Clinique ---
 
   openAdminForm(org: Organization): void {
@@ -212,6 +297,19 @@ export class OrganizationListComponent implements OnInit {
       next: (res) => {
         this.adminCreatedResult.set(res);
         this.adminFormLoading.set(false);
+        
+        // Mettre à jour également l'organisation courante avec ce nouvel administrateur
+        const updatedOrg: Organization = {
+          ...org,
+          adminEmail: res.email,
+          adminDisplayName: res.displayName
+        };
+        this.list.update(items => items.map(item => item.id === org.id ? updatedOrg : item));
+        
+        // Si elle est ouverte dans le drawer, la mettre à jour
+        if (this.selectedOrg()?.id === org.id) {
+          this.selectedOrg.set(updatedOrg);
+        }
       },
       error: (err) => {
         if (err.status === 409 || err.status === 400) {

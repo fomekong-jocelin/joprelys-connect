@@ -176,7 +176,18 @@ public class DocumentService {
         try {
             Path path = Paths.get(doc.getFilePath());
             if (!Files.exists(path)) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Document file not found on disk");
+                // Stratégie de repli : chercher le fichier par son nom dans le dossier storageDir configuré
+                Path fileName = path.getFileName();
+                if (fileName != null) {
+                    Path fallbackPath = Paths.get(storageDir).resolve(fileName);
+                    if (Files.exists(fallbackPath)) {
+                        path = fallbackPath;
+                    } else {
+                        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Fichier du document médical introuvable sur le disque : " + doc.getFilePath());
+                    }
+                } else {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Fichier du document médical introuvable sur le disque : " + doc.getFilePath());
+                }
             }
             byte[] bytes = Files.readAllBytes(path);
 
@@ -217,7 +228,8 @@ public class DocumentService {
     public com.joprelys.backend.visit.api.DocumentStatusResponse revokeDocument(
             UUID documentId, String reason, UUID actorId) {
 
-        MedicalDocumentEntity doc = medicalDocumentRepository.findById(documentId)
+        // JOIN FETCH visit + patient pour éviter LazyInitializationException lors de l'audit
+        MedicalDocumentEntity doc = medicalDocumentRepository.findByIdWithVisitAndPatient(documentId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Document introuvable : " + documentId));
 
@@ -267,7 +279,8 @@ public class DocumentService {
     public com.joprelys.backend.visit.api.DocumentStatusResponse cancelDocument(
             UUID documentId, String reason, UUID actorId) {
 
-        MedicalDocumentEntity doc = medicalDocumentRepository.findById(documentId)
+        // JOIN FETCH visit + patient pour éviter LazyInitializationException lors de l'audit
+        MedicalDocumentEntity doc = medicalDocumentRepository.findByIdWithVisitAndPatient(documentId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Document introuvable : " + documentId));
 

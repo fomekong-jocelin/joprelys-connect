@@ -6,7 +6,34 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-03
+
 ### Added
+
+- **Refonte de la gestion des cliniques pilotes (TASK-0901)** :
+  - Backend : endpoint de mise à jour `PUT /api/organizations/{id}` et enrichissement de `OrganizationResponse` pour renvoyer le nom et l'email de l'administrateur de clinique.
+  - Frontend : affichage en direct de l'administrateur affecté dans le tableau de bord (et tag d'alerte si absent).
+  - Détail & Édition : implémentation d'un tiroir latéral (Drawer) interactif et animé pour visualiser les détails de la clinique, modifier directement ses informations en place et affecter/remplacer son administrateur clinique.
+- **Récupération de mot de passe simplifiée (STORY-0103)** :
+  - Backend : endpoints publics `/api/public/auth/password-recovery/request` et `/api/public/auth/password-recovery/reset` avec validation de formulaire.
+  - Gestion des codes OTP de sécurité à 6 chiffres stockés en mémoire avec limite à 3 essais incorrects et expiration après 5 minutes.
+  - Frontend : composant standalone `ForgotPasswordComponent` avec formulaire multi-étape dynamique (Email -> OTP & Nouveau mot de passe -> Succès), raccordement des routes et i18n FR/EN.
+  - Sécurité : protection contre l'énumération d'adresses e-mail (renvoi de 200 OK pour tout email demandé, seul un utilisateur existant et actif de clinique active reçoit l'OTP), hashage BCrypt pour le stockage en base de données.
+  - Tests unitaires et d'intégration validés à 100% (Backend MockMvc et Frontend Vitest).
+
+- **Affichage détaillé des consultations (IHM Accordéon)** : 
+  - Ajout d'un panneau dépliable (accordéon) sur les listes de consultations du médecin (`PatientDetailComponent`) et du patient (`PatientVisitsListComponent`).
+  - Rendu responsive et esthétique (grille de capsules pour les constantes vitales, observations structurées et tableau de prescriptions).
+  - Enrichissement de `ConsultationResponse` et `PatientPortalMeResponse.PatientPortalConsultation` pour mapper dynamiquement l'intégralité du dossier sans requêtes N+1.
+- Unification de la page de connexion à la racine `/` : suppression de la page `/patient/login` au profit d'un sélecteur d'espace animé "Personnel de santé / Patient" embarquant directement le formulaire OTP double étape.
+- Refonte professionnelle du sélecteur de langue sous forme statique `FR | EN` pour éviter l'échec de rendu des drapeaux émojis sur Windows.
+- Mémorisation et restauration automatique de la langue choisie par l'utilisateur via le `localStorage`.
+- Intégration de l'icône de déconnexion et alignement soigné des métadonnées utilisateur (avatar, nom, rôle) en topbar.
+
+### Fixed
+
+- **LazyInitializationException sur les lignes d'ordonnances** : Résolution du plantage Hibernate lors du dépliage ou de la génération de document en modifiant `PrescriptionRepository.findByConsultationId` pour charger immédiatement la collection `items` avec un `LEFT JOIN FETCH p.items`.
+- Résolution de l'erreur 500 `LazyInitializationException` lors du téléchargement d'ordonnances (modules clinique et patient) par l'utilisation de requêtes JPQL avec `JOIN FETCH` (visite + patient) et la suppression de la transaction `readOnly` bloquant l'enregistrement des audits.
 
 - Implémentation complète de la User Story [STORY-0801](file:///C:/MES-APPLICATIONS/joprelys-connect/docs/ai/tickets/STORY-0801-espace-patient.md) (Espace patient sécurisé et historique personnel) :
   - **Backend** : Création des endpoints d'authentification OTP patients (`/api/public/patient/auth/otp` et `verify`), du contrôleur sécurisé patient (`/api/patient/me`), de la méthode de génération de jeton JWT patient et gestion du multi-tenant avec Hibernate en mode natif.

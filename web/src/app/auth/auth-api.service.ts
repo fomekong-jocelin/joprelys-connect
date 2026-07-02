@@ -24,4 +24,12 @@ export class AuthApiService {
       finalize(() => this.tokenStorage.clear()),
     );
   }
+
+  requestPasswordRecovery(email: string): Observable<void> {
+    return this.http.post<void>('/api/public/auth/password-recovery/request', { email });
+  }
+
+  resetPassword(request: any): Observable<void> {
+    return this.http.post<void>('/api/public/auth/password-recovery/reset', request);
+  }
 }

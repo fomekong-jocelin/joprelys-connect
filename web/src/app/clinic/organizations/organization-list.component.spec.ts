@@ -3,7 +3,7 @@ import { OrganizationListComponent } from './organization-list.component';
 import { OrganizationApiService } from './organization-api.service';
 import { of } from 'rxjs';
 import { Organization } from './organizations.models';
-import { provideRouter } from '@angular/router';
+import { RouterTestingModule } from '@angular/router/testing';
 
 describe('OrganizationListComponent', () => {
   let component: OrganizationListComponent;
@@ -25,13 +25,13 @@ describe('OrganizationListComponent', () => {
     mockApi = {
       list: vi.fn().mockReturnValue(of(mockOrgs)),
       create: vi.fn(),
-      updateStatus: vi.fn()
+      updateStatus: vi.fn(),
+      update: vi.fn()
     };
 
     await TestBed.configureTestingModule({
-      imports: [OrganizationListComponent],
+      imports: [OrganizationListComponent, RouterTestingModule],
       providers: [
-        provideRouter([]),
         { provide: OrganizationApiService, useValue: mockApi }
       ]
     }).compileComponents();

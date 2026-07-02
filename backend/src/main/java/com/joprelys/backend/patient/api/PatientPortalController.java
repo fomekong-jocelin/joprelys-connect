@@ -35,6 +35,7 @@ public class PatientPortalController {
     private final com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository organizationRepository;
     private final com.joprelys.backend.patient.infrastructure.persistence.PatientConsentRepository patientConsentRepository;
     private final AuditService auditService;
+    private final com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository prescriptionRepository;
 
     public PatientPortalController(
             PatientRepository patientRepository,
@@ -43,7 +44,8 @@ public class PatientPortalController {
             DocumentService documentService,
             com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository organizationRepository,
             com.joprelys.backend.patient.infrastructure.persistence.PatientConsentRepository patientConsentRepository,
-            AuditService auditService) {
+            AuditService auditService,
+            com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository prescriptionRepository) {
         this.patientRepository = patientRepository;
         this.consultationRepository = consultationRepository;
         this.medicalDocumentRepository = medicalDocumentRepository;
@@ -51,6 +53,7 @@ public class PatientPortalController {
         this.organizationRepository = organizationRepository;
         this.patientConsentRepository = patientConsentRepository;
         this.auditService = auditService;
+        this.prescriptionRepository = prescriptionRepository;
     }
 
     @GetMapping("/me")
@@ -68,6 +71,12 @@ public class PatientPortalController {
                 .map(c -> {
                     MedicalDocumentEntity doc = medicalDocumentRepository.findByVisitId(c.getVisit().getId()).orElse(null);
                     LocalDate visitDate = LocalDate.ofInstant(c.getVisit().getCreatedAt(), ZoneId.systemDefault());
+                    var vitals = com.joprelys.backend.visit.api.VitalsResponse.fromEntity(c.getVisit().getVitals());
+                    var prescriptionItems = prescriptionRepository.findByConsultationId(c.getId())
+                            .map(p -> p.getItems().stream()
+                                    .map(com.joprelys.backend.prescription.api.PrescriptionItemResponse::fromEntity)
+                                    .toList())
+                            .orElse(List.of());
 
                     return new PatientPortalMeResponse.PatientPortalConsultation(
                             c.getVisit().getId(),
@@ -77,7 +86,13 @@ public class PatientPortalController {
                             c.getVisit().getOrientation(), // Orienté vers le service clinique comme nom de clinique/service
                             c.getDiagnosis(),
                             doc != null ? doc.getId() : null,
-                            doc != null ? doc.getStatus() : null
+                            doc != null ? doc.getStatus() : null,
+                            c.getSymptoms(),
+                            c.getClinicalExam(),
+                            c.getAdvice(),
+                            c.getFollowUp(),
+                            vitals,
+                            prescriptionItems
                     );
                 })
                 .toList();
@@ -110,7 +125,8 @@ public class PatientPortalController {
         PatientEntity patient = patientRepository.findByGlobalPatientNumber(authentication.getName())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dossier patient introuvable."));
 
-        MedicalDocumentEntity doc = medicalDocumentRepository.findByVisitId(visitId)
+        // JOIN FETCH visit + patient en une seule requête → plus de LazyInitializationException
+        MedicalDocumentEntity doc = medicalDocumentRepository.findByVisitIdWithVisitAndPatient(visitId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable pour cette visite."));
 
         // Vérification de sécurité de l'accès au document

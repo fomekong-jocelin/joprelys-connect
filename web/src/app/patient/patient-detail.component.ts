@@ -194,59 +194,197 @@ import { AuditLog } from '../audit/audit.models';
               } @else {
                 <div class="space-y-3">
                   @for (consult of consultationHistory(); track consult.id) {
-                    <div class="p-4 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800/60 space-y-2">
-                      <div class="flex items-start justify-between gap-2">
-                        <div>
+                    <div class="rounded-xl bg-slate-50/50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800/60 overflow-hidden transition-all duration-200">
+                      <!-- En-tête cliquable de l'accordéon -->
+                      <div
+                        (click)="toggleConsultation(consult.id)"
+                        class="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-100/30 dark:hover:bg-slate-800/40 select-none transition-colors"
+                      >
+                        <div class="flex flex-wrap items-center gap-3">
                           <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 uppercase tracking-wider">
                             {{ consult.visitNumber }}
                           </span>
-                          <span class="ml-2 text-xs font-semibold text-slate-400 dark:text-slate-500">
+                          <span class="text-xs font-semibold text-slate-400 dark:text-slate-500">
                             {{ consult.createdAt | slice:0:10 }}
                           </span>
+                          <p class="text-sm font-bold text-slate-800 dark:text-slate-200 line-clamp-1">
+                            <span class="text-xs font-bold uppercase text-slate-400 dark:text-slate-500">Diag : </span>
+                            {{ consult.diagnosis }}
+                          </p>
                         </div>
-                        <span class="text-xs font-extrabold text-slate-500 dark:text-slate-400">Dr. {{ consult.doctorName }}</span>
+
+                        <div class="flex items-center gap-3">
+                          <span class="text-xs font-extrabold text-slate-500 dark:text-slate-400 hidden sm:inline">Dr. {{ consult.doctorName }}</span>
+                          
+                          <!-- Chevron de déploiement -->
+                          <svg
+                            class="w-4 h-4 text-slate-400 transform transition-transform duration-200"
+                            [class.rotate-180]="expandedConsultations()[consult.id]"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
+                          >
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
                       </div>
-                      <div class="flex flex-wrap justify-between items-center pt-2 border-t border-slate-100/50 dark:border-slate-800/20 gap-4">
-                        <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                          <span class="text-xs font-bold uppercase text-slate-400 dark:text-slate-500">Diagnostic : </span>
-                          {{ consult.diagnosis }}
-                        </p>
-                        <div class="flex items-center gap-2">
-                          @if (consult.documentStatus === 'REVOQUE') {
-                            <span class="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-extrabold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300 uppercase tracking-wider">
-                              {{ i18n.t('verify.status.revoked') }}
-                            </span>
-                          } @else if (consult.documentStatus === 'ANNULE') {
-                            <span class="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-extrabold bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300 uppercase tracking-wider">
-                              {{ i18n.t('verify.status.cancelled') }}
-                            </span>
+
+                      <!-- Corps déplié de l'accordéon -->
+                      @if (expandedConsultations()[consult.id]) {
+                        <div class="px-4 pb-4 pt-2 border-t border-slate-100 dark:border-slate-800/40 space-y-4 animate-fade-in text-slate-700 dark:text-slate-300 text-xs">
+                          
+                          <!-- 1. Constantes Vitales en ligne de type barre médicale -->
+                          @if (consult.vitals; as vitals) {
+                            <div class="flex flex-wrap items-center gap-x-4 gap-y-2 p-3 rounded-lg bg-slate-100/50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/80 text-[11px]">
+                              <span class="font-bold text-slate-400 uppercase tracking-wider">Mesures :</span>
+                              @if (vitals.temperature) {
+                                <span class="flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-200">
+                                  <span class="text-rose-500 text-xs">🌡️</span> Température : <strong class="text-rose-600 dark:text-rose-400">{{ vitals.temperature }} °C</strong>
+                                </span>
+                              }
+                              @if (vitals.weight) {
+                                <span class="flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-200">
+                                  <span class="text-indigo-500 text-xs">⚖️</span> Poids : <strong>{{ vitals.weight }} kg</strong>
+                                </span>
+                              }
+                              @if (vitals.height) {
+                                <span class="flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-200">
+                                  <span class="text-indigo-500 text-xs">📏</span> Taille : <strong>{{ vitals.height }} cm</strong>
+                                </span>
+                              }
+                              @if (vitals.bmi) {
+                                <span class="flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-200">
+                                  IMC : <strong class="text-indigo-600 dark:text-indigo-400">{{ vitals.bmi }}</strong>
+                                </span>
+                              }
+                              @if (vitals.systolic && vitals.diastolic) {
+                                <span class="flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-200">
+                                  <span class="text-emerald-500 text-xs">💓</span> Tension : <strong>{{ vitals.systolic }}/{{ vitals.diastolic }} mmHg</strong>
+                                </span>
+                              }
+                              @if (vitals.pulse) {
+                                <span class="flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-200">
+                                  <span class="text-red-500 text-xs">🫀</span> Pouls : <strong>{{ vitals.pulse }} bpm</strong>
+                                </span>
+                              }
+                            </div>
                           }
 
-                          @if (consult.documentId) {
-                            <button 
-                              (click)="downloadPdf(consult)"
-                              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold bg-indigo-50/50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 cursor-pointer transition-colors shrink-0"
-                            >
-                              <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                              </svg>
-                              {{ i18n.t('patients.downloadPdf') }}
-                            </button>
+                          <!-- 2. Bilan Clinique avec Blocs Aérés et Badges -->
+                          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-3">
+                              <!-- Symptômes -->
+                              <div class="p-3 rounded-lg bg-amber-500/5 border border-amber-500/10 dark:border-amber-500/20">
+                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 uppercase tracking-wider">
+                                  Symptômes signalés
+                                </span>
+                                <p class="text-sm font-semibold text-slate-800 dark:text-slate-200 mt-1.5 leading-relaxed">{{ consult.symptoms }}</p>
+                              </div>
 
-                            @if (canRevoke() && consult.documentStatus === 'VALID') {
-                              <button 
-                                (click)="openRevokeModal(consult)"
-                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-50/50 text-red-700 dark:bg-red-950/30 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50 cursor-pointer transition-colors shrink-0"
+                              <!-- Examen Clinique -->
+                              @if (consult.clinicalExam) {
+                                <div class="p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/10 dark:border-indigo-500/20">
+                                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
+                                    Examen Clinique
+                                  </span>
+                                  <p class="text-sm font-semibold text-slate-800 dark:text-slate-200 mt-1.5 leading-relaxed">{{ consult.clinicalExam }}</p>
+                                </div>
+                              }
+                            </div>
+
+                            <div class="space-y-3">
+                              <!-- Conseils & Recommandations -->
+                              @if (consult.advice) {
+                                <div class="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10 dark:border-emerald-500/20">
+                                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
+                                    Conseils & Recommandations
+                                  </span>
+                                  <p class="text-sm font-semibold text-slate-800 dark:text-slate-200 mt-1.5 leading-relaxed">{{ consult.advice }}</p>
+                                </div>
+                              }
+
+                              <!-- Suivi -->
+                              @if (consult.followUp) {
+                                <div class="p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/10 dark:border-cyan-500/20">
+                                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 uppercase tracking-wider">
+                                    Suivi Clinique
+                                  </span>
+                                  <p class="text-sm font-semibold text-slate-800 dark:text-slate-200 mt-1.5 leading-relaxed">{{ consult.followUp }}</p>
+                                </div>
+                              }
+                            </div>
+                          </div>
+
+                          <!-- 3. Prescription Médicale sous forme de lignes fluides épurées (sans tableau froid) -->
+                          @if (consult.prescriptionItems && consult.prescriptionItems.length > 0) {
+                            <div class="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800/40">
+                              <h4 class="font-bold text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500">Ordonnance Médicale</h4>
+                              
+                              <div class="space-y-2">
+                                @for (item of consult.prescriptionItems; track item.id) {
+                                  <div class="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 flex items-start gap-3">
+                                    <span class="p-2 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 shrink-0 text-base">💊</span>
+                                    <div class="flex-1 min-w-0">
+                                      <div class="flex flex-wrap items-baseline gap-x-2">
+                                        <h5 class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ item.drugName }}</h5>
+                                        <span class="text-xs text-slate-400 dark:text-slate-500">
+                                          {{ item.dosage }} @if(item.quantity){(x{{ item.quantity }})}
+                                        </span>
+                                      </div>
+                                      <p class="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-0.5">
+                                        Posologie : <span class="text-slate-800 dark:text-slate-200">{{ item.posology }}</span> @if(item.duration){pendant {{ item.duration }}}
+                                      </p>
+                                      @if (item.instructions) {
+                                        <p class="text-[11px] text-slate-400 dark:text-slate-500 italic mt-0.5">
+                                          Instructions : {{ item.instructions }}
+                                        </p>
+                                      }
+                                    </div>
+                                  </div>
+                                }
+                              </div>
+                            </div>
+                          }
+
+                          <!-- Actions de document (Téléchargement et Révocation) -->
+                          <div class="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/40">
+                            @if (consult.documentStatus === 'REVOQUE') {
+                              <span class="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-extrabold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300 uppercase tracking-wider">
+                                {{ i18n.t('verify.status.revoked') }}
+                              </span>
+                            } @else if (consult.documentStatus === 'ANNULE') {
+                              <span class="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-extrabold bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300 uppercase tracking-wider">
+                                {{ i18n.t('verify.status.cancelled') }}
+                              </span>
+                            }
+
+                            @if (consult.documentId) {
+                              <button
+                                type="button"
+                                (click)="downloadPdf(consult); $event.stopPropagation()"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-extrabold bg-indigo-50/50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 cursor-pointer transition-colors shrink-0"
                               >
                                 <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                 </svg>
-                                {{ i18n.t('patients.revokeDoc') }}
+                                {{ i18n.t('patients.downloadPdf') }}
                               </button>
+
+                              @if (canRevoke() && consult.documentStatus === 'VALID') {
+                                <button
+                                  type="button"
+                                  (click)="openRevokeModal(consult); $event.stopPropagation()"
+                                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-extrabold bg-red-50/50 text-red-700 dark:bg-red-950/30 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50 cursor-pointer transition-colors shrink-0"
+                                >
+                                  <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                  </svg>
+                                  {{ i18n.t('patients.revokeDoc') }}
+                                </button>
+                              }
                             }
-                          }
+                          </div>
+
                         </div>
-                      </div>
+                      }
                     </div>
                   }
                 </div>
@@ -495,6 +633,11 @@ export class PatientDetailComponent implements OnInit {
   showHistory = signal(false);
   isLoadingHistory = signal(false);
   historyLoaded = false; // garde pour éviter double chargement
+  expandedConsultations = signal<Record<string, boolean>>({});
+
+  toggleConsultation(id: string): void {
+    this.expandedConsultations.update(prev => ({ ...prev, [id]: !prev[id] }));
+  }
 
   // STORY-0702 — Properties for Audit
   showAudit = signal(false);

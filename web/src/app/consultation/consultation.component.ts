@@ -1,7 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { DatePipe } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { ButtonComponent } from '../shared/ui/button.component';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
@@ -13,7 +12,7 @@ import { Vitals } from '../visit/visit.models';
 @Component({
   selector: 'app-consultation',
   standalone: true,
-  imports: [ReactiveFormsModule, ButtonComponent, AppShellComponent, RouterLink, DatePipe],
+  imports: [ReactiveFormsModule, ButtonComponent, AppShellComponent],
   template: `
     <app-shell>
       <div class="app-container py-8 max-w-5xl mx-auto space-y-6">

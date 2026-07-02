@@ -1,3 +1,5 @@
+import { Vitals } from '../visit/visit.models';
+
 export interface Consultation {
   id: string;
   visitId: string;
@@ -15,6 +17,8 @@ export interface Consultation {
   updatedAt: string;
   documentId?: string;
   documentStatus?: string;
+  vitals?: Vitals;
+  prescriptionItems?: PrescriptionItem[];
 }
 
 export interface SaveConsultationRequest {

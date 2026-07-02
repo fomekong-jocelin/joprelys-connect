@@ -84,6 +84,10 @@ public class UserAccountEntity {
 		return passwordHash;
 	}
 
+	public void setPasswordHash(String passwordHash) {
+		this.passwordHash = passwordHash;
+	}
+
 	public boolean isEnabled() {
 		return enabled;
 	}

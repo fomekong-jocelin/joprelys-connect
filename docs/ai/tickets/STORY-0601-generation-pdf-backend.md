@@ -91,7 +91,7 @@ Tous les tests compilent et passent avec succès (`BUILD SUCCESS`, 6 tests exéc
 Néant. La story est prête pour la validation finale par le lead dev.
 
 ## 13. Statut final
-Statut : REVIEW
+Statut : DONE
 
 ## 14. Impact version / SemVer
 | Champ | Valeur |

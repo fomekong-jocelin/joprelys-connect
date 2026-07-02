@@ -112,4 +112,51 @@ public class OrganizationControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.status").value("INACTIVE"));
 	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN_JOPRELYS")
+	void givenAdmin_whenUpdateOrganization_thenSuccess() throws Exception {
+		OrganizationEntity org = new OrganizationEntity("Espoir", "espoir@joprelys.local", "123", "street1", "Douala");
+		var saved = organizationRepository.save(org);
+
+		String jsonRequest = """
+				{
+					"name": "Nouveau Nom Clinique",
+					"email": "nouveau.email@joprelys.local",
+					"phone": "+237 999",
+					"address": "Nouvelle Adresse",
+					"city": "Yaoundé"
+				}
+				""";
+
+		mockMvc.perform(put("/api/organizations/" + saved.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(jsonRequest))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.name").value("Nouveau Nom Clinique"))
+				.andExpect(jsonPath("$.email").value("nouveau.email@joprelys.local"))
+				.andExpect(jsonPath("$.phone").value("+237 999"))
+				.andExpect(jsonPath("$.address").value("Nouvelle Adresse"))
+				.andExpect(jsonPath("$.city").value("Yaoundé"));
+	}
+
+	@Test
+	@WithMockUser(roles = "MEDECIN")
+	void givenDoctor_whenUpdateOrganization_thenForbidden() throws Exception {
+		OrganizationEntity org = new OrganizationEntity("Espoir", "espoir@joprelys.local", "123", "street1", "Douala");
+		var saved = organizationRepository.save(org);
+
+		String jsonRequest = """
+				{
+					"name": "Forbidden Update",
+					"email": "espoir@joprelys.local",
+					"city": "Douala"
+				}
+				""";
+
+		mockMvc.perform(put("/api/organizations/" + saved.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(jsonRequest))
+				.andExpect(status().isForbidden());
+	}
 }

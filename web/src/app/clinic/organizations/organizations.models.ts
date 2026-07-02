@@ -8,6 +8,8 @@ export interface Organization {
   logoPath?: string;
   status: 'ACTIVE' | 'INACTIVE';
   createdAt: string;
+  adminEmail?: string;
+  adminDisplayName?: string;
 }
 
 export interface CreateOrganizationRequest {

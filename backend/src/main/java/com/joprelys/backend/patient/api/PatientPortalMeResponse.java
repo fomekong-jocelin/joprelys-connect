@@ -29,7 +29,13 @@ public record PatientPortalMeResponse(
             String clinicName,
             String diagnosis,
             UUID documentId,
-            String documentStatus
+            String documentStatus,
+            String symptoms,
+            String clinicalExam,
+            String advice,
+            String followUp,
+            com.joprelys.backend.visit.api.VitalsResponse vitals,
+            List<com.joprelys.backend.prescription.api.PrescriptionItemResponse> prescriptionItems
     ) {
     }
 }

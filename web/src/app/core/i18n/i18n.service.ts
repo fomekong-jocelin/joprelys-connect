@@ -193,8 +193,22 @@ const FR: TranslationDictionary = {
   'patient.login.verify': 'Se connecter',
   'patient.dashboard.title': 'Mon Espace Santé',
   'patient.dashboard.consent': "Consentements d'accès",
-  'patient.consent.revoke': "Révoquer l'accès",
   'patient.consent.grant': "Accorder l'accès",
+  'auth.forgotPassword.link': "Mot de passe oublié ?",
+  'auth.forgotPassword.title': "Récupération de mot de passe",
+  'auth.forgotPassword.subtitle': "Saisissez votre adresse e-mail professionnelle pour recevoir un code de réinitialisation.",
+  'auth.forgotPassword.email': "Adresse e-mail professionnelle",
+  'auth.forgotPassword.submitRequest': "Recevoir le code de réinitialisation",
+  'auth.forgotPassword.otpTitle': "Validation du code",
+  'auth.forgotPassword.otpSubtitle': "Si cette adresse existe, un code de réinitialisation temporaire a été généré.",
+  'auth.forgotPassword.code': "Code de sécurité (OTP)",
+  'auth.forgotPassword.newPassword': "Nouveau mot de passe (min. 8 caractères)",
+  'auth.forgotPassword.confirmPassword': "Confirmer le mot de passe",
+  'auth.forgotPassword.submitReset': "Modifier le mot de passe",
+  'auth.forgotPassword.successTitle': "Mot de passe modifié !",
+  'auth.forgotPassword.successDesc': "Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.",
+  'auth.forgotPassword.backToLogin': "Retour à la connexion",
+  'auth.forgotPassword.error.mismatch': "Les mots de passe ne correspondent pas.",
 };
 
 const EN: TranslationDictionary = {
@@ -387,18 +401,53 @@ const EN: TranslationDictionary = {
   'patient.login.verify': 'Log In',
   'patient.dashboard.title': 'My Health Portal',
   'patient.dashboard.consent': 'Access Consents',
-  'patient.consent.revoke': 'Revoke Access',
   'patient.consent.grant': 'Grant Access',
+  'auth.forgotPassword.link': "Forgot password?",
+  'auth.forgotPassword.title': "Password Recovery",
+  'auth.forgotPassword.subtitle': "Enter your professional email address to receive a reset code.",
+  'auth.forgotPassword.email': "Professional email address",
+  'auth.forgotPassword.submitRequest': "Request Reset Code",
+  'auth.forgotPassword.otpTitle': "Code Verification",
+  'auth.forgotPassword.otpSubtitle': "If this address exists, a temporary reset code has been generated.",
+  'auth.forgotPassword.code': "Security code (OTP)",
+  'auth.forgotPassword.newPassword': "New password (min. 8 characters)",
+  'auth.forgotPassword.confirmPassword': "Confirm password",
+  'auth.forgotPassword.submitReset': "Update password",
+  'auth.forgotPassword.successTitle': "Password modified!",
+  'auth.forgotPassword.successDesc': "Your password has been successfully reset. You can now log in.",
+  'auth.forgotPassword.backToLogin': "Back to login",
+  'auth.forgotPassword.error.mismatch': "Passwords do not match.",
 };
+
+const LOCALE_STORAGE_KEY = 'joprelys_locale';
 
 @Injectable({
   providedIn: 'root',
 })
 export class I18nService {
-  readonly locale = signal<AppLocale>(APP_BRAND_CONFIG.defaultLocale);
+  readonly locale = signal<AppLocale>(this.loadLocale());
 
   t(key: string): string {
     const dictionary = this.locale() === 'en' ? EN : FR;
     return dictionary[key] ?? key;
+  }
+
+  toggle(): void {
+    const next: AppLocale = this.locale() === 'fr' ? 'en' : 'fr';
+    this.locale.set(next);
+    try { localStorage.setItem(LOCALE_STORAGE_KEY, next); } catch { /* SSR safe */ }
+  }
+
+  setLocale(l: AppLocale): void {
+    this.locale.set(l);
+    try { localStorage.setItem(LOCALE_STORAGE_KEY, l); } catch { /* SSR safe */ }
+  }
+
+  private loadLocale(): AppLocale {
+    try {
+      const stored = localStorage.getItem(LOCALE_STORAGE_KEY) as AppLocale | null;
+      if (stored && APP_BRAND_CONFIG.supportedLocales.includes(stored)) return stored;
+    } catch { /* SSR safe */ }
+    return APP_BRAND_CONFIG.defaultLocale;
   }
 }

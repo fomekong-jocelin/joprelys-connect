@@ -10,7 +10,7 @@
 | Priorité | P0 |
 | Story Points | 3 SP |
 | Sprint | SPRINT-0003 |
-| Statut | REVIEW |
+| Statut | DONE |
 | Assigné | Antigravity |
 | Reviewer | Lead |
 | Profil recommandé | Intermédiaire |
@@ -19,7 +19,7 @@
 | Est. Junior | 1.5j |
 | Temps passé | 0.7j |
 | Dépendances | EPIC-0004 ✅ (VisitEntity, VisitRepository, VitalsEntity) |
-| Dernière MAJ | 2026-07-02 |
+| Dernière MAJ | 2026-07-03 |
 
 ## Objectif
 

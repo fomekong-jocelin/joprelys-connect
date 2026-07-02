@@ -15,6 +15,9 @@ export interface VerifyOtpPayload {
   otpCode: string;
 }
 
+import { Vitals } from '../../../visit/visit.models';
+import { PrescriptionItem } from '../../../consultation/consultation.models';
+
 export interface PatientPortalConsultation {
   visitId: string;
   visitNumber: string;
@@ -24,6 +27,12 @@ export interface PatientPortalConsultation {
   diagnosis: string;
   documentId: string | null;
   documentStatus: string | null;
+  symptoms?: string;
+  clinicalExam?: string;
+  advice?: string;
+  followUp?: string;
+  vitals?: Vitals;
+  prescriptionItems?: PrescriptionItem[];
 }
 
 export interface PatientPortalMeResponse {

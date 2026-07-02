@@ -26,4 +26,8 @@ export class OrganizationApiService {
   createClinicAdmin(organizationId: string, request: CreateClinicAdminRequest): Observable<CreateClinicAdminResponse> {
     return this.http.post<CreateClinicAdminResponse>(`/api/organizations/${organizationId}/admin`, request);
   }
+
+  update(id: string, request: CreateOrganizationRequest): Observable<Organization> {
+    return this.http.put<Organization>(`/api/organizations/${id}`, request);
+  }
 }

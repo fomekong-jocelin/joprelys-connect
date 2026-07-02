@@ -31,7 +31,8 @@ describe('DashboardComponent', () => {
     };
 
     mockI18n = {
-      t: vi.fn().mockImplementation((key) => key)
+      t: vi.fn().mockImplementation((key) => key),
+      locale: signal('fr')
     };
 
     await TestBed.configureTestingModule({

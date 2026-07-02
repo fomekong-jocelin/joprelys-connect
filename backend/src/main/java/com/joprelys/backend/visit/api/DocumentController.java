@@ -38,7 +38,7 @@ public class DocumentController {
     @GetMapping("/api/visits/{visitId}/document")
     @PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'PHARMACIEN')")
     public ResponseEntity<byte[]> downloadDocument(@PathVariable UUID visitId) {
-        MedicalDocumentEntity doc = medicalDocumentRepository.findByVisitId(visitId)
+        MedicalDocumentEntity doc = medicalDocumentRepository.findByVisitIdWithVisitAndPatient(visitId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable pour cette visite."));
 
         byte[] pdfBytes = documentService.loadDocumentFile(doc);

@@ -1,8 +1,11 @@
 package com.joprelys.backend.consultation.api;
 
 import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationEntity;
+import com.joprelys.backend.prescription.api.PrescriptionItemResponse;
+import com.joprelys.backend.visit.api.VitalsResponse;
 import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentEntity;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public record ConsultationResponse(
@@ -21,13 +24,23 @@ public record ConsultationResponse(
 		Instant createdAt,
 		Instant updatedAt,
 		UUID documentId,
-		String documentStatus
+		String documentStatus,
+		VitalsResponse vitals,
+		List<PrescriptionItemResponse> prescriptionItems
 ) {
 	public static ConsultationResponse fromEntity(ConsultationEntity entity) {
-		return fromEntity(entity, null);
+		return fromEntity(entity, null, null, List.of());
 	}
 
 	public static ConsultationResponse fromEntity(ConsultationEntity entity, MedicalDocumentEntity document) {
+		return fromEntity(entity, document, null, List.of());
+	}
+
+	public static ConsultationResponse fromEntity(
+			ConsultationEntity entity,
+			MedicalDocumentEntity document,
+			VitalsResponse vitals,
+			List<PrescriptionItemResponse> prescriptionItems) {
 		return new ConsultationResponse(
 				entity.getId(),
 				entity.getVisit().getId(),
@@ -44,7 +57,9 @@ public record ConsultationResponse(
 				entity.getCreatedAt(),
 				entity.getUpdatedAt(),
 				document != null ? document.getId() : null,
-				document != null ? document.getStatus() : null
+				document != null ? document.getStatus() : null,
+				vitals,
+				prescriptionItems
 		);
 	}
 }

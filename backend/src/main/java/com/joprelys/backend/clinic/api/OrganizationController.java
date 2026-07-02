@@ -118,7 +118,36 @@ public class OrganizationController {
 				saved.getCreatedAt());
 	}
 
+	@PutMapping("/{id}")
+	public OrganizationResponse update(
+			@PathVariable UUID id,
+			@Valid @RequestBody UpdateOrganizationRequest request) {
+
+		OrganizationEntity entity = organizationRepository.findById(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organisation non trouvée."));
+
+		if (!entity.getEmail().equalsIgnoreCase(request.email()) && organizationRepository.existsByEmail(request.email())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "L'organisation avec cet email existe déjà.");
+		}
+
+		entity.setName(request.name());
+		entity.setEmail(request.email());
+		entity.setPhone(request.phone());
+		entity.setAddress(request.address());
+		entity.setCity(request.city());
+
+		OrganizationEntity saved = organizationRepository.save(entity);
+		return mapToResponse(saved);
+	}
+
 	private OrganizationResponse mapToResponse(OrganizationEntity entity) {
+		UserAccountEntity admin = userAccountRepository.findAllByOrganizationId(entity.getId()).stream()
+				.filter(u -> "ADMIN_CLINIQUE".equals(u.getRole()))
+				.findFirst()
+				.orElse(null);
+		String adminEmail = admin != null ? admin.getEmail() : null;
+		String adminDisplayName = admin != null ? admin.getDisplayName() : null;
+
 		return new OrganizationResponse(
 				entity.getId(),
 				entity.getName(),
@@ -128,7 +157,9 @@ public class OrganizationController {
 				entity.getCity(),
 				entity.getLogoPath(),
 				entity.getStatus(),
-				entity.getCreatedAt()
+				entity.getCreatedAt(),
+				adminEmail,
+				adminDisplayName
 		);
 	}
 

@@ -53,6 +53,7 @@ describe('PatientVisitsListComponent', () => {
   it('should list patient visits and emit download event', () => {
     const fixture = TestBed.createComponent(PatientVisitsListComponent);
     fixture.componentInstance.consultations = MOCK_PATIENT.consultations;
+    fixture.componentInstance.expandedConsultations['visit-id-123'] = true;
     fixture.detectChanges();
 
     const element = fixture.nativeElement as HTMLElement;
@@ -104,7 +105,7 @@ describe('PatientAuditListComponent', () => {
 
     const element = fixture.nativeElement as HTMLElement;
     expect(element.textContent).toContain('Clinique Test A');
-    expect(element.textContent).toContain('Urgence (Brise-Glace)');
+    expect(element.textContent).toContain('Urgence');
     expect(element.textContent).toContain('Arrêt cardiaque');
     expect(element.textContent).toContain('SUCCESS');
   });

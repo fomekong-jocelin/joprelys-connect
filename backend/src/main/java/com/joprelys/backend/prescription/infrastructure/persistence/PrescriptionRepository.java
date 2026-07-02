@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public interface PrescriptionRepository extends JpaRepository<PrescriptionEntity, UUID> {
 
-	@Query("SELECT p FROM PrescriptionEntity p WHERE p.consultation.id = :consultationId")
+	@Query("SELECT p FROM PrescriptionEntity p LEFT JOIN FETCH p.items WHERE p.consultation.id = :consultationId")
 	Optional<PrescriptionEntity> findByConsultationId(@Param("consultationId") UUID consultationId);
 
 	boolean existsByConsultationId(UUID consultationId);

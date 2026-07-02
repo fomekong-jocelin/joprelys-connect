@@ -12,5 +12,7 @@ public record OrganizationResponse(
 		String city,
 		String logoPath,
 		String status,
-		Instant createdAt) {
+		Instant createdAt,
+		String adminEmail,
+		String adminDisplayName) {
 }
