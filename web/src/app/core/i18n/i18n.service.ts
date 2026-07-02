@@ -179,6 +179,11 @@ const FR: TranslationDictionary = {
   'common.processing': 'Traitement en cours...',
   'common.confirm': 'Confirmer',
   'verify.status.cancelled': 'DOCUMENT ANNULÉ',
+  'patients.auditLogsTitle': "Journal d'Audit & Sécurité",
+  'patients.auditLogsLoading': "Chargement du journal d'audit...",
+  'patients.auditLogsEmpty': "Aucun événement de traçabilité enregistré.",
+  'patients.auditLogsAction': "Action :",
+  'patients.auditLogsIp': "IP :",
 };
 
 const EN: TranslationDictionary = {
@@ -357,6 +362,11 @@ const EN: TranslationDictionary = {
   'common.processing': 'Processing...',
   'common.confirm': 'Confirm',
   'verify.status.cancelled': 'CANCELLED DOCUMENT',
+  'patients.auditLogsTitle': 'Audit & Security Logs',
+  'patients.auditLogsLoading': 'Loading audit logs...',
+  'patients.auditLogsEmpty': 'No audit events recorded.',
+  'patients.auditLogsAction': 'Action:',
+  'patients.auditLogsIp': 'IP:',
 };
 
 @Injectable({

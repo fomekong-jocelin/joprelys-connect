@@ -7,15 +7,17 @@ import { VisitApiService } from '../visit/visit-api.service';
 import { Visit } from '../visit/visit.models';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { SlicePipe } from '@angular/common';
+import { SlicePipe, DatePipe } from '@angular/common';
 import { ConsultationApiService } from '../consultation/consultation-api.service';
 import { Consultation } from '../consultation/consultation.models';
 import { I18nService } from '../core/i18n/i18n.service';
+import { AuditApiService } from '../audit/audit-api.service';
+import { AuditLog } from '../audit/audit.models';
 
 @Component({
   selector: 'app-patient-detail',
   standalone: true,
-  imports: [ButtonComponent, CardComponent, FormsModule, SlicePipe],
+  imports: [ButtonComponent, CardComponent, FormsModule, SlicePipe, DatePipe],
   template: `
     <app-ui-card [title]="patient().fullName">
       <div class="space-y-6">
@@ -214,6 +216,92 @@ import { I18nService } from '../core/i18n/i18n.service';
           }
         </div>
 
+        <!-- Section 5: Journal d'Audit & Sécurité -->
+        @if (canViewAudit()) {
+          <div class="pt-4 border-t" style="border-color: var(--border-color)">
+            <button
+              (click)="toggleAudit()"
+              class="flex items-center justify-between w-full text-left group cursor-pointer"
+            >
+              <h3 class="text-sm font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">
+                {{ i18n.t('patients.auditLogsTitle') }}
+              </h3>
+              <svg
+                class="w-4 h-4 transition-transform duration-200"
+                [class.rotate-180]="showAudit()"
+                style="color: var(--text-muted)"
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            @if (showAudit()) {
+              <div class="mt-4 space-y-3">
+                @if (isLoadingAudit()) {
+                  <div class="py-6 text-center">
+                    <div class="inline-block w-5 h-5 rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin"></div>
+                    <p class="mt-2 text-xs font-semibold" style="color: var(--text-muted)">{{ i18n.t('patients.auditLogsLoading') }}</p>
+                  </div>
+                } @else if (auditLogs().length === 0) {
+                  <div class="p-4 text-center border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+                    <p class="text-sm font-semibold" style="color: var(--text-muted)">{{ i18n.t('patients.auditLogsEmpty') }}</p>
+                  </div>
+                } @else {
+                  <div class="flow-root">
+                    <ul role="list" class="-mb-8">
+                      @for (log of auditLogs(); track log.id; let last = $last) {
+                        <li>
+                          <div class="relative pb-8">
+                            @if (!last) {
+                              <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-slate-200 dark:bg-slate-700" aria-hidden="true"></span>
+                            }
+                            <div class="relative flex space-x-3">
+                              <div>
+                                <span 
+                                  [class]="log.status === 'SUCCESS' 
+                                    ? 'h-8 w-8 rounded-full bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 flex items-center justify-center ring-8 ring-white dark:ring-slate-900'
+                                    : 'h-8 w-8 rounded-full bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 flex items-center justify-center ring-8 ring-white dark:ring-slate-900'"
+                                >
+                                  @if (log.status === 'SUCCESS') {
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  } @else {
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                  }
+                                </span>
+                              </div>
+                              <div class="flex-1 min-w-0 pt-1.5 flex justify-between space-x-4">
+                                <div>
+                                  <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                    {{ log.reason || log.action }}
+                                  </p>
+                                  <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                                    {{ i18n.t('patients.auditLogsAction') }} <span class="font-mono text-[10px] font-bold">{{ log.action }}</span> 
+                                    @if (log.ipAddress) {
+                                      | {{ i18n.t('patients.auditLogsIp') }} <span class="font-mono text-[10px]">{{ log.ipAddress }}</span>
+                                    }
+                                  </p>
+                                </div>
+                                <div class="text-right text-xs whitespace-nowrap text-slate-400 dark:text-slate-500">
+                                  <time [dateTime]="log.createdAt">{{ log.createdAt | date:'short' }}</time>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      }
+                    </ul>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+
         <div class="flex justify-end gap-3 pt-4 border-t" style="border-color: var(--border-color)">
           <app-ui-button variant="secondary" (pressed)="back.emit()">
             Retour à la liste
@@ -401,9 +489,16 @@ export class PatientDetailComponent implements OnInit {
   isLoadingHistory = signal(false);
   historyLoaded = false; // garde pour éviter double chargement
 
+  // STORY-0702 — Properties for Audit
+  showAudit = signal(false);
+  isLoadingAudit = signal(false);
+  auditLogs = signal<AuditLog[]>([]);
+  auditLoaded = false;
+
   activeVisit = signal<Visit | null>(null);
 
   private readonly consultationApi = inject(ConsultationApiService);
+  private readonly auditApi = inject(AuditApiService);
 
   readonly session = this.tokenStorage.session;
 
@@ -418,12 +513,17 @@ export class PatientDetailComponent implements OnInit {
   // Un médecin/admin peut démarrer une consultation si une visite active existe pour ce patient
   readonly canStartConsultation = computed(() => {
     const role = this.session()?.role;
-    return (role === 'MEDECIN' || role === 'ADMIN_CLINIQUE') && this.activeVisit() !== null;
+    return (role === 'MEDECIN' || role === 'ADMIN_CLINIQUE' && this.activeVisit() !== null);
   });
 
   readonly canRevoke = computed(() => {
     const role = this.session()?.role;
     return role === 'MEDECIN' || role === 'ADMIN_CLINIQUE';
+  });
+
+  readonly canViewAudit = computed(() => {
+    const role = this.session()?.role;
+    return role === 'MEDECIN' || role === 'ADMIN_CLINIQUE' || role === 'AUDITEUR';
   });
 
   readonly age = computed(() => {
@@ -595,6 +695,32 @@ export class PatientDetailComponent implements OnInit {
         this.revokeError.set(err.error?.detail || err.error?.title || 'Une erreur est survenue lors de la révocation du document.');
       }
     });
+  }
+
+  loadAudit(): void {
+    if (!this.canViewAudit()) {
+      return;
+    }
+    this.isLoadingAudit.set(true);
+    this.auditApi.getPatientLogs(this.patient().id).subscribe({
+      next: (data) => {
+        this.auditLogs.set(data);
+        this.isLoadingAudit.set(false);
+        this.auditLoaded = true;
+      },
+      error: () => {
+        this.isLoadingAudit.set(false);
+        this.auditLoaded = true;
+      }
+    });
+  }
+
+  toggleAudit(): void {
+    const newState = !this.showAudit();
+    this.showAudit.set(newState);
+    if (newState && !this.auditLoaded) {
+      this.loadAudit();
+    }
   }
 }
 

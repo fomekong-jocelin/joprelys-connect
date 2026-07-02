@@ -4,11 +4,13 @@ import { AuthTokenStorageService } from '../auth/auth-token-storage.service';
 import { VisitApiService } from '../visit/visit-api.service';
 import { ConsultationApiService } from '../consultation/consultation-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
+import { AuditApiService } from '../audit/audit-api.service';
 import { of } from 'rxjs';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
 import { Patient } from './patient.models';
 import { Consultation } from '../consultation/consultation.models';
+import { AuditLog } from '../audit/audit.models';
 
 describe('PatientDetailComponent', () => {
   let component: PatientDetailComponent;
@@ -16,6 +18,7 @@ describe('PatientDetailComponent', () => {
   let mockAuthToken: any;
   let mockVisitApi: any;
   let mockConsultationApi: any;
+  let mockAuditApi: any;
   let mockI18n: any;
 
   const mockPatient: Patient = {
@@ -51,6 +54,25 @@ describe('PatientDetailComponent', () => {
     }
   ];
 
+  const mockAuditLogs: AuditLog[] = [
+    {
+      id: 'log-1',
+      actorUserId: 'user-1',
+      actorName: 'Dr. Alpha',
+      actorOrganizationId: 'org-1',
+      patientId: 'pat-1',
+      patientName: 'Jean Patient',
+      resourceType: 'PATIENT_RECORD',
+      resourceId: 'pat-1',
+      action: 'CONSULTATION',
+      reason: 'Accès dossier',
+      ipAddress: '127.0.0.1',
+      userAgent: 'Mozilla',
+      status: 'SUCCESS',
+      createdAt: '2026-07-02T12:00:00Z'
+    }
+  ];
+
   beforeEach(async () => {
     mockAuthToken = {
       session: signal({
@@ -73,6 +95,11 @@ describe('PatientDetailComponent', () => {
       cancelDocument: vi.fn().mockReturnValue(of({ id: 'doc-uuid-1', status: 'ANNULE' }))
     };
 
+    mockAuditApi = {
+      getPatientLogs: vi.fn().mockReturnValue(of(mockAuditLogs)),
+      getOrganizationLogs: vi.fn().mockReturnValue(of([]))
+    };
+
     mockI18n = {
       t: vi.fn().mockImplementation((key) => key)
     };
@@ -84,6 +111,7 @@ describe('PatientDetailComponent', () => {
         { provide: AuthTokenStorageService, useValue: mockAuthToken },
         { provide: VisitApiService, useValue: mockVisitApi },
         { provide: ConsultationApiService, useValue: mockConsultationApi },
+        { provide: AuditApiService, useValue: mockAuditApi },
         { provide: I18nService, useValue: mockI18n }
       ]
     }).compileComponents();
@@ -134,5 +162,25 @@ describe('PatientDetailComponent', () => {
     expect(mockConsultationApi.cancelDocument).toHaveBeenCalledWith('doc-uuid-1', 'Erreur doublon');
     expect(component.consultationHistory()[0].documentStatus).toBe('ANNULE');
     expect(component.showRevokeModal).toBe(false);
+  });
+
+  it('should load audit logs when toggled', () => {
+    component.toggleAudit();
+    expect(mockAuditApi.getPatientLogs).toHaveBeenCalledWith('pat-1');
+    expect(component.auditLogs()).toEqual(mockAuditLogs);
+    expect(component.showAudit()).toBe(true);
+  });
+
+  it('should evaluate canViewAudit correctly based on roles', () => {
+    expect(component.canViewAudit()).toBe(true); // MEDECIN
+
+    mockAuthToken.session.set({ role: 'ADMIN_CLINIQUE' });
+    expect(component.canViewAudit()).toBe(true);
+
+    mockAuthToken.session.set({ role: 'AUDITEUR' });
+    expect(component.canViewAudit()).toBe(true);
+
+    mockAuthToken.session.set({ role: 'AGENT_ACCUEIL' });
+    expect(component.canViewAudit()).toBe(false);
   });
 });

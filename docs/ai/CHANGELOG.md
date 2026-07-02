@@ -8,6 +8,9 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- Intégration de l'affichage du journal d'audit et sécurité en timeline sous forme collapsible dans le détail du patient unique (STORY-0702 / EPIC-0007).
+- Service d'API Angular `AuditApiService` et clés d'internationalisation FR/EN pour le support multilingue de la traçabilité (STORY-0702).
+- Tests unitaires et d'autorisation d'affichage basés sur les rôles de l'utilisateur actif (STORY-0702).
 - Implémentation du module de traçabilité et logs d'audit (backend) (STORY-0701 / EPIC-0007).
 - Exposition des API REST sécurisées `GET /api/audit/patients/{patientId}` et `GET /api/audit/organizations/{organizationId}` avec isolation multi-tenant stricte (STORY-0701).
 - Ajout d'écouteurs d'événements Spring Security pour journaliser automatiquement les connexions et échecs d'authentification (STORY-0701).
