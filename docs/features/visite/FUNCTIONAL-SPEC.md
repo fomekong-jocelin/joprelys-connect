@@ -30,8 +30,9 @@ Permettre aux agents d'accueil et infirmiers d'ouvrir une visite clinique pour u
 4. À la validation, la visite est créée avec le statut initial `EN_COURS`.
 
 ### 4.2 Saisie des Constantes Vitales (Tri)
-1. Depuis le tableau de bord de la file d'attente active, l'utilisateur clique sur l'action **"Saisir constantes"** pour un patient en attente.
-2. Un formulaire s'affiche demandant de saisir :
+1. Après l'ouverture d'une visite depuis la fiche patient, le patient apparaît dans la **file d'attente active** du dashboard clinique.
+2. Depuis cette file d'attente active, l'utilisateur clique sur l'action **"Saisir constantes"** pour un patient en attente.
+3. Un formulaire s'affiche demandant de saisir :
    * **Température** (°C)
    * **Poids** (kg)
    * **Taille** (cm)
@@ -40,8 +41,9 @@ Permettre aux agents d'accueil et infirmiers d'ouvrir une visite clinique pour u
    * **SpO2** (%)
    * **Glycémie** (g/L)
    * **Fréquence respiratoire** (cycles/min)
-3. **Calcul de l'IMC automatique** : Si l'utilisateur saisit à la fois le poids et la taille, le système calcule et affiche instantanément l'IMC sous le formulaire avec 2 décimales.
-4. À la validation, les constantes sont sauvegardées et associées à la visite.
+4. **Calcul de l'IMC automatique** : Si l'utilisateur saisit à la fois le poids et la taille, le système calcule et affiche instantanément l'IMC sous le formulaire avec 2 décimales.
+5. À la validation, les constantes sont sauvegardées et associées à la visite.
+6. La file d'attente est rechargée et affiche immédiatement les constantes sur la ligne ou la carte de la visite.
 
 ### 4.3 Consultation et Clôture
 1. Les constantes saisies s'affichent dans les détails de la visite sur le tableau de bord et dans l'historique du patient.
@@ -68,3 +70,5 @@ Permettre aux agents d'accueil et infirmiers d'ouvrir une visite clinique pour u
 3. Les constantes vitales s'affichent de façon structurée (cartes ou badges colorés) sur le dashboard pour chaque patient de la file d'attente si elles ont été saisies.
 4. L'isolation multi-tenant est étanche sur les constantes vitales.
 5. Traduction complète FR/EN des étiquettes et des messages d'erreurs de validation.
+6. Si aucune visite active n'existe, le dashboard affiche un état vide explicite indiquant d'ouvrir une visite depuis un dossier patient.
+7. La file d'attente ne doit jamais rester bloquée sur l'état "Chargement" après succès ou erreur API.

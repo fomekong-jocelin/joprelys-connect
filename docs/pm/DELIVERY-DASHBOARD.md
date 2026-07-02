@@ -9,7 +9,8 @@ Donner une vision simple de la capacité, de l'avancement, des dérives et de la
 | Sprint | Capacité planifiée | Charge engagée | Charge terminée | Taux livraison | Tickets réouverts | Bugs post-sprint | Commentaire |
 |---|---:|---:|---:|---:|---:|---:|---|
 | SPRINT-0001 | | | | | | | |
-| SPRINT-0002 | 15.0j | 5.70j | 0.90j | En cours | 1 | 0 | Charge terminée = tickets DONE uniquement ; STORY-0201 reprise en review pour correction UI/mobile-first ; build production Angular à relancer sous Node pair/LTS |
+| SPRINT-0002 | 15.0j | 5.75j | 1.80j | En cours | 1 | 0 | Charge terminée = tickets DONE uniquement ; STORY-0402 terminée, STORY-0201 reste en review |
+| SPRINT-0003 | 15.0j | 9.25j | À consolider | En cours | 0 | 0 | STORY-0104 backend/front implémentés ; validations Maven backend et build prod Angular restent bloquées par environnement |
 
 ## 3. Tableau par développeur
 
@@ -22,6 +23,8 @@ Donner une vision simple de la capacité, de l'avancement, des dérives et de la
 | Ticket | Estimation | Temps passé | Écart | Cause probable | Action corrective |
 |---|---:|---:|---:|---|---|
 | STORY-0201 | 1.0j | 0.65j | -0.35j | Reprise UI ajoutée après review utilisateur, mais reste sous l'estimation initiale | Validation visuelle mobile + build production sous Node pair/LTS avant validation Lead |
+| STORY-0402 | 0.8j | 0.90j | +0.10j | Correction complémentaire du blocage de file d'attente et sécurisation du fetch des constantes | Ticket passé DONE après tests backend/frontend/build |
+| STORY-0104 | 0.8j | 0.55j | -0.25j | Backend et frontend réalisés ; validation Maven backend et build production Angular bloqués par réseau/dépendances externes | Relancer les tests backend et régler l'inlining Google Fonts pour le build production |
 
 ## 5. Qualité
 

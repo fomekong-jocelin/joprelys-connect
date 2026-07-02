@@ -1,6 +1,6 @@
-import { Component, computed, inject, OnInit } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { AuthTokenStorageService } from '../auth/auth-token-storage.service';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
 import { VisitApiService } from '../visit/visit-api.service';
@@ -19,21 +19,26 @@ export class DashboardComponent implements OnInit {
   private readonly tokenStorage = inject(AuthTokenStorageService);
   private readonly i18n = inject(I18nService);
   private readonly visitApi = inject(VisitApiService);
+  private readonly router = inject(Router);
 
   readonly session = this.tokenStorage.session;
   readonly welcomeLabel = computed(() => this.i18n.t('dashboard.welcome'));
   readonly authorizedLabel = computed(() => this.i18n.t('dashboard.authorized'));
   readonly roleLabel = computed(() => this.i18n.t('dashboard.role'));
 
-  activeVisits: Visit[] = [];
-  isLoadingQueue = false;
-  queueError = '';
+  activeVisits = signal<Visit[]>([]);
+  isLoadingQueue = signal(false);
+  queueError = signal('');
+
+  // Drawer state
+  showVisitDrawer = signal(false);
+  selectedVisitForDrawer = signal<Visit | null>(null);
 
   // Vitals entry modal state
-  showVitalsModal = false;
-  selectedVisitForVitals: Visit | null = null;
-  isSavingVitals = false;
-  vitalsError = '';
+  showVitalsModal = signal(false);
+  selectedVisitForVitals = signal<Visit | null>(null);
+  isSavingVitals = signal(false);
+  vitalsError = signal('');
 
   vitalsTemp?: number;
   vitalsWeight?: number;
@@ -62,18 +67,39 @@ export class DashboardComponent implements OnInit {
   }
 
   loadQueue(): void {
-    this.isLoadingQueue = true;
-    this.queueError = '';
+    this.isLoadingQueue.set(true);
+    this.queueError.set('');
     this.visitApi.getActiveVisits().subscribe({
       next: (data) => {
-        this.activeVisits = data;
-        this.isLoadingQueue = false;
+        this.activeVisits.set(data);
+        this.isLoadingQueue.set(false);
+
+        // Update selected visit in the drawer if it's currently open
+        const currentDrawerVisit = this.selectedVisitForDrawer();
+        if (currentDrawerVisit) {
+          const updated = data.find(v => v.id === currentDrawerVisit.id);
+          if (updated) {
+            this.selectedVisitForDrawer.set(updated);
+          } else {
+            this.closeVisitDrawer();
+          }
+        }
       },
       error: (err) => {
-        this.isLoadingQueue = false;
-        this.queueError = 'Impossible de charger la file d\'attente active.';
+        this.isLoadingQueue.set(false);
+        this.queueError.set(err.error?.detail || 'Impossible de charger la file d\'attente active.');
       }
     });
+  }
+
+  openVisitDrawer(visit: Visit): void {
+    this.selectedVisitForDrawer.set(visit);
+    this.showVisitDrawer.set(true);
+  }
+
+  closeVisitDrawer(): void {
+    this.showVisitDrawer.set(false);
+    this.selectedVisitForDrawer.set(null);
   }
 
   closeVisit(visitId: string): void {
@@ -83,6 +109,10 @@ export class DashboardComponent implements OnInit {
 
     this.visitApi.closeVisit(visitId).subscribe({
       next: () => {
+        const currentDrawerVisit = this.selectedVisitForDrawer();
+        if (currentDrawerVisit && currentDrawerVisit.id === visitId) {
+          this.closeVisitDrawer();
+        }
         this.loadQueue();
       },
       error: (err) => {
@@ -93,6 +123,10 @@ export class DashboardComponent implements OnInit {
 
   t(key: string): string {
     return this.i18n.t(key);
+  }
+
+  startConsultation(visitId: string): void {
+    this.router.navigate(['/clinic/consultation', visitId]);
   }
 
   get computedBmi(): number | null {
@@ -111,10 +145,44 @@ export class DashboardComponent implements OnInit {
     return 'bg-red-50 text-red-700 dark:bg-red-950/25 dark:text-red-300';
   }
 
+  isTempInvalid(): boolean {
+    return this.vitalsTemp !== undefined && this.vitalsTemp !== null && (this.vitalsTemp < 30 || this.vitalsTemp > 45);
+  }
+  isWeightInvalid(): boolean {
+    return this.vitalsWeight !== undefined && this.vitalsWeight !== null && (this.vitalsWeight < 1 || this.vitalsWeight > 500);
+  }
+  isHeightInvalid(): boolean {
+    return this.vitalsHeight !== undefined && this.vitalsHeight !== null && (this.vitalsHeight < 30 || this.vitalsHeight > 250);
+  }
+  isPulseInvalid(): boolean {
+    return this.vitalsPulse !== undefined && this.vitalsPulse !== null && (this.vitalsPulse < 20 || this.vitalsPulse > 250);
+  }
+  isSystolicInvalid(): boolean {
+    return this.vitalsSystolic !== undefined && this.vitalsSystolic !== null && (this.vitalsSystolic < 40 || this.vitalsSystolic > 250);
+  }
+  isDiastolicInvalid(): boolean {
+    return this.vitalsDiastolic !== undefined && this.vitalsDiastolic !== null && (this.vitalsDiastolic < 30 || this.vitalsDiastolic > 150);
+  }
+  isSpo2Invalid(): boolean {
+    return this.vitalsSpo2 !== undefined && this.vitalsSpo2 !== null && (this.vitalsSpo2 < 50 || this.vitalsSpo2 > 100);
+  }
+  isGlycemiaInvalid(): boolean {
+    return this.vitalsGlycemia !== undefined && this.vitalsGlycemia !== null && (this.vitalsGlycemia < 0.1 || this.vitalsGlycemia > 10.0);
+  }
+  isRespInvalid(): boolean {
+    return this.vitalsResp !== undefined && this.vitalsResp !== null && (this.vitalsResp < 5 || this.vitalsResp > 100);
+  }
+
+  isAnyVitalInvalid(): boolean {
+    return this.isTempInvalid() || this.isWeightInvalid() || this.isHeightInvalid() ||
+        this.isPulseInvalid() || this.isSystolicInvalid() || this.isDiastolicInvalid() ||
+        this.isSpo2Invalid() || this.isGlycemiaInvalid() || this.isRespInvalid();
+  }
+
   openVitalsModal(visit: Visit): void {
-    this.selectedVisitForVitals = visit;
-    this.vitalsError = '';
-    this.isSavingVitals = false;
+    this.selectedVisitForVitals.set(visit);
+    this.vitalsError.set('');
+    this.isSavingVitals.set(false);
 
     if (visit.vitals) {
       this.vitalsTemp = visit.vitals.temperature;
@@ -138,21 +206,22 @@ export class DashboardComponent implements OnInit {
       this.vitalsResp = undefined;
     }
 
-    this.showVitalsModal = true;
+    this.showVitalsModal.set(true);
   }
 
   closeVitalsModal(): void {
-    if (!this.isSavingVitals) {
-      this.showVitalsModal = false;
-      this.selectedVisitForVitals = null;
+    if (!this.isSavingVitals()) {
+      this.showVitalsModal.set(false);
+      this.selectedVisitForVitals.set(null);
     }
   }
 
   submitVitals(): void {
-    if (!this.selectedVisitForVitals || this.isSavingVitals) return;
+    const selectedVisit = this.selectedVisitForVitals();
+    if (!selectedVisit || this.isSavingVitals()) return;
 
-    this.isSavingVitals = true;
-    this.vitalsError = '';
+    this.isSavingVitals.set(true);
+    this.vitalsError.set('');
 
     const payload = {
       temperature: this.vitalsTemp,
@@ -166,16 +235,16 @@ export class DashboardComponent implements OnInit {
       respiratoryRate: this.vitalsResp
     };
 
-    this.visitApi.saveVitals(this.selectedVisitForVitals.id, payload).subscribe({
+    this.visitApi.saveVitals(selectedVisit.id, payload).subscribe({
       next: () => {
-        this.isSavingVitals = false;
-        this.showVitalsModal = false;
-        this.selectedVisitForVitals = null;
+        this.isSavingVitals.set(false);
+        this.showVitalsModal.set(false);
+        this.selectedVisitForVitals.set(null);
         this.loadQueue();
       },
       error: (err) => {
-        this.isSavingVitals = false;
-        this.vitalsError = err.error?.detail || err.error?.title || 'Une erreur est survenue lors de l\'enregistrement des constantes.';
+        this.isSavingVitals.set(false);
+        this.vitalsError.set(err.error?.detail || err.error?.title || 'Une erreur est survenue lors de l\'enregistrement des constantes.');
       }
     });
   }

@@ -1,0 +1,44 @@
+# Operating system
+.DS_Store
+Thumbs.db
+
+# IDEs and editors
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+
+# Java / Maven / Spring
+backend/target/
+target/
+*.class
+
+# Angular / Node
+web/node_modules/
+web/dist/
+web/.angular/cache/
+node_modules/
+dist/
+coverage/
+
+# Runtime storage generated locally
+storage/
+backend/storage/
+
+# Temporary files
+tmp/
+temp/
+*.tmp

@@ -25,19 +25,20 @@
 | [STORY-0201](../backlog/STORY-0201-enregistrement-clinique.md) | Enregistrement de la Clinique Pilote & Multi-tenant | 3 | 1.0j | Gemini / Codex | Lead Developer | REVIEW |
 | [STORY-0301](../backlog/STORY-0301-enregistrement-patient.md) | Enregistrement Patient & Génération du DPU | 3 | 1.0j | Gemini | Lead Developer | TODO |
 | [STORY-0302](../backlog/STORY-0302-recherche-patient.md) | Recherche de Patients Multicritères | 3 | 0.5j | Gemini | Lead Developer | TODO |
-| [STORY-0401](../backlog/STORY-0401-ouverture-visite.md) | Ouverture & Clôture de Visite Patient | 2 | 0.5j | Gemini | Lead Developer | TODO |
+| [STORY-0401](../backlog/STORY-0401-ouverture-visite.md) | Ouverture & Clôture de Visite Patient | 2 | 0.5j | Antigravity | Lead Developer | REVIEW |
+| [STORY-0402](../backlog/STORY-0402-saisie-constantes.md) | Saisie des Constantes Vitales & Calcul IMC | 3 | 0.8j | Antigravity / Codex | Lead Developer | DONE |
 
 ## 4. Synthèse capacité
 
 | Élément | Valeur |
 |---|---:|
 | Capacité planifiable totale | 15.0j |
-| Charge engagée | 5.70j |
-| Marge restante | 9.30j |
-| Taux de charge | 38.0 % |
+| Charge engagée | 5.75j |
+| Marge restante | 9.25j |
+| Taux de charge | 38.3 % |
 
 > [!NOTE]
-> La charge est calibrée à 38.0 % car ce sprint comprend l'effort technique initial d'échafaudage de l'architecture des dépôts (Spring Boot, Angular et/ou Flutter), la base de données, l'authentification, RBAC et la reprise UI mobile-first de STORY-0201.
+> La charge est calibrée à 38.3 % car ce sprint comprend l'effort technique initial d'échafaudage de l'architecture des dépôts (Spring Boot, Angular et/ou Flutter), la base de données, l'authentification, RBAC, la reprise UI mobile-first de STORY-0201 et la finalisation de la saisie des constantes vitales.
 
 ## 5. Risques sprint
 
@@ -53,7 +54,7 @@
 - [x] L'écran de connexion frontend est connecté aux API sécurisées par JWT.
 - [x] Les pages s'affichent uniquement selon le rôle de l'utilisateur connecté.
 - [ ] L'enregistrement patient génère des DPU uniques sans collision.
-- [ ] L'agent d'accueil peut ouvrir une visite pour un patient et la voir apparaître dans la file d'attente.
+- [x] L'agent d'accueil peut ouvrir une visite pour un patient et la voir apparaître dans la file d'attente.
 
 ## Impact version / SemVer
 

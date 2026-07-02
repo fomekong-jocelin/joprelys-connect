@@ -1,16 +1,21 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, OnInit, output, signal } from '@angular/core';
 import { ButtonComponent } from '../shared/ui/button.component';
 import { CardComponent } from '../shared/ui/card.component';
 import { Patient } from './patient.models';
 import { AuthTokenStorageService } from '../auth/auth-token-storage.service';
 import { VisitApiService } from '../visit/visit-api.service';
+import { Visit } from '../visit/visit.models';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { SlicePipe } from '@angular/common';
+import { ConsultationApiService } from '../consultation/consultation-api.service';
+import { Consultation } from '../consultation/consultation.models';
+import { I18nService } from '../core/i18n/i18n.service';
 
 @Component({
   selector: 'app-patient-detail',
   standalone: true,
-  imports: [ButtonComponent, CardComponent, FormsModule],
+  imports: [ButtonComponent, CardComponent, FormsModule, SlicePipe],
   template: `
     <app-ui-card [title]="patient().fullName">
       <div class="space-y-6">
@@ -106,12 +111,93 @@ import { FormsModule } from '@angular/forms';
           </div>
         </div>
 
+        <!-- Section 4: Historique Médical -->
+        <div class="pt-4 border-t" style="border-color: var(--border-color)">
+          <button
+            (click)="toggleHistory()"
+            class="flex items-center justify-between w-full text-left group cursor-pointer"
+          >
+            <h3 class="text-sm font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">
+              Historique Médical
+            </h3>
+            <svg
+              class="w-4 h-4 transition-transform duration-200"
+              [class.rotate-180]="showHistory()"
+              style="color: var(--text-muted)"
+              fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          @if (showHistory()) {
+            <div class="mt-4 space-y-3">
+              @if (downloadError()) {
+                <div class="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-red-700 dark:text-red-300 font-semibold mb-3 leading-relaxed flex justify-between items-center">
+                  <span>{{ downloadError() }}</span>
+                  <button (click)="downloadError.set(null)" class="text-red-500 hover:text-red-700 cursor-pointer ml-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              }
+
+              @if (isLoadingHistory()) {
+                <div class="py-6 text-center">
+                  <div class="inline-block w-5 h-5 rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin"></div>
+                  <p class="mt-2 text-xs font-semibold" style="color: var(--text-muted)">Chargement de l'historique...</p>
+                </div>
+              } @else if (consultationHistory().length === 0) {
+                <div class="p-4 text-center border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+                  <p class="text-sm font-semibold" style="color: var(--text-muted)">Aucun antécédent de consultation enregistré.</p>
+                </div>
+              } @else {
+                @for (consult of consultationHistory(); track consult.id) {
+                  <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 space-y-2">
+                    <div class="flex items-start justify-between gap-2">
+                      <div>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 uppercase tracking-wider">
+                          {{ consult.visitNumber }}
+                        </span>
+                        <span class="ml-2 text-xs font-semibold" style="color: var(--text-muted)">
+                          {{ consult.createdAt | slice:0:10 }}
+                        </span>
+                      </div>
+                      <span class="text-xs font-semibold" style="color: var(--text-muted)">Dr. {{ consult.doctorName }}</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-100/50 dark:border-slate-800/40 gap-4">
+                      <p class="text-sm font-semibold" style="color: var(--text-primary)">
+                        <span class="text-xs font-bold uppercase" style="color: var(--text-muted)">Diagnostic : </span>
+                        {{ consult.diagnosis }}
+                      </p>
+                      <button 
+                        (click)="downloadPdf(consult)"
+                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-extrabold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 cursor-pointer transition-colors shrink-0"
+                      >
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        {{ i18n.t('patients.downloadPdf') }}
+                      </button>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          }
+        </div>
+
         <div class="flex justify-end gap-3 pt-4 border-t" style="border-color: var(--border-color)">
           <app-ui-button variant="secondary" (pressed)="back.emit()">
             Retour à la liste
           </app-ui-button>
-          
-          @if (canAdmit()) {
+
+          @if (canStartConsultation()) {
+            <app-ui-button variant="primary" (pressed)="goToConsultation()">
+              Démarrer la consultation
+            </app-ui-button>
+          } @else if (canAdmit()) {
             <app-ui-button variant="primary" (pressed)="openModal()">
               Ouvrir une visite
             </app-ui-button>
@@ -188,19 +274,30 @@ import { FormsModule } from '@angular/forms';
     }
   `,
 })
-export class PatientDetailComponent {
+export class PatientDetailComponent implements OnInit {
   readonly patient = input.required<Patient>();
   readonly back = output<void>();
 
   private readonly tokenStorage = inject(AuthTokenStorageService);
   private readonly visitApi = inject(VisitApiService);
   private readonly router = inject(Router);
+  readonly i18n = inject(I18nService);
 
   showVisitModal = false;
+  downloadError = signal<string | null>(null);
   isSubmitting = signal(false);
   visitReason = '';
   visitOrientation = '';
   visitError = '';
+
+  consultationHistory = signal<Consultation[]>([]);
+  showHistory = signal(false);
+  isLoadingHistory = signal(false);
+  historyLoaded = false; // garde pour éviter double chargement
+
+  activeVisit = signal<Visit | null>(null);
+
+  private readonly consultationApi = inject(ConsultationApiService);
 
   readonly session = this.tokenStorage.session;
 
@@ -208,7 +305,14 @@ export class PatientDetailComponent {
 
   readonly canAdmit = computed(() => {
     const role = this.session()?.role;
-    return role === 'AGENT_ACCUEIL' || role === 'INFIRMIER' || role === 'MEDECIN' || role === 'ADMIN_CLINIQUE';
+    const allowedRoles = ['AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'];
+    return allowedRoles.includes(role || '') && this.activeVisit() === null;
+  });
+
+  // Un médecin/admin peut démarrer une consultation si une visite active existe pour ce patient
+  readonly canStartConsultation = computed(() => {
+    const role = this.session()?.role;
+    return (role === 'MEDECIN' || role === 'ADMIN_CLINIQUE') && this.activeVisit() !== null;
   });
 
   readonly age = computed(() => {
@@ -264,4 +368,74 @@ export class PatientDetailComponent {
       }
     });
   }
+
+  ngOnInit(): void {
+    // Chercher la visite active du patient pour les médecins
+    const role = this.session()?.role;
+    if (role === 'MEDECIN' || role === 'ADMIN_CLINIQUE') {
+      this.visitApi.getActiveVisits().subscribe({
+        next: (visits) => {
+          const found = visits.find(v => v.patientId === this.patient().id) ?? null;
+          this.activeVisit.set(found);
+        },
+        error: () => { /* silencieux */ }
+      });
+    }
+  }
+
+  loadHistory(): void {
+    const role = this.session()?.role;
+    if (role !== 'MEDECIN' && role !== 'ADMIN_CLINIQUE' && role !== 'INFIRMIER') {
+      return;
+    }
+    this.isLoadingHistory.set(true);
+    this.consultationApi.getPatientConsultations(this.patient().id).subscribe({
+      next: (data) => {
+        this.consultationHistory.set(data);
+        this.isLoadingHistory.set(false);
+        this.historyLoaded = true;
+      },
+      error: () => {
+        // 403 or other errors ignored silently
+        this.isLoadingHistory.set(false);
+        this.historyLoaded = true;
+      }
+    });
+  }
+
+  toggleHistory(): void {
+    const newState = !this.showHistory();
+    this.showHistory.set(newState);
+    // Charger l'historique uniquement au premier clic (lazy)
+    if (newState && !this.historyLoaded) {
+      this.loadHistory();
+    }
+  }
+
+  goToConsultation(): void {
+    const visit = this.activeVisit();
+    if (visit) {
+      this.router.navigate(['/clinic/consultation', visit.id]);
+    }
+  }
+
+  downloadPdf(consultation: Consultation): void {
+    this.downloadError.set(null);
+    this.consultationApi.downloadDocument(consultation.visitId).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Ordonnance_Visite_${consultation.visitNumber}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.downloadError.set(this.i18n.t('patients.downloadPdfError'));
+      }
+    });
+  }
 }
+

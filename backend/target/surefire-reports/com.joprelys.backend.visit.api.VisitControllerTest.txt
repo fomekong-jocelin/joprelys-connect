@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.joprelys.backend.visit.api.VisitControllerTest
--------------------------------------------------------------------------------
-Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.726 s -- in com.joprelys.backend.visit.api.VisitControllerTest

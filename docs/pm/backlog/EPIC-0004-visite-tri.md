@@ -29,8 +29,8 @@ Permettre le suivi des visites des patients au sein de la clinique, de l'accueil
 
 | ID | Titre | Priorité | SP | Statut | Sprint cible |
 |---|---|---|---:|---|---|
-| [STORY-0401](STORY-0401-ouverture-visite.md) | Ouverture et clôture de visite patient | P0 | 2 | BACKLOG | SPRINT-0002 |
-| STORY-0402 | Saisie des constantes vitales et calcul IMC | P0 | 3 | BACKLOG | SPRINT-0003 |
+| [STORY-0401](STORY-0401-ouverture-visite.md) | Ouverture et clôture de visite patient | P0 | 2 | REVIEW | SPRINT-0002 |
+| [STORY-0402](STORY-0402-saisie-constantes.md) | Saisie des constantes vitales et calcul IMC | P0 | 3 | DONE | SPRINT-0002 |
 
 ## 5. Dépendances
 
@@ -45,8 +45,8 @@ Permettre le suivi des visites des patients au sein de la clinique, de l'accueil
 
 ## 7. Définition de succès
 
-- [ ] L'infirmier peut enregistrer les constantes vitales en moins de 30 secondes.
-- [ ] L'IMC se calcule et s'enregistre automatiquement dès que le poids et la taille sont valides.
+- [x] L'infirmier peut enregistrer les constantes vitales en moins de 30 secondes.
+- [x] L'IMC se calcule et s'enregistre automatiquement dès que le poids et la taille sont valides.
 - [ ] Une visite ne peut être clôturée que si les étapes médicales obligatoires sont accomplies.
 
 ## 8. Estimation globale

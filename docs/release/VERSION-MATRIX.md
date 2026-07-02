@@ -6,8 +6,8 @@
 
 | Champ | Valeur |
 |---|---|
-| Version courante | 0.3.0 |
-| Dernière release | 2026-07-01 |
+| Version courante | 0.4.0 |
+| Dernière release | 2026-07-02 |
 | Stratégie | SemVer |
 | Source de vérité | `VERSION` + `docs/ai/CHANGELOG.md` |
 
@@ -15,10 +15,10 @@
 
 | Module | Version | Type de version | Dernière release | Compatibilité | Notes |
 |---|---:|---|---|---|---|
-| Backend Spring Boot | 0.3.0 | SemVer | 2026-07-01 | API v0 | À adapter au projet |
-| Angular Web | 0.3.0 | SemVer | 2026-07-01 | API v0 | À adapter au projet |
+| Backend Spring Boot | 0.4.0 | SemVer | 2026-07-02 | API v0 | À adapter au projet |
+| Angular Web | 0.4.0 | SemVer | 2026-07-02 | API v0 | À adapter au projet |
 | Flutter Mobile | 0.3.0 | SemVer | 2026-07-01 | API v0 | À adapter au projet |
-| API Contract | 0.3.0 | SemVer | 2026-07-01 | v0 | À adapter au projet |
+| API Contract | 0.4.0 | SemVer | 2026-07-02 | v0 | À adapter au projet |
 | Database Schema | 0.3.0 | Migration versionnée | 2026-07-01 | v0 | Flyway/Liquibase recommandé |
 
 ## Compatibilité API / clients

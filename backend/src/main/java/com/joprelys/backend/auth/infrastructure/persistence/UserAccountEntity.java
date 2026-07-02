@@ -95,4 +95,24 @@ public class UserAccountEntity {
 	public void setOrganizationId(UUID organizationId) {
 		this.organizationId = organizationId;
 	}
+
+	public void setDisplayName(String displayName) {
+		this.displayName = displayName;
+	}
+
+	public void setRole(String role) {
+		this.role = role;
+	}
+
+	public void setEnabled(boolean enabled) {
+		this.enabled = enabled;
+	}
+
+	public Instant getCreatedAt() {
+		return createdAt;
+	}
+
+	public Instant getUpdatedAt() {
+		return updatedAt;
+	}
 }

@@ -26,7 +26,8 @@ describe('DashboardComponent', () => {
 
     mockVisitApi = {
       getActiveVisits: vi.fn().mockReturnValue(of([])),
-      closeVisit: vi.fn()
+      closeVisit: vi.fn(),
+      saveVitals: vi.fn().mockReturnValue(of({ weight: 70, height: 175, bmi: 22.86 }))
     };
 
     mockI18n = {
@@ -50,6 +51,8 @@ describe('DashboardComponent', () => {
 
   it('should load active visits on init if clinical role', () => {
     expect(mockVisitApi.getActiveVisits).toHaveBeenCalled();
+    expect(component.isLoadingQueue()).toBe(false);
+    expect(component.activeVisits()).toEqual([]);
   });
 
   it('should calculate BMI correctly when weight and height are provided', () => {
@@ -66,5 +69,31 @@ describe('DashboardComponent', () => {
     component.vitalsWeight = 70;
     component.vitalsHeight = undefined;
     expect(component.computedBmi).toBeNull();
+  });
+
+  it('should save vitals for the selected active visit and reload the queue', () => {
+    component.openVitalsModal({
+      id: 'visit-1',
+      visitNumber: 'VIS-001',
+      patientId: 'patient-1',
+      patientName: 'Patient Test',
+      patientDpu: 'DPU-001',
+      reason: 'Fièvre',
+      orientation: 'Tri',
+      status: 'EN_COURS',
+      createdAt: '2026-07-02T08:00:00Z'
+    });
+    component.vitalsWeight = 70;
+    component.vitalsHeight = 175;
+
+    component.submitVitals();
+
+    expect(mockVisitApi.saveVitals).toHaveBeenCalledWith('visit-1', expect.objectContaining({
+      weight: 70,
+      height: 175
+    }));
+    expect(component.showVitalsModal()).toBe(false);
+    expect(component.selectedVisitForVitals()).toBeNull();
+    expect(mockVisitApi.getActiveVisits).toHaveBeenCalledTimes(2);
   });
 });

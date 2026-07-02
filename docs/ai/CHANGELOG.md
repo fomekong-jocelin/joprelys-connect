@@ -8,6 +8,55 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- Implémentation backend de la gestion du personnel clinique (STORY-0104 / EPIC-0001).
+- Ajout de l'API sécurisée `ADMIN_CLINIQUE` `/api/staff` pour lister, inviter, modifier et activer/désactiver les collaborateurs d'une clinique (STORY-0104).
+- Ajout de `StaffService` avec isolation multi-tenant par `organizationId`, validation des rôles cliniques, génération du mot de passe temporaire `Jop-XXXXXX` et hash BCrypt (STORY-0104).
+- Ajout de `StaffControllerTest` couvrant liste tenant-aware, invitation, doublon email, RBAC, cross-tenant, modification et désactivation bloquant la connexion (STORY-0104).
+- Implémentation Angular de la page `/clinic/staff` pour la gestion du personnel clinique, réservée à `ADMIN_CLINIQUE` (STORY-0104).
+- Ajout de `StaffApiService`, `StaffManagementComponent` et `StaffManagementComponent` tests pour lister, inviter, modifier, copier le mot de passe temporaire et suspendre/réactiver les collaborateurs (STORY-0104).
+- Ajout de l'accès "Équipe clinique" dans le dashboard et des traductions FR/EN associées (STORY-0104).
+- Amélioration et refondation du modal de saisie des constantes vitales (design premium, groupements logiques, icônes, et validation client en temps réel avec désactivation du bouton d'enregistrement).
+- Backend : Ajout de l'endpoint `GET /api/visits/{id}` requis lors du chargement initial de la saisie de consultation.
+- Sécurité : Configuration de Spring Security pour autoriser `/error` publiquement, évitant de transformer les erreurs 404 en 401 Unauthorized.
+- Implémentation de la page publique de vérification d'authenticité et intégration du téléchargement de PDF (STORY-0602 / EPIC-0006).
+- Création du composant public `VerificationComponent` avec design premium, responsive, support du mode sombre et protection du secret médical (RGPD).
+- Ajout de la route anonyme `/verify/:documentId` dans `app.routes.ts`.
+- Intégration du bouton "Télécharger PDF" dans la section historique médical du composant `PatientDetailComponent` avec gestion d'erreurs en cas de visite non clôturée.
+- Implémentation de la génération et du stockage des documents PDF médicaux lors de la clôture des visites (STORY-0601 / EPIC-0006).
+- Ajout de l'entité JPA `MedicalDocumentEntity` et de son repository `MedicalDocumentRepository` avec support multi-tenant via `@TenantId`.
+- Ajout du générateur séquentiel `DocumentNumberGenerator` (format `DOC-YYYYMMDD-XXXXXX`) contournant le tenant context via `JdbcTemplate`.
+- Ajout du générateur de QR codes `QrCodeGeneratorService` via `zxing`.
+- Ajout du générateur de PDF `PdfGeneratorService` via `openpdf` (conversion en format de tableau moderne `PdfPTable` et `PdfPCell`).
+- Ajout de `DocumentService` pour l'orchestration de la génération du QR code et du PDF, le stockage sur le disque local, et la persistance en base.
+- Intégration de la génération automatique dans `VisitService.closeVisit()`.
+- Ajout de `DocumentController` exposant un endpoint sécurisé de téléchargement de PDF `/api/visits/{visitId}/document` (RBAC) et un endpoint public anonyme de vérification `/api/public/documents/{id}/verify`.
+- Adaptation de `SecurityConfig` pour ouvrir l'accès public à `/api/public/**`.
+- Ajout de tests d'intégration complets dans `DocumentControllerTest` (vérification de la clôture, du téléchargement sécurisé, du cross-tenant, et de la validation publique sans informations sensibles).
+- Implémentation du module de consultation médicale backend (STORY-0501 / EPIC-0005).
+- Ajout de la migration Flyway `V6__create_consultation_table.sql` créant la table `consultations` (OneToOne avec `visits`, FK vers `users`, `organization_id` multi-tenant, champs `symptoms`, `clinicalExam`, `diagnosis`, `advice`, `followUp`, `status`).
+- Ajout de l'entité JPA `ConsultationEntity` avec annotation `@TenantId` Hibernate pour l'isolation multi-tenant et relation ManyToOne lazy vers `UserAccountEntity` (médecin) (STORY-0501).
+- Ajout du `ConsultationRepository` avec requête JPQL `findByVisitId()` et `existsByVisitId()` (STORY-0501).
+- Ajout du `ConsultationService` exposant un pattern upsert (création ou mise à jour) résolvant le médecin via `UserAccountRepository.findByEmail()` depuis le principal JWT (STORY-0501).
+- Ajout du `ConsultationController` exposant `POST /api/visits/{id}/consultation` (rôles MEDECIN, ADMIN_CLINIQUE) et `GET /api/visits/{id}/consultation` (tous les rôles cliniques) (STORY-0501).
+- Ajout du `ConsultationControllerTest` avec 11 cas de test couvrant création, upsert, lecture, RBAC (403), validation Bean (400), visite inexistante (404), sans token (401), isolation multi-tenant cross-tenant (404) et visite clôturée (400) (STORY-0501).
+- Implémentation du module de prescription médicale backend (STORY-0502 / EPIC-0005).
+- Ajout de la migration Flyway `V7__create_prescription_table.sql` créant les tables `prescriptions` (OneToOne avec `consultations`, @TenantId) et `prescription_items` (1-N médicaments par prescription) (STORY-0502).
+- Ajout de `PrescriptionEntity`, `PrescriptionItemEntity`, `PrescriptionRepository` (pattern upsert avec `orphanRemoval`) (STORY-0502).
+- Ajout du `PrescriptionService` et du `PrescriptionController` exposant `POST/GET /api/consultations/{id}/prescription` (rôles MEDECIN/ADMIN_CLINIQUE pour la saisie, tous les rôles cliniques + PHARMACIEN pour la lecture) (STORY-0502).
+- Ajout du `PrescriptionControllerTest` avec 9 cas de test (création, upsert, lecture, RBAC 403, liste vide 400, 404, 401, isolation multi-tenant) (STORY-0502).
+- Ajout de `ConsultationHistoryController` exposant `GET /api/patients/{id}/consultations` (liste paginée des consultations d'un patient, rôles MEDECIN/ADMIN_CLINIQUE/INFIRMIER) (STORY-0504 backend).
+- Ajout de `findByPatientIdOrderByCreatedAtDesc()` dans `ConsultationRepository` et `getConsultationsByPatientId()` dans `ConsultationService` (STORY-0504 backend).
+- Implémentation du module consultation Angular (STORY-0503 / EPIC-0005).
+- Ajout de `consultation.models.ts` (interfaces Consultation, Prescription, PrescriptionItem, SaveConsultationRequest, SavePrescriptionRequest) (STORY-0503).
+- Ajout de `ConsultationApiService` avec 5 méthodes HTTP (saveConsultation, getConsultation, savePrescription, getPrescription, getPatientConsultations) (STORY-0503).
+- Ajout du `ConsultationComponent` standalone (route `/clinic/consultation/:visitId`) : formulaire réactif complet (symptoms, clinicalExam, diagnosis, advice, followUp) + FormArray prescription avec lignes dynamiques ajoutables/supprimables + affichage des constantes vitales en lecture seule (STORY-0503).
+- Ajout du bouton "Démarrer la consultation" dans le drawer du tableau de bord, accessible aux rôles MEDECIN et ADMIN_CLINIQUE, naviguant vers l'écran de consultation (STORY-0503).
+- Ajout de la section accordéon "Historique Médical" dans `PatientDetailComponent` : chargement lazy des consultations passées avec date, diagnostic, médecin ; spinner ; message vide (STORY-0504 frontend).
+
+### Fixed
+
+- Correction de la référence de clé étrangère dans `V6__create_consultation_table.sql` : `REFERENCES user_accounts(id)` → `REFERENCES users(id)` (nom réel de la table défini dans `V1__create_users_and_auth_audit.sql`) (STORY-0501).
+
 - Implémentation du module de gestion des visites et de la file d'attente active (STORY-0401).
 - Ajout du script de migration Flyway de création de la table SQL `visits` rattachée au patient et à l'organisation (STORY-0401).
 - Ajout de l'entité JPA `VisitEntity` avec relation FetchType.LAZY pour la performance mémoire et liaison multi-tenant (STORY-0401).
@@ -61,6 +110,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+- Correction du chargement de la file d'attente active du dashboard clinique et chargement des constantes avec les visites actives pour permettre la saisie fiable des constantes après ouverture de visite (STORY-0402).
+- Conception et implémentation d'un volet latéral de détails (Drawer / Slide-over) pour la file d'attente active du tableau de bord : affichage complet et aéré des constantes de tri (icônes et cartes associées) et du motif de visite. Ce volet glisse de la droite sur grand écran et du bas vers le haut (Bottom Sheet scrollable) sur mobile (STORY-0402).
 - Correction de l'erreur de DataSource PostgreSQL manquante au démarrage du backend, et initialisation de l'administrateur système conforme aux standards de production avec SLF4J et contrôle d'activation (TICKET-0102).
 - Configuration du proxy de développement Angular pour rediriger les requêtes `/api/*` vers le backend Spring Boot (TICKET-0103).
 - Amélioration des contrastes de couleurs des textes et liens d'action en mode sombre sur le tableau de bord pour la conformité WCAG AA (TICKET-0107).

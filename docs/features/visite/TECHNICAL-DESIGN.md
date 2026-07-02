@@ -83,6 +83,9 @@ export interface Vitals {
 
 ### 3.3 Affichage des Constantes dans la file d'attente
 * Si les constantes de la visite sont renseignées, le tableau affiche une icône ou un bouton permettant d'afficher une popover avec les constantes (Ex: Temp, Tension, SpO2, IMC).
+* La récupération des visites actives utilise `LEFT JOIN FETCH v.vitals` avec `JOIN FETCH v.patient` pour éviter tout accès lazy hors transaction lors de la sérialisation DTO (`open-in-view=false` en production).
+* L'état Angular de la file d'attente (`activeVisits`, `isLoadingQueue`, `queueError`) est piloté par des `signal()` afin que les transitions asynchrones succès/erreur déclenchent systématiquement le rendu.
+* Après `POST /api/visits/{id}/vitals`, le dashboard recharge `/api/visits/active` pour afficher immédiatement les constantes sauvegardées.
 
 ## 4. Stratégie de Validation et Tests
 
@@ -90,3 +93,5 @@ export interface Vitals {
   1. L'insertion réussie de constantes dans une fourchette valide.
   2. Le rejet si les valeurs sortent des limites autorisées.
   3. L'isolation (impossible pour une clinique d'associer des constantes à une visite d'une autre clinique).
+  4. La file d'attente active retourne les constantes via `/api/visits/active` lorsqu'elles existent.
+* **Frontend** : Tester que la file d'attente quitte l'état loading et que la sauvegarde des constantes ferme la modale puis recharge la file.

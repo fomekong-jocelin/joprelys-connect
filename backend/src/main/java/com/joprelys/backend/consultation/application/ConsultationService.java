@@ -1,0 +1,91 @@
+package com.joprelys.backend.consultation.application;
+
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import com.joprelys.backend.consultation.api.SaveConsultationRequest;
+import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationEntity;
+import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationRepository;
+import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
+import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+public class ConsultationService {
+
+	private final ConsultationRepository consultationRepository;
+	private final VisitRepository visitRepository;
+	private final UserAccountRepository userAccountRepository;
+
+	public ConsultationService(
+			ConsultationRepository consultationRepository,
+			VisitRepository visitRepository,
+			UserAccountRepository userAccountRepository) {
+		this.consultationRepository = consultationRepository;
+		this.visitRepository = visitRepository;
+		this.userAccountRepository = userAccountRepository;
+	}
+
+	/**
+	 * Creates or updates a consultation for a given visit.
+	 * Only one consultation is allowed per visit (upsert pattern).
+	 */
+	@Transactional
+	public ConsultationEntity saveConsultation(UUID visitId, String doctorEmail, SaveConsultationRequest request) {
+		VisitEntity visit = visitRepository.findById(visitId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
+
+		if (!"EN_COURS".equals(visit.getStatus())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"Une consultation ne peut être saisie que sur une visite active (EN_COURS).");
+		}
+
+		UserAccountEntity doctor = userAccountRepository.findByEmail(doctorEmail)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Médecin introuvable."));
+
+		ConsultationEntity consultation = consultationRepository.findByVisitId(visitId)
+				.orElseGet(() -> {
+					String docNumber = generateDocumentNumber();
+					return new ConsultationEntity(visit, doctor, docNumber,
+							request.symptoms(), request.clinicalExam(),
+							request.diagnosis(), request.advice(), request.followUp());
+				});
+
+		// Update fields (upsert)
+		consultation.setSymptoms(request.symptoms());
+		consultation.setClinicalExam(request.clinicalExam());
+		consultation.setDiagnosis(request.diagnosis());
+		consultation.setAdvice(request.advice());
+		consultation.setFollowUp(request.followUp());
+		consultation.setDoctor(doctor);
+
+		return consultationRepository.save(consultation);
+	}
+
+	@Transactional(readOnly = true)
+	public Optional<ConsultationEntity> getConsultationByVisitId(UUID visitId) {
+		if (!visitRepository.existsById(visitId)) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable.");
+		}
+		return consultationRepository.findByVisitId(visitId);
+	}
+
+	private String generateDocumentNumber() {
+		String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+		long count = consultationRepository.count() + 1;
+		return String.format("DOC-CONS-%s-%06d", date, count);
+	}
+
+	@Transactional(readOnly = true)
+	public List<ConsultationEntity> getConsultationsByPatientId(UUID patientId) {
+		return consultationRepository.findByPatientIdOrderByCreatedAtDesc(patientId);
+	}
+}

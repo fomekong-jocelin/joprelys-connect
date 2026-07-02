@@ -36,3 +36,6 @@ joprelys:
       email: ${JOPRELYS_ADMIN_EMAIL:admin@joprelys.local}
       name: ${JOPRELYS_ADMIN_NAME:Administrateur Joprelys}
       password: ${JOPRELYS_ADMIN_PASSWORD:Admin@12345}
+  documents:
+    storage-dir: ${JOPRELYS_DOCUMENTS_STORAGE_DIR:./storage/documents}
+    verification-base-url: ${JOPRELYS_VERIFICATION_BASE_URL:http://localhost:4200/verify}

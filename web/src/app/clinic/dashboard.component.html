@@ -65,6 +65,23 @@
           </div>
         }
 
+        @if (currentSession.role === 'ADMIN_CLINIQUE') {
+          <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan dark:text-cyan-400">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m6-4a4 4 0 11-8 0 4 4 0 018 0zm6 2a3 3 0 10-3-5.197" />
+                </svg>
+              </div>
+              <h2 class="font-display font-bold text-lg text-brand-night dark:text-white">{{ t('staff.dashboardTitle') }}</h2>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">{{ t('staff.dashboardSubtitle') }}</p>
+            <a routerLink="/clinic/staff" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-[#22d3ee] hover:underline cursor-pointer">
+              {{ t('staff.dashboardLink') }}
+            </a>
+          </div>
+        }
+
         <!-- Role-Specific: PHARMACIEN -->
         @if (currentSession.role === 'PHARMACIEN' || currentSession.role === 'ADMIN_JOPRELYS') {
           <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
@@ -123,23 +140,25 @@
           <div class="flex items-center justify-between border-b pb-4 mb-6" style="border-color: var(--border-color)">
             <div>
               <h2 class="font-display font-bold text-xl text-brand-night dark:text-white">File d'Attente Active</h2>
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Liste des patients admis en cours de prise en charge clinique.</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                La file se remplit après l'ouverture d'une visite depuis le dossier patient. Les constantes se saisissent ici, avant la consultation.
+              </p>
             </div>
             <app-ui-button variant="secondary" (pressed)="loadQueue()">
               Actualiser
             </app-ui-button>
           </div>
 
-          @if (isLoadingQueue) {
+          @if (isLoadingQueue()) {
             <div class="py-10 text-center text-sm font-semibold" style="color: var(--text-muted)">
               Chargement de la file d'attente...
             </div>
-          } @else if (queueError) {
+          } @else if (queueError()) {
             <div class="p-4 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-red-700 dark:text-red-300 font-semibold leading-relaxed">
-              {{ queueError }}
+              {{ queueError() }}
             </div>
-          } @else if (activeVisits.length === 0) {
-            <app-empty-state message="Aucun patient dans la file d'attente active."></app-empty-state>
+          } @else if (activeVisits().length === 0) {
+            <app-empty-state message="Aucun patient dans la file d'attente active. Ouvrez une visite depuis un dossier patient pour l'afficher ici."></app-empty-state>
           } @else {
             <!-- Desktop Table View -->
             <div class="hidden md:block overflow-x-auto">
@@ -148,76 +167,58 @@
                   <tr class="border-b" style="border-color: var(--border-color)">
                     <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">N° Visite</th>
                     <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">Patient (DPU)</th>
-                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">Arrivée</th>
-                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">Motif</th>
+                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider whitespace-nowrap" style="color: var(--text-muted)">Arrivée</th>
                     <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">Orientation</th>
-                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">Constantes</th>
                     <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">Statut</th>
-                    @if (canCloseVisit()) {
-                      <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider text-right" style="color: var(--text-muted)">Actions</th>
-                    }
+                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider text-right" style="color: var(--text-muted)">Actions</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y" style="border-color: var(--border-color)">
-                  @for (visit of activeVisits; track visit.id) {
+                  @for (visit of activeVisits(); track visit.id) {
                     <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                       <td class="py-4 px-4 text-sm font-bold text-brand-cyan dark:text-[#22d3ee]">{{ visit.visitNumber }}</td>
                       <td class="py-4 px-4">
                         <span class="font-bold text-sm block" style="color: var(--text-primary)">{{ visit.patientName }}</span>
                         <span class="text-xs font-medium block" style="color: var(--text-muted)">{{ visit.patientDpu }}</span>
                       </td>
-                      <td class="py-4 px-4 text-sm font-semibold" style="color: var(--text-primary)">
+                      <td class="py-4 px-4 text-sm font-semibold whitespace-nowrap" style="color: var(--text-primary)">
                         {{ visit.createdAt | date:'HH:mm' }}
                       </td>
-                      <td class="py-4 px-4 text-sm font-medium" style="color: var(--text-secondary)">{{ visit.reason }}</td>
                       <td class="py-4 px-4">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 whitespace-nowrap">
                           {{ visit.orientation }}
                         </span>
                       </td>
-                      <td class="py-4 px-4 text-sm">
-                        @if (visit.vitals) {
-                          <div class="flex flex-col gap-0.5 text-xs">
-                            @if (visit.vitals.temperature) {
-                              <span class="font-semibold text-slate-700 dark:text-slate-300">
-                                Temp: <strong class="font-extrabold text-slate-900 dark:text-white">{{ visit.vitals.temperature }}°C</strong>
-                              </span>
-                            }
-                            @if (visit.vitals.systolic || visit.vitals.diastolic) {
-                              <span class="font-semibold text-slate-700 dark:text-slate-300">
-                                TA: <strong class="font-extrabold text-slate-900 dark:text-white">{{ visit.vitals.systolic }}/{{ visit.vitals.diastolic }} mmHg</strong>
-                              </span>
-                            }
-                            @if (visit.vitals.bmi) {
-                              <span class="font-semibold text-slate-700 dark:text-slate-300">
-                                IMC: <span class="inline-flex items-center px-1.5 py-0.25 rounded-md font-extrabold" [class]="getBmiClass(visit.vitals.bmi)">{{ visit.vitals.bmi }}</span>
-                              </span>
-                            }
-                            <button (click)="openVitalsModal(visit)" class="text-left text-[10px] font-extrabold text-brand-cyan hover:underline mt-1 cursor-pointer">
-                              Modifier
-                            </button>
-                          </div>
-                        } @else {
-                          <button (click)="openVitalsModal(visit)" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-brand-cyan bg-brand-cyan/10 hover:bg-brand-cyan/20 transition-colors cursor-pointer">
-                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
-                            </svg>
-                            Saisir
-                          </button>
-                        }
-                      </td>
                       <td class="py-4 px-4">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300 whitespace-nowrap">
                           {{ visit.status }}
                         </span>
                       </td>
-                      @if (canCloseVisit()) {
-                        <td class="py-4 px-4 text-right">
-                          <app-ui-button variant="secondary" (pressed)="closeVisit(visit.id)">
-                            Clôturer
-                          </app-ui-button>
-                        </td>
-                      }
+                      <td class="py-4 px-4 text-right whitespace-nowrap">
+                        <div class="inline-flex items-center gap-1">
+                          <!-- Bouton Détails -->
+                          <button
+                            (click)="openVisitDrawer(visit)"
+                            title="Voir les détails"
+                            class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-brand-cyan bg-brand-cyan/10 hover:bg-brand-cyan/20 transition-colors cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </button>
+                          <!-- Bouton Clôturer -->
+                          @if (canCloseVisit()) {
+                            <button
+                              (click)="closeVisit(visit.id)"
+                              title="Clôturer la visite"
+                              class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-colors cursor-pointer">
+                              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          }
+                        </div>
+                      </td>
                     </tr>
                   }
                 </tbody>
@@ -226,7 +227,7 @@
 
             <!-- Mobile Card View -->
             <div class="md:hidden space-y-4">
-              @for (visit of activeVisits; track visit.id) {
+              @for (visit of activeVisits(); track visit.id) {
                 <div class="p-4 bg-brand-gray dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl space-y-3">
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-bold text-brand-cyan dark:text-[#22d3ee]">{{ visit.visitNumber }}</span>
@@ -252,6 +253,9 @@
                       @if (visit.vitals.pulse) {
                         <div class="text-slate-500 dark:text-slate-400">Pouls : <strong class="text-slate-800 dark:text-white">{{ visit.vitals.pulse }} bpm</strong></div>
                       }
+                      @if (visit.vitals.spo2) {
+                        <div class="text-slate-500 dark:text-slate-400">SpO2 : <strong class="text-slate-800 dark:text-white">{{ visit.vitals.spo2 }}%</strong></div>
+                      }
                       @if (visit.vitals.bmi) {
                         <div class="text-slate-500 dark:text-slate-400">IMC : <span class="inline-flex items-center px-1 py-0.25 rounded-md font-bold text-[10px]" [class]="getBmiClass(visit.vitals.bmi)">{{ visit.vitals.bmi }}</span></div>
                       }
@@ -259,19 +263,32 @@
                   }
 
                   <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/40">
-                    <div class="flex gap-2">
-                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300">
-                        {{ visit.orientation }}
-                      </span>
-                      <button (click)="openVitalsModal(visit)" class="text-xs font-bold text-brand-cyan hover:underline cursor-pointer">
-                        {{ visit.vitals ? 'Modifier constantes' : 'Saisir constantes' }}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 whitespace-nowrap">
+                      {{ visit.orientation }}
+                    </span>
+                    <div class="inline-flex items-center gap-1">
+                      <!-- Bouton Détails -->
+                      <button
+                        (click)="openVisitDrawer(visit)"
+                        title="Voir les détails"
+                        class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-brand-cyan bg-brand-cyan/10 hover:bg-brand-cyan/20 transition-colors cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
                       </button>
+                      <!-- Bouton Clôturer -->
+                      @if (canCloseVisit()) {
+                        <button
+                          (click)="closeVisit(visit.id)"
+                          title="Clôturer la visite"
+                          class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-colors cursor-pointer">
+                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      }
                     </div>
-                    @if (canCloseVisit()) {
-                      <app-ui-button variant="secondary" (pressed)="closeVisit(visit.id)">
-                        Clôturer
-                      </app-ui-button>
-                    }
                   </div>
                 </div>
               }
@@ -283,170 +300,521 @@
   </div>
 
   <!-- Vitals Form Modal Dialogue -->
-  @if (showVitalsModal && selectedVisitForVitals) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-      <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-2xl max-w-lg w-full shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+  @if (showVitalsModal() && selectedVisitForVitals(); as selectedVisit) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in">
+      <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-2xl max-w-xl w-full shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
         <!-- Close button -->
-        <button (click)="closeVitalsModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer">
+        <button (click)="closeVitalsModal()" class="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
         <!-- Header -->
-        <h3 class="font-display font-bold text-lg text-brand-night dark:text-white mb-1">{{ t('vitals.title') }}</h3>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">
-          Patient : <strong>{{ selectedVisitForVitals.patientName }}</strong> ({{ selectedVisitForVitals.patientDpu }})
-        </p>
-
-        @if (vitalsError) {
-          <div class="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-red-700 dark:text-red-300 font-semibold mb-4 leading-relaxed">
-            {{ vitalsError }}
+        <div class="flex items-center gap-3 mb-1">
+          <div class="w-10 h-10 rounded-xl bg-brand-cyan/15 flex items-center justify-center text-brand-cyan shrink-0">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
           </div>
-        }
-
-        <!-- Form Fields Grid -->
-        <div class="grid grid-cols-2 gap-4">
-          <!-- Température -->
-          <div class="space-y-1.5">
-            <label class="ui-label text-xs">{{ t('vitals.temp') }}</label>
-            <input 
-              type="number" 
-              step="0.1"
-              [(ngModel)]="vitalsTemp"
-              placeholder="Ex: 37.2"
-              class="ui-input p-2.5 text-sm"
-              [disabled]="isSavingVitals"
-            />
-          </div>
-
-          <!-- Pouls -->
-          <div class="space-y-1.5">
-            <label class="ui-label text-xs">{{ t('vitals.pulse') }}</label>
-            <input 
-              type="number" 
-              [(ngModel)]="vitalsPulse"
-              placeholder="Ex: 75"
-              class="ui-input p-2.5 text-sm"
-              [disabled]="isSavingVitals"
-            />
-          </div>
-
-          <!-- Poids -->
-          <div class="space-y-1.5">
-            <label class="ui-label text-xs">{{ t('vitals.weight') }}</label>
-            <input 
-              type="number" 
-              step="0.1"
-              [(ngModel)]="vitalsWeight"
-              placeholder="Ex: 70"
-              class="ui-input p-2.5 text-sm"
-              [disabled]="isSavingVitals"
-            />
-          </div>
-
-          <!-- Taille -->
-          <div class="space-y-1.5">
-            <label class="ui-label text-xs">{{ t('vitals.height') }}</label>
-            <input 
-              type="number" 
-              [(ngModel)]="vitalsHeight"
-              placeholder="Ex: 175"
-              class="ui-input p-2.5 text-sm"
-              [disabled]="isSavingVitals"
-            />
-          </div>
-
-          <!-- Systolique -->
-          <div class="space-y-1.5">
-            <label class="ui-label text-xs">{{ t('vitals.systolic') }}</label>
-            <input 
-              type="number" 
-              [(ngModel)]="vitalsSystolic"
-              placeholder="Ex: 120"
-              class="ui-input p-2.5 text-sm"
-              [disabled]="isSavingVitals"
-            />
-          </div>
-
-          <!-- Diastolique -->
-          <div class="space-y-1.5">
-            <label class="ui-label text-xs">{{ t('vitals.diastolic') }}</label>
-            <input 
-              type="number" 
-              [(ngModel)]="vitalsDiastolic"
-              placeholder="Ex: 80"
-              class="ui-input p-2.5 text-sm"
-              [disabled]="isSavingVitals"
-            />
-          </div>
-
-          <!-- SpO2 -->
-          <div class="space-y-1.5">
-            <label class="ui-label text-xs">{{ t('vitals.spo2') }}</label>
-            <input 
-              type="number" 
-              [(ngModel)]="vitalsSpo2"
-              placeholder="Ex: 98"
-              class="ui-input p-2.5 text-sm"
-              [disabled]="isSavingVitals"
-            />
-          </div>
-
-          <!-- Glycémie -->
-          <div class="space-y-1.5">
-            <label class="ui-label text-xs">{{ t('vitals.glycemia') }}</label>
-            <input 
-              type="number" 
-              step="0.01"
-              [(ngModel)]="vitalsGlycemia"
-              placeholder="Ex: 0.95"
-              class="ui-input p-2.5 text-sm"
-              [disabled]="isSavingVitals"
-            />
-          </div>
-
-          <!-- Fréquence respiratoire -->
-          <div class="space-y-1.5 col-span-2">
-            <label class="ui-label text-xs">{{ t('vitals.resp') }}</label>
-            <input 
-              type="number" 
-              [(ngModel)]="vitalsResp"
-              placeholder="Ex: 16"
-              class="ui-input p-2.5 text-sm"
-              [disabled]="isSavingVitals"
-            />
+          <div>
+            <h3 class="font-display font-black text-lg text-brand-night dark:text-white leading-tight">Enregistrement des Constantes</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Patient : <strong class="text-slate-700 dark:text-slate-300">{{ selectedVisit.patientName }}</strong> ({{ selectedVisit.patientDpu }})
+            </p>
           </div>
         </div>
 
-        <!-- Calculated BMI Display -->
-        @if (computedBmi) {
-          <div class="mt-5 p-3.5 rounded-xl border flex items-center justify-between shadow-xs transition-colors duration-300"
-               [class]="getBmiClass(computedBmi) + ' border-current/10'">
-            <div class="space-y-0.5">
-              <span class="text-xs font-bold uppercase tracking-wider opacity-85 block">{{ t('vitals.bmi') }}</span>
-              <p class="text-xs font-semibold opacity-75">
-                @if (computedBmi < 18.5) { Insuffisance pondérale }
-                @else if (computedBmi < 25) { Corpulence normale }
-                @else if (computedBmi < 30) { Surpoids }
-                @else { Obésité }
-              </p>
-            </div>
-            <span class="font-display font-extrabold text-2xl tracking-tight">{{ computedBmi }}</span>
+        <hr class="border-slate-100 dark:border-slate-800/80 my-4" />
+
+        @if (vitalsError()) {
+          <div class="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-red-700 dark:text-red-300 font-semibold mb-4 leading-relaxed flex items-start gap-2">
+            <svg class="w-4 h-4 shrink-0 text-red-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>{{ vitalsError() }}</span>
           </div>
         }
 
+        <div class="space-y-5">
+          <!-- Section 1 : Paramètres Physiques & BMI -->
+          <div class="p-4 bg-slate-50/50 dark:bg-slate-950/15 border border-slate-100 dark:border-slate-800/50 rounded-xl space-y-4">
+            <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <span>📏</span> Mesures Anthropométriques
+            </h4>
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Poids -->
+              <div class="space-y-1">
+                <label class="ui-label text-[11px]">Poids (Kg)</label>
+                <div class="relative">
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    [(ngModel)]="vitalsWeight"
+                    placeholder="Ex: 70.5"
+                    class="ui-input pr-10 pl-3 py-2 text-sm w-full font-semibold"
+                    [class.border-red-500]="isWeightInvalid()"
+                    [class.focus:border-red-500]="isWeightInvalid()"
+                    [disabled]="isSavingVitals()"
+                  />
+                  <span class="absolute right-3 top-2.5 text-xs font-bold text-slate-400">kg</span>
+                </div>
+                @if (isWeightInvalid()) {
+                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 1 et 500 kg.</p>
+                }
+              </div>
+
+              <!-- Taille -->
+              <div class="space-y-1">
+                <label class="ui-label text-[11px]">Taille (Cm)</label>
+                <div class="relative">
+                  <input 
+                    type="number" 
+                    [(ngModel)]="vitalsHeight"
+                    placeholder="Ex: 175"
+                    class="ui-input pr-10 pl-3 py-2 text-sm w-full font-semibold"
+                    [class.border-red-500]="isHeightInvalid()"
+                    [class.focus:border-red-500]="isHeightInvalid()"
+                    [disabled]="isSavingVitals()"
+                  />
+                  <span class="absolute right-3 top-2.5 text-xs font-bold text-slate-400">cm</span>
+                </div>
+                @if (isHeightInvalid()) {
+                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 30 et 250 cm.</p>
+                }
+              </div>
+            </div>
+
+            <!-- Calculated BMI Display inside Section -->
+            @if (computedBmi) {
+              <div class="p-3 rounded-lg border flex items-center justify-between shadow-3xs transition-colors duration-300"
+                   [class]="getBmiClass(computedBmi) + ' border-current/10'">
+                <div class="space-y-0.5">
+                  <span class="text-[9px] font-extrabold uppercase tracking-wider opacity-85 block">Indice de Masse Corporelle</span>
+                  <p class="text-xs font-bold opacity-75">
+                    @if (computedBmi < 18.5) { Insuffisance pondérale }
+                    @else if (computedBmi < 25) { Corpulence normale }
+                    @else if (computedBmi < 30) { Surpoids }
+                    @else { Obésité }
+                  </p>
+                </div>
+                <span class="font-display font-extrabold text-lg tracking-tight">{{ computedBmi }}</span>
+              </div>
+            }
+          </div>
+
+          <!-- Section 2 : Cardiovasculaire & SpO2 -->
+          <div class="p-4 bg-slate-50/50 dark:bg-slate-950/15 border border-slate-100 dark:border-slate-800/50 rounded-xl space-y-4">
+            <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <span>🩺</span> Cardio-Respiratoire
+            </h4>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Pouls -->
+              <div class="space-y-1">
+                <label class="ui-label text-[11px]">Pouls (BPM)</label>
+                <div class="relative">
+                  <input 
+                    type="number" 
+                    [(ngModel)]="vitalsPulse"
+                    placeholder="Ex: 75"
+                    class="ui-input pr-12 pl-3 py-2 text-sm w-full font-semibold"
+                    [class.border-red-500]="isPulseInvalid()"
+                    [class.focus:border-red-500]="isPulseInvalid()"
+                    [disabled]="isSavingVitals()"
+                  />
+                  <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-slate-400">bpm</span>
+                </div>
+                @if (isPulseInvalid()) {
+                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 20 et 250.</p>
+                }
+              </div>
+
+              <!-- SpO2 -->
+              <div class="space-y-1">
+                <label class="ui-label text-[11px]">SpO2 (%)</label>
+                <div class="relative">
+                  <input 
+                    type="number" 
+                    [(ngModel)]="vitalsSpo2"
+                    placeholder="Ex: 98"
+                    class="ui-input pr-8 pl-3 py-2 text-sm w-full font-semibold"
+                    [class.border-red-500]="isSpo2Invalid()"
+                    [class.focus:border-red-500]="isSpo2Invalid()"
+                    [disabled]="isSavingVitals()"
+                  />
+                  <span class="absolute right-3 top-2.5 text-xs font-bold text-slate-400">%</span>
+                </div>
+                @if (isSpo2Invalid()) {
+                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 50 et 100%.</p>
+                }
+              </div>
+
+              <!-- Tension Systolique -->
+              <div class="space-y-1">
+                <label class="ui-label text-[11px]">Tension Systolique</label>
+                <div class="relative">
+                  <input 
+                    type="number" 
+                    [(ngModel)]="vitalsSystolic"
+                    placeholder="Ex: 120"
+                    class="ui-input pr-12 pl-3 py-2 text-sm w-full font-semibold"
+                    [class.border-red-500]="isSystolicInvalid()"
+                    [class.focus:border-red-500]="isSystolicInvalid()"
+                    [disabled]="isSavingVitals()"
+                  />
+                  <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-slate-400">mmHg</span>
+                </div>
+                @if (isSystolicInvalid()) {
+                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 40 et 250.</p>
+                }
+              </div>
+
+              <!-- Tension Diastolique -->
+              <div class="space-y-1">
+                <label class="ui-label text-[11px]">Tension Diastolique</label>
+                <div class="relative">
+                  <input 
+                    type="number" 
+                    [(ngModel)]="vitalsDiastolic"
+                    placeholder="Ex: 80"
+                    class="ui-input pr-12 pl-3 py-2 text-sm w-full font-semibold"
+                    [class.border-red-500]="isDiastolicInvalid()"
+                    [class.focus:border-red-500]="isDiastolicInvalid()"
+                    [disabled]="isSavingVitals()"
+                  />
+                  <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-slate-400">mmHg</span>
+                </div>
+                @if (isDiastolicInvalid()) {
+                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 30 et 150.</p>
+                }
+              </div>
+
+              <!-- Fréquence Respiratoire (Full Row) -->
+              <div class="space-y-1 col-span-2">
+                <label class="ui-label text-[11px]">Fréquence Respiratoire</label>
+                <div class="relative">
+                  <input 
+                    type="number" 
+                    [(ngModel)]="vitalsResp"
+                    placeholder="Ex: 16"
+                    class="ui-input pr-16 pl-3 py-2 text-sm w-full font-semibold"
+                    [class.border-red-500]="isRespInvalid()"
+                    [class.focus:border-red-500]="isRespInvalid()"
+                    [disabled]="isSavingVitals()"
+                  />
+                  <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-slate-400">cycles/min</span>
+                </div>
+                @if (isRespInvalid()) {
+                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 5 et 100 cycles/min.</p>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3 : Métabolisme & Température -->
+          <div class="p-4 bg-slate-50/50 dark:bg-slate-950/15 border border-slate-100 dark:border-slate-800/50 rounded-xl space-y-4">
+            <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <span>🌡️</span> Thermique & Glycémique
+            </h4>
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Température -->
+              <div class="space-y-1">
+                <label class="ui-label text-[11px]">Température (°C)</label>
+                <div class="relative">
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    [(ngModel)]="vitalsTemp"
+                    placeholder="Ex: 37.2"
+                    class="ui-input pr-8 pl-3 py-2 text-sm w-full font-semibold"
+                    [class.border-red-500]="isTempInvalid()"
+                    [class.focus:border-red-500]="isTempInvalid()"
+                    [disabled]="isSavingVitals()"
+                  />
+                  <span class="absolute right-3 top-2.5 text-xs font-bold text-slate-400">°C</span>
+                </div>
+                @if (isTempInvalid()) {
+                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 30 et 45°C.</p>
+                }
+              </div>
+
+              <!-- Glycémie -->
+              <div class="space-y-1">
+                <label class="ui-label text-[11px]">Glycémie (G/L)</label>
+                <div class="relative">
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    [(ngModel)]="vitalsGlycemia"
+                    placeholder="Ex: 0.95"
+                    class="ui-input pr-8 pl-3 py-2 text-sm w-full font-semibold"
+                    [class.border-red-500]="isGlycemiaInvalid()"
+                    [class.focus:border-red-500]="isGlycemiaInvalid()"
+                    [disabled]="isSavingVitals()"
+                  />
+                  <span class="absolute right-3 top-2.5 text-xs font-bold text-slate-400">g/L</span>
+                </div>
+                @if (isGlycemiaInvalid()) {
+                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 0.1 et 10.0 g/L.</p>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Actions -->
-        <div class="flex justify-end gap-3 mt-6">
-          <app-ui-button variant="secondary" (pressed)="closeVitalsModal()" [disabled]="isSavingVitals">
-            {{ t('common.cancel') }}
+        <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80">
+          <app-ui-button variant="secondary" (pressed)="closeVitalsModal()" [disabled]="isSavingVitals()">
+            Annuler
           </app-ui-button>
-          <app-ui-button variant="primary" (pressed)="submitVitals()" [disabled]="isSavingVitals">
-            {{ isSavingVitals ? t('vitals.saving') : t('vitals.save') }}
+          <app-ui-button variant="primary" (pressed)="submitVitals()" [disabled]="isSavingVitals() || isAnyVitalInvalid()">
+            <span class="flex items-center gap-1.5">
+              @if (isSavingVitals()) {
+                <div class="w-3.5 h-3.5 rounded-full border-2 border-slate-200 border-t-white animate-spin"></div>
+                Enregistrement...
+              } @else {
+                Enregistrer les constantes
+              }
+            </span>
           </app-ui-button>
         </div>
       </div>
     </div>
   }
-</app-shell>
 
+  <!-- Details Slide-over Drawer / Bottom Sheet -->
+  @if (showVisitDrawer() && selectedVisitForDrawer(); as selectedVisit) {
+    <!-- Backdrop overlay -->
+    <div class="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-300 animate-fade-in"
+         (click)="closeVisitDrawer()"></div>
+
+    <!-- Drawer Panel Container -->
+    <div class="fixed inset-x-0 bottom-0 md:inset-y-0 md:right-0 md:left-auto w-full md:max-w-md h-[80vh] md:h-full bg-white dark:bg-slate-900 rounded-t-3xl md:rounded-t-none border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 shadow-2xl z-50 flex flex-col drawer-panel transition-all duration-300">
+      
+      <!-- Drawer Header -->
+      <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/20 rounded-t-3xl md:rounded-t-none">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-brand-cyan/10 text-brand-cyan uppercase tracking-wider">
+              Visite active
+            </span>
+            <span class="text-xs font-bold text-slate-500 dark:text-slate-400">
+              {{ selectedVisit.visitNumber }}
+            </span>
+          </div>
+          <h3 class="font-display font-extrabold text-base text-brand-night dark:text-white mt-1">Détails de l'admission</h3>
+        </div>
+        <button (click)="closeVisitDrawer()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Drawer Body (scrollable) -->
+      <div class="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+        <!-- Patient Info Card -->
+        <div class="p-4 rounded-2xl bg-brand-gray dark:bg-slate-950 border border-slate-100 dark:border-slate-800/50">
+          <span class="ui-label text-[10px] opacity-80 mb-1">Patient</span>
+          <h4 class="font-display font-extrabold text-sm text-brand-night dark:text-white">{{ selectedVisit.patientName }}</h4>
+          <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mt-0.5">DPU : {{ selectedVisit.patientDpu }}</span>
+        </div>
+
+        <!-- Visit General Details Grid -->
+        <div class="grid grid-cols-2 gap-4">
+          <!-- Admission time -->
+          <div class="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800/60 bg-white dark:bg-slate-900 shadow-3xs">
+            <span class="ui-label text-[10px] mb-1">Heure d'arrivée</span>
+            <div class="flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-white">
+              <svg class="w-4 h-4 text-brand-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {{ selectedVisit.createdAt | date:'HH:mm' }}
+            </div>
+          </div>
+
+          <!-- Orientation -->
+          <div class="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800/60 bg-white dark:bg-slate-900 shadow-3xs">
+            <span class="ui-label text-[10px] mb-1">Orientation</span>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 mt-0.5 whitespace-nowrap">
+              {{ selectedVisit.orientation }}
+            </span>
+          </div>
+
+          <!-- Motif de visite (Col-span-2) -->
+          <div class="col-span-2 p-4 rounded-xl border border-slate-100 dark:border-slate-800/60 bg-white dark:bg-slate-900 shadow-3xs space-y-1">
+            <span class="ui-label text-[10px]">Motif de la visite</span>
+            <p class="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">{{ selectedVisit.reason }}</p>
+          </div>
+        </div>
+
+        <!-- Vitals Section -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h5 class="ui-label text-[10px]">Constantes de tri initial</h5>
+            <button (click)="openVitalsModal(selectedVisit)" class="text-xs font-extrabold text-brand-cyan hover:underline inline-flex items-center gap-1 cursor-pointer">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              {{ selectedVisit.vitals ? 'Modifier' : 'Saisir' }}
+            </button>
+          </div>
+
+          @if (selectedVisit.vitals) {
+            <!-- Vitals Cards Grid -->
+            <div class="grid grid-cols-2 gap-3">
+              <!-- Temperature -->
+              @if (selectedVisit.vitals.temperature) {
+                <div class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl flex items-center justify-between">
+                  <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                    🌡️ Temp
+                  </span>
+                  <strong class="text-sm text-slate-800 dark:text-white font-extrabold">{{ selectedVisit.vitals.temperature }}°C</strong>
+                </div>
+              }
+
+              <!-- Pouls -->
+              @if (selectedVisit.vitals.pulse) {
+                <div class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl flex items-center justify-between">
+                  <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                    ❤️ Pouls
+                  </span>
+                  <strong class="text-sm text-slate-800 dark:text-white font-extrabold">{{ selectedVisit.vitals.pulse }} bpm</strong>
+                </div>
+              }
+
+              <!-- SpO2 -->
+              @if (selectedVisit.vitals.spo2) {
+                <div class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl flex items-center justify-between">
+                  <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                    🫁 SpO2
+                  </span>
+                  <strong class="text-sm text-slate-800 dark:text-white font-extrabold">{{ selectedVisit.vitals.spo2 }}%</strong>
+                </div>
+              }
+
+              <!-- Fréquence respiratoire -->
+              @if (selectedVisit.vitals.respiratoryRate) {
+                <div class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl flex items-center justify-between">
+                  <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                    🌀 Respiration
+                  </span>
+                  <strong class="text-sm text-slate-800 dark:text-white font-extrabold">{{ selectedVisit.vitals.respiratoryRate }} /min</strong>
+                </div>
+              }
+
+              <!-- Poids -->
+              @if (selectedVisit.vitals.weight) {
+                <div class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl flex items-center justify-between">
+                  <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                    ⚖️ Poids
+                  </span>
+                  <strong class="text-sm text-slate-800 dark:text-white font-extrabold">{{ selectedVisit.vitals.weight }} kg</strong>
+                </div>
+              }
+
+              <!-- Taille -->
+              @if (selectedVisit.vitals.height) {
+                <div class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl flex items-center justify-between">
+                  <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                    📏 Taille
+                  </span>
+                  <strong class="text-sm text-slate-800 dark:text-white font-extrabold">{{ selectedVisit.vitals.height }} cm</strong>
+                </div>
+              }
+
+              <!-- Tension Artérielle -->
+              @if (selectedVisit.vitals.systolic || selectedVisit.vitals.diastolic) {
+                <div class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl flex items-center justify-between col-span-2">
+                  <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                    🩺 Tension artérielle
+                  </span>
+                  <strong class="text-sm text-slate-800 dark:text-white font-extrabold">{{ selectedVisit.vitals.systolic }}/{{ selectedVisit.vitals.diastolic }} mmHg</strong>
+                </div>
+              }
+
+              <!-- Glycémie -->
+              @if (selectedVisit.vitals.glycemia) {
+                <div class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl flex items-center justify-between col-span-2">
+                  <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                    🍬 Glycémie
+                  </span>
+                  <strong class="text-sm text-slate-800 dark:text-white font-extrabold">{{ selectedVisit.vitals.glycemia }} g/L</strong>
+                </div>
+              }
+
+              <!-- IMC Dynamic Card -->
+              @if (selectedVisit.vitals.bmi) {
+                <div class="p-3.5 rounded-xl border col-span-2 flex items-center justify-between shadow-3xs"
+                     [class]="getBmiClass(selectedVisit.vitals.bmi) + ' border-current/10'">
+                  <div class="space-y-0.5">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider opacity-85">Indice de Masse Corporelle</span>
+                    <p class="text-xs font-bold opacity-75">
+                      @if (selectedVisit.vitals.bmi < 18.5) { Insuffisance pondérale }
+                      @else if (selectedVisit.vitals.bmi < 25) { Corpulence normale }
+                      @else if (selectedVisit.vitals.bmi < 30) { Surpoids }
+                      @else { Obésité }
+                    </p>
+                  </div>
+                  <span class="font-display font-extrabold text-xl tracking-tight">{{ selectedVisit.vitals.bmi }}</span>
+                </div>
+              }
+            </div>
+          } @else {
+            <!-- Empty state vitals card -->
+            <div class="p-5 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-center space-y-3 bg-slate-50/20 dark:bg-slate-950/10">
+              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
+                Aucune constante vitale de tri initial n'a été renseignée pour cette visite.
+              </p>
+              <app-ui-button variant="secondary" (pressed)="openVitalsModal(selectedVisit)">
+                Saisir les constantes
+              </app-ui-button>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Drawer Footer -->
+      <div class="p-6 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/20 flex gap-3 flex-wrap">
+        @if (canCloseVisit()) {
+          <app-ui-button variant="primary" class="flex-1" (pressed)="startConsultation(selectedVisit.id)">
+            <span class="flex items-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Démarrer la consultation
+            </span>
+          </app-ui-button>
+          <app-ui-button variant="secondary" class="flex-1" (pressed)="closeVisit(selectedVisit.id)">
+            Clôturer la visite
+          </app-ui-button>
+        }
+        <app-ui-button variant="secondary" [class]="canCloseVisit() ? 'w-24' : 'flex-1'" (pressed)="closeVisitDrawer()">
+          Fermer
+        </app-ui-button>
+      </div>
+
+    </div>
+  }
+
+  <!-- Styles logic for Slide-over animations -->
+  <style>
+    @keyframes slideInRight {
+      from { transform: translateX(100%); }
+      to { transform: translateX(0); }
+    }
+    @keyframes slideInUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .drawer-panel {
+      animation: slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @media (min-width: 768px) {
+      .drawer-panel {
+        animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+    }
+  </style>
+</app-shell>

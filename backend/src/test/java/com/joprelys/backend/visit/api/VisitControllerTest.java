@@ -189,6 +189,39 @@ public class VisitControllerTest {
 	}
 
 	@Test
+	void givenActiveVisitWithVitals_whenGetActiveVisits_thenIncludesVitals() throws Exception {
+		com.joprelys.backend.auth.security.TenantContext.setTenantId(orgA.getId());
+		VisitEntity visit = new VisitEntity(patientA, "VIS-A", "Motif A", "Tri");
+		visit = visitRepository.save(visit);
+
+		com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity vitals =
+				new com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity(
+						visit,
+						java.math.BigDecimal.valueOf(37.2),
+						java.math.BigDecimal.valueOf(70.0),
+						175,
+						80,
+						120,
+						80,
+						98,
+						java.math.BigDecimal.valueOf(0.95),
+						16,
+						java.math.BigDecimal.valueOf(22.86)
+				);
+		visit.setVitals(vitals);
+		visitRepository.save(visit);
+		com.joprelys.backend.auth.security.TenantContext.clear();
+
+		mockMvc.perform(get("/api/visits/active")
+				.header("Authorization", "Bearer " + tokenAgentA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.length()").value(1))
+				.andExpect(jsonPath("$[0].visitNumber").value("VIS-A"))
+				.andExpect(jsonPath("$[0].vitals.temperature").value(37.2))
+				.andExpect(jsonPath("$[0].vitals.bmi").value(22.86));
+	}
+
+	@Test
 	void givenActiveVisit_whenDoctorCloses_thenSuccess() throws Exception {
 		// Create visit in Tenant A
 		com.joprelys.backend.auth.security.TenantContext.setTenantId(orgA.getId());

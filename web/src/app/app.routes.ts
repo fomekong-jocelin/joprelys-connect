@@ -25,7 +25,23 @@ export const routes: Routes = [
     data: { expectedRoles: ['AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'] },
   },
   {
+    path: 'clinic/staff',
+    loadComponent: () => import('./clinic/staff/staff-management.component').then((module) => module.StaffManagementComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['ADMIN_CLINIQUE'] },
+  },
+  {
+    path: 'clinic/consultation/:visitId',
+    loadComponent: () => import('./consultation/consultation.component').then(m => m.ConsultationComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['MEDECIN', 'ADMIN_CLINIQUE'] },
+  },
+  {
     path: 'unauthorized',
     loadComponent: () => import('./auth/unauthorized.component').then((module) => module.UnauthorizedComponent),
+  },
+  {
+    path: 'verify/:documentId',
+    loadComponent: () => import('./consultation/verification.component').then(m => m.VerificationComponent),
   },
 ];

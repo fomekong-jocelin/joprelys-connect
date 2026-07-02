@@ -37,6 +37,12 @@ public class VisitController {
 				.toList();
 	}
 
+	@GetMapping("/{id}")
+	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	public VisitResponse getVisit(@PathVariable UUID id) {
+		return VisitResponse.fromEntity(visitService.getVisit(id));
+	}
+
 	@PostMapping("/{id}/close")
 	@PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE')")
 	public VisitResponse close(@PathVariable UUID id) {

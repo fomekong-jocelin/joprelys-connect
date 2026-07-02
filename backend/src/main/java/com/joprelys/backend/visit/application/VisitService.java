@@ -21,16 +21,19 @@ public class VisitService {
 	private final VisitNumberGenerator visitNumberGenerator;
 
 	private final VitalsRepository vitalsRepository;
+	private final DocumentService documentService;
 
 	public VisitService(
 			VisitRepository visitRepository,
 			PatientRepository patientRepository,
 			VisitNumberGenerator visitNumberGenerator,
-			VitalsRepository vitalsRepository) {
+			VitalsRepository vitalsRepository,
+			@org.springframework.context.annotation.Lazy DocumentService documentService) {
 		this.visitRepository = visitRepository;
 		this.patientRepository = patientRepository;
 		this.visitNumberGenerator = visitNumberGenerator;
 		this.vitalsRepository = vitalsRepository;
+		this.documentService = documentService;
 	}
 
 	@Transactional
@@ -60,7 +63,24 @@ public class VisitService {
 		visit.setStatus("TERMINEE");
 		visit.setClosedAt(Instant.now());
 
-		return visitRepository.save(visit);
+		// Initialize lazy proxies to prevent LazyInitializationException outside transaction
+		if (visit.getPatient() != null) {
+			visit.getPatient().getFullName();
+		}
+		if (visit.getVitals() != null) {
+			visit.getVitals().getTemperature();
+		}
+
+		VisitEntity savedVisit = visitRepository.save(visit);
+		documentService.generateAndSaveDocument(savedVisit);
+
+		return savedVisit;
+	}
+
+	@Transactional(readOnly = true)
+	public VisitEntity getVisit(UUID id) {
+		return visitRepository.findById(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
 	}
 
 	@Transactional(readOnly = true)
