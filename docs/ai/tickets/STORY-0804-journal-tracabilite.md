@@ -45,16 +45,43 @@ Permettre au patient de consulter l'historique d'audit des accès à son Dossier
 ## 4. Action plan
 
 ### Phase 1 : Logique Métier & API (Backend)
-- [ ] Injecter `AuditService` et `OrganizationRepository` dans `PatientPortalController`.
-- [ ] Déclarer le record `PatientAuditLogDto`.
-- [ ] Créer l'endpoint `GET /api/patient/audit-logs` filtré sur l'ID du patient connecté.
-- [ ] Rédiger les tests d'intégration backend dans `PatientPortalControllerTest`.
+- [x] Injecter `AuditService` et `OrganizationRepository` dans `PatientPortalController`.
+- [x] Déclarer le record `PatientAuditLogDto`.
+- [x] Créer l'endpoint `GET /api/patient/audit-logs` filtré sur l'ID du patient connecté.
+- [x] Rédiger les tests d'intégration backend dans `PatientPortalControllerTest`.
 
 ### Phase 2 : Interface Utilisateur (Frontend)
-- [ ] Ajouter la méthode `getAuditLogs()` dans `PatientPortalService`.
-- [ ] Mettre à jour l'affichage de l'onglet "Sécurité & Audit" dans `PatientDashboardComponent`.
-- [ ] Présenter les logs d'audit sous forme de liste/timeline soignée et lisible.
-- [ ] Écrire les tests unitaires frontend dans `patient-portal.spec.ts`.
+- [x] Ajouter la méthode `getAuditLogs()` dans `PatientPortalService`.
+- [x] Mettre à jour l'affichage de l'onglet "Sécurité & Audit" dans `PatientDashboardComponent`.
+- [x] Présenter les logs d'audit sous forme de liste/timeline soignée et lisible.
+- [x] Écrire les tests unitaires frontend dans `patient-portal.spec.ts`.
 
-## 5. Statut final
-Statut : **TODO**
+## 5. Implémentation réalisée
+Implémentation complète backend (injection d'AuditService et OrganizationRepository, mapping GET /api/patient/audit-logs et dto de restitution PatientAuditLogDto résolvant le nom lisible de la clinique) et frontend (méthode de service, composant dédié PatientAuditListComponent affichant sous forme de table épurée et stylisée les accès DPU du patient connecté).
+
+## 6. Suivi d'exécution
+
+| Date | Développeur | Temps passé | Avancement | Reste à faire | Blocage | Commentaire |
+|---|---|---:|---:|---:|---|---|
+| 2026-07-02 | Antigravity | 0.05j | 10% | Phase 1 & 2 | Aucun | Ticket initialisé |
+| 2026-07-02 | Antigravity | 0.4j | 100% | Aucun | Aucun | Développement backend, frontend et tests validés |
+
+## 7. Tests et vérifications
+- **Backend** : 95 tests unitaires et d'intégration Spring Boot (incluant `PatientPortalControllerTest`) passent à 100%.
+- **Frontend** : 33 tests unitaires Angular / Vitest (incluant `PatientAuditListComponent`) passent à 100%.
+
+## 8. Statut final
+Statut : **DONE**
+
+## 9. Impact version / SemVer
+
+| Champ | Valeur |
+|---|---|
+| Changement livrable | Oui |
+| Type de bump | MINOR |
+| Justification | Journal d'audit de sécurité des accès DPU pour le patient connecté |
+| Breaking change | Non |
+
+## 10. Impact thème / i18n / branding
+- [x] Table stylisée et responsive respectant les tokens design system.
+- [x] Noms des actions et statuts traduits en français lisible.
