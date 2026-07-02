@@ -8,6 +8,7 @@ import { ConsultationApiService } from './consultation-api.service';
 import { VisitApiService } from '../visit/visit-api.service';
 import { Consultation } from './consultation.models';
 import { Vitals } from '../visit/visit.models';
+import { LabOrderApiService } from '../clinic/lab/lab-api.service';
 
 @Component({
   selector: 'app-consultation',
@@ -396,7 +397,113 @@ import { Vitals } from '../visit/visit.models';
                   </div>
                 }
               </div>
-            </div>            <!-- Action Bar -->
+            </div>
+
+            <!-- Card: Demande d'Examens Biologiques -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl shadow-xs overflow-hidden mt-6">
+              <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 bg-gradient-to-r from-violet-50 to-indigo-50 dark:from-violet-950/20 dark:to-indigo-950/20 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-violet-500/10 dark:bg-violet-500/20 flex items-center justify-center text-violet-600 dark:text-violet-400">
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 9.172V5L8 4z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="font-display font-bold text-base text-brand-night dark:text-white">Demande d'Examens Biologiques</h2>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">{{ labExams.length }} examen(s) prescrit(s)</p>
+                </div>
+              </div>
+
+              <div class="p-6 space-y-6">
+                <!-- Suggestions rapides -->
+                <div class="space-y-2">
+                  <label class="ui-label text-xs font-semibold">Suggestions d'analyses courantes (cliquez pour ajouter) :</label>
+                  <div class="flex flex-wrap gap-2">
+                    @for (exam of commonExams; track exam.code) {
+                      <button
+                        type="button"
+                        (click)="addLabExam(exam.code)"
+                        class="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                      >
+                        {{ exam.name }}
+                      </button>
+                    }
+                  </div>
+                </div>
+
+                <!-- Input personnalisé -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div class="md:col-span-2 space-y-1.5">
+                    <label class="ui-label text-xs font-semibold">Ajouter un examen personnalisé</label>
+                    <div class="flex gap-2">
+                      <input
+                        #customExamInput
+                        type="text"
+                        placeholder="Ex: Hémoglobine, Test Widal, ECBU, Ionogramme..."
+                        class="ui-input flex-1 text-xs p-2 rounded-lg"
+                        (keyup.enter)="addLabExam(customExamInput.value); customExamInput.value = ''"
+                      />
+                      <button
+                        type="button"
+                        (click)="addLabExam(customExamInput.value); customExamInput.value = ''"
+                        class="px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        Ajouter
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="space-y-1.5">
+                    <label class="ui-label text-xs font-semibold">Priorité</label>
+                    <select formControlName="labPriority" class="ui-input w-full text-xs p-2.5 rounded-lg">
+                      <option value="NORMALE">NORMALE</option>
+                      <option value="URGENTE">URGENTE</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Motif de l'examen -->
+                <div class="space-y-1.5">
+                  <label class="ui-label text-xs font-semibold">Motif de la demande / Indication clinique (Optionnel)</label>
+                  <input
+                    type="text"
+                    formControlName="labReason"
+                    placeholder="Ex: Fièvre prolongée inexpliquée, bilan annuel de suivi diabétique..."
+                    class="ui-input w-full text-xs p-2.5 rounded-lg"
+                  />
+                </div>
+
+                <!-- Liste des examens prescrits -->
+                <div class="space-y-2">
+                  <label class="ui-label text-xs font-semibold">Analyses prescrites :</label>
+                  @if (labExams.length === 0) {
+                    <div class="py-6 text-center border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+                      <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Aucun examen biologique sélectionné.</p>
+                      <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Cliquez sur une suggestion ou saisissez un examen ci-dessus.</p>
+                    </div>
+                  } @else {
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                      @for (ctrl of labExams.controls; track $index; let i = $index) {
+                        <div class="flex items-center justify-between p-2 rounded-xl bg-violet-50/50 dark:bg-violet-950/10 border border-violet-100/50 dark:border-violet-900/30 text-xs text-slate-800 dark:text-slate-200 font-semibold">
+                          <span class="truncate max-w-[180px]">{{ ctrl.value }}</span>
+                          <button
+                            type="button"
+                            (click)="removeLabExam(i)"
+                            class="text-red-500 hover:text-red-700 transition-colors p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer"
+                            title="Retirer cet examen"
+                          >
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Bar -->
             <div class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl shadow-xs">
               <app-ui-button variant="secondary" (pressed)="goBack()" [disabled]="isSaving() || isClosing()">
                 Annuler
@@ -444,6 +551,7 @@ export class ConsultationComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly consultationApi = inject(ConsultationApiService);
   private readonly visitApi = inject(VisitApiService);
+  private readonly labOrderApi = inject(LabOrderApiService);
 
   readonly isLoading = signal(false);
   readonly isSaving = signal(false);
@@ -455,7 +563,21 @@ export class ConsultationComponent implements OnInit {
   readonly visitNumber = signal('');
 
   private visitId = '';
+  private patientId = '';
   shouldCloseAfterSave = false;
+
+  readonly commonExams = [
+    { name: 'NFS / Hémogramme', code: 'NFS' },
+    { name: 'Glycémie à jeun', code: 'Glycémie à jeun' },
+    { name: 'Créatininémie (Bilan Rénal)', code: 'Créatinine' },
+    { name: 'Urée', code: 'Urée' },
+    { name: 'Bilan Lipidique (EAL)', code: 'Bilan Lipidique' },
+    { name: 'Transaminases (SGOT/SGPT)', code: 'Transaminases' },
+    { name: 'CRP (Protéine C-Réactive)', code: 'CRP' },
+    { name: 'ECBU (Urine)', code: 'ECBU' },
+    { name: 'Hémoglobine Glyquée (HbA1c)', code: 'HbA1c' }
+  ];
+
   readonly form: FormGroup = this.fb.group({
     symptoms: ['', Validators.required],
     clinicalExam: [''],
@@ -463,10 +585,17 @@ export class ConsultationComponent implements OnInit {
     advice: [''],
     followUp: [''],
     prescription: this.fb.array([]),
+    exams: this.fb.array([]),
+    labPriority: ['NORMALE'],
+    labReason: ['']
   });
 
   get prescriptionItems(): FormArray {
     return this.form.get('prescription') as FormArray;
+  }
+
+  get labExams(): FormArray {
+    return this.form.get('exams') as FormArray;
   }
 
   ngOnInit(): void {
@@ -489,11 +618,28 @@ export class ConsultationComponent implements OnInit {
       }
     });
 
-    // Load visit info for visit number
-    this.http.get<{ visitNumber: string }>(`/api/visits/${this.visitId}`).subscribe({
+    // Load visit info for visit number and patient details
+    this.http.get<any>(`/api/visits/${this.visitId}`).subscribe({
       next: (visit) => {
         if (visit?.visitNumber) {
           this.visitNumber.set(visit.visitNumber);
+        }
+        if (visit?.patientId) {
+          this.patientId = visit.patientId;
+          // Load existing lab orders for this patient to find one linked to this visit
+          this.labOrderApi.getPatientLabOrders(this.patientId).subscribe({
+            next: (orders) => {
+              const currentVisitOrder = orders.find(o => o.visitId === this.visitId);
+              if (currentVisitOrder) {
+                this.labExams.clear();
+                currentVisitOrder.exams.forEach(ex => this.addLabExam(ex));
+                this.form.patchValue({
+                  labPriority: currentVisitOrder.priority,
+                  labReason: currentVisitOrder.reason || ''
+                });
+              }
+            }
+          });
         }
       },
       error: () => {}
@@ -530,6 +676,20 @@ export class ConsultationComponent implements OnInit {
     this.prescriptionItems.removeAt(index);
   }
 
+  addLabExam(examName: string = ''): void {
+    if (!examName.trim()) return;
+    const exists = this.labExams.controls.some(
+      (ctrl) => ctrl.value.toLowerCase() === examName.trim().toLowerCase()
+    );
+    if (!exists) {
+      this.labExams.push(this.fb.control(examName.trim(), Validators.required));
+    }
+  }
+
+  removeLabExam(index: number): void {
+    this.labExams.removeAt(index);
+  }
+
   onSave(closeVisitAfter: boolean = false): void {
     if (this.form.invalid || this.isSaving() || this.isClosing()) return;
 
@@ -551,12 +711,23 @@ export class ConsultationComponent implements OnInit {
         this.consultation.set(savedConsultation);
 
         const prescriptionLines = this.prescriptionItems.value;
+        const examsLines = this.labExams.value;
+
+        let successMsg = 'Consultation enregistrée avec succès !';
+        if (prescriptionLines.length > 0 && examsLines.length > 0) {
+          successMsg = 'Consultation, prescription et examens biologiques enregistrés avec succès !';
+        } else if (prescriptionLines.length > 0) {
+          successMsg = 'Consultation et prescription enregistrées avec succès !';
+        } else if (examsLines.length > 0) {
+          successMsg = 'Consultation et examens biologiques enregistrés avec succès !';
+        }
+
         if (prescriptionLines.length > 0) {
           this.consultationApi.savePrescription(savedConsultation.id, {
             items: prescriptionLines,
           }).subscribe({
             next: () => {
-              this.handleAfterSaveSuccess(closeVisitAfter, 'Consultation et prescription enregistrées avec succès !');
+              this.saveLabOrderAndComplete(closeVisitAfter, successMsg);
             },
             error: (err) => {
               this.isSaving.set(false);
@@ -564,7 +735,7 @@ export class ConsultationComponent implements OnInit {
             }
           });
         } else {
-          this.handleAfterSaveSuccess(closeVisitAfter, 'Consultation enregistrée avec succès !');
+          this.saveLabOrderAndComplete(closeVisitAfter, successMsg);
         }
       },
       error: (err) => {
@@ -572,6 +743,32 @@ export class ConsultationComponent implements OnInit {
         this.errorMessage.set(err.error?.detail || err.error?.title || 'Une erreur est survenue lors de l\'enregistrement.');
       }
     });
+  }
+
+  private saveLabOrderAndComplete(closeVisitAfter: boolean, successMsg: string): void {
+    const examsList = this.labExams.value;
+    if (examsList.length > 0 && this.patientId) {
+      const request = {
+        patientId: this.patientId,
+        visitId: this.visitId || undefined,
+        examType: 'LABORATOIRE',
+        exams: examsList,
+        reason: this.form.get('labReason')?.value || undefined,
+        priority: this.form.get('labPriority')?.value || 'NORMALE'
+      };
+
+      this.labOrderApi.create(request).subscribe({
+        next: () => {
+          this.handleAfterSaveSuccess(closeVisitAfter, successMsg);
+        },
+        error: (err) => {
+          this.isSaving.set(false);
+          this.errorMessage.set('Consultation enregistrée mais erreur de demande d\'examens : ' + (err.error?.detail || err.message || 'Erreur inconnue'));
+        }
+      });
+    } else {
+      this.handleAfterSaveSuccess(closeVisitAfter, successMsg);
+    }
   }
 
   private handleAfterSaveSuccess(closeVisitAfter: boolean, successMsg: string): void {

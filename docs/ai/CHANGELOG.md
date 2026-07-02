@@ -6,6 +6,16 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+### Added
+
+- **Demande d'examens biologiques par le médecin (STORY-0901)** :
+  - Backend : table `lab_orders`, entité JPA `LabOrderEntity` isolée par `@TenantId` multi-tenant.
+  - Endpoints REST `/api/lab-orders` (création) et `/api/lab-orders/patient/{patientId}` (liste) sécurisés par rôles (MEDECIN, ADMIN_CLINIQUE).
+  - Génération automatique de numéro d'examen séquentiel quotidien unique formaté `EXAM-REQ-YYYYMMDD-XXXXXX`.
+  - Frontend : Bloc IHM interactif intégré dans l'écran de consultation médecin (`ConsultationComponent`) avec suggestions d'analyses courantes (NFS, Glycémie, Bilan lipidique/rénal, CRP...) et formulaire d'ajout personnalisé.
+  - Intégration et enchaînement asynchrones des appels d'enregistrement (consultation + prescription + examens) et chargement transparent des examens pré-existants.
+  - Tests d'intégration et unitaires backend validés avec succès (107/107). Compilation Angular de production OK.
+
 ## [0.5.0] - 2026-07-03
 
 ### Added

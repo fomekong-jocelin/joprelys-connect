@@ -8,12 +8,12 @@
 |---|---|
 | Dernière mise à jour | 2026-07-03 |
 | Responsable mise à jour | Antigravity |
-| État global | En cours (Sprint 0003 — Authentification, DPU, Visites, Consultation, Ordonnance & Portail Patient finalisés à 100%) |
-| Risques majeurs | Aucun risque technique ou environnemental bloquant. Stratégie de build et tests hors réseau validée. |
-| Prochaine priorité | Démarrer le cadrage de la version mobile (Flutter) ou la planification du Sprint 0004. |
-| Sprint courant | SPRINT-0003 |
+| État global | En cours (Sprint 0004 — Story 0901 - Demande d'examens biologiques médecin finalisée et validée à 100%) |
+| Risques majeurs | Aucun risque technique ou environnemental bloquant. |
+| Prochaine priorité | Démarrer l'API d'intégration labo externe pour téléversement (STORY-0902). |
+| Sprint courant | SPRINT-0004 |
 | Capacité sprint | 15.0j |
-| Charge engagée | 12.5j |
+| Charge engagée | 1.5j |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
@@ -64,7 +64,7 @@
 | STORY-0803 | PAT_PORTAL | User Story | Gestion des consentements d'accès du DPU | Full-stack | DONE | P0 | 8 | Senior | 2.5j | 4j | 6j | Antigravity | Lead | SPRINT-0003 | 0.9j | Aucun | Fort | 2026-07-02 |
 | STORY-0804 | PAT_PORTAL | User Story | Journal de traçabilité des consultations du DPU | Full-stack | DONE | P2 | 3 | Intermédiaire | 0.8j | 1.4j | 1.8j | Antigravity | Lead | SPRINT-0003 | 1.2j | Aucun (traçabilité intégrée au niveau de l'AuditService) | Faible | 2026-07-02 |
 | EPIC-0009 | LAB | Epic | Intégration Laboratoire & Examens Biologiques | Full-stack | BACKLOG | P1 | 7 | Intermédiaire | 1.8j | 2.5j | 4j | À assigner | Lead | À planifier | 0j | Cadrage initial et spécifications fonctionnelles/techniques rédigés | Faible | 2026-07-03 |
-| STORY-0901 | LAB | User Story | Demande d'examens biologiques (médecin) | Full-stack | IN_PROGRESS | P1 | 1.5 | Intermédiaire | 0.3j | 0.5j | 0.8j | Antigravity | Lead | SPRINT-0004 | 0.02j | Scaffolding du ticket et initialisation backend | Faible | 2026-07-03 |
+| STORY-0901 | LAB | User Story | Demande d'examens biologiques (médecin) | Full-stack | DONE | P1 | 1.5 | Intermédiaire | 0.3j | 0.5j | 0.8j | Antigravity | Lead | SPRINT-0004 | 0.4j | Aucun (tests backend validés, compilation frontend OK) | Faible | 2026-07-03 |
 | STORY-0902 | LAB | User Story | API d'intégration labo externe pour téléversement | Backend | TODO | P1 | 3 | Senior | 0.8j | 1.1j | 1.8j | À assigner | Lead | SPRINT-0004 | 0j | Requiert API Key et validation GUID | Moyen | 2026-07-03 |
 | STORY-0903 | LAB | User Story | Écran praticien de visualisation des résultats | Frontend | TODO | P1 | 2.5 | Intermédiaire | 0.7j | 0.9j | 1.4j | À assigner | Lead | SPRINT-0004 | 0j | Tracé de graphes d'évolution Angular | Faible | 2026-07-03 |
 | EPIC-0010 | PHARMA | Epic | Dispensation en Pharmacie & Gestion des Prescriptions | Full-stack | BACKLOG | P1 | 7 | Intermédiaire | 1.8j | 2.6j | 4.2j | À assigner | Lead | À planifier | 0j | Cadrage initial et spécifications fonctionnelles/techniques rédigés | Moyen | 2026-07-03 |
