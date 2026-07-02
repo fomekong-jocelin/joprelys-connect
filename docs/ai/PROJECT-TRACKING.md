@@ -8,9 +8,9 @@
 |---|---|
 | Dernière mise à jour | 2026-07-02 |
 | Responsable mise à jour | Antigravity |
-| État global | En cours (Sprint 0003 — STORY-0501/0502/0503/0504/0602 en REVIEW, STORY-0104 backend/front implémentés, validations bloquées partiellement par environnement) |
-| Risques majeurs | Validation Maven STORY-0104 bloquée par résolution du parent Spring Boot 4.1.0 sans accès réseau ; build Angular production bloqué par inlining Google Fonts externe |
-| Prochaine priorité | Relancer tests backend STORY-0104 dès dépendances disponibles et stabiliser la stratégie de polices pour le build production |
+| État global | En cours (Sprint 0003 — STORY-0104 et EPIC-0007 terminés, STORIES 0501/0502/0503/0504/0601/0602/0603 en REVIEW) |
+| Risques majeurs | Aucun risque technique ou environnemental bloquant. Stratégie de build et tests hors réseau validée. |
+| Prochaine priorité | Entamer la finalisation/review des stories en REVIEW de l'EPIC-0005 (Prescription) et l'EPIC-0006 (Génération PDF). |
 | Sprint courant | SPRINT-0003 |
 | Capacité sprint | 15.0j |
 | Charge engagée | 9.25j |
@@ -32,7 +32,7 @@
 | STORY-0101 | AUTH | User Story | Connexion & Déconnexion Sécurisée | Full-stack | REVIEW | P0 | 3 | Intermédiaire | 0.5j | 0.65j | 1.1j | Codex | Lead | SPRINT-0002 | 0.5j | Aucun (tests validés avec succès) | Moyen | 2026-07-02 |
 | STORY-0102 | AUTH | User Story | Contrôle d'Accès Basé sur les Rôles (RBAC) | Full-stack | REVIEW | P0 | 3 | Senior | 0.4j | 0.65j | 1.1j | Gemini | Lead | SPRINT-0002 | 0.4j | Aucun (tests et specs au vert) | Moyen | 2026-07-02 |
 | STORY-0103 | AUTH | User Story | Récupération de Mot de Passe Simplifiée | Back-end | Intermédiaire | TODO | P2 | 2 | Intermédiaire | 0.3j | 0.45j | 0.75j | À assigner | Lead | SPRINT-0003 | 0j | Prêt pour le dev | Faible | 2026-07-02 |
-| STORY-0104 | AUTH | User Story | Invitation & Gestion du Personnel de Clinique | Full-stack | IN_PROGRESS | P1 | 3 | Intermédiaire | 0.5j | 0.8j | 1.3j | Antigravity / Codex | Lead | SPRINT-0003 | 0.55j | Backend et frontend implémentés ; reste tests Maven backend et build Angular production hors réseau | Moyen | 2026-07-02 |
+| STORY-0104 | AUTH | User Story | Invitation & Gestion du Personnel de Clinique | Full-stack | DONE | P1 | 3 | Intermédiaire | 0.5j | 0.8j | 1.3j | Antigravity / Codex | Lead | SPRINT-0003 | 0.55j | Aucun (tests unitaires et d'intégration validés avec succès) | Faible | 2026-07-02 |
 | EPIC-0002 | CLIN | Epic | Gestion de la Clinique Pilote | Full-stack | DONE | P1 | 5 | Intermédiaire | 1j | 1.3j | 2j | Antigravity | Lead | SPRINT-0003 | 1.25j | Epic entièrement terminée (Enregistrement + Admin clinique) | Faible | 2026-07-02 |
 | STORY-0201 | CLIN | User Story | Enregistrement de la Clinique Pilote & Multi-tenant | Full-stack | DONE | P0 | 3 | Intermédiaire | 1j | 1.3j | 2.2j | Gemini / Codex | Lead | SPRINT-0002 | 0.65j | Aucun | Moyen | 2026-07-02 |
 | STORY-0202 | CLIN | User Story | Création de l'Administrateur Clinique par l'Admin Joprelys | Full-stack | DONE | P1 | 2 | Intermédiaire | 0.3j | 0.5j | 0.8j | Antigravity | Lead | SPRINT-0003 | 0.6j | Aucun (tests unitaires et d'intégration validés) | Faible | 2026-07-02 |
