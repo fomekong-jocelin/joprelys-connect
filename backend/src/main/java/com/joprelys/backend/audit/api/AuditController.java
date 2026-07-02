@@ -1,6 +1,7 @@
 package com.joprelys.backend.audit.api;
 
 import com.joprelys.backend.audit.application.AuditService;
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import org.springframework.http.HttpStatus;
@@ -55,7 +56,14 @@ public class AuditController {
 		);
 
 		return auditService.getPatientLogs(patientId).stream()
-				.map(AuditLogResponse::fromEntity)
+				.map(entity -> {
+					String actorName = entity.getActorUserId() != null 
+							? userAccountRepository.findById(entity.getActorUserId())
+									.map(UserAccountEntity::getDisplayName)
+									.orElse("Utilisateur inconnu")
+							: "Système";
+					return AuditLogResponse.fromEntity(entity, actorName);
+				})
 				.toList();
 	}
 
@@ -73,7 +81,14 @@ public class AuditController {
 		}
 
 		return auditService.getOrganizationLogs(organizationId).stream()
-				.map(AuditLogResponse::fromEntity)
+				.map(entity -> {
+					String actorName = entity.getActorUserId() != null 
+							? userAccountRepository.findById(entity.getActorUserId())
+									.map(UserAccountEntity::getDisplayName)
+									.orElse("Utilisateur inconnu")
+							: "Système";
+					return AuditLogResponse.fromEntity(entity, actorName);
+				})
 				.toList();
 	}
 }

@@ -184,6 +184,7 @@ const FR: TranslationDictionary = {
   'patients.auditLogsEmpty': "Aucun événement de traçabilité enregistré.",
   'patients.auditLogsAction': "Action :",
   'patients.auditLogsIp': "IP :",
+  'patients.auditLogsUser': "Utilisateur :",
 };
 
 const EN: TranslationDictionary = {
@@ -367,6 +368,7 @@ const EN: TranslationDictionary = {
   'patients.auditLogsEmpty': 'No audit events recorded.',
   'patients.auditLogsAction': 'Action:',
   'patients.auditLogsIp': 'IP:',
+  'patients.auditLogsUser': 'User:',
 };
 
 @Injectable({

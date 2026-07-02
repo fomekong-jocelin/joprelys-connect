@@ -280,7 +280,8 @@ import { AuditLog } from '../audit/audit.models';
                                     {{ log.reason || log.action }}
                                   </p>
                                   <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                                    {{ i18n.t('patients.auditLogsAction') }} <span class="font-mono text-[10px] font-bold">{{ log.action }}</span> 
+                                    {{ i18n.t('patients.auditLogsUser') }} <span class="font-bold text-indigo-600 dark:text-indigo-400">{{ log.actorName || 'Système' }}</span>
+                                    | {{ i18n.t('patients.auditLogsAction') }} <span class="font-mono text-[10px] font-bold">{{ log.action }}</span> 
                                     @if (log.ipAddress) {
                                       | {{ i18n.t('patients.auditLogsIp') }} <span class="font-mono text-[10px]">{{ log.ipAddress }}</span>
                                     }

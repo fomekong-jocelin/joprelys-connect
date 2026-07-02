@@ -7,6 +7,7 @@ import java.util.UUID;
 public record AuditLogResponse(
 		UUID id,
 		UUID actorUserId,
+		String actorName,
 		UUID actorOrganizationId,
 		UUID patientId,
 		String resourceType,
@@ -18,10 +19,11 @@ public record AuditLogResponse(
 		String status,
 		Instant createdAt
 ) {
-	public static AuditLogResponse fromEntity(AuditLogEntity entity) {
+	public static AuditLogResponse fromEntity(AuditLogEntity entity, String actorName) {
 		return new AuditLogResponse(
 				entity.getId(),
 				entity.getActorUserId(),
+				actorName,
 				entity.getActorOrganizationId(),
 				entity.getPatientId(),
 				entity.getResourceType(),
