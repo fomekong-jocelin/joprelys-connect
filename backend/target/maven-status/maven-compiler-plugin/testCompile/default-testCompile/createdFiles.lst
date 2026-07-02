@@ -1,0 +1,7 @@
+com\joprelys\backend\auth\application\AdminUserSeederTest.class
+com\joprelys\backend\clinic\api\ClinicControllerTest.class
+com\joprelys\backend\JoprelysBackendApplicationTests.class
+com\joprelys\backend\clinic\api\OrganizationControllerTest.class
+com\joprelys\backend\auth\security\JwtServiceTest.class
+com\joprelys\backend\patient\api\PatientControllerTest.class
+com\joprelys\backend\auth\application\AuthenticationServiceTest.class

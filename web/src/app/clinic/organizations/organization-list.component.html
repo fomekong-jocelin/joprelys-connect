@@ -1,0 +1,40 @@
+<app-shell>
+  <app-page-header
+    [title]="pageTitle()"
+    [subtitle]="pageSubtitle()"
+    backLink="/dashboard"
+    [backLabel]="backLabel()"
+  >
+    <app-ui-button class="w-full sm:w-auto" (pressed)="toggleCreateForm()">
+      {{ createLabel() }}
+    </app-ui-button>
+  </app-page-header>
+
+  <div class="app-container py-8">
+    @if (error(); as err) {
+      <app-ui-alert tone="error" class="mb-6">{{ err }}</app-ui-alert>
+    }
+
+    @if (showCreateForm()) {
+      <app-organization-form
+        [labels]="formLabels()"
+        [loading]="formLoading()"
+        [error]="formError()"
+        [(name)]="name"
+        [(email)]="email"
+        [(phone)]="phone"
+        [(address)]="address"
+        [(city)]="city"
+        (submitted)="submit()"
+        (cancelled)="cancelCreate()"
+      />
+    } @else {
+      <app-organization-table
+        [organizations]="list()"
+        [loading]="loading()"
+        [labels]="tableLabels()"
+        (statusToggled)="toggleStatus($event)"
+      />
+    }
+  </div>
+</app-shell>

@@ -1,0 +1,20 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  darkMode: 'class',
+  content: ['./src/**/*.{html,ts}'],
+  theme: {
+    extend: {
+      colors: {
+        brand: {
+          50: 'rgb(var(--color-brand-50) / <alpha-value>)',
+          500: 'rgb(var(--color-brand-500) / <alpha-value>)',
+          700: 'rgb(var(--color-brand-700) / <alpha-value>)'
+        }
+      },
+      borderRadius: {
+        app: 'var(--radius-app)'
+      }
+    }
+  },
+  plugins: []
+};

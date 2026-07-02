@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:joprelys-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+joprelys:
+  security:
+    jwt:
+      secret: test-jwt-secret-for-joprelys-connect-32
+      issuer: joprelys-connect-test
+      audience: joprelys-clinic-test
+      ttl-minutes: 30

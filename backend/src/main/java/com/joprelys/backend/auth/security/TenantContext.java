@@ -1,0 +1,23 @@
+package com.joprelys.backend.auth.security;
+
+import java.util.UUID;
+
+public final class TenantContext {
+
+	private static final ThreadLocal<UUID> currentTenant = new ThreadLocal<>();
+
+	private TenantContext() {
+	}
+
+	public static UUID getTenantId() {
+		return currentTenant.get();
+	}
+
+	public static void setTenantId(UUID tenantId) {
+		currentTenant.set(tenantId);
+	}
+
+	public static void clear() {
+		currentTenant.remove();
+	}
+}

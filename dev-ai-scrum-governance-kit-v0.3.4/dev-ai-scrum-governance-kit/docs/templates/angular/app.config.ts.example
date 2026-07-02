@@ -1,0 +1,38 @@
+export type SupportedLocale = 'fr' | 'en';
+export type AppThemeMode = 'light' | 'dark' | 'system';
+
+export interface PublicLinkConfig {
+  labelKey: string;
+  url: string;
+}
+
+export interface AppConfig {
+  appName: string;
+  appShortName: string;
+  appSloganKey: string;
+  publisherName: string;
+  logoPath: string;
+  logoDarkPath: string;
+  defaultLocale: SupportedLocale;
+  supportedLocales: SupportedLocale[];
+  defaultTheme: AppThemeMode;
+  supportEmail?: string;
+  publicLinks: PublicLinkConfig[];
+}
+
+export const APP_CONFIG: AppConfig = {
+  appName: 'Your App Name',
+  appShortName: 'YourApp',
+  appSloganKey: 'app.slogan',
+  publisherName: 'Your Company',
+  logoPath: 'assets/branding/logo.svg',
+  logoDarkPath: 'assets/branding/logo-dark.svg',
+  defaultLocale: 'fr',
+  supportedLocales: ['fr', 'en'],
+  defaultTheme: 'system',
+  supportEmail: 'support@example.com',
+  publicLinks: [
+    { labelKey: 'links.privacy', url: '/privacy' },
+    { labelKey: 'links.terms', url: '/terms' }
+  ]
+};
