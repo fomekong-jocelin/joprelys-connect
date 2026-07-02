@@ -56,13 +56,17 @@ public class PatientPortalControllerTest {
     private JwtService jwtService;
 
     private OrganizationEntity orgA;
+    private OrganizationEntity orgB;
     private PatientEntity patientA;
     private PatientEntity patientB;
     private VisitEntity visitA;
     private String tokenPatientA;
+    private String tokenMedecinB;
 
     @BeforeEach
     void setUp() {
+        jdbcTemplate.update("DELETE FROM emergency_access_authorizations");
+        jdbcTemplate.update("DELETE FROM patient_consents");
         jdbcTemplate.update("DELETE FROM medical_documents");
         jdbcTemplate.update("DELETE FROM visits");
         jdbcTemplate.update("DELETE FROM patients");
@@ -72,6 +76,20 @@ public class PatientPortalControllerTest {
         // 1. Créer Organisation
         orgA = new OrganizationEntity("Clinique Test A", "contact@testa.org", "123456", "Adresse A", "Douala");
         orgA = organizationRepository.save(orgA);
+
+        orgB = new OrganizationEntity("Clinique Test B", "contact@testb.org", "654321", "Adresse B", "Yaoundé");
+        orgB = organizationRepository.save(orgB);
+
+        var medecinB = new com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity(
+                "medecin.b@testb.org",
+                "Médecin B",
+                "MEDECIN",
+                "passhash"
+        );
+        medecinB.setOrganizationId(orgB.getId());
+        medecinB = userAccountRepository.save(medecinB);
+
+        tokenMedecinB = jwtService.createToken(medecinB).value();
 
         TenantContext.setTenantId(orgA.getId());
 
@@ -215,5 +233,59 @@ public class PatientPortalControllerTest {
         mockMvc.perform(get("/api/patient/visits/" + visitB.getId() + "/document")
                 .header("Authorization", "Bearer " + tokenPatientA))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void givenPatient_whenGetConsents_thenOk() throws Exception {
+        mockMvc.perform(get("/api/patient/consents")
+                .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].organizationName").value("Clinique Test A"))
+                .andExpect(jsonPath("$[0].status").value("ACTIVE"))
+                .andExpect(jsonPath("$[0].isCreator").value(true));
+    }
+
+    @Test
+    void givenPatient_whenUpdateConsent_thenOk() throws Exception {
+        mockMvc.perform(post("/api/patient/consents/" + orgA.getId())
+                .param("status", "REVOKED")
+                .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/patient/consents")
+                .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("REVOKED"));
+    }
+
+    @Test
+    void givenClinicianWithoutConsent_whenGetPatient_thenForbidden() throws Exception {
+        mockMvc.perform(get("/api/patients/" + patientA.getId())
+                .header("Authorization", "Bearer " + tokenMedecinB))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void givenClinicianWithoutConsent_whenTriggerEmergencyAccess_thenCanAccess() throws Exception {
+        mockMvc.perform(get("/api/patients/" + patientA.getId())
+                .header("Authorization", "Bearer " + tokenMedecinB))
+                .andExpect(status().isForbidden());
+
+        String json = """
+                {
+                    "reason": "Suspicion d'arrêt cardio-respiratoire"
+                }
+                """;
+        mockMvc.perform(post("/api/patients/" + patientA.getId() + "/emergency-access")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .header("Authorization", "Bearer " + tokenMedecinB))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/patients/" + patientA.getId())
+                .header("Authorization", "Bearer " + tokenMedecinB))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fullName").value("Jean Patient A"))
+                .andExpect(jsonPath("$.emergencyAccessActive").value(true));
     }
 }

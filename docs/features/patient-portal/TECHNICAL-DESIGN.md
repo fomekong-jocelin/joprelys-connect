@@ -88,16 +88,41 @@ PatientController (API publique / sécurisée)
 - **Headers** : `Authorization: Bearer <token>`
 - **Response** : `200 OK` (PatientResponse + Liste des consultations associées)
 
----
-
 ## 7. Modèle de données / migrations
-Aucune modification de la structure de la base de données.
-Une table ou un cache en mémoire (ex: `ConcurrentHashMap` avec timestamp d'expiration) sera utilisé dans `PatientAuthService` pour gérer les OTP actifs.
+Création de la migration Flyway `V11__create_patient_consents_and_emergency_access.sql` définissant :
+- `patient_consents` : Table stockant les consentements explicites (`ACTIVE`, `REVOKED`) liant un patient à une organisation.
+- `emergency_access_authorizations` : Table stockant les dérogations d'accès d'urgence "Brise-Glace" d'une durée de validité de 15 minutes.
+
+## 7.1 APIs de Consentement et d'Urgence
+
+### 1. Obtenir les consentements d'accès du patient
+- **Méthode** : `GET`
+- **Endpoint** : `/api/patient/consents`
+- **Headers** : `Authorization: Bearer <token>`
+- **Response** : `200 OK` (Liste d'objets `PatientConsentDto` avec `organizationId`, `organizationName`, `status` (`ACTIVE`/`REVOKED`/`NONE`) et `isCreator`)
+
+### 2. Mettre à jour le consentement pour une clinique
+- **Méthode** : `POST`
+- **Endpoint** : `/api/patient/consents/{orgId}?status=ACTIVE` (ou `REVOKED`)
+- **Headers** : `Authorization: Bearer <token>`
+- **Response** : `200 OK`
+
+### 3. Déclencher un accès d'urgence "Brise-Glace" (Praticien)
+- **Méthode** : `POST`
+- **Endpoint** : `/api/patients/{patientId}/emergency-access`
+- **Headers** : `Authorization: Bearer <token>` (Rôle praticien requis)
+- **Request Body** :
+  ```json
+  {
+    "reason": "Justification de l'accès d'urgence"
+  }
+  ```
+- **Response** : `201 CREATED`
 
 ---
 
 ## 8. Configuration
-Aucune variable de configuration externe requise. La durée de validité de l'OTP est codée en dur à 5 minutes (constant).
+Aucune variable de configuration externe requise. La validité de l'OTP reste à 5 minutes et la dérogation d'urgence Brise-Glace est fixée à 15 minutes.
 
 ---
 
@@ -105,8 +130,9 @@ Aucune variable de configuration externe requise. La durée de validité de l'OT
 
 - Les endpoints `/api/public/patient/auth/**` sont publics.
 - Les endpoints `/api/patient/**` exigent un token JWT valide avec le rôle `ROLE_PATIENT`.
-- Le `JwtAuthenticationFilter` validera le rôle `PATIENT` et l'injectera dans le contexte Spring Security.
 - L'isolation est assurée en comparant le `globalPatientNumber` présent dans le Token JWT avec la ressource consultée.
+- **Blocage d'accès (STORY-0803)** : Lors de l'appel à `PatientService.getPatientById` par un acteur clinique (`MEDECIN`, `INFIRMIER`, etc.), le backend vérifie l'existence d'un consentement `ACTIVE` ou d'une dérogation d'accès d'urgence active pour son organisation. Sinon, il lève une exception `403 FORBIDDEN` avec le message `CONSENT_REQUIRED`.
+- **Accès global cross-tenant** : Utilisation d'une requête native SQL `findByIdGlobally` pour charger la fiche patient et bypasser le filtre Hibernate multi-tenant lors des contrôles de consentement globaux.
 
 ## 10. Observabilité
 - Logs d'audit générés à chaque connexion réussie d'un patient.

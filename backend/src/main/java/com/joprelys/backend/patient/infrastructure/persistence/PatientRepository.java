@@ -20,4 +20,7 @@ public interface PatientRepository extends JpaRepository<PatientEntity, UUID> {
 
 	@Query(value = "SELECT * FROM patients WHERE global_patient_number = :globalPatientNumber", nativeQuery = true)
 	java.util.Optional<PatientEntity> findByGlobalPatientNumber(@Param("globalPatientNumber") String globalPatientNumber);
+
+	@Query(value = "SELECT * FROM patients WHERE id = :id", nativeQuery = true)
+	java.util.Optional<PatientEntity> findByIdGlobally(@Param("id") UUID id);
 }

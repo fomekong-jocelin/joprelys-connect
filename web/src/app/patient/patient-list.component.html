@@ -36,6 +36,61 @@
         (submitted)="submit()"
         (cancelled)="cancelCreate()"
       />
+    } @else if (consentRequiredPatient(); as patient) {
+      <app-ui-card>
+        <div class="max-w-md mx-auto text-center py-8 flex flex-col items-center gap-6">
+          <div class="p-4 rounded-full bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-rose-600 dark:text-rose-400">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-12 h-12">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+            </svg>
+          </div>
+
+          <div>
+            <h3 class="font-display font-black text-xl text-slate-800 dark:text-white">
+              Consentement d'accès requis
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">
+              DPU : <span class="font-mono font-bold text-slate-600 dark:text-slate-400">{{ patient.globalPatientNumber }}</span>
+            </p>
+            <p class="text-sm text-[var(--text-secondary)] mt-4 leading-relaxed">
+              Le patient <strong>{{ patient.fullName }}</strong> n'a pas accordé d'accès DPU actif pour votre clinique.
+              Vous ne pouvez pas consulter ses données médicales.
+            </p>
+          </div>
+
+          @if (emergencyError(); as err) {
+            <app-ui-alert tone="error" class="w-full text-left">{{ err }}</app-ui-alert>
+          }
+
+          <div class="w-full border-t border-slate-100 dark:border-slate-800/80 pt-6 flex flex-col gap-4">
+            <div class="text-left w-full">
+              <label for="emergency-reason" class="ui-label block mb-2">Justification d'accès d'urgence (obligatoire)</label>
+              <textarea
+                id="emergency-reason"
+                class="ui-input w-full min-h-[80px]"
+                placeholder="Ex: Patient inconscient, arrêt cardiaque, accident nécessitant l'accès immédiat au dossier médical..."
+                [value]="emergencyReason()"
+                (input)="emergencyReason.set($any($event.target).value)"
+                style="color: var(--text-primary); background-color: var(--bg-card);"
+              ></textarea>
+            </div>
+
+            <div class="flex items-center justify-between gap-3 w-full">
+              <app-ui-button variant="secondary" (pressed)="closeDetail()" class="grow">
+                Annuler
+              </app-ui-button>
+              <app-ui-button
+                variant="primary"
+                class="grow"
+                [disabled]="!emergencyReason().trim() || emergencyLoading()"
+                (pressed)="triggerEmergencyAccess()"
+              >
+                {{ emergencyLoading() ? 'Activation...' : 'Procédure d\'urgence (Brise-Glace)' }}
+              </app-ui-button>
+            </div>
+          </div>
+        </div>
+      </app-ui-card>
     } @else if (selectedPatient(); as patient) {
       <app-patient-detail
         [patient]="patient"

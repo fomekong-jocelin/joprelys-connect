@@ -21,4 +21,8 @@ export class PatientApiService {
   create(dto: CreatePatientDto): Observable<Patient> {
     return this.http.post<Patient>('/api/patients', dto);
   }
+
+  triggerEmergencyAccess(id: string, reason: string): Observable<void> {
+    return this.http.post<void>(`/api/patients/${id}/emergency-access`, { reason });
+  }
 }

@@ -31,16 +31,22 @@ public class PatientPortalController {
     private final ConsultationRepository consultationRepository;
     private final MedicalDocumentRepository medicalDocumentRepository;
     private final DocumentService documentService;
+    private final com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository organizationRepository;
+    private final com.joprelys.backend.patient.infrastructure.persistence.PatientConsentRepository patientConsentRepository;
 
     public PatientPortalController(
             PatientRepository patientRepository,
             ConsultationRepository consultationRepository,
             MedicalDocumentRepository medicalDocumentRepository,
-            DocumentService documentService) {
+            DocumentService documentService,
+            com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository organizationRepository,
+            com.joprelys.backend.patient.infrastructure.persistence.PatientConsentRepository patientConsentRepository) {
         this.patientRepository = patientRepository;
         this.consultationRepository = consultationRepository;
         this.medicalDocumentRepository = medicalDocumentRepository;
         this.documentService = documentService;
+        this.organizationRepository = organizationRepository;
+        this.patientConsentRepository = patientConsentRepository;
     }
 
     @GetMapping("/me")
@@ -115,4 +121,54 @@ public class PatientPortalController {
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdfBytes);
     }
+
+    @GetMapping("/consents")
+    public List<PatientConsentDto> getConsents(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié.");
+        }
+
+        PatientEntity patient = patientRepository.findByGlobalPatientNumber(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dossier patient introuvable."));
+
+        return organizationRepository.findAll().stream()
+                .map(org -> {
+                    var consentOpt = patientConsentRepository.findByPatientIdAndOrganizationId(patient.getId(), org.getId());
+                    String status;
+                    if (consentOpt.isPresent()) {
+                        status = consentOpt.get().getStatus();
+                    } else if (org.getId().equals(patient.getOrganizationId())) {
+                        status = "ACTIVE";
+                    } else {
+                        status = "NONE";
+                    }
+                    boolean isCreator = org.getId().equals(patient.getOrganizationId());
+                    return new PatientConsentDto(org.getId(), org.getName(), status, isCreator);
+                })
+                .toList();
+    }
+
+    @org.springframework.web.bind.annotation.PostMapping("/consents/{orgId}")
+    public void updateConsent(
+            @PathVariable UUID orgId,
+            @org.springframework.web.bind.annotation.RequestParam String status,
+            Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié.");
+        }
+        if (!"ACTIVE".equals(status) && !"REVOKED".equals(status)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Statut invalide.");
+        }
+
+        PatientEntity patient = patientRepository.findByGlobalPatientNumber(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dossier patient introuvable."));
+
+        var consent = patientConsentRepository.findByPatientIdAndOrganizationId(patient.getId(), orgId)
+                .orElseGet(() -> new com.joprelys.backend.patient.infrastructure.persistence.PatientConsentEntity(patient.getId(), orgId, status));
+
+        consent.setStatus(status);
+        patientConsentRepository.save(consent);
+    }
 }
+
+record PatientConsentDto(UUID organizationId, String organizationName, String status, boolean isCreator) {}

@@ -72,4 +72,19 @@ export class PatientPortalService {
       responseType: 'blob'
     });
   }
+
+  getConsents(): Observable<PatientConsent[]> {
+    return this.http.get<PatientConsent[]>('/api/patient/consents');
+  }
+
+  updateConsent(orgId: string, status: string): Observable<void> {
+    return this.http.post<void>(`/api/patient/consents/${orgId}?status=${status}`, {});
+  }
+}
+
+export interface PatientConsent {
+  organizationId: string;
+  organizationName: string;
+  status: string;
+  isCreator: boolean;
 }

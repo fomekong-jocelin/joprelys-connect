@@ -36,6 +36,12 @@ export class PatientListComponent implements OnInit {
   readonly searchQuery = signal('');
   readonly selectedPatient = signal<Patient | null>(null);
 
+  // STORY-0803 — Consent Blocking & Break-Glass Signals
+  readonly consentRequiredPatient = signal<Patient | null>(null);
+  readonly emergencyReason = signal('');
+  readonly emergencyLoading = signal(false);
+  readonly emergencyError = signal<string | null>(null);
+
   // Form Signals
   readonly fullName = signal('');
   readonly gender = signal('');
@@ -129,11 +135,51 @@ export class PatientListComponent implements OnInit {
   }
 
   viewDetail(patient: Patient): void {
-    this.selectedPatient.set(patient);
+    this.error.set(null);
+    this.selectedPatient.set(null);
+    this.consentRequiredPatient.set(null);
+    this.loading.set(true);
+
+    this.api.getById(patient.id).subscribe({
+      next: (fullPatient) => {
+        this.selectedPatient.set(fullPatient);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.loading.set(false);
+        if (err && err.status === 403) {
+          this.consentRequiredPatient.set(patient);
+        } else {
+          this.error.set(err.error?.detail || err.error?.title || "Impossible de charger le dossier patient.");
+        }
+      }
+    });
   }
 
   closeDetail(): void {
     this.selectedPatient.set(null);
+    this.consentRequiredPatient.set(null);
+  }
+
+  triggerEmergencyAccess(): void {
+    const patient = this.consentRequiredPatient();
+    if (!patient || !this.emergencyReason().trim()) return;
+
+    this.emergencyLoading.set(true);
+    this.emergencyError.set(null);
+
+    this.api.triggerEmergencyAccess(patient.id, this.emergencyReason().trim()).subscribe({
+      next: () => {
+        this.emergencyLoading.set(false);
+        this.consentRequiredPatient.set(null);
+        this.emergencyReason.set('');
+        this.viewDetail(patient);
+      },
+      error: (err) => {
+        this.emergencyLoading.set(false);
+        this.emergencyError.set(err.error?.detail || err.error?.title || "Erreur lors du déclenchement de l'accès d'urgence.");
+      }
+    });
   }
 
   submit(): void {

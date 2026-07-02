@@ -31,7 +31,7 @@ describe('PatientListComponent', () => {
     mockApi = {
       list: vi.fn().mockReturnValue(of(mockPatients)),
       create: vi.fn(),
-      getById: vi.fn(),
+      getById: vi.fn().mockReturnValue(of(mockPatients[0])),
     };
 
     await TestBed.configureTestingModule({

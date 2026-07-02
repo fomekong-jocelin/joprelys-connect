@@ -17,6 +17,7 @@ export interface Patient {
   status: string;
   createdAt: string;
   updatedAt: string;
+  emergencyAccessActive?: boolean;
 }
 
 export interface CreatePatientDto {

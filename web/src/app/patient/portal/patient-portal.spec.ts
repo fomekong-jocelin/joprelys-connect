@@ -97,4 +97,25 @@ describe('PatientPortalService', () => {
     expect(req.request.method).toBe('GET');
     req.flush(MOCK_PATIENT);
   });
+
+  it('should call getConsents and updateConsent', () => {
+    const mockConsents = [
+      { organizationId: 'org-1', organizationName: 'Clinic A', status: 'ACTIVE', isCreator: true },
+      { organizationId: 'org-2', organizationName: 'Clinic B', status: 'NONE', isCreator: false }
+    ];
+
+    service.getConsents().subscribe((data) => {
+      expect(data.length).toBe(2);
+      expect(data[0].organizationName).toBe('Clinic A');
+    });
+
+    const getReq = httpTesting.expectOne('/api/patient/consents');
+    expect(getReq.request.method).toBe('GET');
+    getReq.flush(mockConsents);
+
+    service.updateConsent('org-2', 'ACTIVE').subscribe();
+    const postReq = httpTesting.expectOne('/api/patient/consents/org-2?status=ACTIVE');
+    expect(postReq.request.method).toBe('POST');
+    postReq.flush(null);
+  });
 });

@@ -21,15 +21,21 @@ public class PatientService {
 	private final PatientNumberGenerator patientNumberGenerator;
 	private final AuditService auditService;
 	private final UserAccountRepository userAccountRepository;
+	private final com.joprelys.backend.patient.infrastructure.persistence.PatientConsentRepository patientConsentRepository;
+	private final com.joprelys.backend.patient.infrastructure.persistence.EmergencyAccessAuthorizationRepository emergencyAccessAuthorizationRepository;
 
 	public PatientService(PatientRepository patientRepository,
 						  PatientNumberGenerator patientNumberGenerator,
 						  AuditService auditService,
-						  UserAccountRepository userAccountRepository) {
+						  UserAccountRepository userAccountRepository,
+						  com.joprelys.backend.patient.infrastructure.persistence.PatientConsentRepository patientConsentRepository,
+						  com.joprelys.backend.patient.infrastructure.persistence.EmergencyAccessAuthorizationRepository emergencyAccessAuthorizationRepository) {
 		this.patientRepository = patientRepository;
 		this.patientNumberGenerator = patientNumberGenerator;
 		this.auditService = auditService;
 		this.userAccountRepository = userAccountRepository;
+		this.patientConsentRepository = patientConsentRepository;
+		this.emergencyAccessAuthorizationRepository = emergencyAccessAuthorizationRepository;
 	}
 
 	@Transactional
@@ -80,11 +86,24 @@ public class PatientService {
 
 	@Transactional(readOnly = true)
 	public PatientEntity getPatientById(UUID id) {
-		var patient = patientRepository.findById(id)
+		var patient = patientRepository.findByIdGlobally(id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé"));
 
 		var actor = getCurrentUser();
 		if (actor != null) {
+			String role = actor.getRole();
+			boolean isClinicalRole = "MEDECIN".equals(role) || "INFIRMIER".equals(role) || "AGENT_ACCUEIL".equals(role) || "ADMIN_CLINIQUE".equals(role);
+			if (isClinicalRole) {
+				UUID organizationId = actor.getOrganizationId();
+				boolean hasConsent = checkConsent(patient.getId(), organizationId);
+				if (!hasConsent) {
+					boolean hasEmergencyAccess = checkEmergencyAccess(patient.getId(), organizationId);
+					if (!hasEmergencyAccess) {
+						throw new ResponseStatusException(HttpStatus.FORBIDDEN, "CONSENT_REQUIRED");
+					}
+				}
+			}
+
 			auditService.logSuccess(
 					actor.getId(),
 					actor.getOrganizationId(),
@@ -97,6 +116,62 @@ public class PatientService {
 		}
 
 		return patient;
+	}
+
+	private boolean checkConsent(UUID patientId, UUID organizationId) {
+		var consent = patientConsentRepository.findByPatientIdAndOrganizationId(patientId, organizationId);
+		if (consent.isPresent()) {
+			return "ACTIVE".equals(consent.get().getStatus());
+		}
+		var patient = patientRepository.findByIdGlobally(patientId).orElse(null);
+		return patient != null && patient.getOrganizationId() != null && patient.getOrganizationId().equals(organizationId);
+	}
+
+	private boolean checkEmergencyAccess(UUID patientId, UUID organizationId) {
+		return emergencyAccessAuthorizationRepository
+				.findByPatientIdAndOrganizationIdAndExpiresAtAfter(patientId, organizationId, java.time.Instant.now())
+				.isPresent();
+	}
+
+	@Transactional
+	public void triggerEmergencyAccess(UUID patientId, String reason) {
+		var actor = getCurrentUser();
+		if (actor == null) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié.");
+		}
+
+		var patient = patientRepository.findByIdGlobally(patientId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé"));
+
+		UUID organizationId = actor.getOrganizationId();
+		String doctorEmail = actor.getEmail();
+
+		var auth = new com.joprelys.backend.patient.infrastructure.persistence.EmergencyAccessAuthorizationEntity(
+				patientId,
+				organizationId,
+				doctorEmail,
+				reason,
+				java.time.Instant.now().plus(java.time.Duration.ofMinutes(15))
+		);
+		emergencyAccessAuthorizationRepository.save(auth);
+
+		auditService.log(
+				actor.getId(),
+				organizationId,
+				patientId,
+				"PATIENT_RECORD",
+				patientId,
+				"EMERGENCY_ACCESS",
+				"Accès d'urgence Brise-Glace activé. Motif : " + reason,
+				null, null, "SUCCESS"
+		);
+	}
+
+	@Transactional(readOnly = true)
+	public boolean isEmergencyAccessActiveForCurrentActor(UUID patientId) {
+		var actor = getCurrentUser();
+		if (actor == null) return false;
+		return checkEmergencyAccess(patientId, actor.getOrganizationId());
 	}
 
 	private UserAccountEntity getCurrentUser() {

@@ -41,6 +41,14 @@ public class PatientController {
 				.toList();
 	}
 
+	@PostMapping("/{id}/emergency-access")
+	@ResponseStatus(HttpStatus.CREATED)
+	public void triggerEmergencyAccess(
+			@PathVariable UUID id,
+			@RequestBody EmergencyAccessRequest request) {
+		patientService.triggerEmergencyAccess(id, request.reason());
+	}
+
 	@GetMapping("/{id}")
 	public PatientResponse getById(@PathVariable UUID id) {
 		PatientEntity entity = patientService.getPatientById(id);
@@ -48,6 +56,11 @@ public class PatientController {
 	}
 
 	private PatientResponse mapToResponse(PatientEntity entity) {
+		boolean emergencyActive = patientService.isEmergencyAccessActiveForCurrentActor(entity.getId());
+		return mapToResponse(entity, emergencyActive);
+	}
+
+	private PatientResponse mapToResponse(PatientEntity entity, boolean emergencyActive) {
 		return new PatientResponse(
 				entity.getId(),
 				entity.getOrganizationId(),
@@ -66,7 +79,10 @@ public class PatientController {
 				entity.getMedicalHistory(),
 				entity.getStatus(),
 				entity.getCreatedAt(),
-				entity.getUpdatedAt()
+				entity.getUpdatedAt(),
+				emergencyActive
 		);
 	}
 }
+
+record EmergencyAccessRequest(String reason) {}

@@ -22,6 +22,7 @@ public record PatientResponse(
 		String medicalHistory,
 		String status,
 		Instant createdAt,
-		Instant updatedAt
+		Instant updatedAt,
+		Boolean emergencyAccessActive
 ) {
 }

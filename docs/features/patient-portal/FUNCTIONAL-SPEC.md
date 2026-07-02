@@ -64,7 +64,8 @@ Permettre aux patients du réseau Joprelys Connect d'accéder à leur espace per
 |---|---|
 | Tentative d'accès à un autre DPU via l'URL | Retourner `403 Forbidden` (Vérification du Token JWT par rapport à l'identifiant demandé). |
 | Code OTP erroné ou expiré | Message d'erreur et invitation à régénérer le code. |
-| Clinique révoquée tente de charger le DPU d'un patient | Le backend lève une exception `403 FORBIDDEN` indiquant "Consentement manquant". |
+| Clinique révoquée tente de charger le DPU d'un patient | Le backend lève une exception `403 FORBIDDEN` avec le code `CONSENT_REQUIRED`. |
+| Procédure d'urgence Brise-Glace (Break-Glass) | Un médecin ou infirmier peut forcer l'accès temporaire (15 minutes) au DPU en saisissant une justification médicale obligatoire, ce qui génère un audit log critique de type `EMERGENCY_ACCESS` et affiche un bandeau d'alerte rouge sur le dossier. |
 
 ## 9. Textes / i18n
 

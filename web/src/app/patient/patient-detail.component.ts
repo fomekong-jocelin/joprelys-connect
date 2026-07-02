@@ -54,6 +54,15 @@ import { AuditLog } from '../audit/audit.models';
           </div>
         </div>
 
+        @if (patient().emergencyAccessActive) {
+          <div class="p-4 rounded-[var(--radius-brand-md)] bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/40 text-rose-800 dark:text-rose-300 text-sm font-bold flex items-center gap-3 animate-pulse">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>Procédure d'urgence "Brise-Glace" active : accès temporaire tracé dans le journal d'audit de sécurité.</span>
+          </div>
+        }
+
         <!-- Sélecteur d'onglets (Tabs) -->
         <div class="border-b border-slate-100 dark:border-slate-800/80">
           <nav class="flex space-x-6" aria-label="Tabs">
