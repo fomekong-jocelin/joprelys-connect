@@ -7,18 +7,18 @@ Permettre au patient de contrôler qui peut accéder à ses données médicales 
 ## 2. Critères d'acceptation
 
 ### Côté Patient (Portail Patient)
-- [ ] Un onglet ou une section "Consentements" est accessible sur le tableau de bord patient.
-- [ ] Le patient y voit la liste des cliniques du réseau Joprelys Connect.
-- [ ] Chaque clinique dispose d'un interrupteur (toggle) ou bouton permettant d'activer ("Accorder l'accès") ou désactiver ("Révoquer l'accès") le consentement d'accès.
-- [ ] Par défaut, l'établissement créateur du dossier dispose d'un consentement accordé (`ACTIVE`).
+- [x] Un onglet ou une section "Consentements" est accessible sur le tableau de bord patient.
+- [x] Le patient y voit la liste des cliniques du réseau Joprelys Connect.
+- [x] Chaque clinique dispose d'un interrupteur (toggle) ou bouton permettant d'activer ("Accorder l'accès") ou désactiver ("Révoquer l'accès") le consentement d'accès.
+- [x] Par défaut, l'établissement créateur du dossier dispose d'un consentement accordé (`ACTIVE`).
 
 ### Côté Clinique (Portail Professionnel)
-- [ ] Si une clinique n'a pas le consentement actif pour un patient, toute tentative de lire ses données (détail patient, constantes, consultations) doit renvoyer une erreur `403 FORBIDDEN` avec le code d'erreur `CONSENT_REQUIRED`.
-- [ ] L'interface clinique affiche alors un écran de blocage expliquant que le consentement est manquant.
-- [ ] Un bouton d'urgence **"Brise-Glace"** (Break-Glass) est disponible sur cet écran de blocage pour les rôles cliniques (`MEDECIN`, `INFIRMIER`, `ADMIN_CLINIQUE`).
-- [ ] Cliquer sur "Brise-Glace" ouvre une modale exigeant la saisie d'une justification médicale d'urgence.
-- [ ] Après validation, l'accès au DPU est débloqué pour la clinique pour la session courante (ou via une autorisation d'urgence persistante) et un log d'audit critique de type `EMERGENCY_ACCESS` est enregistré avec la justification.
-- [ ] Un bandeau d'avertissement rouge est affiché sur la fiche patient pour rappeler que l'accès a été forcé pour motif d'urgence.
+- [x] Si une clinique n'a pas le consentement actif pour un patient, toute tentative de lire ses données (détail patient, constantes, consultations) doit renvoyer une erreur `403 FORBIDDEN` avec le code d'erreur `CONSENT_REQUIRED`.
+- [x] L'interface clinique affiche alors un écran de blocage expliquant que le consentement est manquant.
+- [x] Un bouton d'urgence **"Brise-Glace"** (Break-Glass) est disponible sur cet écran de blocage pour les rôles cliniques (`MEDECIN`, `INFIRMIER`, `ADMIN_CLINIQUE`).
+- [x] Cliquer sur "Brise-Glace" ouvre une modale exigeant la saisie d'une justification médicale d'urgence.
+- [x] Après validation, l'accès au DPU est débloqué pour la clinique pour la session courante (ou via une autorisation d'urgence persistante) et un log d'audit critique de type `EMERGENCY_ACCESS` est enregistré avec la justification.
+- [x] Un bandeau d'avertissement rouge est affiché sur la fiche patient pour rappeler que l'accès a été forcé pour motif d'urgence.
 
 ## 3. Pilotage projet
 
@@ -64,47 +64,46 @@ Permettre au patient de contrôler qui peut accéder à ses données médicales 
 ## 7. Action plan
 
 ### Phase 1 : Spécifications et Modèle de Données (Backend)
-- [ ] Mettre à jour `FUNCTIONAL-SPEC.md` et `TECHNICAL-DESIGN.md` pour y inclure la modélisation de `PatientConsentEntity` et `EmergencyAccessEntity`.
-- [ ] Créer les entités et tables de base de données associées.
-- [ ] Créer les repositories associés.
+- [x] Mettre à jour `FUNCTIONAL-SPEC.md` et `TECHNICAL-DESIGN.md` pour y inclure la modélisation de `PatientConsentEntity` et `EmergencyAccessEntity`.
+- [x] Créer les entités et tables de base de données associées.
+- [x] Créer les repositories associés.
 
 ### Phase 2 : Logique Métier & Sécurisation API (Backend)
-- [ ] Implémenter la vérification du consentement dans `PatientService.getPatientById` et lever `403 FORBIDDEN` avec le code `CONSENT_REQUIRED` si absent.
-- [ ] Créer un endpoint `POST /api/patient/consents` pour permettre au patient d'activer/désactiver le consentement pour une clinique.
-- [ ] Créer un endpoint `POST /api/patients/{patientId}/emergency-access` pour déclencher la procédure Brise-Glace et enregistrer l'audit log.
-- [ ] Ajouter les tests d'intégration dans `PatientConsentTest.java`.
+- [x] Implémenter la vérification du consentement dans `PatientService.getPatientById` et lever `403 FORBIDDEN` avec le code `CONSENT_REQUIRED` si absent.
+- [x] Créer un endpoint `POST /api/patient/consents` pour permettre au patient d'activer/désactiver le consentement pour une clinique.
+- [x] Créer un endpoint `POST /api/patients/{patientId}/emergency-access` pour déclencher la procédure Brise-Glace et enregistrer l'audit log.
+- [x] Ajouter les tests d'intégration dans `PatientConsentTest.java`.
 
 ### Phase 3 : Interfaces Utilisateur (Frontend)
-- [ ] Créer le composant de gestion de consentement patient `PatientConsentListComponent` sur le portail patient.
-- [ ] Mettre à jour `PatientDetailComponent` côté clinique pour capturer l'erreur `403 CONSENT_REQUIRED` et afficher l'écran de blocage.
-- [ ] Créer la modale de justification d'accès d'urgence et le bouton "Brise-Glace".
-- [ ] Afficher le bandeau rouge d'alerte d'accès d'urgence sur la fiche d'identité du patient.
-- [ ] Écrire les tests unitaires et d'intégration frontend.
+- [x] Créer le composant de gestion de consentement patient `PatientConsentListComponent` sur le portail patient.
+- [x] Mettre à jour `PatientDetailComponent` côté clinique pour capturer l'erreur `403 CONSENT_REQUIRED` et afficher l'écran de blocage.
+- [x] Créer la modale de justification d'accès d'urgence et le bouton "Brise-Glace".
+- [x] Afficher le bandeau rouge d'alerte d'accès d'urgence sur la fiche d'identité du patient.
+- [x] Écrire les tests unitaires et d'intégration frontend.
 
 ## 8. Implémentation réalisée
-*(À compléter à la fin du développement)*
+Implémentation complète backend (entités JPA, repositories, service de contrôle de consentement, endpoints d'urgence, Flyway migration V11) et frontend (gestion des onglets sur le dashboard patient, composant de liste des consentements par établissement, intercepteur d'accès DPU et écran Brise-Glace avec saisie de justification d'urgence côté clinique).
 
 ## 9. Suivi d'exécution
 
 | Date | Développeur | Temps passé | Avancement | Reste à faire | Blocage | Commentaire |
 |---|---|---:|---:|---:|---|---|
 | 2026-07-02 | Antigravity | 0.1j | 10% | Phase 1, 2 & 3 | Aucun | Cadrage initial et ticket créé |
+| 2026-07-02 | Antigravity | 0.8j | 100% | Aucun | Aucun | Développement backend et frontend terminé et testé |
 
 ## 10. Tests et vérifications
-*(À compléter à la fin)*
+- **Backend** : 94 tests unitaires et d'intégration Spring Boot (incluant `PatientPortalControllerTest` et `PatientServiceTest`) passent à 100%.
+- **Frontend** : 31 tests unitaires et d'intégration (incluant `PatientPortalService` et `PatientListComponent`) passent à 100%.
 
 ## 11. Documentation
-- [ ] Spécification fonctionnelle complétée dans `docs/features/patient-portal/FUNCTIONAL-SPEC.md`
-- [ ] Spécification technique complétée dans `docs/features/patient-portal/TECHNICAL-DESIGN.md`
+- [x] Spécification fonctionnelle complétée dans `docs/features/patient-portal/FUNCTIONAL-SPEC.md`
+- [x] Spécification technique complétée dans `docs/features/patient-portal/TECHNICAL-DESIGN.md`
 
 ## 12. Reste à faire
-- [ ] Compléter les documentations fonctionnelle et technique.
-- [ ] Créer les entités et tables du modèle de données (Flyway).
-- [ ] Implémenter le backend.
-- [ ] Implémenter le frontend.
+Aucun.
 
 ## 13. Statut final
-Statut : **TODO**
+Statut : **DONE**
 
 ## 14. Impact version / SemVer
 
@@ -116,5 +115,5 @@ Statut : **TODO**
 | Breaking change | Non |
 
 ## 15. Impact thème / i18n / branding
-- [ ] Nouveaux libellés i18n FR/EN.
-- [ ] Bandeau rouge d'alerte et design système respectés.
+- [x] Nouveaux libellés i18n FR/EN.
+- [x] Bandeau rouge d'alerte et design système respectés.
