@@ -30,7 +30,7 @@ public class PatientAuthService {
         PatientEntity patient = patientRepository.findByGlobalPatientNumber(globalPatientNumber)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient introuvable."));
 
-        if (!patient.getPhone().equals(phone) || !patient.getBirthDate().equals(birthDate)) {
+        if (!normalizePhone(patient.getPhone()).equals(normalizePhone(phone)) || !patient.getBirthDate().equals(birthDate)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Les informations fournies ne correspondent pas.");
         }
 
@@ -78,6 +78,15 @@ public class PatientAuthService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Code de sécurité incorrect.");
             }
         }
+    }
+
+    private static String normalizePhone(String phone) {
+        if (phone == null) return "";
+        String digits = phone.replaceAll("[^0-9]", "");
+        if (digits.length() >= 9) {
+            return digits.substring(digits.length() - 9);
+        }
+        return digits;
     }
 
     private record OtpData(String code, Instant createdAt, int attempts) {
