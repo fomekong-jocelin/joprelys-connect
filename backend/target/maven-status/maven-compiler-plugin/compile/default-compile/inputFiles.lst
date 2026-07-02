@@ -35,3 +35,10 @@ C:\MES-APPLICATIONS\joprelys-connect\backend\src\main\java\com\joprelys\backend\
 C:\MES-APPLICATIONS\joprelys-connect\backend\src\main\java\com\joprelys\backend\patient\application\PatientService.java
 C:\MES-APPLICATIONS\joprelys-connect\backend\src\main\java\com\joprelys\backend\patient\infrastructure\persistence\PatientEntity.java
 C:\MES-APPLICATIONS\joprelys-connect\backend\src\main\java\com\joprelys\backend\patient\infrastructure\persistence\PatientRepository.java
+C:\MES-APPLICATIONS\joprelys-connect\backend\src\main\java\com\joprelys\backend\visit\api\CreateVisitRequest.java
+C:\MES-APPLICATIONS\joprelys-connect\backend\src\main\java\com\joprelys\backend\visit\api\VisitController.java
+C:\MES-APPLICATIONS\joprelys-connect\backend\src\main\java\com\joprelys\backend\visit\api\VisitResponse.java
+C:\MES-APPLICATIONS\joprelys-connect\backend\src\main\java\com\joprelys\backend\visit\application\VisitNumberGenerator.java
+C:\MES-APPLICATIONS\joprelys-connect\backend\src\main\java\com\joprelys\backend\visit\application\VisitService.java
+C:\MES-APPLICATIONS\joprelys-connect\backend\src\main\java\com\joprelys\backend\visit\infrastructure\persistence\VisitEntity.java
+C:\MES-APPLICATIONS\joprelys-connect\backend\src\main\java\com\joprelys\backend\visit\infrastructure\persistence\VisitRepository.java

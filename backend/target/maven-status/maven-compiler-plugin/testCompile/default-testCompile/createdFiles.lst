@@ -5,3 +5,4 @@ com\joprelys\backend\clinic\api\OrganizationControllerTest.class
 com\joprelys\backend\auth\security\JwtServiceTest.class
 com\joprelys\backend\patient\api\PatientControllerTest.class
 com\joprelys\backend\auth\application\AuthenticationServiceTest.class
+com\joprelys\backend\visit\api\VisitControllerTest.class

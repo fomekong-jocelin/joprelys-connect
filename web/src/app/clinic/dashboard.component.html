@@ -116,6 +116,113 @@
         </div>
 
       </div>
+
+      <!-- File d'Attente Active (Clinical Queue) -->
+      @if (isClinicalRole()) {
+        <div class="mt-10 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+          <div class="flex items-center justify-between border-b pb-4 mb-6" style="border-color: var(--border-color)">
+            <div>
+              <h2 class="font-display font-bold text-xl text-brand-night dark:text-white">File d'Attente Active</h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Liste des patients admis en cours de prise en charge clinique.</p>
+            </div>
+            <app-ui-button variant="secondary" (pressed)="loadQueue()">
+              Actualiser
+            </app-ui-button>
+          </div>
+
+          @if (isLoadingQueue) {
+            <div class="py-10 text-center text-sm font-semibold" style="color: var(--text-muted)">
+              Chargement de la file d'attente...
+            </div>
+          } @else if (queueError) {
+            <div class="p-4 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-red-700 dark:text-red-300 font-semibold leading-relaxed">
+              {{ queueError }}
+            </div>
+          } @else if (activeVisits.length === 0) {
+            <app-empty-state message="Aucun patient dans la file d'attente active."></app-empty-state>
+          } @else {
+            <!-- Desktop Table View -->
+            <div class="hidden md:block overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b" style="border-color: var(--border-color)">
+                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">N° Visite</th>
+                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">Patient (DPU)</th>
+                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">Arrivée</th>
+                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">Motif</th>
+                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">Orientation</th>
+                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">Statut</th>
+                    @if (canCloseVisit()) {
+                      <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider text-right" style="color: var(--text-muted)">Actions</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody class="divide-y" style="border-color: var(--border-color)">
+                  @for (visit of activeVisits; track visit.id) {
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                      <td class="py-4 px-4 text-sm font-bold text-brand-cyan dark:text-[#22d3ee]">{{ visit.visitNumber }}</td>
+                      <td class="py-4 px-4">
+                        <span class="font-bold text-sm block" style="color: var(--text-primary)">{{ visit.patientName }}</span>
+                        <span class="text-xs font-medium block" style="color: var(--text-muted)">{{ visit.patientDpu }}</span>
+                      </td>
+                      <td class="py-4 px-4 text-sm font-semibold" style="color: var(--text-primary)">
+                        {{ visit.createdAt | date:'HH:mm' }}
+                      </td>
+                      <td class="py-4 px-4 text-sm font-medium" style="color: var(--text-secondary)">{{ visit.reason }}</td>
+                      <td class="py-4 px-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300">
+                          {{ visit.orientation }}
+                        </span>
+                      </td>
+                      <td class="py-4 px-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+                          {{ visit.status }}
+                        </span>
+                      </td>
+                      @if (canCloseVisit()) {
+                        <td class="py-4 px-4 text-right">
+                          <app-ui-button variant="secondary" (pressed)="closeVisit(visit.id)">
+                            Clôturer
+                          </app-ui-button>
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Mobile Card View -->
+            <div class="md:hidden space-y-4">
+              @for (visit of activeVisits; track visit.id) {
+                <div class="p-4 bg-brand-gray dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl space-y-3">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-brand-cyan dark:text-[#22d3ee]">{{ visit.visitNumber }}</span>
+                    <span class="text-xs font-semibold" style="color: var(--text-muted)">{{ visit.createdAt | date:'HH:mm' }}</span>
+                  </div>
+                  <div>
+                    <span class="font-bold text-sm block" style="color: var(--text-primary)">{{ visit.patientName }}</span>
+                    <span class="text-xs font-medium block" style="color: var(--text-muted)">{{ visit.patientDpu }}</span>
+                  </div>
+                  <div class="text-xs leading-relaxed" style="color: var(--text-secondary)">
+                    <strong>Motif :</strong> {{ visit.reason }}
+                  </div>
+                  <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/40">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300">
+                      {{ visit.orientation }}
+                    </span>
+                    @if (canCloseVisit()) {
+                      <app-ui-button variant="secondary" (pressed)="closeVisit(visit.id)">
+                        Clôturer
+                      </app-ui-button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
     }
   </div>
 </app-shell>

@@ -37,4 +37,12 @@ public class AuthExceptionHandler {
 		problem.setDetail(detail.isEmpty() ? "Request validation failed" : detail);
 		return problem;
 	}
+
+	@ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+	ProblemDetail responseStatusFailure(org.springframework.web.server.ResponseStatusException ex) {
+		ProblemDetail problem = ProblemDetail.forStatus(ex.getStatusCode());
+		problem.setTitle(ex.getReason() != null ? ex.getReason() : "Error occurred");
+		problem.setDetail(ex.getReason());
+		return problem;
+	}
 }
