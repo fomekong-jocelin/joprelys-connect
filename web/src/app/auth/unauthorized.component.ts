@@ -21,7 +21,7 @@ import { Router } from '@angular/router';
 
         <button 
           (click)="goBack()"
-          class="w-full min-h-[46px] flex items-center justify-center py-3 px-4 rounded-xl text-sm font-semibold text-white bg-brand-cyan hover:bg-[#097b98] active:bg-[#076881] focus:outline-hidden focus:ring-4 focus:ring-brand-cyan/20 dark:focus:ring-brand-cyan/10 transition-all duration-150 cursor-pointer"
+          class="w-full min-h-[46px] flex items-center justify-center py-3 px-4 rounded-xl text-sm font-semibold text-white bg-brand-cyan hover:bg-[#097b98] active:bg-[#076881] focus:outline-hidden transition-all duration-150 cursor-pointer"
         >
           Retour au tableau de bord
         </button>

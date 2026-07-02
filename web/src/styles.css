@@ -154,7 +154,6 @@ body {
   .ui-input:focus {
     border-color: var(--border-input-focus);
     background: var(--app-surface);
-    box-shadow: 0 0 0 4px var(--focus-ring);
   }
 
   .ui-checkbox {
@@ -192,7 +191,6 @@ body {
 
   .ui-checkbox:focus {
     outline: none;
-    box-shadow: 0 0 0 4px var(--focus-ring);
   }
 
   .ui-radio {
@@ -229,7 +227,6 @@ body {
 
   .ui-radio:focus {
     outline: none;
-    box-shadow: 0 0 0 4px var(--focus-ring);
   }
 
   .ui-select {
@@ -259,7 +256,6 @@ body {
   .ui-select:focus {
     border-color: var(--border-input-focus);
     background-color: var(--app-surface);
-    box-shadow: 0 0 0 4px var(--focus-ring);
   }
 
   .ui-textarea {
@@ -277,7 +273,6 @@ body {
   .ui-textarea:focus {
     border-color: var(--border-input-focus);
     background-color: var(--app-surface);
-    box-shadow: 0 0 0 4px var(--focus-ring);
   }
 
   .ui-button {

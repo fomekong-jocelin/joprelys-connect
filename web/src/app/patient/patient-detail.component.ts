@@ -151,7 +151,7 @@ import { FormsModule } from '@angular/forms';
               <textarea 
                 [(ngModel)]="visitReason"
                 placeholder="Ex: Fièvre et toux sèche depuis 2 jours"
-                class="ui-textarea min-h-[80px] p-3 text-sm focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-colors"
+                class="ui-textarea min-h-[80px] p-3 text-sm focus:border-brand-primary transition-colors"
                 [disabled]="isSubmitting()"
               ></textarea>
             </div>
@@ -160,7 +160,7 @@ import { FormsModule } from '@angular/forms';
               <label class="ui-label">Service / Médecin d'orientation <span class="text-red-500">*</span></label>
               <select 
                 [(ngModel)]="visitOrientation"
-                class="ui-select focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-colors"
+                class="ui-select focus:border-brand-primary transition-colors"
                 [disabled]="isSubmitting()"
               >
                 <option value="" disabled selected>Choisir un service...</option>
