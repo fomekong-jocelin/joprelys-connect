@@ -10,21 +10,35 @@ L'état de la dispensation sera stocké dans une nouvelle table de jointure et d
 
 ---
 
-## 2. Modèle de Données (DATA-MODEL.md conceptuel)
+## 2. Modèle de Données (Module 7)
 
 ```mermaid
 erDiagram
     PRESCRIPTION {
         uuid id PK
+        varchar prescription_number UK "ORD-YYYYMMDD-XXXXXX"
         uuid patient_id FK
+        uuid practitioner_id FK
+        uuid organization_id FK
+        uuid visit_id FK
         varchar pin_code "Code de sécurité à 4 car."
-        varchar status "ACTIVE, SERVED, PARTIALLY_SERVED, REVOKED, EXPIRED"
+        varchar status "DRAFT, ACTIVE, PARTIALLY_DISPENSED, FULLY_DISPENSED, EXPIRED, CANCELLED"
+        timestamp issued_at
+        timestamp expires_at
+        uuid document_id FK "Lien vers le PDF"
     }
     PRESCRIPTION_ITEM {
         uuid id PK
         uuid prescription_id FK
-        varchar drug_name
-        integer quantity_prescribed
+        varchar name "Nom ou DCI"
+        varchar dosage
+        varchar form "Comprimé, Sirop"
+        varchar route "Orale, Injectable"
+        varchar frequency
+        varchar duration
+        integer quantity "Quantité prescrite"
+        varchar instructions
+        boolean substitution_allowed
     }
     PRESCRIPTION_DISPENSATION {
         uuid id PK
@@ -37,7 +51,7 @@ erDiagram
         uuid id PK
         uuid dispensation_id FK
         uuid prescription_item_id FK
-        integer quantity_dispensed
+        integer quantity_dispensed "Quantité effectivement donnée"
         varchar substituted_with "Nom du générique si substitution"
     }
     PRESCRIPTION ||--o{ PRESCRIPTION_ITEM : "contient"
@@ -47,14 +61,14 @@ erDiagram
 
 ---
 
-## 3. Contrat d'API (API-CONTRACT.md conceptuel)
+## 3. Contrat d'API
 
 ### Récupération de l'ordonnance par le pharmacien
 `POST /api/public/pharmacy/prescriptions/verify`
 * Requête :
 ```json
 {
-  "prescriptionId": "4fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "prescriptionNumber": "ORD-20260703-000042",
   "pinCode": "8F2A"
 }
 ```
@@ -62,16 +76,22 @@ erDiagram
 ```json
 {
   "prescriptionId": "4fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "prescriptionNumber": "ORD-20260703-000042",
   "status": "ACTIVE",
   "patientName": "Jean Dupont",
   "doctorName": "Dr. Martin",
-  "createdAt": "2026-07-03T09:00:00Z",
+  "issuedAt": "2026-07-03T09:00:00Z",
+  "expiresAt": "2026-10-03T09:00:00Z",
   "items": [
     {
       "itemId": "5fa85f64-5717-4562-b3fc-2c963f66afa6",
       "drugName": "Amoxicilline 500mg",
-      "quantityPrescribed": 3,
-      "quantityAlreadyDispensed": 0
+      "dosage": "500mg",
+      "form": "Comprimé",
+      "quantity": 3,
+      "quantityAlreadyDispensed": 0,
+      "substitutionAllowed": true,
+      "instructions": "1 comprimé 3 fois par jour"
     }
   ]
 }
@@ -82,7 +102,7 @@ erDiagram
 * Requête :
 ```json
 {
-  "prescriptionId": "4fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "prescriptionNumber": "ORD-20260703-000042",
   "pinCode": "8F2A",
   "pharmacyName": "Pharmacie du Grand Marché",
   "pharmacistLicense": "PH-987654",
@@ -90,7 +110,7 @@ erDiagram
     {
       "prescriptionItemId": "5fa85f64-5717-4562-b3fc-2c963f66afa6",
       "quantityDispensed": 3,
-      "substitutedWith": null
+      "substitutedWith": "Générique Amoxicilline Biogaran"
     }
   ]
 }
@@ -106,6 +126,6 @@ erDiagram
 
 ## 5. Stratégie de Tests
 * **Tests unitaires et d'intégration** :
-  - Validation de la logique de calcul de statut de l'ordonnance (`ACTIVE` -> `PARTIALLY_SERVED` -> `SERVED`).
+  - Validation de la logique de calcul de statut de l'ordonnance (`ACTIVE` -> `PARTIALLY_DISPENSED` -> `FULLY_DISPENSED`).
   - Validation du blocage de brute-force du code PIN.
   - Validation du calcul de quantité restante autorisée à la délivrance.

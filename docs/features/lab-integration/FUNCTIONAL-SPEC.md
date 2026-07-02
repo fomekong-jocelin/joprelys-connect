@@ -4,7 +4,7 @@
 Aujourd'hui, les examens de laboratoire prescrits par les médecins sont imprimés sur papier, puis réalisés dans un laboratoire. Le patient doit ensuite ramener le résultat papier lors de sa prochaine visite, ce qui entraîne des pertes, des retards de diagnostic et une absence d'historisation structurée des marqueurs biologiques (comme la glycémie, le cholestérol, l'hémoglobine).
 
 L'objectif du module Laboratoire est d'automatiser le flux :
-1. Prescription numérique structurée de l'examen par le médecin.
+1. Prescription numérique structurée de la demande d'examen par le médecin.
 2. Réception directe et sécurisée des résultats d'analyses transmis par le laboratoire partenaire.
 3. Consultation structurée et visuelle (courbes d'évolution) des constantes biologiques directement dans le DPU du patient.
 
@@ -14,19 +14,34 @@ L'objectif du module Laboratoire est d'automatiser le flux :
 * **Médecin / Infirmier** :
   - Peut émettre une demande d'examen biologique.
   - Peut consulter l'historique et l'évolution des marqueurs biologiques dans le DPU.
-* **Laboratoire Partenaire (API Externe)** :
-  - Peut téléverser des résultats d'examens validés liés à une demande d'examen.
+* **Laboratoire Partenaire (API Externe) / Biologiste** :
+  - Peut recevoir les demandes d'examens et mettre à jour leur statut.
+  - Peut téléverser des résultats d'examens structurés liés à une demande.
 * **Patient** :
   - Peut visualiser ses résultats et leur interprétation simplifiée sur son Portail Patient.
 
 ---
 
-## 3. Périmètre MVP
+## 3. Périmètre MVP (Module 8 & 9 du Cahier des Charges)
 ### Inclus
-- Formulaire de demande d'examen (choix parmi un catalogue de marqueurs standards : Hémogramme, Glycémie, Bilan rénal, Bilan lipidique).
-- API REST sécurisée pour le dépôt automatique des résultats par le laboratoire.
-- Stockage du rapport officiel en format PDF.
-- Visualisation tabulaire et graphique des résultats dans le DPU (Angular).
+- **Cycle de vie de la demande d'examen** (`exam_request_number`) avec les statuts :
+  ```text
+  REQUESTED
+  AWAITING_PAYMENT
+  PAID
+  SAMPLE_COLLECTED
+  IN_PROGRESS
+  RESULT_AVAILABLE
+  VALIDATED
+  CANCELLED
+  ```
+- **Structure d'un résultat d'analyses** (`result_number`, `analyte_name`, `value`, `unit`, `reference_range`, `interpretation` (Normal, Bas, Élevé, Critique), `comment`).
+- **Stockage et rattachement du PDF** officiel du laboratoire externe.
+- **Règles d'accès** :
+  - `FR-EXAM-001` : demande d'examen liée obligatoirement à un patient.
+  - `FR-EXAM-002` : demande d'examen liée obligatoirement à un médecin demandeur.
+  - `FR-EXAM-005` : les résultats validés par le biologiste sont automatiquement injectés dans le DPU du patient.
+  - `FR-RESULT-001` : un résultat validé ne peut plus être modifié sans création d'une nouvelle version.
 
 ### Exclus (Post-MVP)
 - Signature électronique qualifiée des rapports.
@@ -42,12 +57,13 @@ sequenceDiagram
     autonumber
     actor M as Médecin
     participant S as Joprelys System
-    actor L as Laboratoire
+    actor L as Laboratoire / Biologiste
     
-    M->>S: Crée une demande d'examens (ex: Glycémie à jeun)
-    S-->>M: Génère le bon de demande avec identifiant unique (GUID)
-    L->>S: Dépose les résultats via l'API sécurisée avec le GUID
-    S->>S: Extrait et valide les valeurs, associe au DPU du patient
+    M->>S: Crée une demande d'examens (Glycémie à jeun, statut REQUESTED)
+    S-->>M: Génère le bon de demande avec identifiant unique (exam_request_number)
+    L->>S: Met à jour le statut (ex: SAMPLE_COLLECTED -> IN_PROGRESS)
+    L->>S: Dépose les résultats structurés (valeur, unité, interprétation) + PDF (statut VALIDATED)
+    S->>S: Associe les résultats au DPU du patient
     M->>S: Ouvre le DPU et consulte la courbe d'évolution de la glycémie
 ```
 
@@ -55,6 +71,6 @@ sequenceDiagram
 
 ## 5. Critères d'acceptation
 * Un médecin peut sélectionner un ou plusieurs examens biologiques standards lors de sa consultation.
-* La demande génère un code unique (GUID) imprimable ou envoyable sur le bon de demande.
-* L'API externe de téléversement refuse les dépôts sans authentification valide du laboratoire ou sans GUID de demande valide.
-* L'IHM médecin affiche une alerte si des résultats sont hors des normes cliniques configurées.
+* La demande génère un code unique (`exam_request_number`) imprimable ou transmissible.
+* L'API externe de téléversement refuse les dépôts sans authentification valide du laboratoire.
+* L'IHM médecin affiche une alerte si des résultats sont hors des normes cliniques configurées (statuts d'interprétation `ELEVÉ`, `BAS` ou `CRITIQUE`).
