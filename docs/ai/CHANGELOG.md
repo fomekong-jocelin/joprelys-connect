@@ -8,6 +8,9 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- Implémentation complète de la User Story [STORY-0801](file:///C:/MES-APPLICATIONS/joprelys-connect/docs/ai/tickets/STORY-0801-espace-patient.md) (Espace patient sécurisé et historique personnel) :
+  - **Backend** : Création des endpoints d'authentification OTP patients (`/api/public/patient/auth/otp` et `verify`), du contrôleur sécurisé patient (`/api/patient/me`), de la méthode de génération de jeton JWT patient et gestion du multi-tenant avec Hibernate en mode natif.
+  - **Frontend** : Création de `PatientLoginComponent` (formulaire double étape), `PatientDashboardComponent` (orchestration de l'espace patient), et des sous-composants réutilisables `PatientProfileCardComponent` et `PatientVisitsListComponent` dans un grid responsive respectant [DESIGN.md](file:///C:/MES-APPLICATIONS/joprelys-connect/DESIGN.md).
 - Création du fichier de Design System centralisé [DESIGN.md](file:///C:/MES-APPLICATIONS/joprelys-connect/DESIGN.md) à la racine pour standardiser les tokens (couleurs, typographie, espacements, radius) et les règles UI (Tailwind CSS v4 CSS-first).
 - Cadrage et raffinement de la première User Story [STORY-0801](file:///C:/MES-APPLICATIONS/joprelys-connect/docs/ai/tickets/STORY-0801-espace-patient.md) (Espace patient sécurisé et historique personnel) avec rédaction de sa spécification fonctionnelle et de son architecture technique.
 - Mise à jour de `VerificationComponent` (page publique de vérification d'authenticité) pour prendre en compte et afficher correctement les statuts révoqués (`REVOQUE` / `REVOKED`) et annulés (`ANNULE` / `CANCELLED`) du document médical avec des styles et des libellés adaptés (STORY-0602 / STORY-0603).

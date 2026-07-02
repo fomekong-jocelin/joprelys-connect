@@ -44,4 +44,14 @@ export const routes: Routes = [
     path: 'verify/:documentId',
     loadComponent: () => import('./consultation/verification.component').then(m => m.VerificationComponent),
   },
+  {
+    path: 'patient/login',
+    loadComponent: () => import('./patient/portal/patient-login.component').then(m => m.PatientLoginComponent),
+  },
+  {
+    path: 'patient/dashboard',
+    loadComponent: () => import('./patient/portal/patient-dashboard.component').then(m => m.PatientDashboardComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['PATIENT'] },
+  },
 ];

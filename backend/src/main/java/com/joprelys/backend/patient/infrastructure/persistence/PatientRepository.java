@@ -17,4 +17,7 @@ public interface PatientRepository extends JpaRepository<PatientEntity, UUID> {
 	List<PatientEntity> searchPatients(@Param("query") String query);
 
 	boolean existsByGlobalPatientNumber(String globalPatientNumber);
+
+	@Query(value = "SELECT * FROM patients WHERE global_patient_number = :globalPatientNumber", nativeQuery = true)
+	java.util.Optional<PatientEntity> findByGlobalPatientNumber(@Param("globalPatientNumber") String globalPatientNumber);
 }

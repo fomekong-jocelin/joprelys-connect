@@ -54,6 +54,30 @@ public class JwtService {
 		return new CreatedToken(unsignedToken + "." + signature, tokenId, expiresAt);
 	}
 
+	public CreatedToken createPatientToken(com.joprelys.backend.patient.infrastructure.persistence.PatientEntity patient) {
+		Instant issuedAt = clock.instant();
+		Instant expiresAt = issuedAt.plus(properties.ttlMinutes(), ChronoUnit.MINUTES);
+		String tokenId = UUID.randomUUID().toString();
+
+		String header = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
+		String claims = "{"
+				+ "\"iss\":\"" + escapeJson(properties.issuer()) + "\","
+				+ "\"aud\":\"" + escapeJson(properties.audience()) + "\","
+				+ "\"sub\":\"" + escapeJson(patient.getGlobalPatientNumber()) + "\","
+				+ "\"email\":\"" + escapeJson(patient.getGlobalPatientNumber()) + "\","
+				+ "\"name\":\"" + escapeJson(patient.getFullName()) + "\","
+				+ "\"role\":\"PATIENT\","
+				+ "\"org\":\"" + (patient.getOrganizationId() != null ? patient.getOrganizationId().toString() : "") + "\","
+				+ "\"jti\":\"" + escapeJson(tokenId) + "\","
+				+ "\"iat\":" + issuedAt.getEpochSecond() + ","
+				+ "\"exp\":" + expiresAt.getEpochSecond()
+				+ "}";
+
+		String unsignedToken = encodeBase64Url(header) + "." + encodeBase64Url(claims);
+		String signature = sign(unsignedToken);
+		return new CreatedToken(unsignedToken + "." + signature, tokenId, expiresAt);
+	}
+
 	public JwtClaims parseAndValidate(String token) {
 		String[] parts = token.split("\\.");
 		if (parts.length != 3) {

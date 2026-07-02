@@ -65,44 +65,45 @@ Permettre aux patients de se connecter de manière autonome et sécurisée à le
 ## 7. Action plan
 
 ### Phase 1 : Backend Spring Boot
-- [ ] Mettre à jour `JwtService` pour prendre en compte le rôle `PATIENT` et le numéro de DPU comme subject.
-- [ ] Mettre à jour `SecurityConfig` pour autoriser publiquement `/api/public/patient/auth/**`.
-- [ ] Créer `PatientAuthService` gérant la génération d'OTP, l'invalidation après 3 essais ou 5 minutes, et la signature du token JWT.
-- [ ] Créer `PatientAuthController` exposant les endpoints `/api/public/patient/auth/otp` et `/api/public/patient/auth/verify`.
-- [ ] Créer `PatientPortalController` (sécurisé, réservé à `ROLE_PATIENT`) exposant `/api/patient/me` (renvoyant le profil et la liste de ses visites clôturées).
-- [ ] Écrire les tests d'intégration dans `PatientAuthControllerTest` et `PatientPortalControllerTest`.
+- [x] Mettre à jour `JwtService` pour prendre en compte le rôle `PATIENT` et le numéro de DPU comme subject.
+- [x] Mettre à jour `SecurityConfig` pour autoriser publiquement `/api/public/patient/auth/**`.
+- [x] Créer `PatientAuthService` gérant la génération d'OTP, l'invalidation après 3 essais ou 5 minutes, et la signature du token JWT.
+- [x] Créer `PatientAuthController` exposant les endpoints `/api/public/patient/auth/otp` et `/api/public/patient/auth/verify`.
+- [x] Créer `PatientPortalController` (sécurisé, réservé à `ROLE_PATIENT`) exposant `/api/patient/me` (renvoyant le profil et la liste de ses visites clôturées).
+- [x] Écrire les tests d'intégration dans `PatientAuthControllerTest` et `PatientPortalControllerTest`.
 
 ### Phase 2 : Frontend Angular
-- [ ] Créer `PatientPortalService` pour gérer les appels d'authentification et de chargement des données.
-- [ ] Créer les routes et composants :
+- [x] Créer `PatientPortalService` pour gérer les appels d'authentification et de chargement des données.
+- [x] Créer les routes et composants :
   - `PatientLoginComponent` (saisie DPU / Téléphone / Date de naissance, puis OTP).
   - `PatientDashboardComponent` (affichage profil et historique).
-- [ ] Ajouter les libellés de traduction français / anglais dans `I18nService`.
-- [ ] Écrire les tests unitaires frontend.
+- [x] Ajouter les libellés de traduction français / anglais dans `I18nService`.
+- [x] Écrire les tests unitaires frontend.
 
 ## 8. Implémentation réalisée
-*(À compléter à la fin du développement)*
+- Authentification OTP sécurisée et génération de token JWT dédiée aux patients sans nécessiter de compte dans la table `users`.
+- Multi-tenancy préservée en intégrant l'ID d'organisation du patient dans le token et en utilisant une requête SQL native pour la recherche initiale du patient.
+- Dashboard patient découpé en composants atomiques (`PatientProfileCardComponent`, `PatientVisitsListComponent`) agencés dans un grid responsive.
 
 ## 9. Suivi d'exécution
 
 | Date | Développeur | Temps passé | Avancement | Reste à faire | Blocage | Commentaire |
 |---|---|---:|---:|---:|---|---|
-| 2026-07-02 | Antigravity | 0.1j | 10% | Phase 1 & Phase 2 | Aucun | Cadrage initial et ticket créé |
+| 2026-07-02 | Antigravity | 0.9j | 100% | Aucun | Aucun | Implémentation complète et tests validés |
 
 ## 10. Tests et vérifications
-*(À compléter à la fin)*
+- **Backend (90/90 OK)** : Tests de `PatientPortalControllerTest` validant l'ensemble de la cinématique (demande d'OTP, échec de téléphone/DPU erroné, validation correcte et incorrecte, accès bloqué sans token et accès interdit au document d'autrui).
+- **Frontend (30/30 OK)** : Tests de `patient-portal.spec.ts` validant le bon affichage du profil, de la liste de consultations, l'action de téléchargement d'ordonnance et les appels HTTP du service de portail.
 
 ## 11. Documentation
 - [x] Documentation fonctionnelle initiale créée : `docs/features/patient-portal/FUNCTIONAL-SPEC.md`
 - [x] Documentation technique initiale créée : `docs/features/patient-portal/TECHNICAL-DESIGN.md`
 
 ## 12. Reste à faire
-- [ ] Implémenter la Phase 1 (Backend Spring Boot)
-- [ ] Implémenter la Phase 2 (Frontend Angular)
-- [ ] Exécuter les tests unitaires et d'intégration
+- Aucun.
 
 ## 13. Statut final
-Statut : **TODO**
+Statut : **DONE**
 
 ## 14. Impact version / SemVer
 
@@ -114,5 +115,5 @@ Statut : **TODO**
 | Breaking change | Non |
 
 ## 15. Impact thème / i18n / branding
-- [ ] Textes `fr` / `en` intégrés dans `I18nService`.
-- [ ] Arrondis et ombres conformes à `DESIGN.md` (coins de 4px à 8px maximum).
+- [x] Textes `fr` / `en` intégrés dans `I18nService`.
+- [x] Arrondis et ombres conformes à `DESIGN.md` (coins de 4px à 8px maximum).

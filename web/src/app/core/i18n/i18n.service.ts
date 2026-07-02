@@ -185,6 +185,16 @@ const FR: TranslationDictionary = {
   'patients.auditLogsAction': "Action :",
   'patients.auditLogsIp': "IP :",
   'patients.auditLogsUser': "Utilisateur :",
+  'patient.login.title': 'Espace Patient Sécurisé',
+  'patient.login.dpu': 'Numéro DPU',
+  'patient.login.email': 'Adresse E-mail',
+  'patient.login.submit': 'Recevoir le code de sécurité',
+  'patient.login.otp': 'Code de sécurité (OTP)',
+  'patient.login.verify': 'Se connecter',
+  'patient.dashboard.title': 'Mon Espace Santé',
+  'patient.dashboard.consent': "Consentements d'accès",
+  'patient.consent.revoke': "Révoquer l'accès",
+  'patient.consent.grant': "Accorder l'accès",
 };
 
 const EN: TranslationDictionary = {
@@ -369,6 +379,16 @@ const EN: TranslationDictionary = {
   'patients.auditLogsAction': 'Action:',
   'patients.auditLogsIp': 'IP:',
   'patients.auditLogsUser': 'User:',
+  'patient.login.title': 'Secure Patient Portal',
+  'patient.login.dpu': 'UPR Number',
+  'patient.login.email': 'Email Address',
+  'patient.login.submit': 'Request Security Code',
+  'patient.login.otp': 'Security Code (OTP)',
+  'patient.login.verify': 'Log In',
+  'patient.dashboard.title': 'My Health Portal',
+  'patient.dashboard.consent': 'Access Consents',
+  'patient.consent.revoke': 'Revoke Access',
+  'patient.consent.grant': 'Grant Access',
 };
 
 @Injectable({
