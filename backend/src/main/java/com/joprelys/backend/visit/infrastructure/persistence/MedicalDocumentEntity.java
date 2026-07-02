@@ -13,6 +13,8 @@ import org.hibernate.annotations.TenantId;
 import java.time.Instant;
 import java.util.UUID;
 
+// STORY-0603 — Révocation et annulation de documents médicaux
+
 @Entity
 @Table(name = "medical_documents")
 public class MedicalDocumentEntity {
@@ -42,6 +44,16 @@ public class MedicalDocumentEntity {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    // STORY-0603 — champs de traçabilité de révocation
+    @Column(name = "revoked_at")
+    private Instant revokedAt;
+
+    @Column(name = "revoked_by_user_id")
+    private UUID revokedByUserId;
+
+    @Column(name = "revocation_reason", length = 500)
+    private String revocationReason;
 
     protected MedicalDocumentEntity() {
     }
@@ -119,5 +131,26 @@ public class MedicalDocumentEntity {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    // STORY-0603 — méthode métier de révocation
+    public void revoke(UUID revokedByUserId, String reason, String newStatus) {
+        this.status = newStatus;
+        this.revokedAt = Instant.now();
+        this.revokedByUserId = revokedByUserId;
+        this.revocationReason = reason;
+        this.updatedAt = Instant.now();
+    }
+
+    public Instant getRevokedAt() {
+        return revokedAt;
+    }
+
+    public UUID getRevokedByUserId() {
+        return revokedByUserId;
+    }
+
+    public String getRevocationReason() {
+        return revocationReason;
     }
 }

@@ -12,6 +12,8 @@ import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentRepo
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -156,5 +158,82 @@ public class DocumentService {
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to read document file from disk", e);
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // STORY-0603 — Révocation et annulation de documents médicaux
+    // -------------------------------------------------------------------------
+
+    /**
+     * Révoque un document (statut : REVOQUE).
+     * Action réservée aux rôles MEDECIN et ADMIN_CLINIQUE.
+     * Un document déjà révoqué ou annulé ne peut pas être révoqué une seconde fois.
+     *
+     * @param documentId UUID opaque du document médical
+     * @param reason     Motif de révocation (obligatoire pour l'audit)
+     * @param actorId    UUID de l'utilisateur qui effectue la révocation
+     * @return DocumentStatusResponse avec les métadonnées de traçabilité
+     */
+    @Transactional
+    public com.joprelys.backend.visit.api.DocumentStatusResponse revokeDocument(
+            UUID documentId, String reason, UUID actorId) {
+
+        MedicalDocumentEntity doc = medicalDocumentRepository.findById(documentId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Document introuvable : " + documentId));
+
+        if (!"VALID".equals(doc.getStatus())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Ce document ne peut pas être révoqué car son statut actuel est : " + doc.getStatus());
+        }
+
+        doc.revoke(actorId, reason, "REVOQUE");
+        medicalDocumentRepository.save(doc);
+
+        return new com.joprelys.backend.visit.api.DocumentStatusResponse(
+                doc.getId(),
+                doc.getDocumentNumber(),
+                doc.getStatus(),
+                doc.getRevokedAt(),
+                doc.getRevokedByUserId(),
+                doc.getRevocationReason());
+    }
+
+    /**
+     * Annule un document (statut : ANNULE).
+     * Action réservée aux rôles ADMIN_CLINIQUE et MEDECIN.
+     * Différence sémantique avec la révocation :
+     *   REVOQUE = document invalide mais historiquement référençable
+     *   ANNULE  = document considéré comme n'ayant jamais dû exister
+     *
+     * @param documentId UUID opaque du document médical
+     * @param reason     Motif d'annulation (obligatoire pour l'audit)
+     * @param actorId    UUID de l'utilisateur qui effectue l'annulation
+     * @return DocumentStatusResponse avec les métadonnées de traçabilité
+     */
+    @Transactional
+    public com.joprelys.backend.visit.api.DocumentStatusResponse cancelDocument(
+            UUID documentId, String reason, UUID actorId) {
+
+        MedicalDocumentEntity doc = medicalDocumentRepository.findById(documentId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Document introuvable : " + documentId));
+
+        if ("ANNULE".equals(doc.getStatus())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "Ce document est déjà annulé.");
+        }
+
+        doc.revoke(actorId, reason, "ANNULE");
+        medicalDocumentRepository.save(doc);
+
+        return new com.joprelys.backend.visit.api.DocumentStatusResponse(
+                doc.getId(),
+                doc.getDocumentNumber(),
+                doc.getStatus(),
+                doc.getRevokedAt(),
+                doc.getRevokedByUserId(),
+                doc.getRevocationReason());
     }
 }

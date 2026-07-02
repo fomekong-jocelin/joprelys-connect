@@ -1,6 +1,7 @@
 package com.joprelys.backend.consultation.api;
 
 import com.joprelys.backend.consultation.application.ConsultationService;
+import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,9 +21,13 @@ import java.util.UUID;
 public class ConsultationController {
 
 	private final ConsultationService consultationService;
+	private final MedicalDocumentRepository medicalDocumentRepository;
 
-	public ConsultationController(ConsultationService consultationService) {
+	public ConsultationController(
+			ConsultationService consultationService,
+			MedicalDocumentRepository medicalDocumentRepository) {
 		this.consultationService = consultationService;
+		this.medicalDocumentRepository = medicalDocumentRepository;
 	}
 
 	/**
@@ -50,9 +55,10 @@ public class ConsultationController {
 	@GetMapping("/{id}/consultation")
 	@PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'AGENT_ACCUEIL', 'ADMIN_CLINIQUE')")
 	public ConsultationResponse getConsultation(@PathVariable UUID id) {
-		return consultationService.getConsultationByVisitId(id)
-				.map(ConsultationResponse::fromEntity)
+		var consultation = consultationService.getConsultationByVisitId(id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
 						"Aucune consultation trouvée pour cette visite."));
+		var doc = medicalDocumentRepository.findByVisitId(id).orElse(null);
+		return ConsultationResponse.fromEntity(consultation, doc);
 	}
 }

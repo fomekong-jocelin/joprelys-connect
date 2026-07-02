@@ -1,6 +1,7 @@
 package com.joprelys.backend.consultation.api;
 
 import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationEntity;
+import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentEntity;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -18,9 +19,15 @@ public record ConsultationResponse(
 		String followUp,
 		String status,
 		Instant createdAt,
-		Instant updatedAt
+		Instant updatedAt,
+		UUID documentId,
+		String documentStatus
 ) {
 	public static ConsultationResponse fromEntity(ConsultationEntity entity) {
+		return fromEntity(entity, null);
+	}
+
+	public static ConsultationResponse fromEntity(ConsultationEntity entity, MedicalDocumentEntity document) {
 		return new ConsultationResponse(
 				entity.getId(),
 				entity.getVisit().getId(),
@@ -35,7 +42,9 @@ public record ConsultationResponse(
 				entity.getFollowUp(),
 				entity.getStatus(),
 				entity.getCreatedAt(),
-				entity.getUpdatedAt()
+				entity.getUpdatedAt(),
+				document != null ? document.getId() : null,
+				document != null ? document.getStatus() : null
 		);
 	}
 }

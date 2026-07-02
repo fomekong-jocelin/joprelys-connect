@@ -8,6 +8,20 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- Mise à niveau du kit de gouvernance IA, Scrum et Architecture vers la version v0.3.8 (TICKET-0108).
+- Ajout de standards de design system Tailwind CSS v4 CSS-first et d'arrondis sobres (4px-6px) sous `docs/standards/DESIGN-SYSTEM-STANDARDS.md` et `docs/standards/UI-RADIUS-AND-SHADOW-STANDARDS.md` (TICKET-0108).
+- Ajout de standards d'architecture SOLID et limitation stricte à 500 lignes par classe et 40 lignes par méthode sous `docs/standards/ARCHITECTURE-SOLID-RESPONSIBILITY-STANDARDS.md` (TICKET-0108).
+- Préservation et isolation des fichiers de données projet (`VERSION`, `CHANGELOG.md`, `PROJECT-TRACKING.md`, `DELIVERY-DASHBOARD.md`, `VERSION-MATRIX.md`) (TICKET-0108).
+- Implémentation frontend de l'écran de révocation et d'annulation de documents médicaux pour les cliniciens (STORY-0604 / EPIC-0006).
+- Enrichissement de la réponse `ConsultationResponse` sur le backend pour propager les identifiants et statuts de documents sans requêtes N+1 (STORY-0604).
+- Ajout du bouton d'action et d'une modale de confirmation interactive avec radio-boutons de type d'action et motif d'audit sur `PatientDetailComponent` (STORY-0604).
+- Ajout de 4 tests unitaires frontend dans `patient-detail.component.spec.ts` validant le cycle de révocation/annulation (STORY-0604).
+- Implémentation backend de la révocation et de l'annulation de documents médicaux (STORY-0603 / EPIC-0006).
+- Ajout des endpoints sécurisés `PATCH /api/documents/{id}/revoke` (statut → `REVOQUE`) et `PATCH /api/documents/{id}/cancel` (statut → `ANNULE`), réservés aux rôles `MEDECIN` et `ADMIN_CLINIQUE` (STORY-0603).
+- Ajout des champs de traçabilité `revoked_at`, `revoked_by_user_id`, `revocation_reason` dans la table `medical_documents` via migration Flyway `V9__add_revocation_to_medical_documents.sql` (STORY-0603).
+- Ajout de la méthode métier `revoke()` dans `MedicalDocumentEntity` pour centraliser la logique de changement de statut avec audit (STORY-0603).
+- Ajout des DTOs `RevokeDocumentRequest` (motif obligatoire ≤ 500 caractères) et `DocumentStatusResponse` (métadonnées d'audit sans données médicales) (STORY-0603).
+- Ajout de 5 tests d'intégration dans `DocumentRevocationControllerTest` couvrant révocation, annulation, double révocation (409), rôle non habilité (403) et accès anonyme (401) (STORY-0603).
 - Implémentation backend de la gestion du personnel clinique (STORY-0104 / EPIC-0001).
 - Ajout de l'API sécurisée `ADMIN_CLINIQUE` `/api/staff` pour lister, inviter, modifier et activer/désactiver les collaborateurs d'une clinique (STORY-0104).
 - Ajout de `StaffService` avec isolation multi-tenant par `organizationId`, validation des rôles cliniques, génération du mot de passe temporaire `Jop-XXXXXX` et hash BCrypt (STORY-0104).

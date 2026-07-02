@@ -166,20 +166,46 @@ import { I18nService } from '../core/i18n/i18n.service';
                       </div>
                       <span class="text-xs font-semibold" style="color: var(--text-muted)">Dr. {{ consult.doctorName }}</span>
                     </div>
-                    <div class="flex justify-between items-center pt-2 border-t border-slate-100/50 dark:border-slate-800/40 gap-4">
+                    <div class="flex flex-wrap justify-between items-center pt-2 border-t border-slate-100/50 dark:border-slate-800/40 gap-4">
                       <p class="text-sm font-semibold" style="color: var(--text-primary)">
                         <span class="text-xs font-bold uppercase" style="color: var(--text-muted)">Diagnostic : </span>
                         {{ consult.diagnosis }}
                       </p>
-                      <button 
-                        (click)="downloadPdf(consult)"
-                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-extrabold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 cursor-pointer transition-colors shrink-0"
-                      >
-                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        {{ i18n.t('patients.downloadPdf') }}
-                      </button>
+                      <div class="flex items-center gap-2">
+                        @if (consult.documentStatus === 'REVOQUE') {
+                          <span class="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-extrabold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300 uppercase tracking-wider">
+                            {{ i18n.t('verify.status.revoked') }}
+                          </span>
+                        } @else if (consult.documentStatus === 'ANNULE') {
+                          <span class="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-extrabold bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300 uppercase tracking-wider">
+                            {{ i18n.t('verify.status.cancelled') }}
+                          </span>
+                        }
+
+                        @if (consult.documentId) {
+                          <button 
+                            (click)="downloadPdf(consult)"
+                            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-extrabold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 cursor-pointer transition-colors shrink-0"
+                          >
+                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            {{ i18n.t('patients.downloadPdf') }}
+                          </button>
+
+                          @if (canRevoke() && consult.documentStatus === 'VALID') {
+                            <button 
+                              (click)="openRevokeModal(consult)"
+                              class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-extrabold bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50 cursor-pointer transition-colors shrink-0"
+                            >
+                              <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              {{ i18n.t('patients.revokeDoc') }}
+                            </button>
+                          }
+                        }
+                      </div>
                     </div>
                   </div>
                 }
@@ -272,6 +298,78 @@ import { I18nService } from '../core/i18n/i18n.service';
         </div>
       </div>
     }
+
+    <!-- Revocation Modal Dialogue -->
+    @if (showRevokeModal) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-2xl max-w-md w-full shadow-2xl p-6 relative">
+          <!-- Close button -->
+          <button (click)="closeRevokeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          <!-- Header -->
+          <h3 class="font-display font-bold text-lg text-brand-night dark:text-white mb-2">{{ i18n.t('patients.revokeModalTitle') }}</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-6">
+            {{ i18n.t('patients.revokeModalSubtitle') }} <strong>{{ selectedConsultation()?.documentNumber }}</strong>.
+          </p>
+
+          @if (revokeError()) {
+            <div class="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-red-700 dark:text-red-300 font-semibold mb-4 leading-relaxed">
+              {{ revokeError() }}
+            </div>
+          }
+
+          <!-- Form -->
+          <div class="space-y-4">
+            <div class="space-y-2">
+              <label class="ui-label font-bold block">{{ i18n.t('patients.revokeActionType') }} <span class="text-red-500">*</span></label>
+              <div class="flex gap-4">
+                <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer" style="color: var(--text-primary)">
+                  <input type="radio" name="actionType" value="REVOKE" [(ngModel)]="revokeActionType" class="text-indigo-600 focus:ring-indigo-500">
+                  {{ i18n.t('patients.revokeTypeRevoke') }}
+                </label>
+                <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer" style="color: var(--text-primary)">
+                  <input type="radio" name="actionType" value="CANCEL" [(ngModel)]="revokeActionType" class="text-indigo-600 focus:ring-indigo-500">
+                  {{ i18n.t('patients.revokeTypeCancel') }}
+                </label>
+              </div>
+              <p class="text-[10px] text-slate-400 leading-relaxed">
+                {{ revokeActionType === 'REVOKE' ? i18n.t('patients.revokeDescRevoke') : i18n.t('patients.revokeDescCancel') }}
+              </p>
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="ui-label font-bold block">{{ i18n.t('patients.revokeReason') }} <span class="text-red-500">*</span></label>
+              <textarea 
+                [(ngModel)]="revokeReason"
+                [placeholder]="i18n.t('patients.revokeReasonPlaceholder')"
+                class="ui-textarea min-h-[80px] p-3 text-sm focus:border-brand-primary transition-colors"
+                [disabled]="isRevokingSubmitting()"
+              ></textarea>
+              <div class="flex justify-between text-[10px] text-slate-400 mt-1">
+                <span>{{ revokeReason.length }}/500 {{ i18n.t('common.characters') }}</span>
+                @if (revokeReason.length > 0 && revokeReason.length < 5) {
+                  <span class="text-red-500 font-semibold">{{ i18n.t('patients.revokeReasonMinChar') }}</span>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex justify-end gap-3 mt-8">
+            <app-ui-button variant="secondary" (pressed)="closeRevokeModal()" [disabled]="isRevokingSubmitting()">
+              {{ i18n.t('common.cancel') }}
+            </app-ui-button>
+            <app-ui-button variant="primary" (pressed)="submitRevocation()" [disabled]="isRevokingSubmitting() || !revokeReason || revokeReason.length < 5 || revokeReason.length > 500">
+              {{ isRevokingSubmitting() ? i18n.t('common.processing') : i18n.t('common.confirm') }}
+            </app-ui-button>
+          </div>
+        </div>
+      </div>
+    }
   `,
 })
 export class PatientDetailComponent implements OnInit {
@@ -289,6 +387,14 @@ export class PatientDetailComponent implements OnInit {
   visitReason = '';
   visitOrientation = '';
   visitError = '';
+
+  // STORY-0604 — Properties for revocation
+  showRevokeModal = false;
+  revokeReason = '';
+  revokeActionType: 'REVOKE' | 'CANCEL' = 'REVOKE';
+  revokeError = signal<string | null>(null);
+  isRevokingSubmitting = signal(false);
+  selectedConsultation = signal<Consultation | null>(null);
 
   consultationHistory = signal<Consultation[]>([]);
   showHistory = signal(false);
@@ -313,6 +419,11 @@ export class PatientDetailComponent implements OnInit {
   readonly canStartConsultation = computed(() => {
     const role = this.session()?.role;
     return (role === 'MEDECIN' || role === 'ADMIN_CLINIQUE') && this.activeVisit() !== null;
+  });
+
+  readonly canRevoke = computed(() => {
+    const role = this.session()?.role;
+    return role === 'MEDECIN' || role === 'ADMIN_CLINIQUE';
   });
 
   readonly age = computed(() => {
@@ -434,6 +545,54 @@ export class PatientDetailComponent implements OnInit {
       },
       error: () => {
         this.downloadError.set(this.i18n.t('patients.downloadPdfError'));
+      }
+    });
+  }
+
+  // STORY-0604 — Revocation methods
+  openRevokeModal(consultation: Consultation): void {
+    this.selectedConsultation.set(consultation);
+    this.revokeReason = '';
+    this.revokeActionType = 'REVOKE';
+    this.revokeError.set(null);
+    this.showRevokeModal = true;
+  }
+
+  closeRevokeModal(): void {
+    if (!this.isRevokingSubmitting()) {
+      this.showRevokeModal = false;
+      this.selectedConsultation.set(null);
+    }
+  }
+
+  submitRevocation(): void {
+    const consultation = this.selectedConsultation();
+    if (!consultation || !consultation.documentId || this.isRevokingSubmitting()) {
+      return;
+    }
+
+    this.isRevokingSubmitting.set(true);
+    this.revokeError.set(null);
+
+    const apiCall = this.revokeActionType === 'REVOKE'
+      ? this.consultationApi.revokeDocument(consultation.documentId, this.revokeReason)
+      : this.consultationApi.cancelDocument(consultation.documentId, this.revokeReason);
+
+    apiCall.subscribe({
+      next: (res) => {
+        this.isRevokingSubmitting.set(false);
+        this.showRevokeModal = false;
+
+        // Update document status locally in the list
+        this.consultationHistory.update(list =>
+          list.map(c => c.id === consultation.id ? { ...c, documentStatus: res.status } : c)
+        );
+
+        this.selectedConsultation.set(null);
+      },
+      error: (err) => {
+        this.isRevokingSubmitting.set(false);
+        this.revokeError.set(err.error?.detail || err.error?.title || 'Une erreur est survenue lors de la révocation du document.');
       }
     });
   }

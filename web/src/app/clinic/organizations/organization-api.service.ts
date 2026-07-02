@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { CreateOrganizationRequest, Organization } from './organizations.models';
+import { CreateClinicAdminRequest, CreateClinicAdminResponse, CreateOrganizationRequest, Organization } from './organizations.models';
 
 @Injectable({
   providedIn: 'root',
@@ -21,5 +21,9 @@ export class OrganizationApiService {
     return this.http.put<Organization>(`/api/organizations/${id}/status`, `"${status}"`, {
       headers: { 'Content-Type': 'application/json' }
     });
+  }
+
+  createClinicAdmin(organizationId: string, request: CreateClinicAdminRequest): Observable<CreateClinicAdminResponse> {
+    return this.http.post<CreateClinicAdminResponse>(`/api/organizations/${organizationId}/admin`, request);
   }
 }

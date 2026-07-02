@@ -7,7 +7,7 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { OrganizationApiService } from './organization-api.service';
 import { OrganizationFormComponent, OrganizationFormLabels } from './organization-form.component';
 import { OrganizationTableComponent, OrganizationTableLabels } from './organization-table.component';
-import { Organization } from './organizations.models';
+import { CreateClinicAdminResponse, Organization } from './organizations.models';
 
 @Component({
   selector: 'app-organization-list',
@@ -16,12 +16,13 @@ import { Organization } from './organizations.models';
 })
 export class OrganizationListComponent implements OnInit {
   private readonly api = inject(OrganizationApiService);
-  private readonly i18n = inject(I18nService);
+  readonly i18n = inject(I18nService);
 
   readonly list = signal<Organization[]>([]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
+  // --- Formulaire création clinique ---
   readonly name = signal('');
   readonly email = signal('');
   readonly phone = signal('');
@@ -30,6 +31,15 @@ export class OrganizationListComponent implements OnInit {
   readonly formLoading = signal(false);
   readonly formError = signal<string | null>(null);
   readonly showCreateForm = signal(false);
+
+  // --- Formulaire création admin clinique ---
+  readonly adminTargetOrg = signal<Organization | null>(null);
+  readonly adminDisplayName = signal('');
+  readonly adminEmail = signal('');
+  readonly adminFormLoading = signal(false);
+  readonly adminFormError = signal<string | null>(null);
+  readonly adminCreatedResult = signal<CreateClinicAdminResponse | null>(null);
+  readonly adminPasswordCopied = signal(false);
 
   readonly pageTitle = computed(() => this.i18n.t('organizations.title'));
   readonly pageSubtitle = computed(() => this.i18n.t('organizations.subtitle'));
@@ -67,6 +77,7 @@ export class OrganizationListComponent implements OnInit {
     inactive: this.i18n.t('common.inactive'),
     activate: this.i18n.t('common.activate'),
     deactivate: this.i18n.t('common.deactivate'),
+    assignAdmin: this.i18n.t('organizations.assignAdmin'),
   }));
 
   ngOnInit(): void {
@@ -160,5 +171,69 @@ export class OrganizationListComponent implements OnInit {
     this.address.set('');
     this.city.set('');
     this.formError.set(null);
+  }
+
+  // --- Gestion du formulaire Admin Clinique ---
+
+  openAdminForm(org: Organization): void {
+    this.adminTargetOrg.set(org);
+    this.adminDisplayName.set('');
+    this.adminEmail.set('');
+    this.adminFormError.set(null);
+    this.adminCreatedResult.set(null);
+    this.adminPasswordCopied.set(false);
+    this.showCreateForm.set(false);
+  }
+
+  closeAdminForm(): void {
+    this.adminTargetOrg.set(null);
+    this.adminDisplayName.set('');
+    this.adminEmail.set('');
+    this.adminFormError.set(null);
+    this.adminCreatedResult.set(null);
+    this.adminPasswordCopied.set(false);
+  }
+
+  submitAdmin(): void {
+    this.adminFormError.set(null);
+    const org = this.adminTargetOrg();
+    if (!org) return;
+
+    if (!this.adminDisplayName().trim() || !this.adminEmail().trim()) {
+      this.adminFormError.set(this.i18n.t('organizations.adminRequiredFields'));
+      return;
+    }
+
+    this.adminFormLoading.set(true);
+    this.api.createClinicAdmin(org.id, {
+      displayName: this.adminDisplayName().trim(),
+      email: this.adminEmail().trim(),
+    }).subscribe({
+      next: (res) => {
+        this.adminCreatedResult.set(res);
+        this.adminFormLoading.set(false);
+      },
+      error: (err) => {
+        if (err.status === 409 || err.status === 400) {
+          this.adminFormError.set(this.i18n.t('organizations.adminDuplicateEmail'));
+        } else if (err && err.status === 404) {
+          this.adminFormError.set(this.i18n.t('organizations.adminOrgNotFound'));
+        } else if (err && err.error && err.error.detail) {
+          this.adminFormError.set(err.error.detail);
+        } else {
+          this.adminFormError.set(this.i18n.t('organizations.adminSaveError'));
+        }
+        this.adminFormLoading.set(false);
+      }
+    });
+  }
+
+  copyAdminPassword(): void {
+    const result = this.adminCreatedResult();
+    if (!result) return;
+    navigator.clipboard.writeText(result.temporaryPassword).then(() => {
+      this.adminPasswordCopied.set(true);
+      setTimeout(() => this.adminPasswordCopied.set(false), 2000);
+    });
   }
 }

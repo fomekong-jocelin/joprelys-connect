@@ -1,12 +1,17 @@
 package com.joprelys.backend.clinic.api;
 
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import jakarta.validation.Valid;
+import java.security.SecureRandom;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,10 +27,21 @@ import org.springframework.web.server.ResponseStatusException;
 @PreAuthorize("hasRole('ADMIN_JOPRELYS')")
 public class OrganizationController {
 
-	private final OrganizationRepository organizationRepository;
+	private static final String PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+	private static final int TEMPORARY_PASSWORD_LENGTH = 6;
 
-	public OrganizationController(OrganizationRepository organizationRepository) {
+	private final OrganizationRepository organizationRepository;
+	private final UserAccountRepository userAccountRepository;
+	private final PasswordEncoder passwordEncoder;
+	private final SecureRandom secureRandom = new SecureRandom();
+
+	public OrganizationController(
+			OrganizationRepository organizationRepository,
+			UserAccountRepository userAccountRepository,
+			PasswordEncoder passwordEncoder) {
 		this.organizationRepository = organizationRepository;
+		this.userAccountRepository = userAccountRepository;
+		this.passwordEncoder = passwordEncoder;
 	}
 
 	@PostMapping
@@ -68,6 +84,40 @@ public class OrganizationController {
 		return mapToResponse(saved);
 	}
 
+	@PostMapping("/{id}/admin")
+	@ResponseStatus(HttpStatus.CREATED)
+	public CreateClinicAdminResponse createClinicAdmin(
+			@PathVariable UUID id,
+			@Valid @RequestBody CreateClinicAdminRequest request) {
+
+		OrganizationEntity org = organizationRepository.findById(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organisation non trouvée."));
+
+		String email = request.email().trim().toLowerCase(Locale.ROOT);
+		if (userAccountRepository.existsByEmail(email)) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "Un utilisateur avec cet e-mail existe déjà.");
+		}
+
+		String temporaryPassword = generateTemporaryPassword();
+		UserAccountEntity admin = new UserAccountEntity(
+				email,
+				request.displayName().trim(),
+				"ADMIN_CLINIQUE",
+				passwordEncoder.encode(temporaryPassword));
+		admin.setOrganizationId(org.getId());
+		UserAccountEntity saved = userAccountRepository.save(admin);
+
+		return new CreateClinicAdminResponse(
+				saved.getId(),
+				saved.getEmail(),
+				saved.getDisplayName(),
+				saved.getRole(),
+				saved.isEnabled(),
+				temporaryPassword,
+				org.getId(),
+				saved.getCreatedAt());
+	}
+
 	private OrganizationResponse mapToResponse(OrganizationEntity entity) {
 		return new OrganizationResponse(
 				entity.getId(),
@@ -80,5 +130,13 @@ public class OrganizationController {
 				entity.getStatus(),
 				entity.getCreatedAt()
 		);
+	}
+
+	private String generateTemporaryPassword() {
+		StringBuilder suffix = new StringBuilder(TEMPORARY_PASSWORD_LENGTH);
+		for (int index = 0; index < TEMPORARY_PASSWORD_LENGTH; index++) {
+			suffix.append(PASSWORD_ALPHABET.charAt(secureRandom.nextInt(PASSWORD_ALPHABET.length())));
+		}
+		return "Jop-" + suffix;
 	}
 }

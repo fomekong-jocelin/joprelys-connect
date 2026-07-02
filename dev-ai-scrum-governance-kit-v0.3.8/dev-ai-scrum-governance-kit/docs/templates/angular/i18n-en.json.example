@@ -1,0 +1,15 @@
+{
+  "app": {
+    "slogan": "Your application tagline"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "error": "An error occurred"
+  },
+  "links": {
+    "privacy": "Privacy",
+    "terms": "Terms of use"
+  }
+}

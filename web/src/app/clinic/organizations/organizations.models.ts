@@ -17,3 +17,19 @@ export interface CreateOrganizationRequest {
   address?: string;
   city: string;
 }
+
+export interface CreateClinicAdminRequest {
+  readonly displayName: string;
+  readonly email: string;
+}
+
+export interface CreateClinicAdminResponse {
+  readonly id: string;
+  readonly email: string;
+  readonly displayName: string;
+  readonly role: string;
+  readonly enabled: boolean;
+  readonly temporaryPassword: string;
+  readonly organizationId: string;
+  readonly createdAt: string;
+}

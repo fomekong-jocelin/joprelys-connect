@@ -13,6 +13,8 @@ export interface Consultation {
   status: string;
   createdAt: string;
   updatedAt: string;
+  documentId?: string;
+  documentStatus?: string;
 }
 
 export interface SaveConsultationRequest {

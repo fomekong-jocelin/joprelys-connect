@@ -49,7 +49,9 @@
 | EPIC-0006 | DOC | Epic | Génération PDF & Vérification par QR Code | Full-stack | IN_PROGRESS | P0 | 8 | Senior | 2.5j | 3.2j | 5j | Antigravity | Lead | SPRINT-0003 | 1.0j | STORY-0601 en review | Fort | 2026-07-02 |
 | STORY-0601 | DOC | User Story | Génération et stockage du PDF de consultation | Backend | REVIEW | P0 | 3 | Senior | 1j | 1.3j | 2j | Antigravity | Lead | SPRINT-0003 | 1.0j | Aucun | Moyen | 2026-07-02 |
 | STORY-0602 | DOC | User Story | Page publique de vérification d'authenticité | Full-stack | REVIEW | P0 | 3 | Intermédiaire | 0.8j | 1.1j | 1.8j | Antigravity | Lead | SPRINT-0003 | 0.4j | Validation de la review | Moyen | 2026-07-02 |
-| STORY-0603 | DOC | User Story | Révocation et annulation de documents | Backend | BACKLOG | P1 | 2 | Intermédiaire | 0.7j | 0.9j | 1.5j | À assigner | Lead | SPRINT-0004 | 0j | Dépend de STORY-0601 | Faible | 2026-07-02 |
+| STORY-0603 | DOC | User Story | Révocation et annulation de documents (backend) | Backend | REVIEW | P1 | 2 | Intermédiaire | 0.7j | 0.9j | 1.5j | Antigravity | Lead | SPRINT-0004 | 0.7j | Aucun (5/5 tests au vert) | Faible | 2026-07-02 |
+| STORY-0604 | DOC | User Story | Écran de révocation côté frontend | Full-stack | DONE | P1 | 2 | Intermédiaire | 0.3j | 0.5j | 0.8j | Antigravity | Lead | SPRINT-0003 | 0.5j | Aucun (25/25 tests au vert) | Faible | 2026-07-02 |
+| TICKET-0108 | GOV | Chore | Mise à niveau du kit de gouvernance v0.3.8 | Gouvernance | DONE | P0 | 1 | Intermédiaire | 0.1j | 0.2j | 0.4j | Antigravity | Lead | SPRINT-0003 | 0.1j | Aucun | Faible | 2026-07-02 |
 | EPIC-0007 | AUDIT | Epic | Traçabilité & Audit Logs | Back-end | BACKLOG | P1 | 5 | Intermédiaire | 1.5j | 2j | 3j | À assigner | Lead | À planifier | 0j | Définir les stories détaillées | Moyen | 2026-07-01 |
 
 ## Statuts autorisés

@@ -34,4 +34,12 @@ export class ConsultationApiService {
   verifyDocumentPublic(documentId: string): Observable<any> {
     return this.http.get<any>(`/api/public/documents/${documentId}/verify`);
   }
+
+  revokeDocument(documentId: string, reason: string): Observable<any> {
+    return this.http.patch<any>(`/api/documents/${documentId}/revoke`, { reason });
+  }
+
+  cancelDocument(documentId: string, reason: string): Observable<any> {
+    return this.http.patch<any>(`/api/documents/${documentId}/cancel`, { reason });
+  }
 }

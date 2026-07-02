@@ -19,6 +19,7 @@ export interface OrganizationTableLabels {
   readonly inactive: string;
   readonly activate: string;
   readonly deactivate: string;
+  readonly assignAdmin: string;
 }
 
 @Component({
@@ -64,13 +65,20 @@ export interface OrganizationTableLabels {
                 }
               </dl>
 
-              <div class="mt-4">
+              <div class="mt-4 flex flex-col gap-2">
                 <app-ui-button
                   class="w-full"
                   [variant]="org.status === 'ACTIVE' ? 'secondary' : 'primary'"
                   (pressed)="statusToggled.emit(org)"
                 >
                   {{ org.status === 'ACTIVE' ? labels().deactivate : labels().activate }}
+                </app-ui-button>
+                <app-ui-button
+                  class="w-full"
+                  variant="link"
+                  (pressed)="adminRequested.emit(org)"
+                >
+                  {{ labels().assignAdmin }}
                 </app-ui-button>
               </div>
             </article>
@@ -111,12 +119,20 @@ export interface OrganizationTableLabels {
                     />
                   </td>
                   <td class="text-right">
-                    <app-ui-button
-                      [variant]="org.status === 'ACTIVE' ? 'danger' : 'link'"
-                      (pressed)="statusToggled.emit(org)"
-                    >
-                      {{ org.status === 'ACTIVE' ? labels().deactivate : labels().activate }}
-                    </app-ui-button>
+                    <div class="inline-flex flex-col items-end gap-1">
+                      <app-ui-button
+                        [variant]="org.status === 'ACTIVE' ? 'danger' : 'link'"
+                        (pressed)="statusToggled.emit(org)"
+                      >
+                        {{ org.status === 'ACTIVE' ? labels().deactivate : labels().activate }}
+                      </app-ui-button>
+                      <app-ui-button
+                        variant="link"
+                        (pressed)="adminRequested.emit(org)"
+                      >
+                        {{ labels().assignAdmin }}
+                      </app-ui-button>
+                    </div>
                   </td>
                 </tr>
               }
@@ -132,4 +148,5 @@ export class OrganizationTableComponent {
   readonly labels = input.required<OrganizationTableLabels>();
   readonly loading = input(false);
   readonly statusToggled = output<Organization>();
+  readonly adminRequested = output<Organization>();
 }
