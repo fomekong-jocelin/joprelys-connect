@@ -19,121 +19,149 @@ import { AuditLog } from '../audit/audit.models';
   standalone: true,
   imports: [ButtonComponent, CardComponent, FormsModule, SlicePipe, DatePipe],
   template: `
-    <app-ui-card [title]="patient().fullName">
+    <app-ui-card>
       <div class="space-y-6">
         
-        <!-- Headers with numbers -->
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 border-b pb-4" style="border-color: var(--border-color)">
+        <!-- En-tête : Nom du Patient, Numéros & Actions principales -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b border-slate-100 dark:border-slate-800/80 gap-4">
           <div>
-            <span class="ui-label font-bold block">Dossier Patient Unique (DPU)</span>
-            <span class="text-lg font-black tracking-wider text-indigo-500 dark:text-indigo-400">{{ patient().globalPatientNumber }}</span>
-          </div>
-          <div>
-            <span class="ui-label font-bold block">N° Local Etablissement</span>
-            <span class="text-lg font-black tracking-wider text-emerald-500 dark:text-emerald-400">{{ patient().localPatientNumber }}</span>
-          </div>
-          <div>
-            <span class="ui-label font-bold block">Statut du Dossier</span>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 mt-1">
-              {{ patient().status }}
-            </span>
-          </div>
-        </div>
-
-        <!-- Section 1: Informations Administratives -->
-        <div>
-          <h3 class="text-sm font-extrabold uppercase tracking-wider mb-3" style="color: var(--text-muted)">
-            Informations Administratives
-          </h3>
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <span class="ui-label block">Sexe</span>
-              <span class="font-bold" style="color: var(--text-primary)">{{ patient().gender }}</span>
-            </div>
-            <div>
-              <span class="ui-label block">Date de naissance (Âge)</span>
-              <span class="font-bold" style="color: var(--text-primary)">
-                {{ patient().birthDate }} ({{ age() }} ans)
+            <div class="flex items-center gap-3">
+              <h2 class="text-xl font-black text-slate-800 dark:text-white">{{ patient().fullName }}</h2>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300 uppercase tracking-wider">
+                {{ patient().status }}
               </span>
             </div>
-            <div>
-              <span class="ui-label block">Téléphone</span>
-              <span class="font-bold" style="color: var(--text-primary)">{{ patient().phone }}</span>
-            </div>
-            <div>
-              <span class="ui-label block">Ville</span>
-              <span class="font-bold" style="color: var(--text-primary)">{{ patient().city }}</span>
-            </div>
-            <div>
-              <span class="ui-label block">Quartier / District</span>
-              <span class="font-bold" style="color: var(--text-primary)">{{ patient().district || '-' }}</span>
-            </div>
-            <div>
-              <span class="ui-label block">Adresse géographique</span>
-              <span class="font-bold" style="color: var(--text-primary)">{{ patient().address || '-' }}</span>
-            </div>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
+              DPU: <span class="font-mono font-bold text-slate-600 dark:text-slate-400">{{ patient().globalPatientNumber }}</span> 
+              | Etablissement: <span class="font-mono text-slate-600 dark:text-slate-400">{{ patient().localPatientNumber }}</span>
+            </p>
+          </div>
+          
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <app-ui-button variant="secondary" (pressed)="back.emit()" class="grow sm:grow-0 text-xs">
+              Retour
+            </app-ui-button>
+            
+            @if (canStartConsultation()) {
+              <app-ui-button variant="primary" (pressed)="goToConsultation()" class="grow sm:grow-0 text-xs">
+                Démarrer la consultation
+              </app-ui-button>
+            } @else if (canAdmit()) {
+              <app-ui-button variant="primary" (pressed)="openModal()" class="grow sm:grow-0 text-xs">
+                Ouvrir une visite
+              </app-ui-button>
+            }
           </div>
         </div>
 
-        <!-- Section 2: Contact d'Urgence -->
-        <div class="pt-4 border-t" style="border-color: var(--border-color)">
-          <h3 class="text-sm font-extrabold uppercase tracking-wider mb-3" style="color: var(--text-muted)">
-            Contact d'Urgence
-          </h3>
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <span class="ui-label block">Nom complet</span>
-              <span class="font-bold" style="color: var(--text-primary)">{{ patient().emergencyContactName || '-' }}</span>
-            </div>
-            <div>
-              <span class="ui-label block">Téléphone</span>
-              <span class="font-bold" style="color: var(--text-primary)">{{ patient().emergencyContactPhone || '-' }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Section 3: Antécédents & Clinique -->
-        <div class="pt-4 border-t" style="border-color: var(--border-color)">
-          <h3 class="text-sm font-extrabold uppercase tracking-wider mb-3" style="color: var(--text-muted)">
-            Dossier Clinique
-          </h3>
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div class="p-4 rounded-lg bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30">
-              <span class="ui-label block font-bold text-rose-800 dark:text-rose-300">Allergies signalées</span>
-              <p class="mt-2 text-sm font-semibold text-rose-900 dark:text-rose-200 whitespace-pre-line">
-                {{ patient().allergies || 'Aucune allergie signalée' }}
-              </p>
-            </div>
-            <div class="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30">
-              <span class="ui-label block font-bold text-blue-800 dark:text-blue-300">Antécédents médicaux</span>
-              <p class="mt-2 text-sm font-semibold text-blue-900 dark:text-blue-200 whitespace-pre-line">
-                {{ patient().medicalHistory || 'Aucun antécédent médical signalé' }}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Section 4: Historique Médical -->
-        <div class="pt-4 border-t" style="border-color: var(--border-color)">
-          <button
-            (click)="toggleHistory()"
-            class="flex items-center justify-between w-full text-left group cursor-pointer"
-          >
-            <h3 class="text-sm font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">
-              Historique Médical
-            </h3>
-            <svg
-              class="w-4 h-4 transition-transform duration-200"
-              [class.rotate-180]="showHistory()"
-              style="color: var(--text-muted)"
-              fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        <!-- Sélecteur d'onglets (Tabs) -->
+        <div class="border-b border-slate-100 dark:border-slate-800/80">
+          <nav class="flex space-x-6" aria-label="Tabs">
+            <button
+              (click)="setActiveTab('general')"
+              [class]="activeTab() === 'general'
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 border-b-2 py-2 px-1 text-sm font-extrabold cursor-pointer transition-all'
+                : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 border-b-2 py-2 px-1 text-sm font-bold cursor-pointer transition-all'"
             >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
+              Fiche Patient
+            </button>
+            <button
+              (click)="setActiveTab('medical')"
+              [class]="activeTab() === 'medical'
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 border-b-2 py-2 px-1 text-sm font-extrabold cursor-pointer transition-all'
+                : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 border-b-2 py-2 px-1 text-sm font-bold cursor-pointer transition-all'"
+            >
+              Dossier Médical
+            </button>
+            @if (canViewAudit()) {
+              <button
+                (click)="setActiveTab('audit')"
+                [class]="activeTab() === 'audit'
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 border-b-2 py-2 px-1 text-sm font-extrabold cursor-pointer transition-all'
+                  : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 border-b-2 py-2 px-1 text-sm font-bold cursor-pointer transition-all'"
+              >
+                Journal d'Audit
+              </button>
+            }
+          </nav>
+        </div>
 
-          @if (showHistory()) {
-            <div class="mt-4 space-y-3">
+        <!-- Onglet 1 : Général (Informations Administratives & Contacts) -->
+        @if (activeTab() === 'general') {
+          <div class="space-y-6 animate-fade-in">
+            <div>
+              <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">
+                Informations Administratives
+              </h3>
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+                  <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Sexe</span>
+                  <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ patient().gender }}</span>
+                </div>
+                <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+                  <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Date de naissance (âge)</span>
+                  <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ patient().birthDate }} ({{ age() }} ans)</span>
+                </div>
+                <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+                  <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Téléphone</span>
+                  <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ patient().phone || 'Non renseigné' }}</span>
+                </div>
+                <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+                  <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Ville</span>
+                  <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200 capitalize">{{ patient().city }}</span>
+                </div>
+                <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+                  <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Quartier / District</span>
+                  <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ patient().district || 'Non renseigné' }}</span>
+                </div>
+                <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+                  <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Adresse Géographique</span>
+                  <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ patient().address || 'Non renseignée' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">
+                Contact d'Urgence
+              </h3>
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+                  <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Nom Complet</span>
+                  <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ patient().emergencyContactName || 'Non renseigné' }}</span>
+                </div>
+                <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+                  <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Téléphone</span>
+                  <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ patient().emergencyContactPhone || 'Non renseigné' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Onglet 2 : Dossier Médical (Allergies, Antécédents & Consultations) -->
+        @if (activeTab() === 'medical') {
+          <div class="space-y-6 animate-fade-in">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="p-4 rounded-lg bg-rose-50/45 dark:bg-rose-950/10 border border-rose-100/50 dark:border-rose-900/20">
+                <span class="ui-label block font-extrabold text-rose-800 dark:text-rose-300 text-xs mb-2">Allergies signalées</span>
+                <p class="text-sm font-semibold text-rose-950 dark:text-rose-200 whitespace-pre-line leading-relaxed">
+                  {{ patient().allergies || 'Aucune allergie signalée' }}
+                </p>
+              </div>
+              <div class="p-4 rounded-lg bg-blue-50/45 dark:bg-blue-950/10 border border-blue-100/50 dark:border-blue-900/20">
+                <span class="ui-label block font-extrabold text-blue-800 dark:text-blue-300 text-xs mb-2">Antécédents médicaux</span>
+                <p class="text-sm font-semibold text-blue-950 dark:text-rose-200 whitespace-pre-line leading-relaxed">
+                  {{ patient().medicalHistory || 'Aucun antécédent médical signalé' }}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">
+                Historique Médical & Consultations
+              </h3>
+
               @if (downloadError()) {
                 <div class="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-red-700 dark:text-red-300 font-semibold mb-3 leading-relaxed flex justify-between items-center">
                   <span>{{ downloadError() }}</span>
@@ -146,178 +174,147 @@ import { AuditLog } from '../audit/audit.models';
               }
 
               @if (isLoadingHistory()) {
-                <div class="py-6 text-center">
-                  <div class="inline-block w-5 h-5 rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin"></div>
-                  <p class="mt-2 text-xs font-semibold" style="color: var(--text-muted)">Chargement de l'historique...</p>
+                <div class="py-12 text-center">
+                  <div class="inline-block w-6 h-6 rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin"></div>
+                  <p class="mt-2 text-xs font-bold text-slate-400 dark:text-slate-500">Chargement de l'historique...</p>
                 </div>
               } @else if (consultationHistory().length === 0) {
-                <div class="p-4 text-center border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
-                  <p class="text-sm font-semibold" style="color: var(--text-muted)">Aucun antécédent de consultation enregistré.</p>
+                <div class="p-8 text-center border border-dashed border-slate-200 dark:border-slate-800/80 rounded-xl">
+                  <p class="text-sm font-semibold text-slate-400 dark:text-slate-500">Aucun antécédent de consultation enregistré.</p>
                 </div>
               } @else {
-                @for (consult of consultationHistory(); track consult.id) {
-                  <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 space-y-2">
-                    <div class="flex items-start justify-between gap-2">
-                      <div>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 uppercase tracking-wider">
-                          {{ consult.visitNumber }}
-                        </span>
-                        <span class="ml-2 text-xs font-semibold" style="color: var(--text-muted)">
-                          {{ consult.createdAt | slice:0:10 }}
-                        </span>
+                <div class="space-y-3">
+                  @for (consult of consultationHistory(); track consult.id) {
+                    <div class="p-4 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800/60 space-y-2">
+                      <div class="flex items-start justify-between gap-2">
+                        <div>
+                          <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 uppercase tracking-wider">
+                            {{ consult.visitNumber }}
+                          </span>
+                          <span class="ml-2 text-xs font-semibold text-slate-400 dark:text-slate-500">
+                            {{ consult.createdAt | slice:0:10 }}
+                          </span>
+                        </div>
+                        <span class="text-xs font-extrabold text-slate-500 dark:text-slate-400">Dr. {{ consult.doctorName }}</span>
                       </div>
-                      <span class="text-xs font-semibold" style="color: var(--text-muted)">Dr. {{ consult.doctorName }}</span>
-                    </div>
-                    <div class="flex flex-wrap justify-between items-center pt-2 border-t border-slate-100/50 dark:border-slate-800/40 gap-4">
-                      <p class="text-sm font-semibold" style="color: var(--text-primary)">
-                        <span class="text-xs font-bold uppercase" style="color: var(--text-muted)">Diagnostic : </span>
-                        {{ consult.diagnosis }}
-                      </p>
-                      <div class="flex items-center gap-2">
-                        @if (consult.documentStatus === 'REVOQUE') {
-                          <span class="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-extrabold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300 uppercase tracking-wider">
-                            {{ i18n.t('verify.status.revoked') }}
-                          </span>
-                        } @else if (consult.documentStatus === 'ANNULE') {
-                          <span class="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-extrabold bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300 uppercase tracking-wider">
-                            {{ i18n.t('verify.status.cancelled') }}
-                          </span>
-                        }
+                      <div class="flex flex-wrap justify-between items-center pt-2 border-t border-slate-100/50 dark:border-slate-800/20 gap-4">
+                        <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                          <span class="text-xs font-bold uppercase text-slate-400 dark:text-slate-500">Diagnostic : </span>
+                          {{ consult.diagnosis }}
+                        </p>
+                        <div class="flex items-center gap-2">
+                          @if (consult.documentStatus === 'REVOQUE') {
+                            <span class="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-extrabold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300 uppercase tracking-wider">
+                              {{ i18n.t('verify.status.revoked') }}
+                            </span>
+                          } @else if (consult.documentStatus === 'ANNULE') {
+                            <span class="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-extrabold bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300 uppercase tracking-wider">
+                              {{ i18n.t('verify.status.cancelled') }}
+                            </span>
+                          }
 
-                        @if (consult.documentId) {
-                          <button 
-                            (click)="downloadPdf(consult)"
-                            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-extrabold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 cursor-pointer transition-colors shrink-0"
-                          >
-                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                            {{ i18n.t('patients.downloadPdf') }}
-                          </button>
-
-                          @if (canRevoke() && consult.documentStatus === 'VALID') {
+                          @if (consult.documentId) {
                             <button 
-                              (click)="openRevokeModal(consult)"
-                              class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-extrabold bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50 cursor-pointer transition-colors shrink-0"
+                              (click)="downloadPdf(consult)"
+                              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold bg-indigo-50/50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 cursor-pointer transition-colors shrink-0"
                             >
                               <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                               </svg>
-                              {{ i18n.t('patients.revokeDoc') }}
+                              {{ i18n.t('patients.downloadPdf') }}
                             </button>
+
+                            @if (canRevoke() && consult.documentStatus === 'VALID') {
+                              <button 
+                                (click)="openRevokeModal(consult)"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-50/50 text-red-700 dark:bg-red-950/30 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50 cursor-pointer transition-colors shrink-0"
+                              >
+                                <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                {{ i18n.t('patients.revokeDoc') }}
+                              </button>
+                            }
                           }
-                        }
+                        </div>
                       </div>
                     </div>
-                  </div>
-                }
+                  }
+                </div>
               }
             </div>
-          }
-        </div>
+          </div>
+        }
 
-        <!-- Section 5: Journal d'Audit & Sécurité -->
-        @if (canViewAudit()) {
-          <div class="pt-4 border-t" style="border-color: var(--border-color)">
-            <button
-              (click)="toggleAudit()"
-              class="flex items-center justify-between w-full text-left group cursor-pointer"
-            >
-              <h3 class="text-sm font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">
-                {{ i18n.t('patients.auditLogsTitle') }}
-              </h3>
-              <svg
-                class="w-4 h-4 transition-transform duration-200"
-                [class.rotate-180]="showAudit()"
-                style="color: var(--text-muted)"
-                fill="none" viewBox="0 0 24 24" stroke="currentColor"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
+        <!-- Onglet 3 : Journal d'Audit & Sécurité -->
+        @if (activeTab() === 'audit' && canViewAudit()) {
+          <div class="space-y-4 animate-fade-in">
+            <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">
+              {{ i18n.t('patients.auditLogsTitle') }}
+            </h3>
 
-            @if (showAudit()) {
-              <div class="mt-4 space-y-3">
-                @if (isLoadingAudit()) {
-                  <div class="py-6 text-center">
-                    <div class="inline-block w-5 h-5 rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin"></div>
-                    <p class="mt-2 text-xs font-semibold" style="color: var(--text-muted)">{{ i18n.t('patients.auditLogsLoading') }}</p>
-                  </div>
-                } @else if (auditLogs().length === 0) {
-                  <div class="p-4 text-center border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
-                    <p class="text-sm font-semibold" style="color: var(--text-muted)">{{ i18n.t('patients.auditLogsEmpty') }}</p>
-                  </div>
-                } @else {
-                  <div class="flow-root">
-                    <ul role="list" class="-mb-8">
-                      @for (log of auditLogs(); track log.id; let last = $last) {
-                        <li>
-                          <div class="relative pb-8">
-                            @if (!last) {
-                              <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-slate-200 dark:bg-slate-700" aria-hidden="true"></span>
-                            }
-                            <div class="relative flex space-x-3">
-                              <div>
-                                <span 
-                                  [class]="log.status === 'SUCCESS' 
-                                    ? 'h-8 w-8 rounded-full bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 flex items-center justify-center ring-8 ring-white dark:ring-slate-900'
-                                    : 'h-8 w-8 rounded-full bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 flex items-center justify-center ring-8 ring-white dark:ring-slate-900'"
-                                >
-                                  @if (log.status === 'SUCCESS') {
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  } @else {
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                    </svg>
-                                  }
-                                </span>
-                              </div>
-                              <div class="flex-1 min-w-0 pt-1.5 flex justify-between space-x-4">
-                                <div>
-                                  <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                                    {{ log.reason || log.action }}
-                                  </p>
-                                  <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                                    {{ i18n.t('patients.auditLogsUser') }} <span class="font-bold text-indigo-600 dark:text-indigo-400">{{ log.actorName || 'Système' }}</span>
-                                    | {{ i18n.t('patients.auditLogsAction') }} <span class="font-mono text-[10px] font-bold">{{ log.action }}</span> 
-                                    @if (log.ipAddress) {
-                                      | {{ i18n.t('patients.auditLogsIp') }} <span class="font-mono text-[10px]">{{ log.ipAddress }}</span>
-                                    }
-                                  </p>
-                                </div>
-                                <div class="text-right text-xs whitespace-nowrap text-slate-400 dark:text-slate-500">
-                                  <time [dateTime]="log.createdAt">{{ log.createdAt | date:'short' }}</time>
-                                </div>
-                              </div>
+            @if (isLoadingAudit()) {
+              <div class="py-12 text-center">
+                <div class="inline-block w-6 h-6 rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin"></div>
+                <p class="mt-2 text-xs font-bold text-slate-400 dark:text-slate-500">{{ i18n.t('patients.auditLogsLoading') }}</p>
+              </div>
+            } @else if (auditLogs().length === 0) {
+              <div class="p-8 text-center border border-dashed border-slate-200 dark:border-slate-800/80 rounded-xl">
+                <p class="text-sm font-semibold text-slate-400 dark:text-slate-500">{{ i18n.t('patients.auditLogsEmpty') }}</p>
+              </div>
+            } @else {
+              <div class="flow-root px-4">
+                <ul role="list" class="-mb-8">
+                  @for (log of auditLogs(); track log.id; let last = $last) {
+                    <li>
+                      <div class="relative pb-8">
+                        @if (!last) {
+                          <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-slate-100 dark:bg-slate-800" aria-hidden="true"></span>
+                        }
+                        <div class="relative flex space-x-3">
+                          <div>
+                            <span 
+                              [class]="log.status === 'SUCCESS' 
+                                ? 'h-8 w-8 rounded-full bg-green-50 dark:bg-green-950/20 text-green-600 dark:text-green-400 flex items-center justify-center ring-8 ring-white dark:ring-slate-900'
+                                : 'h-8 w-8 rounded-full bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 flex items-center justify-center ring-8 ring-white dark:ring-slate-900'"
+                            >
+                              @if (log.status === 'SUCCESS') {
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              } @else {
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                              }
+                            </span>
+                          </div>
+                          <div class="flex-1 min-w-0 pt-1.5 flex justify-between space-x-4">
+                            <div>
+                              <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                {{ log.reason || log.action }}
+                              </p>
+                              <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                                {{ i18n.t('patients.auditLogsUser') }} <span class="font-bold text-indigo-600 dark:text-indigo-400">{{ log.actorName || 'Système' }}</span>
+                                | {{ i18n.t('patients.auditLogsAction') }} <span class="font-mono text-[10px] font-bold">{{ log.action }}</span> 
+                                @if (log.ipAddress) {
+                                  | {{ i18n.t('patients.auditLogsIp') }} <span class="font-mono text-[10px]">{{ log.ipAddress }}</span>
+                                }
+                              </p>
+                            </div>
+                            <div class="text-right text-xs whitespace-nowrap text-slate-400 dark:text-slate-500">
+                              <time [dateTime]="log.createdAt">{{ log.createdAt | date:'short' }}</time>
                             </div>
                           </div>
-                        </li>
-                      }
-                    </ul>
-                  </div>
-                }
+                        </div>
+                      </div>
+                    </li>
+                  }
+                </ul>
               </div>
             }
           </div>
         }
-
-        <div class="flex justify-end gap-3 pt-4 border-t" style="border-color: var(--border-color)">
-          <app-ui-button variant="secondary" (pressed)="back.emit()">
-            Retour à la liste
-          </app-ui-button>
-
-          @if (canStartConsultation()) {
-            <app-ui-button variant="primary" (pressed)="goToConsultation()">
-              Démarrer la consultation
-            </app-ui-button>
-          } @else if (canAdmit()) {
-            <app-ui-button variant="primary" (pressed)="openModal()">
-              Ouvrir une visite
-            </app-ui-button>
-          }
-        </div>
 
       </div>
     </app-ui-card>
@@ -496,6 +493,9 @@ export class PatientDetailComponent implements OnInit {
   auditLogs = signal<AuditLog[]>([]);
   auditLoaded = false;
 
+  // UX/UI Improvement — Active Tab state
+  activeTab = signal<'general' | 'medical' | 'audit'>('general');
+
   activeVisit = signal<Visit | null>(null);
 
   private readonly consultationApi = inject(ConsultationApiService);
@@ -514,7 +514,7 @@ export class PatientDetailComponent implements OnInit {
   // Un médecin/admin peut démarrer une consultation si une visite active existe pour ce patient
   readonly canStartConsultation = computed(() => {
     const role = this.session()?.role;
-    return (role === 'MEDECIN' || role === 'ADMIN_CLINIQUE' && this.activeVisit() !== null);
+    return (role === 'MEDECIN' || role === 'ADMIN_CLINIQUE') && this.activeVisit() !== null;
   });
 
   readonly canRevoke = computed(() => {
@@ -720,6 +720,16 @@ export class PatientDetailComponent implements OnInit {
     const newState = !this.showAudit();
     this.showAudit.set(newState);
     if (newState && !this.auditLoaded) {
+      this.loadAudit();
+    }
+  }
+
+  setActiveTab(tab: 'general' | 'medical' | 'audit'): void {
+    this.activeTab.set(tab);
+    if (tab === 'medical' && !this.historyLoaded) {
+      this.loadHistory();
+    }
+    if (tab === 'audit' && !this.auditLoaded) {
       this.loadAudit();
     }
   }

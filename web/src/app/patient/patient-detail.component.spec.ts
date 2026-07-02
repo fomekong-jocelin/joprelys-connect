@@ -122,10 +122,11 @@ describe('PatientDetailComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should load history and display consultations', () => {
-    component.toggleHistory();
+  it('should load history and display consultations when medical tab is selected', () => {
+    component.setActiveTab('medical');
     expect(mockConsultationApi.getPatientConsultations).toHaveBeenCalledWith('pat-1');
     expect(component.consultationHistory()).toEqual(mockConsultations);
+    expect(component.activeTab()).toBe('medical');
   });
 
   it('should open and close revoke modal', () => {
@@ -164,11 +165,11 @@ describe('PatientDetailComponent', () => {
     expect(component.showRevokeModal).toBe(false);
   });
 
-  it('should load audit logs when toggled', () => {
-    component.toggleAudit();
+  it('should load audit logs when audit tab is selected', () => {
+    component.setActiveTab('audit');
     expect(mockAuditApi.getPatientLogs).toHaveBeenCalledWith('pat-1');
     expect(component.auditLogs()).toEqual(mockAuditLogs);
-    expect(component.showAudit()).toBe(true);
+    expect(component.activeTab()).toBe('audit');
   });
 
   it('should evaluate canViewAudit correctly based on roles', () => {
