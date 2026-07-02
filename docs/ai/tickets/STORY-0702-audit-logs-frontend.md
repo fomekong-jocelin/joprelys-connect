@@ -76,8 +76,9 @@ Implémenter l'intégration de la visualisation des logs d'audit côté frontend
 
 - Interface de données `AuditLog` dans `web/src/app/audit/audit.models.ts`.
 - Service HTTP Angular `AuditApiService` dans `web/src/app/audit/audit-api.service.ts`.
-- Clés de dictionnaire i18n dans `I18nService` (`patients.auditLogsTitle`, `patients.auditLogsLoading`, `patients.auditLogsEmpty`, `patients.auditLogsAction`, `patients.auditLogsIp`).
+- Clés de dictionnaire i18n dans `I18nService` (`patients.auditLogsTitle`, `patients.auditLogsLoading`, `patients.auditLogsEmpty`, `patients.auditLogsAction`, `patients.auditLogsIp`, `patients.auditLogsUser`).
 - Intégration de la timeline d'audit (Section 5) en bas de `PatientDetailComponent` avec chargement asynchrone paresseux au clic et computed properties pour la sécurité.
+- Ajout de la résolution de `actorName` depuis le backend via `UserAccountRepository` et affichage en timeline côté frontend sous `Utilisateur : <nom>`.
 - Ajout des tests unitaires Vitest Angular dans `patient-detail.component.spec.ts`.
 
 ## 9. Suivi d'exécution
@@ -85,6 +86,7 @@ Implémenter l'intégration de la visualisation des logs d'audit côté frontend
 | Date | Développeur | Temps passé | Avancement | Reste à faire | Blocage | Commentaire |
 |---|---|---:|---:|---:|---|---|
 | 2026-07-02 | Antigravity | 0.5j | 100% | Aucun | Aucun | Implémentation frontend, intégration i18n, design et tests unitaires terminés |
+| 2026-07-02 | Antigravity | 0.1j | 100% | Aucun | Aucun | Ajout de la résolution du nom de l'acteur en backend et affichage dans la timeline |
 
 ## 10. Tests et vérifications
 
