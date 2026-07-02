@@ -8,9 +8,9 @@
 |---|---|
 | Dernière mise à jour | 2026-07-02 |
 | Responsable mise à jour | Antigravity |
-| État global | En cours (Sprint 0002, STORY-0401, STORY-0301, STORY-0302 et STORY-0201 en review) |
+| État global | En cours (Sprint 0002, STORY-0402 en cours de spécification ; STORY-0401, STORY-0301, STORY-0302 et STORY-0201 en review) |
 | Risques majeurs | Aucun (le build de production réussit sous Node.js 25.9.0) |
-| Prochaine priorité | Démarrer STORY-0402 (Saisie des constantes vitales et calcul IMC) |
+| Prochaine priorité | Implémenter la table SQL vitals et les APIs backend de STORY-0402 |
 | Sprint courant | SPRINT-0002 |
 | Capacité sprint | 15.0j |
 | Charge engagée | 5.70j |
@@ -38,8 +38,9 @@
 | EPIC-0003 | PAT | Epic | Dossier Patient Unique (DPU) & Recherche | Full-stack | BACKLOG | P0 | 8 | Senior | 2j | 2.6j | 4j | À assigner | Lead | À planifier | 0j | Stories initiales rédigées | Moyen | 2026-07-01 |
 | STORY-0301 | PAT | User Story | Enregistrement Patient & Génération du DPU | Full-stack | REVIEW | P0 | 3 | Intermédiaire | 1j | 1.3j | 2.2j | Antigravity | Lead | SPRINT-0002 | 0.65j | Aucun | Moyen | 2026-07-02 |
 | STORY-0302 | PAT | User Story | Recherche de Patients Multicritères | Full-stack | REVIEW | P0 | 3 | Intermédiaire | 0.5j | 0.65j | 1.1j | Antigravity | Lead | SPRINT-0002 | 0.1j | Aucun | Faible | 2026-07-02 |
-| EPIC-0004 | VISIT | Epic | Gestion des Visites & Constantes Vitales | Full-stack | READY | P0 | 5 | Intermédiaire | 1.5j | 2j | 3j | Antigravity | Lead | SPRINT-0002 | 0.52j | Story 0401 complétée | Moyen | 2026-07-02 |
+| EPIC-0004 | VISIT | Epic | Gestion des Visites & Constantes Vitales | Full-stack | READY | P0 | 5 | Intermédiaire | 1.5j | 2j | 3j | Antigravity | Lead | SPRINT-0002 | 0.54j | Story 0401 complétée, Story 0402 en cours | Moyen | 2026-07-02 |
 | STORY-0401 | VISIT | User Story | Ouverture & Clôture de Visite Patient | Full-stack | REVIEW | P0 | 2 | Junior | 0.5j | 0.65j | 1.1j | Antigravity | Lead | SPRINT-0002 | 0.5j | Aucun (tests unitaires et intégration validés avec succès) | Faible | 2026-07-02 |
+| STORY-0402 | VISIT | User Story | Saisie des Constantes Vitales & Calcul IMC | Full-stack | IN_PROGRESS | P0 | 3 | Intermédiaire | 0.8j | 1.1j | 1.8j | Antigravity | Lead | SPRINT-0002 | 0.02j | Rédaction des spécifications fonctionnelles et techniques | Faible | 2026-07-02 |
 | EPIC-0005 | CLINIC | Epic | Consultation Médicale & Prescription | Full-stack | BACKLOG | P0 | 8 | Senior | 2j | 2.6j | 4j | À assigner | Lead | À planifier | 0j | Définir les stories détaillées | Moyen | 2026-07-01 |
 | EPIC-0006 | DOC | Epic | Génération PDF & Vérification par QR Code | Full-stack | BACKLOG | P0 | 8 | Senior | 2.5j | 3.2j | 5j | À assigner | Lead | À planifier | 0j | Définir les stories détaillées | Fort | 2026-07-01 |
 | EPIC-0007 | AUDIT | Epic | Traçabilité & Audit Logs | Back-end | BACKLOG | P1 | 5 | Intermédiaire | 1.5j | 2j | 3j | À assigner | Lead | À planifier | 0j | Définir les stories détaillées | Moyen | 2026-07-01 |
