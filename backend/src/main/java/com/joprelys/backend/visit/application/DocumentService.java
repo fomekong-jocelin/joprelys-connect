@@ -1,5 +1,8 @@
 package com.joprelys.backend.visit.application;
 
+import com.joprelys.backend.audit.application.AuditService;
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationEntity;
@@ -36,6 +39,8 @@ public class DocumentService {
     private final QrCodeGeneratorService qrCodeGeneratorService;
     private final PdfGeneratorService pdfGeneratorService;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+    private final AuditService auditService;
+    private final UserAccountRepository userAccountRepository;
 
     @Value("${joprelys.documents.storage-dir:./storage/documents}")
     private String storageDir;
@@ -51,7 +56,9 @@ public class DocumentService {
             DocumentNumberGenerator documentNumberGenerator,
             QrCodeGeneratorService qrCodeGeneratorService,
             PdfGeneratorService pdfGeneratorService,
-            org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
+            org.springframework.jdbc.core.JdbcTemplate jdbcTemplate,
+            AuditService auditService,
+            UserAccountRepository userAccountRepository) {
         this.medicalDocumentRepository = medicalDocumentRepository;
         this.organizationRepository = organizationRepository;
         this.consultationRepository = consultationRepository;
@@ -60,6 +67,8 @@ public class DocumentService {
         this.qrCodeGeneratorService = qrCodeGeneratorService;
         this.pdfGeneratorService = pdfGeneratorService;
         this.jdbcTemplate = jdbcTemplate;
+        this.auditService = auditService;
+        this.userAccountRepository = userAccountRepository;
     }
 
     public java.util.Optional<com.joprelys.backend.visit.api.DocumentVerificationResponse> verifyDocument(UUID documentId) {
@@ -142,7 +151,22 @@ public class DocumentService {
 
             // 9. Mettre à jour le chemin réel et sauvegarder l'entité
             doc.setFilePath(filePath.toAbsolutePath().toString());
-            return medicalDocumentRepository.save(doc);
+            var savedDoc = medicalDocumentRepository.save(doc);
+
+            var actor = getCurrentUser();
+            if (actor != null) {
+                auditService.logSuccess(
+                        actor.getId(),
+                        actor.getOrganizationId(),
+                        visit.getPatient().getId(),
+                        "MEDICAL_DOCUMENT",
+                        savedDoc.getId(),
+                        "GENERATE_DOCUMENT",
+                        "Génération du document médical n° : " + savedDoc.getDocumentNumber()
+                );
+            }
+
+            return savedDoc;
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store PDF document on disk", e);
         }
@@ -154,7 +178,22 @@ public class DocumentService {
             if (!Files.exists(path)) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Document file not found on disk");
             }
-            return Files.readAllBytes(path);
+            byte[] bytes = Files.readAllBytes(path);
+
+            var actor = getCurrentUser();
+            if (actor != null) {
+                auditService.logSuccess(
+                        actor.getId(),
+                        actor.getOrganizationId(),
+                        doc.getVisit().getPatient().getId(),
+                        "MEDICAL_DOCUMENT",
+                        doc.getId(),
+                        "DOWNLOAD_DOCUMENT",
+                        "Téléchargement du document médical n° : " + doc.getDocumentNumber()
+                );
+            }
+
+            return bytes;
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to read document file from disk", e);
         }
@@ -190,6 +229,18 @@ public class DocumentService {
 
         doc.revoke(actorId, reason, "REVOQUE");
         medicalDocumentRepository.save(doc);
+
+        var user = userAccountRepository.findById(actorId).orElse(null);
+        UUID orgId = user != null ? user.getOrganizationId() : doc.getOrganizationId();
+        auditService.logSuccess(
+                actorId,
+                orgId,
+                doc.getVisit().getPatient().getId(),
+                "MEDICAL_DOCUMENT",
+                doc.getId(),
+                "REVOKE_DOCUMENT",
+                "Révocation du document médical n° " + doc.getDocumentNumber() + ". Motif: " + reason
+        );
 
         return new com.joprelys.backend.visit.api.DocumentStatusResponse(
                 doc.getId(),
@@ -228,6 +279,18 @@ public class DocumentService {
         doc.revoke(actorId, reason, "ANNULE");
         medicalDocumentRepository.save(doc);
 
+        var user = userAccountRepository.findById(actorId).orElse(null);
+        UUID orgId = user != null ? user.getOrganizationId() : doc.getOrganizationId();
+        auditService.logSuccess(
+                actorId,
+                orgId,
+                doc.getVisit().getPatient().getId(),
+                "MEDICAL_DOCUMENT",
+                doc.getId(),
+                "CANCEL_DOCUMENT",
+                "Annulation du document médical n° " + doc.getDocumentNumber() + ". Motif: " + reason
+        );
+
         return new com.joprelys.backend.visit.api.DocumentStatusResponse(
                 doc.getId(),
                 doc.getDocumentNumber(),
@@ -235,5 +298,13 @@ public class DocumentService {
                 doc.getRevokedAt(),
                 doc.getRevokedByUserId(),
                 doc.getRevocationReason());
+    }
+
+    private UserAccountEntity getCurrentUser() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
+            return userAccountRepository.findByEmail(auth.getName().trim().toLowerCase()).orElse(null);
+        }
+        return null;
     }
 }

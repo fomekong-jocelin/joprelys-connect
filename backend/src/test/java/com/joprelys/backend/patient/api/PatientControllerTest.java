@@ -57,6 +57,12 @@ public class PatientControllerTest {
 
 	@BeforeEach
 	void setUp() {
+		jdbcTemplate.update("DELETE FROM audit_logs");
+		jdbcTemplate.update("DELETE FROM medical_documents");
+		jdbcTemplate.update("DELETE FROM prescription_items");
+		jdbcTemplate.update("DELETE FROM prescriptions");
+		jdbcTemplate.update("DELETE FROM consultations");
+		jdbcTemplate.update("DELETE FROM visits");
 		jdbcTemplate.update("DELETE FROM patients");
 		userAccountRepository.deleteAll();
 		organizationRepository.deleteAll();

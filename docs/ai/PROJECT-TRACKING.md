@@ -52,7 +52,9 @@
 | STORY-0603 | DOC | User Story | Révocation et annulation de documents (backend) | Backend | REVIEW | P1 | 2 | Intermédiaire | 0.7j | 0.9j | 1.5j | Antigravity | Lead | SPRINT-0004 | 0.7j | Aucun (5/5 tests au vert) | Faible | 2026-07-02 |
 | STORY-0604 | DOC | User Story | Écran de révocation côté frontend | Full-stack | DONE | P1 | 2 | Intermédiaire | 0.3j | 0.5j | 0.8j | Antigravity | Lead | SPRINT-0003 | 0.5j | Aucun (25/25 tests au vert) | Faible | 2026-07-02 |
 | TICKET-0108 | GOV | Chore | Mise à niveau du kit de gouvernance v0.3.8 | Gouvernance | DONE | P0 | 1 | Intermédiaire | 0.1j | 0.2j | 0.4j | Antigravity | Lead | SPRINT-0003 | 0.1j | Aucun | Faible | 2026-07-02 |
-| EPIC-0007 | AUDIT | Epic | Traçabilité & Audit Logs | Back-end | BACKLOG | P1 | 5 | Intermédiaire | 1.5j | 2j | 3j | À assigner | Lead | À planifier | 0j | Définir les stories détaillées | Moyen | 2026-07-01 |
+| EPIC-0007 | AUDIT | Epic | Traçabilité & Audit Logs | Back-end | IN_PROGRESS | P1 | 5 | Intermédiaire | 1.5j | 2j | 3j | Antigravity | Lead | SPRINT-0003 | 0.85j | Story backend terminée | Moyen | 2026-07-02 |
+| STORY-0701 | AUDIT | User Story | Enregistrement et API REST des logs d'audit (backend) | Backend | DONE | P1 | 3 | Intermédiaire | 0.7j | 1.0j | 1.8j | Antigravity | Lead | SPRINT-0003 | 0.8j | Backend et tests d'intégration OK | Moyen | 2026-07-02 |
+| STORY-0702 | AUDIT | User Story | Écran de visualisation et filtrage des logs d'audit (frontend) | Frontend | BACKLOG | P2 | 2 | Intermédiaire | 0.5j | 0.7j | 1.1j | À assigner | Lead | SPRINT-0004 | 0j | Non démarré | Faible | 2026-07-02 |
 
 ## Statuts autorisés
 
