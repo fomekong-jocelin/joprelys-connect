@@ -11,6 +11,7 @@ Donner une vision simple de la capacité, de l'avancement, des dérives et de la
 | SPRINT-0001 | | | | | | | |
 | SPRINT-0002 | 15.0j | 5.75j | 1.80j | En cours | 1 | 0 | Charge terminée = tickets DONE uniquement ; STORY-0402 terminée, STORY-0201 reste en review |
 | SPRINT-0003 | 15.0j | 9.25j | À consolider | En cours | 0 | 0 | STORY-0104 backend/front implémentés ; validations Maven backend et build prod Angular restent bloquées par environnement |
+| SPRINT-0006 | 15.0j | 3.1j | 3.1j | 100 % | 0 | 0 | Allergies, antécédents, hospitalisations et QA livrés avec succès |
 
 ## 3. Tableau par développeur
 

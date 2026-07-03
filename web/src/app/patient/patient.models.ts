@@ -70,3 +70,88 @@ export interface LabResult {
   validatedAt?: string;
   createdAt: string;
 }
+
+export interface PatientAllergy {
+  id?: string;
+  patientId: string;
+  substance: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  reaction?: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  discoveredAt?: string;
+  comment?: string;
+  updatedAt?: string;
+}
+
+export interface CreatePatientAllergyRequest {
+  substance: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  reaction?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+  discoveredAt?: string;
+  comment?: string;
+}
+
+export interface PatientMedicalHistory {
+  id?: string;
+  patientId: string;
+  category: 'MEDICAL' | 'SURGICAL' | 'FAMILY' | 'OBSTETRICAL' | 'OTHER';
+  description: string;
+  onsetDate?: string;
+  isOngoing: boolean;
+  comment?: string;
+  updatedAt?: string;
+}
+
+export interface CreatePatientMedicalHistoryRequest {
+  category: 'MEDICAL' | 'SURGICAL' | 'FAMILY' | 'OBSTETRICAL' | 'OTHER';
+  description: string;
+  onsetDate?: string;
+  isOngoing: boolean;
+  comment?: string;
+}
+
+export interface Hospitalization {
+  id: string;
+  patientId: string;
+  organizationId: string;
+  version: number;
+  serviceName: string;
+  roomNumber: string;
+  bedNumber: string;
+  admissionReason: string;
+  status: 'EN_COURS' | 'SORTI';
+  admittedAt: string;
+  dischargedAt?: string;
+  dischargeDiagnosis?: string;
+  dischargeInstructions?: string;
+  pdfFilePath?: string;
+}
+
+export interface CreateHospitalizationRequest {
+  patientId: string;
+  serviceName: string;
+  roomNumber: string;
+  bedNumber: string;
+  admissionReason: string;
+}
+
+export interface HospitalizationNote {
+  id: string;
+  hospitalizationId: string;
+  organizationId: string;
+  authorName: string;
+  noteContent: string;
+  createdAt: string;
+}
+
+export interface CreateHospitalizationNoteRequest {
+  noteContent: string;
+}
+
+export interface DischargeHospitalizationRequest {
+  dischargeDiagnosis: string;
+  dischargeInstructions: string;
+}
+
+

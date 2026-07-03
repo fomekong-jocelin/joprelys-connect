@@ -139,7 +139,8 @@ describe('PatientDetailComponent', () => {
 
     mockPatientApi = {
       getPatientLabOrders: vi.fn().mockReturnValue(of(mockLabOrders)),
-      getPatientLabResults: vi.fn().mockReturnValue(of(mockLabResults))
+      getPatientLabResults: vi.fn().mockReturnValue(of(mockLabResults)),
+      getAllergies: vi.fn().mockReturnValue(of([]))
     };
 
     mockI18n = {

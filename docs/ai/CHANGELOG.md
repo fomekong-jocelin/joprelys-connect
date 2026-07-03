@@ -8,9 +8,17 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+### [0.8.0] - 2026-07-04
+
+### Added
+
+- **Hospitalisations & Notes d'Évolution (STORY-1202)** : migration Flyway V19, entités JPA HospitalizationEntity et HospitalizationNoteEntity avec concurrence optimiste (@Version) et multi-tenant, génération de la fiche de sortie PDF avec QR Code de vérification, et intégration dans l'IHM Angular (Tailwind CSS v4, I18nService).
+- **Allergies & Antécédents Médicaux (STORY-1201)** : migration Flyway V18, entités JPA PatientAllergyEntity et PatientMedicalHistoryEntity avec concurrence optimiste (@Version) et multi-tenant, endpoints CRUD sécurisés avec audit logs, et intégration dans l'IHM Angular (Tailwind CSS v4, I18nService).
 - **Préparation du SPRINT-0006** : initialisation du plan de sprint et écriture des tickets pour les modules cliniques d'Allergies/Antécédents (STORY-1201) et d'Hospitalisations (STORY-1202).
 
 ### Changed
+
+- **Alignement IHM & Enveloppe de Layout (AppShell)** : Uniformisation de toutes les pages de l'application (incluant les stocks de pharmacie et la page d'accès refusé) pour utiliser systématiquement le composant structurel `AppShellComponent` afin de garantir la présence du même en-tête (profil utilisateur, sélecteur de langue) et du même pied de page (footer) partout.
 
 ### Fixed
 

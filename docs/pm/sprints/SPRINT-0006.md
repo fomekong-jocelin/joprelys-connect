@@ -22,9 +22,9 @@
 
 | Ticket | Titre | Type | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Statut |
 |---|---|---|---:|---|---:|---:|---:|---|---|---|
-| [STORY-1201](../../features/story-1201/FUNCTIONAL-SPEC.md) | Module Allergies & Antécédents Médicaux | User Story | 5 | Intermédiaire | 0.8j | 1.2j | 2.0j | Gemini | Lead Developer | READY |
-| [STORY-1202](../../features/story-1202/FUNCTIONAL-SPEC.md) | Module Hospitalisations, lits et notes journalières | User Story | 8 | Senior | 1.8j | 2.5j | 4.0j | Gemini | Lead Developer | READY |
-| [TICKET-0002](../../ai/tickets/TICKET-0002-governance.md) | Application de la checklist de review aux futures PR | Task | 2 | Intermédiaire | 0.5j | 0.75j | 1j | Lead Developer | Gemini | READY |
+| [STORY-1201](../../features/story-1201/FUNCTIONAL-SPEC.md) | Module Allergies & Antécédents Médicaux | User Story | 5 | Intermédiaire | 0.8j | 1.2j | 2.0j | Gemini | Lead Developer | DONE |
+| [STORY-1202](../../features/story-1202/FUNCTIONAL-SPEC.md) | Module Hospitalisations, lits et notes journalières | User Story | 8 | Senior | 1.8j | 2.5j | 4.0j | Gemini | Lead Developer | DONE |
+| [TICKET-0002](../../ai/tickets/TICKET-0002-governance.md) | Application de la checklist de review aux futures PR | Task | 2 | Intermédiaire | 0.5j | 0.75j | 1j | Lead Developer | Gemini | DONE |
 
 ## 4. Synthèse capacité
 
@@ -32,6 +32,8 @@
 |---|---:|
 | Capacité planifiable totale | 15.0j |
 | Charge engagée | 3.1j (Est. Senior) |
+| Charge terminée | 3.1j (Est. Senior) |
+| Taux de livraison | 100.0 % |
 | Marge restante (Marge de sécurité/Bugs) | 11.9j |
 | Taux de charge | 20.7 % |
 

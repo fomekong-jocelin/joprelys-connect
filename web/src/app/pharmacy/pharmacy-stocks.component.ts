@@ -4,13 +4,14 @@ import { PharmacyApiService } from './pharmacy-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { DrugStockResponse, CreateDrugStockRequest } from './pharmacy.models';
 import { Router } from '@angular/router';
+import { AppShellComponent } from '../shared/layout/app-shell.component';
 
 @Component({
   selector: 'app-pharmacy-stocks',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, AppShellComponent],
   template: `
-    <main class="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+    <app-shell>
       <!-- En-tête de la page -->
       <header class="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800/80 sticky top-0 z-30 transition-colors">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
@@ -316,7 +317,7 @@ import { Router } from '@angular/router';
           </div>
         </div>
       }
-    </main>
+    </app-shell>
   `
 })
 export class PharmacyStocksComponent implements OnInit {

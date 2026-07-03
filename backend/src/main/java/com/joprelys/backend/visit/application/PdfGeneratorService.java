@@ -225,4 +225,112 @@ public class PdfGeneratorService {
 
         return baos.toByteArray();
     }
+
+    public byte[] generateHospitalizationDischargePdf(
+            com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationEntity hospitalization,
+            com.joprelys.backend.patient.infrastructure.persistence.PatientEntity patient,
+            String clinicName,
+            String clinicAddress,
+            String clinicPhone,
+            byte[] qrCodePngBytes) {
+
+        Document document = new Document(PageSize.A4, 36, 36, 36, 36);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        try {
+            PdfWriter.getInstance(document, baos);
+            document.open();
+
+            // Fonts definitions
+            Font fontTitle = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, Color.BLACK);
+            Font fontSectionHeader = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.BLACK);
+            Font fontBodyBold = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.BLACK);
+            Font fontBody = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.BLACK);
+            Font fontMuted = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.DARK_GRAY);
+
+            // 1. En-tête
+            PdfPTable headerTable = new PdfPTable(2);
+            headerTable.setWidthPercentage(100f);
+            headerTable.setWidths(new float[]{70f, 30f});
+
+            PdfPCell leftCell = new PdfPCell();
+            leftCell.setBorder(Rectangle.NO_BORDER);
+            leftCell.addElement(new Paragraph(clinicName, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.BLACK)));
+            leftCell.addElement(new Paragraph(clinicAddress != null ? clinicAddress : "", fontMuted));
+            leftCell.addElement(new Paragraph("Tél : " + (clinicPhone != null ? clinicPhone : ""), fontMuted));
+
+            PdfPCell rightCell = new PdfPCell();
+            rightCell.setBorder(Rectangle.NO_BORDER);
+            rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            if (qrCodePngBytes != null) {
+                Image qrCodeImg = Image.getInstance(qrCodePngBytes);
+                qrCodeImg.scaleAbsolute(70f, 70f);
+                qrCodeImg.setAlignment(Element.ALIGN_RIGHT);
+                rightCell.addElement(qrCodeImg);
+            }
+
+            headerTable.addCell(leftCell);
+            headerTable.addCell(rightCell);
+            document.add(headerTable);
+
+            // Separation line
+            Paragraph separator = new Paragraph("______________________________________________________________________________",
+                    FontFactory.getFont(FontFactory.HELVETICA, 10, Color.LIGHT_GRAY));
+            separator.setAlignment(Element.ALIGN_CENTER);
+            document.add(separator);
+            document.add(new Paragraph(" "));
+
+            // 2. Document Title
+            Paragraph title = new Paragraph("FICHE DE SORTIE D'HOSPITALISATION", fontTitle);
+            title.setAlignment(Element.ALIGN_CENTER);
+            document.add(title);
+            document.add(new Paragraph(" "));
+
+            // 3. Information Tables
+            PdfPTable infoTable = new PdfPTable(2);
+            infoTable.setWidthPercentage(100f);
+            infoTable.setWidths(new float[]{50f, 50f});
+
+            PdfPCell stayCell = new PdfPCell();
+            stayCell.setBorder(Rectangle.NO_BORDER);
+            stayCell.addElement(new Paragraph("Détails du Séjour", fontSectionHeader));
+            stayCell.addElement(new Paragraph("Service : " + hospitalization.getServiceName(), fontBody));
+            stayCell.addElement(new Paragraph("Chambre : " + hospitalization.getRoomNumber() + " | Lit : " + hospitalization.getBedNumber(), fontBody));
+            stayCell.addElement(new Paragraph("Admis le : " + DATE_FORMATTER.format(hospitalization.getAdmittedAt()), fontBody));
+            if (hospitalization.getDischargedAt() != null) {
+                stayCell.addElement(new Paragraph("Sorti le : " + DATE_FORMATTER.format(hospitalization.getDischargedAt()), fontBody));
+            }
+
+            PdfPCell patientCell = new PdfPCell();
+            patientCell.setBorder(Rectangle.NO_BORDER);
+            patientCell.addElement(new Paragraph("Informations du Patient", fontSectionHeader));
+            patientCell.addElement(new Paragraph("Nom : " + patient.getFullName(), fontBody));
+            patientCell.addElement(new Paragraph("DPU : " + patient.getGlobalPatientNumber(), fontBody));
+            patientCell.addElement(new Paragraph("Tél : " + patient.getPhone(), fontBody));
+
+            infoTable.addCell(stayCell);
+            infoTable.addCell(patientCell);
+            document.add(infoTable);
+            document.add(new Paragraph(" "));
+
+            // 4. Clinical Details
+            document.add(new Paragraph("Motif d'hospitalisation :", fontSectionHeader));
+            document.add(new Paragraph(hospitalization.getAdmissionReason(), fontBody));
+            document.add(new Paragraph(" "));
+
+            document.add(new Paragraph("Diagnostic de sortie :", fontSectionHeader));
+            document.add(new Paragraph(hospitalization.getDischargeDiagnosis() != null ? hospitalization.getDischargeDiagnosis() : "Non renseigné", fontBody));
+            document.add(new Paragraph(" "));
+
+            document.add(new Paragraph("Consignes médicales & Prescriptions de sortie :", fontSectionHeader));
+            document.add(new Paragraph(hospitalization.getDischargeInstructions() != null ? hospitalization.getDischargeInstructions() : "Non renseigné", fontBody));
+            document.add(new Paragraph(" "));
+
+            document.close();
+        } catch (DocumentException | IOException e) {
+            throw new RuntimeException("Failed to generate PDF", e);
+        }
+
+        return baos.toByteArray();
+    }
 }

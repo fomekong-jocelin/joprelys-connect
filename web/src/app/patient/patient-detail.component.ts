@@ -1,7 +1,7 @@
 import { Component, computed, inject, input, OnInit, output, signal } from '@angular/core';
 import { ButtonComponent } from '../shared/ui/button.component';
 import { CardComponent } from '../shared/ui/card.component';
-import { Patient, LabOrder, LabResult } from './patient.models';
+import { Patient, LabOrder, LabResult, PatientAllergy } from './patient.models';
 import { AuthTokenStorageService } from '../auth/auth-token-storage.service';
 import { VisitApiService } from '../visit/visit-api.service';
 import { Visit } from '../visit/visit.models';
@@ -14,11 +14,13 @@ import { I18nService } from '../core/i18n/i18n.service';
 import { AuditApiService } from '../audit/audit-api.service';
 import { AuditLog } from '../audit/audit.models';
 import { PatientApiService } from './patient-api.service';
+import { PatientMedicalInfoComponent } from './patient-medical-info.component';
+import { PatientHospitalizationComponent } from './patient-hospitalization.component';
 
 @Component({
   selector: 'app-patient-detail',
   standalone: true,
-  imports: [ButtonComponent, CardComponent, FormsModule, SlicePipe, DatePipe],
+  imports: [ButtonComponent, CardComponent, FormsModule, SlicePipe, DatePipe, PatientMedicalInfoComponent, PatientHospitalizationComponent],
   template: `
     <app-ui-card>
       <div class="space-y-6">
@@ -64,6 +66,18 @@ import { PatientApiService } from './patient-api.service';
           </div>
         }
 
+        @if (criticalAllergies().length > 0) {
+          <div class="p-4 rounded-[var(--radius-brand-md)] bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/40 text-red-800 dark:text-red-300 text-sm font-bold flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5 animate-bounce">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+              <span>Attention : allergies critiques ou sévères détectées pour ce patient :</span>
+              <span class="ml-1 font-extrabold">{{ criticalAllergiesSubstances() }}</span>
+            </div>
+          </div>
+        }
+
         <!-- Sélecteur d'onglets (Tabs) -->
         <div class="border-b border-slate-100 dark:border-slate-800/80">
           <nav class="flex space-x-6" aria-label="Tabs">
@@ -100,6 +114,14 @@ import { PatientApiService } from './patient-api.service';
                 : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 border-b-2 py-2 px-1 text-sm font-bold cursor-pointer transition-all'"
             >
               Analyses & Labo
+            </button>
+            <button
+              (click)="setActiveTab('hospitalization')"
+              [class]="activeTab() === 'hospitalization'
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 border-b-2 py-2 px-1 text-sm font-extrabold cursor-pointer transition-all'
+                : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 border-b-2 py-2 px-1 text-sm font-bold cursor-pointer transition-all'"
+            >
+              {{ i18n.t('patients.hospitalization') }}
             </button>
           </nav>
         </div>
@@ -160,20 +182,7 @@ import { PatientApiService } from './patient-api.service';
         <!-- Onglet 2 : Dossier Médical (Allergies, Antécédents & Consultations) -->
         @if (activeTab() === 'medical') {
           <div class="space-y-6 animate-fade-in">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div class="p-4 rounded-lg bg-rose-50/45 dark:bg-rose-950/10 border border-rose-100/50 dark:border-rose-900/20">
-                <span class="ui-label block font-extrabold text-rose-800 dark:text-rose-300 text-xs mb-2">Allergies signalées</span>
-                <p class="text-sm font-semibold text-rose-950 dark:text-rose-200 whitespace-pre-line leading-relaxed">
-                  {{ patient().allergies || 'Aucune allergie signalée' }}
-                </p>
-              </div>
-              <div class="p-4 rounded-lg bg-blue-50/45 dark:bg-blue-950/10 border border-blue-100/50 dark:border-blue-900/20">
-                <span class="ui-label block font-extrabold text-blue-800 dark:text-blue-300 text-xs mb-2">Antécédents médicaux</span>
-                <p class="text-sm font-semibold text-blue-950 dark:text-rose-200 whitespace-pre-line leading-relaxed">
-                  {{ patient().medicalHistory || 'Aucun antécédent médical signalé' }}
-                </p>
-              </div>
-            </div>
+            <app-patient-medical-info [patientId]="patient().id"></app-patient-medical-info>
 
             <div>
               <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">
@@ -643,8 +652,8 @@ import { PatientApiService } from './patient-api.service';
                       <div class="rounded-xl bg-slate-50/50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800/60 overflow-hidden">
                         <!-- En-tête cliquable -->
                         <div
-                          (click)="toggleLabOrder(order.id)"
-                          class="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-100/30 dark:hover:bg-slate-800/40 select-none transition-colors"
+                           (click)="toggleLabOrder(order.id)"
+                           class="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-100/30 dark:hover:bg-slate-800/40 select-none transition-colors"
                         >
                           <div class="flex flex-wrap items-center gap-3">
                             <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 uppercase tracking-wider">
@@ -709,6 +718,13 @@ import { PatientApiService } from './patient-api.service';
                 }
               </div>
             }
+          </div>
+        }
+
+        <!-- Onglet Hospitalisation -->
+        @if (activeTab() === 'hospitalization') {
+          <div class="space-y-6 animate-fade-in">
+            <app-patient-hospitalization [patientId]="patient().id"></app-patient-hospitalization>
           </div>
         }
 
@@ -883,6 +899,10 @@ export class PatientDetailComponent implements OnInit {
   isLoadingHistory = signal(false);
   historyLoaded = false; // garde pour éviter double chargement
   expandedConsultations = signal<Record<string, boolean>>({});
+  criticalAllergies = signal<PatientAllergy[]>([]);
+  criticalAllergiesSubstances = computed(() => 
+    this.criticalAllergies().map(a => a.substance).join(', ')
+  );
 
   toggleConsultation(id: string): void {
     this.expandedConsultations.update(prev => ({ ...prev, [id]: !prev[id] }));
@@ -895,7 +915,7 @@ export class PatientDetailComponent implements OnInit {
   auditLoaded = false;
 
 	// UX/UI Improvement — Active Tab state
-	activeTab = signal<'general' | 'medical' | 'audit' | 'lab'>('general');
+	activeTab = signal<'general' | 'medical' | 'audit' | 'lab' | 'hospitalization'>('general');
 
 	activeVisit = signal<Visit | null>(null);
 
@@ -1007,6 +1027,14 @@ export class PatientDetailComponent implements OnInit {
         error: () => { /* silencieux */ }
       });
     }
+
+    this.patientApi.getAllergies(this.patient().id).subscribe({
+      next: (allergies) => {
+        const critical = allergies.filter(a => a.status === 'ACTIVE' && (a.severity === 'CRITICAL' || a.severity === 'HIGH'));
+        this.criticalAllergies.set(critical);
+      },
+      error: () => { /* silencieux */ }
+    });
   }
 
   loadHistory(): void {
@@ -1232,7 +1260,7 @@ export class PatientDetailComponent implements OnInit {
 		});
 	}
 
-	setActiveTab(tab: 'general' | 'medical' | 'audit' | 'lab'): void {
+	setActiveTab(tab: 'general' | 'medical' | 'audit' | 'lab' | 'hospitalization'): void {
 		this.activeTab.set(tab);
 		if (tab === 'medical' && !this.historyLoaded) {
 			this.loadHistory();

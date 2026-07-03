@@ -89,8 +89,8 @@
 | STORY-1103 | PHARMA | User Story | Gestion réelle des stocks de médicaments | Full-stack | DONE | P1 | 8 | Intermédiaire | 1.8j | 2.3j | 4.0j | Antigravity | Lead | SPRINT-0005 | 1.8j | Tests MockMvc et IHM Angular à implémenter | Moyen | 2026-07-03 |
 | STORY-1104 | LAB | User Story | Import de résultats structurés de laboratoire (FHIR/HL7) | Full-stack | DONE | P1 | 5 | Senior | 1.2j | 1.6j | 2.8j | Antigravity | Lead | SPRINT-0005 | 1.2j | Aucun (FhirDiagnosticReportParser Jackson, endpoint FHIR POST, 4 tests unitaires purs) | Fort | 2026-07-03 |
 | STORY-1105 | QUAL | User Story | Nettoyage de la dette technique & Application de la checklist QA | Full-stack | DONE | P2 | 2 | Junior | 0.4j | 0.5j | 0.8j | Antigravity | Lead | SPRINT-0005 | 0.4j | Aucun (5 dépendances Maven invalides supprimées, spring-security-test ajouté, application-test.yml complet, repair-on-migrate activé) | Faible | 2026-07-03 |
-| STORY-1201 | PAT | User Story | Module Allergies & Antécédents Médicaux | Full-stack | READY | P1 | 5 | Intermédiaire | 0.8j | 1.2j | 2.0j | Gemini | Lead Developer | SPRINT-0006 | 0j | Migration Flyway, services JPA et IHM Angular | Faible | 2026-07-03 |
-| STORY-1202 | CLIN | User Story | Module Hospitalisations, lits et notes journalières | Full-stack | READY | P1 | 8 | Senior | 1.8j | 2.5j | 4.0j | Gemini | Lead Developer | SPRINT-0006 | 0j | Tables SQL, JPA avec version, PDF sortie et écrans | Moyen | 2026-07-03 |
+| STORY-1201 | PAT | User Story | Module Allergies & Antécédents Médicaux | Full-stack | DONE | P1 | 5 | Intermédiaire | 0.8j | 1.2j | 2.0j | Gemini | Lead Developer | SPRINT-0006 | 0.8j | Aucun | Faible | 2026-07-03 |
+| STORY-1202 | CLIN | User Story | Module Hospitalisations, lits et notes journalières | Full-stack | DONE | P1 | 8 | Senior | 1.8j | 2.5j | 4.0j | Gemini | Lead Developer | SPRINT-0006 | 1.8j | Aucun | Moyen | 2026-07-04 |
  
 
 ## Statuts autorisés

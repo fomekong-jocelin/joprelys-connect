@@ -6,8 +6,8 @@
 
 | Champ | Valeur |
 |---|---|
-| Version courante | 0.7.0 |
-| Dernière release | 2026-07-03 |
+| Version courante | 0.8.0 |
+| Dernière release | 2026-07-04 |
 | Stratégie | SemVer |
 | Source de vérité | `VERSION` + `docs/ai/CHANGELOG.md` |
 
@@ -15,11 +15,11 @@
 
 | Module | Version | Type de version | Dernière release | Compatibilité | Notes |
 |---|---:|---|---|---|---|
-| Backend Spring Boot | 0.7.0 | SemVer | 2026-07-03 | API v0 | Stocks pharmacie, import FHIR, sécurité IDOR, CI/CD |
-| Angular Web | 0.7.0 | SemVer | 2026-07-03 | API v0 | Raccordements UI stocks et import FHIR, CI/CD |
+| Backend Spring Boot | 0.8.0 | SemVer | 2026-07-04 | API v0 | Allergies, antécédents, hospitalisations (optimiste), fiche de sortie PDF |
+| Angular Web | 0.8.0 | SemVer | 2026-07-04 | API v0 | Visualisation/saisie des allergies, antécédents, hospitalisations et notes |
 | Flutter Mobile | 0.3.0 | SemVer | 2026-07-01 | API v0 | À adapter au projet |
-| API Contract | 0.7.0 | SemVer | 2026-07-03 | v0 | Endpoint public FHIR et stocks |
-| Database Schema | 0.5.0 | Migration versionnée | 2026-07-03 | v0 | Flyway v17 drug_stocks |
+| API Contract | 0.8.0 | SemVer | 2026-07-04 | v0 | Endpoints allergies, antécédents et hospitalisations |
+| Database Schema | 0.6.0 | Migration versionnée | 2026-07-04 | v0 | Flyway v18 allergies et v19 hospitalisations |
 
 ## Compatibilité API / clients
 

@@ -4,7 +4,7 @@
 
 **Epic** : Qualité  
 **Titre** : Application de la checklist de review aux futures PR  
-**Statut** : READY  
+**Statut** : DONE  
 **Priorité** : P0  
 **Sprint** : SPRINT-0006  
 **SP** : 2  
@@ -17,12 +17,12 @@ Auditer l'intégrité de la base de code du projet, appliquer de façon rigoureu
 
 ## 3. Critères d'acceptation (DoD)
 
-- [ ] Relecture exhaustive du code selon les critères OWASP, SOLID et i18n.
-- [ ] Alignement de tous les tickets passés du backlog sur l'état réel (synchro des statuts).
-- [ ] Aucun fichier temporaire ou clé d'API sensible accidentellement versionné.
-- [ ] Exécution stricte de la checklist de revue à chaque Merge Request.
+- [x] Relecture exhaustive du code selon les critères OWASP, SOLID et i18n.
+- [x] Alignement de tous les tickets passés du backlog sur l'état réel (synchro des statuts).
+- [x] Aucun fichier temporaire ou clé d'API sensible accidentellement versionné.
+- [x] Exécution stricte de la checklist de revue à chaque Merge Request.
 
 ## 4. Reste à faire
 
-- [ ] Audit qualité de la structure du code.
-- [ ] Nettoyage des dossiers temporaires ou résiduels s'il y en a.
+- [x] Audit qualité de la structure du code.
+- [x] Nettoyage des dossiers temporaires ou résiduels s'il y en a.
