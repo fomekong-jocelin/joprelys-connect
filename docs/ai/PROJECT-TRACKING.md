@@ -6,15 +6,15 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-03 |
+| Dernière mise à jour | 2026-07-04 |
 | Responsable mise à jour | Antigravity |
-| État global | Sprint 0005 clôturé (v0.7.0) — Démarrage du Sprint 0006 (Allergies/Hospitalisations) |
-| Risques majeurs | Gestion concurrentielle des lits et chambres d'hospitalisation |
-| Prochaine priorité | Implémenter le module d'Allergies/Antécédents (STORY-1201) et d'Hospitalisations (STORY-1202) |
-| Sprint courant | SPRINT-0006 |
+| État global | Sprint 0006 clôturé (v0.8.0) — En cours sur le Sprint 0007 (Demandes d'accès externe & Notifications) |
+| Risques majeurs | Contrôles de sécurité strictes sur les accès inter-établissements |
+| Prochaine priorité | Intégrer les filtres d'accès inter-établissements (STORY-1303) et le socle de notifications (STORY-1501) |
+| Sprint courant | SPRINT-0007 |
 
 | Capacité sprint | 15.0j |
-| Charge engagée | 3.1j (Est. Senior) |
+| Charge engagée | 3.3j (Est. Senior) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
@@ -92,7 +92,7 @@
 | STORY-1201 | PAT | User Story | Module Allergies & Antécédents Médicaux | Full-stack | DONE | P1 | 5 | Intermédiaire | 0.8j | 1.2j | 2.0j | Gemini | Lead Developer | SPRINT-0006 | 0.8j | Aucun | Faible | 2026-07-03 |
 | STORY-1202 | CLIN | User Story | Module Hospitalisations, lits et notes journalières | Full-stack | DONE | P1 | 8 | Senior | 1.8j | 2.5j | 4.0j | Gemini | Lead Developer | SPRINT-0006 | 1.8j | Aucun | Moyen | 2026-07-04 |
 | STORY-1301 | DPU_ACCESS | User Story | Enregistrement de demande d'accès externe (backend) | Backend | DONE | P1 | 5 | Intermédiaire | 0.8j | 1.2j | 2.0j | Gemini | Lead Developer | SPRINT-0007 | 1.2j | Entité, Repository, Service et API REST pour requêtes d'accès temporaires + 5 tests unitaires MockMvc | Moyen | 2026-07-04 |
-| STORY-1302 | DPU_ACCESS | User Story | Validation de demande d'accès externe (portail patient) | Full-stack | READY | P1 | 3 | Intermédiaire | 0.5j | 0.8j | 1.3j | Gemini | Lead Developer | SPRINT-0007 | 0j | Implémenter écran portail patient | Faible | 2026-07-04 |
+| STORY-1302 | DPU_ACCESS | User Story | Validation de demande d'accès externe (portail patient) | Full-stack | DONE | P1 | 3 | Intermédiaire | 0.5j | 0.8j | 1.3j | Gemini | Lead Developer | SPRINT-0007 | 0.8j | Aucun (tests backend/frontend validés) | Faible | 2026-07-04 |
 | STORY-1303 | DPU_ACCESS | User Story | Contrôle d'accès & Expiration des droits externes | Backend | READY | P0 | 5 | Senior | 1.0j | 1.5j | 2.5j | Lead Developer | Gemini | SPRINT-0007 | 0j | Implémenter règles Spring Security et planificateur | Fort | 2026-07-04 |
 | STORY-1501 | NOTIF | User Story | Socle et service d'envoi de notifications (backend) | Backend | READY | P1 | 3 | Intermédiaire | 0.6j | 0.9j | 1.5j | Gemini | Lead Developer | SPRINT-0007 | 0j | Implémenter table notifications et mock service | Faible | 2026-07-04 |
 | STORY-1502 | NOTIF | User Story | Centre de notifications sur le portail patient (IHM) | Frontend | READY | P2 | 3 | Junior | 0.4j | 0.6j | 1.0j | Lead Developer | Gemini | SPRINT-0007 | 0j | Implémenter IHM centre de notifications | Faible | 2026-07-04 |

@@ -9,18 +9,20 @@ public record ExternalAccessResponse(
         UUID patientId,
         UUID requesterUserId,
         UUID requesterOrganizationId,
+        String requesterOrganizationName,
         String reason,
         Integer durationHours,
         String status,
         Instant createdAt,
         Instant expiresAt
 ) {
-    public static ExternalAccessResponse fromEntity(ExternalAccessRequestEntity entity) {
+    public static ExternalAccessResponse fromEntity(ExternalAccessRequestEntity entity, String requesterOrganizationName) {
         return new ExternalAccessResponse(
                 entity.getId(),
                 entity.getPatientId(),
                 entity.getRequesterUserId(),
                 entity.getRequesterOrganizationId(),
+                requesterOrganizationName,
                 entity.getReason(),
                 entity.getRequestedDurationHours(),
                 entity.getStatus(),

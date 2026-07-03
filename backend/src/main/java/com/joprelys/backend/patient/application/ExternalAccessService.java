@@ -3,6 +3,8 @@ package com.joprelys.backend.patient.application;
 import com.joprelys.backend.audit.application.AuditService;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
+import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import com.joprelys.backend.patient.api.CreateExternalAccessRequest;
 import com.joprelys.backend.patient.api.ExternalAccessResponse;
 import com.joprelys.backend.patient.infrastructure.persistence.ExternalAccessRequestEntity;
@@ -25,15 +27,18 @@ public class ExternalAccessService {
     private final ExternalAccessRequestRepository externalAccessRequestRepository;
     private final PatientRepository patientRepository;
     private final UserAccountRepository userAccountRepository;
+    private final OrganizationRepository organizationRepository;
     private final AuditService auditService;
 
     public ExternalAccessService(ExternalAccessRequestRepository externalAccessRequestRepository,
                                  PatientRepository patientRepository,
                                  UserAccountRepository userAccountRepository,
+                                 OrganizationRepository organizationRepository,
                                  AuditService auditService) {
         this.externalAccessRequestRepository = externalAccessRequestRepository;
         this.patientRepository = patientRepository;
         this.userAccountRepository = userAccountRepository;
+        this.organizationRepository = organizationRepository;
         this.auditService = auditService;
     }
 
@@ -84,7 +89,93 @@ public class ExternalAccessService {
                 "Demande d'accès externe créée pour le patient : " + patient.getFullName() + " (Motif: " + saved.getReason() + ")"
         );
 
-        return ExternalAccessResponse.fromEntity(saved);
+        return ExternalAccessResponse.fromEntity(saved, getOrganizationName(requesterOrgId));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ExternalAccessResponse> getPatientRequests(UUID patientId) {
+        return externalAccessRequestRepository.findByPatientId(patientId).stream()
+                .map(r -> ExternalAccessResponse.fromEntity(r, getOrganizationName(r.getRequesterOrganizationId())))
+                .toList();
+    }
+
+    @Transactional
+    public ExternalAccessResponse approveRequest(UUID patientId, UUID requestId) {
+        ExternalAccessRequestEntity request = externalAccessRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Demande d'accès introuvable."));
+
+        if (!request.getPatientId().equals(patientId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cette demande ne vous concerne pas.");
+        }
+
+        if (!"EN_ATTENTE".equals(request.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seule une demande en attente peut être approuvée.");
+        }
+
+        request.setStatus("APPROUVEE");
+        request.setExpiresAt(Instant.now().plus(java.time.Duration.ofHours(request.getRequestedDurationHours())));
+        ExternalAccessRequestEntity saved = externalAccessRequestRepository.save(request);
+
+        // Récupérer l'organisation du patient (si disponible) pour l'audit log, sinon celle de la demande
+        UUID actorOrgId = request.getRequesterOrganizationId();
+        PatientEntity patient = patientRepository.findByIdGlobally(patientId).orElse(null);
+        if (patient != null && patient.getOrganizationId() != null) {
+            actorOrgId = patient.getOrganizationId();
+        }
+
+        auditService.logSuccess(
+                patientId, // L'acteur de l'action est le patient
+                actorOrgId,
+                patientId,
+                "EXTERNAL_ACCESS_REQUEST",
+                saved.getId(),
+                "APPROVE_EXTERNAL_ACCESS",
+                "Demande d'accès externe approuvée par le patient."
+        );
+
+        return ExternalAccessResponse.fromEntity(saved, getOrganizationName(saved.getRequesterOrganizationId()));
+    }
+
+    @Transactional
+    public ExternalAccessResponse rejectRequest(UUID patientId, UUID requestId) {
+        ExternalAccessRequestEntity request = externalAccessRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Demande d'accès introuvable."));
+
+        if (!request.getPatientId().equals(patientId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cette demande ne vous concerne pas.");
+        }
+
+        if (!"EN_ATTENTE".equals(request.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seule une demande en attente peut être rejetée.");
+        }
+
+        request.setStatus("REFUSEE");
+        ExternalAccessRequestEntity saved = externalAccessRequestRepository.save(request);
+
+        // Récupérer l'organisation du patient (si disponible) pour l'audit log, sinon celle de la demande
+        UUID actorOrgId = request.getRequesterOrganizationId();
+        PatientEntity patient = patientRepository.findByIdGlobally(patientId).orElse(null);
+        if (patient != null && patient.getOrganizationId() != null) {
+            actorOrgId = patient.getOrganizationId();
+        }
+
+        auditService.logSuccess(
+                patientId, // L'acteur de l'action est le patient
+                actorOrgId,
+                patientId,
+                "EXTERNAL_ACCESS_REQUEST",
+                saved.getId(),
+                "REJECT_EXTERNAL_ACCESS",
+                "Demande d'accès externe rejetée par le patient."
+        );
+
+        return ExternalAccessResponse.fromEntity(saved, getOrganizationName(saved.getRequesterOrganizationId()));
+    }
+
+    private String getOrganizationName(UUID orgId) {
+        return organizationRepository.findById(orgId)
+                .map(OrganizationEntity::getName)
+                .orElse("Établissement inconnu");
     }
 
     private UserAccountEntity getCurrentUser() {

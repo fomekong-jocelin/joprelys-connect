@@ -14,10 +14,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import com.joprelys.backend.patient.application.ExternalAccessService;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -38,6 +36,7 @@ public class PatientPortalController {
     private final AuditService auditService;
     private final com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository prescriptionRepository;
     private final PatientAccessGuardService patientAccessGuardService;
+    private final ExternalAccessService externalAccessService;
 
     public PatientPortalController(
             PatientRepository patientRepository,
@@ -48,7 +47,8 @@ public class PatientPortalController {
             com.joprelys.backend.patient.infrastructure.persistence.PatientConsentRepository patientConsentRepository,
             AuditService auditService,
             com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository prescriptionRepository,
-            PatientAccessGuardService patientAccessGuardService) {
+            PatientAccessGuardService patientAccessGuardService,
+            ExternalAccessService externalAccessService) {
         this.patientRepository = patientRepository;
         this.consultationRepository = consultationRepository;
         this.medicalDocumentRepository = medicalDocumentRepository;
@@ -58,6 +58,7 @@ public class PatientPortalController {
         this.auditService = auditService;
         this.prescriptionRepository = prescriptionRepository;
         this.patientAccessGuardService = patientAccessGuardService;
+        this.externalAccessService = externalAccessService;
     }
 
     @GetMapping("/me")
@@ -193,6 +194,24 @@ public class PatientPortalController {
                                 .orElse("Établissement inconnu") : "N/A"
                 ))
                 .toList();
+    }
+
+    @GetMapping("/access-requests")
+    public List<ExternalAccessResponse> getAccessRequests(Authentication authentication) {
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
+        return externalAccessService.getPatientRequests(patient.getId());
+    }
+
+    @org.springframework.web.bind.annotation.PostMapping("/access-requests/{id}/approve")
+    public ExternalAccessResponse approveAccessRequest(@PathVariable UUID id, Authentication authentication) {
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
+        return externalAccessService.approveRequest(patient.getId(), id);
+    }
+
+    @org.springframework.web.bind.annotation.PostMapping("/access-requests/{id}/reject")
+    public ExternalAccessResponse rejectAccessRequest(@PathVariable UUID id, Authentication authentication) {
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
+        return externalAccessService.rejectRequest(patient.getId(), id);
     }
 }
 

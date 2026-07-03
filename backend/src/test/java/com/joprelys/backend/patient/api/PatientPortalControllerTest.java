@@ -59,6 +59,9 @@ public class PatientPortalControllerTest {
     @Autowired
     private AuditService auditService;
 
+    @Autowired
+    private com.joprelys.backend.patient.infrastructure.persistence.ExternalAccessRequestRepository externalAccessRequestRepository;
+
     private OrganizationEntity orgA;
     private OrganizationEntity orgB;
     private PatientEntity patientA;
@@ -66,6 +69,7 @@ public class PatientPortalControllerTest {
     private VisitEntity visitA;
     private String tokenPatientA;
     private String tokenMedecinB;
+    private com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity medecinBEntity;
 
     @BeforeEach
     void setUp() {
@@ -74,6 +78,7 @@ public class PatientPortalControllerTest {
         jdbcTemplate.update("DELETE FROM patient_consents");
         jdbcTemplate.update("DELETE FROM medical_documents");
         jdbcTemplate.update("DELETE FROM visits");
+        jdbcTemplate.update("DELETE FROM external_access_requests");
         jdbcTemplate.update("DELETE FROM patients");
         userAccountRepository.deleteAll();
         organizationRepository.deleteAll();
@@ -85,16 +90,16 @@ public class PatientPortalControllerTest {
         orgB = new OrganizationEntity("Clinique Test B", "contact@testb.org", "654321", "Adresse B", "Yaoundé");
         orgB = organizationRepository.save(orgB);
 
-        var medecinB = new com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity(
+        medecinBEntity = new com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity(
                 "medecin.b@testb.org",
                 "Médecin B",
                 "MEDECIN",
                 "passhash"
         );
-        medecinB.setOrganizationId(orgB.getId());
-        medecinB = userAccountRepository.save(medecinB);
+        medecinBEntity.setOrganizationId(orgB.getId());
+        medecinBEntity = userAccountRepository.save(medecinBEntity);
 
-        tokenMedecinB = jwtService.createToken(medecinB).value();
+        tokenMedecinB = jwtService.createToken(medecinBEntity).value();
 
         TenantContext.setTenantId(orgA.getId());
 
@@ -316,5 +321,78 @@ public class PatientPortalControllerTest {
                 .andExpect(jsonPath("$[0].action").value("VIEW_PORTAL_DASHBOARD"))
                 .andExpect(jsonPath("$[0].reason").value("Consultation de l'espace patient"))
                 .andExpect(jsonPath("$[0].organizationName").value("Clinique Test A"));
+    }
+
+    @Test
+    void givenPatient_whenGetAccessRequests_thenReturnsList() throws Exception {
+        var request = new com.joprelys.backend.patient.infrastructure.persistence.ExternalAccessRequestEntity(
+                patientA.getId(),
+                medecinBEntity.getId(),
+                orgB.getId(),
+                "Consultation externe de cardiologie",
+                24
+        );
+        externalAccessRequestRepository.save(request);
+
+        mockMvc.perform(get("/api/patient/access-requests")
+                        .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].reason").value("Consultation externe de cardiologie"))
+                .andExpect(jsonPath("$[0].requesterOrganizationName").value("Clinique Test B"))
+                .andExpect(jsonPath("$[0].status").value("EN_ATTENTE"));
+    }
+
+    @Test
+    void givenPatient_whenApproveAccessRequest_thenApprove() throws Exception {
+        var request = new com.joprelys.backend.patient.infrastructure.persistence.ExternalAccessRequestEntity(
+                patientA.getId(),
+                medecinBEntity.getId(),
+                orgB.getId(),
+                "Consultation externe de cardiologie",
+                24
+        );
+        request = externalAccessRequestRepository.save(request);
+
+        mockMvc.perform(post("/api/patient/access-requests/" + request.getId() + "/approve")
+                        .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROUVEE"))
+                .andExpect(jsonPath("$.expiresAt").isNotEmpty());
+    }
+
+    @Test
+    void givenPatient_whenRejectAccessRequest_thenReject() throws Exception {
+        var request = new com.joprelys.backend.patient.infrastructure.persistence.ExternalAccessRequestEntity(
+                patientA.getId(),
+                medecinBEntity.getId(),
+                orgB.getId(),
+                "Consultation externe de cardiologie",
+                24
+        );
+        request = externalAccessRequestRepository.save(request);
+
+        mockMvc.perform(post("/api/patient/access-requests/" + request.getId() + "/reject")
+                        .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REFUSEE"));
+    }
+
+    @Test
+    void givenPatient_whenApproveOtherPatientRequest_thenForbidden() throws Exception {
+        // Crée une demande d'accès pour Patient B
+        var request = new com.joprelys.backend.patient.infrastructure.persistence.ExternalAccessRequestEntity(
+                patientB.getId(),
+                medecinBEntity.getId(),
+                orgB.getId(),
+                "Consultation externe de cardiologie pour B",
+                24
+        );
+        request = externalAccessRequestRepository.save(request);
+
+        // Patient A tente d'approuver la demande de Patient B
+        mockMvc.perform(post("/api/patient/access-requests/" + request.getId() + "/approve")
+                        .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isForbidden());
     }
 }

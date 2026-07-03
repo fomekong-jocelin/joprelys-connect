@@ -22,8 +22,8 @@
 
 | Ticket | Titre | Type | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Statut |
 |---|---|---|---:|---|---:|---:|---:|---|---|---|
-| [STORY-1301](../../features/story-1301/FUNCTIONAL-SPEC.md) | Enregistrement de demande d'accès externe (backend) | User Story | 5 | Intermédiaire | 0.8j | 1.2j | 2.0j | Gemini | Lead Developer | READY |
-| [STORY-1302](../../features/story-1302/FUNCTIONAL-SPEC.md) | Validation de demande d'accès externe (portail patient) | User Story | 3 | Intermédiaire | 0.5j | 0.8j | 1.3j | Gemini | Lead Developer | READY |
+| [STORY-1301](../../features/story-1301/FUNCTIONAL-SPEC.md) | Enregistrement de demande d'accès externe (backend) | User Story | 5 | Intermédiaire | 0.8j | 1.2j | 2.0j | Gemini | Lead Developer | DONE |
+| [STORY-1302](../../features/story-1302/FUNCTIONAL-SPEC.md) | Validation de demande d'accès externe (portail patient) | User Story | 3 | Intermédiaire | 0.5j | 0.8j | 1.3j | Gemini | Lead Developer | DONE |
 | [STORY-1303](../../features/story-1303/FUNCTIONAL-SPEC.md) | Contrôle d'accès & Expiration des droits externes | User Story | 5 | Senior | 1.0j | 1.5j | 2.5j | Lead Developer | Gemini | READY |
 | [STORY-1501](../../features/story-1501/FUNCTIONAL-SPEC.md) | Socle et service d'envoi de notifications (backend) | User Story | 3 | Intermédiaire | 0.6j | 0.9j | 1.5j | Gemini | Lead Developer | READY |
 | [STORY-1502](../../features/story-1502/FUNCTIONAL-SPEC.md) | Centre de notifications sur le portail patient (IHM) | User Story | 3 | Junior/Intermédiaire | 0.4j | 0.6j | 1.0j | Lead Developer | Gemini | READY |
@@ -49,8 +49,8 @@
 
 ## 6. Definition of Success
 
-- [ ] Un établissement externe peut soumettre une demande d'accès temporaire de consultation d'un DPU (motif, durée en heures).
-- [ ] Le patient reçoit une notification sur son portail et peut approuver/refuser la demande en un clic.
+- [x] Un établissement externe peut soumettre une demande d'accès temporaire de consultation d'un DPU (motif, durée en heures).
+- [x] Le patient reçoit une notification sur son portail et peut approuver/refuser la demande en un clic.
 - [ ] Un médecin externe ne peut pas consulter le dossier sans consentement préalable approuvé et non expiré.
 - [ ] Les accès expirés sont bloqués immédiatement.
 - [ ] Le journal d'audit trace toutes les demandes d'accès externe (émises, approuvées, expirées, refusées).

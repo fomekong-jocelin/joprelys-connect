@@ -93,6 +93,18 @@ export class PatientPortalService {
   getAuditLogs(): Observable<PatientAuditLog[]> {
     return this.http.get<PatientAuditLog[]>('/api/patient/audit-logs');
   }
+
+  getAccessRequests(): Observable<ExternalAccessResponse[]> {
+    return this.http.get<ExternalAccessResponse[]>('/api/patient/access-requests');
+  }
+
+  approveAccessRequest(id: string): Observable<ExternalAccessResponse> {
+    return this.http.post<ExternalAccessResponse>(`/api/patient/access-requests/${id}/approve`, {});
+  }
+
+  rejectAccessRequest(id: string): Observable<ExternalAccessResponse> {
+    return this.http.post<ExternalAccessResponse>(`/api/patient/access-requests/${id}/reject`, {});
+  }
 }
 
 export interface PatientConsent {
@@ -111,4 +123,17 @@ export interface PatientAuditLog {
   status: string;
   createdAt: string;
   organizationName: string;
+}
+
+export interface ExternalAccessResponse {
+  id: string;
+  patientId: string;
+  requesterUserId: string;
+  requesterOrganizationId: string;
+  requesterOrganizationName: string;
+  reason: string;
+  durationHours: number;
+  status: string;
+  createdAt: string;
+  expiresAt: string | null;
 }

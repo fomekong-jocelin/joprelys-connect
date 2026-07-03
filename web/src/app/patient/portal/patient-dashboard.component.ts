@@ -5,12 +5,13 @@ import { PatientVisitsListComponent } from './components/patient-visits-list.com
 import { PatientPortalMeResponse, PatientPortalService } from './services/patient-portal.service';
 import { PatientConsentsListComponent } from './components/patient-consents-list.component';
 import { PatientAuditListComponent } from './components/patient-audit-list.component';
+import { PatientRequestsListComponent } from './components/patient-requests-list.component';
 import { I18nService } from '../../core/i18n/i18n.service';
 
 @Component({
   selector: 'app-patient-dashboard',
   standalone: true,
-  imports: [AppShellComponent, PatientProfileCardComponent, PatientVisitsListComponent, PatientConsentsListComponent, PatientAuditListComponent],
+  imports: [AppShellComponent, PatientProfileCardComponent, PatientVisitsListComponent, PatientConsentsListComponent, PatientAuditListComponent, PatientRequestsListComponent],
   template: `
     <app-shell>
       <div class="app-container-wide py-6 lg:py-8 flex flex-col gap-5">
@@ -76,7 +77,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
             </div>
           </div>-->
 
-          <div class="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3 snap-x snap-mandatory">
+          <div class="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4 snap-x snap-mandatory">
             <button
               type="button"
               (click)="activeTab.set('visits')"
@@ -132,6 +133,23 @@ import { I18nService } from '../../core/i18n/i18n.service';
                 <p class="text-[11px] text-[var(--text-muted)] truncate">{{ i18n.t('patient.dashboard.dpuAccess') }}</p>
               </div>
             </button>
+
+            <button
+              type="button"
+              (click)="activeTab.set('requests')"
+              [attr.aria-pressed]="activeTab() === 'requests'"
+              [class]="tabClass('requests')"
+            >
+              <div class="p-2 rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+              </div>
+              <div class="min-w-0">
+                <span class="font-display font-bold text-sm text-[var(--text-primary)]">{{ i18n.t('patient.access.requests.title') }}</span>
+                <p class="text-[11px] text-[var(--text-muted)] truncate">{{ i18n.t('patient.dashboard.externalAccessRequests') }}</p>
+              </div>
+            </button>
           </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] gap-5 items-start">
@@ -148,6 +166,8 @@ import { I18nService } from '../../core/i18n/i18n.service';
                 <app-patient-consents-list />
               } @else if (activeTab() === 'audit') {
                 <app-patient-audit-list />
+              } @else if (activeTab() === 'requests') {
+                <app-patient-requests-list />
               }
             </div>
           </div>
@@ -174,13 +194,13 @@ export class PatientDashboardComponent implements OnInit {
   private readonly portalService = inject(PatientPortalService);
   readonly i18n = inject(I18nService);
 
-  readonly activeTab = signal<'visits' | 'consents' | 'audit'>('visits');
+  readonly activeTab = signal<'visits' | 'consents' | 'audit' | 'requests'>('visits');
   readonly patientData = signal<PatientPortalMeResponse | null>(null);
   readonly isLoading = signal(false);
   readonly error = signal('');
   readonly expandedConsultations = signal<Record<string, boolean>>({});
 
-  tabClass(tab: 'visits' | 'consents' | 'audit'): string {
+  tabClass(tab: 'visits' | 'consents' | 'audit' | 'requests'): string {
     const base = 'ui-card-subtle p-3.5 flex items-center gap-3 text-left transition-colors cursor-pointer snap-start shrink-0 w-[236px] md:w-auto';
     return this.activeTab() === tab
       ? `${base} border-[var(--brand-primary)] bg-[var(--app-surface)]`
