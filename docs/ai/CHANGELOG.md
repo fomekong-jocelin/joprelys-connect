@@ -8,7 +8,9 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
-### [0.8.0] - 2026-07-04
+- **Demandes d'Accès Externes (STORY-1301)** : migration Flyway V20, entité JPA ExternalAccessRequestEntity et Repository, Service d'enregistrement des demandes et contrôleur API REST POST /api/external-access/requests avec validation d'entrée stricte, audit log automatique et suite complète de 5 tests d'intégration MockMvc.
+
+## [0.8.0] - 2026-07-04
 
 ### Added
 

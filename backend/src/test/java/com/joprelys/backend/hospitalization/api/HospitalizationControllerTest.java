@@ -74,6 +74,7 @@ public class HospitalizationControllerTest {
         jdbcTemplate.update("DELETE FROM hospitalizations");
         jdbcTemplate.update("DELETE FROM patient_allergies");
         jdbcTemplate.update("DELETE FROM patient_medical_history");
+        jdbcTemplate.update("DELETE FROM external_access_requests");
         jdbcTemplate.update("DELETE FROM patients");
         userAccountRepository.deleteAll();
         organizationRepository.deleteAll();
