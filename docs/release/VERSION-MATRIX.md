@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Version courante | 0.5.0 |
+| Version courante | 0.6.0 |
 | Dernière release | 2026-07-03 |
 | Stratégie | SemVer |
 | Source de vérité | `VERSION` + `docs/ai/CHANGELOG.md` |
@@ -15,11 +15,11 @@
 
 | Module | Version | Type de version | Dernière release | Compatibilité | Notes |
 |---|---:|---|---|---|---|
-| Backend Spring Boot | 0.5.0 | SemVer | 2026-07-03 | API v0 | Intègre OTP password recovery et PUT orgs |
-| Angular Web | 0.5.0 | SemVer | 2026-07-03 | API v0 | IHM recovery, IHM orgs Drawer |
+| Backend Spring Boot | 0.6.0 | SemVer | 2026-07-03 | API v0 | Portail pharmacie API, upload PDF strict, role biologiste |
+| Angular Web | 0.6.0 | SemVer | 2026-07-03 | API v0 | Portail pharmacie UI, portail labo filtres et biologiste |
 | Flutter Mobile | 0.3.0 | SemVer | 2026-07-01 | API v0 | À adapter au projet |
-| API Contract | 0.5.0 | SemVer | 2026-07-03 | v0 | Nouveaux contrats d'API publics et d'édition |
-| Database Schema | 0.3.0 | Migration versionnée | 2026-07-01 | v0 | Flyway/Liquibase recommandé |
+| API Contract | 0.6.0 | SemVer | 2026-07-03 | v0 | Nouveaux endpoints pharmacie publics et labo |
+| Database Schema | 0.4.0 | Migration versionnée | 2026-07-03 | v0 | Flyway v14-v16 avec cascade deletes |
 
 ## Compatibilité API / clients
 

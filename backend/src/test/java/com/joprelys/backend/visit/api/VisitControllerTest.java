@@ -344,4 +344,30 @@ public class VisitControllerTest {
 				.andExpect(jsonPath("$.temperature").value(36.8))
 				.andExpect(jsonPath("$.bmi").value(22.49));
 	}
+
+	@Test
+	void givenActiveVisit_whenDoctorCancels_thenSuccess() throws Exception {
+		com.joprelys.backend.auth.security.TenantContext.setTenantId(orgA.getId());
+		VisitEntity visit = new VisitEntity(patientA, "VIS-CANCEL", "Motif annulation", "Tri");
+		visit = visitRepository.save(visit);
+		com.joprelys.backend.auth.security.TenantContext.clear();
+
+		mockMvc.perform(post("/api/visits/" + visit.getId() + "/cancel")
+				.header("Authorization", "Bearer " + tokenMedecinA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("ANNULEE"))
+				.andExpect(jsonPath("$.closedAt").isNotEmpty());
+	}
+
+	@Test
+	void givenActiveVisit_whenAgentCancels_thenForbidden() throws Exception {
+		com.joprelys.backend.auth.security.TenantContext.setTenantId(orgA.getId());
+		VisitEntity visit = new VisitEntity(patientA, "VIS-CANCEL-AGENT", "Motif", "Tri");
+		visit = visitRepository.save(visit);
+		com.joprelys.backend.auth.security.TenantContext.clear();
+
+		mockMvc.perform(post("/api/visits/" + visit.getId() + "/cancel")
+				.header("Authorization", "Bearer " + tokenAgentA))
+				.andExpect(status().isForbidden());
+	}
 }

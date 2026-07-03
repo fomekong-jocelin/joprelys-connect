@@ -6,6 +6,7 @@ import { PatientProfileCardComponent } from './components/patient-profile-card.c
 import { PatientVisitsListComponent } from './components/patient-visits-list.component';
 import { PatientPortalService, PatientPortalMeResponse } from './services/patient-portal.service';
 import { PatientAuditListComponent } from './components/patient-audit-list.component';
+import { PatientConsentsListComponent } from './components/patient-consents-list.component';
 
 const MOCK_PATIENT: PatientPortalMeResponse = {
   id: 'patient-id-123',
@@ -63,7 +64,8 @@ describe('PatientVisitsListComponent', () => {
     let emittedId: string | undefined;
     fixture.componentInstance.download.subscribe((id) => (emittedId = id));
 
-    const btn = element.querySelector('button');
+    const btn = Array.from(element.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('Télécharger PDF'));
     expect(btn).toBeTruthy();
     btn?.click();
     expect(emittedId).toBe('visit-id-123');
@@ -108,6 +110,60 @@ describe('PatientAuditListComponent', () => {
     expect(element.textContent).toContain('Urgence');
     expect(element.textContent).toContain('Arrêt cardiaque');
     expect(element.textContent).toContain('SUCCESS');
+  });
+});
+
+describe('PatientConsentsListComponent', () => {
+  let httpTesting: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [PatientConsentsListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        PatientPortalService
+      ]
+    });
+    httpTesting = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpTesting.verify();
+  });
+
+  it('should fetch and display consents list and allow toggling', () => {
+    const fixture = TestBed.createComponent(PatientConsentsListComponent);
+    fixture.detectChanges();
+
+    const mockConsents = [
+      { organizationId: 'org-1', organizationName: 'Clinique Test A', status: 'ACTIVE', isCreator: true },
+      { organizationId: 'org-2', organizationName: 'Clinique Test B', status: 'REVOKED', isCreator: false }
+    ];
+
+    const getReq = httpTesting.expectOne('/api/patient/consents');
+    expect(getReq.request.method).toBe('GET');
+    getReq.flush(mockConsents);
+
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.textContent).toContain('Clinique Test A');
+    expect(element.textContent).toContain('Établissement Créateur');
+    expect(element.textContent).toContain('Clinique Test B');
+    expect(element.textContent).toContain('Accès révoqué');
+
+    const btn = Array.from(element.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('Accès révoqué'));
+    expect(btn).toBeTruthy();
+    btn?.click();
+
+    const postReq = httpTesting.expectOne('/api/patient/consents/org-2?status=ACTIVE');
+    expect(postReq.request.method).toBe('POST');
+    postReq.flush(null);
+
+    fixture.detectChanges();
+    expect(element.textContent).toContain('Accès autorisé');
   });
 });
 

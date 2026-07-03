@@ -8,6 +8,14 @@ Pour éviter de requérir un compte utilisateur nominatif lourd à créer pour c
 
 L'état de la dispensation sera stocké dans une nouvelle table de jointure et de suivi `PrescriptionDispensationEntity`.
 
+Le Cahier des Charges impose un portail pharmacie. L'implémentation doit donc couvrir une expérience Angular complète en plus des endpoints publics :
+
+- vérification ordonnance ;
+- détail ordonnance ;
+- disponibilité médicaments déclarative ;
+- délivrance partielle / totale ;
+- historique délivrances.
+
 ---
 
 ## 2. Modèle de Données (Module 7)
@@ -116,11 +124,94 @@ erDiagram
 }
 ```
 
+### Historique des délivrances
+`POST /api/public/pharmacy/prescriptions/history`
+
+Le PIN reste dans le body pour éviter toute exposition dans les logs d'URL, l'historique du navigateur ou les reverse proxies.
+
+* Requête :
+```json
+{
+  "prescriptionNumber": "ORD-20260703-000042",
+  "pinCode": "8F2A"
+}
+```
+
+* Réponse :
+```json
+[
+  {
+    "dispensationId": "bfa85f64-5717-4562-b3fc-2c963f66afa6",
+    "dispensedAt": "2026-07-03T10:15:00Z",
+    "pharmacyName": "Pharmacie du Grand Marché",
+    "pharmacistLicense": "PH-987654",
+    "items": [
+      {
+        "prescriptionItemId": "5fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "drugName": "Amoxicilline 500mg",
+        "quantityDispensed": 3,
+        "substitutedWith": "Générique Amoxicilline Biogaran"
+      }
+    ]
+  }
+]
+```
+
 ---
 
 ## 4. Sécurité & Audit Logs
 - **Limitation d'accès** : Toute tentative de brute-force du `pinCode` sur un ID d'ordonnance donné est bloquée après 3 tentatives infructueuses (bannissement d'IP temporaire sur ce endpoint).
 - **Traçabilité** : Chaque appel aux endpoints de vérification et de dispensation génère un log d'audit structuré dans la table `audit_logs` avec l'action `PHARMACY_VERIFIED` ou `PHARMACY_DISPENSED`.
+- **Exposition minimale** : le portail pharmacie ne doit exposer que les informations nécessaires à la délivrance (`FR-PRESC-004`) et ne doit jamais donner accès au DPU complet.
+- **Backend maître** : Angular peut afficher la quantité restante et les erreurs UX, mais le backend reste seul responsable de bloquer la sur-délivrance, l'expiration, la révocation et la double dispensation.
+
+---
+
+## 4.1 Architecture UI portail pharmacie
+
+Routes cibles à valider :
+
+```text
+/pharmacy/prescriptions
+/pharmacy/prescriptions/:prescriptionNumber
+```
+
+Structure Angular recommandée :
+
+```text
+web/src/app/pharmacy/
+  pharmacy.routes.ts
+  pages/
+    pharmacy-prescription-verify-page.component.ts
+    pharmacy-prescription-detail-page.component.ts
+  components/
+    pharmacy-prescription-summary.component.ts
+    pharmacy-dispensation-lines.component.ts
+    pharmacy-dispensation-history.component.ts
+  services/
+    pharmacy-api.service.ts
+  models/
+    pharmacy.models.ts
+```
+
+Les appels HTTP doivent rester relatifs :
+
+```text
+/api/public/pharmacy/prescriptions/verify
+/api/public/pharmacy/prescriptions/dispense
+/api/public/pharmacy/prescriptions/history
+```
+
+### Référence visuelle
+
+Les écrans doivent s'appuyer sur le dashboard patient :
+
+- conteneur desktop large pour réduire les marges gauche/droite ;
+- présentation dense des lignes de médicaments ;
+- couleurs et statuts alignés sur `DESIGN.md` ;
+- pas d'Angular Material ;
+- Tailwind CSS v4 CSS-first ;
+- i18n FR/EN et light/dark obligatoires.
 
 ---
 
@@ -129,3 +220,9 @@ erDiagram
   - Validation de la logique de calcul de statut de l'ordonnance (`ACTIVE` -> `PARTIALLY_DISPENSED` -> `FULLY_DISPENSED`).
   - Validation du blocage de brute-force du code PIN.
   - Validation du calcul de quantité restante autorisée à la délivrance.
+* **Tests Frontend** :
+  - vérification ordonnance réussie et refusée ;
+  - affichage du détail minimal ;
+  - délivrance partielle et totale ;
+  - historique des délivrances ;
+  - états vide, erreur, ordonnance expirée/révoquée/déjà délivrée.

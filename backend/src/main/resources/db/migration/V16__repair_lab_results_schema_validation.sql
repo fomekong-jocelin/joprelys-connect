@@ -1,0 +1,21 @@
+ALTER TABLE lab_results ADD COLUMN IF NOT EXISTS result_number VARCHAR(50);
+ALTER TABLE lab_results ADD COLUMN IF NOT EXISTS lab_order_id UUID;
+ALTER TABLE lab_results ADD COLUMN IF NOT EXISTS patient_id UUID;
+ALTER TABLE lab_results ADD COLUMN IF NOT EXISTS organization_id UUID;
+ALTER TABLE lab_results ADD COLUMN IF NOT EXISTS validator_name VARCHAR(150) NOT NULL DEFAULT 'UNKNOWN';
+ALTER TABLE lab_results ADD COLUMN IF NOT EXISTS analyte_name VARCHAR(100) NOT NULL DEFAULT 'UNKNOWN';
+ALTER TABLE lab_results ADD COLUMN IF NOT EXISTS result_value VARCHAR(50) NOT NULL DEFAULT '';
+ALTER TABLE lab_results ADD COLUMN IF NOT EXISTS unit VARCHAR(20);
+ALTER TABLE lab_results ADD COLUMN IF NOT EXISTS reference_range VARCHAR(50);
+ALTER TABLE lab_results ADD COLUMN IF NOT EXISTS interpretation VARCHAR(20) NOT NULL DEFAULT 'NORMAL';
+ALTER TABLE lab_results ADD COLUMN IF NOT EXISTS comment VARCHAR(255);
+ALTER TABLE lab_results ADD COLUMN IF NOT EXISTS pdf_file_path VARCHAR(500);
+ALTER TABLE lab_results ADD COLUMN IF NOT EXISTS sample_collected_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE lab_results ADD COLUMN IF NOT EXISTS result_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE lab_results ADD COLUMN IF NOT EXISTS validated_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE lab_results ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_lab_results_result_number ON lab_results (result_number);
+CREATE INDEX IF NOT EXISTS idx_lab_results_lab_order_id ON lab_results (lab_order_id);
+CREATE INDEX IF NOT EXISTS idx_lab_results_patient_id ON lab_results (patient_id);
+CREATE INDEX IF NOT EXISTS idx_lab_results_organization_id ON lab_results (organization_id);

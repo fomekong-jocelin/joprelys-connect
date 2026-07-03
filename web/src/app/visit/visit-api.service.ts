@@ -21,6 +21,10 @@ export class VisitApiService {
     return this.http.post<Visit>(`/api/visits/${id}/close`, {});
   }
 
+  cancelVisit(id: string): Observable<Visit> {
+    return this.http.post<Visit>(`/api/visits/${id}/cancel`, {});
+  }
+
   saveVitals(id: string, vitals: Vitals): Observable<Vitals> {
     return this.http.post<Vitals>(`/api/visits/${id}/vitals`, vitals);
   }

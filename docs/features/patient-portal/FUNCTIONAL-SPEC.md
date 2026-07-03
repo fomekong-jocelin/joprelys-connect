@@ -91,6 +91,19 @@ Permettre aux patients du réseau Joprelys Connect d'accéder à leur espace per
 | Thème light/dark | Oui |
 | Composants réutilisables | Oui (Boutons, cartes standard) |
 
+## 10.1 Amélioration UI premium du dashboard patient (2026-07-03)
+
+Objectif complémentaire : rendre `/patient/dashboard` plus premium et plus confortable à lire sans changer le périmètre fonctionnel.
+
+Critères UX complémentaires :
+
+- Le patient doit identifier immédiatement son nom, son DPU, ses informations clés et les sections disponibles.
+- Le DPU doit rester lisible même s'il est long.
+- L'historique des consultations doit être plus compact et hiérarchisé : établissement, date, médecin, diagnostic, mesures, détails cliniques, document.
+- Les informations médicales ne doivent pas s'appuyer sur des emojis décoratifs.
+- Les couleurs doivent rester sobres et limitées aux accents utiles : action principale, alerte/allergie, information médicale.
+- Le layout desktop doit mieux utiliser la largeur disponible tout en conservant une pile claire sur mobile.
+
 ## 11. Hypothèses et questions ouvertes
 
 - Pour la version locale/démo, le code OTP généré sera affiché dans les logs du backend (stdout) sous la forme `[OTP PATIENT] Code de connexion pour DPU XXX : 123456`.
@@ -100,3 +113,4 @@ Permettre aux patients du réseau Joprelys Connect d'accéder à leur espace per
 | Date | Auteur | Changement |
 |---|---|---|
 | 2026-07-02 | Antigravity | Création initiale de la spec fonctionnelle |
+| 2026-07-03 | Codex | Ajout des critères UX premium du dashboard patient |

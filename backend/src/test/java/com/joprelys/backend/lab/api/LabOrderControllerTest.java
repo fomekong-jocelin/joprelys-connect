@@ -58,9 +58,11 @@ public class LabOrderControllerTest {
 	private VisitEntity visit;
 	private UserAccountEntity doctor;
 	private UserAccountEntity patientUser;
+	private UserAccountEntity biologist;
 	
 	private String tokenDoctor;
 	private String tokenPatient;
+	private String tokenBiologist;
 
 	@BeforeEach
 	void setUp() {
@@ -89,6 +91,11 @@ public class LabOrderControllerTest {
 		patientUser.setOrganizationId(org.getId());
 		patientUser = userAccountRepository.save(patientUser);
 		tokenPatient = jwtService.createToken(patientUser).value();
+
+		biologist = new UserAccountEntity("biologiste@joprelys.local", "Dr. Biologiste", "BIOLOGISTE", "passhash");
+		biologist.setOrganizationId(org.getId());
+		biologist = userAccountRepository.save(biologist);
+		tokenBiologist = jwtService.createToken(biologist).value();
 
 		TenantContext.setTenantId(org.getId());
 
@@ -188,5 +195,26 @@ public class LabOrderControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.length()").value(1))
 				.andExpect(jsonPath("$[0].exams[0]").value("NFS"));
+	}
+
+	@Test
+	void givenDoctor_whenGetPatientResults_thenReturnsList() throws Exception {
+		mockMvc.perform(get("/api/lab-orders/patient/" + patient.getId() + "/results")
+						.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenDoctor))
+				.andExpect(status().isOk());
+	}
+
+	@Test
+	void givenDoctor_whenGetLabOrdersQueue_thenForbidden() throws Exception {
+		mockMvc.perform(get("/api/lab-orders")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenDoctor))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void givenBiologist_whenGetLabOrdersQueue_thenSuccess() throws Exception {
+		mockMvc.perform(get("/api/lab-orders")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenBiologist))
+				.andExpect(status().isOk());
 	}
 }

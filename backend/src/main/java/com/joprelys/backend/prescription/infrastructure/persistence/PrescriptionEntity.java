@@ -27,6 +27,18 @@ public class PrescriptionEntity {
 	@OrderBy("sortOrder ASC")
 	private List<PrescriptionItemEntity> items = new ArrayList<>();
 
+	@Column(name = "prescription_number", length = 50, unique = true)
+	private String prescriptionNumber;
+
+	@Column(name = "pin_code", length = 4)
+	private String pinCode;
+
+	@Column(name = "status", nullable = false, length = 20)
+	private String status = "ACTIVE";
+
+	@Column(name = "expires_at")
+	private Instant expiresAt;
+
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
@@ -54,6 +66,14 @@ public class PrescriptionEntity {
 	public UUID getOrganizationId() { return organizationId; }
 	public ConsultationEntity getConsultation() { return consultation; }
 	public List<PrescriptionItemEntity> getItems() { return items; }
+	public String getPinCode() { return pinCode; }
+	public void setPinCode(String pinCode) { this.pinCode = pinCode; }
+	public String getStatus() { return status; }
+	public void setStatus(String status) { this.status = status; }
+	public Instant getExpiresAt() { return expiresAt; }
+	public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
+	public String getPrescriptionNumber() { return prescriptionNumber; }
+	public void setPrescriptionNumber(String prescriptionNumber) { this.prescriptionNumber = prescriptionNumber; }
 	public Instant getCreatedAt() { return createdAt; }
 	public Instant getUpdatedAt() { return updatedAt; }
 }

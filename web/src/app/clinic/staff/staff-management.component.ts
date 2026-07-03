@@ -9,7 +9,7 @@ import { StaffApiService } from './staff-api.service';
 import { StaffMember, StaffRole } from './staff.models';
 import { StaffTableComponent, StaffTableLabels } from './staff-table.component';
 
-const STAFF_ROLES: readonly StaffRole[] = ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEIL', 'PHARMACIEN'];
+const STAFF_ROLES: readonly StaffRole[] = ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEIL', 'PHARMACIEN', 'BIOLOGISTE'];
 
 @Component({
   selector: 'app-staff-management',
@@ -167,6 +167,7 @@ export class StaffManagementComponent implements OnInit {
       INFIRMIER: this.t('staff.roles.INFIRMIER'),
       AGENT_ACCUEIL: this.t('staff.roles.AGENT_ACCUEIL'),
       PHARMACIEN: this.t('staff.roles.PHARMACIEN'),
+      BIOLOGISTE: this.t('staff.roles.BIOLOGISTE'),
     },
   }));
 

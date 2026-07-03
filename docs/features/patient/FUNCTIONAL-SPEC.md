@@ -49,3 +49,14 @@ Permettre aux professionnels de santé autorisés (en particulier l'**agent d'ac
 3. **Multi-tenant / Confidentialité** : Un patient créé dans la clinique A n'apparaît jamais dans la recherche de la clinique B. Les requêtes directes via API sur d'autres cliniques sont bloquées (403/404).
 4. **Traductions** : L'écran de liste, de création et de profil du patient est entièrement disponible en français et en anglais.
 5. **Aesthetics & Responsive** : L'interface respecte la charte graphique Montserrat/Inter, s'affiche en cartes optimisées sur mobile, et bascule sur un tableau clair sur desktop.
+
+## 6. Correction UI — Lisibilité du tableau desktop (2026-07-03)
+
+Le tableau desktop de la liste patients doit conserver les identifiants DPU et patient local sur une seule ligne, comme le tableau de gestion des cliniques pilotes.
+
+Critères complémentaires :
+
+1. Les colonnes `N° DPU (National)` et `N° Local` ne doivent pas couper les identifiants sur deux lignes.
+2. L'action `Voir le dossier` doit rester lisible sur une seule ligne.
+3. En cas de largeur insuffisante, le conteneur desktop doit conserver le défilement horizontal existant plutôt que compresser les données critiques.
+4. La vue mobile en cartes n'est pas modifiée par cette correction.

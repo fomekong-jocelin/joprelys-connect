@@ -29,6 +29,10 @@ body {
 
 :root,
 :root[data-theme='light'] {
+  --radius-brand-xs: 2px;
+  --radius-brand-sm: 4px;
+  --radius-brand-md: 6px;
+  --radius-brand-lg: 8px;
   --app-bg: #f7fafc;
   --app-surface: #ffffff;
   --app-surface-muted: #eef6f7;
@@ -42,6 +46,7 @@ body {
   --brand-danger: #dc2626;
   --focus-ring: rgba(11, 145, 178, 0.18);
   --shadow-panel: 0 18px 45px rgba(10, 29, 61, 0.08);
+  --shadow-panel-subtle: 0 10px 28px rgba(10, 29, 61, 0.06);
   --bg-input: #F2F4F7;
   --border-input: #e4e7ec;
   --border-input-focus: #0b91b2;
@@ -61,6 +66,7 @@ body {
   --brand-danger: #fb7185;
   --focus-ring: rgba(34, 168, 200, 0.22);
   --shadow-panel: 0 18px 45px rgba(0, 0, 0, 0.28);
+  --shadow-panel-subtle: 0 10px 28px rgba(0, 0, 0, 0.22);
   --bg-input: #0f172a;
   --border-input: #1e293b;
   --border-input-focus: #22a8c8;
@@ -76,6 +82,9 @@ body {
   }
 
   .app-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
     background: color-mix(in srgb, var(--app-surface) 92%, transparent);
     border-bottom: 1px solid var(--app-border);
     backdrop-filter: blur(14px);
@@ -91,11 +100,23 @@ body {
     margin-inline: auto;
   }
 
+  .app-container-wide {
+    width: min(1280px, calc(100% - 32px));
+    margin-inline: auto;
+  }
+
   .ui-card {
     background: var(--app-surface);
     border: 1px solid var(--app-border);
     border-radius: 8px;
     box-shadow: var(--shadow-panel);
+  }
+
+  .ui-card-subtle {
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: 8px;
+    box-shadow: var(--shadow-panel-subtle);
   }
 
   .ui-avatar {

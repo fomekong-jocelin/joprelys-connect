@@ -146,6 +146,30 @@ Aucune variable de configuration externe requise. La validité de l'OTP reste à
 - **Frontend** :
   - Tests unitaires pour les formulaires Angular de connexion et d'OTP.
 
+## 11.1 Amélioration UI premium du dashboard patient (2026-07-03)
+
+Portée technique :
+
+- `PatientDashboardComponent` : amélioration du conteneur desktop, header, bannière patient et onglets de navigation.
+- `PatientProfileCardComponent` : meilleure hiérarchie d'information, DPU lisible sur une ligne scrollable si nécessaire, alertes médicales plus sobres.
+- `PatientVisitsListComponent` : accordéon plus dense, suppression des emojis, couleurs médicales réduites, bouton de téléchargement moins dominant.
+- `styles.css` : ajout d'un conteneur large réutilisable pour les écrans de consultation/dossier nécessitant plus que `1120px`.
+
+Contraintes :
+
+- Aucun changement de service Angular.
+- Aucun changement de contrat REST.
+- Aucun changement de logique de téléchargement.
+- Aucun changement de sécurité ou de stockage du token.
+- Tailwind CSS v4 uniquement, pas d'Angular Material.
+- Arrondis standard à `8px` maximum hors avatars.
+
+Validation prévue :
+
+- Tests unitaires Angular existants.
+- Build Angular de développement.
+- Build production si les polices externes sont accessibles.
+
 ## 12. Impact version / SemVer
 
 - **Type de bump** : `MINOR`

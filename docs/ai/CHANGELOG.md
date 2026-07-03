@@ -8,6 +8,103 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.6.0] - 2026-07-03
+
+### Fixed
+
+- **Bypass du filtre TenantId Hibernate pour les requêtes publiques de Pharmacie (STORY-1005 / T-SYS-01)** :
+  - Modification de `PharmacyService.java` pour requêter les ordonnances via la nouvelle méthode SQL native `findByPrescriptionNumberGlobally` de `PrescriptionRepository`.
+  - Résolution des exceptions 404 lors des appels anonymes/publics en bypassant l'isolation multi-tenant de session de Hibernate.
+  - Utilisation de requêtes SQL brutes via `jdbcTemplate` pour charger les informations d'associations filtrées par tenant (`PatientEntity` et `ConsultationEntity`) sans provoquer de `LazyInitializationException` ou de filtrage erroné par le tenant par défaut.
+
+- **Intégrité référentielle et isolation des tests de la base de données H2** :
+  - Ajout de la contrainte `ON DELETE CASCADE` sur la clé étrangère `prescription_item_id` dans la table `dispensation_items` dans le script de migration `V14__add_pharmacy_fields_and_tables.sql`.
+  - Résolution des erreurs d'intégrité de clé étrangère lors du nettoyage des tables (`DELETE FROM visits`, etc.) dans les configurations `@BeforeEach` des autres suites de tests.
+  - Ajout de la méthode `resetLockouts()` dans `PharmacyService.java` et appel au début du test `setUp()` de `PharmacyControllerTest` pour éviter la pollution de l'état de verrouillage (erreur 429) entre les méthodes de test.
+
+### Changed
+
+- **Header topbar fixe (TICKET-UI-FIXED-TOPBAR)** :
+  - Rendu de la barre de navigation supérieure (`.app-topbar`) sticky (`position: sticky`) au défilement sur l'ensemble de l'application web, avec une gestion du `z-index: 50` pour garantir la superposition.
+
+- **Redesign des vues Consentement et Sécurité du portail patient (TICKET-UI-PATIENT-PORTAL-CONSENT-SECURITY-REDESIGN)** :
+  - Restructuration visuelle de la gestion des consentements (`PatientConsentsListComponent`) et du journal d'accès (`PatientAuditListComponent`) avec le conteneur `ui-card-subtle` et des styles épurés et professionnels conformes à `DESIGN.md`.
+  - Remplacement de l'interrupteur capsule (en forme de pilule `rounded-full` non conforme) par des boutons de statut explicites, esthétiques et accessibles avec des rayons de courbure standardisés de 4px (`rounded-[var(--radius-brand-sm)]`).
+  - Simplification visuelle du journal de sécurité avec un tableau responsive et des cartes mobiles plus denses.
+  - Extraction de tous les textes visibles des composants Consentement et Sécurité dans l'injectable `I18nService` avec traduction complète FR/EN pour respecter les standards du projet.
+  - Ajout de tests unitaires complets pour le composant de consentement dans `patient-portal.spec.ts`.
+
+
+- **Amélioration premium du portail patient (TICKET-UI-PATIENT-PORTAL-PREMIUM-REDESIGN)** :
+  - Recomposition visuelle de `/patient/dashboard` avec conteneur desktop plus large, en-tête plus sobre, DPU plus lisible et onglets accessibles sous forme de boutons.
+  - Simplification de l'historique des consultations : suppression des emojis, mesures médicales en grille, couleurs secondaires réduites et action PDF moins dominante.
+  - Ajout de tokens de radius manquants et d'une carte subtile réutilisable dans le design system CSS global.
+
+### Fixed
+
+- **Double header et alignement du header pharmacie et laboratoire (TICKET-UI-PHARMACY-LAB-HEADER-FIX)** :
+  - Résolution du problème de double header dans le portail laboratoire et pharmacie en remplaçant les en-têtes personnalisés avec logo dupliqué par le composant réutilisable standard `<app-page-header>`.
+  - Intégration de `<app-shell>` sur la page de vérification des ordonnances de la pharmacie pour assurer une cohérence visuelle complète (topbar avec session utilisateur, langue et logout, et footer).
+  - Sécurisation de la route `pharmacy/prescriptions` avec `roleGuard` réservé aux rôles `PHARMACIEN` et `ADMIN_JOPRELYS`.
+  - Nettoyage des imports inutilisés (comme `RouterLink`) pour éviter les avertissements du compilateur Angular.
+
+- **Lisibilité du tableau patients DPU (TICKET-UI-DPU-PATIENT-TABLE-READABILITY)** :
+  - Stabilisation des colonnes desktop de la liste patients pour conserver les numeros DPU, numeros locaux et l'action de consultation sur une seule ligne.
+  - Conservation du responsive par defilement horizontal desktop/tablette et sans impact sur la vue mobile en cartes.
+
+- **Correction de validation Hibernate du schema laboratoire (TICKET-1011)** :
+  - Ajout d'une migration Flyway additive `V16__repair_lab_results_schema_validation.sql` pour synchroniser la table `lab_results` avec `LabResultEntity`, notamment la colonne manquante `result_value`.
+  - Objectif : eviter l'echec de demarrage Spring Boot lors de la creation de `entityManagerFactory` avec `ddl-auto: validate`.
+
+- **Correction de validation Hibernate du schema pharmacie (TICKET-1010)** :
+  - Ajout d'une migration Flyway additive `V15__repair_pharmacy_schema_validation.sql` pour synchroniser les colonnes pharmacie de `prescriptions`, les tables de dispensation et leurs index sur les bases locales/de developpement ayant deja applique une variante incomplete de `V14`.
+  - Objectif : eviter l'echec de demarrage Spring Boot lors de la creation de `entityManagerFactory` avec `ddl-auto: validate`.
+
+### Added
+
+- **Portail pharmacie — vérification et détail ordonnance (STORY-1004)** :
+  - Frontend : ajout de la route publique `/pharmacy/prescriptions` pour vérifier une ordonnance via numéro et PIN.
+  - Ajout de `PharmacyApiService` utilisant l'endpoint relatif `/api/public/pharmacy/prescriptions/verify`.
+  - Ajout d'un écran Angular responsive affichant uniquement les données nécessaires à la délivrance : statut, patient minimal, prescripteur, dates et lignes de médicaments.
+  - Raccordement de la carte pharmacien du dashboard vers le nouvel écran.
+  - Ajout des traductions FR/EN et de tests unitaires frontend couvrant succès, erreur, état vide et ordonnance expirée.
+
+- **Portail pharmacie — délivrance et historique (STORY-1005)** :
+  - Backend : ajout de `POST /api/public/pharmacy/prescriptions/history`, protégé par numéro d'ordonnance + PIN, pour restituer l'historique des délivrances sans exposer le PIN dans l'URL.
+  - Backend : ajout des DTOs d'historique pharmacie avec date, pharmacie, licence, médicaments, quantités et substitutions.
+  - Frontend : ajout d'un panneau de délivrance partielle/totale sur `/pharmacy/prescriptions`, avec quantités servies, substitutions autorisées et disponibilité déclarative sans module de stock.
+  - Frontend : affichage de l'historique des délivrances après vérification et rafraîchissement après délivrance.
+  - Ajout de traductions FR/EN et de tests Angular couvrant `/verify`, `/dispense`, `/history`, succès de délivrance et erreurs backend.
+
+- **Portail laboratoire — demandes, statuts, résultats et PDF (STORY-0904 / STORY-0905 / STORY-0906)** :
+  - Backend : ajout de `GET /api/lab-orders` pour lister les demandes d'examens du tenant courant.
+  - Backend : ajout de `PATCH /api/lab-orders/{id}/status` avec liste blanche de statuts CDC et audit `UPDATE_LAB_ORDER_STATUS`.
+  - Frontend : ajout de la route sécurisée `/clinic/lab-orders` pour consulter les demandes reçues, ouvrir le détail, changer le statut et saisir des résultats structurés.
+  - Frontend : upload PDF optionnel via `/api/public/lab-integration/upload` avec `X-API-KEY`.
+  - Frontend : affichage de l'historique des résultats filtré par numéro de demande.
+  - Ajout de traductions FR/EN et de tests Angular couvrant liste, statut, upload, erreur backend et historique.
+
+- **Écran praticien de visualisation des résultats (STORY-0903)** :
+  - Frontend : Onglet "Analyses & Labo" sur la fiche patient affichant la liste des demandes et l'historique détaillé des examens biologiques.
+  - Graphique SVG interactif et réactif traçant l'évolution temporelle des marqueurs cliniques (ex : Glucose).
+  - Code couleur dynamique (Vert/Bleu/Orange/Rouge) selon l'interprétation clinique (`NORMAL`, `BAS`, `ELEVE`, `CRITIQUE`).
+  - Validation de la logique et du tracé par l'ajout de nouveaux tests unitaires dans `patient-detail.component.spec.ts` (39/39 tests au vert).
+- **Rembobinage & Réparation de base de données (Gouvernance/CI-CD)** :
+  - Configuration de `spring.flyway.repair-on-migrate: true` dans `application.yml` pour réparer de manière automatisée les anomalies de checksum Flyway locales/de dev en cas de script modifié.
+
+
+- **Téléversement de résultats d'analyses par les labos externes (STORY-0902)** :
+  - Backend : endpoints publics `/api/public/lab-integration/upload` sécurisés par clé d'API (`X-API-KEY`) validée via la propriété configurable `joprelys.lab-integration.api-key`.
+  - Intégration de la logique de décodage du PDF en Base64 et stockage physique des fichiers de résultats dans le répertoire de stockage (`joprelys.documents.storage-dir`).
+  - Insertion structurée des constantes et des lignes d'analyses dans la table `lab_results` et mise à jour du statut de la demande `LabOrderEntity` vers `VALIDATED`.
+  - Enregistrement automatique d'un log d'audit de succès `UPLOAD_LAB_RESULTS` pour garantir la traçabilité.
+  - Couverture complète par des tests d'intégration automatisés avec MockMvc (100% de succès).
+
+
 - **Demande d'examens biologiques par le médecin (STORY-0901)** :
   - Backend : table `lab_orders`, entité JPA `LabOrderEntity` isolée par `@TenantId` multi-tenant.
   - Endpoints REST `/api/lab-orders` (création) et `/api/lab-orders/patient/{patientId}` (liste) sécurisés par rôles (MEDECIN, ADMIN_CLINIQUE).

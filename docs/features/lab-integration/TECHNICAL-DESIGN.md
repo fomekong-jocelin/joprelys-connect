@@ -7,6 +7,11 @@ L'intégration s'appuiera sur la création de deux entités majeures dans la bas
 
 Le système exposera une API sécurisée par authentification JWT avec une clé d'API dédiée aux serveurs du laboratoire partenaire.
 
+Le Cahier des Charges impose également un portail laboratoire. L'implémentation doit donc distinguer :
+
+- **intégration serveur à serveur** : `POST /api/public/lab-integration/upload` par clé d'API ;
+- **portail laboratoire Angular** : écrans authentifiés pour tableau de bord, demandes reçues, détail demande, changement de statut, saisie/validation résultat, dépôt PDF et historique.
+
 ---
 
 ## 2. Modèle de Données (Module 8 & 9)
@@ -68,6 +73,31 @@ erDiagram
 }
 ```
 
+### Liste des demandes reçues
+`GET /api/lab-orders`
+
+Retourne les demandes d'examens du tenant courant pour alimenter le portail laboratoire MVP.
+
+### Changement de statut laboratoire
+`PATCH /api/lab-orders/{id}/status`
+
+```json
+{
+  "status": "IN_PROGRESS"
+}
+```
+
+Statuts autorisés :
+
+```text
+REQUESTED
+SAMPLE_COLLECTED
+IN_PROGRESS
+RESULT_AVAILABLE
+VALIDATED
+CANCELLED
+```
+
 ### Dépôt de résultats (Laboratoire)
 `POST /api/public/lab-integration/upload`
 * Headers : `X-API-KEY: lab-partner-secret-token`
@@ -99,6 +129,50 @@ erDiagram
 ## 4. Sécurité & Contrôle d'Accès
 - **Édition / Consultation** : Rôles `MEDECIN` and `ADMIN_CLINIQUE` requis sur les routes `/api/lab-orders/**`.
 - **Dépôt externe** : Authentification par clé d'API (API Key) validée par un filtre Spring Security spécifique (`ApiKeyAuthenticationFilter`), avec limitation de débit (rate limiting) pour éviter les attaques par déni de service.
+- **Portail laboratoire** : rôle laboratoire/biologiste à confirmer (`BIOLOGISTE`, `LABORATOIRE` ou extension contrôlée du RBAC existant). Le MVP utilise le fallback sécurisé `MEDECIN` / `ADMIN_CLINIQUE`. Les écrans ne doivent exposer que les données nécessaires au traitement de la demande, pas le DPU complet.
+- **Transitions de statut** : le backend reste maître des transitions autorisées. Angular affiche les actions disponibles, mais ne décide jamais seul de la validité métier.
+
+---
+
+## 4.1 Architecture UI portail laboratoire
+
+Routes cibles à valider :
+
+```text
+/clinic/lab-orders
+```
+
+Structure Angular recommandée :
+
+```text
+web/src/app/lab/
+  lab.routes.ts
+  pages/
+    lab-dashboard-page.component.ts
+    lab-order-detail-page.component.ts
+    lab-result-entry-page.component.ts
+  components/
+    lab-order-table.component.ts
+    lab-order-status-badge.component.ts
+    lab-result-lines.component.ts
+  services/
+    lab-portal-api.service.ts
+  models/
+    lab-portal.models.ts
+```
+
+Les composants pages orchestrent les appels API et les composants de présentation restent réutilisables. Les appels HTTP passent par des chemins relatifs `/api/...`.
+
+### Référence visuelle
+
+Les écrans doivent reprendre l'approche du dashboard patient :
+
+- conteneur desktop large pour réduire les marges gauche/droite ;
+- tableaux et listes denses, scannables ;
+- surfaces sobres alignées sur `DESIGN.md` ;
+- pas d'Angular Material ;
+- Tailwind CSS v4 CSS-first ;
+- i18n FR/EN et light/dark obligatoires.
 
 ---
 
@@ -108,3 +182,6 @@ erDiagram
   - `LabIntegrationControllerTest` : Validation de l'authentification X-API-KEY et des formats de payload.
 * **Tests Frontend** :
   - `lab-results-timeline.component.spec.ts` : Validation de l'affichage correct des courbes d'évolution des marqueurs.
+  - `lab-dashboard-page.component.spec.ts` : liste des demandes, filtres, états vide/erreur.
+  - `lab-order-detail-page.component.spec.ts` : affichage du détail et actions de statut.
+  - `lab-result-entry-page.component.spec.ts` : saisie, validation résultat et upload PDF.

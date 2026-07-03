@@ -26,7 +26,8 @@ public class StaffService {
 			"MEDECIN",
 			"INFIRMIER",
 			"AGENT_ACCUEIL",
-			"PHARMACIEN");
+			"PHARMACIEN",
+			"BIOLOGISTE");
 	private static final String PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 	private static final int TEMPORARY_PASSWORD_LENGTH = 6;
 

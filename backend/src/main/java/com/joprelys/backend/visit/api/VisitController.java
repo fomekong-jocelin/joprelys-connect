@@ -50,6 +50,13 @@ public class VisitController {
 		return VisitResponse.fromEntity(visit);
 	}
 
+	@PostMapping("/{id}/cancel")
+	@PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE')")
+	public VisitResponse cancel(@PathVariable UUID id) {
+		var visit = visitService.cancelVisit(id);
+		return VisitResponse.fromEntity(visit);
+	}
+
 	@PostMapping("/{id}/vitals")
 	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
 	public VitalsResponse saveVitals(@PathVariable UUID id, @Valid @RequestBody SaveVitalsRequest request) {

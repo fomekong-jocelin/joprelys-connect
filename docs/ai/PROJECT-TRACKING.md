@@ -8,12 +8,13 @@
 |---|---|
 | Dernière mise à jour | 2026-07-03 |
 | Responsable mise à jour | Antigravity |
-| État global | En cours (Sprint 0004 — Story 0901 - Demande d'examens biologiques médecin finalisée et validée à 100%) |
-| Risques majeurs | Aucun risque technique ou environnemental bloquant. |
-| Prochaine priorité | Démarrer l'API d'intégration labo externe pour téléversement (STORY-0902). |
+| État global | Terminé (Sprint 0004 — Portails pharmacie et laboratoire livrés et fonctionnels, tests unitaires et intégration OK) |
+| Risques majeurs | Aucun (tests unitaires frontend et d'intégration backend passés avec succès) |
+| Prochaine priorité | Préparer la release de livraison du Sprint 0004 |
 | Sprint courant | SPRINT-0004 |
+
 | Capacité sprint | 15.0j |
-| Charge engagée | 1.5j |
+| Charge engagée | 7.45j |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
@@ -41,6 +42,7 @@
 | EPIC-0003 | PAT | Epic | Dossier Patient Unique (DPU) & Recherche | Full-stack | BACKLOG | P0 | 8 | Senior | 2j | 2.6j | 4j | À assigner | Lead | À planifier | 0j | Stories initiales rédigées | Moyen | 2026-07-01 |
 | STORY-0301 | PAT | User Story | Enregistrement Patient & Génération du DPU | Full-stack | DONE | P0 | 3 | Intermédiaire | 1j | 1.3j | 2.2j | Antigravity | Lead | SPRINT-0002 | 0.65j | Aucun | Moyen | 2026-07-03 |
 | STORY-0302 | PAT | User Story | Recherche de Patients Multicritères | Full-stack | DONE | P0 | 3 | Intermédiaire | 0.5j | 0.65j | 1.1j | Antigravity | Lead | SPRINT-0002 | 0.1j | Aucun | Faible | 2026-07-03 |
+| TICKET-UI-DPU-PATIENT-TABLE-READABILITY | PAT | UI/UX | Lisibilité du tableau patients DPU | Frontend | DONE | P2 | 0.5 | Intermédiaire | 0.03j | 0.05j | 0.08j | Codex | Lead | SPRINT-0004 | 0.05j | Aucun | Faible | 2026-07-03 |
 | EPIC-0004 | VISIT | Epic | Gestion des Visites & Constantes Vitales | Full-stack | READY | P0 | 5 | Intermédiaire | 1.5j | 2j | 3j | Antigravity / Codex | Lead | SPRINT-0002 | 1.50j | STORY-0402 terminée, STORY-0401 en review | Moyen | 2026-07-02 |
 | STORY-0401 | VISIT | User Story | Ouverture & Clôture de Visite Patient | Full-stack | DONE | P0 | 2 | Junior | 0.5j | 0.65j | 1.1j | Antigravity | Lead | SPRINT-0002 | 0.5j | Aucun (tests unitaires et intégration validés avec succès) | Faible | 2026-07-03 |
 | STORY-0402 | VISIT | User Story | Saisie des Constantes Vitales & Calcul IMC | Full-stack | DONE | P0 | 3 | Intermédiaire | 0.8j | 1.1j | 1.8j | Antigravity / Codex | Lead | SPRINT-0002 | 1.00j | Aucun | Faible | 2026-07-02 |
@@ -60,17 +62,29 @@
 | STORY-0702 | AUDIT | User Story | Écran de visualisation et filtrage des logs d'audit (frontend) | Frontend | DONE | P2 | 2 | Intermédiaire | 0.5j | 0.7j | 1.1j | Antigravity | Lead | SPRINT-0003 | 0.5j | Timeline d'audit patient et tests unitaires OK | Faible | 2026-07-02 |
 | EPIC-0008 | PAT_PORTAL | Epic | Portail Patient & Consentement | Full-stack | IN_PROGRESS | P1 | 18 | Senior | 5j | 8j | 12j | Antigravity | Lead | SPRINT-0003 | 3.3j | Epic entièrement terminée | Moyen | 2026-07-02 |
 | STORY-0801 | PAT_PORTAL | User Story | Espace patient sécurisé et historique personnel | Full-stack | DONE | P1 | 5 | Intermédiaire | 1.2j | 1.8j | 3j | Antigravity | Lead | SPRINT-0003 | 0.9j | Aucun | Moyen | 2026-07-02 |
+| TICKET-UI-PATIENT-PORTAL-PREMIUM-REDESIGN | PAT_PORTAL | UI/UX | Amélioration premium du portail patient | Frontend | DONE | P1 | 1 | Intermédiaire | 0.1j | 0.15j | 0.25j | Codex | Lead | SPRINT-0004 | 0.15j | Aucun | Faible | 2026-07-03 |
+| TICKET-UI-PATIENT-PORTAL-CONSENT-SECURITY-REDESIGN | PAT_PORTAL | UI/UX | Redesign premium des consentements et de la sécurité du portail patient | Frontend | DONE | P1 | 2 | Intermédiaire | 0.1j | 0.2j | 0.35j | Antigravity | Lead | SPRINT-0004 | 0.2j | Aucun (tests et build validés) | Faible | 2026-07-03 |
+| TICKET-UI-FIXED-TOPBAR | PAT_PORTAL | UI/UX | Rendre le header topbar fixe et sticky | Frontend | DONE | P2 | 1 | Junior | 0.02j | 0.05j | 0.1j | Antigravity | Lead | SPRINT-0004 | 0.05j | Aucun (tests et build validés) | Faible | 2026-07-03 |
 | STORY-0802 | PAT_PORTAL | User Story | Téléchargement sécurisé de ses propres ordonnances | Full-stack | DONE | P1 | 2 | Junior | 0.5j | 0.8j | 1.2j | Antigravity | Lead | SPRINT-0003 | 0.3j | Aucun | Faible | 2026-07-02 |
 | STORY-0803 | PAT_PORTAL | User Story | Gestion des consentements d'accès du DPU | Full-stack | DONE | P0 | 8 | Senior | 2.5j | 4j | 6j | Antigravity | Lead | SPRINT-0003 | 0.9j | Aucun | Fort | 2026-07-02 |
 | STORY-0804 | PAT_PORTAL | User Story | Journal de traçabilité des consultations du DPU | Full-stack | DONE | P2 | 3 | Intermédiaire | 0.8j | 1.4j | 1.8j | Antigravity | Lead | SPRINT-0003 | 1.2j | Aucun (traçabilité intégrée au niveau de l'AuditService) | Faible | 2026-07-02 |
-| EPIC-0009 | LAB | Epic | Intégration Laboratoire & Examens Biologiques | Full-stack | BACKLOG | P1 | 7 | Intermédiaire | 1.8j | 2.5j | 4j | À assigner | Lead | À planifier | 0j | Cadrage initial et spécifications fonctionnelles/techniques rédigés | Faible | 2026-07-03 |
+| EPIC-0009 | LAB | Epic | Intégration Laboratoire & Examens Biologiques + Portail Laboratoire CDC | Full-stack | DONE | P1 | 14 | Intermédiaire | 3.6j | 5.0j | 8.2j | Codex / Antigravity | Lead | SPRINT-0004 | 3.8j | Aucun (Epic entièrement livrée, rôle dédié, filtres et upload validés) | Faible | 2026-07-03 |
 | STORY-0901 | LAB | User Story | Demande d'examens biologiques (médecin) | Full-stack | DONE | P1 | 1.5 | Intermédiaire | 0.3j | 0.5j | 0.8j | Antigravity | Lead | SPRINT-0004 | 0.4j | Aucun (tests backend validés, compilation frontend OK) | Faible | 2026-07-03 |
-| STORY-0902 | LAB | User Story | API d'intégration labo externe pour téléversement | Backend | TODO | P1 | 3 | Senior | 0.8j | 1.1j | 1.8j | À assigner | Lead | SPRINT-0004 | 0j | Requiert API Key et validation GUID | Moyen | 2026-07-03 |
-| STORY-0903 | LAB | User Story | Écran praticien de visualisation des résultats | Frontend | TODO | P1 | 2.5 | Intermédiaire | 0.7j | 0.9j | 1.4j | À assigner | Lead | SPRINT-0004 | 0j | Tracé de graphes d'évolution Angular | Faible | 2026-07-03 |
-| EPIC-0010 | PHARMA | Epic | Dispensation en Pharmacie & Gestion des Prescriptions | Full-stack | BACKLOG | P1 | 7 | Intermédiaire | 1.8j | 2.6j | 4.2j | À assigner | Lead | À planifier | 0j | Cadrage initial et spécifications fonctionnelles/techniques rédigés | Moyen | 2026-07-03 |
-| STORY-1001 | PHARMA | User Story | API de récupération sécurisée d'ordonnance | Backend | TODO | P1 | 2 | Intermédiaire | 0.5j | 0.7j | 1.1j | À assigner | Lead | SPRINT-0004 | 0j | Authentification double facteur GUID + PIN | Moyen | 2026-07-03 |
-| STORY-1002 | PHARMA | User Story | Enregistrement de dispensation | Full-stack | TODO | P1 | 3 | Senior | 0.8j | 1.2j | 1.9j | À assigner | Lead | SPRINT-0004 | 0j | Coche de délivrance et gestion des génériques | Moyen | 2026-07-03 |
-| STORY-1003 | PHARMA | User Story | Traçabilité & Statut ordonnance | Full-stack | TODO | P2 | 2 | Intermédiaire | 0.5j | 0.7j | 1.2j | À assigner | Lead | SPRINT-0004 | 0j | Changements d'état de prescription et logs d'audit | Faible | 2026-07-03 |
+| STORY-0902 | LAB | User Story | API d'intégration labo externe pour téléversement | Backend | DONE | P1 | 3 | Senior | 0.8j | 1.1j | 1.8j | Antigravity | Lead | SPRINT-0004 | 0.8j | Aucun (tests unitaires et d'intégration validés avec succès) | Moyen | 2026-07-03 |
+| STORY-0903 | LAB | User Story | Écran praticien de visualisation des résultats | Frontend | DONE | P1 | 2.5 | Intermédiaire | 0.7j | 0.9j | 1.4j | Antigravity | Lead | SPRINT-0004 | 0.9j | Aucun (tests unitaires au vert) | Faible | 2026-07-03 |
+| STORY-0904 | LAB | User Story | Portail laboratoire — tableau de bord et demandes reçues | Full-stack | DONE | P1 | 2 | Intermédiaire | 0.5j | 0.7j | 1.2j | Codex / Antigravity | Lead | SPRINT-0004 | 0.5j | Aucun (rôle biologiste dédié et filtres de recherche intégrés) | Faible | 2026-07-03 |
+| STORY-0905 | LAB | User Story | Portail laboratoire — détail demande et changement de statut | Full-stack | DONE | P1 | 2 | Intermédiaire | 0.5j | 0.7j | 1.2j | Codex / Antigravity | Lead | SPRINT-0004 | 0.5j | Aucun (détail et transitions de statut validées et testées) | Faible | 2026-07-03 |
+| STORY-0906 | LAB | User Story | Portail laboratoire — saisie, validation résultat, PDF et historique | Full-stack | DONE | P1 | 3 | Senior | 0.8j | 1.1j | 1.8j | Codex / Antigravity | Lead | SPRINT-0004 | 0.7j | Aucun (saisie multi-analytes, historique et validation PDF strictes ok) | Faible | 2026-07-03 |
+| EPIC-0010 | PHARMA | Epic | Dispensation en Pharmacie & Gestion des Prescriptions + Portail Pharmacie CDC | Full-stack | DONE | P1 | 12 | Intermédiaire | 3.0j | 4.2j | 6.8j | Codex / Antigravity | Lead | SPRINT-0004 | 2.2j | Aucun (Epic entièrement livrée, portail pharmacie opérationnel et tests ok) | Faible | 2026-07-03 |
+| STORY-1001 | PHARMA | User Story | API de récupération sécurisée d'ordonnance | Backend | DONE | P1 | 2 | Intermédiaire | 0.4j | 0.6j | 1.0j | Antigravity | Lead | SPRINT-0004 | 0.4j | Aucun (API de vérification prescription validée par tests) | Faible | 2026-07-03 |
+| STORY-1002 | PHARMA | User Story | Enregistrement de dispensation | Backend | DONE | P1 | 3 | Senior | 0.8j | 1.1j | 1.8j | Antigravity | Lead | SPRINT-0004 | 0.8j | Aucun (enregistrement et validations de dispensation ok) | Faible | 2026-07-03 |
+| STORY-1003 | PHARMA | User Story | Traçabilité & Statut ordonnance | Full-stack | DONE | P1 | 2 | Intermédiaire | 0.3j | 0.5j | 0.8j | Antigravity | Lead | SPRINT-0004 | 0.3j | Aucun (gestion des statuts fully/partially/expired intégrée) | Faible | 2026-07-03 |
+| STORY-1004 | PHARMA | User Story | Portail pharmacie — vérification et détail ordonnance | Frontend | DONE | P1 | 2.5 | Intermédiaire | 0.6j | 0.8j | 1.3j | Codex | Lead | SPRINT-0004 | 0.4j | Aucun côté écran ; scan QR physique hors périmètre | Faible | 2026-07-03 |
+| STORY-1005 | PHARMA | User Story | Portail pharmacie — délivrance et historique | Full-stack | DONE | P1 | 2.5 | Intermédiaire | 0.6j | 0.8j | 1.3j | Codex / Antigravity | Lead | SPRINT-0004 | 0.7j | Aucun (tests unitaires frontend et d'intégration backend passés avec succès) | Faible | 2026-07-03 |
+| TICKET-1010 | PHARMA | Bug | Correction validation Hibernate du schema pharmacie | Back-end | DONE | P0 | 1 | Intermédiaire | 0.1j | 0.15j | 0.25j | Codex | Lead | SPRINT-0004 | 0.1j | Relancer le backend sur PostgreSQL local | Faible | 2026-07-03 |
+| TICKET-1011 | LAB | Bug | Correction validation Hibernate du schema lab_results | Back-end | DONE | P0 | 1 | Intermédiaire | 0.05j | 0.1j | 0.2j | Codex | Lead | SPRINT-0004 | 0.05j | Relancer le backend sur PostgreSQL local | Faible | 2026-07-03 |
+| TICKET-UI-PHARMACY-LAB-HEADER-FIX | PHARMA/LAB | Bug | Alignement du header pharmacie/labo et résolution du double header | Frontend | DONE | P1 | 2 | Intermédiaire | 0.15j | 0.2j | 0.3j | Antigravity | Lead | SPRINT-0004 | 0.15j | Aucun (enveloppe app-shell, page-header, guards de route configurés) | Faible | 2026-07-03 |
+
 
 ## Statuts autorisés
 

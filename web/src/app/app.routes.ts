@@ -37,12 +37,24 @@ export const routes: Routes = [
     data: { expectedRoles: ['MEDECIN', 'ADMIN_CLINIQUE'] },
   },
   {
+    path: 'clinic/lab-orders',
+    loadComponent: () => import('./clinic/lab/lab-orders-page.component').then(m => m.LabOrdersPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['BIOLOGISTE', 'ADMIN_JOPRELYS'] },
+  },
+  {
     path: 'unauthorized',
     loadComponent: () => import('./auth/unauthorized.component').then((module) => module.UnauthorizedComponent),
   },
   {
     path: 'verify/:documentId',
     loadComponent: () => import('./consultation/verification.component').then(m => m.VerificationComponent),
+  },
+  {
+    path: 'pharmacy/prescriptions',
+    loadComponent: () => import('./pharmacy/pharmacy-prescription-verify-page.component').then(m => m.PharmacyPrescriptionVerifyPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['PHARMACIEN', 'ADMIN_JOPRELYS'] },
   },
   {
     path: 'forgot-password',

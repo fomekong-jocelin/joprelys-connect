@@ -164,14 +164,22 @@
 
           <!-- Desktop Table -->
           <div class="hidden overflow-x-auto md:block">
-            <table class="ui-table">
+            <table class="ui-table min-w-[1060px]">
+              <colgroup>
+                <col class="w-[18%]" />
+                <col class="w-[25%]" />
+                <col class="w-[23%]" />
+                <col class="w-[10%]" />
+                <col class="w-[14%]" />
+                <col class="w-[10%]" />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Nom Complet</th>
-                  <th>N° DPU (National)</th>
-                  <th>N° Local</th>
-                  <th>Sexe</th>
-                  <th>Téléphone</th>
+                  <th class="whitespace-nowrap">N° DPU (National)</th>
+                  <th class="whitespace-nowrap">N° Local</th>
+                  <th class="whitespace-nowrap">Sexe</th>
+                  <th class="whitespace-nowrap">Téléphone</th>
                   <th class="text-right">Actions</th>
                 </tr>
               </thead>
@@ -179,14 +187,14 @@
                 @for (patient of list(); track patient.id) {
                   <tr>
                     <td>
-                      <div class="font-extrabold" style="color: var(--text-primary)">{{ patient.fullName }}</div>
-                      <div class="text-xs text-gray-400 mt-0.5">{{ patient.city }}</div>
+                      <div class="max-w-[180px] truncate font-extrabold" style="color: var(--text-primary)" [title]="patient.fullName">{{ patient.fullName }}</div>
+                      <div class="mt-0.5 max-w-[180px] truncate text-xs text-gray-400" [title]="patient.city">{{ patient.city }}</div>
                     </td>
-                    <td class="font-bold tracking-wider text-indigo-500 dark:text-indigo-400">{{ patient.globalPatientNumber }}</td>
-                    <td class="font-bold tracking-wider text-emerald-500 dark:text-emerald-400">{{ patient.localPatientNumber }}</td>
-                    <td>{{ patient.gender }}</td>
-                    <td>{{ patient.phone }}</td>
-                    <td class="text-right">
+                    <td class="whitespace-nowrap font-mono text-sm font-extrabold tracking-wide text-indigo-500 dark:text-indigo-400">{{ patient.globalPatientNumber }}</td>
+                    <td class="whitespace-nowrap font-mono text-sm font-extrabold tracking-wide text-emerald-500 dark:text-emerald-400">{{ patient.localPatientNumber }}</td>
+                    <td class="whitespace-nowrap">{{ patient.gender }}</td>
+                    <td class="whitespace-nowrap">{{ patient.phone }}</td>
+                    <td class="whitespace-nowrap text-right">
                       <app-ui-button variant="link" (pressed)="viewDetail(patient)">
                         Voir le dossier
                       </app-ui-button>

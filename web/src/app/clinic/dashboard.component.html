@@ -65,6 +65,23 @@
           </div>
         }
 
+        @if (currentSession.role === 'BIOLOGISTE' || currentSession.role === 'ADMIN_JOPRELYS') {
+          <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan dark:text-cyan-400">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3h8l-1 1v4.5l4.5 7.8A3 3 0 0116.9 21H7.1a3 3 0 01-2.6-4.7L9 8.5V4L8 3z" />
+                </svg>
+              </div>
+              <h2 class="font-display font-bold text-lg text-brand-night dark:text-white">{{ t('lab.dashboardTitle') }}</h2>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">{{ t('lab.dashboardSubtitle') }}</p>
+            <a routerLink="/clinic/lab-orders" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-[#22d3ee] hover:underline cursor-pointer">
+              {{ t('lab.dashboardLink') }}
+            </a>
+          </div>
+        }
+
         @if (currentSession.role === 'ADMIN_CLINIQUE') {
           <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-4">
@@ -94,9 +111,9 @@
               <h2 class="font-display font-bold text-lg text-brand-night dark:text-white">Validation Ordonnances</h2>
             </div>
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">Rechercher les ordonnances partagées, valider la délivrance des médicaments et signaler les contre-indications.</p>
-            <button class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-[#22d3ee] hover:underline cursor-pointer">
+            <a routerLink="/pharmacy/prescriptions" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-[#22d3ee] hover:underline cursor-pointer">
               Valider les prescriptions →
-            </button>
+            </a>
           </div>
         }
 
@@ -209,7 +226,7 @@
                           <!-- Bouton Clôturer -->
                           @if (canCloseVisit()) {
                             <button
-                              (click)="closeVisit(visit.id)"
+                              (click)="openCloseConfirmModal(visit.id)"
                               title="Clôturer la visite"
                               class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-colors cursor-pointer">
                               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -280,7 +297,7 @@
                       <!-- Bouton Clôturer -->
                       @if (canCloseVisit()) {
                         <button
-                          (click)="closeVisit(visit.id)"
+                          (click)="openCloseConfirmModal(visit.id)"
                           title="Clôturer la visite"
                           class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-colors cursor-pointer">
                           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -786,7 +803,7 @@
               Démarrer la consultation
             </span>
           </app-ui-button>
-          <app-ui-button variant="secondary" class="flex-1" (pressed)="closeVisit(selectedVisit.id)">
+          <app-ui-button variant="secondary" class="flex-1" (pressed)="openCloseConfirmModal(selectedVisit.id)">
             Clôturer la visite
           </app-ui-button>
         }
@@ -795,6 +812,51 @@
         </app-ui-button>
       </div>
 
+    </div>
+  }
+
+  <!-- Close Visit Confirmation Modal -->
+  @if (showCloseConfirmModal()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
+      <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-2xl max-w-sm w-full shadow-2xl p-6 relative">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/20 flex items-center justify-center text-red-500 shrink-0">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-display font-bold text-base text-brand-night dark:text-white">Clôturer la visite</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Cette action est irréversible.</p>
+          </div>
+        </div>
+
+        <p class="text-sm text-slate-600 dark:text-slate-300 mb-5 leading-relaxed">
+          Voulez-vous vraiment clôturer cette visite ? Un document médical sera généré automatiquement.
+        </p>
+
+        @if (closeVisitError()) {
+          <div class="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-red-700 dark:text-red-300 font-semibold mb-4 leading-relaxed">
+            {{ closeVisitError() }}
+          </div>
+        }
+
+        <div class="flex justify-end gap-3">
+          <app-ui-button variant="secondary" (pressed)="cancelCloseConfirm()" [disabled]="isClosingVisit()">
+            Annuler
+          </app-ui-button>
+          <app-ui-button variant="primary" (pressed)="confirmCloseVisit()" [disabled]="isClosingVisit()">
+            <span class="flex items-center gap-1.5">
+              @if (isClosingVisit()) {
+                <div class="w-3.5 h-3.5 rounded-full border-2 border-slate-200 border-t-white animate-spin"></div>
+                Clôture...
+              } @else {
+                Confirmer la clôture
+              }
+            </span>
+          </app-ui-button>
+        </div>
+      </div>
     </div>
   }
 

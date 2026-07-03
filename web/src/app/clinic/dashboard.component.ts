@@ -34,6 +34,12 @@ export class DashboardComponent implements OnInit {
   showVisitDrawer = signal(false);
   selectedVisitForDrawer = signal<Visit | null>(null);
 
+  // Close confirmation modal state
+  showCloseConfirmModal = signal(false);
+  visitIdToClose = signal<string | null>(null);
+  isClosingVisit = signal(false);
+  closeVisitError = signal<string | null>(null);
+
   // Vitals entry modal state
   showVitalsModal = signal(false);
   selectedVisitForVitals = signal<Visit | null>(null);
@@ -71,7 +77,9 @@ export class DashboardComponent implements OnInit {
     this.queueError.set('');
     this.visitApi.getActiveVisits().subscribe({
       next: (data) => {
-        this.activeVisits.set(data);
+        this.activeVisits.set([...data].sort((a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        ));
         this.isLoadingQueue.set(false);
 
         // Update selected visit in the drawer if it's currently open
@@ -102,13 +110,31 @@ export class DashboardComponent implements OnInit {
     this.selectedVisitForDrawer.set(null);
   }
 
-  closeVisit(visitId: string): void {
-    if (!confirm('Voulez-vous vraiment clôturer cette visite ?')) {
-      return;
+  openCloseConfirmModal(visitId: string): void {
+    this.visitIdToClose.set(visitId);
+    this.closeVisitError.set(null);
+    this.showCloseConfirmModal.set(true);
+  }
+
+  cancelCloseConfirm(): void {
+    if (!this.isClosingVisit()) {
+      this.showCloseConfirmModal.set(false);
+      this.visitIdToClose.set(null);
     }
+  }
+
+  confirmCloseVisit(): void {
+    const visitId = this.visitIdToClose();
+    if (!visitId || this.isClosingVisit()) return;
+
+    this.isClosingVisit.set(true);
+    this.closeVisitError.set(null);
 
     this.visitApi.closeVisit(visitId).subscribe({
       next: () => {
+        this.isClosingVisit.set(false);
+        this.showCloseConfirmModal.set(false);
+        this.visitIdToClose.set(null);
         const currentDrawerVisit = this.selectedVisitForDrawer();
         if (currentDrawerVisit && currentDrawerVisit.id === visitId) {
           this.closeVisitDrawer();
@@ -116,7 +142,8 @@ export class DashboardComponent implements OnInit {
         this.loadQueue();
       },
       error: (err) => {
-        alert(err.error?.detail || 'Erreur lors de la clôtures de la visite.');
+        this.isClosingVisit.set(false);
+        this.closeVisitError.set(err.error?.detail || 'Erreur lors de la clôture de la visite.');
       }
     });
   }

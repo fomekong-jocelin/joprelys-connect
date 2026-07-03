@@ -20,11 +20,14 @@ public class PrescriptionService {
 
 	private final PrescriptionRepository prescriptionRepository;
 	private final ConsultationRepository consultationRepository;
+	private final PrescriptionNumberGenerator prescriptionNumberGenerator;
 
 	public PrescriptionService(PrescriptionRepository prescriptionRepository,
-			ConsultationRepository consultationRepository) {
+			ConsultationRepository consultationRepository,
+			PrescriptionNumberGenerator prescriptionNumberGenerator) {
 		this.prescriptionRepository = prescriptionRepository;
 		this.consultationRepository = consultationRepository;
+		this.prescriptionNumberGenerator = prescriptionNumberGenerator;
 	}
 
 	@Transactional
@@ -33,7 +36,14 @@ public class PrescriptionService {
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Consultation introuvable."));
 
 		PrescriptionEntity prescription = prescriptionRepository.findByConsultationId(consultationId)
-				.orElseGet(() -> new PrescriptionEntity(consultation));
+				.orElseGet(() -> {
+					PrescriptionEntity newPresc = new PrescriptionEntity(consultation);
+					newPresc.setPrescriptionNumber(prescriptionNumberGenerator.generateNextPrescriptionNumber());
+					newPresc.setPinCode(generateRandomPin());
+					newPresc.setExpiresAt(java.time.Instant.now().plus(90, java.time.temporal.ChronoUnit.DAYS));
+					newPresc.setStatus("ACTIVE");
+					return newPresc;
+				});
 
 		// Remplacer les items (orphanRemoval)
 		prescription.getItems().clear();
@@ -56,5 +66,15 @@ public class PrescriptionService {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Consultation introuvable.");
 		}
 		return prescriptionRepository.findByConsultationId(consultationId);
+	}
+
+	private String generateRandomPin() {
+		String chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		java.security.SecureRandom random = new java.security.SecureRandom();
+		StringBuilder sb = new StringBuilder(4);
+		for (int i = 0; i < 4; i++) {
+			sb.append(chars.charAt(random.nextInt(chars.length())));
+		}
+		return sb.toString();
 	}
 }

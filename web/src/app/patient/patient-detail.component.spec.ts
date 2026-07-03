@@ -8,9 +8,10 @@ import { AuditApiService } from '../audit/audit-api.service';
 import { of } from 'rxjs';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
-import { Patient } from './patient.models';
+import { Patient, LabOrder, LabResult } from './patient.models';
 import { Consultation } from '../consultation/consultation.models';
 import { AuditLog } from '../audit/audit.models';
+import { PatientApiService } from './patient-api.service';
 
 describe('PatientDetailComponent', () => {
   let component: PatientDetailComponent;
@@ -19,6 +20,7 @@ describe('PatientDetailComponent', () => {
   let mockVisitApi: any;
   let mockConsultationApi: any;
   let mockAuditApi: any;
+  let mockPatientApi: any;
   let mockI18n: any;
 
   const mockPatient: Patient = {
@@ -73,6 +75,41 @@ describe('PatientDetailComponent', () => {
     }
   ];
 
+  const mockLabOrders: LabOrder[] = [
+    {
+      id: 'lo-1',
+      examRequestNumber: 'EXAM-REQ-20260703-000042',
+      patientId: 'pat-1',
+      patientName: 'Jean Patient',
+      requesterPractitionerId: 'doc-1',
+      requesterPractitionerName: 'Dr. Alpha',
+      sourceOrganizationId: 'org-1',
+      examType: 'LABORATOIRE',
+      exams: ['GLYSEMIE_A_JEUN'],
+      priority: 'NORMALE',
+      status: 'VALIDATED',
+      createdAt: '2026-07-03T10:00:00Z'
+    }
+  ];
+
+  const mockLabResults: LabResult[] = [
+    {
+      id: 'lr-1',
+      resultNumber: 'EXAM-RES-20260703-000001',
+      examRequestNumber: 'EXAM-REQ-20260703-000042',
+      patientId: 'pat-1',
+      validatorName: 'Dr. Jean Kamdem',
+      analyteName: 'Glucose à jeun',
+      value: '1.45',
+      unit: 'g/L',
+      referenceRange: '0.70 - 1.10',
+      interpretation: 'ELEVE',
+      comment: 'Patient à jeun depuis 12h',
+      createdAt: '2026-07-03T10:15:00Z',
+      validatedAt: '2026-07-03T10:15:00Z'
+    }
+  ];
+
   beforeEach(async () => {
     mockAuthToken = {
       session: signal({
@@ -100,6 +137,11 @@ describe('PatientDetailComponent', () => {
       getOrganizationLogs: vi.fn().mockReturnValue(of([]))
     };
 
+    mockPatientApi = {
+      getPatientLabOrders: vi.fn().mockReturnValue(of(mockLabOrders)),
+      getPatientLabResults: vi.fn().mockReturnValue(of(mockLabResults))
+    };
+
     mockI18n = {
       t: vi.fn().mockImplementation((key) => key)
     };
@@ -112,6 +154,7 @@ describe('PatientDetailComponent', () => {
         { provide: VisitApiService, useValue: mockVisitApi },
         { provide: ConsultationApiService, useValue: mockConsultationApi },
         { provide: AuditApiService, useValue: mockAuditApi },
+        { provide: PatientApiService, useValue: mockPatientApi },
         { provide: I18nService, useValue: mockI18n }
       ]
     }).compileComponents();
@@ -170,6 +213,25 @@ describe('PatientDetailComponent', () => {
     expect(mockAuditApi.getPatientLogs).toHaveBeenCalledWith('pat-1');
     expect(component.auditLogs()).toEqual(mockAuditLogs);
     expect(component.activeTab()).toBe('audit');
+  });
+
+  it('should load lab orders and results when lab tab is selected', () => {
+    component.setActiveTab('lab');
+    expect(mockPatientApi.getPatientLabOrders).toHaveBeenCalledWith('pat-1');
+    expect(mockPatientApi.getPatientLabResults).toHaveBeenCalledWith('pat-1');
+    expect(component.labOrders()).toEqual(mockLabOrders);
+    expect(component.labResults()).toEqual(mockLabResults);
+    expect(component.activeTab()).toBe('lab');
+  });
+
+  it('should compute analyteNames, filteredResults, and chartPoints correctly', () => {
+    component.setActiveTab('lab');
+    expect(component.analyteNames()).toEqual(['Glucose à jeun']);
+    expect(component.selectedAnalyte()).toBe('Glucose à jeun');
+    expect(component.filteredResults()).toEqual(mockLabResults);
+    expect(component.chartPoints().length).toBe(1);
+    expect(component.chartPoints()[0].val).toBe(1.45);
+    expect(component.chartPoints()[0].interpretation).toBe('ELEVE');
   });
 
   it('should evaluate canViewAudit correctly based on roles', () => {

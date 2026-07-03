@@ -77,6 +77,25 @@ public class VisitService {
 		return savedVisit;
 	}
 
+	@Transactional
+	public VisitEntity cancelVisit(UUID visitId) {
+		VisitEntity visit = visitRepository.findById(visitId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
+
+		if (!"EN_COURS".equals(visit.getStatus())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seule une visite active peut être annulée.");
+		}
+
+		visit.setStatus("ANNULEE");
+		visit.setClosedAt(Instant.now());
+
+		if (visit.getPatient() != null) {
+			visit.getPatient().getFullName();
+		}
+
+		return visitRepository.save(visit);
+	}
+
 	@Transactional(readOnly = true)
 	public VisitEntity getVisit(UUID id) {
 		return visitRepository.findById(id)

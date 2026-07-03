@@ -25,3 +25,42 @@ export interface CreateLabOrderRequest {
   reason?: string;
   priority?: string;
 }
+
+export interface LabResultItemRequest {
+  analyteName: string;
+  value: string;
+  unit?: string;
+  referenceRange?: string;
+  interpretation?: string;
+  comment?: string;
+}
+
+export interface LabResultUploadRequest {
+  examRequestNumber: string;
+  validatorName: string;
+  sampleCollectedAt?: string;
+  resultAt?: string;
+  validatedAt?: string;
+  conclusion?: string;
+  results: LabResultItemRequest[];
+  pdfBase64?: string;
+}
+
+export interface LabResult {
+  id: string;
+  resultNumber: string;
+  examRequestNumber: string;
+  patientId: string;
+  validatorName: string;
+  analyteName: string;
+  value: string;
+  unit?: string;
+  referenceRange?: string;
+  interpretation?: string;
+  comment?: string;
+  pdfFilePath?: string;
+  sampleCollectedAt?: string;
+  resultAt?: string;
+  validatedAt?: string;
+  createdAt: string;
+}

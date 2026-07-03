@@ -123,7 +123,7 @@ Cette user story consiste à modéliser et implémenter le cycle de vie de base 
 
 ## 13. Statut final
 
-Statut : REVIEW
+Statut : DONE
 
 ## 14. Impact version / SemVer
 

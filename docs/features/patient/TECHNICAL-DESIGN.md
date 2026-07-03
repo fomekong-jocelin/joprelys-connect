@@ -68,3 +68,21 @@ Tous les endpoints de `/api/patients` requièrent une authentification et sont f
 2. **Tests d'Intégration** : Validation de la création de patients et de la recherche.
 3. **Tests d'Isolation** : Vérification stricte qu'un utilisateur de l'organisation A ne peut pas lister ou lire par ID les patients de l'organisation B.
 4. **Tests Frontend** : Validation de l'affichage mobile-first et de la soumission de formulaires réactifs.
+
+## 7. Correction UI — Tableau desktop patient (2026-07-03)
+
+La correction de lisibilité du tableau patient reste limitee au template Angular `patient-list.component.html`.
+
+Approche technique :
+
+1. Ajouter une largeur minimale au tableau desktop pour eviter la compression excessive des colonnes contenant les identifiants.
+2. Definir des largeurs de colonnes via `colgroup` pour stabiliser la mise en page.
+3. Appliquer `whitespace-nowrap` sur les donnees critiques : DPU national, numero local, sexe, telephone et action.
+4. Conserver `overflow-x-auto` sur le conteneur afin de preserver le responsive desktop/tablette sans impacter la vue mobile.
+
+Impacts exclus :
+
+- Aucun endpoint REST modifie.
+- Aucun modele TypeScript modifie.
+- Aucun changement de logique metier ou de securite.
+- Aucun changement de theme global.

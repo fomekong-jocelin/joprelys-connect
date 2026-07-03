@@ -5,6 +5,7 @@ import { PatientVisitsListComponent } from './components/patient-visits-list.com
 import { PatientPortalMeResponse, PatientPortalService } from './services/patient-portal.service';
 import { PatientConsentsListComponent } from './components/patient-consents-list.component';
 import { PatientAuditListComponent } from './components/patient-audit-list.component';
+import { I18nService } from '../../core/i18n/i18n.service';
 
 @Component({
   selector: 'app-patient-dashboard',
@@ -12,23 +13,37 @@ import { PatientAuditListComponent } from './components/patient-audit-list.compo
   imports: [AppShellComponent, PatientProfileCardComponent, PatientVisitsListComponent, PatientConsentsListComponent, PatientAuditListComponent],
   template: `
     <app-shell>
-      <div class="app-container py-6 flex flex-col gap-5">
-
-        <!-- Header -->
-        <div class="flex flex-col gap-0.5">
-          <h1 class="font-display text-2xl font-extrabold" style="color: var(--text-primary)">
+      <div class="app-container-wide py-6 lg:py-8 flex flex-col gap-5">
+        <div class="flex flex-col gap-1">
+          <p class="ui-label">{{ i18n.t('patient.dashboard.portal') }}</p>
+          <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h1 class="font-display text-2xl lg:text-3xl font-extrabold leading-tight" style="color: var(--text-primary)">
+                @if (patientData()) {
+                  {{ i18n.t('patient.dashboard.greeting') }}, {{ (patientData()!.fullName.split(' ')[0]) || patientData()!.fullName }}
+                } @else {
+                  {{ i18n.t('patient.dashboard.title') }}
+                }
+              </h1>
+              <p class="text-sm text-[var(--text-secondary)]">{{ i18n.t('patient.dashboard.subtitle') }}</p>
+            </div>
             @if (patientData()) {
-              Bonjour, {{ (patientData()!.fullName.split(' ')[0]) || patientData()!.fullName }} 👋
-            } @else {
-              Mon Espace Santé
+              <div class="hidden md:flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                <span class="px-2 py-1 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface)]">
+                  {{ patientData()!.consultations.length }}
+                  {{ i18n.t(patientData()!.consultations.length > 1 ? 'patient.dashboard.consultationCountPlural' : 'patient.dashboard.consultationCount') }}
+                </span>
+                <span class="px-2 py-1 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface)]">
+                  {{ i18n.t('patient.dashboard.readOnlyProfile') }}
+                </span>
+              </div>
             }
-          </h1>
-          <p class="text-xs text-[var(--text-secondary)]">Votre espace santé connecté Joprelys.</p>
+          </div>
         </div>
 
         @if (isLoading()) {
-          <div class="flex items-center justify-center p-12">
-            <div class="w-8 h-8 border-4 border-[var(--brand-primary)] border-t-transparent rounded-full animate-spin"></div>
+          <div class="ui-card-subtle flex items-center justify-center p-12">
+            <div class="w-8 h-8 border-4 border-[var(--brand-primary)] border-t-transparent rounded-full animate-spin" [attr.aria-label]="i18n.t('common.loading')"></div>
           </div>
         } @else if (error()) {
           <div class="p-4 rounded-[var(--radius-brand-md)] bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/40 text-rose-700 dark:text-rose-300 text-sm font-semibold">
@@ -36,29 +51,37 @@ import { PatientAuditListComponent } from './components/patient-audit-list.compo
           </div>
         } @else if (patientData()) {
 
-          <!-- Bannière profil compact (mobile-first) -->
-          <div class="ui-card p-4 flex items-center gap-4">
+          <!--<div class="ui-card-subtle p-4 lg:p-5 flex flex-col gap-4 md:flex-row md:items-center">
             <div class="ui-avatar w-12 h-12 text-lg flex items-center justify-center font-bold shrink-0">
               {{ patientData()!.fullName.charAt(0) }}
             </div>
-            <div class="min-w-0 flex-1">
-              <p class="font-display font-bold text-sm text-[var(--text-primary)] truncate">{{ patientData()!.fullName }}</p>
-              <p class="text-[11px] text-[var(--text-muted)] font-mono truncate">N° {{ patientData()!.globalPatientNumber }}</p>
+            <div class="min-w-0 flex-1 space-y-1">
+              <p class="font-display font-extrabold text-base text-[var(&#45;&#45;text-primary)] truncate">{{ patientData()!.fullName }}</p>
+              <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+                <span class="ui-label normal-case tracking-normal">{{ i18n.t('patient.dashboard.nationalDpu') }}</span>
+                <code class="block max-w-full overflow-x-auto whitespace-nowrap rounded-[var(&#45;&#45;radius-brand-sm)] bg-[var(&#45;&#45;app-surface-muted)] px-2 py-1 font-mono text-[11px] font-bold text-[var(&#45;&#45;text-secondary)]">
+                  {{ patientData()!.globalPatientNumber }}
+                </code>
+              </div>
             </div>
-            <!-- Infos clés masquées sur très petit écran, visibles à partir de sm -->
-            <div class="hidden sm:flex items-center gap-4 text-xs text-[var(--text-secondary)]">
-              <span class="hidden md:block">{{ patientData()!.birthDate }}</span>
-              <span>{{ patientData()!.phone }}</span>
+            <div class="grid grid-cols-2 gap-3 text-xs text-[var(&#45;&#45;text-secondary)] sm:flex sm:items-center sm:gap-5">
+              <div>
+                <span class="ui-label">{{ i18n.t('patient.profile.birth') }}</span>
+                <span class="font-semibold text-[var(&#45;&#45;text-primary)]">{{ patientData()!.birthDate }}</span>
+              </div>
+              <div>
+                <span class="ui-label">{{ i18n.t('patients.phone') }}</span>
+                <span class="font-semibold text-[var(&#45;&#45;text-primary)] whitespace-nowrap">{{ patientData()!.phone }}</span>
+              </div>
             </div>
-          </div>
+          </div>-->
 
-          <!-- Cartes de navigation : scroll horizontal sur mobile, grille 3 col sur md+ -->
           <div class="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3 snap-x snap-mandatory">
-            <!-- Ordonnances -->
-            <div
+            <button
+              type="button"
               (click)="activeTab.set('visits')"
-              [class.border-[var(--brand-primary)]]="activeTab() === 'visits'"
-              class="ui-card p-3.5 flex items-center gap-3 transition-all duration-200 hover:border-[var(--brand-primary)] hover:shadow-sm cursor-pointer snap-start shrink-0 w-[220px] md:w-auto"
+              [attr.aria-pressed]="activeTab() === 'visits'"
+              [class]="tabClass('visits')"
             >
               <div class="p-2 rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
@@ -67,20 +90,20 @@ import { PatientAuditListComponent } from './components/patient-audit-list.compo
               </div>
               <div class="min-w-0">
                 <div class="flex items-center gap-1.5">
-                  <span class="font-display font-bold text-sm text-[var(--text-primary)] truncate">Ordonnances</span>
+                  <span class="font-display font-bold text-sm text-[var(--text-primary)] truncate">{{ i18n.t('patient.dashboard.prescriptions') }}</span>
                   <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-[var(--radius-brand-xs)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] shrink-0">
                     {{ patientData()?.consultations?.length || 0 }}
                   </span>
                 </div>
-                <p class="text-[11px] text-[var(--text-muted)] truncate">Documents médicaux</p>
+                <p class="text-[11px] text-[var(--text-muted)] truncate">{{ i18n.t('patient.dashboard.medicalDocuments') }}</p>
               </div>
-            </div>
+            </button>
 
-            <!-- Consentements -->
-            <div
+            <button
+              type="button"
               (click)="activeTab.set('consents')"
-              [class.border-[var(--brand-primary)]]="activeTab() === 'consents'"
-              class="ui-card p-3.5 flex items-center gap-3 transition-all duration-200 hover:border-[var(--brand-primary)] hover:shadow-sm cursor-pointer snap-start shrink-0 w-[220px] md:w-auto"
+              [attr.aria-pressed]="activeTab() === 'consents'"
+              [class]="tabClass('consents')"
             >
               <div class="p-2 rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
@@ -88,16 +111,16 @@ import { PatientAuditListComponent } from './components/patient-audit-list.compo
                 </svg>
               </div>
               <div class="min-w-0">
-                <span class="font-display font-bold text-sm text-[var(--text-primary)]">Consentements</span>
-                <p class="text-[11px] text-[var(--text-muted)] truncate">Partage de données</p>
+                <span class="font-display font-bold text-sm text-[var(--text-primary)]">{{ i18n.t('patient.dashboard.consent') }}</span>
+                <p class="text-[11px] text-[var(--text-muted)] truncate">{{ i18n.t('patient.dashboard.dataSharing') }}</p>
               </div>
-            </div>
+            </button>
 
-            <!-- Sécurité & Audit -->
-            <div
+            <button
+              type="button"
               (click)="activeTab.set('audit')"
-              [class.border-[var(--brand-primary)]]="activeTab() === 'audit'"
-              class="ui-card p-3.5 flex items-center gap-3 transition-all duration-200 hover:border-[var(--brand-primary)] hover:shadow-sm cursor-pointer snap-start shrink-0 w-[220px] md:w-auto"
+              [attr.aria-pressed]="activeTab() === 'audit'"
+              [class]="tabClass('audit')"
             >
               <div class="p-2 rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
@@ -105,20 +128,17 @@ import { PatientAuditListComponent } from './components/patient-audit-list.compo
                 </svg>
               </div>
               <div class="min-w-0">
-                <span class="font-display font-bold text-sm text-[var(--text-primary)]">Sécurité & Audit</span>
-                <p class="text-[11px] text-[var(--text-muted)] truncate">Accès à votre DPU</p>
+                <span class="font-display font-bold text-sm text-[var(--text-primary)]">{{ i18n.t('patient.dashboard.securityAudit') }}</span>
+                <p class="text-[11px] text-[var(--text-muted)] truncate">{{ i18n.t('patient.dashboard.dpuAccess') }}</p>
               </div>
-            </div>
+            </button>
           </div>
 
-          <!-- Contenu principal : plein écran sur mobile, 3 colonnes sur lg -->
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-            <!-- Profil détaillé : masqué sur mobile (déjà en bannière), visible sur lg -->
-            <div class="hidden lg:block lg:col-span-1">
+          <div class="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] gap-5 items-start">
+            <div class="hidden lg:block lg:sticky lg:top-6">
               <app-patient-profile-card [patient]="patientData()!" />
             </div>
-            <!-- Contenu onglet actif : plein écran mobile, 2/3 desktop -->
-            <div class="col-span-1 lg:col-span-2">
+            <div class="min-w-0">
               @if (activeTab() === 'visits') {
                 <app-patient-visits-list
                   [consultations]="patientData()!.consultations"
@@ -132,11 +152,10 @@ import { PatientAuditListComponent } from './components/patient-audit-list.compo
             </div>
           </div>
 
-          <!-- Profil étendu sur mobile uniquement (en bas, dépliable) -->
           <div class="lg:hidden">
-            <details class="ui-card">
+            <details class="ui-card-subtle">
               <summary class="p-4 font-display font-bold text-sm text-[var(--text-primary)] cursor-pointer flex items-center justify-between gap-2">
-                <span>Mon profil complet</span>
+                <span>{{ i18n.t('patient.dashboard.fullProfile') }}</span>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-[var(--text-muted)]">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
                 </svg>
@@ -153,12 +172,20 @@ import { PatientAuditListComponent } from './components/patient-audit-list.compo
 })
 export class PatientDashboardComponent implements OnInit {
   private readonly portalService = inject(PatientPortalService);
+  readonly i18n = inject(I18nService);
 
   readonly activeTab = signal<'visits' | 'consents' | 'audit'>('visits');
   readonly patientData = signal<PatientPortalMeResponse | null>(null);
   readonly isLoading = signal(false);
   readonly error = signal('');
   readonly expandedConsultations = signal<Record<string, boolean>>({});
+
+  tabClass(tab: 'visits' | 'consents' | 'audit'): string {
+    const base = 'ui-card-subtle p-3.5 flex items-center gap-3 text-left transition-colors cursor-pointer snap-start shrink-0 w-[236px] md:w-auto';
+    return this.activeTab() === tab
+      ? `${base} border-[var(--brand-primary)] bg-[var(--app-surface)]`
+      : `${base} hover:border-[var(--brand-primary)]`;
+  }
 
   toggleConsultation(id: string): void {
     this.expandedConsultations.update(prev => ({ ...prev, [id]: !prev[id] }));
@@ -178,7 +205,7 @@ export class PatientDashboardComponent implements OnInit {
       },
       error: (err) => {
         this.isLoading.set(false);
-        this.error.set(err.error?.detail || "Impossible de charger les données du portail patient.");
+        this.error.set(err.error?.detail || this.i18n.t('patients.loadError'));
       }
     });
   }
@@ -196,7 +223,7 @@ export class PatientDashboardComponent implements OnInit {
         window.URL.revokeObjectURL(url);
       },
       error: () => {
-        alert("Erreur lors du téléchargement de l'ordonnance.");
+        alert(this.i18n.t('patients.downloadPdfError'));
       }
     });
   }

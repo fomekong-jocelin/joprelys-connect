@@ -13,5 +13,7 @@ public interface LabOrderRepository extends JpaRepository<LabOrderEntity, UUID> 
 
 	List<LabOrderEntity> findByPatientIdOrderByCreatedAtDesc(UUID patientId);
 
+	List<LabOrderEntity> findAllByOrderByCreatedAtDesc();
+
 	long countByExamRequestNumberStartingWith(String prefix);
 }

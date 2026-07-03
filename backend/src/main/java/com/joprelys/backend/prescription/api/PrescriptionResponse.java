@@ -8,7 +8,11 @@ import java.util.UUID;
 public record PrescriptionResponse(
 		UUID id,
 		UUID consultationId,
+		String prescriptionNumber,
 		List<PrescriptionItemResponse> items,
+		String pinCode,
+		String status,
+		Instant expiresAt,
 		Instant createdAt,
 		Instant updatedAt
 ) {
@@ -16,7 +20,11 @@ public record PrescriptionResponse(
 		return new PrescriptionResponse(
 				e.getId(),
 				e.getConsultation().getId(),
+				e.getPrescriptionNumber(),
 				e.getItems().stream().map(PrescriptionItemResponse::fromEntity).toList(),
+				e.getPinCode(),
+				e.getStatus(),
+				e.getExpiresAt(),
 				e.getCreatedAt(),
 				e.getUpdatedAt()
 		);
