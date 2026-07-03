@@ -8,13 +8,13 @@
 |---|---|
 | Dernière mise à jour | 2026-07-03 |
 | Responsable mise à jour | Antigravity |
-| État global | Terminé (Sprint 0004 — Portails pharmacie et laboratoire livrés et fonctionnels, tests unitaires et intégration OK) |
-| Risques majeurs | Aucun (tests unitaires frontend et d'intégration backend passés avec succès) |
-| Prochaine priorité | Préparer la release de livraison du Sprint 0004 |
-| Sprint courant | SPRINT-0004 |
+| État global | Planification (Sprint 0005 — DevOps CI/CD, audit OWASP, stock pharmacie réel et import FHIR labo) |
+| Risques majeurs | Risque de décalage sur l'import FHIR DiagnosticReport et la synchronisation concurrente des stocks |
+| Prochaine priorité | Démarrer l'automatisation CI/CD (STORY-1101) et l'audit de sécurité OWASP (STORY-1102) |
+| Sprint courant | SPRINT-0005 |
 
 | Capacité sprint | 15.0j |
-| Charge engagée | 7.45j |
+| Charge engagée | 10.5j |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
@@ -84,7 +84,12 @@
 | TICKET-1010 | PHARMA | Bug | Correction validation Hibernate du schema pharmacie | Back-end | DONE | P0 | 1 | Intermédiaire | 0.1j | 0.15j | 0.25j | Codex | Lead | SPRINT-0004 | 0.1j | Relancer le backend sur PostgreSQL local | Faible | 2026-07-03 |
 | TICKET-1011 | LAB | Bug | Correction validation Hibernate du schema lab_results | Back-end | DONE | P0 | 1 | Intermédiaire | 0.05j | 0.1j | 0.2j | Codex | Lead | SPRINT-0004 | 0.05j | Relancer le backend sur PostgreSQL local | Faible | 2026-07-03 |
 | TICKET-UI-PHARMACY-LAB-HEADER-FIX | PHARMA/LAB | Bug | Alignement du header pharmacie/labo et résolution du double header | Frontend | DONE | P1 | 2 | Intermédiaire | 0.15j | 0.2j | 0.3j | Antigravity | Lead | SPRINT-0004 | 0.15j | Aucun (enveloppe app-shell, page-header, guards de route configurés) | Faible | 2026-07-03 |
-
+| STORY-1101 | DEVOPS | User Story | CI/CD Automatisation & Compilation strictes | Full-stack | TODO | P0 | 3 | Senior | 0.7j | 1.0j | 1.8j | À assigner | Lead | SPRINT-0005 | 0j | Mettre en place le fichier de workflow CI | Faible | 2026-07-03 |
+| STORY-1102 | PAT_PORTAL | User Story | Audit OWASP & Sécurisation IDOR Portail Patient | Full-stack | TODO | P0 | 5 | Senior | 1.1j | 1.5j | 2.5j | À assigner | Lead | SPRINT-0005 | 0j | Sécuriser l'accès aux DPU par rapport à l'utilisateur JWT | Fort | 2026-07-03 |
+| STORY-1103 | PHARMA | User Story | Gestion réelle des stocks de médicaments | Full-stack | TODO | P1 | 8 | Intermédiaire | 1.8j | 2.3j | 4.0j | À assigner | Lead | SPRINT-0005 | 0j | Créer la table drug_stocks et décrémentation | Moyen | 2026-07-03 |
+| STORY-1104 | LAB | User Story | Import de résultats structurés de laboratoire (FHIR/HL7) | Full-stack | TODO | P1 | 5 | Senior | 1.2j | 1.6j | 2.8j | À assigner | Lead | SPRINT-0005 | 0j | Implémenter le parseur FHIR DiagnosticReport | Fort | 2026-07-03 |
+| STORY-1105 | QUAL | User Story | Nettoyage de la dette technique & Application de la checklist QA | Full-stack | TODO | P2 | 2 | Junior | 0.4j | 0.5j | 0.8j | À assigner | Lead | SPRINT-0005 | 0j | Lancer audit statique et corriger warnings | Faible | 2026-07-03 |
+ 
 
 ## Statuts autorisés
 
