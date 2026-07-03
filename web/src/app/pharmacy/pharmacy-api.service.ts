@@ -6,6 +6,8 @@ import {
   PharmacyDispenseRequest,
   PharmacyVerifyRequest,
   PharmacyVerifyResponse,
+  DrugStockResponse,
+  CreateDrugStockRequest,
 } from './pharmacy.models';
 
 @Injectable({
@@ -14,6 +16,7 @@ import {
 export class PharmacyApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/public/pharmacy/prescriptions';
+  private readonly stocksUrl = '/api/pharmacy/stocks';
 
   verifyPrescription(request: PharmacyVerifyRequest): Observable<PharmacyVerifyResponse> {
     return this.http.post<PharmacyVerifyResponse>(`${this.baseUrl}/verify`, request);
@@ -25,5 +28,17 @@ export class PharmacyApiService {
 
   getDispensationHistory(request: PharmacyVerifyRequest): Observable<PharmacyDispensationHistoryEntry[]> {
     return this.http.post<PharmacyDispensationHistoryEntry[]>(`${this.baseUrl}/history`, request);
+  }
+
+  getStocks(): Observable<DrugStockResponse[]> {
+    return this.http.get<DrugStockResponse[]>(this.stocksUrl);
+  }
+
+  createOrUpdateStock(request: CreateDrugStockRequest): Observable<DrugStockResponse> {
+    return this.http.post<DrugStockResponse>(this.stocksUrl, request);
+  }
+
+  getLowStockAlerts(): Observable<DrugStockResponse[]> {
+    return this.http.get<DrugStockResponse[]>(`${this.stocksUrl}/alerts`);
   }
 }

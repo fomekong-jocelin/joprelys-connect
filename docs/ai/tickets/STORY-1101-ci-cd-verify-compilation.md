@@ -8,10 +8,10 @@ Mettre en place un pipeline GitHub Actions / GitLab CI pour exécuter automatiqu
  
 ## 2. Critères d'acceptation
  
-- [ ] Pipeline CI activé sur les branches et les Pull Requests.
-- [ ] Le build Maven backend doit compiler et exécuter tous les 128 tests sans erreur.
-- [ ] Le build frontend Angular doit compiler en mode strict et valider les 58 tests.
-- [ ] Aucune variable d'environnement ou clé secrète ne doit être versionnée.
+- [x] Pipeline CI activé sur les branches et les Pull Requests.
+- [x] Le build Maven backend doit compiler et exécuter tous les 128 tests sans erreur.
+- [x] Le build frontend Angular doit compiler en mode strict et valider les 58 tests.
+- [x] Aucune variable d'environnement ou clé secrète ne doit être versionnée.
  
 ## 3. Pilotage projet
  
@@ -36,14 +36,14 @@ Mettre en place un pipeline GitHub Actions / GitLab CI pour exécuter automatiqu
  
 ## 4. Action plan
  
-- [ ] Créer le fichier de workflow CI (ex: `.github/workflows/ci.yml`).
-- [ ] Configurer les étapes Java/Maven (Java 21+, mise en cache du repo `.m2`).
-- [ ] Configurer les étapes Node.js (Node 22+, `npm ci`, build Angular, tests).
-- [ ] Mettre à jour `CHANGELOG.md` et `PROJECT-TRACKING.md`.
+- [x] Créer le fichier de workflow CI (ex: `.github/workflows/ci.yml`).
+- [x] Configurer les étapes Java/Maven (Java 21+, mise en cache du repo `.m2`).
+- [x] Configurer les étapes Node.js (Node 22+, `npm ci`, build Angular, tests).
+- [x] Mettre à jour `CHANGELOG.md` et `PROJECT-TRACKING.md`.
  
 ## 13. Statut final
  
-Statut : TODO
+Statut : DONE
  
 ## 14. Impact version / SemVer
  

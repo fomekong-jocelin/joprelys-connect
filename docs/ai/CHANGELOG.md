@@ -12,6 +12,23 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+## [0.7.0] - 2026-07-03
+
+### Added
+
+- **Gestion réelle des stocks de médicaments (STORY-1103)** : table `drug_stocks` (Flyway V17), entité JPA `DrugStockEntity` avec verrouillage optimiste (`@Version`) et isolation multi-tenant (`@TenantId`), `DrugStockService` avec upsert par nom, décrémentation transactionnelle et alertes de stock bas, API CRUD `GET/POST /api/pharmacy/stocks` et `GET /api/pharmacy/stocks/alerts` réservée aux pharmaciens.
+- **Pipeline CI/CD GitHub Actions (STORY-1101)** : création du workflow .github/workflows/ci.yml pour valider build Maven backend (Java 21, H2) et build Angular (Node 22, Vitest) sur chaque PR et push main/develop.
+- **Import FHIR DiagnosticReport (STORY-1104)** : FhirDiagnosticReportParser Jackson (sans HAPI), endpoint POST /api/public/lab-integration/fhir/diagnostic-report sécurisé par API KEY, tests unitaires purs.
+### Changed
+
+- **Nettoyage dette technique QA (STORY-1105)** : suppression des dépendances Maven test invalides (spring-boot-starter-*-test inexistants), ajout spring-security-test, création application-test.yml, repair-on-migrate Flyway activé.
+
+### Fixed
+
+### Security
+
+- **Sécurisation IDOR Portail Patient (STORY-1102)** : `PatientAccessGuardService` centralise les contrôles OWASP A01. Tout accès cross-patient retourne 403. Tests de sécurité ajoutés.
+
 ## [0.6.0] - 2026-07-03
 
 ### Fixed

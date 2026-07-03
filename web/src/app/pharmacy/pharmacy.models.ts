@@ -53,3 +53,29 @@ export interface PharmacyDispensationHistoryEntry {
   pharmacistLicense: string;
   items: PharmacyDispensationHistoryItem[];
 }
+
+export interface DrugStockResponse {
+  id: string;
+  drugName: string;
+  genericName?: string;
+  unit: string;
+  quantityAvailable: number;
+  minimumThreshold: number;
+  belowThreshold: boolean;
+  batchNumber?: string;
+  expiryDate?: string;
+  supplier?: string;
+  updatedAt: string;
+}
+
+export interface CreateDrugStockRequest {
+  drugName: string;
+  genericName?: string;
+  unit: string;
+  quantityAvailable: number;
+  minimumThreshold: number;
+  batchNumber?: string;
+  expiryDate?: string;
+  supplier?: string;
+}
+

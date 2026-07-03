@@ -1,0 +1,31 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  flyway:
+    enabled: true
+    validate-on-migrate: false
+    repair-on-migrate: true
+    locations: classpath:db/migration
+
+joprelys:
+  security:
+    jwt:
+      issuer: joprelys-test
+      audience: joprelys-test
+      secret: test-jwt-secret-at-least-32-chars-long-hs256
+      ttl-minutes: 30
+  seed:
+    admin:
+      enabled: false
+  documents:
+    storage-dir: ./target/test-storage
+    verification-base-url: http://localhost/verify
+  lab-integration:
+    api-key: lab-partner-secret-token

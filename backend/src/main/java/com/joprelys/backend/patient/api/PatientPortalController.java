@@ -1,6 +1,7 @@
 package com.joprelys.backend.patient.api;
 
 import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationRepository;
+import com.joprelys.backend.patient.application.PatientAccessGuardService;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.visit.application.DocumentService;
@@ -36,6 +37,7 @@ public class PatientPortalController {
     private final com.joprelys.backend.patient.infrastructure.persistence.PatientConsentRepository patientConsentRepository;
     private final AuditService auditService;
     private final com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository prescriptionRepository;
+    private final PatientAccessGuardService patientAccessGuardService;
 
     public PatientPortalController(
             PatientRepository patientRepository,
@@ -45,7 +47,8 @@ public class PatientPortalController {
             com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository organizationRepository,
             com.joprelys.backend.patient.infrastructure.persistence.PatientConsentRepository patientConsentRepository,
             AuditService auditService,
-            com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository prescriptionRepository) {
+            com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository prescriptionRepository,
+            PatientAccessGuardService patientAccessGuardService) {
         this.patientRepository = patientRepository;
         this.consultationRepository = consultationRepository;
         this.medicalDocumentRepository = medicalDocumentRepository;
@@ -54,16 +57,12 @@ public class PatientPortalController {
         this.patientConsentRepository = patientConsentRepository;
         this.auditService = auditService;
         this.prescriptionRepository = prescriptionRepository;
+        this.patientAccessGuardService = patientAccessGuardService;
     }
 
     @GetMapping("/me")
     public PatientPortalMeResponse getMe(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié.");
-        }
-
-        PatientEntity patient = patientRepository.findByGlobalPatientNumber(authentication.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dossier patient introuvable."));
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
 
         List<PatientPortalMeResponse.PatientPortalConsultation> consultations = consultationRepository
                 .findByPatientIdOrderByCreatedAtDesc(patient.getId())
@@ -118,12 +117,7 @@ public class PatientPortalController {
 
     @GetMapping("/visits/{visitId}/document")
     public ResponseEntity<byte[]> downloadOwnDocument(@PathVariable UUID visitId, Authentication authentication) {
-        if (authentication == null || authentication.getName() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié.");
-        }
-
-        PatientEntity patient = patientRepository.findByGlobalPatientNumber(authentication.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dossier patient introuvable."));
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
 
         // JOIN FETCH visit + patient en une seule requête → plus de LazyInitializationException
         MedicalDocumentEntity doc = medicalDocumentRepository.findByVisitIdWithVisitAndPatient(visitId)
@@ -144,12 +138,7 @@ public class PatientPortalController {
 
     @GetMapping("/consents")
     public List<PatientConsentDto> getConsents(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié.");
-        }
-
-        PatientEntity patient = patientRepository.findByGlobalPatientNumber(authentication.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dossier patient introuvable."));
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
 
         return organizationRepository.findAll().stream()
                 .map(org -> {
@@ -173,15 +162,11 @@ public class PatientPortalController {
             @PathVariable UUID orgId,
             @org.springframework.web.bind.annotation.RequestParam String status,
             Authentication authentication) {
-        if (authentication == null || authentication.getName() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié.");
-        }
         if (!"ACTIVE".equals(status) && !"REVOKED".equals(status)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Statut invalide.");
         }
 
-        PatientEntity patient = patientRepository.findByGlobalPatientNumber(authentication.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dossier patient introuvable."));
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
 
         var consent = patientConsentRepository.findByPatientIdAndOrganizationId(patient.getId(), orgId)
                 .orElseGet(() -> new com.joprelys.backend.patient.infrastructure.persistence.PatientConsentEntity(patient.getId(), orgId, status));
@@ -192,12 +177,7 @@ public class PatientPortalController {
 
     @GetMapping("/audit-logs")
     public List<PatientAuditLogDto> getAuditLogs(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié.");
-        }
-
-        PatientEntity patient = patientRepository.findByGlobalPatientNumber(authentication.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dossier patient introuvable."));
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
 
         return auditService.getPatientLogs(patient.getId()).stream()
                 .map(log -> new PatientAuditLogDto(

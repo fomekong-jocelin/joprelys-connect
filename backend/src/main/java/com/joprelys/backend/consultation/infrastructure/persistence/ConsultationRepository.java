@@ -9,7 +9,7 @@ import java.util.UUID;
 
 public interface ConsultationRepository extends JpaRepository<ConsultationEntity, UUID> {
 
-	@Query("SELECT c FROM ConsultationEntity c WHERE c.visit.id = :visitId")
+	@Query("SELECT c FROM ConsultationEntity c JOIN FETCH c.visit JOIN FETCH c.doctor WHERE c.visit.id = :visitId")
 	Optional<ConsultationEntity> findByVisitId(@Param("visitId") UUID visitId);
 
 	boolean existsByVisitId(UUID visitId);

@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Version courante | 0.6.0 |
+| Version courante | 0.7.0 |
 | Dernière release | 2026-07-03 |
 | Stratégie | SemVer |
 | Source de vérité | `VERSION` + `docs/ai/CHANGELOG.md` |
@@ -15,11 +15,11 @@
 
 | Module | Version | Type de version | Dernière release | Compatibilité | Notes |
 |---|---:|---|---|---|---|
-| Backend Spring Boot | 0.6.0 | SemVer | 2026-07-03 | API v0 | Portail pharmacie API, upload PDF strict, role biologiste |
-| Angular Web | 0.6.0 | SemVer | 2026-07-03 | API v0 | Portail pharmacie UI, portail labo filtres et biologiste |
+| Backend Spring Boot | 0.7.0 | SemVer | 2026-07-03 | API v0 | Stocks pharmacie, import FHIR, sécurité IDOR, CI/CD |
+| Angular Web | 0.7.0 | SemVer | 2026-07-03 | API v0 | Raccordements UI stocks et import FHIR, CI/CD |
 | Flutter Mobile | 0.3.0 | SemVer | 2026-07-01 | API v0 | À adapter au projet |
-| API Contract | 0.6.0 | SemVer | 2026-07-03 | v0 | Nouveaux endpoints pharmacie publics et labo |
-| Database Schema | 0.4.0 | Migration versionnée | 2026-07-03 | v0 | Flyway v14-v16 avec cascade deletes |
+| API Contract | 0.7.0 | SemVer | 2026-07-03 | v0 | Endpoint public FHIR et stocks |
+| Database Schema | 0.5.0 | Migration versionnée | 2026-07-03 | v0 | Flyway v17 drug_stocks |
 
 ## Compatibilité API / clients
 

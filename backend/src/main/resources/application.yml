@@ -23,6 +23,7 @@ spring:
   flyway:
     enabled: true
     validate-on-migrate: false
+    repair-on-migrate: true
 
 joprelys:
   security:

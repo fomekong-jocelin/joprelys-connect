@@ -8,9 +8,9 @@ Implémenter un parseur de fichiers structurés (JSON/XML au format FHIR Diagnos
  
 ## 2. Critères d'acceptation
  
-- [ ] L'API publique d'upload supporte le format FHIR standard DiagnosticReport en entrée.
-- [ ] Les valeurs d'analyses (glycémie, cholestérol, etc.) parsées alimentent directement l'historique des constantes vitales du patient lié.
-- [ ] Les erreurs de structure ou de format de données sont gérées gracieusement (HTTP 400 avec détails).
+- [x] L'API publique d'upload supporte le format FHIR standard DiagnosticReport en entrée.
+- [x] Les valeurs d'analyses (glycémie, cholestérol, etc.) parsées alimentent directement l'historique des constantes vitales du patient lié.
+- [x] Les erreurs de structure ou de format de données sont gérées gracieusement (HTTP 400 avec détails).
  
 ## 3. Pilotage projet
  
@@ -35,14 +35,14 @@ Implémenter un parseur de fichiers structurés (JSON/XML au format FHIR Diagnos
  
 ## 4. Action plan
  
-- [ ] Créer le parseur FHIR DiagnosticReport JSON/XML dans le backend.
-- [ ] Ajouter les liaisons de constantes vitales et historiques du patient.
-- [ ] Écrire les tests unitaires avec des payloads de test FHIR valides et invalides.
-- [ ] Mettre à jour `CHANGELOG.md` et `PROJECT-TRACKING.md`.
+- [x] Créer le parseur FHIR DiagnosticReport JSON/XML dans le backend.
+- [x] Ajouter les liaisons de constantes vitales et historiques du patient.
+- [x] Écrire les tests unitaires avec des payloads de test FHIR valides et invalides.
+- [x] Mettre à jour `CHANGELOG.md` et `PROJECT-TRACKING.md`.
  
 ## 13. Statut final
  
-Statut : TODO
+Statut : DONE
  
 ## 14. Impact version / SemVer
  

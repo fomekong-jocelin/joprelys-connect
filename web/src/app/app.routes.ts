@@ -57,6 +57,12 @@ export const routes: Routes = [
     data: { expectedRoles: ['PHARMACIEN', 'ADMIN_JOPRELYS'] },
   },
   {
+    path: 'pharmacy/stocks',
+    loadComponent: () => import('./pharmacy/pharmacy-stocks.component').then(m => m.PharmacyStocksComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['PHARMACIEN', 'ADMIN_CLINIQUE'] },
+  },
+  {
     path: 'forgot-password',
     loadComponent: () => import('./auth/forgot-password.component').then((module) => module.ForgotPasswordComponent),
   },

@@ -117,6 +117,25 @@
           </div>
         }
 
+        <!-- Role-Specific: PHARMACIEN / ADMIN_CLINIQUE (Stocks) -->
+        @if (currentSession.role === 'PHARMACIEN' || currentSession.role === 'ADMIN_CLINIQUE') {
+          <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              </div>
+              <h2 class="font-display font-bold text-lg text-brand-night dark:text-white">{{ t('pharmacy.stocks.title') }}</h2>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">{{ t('pharmacy.stocks.subtitle') }}</p>
+            <a routerLink="/pharmacy/stocks" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-[#22d3ee] hover:underline cursor-pointer">
+              Gérer l'inventaire →
+            </a>
+          </div>
+        }
+
+
         <!-- General Info Card -->
         <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
           <div class="flex items-center gap-3 mb-4">

@@ -1,5 +1,6 @@
 package com.joprelys.backend.lab.api;
 
+import com.joprelys.backend.lab.application.FhirDiagnosticReportParser;
 import com.joprelys.backend.lab.application.LabResultService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -16,12 +17,15 @@ import org.springframework.web.server.ResponseStatusException;
 public class LabResultUploadController {
 
 	private final LabResultService labResultService;
+	private final FhirDiagnosticReportParser fhirParser;
 
 	@Value("${joprelys.lab-integration.api-key:lab-partner-secret-token}")
 	private String configuredApiKey;
 
-	public LabResultUploadController(LabResultService labResultService) {
+	public LabResultUploadController(LabResultService labResultService,
+			FhirDiagnosticReportParser fhirParser) {
 		this.labResultService = labResultService;
+		this.fhirParser = fhirParser;
 	}
 
 	@PostMapping("/upload")
@@ -36,6 +40,29 @@ public class LabResultUploadController {
 
 		// 2. Traiter le téléversement
 		labResultService.uploadResults(request);
+
+		return ResponseEntity.status(HttpStatus.CREATED).build();
+	}
+
+	/**
+	 * Import de résultats biologiques au format FHIR R4 DiagnosticReport.
+	 * STORY-1104.
+	 */
+	@PostMapping("/fhir/diagnostic-report")
+	public ResponseEntity<Void> uploadFhirDiagnosticReport(
+			@RequestHeader(value = "X-API-KEY", required = false) String apiKey,
+			@RequestBody FhirDiagnosticReportUploadRequest request) {
+
+		// 1. Valider la clé d'API
+		if (apiKey == null || !apiKey.equals(configuredApiKey)) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Clé d'API invalide ou manquante.");
+		}
+
+		// 2. Parser le payload FHIR
+		LabResultUploadRequest parsedRequest = fhirParser.parse(request.fhirJson(), request.validatorName());
+
+		// 3. Traiter le téléversement
+		labResultService.uploadResults(parsedRequest);
 
 		return ResponseEntity.status(HttpStatus.CREATED).build();
 	}
