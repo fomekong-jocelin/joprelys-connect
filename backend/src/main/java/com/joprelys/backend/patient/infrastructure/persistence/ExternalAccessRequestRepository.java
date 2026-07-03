@@ -1,6 +1,9 @@
 package com.joprelys.backend.patient.infrastructure.persistence;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -9,4 +12,8 @@ public interface ExternalAccessRequestRepository extends JpaRepository<ExternalA
     boolean existsByPatientIdAndRequesterOrganizationIdAndStatusIn(UUID patientId, UUID requesterOrganizationId, Collection<String> statuses);
     List<ExternalAccessRequestEntity> findByPatientId(UUID patientId);
     List<ExternalAccessRequestEntity> findByPatientIdAndStatus(UUID patientId, String status);
+
+    @Modifying
+    @Query("UPDATE ExternalAccessRequestEntity r SET r.status = 'EXPIREE' WHERE r.status = 'APPROUVEE' AND r.expiresAt <= :now")
+    int expireRequests(@Param("now") java.time.Instant now);
 }

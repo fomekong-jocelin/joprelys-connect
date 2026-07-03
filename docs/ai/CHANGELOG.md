@@ -10,6 +10,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 - **Demandes d'Accès Externes (STORY-1301)** : migration Flyway V20, entité JPA ExternalAccessRequestEntity et Repository, Service d'enregistrement des demandes et contrôleur API REST POST /api/external-access/requests avec validation d'entrée stricte, audit log automatique et suite complète de 5 tests d'intégration MockMvc.
 - **Validation de demande d'accès externe (STORY-1302)** : contrôleur API REST pour les actions du patient (liste, approbation, rejet), sécurisation stricte anti-IDOR avec audit log automatique, et IHM Angular complète (onglet "Demandes d'accès", boutons d'action d'approbation et de rejet, gestion i18n FR/EN et styles Tailwind CSS v4) avec tests d'intégration backend et tests unitaires frontend passants à 100%.
+- **Contrôle d'accès & Expiration des droits (STORY-1303)** : renforcement du filtrage de sécurité dans `PatientService` pour interdire l'accès aux dossiers par des cliniques externes sans autorisation valide. Ajout du planificateur automatique `ExternalAccessExpirationScheduler` (cron `@Scheduled` configurable) pour expirer les autorisations obsolètes. Mise en place de logs d'audit critiques `EMERGENCY_DPU_ACCESS` et rendu rouge/rose dans la timeline de sécurité patient.
 
 ## [0.8.0] - 2026-07-04
 

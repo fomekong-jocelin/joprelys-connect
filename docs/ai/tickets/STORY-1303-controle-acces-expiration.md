@@ -4,7 +4,7 @@
 
 **Epic** : Demande d'accès externe (Module 13)  
 **Titre** : Contrôle d'accès & Expiration des droits externes  
-**Statut** : READY  
+**Statut** : DONE  
 **Priorité** : P0  
 **Sprint** : SPRINT-0007  
 **SP** : 5  
@@ -17,14 +17,14 @@ Verrouiller et sécuriser la consultation du DPU par un établissement externe. 
 
 ## 3. Critères d'acceptation (DoD)
 
-- [ ] Validation de l'accès au niveau de la couche Spring Security ou dans le filtre de contrôle d'accès patient.
-- [ ] Mode d'accès urgence ("Break the Glass") disponible pour les médecins (lève immédiatement les restrictions de consentement mais génère un log d'audit rouge critique `EMERGENCY_DPU_ACCESS` et alerte le patient).
-- [ ] Planificateur Spring `@Scheduled` ou mécanisme automatique de passage des demandes d'accès à l'état `EXPIREE` dès la fin de validité de la durée d'accès.
-- [ ] Tests d'intégration de sécurité simulant des tentatives d'accès externe illégitimes (validation de HTTP 403 Forbidden).
+- [x] Validation de l'accès au niveau de la couche Spring Security ou dans le filtre de contrôle d'accès patient.
+- [x] Mode d'accès urgence ("Break the Glass") disponible pour les médecins (lève immédiatement les restrictions de consentement mais génère un log d'audit rouge critique `EMERGENCY_DPU_ACCESS` et alerte le patient).
+- [x] Planificateur Spring `@Scheduled` ou mécanisme automatique de passage des demandes d'accès à l'état `EXPIREE` dès la fin de validité de la durée d'accès.
+- [x] Tests d'intégration de sécurité simulant des tentatives d'accès externe illégitimes (validation de HTTP 403 Forbidden).
 
 ## 4. Reste à faire
 
-- [ ] Implémentation du filtre de sécurité inter-établissements.
-- [ ] Ajout du workflow d'urgence.
-- [ ] Planification de la tâche d'expiration.
-- [ ] Écriture des tests d'intégration de sécurité.
+- [x] Implémentation du filtre de sécurité inter-établissements.
+- [x] Ajout du workflow d'urgence.
+- [x] Planification de la tâche d'expiration.
+- [x] Écriture des tests d'intégration de sécurité.

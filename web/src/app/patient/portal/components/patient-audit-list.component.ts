@@ -167,6 +167,7 @@ export class PatientAuditListComponent implements OnInit {
       case 'VIEW_PORTAL_DASHBOARD': return this.i18n.t('patient.audit.action.VIEW_PORTAL_DASHBOARD');
       case 'DOWNLOAD_DOCUMENT': return this.i18n.t('patient.audit.action.DOWNLOAD_DOCUMENT');
       case 'EMERGENCY_ACCESS': return this.i18n.t('patient.audit.action.EMERGENCY_ACCESS');
+      case 'EMERGENCY_DPU_ACCESS': return this.i18n.t('patient.audit.action.EMERGENCY_DPU_ACCESS');
       case 'CONSULTATION': return this.i18n.t('patient.audit.action.CONSULTATION');
       case 'CREATE_PATIENT': return this.i18n.t('patient.audit.action.CREATE_PATIENT');
       case 'UPDATE_PATIENT': return this.i18n.t('patient.audit.action.UPDATE_PATIENT');
@@ -180,6 +181,7 @@ export class PatientAuditListComponent implements OnInit {
   getActionBadgeClass(action: string): string {
     switch (action) {
       case 'EMERGENCY_ACCESS':
+      case 'EMERGENCY_DPU_ACCESS':
         return 'bg-rose-100 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300';
       case 'DOWNLOAD_DOCUMENT':
       case 'REVOKE_DOCUMENT':

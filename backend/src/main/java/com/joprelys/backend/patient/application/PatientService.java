@@ -23,19 +23,22 @@ public class PatientService {
 	private final UserAccountRepository userAccountRepository;
 	private final com.joprelys.backend.patient.infrastructure.persistence.PatientConsentRepository patientConsentRepository;
 	private final com.joprelys.backend.patient.infrastructure.persistence.EmergencyAccessAuthorizationRepository emergencyAccessAuthorizationRepository;
+	private final com.joprelys.backend.patient.infrastructure.persistence.ExternalAccessRequestRepository externalAccessRequestRepository;
 
 	public PatientService(PatientRepository patientRepository,
 						  PatientNumberGenerator patientNumberGenerator,
 						  AuditService auditService,
 						  UserAccountRepository userAccountRepository,
 						  com.joprelys.backend.patient.infrastructure.persistence.PatientConsentRepository patientConsentRepository,
-						  com.joprelys.backend.patient.infrastructure.persistence.EmergencyAccessAuthorizationRepository emergencyAccessAuthorizationRepository) {
+						  com.joprelys.backend.patient.infrastructure.persistence.EmergencyAccessAuthorizationRepository emergencyAccessAuthorizationRepository,
+						  com.joprelys.backend.patient.infrastructure.persistence.ExternalAccessRequestRepository externalAccessRequestRepository) {
 		this.patientRepository = patientRepository;
 		this.patientNumberGenerator = patientNumberGenerator;
 		this.auditService = auditService;
 		this.userAccountRepository = userAccountRepository;
 		this.patientConsentRepository = patientConsentRepository;
 		this.emergencyAccessAuthorizationRepository = emergencyAccessAuthorizationRepository;
+		this.externalAccessRequestRepository = externalAccessRequestRepository;
 	}
 
 	@Transactional
@@ -124,7 +127,18 @@ public class PatientService {
 			return "ACTIVE".equals(consent.get().getStatus());
 		}
 		var patient = patientRepository.findByIdGlobally(patientId).orElse(null);
-		return patient != null && patient.getOrganizationId() != null && patient.getOrganizationId().equals(organizationId);
+		if (patient != null && patient.getOrganizationId() != null && patient.getOrganizationId().equals(organizationId)) {
+			return true;
+		}
+		return checkExternalAccess(patientId, organizationId);
+	}
+
+	private boolean checkExternalAccess(UUID patientId, UUID organizationId) {
+		return externalAccessRequestRepository.findByPatientId(patientId).stream()
+				.anyMatch(r -> organizationId.equals(r.getRequesterOrganizationId()) &&
+						"APPROUVEE".equals(r.getStatus()) &&
+						r.getExpiresAt() != null &&
+						r.getExpiresAt().isAfter(java.time.Instant.now()));
 	}
 
 	private boolean checkEmergencyAccess(UUID patientId, UUID organizationId) {
@@ -161,7 +175,7 @@ public class PatientService {
 				patientId,
 				"PATIENT_RECORD",
 				patientId,
-				"EMERGENCY_ACCESS",
+				"EMERGENCY_DPU_ACCESS",
 				"Accès d'urgence Brise-Glace activé. Motif : " + reason,
 				null, null, "SUCCESS"
 		);
