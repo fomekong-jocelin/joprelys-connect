@@ -7,6 +7,7 @@ import { PatientVisitsListComponent } from './components/patient-visits-list.com
 import { PatientPortalService, PatientPortalMeResponse } from './services/patient-portal.service';
 import { PatientAuditListComponent } from './components/patient-audit-list.component';
 import { PatientConsentsListComponent } from './components/patient-consents-list.component';
+import { PatientNotificationsComponent } from './components/patient-notifications.component';
 
 const MOCK_PATIENT: PatientPortalMeResponse = {
   id: 'patient-id-123',
@@ -232,5 +233,58 @@ describe('PatientPortalService', () => {
     const req = httpTesting.expectOne('/api/patient/audit-logs');
     expect(req.request.method).toBe('GET');
     req.flush(mockLogs);
+  });
+});
+
+describe('PatientNotificationsComponent', () => {
+  let httpTesting: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [PatientNotificationsComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        PatientPortalService
+      ]
+    });
+    httpTesting = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpTesting.verify();
+  });
+
+  it('should fetch, display, and mark notifications as read', () => {
+    const fixture = TestBed.createComponent(PatientNotificationsComponent);
+    fixture.detectChanges();
+
+    const mockNotifs = [
+      { id: 'notif-1', patientId: 'p-1', title: 'Alerte sécurité', message: 'Accès urgence', type: 'SECURITY', status: 'NON_LU', createdAt: '2026-07-02T12:00:00Z' },
+      { id: 'notif-2', patientId: 'p-1', title: 'Info visite', message: 'Nouvel examen dispo', type: 'INFO', status: 'LU', createdAt: '2026-07-02T13:00:00Z' }
+    ];
+
+    const getReq = httpTesting.expectOne('/api/patient/notifications');
+    expect(getReq.request.method).toBe('GET');
+    getReq.flush(mockNotifs);
+
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.textContent).toContain('Alerte sécurité');
+    expect(element.textContent).toContain('Info visite');
+    expect(element.textContent).toContain('Accès urgence');
+
+    // Click "Marquer lu" for notif-1
+    const btn = Array.from(element.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('Marquer lu'));
+    expect(btn).toBeTruthy();
+    btn?.click();
+
+    const postReq = httpTesting.expectOne('/api/patient/notifications/notif-1/read');
+    expect(postReq.request.method).toBe('POST');
+    postReq.flush({ ...mockNotifs[0], status: 'LU' });
+
+    fixture.detectChanges();
   });
 });

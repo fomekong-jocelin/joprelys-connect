@@ -37,6 +37,7 @@ public class PatientPortalController {
     private final com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository prescriptionRepository;
     private final PatientAccessGuardService patientAccessGuardService;
     private final ExternalAccessService externalAccessService;
+    private final com.joprelys.backend.notification.application.NotificationService notificationService;
 
     public PatientPortalController(
             PatientRepository patientRepository,
@@ -48,7 +49,8 @@ public class PatientPortalController {
             AuditService auditService,
             com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository prescriptionRepository,
             PatientAccessGuardService patientAccessGuardService,
-            ExternalAccessService externalAccessService) {
+            ExternalAccessService externalAccessService,
+            com.joprelys.backend.notification.application.NotificationService notificationService) {
         this.patientRepository = patientRepository;
         this.consultationRepository = consultationRepository;
         this.medicalDocumentRepository = medicalDocumentRepository;
@@ -59,6 +61,7 @@ public class PatientPortalController {
         this.prescriptionRepository = prescriptionRepository;
         this.patientAccessGuardService = patientAccessGuardService;
         this.externalAccessService = externalAccessService;
+        this.notificationService = notificationService;
     }
 
     @GetMapping("/me")
@@ -212,6 +215,25 @@ public class PatientPortalController {
     public ExternalAccessResponse rejectAccessRequest(@PathVariable UUID id, Authentication authentication) {
         PatientEntity patient = patientAccessGuardService.resolve(authentication);
         return externalAccessService.rejectRequest(patient.getId(), id);
+    }
+
+    @GetMapping("/notifications")
+    public List<com.joprelys.backend.notification.infrastructure.persistence.NotificationEntity> getNotifications(Authentication authentication) {
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
+        return notificationService.getPatientNotifications(patient.getId());
+    }
+
+    @org.springframework.web.bind.annotation.PostMapping("/notifications/{id}/read")
+    public com.joprelys.backend.notification.infrastructure.persistence.NotificationEntity markNotificationAsRead(
+            @PathVariable UUID id, Authentication authentication) {
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
+        return notificationService.markAsRead(patient.getId(), id);
+    }
+
+    @org.springframework.web.bind.annotation.PostMapping("/notifications/read-all")
+    public void markAllNotificationsAsRead(Authentication authentication) {
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
+        notificationService.markAllAsRead(patient.getId());
     }
 }
 

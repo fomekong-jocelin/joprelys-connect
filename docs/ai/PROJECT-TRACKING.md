@@ -94,8 +94,8 @@
 | STORY-1301 | DPU_ACCESS | User Story | Enregistrement de demande d'accès externe (backend) | Backend | DONE | P1 | 5 | Intermédiaire | 0.8j | 1.2j | 2.0j | Gemini | Lead Developer | SPRINT-0007 | 1.2j | Entité, Repository, Service et API REST pour requêtes d'accès temporaires + 5 tests unitaires MockMvc | Moyen | 2026-07-04 |
 | STORY-1302 | DPU_ACCESS | User Story | Validation de demande d'accès externe (portail patient) | Full-stack | DONE | P1 | 3 | Intermédiaire | 0.5j | 0.8j | 1.3j | Gemini | Lead Developer | SPRINT-0007 | 0.8j | Aucun (tests backend/frontend validés) | Faible | 2026-07-04 |
 | STORY-1303 | DPU_ACCESS | User Story | Contrôle d'accès & Expiration des droits externes | Backend | DONE | P0 | 5 | Senior | 1.0j | 1.5j | 2.5j | Gemini | Lead Developer | SPRINT-0007 | 1.5j | Aucun (tests unitaires et intégration de sécurité au vert) | Fort | 2026-07-04 |
-| STORY-1501 | NOTIF | User Story | Socle et service d'envoi de notifications (backend) | Backend | READY | P1 | 3 | Intermédiaire | 0.6j | 0.9j | 1.5j | Gemini | Lead Developer | SPRINT-0007 | 0j | Implémenter table notifications et mock service | Faible | 2026-07-04 |
-| STORY-1502 | NOTIF | User Story | Centre de notifications sur le portail patient (IHM) | Frontend | READY | P2 | 3 | Junior | 0.4j | 0.6j | 1.0j | Lead Developer | Gemini | SPRINT-0007 | 0j | Implémenter IHM centre de notifications | Faible | 2026-07-04 |
+| STORY-1501 | NOTIF | User Story | Socle et service d'envoi de notifications (backend) | Backend | DONE | P1 | 3 | Intermédiaire | 0.6j | 0.9j | 1.5j | Gemini | Lead Developer | SPRINT-0007 | 0.9j | Aucun (table SQL, service et API terminés) | Faible | 2026-07-04 |
+| STORY-1502 | NOTIF | User Story | Centre de notifications sur le portail patient (IHM) | Frontend | DONE | P2 | 3 | Junior | 0.4j | 0.6j | 1.0j | Lead Developer | Gemini | SPRINT-0007 | 0.6j | Aucun (IHM Angular, service de liaison et tests terminés) | Faible | 2026-07-04 |
  
 
 ## Statuts autorisés

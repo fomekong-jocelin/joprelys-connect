@@ -105,6 +105,18 @@ export class PatientPortalService {
   rejectAccessRequest(id: string): Observable<ExternalAccessResponse> {
     return this.http.post<ExternalAccessResponse>(`/api/patient/access-requests/${id}/reject`, {});
   }
+
+  getNotifications(): Observable<PatientNotification[]> {
+    return this.http.get<PatientNotification[]>('/api/patient/notifications');
+  }
+
+  markNotificationAsRead(id: string): Observable<PatientNotification> {
+    return this.http.post<PatientNotification>(`/api/patient/notifications/${id}/read`, {});
+  }
+
+  markAllNotificationsAsRead(): Observable<void> {
+    return this.http.post<void>('/api/patient/notifications/read-all', {});
+  }
 }
 
 export interface PatientConsent {
@@ -136,4 +148,14 @@ export interface ExternalAccessResponse {
   status: string;
   createdAt: string;
   expiresAt: string | null;
+}
+
+export interface PatientNotification {
+  id: string;
+  patientId: string;
+  title: string;
+  message: string;
+  type: string; // INFO, SECURITY, EMERGENCY
+  status: string; // LU, NON_LU
+  createdAt: string;
 }

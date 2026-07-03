@@ -62,6 +62,9 @@ public class PatientPortalControllerTest {
     @Autowired
     private com.joprelys.backend.patient.infrastructure.persistence.ExternalAccessRequestRepository externalAccessRequestRepository;
 
+    @Autowired
+    private com.joprelys.backend.notification.infrastructure.persistence.NotificationRepository notificationRepository;
+
     private OrganizationEntity orgA;
     private OrganizationEntity orgB;
     private PatientEntity patientA;
@@ -79,6 +82,7 @@ public class PatientPortalControllerTest {
         jdbcTemplate.update("DELETE FROM medical_documents");
         jdbcTemplate.update("DELETE FROM visits");
         jdbcTemplate.update("DELETE FROM external_access_requests");
+        jdbcTemplate.update("DELETE FROM notifications");
         jdbcTemplate.update("DELETE FROM patients");
         userAccountRepository.deleteAll();
         organizationRepository.deleteAll();
@@ -392,6 +396,77 @@ public class PatientPortalControllerTest {
 
         // Patient A tente d'approuver la demande de Patient B
         mockMvc.perform(post("/api/patient/access-requests/" + request.getId() + "/approve")
+                        .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void givenPatient_whenGetNotifications_thenReturnsNotificationsList() throws Exception {
+        var notif = new com.joprelys.backend.notification.infrastructure.persistence.NotificationEntity(
+                patientA.getId(),
+                "Alerte test",
+                "Ceci est un message de test",
+                "INFO"
+        );
+        notificationRepository.save(notif);
+
+        mockMvc.perform(get("/api/patient/notifications")
+                        .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].title").value("Alerte test"))
+                .andExpect(jsonPath("$[0].status").value("NON_LU"));
+    }
+
+    @Test
+    void givenPatient_whenMarkNotificationAsRead_thenMarkedAsRead() throws Exception {
+        var notif = new com.joprelys.backend.notification.infrastructure.persistence.NotificationEntity(
+                patientA.getId(),
+                "Alerte test",
+                "Ceci est un message de test",
+                "INFO"
+        );
+        notif = notificationRepository.save(notif);
+
+        mockMvc.perform(post("/api/patient/notifications/" + notif.getId() + "/read")
+                        .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("LU"));
+    }
+
+    @Test
+    void givenPatient_whenMarkAllNotificationsAsRead_thenAllMarked() throws Exception {
+        var notif1 = new com.joprelys.backend.notification.infrastructure.persistence.NotificationEntity(
+                patientA.getId(),
+                "Alerte test 1",
+                "Ceci est un message de test 1",
+                "INFO"
+        );
+        notificationRepository.save(notif1);
+
+        mockMvc.perform(post("/api/patient/notifications/read-all")
+                        .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/patient/notifications")
+                        .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("LU"));
+    }
+
+    @Test
+    void givenPatient_whenMarkOtherPatientNotification_thenForbidden() throws Exception {
+        // Crée une notification pour Patient B
+        var notif = new com.joprelys.backend.notification.infrastructure.persistence.NotificationEntity(
+                patientB.getId(),
+                "Alerte B",
+                "Message pour B",
+                "INFO"
+        );
+        notif = notificationRepository.save(notif);
+
+        // Patient A tente de marquer la notification de Patient B comme lue
+        mockMvc.perform(post("/api/patient/notifications/" + notif.getId() + "/read")
                         .header("Authorization", "Bearer " + tokenPatientA))
                 .andExpect(status().isForbidden());
     }

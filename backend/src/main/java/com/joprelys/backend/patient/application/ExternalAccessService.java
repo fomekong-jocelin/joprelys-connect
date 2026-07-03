@@ -29,17 +29,20 @@ public class ExternalAccessService {
     private final UserAccountRepository userAccountRepository;
     private final OrganizationRepository organizationRepository;
     private final AuditService auditService;
+    private final com.joprelys.backend.notification.application.NotificationService notificationService;
 
     public ExternalAccessService(ExternalAccessRequestRepository externalAccessRequestRepository,
                                  PatientRepository patientRepository,
                                  UserAccountRepository userAccountRepository,
                                  OrganizationRepository organizationRepository,
-                                 AuditService auditService) {
+                                 AuditService auditService,
+                                 com.joprelys.backend.notification.application.NotificationService notificationService) {
         this.externalAccessRequestRepository = externalAccessRequestRepository;
         this.patientRepository = patientRepository;
         this.userAccountRepository = userAccountRepository;
         this.organizationRepository = organizationRepository;
         this.auditService = auditService;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -87,6 +90,13 @@ public class ExternalAccessService {
                 saved.getId(),
                 "REQUEST_EXTERNAL_ACCESS",
                 "Demande d'accès externe créée pour le patient : " + patient.getFullName() + " (Motif: " + saved.getReason() + ")"
+        );
+
+        notificationService.sendNotification(
+                patient.getId(),
+                "Demande d'accès externe",
+                "L'établissement " + getOrganizationName(requesterOrgId) + " demande l'accès à votre dossier pour : " + request.reason(),
+                "INFO"
         );
 
         return ExternalAccessResponse.fromEntity(saved, getOrganizationName(requesterOrgId));

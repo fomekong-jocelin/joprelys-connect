@@ -24,6 +24,7 @@ public class PatientService {
 	private final com.joprelys.backend.patient.infrastructure.persistence.PatientConsentRepository patientConsentRepository;
 	private final com.joprelys.backend.patient.infrastructure.persistence.EmergencyAccessAuthorizationRepository emergencyAccessAuthorizationRepository;
 	private final com.joprelys.backend.patient.infrastructure.persistence.ExternalAccessRequestRepository externalAccessRequestRepository;
+	private final com.joprelys.backend.notification.application.NotificationService notificationService;
 
 	public PatientService(PatientRepository patientRepository,
 						  PatientNumberGenerator patientNumberGenerator,
@@ -31,7 +32,8 @@ public class PatientService {
 						  UserAccountRepository userAccountRepository,
 						  com.joprelys.backend.patient.infrastructure.persistence.PatientConsentRepository patientConsentRepository,
 						  com.joprelys.backend.patient.infrastructure.persistence.EmergencyAccessAuthorizationRepository emergencyAccessAuthorizationRepository,
-						  com.joprelys.backend.patient.infrastructure.persistence.ExternalAccessRequestRepository externalAccessRequestRepository) {
+						  com.joprelys.backend.patient.infrastructure.persistence.ExternalAccessRequestRepository externalAccessRequestRepository,
+						  com.joprelys.backend.notification.application.NotificationService notificationService) {
 		this.patientRepository = patientRepository;
 		this.patientNumberGenerator = patientNumberGenerator;
 		this.auditService = auditService;
@@ -39,6 +41,7 @@ public class PatientService {
 		this.patientConsentRepository = patientConsentRepository;
 		this.emergencyAccessAuthorizationRepository = emergencyAccessAuthorizationRepository;
 		this.externalAccessRequestRepository = externalAccessRequestRepository;
+		this.notificationService = notificationService;
 	}
 
 	@Transactional
@@ -178,6 +181,13 @@ public class PatientService {
 				"EMERGENCY_DPU_ACCESS",
 				"Accès d'urgence Brise-Glace activé. Motif : " + reason,
 				null, null, "SUCCESS"
+		);
+
+		notificationService.sendNotification(
+				patientId,
+				"Alerte de sécurité : Accès d'urgence",
+				"Le praticien " + doctorEmail + " a accédé à votre dossier en mode d'urgence Brise-Glace pour le motif : " + reason,
+				"SECURITY"
 		);
 	}
 

@@ -6,12 +6,13 @@ import { PatientPortalMeResponse, PatientPortalService } from './services/patien
 import { PatientConsentsListComponent } from './components/patient-consents-list.component';
 import { PatientAuditListComponent } from './components/patient-audit-list.component';
 import { PatientRequestsListComponent } from './components/patient-requests-list.component';
+import { PatientNotificationsComponent } from './components/patient-notifications.component';
 import { I18nService } from '../../core/i18n/i18n.service';
 
 @Component({
   selector: 'app-patient-dashboard',
   standalone: true,
-  imports: [AppShellComponent, PatientProfileCardComponent, PatientVisitsListComponent, PatientConsentsListComponent, PatientAuditListComponent, PatientRequestsListComponent],
+  imports: [AppShellComponent, PatientProfileCardComponent, PatientVisitsListComponent, PatientConsentsListComponent, PatientAuditListComponent, PatientRequestsListComponent, PatientNotificationsComponent],
   template: `
     <app-shell>
       <div class="app-container-wide py-6 lg:py-8 flex flex-col gap-5">
@@ -77,7 +78,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
             </div>
           </div>-->
 
-          <div class="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4 snap-x snap-mandatory">
+          <div class="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-5 snap-x snap-mandatory">
             <button
               type="button"
               (click)="activeTab.set('visits')"
@@ -150,6 +151,28 @@ import { I18nService } from '../../core/i18n/i18n.service';
                 <p class="text-[11px] text-[var(--text-muted)] truncate">{{ i18n.t('patient.dashboard.externalAccessRequests') }}</p>
               </div>
             </button>
+
+            <button
+              type="button"
+              (click)="activeTab.set('notifications')"
+              [attr.aria-pressed]="activeTab() === 'notifications'"
+              [class]="tabClass('notifications')"
+            >
+              <div class="p-2 rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] shrink-0 relative">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0M3.124 7.5A8.969 8.969 0 015.292 3m13.416 0a8.969 8.969 0 012.168 4.5" />
+                </svg>
+                @if (unreadNotificationsCount() > 0) {
+                  <span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-[var(--radius-brand-xs)] bg-rose-500 text-[9px] font-bold text-white">
+                    {{ unreadNotificationsCount() }}
+                  </span>
+                }
+              </div>
+              <div class="min-w-0">
+                <span class="font-display font-bold text-sm text-[var(--text-primary)]">{{ i18n.t('patient.notifications.title') }}</span>
+                <p class="text-[11px] text-[var(--text-muted)] truncate">{{ i18n.t('patient.dashboard.unreadAlerts') }}</p>
+              </div>
+            </button>
           </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] gap-5 items-start">
@@ -168,6 +191,8 @@ import { I18nService } from '../../core/i18n/i18n.service';
                 <app-patient-audit-list />
               } @else if (activeTab() === 'requests') {
                 <app-patient-requests-list />
+              } @else if (activeTab() === 'notifications') {
+                <app-patient-notifications (countUpdated)="unreadNotificationsCount.set($event)" />
               }
             </div>
           </div>
@@ -194,13 +219,14 @@ export class PatientDashboardComponent implements OnInit {
   private readonly portalService = inject(PatientPortalService);
   readonly i18n = inject(I18nService);
 
-  readonly activeTab = signal<'visits' | 'consents' | 'audit' | 'requests'>('visits');
+  readonly activeTab = signal<'visits' | 'consents' | 'audit' | 'requests' | 'notifications'>('visits');
   readonly patientData = signal<PatientPortalMeResponse | null>(null);
   readonly isLoading = signal(false);
   readonly error = signal('');
   readonly expandedConsultations = signal<Record<string, boolean>>({});
+  readonly unreadNotificationsCount = signal(0);
 
-  tabClass(tab: 'visits' | 'consents' | 'audit' | 'requests'): string {
+  tabClass(tab: 'visits' | 'consents' | 'audit' | 'requests' | 'notifications'): string {
     const base = 'ui-card-subtle p-3.5 flex items-center gap-3 text-left transition-colors cursor-pointer snap-start shrink-0 w-[236px] md:w-auto';
     return this.activeTab() === tab
       ? `${base} border-[var(--brand-primary)] bg-[var(--app-surface)]`
@@ -213,6 +239,15 @@ export class PatientDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadPatientData();
+    this.loadNotificationsCount();
+  }
+
+  loadNotificationsCount(): void {
+    this.portalService.getNotifications().subscribe({
+      next: (list) => {
+        this.unreadNotificationsCount.set(list.filter(n => n.status === 'NON_LU').length);
+      }
+    });
   }
 
   loadPatientData(): void {
