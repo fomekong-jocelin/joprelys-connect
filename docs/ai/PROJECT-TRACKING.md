@@ -8,13 +8,13 @@
 |---|---|
 | Dernière mise à jour | 2026-07-03 |
 | Responsable mise à jour | Antigravity |
-| État global | Sprint 0005 en cours — CI/CD livré (STORY-1101), import FHIR DiagnosticReport livré (STORY-1104) |
-| Risques majeurs | Risque de décalage sur l'audit OWASP IDOR et la synchronisation concurrente des stocks pharmacie |
-| Prochaine priorité | Audit de sécurité OWASP IDOR (STORY-1102) et gestion réelle des stocks pharmacie (STORY-1103) |
-| Sprint courant | SPRINT-0005 |
+| État global | Sprint 0005 clôturé (v0.7.0) — Démarrage du Sprint 0006 (Allergies/Hospitalisations) |
+| Risques majeurs | Gestion concurrentielle des lits et chambres d'hospitalisation |
+| Prochaine priorité | Implémenter le module d'Allergies/Antécédents (STORY-1201) et d'Hospitalisations (STORY-1202) |
+| Sprint courant | SPRINT-0006 |
 
 | Capacité sprint | 15.0j |
-| Charge engagée | 10.5j |
+| Charge engagée | 3.1j (Est. Senior) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
@@ -22,7 +22,7 @@
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---:|---|---:|---:|---:|---|---|---|---:|---|---|---|
 | TICKET-0001 | GOV | Gouvernance | Mettre en place la documentation IA centralisée | Full-stack | DONE | P0 | 3 | Senior | 0.5j | 0.75j | 1j | Gemini | Lead | SPRINT-0001 | 0.5j | Adapter les tests et créer le backlog | Faible | 2026-07-01 |
-| TICKET-0002 | QUAL | Qualité | Appliquer la checklist aux prochaines PR | Full-stack | TODO | P0 | 2 | Intermédiaire | 0.5j | 0.75j | 1j | À assigner | Lead | À planifier | 0j | Créer les tickets réels | Moyen | 2026-07-01 |
+| TICKET-0002 | QUAL | Task | Appliquer la checklist de review aux futures PR | Full-stack | READY | P0 | 2 | Intermédiaire | 0.5j | 0.75j | 1j | Lead Developer | Gemini | SPRINT-0006 | 0j | Appliquer la checklist aux PR | Faible | 2026-07-03 |
 | TICKET-0102 | QUAL | Bug | Configuration de la DataSource PostgreSQL au démarrage | Back-end | DONE | P0 | 1 | Intermédiaire | 0.1j | 0.2j | 0.3j | Gemini | Lead | SPRINT-0002 | 0.1j | Aucun | Faible | 2026-07-02 |
 | TICKET-0103 | QUAL | Bug | Configuration du Proxy de Développement Frontend | Front-end | DONE | P0 | 1 | Intermédiaire | 0.05j | 0.1j | 0.2j | Gemini | Lead | SPRINT-0002 | 0.1j | Aucun | Faible | 2026-07-02 |
 | TICKET-0104 | QUAL | DevOps | Migration Gradle -> Maven (Backend) & Intégration Tailwind v4 (Frontend) | Full-stack | DONE | P0 | 3 | Senior | 0.2j | 0.35j | 0.6j | Gemini | Lead | SPRINT-0002 | 0.3j | Aucun | Faible | 2026-07-02 |
@@ -89,6 +89,8 @@
 | STORY-1103 | PHARMA | User Story | Gestion réelle des stocks de médicaments | Full-stack | DONE | P1 | 8 | Intermédiaire | 1.8j | 2.3j | 4.0j | Antigravity | Lead | SPRINT-0005 | 1.8j | Tests MockMvc et IHM Angular à implémenter | Moyen | 2026-07-03 |
 | STORY-1104 | LAB | User Story | Import de résultats structurés de laboratoire (FHIR/HL7) | Full-stack | DONE | P1 | 5 | Senior | 1.2j | 1.6j | 2.8j | Antigravity | Lead | SPRINT-0005 | 1.2j | Aucun (FhirDiagnosticReportParser Jackson, endpoint FHIR POST, 4 tests unitaires purs) | Fort | 2026-07-03 |
 | STORY-1105 | QUAL | User Story | Nettoyage de la dette technique & Application de la checklist QA | Full-stack | DONE | P2 | 2 | Junior | 0.4j | 0.5j | 0.8j | Antigravity | Lead | SPRINT-0005 | 0.4j | Aucun (5 dépendances Maven invalides supprimées, spring-security-test ajouté, application-test.yml complet, repair-on-migrate activé) | Faible | 2026-07-03 |
+| STORY-1201 | PAT | User Story | Module Allergies & Antécédents Médicaux | Full-stack | READY | P1 | 5 | Intermédiaire | 0.8j | 1.2j | 2.0j | Gemini | Lead Developer | SPRINT-0006 | 0j | Migration Flyway, services JPA et IHM Angular | Faible | 2026-07-03 |
+| STORY-1202 | CLIN | User Story | Module Hospitalisations, lits et notes journalières | Full-stack | READY | P1 | 8 | Senior | 1.8j | 2.5j | 4.0j | Gemini | Lead Developer | SPRINT-0006 | 0j | Tables SQL, JPA avec version, PDF sortie et écrans | Moyen | 2026-07-03 |
  
 
 ## Statuts autorisés

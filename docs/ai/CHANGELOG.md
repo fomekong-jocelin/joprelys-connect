@@ -8,6 +8,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- **Préparation du SPRINT-0006** : initialisation du plan de sprint et écriture des tickets pour les modules cliniques d'Allergies/Antécédents (STORY-1201) et d'Hospitalisations (STORY-1202).
+
 ### Changed
 
 ### Fixed
