@@ -8,10 +8,10 @@
 |---|---|
 | Dernière mise à jour | 2026-07-04 |
 | Responsable mise à jour | Antigravity |
-| État global | Sprint 0006 clôturé (v0.8.0) — En cours sur le Sprint 0007 (Demandes d'accès externe & Notifications) |
-| Risques majeurs | Contrôles de sécurité strictes sur les accès inter-établissements |
-| Prochaine priorité | Intégrer les filtres d'accès inter-établissements (STORY-1303) et le socle de notifications (STORY-1501) |
-| Sprint courant | SPRINT-0007 |
+| État global | Sprint 0007 clôturé (v0.9.0) — Préparation du Sprint 0008 (Télétransmission AllôPharma) |
+| Risques majeurs | Intégration d'API partenaires externes |
+| Prochaine priorité | Démarrer l'implémentation de la télétransmission d'ordonnances (STORY-1601) |
+| Sprint courant | SPRINT-0008 |
 
 | Capacité sprint | 15.0j |
 | Charge engagée | 3.3j (Est. Senior) |
@@ -96,6 +96,8 @@
 | STORY-1303 | DPU_ACCESS | User Story | Contrôle d'accès & Expiration des droits externes | Backend | DONE | P0 | 5 | Senior | 1.0j | 1.5j | 2.5j | Gemini | Lead Developer | SPRINT-0007 | 1.5j | Aucun (tests unitaires et intégration de sécurité au vert) | Fort | 2026-07-04 |
 | STORY-1501 | NOTIF | User Story | Socle et service d'envoi de notifications (backend) | Backend | DONE | P1 | 3 | Intermédiaire | 0.6j | 0.9j | 1.5j | Gemini | Lead Developer | SPRINT-0007 | 0.9j | Aucun (table SQL, service et API terminés) | Faible | 2026-07-04 |
 | STORY-1502 | NOTIF | User Story | Centre de notifications sur le portail patient (IHM) | Frontend | DONE | P2 | 3 | Junior | 0.4j | 0.6j | 1.0j | Lead Developer | Gemini | SPRINT-0007 | 0.6j | Aucun (IHM Angular, service de liaison et tests terminés) | Faible | 2026-07-04 |
+| STORY-1601 | API_INTEG | User Story | Télétransmission d'ordonnances à AllôPharma (backend) | Backend | READY | P1 | 5 | Senior | 1.0j | 1.3j | 2.0j | Lead Developer | Gemini | SPRINT-0008 | 0j | Initier le script Flyway, l'entité et le service d'intégration externe | Moyen | 2026-07-04 |
+| STORY-1602 | API_INTEG | User Story | Interface de télétransmission (IHM) | Frontend | READY | P1 | 3 | Intermédiaire | 0.5j | 0.7j | 1.1j | Lead Developer | Gemini | SPRINT-0008 | 0j | Développer le bouton de télétransmission et le badge de statut IHM | Faible | 2026-07-04 |
  
 
 ## Statuts autorisés
