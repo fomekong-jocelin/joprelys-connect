@@ -29,3 +29,5 @@ joprelys:
     verification-base-url: http://localhost/verify
   lab-integration:
     api-key: lab-partner-secret-token
+  rate-limiting:
+    enabled: false

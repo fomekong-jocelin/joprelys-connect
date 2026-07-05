@@ -17,11 +17,16 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.core.context.SecurityContextHolder;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/patients")
 @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+@Tag(name = "Patients", description = "Gestion du dossier patient unique (DPU)")
 public class PatientController {
 
 	private final PatientService patientService;
@@ -34,13 +39,21 @@ public class PatientController {
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
+	@Operation(summary = "Créer un patient", description = "Enregistre un nouveau patient et génère son numéro DPU.", responses = {
+		@ApiResponse(responseCode = "201", description = "Patient créé avec succès"),
+		@ApiResponse(responseCode = "400", description = "Données invalides"),
+		@ApiResponse(responseCode = "409", description = "Patient en doublon détecté")
+	})
 	public PatientResponse create(@Valid @RequestBody CreatePatientRequest request) {
 		PatientEntity entity = patientService.createPatient(request);
 		return mapToResponse(entity);
 	}
 
 	@GetMapping
-	public List<PatientResponse> list(@RequestParam(value = "q", required = false) String query) {
+	@Operation(summary = "Lister les patients", description = "Retourne la liste des patients avec recherche optionnelle par nom, téléphone ou DPU.", responses = {
+		@ApiResponse(responseCode = "200", description = "Liste retournée avec succès")
+	})
+	public List<PatientResponse> list(@RequestParam(value = "q", required = false) @Parameter(description = "Terme de recherche") String query) {
 		return patientService.searchPatients(query).stream()
 				.map(this::mapToResponse)
 				.toList();

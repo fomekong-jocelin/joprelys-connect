@@ -25,8 +25,8 @@ export class AuthApiService {
     );
   }
 
-  requestPasswordRecovery(email: string): Observable<void> {
-    return this.http.post<void>('/api/public/auth/password-recovery/request', { email });
+  requestPasswordRecovery(email: string): Observable<{ otpCode: string }> {
+    return this.http.post<{ otpCode: string }>('/api/public/auth/password-recovery/request', { email });
   }
 
   resetPassword(request: any): Observable<void> {

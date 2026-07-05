@@ -38,7 +38,7 @@ public class PasswordRecoveryService {
         this.clock = clock;
     }
 
-    public void generateAndSendOtp(String email) {
+    public String generateAndSendOtp(String email) {
         String normalizedEmail = normalizeEmail(email);
         UserAccountEntity user = userAccountRepository.findByEmail(normalizedEmail)
                 .filter(UserAccountEntity::isEnabled)
@@ -51,7 +51,7 @@ public class PasswordRecoveryService {
                 if (org != null && !"ACTIVE".equals(org.getStatus())) {
                     // Organisation inactive, on ne génère pas d'OTP
                     System.out.println("[PASSWORD RECOVERY] Tentative pour e-mail avec organisation inactive : " + normalizedEmail);
-                    return;
+                    return null;
                 }
             }
 
@@ -60,8 +60,10 @@ public class PasswordRecoveryService {
 
             // Impression en console pour la simulation
             System.out.println("[PASSWORD RECOVERY] Code de réinitialisation pour " + normalizedEmail + " : " + code);
+            return code;
         } else {
             System.out.println("[PASSWORD RECOVERY] Tentative pour e-mail inconnu ou inactif : " + normalizedEmail);
+            return null;
         }
     }
 

@@ -67,6 +67,16 @@ import { I18nService } from '../core/i18n/i18n.service';
               <p class="text-xs text-slate-500 dark:text-slate-400">{{ t('auth.forgotPassword.otpSubtitle') }}</p>
             </div>
 
+            @if (receivedOtpCode(); as code) {
+              <div class="mb-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-md">
+                <p class="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider mb-1">{{ t('auth.forgotPassword.pilotWarning') }}</p>
+                <p class="text-xs text-amber-600 dark:text-amber-300">{{ t('auth.forgotPassword.pilotDesc') }}</p>
+                <code class="mt-2 inline-flex rounded-sm bg-white dark:bg-slate-800 px-3 py-1.5 font-mono text-lg font-extrabold text-amber-800 dark:text-amber-300">
+                  {{ code }}
+                </code>
+              </div>
+            }
+
             <form class="space-y-4" (submit)="$event.preventDefault(); submitReset()">
               <div class="space-y-1.5">
                 <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">{{ t('auth.forgotPassword.code') }}</label>
@@ -127,6 +137,7 @@ export class ForgotPasswordComponent {
   readonly confirmPassword = signal('');
   readonly error = signal<string | null>(null);
   readonly loading = signal(false);
+  readonly receivedOtpCode = signal<string | null>(null);
 
   readonly canSubmitEmail = computed(() =>
     this.isValidEmail(this.email()) && !this.loading()
@@ -152,8 +163,9 @@ export class ForgotPasswordComponent {
     this.loading.set(true);
 
     this.authApi.requestPasswordRecovery(this.email()).subscribe({
-      next: () => {
+      next: (res) => {
         this.loading.set(false);
+        this.receivedOtpCode.set(res.otpCode);
         this.step.set(2);
       },
       error: (err) => {

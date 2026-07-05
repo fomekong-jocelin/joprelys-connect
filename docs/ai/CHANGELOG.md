@@ -8,6 +8,22 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- **Module API Joprelys Connect — Sous-tâches 3, 4 & 5 (TICKET-0016)** :
+  - `RateLimitingFilter` — filtre HTTP avec bucket token simplifié par IP et par utilisateur. Configurable via `application.yml` (`joprelys.rate-limiting.enabled`, `max-requests-per-window`, `window-seconds`). Désactivé en profil `test`.
+  - `RateLimitingProperties` — `@ConfigurationProperties` pour la config rate limiting.
+  - `WebhookEntity`, `WebhookRepository`, `WebhookService`, `WebhookController` — CRUD complet des webhooks (rôles ADMIN_CLINIQUE/ADMIN_JOPRELYS). Validation HTTPS obligatoire. Suppression logique (status INACTIVE). Déclenchement simulé (log) pour le pilote.
+  - Migration Flyway `V27__webhooks_schema.sql` — table `webhooks` avec indexes.
+  - Annotations OpenAPI (`@Tag`, `@Operation`, `@ApiResponse`, `@Parameter`) sur 6 controllers principaux : `PatientController`, `VisitController`, `ConsultationController`, `PrescriptionController`, `LabOrderController`, `DocumentController`.
+  - Tests unitaires `RateLimitingFilterTest` (5 cas : under limit, over limit, disabled, authenticated user, different IPs) et `WebhookServiceTest` (9 cas : create, invalid URL, list, update, update forbidden, delete, delete, trigger matching, trigger non-matching).
+
+- **Module API Joprelys Connect — Sous-tâche 1 & 2 (TICKET-0016)** :
+  - `TraceIdFilter` — génère un `X-Trace-Id` unique par requête HTTP, propagé dans les logs (MDC) et les headers de réponse.
+  - `ApiErrorResponse` — DTO du format d'erreur CDC : `{ "error": { "code", "message", "trace_id" } }`.
+  - `GlobalExceptionHandler` (`@RestControllerAdvice`) — gère `ResponseStatusException`, `MethodArgumentNotValidException`, `AccessDeniedException`, `NoSuchElementException`, et exceptions génériques avec `trace_id`.
+  - `AuthExceptionHandler` conservé sans modification — pas de régression sur le format `ProblemDetail` existant.
+  - Configuration SpringDoc/OpenAPI dans `application.yml` — info API, version, contact, Swagger UI accessible publiquement (`/swagger-ui`).
+  - Tests unitaires `GlobalExceptionHandlerTest` (7 cas : ResponseStatusException, BadRequest, validation, access denied, not found, generic, missing trace_id).
+
 - **Module Notifications — Complétion (TICKET-0015)** :
   - `NotificationController` dédié avec endpoints REST : `GET /api/notifications/unread-count` (badge), `GET /api/notifications` (pagination Pageable), `DELETE /api/notifications/{id}` (suppression avec vérification propriétaire).
   - Méthodes `getUnreadCount`, `getNotificationsPaginated`, `deleteNotification` ajoutées à `NotificationService`.

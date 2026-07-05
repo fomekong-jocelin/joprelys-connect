@@ -43,3 +43,24 @@ joprelys:
     verification-base-url: ${JOPRELYS_VERIFICATION_BASE_URL:http://localhost:4200/verify}
   lab-integration:
     api-key: ${JOPRELYS_LAB_INTEGRATION_API_KEY:lab-partner-secret-token}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui
+    enabled: true
+    operationsSorter: method
+    tagsSorter: alpha
+    displayRequestDuration: true
+  info:
+    title: Joprelys Connect API
+    description: Plateforme d'interopérabilité santé, dossier patient partagé et documents médicaux vérifiables
+    version: 1.0.0
+    contact:
+      name: Joprelys HealthTech
+      email: support@joprelys.com
+    license:
+      name: Proprietary
+

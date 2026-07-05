@@ -18,9 +18,12 @@ public class PasswordRecoveryController {
     }
 
     @PostMapping("/request")
-    public void requestRecovery(@Valid @RequestBody PasswordRecoveryRequest request) {
-        passwordRecoveryService.generateAndSendOtp(request.email());
+    public OtpResponse requestRecovery(@Valid @RequestBody PasswordRecoveryRequest request) {
+        String code = passwordRecoveryService.generateAndSendOtp(request.email());
+        return new OtpResponse(code);
     }
+
+    public record OtpResponse(String otpCode) {}
 
     @PostMapping("/reset")
     public void resetPassword(@Valid @RequestBody PasswordResetRequest request) {

@@ -4,6 +4,10 @@ import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepositor
 import com.joprelys.backend.visit.application.DocumentService;
 import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -20,6 +24,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.UUID;
 
 @RestController
+@Tag(name = "Documents", description = "Documents médicaux vérifiables")
 public class DocumentController {
 
     private final DocumentService documentService;
@@ -37,7 +42,11 @@ public class DocumentController {
 
     @GetMapping("/api/visits/{visitId}/document")
     @PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'PHARMACIEN')")
-    public ResponseEntity<byte[]> downloadDocument(@PathVariable UUID visitId) {
+    @Operation(summary = "Télécharger un document", description = "Télécharge le document médical PDF associé à une visite.", responses = {
+            @ApiResponse(responseCode = "200", description = "Document PDF retourné"),
+            @ApiResponse(responseCode = "404", description = "Introuvable")
+    })
+    public ResponseEntity<byte[]> downloadDocument(@Parameter(description = "Identifiant de la visite") @PathVariable UUID visitId) {
         MedicalDocumentEntity doc = medicalDocumentRepository.findByVisitIdWithVisitAndPatient(visitId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable pour cette visite."));
 
@@ -50,7 +59,11 @@ public class DocumentController {
     }
 
     @GetMapping("/api/public/documents/{id}/verify")
-    public DocumentVerificationResponse verifyAnonymously(@PathVariable UUID id) {
+    @Operation(summary = "Vérifier un document (anonyme)", description = "Vérifie publiquement la validité d'un document médical via son identifiant.", responses = {
+            @ApiResponse(responseCode = "200", description = "Document vérifié"),
+            @ApiResponse(responseCode = "404", description = "Introuvable")
+    })
+    public DocumentVerificationResponse verifyAnonymously(@Parameter(description = "Identifiant du document") @PathVariable UUID id) {
         return documentService.verifyDocument(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable."));
     }
@@ -66,8 +79,12 @@ public class DocumentController {
      */
     @PatchMapping("/api/documents/{id}/revoke")
     @PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE')")
+    @Operation(summary = "Révoquer un document", description = "Révoque un document médical valide. Le QR code affichera ensuite DOCUMENT RÉVOQUÉ.", responses = {
+            @ApiResponse(responseCode = "200", description = "Document révoqué avec succès"),
+            @ApiResponse(responseCode = "404", description = "Introuvable")
+    })
     public DocumentStatusResponse revokeDocument(
-            @PathVariable UUID id,
+            @Parameter(description = "Identifiant du document") @PathVariable UUID id,
             @Valid @RequestBody RevokeDocumentRequest request,
             Authentication authentication) {
 
@@ -82,8 +99,12 @@ public class DocumentController {
      */
     @PatchMapping("/api/documents/{id}/cancel")
     @PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE')")
+    @Operation(summary = "Annuler un document", description = "Annule un document médical (VALID ou REVOQUE). Cas d'usage : document généré par erreur système ou doublon.", responses = {
+            @ApiResponse(responseCode = "200", description = "Document annulé avec succès"),
+            @ApiResponse(responseCode = "404", description = "Introuvable")
+    })
     public DocumentStatusResponse cancelDocument(
-            @PathVariable UUID id,
+            @Parameter(description = "Identifiant du document") @PathVariable UUID id,
             @Valid @RequestBody RevokeDocumentRequest request,
             Authentication authentication) {
 

@@ -90,7 +90,11 @@ public class PasswordRecoveryControllerTest {
         mockMvc.perform(post("/api/public/auth/password-recovery/request")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    String response = result.getResponse().getContentAsString();
+                    assertTrue(response.contains("\"otpCode\""));
+                });
 
         String otp = getOtpFromService("medecin@joprelys.local");
         assertTrue(otp != null && otp.length() == 6);
@@ -107,7 +111,12 @@ public class PasswordRecoveryControllerTest {
         mockMvc.perform(post("/api/public/auth/password-recovery/request")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
-                .andExpect(status().isOk()); // Doit renvoyer 200 par sécurité
+                .andExpect(status().isOk()) // Doit renvoyer 200 par sécurité
+                .andExpect(result -> {
+                    String response = result.getResponse().getContentAsString();
+                    // En mode pilote, on retourne quand même un objet avec otpCode null
+                    assertTrue(response.contains("\"otpCode\""));
+                });
 
         String otp = getOtpFromService("medecin.inactive@joprelys.local");
         assertTrue(otp == null);
@@ -124,7 +133,11 @@ public class PasswordRecoveryControllerTest {
         mockMvc.perform(post("/api/public/auth/password-recovery/request")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
-                .andExpect(status().isOk()); // Doit renvoyer 200 par sécurité
+                .andExpect(status().isOk()) // Doit renvoyer 200 par sécurité
+                .andExpect(result -> {
+                    String response = result.getResponse().getContentAsString();
+                    assertTrue(response.contains("\"otpCode\""));
+                });
 
         String otp = getOtpFromService("inconnu@joprelys.local");
         assertTrue(otp == null);
@@ -133,8 +146,8 @@ public class PasswordRecoveryControllerTest {
     @Test
     void givenValidOtp_whenResetPassword_thenPasswordUpdated() throws Exception {
         // 1. Demande d'OTP
-        passwordRecoveryService.generateAndSendOtp("medecin@joprelys.local");
-        String otp = getOtpFromService("medecin@joprelys.local");
+        String otp = passwordRecoveryService.generateAndSendOtp("medecin@joprelys.local");
+        assertTrue(otp != null && otp.length() == 6);
 
         // 2. Réinitialisation
         String resetRequest = String.format("""
