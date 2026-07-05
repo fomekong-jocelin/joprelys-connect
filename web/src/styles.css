@@ -96,13 +96,15 @@ body {
   }
 
   .app-container {
-    width: min(1120px, calc(100% - 32px));
-    margin-inline: auto;
+    width: 100%;
+    max-width: 100%;
+    padding-inline: 1.5rem;
   }
 
   .app-container-wide {
-    width: min(1280px, calc(100% - 32px));
-    margin-inline: auto;
+    width: 100%;
+    max-width: 100%;
+    padding-inline: 1.5rem;
   }
 
   .ui-card {

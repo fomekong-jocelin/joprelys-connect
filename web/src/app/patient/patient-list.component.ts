@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
 import { AlertComponent } from '../shared/ui/alert.component';
@@ -7,7 +8,6 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { CardComponent } from '../shared/ui/card.component';
 import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { PatientFormComponent, PatientFormLabels } from './patient-form.component';
-import { PatientDetailComponent } from './patient-detail.component';
 import { PatientApiService } from './patient-api.service';
 import { Patient } from './patient.models';
 
@@ -21,13 +21,13 @@ import { Patient } from './patient.models';
     CardComponent,
     EmptyStateComponent,
     PatientFormComponent,
-    PatientDetailComponent,
     PageHeaderComponent,
   ],
 })
 export class PatientListComponent implements OnInit {
   private readonly api = inject(PatientApiService);
   private readonly i18n = inject(I18nService);
+  private readonly router = inject(Router);
 
   readonly list = signal<Patient[]>([]);
   readonly loading = signal(false);
@@ -135,25 +135,7 @@ export class PatientListComponent implements OnInit {
   }
 
   viewDetail(patient: Patient): void {
-    this.error.set(null);
-    this.selectedPatient.set(null);
-    this.consentRequiredPatient.set(null);
-    this.loading.set(true);
-
-    this.api.getById(patient.id).subscribe({
-      next: (fullPatient) => {
-        this.selectedPatient.set(fullPatient);
-        this.loading.set(false);
-      },
-      error: (err) => {
-        this.loading.set(false);
-        if (err && err.status === 403) {
-          this.consentRequiredPatient.set(patient);
-        } else {
-          this.error.set(err.error?.detail || err.error?.title || "Impossible de charger le dossier patient.");
-        }
-      }
-    });
+    this.router.navigate(['/patients', patient.id], { state: { patient } });
   }
 
   closeDetail(): void {

@@ -37,7 +37,9 @@ describe('PatientListComponent', () => {
     await TestBed.configureTestingModule({
       imports: [PatientListComponent],
       providers: [
-        provideRouter([]),
+        provideRouter([
+          { path: 'patients/:id', redirectTo: '' }
+        ]),
         { provide: PatientApiService, useValue: mockApi },
       ],
     }).compileComponents();

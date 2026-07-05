@@ -91,11 +91,6 @@
           </div>
         </div>
       </app-ui-card>
-    } @else if (selectedPatient(); as patient) {
-      <app-patient-detail
-        [patient]="patient"
-        (back)="closeDetail()"
-      />
     } @else {
       <!-- List & Search -->
       <div class="mb-6 flex gap-3 max-w-lg">

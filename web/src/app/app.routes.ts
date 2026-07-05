@@ -25,6 +25,40 @@ export const routes: Routes = [
     data: { expectedRoles: ['AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'] },
   },
   {
+    path: 'patients/:id',
+    loadComponent: () => import('./patient/patient-detail.component').then(m => m.PatientDetailComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'] },
+    children: [
+      { path: '', redirectTo: 'profile', pathMatch: 'full' },
+      {
+        path: 'profile',
+        loadComponent: () => import('./patient/detail/patient-profile-tab.component').then(m => m.PatientProfileTabComponent),
+        data: { breadcrumb: 'breadcrumb.patients.profile' }
+      },
+      {
+        path: 'consultations',
+        loadComponent: () => import('./patient/detail/patient-consultations-tab.component').then(m => m.PatientConsultationsTabComponent),
+        data: { breadcrumb: 'breadcrumb.patients.consultations' }
+      },
+      {
+        path: 'hospitalizations',
+        loadComponent: () => import('./patient/detail/patient-hospitalizations-tab.component').then(m => m.PatientHospitalizationsTabComponent),
+        data: { breadcrumb: 'breadcrumb.patients.hospitalizations' }
+      },
+      {
+        path: 'lab-orders',
+        loadComponent: () => import('./patient/detail/patient-lab-orders-tab.component').then(m => m.PatientLabOrdersTabComponent),
+        data: { breadcrumb: 'breadcrumb.patients.lab-orders' }
+      },
+      {
+        path: 'audit-trail',
+        loadComponent: () => import('./patient/detail/patient-audit-trail-tab.component').then(m => m.PatientAuditTrailTabComponent),
+        data: { breadcrumb: 'breadcrumb.patients.audit-trail' }
+      }
+    ]
+  },
+  {
     path: 'clinic/staff',
     loadComponent: () => import('./clinic/staff/staff-management.component').then((module) => module.StaffManagementComponent),
     canActivate: [roleGuard],
@@ -74,6 +108,36 @@ export const routes: Routes = [
   {
     path: 'patient/dashboard',
     loadComponent: () => import('./patient/portal/patient-dashboard.component').then(m => m.PatientDashboardComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['PATIENT'] },
+  },
+  {
+    path: 'patient/prescriptions',
+    loadComponent: () => import('./patient/portal/pages/patient-prescriptions-page.component').then(m => m.PatientPrescriptionsPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['PATIENT'] },
+  },
+  {
+    path: 'patient/consents',
+    loadComponent: () => import('./patient/portal/pages/patient-consents-page.component').then(m => m.PatientConsentsPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['PATIENT'] },
+  },
+  {
+    path: 'patient/audit',
+    loadComponent: () => import('./patient/portal/pages/patient-audit-page.component').then(m => m.PatientAuditPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['PATIENT'] },
+  },
+  {
+    path: 'patient/requests',
+    loadComponent: () => import('./patient/portal/pages/patient-requests-page.component').then(m => m.PatientRequestsPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['PATIENT'] },
+  },
+  {
+    path: 'patient/notifications',
+    loadComponent: () => import('./patient/portal/pages/patient-notifications-page.component').then(m => m.PatientNotificationsPageComponent),
     canActivate: [roleGuard],
     data: { expectedRoles: ['PATIENT'] },
   },

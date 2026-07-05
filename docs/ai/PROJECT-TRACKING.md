@@ -8,13 +8,13 @@
 |---|---|
 | Dernière mise à jour | 2026-07-05 |
 | Responsable mise à jour | Antigravity |
-| État global | Sprint 0009 — Implémentation terminée de l'interopérabilité HL7 FHIR |
+| État global | Sprint 0009 — Audit complet des modules et interopérabilité HL7 FHIR |
 | Risques majeurs | Aucun |
 | Prochaine priorité | Validation finale et préparation livraison |
 | Sprint courant | SPRINT-0009 |
 
 | Capacité sprint | 15.0j |
-| Charge engagée | 2.7j (Est. Senior) |
+| Charge engagée | 7.15j (Est. Senior) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
@@ -23,6 +23,7 @@
 |---|---|---|---|---|---|---|---:|---|---:|---:|---:|---|---|---|---:|---|---|---|
 | TICKET-0001 | GOV | Gouvernance | Mettre en place la documentation IA centralisée | Full-stack | DONE | P0 | 3 | Senior | 0.5j | 0.75j | 1j | Gemini | Lead | SPRINT-0001 | 0.5j | Adapter les tests et créer le backlog | Faible | 2026-07-01 |
 | TICKET-0002 | QUAL | Task | Appliquer la checklist de review aux futures PR | Full-stack | READY | P0 | 2 | Intermédiaire | 0.5j | 0.75j | 1j | Lead Developer | Gemini | SPRINT-0006 | 0j | Appliquer la checklist aux PR | Faible | 2026-07-03 |
+| TICKET-AUDIT-MODULES-COMPARISON | QUAL | Gouvernance | Audit et analyse d'écart des modules par rapport au CDC | Full-stack | DONE | P1 | 2 | Tech Lead | 0.2j | 0.3j | 0.5j | Antigravity | Lead | SPRINT-0009 | 0.15j | Aucun (Rapport d'audit rédigé) | Faible | 2026-07-05 |
 | TICKET-0102 | QUAL | Bug | Configuration de la DataSource PostgreSQL au démarrage | Back-end | DONE | P0 | 1 | Intermédiaire | 0.1j | 0.2j | 0.3j | Gemini | Lead | SPRINT-0002 | 0.1j | Aucun | Faible | 2026-07-02 |
 | TICKET-0103 | QUAL | Bug | Configuration du Proxy de Développement Frontend | Front-end | DONE | P0 | 1 | Intermédiaire | 0.05j | 0.1j | 0.2j | Gemini | Lead | SPRINT-0002 | 0.1j | Aucun | Faible | 2026-07-02 |
 | TICKET-0104 | QUAL | DevOps | Migration Gradle -> Maven (Backend) & Intégration Tailwind v4 (Frontend) | Full-stack | DONE | P0 | 3 | Senior | 0.2j | 0.35j | 0.6j | Gemini | Lead | SPRINT-0002 | 0.3j | Aucun | Faible | 2026-07-02 |
@@ -103,6 +104,20 @@
 | STORY-1701 | FHIR | User Story | Mapping des entités DPU vers les ressources FHIR (Patient, Encounter, Observation) | Backend | DONE | P1 | 5 | Senior | 1.0j | 1.3j | 2.0j | Antigravity | Lead Developer | SPRINT-0009 | 0.2j | Aucun (DTOs, Mappers et tests unitaires validés) | Moyen | 2026-07-04 |
 | STORY-1702 | FHIR | User Story | Endpoints REST FHIR pour les patients et consultations | Backend | DONE | P1 | 5 | Senior | 1.0j | 1.3j | 2.0j | Antigravity | Lead Developer | SPRINT-0009 | 0.4j | Aucun (endpoints GET /fhir/Patient, Encounter et Observation et tests validés) | Moyen | 2026-07-05 |
 | STORY-1703 | FHIR | User Story | Portail Développeur & Documentation OpenAPI/Swagger | Documentation | DONE | P2 | 3 | Intermédiaire | 0.7j | 1.0j | 1.7j | Antigravity | Lead Developer | SPRINT-0009 | 0.3j | Aucun (API OpenAPI intégrée et guide utilisateur rédigé) | Faible | 2026-07-05 |
+| EPIC-0012 | UI_UX | Epic | Refonte UI/UX Premium back-office | Full-stack | DONE | P1 | 22 | Senior | 2.25j | 3.1j | 5.3j | Antigravity | Lead Developer | SPRINT-0009 | 1.15j | Aucun (Refonte UI/UX premium complète avec navigation contextuelle) | Faible | 2026-07-05 |
+| STORY-1801 | UI_UX | User Story | Intégration du sélecteur de Thème (Clair / Sombre) dans l'AppShell | Frontend | DONE | P1 | 2 | Intermédiaire | 0.15j | 0.2j | 0.35j | Antigravity | Lead Developer | SPRINT-0009 | 0.15j | Aucun (Bouton switch et ThemeService intégrés) | Faible | 2026-07-05 |
+| STORY-1802 | UI_UX | User Story | Menu Latéral (Sidebar) Rétractable pour le Back-office | Frontend | DONE | P1 | 5 | Senior | 0.5j | 0.8j | 1.3j | Antigravity | Lead Developer | SPRINT-0009 | 0.4j | Aucun (Sidebar collapsible avec rôles en place) | Faible | 2026-07-05 |
+| STORY-1803 | UI_UX | User Story | Fil d'Ariane (Breadcrumbs) et Titrage Dynamique | Frontend | DONE | P2 | 2 | Intermédiaire | 0.2j | 0.3j | 0.5j | Antigravity | Lead Developer | SPRINT-0009 | 0.15j | Aucun (Composant breadcrumbs fonctionnel) | Faible | 2026-07-05 |
+| STORY-1804 | UI_UX | User Story | Découpage du Dossier Patient Unique (DPU) en Vues Dédiées | Frontend | DONE | P1 | 5 | Senior | 0.6j | 1.0j | 1.7j | Antigravity | Lead Developer | SPRINT-0009 | 0.25j | Aucun (Routage enfant et extraction composants OK) | Faible | 2026-07-05 |
+| TICKET-UX-GOOGLE-DESIGN | UI_UX | Refactoring | Refonte UI/UX : Navigation Contextuelle & Pages Dédiées | Frontend | DONE | P0 | 8 | Senior | 0.8j | 1.0j | 1.7j | Antigravity | Lead Developer | SPRINT-0009 | 0.2j | Aucun (Sidebar contextuelle et 5 pages portail patient créées) | Faible | 2026-07-05 |
+| EPIC-0013 | PATIENT_COMPLIANCE | Epic | Conformité Module Patient (Cahier des Charges) | Full-stack | IN_PROGRESS | P1 | 22 | Senior | 2.2j | 3.0j | 5.0j | Antigravity | Lead Developer | SPRINT-0009 | 0.0j | Implémenter la détection de doublons, fusion, PDF et scopes | Moyen | 2026-07-05 |
+| TICKET-1301 | PATIENT_COMPLIANCE | Task | Rendre le téléphone optionnel à la création | Full-stack | TODO | P1 | 1 | Senior | 0.1j | 0.15j | 0.25j | Antigravity | Lead Developer | SPRINT-0009 | 0.0j | Modifier DTO et validation IHM | Faible | 2026-07-05 |
+| TICKET-1302 | PATIENT_COMPLIANCE | Task | Service de détection de doublons (Levenshtein) | Backend | TODO | P1 | 5 | Senior | 0.5j | 0.7j | 1.1j | Antigravity | Lead Developer | SPRINT-0009 | 0.0j | Implémenter algorithme et candidats Flyway | Moyen | 2026-07-05 |
+| TICKET-1303 | PATIENT_COMPLIANCE | Task | Logique transactionnelle de fusion de dossiers | Backend | TODO | P1 | 5 | Senior | 0.5j | 0.7j | 1.1j | Antigravity | Lead Developer | SPRINT-0009 | 0.0j | Implémenter fusion FKs et désactivation | Moyen | 2026-07-05 |
+| TICKET-1304 | PATIENT_COMPLIANCE | Task | IHM d'administration des doublons et assistant de fusion | Frontend | TODO | P1 | 3 | Senior | 0.3j | 0.4j | 0.7j | Antigravity | Lead Developer | SPRINT-0009 | 0.0j | Créer page et modal comparatif de fusion | Faible | 2026-07-05 |
+| TICKET-1305 | PATIENT_COMPLIANCE | Task | Fiche de synthèse médicale en PDF | Full-stack | TODO | P1 | 3 | Senior | 0.3j | 0.4j | 0.7j | Antigravity | Lead Developer | SPRINT-0009 | 0.0j | Générer PDF A4 et bouton Angular de téléchargement | Faible | 2026-07-05 |
+| TICKET-1306 | PATIENT_COMPLIANCE | Task | Scopes granulaires de consentements & canal | Full-stack | TODO | P1 | 3 | Senior | 0.3j | 0.4j | 0.7j | Antigravity | Lead Developer | SPRINT-0009 | 0.0j | Ajouter colonne Flyway, filtres API et checkboxes | Moyen | 2026-07-05 |
+| TICKET-1307 | PATIENT_COMPLIANCE | Task | Scopes granulaires pour les demandes d'accès externes | Full-stack | TODO | P1 | 2 | Senior | 0.2j | 0.3j | 0.5j | Antigravity | Lead Developer | SPRINT-0009 | 0.0j | Ajouter colonne Flyway, filtres API et checkboxes | Moyen | 2026-07-05 |
 
 
 ## Statuts autorisés
