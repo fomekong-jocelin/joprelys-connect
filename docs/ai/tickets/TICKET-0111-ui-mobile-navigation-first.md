@@ -101,6 +101,10 @@ Rendre l'application mobile-first et intuitive sur les petits écrans (smartphon
   - Ajustement des affichages du numéro DPU dans `patient-list.component.html` et `patient-detail.component.ts` avec `whitespace-nowrap`, `font-mono` et `text-xs` pour empêcher le retour à la ligne inesthétique sur petit écran.
   - Découpage en blocs flexibles avec gestion de flex-wrap pour les informations secondaires de la fiche d'en-tête patient.
   - Réorganisation du bloc d'en-tête de la file d'attente sur le tableau de bord (`dashboard.component.html`) pour placer le bouton "Actualiser" directement à côté du titre sur mobile, évitant ainsi son tassement en bout de ligne.
+- **Phase 4 : Remplacement du bouton Actualiser par une icône et réduction des polices sur mobile (Demande complémentaire)** :
+  - Remplacement du bouton texte "Actualiser" par un bouton icône d'actualisation (`svg` de rafraîchissement) sur mobile dans `dashboard.component.html`, masqué sur grand écran.
+  - Réduction de la taille de la police du message d'accueil de `text-3xl` à `text-xl md:text-3xl` sur mobile pour éviter les débordements de texte sur petit écran.
+  - Réduction de la taille du titre de la file d'attente active de `text-xl` à `text-base sm:text-xl` sur mobile.
 
 ## 9. Suivi d'exécution
 
@@ -109,6 +113,7 @@ Rendre l'application mobile-first et intuitive sur les petits écrans (smartphon
 | 2026-07-05 | Antigravity | 0.15j | 100% | Aucun | Aucun | Implémentation et tests complets validés |
 | 2026-07-05 | Antigravity | 0.05j | 100% | Aucun | Aucun | Phase 2 : Optimisation des paddings et disposition des boutons sur mobile |
 | 2026-07-05 | Antigravity | 0.05j | 100% | Aucun | Aucun | Phase 3 : Résolution du wrap DPU et du bouton Actualiser sur mobile |
+| 2026-07-05 | Antigravity | 0.05j | 100% | Aucun | Aucun | Phase 4 : Remplacement du bouton Actualiser par une icône et réduction des polices sur mobile |
 
 ## 10. Tests et vérifications
 

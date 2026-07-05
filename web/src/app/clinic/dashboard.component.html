@@ -2,7 +2,7 @@
   <div class="app-container py-10">
     @if (session(); as currentSession) {
       <div class="mb-8">
-        <h1 class="ui-title text-3xl">
+        <h1 class="ui-title text-xl md:text-3xl">
           {{ welcomeLabel() }}, {{ currentSession.name }}
         </h1>
         <p class="mt-1 text-sm font-medium" style="color: var(--text-secondary)">
@@ -181,10 +181,17 @@
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4 mb-6" style="border-color: var(--border-color)">
             <div class="w-full">
               <div class="flex items-center justify-between sm:justify-start gap-4">
-                <h2 class="font-display font-bold text-xl text-brand-night dark:text-white">File d'Attente Active</h2>
-                <app-ui-button variant="secondary" (pressed)="loadQueue()" class="sm:hidden text-xs">
-                  Actualiser
-                </app-ui-button>
+                <h2 class="font-display font-bold text-base sm:text-xl text-brand-night dark:text-white">File d'Attente Active</h2>
+                <button
+                  type="button"
+                  (click)="loadQueue()"
+                  class="p-2 sm:hidden rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  title="Actualiser"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  </svg>
+                </button>
               </div>
               <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 pr-0 sm:pr-8">
                 La file se remplit après l'ouverture d'une visite depuis le dossier patient. Les constantes se saisissent ici, avant la consultation.

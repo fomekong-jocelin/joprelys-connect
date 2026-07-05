@@ -24,6 +24,10 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - **Phase 3 : Résolution du wrap DPU et du bouton Actualiser sur mobile** :
     - Remplacement de l'affichage standard du DPU sur mobile par un format `text-xs font-mono whitespace-nowrap` pour empêcher les retours à la ligne indésirables.
     - Réorganisation de l'en-tête de la file d'attente sur le tableau de bord pour placer le bouton "Actualiser" sur la même ligne que le titre sur mobile, déchargeant ainsi la description en dessous.
+  - **Phase 4 : Remplacement du bouton Actualiser par une icône et réduction des polices sur mobile** :
+    - Remplacement du bouton texte "Actualiser" par un bouton icône d'actualisation (`svg` de rafraîchissement) sur mobile sur le tableau de bord, masqué sur grand écran.
+    - Réduction de la taille de la police du message d'accueil de `text-3xl` à `text-xl md:text-3xl` sur mobile pour éviter les débordements de texte sur petit écran.
+    - Réduction de la taille du titre de la file d'attente active de `text-xl` à `text-base sm:text-xl` sur mobile.
 
 - **Module API Joprelys Connect — Sous-tâches 3, 4 & 5 (TICKET-0016)** :
   - `RateLimitingFilter` — filtre HTTP avec bucket token simplifié par IP et par utilisateur. Configurable via `application.yml` (`joprelys.rate-limiting.enabled`, `max-requests-per-window`, `window-seconds`). Désactivé en profil `test`.
