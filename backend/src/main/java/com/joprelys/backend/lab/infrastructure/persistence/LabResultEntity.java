@@ -183,4 +183,8 @@ public class LabResultEntity {
 	public Instant getCreatedAt() {
 		return createdAt;
 	}
+
+	public void setPatient(PatientEntity patient) {
+		this.patient = patient;
+	}
 }

@@ -79,6 +79,9 @@ public class ExternalAccessService {
                 request.reason(),
                 request.durationHours()
         );
+        if (request.scopes() != null && !request.scopes().isBlank()) {
+            newRequest.setScopes(request.scopes());
+        }
 
         ExternalAccessRequestEntity saved = externalAccessRequestRepository.save(newRequest);
 
@@ -111,6 +114,11 @@ public class ExternalAccessService {
 
     @Transactional
     public ExternalAccessResponse approveRequest(UUID patientId, UUID requestId) {
+        return approveRequest(patientId, requestId, null);
+    }
+
+    @Transactional
+    public ExternalAccessResponse approveRequest(UUID patientId, UUID requestId, String scopes) {
         ExternalAccessRequestEntity request = externalAccessRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Demande d'accès introuvable."));
 
@@ -124,6 +132,9 @@ public class ExternalAccessService {
 
         request.setStatus("APPROUVEE");
         request.setExpiresAt(Instant.now().plus(java.time.Duration.ofHours(request.getRequestedDurationHours())));
+        if (scopes != null && !scopes.isBlank()) {
+            request.setScopes(scopes);
+        }
         ExternalAccessRequestEntity saved = externalAccessRequestRepository.save(request);
 
         // Récupérer l'organisation du patient (si disponible) pour l'audit log, sinon celle de la demande

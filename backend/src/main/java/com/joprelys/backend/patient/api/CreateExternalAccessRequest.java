@@ -18,5 +18,6 @@ public record CreateExternalAccessRequest(
         @NotNull(message = "La durée d'accès est obligatoire.")
         @Min(value = 1, message = "La durée minimale est de 1 heure.")
         @Max(value = 168, message = "La durée maximale est de 168 heures (7 jours).")
-        Integer durationHours
+        Integer durationHours,
+        String scopes
 ) {}

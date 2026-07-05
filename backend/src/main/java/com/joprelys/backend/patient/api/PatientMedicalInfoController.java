@@ -1,11 +1,12 @@
 package com.joprelys.backend.patient.api;
 
 import com.joprelys.backend.patient.application.PatientMedicalInfoService;
+import com.joprelys.backend.patient.application.PatientService;
+import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.UUID;
 
@@ -15,14 +16,29 @@ import java.util.UUID;
 public class PatientMedicalInfoController {
 
     private final PatientMedicalInfoService patientMedicalInfoService;
+    private final PatientService patientService;
+    private final PatientRepository patientRepository;
 
-    public PatientMedicalInfoController(PatientMedicalInfoService patientMedicalInfoService) {
+    public PatientMedicalInfoController(
+            PatientMedicalInfoService patientMedicalInfoService,
+            PatientService patientService,
+            PatientRepository patientRepository) {
         this.patientMedicalInfoService = patientMedicalInfoService;
+        this.patientService = patientService;
+        this.patientRepository = patientRepository;
     }
 
     @GetMapping("/allergies")
     public List<PatientAllergyResponse> getAllergies(@PathVariable UUID patientId) {
-        return patientMedicalInfoService.listAllergies(patientId);
+        patientService.validateAccess(patientId, "allergies_history");
+        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
+        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
+        try {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
+            return patientMedicalInfoService.listAllergies(patientId);
+        } finally {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
+        }
     }
 
     @PostMapping("/allergies")
@@ -31,7 +47,15 @@ public class PatientMedicalInfoController {
     public PatientAllergyResponse addAllergy(
             @PathVariable UUID patientId,
             @Valid @RequestBody CreatePatientAllergyRequest request) {
-        return patientMedicalInfoService.addAllergy(patientId, request);
+        patientService.validateAccess(patientId, "allergies_history");
+        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
+        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
+        try {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
+            return patientMedicalInfoService.addAllergy(patientId, request);
+        } finally {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
+        }
     }
 
     @PutMapping("/allergies/{allergyId}")
@@ -40,12 +64,28 @@ public class PatientMedicalInfoController {
             @PathVariable UUID patientId,
             @PathVariable UUID allergyId,
             @Valid @RequestBody CreatePatientAllergyRequest request) {
-        return patientMedicalInfoService.updateAllergy(patientId, allergyId, request);
+        patientService.validateAccess(patientId, "allergies_history");
+        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
+        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
+        try {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
+            return patientMedicalInfoService.updateAllergy(patientId, allergyId, request);
+        } finally {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
+        }
     }
 
     @GetMapping("/medical-history")
     public List<PatientMedicalHistoryResponse> getMedicalHistory(@PathVariable UUID patientId) {
-        return patientMedicalInfoService.listMedicalHistory(patientId);
+        patientService.validateAccess(patientId, "allergies_history");
+        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
+        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
+        try {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
+            return patientMedicalInfoService.listMedicalHistory(patientId);
+        } finally {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
+        }
     }
 
     @PostMapping("/medical-history")
@@ -54,7 +94,15 @@ public class PatientMedicalInfoController {
     public PatientMedicalHistoryResponse addMedicalHistory(
             @PathVariable UUID patientId,
             @Valid @RequestBody CreatePatientMedicalHistoryRequest request) {
-        return patientMedicalInfoService.addMedicalHistory(patientId, request);
+        patientService.validateAccess(patientId, "allergies_history");
+        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
+        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
+        try {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
+            return patientMedicalInfoService.addMedicalHistory(patientId, request);
+        } finally {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
+        }
     }
 
     @PutMapping("/medical-history/{historyId}")
@@ -63,6 +111,14 @@ public class PatientMedicalInfoController {
             @PathVariable UUID patientId,
             @PathVariable UUID historyId,
             @Valid @RequestBody CreatePatientMedicalHistoryRequest request) {
-        return patientMedicalInfoService.updateMedicalHistory(patientId, historyId, request);
+        patientService.validateAccess(patientId, "allergies_history");
+        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
+        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
+        try {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
+            return patientMedicalInfoService.updateMedicalHistory(patientId, historyId, request);
+        } finally {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
+        }
     }
 }

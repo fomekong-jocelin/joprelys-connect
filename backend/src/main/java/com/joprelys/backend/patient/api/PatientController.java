@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.context.SecurityContextHolder;
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/patients")
@@ -22,9 +25,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class PatientController {
 
 	private final PatientService patientService;
+	private final UserAccountRepository userAccountRepository;
 
-	public PatientController(PatientService patientService) {
+	public PatientController(PatientService patientService, UserAccountRepository userAccountRepository) {
 		this.patientService = patientService;
+		this.userAccountRepository = userAccountRepository;
 	}
 
 	@PostMapping
@@ -41,6 +46,41 @@ public class PatientController {
 				.toList();
 	}
 
+	// WT3 (DUPLICATES): Liste des candidats doublons
+	@GetMapping("/duplicates")
+	@PreAuthorize("hasRole('ADMIN_CLINIQUE')")
+	public List<PatientDuplicateCandidateResponse> getDuplicates() {
+		return patientService.getDuplicateCandidates().stream()
+				.map(c -> new PatientDuplicateCandidateResponse(
+						c.getId(),
+						mapToResponse(c.getSourcePatient()),
+						mapToResponse(c.getTargetPatient()),
+						c.getSimilarityScore(),
+						c.getStatus(),
+						c.getCreatedAt()
+				))
+				.toList();
+	}
+
+	// WT3 (DUPLICATES): Ignorer un doublon candidat
+	@PostMapping("/duplicates/{id}/ignore")
+	@PreAuthorize("hasRole('ADMIN_CLINIQUE')")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void ignoreDuplicate(@PathVariable UUID id) {
+		patientService.ignoreDuplicateCandidate(id);
+	}
+
+	// WT3 (DUPLICATES): Fusionner deux dossiers patients
+	@PostMapping("/merge")
+	@PreAuthorize("hasRole('ADMIN_CLINIQUE')")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void merge(@Valid @RequestBody MergePatientsRequest request) {
+		var actorEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+		var actor = userAccountRepository.findByEmail(actorEmail.trim().toLowerCase())
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur non trouvé"));
+		patientService.mergePatients(request.primaryId(), request.secondaryId(), actor.getId());
+	}
+
 	@PostMapping("/{id}/emergency-access")
 	@ResponseStatus(HttpStatus.CREATED)
 	public void triggerEmergencyAccess(
@@ -53,6 +93,17 @@ public class PatientController {
 	public PatientResponse getById(@PathVariable UUID id) {
 		PatientEntity entity = patientService.getPatientById(id);
 		return mapToResponse(entity);
+	}
+
+	// WT2 (PDF): Téléchargement du PDF de synthèse médicale patient
+	@GetMapping("/{id}/summary-pdf")
+	@PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE')")
+	public org.springframework.http.ResponseEntity<byte[]> downloadSummaryPdf(@PathVariable UUID id) {
+		byte[] pdfBytes = patientService.generatePatientSummaryPdf(id);
+		return org.springframework.http.ResponseEntity.ok()
+				.header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"patient-summary-" + id + ".pdf\"")
+				.contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+				.body(pdfBytes);
 	}
 
 	private PatientResponse mapToResponse(PatientEntity entity) {

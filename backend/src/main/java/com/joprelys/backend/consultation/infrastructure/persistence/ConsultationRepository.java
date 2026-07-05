@@ -19,4 +19,13 @@ public interface ConsultationRepository extends JpaRepository<ConsultationEntity
 
 	@Query("SELECT c FROM ConsultationEntity c JOIN FETCH c.visit JOIN FETCH c.doctor WHERE c.visit.patient.id = :patientId ORDER BY c.createdAt DESC")
 	List<ConsultationEntity> findByPatientIdOrderByCreatedAtDesc(@Param("patientId") UUID patientId);
+
+	@Query(value = "SELECT * FROM consultations WHERE id = :id", nativeQuery = true)
+	Optional<ConsultationEntity> findByIdGlobally(@Param("id") UUID id);
+
+	@Query(value = "SELECT * FROM consultations WHERE visit_id = :visitId", nativeQuery = true)
+	Optional<ConsultationEntity> findByVisitIdGlobally(@Param("visitId") UUID visitId);
+
+	@Query(value = "SELECT v.patient_id FROM consultations c JOIN visits v ON c.visit_id = v.id WHERE c.id = :consultationId", nativeQuery = true)
+	Optional<Object> findPatientIdByConsultationId(@Param("consultationId") UUID consultationId);
 }

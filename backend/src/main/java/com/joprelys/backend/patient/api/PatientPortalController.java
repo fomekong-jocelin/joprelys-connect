@@ -164,15 +164,23 @@ public class PatientPortalController {
                 .map(org -> {
                     var consentOpt = patientConsentRepository.findByPatientIdAndOrganizationId(patient.getId(), org.getId());
                     String status;
+                    String scopes;
+                    String validationChannel;
                     if (consentOpt.isPresent()) {
                         status = consentOpt.get().getStatus();
+                        scopes = consentOpt.get().getScopes();
+                        validationChannel = consentOpt.get().getValidationChannel();
                     } else if (org.getId().equals(patient.getOrganizationId())) {
                         status = "ACTIVE";
+                        scopes = "medical_records,prescriptions,lab_results,allergies_history";
+                        validationChannel = "PORTAL";
                     } else {
                         status = "NONE";
+                        scopes = "medical_records,prescriptions,lab_results,allergies_history";
+                        validationChannel = "PORTAL";
                     }
                     boolean isCreator = org.getId().equals(patient.getOrganizationId());
-                    return new PatientConsentDto(org.getId(), org.getName(), status, isCreator);
+                    return new PatientConsentDto(org.getId(), org.getName(), status, isCreator, scopes, validationChannel);
                 })
                 .toList();
     }
@@ -181,6 +189,8 @@ public class PatientPortalController {
     public void updateConsent(
             @PathVariable UUID orgId,
             @org.springframework.web.bind.annotation.RequestParam String status,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String scopes,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String validationChannel,
             Authentication authentication) {
         if (!"ACTIVE".equals(status) && !"REVOKED".equals(status)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Statut invalide.");
@@ -192,6 +202,14 @@ public class PatientPortalController {
                 .orElseGet(() -> new com.joprelys.backend.patient.infrastructure.persistence.PatientConsentEntity(patient.getId(), orgId, status));
 
         consent.setStatus(status);
+        if (scopes != null) {
+            consent.setScopes(scopes);
+        }
+        if (validationChannel != null) {
+            consent.setValidationChannel(validationChannel);
+        } else {
+            consent.setValidationChannel("PORTAL");
+        }
         patientConsentRepository.save(consent);
     }
 
@@ -222,9 +240,12 @@ public class PatientPortalController {
     }
 
     @org.springframework.web.bind.annotation.PostMapping("/access-requests/{id}/approve")
-    public ExternalAccessResponse approveAccessRequest(@PathVariable UUID id, Authentication authentication) {
+    public ExternalAccessResponse approveAccessRequest(
+            @PathVariable UUID id,
+            @RequestParam(required = false) String scopes,
+            Authentication authentication) {
         PatientEntity patient = patientAccessGuardService.resolve(authentication);
-        return externalAccessService.approveRequest(patient.getId(), id);
+        return externalAccessService.approveRequest(patient.getId(), id, scopes);
     }
 
     @org.springframework.web.bind.annotation.PostMapping("/access-requests/{id}/reject")
@@ -261,7 +282,7 @@ public class PatientPortalController {
     }
 }
 
-record PatientConsentDto(UUID organizationId, String organizationName, String status, boolean isCreator) {}
+record PatientConsentDto(UUID organizationId, String organizationName, String status, boolean isCreator, String scopes, String validationChannel) {}
 
 record PatientAuditLogDto(
         UUID id,

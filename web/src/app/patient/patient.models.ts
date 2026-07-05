@@ -6,7 +6,7 @@ export interface Patient {
   fullName: string;
   gender: string;
   birthDate: string; // ISO string date YYYY-MM-DD
-  phone: string;
+  phone?: string;
   city: string;
   district?: string;
   address?: string;
@@ -24,7 +24,7 @@ export interface CreatePatientDto {
   fullName: string;
   gender: string;
   birthDate: string;
-  phone: string;
+  phone?: string;
   city: string;
   district?: string;
   address?: string;
@@ -155,3 +155,12 @@ export interface DischargeHospitalizationRequest {
 }
 
 
+
+export interface PatientDuplicateCandidate {
+  id: string;
+  sourcePatient: Patient;
+  targetPatient: Patient;
+  similarityScore: number;
+  status: 'PENDING' | 'RESOLVED' | 'IGNORED';
+  createdAt: string;
+}

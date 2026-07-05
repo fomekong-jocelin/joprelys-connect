@@ -77,4 +77,8 @@ public class EmergencyAccessAuthorizationEntity {
 	public Instant getCreatedAt() {
 		return createdAt;
 	}
+
+	public void setPatientId(java.util.UUID patientId) {
+		this.patientId = patientId;
+	}
 }

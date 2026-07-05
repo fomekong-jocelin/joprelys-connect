@@ -23,4 +23,6 @@ public interface PatientRepository extends JpaRepository<PatientEntity, UUID> {
 
 	@Query(value = "SELECT * FROM patients WHERE id = :id", nativeQuery = true)
 	java.util.Optional<PatientEntity> findByIdGlobally(@Param("id") UUID id);
+
+	List<PatientEntity> findByBirthDate(java.time.LocalDate birthDate);
 }

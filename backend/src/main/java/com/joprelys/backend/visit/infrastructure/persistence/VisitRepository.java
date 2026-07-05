@@ -13,7 +13,13 @@ public interface VisitRepository extends JpaRepository<VisitEntity, UUID> {
 
 	boolean existsByPatientIdAndStatus(UUID patientId, String status);
 
+	// WT3 (DUPLICATES): Find all visits for a patient (used during merge)
+	List<VisitEntity> findByPatientId(UUID patientId);
+
 	@Query(value = "SELECT * FROM visits WHERE id = :id", nativeQuery = true)
 	java.util.Optional<VisitEntity> findByIdGlobally(@Param("id") UUID id);
-}
 
+	// WT1 (SCOPES): Find patient ID from a visit ID (used for scope validation)
+	@Query(value = "SELECT patient_id FROM visits WHERE id = :visitId", nativeQuery = true)
+	java.util.Optional<Object> findPatientIdByVisitId(@Param("visitId") UUID visitId);
+}

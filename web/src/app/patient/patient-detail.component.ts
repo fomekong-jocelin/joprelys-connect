@@ -122,6 +122,19 @@ import { CardComponent } from '../shared/ui/card.component';
                   <app-ui-button variant="secondary" (pressed)="goBack()" class="grow sm:grow-0 text-xs">
                     Retour
                   </app-ui-button>
+
+                  @if (canDownloadSummary()) {
+                    <button
+                      (click)="downloadSummaryPdf()"
+                      class="grow sm:grow-0 text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center justify-center gap-1.5 font-bold transition-all cursor-pointer shadow-xs"
+                      title="Télécharger la synthèse médicale (PDF)"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-brand-primary">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                      </svg>
+                      <span>Synthèse PDF</span>
+                    </button>
+                  }
                   
                   @if (canStartConsultation()) {
                     <app-ui-button variant="primary" (pressed)="goToConsultation()" class="grow sm:grow-0 text-xs">
@@ -294,6 +307,33 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
     const role = this.session()?.role;
     return role === 'MEDECIN' || role === 'ADMIN_CLINIQUE' || role === 'AUDITEUR';
   });
+
+  readonly canDownloadSummary = computed(() => {
+    const role = this.session()?.role;
+    const allowedRoles = ['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'];
+    return allowedRoles.includes(role || '');
+  });
+
+  downloadSummaryPdf(): void {
+    const currentPatient = this.patient();
+    if (!currentPatient) return;
+    this.patientApi.downloadSummaryPdf(currentPatient.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `patient-summary-${currentPatient.id}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Error downloading summary pdf', err);
+        alert('Erreur lors du téléchargement du PDF de synthèse');
+      }
+    });
+  }
 
   ngOnInit(): void {
     // If navigation details were supplied via Router state, use them immediately

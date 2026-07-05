@@ -205,7 +205,7 @@ public class HospitalizationService {
             Path filePath = storagePath.resolve("discharge-" + entity.getId() + ".pdf");
             Files.write(filePath, pdfBytes);
 
-            entity.discharge(request.dischargeDiagnosis(), request.dischargeInstructions(), filePath.toAbsolutePath().toString());
+            entity.discharge(request.dischargeDiagnosis(), request.dischargeInstructions(), filePath.toString());
             HospitalizationEntity saved = hospitalizationRepository.save(entity);
 
             UserAccountEntity actor = getCurrentUser();

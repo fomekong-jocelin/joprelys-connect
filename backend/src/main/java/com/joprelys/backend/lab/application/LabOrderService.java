@@ -130,7 +130,7 @@ public class LabOrderService {
 	}
 
 	private LabOrderResponse mapToResponse(LabOrderEntity entity) {
-		List<String> examsList = List.of(entity.getExams().split(",\\s*"));
+		List<String> examsList = List.of(entity.getExams().split(",\s*"));
 		return new LabOrderResponse(
 				entity.getId(),
 				entity.getExamRequestNumber(),

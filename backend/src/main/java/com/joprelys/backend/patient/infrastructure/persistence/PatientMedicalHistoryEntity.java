@@ -93,4 +93,5 @@ public class PatientMedicalHistoryEntity {
     public void setOnsetDate(LocalDate date) { this.onsetDate = date; }
     public void setOngoing(boolean ongoing) { this.isOngoing = ongoing; }
     public void setComment(String comment) { this.comment = comment; }
+    public void setPatientId(java.util.UUID patientId) { this.patientId = patientId; }
 }

@@ -52,16 +52,13 @@ public class LabResultService {
 
 	@Transactional
 	public void uploadResults(LabResultUploadRequest request) {
-		// 1. Charger la demande d'examen
 		LabOrderEntity labOrder = labOrderRepository.findByExamRequestNumber(request.examRequestNumber())
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Demande d'examen introuvable."));
 
-		// 2. Vérifier que la commande n'est pas annulée
 		if ("CANCELLED".equals(labOrder.getStatus())) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Impossible de téléverser des résultats sur une demande annulée.");
 		}
 
-		// 3. Gérer le PDF si fourni
 		String pdfFilePath = null;
 		if (request.pdfBase64() != null && !request.pdfBase64().isBlank()) {
 			try {
@@ -80,12 +77,10 @@ public class LabResultService {
 
 				byte[] pdfBytes = Base64.getDecoder().decode(base64Data);
 
-				// 3.1 Validation de la taille (max 5 Mo)
 				if (pdfBytes.length > 5 * 1024 * 1024) {
 					throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le fichier PDF dépasse la taille maximale autorisée de 5 Mo.");
 				}
 
-				// 3.2 Validation de la signature magique (%PDF)
 				if (pdfBytes.length < 4 || pdfBytes[0] != 0x25 || pdfBytes[1] != 0x50 || pdfBytes[2] != 0x44 || pdfBytes[3] != 0x46) {
 					throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le fichier n'est pas un document PDF valide (signature magique manquante).");
 				}
@@ -106,12 +101,10 @@ public class LabResultService {
 			}
 		}
 
-		// 4. Générer un numéro de résultat unique
 		String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 		long nextVal = labResultRepository.count() + 1;
 		String resultNumber = String.format("EXAM-RES-%s-%06d", dateStr, nextVal);
 
-		// 5. Créer les entités de résultats
 		for (LabResultItem item : request.results()) {
 			LabResultEntity resultEntity = new LabResultEntity(
 					resultNumber,
@@ -132,13 +125,11 @@ public class LabResultService {
 			labResultRepository.save(resultEntity);
 		}
 
-		// 6. Mettre à jour le statut de la demande d'examen
 		labOrder.setStatus("VALIDATED");
 		labOrderRepository.save(labOrder);
 
-		// 7. Enregistrer l'audit
 		auditService.logSuccess(
-				null, // System actor
+				null,
 				labOrder.getOrganizationId(),
 				labOrder.getPatient().getId(),
 				"LAB_ORDER",

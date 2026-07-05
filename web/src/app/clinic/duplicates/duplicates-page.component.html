@@ -1,0 +1,356 @@
+<app-app-shell>
+  <div class="px-4 py-6 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="md:flex md:items-center md:justify-between mb-8">
+      <div class="flex-1 min-w-0">
+        <h2 class="text-2xl font-bold leading-7 text-gray-900 dark:text-white sm:text-3xl sm:truncate font-montserrat">
+          {{ t('duplicates.title') }}
+        </h2>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          {{ t('duplicates.subtitle') }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Alert Messages -->
+    @if (error()) {
+      <app-ui-alert tone="error" class="mb-6">{{ error() }}</app-ui-alert>
+    }
+
+    <!-- Main Content -->
+    @if (isLoading()) {
+      <div class="flex justify-center items-center py-12">
+        <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
+        <span class="ml-3 text-gray-600 dark:text-gray-300">{{ t('common.loading') }}</span>
+      </div>
+    } @else if (candidates().length === 0) {
+      <app-ui-empty-state
+        icon="users"
+        [title]="t('duplicates.empty')"
+        description=""
+      />
+    } @else {
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        @for (candidate of candidates(); track candidate.id) {
+          <app-ui-card [title]="t('duplicates.score') + ': ' + (candidate.similarityScore | number:'1.0-1') + '%'" class="border border-gray-200 dark:border-gray-700">
+            <div class="space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <!-- Patient Source (A) -->
+                <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                  <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                    {{ t('duplicates.patientA') }}
+                  </div>
+                  <div class="font-bold text-gray-900 dark:text-white">{{ candidate.sourcePatient.fullName }}</div>
+                  <div class="text-sm text-gray-500 dark:text-gray-400">{{ candidate.sourcePatient.birthDate | date:'dd/MM/yyyy' }}</div>
+                  <div class="text-sm text-gray-500 dark:text-gray-400">{{ candidate.sourcePatient.phone || '-' }}</div>
+                  <div class="text-xs text-indigo-600 dark:text-indigo-400 mt-2 font-mono">{{ candidate.sourcePatient.globalPatientNumber }}</div>
+                </div>
+
+                <!-- Patient Target (B) -->
+                <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                  <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                    {{ t('duplicates.patientB') }}
+                  </div>
+                  <div class="font-bold text-gray-900 dark:text-white">{{ candidate.targetPatient.fullName }}</div>
+                  <div class="text-sm text-gray-500 dark:text-gray-400">{{ candidate.targetPatient.birthDate | date:'dd/MM/yyyy' }}</div>
+                  <div class="text-sm text-gray-500 dark:text-gray-400">{{ candidate.targetPatient.phone || '-' }}</div>
+                  <div class="text-xs text-indigo-600 dark:text-indigo-400 mt-2 font-mono">{{ candidate.targetPatient.globalPatientNumber }}</div>
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                <app-ui-button variant="secondary" (pressed)="ignoreCandidate(candidate)" [disabled]="isProcessing()">
+                  {{ t('duplicates.ignoreBtn') }}
+                </app-ui-button>
+                <app-ui-button variant="primary" (pressed)="openMergeAssistant(candidate)">
+                  {{ t('duplicates.mergeBtn') }}
+                </app-ui-button>
+              </div>
+            </div>
+          </app-ui-card>
+        }
+      </div>
+    }
+  </div>
+</app-app-shell>
+
+<!-- Merge Assistant Modal -->
+@if (selectedCandidate(); as candidate) {
+  <div class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-opacity-80 transition-opacity" (click)="closeMergeAssistant()"></div>
+
+    <!-- Center content -->
+    <div class="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
+      <div class="relative transform overflow-hidden rounded-xl bg-white dark:bg-gray-900 text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-5xl border border-gray-200 dark:border-gray-800">
+        
+        <!-- Header -->
+        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white font-montserrat">
+            {{ t('duplicates.mergeTitle') }}
+          </h3>
+          <button type="button" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300" (click)="closeMergeAssistant()">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Content -->
+        <div class="px-6 py-4 max-h-[70vh] overflow-y-auto">
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            {{ t('duplicates.mergeDesc') }}
+          </p>
+
+          @if (actionError()) {
+            <app-ui-alert tone="error" class="mb-4">{{ actionError() }}</app-ui-alert>
+          }
+
+          <!-- Side-by-Side Selection Card Headings -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <!-- Patient Source Selector -->
+            <div 
+              [ngClass]="{
+                'border-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50/10': selectedPrimaryId() === candidate.sourcePatient.id,
+                'border border-gray-200 dark:border-gray-800 bg-gray-50/30': selectedPrimaryId() !== candidate.sourcePatient.id
+              }"
+              class="p-4 rounded-xl cursor-pointer transition"
+              (click)="selectPrimary(candidate.sourcePatient.id)"
+            >
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                  {{ t('duplicates.patientA') }}
+                </span>
+                <input 
+                  type="radio" 
+                  name="primary_selector" 
+                  [checked]="selectedPrimaryId() === candidate.sourcePatient.id"
+                  class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                />
+              </div>
+              <div class="font-bold text-gray-900 dark:text-white text-lg">{{ candidate.sourcePatient.fullName }}</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">{{ candidate.sourcePatient.globalPatientNumber }}</div>
+              <div class="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                {{ selectedPrimaryId() === candidate.sourcePatient.id ? t('duplicates.keepPrimary') : t('duplicates.archiveSecondary') }}
+              </div>
+            </div>
+
+            <!-- Patient Target Selector -->
+            <div 
+              [ngClass]="{
+                'border-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50/10': selectedPrimaryId() === candidate.targetPatient.id,
+                'border border-gray-200 dark:border-gray-800 bg-gray-50/30': selectedPrimaryId() !== candidate.targetPatient.id
+              }"
+              class="p-4 rounded-xl cursor-pointer transition"
+              (click)="selectPrimary(candidate.targetPatient.id)"
+            >
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                  {{ t('duplicates.patientB') }}
+                </span>
+                <input 
+                  type="radio" 
+                  name="primary_selector" 
+                  [checked]="selectedPrimaryId() === candidate.targetPatient.id"
+                  class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                />
+              </div>
+              <div class="font-bold text-gray-900 dark:text-white text-lg">{{ candidate.targetPatient.fullName }}</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">{{ candidate.targetPatient.globalPatientNumber }}</div>
+              <div class="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                {{ selectedPrimaryId() === candidate.targetPatient.id ? t('duplicates.keepPrimary') : t('duplicates.archiveSecondary') }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Comparison Table -->
+          <div class="overflow-x-auto border border-gray-200 dark:border-gray-800 rounded-xl mb-6">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+              <thead class="bg-gray-50 dark:bg-gray-850">
+                <tr>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-400 w-1/4">
+                    {{ t('duplicates.field') }}
+                  </th>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-400 w-3/8">
+                    {{ t('duplicates.patientA') }}
+                  </th>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-400 w-3/8">
+                    {{ t('duplicates.patientB') }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                
+                <!-- FullName -->
+                <tr [ngClass]="{'bg-amber-50/20 dark:bg-amber-950/10': hasDiff('fullName')}">
+                  <td class="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400">
+                    {{ t('patients.fullName') }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white font-semibold">
+                    {{ candidate.sourcePatient.fullName }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white font-semibold">
+                    {{ candidate.targetPatient.fullName }}
+                  </td>
+                </tr>
+
+                <!-- BirthDate -->
+                <tr [ngClass]="{'bg-amber-50/20 dark:bg-amber-950/10': hasDiff('birthDate')}">
+                  <td class="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400">
+                    {{ t('patients.birthDate') }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                    {{ candidate.sourcePatient.birthDate | date:'dd/MM/yyyy' }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                    {{ candidate.targetPatient.birthDate | date:'dd/MM/yyyy' }}
+                  </td>
+                </tr>
+
+                <!-- Gender -->
+                <tr [ngClass]="{'bg-amber-50/20 dark:bg-amber-950/10': hasDiff('gender')}">
+                  <td class="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400">
+                    {{ t('patients.gender') }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                    {{ candidate.sourcePatient.gender === 'MASCULIN' ? t('patients.genderMale') : t('patients.genderFemale') }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                    {{ candidate.targetPatient.gender === 'MASCULIN' ? t('patients.genderMale') : t('patients.genderFemale') }}
+                  </td>
+                </tr>
+
+                <!-- Phone -->
+                <tr [ngClass]="{'bg-amber-50/20 dark:bg-amber-950/10': hasDiff('phone')}">
+                  <td class="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400">
+                    {{ t('patients.phone') }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                    {{ candidate.sourcePatient.phone || '-' }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                    {{ candidate.targetPatient.phone || '-' }}
+                  </td>
+                </tr>
+
+                <!-- City -->
+                <tr [ngClass]="{'bg-amber-50/20 dark:bg-amber-950/10': hasDiff('city')}">
+                  <td class="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400">
+                    {{ t('patients.city') }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                    {{ candidate.sourcePatient.city || '-' }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                    {{ candidate.targetPatient.city || '-' }}
+                  </td>
+                </tr>
+
+                <!-- District -->
+                <tr [ngClass]="{'bg-amber-50/20 dark:bg-amber-950/10': hasDiff('district')}">
+                  <td class="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400">
+                    {{ t('patients.district') }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                    {{ candidate.sourcePatient.district || '-' }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                    {{ candidate.targetPatient.district || '-' }}
+                  </td>
+                </tr>
+
+                <!-- Address -->
+                <tr [ngClass]="{'bg-amber-50/20 dark:bg-amber-950/10': hasDiff('address')}">
+                  <td class="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400">
+                    {{ t('patients.address') }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                    {{ candidate.sourcePatient.address || '-' }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                    {{ candidate.targetPatient.address || '-' }}
+                  </td>
+                </tr>
+
+                <!-- Emergency Contact Name -->
+                <tr [ngClass]="{'bg-amber-50/20 dark:bg-amber-950/10': hasDiff('emergencyContactName')}">
+                  <td class="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400">
+                    {{ t('patients.emergencyContactName') }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                    {{ candidate.sourcePatient.emergencyContactName || '-' }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                    {{ candidate.targetPatient.emergencyContactName || '-' }}
+                  </td>
+                </tr>
+
+                <!-- Emergency Contact Phone -->
+                <tr [ngClass]="{'bg-amber-50/20 dark:bg-amber-950/10': hasDiff('emergencyContactPhone')}">
+                  <td class="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400">
+                    {{ t('patients.emergencyContactPhone') }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                    {{ candidate.sourcePatient.emergencyContactPhone || '-' }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                    {{ candidate.targetPatient.emergencyContactPhone || '-' }}
+                  </td>
+                </tr>
+
+                <!-- Allergies -->
+                <tr [ngClass]="{'bg-amber-50/20 dark:bg-amber-950/10': hasDiff('allergies')}">
+                  <td class="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400">
+                    {{ t('patients.allergies') }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white italic">
+                    {{ candidate.sourcePatient.allergies || '-' }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white italic">
+                    {{ candidate.targetPatient.allergies || '-' }}
+                  </td>
+                </tr>
+
+                <!-- Medical History -->
+                <tr [ngClass]="{'bg-amber-50/20 dark:bg-amber-950/10': hasDiff('medicalHistory')}">
+                  <td class="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400">
+                    {{ t('patients.medicalHistory') }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white italic">
+                    {{ candidate.sourcePatient.medicalHistory || '-' }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-900 dark:text-white italic">
+                    {{ candidate.targetPatient.medicalHistory || '-' }}
+                  </td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Warning text -->
+          <div class="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-xl text-amber-700 dark:text-amber-300 text-sm font-medium">
+            <div class="flex items-center gap-2">
+              <svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+              <span>{{ t('duplicates.warnDataTransfer') }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+          <app-ui-button variant="secondary" (pressed)="closeMergeAssistant()" [disabled]="isProcessing()">
+            {{ t('common.cancel') }}
+          </app-ui-button>
+          <app-ui-button variant="primary" (pressed)="confirmMerge()" [disabled]="isProcessing()">
+            {{ isProcessing() ? t('common.saving') : t('duplicates.confirmMergeBtn') }}
+          </app-ui-button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+}

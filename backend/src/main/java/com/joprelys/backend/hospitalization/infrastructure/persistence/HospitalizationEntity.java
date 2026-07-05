@@ -114,4 +114,5 @@ public class HospitalizationEntity {
     public void setRoomNumber(String roomNumber) { this.roomNumber = roomNumber; }
     public void setBedNumber(String bedNumber) { this.bedNumber = bedNumber; }
     public void setAdmissionReason(String reason) { this.admissionReason = reason; }
+    public void setPatientId(java.util.UUID patientId) { this.patientId = patientId; }
 }

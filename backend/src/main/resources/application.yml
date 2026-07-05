@@ -30,8 +30,8 @@ joprelys:
     jwt:
       issuer: ${JOPRELYS_JWT_ISSUER:joprelys-connect}
       audience: ${JOPRELYS_JWT_AUDIENCE:joprelys-clinic}
-      secret: ${JOPRELYS_JWT_SECRET:joprelys-dev-jwt-secret-change-me-2026}
-      ttl-minutes: ${JOPRELYS_JWT_TTL_MINUTES:30}
+      secret: ${JOPRELYS_JWT_SECRET:snMVSBygC5IUa+4aF3dOcjZ/UVlmb8UIYbfu7dFKu2SE6kZ/mJUg5fsNMbS1MCcfwU1XiqR1OA5Tga+UpPwcPA==}
+      ttl-minutes: ${JOPRELYS_JWT_TTL_MINUTES:120}
   seed:
     admin:
       enabled: ${JOPRELYS_SEED_ADMIN_ENABLED:true}

@@ -99,4 +99,5 @@ public class PatientAllergyEntity {
     public void setStatus(String status) { this.status = status; }
     public void setDiscoveredAt(LocalDate date) { this.discoveredAt = date; }
     public void setComment(String comment) { this.comment = comment; }
+    public void setPatientId(java.util.UUID patientId) { this.patientId = patientId; }
 }

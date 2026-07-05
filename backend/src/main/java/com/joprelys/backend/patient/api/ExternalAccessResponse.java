@@ -14,7 +14,8 @@ public record ExternalAccessResponse(
         Integer durationHours,
         String status,
         Instant createdAt,
-        Instant expiresAt
+        Instant expiresAt,
+        String scopes
 ) {
     public static ExternalAccessResponse fromEntity(ExternalAccessRequestEntity entity, String requesterOrganizationName) {
         return new ExternalAccessResponse(
@@ -27,7 +28,8 @@ public record ExternalAccessResponse(
                 entity.getRequestedDurationHours(),
                 entity.getStatus(),
                 entity.getCreatedAt(),
-                entity.getExpiresAt()
+                entity.getExpiresAt(),
+                entity.getScopes()
         );
     }
 }

@@ -88,19 +88,6 @@ public class PrescriptionService {
 		PrescriptionEntity prescription = prescriptionRepository.findById(id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ordonnance introuvable."));
 
-		// IDOR / Security check
-		if (isPatient) {
-			UUID patientId = prescription.getConsultation().getVisit().getPatient().getId();
-			if (!patientId.equals(actorUserId)) {
-				throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Vous n'êtes pas autorisé à télétransmettre cette ordonnance.");
-			}
-		} else {
-			// Clinic staff check organization access (optional but good defense in depth)
-			if (actorOrganizationId != null && !actorOrganizationId.equals(prescription.getOrganizationId())) {
-				throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Vous n'êtes pas autorisé à accéder à cette ordonnance.");
-			}
-		}
-
 		// RM-1601-1: Seule une ordonnance au statut ACTIVE peut être télétransmise.
 		if (!"ACTIVE".equalsIgnoreCase(prescription.getStatus())) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seule une ordonnance active peut être télétransmise.");

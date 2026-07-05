@@ -13,7 +13,8 @@ import {
   Hospitalization,
   CreateHospitalizationRequest,
   HospitalizationNote,
-  DischargeHospitalizationRequest
+  DischargeHospitalizationRequest,
+  PatientDuplicateCandidate
 } from './patient.models';
 
 @Injectable({
@@ -102,5 +103,24 @@ export class PatientApiService {
   downloadDischargePdf(id: string): Observable<Blob> {
     return this.http.get(`/api/hospitalizations/${id}/pdf`, { responseType: 'blob' });
   }
-}
 
+  // WT2 (PDF): Téléchargement du PDF de synthèse médicale patient
+  downloadSummaryPdf(id: string): Observable<Blob> {
+    return this.http.get(`/api/patients/${id}/summary-pdf`, { responseType: 'blob' });
+  }
+
+  // WT3 (DUPLICATES): Récupération des candidats doublons
+  getDuplicates(): Observable<PatientDuplicateCandidate[]> {
+    return this.http.get<PatientDuplicateCandidate[]>('/api/patients/duplicates');
+  }
+
+  // WT3 (DUPLICATES): Ignorer un candidat doublon
+  ignoreDuplicate(id: string): Observable<void> {
+    return this.http.post<void>(`/api/patients/duplicates/${id}/ignore`, {});
+  }
+
+  // WT3 (DUPLICATES): Fusionner deux dossiers patients
+  mergePatients(primaryId: string, secondaryId: string): Observable<void> {
+    return this.http.post<void>('/api/patients/merge', { primaryId, secondaryId });
+  }
+}

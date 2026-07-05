@@ -44,7 +44,6 @@ public class PatientMedicalInfoService {
 
     @Transactional(readOnly = true)
     public List<PatientAllergyResponse> listAllergies(UUID patientId) {
-        // Valide l'accès au patient (lève 403 CONSENT_REQUIRED ou 404 si inexistant)
         patientService.getPatientById(patientId);
 
         return patientAllergyRepository.findAllByPatientId(patientId).stream()

@@ -18,8 +18,7 @@ public record CreatePatientRequest(
 		@PastOrPresent(message = "La date de naissance ne peut pas être dans le futur")
 		LocalDate birthDate,
 
-		@NotBlank(message = "Le téléphone est obligatoire")
-		String phone,
+				String phone,
 
 		@NotBlank(message = "La ville est obligatoire")
 		String city,

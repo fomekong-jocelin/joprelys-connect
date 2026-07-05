@@ -45,10 +45,6 @@ public class ConsultationService {
 		this.prescriptionRepository = prescriptionRepository;
 	}
 
-	/**
-	 * Creates or updates a consultation for a given visit.
-	 * Only one consultation is allowed per visit (upsert pattern).
-	 */
 	@Transactional
 	public ConsultationEntity saveConsultation(UUID visitId, String doctorEmail, SaveConsultationRequest request) {
 		VisitEntity visit = visitRepository.findById(visitId)
