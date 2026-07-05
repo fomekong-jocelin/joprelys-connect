@@ -1,5 +1,6 @@
 package com.joprelys.backend.auth.config;
 
+import com.joprelys.backend.auth.security.ApiKeyAuthenticationFilter;
 import com.joprelys.backend.auth.security.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
@@ -19,7 +20,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
 	@Bean
-	SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter)
+	SecurityFilterChain securityFilterChain(
+			HttpSecurity http,
+			JwtAuthenticationFilter jwtAuthenticationFilter,
+			ApiKeyAuthenticationFilter apiKeyAuthenticationFilter)
 			throws Exception {
 		return http
 				.csrf(AbstractHttpConfigurer::disable)
@@ -35,6 +39,7 @@ public class SecurityConfig {
 						.authenticationEntryPoint((request, response, exception) ->
 								response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentication is required")))
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+				.addFilterBefore(apiKeyAuthenticationFilter, JwtAuthenticationFilter.class)
 				.build();
 	}
 

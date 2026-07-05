@@ -11,16 +11,16 @@ L'objectif est d'aligner le module avec les exigences réglementaires et de séc
 
 ## 2. Critères d'acceptation
 
-- [ ] Migration de base de données Flyway `V28` écrite et validée.
-- [ ] Entité `OrganizationEntity` et les DTOs backend enrichis avec `type`, `country`, `responsible_name`, `api_enabled`.
-- [ ] Table `organization_api_keys` créée avec gestion d'empreinte sécurisée (SHA-256 ou hash bcrypt) des clés.
-- [ ] Endpoints de génération et révocation des clés API implémentés sur `/api/organizations/{id}/api-keys` réservés au rôle `ADMIN_JOPRELYS`.
-- [ ] Intercepteur/Filtre de sécurité Spring Boot (`ApiKeyAuthenticationFilter`) validant la clé passée en header HTTP `X-API-KEY`.
-- [ ] Rejet des appels API (403 Forbidden) pour tout établissement désactivé/suspendu ou pour lequel `api_enabled` est faux.
-- [ ] Formulaires Angular mis à jour avec les nouveaux champs obligatoires (Type, Pays, Nom du responsable).
-- [ ] Interface utilisateur mise à jour pour afficher et gérer les clés API de chaque organisation.
-- [ ] Tests d'intégration et unitaires backend/frontend écrits et passant au vert.
-- [ ] Spécification fonctionnelle et technique rédigée sous `./docs/features/organizations/`.
+- [x] Migration de base de données Flyway `V28` écrite et validée.
+- [x] Entité `OrganizationEntity` et les DTOs backend enrichis avec `type`, `country`, `responsible_name`, `api_enabled`.
+- [x] Table `organization_api_keys` créée avec gestion d'empreinte sécurisée (SHA-256) des clés.
+- [x] Endpoints de génération et révocation des clés API implémentés sur `/api/organizations/{id}/api-keys` réservés au rôle `ADMIN_JOPRELYS`.
+- [x] Intercepteur/Filtre de sécurité Spring Boot (`ApiKeyAuthenticationFilter`) validant la clé passée en header HTTP `X-API-KEY`.
+- [x] Rejet des appels API (403 Forbidden) pour tout établissement désactivé/suspendu ou pour lequel `api_enabled` est faux.
+- [x] Formulaires Angular mis à jour avec les nouveaux champs obligatoires (Type, Pays, Nom du responsable).
+- [x] Interface utilisateur mise à jour pour afficher et gérer les clés API de chaque organisation.
+- [x] Tests d'intégration et unitaires backend/frontend écrits et passant au vert.
+- [x] Spécification fonctionnelle et technique rédigée sous `./docs/features/organizations/`.
 
 ## 3. Pilotage projet
 
@@ -36,7 +36,7 @@ L'objectif est d'aligner le module avec les exigences réglementaires et de séc
 | Effort estimé senior | 0.4j |
 | Effort estimé intermédiaire | 0.6j |
 | Effort estimé junior | 1.0j |
-| Responsable | À assigner / Antigravity |
+| Responsable | Antigravity |
 | Reviewer obligatoire | Lead Developer / Jocelin |
 | Risque fonctionnel | Moyen |
 | Risque technique | Moyen |
@@ -53,7 +53,7 @@ L'objectif est d'aligner le module avec les exigences réglementaires et de séc
 ## 5. Hypothèses
 
 - Le type d'établissement doit respecter une liste d'énumérations restrictives : HOSPITAL, CLINIC, CABINET, LABORATORY, IMAGING_CENTER, PHARMACY, HEALTH_PLATFORM, NGO, INSTITUTION.
-- La clé API générée est visible une seule fois par l'utilisateur (lors de la création) et stockée sous forme hachée sécurisée (ex: SHA-256) en base de données.
+- La clé API générée est visible une seule fois par l'utilisateur (lors de la création) et stockée sous forme hachée sécurisée (SHA-256) en base de données.
 - L'entête standard utilisé pour s'authentifier par clé API est `X-API-KEY`.
 
 ## 6. Risques et impacts
@@ -85,31 +85,36 @@ L'objectif est d'aligner le module avec les exigences réglementaires et de séc
 
 ## 8. Implémentation réalisée
 
-- (À remplir lors de la clôture)
+- Migration Flyway `V28` écrite pour ajouter les colonnes `type`, `country`, `responsible_name`, `api_enabled` à la table `organizations` et créer la table `organization_api_keys`.
+- JPA entities (`OrganizationEntity`, `OrganizationApiKeyEntity`), repositories et DTOs mis à jour/créés.
+- `OrganizationController` enrichi pour gérer les clés API (génération de clé random `jop_live_...`, hashage SHA-256 pour persistance DB, liste avec masquage, révocation).
+- `ApiKeyAuthenticationFilter` configuré dans `SecurityConfig` pour intercepter `X-API-KEY` (sauf sur les routes publiques `/api/public/` qui valident leurs propres clés). Le filtre vérifie le statut de l'organisation et injecte le rôle `ROLE_API_CLIENT` tout en positionnant le `TenantContext`.
+- Modèles, formulaire de création, drawer d'édition et détails mis à jour côté Angular (intégration des nouveaux champs et de l'IHM de gestion des clés API).
+- Les tests unitaires/intégration backend (228/228 passant) et frontend (63/63 passant) valident le bon fonctionnement.
 
 ## 9. Suivi d'exécution
 
 | Date | Développeur | Temps passé | Avancement | Reste à faire | Blocage | Commentaire |
 |---|---|---:|---:|---:|---|---|
 | 2026-07-05 | Antigravity | 0.05j | 0% | Conception et découpage | Aucun | Ticket initialisé et mis au statut READY |
+| 2026-07-05 | Antigravity | 0.35j | 100% | Aucun | Aucun | Implémentation complète backend/frontend et tests OK |
 
 ## 10. Tests et vérifications
 
-- (À remplir lors du test)
+- Tests unitaires et d'intégration backend passés avec succès via `./mvnw test` (228 tests au total, dont les nouveaux scénarios d'API Key).
+- Tests unitaires frontend passés avec succès via `npm run test -- --watch=false` (63 tests validés).
+- Build de production frontend validé via `npm run build`.
 
 ## 11. Documentation
 
-- [ ] Spécification fonctionnelle et technique rédigée
-- [ ] Changelog mis à jour
-- [ ] Suivi projet mis à jour
+- [x] Spécification fonctionnelle et technique rédigée
+- [x] Changelog mis à jour
+- [x] Suivi projet mis à jour
 
 ## 12. Reste à faire
 
-- [ ] Implémenter les migrations de base de données
-- [ ] Implémenter le backend (modèles, DTOs, sécurité clé API, endpoints)
-- [ ] Implémenter le frontend Angular (modèles, formulaires, affichage, actions clés API)
-- [ ] Exécuter et valider les tests
+- Aucun. Tout est complété.
 
 ## 13. Statut final
 
-Statut : READY
+Statut : DONE

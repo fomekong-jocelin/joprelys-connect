@@ -8,6 +8,17 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- **Complétion du Module 1 - Gestion des établissements (TICKET-0112)** :
+  - Enrichissement de la table `organizations` (migration Flyway `V28`) et de l'entité `OrganizationEntity` avec les propriétés `type` (type d'acteur), `country` (pays), `responsible_name` (nom du responsable) et `api_enabled` (autorisation API).
+  - Implémentation du système de clés API par établissement avec empreinte hachée sécurisée (SHA-256) en base de données.
+  - Endpoints sécurisés pour la génération de clés randomisées (`jop_live_...`), listing sécurisé avec masquage, et révocation immédiate (statut `REVOKED` et journalisation `revoked_at`).
+  - Filtre de sécurité Spring Boot (`ApiKeyAuthenticationFilter`) validant le header `X-API-KEY`, injectant le rôle `ROLE_API_CLIENT` dans le contexte de sécurité et paramétrant le `TenantContext` pour les requêtes multi-tenant.
+  - Validation de l'accès API (vérification que l'organisation est active et possède `apiEnabled = true`).
+  - Bypass du filtre de clé API pour les routes publiques `/api/public/**` (qui exécutent leur propre validation, par exemple pour le téléversement FHIR de résultats biologiques).
+  - Rénovation des formulaires Angular de création, d'édition et du tiroir de détails pour prendre en compte les nouveaux attributs d'organisation.
+  - Intégration dans le drawer Angular d'un gestionnaire complet de clés API (création avec affichage unique de la clé générée, copie dans le presse-papiers, affichage des clés actives/révoquées, et bouton de révocation).
+  - Validation complète par tests unitaires et d'intégration MockMvc backend et Jest/Vitest frontend Angular.
+
 - **Navigation et responsivité mobile (TICKET-0111)** :
   - Masquage de la Sidebar de bureau sur mobile (`hidden md:flex`) pour libérer l'espace.
   - Implémentation d'un tiroir de navigation mobile (Drawer) coulissant avec arrière-plan estompé (`backdrop-blur-xs`) et bouton Hamburger dans le header.

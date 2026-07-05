@@ -17,7 +17,11 @@ describe('OrganizationListComponent', () => {
       email: 'paix@joprelys.local',
       city: 'Yaoundé',
       status: 'ACTIVE',
-      createdAt: '2026-07-02T12:00:00Z'
+      createdAt: '2026-07-02T12:00:00Z',
+      country: 'Cameroun',
+      type: 'CLINIC',
+      responsibleName: 'Dr. Paix',
+      apiEnabled: true
     }
   ];
 
@@ -26,7 +30,10 @@ describe('OrganizationListComponent', () => {
       list: vi.fn().mockReturnValue(of(mockOrgs)),
       create: vi.fn(),
       updateStatus: vi.fn(),
-      update: vi.fn()
+      update: vi.fn(),
+      listApiKeys: vi.fn().mockReturnValue(of([])),
+      generateApiKey: vi.fn(),
+      revokeApiKey: vi.fn()
     };
 
     await TestBed.configureTestingModule({
@@ -51,14 +58,22 @@ describe('OrganizationListComponent', () => {
     component.name.set('Clinique de l\'Espoir');
     component.email.set('espoir@joprelys.local');
     component.city.set('Douala');
-    
+    component.country.set('Cameroun');
+    component.type.set('CLINIC');
+    component.responsibleName.set('Dr. Espoir');
+    component.apiEnabled.set(true);
+
     mockApi.create.mockReturnValue(of({
       id: '2',
       name: 'Clinique de l\'Espoir',
       email: 'espoir@joprelys.local',
       city: 'Douala',
       status: 'ACTIVE',
-      createdAt: '2026-07-02T12:00:00Z'
+      createdAt: '2026-07-02T12:00:00Z',
+      country: 'Cameroun',
+      type: 'CLINIC',
+      responsibleName: 'Dr. Espoir',
+      apiEnabled: true
     }));
 
     component.submit();
@@ -68,7 +83,11 @@ describe('OrganizationListComponent', () => {
       email: 'espoir@joprelys.local',
       phone: '',
       address: '',
-      city: 'Douala'
+      city: 'Douala',
+      country: 'Cameroun',
+      type: 'CLINIC',
+      responsibleName: 'Dr. Espoir',
+      apiEnabled: true
     });
     expect(component.list().length).toBe(2);
   });

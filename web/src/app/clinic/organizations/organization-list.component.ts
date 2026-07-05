@@ -7,12 +7,21 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { OrganizationApiService } from './organization-api.service';
 import { OrganizationFormComponent, OrganizationFormLabels } from './organization-form.component';
 import { OrganizationTableComponent, OrganizationTableLabels } from './organization-table.component';
-import { CreateClinicAdminResponse, Organization } from './organizations.models';
+import { CreateClinicAdminResponse, Organization, ApiKey } from './organizations.models';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-organization-list',
   templateUrl: './organization-list.component.html',
-  imports: [AlertComponent, AppShellComponent, ButtonComponent, OrganizationFormComponent, OrganizationTableComponent, PageHeaderComponent],
+  imports: [
+    AlertComponent,
+    AppShellComponent,
+    ButtonComponent,
+    OrganizationFormComponent,
+    OrganizationTableComponent,
+    PageHeaderComponent,
+    FormsModule
+  ],
 })
 export class OrganizationListComponent implements OnInit {
   private readonly api = inject(OrganizationApiService);
@@ -28,6 +37,11 @@ export class OrganizationListComponent implements OnInit {
   readonly phone = signal('');
   readonly address = signal('');
   readonly city = signal('');
+  readonly country = signal('Cameroun');
+  readonly type = signal('CLINIC');
+  readonly responsibleName = signal('');
+  readonly apiEnabled = signal(true);
+
   readonly formLoading = signal(false);
   readonly formError = signal<string | null>(null);
   readonly showCreateForm = signal(false);
@@ -35,6 +49,13 @@ export class OrganizationListComponent implements OnInit {
   // --- Organisation Sélectionnée (Détails & Édition) ---
   readonly selectedOrg = signal<Organization | null>(null);
   readonly isEditingSelectedOrg = signal(false);
+
+  // --- Clés API ---
+  readonly apiKeys = signal<ApiKey[]>([]);
+  readonly loadingApiKeys = signal(false);
+  readonly newKeyName = signal('');
+  readonly generatedKey = signal<ApiKey | null>(null);
+  readonly apiKeyCopied = signal(false);
 
   // --- Formulaire création admin clinique ---
   readonly adminTargetOrg = signal<Organization | null>(null);
@@ -51,6 +72,7 @@ export class OrganizationListComponent implements OnInit {
     this.showCreateForm() ? this.i18n.t('common.cancel') : this.i18n.t('organizations.create')
   );
   readonly backLabel = computed(() => this.i18n.t('common.back'));
+
   readonly formLabels = computed<OrganizationFormLabels>(() => ({
     title: this.i18n.t('organizations.createTitle'),
     name: this.i18n.t('organizations.name'),
@@ -63,10 +85,17 @@ export class OrganizationListComponent implements OnInit {
     cityPlaceholder: this.i18n.t('organizations.cityPlaceholder'),
     address: this.i18n.t('organizations.address'),
     addressPlaceholder: this.i18n.t('organizations.addressPlaceholder'),
+    country: 'Pays',
+    countryPlaceholder: 'Ex: Cameroun',
+    type: 'Type d\'établissement',
+    responsibleName: 'Responsable légal',
+    responsibleNamePlaceholder: 'Nom du responsable',
+    apiEnabled: 'Accès API activé',
     cancel: this.i18n.t('common.cancel'),
     save: this.i18n.t('common.save'),
     saving: this.i18n.t('common.saving'),
   }));
+
   readonly tableLabels = computed<OrganizationTableLabels>(() => ({
     title: this.i18n.t('organizations.tableTitle'),
     loading: this.i18n.t('common.loading'),
@@ -139,18 +168,22 @@ export class OrganizationListComponent implements OnInit {
 
   submit(): void {
     this.formError.set(null);
-    if (!this.name() || !this.email() || !this.city()) {
+    if (!this.name() || !this.email() || !this.city() || !this.country() || !this.responsibleName()) {
       this.formError.set(this.i18n.t('organizations.requiredFields'));
       return;
     }
 
     this.formLoading.set(true);
     this.api.create({
-      name: this.name(),
-      email: this.email(),
-      phone: this.phone(),
-      address: this.address(),
-      city: this.city()
+      name: this.name().trim(),
+      email: this.email().trim(),
+      phone: this.phone().trim(),
+      address: this.address().trim(),
+      city: this.city().trim(),
+      country: this.country().trim(),
+      type: this.type().trim(),
+      responsibleName: this.responsibleName().trim(),
+      apiEnabled: this.apiEnabled()
     }).subscribe({
       next: (res) => {
         this.list.update(items => [...items, res]);
@@ -183,6 +216,10 @@ export class OrganizationListComponent implements OnInit {
     this.phone.set('');
     this.address.set('');
     this.city.set('');
+    this.country.set('Cameroun');
+    this.type.set('CLINIC');
+    this.responsibleName.set('');
+    this.apiEnabled.set(true);
     this.formError.set(null);
   }
 
@@ -193,12 +230,16 @@ export class OrganizationListComponent implements OnInit {
     this.isEditingSelectedOrg.set(false);
     this.formError.set(null);
     this.showCreateForm.set(false);
+    this.generatedKey.set(null);
+    this.newKeyName.set('');
+    this.loadApiKeys(org.id);
   }
 
   closeDrawer(): void {
     this.selectedOrg.set(null);
     this.isEditingSelectedOrg.set(false);
     this.formError.set(null);
+    this.generatedKey.set(null);
   }
 
   startEditing(): void {
@@ -209,6 +250,10 @@ export class OrganizationListComponent implements OnInit {
     this.phone.set(org.phone || '');
     this.address.set(org.address || '');
     this.city.set(org.city);
+    this.country.set(org.country || 'Cameroun');
+    this.type.set(org.type || 'CLINIC');
+    this.responsibleName.set(org.responsibleName || '');
+    this.apiEnabled.set(org.apiEnabled !== undefined ? org.apiEnabled : true);
     this.isEditingSelectedOrg.set(true);
     this.formError.set(null);
   }
@@ -223,7 +268,7 @@ export class OrganizationListComponent implements OnInit {
     const org = this.selectedOrg();
     if (!org) return;
 
-    if (!this.name().trim() || !this.email().trim() || !this.city().trim()) {
+    if (!this.name().trim() || !this.email().trim() || !this.city().trim() || !this.country().trim() || !this.responsibleName().trim()) {
       this.formError.set(this.i18n.t('organizations.requiredFields'));
       return;
     }
@@ -234,7 +279,11 @@ export class OrganizationListComponent implements OnInit {
       email: this.email().trim(),
       phone: this.phone().trim(),
       address: this.address().trim(),
-      city: this.city().trim()
+      city: this.city().trim(),
+      country: this.country().trim(),
+      type: this.type().trim(),
+      responsibleName: this.responsibleName().trim(),
+      apiEnabled: this.apiEnabled()
     }).subscribe({
       next: (res) => {
         const updated: Organization = {
@@ -255,6 +304,57 @@ export class OrganizationListComponent implements OnInit {
           this.formError.set(err.error?.detail || "Erreur lors de la mise à jour");
         }
       }
+    });
+  }
+
+  // --- Clés API ---
+
+  loadApiKeys(orgId: string): void {
+    this.loadingApiKeys.set(true);
+    this.api.listApiKeys(orgId).subscribe({
+      next: (keys) => {
+        this.apiKeys.set(keys);
+        this.loadingApiKeys.set(false);
+      },
+      error: () => {
+        this.loadingApiKeys.set(false);
+      }
+    });
+  }
+
+  generateKey(): void {
+    const org = this.selectedOrg();
+    if (!org || !this.newKeyName().trim()) return;
+
+    this.api.generateApiKey(org.id, { name: this.newKeyName().trim() }).subscribe({
+      next: (key) => {
+        this.apiKeys.update(keys => [...keys, key]);
+        this.generatedKey.set(key);
+        this.newKeyName.set('');
+      }
+    });
+  }
+
+  revokeKey(keyId: string): void {
+    const org = this.selectedOrg();
+    if (!org) return;
+
+    this.api.revokeApiKey(org.id, keyId).subscribe({
+      next: () => {
+        this.apiKeys.update(keys =>
+          keys.map(k => k.id === keyId ? { ...k, status: 'REVOKED', revokedAt: new Date().toISOString() } : k)
+        );
+      }
+    });
+  }
+
+  copyRawKey(): void {
+    const key = this.generatedKey();
+    if (!key || !key.rawKey) return;
+
+    navigator.clipboard.writeText(key.rawKey).then(() => {
+      this.apiKeyCopied.set(true);
+      setTimeout(() => this.apiKeyCopied.set(false), 2000);
     });
   }
 
@@ -297,16 +397,14 @@ export class OrganizationListComponent implements OnInit {
       next: (res) => {
         this.adminCreatedResult.set(res);
         this.adminFormLoading.set(false);
-        
-        // Mettre à jour également l'organisation courante avec ce nouvel administrateur
+
         const updatedOrg: Organization = {
           ...org,
           adminEmail: res.email,
           adminDisplayName: res.displayName
         };
         this.list.update(items => items.map(item => item.id === org.id ? updatedOrg : item));
-        
-        // Si elle est ouverte dans le drawer, la mettre à jour
+
         if (this.selectedOrg()?.id === org.id) {
           this.selectedOrg.set(updatedOrg);
         }

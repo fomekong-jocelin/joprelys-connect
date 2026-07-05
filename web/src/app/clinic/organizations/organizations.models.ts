@@ -10,6 +10,10 @@ export interface Organization {
   createdAt: string;
   adminEmail?: string;
   adminDisplayName?: string;
+  country: string;
+  type: string;
+  responsibleName: string;
+  apiEnabled: boolean;
 }
 
 export interface CreateOrganizationRequest {
@@ -18,6 +22,10 @@ export interface CreateOrganizationRequest {
   phone?: string;
   address?: string;
   city: string;
+  country: string;
+  type: string;
+  responsibleName: string;
+  apiEnabled: boolean;
 }
 
 export interface CreateClinicAdminRequest {
@@ -34,4 +42,18 @@ export interface CreateClinicAdminResponse {
   readonly temporaryPassword: string;
   readonly organizationId: string;
   readonly createdAt: string;
+}
+
+export interface ApiKey {
+  id: string;
+  name: string;
+  prefix: string;
+  rawKey?: string;
+  status: 'ACTIVE' | 'REVOKED';
+  createdAt: string;
+  revokedAt?: string;
+}
+
+export interface CreateApiKeyRequest {
+  name: string;
 }

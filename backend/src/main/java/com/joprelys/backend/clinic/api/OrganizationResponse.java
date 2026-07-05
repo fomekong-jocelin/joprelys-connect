@@ -14,5 +14,9 @@ public record OrganizationResponse(
 		String status,
 		Instant createdAt,
 		String adminEmail,
-		String adminDisplayName) {
+		String adminDisplayName,
+		String country,
+		String type,
+		String responsibleName,
+		boolean apiEnabled) {
 }

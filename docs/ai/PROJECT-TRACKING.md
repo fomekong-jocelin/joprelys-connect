@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-05 (creation backlog complétion module 1 TICKET-0112) |
+| Dernière mise à jour | 2026-07-05 (complétion module 1 TICKET-0112) |
 | Responsable mise à jour | Antigravity |
 | État global | Sprint 0009 — Audit complet des modules et interopérabilité HL7 FHIR |
 | Risques majeurs | Aucun |
@@ -14,7 +14,7 @@
 | Sprint courant | SPRINT-0009 |
 | | |
 | Capacité sprint | 15.0j |
-| Charge engagée | 7.45j (Est. Senior) |
+| Charge engagée | 7.05j (Est. Senior) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
@@ -34,7 +34,7 @@
 | TICKET-0109 | QUAL | Bug | Connexion Unifiée, Sélecteur de langue & LazyInit Bug | Full-stack | DONE | P0 | 2 | Intermédiaire | 0.2j | 0.3j | 0.5j | Antigravity | Lead | SPRINT-0003 | 0.25j | Aucun | Faible | 2026-07-02 |
 | TICKET-0110 | UI_UX | Task | Conformité Patient et DPU (Vaccinations, Groupe Sanguin, Email, Doublons) | Full-stack | DONE | P1 | 3 | Senior | 0.3j | 0.5j | 0.8j | Antigravity | Lead Developer | SPRINT-0009 | 0.35j | Aucun (implémentation et tests complets) | Faible | 2026-07-05 |
 | TICKET-0111 | UI_UX | Task | Résolution de la navigation et responsivité mobile (Mobile First App-like) | Frontend | DONE | P0 | 2 | Senior | 0.3j | 0.35j | 0.6j | Antigravity | Lead Developer | SPRINT-0009 | 0.3j | Aucun (Hamburger, Drawer, Backdrop, factorisation menu, suppression double padding, paddings container/carte/panneaux, boutons empiles, wrap DPU, actualiser mobile icone, polices reduites) | Faible | 2026-07-05 |
-| TICKET-0112 | UI_UX | Task | Complétion de la gestion des établissements (Module 1 - type, pays, responsable, clés API) | Full-stack | READY | P1 | 3 | Senior | 0.4j | 0.6j | 1.0j | À assigner | Lead Developer | SPRINT-0010 | 0j | Backlog initialisé et prêt pour refinement | Moyen | 2026-07-05 |
+| TICKET-0112 | UI_UX | Task | Complétion de la gestion des établissements (Module 1 - type, pays, responsable, clés API) | Full-stack | DONE | P1 | 3 | Senior | 0.4j | 0.6j | 1.0j | Antigravity | Lead Developer | SPRINT-0009 | 0.35j | Aucun (migration DB, entities backend, filtre de sécurité X-API-KEY, IHM formulaire et panneau de clés API Angular en place) | Faible | 2026-07-05 |
 | EPIC-0001 | AUTH | Epic | Authentification & Gestion des Rôles | Full-stack | BACKLOG | P0 | 11 | Senior | 2.5j | 3.4j | 5.3j | À assigner | Lead | À planifier | 0j | Stories initiales rédigées | Moyen | 2026-07-02 |
 | STORY-0101 | AUTH | User Story | Connexion & Déconnexion Sécurisée | Full-stack | DONE | P0 | 3 | Intermédiaire | 0.5j | 0.65j | 1.1j | Codex | Lead | SPRINT-0002 | 0.5j | Aucun (tests validés avec succès) | Moyen | 2026-07-03 |
 | STORY-0102 | AUTH | User Story | Contrôle d'Accès Basé sur les Rôles (RBAC) | Full-stack | DONE | P0 | 3 | Senior | 0.4j | 0.65j | 1.1j | Gemini | Lead | SPRINT-0002 | 0.4j | Aucun (tests et specs au vert) | Moyen | 2026-07-03 |

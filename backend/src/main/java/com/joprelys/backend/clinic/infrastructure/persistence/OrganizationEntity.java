@@ -37,6 +37,18 @@ public class OrganizationEntity {
 	@Column(nullable = false, length = 20)
 	private String status;
 
+	@Column(nullable = false, length = 50)
+	private String type;
+
+	@Column(nullable = false, length = 100)
+	private String country;
+
+	@Column(name = "responsible_name", nullable = false, length = 150)
+	private String responsibleName;
+
+	@Column(name = "api_enabled", nullable = false)
+	private boolean apiEnabled;
+
 	@Column(nullable = false)
 	private Instant createdAt;
 
@@ -53,6 +65,24 @@ public class OrganizationEntity {
 		this.phone = phone;
 		this.address = address;
 		this.city = city;
+		this.status = "ACTIVE";
+		this.type = "CLINIC";
+		this.country = "Cameroun";
+		this.responsibleName = "Responsable";
+		this.apiEnabled = true;
+	}
+
+	public OrganizationEntity(String name, String email, String phone, String address, String city, String country, String type, String responsibleName, boolean apiEnabled) {
+		this.id = UUID.randomUUID();
+		this.name = name;
+		this.email = email;
+		this.phone = phone;
+		this.address = address;
+		this.city = city;
+		this.country = country != null ? country : "Cameroun";
+		this.type = type != null ? type : "CLINIC";
+		this.responsibleName = responsibleName != null ? responsibleName : "Responsable";
+		this.apiEnabled = apiEnabled;
 		this.status = "ACTIVE";
 	}
 
@@ -134,5 +164,37 @@ public class OrganizationEntity {
 
 	public Instant getUpdatedAt() {
 		return updatedAt;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public String getCountry() {
+		return country;
+	}
+
+	public void setCountry(String country) {
+		this.country = country;
+	}
+
+	public String getResponsibleName() {
+		return responsibleName;
+	}
+
+	public void setResponsibleName(String responsibleName) {
+		this.responsibleName = responsibleName;
+	}
+
+	public boolean isApiEnabled() {
+		return apiEnabled;
+	}
+
+	public void setApiEnabled(boolean apiEnabled) {
+		this.apiEnabled = apiEnabled;
 	}
 }

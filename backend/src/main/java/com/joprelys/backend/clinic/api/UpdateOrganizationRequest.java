@@ -8,5 +8,13 @@ public record UpdateOrganizationRequest(
 		@NotBlank @Email String email,
 		String phone,
 		String address,
-		@NotBlank String city) {
+		@NotBlank String city,
+		String country,
+		String type,
+		String responsibleName,
+		Boolean apiEnabled) {
+
+	public UpdateOrganizationRequest(String name, String email, String phone, String address, String city) {
+		this(name, email, phone, address, city, "Cameroun", "CLINIC", "Responsable", true);
+	}
 }

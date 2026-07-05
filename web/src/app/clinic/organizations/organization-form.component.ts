@@ -16,6 +16,12 @@ export interface OrganizationFormLabels {
   readonly cityPlaceholder: string;
   readonly address: string;
   readonly addressPlaceholder: string;
+  readonly country: string;
+  readonly countryPlaceholder: string;
+  readonly type: string;
+  readonly responsibleName: string;
+  readonly responsibleNamePlaceholder: string;
+  readonly apiEnabled: string;
   readonly cancel: string;
   readonly save: string;
   readonly saving: string;
@@ -57,6 +63,51 @@ export interface OrganizationFormLabels {
             [required]="true"
             [(value)]="city"
           />
+          <app-ui-input
+            [label]="labels().country"
+            [placeholder]="labels().countryPlaceholder"
+            [required]="true"
+            [(value)]="country"
+          />
+          <div class="space-y-1.5 w-full">
+            <label class="ui-label">
+              {{ labels().type }} <span class="text-red-500">*</span>
+            </label>
+            <select
+              [value]="type()"
+              (change)="type.set($any($event.target).value)"
+              class="ui-input bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+              required
+            >
+              <option value="HOSPITAL">Hôpital</option>
+              <option value="CLINIC">Clinique</option>
+              <option value="CABINET">Cabinet médical</option>
+              <option value="LABORATORY">Laboratoire</option>
+              <option value="IMAGING_CENTER">Centre d'imagerie</option>
+              <option value="PHARMACY">Pharmacie</option>
+              <option value="HEALTH_PLATFORM">Plateforme santé</option>
+              <option value="NGO">Association / ONG</option>
+              <option value="INSTITUTION">Institution</option>
+            </select>
+          </div>
+          <app-ui-input
+            [label]="labels().responsibleName"
+            [placeholder]="labels().responsibleNamePlaceholder"
+            [required]="true"
+            [(value)]="responsibleName"
+          />
+          <div class="flex items-center gap-3 pt-6">
+            <input
+              type="checkbox"
+              id="apiEnabled"
+              [checked]="apiEnabled()"
+              (change)="apiEnabled.set($any($event.target).checked)"
+              class="h-5 w-5 rounded border-slate-300 dark:border-slate-700 text-brand-primary focus:ring-brand-primary cursor-pointer"
+            />
+            <label for="apiEnabled" class="text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+              {{ labels().apiEnabled }}
+            </label>
+          </div>
           <div class="sm:col-span-2">
             <app-ui-input
               [label]="labels().address"
@@ -88,6 +139,10 @@ export class OrganizationFormComponent {
   readonly phone = model('');
   readonly address = model('');
   readonly city = model('');
+  readonly country = model('Cameroun');
+  readonly type = model('CLINIC');
+  readonly responsibleName = model('');
+  readonly apiEnabled = model(true);
 
   readonly submitted = output<void>();
   readonly cancelled = output<void>();

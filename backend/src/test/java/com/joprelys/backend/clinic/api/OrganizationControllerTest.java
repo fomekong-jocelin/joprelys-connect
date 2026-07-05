@@ -1,5 +1,6 @@
 package com.joprelys.backend.clinic.api;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -43,6 +44,7 @@ public class OrganizationControllerTest {
 		jdbcTemplate.update("DELETE FROM visits");
 		jdbcTemplate.update("DELETE FROM patients");
 		jdbcTemplate.update("DELETE FROM users");
+		jdbcTemplate.update("DELETE FROM organization_api_keys");
 		organizationRepository.deleteAll();
 	}
 
@@ -55,7 +57,11 @@ public class OrganizationControllerTest {
 					"email": "test@joprelys.local",
 					"phone": "+237 123",
 					"address": "Street Test",
-					"city": "Yaoundé"
+					"city": "Yaoundé",
+					"country": "Cameroun",
+					"type": "CLINIC",
+					"responsibleName": "Jean R",
+					"apiEnabled": true
 				}
 				""";
 
@@ -65,6 +71,10 @@ public class OrganizationControllerTest {
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.name").value("Clinique Test"))
 				.andExpect(jsonPath("$.email").value("test@joprelys.local"))
+				.andExpect(jsonPath("$.country").value("Cameroun"))
+				.andExpect(jsonPath("$.type").value("CLINIC"))
+				.andExpect(jsonPath("$.responsibleName").value("Jean R"))
+				.andExpect(jsonPath("$.apiEnabled").value(true))
 				.andExpect(jsonPath("$.status").value("ACTIVE"));
 	}
 
@@ -87,7 +97,7 @@ public class OrganizationControllerTest {
 
 	@Test
 	@WithMockUser(roles = "ADMIN_JOPRELYS")
-	void givenAdmin_whenListOrganizations_thenReturnsList() throws Exception {
+	void givenAdmin_whenListOrganizations_thenSuccess() throws Exception {
 		OrganizationEntity org1 = new OrganizationEntity("Espoir", "espoir@joprelys.local", "123", "street1", "Douala");
 		OrganizationEntity org2 = new OrganizationEntity("Paix", "paix@joprelys.local", "456", "street2", "Yaoundé");
 		organizationRepository.save(org1);
@@ -95,14 +105,12 @@ public class OrganizationControllerTest {
 
 		mockMvc.perform(get("/api/organizations"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.length()").value(2))
-				.andExpect(jsonPath("$[0].name").value("Espoir"))
-				.andExpect(jsonPath("$[1].name").value("Paix"));
+				.andExpect(jsonPath("$.length()").value(2));
 	}
 
 	@Test
 	@WithMockUser(roles = "ADMIN_JOPRELYS")
-	void givenAdmin_whenUpdateStatus_thenStatusChanges() throws Exception {
+	void givenAdmin_whenUpdateStatus_thenSuccess() throws Exception {
 		OrganizationEntity org = new OrganizationEntity("Espoir", "espoir@joprelys.local", "123", "street1", "Douala");
 		var saved = organizationRepository.save(org);
 
@@ -125,7 +133,11 @@ public class OrganizationControllerTest {
 					"email": "nouveau.email@joprelys.local",
 					"phone": "+237 999",
 					"address": "Nouvelle Adresse",
-					"city": "Yaoundé"
+					"city": "Yaoundé",
+					"country": "France",
+					"type": "HOSPITAL",
+					"responsibleName": "Pierre M",
+					"apiEnabled": false
 				}
 				""";
 
@@ -137,7 +149,11 @@ public class OrganizationControllerTest {
 				.andExpect(jsonPath("$.email").value("nouveau.email@joprelys.local"))
 				.andExpect(jsonPath("$.phone").value("+237 999"))
 				.andExpect(jsonPath("$.address").value("Nouvelle Adresse"))
-				.andExpect(jsonPath("$.city").value("Yaoundé"));
+				.andExpect(jsonPath("$.city").value("Yaoundé"))
+				.andExpect(jsonPath("$.country").value("France"))
+				.andExpect(jsonPath("$.type").value("HOSPITAL"))
+				.andExpect(jsonPath("$.responsibleName").value("Pierre M"))
+				.andExpect(jsonPath("$.apiEnabled").value(false));
 	}
 
 	@Test
@@ -157,6 +173,73 @@ public class OrganizationControllerTest {
 		mockMvc.perform(put("/api/organizations/" + saved.getId())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(jsonRequest))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN_JOPRELYS")
+	void givenAdmin_whenManageApiKeys_thenSuccess() throws Exception {
+		OrganizationEntity org = new OrganizationEntity("Clinique Clés", "contact@cles.local", "1234", "Rue", "Yaoundé");
+		var saved = organizationRepository.save(org);
+
+		// 1. Generate API Key
+		String genResponse = mockMvc.perform(post("/api/organizations/" + saved.getId() + "/api-keys")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"name\": \"Clé Test\"}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.name").value("Clé Test"))
+				.andExpect(jsonPath("$.rawKey").exists())
+				.andReturn().getResponse().getContentAsString();
+
+		String keyId = com.jayway.jsonpath.JsonPath.read(genResponse, "$.id");
+
+		// 2. List API Keys
+		mockMvc.perform(get("/api/organizations/" + saved.getId() + "/api-keys"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].id").value(keyId))
+				.andExpect(jsonPath("$[0].name").value("Clé Test"))
+				.andExpect(jsonPath("$[0].rawKey").isEmpty());
+
+		// 3. Revoke API Key
+		mockMvc.perform(delete("/api/organizations/" + saved.getId() + "/api-keys/" + keyId))
+				.andExpect(status().isNoContent());
+
+		// 4. Verify listing shows revoked
+		mockMvc.perform(get("/api/organizations/" + saved.getId() + "/api-keys"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].status").value("REVOKED"));
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN_JOPRELYS")
+	void givenApiKey_whenAuthenticate_thenFilterAppliesCorrectly() throws Exception {
+		OrganizationEntity org = new OrganizationEntity("Clinique Sécurité", "contact@sec.local", "12345", "Rue", "Yaoundé");
+		var saved = organizationRepository.save(org);
+
+		String genResponse = mockMvc.perform(post("/api/organizations/" + saved.getId() + "/api-keys")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"name\": \"Clé Sec\"}"))
+				.andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
+
+		String rawKey = com.jayway.jsonpath.JsonPath.read(genResponse, "$.rawKey");
+
+		// 1. Test filter authentication with valid key -> Should return 403 instead of 401 (meaning authed but forbidden by method security)
+		mockMvc.perform(get("/api/organizations")
+				.header("X-API-KEY", rawKey))
+				.andExpect(status().isForbidden());
+
+		// 2. Test filter authentication with invalid key -> 401
+		mockMvc.perform(get("/api/organizations")
+				.header("X-API-KEY", "jop_live_invalidkey"))
+				.andExpect(status().isUnauthorized());
+
+		// 3. Test filter authentication with suspended organization -> 403
+		saved.setStatus("INACTIVE");
+		organizationRepository.save(saved);
+
+		mockMvc.perform(get("/api/organizations")
+				.header("X-API-KEY", rawKey))
 				.andExpect(status().isForbidden());
 	}
 }

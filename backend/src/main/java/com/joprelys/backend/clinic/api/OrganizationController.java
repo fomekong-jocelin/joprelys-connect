@@ -2,6 +2,8 @@ package com.joprelys.backend.clinic.api;
 
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationApiKeyEntity;
+import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationApiKeyRepository;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import jakarta.validation.Valid;
@@ -12,6 +14,7 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,15 +35,18 @@ public class OrganizationController {
 
 	private final OrganizationRepository organizationRepository;
 	private final UserAccountRepository userAccountRepository;
+	private final OrganizationApiKeyRepository apiKeyRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final SecureRandom secureRandom = new SecureRandom();
 
 	public OrganizationController(
 			OrganizationRepository organizationRepository,
 			UserAccountRepository userAccountRepository,
+			OrganizationApiKeyRepository apiKeyRepository,
 			PasswordEncoder passwordEncoder) {
 		this.organizationRepository = organizationRepository;
 		this.userAccountRepository = userAccountRepository;
+		this.apiKeyRepository = apiKeyRepository;
 		this.passwordEncoder = passwordEncoder;
 	}
 
@@ -56,7 +62,11 @@ public class OrganizationController {
 				request.email(),
 				request.phone(),
 				request.address(),
-				request.city()
+				request.city(),
+				request.country(),
+				request.type(),
+				request.responsibleName(),
+				request.apiEnabled() != null ? request.apiEnabled() : true
 		);
 		var saved = organizationRepository.save(entity);
 		return mapToResponse(saved);
@@ -135,9 +145,83 @@ public class OrganizationController {
 		entity.setPhone(request.phone());
 		entity.setAddress(request.address());
 		entity.setCity(request.city());
+		entity.setCountry(request.country());
+		entity.setType(request.type());
+		entity.setResponsibleName(request.responsibleName());
+		entity.setApiEnabled(request.apiEnabled() != null ? request.apiEnabled() : true);
 
 		OrganizationEntity saved = organizationRepository.save(entity);
 		return mapToResponse(saved);
+	}
+
+	@PostMapping("/{id}/api-keys")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiKeyResponse generateApiKey(
+			@PathVariable UUID id,
+			@Valid @RequestBody CreateApiKeyRequest request) {
+
+		OrganizationEntity org = organizationRepository.findById(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organisation non trouvée."));
+
+		String randomStr = generateRandomString(32);
+		String rawKey = "jop_live_" + randomStr;
+		String hashedKey = hashKey(rawKey);
+		String prefix = "jop_live_" + randomStr.substring(0, 4) + "...";
+
+		var keyEntity = new OrganizationApiKeyEntity(
+				org.getId(),
+				hashedKey,
+				prefix,
+				request.name().trim()
+		);
+
+		OrganizationApiKeyEntity saved = apiKeyRepository.save(keyEntity);
+
+		return new ApiKeyResponse(
+				saved.getId(),
+				saved.getName(),
+				saved.getPrefix(),
+				rawKey,
+				saved.getStatus(),
+				saved.getCreatedAt(),
+				saved.getRevokedAt()
+		);
+	}
+
+	@GetMapping("/{id}/api-keys")
+	public List<ApiKeyResponse> listApiKeys(@PathVariable UUID id) {
+		OrganizationEntity org = organizationRepository.findById(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organisation non trouvée."));
+
+		return apiKeyRepository.findAllByOrganizationId(org.getId()).stream()
+				.map(key -> new ApiKeyResponse(
+						key.getId(),
+						key.getName(),
+						key.getPrefix(),
+						null,
+						key.getStatus(),
+						key.getCreatedAt(),
+						key.getRevokedAt()
+				))
+				.toList();
+	}
+
+	@DeleteMapping("/{orgId}/api-keys/{keyId}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void revokeApiKey(@PathVariable UUID orgId, @PathVariable UUID keyId) {
+		organizationRepository.findById(orgId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organisation non trouvée."));
+
+		OrganizationApiKeyEntity key = apiKeyRepository.findById(keyId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Clé API non trouvée."));
+
+		if (!key.getOrganizationId().equals(orgId)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La clé API n'appartient pas à cette organisation.");
+		}
+
+		key.setStatus("REVOKED");
+		key.setRevokedAt(java.time.Instant.now());
+		apiKeyRepository.save(key);
 	}
 
 	private OrganizationResponse mapToResponse(OrganizationEntity entity) {
@@ -159,7 +243,11 @@ public class OrganizationController {
 				entity.getStatus(),
 				entity.getCreatedAt(),
 				adminEmail,
-				adminDisplayName
+				adminDisplayName,
+				entity.getCountry(),
+				entity.getType(),
+				entity.getResponsibleName(),
+				entity.isApiEnabled()
 		);
 	}
 
@@ -169,5 +257,30 @@ public class OrganizationController {
 			suffix.append(PASSWORD_ALPHABET.charAt(secureRandom.nextInt(PASSWORD_ALPHABET.length())));
 		}
 		return "Jop-" + suffix;
+	}
+
+	private String generateRandomString(int length) {
+		String chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+		StringBuilder sb = new StringBuilder(length);
+		for (int index = 0; index < length; index++) {
+			sb.append(chars.charAt(secureRandom.nextInt(chars.length())));
+		}
+		return sb.toString();
+	}
+
+	private String hashKey(String rawKey) {
+		try {
+			var digest = java.security.MessageDigest.getInstance("SHA-256");
+			byte[] hashBytes = digest.digest(rawKey.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+			var hexString = new StringBuilder();
+			for (byte b : hashBytes) {
+				String hex = Integer.toHexString(0xff & b);
+				if (hex.length() == 1) hexString.append('0');
+				hexString.append(hex);
+			}
+			return hexString.toString();
+		} catch (Exception e) {
+			throw new RuntimeException("Erreur lors du hachage de la clé API", e);
+		}
 	}
 }
