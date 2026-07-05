@@ -6,7 +6,7 @@
 | **Epic** | EPIC-0014 |
 | **Type** | User Story |
 | **Titre** | Alignement Module 7 — Prescriptions et ordonnances conformes CDC |
-| **Statut** | READY |
+| **Statut** | IMPLEMENTATION |
 | **Priorité** | P0 |
 | **Stack** | Full-stack |
 | **Profil recommandé** | Senior Backend + Frontend Intermédiaire |
@@ -14,7 +14,7 @@
 | **Estimation Intermédiaire** | 2.5j |
 | **Estimation Junior** | 4.0j |
 | **Sprint cible** | SPRINT-0011 |
-| **Assigné** | À assigner |
+| **Assigné** | Antigravity |
 | **Reviewer** | Lead Developer |
 | **Dernière MAJ** | 2026-07-05 |
 
