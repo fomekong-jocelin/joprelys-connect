@@ -42,4 +42,8 @@ export class ConsultationApiService {
   cancelDocument(documentId: string, reason: string): Observable<any> {
     return this.http.patch<any>(`/api/documents/${documentId}/cancel`, { reason });
   }
+
+  transmitPrescription(prescriptionId: string): Observable<any> {
+    return this.http.post<any>(`/api/prescriptions/${prescriptionId}/transmit`, {});
+  }
 }

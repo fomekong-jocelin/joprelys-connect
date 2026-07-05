@@ -18,6 +18,11 @@ export interface Consultation {
   documentId?: string;
   documentStatus?: string;
   vitals?: Vitals;
+  prescriptionId?: string;
+  prescriptionNumber?: string;
+  prescriptionStatus?: string;
+  prescriptionTransmissionStatus?: string;
+  prescriptionTransmittedAt?: string;
   prescriptionItems?: PrescriptionItem[];
 }
 

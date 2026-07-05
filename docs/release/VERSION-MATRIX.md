@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Version courante | 0.8.0 |
+| Version courante | 0.9.0 |
 | Dernière release | 2026-07-04 |
 | Stratégie | SemVer |
 | Source de vérité | `VERSION` + `docs/ai/CHANGELOG.md` |
@@ -15,11 +15,11 @@
 
 | Module | Version | Type de version | Dernière release | Compatibilité | Notes |
 |---|---:|---|---|---|---|
-| Backend Spring Boot | 0.8.0 | SemVer | 2026-07-04 | API v0 | Allergies, antécédents, hospitalisations (optimiste), fiche de sortie PDF |
-| Angular Web | 0.8.0 | SemVer | 2026-07-04 | API v0 | Visualisation/saisie des allergies, antécédents, hospitalisations et notes |
+| Backend Spring Boot | 0.9.0 | SemVer | 2026-07-04 | API v0 | Télétransmission AllôPharma, centre de notifications, demandes d'accès externes |
+| Angular Web | 0.9.0 | SemVer | 2026-07-04 | API v0 | Boutons de télétransmission, onglet notifications et badge, demandes d'accès externes |
 | Flutter Mobile | 0.3.0 | SemVer | 2026-07-01 | API v0 | À adapter au projet |
-| API Contract | 0.8.0 | SemVer | 2026-07-04 | v0 | Endpoints allergies, antécédents et hospitalisations |
-| Database Schema | 0.6.0 | Migration versionnée | 2026-07-04 | v0 | Flyway v18 allergies et v19 hospitalisations |
+| API Contract | 0.9.0 | SemVer | 2026-07-04 | v0 | Endpoints AllôPharma, notifications et demandes d'accès |
+| Database Schema | 0.9.0 | Migration versionnée | 2026-07-04 | v0 | Flyway v20 (accès externes), v21 (notifications), v22 (télétransmission) |
 
 ## Compatibilité API / clients
 

@@ -129,7 +129,8 @@ describe('PatientDetailComponent', () => {
       getPatientConsultations: vi.fn().mockReturnValue(of(mockConsultations)),
       downloadDocument: vi.fn(),
       revokeDocument: vi.fn().mockReturnValue(of({ id: 'doc-uuid-1', status: 'REVOQUE' })),
-      cancelDocument: vi.fn().mockReturnValue(of({ id: 'doc-uuid-1', status: 'ANNULE' }))
+      cancelDocument: vi.fn().mockReturnValue(of({ id: 'doc-uuid-1', status: 'ANNULE' })),
+      transmitPrescription: vi.fn().mockReturnValue(of({}))
     };
 
     mockAuditApi = {
@@ -246,5 +247,17 @@ describe('PatientDetailComponent', () => {
 
     mockAuthToken.session.set({ role: 'AGENT_ACCUEIL' });
     expect(component.canViewAudit()).toBe(false);
+  });
+
+  it('should call transmitPrescription api and reload history on success', () => {
+    mockConsultationApi.transmitPrescription.mockReturnValue(of({}));
+    const consultWithPresc = {
+      ...mockConsultations[0],
+      prescriptionId: 'presc-uuid-123',
+      prescriptionTransmissionStatus: 'NOT_TRANSMITTED'
+    };
+    component.transmitPrescription(consultWithPresc);
+    expect(mockConsultationApi.transmitPrescription).toHaveBeenCalledWith('presc-uuid-123');
+    expect(mockConsultationApi.getPatientConsultations).toHaveBeenCalled();
   });
 });

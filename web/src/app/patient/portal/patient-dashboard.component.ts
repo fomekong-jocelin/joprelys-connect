@@ -184,6 +184,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
                 <app-patient-visits-list
                   [consultations]="patientData()!.consultations"
                   (download)="onDownloadDocument($event)"
+                  (transmit)="onTransmitPrescription($event)"
                 />
               } @else if (activeTab() === 'consents') {
                 <app-patient-consents-list />
@@ -279,6 +280,25 @@ export class PatientDashboardComponent implements OnInit {
       },
       error: () => {
         alert(this.i18n.t('patients.downloadPdfError'));
+      }
+    });
+  }
+
+  onTransmitPrescription(prescriptionId: string): void {
+    const consultations = this.patientData()?.consultations || [];
+    const consult = consultations.find(c => c.prescriptionId === prescriptionId);
+    if (consult) {
+      consult.prescriptionTransmissionStatus = 'PENDING';
+    }
+    this.portalService.transmitPrescription(prescriptionId).subscribe({
+      next: () => {
+        this.loadPatientData();
+      },
+      error: (err) => {
+        if (consult) {
+          consult.prescriptionTransmissionStatus = 'FAILED';
+        }
+        alert(err.error?.detail || this.i18n.t('patient.prescription.transmitError'));
       }
     });
   }

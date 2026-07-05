@@ -32,6 +32,11 @@ export interface PatientPortalConsultation {
   advice?: string;
   followUp?: string;
   vitals?: Vitals;
+  prescriptionId?: string | null;
+  prescriptionNumber?: string | null;
+  prescriptionStatus?: string | null;
+  prescriptionTransmissionStatus?: string | null;
+  prescriptionTransmittedAt?: string | null;
   prescriptionItems?: PrescriptionItem[];
 }
 
@@ -116,6 +121,10 @@ export class PatientPortalService {
 
   markAllNotificationsAsRead(): Observable<void> {
     return this.http.post<void>('/api/patient/notifications/read-all', {});
+  }
+
+  transmitPrescription(prescriptionId: string): Observable<any> {
+    return this.http.post<any>(`/api/patient/me/prescriptions/${prescriptionId}/transmit`, {});
   }
 }
 

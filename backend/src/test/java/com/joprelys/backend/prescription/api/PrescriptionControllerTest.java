@@ -308,4 +308,82 @@ public class PrescriptionControllerTest {
 				.content(json))
 				.andExpect(status().isNotFound());
 	}
+
+	@Test
+	void givenMedecinA_whenTransmitPrescription_thenOk() throws Exception {
+		TenantContext.setTenantId(orgA.getId());
+		PrescriptionEntity prescription = new PrescriptionEntity(consultationA);
+		prescription.setPrescriptionNumber("TX-DOC-GOOD");
+		prescription.setStatus("ACTIVE");
+		prescription.setTransmissionStatus("NOT_TRANSMITTED");
+		prescription = prescriptionRepository.save(prescription);
+		TenantContext.clear();
+
+		mockMvc.perform(post("/api/prescriptions/" + prescription.getId() + "/transmit")
+						.header("Authorization", "Bearer " + tokenMedecinA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.transmissionStatus").value("TRANSMITTED"))
+				.andExpect(jsonPath("$.transmittedAt").isNotEmpty());
+	}
+
+	@Test
+	void givenMedecinA_whenTransmitAlreadyTransmitted_thenBadRequest() throws Exception {
+		TenantContext.setTenantId(orgA.getId());
+		PrescriptionEntity prescription = new PrescriptionEntity(consultationA);
+		prescription.setPrescriptionNumber("TX-DOC-ALREADY");
+		prescription.setStatus("ACTIVE");
+		prescription.setTransmissionStatus("TRANSMITTED");
+		prescription = prescriptionRepository.save(prescription);
+		TenantContext.clear();
+
+		mockMvc.perform(post("/api/prescriptions/" + prescription.getId() + "/transmit")
+						.header("Authorization", "Bearer " + tokenMedecinA))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void givenMedecinA_whenTransmitInactive_thenBadRequest() throws Exception {
+		TenantContext.setTenantId(orgA.getId());
+		PrescriptionEntity prescription = new PrescriptionEntity(consultationA);
+		prescription.setPrescriptionNumber("TX-DOC-INACTIVE");
+		prescription.setStatus("EXPIRED");
+		prescription.setTransmissionStatus("NOT_TRANSMITTED");
+		prescription = prescriptionRepository.save(prescription);
+		TenantContext.clear();
+
+		mockMvc.perform(post("/api/prescriptions/" + prescription.getId() + "/transmit")
+						.header("Authorization", "Bearer " + tokenMedecinA))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void givenAgentAccueil_whenTransmitPrescription_thenForbidden() throws Exception {
+		TenantContext.setTenantId(orgA.getId());
+		PrescriptionEntity prescription = new PrescriptionEntity(consultationA);
+		prescription.setPrescriptionNumber("TX-DOC-FORBIDDEN");
+		prescription.setStatus("ACTIVE");
+		prescription.setTransmissionStatus("NOT_TRANSMITTED");
+		prescription = prescriptionRepository.save(prescription);
+		TenantContext.clear();
+
+		mockMvc.perform(post("/api/prescriptions/" + prescription.getId() + "/transmit")
+						.header("Authorization", "Bearer " + tokenAgentA))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void givenMedecinB_whenTransmitPrescriptionA_thenNotFound() throws Exception {
+		TenantContext.setTenantId(orgA.getId());
+		PrescriptionEntity prescription = new PrescriptionEntity(consultationA);
+		prescription.setPrescriptionNumber("TX-DOC-CROSS");
+		prescription.setStatus("ACTIVE");
+		prescription.setTransmissionStatus("NOT_TRANSMITTED");
+		prescription = prescriptionRepository.save(prescription);
+		TenantContext.clear();
+
+		// Médecin B tente de transmettre l'ordonnance de la Clinique A
+		mockMvc.perform(post("/api/prescriptions/" + prescription.getId() + "/transmit")
+						.header("Authorization", "Bearer " + tokenMedecinB))
+				.andExpect(status().isNotFound());
+	}
 }

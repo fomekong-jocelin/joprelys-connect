@@ -65,6 +65,12 @@ public class PatientPortalControllerTest {
     @Autowired
     private com.joprelys.backend.notification.infrastructure.persistence.NotificationRepository notificationRepository;
 
+    @Autowired
+    private com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository prescriptionRepository;
+
+    @Autowired
+    private com.joprelys.backend.consultation.infrastructure.persistence.ConsultationRepository consultationRepository;
+
     private OrganizationEntity orgA;
     private OrganizationEntity orgB;
     private PatientEntity patientA;
@@ -79,6 +85,11 @@ public class PatientPortalControllerTest {
         jdbcTemplate.update("DELETE FROM audit_logs");
         jdbcTemplate.update("DELETE FROM emergency_access_authorizations");
         jdbcTemplate.update("DELETE FROM patient_consents");
+        jdbcTemplate.update("DELETE FROM dispensation_items");
+        jdbcTemplate.update("DELETE FROM prescription_dispensations");
+        jdbcTemplate.update("DELETE FROM prescription_items");
+        jdbcTemplate.update("DELETE FROM prescriptions");
+        jdbcTemplate.update("DELETE FROM consultations");
         jdbcTemplate.update("DELETE FROM medical_documents");
         jdbcTemplate.update("DELETE FROM visits");
         jdbcTemplate.update("DELETE FROM external_access_requests");
@@ -469,5 +480,81 @@ public class PatientPortalControllerTest {
         mockMvc.perform(post("/api/patient/notifications/" + notif.getId() + "/read")
                         .header("Authorization", "Bearer " + tokenPatientA))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void givenPatientPrescription_whenTransmit_thenOk() throws Exception {
+        TenantContext.setTenantId(orgA.getId());
+        var consultation = consultationRepository.save(new com.joprelys.backend.consultation.infrastructure.persistence.ConsultationEntity(
+                visitA, medecinBEntity, "DOC-TX-1", "symptoms", "exam", "diag", null, null));
+        var prescription = new com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionEntity(consultation);
+        prescription.setPrescriptionNumber("TX-GOOD");
+        prescription.setStatus("ACTIVE");
+        prescription.setTransmissionStatus("NOT_TRANSMITTED");
+        prescription = prescriptionRepository.save(prescription);
+        TenantContext.clear();
+
+        mockMvc.perform(post("/api/patient/me/prescriptions/" + prescription.getId() + "/transmit")
+                        .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.transmissionStatus").value("TRANSMITTED"))
+                .andExpect(jsonPath("$.transmittedAt").isNotEmpty());
+    }
+
+    @Test
+    void givenOtherPatientPrescription_whenTransmit_thenForbidden() throws Exception {
+        TenantContext.setTenantId(orgA.getId());
+        // Visite et consultation pour patient B
+        VisitEntity visitB = new VisitEntity(patientB, "VIS-20260702-9999", "Consultation cardiologie", "CARDIOLOGIE");
+        visitB.setOrganizationId(orgA.getId());
+        visitB.setStatus("CLOTUREE");
+        visitB = visitRepository.save(visitB);
+        var consultation = consultationRepository.save(new com.joprelys.backend.consultation.infrastructure.persistence.ConsultationEntity(
+                visitB, medecinBEntity, "DOC-TX-2", "symptoms", "exam", "diag", null, null));
+        var prescription = new com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionEntity(consultation);
+        prescription.setPrescriptionNumber("TX-OTHER");
+        prescription.setStatus("ACTIVE");
+        prescription.setTransmissionStatus("NOT_TRANSMITTED");
+        prescription = prescriptionRepository.save(prescription);
+        TenantContext.clear();
+
+        // Le Patient A tente de transmettre l'ordonnance du Patient B
+        mockMvc.perform(post("/api/patient/me/prescriptions/" + prescription.getId() + "/transmit")
+                        .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void givenAlreadyTransmittedPrescription_whenTransmit_thenBadRequest() throws Exception {
+        TenantContext.setTenantId(orgA.getId());
+        var consultation = consultationRepository.save(new com.joprelys.backend.consultation.infrastructure.persistence.ConsultationEntity(
+                visitA, medecinBEntity, "DOC-TX-3", "symptoms", "exam", "diag", null, null));
+        var prescription = new com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionEntity(consultation);
+        prescription.setPrescriptionNumber("TX-ALREADY");
+        prescription.setStatus("ACTIVE");
+        prescription.setTransmissionStatus("TRANSMITTED");
+        prescription = prescriptionRepository.save(prescription);
+        TenantContext.clear();
+
+        mockMvc.perform(post("/api/patient/me/prescriptions/" + prescription.getId() + "/transmit")
+                        .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void givenInactivePrescription_whenTransmit_thenBadRequest() throws Exception {
+        TenantContext.setTenantId(orgA.getId());
+        var consultation = consultationRepository.save(new com.joprelys.backend.consultation.infrastructure.persistence.ConsultationEntity(
+                visitA, medecinBEntity, "DOC-TX-4", "symptoms", "exam", "diag", null, null));
+        var prescription = new com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionEntity(consultation);
+        prescription.setPrescriptionNumber("TX-INACTIVE");
+        prescription.setStatus("EXPIRED");
+        prescription.setTransmissionStatus("NOT_TRANSMITTED");
+        prescription = prescriptionRepository.save(prescription);
+        TenantContext.clear();
+
+        mockMvc.perform(post("/api/patient/me/prescriptions/" + prescription.getId() + "/transmit")
+                        .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isBadRequest());
     }
 }

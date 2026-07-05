@@ -401,6 +401,50 @@ import { PatientHospitalizationComponent } from './patient-hospitalization.compo
                             }
                           </div>
 
+                          @if (consult.prescriptionId) {
+                            <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/40">
+                              <div class="flex flex-col">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                  {{ i18n.t('patient.prescription.teletransmission') }}
+                                </span>
+                                @if (consult.prescriptionTransmittedAt) {
+                                  <span class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                                    {{ i18n.t('patient.prescription.transmittedAt') }} : {{ consult.prescriptionTransmittedAt | date:'dd/MM/yyyy HH:mm' }}
+                                  </span>
+                                }
+                              </div>
+                              <div class="flex items-center gap-2">
+                                @if (consult.prescriptionTransmissionStatus === 'TRANSMITTED') {
+                                  <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-extrabold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/25 dark:text-emerald-400 uppercase tracking-wider">
+                                    {{ i18n.t('patient.prescription.transmitted') }}
+                                  </span>
+                                } @else if (consult.prescriptionTransmissionStatus === 'PENDING') {
+                                  <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-extrabold bg-amber-50 text-amber-700 dark:bg-amber-950/25 dark:text-amber-400 uppercase tracking-wider animate-pulse">
+                                    {{ i18n.t('patient.prescription.pending') }}
+                                  </span>
+                                } @else if (consult.prescriptionTransmissionStatus === 'FAILED') {
+                                  <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-extrabold bg-rose-50 text-rose-700 dark:bg-rose-950/25 dark:text-rose-400 uppercase tracking-wider">
+                                    {{ i18n.t('patient.prescription.failed') }}
+                                  </span>
+                                } @else {
+                                  <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-extrabold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 uppercase tracking-wider">
+                                    {{ i18n.t('patient.prescription.notTransmitted') }}
+                                  </span>
+                                }
+
+                                @if (consult.prescriptionTransmissionStatus !== 'TRANSMITTED') {
+                                  <button
+                                    type="button"
+                                    (click)="transmitPrescription(consult); $event.stopPropagation()"
+                                    [disabled]="consult.prescriptionTransmissionStatus === 'PENDING'"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-extrabold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors shrink-0"
+                                  >
+                                    {{ i18n.t('patient.prescription.transmitBtn') }}
+                                  </button>
+                                }
+                              </div>
+                            </div>
+                          }
                         </div>
                       }
                     </div>
@@ -1088,6 +1132,20 @@ export class PatientDetailComponent implements OnInit {
       },
       error: () => {
         this.downloadError.set(this.i18n.t('patients.downloadPdfError'));
+      }
+    });
+  }
+
+  transmitPrescription(consultation: Consultation): void {
+    if (!consultation.prescriptionId) return;
+    consultation.prescriptionTransmissionStatus = 'PENDING';
+    this.consultationApi.transmitPrescription(consultation.prescriptionId).subscribe({
+      next: () => {
+        this.loadHistory();
+      },
+      error: (err) => {
+        consultation.prescriptionTransmissionStatus = 'FAILED';
+        alert(err.error?.detail || this.i18n.t('patient.prescription.transmitError'));
       }
     });
   }

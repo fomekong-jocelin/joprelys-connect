@@ -13,6 +13,8 @@ public record PrescriptionResponse(
 		String pinCode,
 		String status,
 		Instant expiresAt,
+		String transmissionStatus,
+		Instant transmittedAt,
 		Instant createdAt,
 		Instant updatedAt
 ) {
@@ -25,6 +27,8 @@ public record PrescriptionResponse(
 				e.getPinCode(),
 				e.getStatus(),
 				e.getExpiresAt(),
+				e.getTransmissionStatus(),
+				e.getTransmittedAt(),
 				e.getCreatedAt(),
 				e.getUpdatedAt()
 		);

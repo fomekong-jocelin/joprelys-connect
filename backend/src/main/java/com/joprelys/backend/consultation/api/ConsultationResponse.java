@@ -26,14 +26,19 @@ public record ConsultationResponse(
 		UUID documentId,
 		String documentStatus,
 		VitalsResponse vitals,
-		List<PrescriptionItemResponse> prescriptionItems
+		List<PrescriptionItemResponse> prescriptionItems,
+		UUID prescriptionId,
+		String prescriptionNumber,
+		String prescriptionStatus,
+		String prescriptionTransmissionStatus,
+		Instant prescriptionTransmittedAt
 ) {
 	public static ConsultationResponse fromEntity(ConsultationEntity entity) {
-		return fromEntity(entity, null, null, List.of());
+		return fromEntity(entity, null, null, List.of(), null);
 	}
 
 	public static ConsultationResponse fromEntity(ConsultationEntity entity, MedicalDocumentEntity document) {
-		return fromEntity(entity, document, null, List.of());
+		return fromEntity(entity, document, null, List.of(), null);
 	}
 
 	public static ConsultationResponse fromEntity(
@@ -41,6 +46,15 @@ public record ConsultationResponse(
 			MedicalDocumentEntity document,
 			VitalsResponse vitals,
 			List<PrescriptionItemResponse> prescriptionItems) {
+		return fromEntity(entity, document, vitals, prescriptionItems, null);
+	}
+
+	public static ConsultationResponse fromEntity(
+			ConsultationEntity entity,
+			MedicalDocumentEntity document,
+			VitalsResponse vitals,
+			List<PrescriptionItemResponse> prescriptionItems,
+			com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionEntity prescription) {
 		return new ConsultationResponse(
 				entity.getId(),
 				entity.getVisit().getId(),
@@ -59,7 +73,12 @@ public record ConsultationResponse(
 				document != null ? document.getId() : null,
 				document != null ? document.getStatus() : null,
 				vitals,
-				prescriptionItems
+				prescriptionItems,
+				prescription != null ? prescription.getId() : null,
+				prescription != null ? prescription.getPrescriptionNumber() : null,
+				prescription != null ? prescription.getStatus() : null,
+				prescription != null ? prescription.getTransmissionStatus() : null,
+				prescription != null ? prescription.getTransmittedAt() : null
 		);
 	}
 }

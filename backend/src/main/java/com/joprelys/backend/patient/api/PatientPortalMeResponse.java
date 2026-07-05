@@ -35,6 +35,11 @@ public record PatientPortalMeResponse(
             String advice,
             String followUp,
             com.joprelys.backend.visit.api.VitalsResponse vitals,
+            UUID prescriptionId,
+            String prescriptionNumber,
+            String prescriptionStatus,
+            String prescriptionTransmissionStatus,
+            java.time.Instant prescriptionTransmittedAt,
             List<com.joprelys.backend.prescription.api.PrescriptionItemResponse> prescriptionItems
     ) {
     }

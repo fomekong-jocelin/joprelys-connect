@@ -39,6 +39,12 @@ public class PrescriptionEntity {
 	@Column(name = "expires_at")
 	private Instant expiresAt;
 
+	@Column(name = "transmission_status", nullable = false, length = 20)
+	private String transmissionStatus = "NOT_TRANSMITTED";
+
+	@Column(name = "transmitted_at")
+	private Instant transmittedAt;
+
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
@@ -74,6 +80,10 @@ public class PrescriptionEntity {
 	public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
 	public String getPrescriptionNumber() { return prescriptionNumber; }
 	public void setPrescriptionNumber(String prescriptionNumber) { this.prescriptionNumber = prescriptionNumber; }
+	public String getTransmissionStatus() { return transmissionStatus; }
+	public void setTransmissionStatus(String transmissionStatus) { this.transmissionStatus = transmissionStatus; }
+	public Instant getTransmittedAt() { return transmittedAt; }
+	public void setTransmittedAt(Instant transmittedAt) { this.transmittedAt = transmittedAt; }
 	public Instant getCreatedAt() { return createdAt; }
 	public Instant getUpdatedAt() { return updatedAt; }
 }

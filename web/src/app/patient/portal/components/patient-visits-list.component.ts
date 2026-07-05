@@ -194,6 +194,49 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                     }
                   </div>
 
+                  @if (c.prescriptionId) {
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[var(--app-border)]/70">
+                      <div class="flex flex-col">
+                        <span class="text-[11px] font-semibold text-[var(--text-muted)]">{{ i18n.t('patient.prescription.teletransmission') }}</span>
+                        @if (c.prescriptionTransmittedAt) {
+                          <span class="text-[10px] text-[var(--text-muted)] mt-0.5">
+                            {{ i18n.t('patient.prescription.transmittedAt') }} : {{ c.prescriptionTransmittedAt | date:'dd/MM/yyyy HH:mm' }}
+                          </span>
+                        }
+                      </div>
+                      <div class="flex items-center gap-2">
+                        @if (c.prescriptionTransmissionStatus === 'TRANSMITTED') {
+                          <span class="text-[10px] font-extrabold uppercase tracking-wide px-3 py-1.5 rounded-[var(--radius-brand-sm)] bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-400">
+                            {{ i18n.t('patient.prescription.transmitted') }}
+                          </span>
+                        } @else if (c.prescriptionTransmissionStatus === 'PENDING') {
+                          <span class="text-[10px] font-extrabold uppercase tracking-wide px-3 py-1.5 rounded-[var(--radius-brand-sm)] bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-amber-700 dark:text-amber-400 animate-pulse">
+                            {{ i18n.t('patient.prescription.pending') }}
+                          </span>
+                        } @else if (c.prescriptionTransmissionStatus === 'FAILED') {
+                          <span class="text-[10px] font-extrabold uppercase tracking-wide px-3 py-1.5 rounded-[var(--radius-brand-sm)] bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 text-rose-700 dark:text-rose-400">
+                            {{ i18n.t('patient.prescription.failed') }}
+                          </span>
+                        } @else {
+                          <span class="text-[10px] font-extrabold uppercase tracking-wide px-3 py-1.5 rounded-[var(--radius-brand-sm)] bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-900/40 text-slate-700 dark:text-slate-400">
+                            {{ i18n.t('patient.prescription.notTransmitted') }}
+                          </span>
+                        }
+
+                        @if (c.prescriptionTransmissionStatus !== 'TRANSMITTED') {
+                          <button
+                            type="button"
+                            (click)="transmit.emit(c.prescriptionId); $event.stopPropagation()"
+                            [disabled]="c.prescriptionTransmissionStatus === 'PENDING'"
+                            class="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold rounded-[var(--radius-brand-sm)] border border-[var(--brand-primary)] text-[var(--brand-primary)] hover:bg-[var(--brand-primary)] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[var(--brand-primary)] transition-colors cursor-pointer"
+                          >
+                            {{ i18n.t('patient.prescription.transmitBtn') }}
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  }
+
                 </div>
               }
             </article>
@@ -212,6 +255,7 @@ export class PatientVisitsListComponent {
 
   @Input({ required: true }) consultations: PatientPortalConsultation[] = [];
   @Output() download = new EventEmitter<string>();
+  @Output() transmit = new EventEmitter<string>();
 
   expandedConsultations: Record<string, boolean> = {};
 

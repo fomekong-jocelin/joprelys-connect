@@ -39,6 +39,8 @@ public class PatientPortalController {
     private final ExternalAccessService externalAccessService;
     private final com.joprelys.backend.notification.application.NotificationService notificationService;
 
+    private final com.joprelys.backend.prescription.application.PrescriptionService prescriptionService;
+
     public PatientPortalController(
             PatientRepository patientRepository,
             ConsultationRepository consultationRepository,
@@ -50,7 +52,8 @@ public class PatientPortalController {
             com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository prescriptionRepository,
             PatientAccessGuardService patientAccessGuardService,
             ExternalAccessService externalAccessService,
-            com.joprelys.backend.notification.application.NotificationService notificationService) {
+            com.joprelys.backend.notification.application.NotificationService notificationService,
+            com.joprelys.backend.prescription.application.PrescriptionService prescriptionService) {
         this.patientRepository = patientRepository;
         this.consultationRepository = consultationRepository;
         this.medicalDocumentRepository = medicalDocumentRepository;
@@ -62,6 +65,7 @@ public class PatientPortalController {
         this.patientAccessGuardService = patientAccessGuardService;
         this.externalAccessService = externalAccessService;
         this.notificationService = notificationService;
+        this.prescriptionService = prescriptionService;
     }
 
     @GetMapping("/me")
@@ -75,11 +79,18 @@ public class PatientPortalController {
                     MedicalDocumentEntity doc = medicalDocumentRepository.findByVisitId(c.getVisit().getId()).orElse(null);
                     LocalDate visitDate = LocalDate.ofInstant(c.getVisit().getCreatedAt(), ZoneId.systemDefault());
                     var vitals = com.joprelys.backend.visit.api.VitalsResponse.fromEntity(c.getVisit().getVitals());
-                    var prescriptionItems = prescriptionRepository.findByConsultationId(c.getId())
+                    var prescriptionOpt = prescriptionRepository.findByConsultationId(c.getId());
+                    var prescriptionItems = prescriptionOpt
                             .map(p -> p.getItems().stream()
                                     .map(com.joprelys.backend.prescription.api.PrescriptionItemResponse::fromEntity)
                                     .toList())
                             .orElse(List.of());
+
+                    UUID prescriptionId = prescriptionOpt.map(p -> p.getId()).orElse(null);
+                    String prescriptionNumber = prescriptionOpt.map(p -> p.getPrescriptionNumber()).orElse(null);
+                    String prescriptionStatus = prescriptionOpt.map(p -> p.getStatus()).orElse(null);
+                    String prescriptionTransmissionStatus = prescriptionOpt.map(p -> p.getTransmissionStatus()).orElse(null);
+                    java.time.Instant prescriptionTransmittedAt = prescriptionOpt.map(p -> p.getTransmittedAt()).orElse(null);
 
                     return new PatientPortalMeResponse.PatientPortalConsultation(
                             c.getVisit().getId(),
@@ -95,6 +106,11 @@ public class PatientPortalController {
                             c.getAdvice(),
                             c.getFollowUp(),
                             vitals,
+                            prescriptionId,
+                            prescriptionNumber,
+                            prescriptionStatus,
+                            prescriptionTransmissionStatus,
+                            prescriptionTransmittedAt,
                             prescriptionItems
                     );
                 })
@@ -234,6 +250,14 @@ public class PatientPortalController {
     public void markAllNotificationsAsRead(Authentication authentication) {
         PatientEntity patient = patientAccessGuardService.resolve(authentication);
         notificationService.markAllAsRead(patient.getId());
+    }
+
+    @org.springframework.web.bind.annotation.PostMapping("/me/prescriptions/{id}/transmit")
+    public com.joprelys.backend.prescription.api.PrescriptionResponse transmitOwnPrescription(
+            @PathVariable UUID id, Authentication authentication) {
+        return com.joprelys.backend.prescription.api.PrescriptionResponse.fromEntity(
+                prescriptionService.transmitPrescriptionForPatient(id, authentication.getName())
+        );
     }
 }
 

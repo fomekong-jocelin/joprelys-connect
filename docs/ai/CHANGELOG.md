@@ -8,6 +8,14 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- **Interopérabilité HL7 FHIR - Mapping (STORY-1701)** : DTOs FHIR minimaux (`FhirPatientDto`, `FhirEncounterDto`, `FhirObservationDto` et leurs sous-structures) et mappers associés (`FhirPatientMapper`, `FhirEncounterMapper`, `FhirObservationMapper`) permettant de projeter à la volée les entités JPA existantes (`PatientEntity`, `VisitEntity`, `VitalsEntity`) au format de ressources standardisé HL7 FHIR R4. Ajout de tests unitaires couvrant l'ensemble de la logique de conversion et de validation des formats.
+
+## [0.9.0] - 2026-07-04
+
+### Added
+
+- **Télétransmission d'ordonnances (STORY-1601/1602)** : migration Flyway V22 d'ajout des colonnes de télétransmission, service d'intégration simulé `AlloPharmaClient`, service métier et contrôleurs Rest médecin (`POST /api/prescriptions/{id}/transmit`) et patient (`POST /api/patient/me/prescriptions/{id}/transmit`) avec contrôles IDOR et logs d'audit. Ajout de boutons "Télétransmettre" et badges de statut IHM i18n sur le dossier praticien et portail patient, avec tests unitaires et intégration complets.
+- **Configuration Git (TICKET-1603)** : Ajout du dépôt distant officiel (remote `origin`) pointant vers `https://github.com/fomekong-jocelin/joprelys-connect.git`.
 - **Demandes d'Accès Externes (STORY-1301)** : migration Flyway V20, entité JPA ExternalAccessRequestEntity et Repository, Service d'enregistrement des demandes et contrôleur API REST POST /api/external-access/requests avec validation d'entrée stricte, audit log automatique et suite complète de 5 tests d'intégration MockMvc.
 - **Validation de demande d'accès externe (STORY-1302)** : contrôleur API REST pour les actions du patient (liste, approbation, rejet), sécurisation stricte anti-IDOR avec audit log automatique, et IHM Angular complète (onglet "Demandes d'accès", boutons d'action d'approbation et de rejet, gestion i18n FR/EN et styles Tailwind CSS v4) avec tests d'intégration backend et tests unitaires frontend passants à 100%.
 - **Contrôle d'accès & Expiration des droits (STORY-1303)** : renforcement du filtrage de sécurité dans `PatientService` pour interdire l'accès aux dossiers par des cliniques externes sans autorisation valide. Ajout du planificateur automatique `ExternalAccessExpirationScheduler` (cron `@Scheduled` configurable) pour expirer les autorisations obsolètes. Mise en place de logs d'audit critiques `EMERGENCY_DPU_ACCESS` et rendu rouge/rose dans la timeline de sécurité patient.

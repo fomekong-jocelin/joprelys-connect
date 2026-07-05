@@ -480,6 +480,14 @@ const FR: TranslationDictionary = {
   'auth.forgotPassword.successDesc': "Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.",
   'auth.forgotPassword.backToLogin': "Retour à la connexion",
   'auth.forgotPassword.error.mismatch': "Les mots de passe ne correspondent pas.",
+  'patient.prescription.teletransmission': 'Télétransmission',
+  'patient.prescription.transmittedAt': 'Transmise le',
+  'patient.prescription.transmitted': 'Transmise à AllôPharma',
+  'patient.prescription.pending': 'Transmission en cours...',
+  'patient.prescription.failed': 'Échec transmission',
+  'patient.prescription.notTransmitted': 'Non transmise',
+  'patient.prescription.transmitBtn': 'Télétransmettre à AllôPharma',
+  'patient.prescription.transmitError': "Impossible de télétransmettre l'ordonnance.",
 };
 
 const EN: TranslationDictionary = {
@@ -959,6 +967,14 @@ const EN: TranslationDictionary = {
   'auth.forgotPassword.successDesc': "Your password has been successfully reset. You can now log in.",
   'auth.forgotPassword.backToLogin': "Back to login",
   'auth.forgotPassword.error.mismatch': "Passwords do not match.",
+  'patient.prescription.teletransmission': 'Teletransmission',
+  'patient.prescription.transmittedAt': 'Transmitted on',
+  'patient.prescription.transmitted': 'Transmitted to AllôPharma',
+  'patient.prescription.pending': 'Transmission in progress...',
+  'patient.prescription.failed': 'Transmission failed',
+  'patient.prescription.notTransmitted': 'Not transmitted',
+  'patient.prescription.transmitBtn': 'Transmit to AllôPharma',
+  'patient.prescription.transmitError': 'Unable to transmit prescription.',
 };
 
 const LOCALE_STORAGE_KEY = 'joprelys_locale';

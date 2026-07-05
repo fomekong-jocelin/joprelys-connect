@@ -71,6 +71,30 @@ describe('PatientVisitsListComponent', () => {
     btn?.click();
     expect(emittedId).toBe('visit-id-123');
   });
+
+  it('should display teletransmission button and emit transmit event', () => {
+    const fixture = TestBed.createComponent(PatientVisitsListComponent);
+    const consultWithPresc = {
+      ...MOCK_PATIENT.consultations[0],
+      prescriptionId: 'presc-id-123',
+      prescriptionTransmissionStatus: 'NOT_TRANSMITTED'
+    };
+    fixture.componentInstance.consultations = [consultWithPresc];
+    fixture.componentInstance.expandedConsultations['visit-id-123'] = true;
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.textContent).toContain('Télétransmission');
+
+    let emittedPrescId: string | undefined;
+    fixture.componentInstance.transmit.subscribe((id) => (emittedPrescId = id));
+
+    const btn = Array.from(element.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('Télétransmettre à AllôPharma'));
+    expect(btn).toBeTruthy();
+    btn?.click();
+    expect(emittedPrescId).toBe('presc-id-123');
+  });
 });
 
 describe('PatientAuditListComponent', () => {
@@ -233,6 +257,14 @@ describe('PatientPortalService', () => {
     const req = httpTesting.expectOne('/api/patient/audit-logs');
     expect(req.request.method).toBe('GET');
     req.flush(mockLogs);
+  });
+
+  it('should call transmitPrescription', () => {
+    service.transmitPrescription('presc-id-123').subscribe();
+
+    const req = httpTesting.expectOne('/api/patient/me/prescriptions/presc-id-123/transmit');
+    expect(req.request.method).toBe('POST');
+    req.flush({});
   });
 });
 

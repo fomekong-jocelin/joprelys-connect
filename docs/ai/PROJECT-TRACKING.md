@@ -8,13 +8,13 @@
 |---|---|
 | Dernière mise à jour | 2026-07-04 |
 | Responsable mise à jour | Antigravity |
-| État global | Sprint 0007 clôturé (v0.9.0) — Préparation du Sprint 0008 (Télétransmission AllôPharma) |
-| Risques majeurs | Intégration d'API partenaires externes |
-| Prochaine priorité | Démarrer l'implémentation de la télétransmission d'ordonnances (STORY-1601) |
-| Sprint courant | SPRINT-0008 |
+| État global | Démarrage du Sprint 0009 — Implémentation du mapping HL7 FHIR |
+| Risques majeurs | Aucun |
+| Prochaine priorité | STORY-1701: Mapping DTOs FHIR |
+| Sprint courant | SPRINT-0009 |
 
 | Capacité sprint | 15.0j |
-| Charge engagée | 3.3j (Est. Senior) |
+| Charge engagée | 1.0j (Est. Senior) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
@@ -96,9 +96,14 @@
 | STORY-1303 | DPU_ACCESS | User Story | Contrôle d'accès & Expiration des droits externes | Backend | DONE | P0 | 5 | Senior | 1.0j | 1.5j | 2.5j | Gemini | Lead Developer | SPRINT-0007 | 1.5j | Aucun (tests unitaires et intégration de sécurité au vert) | Fort | 2026-07-04 |
 | STORY-1501 | NOTIF | User Story | Socle et service d'envoi de notifications (backend) | Backend | DONE | P1 | 3 | Intermédiaire | 0.6j | 0.9j | 1.5j | Gemini | Lead Developer | SPRINT-0007 | 0.9j | Aucun (table SQL, service et API terminés) | Faible | 2026-07-04 |
 | STORY-1502 | NOTIF | User Story | Centre de notifications sur le portail patient (IHM) | Frontend | DONE | P2 | 3 | Junior | 0.4j | 0.6j | 1.0j | Lead Developer | Gemini | SPRINT-0007 | 0.6j | Aucun (IHM Angular, service de liaison et tests terminés) | Faible | 2026-07-04 |
-| STORY-1601 | API_INTEG | User Story | Télétransmission d'ordonnances à AllôPharma (backend) | Backend | READY | P1 | 5 | Senior | 1.0j | 1.3j | 2.0j | Lead Developer | Gemini | SPRINT-0008 | 0j | Initier le script Flyway, l'entité et le service d'intégration externe | Moyen | 2026-07-04 |
-| STORY-1602 | API_INTEG | User Story | Interface de télétransmission (IHM) | Frontend | READY | P1 | 3 | Intermédiaire | 0.5j | 0.7j | 1.1j | Lead Developer | Gemini | SPRINT-0008 | 0j | Développer le bouton de télétransmission et le badge de statut IHM | Faible | 2026-07-04 |
- 
+| STORY-1601 | API_INTEG | User Story | Télétransmission d'ordonnances à AllôPharma (backend) | Backend | DONE | P1 | 5 | Senior | 1.0j | 1.3j | 2.0j | Lead Developer | Gemini | SPRINT-0008 | 1.2j | Aucun (tests unitaires et intégration MockMvc validés) | Faible | 2026-07-04 |
+| STORY-1602 | API_INTEG | User Story | Interface de télétransmission (IHM) | Frontend | DONE | P1 | 3 | Intermédiaire | 0.5j | 0.7j | 1.1j | Lead Developer | Gemini | SPRINT-0008 | 0.6j | Aucun (bouton, badge et tests unitaires Angular validés) | Faible | 2026-07-04 |
+| TICKET-1603 | GOV | DevOps | Ajout du dépôt remote git | DevOps | DONE | P2 | 1 | Junior | 0.01j | 0.02j | 0.05j | Antigravity | Lead Developer | SPRINT-0008 | 0.02j | Aucun (remote configuré) | Faible | 2026-07-04 |
+| EPIC-0011 | FHIR | Epic | Interopérabilité HL7 FHIR | Full-stack | TODO | P1 | 13 | Senior | 4.0j | 5.4j | 8.8j | À assigner | Lead Developer | SPRINT-0009 | 0j | Cadrage initial rédigé (FUNCTIONAL-SPEC / TECHNICAL-DESIGN) | Moyen | 2026-07-04 |
+| STORY-1701 | FHIR | User Story | Mapping des entités DPU vers les ressources FHIR (Patient, Encounter, Observation) | Backend | DONE | P1 | 5 | Senior | 1.0j | 1.3j | 2.0j | Antigravity | Lead Developer | SPRINT-0009 | 0.2j | Aucun (DTOs, Mappers et tests unitaires validés) | Moyen | 2026-07-04 |
+| STORY-1702 | FHIR | User Story | Endpoints REST FHIR pour les patients et consultations | Backend | TODO | P1 | 5 | Senior | 1.0j | 1.3j | 2.0j | À assigner | Lead Developer | SPRINT-0009 | 0j | Exposer GET /fhir/Patient/{id} et GET /fhir/Encounter/{id} | Moyen | 2026-07-04 |
+| STORY-1703 | FHIR | User Story | Portail Développeur & Documentation OpenAPI/Swagger | Documentation | TODO | P2 | 3 | Intermédiaire | 0.7j | 1.0j | 1.7j | À assigner | Lead Developer | SPRINT-0009 | 0j | Rédiger OpenAPI FHIR | Faible | 2026-07-04 |
+
 
 ## Statuts autorisés
 

@@ -106,12 +106,13 @@ public class ConsultationService {
 				.map(c -> {
 					var doc = medicalDocumentRepository.findByVisitId(c.getVisit().getId()).orElse(null);
 					var vitals = VitalsResponse.fromEntity(c.getVisit().getVitals());
-					var prescriptionItems = prescriptionRepository.findByConsultationId(c.getId())
+					var prescriptionOpt = prescriptionRepository.findByConsultationId(c.getId());
+					var prescriptionItems = prescriptionOpt
 							.map(p -> p.getItems().stream()
 									.map(PrescriptionItemResponse::fromEntity)
 									.toList())
 							.orElse(List.of());
-					return ConsultationResponse.fromEntity(c, doc, vitals, prescriptionItems);
+					return ConsultationResponse.fromEntity(c, doc, vitals, prescriptionItems, prescriptionOpt.orElse(null));
 				})
 				.toList();
 	}

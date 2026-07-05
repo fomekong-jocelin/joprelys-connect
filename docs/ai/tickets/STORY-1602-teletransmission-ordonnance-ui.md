@@ -4,7 +4,7 @@
 
 **Epic** : API & Intégration Partenaire (Module 16)  
 **Titre** : Interface de télétransmission (IHM)  
-**Statut** : READY  
+**Statut** : DONE  
 **Priorité** : P1  
 **Sprint** : SPRINT-0008  
 **SP** : 3  
@@ -17,15 +17,12 @@ Offrir aux patients et praticiens une interface visuelle pour déclencher la té
 
 ## 3. Critères d'acceptation (DoD)
 
-- [ ] Bouton "Télétransmettre à AllôPharma" visible sur la vue de l'ordonnance (portail patient et dossier de consultation praticien) si le statut de transmission n'est pas déjà `TRANSMITTED`.
-- [ ] Badge indicateur coloré selon le statut (ex : vert pour `TRANSMITTED`, jaune pour `PENDING`, gris pour non transmis).
-- [ ] Support multilingue FR/EN pour toutes les chaînes textuelles introduites.
-- [ ] Alignement strict sur les directives de `DESIGN.md` (coins carrés/arrondis sobres max 6-8px, ombres légères, Tailwind CSS v4).
-- [ ] Tests unitaires Angular Vitest vérifiant le clic et le rendu visuel.
+- [x] Bouton "Télétransmettre à AllôPharma" visible sur la vue de l'ordonnance (portail patient et dossier de consultation praticien) si le statut de transmission n'est pas déjà `TRANSMITTED`.
+- [x] Badge indicateur coloré selon le statut (ex : vert pour `TRANSMITTED`, jaune pour `PENDING`, gris pour non transmis).
+- [x] Support multilingue FR/EN pour toutes les chaînes textuelles introduites.
+- [x] Alignement strict sur les directives de `DESIGN.md` (coins carrés/arrondis sobres max 6-8px, ombres légères, Tailwind CSS v4).
+- [x] Tests unitaires Angular Vitest vérifiant le clic et le rendu visuel.
 
 ## 4. Reste à faire
 
-- [ ] Raccordement aux services API Angular.
-- [ ] Ajout du bouton et du badge sur le composant ordonnance.
-- [ ] Traduction linguistique.
-- [ ] Écriture des tests unitaires frontend.
+*Aucun, tout a été implémenté et validé par tests unitaires.*

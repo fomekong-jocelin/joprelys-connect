@@ -1,0 +1,2 @@
+ALTER TABLE prescriptions ADD COLUMN transmission_status VARCHAR(20) NOT NULL DEFAULT 'NOT_TRANSMITTED';
+ALTER TABLE prescriptions ADD COLUMN transmitted_at TIMESTAMP WITH TIME ZONE;
