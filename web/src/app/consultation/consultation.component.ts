@@ -6,7 +6,7 @@ import { CommonModule } from '@angular/common';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
 import { ConsultationApiService } from './consultation-api.service';
 import { VisitApiService } from '../visit/visit-api.service';
-import { Consultation } from './consultation.models';
+import { Consultation, Prescription } from './consultation.models';
 import { Vitals } from '../visit/visit.models';
 import { LabOrderApiService } from '../clinic/lab/lab-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
@@ -34,6 +34,7 @@ export class ConsultationComponent implements OnInit {
   readonly errorMessage = signal('');
   readonly vitals = signal<Vitals | null>(null);
   readonly consultation = signal<Consultation | null>(null);
+  readonly prescription = signal<Prescription | null>(null);
   readonly visitNumber = signal('');
 
   private visitId = '';
@@ -136,23 +137,64 @@ export class ConsultationComponent implements OnInit {
           advice: existing.advice ?? '',
           followUp: existing.followUp ?? '',
         });
+
+        // Load prescription using consultation ID
+        this.loadPrescription(existing.id);
       },
       error: () => {}
     });
   }
 
+  loadPrescription(consultationId: string): void {
+    this.consultationApi.getPrescription(consultationId).subscribe({
+      next: (presc) => {
+        this.prescription.set(presc);
+        this.prescriptionItems.clear();
+        presc.items.forEach(item => {
+          this.prescriptionItems.push(this.fb.group({
+            drugName: [{ value: item.drugName, disabled: presc.status !== 'DRAFT' }, Validators.required],
+            dosage: [{ value: item.dosage, disabled: presc.status !== 'DRAFT' }, Validators.required],
+            posology: [{ value: item.posology || '', disabled: presc.status !== 'DRAFT' }],
+            duration: [{ value: item.duration || '', disabled: presc.status !== 'DRAFT' }],
+            quantity: [{ value: item.quantity || '', disabled: presc.status !== 'DRAFT' }],
+            instructions: [{ value: item.instructions || '', disabled: presc.status !== 'DRAFT' }],
+            form: [{ value: item.form || '', disabled: presc.status !== 'DRAFT' }],
+            route: [{ value: item.route || '', disabled: presc.status !== 'DRAFT' }],
+            frequency: [{ value: item.frequency || '', disabled: presc.status !== 'DRAFT' }],
+            substitutionAllowed: [{ value: item.substitutionAllowed !== false, disabled: presc.status !== 'DRAFT' }],
+          }));
+        });
+      },
+      error: () => {
+        this.prescription.set(null);
+      }
+    });
+  }
+
   addPrescriptionLine(): void {
+    // Si l'ordonnance existe déjà et n'est pas DRAFT, ne pas ajouter de ligne
+    const presc = this.prescription();
+    if (presc && presc.status !== 'DRAFT') return;
+
     const line = this.fb.group({
       drugName: ['', Validators.required],
       dosage: ['', Validators.required],
       posology: [''],
       duration: [''],
       quantity: [''],
+      instructions: [''],
+      form: [''],
+      route: [''],
+      frequency: [''],
+      substitutionAllowed: [true],
     });
     this.prescriptionItems.push(line);
   }
 
   removePrescriptionLine(index: number): void {
+    const presc = this.prescription();
+    if (presc && presc.status !== 'DRAFT') return;
+
     this.prescriptionItems.removeAt(index);
   }
 
@@ -168,6 +210,68 @@ export class ConsultationComponent implements OnInit {
 
   removeLabExam(index: number): void {
     this.labExams.removeAt(index);
+  }
+
+  finalizePrescription(): void {
+    const presc = this.prescription();
+    if (!presc) return;
+
+    this.isLoading.set(true);
+    this.consultationApi.finalizePrescription(presc.id).subscribe({
+      next: () => {
+        this.isLoading.set(false);
+        this.successMessage.set(this.i18n.t('consultation.prescription.finalizedSuccess'));
+        this.loadPrescription(presc.consultationId);
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        this.errorMessage.set(err.error?.detail || 'Error finalizing prescription.');
+      }
+    });
+  }
+
+  cancelPrescription(): void {
+    const presc = this.prescription();
+    if (!presc) return;
+
+    if (!confirm(this.i18n.t('consultation.prescription.confirmCancel'))) return;
+
+    this.isLoading.set(true);
+    this.consultationApi.cancelPrescription(presc.id).subscribe({
+      next: () => {
+        this.isLoading.set(false);
+        this.successMessage.set(this.i18n.t('consultation.prescription.cancelledSuccess'));
+        this.loadPrescription(presc.consultationId);
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        this.errorMessage.set(err.error?.detail || 'Error cancelling prescription.');
+      }
+    });
+  }
+
+  downloadPrescriptionPdf(): void {
+    const presc = this.prescription();
+    if (!presc || !presc.documentId) return;
+
+    this.isLoading.set(true);
+    this.consultationApi.downloadDocumentById(presc.documentId).subscribe({
+      next: (blob) => {
+        this.isLoading.set(false);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ordonnance-${presc.prescriptionNumber}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.isLoading.set(false);
+        this.errorMessage.set('Error downloading PDF.');
+      }
+    });
   }
 
   onSave(closeVisitAfter: boolean = false): void {
@@ -193,7 +297,7 @@ export class ConsultationComponent implements OnInit {
       next: (savedConsultation) => {
         this.consultation.set(savedConsultation);
 
-        const prescriptionLines = this.prescriptionItems.value;
+        const prescriptionLines = this.prescriptionItems.getRawValue(); // use getRawValue to get disabled form fields as well
         const examsLines = this.labExams.value;
 
         let successMsg = this.i18n.t('consultation.success.saved');
@@ -205,11 +309,13 @@ export class ConsultationComponent implements OnInit {
           successMsg = this.i18n.t('consultation.success.savedLab');
         }
 
-        if (prescriptionLines.length > 0) {
+        const presc = this.prescription();
+        if (prescriptionLines.length > 0 && (!presc || presc.status === 'DRAFT')) {
           this.consultationApi.savePrescription(savedConsultation.id, {
             items: prescriptionLines,
           }).subscribe({
-            next: () => {
+            next: (savedPresc) => {
+              this.prescription.set(savedPresc);
               this.saveLabOrderAndComplete(closeVisitAfter, successMsg);
             },
             error: (err) => {
@@ -259,24 +365,28 @@ export class ConsultationComponent implements OnInit {
       this.isClosing.set(true);
       this.visitApi.closeVisit(this.visitId).subscribe({
         next: () => {
-          this.isSaving.set(false);
           this.isClosing.set(false);
-          this.successMessage.set(this.i18n.t('consultation.success.closed'));
-          setTimeout(() => this.goBack(), 1500);
+          this.isSaving.set(false);
+          this.router.navigate(['/clinic/visits']);
         },
         error: (err) => {
-          this.isSaving.set(false);
           this.isClosing.set(false);
-          this.errorMessage.set(this.i18n.t('consultation.success.saved') + ' - Error: ' + (err.error?.detail || err.message || 'Close visit error'));
+          this.isSaving.set(false);
+          this.errorMessage.set('Saved but failed to close visit: ' + (err.error?.detail || err.message));
         }
       });
     } else {
       this.isSaving.set(false);
       this.successMessage.set(successMsg);
+      // Reload prescription list to refresh status/disabled state
+      const consultationObj = this.consultation();
+      if (consultationObj) {
+        this.loadPrescription(consultationObj.id);
+      }
     }
   }
 
   goBack(): void {
-    this.router.navigate(['/dashboard']);
+    this.router.navigate(['/clinic/visits']);
   }
 }

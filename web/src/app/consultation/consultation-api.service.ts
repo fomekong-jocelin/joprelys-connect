@@ -46,4 +46,16 @@ export class ConsultationApiService {
   transmitPrescription(prescriptionId: string): Observable<any> {
     return this.http.post<any>(`/api/prescriptions/${prescriptionId}/transmit`, {});
   }
+
+  finalizePrescription(prescriptionId: string): Observable<Prescription> {
+    return this.http.post<Prescription>(`/api/prescriptions/${prescriptionId}/finalize`, {});
+  }
+
+  cancelPrescription(prescriptionId: string): Observable<Prescription> {
+    return this.http.patch<Prescription>(`/api/prescriptions/${prescriptionId}/cancel`, {});
+  }
+
+  downloadDocumentById(documentId: string): Observable<Blob> {
+    return this.http.get(`/api/documents/${documentId}/download`, { responseType: 'blob' });
+  }
 }

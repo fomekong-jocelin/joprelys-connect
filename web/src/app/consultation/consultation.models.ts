@@ -49,12 +49,24 @@ export interface PrescriptionItem {
   quantity?: string;
   instructions?: string;
   sortOrder?: number;
+  form?: string;
+  route?: string;
+  frequency?: string;
+  substitutionAllowed?: boolean;
 }
 
 export interface Prescription {
   id: string;
   consultationId: string;
   items: PrescriptionItem[];
+  status: string;
+  prescriptionNumber?: string;
+  pinCode?: string;
+  expiresAt?: string;
+  transmissionStatus?: string;
+  transmittedAt?: string;
+  issuedAt?: string;
+  documentId?: string;
   createdAt: string;
   updatedAt: string;
 }

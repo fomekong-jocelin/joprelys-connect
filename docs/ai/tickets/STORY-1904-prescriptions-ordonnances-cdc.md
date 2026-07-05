@@ -6,7 +6,7 @@
 | **Epic** | EPIC-0014 |
 | **Type** | User Story |
 | **Titre** | Alignement Module 7 — Prescriptions et ordonnances conformes CDC |
-| **Statut** | IMPLEMENTATION |
+| **Statut** | DONE |
 | **Priorité** | P0 |
 | **Stack** | Full-stack |
 | **Profil recommandé** | Senior Backend + Frontend Intermédiaire |
@@ -30,22 +30,22 @@ Le CDC définit un modèle complet d’ordonnance : numéro unique, statuts (`DR
 
 ### Backend
 
-- [ ] `PrescriptionItemEntity` contient `form`, `route`, `frequency`, `substitution_allowed`.
-- [ ] `PrescriptionEntity` contient `issued_at`, `visit_id`, `document_id` (lien vers `medical_documents`).
-- [ ] Statut `DRAFT` supporté ; endpoint prescripteur pour basculer de `DRAFT` à `ACTIVE`.
-- [ ] Endpoint prescripteur `PATCH /api/prescriptions/{id}/cancel` pour annuler une ordonnance.
-- [ ] Job planifié pour passer les prescriptions `expires_at` au statut `EXPIRED`.
-- [ ] Génération d’un PDF d’ordonnance dédié avec QR code et hash (via `MedicalDocumentEntity` avec `document_type = ORDONNANCE`).
-- [ ] Vérification publique par QR code ou numéro + PIN.
-- [ ] `substitution_allowed` configurable par ligne.
+- [x] `PrescriptionItemEntity` contient `form`, `route`, `frequency`, `substitution_allowed`.
+- [x] `PrescriptionEntity` contient `issued_at`, `visit_id`, `document_id` (lien vers `medical_documents`).
+- [x] Statut `DRAFT` supporté ; endpoint prescripteur pour basculer de `DRAFT` à `ACTIVE`.
+- [x] Endpoint prescripteur `PATCH /api/prescriptions/{id}/cancel` pour annuler une ordonnance.
+- [x] Job planifié pour passer les prescriptions `expires_at` au statut `EXPIRED`.
+- [x] Génération d’un PDF d’ordonnance dédié avec QR code et hash (via `MedicalDocumentEntity` avec `document_type = ORDONNANCE`).
+- [x] Vérification publique par QR code ou numéro + PIN.
+- [x] `substitution_allowed` configurable par ligne.
 
 ### Frontend
 
-- [ ] Formulaire de prescription avec les nouveaux champs médicament.
-- [ ] Bouton "Enregistrer comme brouillon" et "Valider l’ordonnance".
-- [ ] Bouton "Annuler l’ordonnance" pour le prescripteur.
-- [ ] Affichage du QR code / numéro d’ordonnance.
-- [ ] Internationalisation FR/EN.
+- [x] Formulaire de prescription avec les nouveaux champs médicament.
+- [x] Bouton "Enregistrer comme brouillon" et "Valider l’ordonnance".
+- [x] Bouton "Annuler l’ordonnance" pour le prescripteur.
+- [x] Affichage du QR code / numéro d’ordonnance.
+- [x] Internationalisation FR/EN.
 
 ---
 
@@ -96,11 +96,11 @@ Le CDC définit un modèle complet d’ordonnance : numéro unique, statuts (`DR
 
 ## 5. Tests attendus
 
-- [ ] Backend : création ordonnance en DRAFT puis activation.
-- [ ] Backend : annulation prescripteur.
-- [ ] Backend : expiration automatique.
-- [ ] Backend : génération PDF ordonnance avec hash.
-- [ ] Frontend : test du formulaire de prescription.
+- [x] Backend : création ordonnance en DRAFT puis activation.
+- [x] Backend : annulation prescripteur.
+- [x] Backend : expiration automatique.
+- [x] Backend : génération PDF ordonnance avec hash.
+- [x] Frontend : test du formulaire de prescription.
 
 ---
 

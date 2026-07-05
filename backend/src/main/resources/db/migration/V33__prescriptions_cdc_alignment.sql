@@ -1,0 +1,12 @@
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS issued_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS visit_id UUID REFERENCES visits(id) ON DELETE SET NULL;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS document_id UUID REFERENCES medical_documents(id) ON DELETE SET NULL;
+
+ALTER TABLE prescription_items ADD COLUMN IF NOT EXISTS form VARCHAR(100);
+ALTER TABLE prescription_items ADD COLUMN IF NOT EXISTS route VARCHAR(100);
+ALTER TABLE prescription_items ADD COLUMN IF NOT EXISTS frequency VARCHAR(100);
+ALTER TABLE prescription_items ADD COLUMN IF NOT EXISTS substitution_allowed BOOLEAN DEFAULT TRUE;
+
+ALTER TABLE medical_documents ADD COLUMN IF NOT EXISTS document_type VARCHAR(50) DEFAULT 'SYNTHESE';
+
+ALTER TABLE medical_documents DROP CONSTRAINT IF EXISTS medical_documents_visit_id_key;

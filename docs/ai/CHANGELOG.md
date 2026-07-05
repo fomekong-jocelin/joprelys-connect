@@ -42,6 +42,25 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - Internationalisation `i18n.service.ts` mise à jour avec les traductions pour les nouvelles catégories en français et en anglais.
   - Tests unitaires frontend `patient-medical-info.component.spec.ts` créés de manière isolée sous Vitest : validation de l'initialisation, de la sauvegarde et du soft delete des allergies et antécédents.
 
+- **Alignement Module 7 — Prescriptions et ordonnances conformes CDC (STORY-1904)** :
+  - `PrescriptionItemEntity` : ajout des champs `form`, `route`, `frequency` et `substitutionAllowed` (boolean).
+  - `PrescriptionEntity` : ajout des champs `issuedAt`, `visitId`, `documentId` (UUID) pour faire le lien avec `MedicalDocumentEntity`.
+  - `MedicalDocumentEntity` : changement de la relation `@OneToOne` à `@ManyToOne` sur `visit` pour autoriser plusieurs documents par visite (synthèse + ordonnance PDF) et suppression de la contrainte unique en DB ; ajout du champ `documentType` (default `"SYNTHESE"`).
+  - `MedicalDocumentRepository` : filtrage par type `"SYNTHESE"` par défaut pour préserver la rétrocompatibilité des requêtes de dossiers et éviter toute exception de type `NonUniqueResultException`.
+  - `DocumentController` : ajout de l'endpoint `GET /api/documents/{id}/download` pour permettre de télécharger n'importe quel document médical (dont l'ordonnance PDF) à partir de son ID unique de document.
+  - `DocumentService` : implémentation de `generatePrescriptionDocument` qui génère le PDF ordonnance structuré dédié avec QR code de vérification publique et code PIN d'accès sécurisé.
+  - `PdfGeneratorService` : implémentation de la mise en page de l'ordonnance PDF officielle (en-tête clinique, info patient/prescripteur, tableau des médicaments détaillés avec substitution autorisée/interdite, PIN de vérification).
+  - `PrescriptionService` : implémentation du cycle de vie complet (`DRAFT` par défaut à l'enregistrement, finalisation vers `ACTIVE` avec appel de génération PDF, et annulation avec révocation synchrone du document PDF associé).
+  - Scheduler `@Scheduled` : job de nuit pour invalider automatiquement les ordonnances actives dont la date d'expiration est dépassée.
+  - Endpoints REST : exposition de `POST /api/prescriptions/{id}/finalize` et `PATCH /api/prescriptions/{id}/cancel` sur `PrescriptionController`.
+  - Tests d'intégration : ajout de scénarios dans `PrescriptionControllerTest.java` validant la finalisation (génération PDF ordonnance, passage à ACTIVE) et l'annulation.
+  - Frontend Angular :
+    - `ConsultationComponent` : enrichissement du formulaire de prescription avec les colonnes Forme, Voie, Fréquence, Substitution Aut. et Instructions (layout sur double-ligne très soigné et responsive) ; désactivation des champs lorsque l'ordonnance est active ou annulée.
+    - Ajout de badges de statuts clairs et colorés pour l'ordonnance (`DRAFT`, `ACTIVE`, `CANCELLED`).
+    - Intégration de la barre d'action du cycle de vie en bas de carte avec les boutons "Valider l'ordonnance", "Annuler l'ordonnance" et "Télécharger PDF".
+    - Traduction multilingue (FR/EN) complète de l'ensemble des libellés de prescription et de cycle de vie dans `i18n.service.ts`.
+    - Eager loading de la prescription existante lors de l'initialisation de la consultation pour s'assurer que l'utilisateur voit toujours l'ordonnance précédemment saisie.
+
 - **Alignement Module 5 — Visites et consultations conformes CDC (STORY-1902)** :
   - Migration Flyway `V31__visits_consultations_cdc_alignment.sql` : ajout de `service_name`, `main_practitioner_id`, `arrival_at` sur la table `visits` ; ajout de `suspected_diagnosis`, `final_diagnosis`, `conclusion` sur la table `consultations` ; ajout de `pain_scale` sur la table `vitals` ; création de la table `visit_corrections` pour la traçabilité des corrections (FR-VISIT-005).
   - `VisitEntity` mis à jour avec les champs `service`, `mainPractitionerId`, `arrivalAt`.
