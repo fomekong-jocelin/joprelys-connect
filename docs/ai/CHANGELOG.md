@@ -8,6 +8,14 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- **Navigation et responsivité mobile (TICKET-0111)** :
+  - Masquage de la Sidebar de bureau sur mobile (`hidden md:flex`) pour libérer l'espace.
+  - Implémentation d'un tiroir de navigation mobile (Drawer) coulissant avec arrière-plan estompé (`backdrop-blur-xs`) et bouton Hamburger dans le header.
+  - Déplacement des sélecteurs de langue/thème et du bouton de déconnexion de la Topbar vers la base du Drawer mobile pour désencombrer l'entête.
+  - Factorisation réutilisable des liens et icônes du menu de navigation dans un `<ng-template>` pour éviter la duplication de code et faciliter la maintenance.
+  - Ajustement des espacements et paddings des Breadcrumbs et du conteneur de contenu principal sur mobile.
+  - Restauration de la conformité de la suite de tests unitaires (correction des mocks unitaires de `forgot-password.component.spec.ts` et `patient-detail.component.spec.ts`).
+
 - **Module API Joprelys Connect — Sous-tâches 3, 4 & 5 (TICKET-0016)** :
   - `RateLimitingFilter` — filtre HTTP avec bucket token simplifié par IP et par utilisateur. Configurable via `application.yml` (`joprelys.rate-limiting.enabled`, `max-requests-per-window`, `window-seconds`). Désactivé en profil `test`.
   - `RateLimitingProperties` — `@ConfigurationProperties` pour la config rate limiting.

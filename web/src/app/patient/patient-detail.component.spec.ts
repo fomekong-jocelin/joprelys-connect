@@ -146,6 +146,7 @@ describe('PatientDetail System Tests', () => {
       getPatientLabResults: vi.fn().mockReturnValue(of(mockLabResults)),
       getAllergies: vi.fn().mockReturnValue(of([])),
       getMedicalHistory: vi.fn().mockReturnValue(of([])),
+      getVaccinations: vi.fn().mockReturnValue(of([])),
       getById: vi.fn().mockReturnValue(of(mockPatient)),
       triggerEmergencyAccess: vi.fn().mockReturnValue(of(undefined))
     };

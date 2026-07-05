@@ -15,7 +15,7 @@ interface BreadcrumbItem {
   imports: [RouterLink],
   template: `
     @if (breadcrumbs().length > 0) {
-      <nav class="flex items-center space-x-2 px-6 py-3 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] text-xs font-semibold text-slate-500 select-none">
+      <nav class="flex items-center space-x-2 px-4 md:px-6 py-3 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] text-xs font-semibold text-slate-500 select-none">
         <a routerLink="/" class="hover:text-slate-900 dark:hover:text-slate-200 transition-colors">
           {{ i18n.t('breadcrumb.home') }}
         </a>

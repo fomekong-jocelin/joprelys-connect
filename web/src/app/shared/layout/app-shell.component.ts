@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { NgTemplateOutlet } from '@angular/common';
 import { AuthApiService } from '../../auth/auth-api.service';
 import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
 import { APP_BRAND_CONFIG, AppLocale } from '../../core/config/app-brand.config';
@@ -13,18 +14,32 @@ import { PatientPortalService } from '../../patient/portal/services/patient-port
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [AppLogoComponent, RouterLink, RouterLinkActive, BreadcrumbComponent],
+  imports: [AppLogoComponent, RouterLink, RouterLinkActive, BreadcrumbComponent, NgTemplateOutlet],
   template: `
     <main class="app-page flex min-h-screen flex-col">
       <header class="app-topbar">
         <div class="app-container flex items-center justify-between py-4">
-          <a routerLink="/dashboard" class="inline-flex w-fit">
-            <app-logo />
-          </a>
+          <div class="flex items-center gap-2">
+            <!-- Mobile Hamburger Button -->
+            <button
+              type="button"
+              (click)="toggleMobileMenu()"
+              class="inline-flex md:hidden items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-slate-500 hover:text-brand-cyan hover:bg-[var(--app-surface-muted)] transition-all duration-150 cursor-pointer"
+              [attr.aria-label]="mobileMenuOpen() ? 'Close menu' : 'Open menu'"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            </button>
+
+            <a routerLink="/dashboard" class="inline-flex w-fit">
+              <app-logo />
+            </a>
+          </div>
 
           <div class="flex items-center gap-4">
-            <!-- Sélecteur de langue statique et élégant -->
-            <div class="flex items-center gap-1.5 text-xs font-bold border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2.5 py-1.5 rounded-sm select-none">
+            <!-- Sélecteur de langue statique et élégant - Masqué sur mobile -->
+            <div class="hidden md:flex items-center gap-1.5 text-xs font-bold border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2.5 py-1.5 rounded-sm select-none">
               <button
                 type="button"
                 (click)="setLang('fr')"
@@ -42,13 +57,13 @@ import { PatientPortalService } from '../../patient/portal/services/patient-port
               </button>
             </div>
 
-            <!-- Theme Switcher Button -->
+            <!-- Theme Switcher Button - Masqué sur mobile -->
             <button
               type="button"
               (click)="toggleTheme()"
               [title]="themeTooltip()"
               [attr.aria-label]="themeTooltip()"
-              class="inline-flex items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-slate-500 dark:text-slate-400 hover:text-brand-cyan hover:bg-[var(--app-surface-muted)] transition-all duration-150 cursor-pointer"
+              class="hidden md:inline-flex items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-slate-500 dark:text-slate-400 hover:text-brand-cyan hover:bg-[var(--app-surface-muted)] transition-all duration-150 cursor-pointer"
             >
               @if (theme() === 'dark') {
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
@@ -61,8 +76,8 @@ import { PatientPortalService } from '../../patient/portal/services/patient-port
               }
             </button>
 
-            <!-- Séparateur vertical discret -->
-            <div class="h-6 w-px bg-slate-200 dark:bg-slate-800"></div>
+            <!-- Séparateur vertical discret - Masqué sur mobile -->
+            <div class="hidden md:block h-6 w-px bg-slate-200 dark:bg-slate-800"></div>
 
             @if (session(); as currentSession) {
               <!-- Groupe Profil Utilisateur -->
@@ -78,12 +93,12 @@ import { PatientPortalService } from '../../patient/portal/services/patient-port
                 <div class="ui-avatar shadow-xs select-none">{{ currentSession.name.charAt(0) }}</div>
               </div>
 
-              <!-- Bouton Déconnexion Premium - Icône uniquement de taille fixe -->
+              <!-- Bouton Déconnexion Premium - Masqué sur mobile -->
               <button
                 type="button"
                 (click)="logout()"
                 [title]="logoutLabel()"
-                class="inline-flex items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-200 dark:hover:border-red-900 transition-all duration-150 cursor-pointer ml-1"
+                class="hidden md:inline-flex items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-200 dark:hover:border-red-900 transition-all duration-150 cursor-pointer ml-1"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" class="w-4.5 h-4.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
@@ -96,11 +111,11 @@ import { PatientPortalService } from '../../patient/portal/services/patient-port
 
       <div class="flex flex-1">
         @if (session(); as currentSession) {
-          <!-- Collapsible Sidebar -->
+          <!-- Collapsible Sidebar - Desktop Only -->
           <aside
             [class.w-64]="!sidebarCollapsed()"
             [class.w-16]="sidebarCollapsed()"
-            class="flex flex-col bg-[var(--app-surface)] border-r border-[var(--app-border)] transition-all duration-200"
+            class="hidden md:flex flex-col bg-[var(--app-surface)] border-r border-[var(--app-border)] transition-all duration-200"
           >
             <!-- Toggle Sidebar Button container -->
             <div class="flex justify-end p-2 border-b border-[var(--app-border)]">
@@ -125,105 +140,128 @@ import { PatientPortalService } from '../../patient/portal/services/patient-port
 
             <!-- Sidebar Navigation -->
             <nav class="flex-1 p-2 space-y-1 overflow-y-auto">
-              @for (item of menuItems(); track (item.path + '-' + item.label)) {
-                @if (item.isHeader) {
-                  @if (!sidebarCollapsed()) {
-                    <div class="px-3 pt-4 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                      {{ item.label }}
-                    </div>
-                  } @else {
-                    <div class="h-px bg-[var(--app-border)] my-2"></div>
-                  }
-                } @else {
-                  <a
-                    [routerLink]="item.path"
-                    routerLinkActive="bg-[var(--app-surface-muted)] text-brand-cyan font-bold border-l-2 border-brand-cyan"
-                    [class.justify-center]="sidebarCollapsed()"
-                    [class.pl-8]="item.indent && !sidebarCollapsed()"
-                    [title]="sidebarCollapsed() ? item.label : ''"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-[var(--app-surface-muted)] hover:text-slate-900 dark:hover:text-slate-200 transition-colors no-underline"
-                  >
-                    <span class="flex items-center justify-center w-5 h-5 flex-shrink-0">
-                      @switch (item.iconName) {
-                        @case ('dashboard') {
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-                          </svg>
-                        }
-                        @case ('clinics') {
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" />
-                          </svg>
-                        }
-                        @case ('labOrders') {
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v1.244c0 .593-.193 1.168-.55 1.637L4.75 11.96c-.357.47-.55 1.045-.55 1.638v3.152c0 1.242 1.01 2.25 2.25 2.25h11.1c1.242 0 2.25-1.008 2.25-2.25v-3.152c0-.593-.193-1.168-.55-1.637l-4.45-5.975a2.72 2.72 0 00-.55-1.637V3.104M9.75 3.104c0-.528.435-.953.97-.953h2.56c.535 0 .97.425.97.953M9.75 3.104h4.5M18.75 14.25h-13.5" />
-                          </svg>
-                        }
-                        @case ('prescriptions') {
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.03 0 1.9.693 2.166 1.638m-7.377 2.24a4.5 4.5 0 112.924-2.924M7.5 19.5h-.75A2.25 2.25 0 014.5 17.25V5.37c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15 12.75l1.5 1.5 3-3" />
-                          </svg>
-                        }
-                        @case ('stocks') {
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-                          </svg>
-                        }
-                        @case ('patients') {
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                          </svg>
-                        }
-                        @case ('staff') {
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-                          </svg>
-                        }
-                        @case ('consents') {
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                          </svg>
-                        }
-                        @case ('audit') {
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        }
-                        @case ('requests') {
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                          </svg>
-                        }
-                        @case ('notifications') {
-                          <div class="relative">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0M3.124 7.5A8.969 8.969 0 015.292 3m13.416 0a8.969 8.969 0 012.168 4.5" />
-                            </svg>
-                            @if (unreadNotificationCount() > 0) {
-                              <span class="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white">
-                                {{ unreadNotificationCount() > 9 ? '9+' : unreadNotificationCount() }}
-                              </span>
-                            }
-                          </div>
-                        }
-                      }
-                    </span>
-                    @if (!sidebarCollapsed()) {
-                      <span class="truncate">{{ item.label }}</span>
-                    }
-                  </a>
-                }
-              }
+              <ng-container *ngTemplateOutlet="menuLinks; context: { isMobile: false }"></ng-container>
             </nav>
           </aside>
+        }
+
+        <!-- Mobile Menu Drawer (Backdrop + Content) -->
+        @if (session() && mobileMenuOpen()) {
+          <div class="fixed inset-0 z-[100] flex md:hidden">
+            <!-- Backdrop -->
+            <div
+              class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+              (click)="closeMobileMenu()"
+            ></div>
+
+            <!-- Drawer Content -->
+            <div class="relative flex w-full max-w-xs flex-1 flex-col bg-[var(--app-surface)] border-r border-[var(--app-border)] pt-5 pb-4 transition-transform duration-300 ease-in-out">
+              <!-- Close Button -->
+              <div class="absolute top-4 right-4">
+                <button
+                  type="button"
+                  (click)="closeMobileMenu()"
+                  class="inline-flex items-center justify-center w-8 h-8 rounded-sm hover:bg-[var(--app-surface-muted)] text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer"
+                  aria-label="Close menu"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Logo -->
+              <div class="flex items-center px-4 mb-5">
+                <app-logo />
+              </div>
+
+              <!-- Session user info inside drawer -->
+              @if (session(); as currentSession) {
+                <div class="px-4 py-3 mb-4 mx-3 bg-[var(--app-surface-muted)] border border-[var(--app-border)] rounded-sm">
+                  <div class="flex items-center gap-3">
+                    <div class="ui-avatar shadow-xs select-none">{{ currentSession.name.charAt(0) }}</div>
+                    <div class="flex flex-col">
+                      <span class="font-display text-sm font-extrabold leading-none text-slate-800 dark:text-slate-200">
+                        {{ currentSession.name }}
+                      </span>
+                      <span class="text-[0.65rem] font-extrabold uppercase tracking-wider mt-1 text-slate-400 dark:text-slate-500">
+                        {{ currentSession.role }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              }
+
+              <!-- Navigation Links -->
+              <nav class="flex-1 px-3 space-y-1 overflow-y-auto">
+                <ng-container *ngTemplateOutlet="menuLinks; context: { isMobile: true }"></ng-container>
+              </nav>
+
+              <!-- Drawer Footer: Settings & Actions (Lang, Theme, Logout) -->
+              <div class="border-t border-[var(--app-border)] p-4 space-y-4">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-slate-500 dark:text-slate-400">Thème</span>
+                  <button
+                    type="button"
+                    (click)="toggleTheme()"
+                    [title]="themeTooltip()"
+                    class="inline-flex items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-slate-500 dark:text-slate-400 hover:text-brand-cyan transition-all duration-150 cursor-pointer"
+                  >
+                    @if (theme() === 'dark') {
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m0 13.5V21M4.978 4.978l1.59 1.59m10.862 10.862l1.59 1.59M3 12h2.25m13.5 0H21M4.978 19.022l1.59-1.59m10.862-10.862l1.59-1.59M12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" />
+                      </svg>
+                    } @else {
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+                      </svg>
+                    }
+                  </button>
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-slate-500 dark:text-slate-400">Langue</span>
+                  <div class="flex items-center gap-1.5 text-xs font-bold border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2.5 py-1.5 rounded-sm select-none">
+                    <button
+                      type="button"
+                      (click)="setLang('fr')"
+                      [class]="locale() === 'fr' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer'"
+                    >
+                      FR
+                    </button>
+                    <span class="text-slate-300 dark:text-slate-700">|</span>
+                    <button
+                      type="button"
+                      (click)="setLang('en')"
+                      [class]="locale() === 'en' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer'"
+                    >
+                      EN
+                    </button>
+                  </div>
+                </div>
+
+                @if (session(); as currentSession) {
+                  <button
+                    type="button"
+                    (click)="logout(); closeMobileMenu()"
+                    class="flex w-full items-center justify-center gap-2 py-2.5 rounded-sm border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/20 text-red-600 hover:bg-red-100 transition-all duration-150 cursor-pointer text-sm font-bold"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+                    </svg>
+                    <span>{{ logoutLabel() }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
         }
 
         <!-- Main Content Area -->
         <div class="flex-1 flex flex-col min-w-0">
           <app-breadcrumb />
 
-          <section class="flex-1 p-6">
+          <section class="flex-1 p-4 md:p-6">
             <ng-content></ng-content>
           </section>
         </div>
@@ -240,6 +278,101 @@ import { PatientPortalService } from '../../patient/portal/services/patient-port
         </div>
       </footer>
     </main>
+
+    <!-- Factorized menu items template -->
+    <ng-template #menuLinks let-isMobile="isMobile">
+      @for (item of menuItems(); track (item.path + '-' + item.label)) {
+        @if (item.isHeader) {
+          @if (!sidebarCollapsed() || isMobile) {
+            <div class="px-3 pt-4 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              {{ item.label }}
+            </div>
+          } @else {
+            <div class="h-px bg-[var(--app-border)] my-2"></div>
+          }
+        } @else {
+          <a
+            [routerLink]="item.path"
+            routerLinkActive="bg-[var(--app-surface-muted)] text-brand-cyan font-bold border-l-2 border-brand-cyan"
+            [class.justify-center]="sidebarCollapsed() && !isMobile"
+            [class.pl-8]="item.indent && (!sidebarCollapsed() || isMobile)"
+            [title]="(sidebarCollapsed() && !isMobile) ? item.label : ''"
+            (click)="isMobile ? closeMobileMenu() : null"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-[var(--app-surface-muted)] hover:text-slate-900 dark:hover:text-slate-200 transition-colors no-underline"
+          >
+            <span class="flex items-center justify-center w-5 h-5 flex-shrink-0">
+              @switch (item.iconName) {
+                @case ('dashboard') {
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                  </svg>
+                }
+                @case ('clinics') {
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" />
+                  </svg>
+                }
+                @case ('labOrders') {
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v1.244c0 .593-.193 1.168-.55 1.637L4.75 11.96c-.357.47-.55 1.045-.55 1.638v3.152c0 1.242 1.01 2.25 2.25 2.25h11.1c1.242 0 2.25-1.008 2.25-2.25v-3.152c0-.593-.193-1.168-.55-1.637l-4.45-5.975a2.72 2.72 0 00-.55-1.637V3.104M9.75 3.104c0-.528.435-.953.97-.953h2.56c.535 0 .97.425.97.953M9.75 3.104h4.5M18.75 14.25h-13.5" />
+                  </svg>
+                }
+                @case ('prescriptions') {
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.03 0 1.9.693 2.166 1.638m-7.377 2.24a4.5 4.5 0 112.924-2.924M7.5 19.5h-.75A2.25 2.25 0 014.5 17.25V5.37c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15 12.75l1.5 1.5 3-3" />
+                  </svg>
+                }
+                @case ('stocks') {
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                  </svg>
+                }
+                @case ('patients') {
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                  </svg>
+                }
+                @case ('staff') {
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                  </svg>
+                }
+                @case ('consents') {
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                  </svg>
+                }
+                @case ('audit') {
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                }
+                @case ('requests') {
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                  </svg>
+                }
+                @case ('notifications') {
+                  <div class="relative">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0M3.124 7.5A8.969 8.969 0 015.292 3m13.416 0a8.969 8.969 0 012.168 4.5" />
+                    </svg>
+                    @if (unreadNotificationCount() > 0) {
+                      <span class="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white">
+                        {{ unreadNotificationCount() > 9 ? '9+' : unreadNotificationCount() }}
+                      </span>
+                    }
+                  </div>
+                }
+              }
+            </span>
+            @if (!sidebarCollapsed() || isMobile) {
+              <span class="truncate">{{ item.label }}</span>
+            }
+          </a>
+        }
+      }
+    </ng-template>
   `,
 })
 export class AppShellComponent {
@@ -272,6 +405,7 @@ export class AppShellComponent {
   );
 
   readonly sidebarCollapsed = signal<boolean>(this.resolveInitialSidebarState());
+  readonly mobileMenuOpen = signal<boolean>(false);
 
   readonly menuItems = computed(() => {
     const currentSession = this.session();
@@ -379,6 +513,14 @@ export class AppShellComponent {
     try {
       localStorage.setItem('joprelys.sidebar.collapsed', String(next));
     } catch {}
+  }
+
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen.update(v => !v);
+  }
+
+  closeMobileMenu(): void {
+    this.mobileMenuOpen.set(false);
   }
 
   setLang(lang: AppLocale): void {
