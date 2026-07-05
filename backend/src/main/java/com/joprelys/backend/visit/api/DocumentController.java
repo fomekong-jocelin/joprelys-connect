@@ -58,6 +58,21 @@ public class DocumentController {
                 .body(pdfBytes);
     }
 
+    @GetMapping("/api/documents/{id}/download")
+    @PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'PHARMACIEN')")
+    @Operation(summary = "Télécharger un document par son ID", description = "Télécharge le document médical PDF (synthèse, ordonnance, etc.) via son ID unique.")
+    public ResponseEntity<byte[]> downloadDocumentById(@PathVariable UUID id) {
+        MedicalDocumentEntity doc = medicalDocumentRepository.findByIdWithVisitAndPatient(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable."));
+
+        byte[] pdfBytes = documentService.loadDocumentFile(doc);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + doc.getDocumentNumber() + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
+    }
+
     @GetMapping("/api/public/documents/{id}/verify")
     @Operation(summary = "Vérifier un document (anonyme)", description = "Vérifie publiquement la validité d'un document médical via son identifiant.", responses = {
             @ApiResponse(responseCode = "200", description = "Document vérifié"),
