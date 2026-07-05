@@ -335,7 +335,7 @@ public class PdfGeneratorService {
     }
 
     public byte[] generatePatientSummaryPdf(
-            com.joprelys.backend.patient.infrastructure.persistence.PatientEntity patient,
+            com.joprelys.backend.patient.api.MedicalSummaryResponse summary,
             VitalsEntity vitals,
             String clinicName,
             String clinicAddress,
@@ -354,7 +354,8 @@ public class PdfGeneratorService {
             Font fontSectionHeader = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.BLACK);
             Font fontBody = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.BLACK);
             Font fontMuted = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.DARK_GRAY);
-            Font fontTableCell = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.BLACK);
+            Font fontTableHead = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, Color.BLACK);
+            Font fontTableCell = FontFactory.getFont(FontFactory.HELVETICA, 8, Color.BLACK);
 
             // 1. En-tête avec Clinique à gauche et QR code à droite (via PdfPTable)
             PdfPTable headerTable = new PdfPTable(2);
@@ -409,26 +410,18 @@ public class PdfGeneratorService {
 
             PdfPCell col1 = new PdfPCell();
             col1.setBorder(Rectangle.NO_BORDER);
-            col1.addElement(new Paragraph("Nom complet : " + patient.getFullName(), fontBody));
-            col1.addElement(new Paragraph("Date de naissance : " + (patient.getBirthDate() != null ? patient.getBirthDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : ""), fontBody));
-            col1.addElement(new Paragraph("Genre : " + patient.getGender(), fontBody));
-            if (patient.getBloodGroup() != null && !patient.getBloodGroup().isBlank()) {
-                col1.addElement(new Paragraph("Groupe sanguin : " + patient.getBloodGroup(), fontBody));
+            col1.addElement(new Paragraph("Nom complet : " + summary.fullName(), fontBody));
+            col1.addElement(new Paragraph("Date de naissance : " + (summary.birthDate() != null ? summary.birthDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : ""), fontBody));
+            col1.addElement(new Paragraph("Genre : " + summary.gender(), fontBody));
+            if (summary.bloodGroup() != null && !summary.bloodGroup().isBlank()) {
+                col1.addElement(new Paragraph("Groupe sanguin : " + summary.bloodGroup(), fontBody));
             }
-            col1.addElement(new Paragraph("DPU (N° Patient Unique) : " + patient.getGlobalPatientNumber(), fontBody));
-            col1.addElement(new Paragraph("N° Dossier Local : " + patient.getLocalPatientNumber(), fontBody));
+            col1.addElement(new Paragraph("DPU (N° Patient Unique) : " + summary.globalPatientNumber(), fontBody));
 
             PdfPCell col2 = new PdfPCell();
             col2.setBorder(Rectangle.NO_BORDER);
-            col2.addElement(new Paragraph("Adresse : " + (patient.getAddress() != null ? patient.getAddress() : "") + 
-                                          (patient.getDistrict() != null ? ", " + patient.getDistrict() : "") + 
-                                          (patient.getCity() != null ? ", " + patient.getCity() : ""), fontBody));
-            col2.addElement(new Paragraph("Téléphone : " + (patient.getPhone() != null ? patient.getPhone() : "-"), fontBody));
-            if (patient.getEmail() != null && !patient.getEmail().isBlank()) {
-                col2.addElement(new Paragraph("Email : " + patient.getEmail(), fontBody));
-            }
-            col2.addElement(new Paragraph("Contact d'urgence : " + (patient.getEmergencyContactName() != null ? patient.getEmergencyContactName() : "-"), fontBody));
-            col2.addElement(new Paragraph("Tél. contact d'urgence : " + (patient.getEmergencyContactPhone() != null ? patient.getEmergencyContactPhone() : "-"), fontBody));
+            col2.addElement(new Paragraph("Téléphone : ", fontBody)); // Optional phone or default details
+            document.add(new Paragraph(" ")); // Just placeholder separation
 
             identityTable.addCell(col1);
             identityTable.addCell(col2);
@@ -482,30 +475,200 @@ public class PdfGeneratorService {
             }
             document.add(pSpacing);
 
-            // 5. Section 3 : Allergies & Intolérances
-            Paragraph sect3 = new Paragraph("3. Allergies & Intolérances", fontSectionHeader);
+            // 5. Section 3 : Allergies & Intolérances Actives
+            Paragraph sect3 = new Paragraph("3. Allergies & Intolérances Actives", fontSectionHeader);
             document.add(sect3);
             document.add(pSpacing);
             
-            String allergiesText = patient.getAllergies();
-            if (allergiesText == null || allergiesText.trim().isEmpty()) {
-                allergiesText = "Aucune allergie connue.";
+            if (summary.allergies() != null && !summary.allergies().isEmpty()) {
+                PdfPTable allergiesTable = new PdfPTable(4);
+                allergiesTable.setWidthPercentage(100f);
+                allergiesTable.setWidths(new float[]{30f, 20f, 30f, 20f});
+                allergiesTable.getDefaultCell().setBorder(Rectangle.BOX);
+                allergiesTable.getDefaultCell().setBorderWidth(0.5f);
+                allergiesTable.getDefaultCell().setPadding(5f);
+
+                allergiesTable.addCell(new Phrase("Substance", fontTableHead));
+                allergiesTable.addCell(new Phrase("Sévérité", fontTableHead));
+                allergiesTable.addCell(new Phrase("Réaction", fontTableHead));
+                allergiesTable.addCell(new Phrase("Date Découverte", fontTableHead));
+
+                for (var a : summary.allergies()) {
+                    allergiesTable.addCell(new Phrase(a.substance(), fontTableCell));
+                    allergiesTable.addCell(new Phrase(a.severity(), fontTableCell));
+                    allergiesTable.addCell(new Phrase(a.reaction() != null ? a.reaction() : "-", fontTableCell));
+                    allergiesTable.addCell(new Phrase(a.discoveredAt() != null ? a.discoveredAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "-", fontTableCell));
+                }
+                document.add(allergiesTable);
+            } else {
+                document.add(new Paragraph("Aucune allergie active signalée.", fontMuted));
             }
-            Paragraph allergiesPara = new Paragraph(allergiesText, fontBody);
-            document.add(allergiesPara);
             document.add(pSpacing);
 
-            // 6. Section 4 : Antécédents Médicaux
-            Paragraph sect4 = new Paragraph("4. Antécédents Médicaux", fontSectionHeader);
+            // 6. Section 4 : Antécédents Médicaux (Importants ou En cours)
+            Paragraph sect4 = new Paragraph("4. Antécédents Médicaux Principaux", fontSectionHeader);
             document.add(sect4);
             document.add(pSpacing);
 
-            String historyText = patient.getMedicalHistory();
-            if (historyText == null || historyText.trim().isEmpty()) {
-                historyText = "Aucun antécédent médical signalé.";
+            if (summary.medicalHistory() != null && !summary.medicalHistory().isEmpty()) {
+                PdfPTable historyTable = new PdfPTable(4);
+                historyTable.setWidthPercentage(100f);
+                historyTable.setWidths(new float[]{20f, 40f, 20f, 20f});
+                historyTable.getDefaultCell().setBorder(Rectangle.BOX);
+                historyTable.getDefaultCell().setBorderWidth(0.5f);
+                historyTable.getDefaultCell().setPadding(5f);
+
+                historyTable.addCell(new Phrase("Catégorie", fontTableHead));
+                historyTable.addCell(new Phrase("Description", fontTableHead));
+                historyTable.addCell(new Phrase("Date de Début", fontTableHead));
+                historyTable.addCell(new Phrase("Important / En cours", fontTableHead));
+
+                for (var h : summary.medicalHistory()) {
+                    historyTable.addCell(new Phrase(h.category(), fontTableCell));
+                    historyTable.addCell(new Phrase(h.description(), fontTableCell));
+                    historyTable.addCell(new Phrase(h.onsetDate() != null ? h.onsetDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "-", fontTableCell));
+                    
+                    String statusStr = (h.important() ? "⚠️ Important" : "") + 
+                                       (h.isOngoing() ? (h.important() ? " / " : "") + "En cours" : "");
+                    historyTable.addCell(new Phrase(statusStr, fontTableCell));
+                }
+                document.add(historyTable);
+            } else {
+                document.add(new Paragraph("Aucun antécédent médical principal signalé.", fontMuted));
             }
-            Paragraph historyPara = new Paragraph(historyText, fontBody);
-            document.add(historyPara);
+            document.add(pSpacing);
+
+            // 7. Section 5 : Traitements en cours
+            Paragraph sect5 = new Paragraph("5. Traitements Actuels en cours", fontSectionHeader);
+            document.add(sect5);
+            document.add(pSpacing);
+
+            if (summary.activePrescriptions() != null && !summary.activePrescriptions().isEmpty()) {
+                PdfPTable treatmentsTable = new PdfPTable(4);
+                treatmentsTable.setWidthPercentage(100f);
+                treatmentsTable.setWidths(new float[]{30f, 30f, 20f, 20f});
+                treatmentsTable.getDefaultCell().setBorder(Rectangle.BOX);
+                treatmentsTable.getDefaultCell().setBorderWidth(0.5f);
+                treatmentsTable.getDefaultCell().setPadding(5f);
+
+                treatmentsTable.addCell(new Phrase("Médicament", fontTableHead));
+                treatmentsTable.addCell(new Phrase("Dosage / Instructions", fontTableHead));
+                treatmentsTable.addCell(new Phrase("Posologie", fontTableHead));
+                treatmentsTable.addCell(new Phrase("Durée", fontTableHead));
+
+                for (var p : summary.activePrescriptions()) {
+                    for (var item : p.items()) {
+                        treatmentsTable.addCell(new Phrase(item.drugName(), fontTableCell));
+                        treatmentsTable.addCell(new Phrase((item.dosage() != null ? item.dosage() : "") + 
+                                                           (item.instructions() != null ? " (" + item.instructions() + ")" : ""), fontTableCell));
+                        treatmentsTable.addCell(new Phrase(item.posology() != null ? item.posology() : "-", fontTableCell));
+                        treatmentsTable.addCell(new Phrase(item.duration() != null ? item.duration() : "-", fontTableCell));
+                    }
+                }
+                document.add(treatmentsTable);
+            } else {
+                document.add(new Paragraph("Aucun traitement médicamenteux actif en cours.", fontMuted));
+            }
+            document.add(pSpacing);
+
+            // 8. Section 6 : Dernières Visites (3 dernières)
+            Paragraph sect6 = new Paragraph("6. Historique des Dernières Visites", fontSectionHeader);
+            document.add(sect6);
+            document.add(pSpacing);
+
+            if (summary.recentVisits() != null && !summary.recentVisits().isEmpty()) {
+                PdfPTable visitsTable = new PdfPTable(4);
+                visitsTable.setWidthPercentage(100f);
+                visitsTable.setWidths(new float[]{25f, 25f, 35f, 15f});
+                visitsTable.getDefaultCell().setBorder(Rectangle.BOX);
+                visitsTable.getDefaultCell().setBorderWidth(0.5f);
+                visitsTable.getDefaultCell().setPadding(5f);
+
+                visitsTable.addCell(new Phrase("Date", fontTableHead));
+                visitsTable.addCell(new Phrase("N° Visite", fontTableHead));
+                visitsTable.addCell(new Phrase("Motif de visite", fontTableHead));
+                visitsTable.addCell(new Phrase("Service", fontTableHead));
+
+                for (var v : summary.recentVisits()) {
+                    visitsTable.addCell(new Phrase(DATE_FORMATTER.format(v.createdAt()), fontTableCell));
+                    visitsTable.addCell(new Phrase(v.visitNumber(), fontTableCell));
+                    visitsTable.addCell(new Phrase(v.reason(), fontTableCell));
+                    visitsTable.addCell(new Phrase(v.service() != null ? v.service() : "-", fontTableCell));
+                }
+                document.add(visitsTable);
+            } else {
+                document.add(new Paragraph("Aucune visite enregistrée.", fontMuted));
+            }
+            document.add(pSpacing);
+
+            // 9. Section 7 : Derniers Diagnostics & Conclusions (3 derniers)
+            Paragraph sect7 = new Paragraph("7. Derniers Diagnostics & Conclusions", fontSectionHeader);
+            document.add(sect7);
+            document.add(pSpacing);
+
+            if (summary.recentDiagnostics() != null && !summary.recentDiagnostics().isEmpty()) {
+                PdfPTable diagTable = new PdfPTable(4);
+                diagTable.setWidthPercentage(100f);
+                diagTable.setWidths(new float[]{20f, 30f, 30f, 20f});
+                diagTable.getDefaultCell().setBorder(Rectangle.BOX);
+                diagTable.getDefaultCell().setBorderWidth(0.5f);
+                diagTable.getDefaultCell().setPadding(5f);
+
+                diagTable.addCell(new Phrase("Date", fontTableHead));
+                diagTable.addCell(new Phrase("Diagnostic Suspecté", fontTableHead));
+                diagTable.addCell(new Phrase("Diagnostic Final / Conclusion", fontTableHead));
+                diagTable.addCell(new Phrase("Médecin", fontTableHead));
+
+                for (var d : summary.recentDiagnostics()) {
+                    diagTable.addCell(new Phrase(DATE_FORMATTER.format(d.createdAt()), fontTableCell));
+                    diagTable.addCell(new Phrase(d.suspectedDiagnosis() != null ? d.suspectedDiagnosis() : "-", fontTableCell));
+                    
+                    String mainDiag = d.diagnosis();
+                    if (d.finalDiagnosis() != null && !d.finalDiagnosis().isBlank()) {
+                        mainDiag = d.finalDiagnosis();
+                    }
+                    if (d.conclusion() != null && !d.conclusion().isBlank()) {
+                        mainDiag += " (" + d.conclusion() + ")";
+                    }
+                    diagTable.addCell(new Phrase(mainDiag, fontTableCell));
+                    diagTable.addCell(new Phrase(d.doctorName(), fontTableCell));
+                }
+                document.add(diagTable);
+            } else {
+                document.add(new Paragraph("Aucun diagnostic enregistré.", fontMuted));
+            }
+            document.add(pSpacing);
+
+            // 10. Section 8 : Résultats Biologiques Critiques
+            Paragraph sect8 = new Paragraph("8. Résultats Biologiques Critiques récents", fontSectionHeader);
+            document.add(sect8);
+            document.add(pSpacing);
+
+            if (summary.criticalResults() != null && !summary.criticalResults().isEmpty()) {
+                PdfPTable critTable = new PdfPTable(5);
+                critTable.setWidthPercentage(100f);
+                critTable.setWidths(new float[]{20f, 20f, 30f, 15f, 15f});
+                critTable.getDefaultCell().setBorder(Rectangle.BOX);
+                critTable.getDefaultCell().setBorderWidth(0.5f);
+                critTable.getDefaultCell().setPadding(5f);
+
+                critTable.addCell(new Phrase("Date validation", fontTableHead));
+                critTable.addCell(new Phrase("N° Résultat", fontTableHead));
+                critTable.addCell(new Phrase("Analyse / Paramètre", fontTableHead));
+                critTable.addCell(new Phrase("Valeur", fontTableHead));
+                critTable.addCell(new Phrase("Interprétation", fontTableHead));
+
+                for (var r : summary.criticalResults()) {
+                    critTable.addCell(new Phrase(r.validatedAt() != null ? DATE_FORMATTER.format(r.validatedAt()) : "-", fontTableCell));
+                    critTable.addCell(new Phrase(r.resultNumber(), fontTableCell));
+                    critTable.addCell(new Phrase(r.analyteName(), fontTableCell));
+                    critTable.addCell(new Phrase(r.value() + " " + (r.unit() != null ? r.unit() : ""), fontTableCell));
+                    critTable.addCell(new Phrase(r.interpretation(), fontTableCell));
+                }
+                document.add(critTable);
+            } else {
+                document.add(new Paragraph("Aucun résultat biologique critique récent.", fontMuted));
+            }
 
             document.close();
         } catch (DocumentException | IOException e) {

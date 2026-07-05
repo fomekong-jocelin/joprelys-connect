@@ -38,8 +38,8 @@ public class PatientPortalController {
     private final PatientAccessGuardService patientAccessGuardService;
     private final ExternalAccessService externalAccessService;
     private final com.joprelys.backend.notification.application.NotificationService notificationService;
-
     private final com.joprelys.backend.prescription.application.PrescriptionService prescriptionService;
+    private final com.joprelys.backend.patient.application.PatientSummaryService patientSummaryService;
 
     public PatientPortalController(
             PatientRepository patientRepository,
@@ -53,7 +53,8 @@ public class PatientPortalController {
             PatientAccessGuardService patientAccessGuardService,
             ExternalAccessService externalAccessService,
             com.joprelys.backend.notification.application.NotificationService notificationService,
-            com.joprelys.backend.prescription.application.PrescriptionService prescriptionService) {
+            com.joprelys.backend.prescription.application.PrescriptionService prescriptionService,
+            com.joprelys.backend.patient.application.PatientSummaryService patientSummaryService) {
         this.patientRepository = patientRepository;
         this.consultationRepository = consultationRepository;
         this.medicalDocumentRepository = medicalDocumentRepository;
@@ -66,6 +67,7 @@ public class PatientPortalController {
         this.externalAccessService = externalAccessService;
         this.notificationService = notificationService;
         this.prescriptionService = prescriptionService;
+        this.patientSummaryService = patientSummaryService;
     }
 
     @GetMapping("/me")
@@ -135,6 +137,22 @@ public class PatientPortalController {
                 patient.getEmail(),
                 consultations
         );
+    }
+
+    @GetMapping("/medical-summary")
+    public MedicalSummaryResponse getMedicalSummary(Authentication authentication) {
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
+        return patientSummaryService.getMedicalSummary(patient.getId());
+    }
+
+    @GetMapping("/summary-pdf")
+    public ResponseEntity<byte[]> downloadOwnSummaryPdf(Authentication authentication) {
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
+        byte[] pdfBytes = patientSummaryService.generatePatientSummaryPdf(patient.getId());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"patient-summary.pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
     }
 
     @GetMapping("/visits/{visitId}/document")

@@ -9,7 +9,10 @@ export interface Consultation {
   documentNumber: string;
   symptoms: string;
   clinicalExam?: string;
+  suspectedDiagnosis?: string;
   diagnosis: string;
+  finalDiagnosis?: string;
+  conclusion?: string;
   advice?: string;
   followUp?: string;
   status: string;
@@ -29,7 +32,10 @@ export interface Consultation {
 export interface SaveConsultationRequest {
   symptoms: string;
   clinicalExam?: string;
+  suspectedDiagnosis?: string;
   diagnosis: string;
+  finalDiagnosis?: string;
+  conclusion?: string;
   advice?: string;
   followUp?: string;
 }

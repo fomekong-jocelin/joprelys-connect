@@ -144,6 +144,16 @@ export class PatientPortalService {
   transmitPrescription(prescriptionId: string): Observable<any> {
     return this.http.post<any>(`/api/patient/me/prescriptions/${prescriptionId}/transmit`, {});
   }
+
+  getMedicalSummary(): Observable<any> {
+    return this.http.get<any>('/api/patient/medical-summary');
+  }
+
+  downloadSummaryPdf(): Observable<Blob> {
+    return this.http.get('/api/patient/summary-pdf', {
+      responseType: 'blob'
+    });
+  }
 }
 
 export interface PatientConsent {

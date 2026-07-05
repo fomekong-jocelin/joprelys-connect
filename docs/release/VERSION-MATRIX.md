@@ -6,8 +6,8 @@
 
 | Champ | Valeur |
 |---|---|
-| Version courante | 0.9.0 |
-| Dernière release | 2026-07-04 |
+| Version courante | 0.10.0 |
+| Dernière release | 2026-07-05 |
 | Stratégie | SemVer |
 | Source de vérité | `VERSION` + `docs/ai/CHANGELOG.md` |
 
@@ -15,11 +15,11 @@
 
 | Module | Version | Type de version | Dernière release | Compatibilité | Notes |
 |---|---:|---|---|---|---|
-| Backend Spring Boot | 0.9.0 | SemVer | 2026-07-04 | API v0 | Télétransmission AllôPharma, centre de notifications, demandes d'accès externes |
-| Angular Web | 0.9.0 | SemVer | 2026-07-04 | API v0 | Boutons de télétransmission, onglet notifications et badge, demandes d'accès externes |
+| Backend Spring Boot | 0.10.0 | SemVer | 2026-07-05 | API v0 | Synthèse médicale structurée conforme CDC, validations de sécurité patient |
+| Angular Web | 0.10.0 | SemVer | 2026-07-05 | API v0 | Page "Ma synthèse médicale" et téléchargement PDF |
 | Flutter Mobile | 0.3.0 | SemVer | 2026-07-01 | API v0 | À adapter au projet |
-| API Contract | 0.9.0 | SemVer | 2026-07-04 | v0 | Endpoints AllôPharma, notifications et demandes d'accès |
-| Database Schema | 0.9.0 | Migration versionnée | 2026-07-04 | v0 | Flyway v20 (accès externes), v21 (notifications), v22 (télétransmission) |
+| API Contract | 0.10.0 | SemVer | 2026-07-05 | v0 | Endpoints synthèse médicale et gestion de la sécurité |
+| Database Schema | 0.10.0 | Migration versionnée | 2026-07-05 | v0 | Flyway v32 (soft delete et flag important) |
 
 ## Compatibilité API / clients
 

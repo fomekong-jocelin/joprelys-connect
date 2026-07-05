@@ -10,5 +10,6 @@ public record CreatePatientMedicalHistoryRequest(
         String description,
         LocalDate onsetDate,
         boolean isOngoing,
-        String comment
+        String comment,
+        Boolean important
 ) {}

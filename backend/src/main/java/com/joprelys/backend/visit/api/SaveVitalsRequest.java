@@ -41,6 +41,10 @@ public record SaveVitalsRequest(
 
 		@Min(value = 5, message = "La fréquence respiratoire doit être supérieure ou égale à 5 cycles/min.")
 		@Max(value = 100, message = "La fréquence respiratoire doit être inférieure ou égale à 100 cycles/min.")
-		Integer respiratoryRate
+		Integer respiratoryRate,
+
+		@Min(value = 0, message = "L'échelle de douleur doit être supérieure ou égale à 0.")
+		@Max(value = 10, message = "L'échelle de douleur doit être inférieure ou égale à 10.")
+		Integer painScale
 ) {
 }

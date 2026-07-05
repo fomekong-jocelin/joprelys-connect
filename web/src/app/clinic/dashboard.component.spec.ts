@@ -97,4 +97,50 @@ describe('DashboardComponent', () => {
     expect(component.selectedVisitForVitals()).toBeNull();
     expect(mockVisitApi.getActiveVisits).toHaveBeenCalledTimes(2);
   });
+
+  it('should validate pain scale values correctly', () => {
+    component.vitalsPain = undefined;
+    expect(component.isPainInvalid()).toBe(false);
+
+    component.vitalsPain = 0;
+    expect(component.isPainInvalid()).toBe(false);
+
+    component.vitalsPain = 5;
+    expect(component.isPainInvalid()).toBe(false);
+
+    component.vitalsPain = 10;
+    expect(component.isPainInvalid()).toBe(false);
+
+    component.vitalsPain = -1;
+    expect(component.isPainInvalid()).toBe(true);
+
+    component.vitalsPain = 11;
+    expect(component.isPainInvalid()).toBe(true);
+  });
+
+  it('should submit pain scale with other vitals', () => {
+    component.openVitalsModal({
+      id: 'visit-1',
+      visitNumber: 'VIS-001',
+      patientId: 'patient-1',
+      patientName: 'Patient Test',
+      patientDpu: 'DPU-001',
+      reason: 'Fièvre',
+      orientation: 'Tri',
+      status: 'EN_COURS',
+      createdAt: '2026-07-02T08:00:00Z'
+    });
+    component.vitalsWeight = 70;
+    component.vitalsHeight = 175;
+    component.vitalsPain = 6;
+
+    component.submitVitals();
+
+    expect(mockVisitApi.saveVitals).toHaveBeenCalledWith('visit-1', expect.objectContaining({
+      weight: 70,
+      height: 175,
+      painScale: 6
+    }));
+  });
 });
+

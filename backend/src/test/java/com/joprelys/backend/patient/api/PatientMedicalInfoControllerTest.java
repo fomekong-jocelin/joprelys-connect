@@ -245,4 +245,105 @@ public class PatientMedicalInfoControllerTest {
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].vaccineName").value("Fièvre Jaune (Rappel)"));
     }
+
+    @Test
+    void givenDoctor_whenAddHistoryWithImportantFlag_thenStoredAndReturned() throws Exception {
+        String addHistory = """
+                {
+                    "category": "SURGICAL",
+                    "description": "Appendicectomie",
+                    "onsetDate": "2015-08-20",
+                    "isOngoing": false,
+                    "comment": "RAS",
+                    "important": true
+                }
+                """;
+
+        mockMvc.perform(post("/api/patients/" + patientA.getId() + "/medical-history")
+                .header("Authorization", "Bearer " + tokenDoctorA)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(addHistory))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.category").value("SURGICAL"))
+                .andExpect(jsonPath("$.important").value(true));
+    }
+
+    @Test
+    void givenDoctor_whenDeleteAllergyAndHistory_thenSoftDeletedAndInvisible() throws Exception {
+        // 1. Add allergy and history
+        String addAllergy = """
+                {
+                    "substance": "Lactose",
+                    "severity": "LOW",
+                    "reaction": "Ballonnements",
+                    "status": "ACTIVE"
+                }
+                """;
+
+        String allergyResp = mockMvc.perform(post("/api/patients/" + patientA.getId() + "/allergies")
+                .header("Authorization", "Bearer " + tokenDoctorA)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(addAllergy))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        String allergyId = com.fasterxml.jackson.databind.ObjectMapper.class.getDeclaredConstructor()
+                .newInstance().readTree(allergyResp).get("id").asText();
+
+        String addHistory = """
+                {
+                    "category": "MEDICAL",
+                    "description": "Hypertension",
+                    "isOngoing": true
+                }
+                """;
+
+        String historyResp = mockMvc.perform(post("/api/patients/" + patientA.getId() + "/medical-history")
+                .header("Authorization", "Bearer " + tokenDoctorA)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(addHistory))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        String historyId = com.fasterxml.jackson.databind.ObjectMapper.class.getDeclaredConstructor()
+                .newInstance().readTree(historyResp).get("id").asText();
+
+        // Check they exist in listing
+        mockMvc.perform(get("/api/patients/" + patientA.getId() + "/allergies")
+                .header("Authorization", "Bearer " + tokenDoctorA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+
+        mockMvc.perform(get("/api/patients/" + patientA.getId() + "/medical-history")
+                .header("Authorization", "Bearer " + tokenDoctorA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+
+        // 2. Soft-delete
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/patients/" + patientA.getId() + "/allergies/" + allergyId)
+                .header("Authorization", "Bearer " + tokenDoctorA))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/patients/" + patientA.getId() + "/medical-history/" + historyId)
+                .header("Authorization", "Bearer " + tokenDoctorA))
+                .andExpect(status().isNoContent());
+
+        // 3. Verify invisible in listing
+        mockMvc.perform(get("/api/patients/" + patientA.getId() + "/allergies")
+                .header("Authorization", "Bearer " + tokenDoctorA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+
+        mockMvc.perform(get("/api/patients/" + patientA.getId() + "/medical-history")
+                .header("Authorization", "Bearer " + tokenDoctorA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+
+        // 4. Verify modifying returns 404
+        mockMvc.perform(put("/api/patients/" + patientA.getId() + "/medical-history/" + historyId)
+                .header("Authorization", "Bearer " + tokenDoctorA)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(addHistory))
+                .andExpect(status().isNotFound());
+    }
 }

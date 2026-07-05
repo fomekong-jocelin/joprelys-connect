@@ -57,9 +57,9 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
                   }
                 </div>
                 <button
-                  (click)="deactivateAllergy(allergy)"
-                  class="p-1 rounded-sm text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 transition-colors cursor-pointer"
-                  title="Désactiver"
+                  (click)="deleteAllergy(allergy)"
+                  class="p-1 rounded-sm text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-600 transition-colors cursor-pointer"
+                  title="Supprimer"
                 >
                   <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -113,6 +113,11 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
                                 {{ t('patients.medicalInfo.history.ongoing') }}
                               </span>
                             }
+                            @if (item.important) {
+                              <span class="px-1.5 py-0.5 rounded-sm text-[9px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-100 dark:border-rose-900/20 flex items-center gap-1 animate-pulse">
+                                ⚠️ Important
+                              </span>
+                            }
                           </div>
                           @if (item.onsetDate) {
                             <p class="text-xs text-slate-400 mt-1">{{ t('patients.medicalInfo.history.onsetDate') }} : {{ item.onsetDate | date:'dd/MM/yyyy' }}</p>
@@ -121,15 +126,26 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 italic">{{ item.comment }}</p>
                           }
                         </div>
-                        <button
-                          (click)="toggleOngoingHistory(item)"
-                          class="p-1 rounded-sm text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 transition-colors cursor-pointer"
-                          title="Modifier statut"
-                        >
-                          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                        </button>
+                        <div class="flex items-center gap-1">
+                          <button
+                            (click)="toggleOngoingHistory(item)"
+                            class="p-1 rounded-sm text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 transition-colors cursor-pointer"
+                            title="Modifier statut"
+                          >
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                          </button>
+                          <button
+                            (click)="deleteHistory(item)"
+                            class="p-1 rounded-sm text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-600 transition-colors cursor-pointer"
+                            title="Supprimer"
+                          >
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     }
                   </div>
@@ -192,13 +208,15 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
               </button>
             </header>
             <form (submit)="saveHistory($event)" class="p-5 space-y-4">
-              <div class="space-y-1">
+               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.history.category') }}*</label>
                 <select [(ngModel)]="historyCategory" name="category" class="ui-select">
                   <option value="MEDICAL">{{ t('patients.medicalInfo.history.category.MEDICAL') }}</option>
                   <option value="SURGICAL">{{ t('patients.medicalInfo.history.category.SURGICAL') }}</option>
                   <option value="FAMILY">{{ t('patients.medicalInfo.history.category.FAMILY') }}</option>
                   <option value="OBSTETRICAL">{{ t('patients.medicalInfo.history.category.OBSTETRICAL') }}</option>
+                  <option value="ALLERGIC">Allergique</option>
+                  <option value="SOCIAL">Social / Habitudes</option>
                   <option value="OTHER">{{ t('patients.medicalInfo.history.category.OTHER') }}</option>
                 </select>
               </div>
@@ -206,15 +224,21 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.history.description') }}*</label>
                 <input type="text" [(ngModel)]="historyDescription" name="description" required class="ui-input" placeholder="Ex: Diabète type 2, Appendicectomie" />
               </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div class="space-y-1">
+              <div class="grid grid-cols-3 gap-4">
+                <div class="space-y-1 col-span-1">
                   <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.history.onsetDate') }}</label>
                   <input type="date" [(ngModel)]="historyOnsetDate" name="onsetDate" class="ui-input" />
                 </div>
-                <div class="flex items-center pt-5">
+                <div class="flex items-center pt-5 justify-center col-span-1">
                   <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
                     <input type="checkbox" [(ngModel)]="historyIsOngoing" name="isOngoing" class="ui-checkbox" />
                     {{ t('patients.medicalInfo.history.isOngoing') }}
+                  </label>
+                </div>
+                <div class="flex items-center pt-5 justify-end col-span-1">
+                  <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                    <input type="checkbox" [(ngModel)]="historyIsImportant" name="important" class="ui-checkbox" />
+                    Important
                   </label>
                 </div>
               </div>
@@ -355,10 +379,11 @@ export class PatientMedicalInfoComponent implements OnInit {
   allergyComment = '';
 
   // Formulaire Antécédents
-  historyCategory: 'MEDICAL' | 'SURGICAL' | 'FAMILY' | 'OBSTETRICAL' | 'OTHER' = 'MEDICAL';
+  historyCategory: 'MEDICAL' | 'SURGICAL' | 'FAMILY' | 'OBSTETRICAL' | 'OTHER' | 'ALLERGIC' | 'SOCIAL' = 'MEDICAL';
   historyDescription = '';
   historyOnsetDate = '';
   historyIsOngoing = true;
+  historyIsImportant = false;
   historyComment = '';
 
   // Formulaire Vaccinations
@@ -369,8 +394,8 @@ export class PatientMedicalInfoComponent implements OnInit {
   vaccineAdministeredBy = '';
   vaccineNotes = '';
 
-  readonly historyCategories: Array<'MEDICAL' | 'SURGICAL' | 'FAMILY' | 'OBSTETRICAL' | 'OTHER'> = [
-    'MEDICAL', 'SURGICAL', 'FAMILY', 'OBSTETRICAL', 'OTHER'
+  readonly historyCategories: Array<'MEDICAL' | 'SURGICAL' | 'FAMILY' | 'OBSTETRICAL' | 'ALLERGIC' | 'SOCIAL' | 'OTHER'> = [
+    'MEDICAL', 'SURGICAL', 'FAMILY', 'OBSTETRICAL', 'ALLERGIC', 'SOCIAL', 'OTHER'
   ];
 
   ngOnInit(): void {
@@ -448,6 +473,7 @@ export class PatientMedicalInfoComponent implements OnInit {
     this.historyDescription = '';
     this.historyOnsetDate = '';
     this.historyIsOngoing = true;
+    this.historyIsImportant = false;
     this.historyComment = '';
     this.showHistoryModal.set(true);
   }
@@ -470,17 +496,13 @@ export class PatientMedicalInfoComponent implements OnInit {
     });
   }
 
-  deactivateAllergy(allergy: PatientAllergy): void {
+  deleteAllergy(allergy: PatientAllergy): void {
     if (!allergy.id) return;
-    this.patientApi.updateAllergy(this.patientId, allergy.id, {
-      substance: allergy.substance,
-      severity: allergy.severity,
-      reaction: allergy.reaction,
-      comment: allergy.comment,
-      status: 'INACTIVE'
-    }).subscribe({
-      next: () => this.loadAllergies()
-    });
+    if (confirm("Voulez-vous vraiment supprimer cette allergie ?")) {
+      this.patientApi.deleteAllergy(this.patientId, allergy.id).subscribe({
+        next: () => this.loadAllergies()
+      });
+    }
   }
 
   saveHistory(event: Event): void {
@@ -491,7 +513,9 @@ export class PatientMedicalInfoComponent implements OnInit {
       category: this.historyCategory,
       description: this.historyDescription.trim(),
       onsetDate: this.historyOnsetDate || undefined,
-      isOngoing: this.historyIsOngoing
+      isOngoing: this.historyIsOngoing,
+      comment: this.historyComment.trim() || undefined,
+      important: this.historyIsImportant
     }).subscribe({
       next: () => {
         this.showHistoryModal.set(false);
@@ -507,10 +531,20 @@ export class PatientMedicalInfoComponent implements OnInit {
       description: item.description,
       onsetDate: item.onsetDate,
       isOngoing: !item.isOngoing,
-      comment: item.comment
+      comment: item.comment,
+      important: item.important
     }).subscribe({
       next: () => this.loadHistory()
     });
+  }
+
+  deleteHistory(item: PatientMedicalHistory): void {
+    if (!item.id) return;
+    if (confirm("Voulez-vous vraiment supprimer cet antécédent ?")) {
+      this.patientApi.deleteMedicalHistory(this.patientId, item.id).subscribe({
+        next: () => this.loadHistory()
+      });
+    }
   }
 
   openVaccinationModal(): void {

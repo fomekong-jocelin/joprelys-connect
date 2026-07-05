@@ -447,6 +447,7 @@ export class AppShellComponent {
     } else if (role === 'PATIENT') {
       items.push(
         { path: '/patient/dashboard', label: this.i18n.t('menu.patientDashboard'), iconName: 'dashboard' },
+        { path: '/patient/summary', label: this.i18n.t('menu.patientSummary'), iconName: 'prescriptions' },
         { path: '/patient/prescriptions', label: this.i18n.t('menu.patientPrescriptions'), iconName: 'prescriptions' },
         { path: '/patient/consents', label: this.i18n.t('menu.patientConsents'), iconName: 'consents' },
         { path: '/patient/audit', label: this.i18n.t('menu.patientAudit'), iconName: 'audit' },

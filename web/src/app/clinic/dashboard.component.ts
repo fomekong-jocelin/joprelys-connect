@@ -55,6 +55,7 @@ export class DashboardComponent implements OnInit {
   vitalsSpo2?: number;
   vitalsGlycemia?: number;
   vitalsResp?: number;
+  vitalsPain?: number;
 
   readonly isClinicalRole = computed(() => {
     const role = this.session()?.role;
@@ -199,11 +200,14 @@ export class DashboardComponent implements OnInit {
   isRespInvalid(): boolean {
     return this.vitalsResp !== undefined && this.vitalsResp !== null && (this.vitalsResp < 5 || this.vitalsResp > 100);
   }
+  isPainInvalid(): boolean {
+    return this.vitalsPain !== undefined && this.vitalsPain !== null && (this.vitalsPain < 0 || this.vitalsPain > 10);
+  }
 
   isAnyVitalInvalid(): boolean {
     return this.isTempInvalid() || this.isWeightInvalid() || this.isHeightInvalid() ||
         this.isPulseInvalid() || this.isSystolicInvalid() || this.isDiastolicInvalid() ||
-        this.isSpo2Invalid() || this.isGlycemiaInvalid() || this.isRespInvalid();
+        this.isSpo2Invalid() || this.isGlycemiaInvalid() || this.isRespInvalid() || this.isPainInvalid();
   }
 
   openVitalsModal(visit: Visit): void {
@@ -221,6 +225,7 @@ export class DashboardComponent implements OnInit {
       this.vitalsSpo2 = visit.vitals.spo2;
       this.vitalsGlycemia = visit.vitals.glycemia;
       this.vitalsResp = visit.vitals.respiratoryRate;
+      this.vitalsPain = visit.vitals.painScale;
     } else {
       this.vitalsTemp = undefined;
       this.vitalsWeight = undefined;
@@ -231,6 +236,7 @@ export class DashboardComponent implements OnInit {
       this.vitalsSpo2 = undefined;
       this.vitalsGlycemia = undefined;
       this.vitalsResp = undefined;
+      this.vitalsPain = undefined;
     }
 
     this.showVitalsModal.set(true);
@@ -259,7 +265,8 @@ export class DashboardComponent implements OnInit {
       diastolic: this.vitalsDiastolic,
       spo2: this.vitalsSpo2,
       glycemia: this.vitalsGlycemia,
-      respiratoryRate: this.vitalsResp
+      respiratoryRate: this.vitalsResp,
+      painScale: this.vitalsPain
     };
 
     this.visitApi.saveVitals(selectedVisit.id, payload).subscribe({

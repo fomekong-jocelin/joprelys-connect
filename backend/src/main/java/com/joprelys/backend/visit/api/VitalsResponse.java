@@ -13,6 +13,7 @@ public record VitalsResponse(
 		Integer spo2,
 		BigDecimal glycemia,
 		Integer respiratoryRate,
+		Integer painScale,
 		BigDecimal bmi
 ) {
 	public static VitalsResponse fromEntity(VitalsEntity entity) {
@@ -27,6 +28,7 @@ public record VitalsResponse(
 				entity.getSpo2(),
 				entity.getGlycemia(),
 				entity.getRespiratoryRate(),
+				entity.getPainScale(),
 				entity.getBmi()
 		);
 	}

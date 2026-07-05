@@ -12,6 +12,12 @@ public record CreateVisitRequest(
 		String reason,
 
 		@NotBlank(message = "Le service ou médecin d'orientation est obligatoire.")
-		String orientation
+		String orientation,
+
+		String service,
+
+		UUID mainPractitionerId,
+
+		java.time.Instant arrivalAt
 ) {
 }

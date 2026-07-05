@@ -27,4 +27,7 @@ public interface PrescriptionRepository extends JpaRepository<PrescriptionEntity
 
 	@Query(value = "SELECT v.patient_id FROM prescriptions p JOIN consultations c ON p.consultation_id = c.id JOIN visits v ON c.visit_id = v.id WHERE p.id = :prescriptionId", nativeQuery = true)
 	Optional<Object> findPatientIdByPrescriptionId(@Param("prescriptionId") UUID prescriptionId);
+
+	@Query("SELECT p FROM PrescriptionEntity p LEFT JOIN FETCH p.items WHERE p.consultation.visit.patient.id = :patientId AND p.status = 'ACTIVE' ORDER BY p.createdAt DESC")
+	java.util.List<PrescriptionEntity> findActivePrescriptionsByPatientId(@Param("patientId") java.util.UUID patientId);
 }

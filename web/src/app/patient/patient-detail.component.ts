@@ -8,7 +8,7 @@ import { AuthTokenStorageService } from '../auth/auth-token-storage.service';
 import { VisitApiService } from '../visit/visit-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { Patient, PatientAllergy } from './patient.models';
-import { Visit } from '../visit/visit.models';
+import { CreateVisitRequest, Visit } from '../visit/visit.models';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
 import { AlertComponent } from '../shared/ui/alert.component';
 import { ButtonComponent } from '../shared/ui/button.component';
@@ -208,7 +208,7 @@ import { CardComponent } from '../shared/ui/card.component';
           <div class="space-y-4">
             <div class="space-y-1.5">
               <label class="ui-label">Motif de visite <span class="text-red-500">*</span></label>
-              <textarea 
+              <textarea
                 [(ngModel)]="visitReason"
                 placeholder="Ex: Fièvre et toux sèche depuis 2 jours"
                 class="ui-textarea min-h-[80px] p-3 text-sm focus:border-brand-primary transition-colors"
@@ -217,13 +217,13 @@ import { CardComponent } from '../shared/ui/card.component';
             </div>
 
             <div class="space-y-1.5">
-              <label class="ui-label">Service / Médecin d'orientation <span class="text-red-500">*</span></label>
-              <select 
+              <label class="ui-label">Orientation <span class="text-red-500">*</span></label>
+              <select
                 [(ngModel)]="visitOrientation"
                 class="ui-select focus:border-brand-primary transition-colors"
                 [disabled]="isSubmitting()"
               >
-                <option value="" disabled selected>Choisir un service...</option>
+                <option value="" disabled selected>Choisir une orientation...</option>
                 <option value="Médecine générale">Médecine générale</option>
                 <option value="Tri / Urgences">Tri / Urgences</option>
                 <option value="Pédiatrie">Pédiatrie</option>
@@ -231,6 +231,38 @@ import { CardComponent } from '../shared/ui/card.component';
                 <option value="Pharmacie">Pharmacie</option>
                 <option value="Autre">Autre</option>
               </select>
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="ui-label">Service clinique</label>
+              <input
+                type="text"
+                [(ngModel)]="visitService"
+                placeholder="Ex: Médecine générale (laisser vide pour reprendre l'orientation)"
+                class="ui-input w-full p-3 text-sm focus:border-brand-primary transition-colors"
+                [disabled]="isSubmitting()"
+              />
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="ui-label">Praticien responsable (ID)</label>
+              <input
+                type="text"
+                [(ngModel)]="visitMainPractitionerId"
+                placeholder="UUID du praticien responsable (optionnel)"
+                class="ui-input w-full p-3 text-sm focus:border-brand-primary transition-colors"
+                [disabled]="isSubmitting()"
+              />
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="ui-label">Date / Heure d'arrivée</label>
+              <input
+                type="datetime-local"
+                [(ngModel)]="visitArrivalAt"
+                class="ui-input w-full p-3 text-sm focus:border-brand-primary transition-colors"
+                [disabled]="isSubmitting()"
+              />
             </div>
           </div>
 
@@ -282,6 +314,9 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
   isSubmitting = signal(false);
   visitReason = '';
   visitOrientation = '';
+  visitService = '';
+  visitMainPractitionerId = '';
+  visitArrivalAt = '';
   visitError = '';
 
   activeVisit = signal<Visit | null>(null);
@@ -469,6 +504,9 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
     this.showVisitModal = true;
     this.visitReason = '';
     this.visitOrientation = '';
+    this.visitService = '';
+    this.visitMainPractitionerId = '';
+    this.visitArrivalAt = '';
     this.visitError = '';
   }
 
@@ -487,11 +525,16 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
     this.isSubmitting.set(true);
     this.visitError = '';
 
-    this.visitApi.create({
+    const request: CreateVisitRequest = {
       patientId: patientObj.id,
       reason: this.visitReason,
-      orientation: this.visitOrientation
-    }).subscribe({
+      orientation: this.visitOrientation,
+      service: this.visitService?.trim() || undefined,
+      mainPractitionerId: this.visitMainPractitionerId?.trim() || undefined,
+      arrivalAt: this.visitArrivalAt ? new Date(this.visitArrivalAt).toISOString() : undefined
+    };
+
+    this.visitApi.create(request).subscribe({
       next: () => {
         this.isSubmitting.set(false);
         this.showVisitModal = false;

@@ -45,6 +45,15 @@ public class PatientMedicalHistoryEntity {
     @Column(name = "comment")
     private String comment;
 
+    @Column(name = "important", nullable = false)
+    private boolean important;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
+    @Column(name = "deleted_by")
+    private UUID deletedBy;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -55,6 +64,10 @@ public class PatientMedicalHistoryEntity {
     }
 
     public PatientMedicalHistoryEntity(UUID patientId, String category, String description, LocalDate onsetDate, boolean isOngoing, String comment) {
+        this(patientId, category, description, onsetDate, isOngoing, comment, false);
+    }
+
+    public PatientMedicalHistoryEntity(UUID patientId, String category, String description, LocalDate onsetDate, boolean isOngoing, String comment, boolean important) {
         this.id = UUID.randomUUID();
         this.patientId = patientId;
         this.category = category != null ? category : "OTHER";
@@ -62,6 +75,7 @@ public class PatientMedicalHistoryEntity {
         this.onsetDate = onsetDate;
         this.isOngoing = isOngoing;
         this.comment = comment;
+        this.important = important;
     }
 
     @PrePersist
@@ -85,6 +99,9 @@ public class PatientMedicalHistoryEntity {
     public LocalDate getOnsetDate() { return onsetDate; }
     public boolean isOngoing() { return isOngoing; }
     public String getComment() { return comment; }
+    public boolean isImportant() { return important; }
+    public Instant getDeletedAt() { return deletedAt; }
+    public UUID getDeletedBy() { return deletedBy; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 
@@ -94,4 +111,7 @@ public class PatientMedicalHistoryEntity {
     public void setOngoing(boolean ongoing) { this.isOngoing = ongoing; }
     public void setComment(String comment) { this.comment = comment; }
     public void setPatientId(java.util.UUID patientId) { this.patientId = patientId; }
+    public void setImportant(boolean important) { this.important = important; }
+    public void setDeletedAt(Instant deletedAt) { this.deletedAt = deletedAt; }
+    public void setDeletedBy(UUID deletedBy) { this.deletedBy = deletedBy; }
 }

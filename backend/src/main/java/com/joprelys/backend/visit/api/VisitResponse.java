@@ -12,7 +12,10 @@ public record VisitResponse(
 		String patientDpu,
 		String reason,
 		String orientation,
+		String service,
+		UUID mainPractitionerId,
 		String status,
+		Instant arrivalAt,
 		Instant createdAt,
 		Instant closedAt,
 		VitalsResponse vitals
@@ -26,7 +29,10 @@ public record VisitResponse(
 				entity.getPatient().getGlobalPatientNumber(),
 				entity.getReason(),
 				entity.getOrientation(),
+				entity.getService(),
+				entity.getMainPractitionerId(),
 				entity.getStatus(),
+				entity.getArrivalAt(),
 				entity.getCreatedAt(),
 				entity.getClosedAt(),
 				VitalsResponse.fromEntity(entity.getVitals())

@@ -99,20 +99,22 @@ export interface CreatePatientAllergyRequest {
 export interface PatientMedicalHistory {
   id?: string;
   patientId: string;
-  category: 'MEDICAL' | 'SURGICAL' | 'FAMILY' | 'OBSTETRICAL' | 'OTHER';
+  category: 'MEDICAL' | 'SURGICAL' | 'FAMILY' | 'OBSTETRICAL' | 'OTHER' | 'ALLERGIC' | 'SOCIAL';
   description: string;
   onsetDate?: string;
   isOngoing: boolean;
   comment?: string;
+  important?: boolean;
   updatedAt?: string;
 }
 
 export interface CreatePatientMedicalHistoryRequest {
-  category: 'MEDICAL' | 'SURGICAL' | 'FAMILY' | 'OBSTETRICAL' | 'OTHER';
+  category: 'MEDICAL' | 'SURGICAL' | 'FAMILY' | 'OBSTETRICAL' | 'OTHER' | 'ALLERGIC' | 'SOCIAL';
   description: string;
   onsetDate?: string;
   isOngoing: boolean;
   comment?: string;
+  important?: boolean;
 }
 
 export interface Hospitalization {

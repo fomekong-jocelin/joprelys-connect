@@ -11,7 +11,8 @@ public record PatientMedicalHistoryResponse(
         String description,
         LocalDate onsetDate,
         boolean isOngoing,
-        String comment
+        String comment,
+        boolean important
 ) {
     public static PatientMedicalHistoryResponse fromEntity(PatientMedicalHistoryEntity entity) {
         return new PatientMedicalHistoryResponse(
@@ -21,7 +22,8 @@ public record PatientMedicalHistoryResponse(
                 entity.getDescription(),
                 entity.getOnsetDate(),
                 entity.isOngoing(),
-                entity.getComment()
+                entity.getComment(),
+                entity.isImportant()
         );
     }
 }

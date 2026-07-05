@@ -266,6 +266,26 @@ describe('PatientPortalService', () => {
     expect(req.request.method).toBe('POST');
     req.flush({});
   });
+
+  it('should call getMedicalSummary', () => {
+    service.getMedicalSummary().subscribe((data) => {
+      expect(data).toBeTruthy();
+    });
+
+    const req = httpTesting.expectOne('/api/patient/medical-summary');
+    expect(req.request.method).toBe('GET');
+    req.flush({ fullName: 'Jean Patient A' });
+  });
+
+  it('should call downloadSummaryPdf', () => {
+    service.downloadSummaryPdf().subscribe((blob) => {
+      expect(blob).toBeTruthy();
+    });
+
+    const req = httpTesting.expectOne('/api/patient/summary-pdf');
+    expect(req.request.method).toBe('GET');
+    req.flush(new Blob());
+  });
 });
 
 describe('PatientNotificationsComponent', () => {

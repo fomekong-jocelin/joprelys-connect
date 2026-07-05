@@ -121,6 +121,31 @@ public class PatientService {
 
 		var saved = patientRepository.save(patient);
 
+		if (request.allergies() != null && !request.allergies().isBlank()) {
+			var allergy = new com.joprelys.backend.patient.infrastructure.persistence.PatientAllergyEntity(
+					saved.getId(),
+					request.allergies().trim(),
+					"MEDIUM",
+					null,
+					"ACTIVE",
+					null,
+					"Généré à la création"
+			);
+			patientAllergyRepository.save(allergy);
+		}
+		if (request.medicalHistory() != null && !request.medicalHistory().isBlank()) {
+			var history = new com.joprelys.backend.patient.infrastructure.persistence.PatientMedicalHistoryEntity(
+					saved.getId(),
+					"MEDICAL",
+					request.medicalHistory().trim(),
+					null,
+					true,
+					"Généré à la création",
+					false
+			);
+			patientMedicalHistoryRepository.save(history);
+		}
+
 		// WT3: Trigger automatic duplicate check
 		patientSimilarityService.checkForDuplicates(saved);
 
@@ -205,6 +230,17 @@ public class PatientService {
 	public void validateAccess(UUID patientId, String requiredScope) {
 		var actor = getCurrentUser();
 		if (actor == null) {
+			var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+			if (auth != null && auth.isAuthenticated()) {
+				boolean isPatientRole = auth.getAuthorities().stream()
+						.anyMatch(a -> a.getAuthority().equals("ROLE_PATIENT"));
+				if (isPatientRole) {
+					var patientOpt = patientRepository.findByGlobalPatientNumber(auth.getName());
+					if (patientOpt.isPresent() && patientOpt.get().getId().equals(patientId)) {
+						return; // Allowed!
+					}
+				}
+			}
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié.");
 		}
 
@@ -351,51 +387,6 @@ public class PatientService {
 		return checkEmergencyAccess(patientId, actor.getOrganizationId());
 	}
 
-	// WT2 (PDF): Génération du PDF de synthèse médicale du patient
-	@Transactional(readOnly = true)
-	public byte[] generatePatientSummaryPdf(UUID patientId) {
-		PatientEntity patient = getPatientById(patientId);
-
-		// Get organization details
-		var orgOpt = organizationRepository.findById(patient.getOrganizationId());
-		String orgName = orgOpt.map(o -> o.getName()).orElse("Clinique Joprelys");
-		String orgAddress = orgOpt.map(o -> o.getAddress()).orElse("");
-		String orgPhone = orgOpt.map(o -> o.getPhone()).orElse("");
-
-		// Get recent vitals
-		var vitalsList = vitalsRepository.findAllByPatientId(patientId);
-		com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity vitals = vitalsList.isEmpty() ? null : vitalsList.get(0);
-
-		// Generate QR Code pointing to verification page of patient summary
-		String verificationUrl = verificationBaseUrl + "/patient-summary/" + patient.getId();
-		byte[] qrCodeBytes = qrCodeGeneratorService.generateQrCode(verificationUrl, 200, 200);
-
-		// Generate PDF
-		byte[] pdfBytes = pdfGeneratorService.generatePatientSummaryPdf(
-				patient,
-				vitals,
-				orgName,
-				orgAddress,
-				orgPhone,
-				qrCodeBytes
-		);
-
-		// Log audit
-		var actor = getCurrentUser();
-		if (actor != null) {
-			auditService.logSuccess(
-					actor.getId(),
-					actor.getOrganizationId(),
-					patient.getId(),
-					"PATIENT_RECORD",
-					patient.getId(),
-					"DOWNLOAD_SUMMARY_PDF",
-					"Téléchargement du PDF de synthèse médicale pour le patient : " + patient.getFullName()
-			);
-		}
-
-		return pdfBytes;
-	}
 
 	// WT3 (DUPLICATES): Récupération des candidats doublons en attente
 	@Transactional(readOnly = true)

@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,12 +30,31 @@ public class VisitController {
 
 	@PostMapping
 	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
-	@Operation(summary = "Créer une visite", description = "Crée une nouvelle visite pour un patient avec motif et orientation.", responses = {
+	@Operation(summary = "Créer une visite", description = "Crée une nouvelle visite pour un patient avec motif, orientation, service, praticien et date d'arrivée.", responses = {
 			@ApiResponse(responseCode = "200", description = "Visite créée avec succès"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
 	})
 	public VisitResponse create(@Valid @RequestBody CreateVisitRequest request) {
-		var visit = visitService.createVisit(request.patientId(), request.reason(), request.orientation());
+		var visit = visitService.createVisit(request);
+		return VisitResponse.fromEntity(visit);
+	}
+
+	@PostMapping("/{id}/correct")
+	@PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE')")
+	@Operation(summary = "Corriger une visite clôturée", description = "Corrige une visite terminée ou annulée avec traçabilité de la correction.", responses = {
+			@ApiResponse(responseCode = "200", description = "Visite corrigée avec succès"),
+			@ApiResponse(responseCode = "404", description = "Introuvable")
+	})
+	public VisitResponse correct(
+			@Parameter(description = "Identifiant de la visite") @PathVariable UUID id,
+			@Valid @RequestBody CorrectVisitRequest request,
+			Authentication authentication) {
+		var claims = (com.joprelys.backend.auth.security.JwtClaims) authentication.getDetails();
+		UUID userId = UUID.fromString(claims.subject());
+		UUID organizationId = claims.organizationId() != null && !claims.organizationId().isBlank()
+				? UUID.fromString(claims.organizationId())
+				: null;
+		var visit = visitService.correctVisit(id, request, userId, organizationId);
 		return VisitResponse.fromEntity(visit);
 	}
 

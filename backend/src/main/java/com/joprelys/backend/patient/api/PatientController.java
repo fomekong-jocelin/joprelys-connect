@@ -31,10 +31,12 @@ public class PatientController {
 
 	private final PatientService patientService;
 	private final UserAccountRepository userAccountRepository;
+	private final com.joprelys.backend.patient.application.PatientSummaryService patientSummaryService;
 
-	public PatientController(PatientService patientService, UserAccountRepository userAccountRepository) {
+	public PatientController(PatientService patientService, UserAccountRepository userAccountRepository, com.joprelys.backend.patient.application.PatientSummaryService patientSummaryService) {
 		this.patientService = patientService;
 		this.userAccountRepository = userAccountRepository;
+		this.patientSummaryService = patientSummaryService;
 	}
 
 	@PostMapping
@@ -112,11 +114,17 @@ public class PatientController {
 	@GetMapping("/{id}/summary-pdf")
 	@PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE')")
 	public org.springframework.http.ResponseEntity<byte[]> downloadSummaryPdf(@PathVariable UUID id) {
-		byte[] pdfBytes = patientService.generatePatientSummaryPdf(id);
+		byte[] pdfBytes = patientSummaryService.generatePatientSummaryPdf(id);
 		return org.springframework.http.ResponseEntity.ok()
 				.header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"patient-summary-" + id + ".pdf\"")
 				.contentType(org.springframework.http.MediaType.APPLICATION_PDF)
 				.body(pdfBytes);
+	}
+
+	@GetMapping("/{id}/medical-summary")
+	@Operation(summary = "Obtenir la synthèse médicale d'un patient", description = "Retourne la synthèse médicale structurée d'un patient.")
+	public MedicalSummaryResponse getMedicalSummary(@PathVariable UUID id) {
+		return patientSummaryService.getMedicalSummary(id);
 	}
 
 	private PatientResponse mapToResponse(PatientEntity entity) {

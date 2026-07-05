@@ -6,15 +6,15 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-05 (complétion module 2 TICKET-0113) |
+| Dernière mise à jour | 2026-07-05 (création EPIC-0014 et tickets d'alignement modules 4-12) |
 | Responsable mise à jour | Antigravity |
-| État global | Sprint 0009 — Audit complet des modules et interopérabilité HL7 FHIR |
-| Risques majeurs | Aucun |
-| Prochaine priorité | Validation finale et préparation livraison |
-| Sprint courant | SPRINT-0009 |
+| État global | SPRINT-0011 — Alignement modules 4 à 12 du CDC (DPU, soins, documents, consentements) |
+| Risques majeurs | Taille du chantier (9 modules), dette architecture controllers→repositories |
+| Prochaine priorité | Démarrage EPIC-0014 — STORY-1901 DPU / synthèse médicale |
+| Sprint courant | SPRINT-0011 |
 | | |
-| Capacité sprint | 15.0j |
-| Charge engagée | 7.05j (Est. Senior) |
+| Capacité sprint | À planifier |
+| Charge engagée | 16.0j (Est. Senior) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
@@ -126,6 +126,19 @@
 | TICKET-1306 | PATIENT_COMPLIANCE | Task | Scopes granulaires de consentements & canal | Full-stack | DONE | P1 | 3 | Senior | 0.3j | 0.4j | 0.7j | Antigravity | Lead Developer | SPRINT-0009 | 0.3j | Aucun (champs scopes+validation_channel, migration V23, validateAccess()) | Moyen | 2026-07-05 |
 | TICKET-1307 | PATIENT_COMPLIANCE | Task | Scopes granulaires pour les demandes d'accès externes | Full-stack | DONE | P1 | 2 | Senior | 0.2j | 0.3j | 0.5j | Antigravity | Lead Developer | SPRINT-0009 | 0.2j | Aucun (champ scopes sur ExternalAccessRequestEntity, migration V23) | Moyen | 2026-07-05 |
 | TICKET-CLINIC-EXTERNAL-ACCESS-REQUEST | DPU_ACCESS | Task | Page clinique de demande d'accès externe au DPU | Frontend | DONE | P1 | 2 | Intermédiaire | 0.15j | 0.25j | 0.4j | Antigravity | Lead Developer | SPRINT-0009 | 0.15j | Aucun (route /clinic/access-request, formulaire avec scopes, i18n FR/EN, build OK) | Faible | 2026-07-05 |
+| EPIC-0014 | CDC_ALIGN | Epic | Alignement modules 4 à 12 du CDC | Full-stack | READY | P0 | 45 | Senior | 8.0j | 12.0j | 20.0j | À assigner | Lead | SPRINT-0011 | 0j | Tickets créés, documentation rédigée, prêt pour implémentation | Élevé | 2026-07-05 |
+| TICKET-0114 | CDC_ALIGN | Gouvernance | Audit et tickets d'alignement modules 4-12 du CDC | Full-stack | DONE | P0 | 2 | Tech Lead | 0.5j | 0.75j | 1.0j | Antigravity | Lead | SPRINT-0011 | 0.5j | Aucun (audit + 11 tickets + docs) | Faible | 2026-07-05 |
+| STORY-1901 | CDC_ALIGN | User Story | Dossier patient partagé et synthèse médicale conforme CDC | Full-stack | DONE | P0 | 5 | Senior | 2.0j | 3.0j | 5.0j | Antigravity | Lead | SPRINT-0011 | 1.8j | Aucun (Synthèse médicale conforme CDC et tests OK) | Moyen | 2026-07-05 |
+| STORY-1902 | CDC_ALIGN | User Story | Visites et consultations conformes CDC | Full-stack | DONE | P0 | 4 | Senior Backend + Frontend Intermédiaire | 1.5j | 2.5j | 4.0j | Antigravity | Lead | SPRINT-0011 | 0.5j | Aucun (migration V31, VisitEntity/ConsultationEntity/VitalsEntity mis à jour, correction traçable, painScale UI, build OK) | Moyen | 2026-07-05 |
+| STORY-1903 | CDC_ALIGN | User Story | Allergies et antécédents conformes CDC | Full-stack | DONE | P0 | 3 | Intermédiaire | 1.0j | 1.5j | 2.5j | Antigravity | Lead | SPRINT-0011 | 0.5j | Aucun (migration V32, PatientAllergyEntity/PatientMedicalHistoryEntity mis à jour avec soft delete et important, endpoints de suppression, i18n, Vitest & Maven OK) | Faible | 2026-07-05 |
+| STORY-1904 | CDC_ALIGN | User Story | Prescriptions et ordonnances conformes CDC | Full-stack | READY | P0 | 4 | Senior | 1.5j | 2.5j | 4.0j | À assigner | Lead | SPRINT-0011 | 0j | Champs médicament, cycle de vie, PDF ordonnance | Moyen | 2026-07-05 |
+| STORY-1905 | CDC_ALIGN | User Story | Examens médicaux conformes CDC | Full-stack | READY | P0 | 3 | Intermédiaire | 1.0j | 1.5j | 2.5j | À assigner | Lead | SPRINT-0011 | 0j | Types enum, statuts paiement, items fils | Moyen | 2026-07-05 |
+| STORY-1906 | CDC_ALIGN | User Story | Résultats d'examens conformes CDC | Full-stack | READY | P0 | 4 | Senior | 1.5j | 2.5j | 4.0j | À assigner | Lead | SPRINT-0011 | 0j | Statut, validateur, immutabilité, export FHIR | Moyen | 2026-07-05 |
+| STORY-1907 | CDC_ALIGN | User Story | Hospitalisations conformes CDC | Full-stack | READY | P0 | 3 | Intermédiaire | 1.0j | 1.5j | 2.5j | À assigner | Lead | SPRINT-0011 | 0j | Numéro séjour, lien visite, médecin responsable | Moyen | 2026-07-05 |
+| STORY-1908 | CDC_ALIGN | User Story | Documents médicaux vérifiables conformes CDC | Full-stack | READY | P0 | 4 | Senior | 1.5j | 2.5j | 4.0j | À assigner | Lead | SPRINT-0011 | 0j | Type, hash, versionnement, vérification publique | Moyen | 2026-07-05 |
+| STORY-1909 | CDC_ALIGN | User Story | Consentements patient et accès externe conformes CDC | Full-stack | READY | P0 | 4 | Senior | 1.5j | 2.5j | 4.0j | À assigner | Lead | SPRINT-0011 | 0j | Types, durées, statuts, OTP, révocation | Moyen | 2026-07-05 |
+| STORY-1910 | CDC_ALIGN | User Story | Portails patient, pro, labo, pharmacie et vérification publique conformes CDC | Frontend | READY | P0 | 5 | Senior | 2.0j | 3.0j | 5.0j | À assigner | Lead | SPRINT-0011 | 0j | Écrans manquants, refactor taille/i18n/design | Moyen | 2026-07-05 |
+| STORY-1911 | CDC_ALIGN | User Story | Dette technique architecture SOLID, sécurité et design system | Full-stack | READY | P1 | 4 | Tech Lead | 2.0j | 3.0j | 5.0j | À assigner | Lead | SPRINT-0011 | 0j | Refactor controllers/repositories, externalisation secrets, i18n | Moyen | 2026-07-05 |
 
 
 ## Statuts autorisés

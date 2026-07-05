@@ -34,26 +34,29 @@ public class PatientMedicalInfoService {
     private final PatientService patientService;
     private final UserAccountRepository userAccountRepository;
     private final AuditService auditService;
+    private final com.joprelys.backend.patient.infrastructure.persistence.PatientRepository patientRepository;
 
     public PatientMedicalInfoService(PatientAllergyRepository patientAllergyRepository,
                                      PatientMedicalHistoryRepository patientMedicalHistoryRepository,
                                      PatientVaccinationRepository patientVaccinationRepository,
                                      PatientService patientService,
                                      UserAccountRepository userAccountRepository,
-                                     AuditService auditService) {
+                                     AuditService auditService,
+                                     com.joprelys.backend.patient.infrastructure.persistence.PatientRepository patientRepository) {
         this.patientAllergyRepository = patientAllergyRepository;
         this.patientMedicalHistoryRepository = patientMedicalHistoryRepository;
         this.patientVaccinationRepository = patientVaccinationRepository;
         this.patientService = patientService;
         this.userAccountRepository = userAccountRepository;
         this.auditService = auditService;
+        this.patientRepository = patientRepository;
     }
 
     @Transactional(readOnly = true)
     public List<PatientAllergyResponse> listAllergies(UUID patientId) {
         patientService.getPatientById(patientId);
 
-        return patientAllergyRepository.findAllByPatientId(patientId).stream()
+        return patientAllergyRepository.findAllByPatientIdAndDeletedAtIsNull(patientId).stream()
                 .map(PatientAllergyResponse::fromEntity)
                 .toList();
     }
@@ -87,6 +90,8 @@ public class PatientMedicalInfoService {
             );
         }
 
+        syncAllergies(patientId);
+
         return PatientAllergyResponse.fromEntity(saved);
     }
 
@@ -94,7 +99,7 @@ public class PatientMedicalInfoService {
     public PatientAllergyResponse updateAllergy(UUID patientId, UUID allergyId, CreatePatientAllergyRequest request) {
         PatientEntity patient = patientService.getPatientById(patientId);
 
-        PatientAllergyEntity allergy = patientAllergyRepository.findByIdAndPatientId(allergyId, patientId)
+        PatientAllergyEntity allergy = patientAllergyRepository.findByIdAndPatientIdAndDeletedAtIsNull(allergyId, patientId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Allergie introuvable pour ce patient"));
 
         allergy.setSubstance(request.substance());
@@ -119,14 +124,45 @@ public class PatientMedicalInfoService {
             );
         }
 
+        syncAllergies(patientId);
+
         return PatientAllergyResponse.fromEntity(saved);
+    }
+
+    @Transactional
+    public void deleteAllergy(UUID patientId, UUID allergyId) {
+        PatientEntity patient = patientService.getPatientById(patientId);
+
+        PatientAllergyEntity allergy = patientAllergyRepository.findByIdAndPatientIdAndDeletedAtIsNull(allergyId, patientId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Allergie introuvable pour ce patient"));
+
+        UserAccountEntity actor = getCurrentUser();
+        allergy.setDeletedAt(java.time.Instant.now());
+        if (actor != null) {
+            allergy.setDeletedBy(actor.getId());
+        }
+        patientAllergyRepository.save(allergy);
+
+        if (actor != null) {
+            auditService.logSuccess(
+                    actor.getId(),
+                    actor.getOrganizationId(),
+                    patientId,
+                    "PATIENT_ALLERGY",
+                    allergy.getId(),
+                    "DELETE_ALLERGY",
+                    "Suppression logique de l'allergie : " + allergy.getSubstance() + " pour " + patient.getFullName()
+            );
+        }
+
+        syncAllergies(patientId);
     }
 
     @Transactional(readOnly = true)
     public List<PatientMedicalHistoryResponse> listMedicalHistory(UUID patientId) {
         patientService.getPatientById(patientId);
 
-        return patientMedicalHistoryRepository.findAllByPatientId(patientId).stream()
+        return patientMedicalHistoryRepository.findAllByPatientIdAndDeletedAtIsNull(patientId).stream()
                 .map(PatientMedicalHistoryResponse::fromEntity)
                 .toList();
     }
@@ -135,13 +171,15 @@ public class PatientMedicalInfoService {
     public PatientMedicalHistoryResponse addMedicalHistory(UUID patientId, CreatePatientMedicalHistoryRequest request) {
         PatientEntity patient = patientService.getPatientById(patientId);
 
+        boolean important = request.important() != null ? request.important() : false;
         PatientMedicalHistoryEntity history = new PatientMedicalHistoryEntity(
                 patientId,
                 request.category(),
                 request.description(),
                 request.onsetDate(),
                 request.isOngoing(),
-                request.comment()
+                request.comment(),
+                important
         );
 
         PatientMedicalHistoryEntity saved = patientMedicalHistoryRepository.save(history);
@@ -159,6 +197,8 @@ public class PatientMedicalInfoService {
             );
         }
 
+        syncMedicalHistory(patientId);
+
         return PatientMedicalHistoryResponse.fromEntity(saved);
     }
 
@@ -166,7 +206,7 @@ public class PatientMedicalInfoService {
     public PatientMedicalHistoryResponse updateMedicalHistory(UUID patientId, UUID historyId, CreatePatientMedicalHistoryRequest request) {
         PatientEntity patient = patientService.getPatientById(patientId);
 
-        PatientMedicalHistoryEntity history = patientMedicalHistoryRepository.findByIdAndPatientId(historyId, patientId)
+        PatientMedicalHistoryEntity history = patientMedicalHistoryRepository.findByIdAndPatientIdAndDeletedAtIsNull(historyId, patientId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Antécédent introuvable pour ce patient"));
 
         history.setCategory(request.category());
@@ -174,6 +214,9 @@ public class PatientMedicalInfoService {
         history.setOnsetDate(request.onsetDate());
         history.setOngoing(request.isOngoing());
         history.setComment(request.comment());
+        if (request.important() != null) {
+            history.setImportant(request.important());
+        }
 
         PatientMedicalHistoryEntity saved = patientMedicalHistoryRepository.save(history);
 
@@ -190,7 +233,38 @@ public class PatientMedicalInfoService {
             );
         }
 
+        syncMedicalHistory(patientId);
+
         return PatientMedicalHistoryResponse.fromEntity(saved);
+    }
+
+    @Transactional
+    public void deleteMedicalHistory(UUID patientId, UUID historyId) {
+        PatientEntity patient = patientService.getPatientById(patientId);
+
+        PatientMedicalHistoryEntity history = patientMedicalHistoryRepository.findByIdAndPatientIdAndDeletedAtIsNull(historyId, patientId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Antécédent introuvable pour ce patient"));
+
+        UserAccountEntity actor = getCurrentUser();
+        history.setDeletedAt(java.time.Instant.now());
+        if (actor != null) {
+            history.setDeletedBy(actor.getId());
+        }
+        patientMedicalHistoryRepository.save(history);
+
+        if (actor != null) {
+            auditService.logSuccess(
+                    actor.getId(),
+                    actor.getOrganizationId(),
+                    patientId,
+                    "PATIENT_HISTORY",
+                    history.getId(),
+                    "DELETE_HISTORY",
+                    "Suppression logique de l'antécédent : " + history.getDescription() + " pour " + patient.getFullName()
+            );
+        }
+
+        syncMedicalHistory(patientId);
     }
 
     @Transactional(readOnly = true)
@@ -264,6 +338,38 @@ public class PatientMedicalInfoService {
         }
 
         return PatientVaccinationResponse.fromEntity(saved);
+    }
+
+    private void syncAllergies(UUID patientId) {
+        List<PatientAllergyEntity> activeAllergies = patientAllergyRepository.findAllByPatientIdAndDeletedAtIsNull(patientId);
+        String allergiesStr = activeAllergies.stream()
+                .filter(a -> "ACTIVE".equalsIgnoreCase(a.getStatus()))
+                .map(PatientAllergyEntity::getSubstance)
+                .collect(java.util.stream.Collectors.joining(", "));
+        
+        PatientEntity patient = patientRepository.findByIdGlobally(patientId).orElse(null);
+        if (patient != null) {
+            patient.setAllergies(allergiesStr);
+            patientRepository.save(patient);
+        }
+    }
+
+    private void syncMedicalHistory(UUID patientId) {
+        List<PatientMedicalHistoryEntity> activeHistories = patientMedicalHistoryRepository.findAllByPatientIdAndDeletedAtIsNull(patientId);
+        String historyStr = activeHistories.stream()
+                .filter(h -> h.isOngoing() || h.isImportant())
+                .map(h -> {
+                    String prefix = h.isImportant() ? "[⚠️ Important] " : "";
+                    String suffix = h.isOngoing() ? " (En cours)" : "";
+                    return prefix + h.getDescription() + suffix;
+                })
+                .collect(java.util.stream.Collectors.joining(", "));
+        
+        PatientEntity patient = patientRepository.findByIdGlobally(patientId).orElse(null);
+        if (patient != null) {
+            patient.setMedicalHistory(historyStr);
+            patientRepository.save(patient);
+        }
     }
 
     private UserAccountEntity getCurrentUser() {

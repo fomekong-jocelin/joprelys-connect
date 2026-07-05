@@ -74,6 +74,14 @@ export class PatientApiService {
     return this.http.put<PatientMedicalHistory>(`/api/patients/${patientId}/medical-history/${historyId}`, request);
   }
 
+  deleteAllergy(patientId: string, allergyId: string): Observable<void> {
+    return this.http.delete<void>(`/api/patients/${patientId}/allergies/${allergyId}`);
+  }
+
+  deleteMedicalHistory(patientId: string, historyId: string): Observable<void> {
+    return this.http.delete<void>(`/api/patients/${patientId}/medical-history/${historyId}`);
+  }
+
   getHospitalizations(patientId: string): Observable<Hospitalization[]> {
     return this.http.get<Hospitalization[]>(`/api/hospitalizations/patient/${patientId}`);
   }
@@ -136,5 +144,9 @@ export class PatientApiService {
 
   updateVaccination(patientId: string, vaccinationId: string, request: CreatePatientVaccinationRequest): Observable<PatientVaccination> {
     return this.http.put<PatientVaccination>(`/api/patients/${patientId}/vaccinations/${vaccinationId}`, request);
+  }
+
+  getMedicalSummary(patientId: string): Observable<any> {
+    return this.http.get<any>(`/api/patients/${patientId}/medical-summary`);
   }
 }

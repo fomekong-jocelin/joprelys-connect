@@ -38,6 +38,12 @@ public class VisitEntity {
 	@Column(name = "orientation", nullable = false, length = 100)
 	private String orientation;
 
+	@Column(name = "service_name", length = 100)
+	private String service;
+
+	@Column(name = "main_practitioner_id")
+	private UUID mainPractitionerId;
+
 	@Column(name = "status", nullable = false, length = 20)
 	private String status;
 
@@ -46,6 +52,9 @@ public class VisitEntity {
 
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
+
+	@Column(name = "arrival_at")
+	private Instant arrivalAt;
 
 	@Column(name = "closed_at")
 	private Instant closedAt;
@@ -61,11 +70,25 @@ public class VisitEntity {
 			String visitNumber,
 			String reason,
 			String orientation) {
+		this(patient, visitNumber, reason, orientation, orientation, null, null);
+	}
+
+	public VisitEntity(
+			PatientEntity patient,
+			String visitNumber,
+			String reason,
+			String orientation,
+			String service,
+			UUID mainPractitionerId,
+			Instant arrivalAt) {
 		this.id = UUID.randomUUID();
 		this.patient = patient;
 		this.visitNumber = visitNumber;
 		this.reason = reason;
 		this.orientation = orientation;
+		this.service = service;
+		this.mainPractitionerId = mainPractitionerId;
+		this.arrivalAt = arrivalAt;
 		this.status = "EN_COURS";
 	}
 
@@ -123,6 +146,30 @@ public class VisitEntity {
 
 	public void setOrientation(String orientation) {
 		this.orientation = orientation;
+	}
+
+	public String getService() {
+		return service;
+	}
+
+	public void setService(String service) {
+		this.service = service;
+	}
+
+	public UUID getMainPractitionerId() {
+		return mainPractitionerId;
+	}
+
+	public void setMainPractitionerId(UUID mainPractitionerId) {
+		this.mainPractitionerId = mainPractitionerId;
+	}
+
+	public Instant getArrivalAt() {
+		return arrivalAt;
+	}
+
+	public void setArrivalAt(Instant arrivalAt) {
+		this.arrivalAt = arrivalAt;
 	}
 
 	public String getStatus() {

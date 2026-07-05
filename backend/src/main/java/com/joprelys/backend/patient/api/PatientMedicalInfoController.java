@@ -168,4 +168,38 @@ public class PatientMedicalInfoController {
             com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
         }
     }
+
+    @DeleteMapping("/allergies/{allergyId}")
+    @PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteAllergy(
+            @PathVariable UUID patientId,
+            @PathVariable UUID allergyId) {
+        patientService.validateAccess(patientId, "allergies_history");
+        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
+        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
+        try {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
+            patientMedicalInfoService.deleteAllergy(patientId, allergyId);
+        } finally {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
+        }
+    }
+
+    @DeleteMapping("/medical-history/{historyId}")
+    @PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteMedicalHistory(
+            @PathVariable UUID patientId,
+            @PathVariable UUID historyId) {
+        patientService.validateAccess(patientId, "allergies_history");
+        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
+        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
+        try {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
+            patientMedicalInfoService.deleteMedicalHistory(patientId, historyId);
+        } finally {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
+        }
+    }
 }

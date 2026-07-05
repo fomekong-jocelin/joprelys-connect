@@ -8,4 +8,6 @@ import java.util.UUID;
 public interface PatientMedicalHistoryRepository extends JpaRepository<PatientMedicalHistoryEntity, UUID> {
     List<PatientMedicalHistoryEntity> findAllByPatientId(UUID patientId);
     Optional<PatientMedicalHistoryEntity> findByIdAndPatientId(UUID id, UUID patientId);
+    List<PatientMedicalHistoryEntity> findAllByPatientIdAndDeletedAtIsNull(UUID patientId);
+    Optional<PatientMedicalHistoryEntity> findByIdAndPatientIdAndDeletedAtIsNull(UUID id, UUID patientId);
 }

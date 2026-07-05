@@ -44,8 +44,17 @@ public class ConsultationEntity {
 	@Column(name = "clinical_exam", columnDefinition = "TEXT")
 	private String clinicalExam;
 
+	@Column(name = "suspected_diagnosis", columnDefinition = "TEXT")
+	private String suspectedDiagnosis;
+
 	@Column(name = "diagnosis", nullable = false, columnDefinition = "TEXT")
 	private String diagnosis;
+
+	@Column(name = "final_diagnosis", columnDefinition = "TEXT")
+	private String finalDiagnosis;
+
+	@Column(name = "conclusion", columnDefinition = "TEXT")
+	private String conclusion;
 
 	@Column(name = "advice", columnDefinition = "TEXT")
 	private String advice;
@@ -74,13 +83,31 @@ public class ConsultationEntity {
 			String diagnosis,
 			String advice,
 			String followUp) {
+		this(visit, doctor, documentNumber, symptoms, clinicalExam, null, diagnosis, null, null, advice, followUp);
+	}
+
+	public ConsultationEntity(
+			VisitEntity visit,
+			UserAccountEntity doctor,
+			String documentNumber,
+			String symptoms,
+			String clinicalExam,
+			String suspectedDiagnosis,
+			String diagnosis,
+			String finalDiagnosis,
+			String conclusion,
+			String advice,
+			String followUp) {
 		this.id = UUID.randomUUID();
 		this.visit = visit;
 		this.doctor = doctor;
 		this.documentNumber = documentNumber;
 		this.symptoms = symptoms;
 		this.clinicalExam = clinicalExam;
+		this.suspectedDiagnosis = suspectedDiagnosis;
 		this.diagnosis = diagnosis;
+		this.finalDiagnosis = finalDiagnosis;
+		this.conclusion = conclusion;
 		this.advice = advice;
 		this.followUp = followUp;
 		this.status = "BROUILLON";
@@ -120,9 +147,21 @@ public class ConsultationEntity {
 
 	public void setClinicalExam(String clinicalExam) { this.clinicalExam = clinicalExam; }
 
+	public String getSuspectedDiagnosis() { return suspectedDiagnosis; }
+
+	public void setSuspectedDiagnosis(String suspectedDiagnosis) { this.suspectedDiagnosis = suspectedDiagnosis; }
+
 	public String getDiagnosis() { return diagnosis; }
 
 	public void setDiagnosis(String diagnosis) { this.diagnosis = diagnosis; }
+
+	public String getFinalDiagnosis() { return finalDiagnosis; }
+
+	public void setFinalDiagnosis(String finalDiagnosis) { this.finalDiagnosis = finalDiagnosis; }
+
+	public String getConclusion() { return conclusion; }
+
+	public void setConclusion(String conclusion) { this.conclusion = conclusion; }
 
 	public String getAdvice() { return advice; }
 

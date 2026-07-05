@@ -557,4 +557,13 @@ public class PatientPortalControllerTest {
                         .header("Authorization", "Bearer " + tokenPatientA))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void getMedicalSummary_succeeds() throws Exception {
+        mockMvc.perform(get("/api/patient/medical-summary")
+                        .header("Authorization", "Bearer " + tokenPatientA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fullName").value(patientA.getFullName()))
+                .andExpect(jsonPath("$.globalPatientNumber").value(patientA.getGlobalPatientNumber()));
+    }
 }

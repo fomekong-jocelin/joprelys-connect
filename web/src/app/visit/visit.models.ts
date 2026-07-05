@@ -8,6 +8,7 @@ export interface Vitals {
   spo2?: number;
   glycemia?: number;
   respiratoryRate?: number;
+  painScale?: number;
   bmi?: number;
 }
 
@@ -19,7 +20,10 @@ export interface Visit {
   patientDpu: string;
   reason: string;
   orientation: string;
+  service?: string;
+  mainPractitionerId?: string;
   status: string;
+  arrivalAt?: string;
   createdAt: string;
   closedAt?: string;
   vitals?: Vitals;
@@ -29,4 +33,7 @@ export interface CreateVisitRequest {
   patientId: string;
   reason: string;
   orientation: string;
+  service?: string;
+  mainPractitionerId?: string;
+  arrivalAt?: string;
 }

@@ -8,6 +8,71 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- **Alignement Module 4 — Dossier patient partagé et synthèse médicale conforme CDC (STORY-1901)** :
+  - `PatientSummaryService` : service d'orchestration pour composer la synthèse médicale structurée (DPU, identité, allergies actives, antécédents importants/en cours, traitements actifs, 3 dernières visites, 3 derniers diagnostics, derniers résultats critiques) et génération du PDF.
+  - Endpoints REST créés :
+    - `GET /api/patients/{id}/medical-summary` (pour les praticiens, sécurisé par tenant/consentement/scopes via `validateAccess`).
+    - `GET /api/patient/medical-summary` (pour le portail patient, récupérant le patient connecté sans paramètre d'URL pour éviter tout IDOR).
+    - `GET /api/patient/summary-pdf` (pour le téléchargement sécurisé du PDF par le patient lui-même).
+  - Modification de `PatientController./{id}/summary-pdf` pour déléguer à `PatientSummaryService` et éviter ainsi une dépendance cyclique avec `PatientService`.
+  - Modification de `PatientService.validateAccess()` pour autoriser le rôle `PATIENT` à accéder à ses propres données (vérification d'ID) tout en bloquant l'accès à d'autres dossiers.
+  - Modification de `PatientService.createPatient()` pour persister initialement les champs textes libres d'allergies/antécédents dans les tables structurées correspondantes.
+  - Implémentation des méthodes de synchronisation dans `PatientMedicalInfoService` : toute modification structurelle d'une allergie ou d'un antécédent met à jour de façon synchrone le texte consolidé (`PatientEntity.allergies` et `PatientEntity.medicalHistory`) pour la rétro-compatibilité.
+  - Refactorisation du PDF de synthèse médicale dans `PdfGeneratorService` pour présenter des tableaux structurés et soignés pour chaque type d'information médicale requise par le CDC (Allergies, Antécédents principaux, Traitements, Diagnostics, Visites, Résultats critiques).
+  - Ajout de tests unitaires et d'intégration MockMvc complets dans `PatientPortalControllerTest.java` validant la récupération de la synthèse structurée.
+  - Frontend Angular :
+    - Page de synthèse médicale **"Ma synthèse médicale"** (`/patient/summary`) affichant l'ensemble de la synthèse sous forme de cartes d'informations soignées avec indicateurs de gravité et de criticité (animations légères pour résultats critiques et badges de sévérité).
+    - Option de téléchargement du document PDF officiel en direct.
+    - Ajout du lien dans la barre latérale (Sidebar) du portail patient.
+    - Support complet multilingue (FR/EN) pour tous les libellés de la synthèse via `I18nService`.
+    - Tests unitaires et d'intégration Vitest (`patient-portal.spec.ts`) validant la récupération des données et le téléchargement du PDF.
+
+- **Alignement Module 6 — Allergies et antécédents conformes CDC (STORY-1903)** :
+  - Migration Flyway `V32__allergies_history_soft_delete_important.sql` : ajout de la colonne `important` (BOOLEAN DEFAULT FALSE) sur `patient_medical_history` ; ajout de `deleted_at` (TIMESTAMP) et `deleted_by` (UUID) sur `patient_medical_history` et `patient_allergies` pour le soft delete.
+  - `PatientMedicalHistoryEntity` mis à jour avec `important`, `deletedAt`, `deletedBy` et getters/setters associés.
+  - `PatientAllergyEntity` mis à jour avec `deletedAt`, `deletedBy` et getters/setters.
+  - Repositories mis à jour avec des méthodes interrogeant uniquement les enregistrements non supprimés (`findAllBy...AndDeletedAtIsNull`, `findByIdAnd...AndDeletedAtIsNull`).
+  - `PatientMedicalInfoService` mis à jour pour filtrer par statut non supprimé, gérer le flag `important` dans l'ajout/modification, et implémenter `deleteAllergy()` et `deleteMedicalHistory()` avec journalisation de l'action (`DELETE_ALLERGY`, `DELETE_HISTORY`) dans la table d'audit.
+  - `PatientMedicalInfoController` : exposition des endpoints `DELETE /api/patients/{patientId}/allergies/{allergyId}` et `DELETE /api/patients/{patientId}/medical-history/{historyId}`.
+  - DTOs `CreatePatientMedicalHistoryRequest` et `PatientMedicalHistoryResponse` mis à jour avec le champ `important`.
+  - Tests unitaires et d'intégration backend (`PatientMedicalInfoControllerTest.java`) : validation de l'ajout du flag d'importance, de la suppression logique et de l'invisibilité des données supprimées.
+  - Modèles et interfaces frontend `patient.models.ts` mis à jour avec le flag `important` et les nouvelles catégories d'antécédents (`ALLERGIC` et `SOCIAL`).
+  - `PatientApiService` mis à jour avec les méthodes d'appels delete `deleteAllergy` et `deleteMedicalHistory`.
+  - Frontend Angular `patient-medical-info.component.ts` : modale d'ajout mise à jour avec les catégories `Allergique` et `Social / Habitudes` ainsi qu'une case à cocher pour marquer l'antécédent comme important ; liste d'antécédents mise à jour pour afficher un badge clignotant rouge "⚠️ Important" ; ajout d'une option de suppression logique (bouton corbeille) avec pop-up de confirmation.
+  - Internationalisation `i18n.service.ts` mise à jour avec les traductions pour les nouvelles catégories en français et en anglais.
+  - Tests unitaires frontend `patient-medical-info.component.spec.ts` créés de manière isolée sous Vitest : validation de l'initialisation, de la sauvegarde et du soft delete des allergies et antécédents.
+
+- **Alignement Module 5 — Visites et consultations conformes CDC (STORY-1902)** :
+  - Migration Flyway `V31__visits_consultations_cdc_alignment.sql` : ajout de `service_name`, `main_practitioner_id`, `arrival_at` sur la table `visits` ; ajout de `suspected_diagnosis`, `final_diagnosis`, `conclusion` sur la table `consultations` ; ajout de `pain_scale` sur la table `vitals` ; création de la table `visit_corrections` pour la traçabilité des corrections (FR-VISIT-005).
+  - `VisitEntity` mis à jour avec les champs `service`, `mainPractitionerId`, `arrivalAt`.
+  - `ConsultationEntity` mis à jour avec `suspectedDiagnosis`, `finalDiagnosis`, `conclusion`.
+  - `VitalsEntity` mis à jour avec `painScale` (INTEGER, échelle 0-10).
+  - `SaveVitalsRequest` : validation `@Min(0)` / `@Max(10)` sur `painScale`.
+  - `VitalsResponse` : exposition du champ `painScale`.
+  - `CreateVisitRequest` : support de `service`, `mainPractitionerId`, `arrivalAt`.
+  - `VisitService.saveVitals()` : persistance de `painScale` ; `createVisit()` : persistance des nouveaux champs.
+  - `VisitService.correctVisit()` : correction traçable de visite terminée via `VisitCorrectionEntity` (log avant modification).
+  - `VisitController` : endpoint `POST /api/visits/{id}/correct` pour corriger une visite clôturée avec traçabilité.
+  - Import `Authentication` ajouté dans `VisitController` (correctif compilation).
+  - `SaveConsultationRequest` : support de `suspectedDiagnosis`, `finalDiagnosis`, `conclusion`.
+  - Frontend Angular `dashboard.component.ts` : propriété `vitalsPain`, `isPainInvalid()`, initialisation depuis `visit.vitals.painScale`, inclusion dans `isAnyVitalInvalid()`, envoi de `painScale` dans le payload API.
+  - Frontend Angular `dashboard.component.html` : section **Douleur (Échelle 0-10)** dans le formulaire des constantes vitales, avec badge code couleur contextuel (vert/jaune/orange/rouge) et légende textuelle.
+  - Frontend Angular `consultation.component.ts` : affichage de la carte **Douleur** dans la grille des constantes vitales en lecture seule, avec code couleur contextuel selon l'intensité.
+  - Rénovation de la page de saisie de consultation (`ConsultationComponent`) :
+    - Extraction du template HTML vers [consultation.component.html](file:///C:/MES-APPLICATIONS/joprelys-connect/web/src/app/consultation/consultation.component.html) pour séparer la vue du contrôleur et réduire la taille de la classe TypeScript sous la barre des 300 lignes, conformément aux standards de design et de code SOLID.
+    - Élargissement de la mise en page pour utiliser l'intégralité de la largeur d'écran (`app-container py-6 space-y-6` au lieu de `max-w-5xl mx-auto`).
+    - Suppression des aplats et dégradés de couleurs trop contrastés au profit de cartes blanches/slate-900 sobres à bordures discrètes pour s'aligner sur la charte graphique et supporter proprement les thèmes clair/sombre.
+    - Application de la politique stricte d'arrondis sobres (radius max 8px via `rounded-[6px]` et `rounded-[4px]`).
+    - Remplacement de toutes les chaînes de caractères brutes en français par l'injection de `I18nService` avec des clés spécifiques sous l'espace de nom `consultation.*`.
+    - Ajout des traductions françaises et anglaises complètes dans [i18n.service.ts](file:///C:/MES-APPLICATIONS/joprelys-connect/web/src/app/core/i18n/i18n.service.ts).
+
+
+  - Audit complet du backend et frontend par rapport aux exigences des modules 4 à 12 du Cahier des charges.
+  - Création de l’Epic `EPIC-0014` et de 11 User Stories détaillées (`STORY-1901` à `STORY-1911`).
+  - Documentation fonctionnelle et technique dans `docs/features/alignment-modules-4-12/FUNCTIONAL-SPEC.md` et `TECHNICAL-DESIGN.md`.
+  - Mise à jour de `docs/ai/PROJECT-TRACKING.md` avec le nouveau sprint `SPRINT-0011` et le planning d’alignement.
+  - Identification des écarts critiques : synthèse médicale, champs visites/consultations, allergies/antécédents, prescriptions, examens, résultats, hospitalisations, documents vérifiables, consentements et portails frontend.
+
 - **Conformité du Module 2 - Gestion des utilisateurs et rôles (TICKET-0113)** :
   - Ajout de la colonne `last_login_at` à la table `users` (migration Flyway `V29`) pour stocker la date/heure de dernière connexion des professionnels.
   - Implémentation du support de rôles multiples séparés par des virgules dans le champ `role` existant (ex: `"MEDECIN,PHARMACIEN"`) afin de préserver la structure sans breaking change.

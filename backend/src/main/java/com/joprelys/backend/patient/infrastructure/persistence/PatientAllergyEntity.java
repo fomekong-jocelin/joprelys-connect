@@ -48,6 +48,12 @@ public class PatientAllergyEntity {
     @Column(name = "comment")
     private String comment;
 
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
+    @Column(name = "deleted_by")
+    private UUID deletedBy;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -90,6 +96,8 @@ public class PatientAllergyEntity {
     public String getStatus() { return status; }
     public LocalDate getDiscoveredAt() { return discoveredAt; }
     public String getComment() { return comment; }
+    public Instant getDeletedAt() { return deletedAt; }
+    public UUID getDeletedBy() { return deletedBy; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 
@@ -100,4 +108,6 @@ public class PatientAllergyEntity {
     public void setDiscoveredAt(LocalDate date) { this.discoveredAt = date; }
     public void setComment(String comment) { this.comment = comment; }
     public void setPatientId(java.util.UUID patientId) { this.patientId = patientId; }
+    public void setDeletedAt(Instant deletedAt) { this.deletedAt = deletedAt; }
+    public void setDeletedBy(UUID deletedBy) { this.deletedBy = deletedBy; }
 }

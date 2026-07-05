@@ -51,6 +51,9 @@ public class VitalsEntity {
 	@Column(name = "respiratory_rate")
 	private Integer respiratoryRate;
 
+	@Column(name = "pain_scale")
+	private Integer painScale;
+
 	@Column(name = "bmi", precision = 4, scale = 2)
 	private BigDecimal bmi;
 
@@ -75,6 +78,22 @@ public class VitalsEntity {
 			BigDecimal glycemia,
 			Integer respiratoryRate,
 			BigDecimal bmi) {
+		this(visit, temperature, weight, height, pulse, systolic, diastolic, spo2, glycemia, respiratoryRate, null, bmi);
+	}
+
+	public VitalsEntity(
+			VisitEntity visit,
+			BigDecimal temperature,
+			BigDecimal weight,
+			Integer height,
+			Integer pulse,
+			Integer systolic,
+			Integer diastolic,
+			Integer spo2,
+			BigDecimal glycemia,
+			Integer respiratoryRate,
+			Integer painScale,
+			BigDecimal bmi) {
 		this.id = UUID.randomUUID();
 		this.visit = visit;
 		this.temperature = temperature;
@@ -86,6 +105,7 @@ public class VitalsEntity {
 		this.spo2 = spo2;
 		this.glycemia = glycemia;
 		this.respiratoryRate = respiratoryRate;
+		this.painScale = painScale;
 		this.bmi = bmi;
 	}
 
@@ -183,6 +203,14 @@ public class VitalsEntity {
 
 	public void setRespiratoryRate(Integer respiratoryRate) {
 		this.respiratoryRate = respiratoryRate;
+	}
+
+	public Integer getPainScale() {
+		return painScale;
+	}
+
+	public void setPainScale(Integer painScale) {
+		this.painScale = painScale;
 	}
 
 	public BigDecimal getBmi() {
