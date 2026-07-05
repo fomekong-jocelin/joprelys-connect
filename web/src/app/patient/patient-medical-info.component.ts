@@ -12,7 +12,7 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
   template: `
     <div class="space-y-6">
       <!-- Section Allergies -->
-      <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-xl p-5 shadow-xs transition-colors">
+      <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-xl p-4 md:p-5 shadow-xs transition-colors">
         <div class="flex items-center justify-between mb-4">
           <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
             <span>🛡️</span> {{ t('patients.medicalInfo.allergies') }}
@@ -72,7 +72,7 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
       </div>
 
       <!-- Section Antécédents -->
-      <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-xl p-5 shadow-xs transition-colors">
+      <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-xl p-4 md:p-5 shadow-xs transition-colors">
         <div class="flex items-center justify-between mb-4">
           <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
             <span>📋</span> {{ t('patients.medicalInfo.history') }}
@@ -228,7 +228,7 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
       }
 
       <!-- Section Vaccinations -->
-      <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-xl p-5 shadow-xs transition-colors">
+      <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-xl p-4 md:p-5 shadow-xs transition-colors">
         <div class="flex items-center justify-between mb-4">
           <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
             <span>💉</span> Vaccinations (DPU Section 9)

@@ -118,7 +118,7 @@ import { CardComponent } from '../shared/ui/card.component';
                   </p>
                 </div>
                 
-                <div class="flex items-center gap-2 w-full sm:w-auto">
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                   <app-ui-button variant="secondary" (pressed)="goBack()" class="grow sm:grow-0 text-xs">
                     Retour
                   </app-ui-button>

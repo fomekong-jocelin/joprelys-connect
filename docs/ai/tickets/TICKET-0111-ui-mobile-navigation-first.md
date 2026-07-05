@@ -91,12 +91,19 @@ Rendre l'application mobile-first et intuitive sur les petits écrans (smartphon
 - Création du tiroir coulissant mobile (Drawer layout) avec fond estompé (`backdrop-blur-xs`), affichant la fiche de profil simplifiée, les options de navigation, et le panneau de paramétrage (Langue / Thème / Déconnexion) au bas du Drawer.
 - Optimisation des paddings de la page et des Breadcrumbs pour les mobiles.
 - Correction des tests existants impactés par l'introduction de nouvelles fonctionnalités (mocks de `getVaccinations` dans `patient-detail.component.spec.ts` et `otpCode` dans `forgot-password.component.spec.ts`).
+- **Phase 2 : Optimisation des paddings et alignements mobiles (Demande complémentaire)** :
+  - Suppression de la double marge mobile en changeant le padding de la section d'affichage du Shell de `p-4 md:p-6` à `p-0 md:p-6`. Les pages contrôlent ainsi leur propre padding via `app-container` ou des classes spécifiques (ex : `px-4`).
+  - Réduction de la marge interne des conteneurs `.app-container` et `.app-container-wide` sur mobile de `1.5rem` (24px) à `1rem` (16px) pour maximiser l'espace utilisable sur petit écran.
+  - Réduction du padding interne des composants de cartes `.ui-card` sur mobile de `p-6` (24px) à `p-4` (16px) pour éviter l'effet "vide" sur les côtés.
+  - Réorganisation des boutons d'actions principales du Dossier Patient (`Retour`, `Synthèse PDF`, `Ouvrir une visite`/`Démarrer la consultation`) sur mobile : ils s'empilent désormais verticalement et s'étirent sur toute la largeur (`flex flex-col items-stretch`) au lieu d'être compressés côte à côte.
+  - Réduction du padding interne des panneaux médicaux de la fiche patient (`Allergies`, `Antécédents`, `Vaccinations`) de `p-5` à `p-4 md:p-5`.
 
 ## 9. Suivi d'exécution
 
 | Date | Développeur | Temps passé | Avancement | Reste à faire | Blocage | Commentaire |
 |---|---|---:|---:|---:|---|---|
 | 2026-07-05 | Antigravity | 0.15j | 100% | Aucun | Aucun | Implémentation et tests complets validés |
+| 2026-07-05 | Antigravity | 0.05j | 100% | Aucun | Aucun | Phase 2 : Optimisation des paddings et disposition des boutons sur mobile |
 
 ## 10. Tests et vérifications
 

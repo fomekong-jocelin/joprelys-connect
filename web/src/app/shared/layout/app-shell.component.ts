@@ -261,7 +261,7 @@ import { PatientPortalService } from '../../patient/portal/services/patient-port
         <div class="flex-1 flex flex-col min-w-0">
           <app-breadcrumb />
 
-          <section class="flex-1 p-4 md:p-6">
+          <section class="flex-1 p-0 md:p-6">
             <ng-content></ng-content>
           </section>
         </div>

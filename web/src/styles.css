@@ -98,13 +98,22 @@ body {
   .app-container {
     width: 100%;
     max-width: 100%;
-    padding-inline: 1.5rem;
+    padding-inline: 1rem;
   }
 
   .app-container-wide {
     width: 100%;
     max-width: 100%;
-    padding-inline: 1.5rem;
+    padding-inline: 1rem;
+  }
+
+  @media (min-width: 768px) {
+    .app-container {
+      padding-inline: 1.5rem;
+    }
+    .app-container-wide {
+      padding-inline: 1.5rem;
+    }
   }
 
   .ui-card {

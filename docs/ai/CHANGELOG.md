@@ -15,6 +15,12 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - Factorisation réutilisable des liens et icônes du menu de navigation dans un `<ng-template>` pour éviter la duplication de code et faciliter la maintenance.
   - Ajustement des espacements et paddings des Breadcrumbs et du conteneur de contenu principal sur mobile.
   - Restauration de la conformité de la suite de tests unitaires (correction des mocks unitaires de `forgot-password.component.spec.ts` et `patient-detail.component.spec.ts`).
+  - **Phase 2 : Optimisation fine des espaces et mise en page mobile** :
+    - Suppression du double padding mobile dans le Shell en passant la section principale à `p-0` sur mobile (les pages contrôlent ainsi leur propre padding).
+    - Réduction du padding horizontal des conteneurs `.app-container` et `.app-container-wide` sur mobile de `1.5rem` à `1rem`.
+    - Réduction du padding interne des cartes `.ui-card` sur mobile de `p-6` à `p-4` pour éviter le vide latéral.
+    - Passage des boutons d'actions principales du Dossier Patient en disposition verticale étirée (`flex-col items-stretch`) sur mobile pour supprimer la compression horizontale.
+    - Réduction de la marge interne des panneaux médicaux de la fiche patient (`p-5` à `p-4 md:p-5`).
 
 - **Module API Joprelys Connect — Sous-tâches 3, 4 & 5 (TICKET-0016)** :
   - `RateLimitingFilter` — filtre HTTP avec bucket token simplifié par IP et par utilisateur. Configurable via `application.yml` (`joprelys.rate-limiting.enabled`, `max-requests-per-window`, `window-seconds`). Désactivé en profil `test`.
