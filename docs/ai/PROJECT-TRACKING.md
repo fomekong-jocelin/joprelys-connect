@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-05 |
+| Dernière mise à jour | 2026-07-05 (fusion EPIC-0013) |
 | Responsable mise à jour | Antigravity |
 | État global | Sprint 0009 — Audit complet des modules et interopérabilité HL7 FHIR |
 | Risques majeurs | Aucun |
@@ -110,14 +110,14 @@
 | STORY-1803 | UI_UX | User Story | Fil d'Ariane (Breadcrumbs) et Titrage Dynamique | Frontend | DONE | P2 | 2 | Intermédiaire | 0.2j | 0.3j | 0.5j | Antigravity | Lead Developer | SPRINT-0009 | 0.15j | Aucun (Composant breadcrumbs fonctionnel) | Faible | 2026-07-05 |
 | STORY-1804 | UI_UX | User Story | Découpage du Dossier Patient Unique (DPU) en Vues Dédiées | Frontend | DONE | P1 | 5 | Senior | 0.6j | 1.0j | 1.7j | Antigravity | Lead Developer | SPRINT-0009 | 0.25j | Aucun (Routage enfant et extraction composants OK) | Faible | 2026-07-05 |
 | TICKET-UX-GOOGLE-DESIGN | UI_UX | Refactoring | Refonte UI/UX : Navigation Contextuelle & Pages Dédiées | Frontend | DONE | P0 | 8 | Senior | 0.8j | 1.0j | 1.7j | Antigravity | Lead Developer | SPRINT-0009 | 0.2j | Aucun (Sidebar contextuelle et 5 pages portail patient créées) | Faible | 2026-07-05 |
-| EPIC-0013 | PATIENT_COMPLIANCE | Epic | Conformité Module Patient (Cahier des Charges) | Full-stack | IN_PROGRESS | P1 | 22 | Senior | 2.2j | 3.0j | 5.0j | Antigravity | Lead Developer | SPRINT-0009 | 0.0j | Implémenter la détection de doublons, fusion, PDF et scopes | Moyen | 2026-07-05 |
-| TICKET-1301 | PATIENT_COMPLIANCE | Task | Rendre le téléphone optionnel à la création | Full-stack | TODO | P1 | 1 | Senior | 0.1j | 0.15j | 0.25j | Antigravity | Lead Developer | SPRINT-0009 | 0.0j | Modifier DTO et validation IHM | Faible | 2026-07-05 |
-| TICKET-1302 | PATIENT_COMPLIANCE | Task | Service de détection de doublons (Levenshtein) | Backend | TODO | P1 | 5 | Senior | 0.5j | 0.7j | 1.1j | Antigravity | Lead Developer | SPRINT-0009 | 0.0j | Implémenter algorithme et candidats Flyway | Moyen | 2026-07-05 |
-| TICKET-1303 | PATIENT_COMPLIANCE | Task | Logique transactionnelle de fusion de dossiers | Backend | TODO | P1 | 5 | Senior | 0.5j | 0.7j | 1.1j | Antigravity | Lead Developer | SPRINT-0009 | 0.0j | Implémenter fusion FKs et désactivation | Moyen | 2026-07-05 |
-| TICKET-1304 | PATIENT_COMPLIANCE | Task | IHM d'administration des doublons et assistant de fusion | Frontend | TODO | P1 | 3 | Senior | 0.3j | 0.4j | 0.7j | Antigravity | Lead Developer | SPRINT-0009 | 0.0j | Créer page et modal comparatif de fusion | Faible | 2026-07-05 |
-| TICKET-1305 | PATIENT_COMPLIANCE | Task | Fiche de synthèse médicale en PDF | Full-stack | TODO | P1 | 3 | Senior | 0.3j | 0.4j | 0.7j | Antigravity | Lead Developer | SPRINT-0009 | 0.0j | Générer PDF A4 et bouton Angular de téléchargement | Faible | 2026-07-05 |
-| TICKET-1306 | PATIENT_COMPLIANCE | Task | Scopes granulaires de consentements & canal | Full-stack | TODO | P1 | 3 | Senior | 0.3j | 0.4j | 0.7j | Antigravity | Lead Developer | SPRINT-0009 | 0.0j | Ajouter colonne Flyway, filtres API et checkboxes | Moyen | 2026-07-05 |
-| TICKET-1307 | PATIENT_COMPLIANCE | Task | Scopes granulaires pour les demandes d'accès externes | Full-stack | TODO | P1 | 2 | Senior | 0.2j | 0.3j | 0.5j | Antigravity | Lead Developer | SPRINT-0009 | 0.0j | Ajouter colonne Flyway, filtres API et checkboxes | Moyen | 2026-07-05 |
+| EPIC-0013 | PATIENT_COMPLIANCE | Epic | Conformité Module Patient (Cahier des Charges) | Full-stack | DONE | P1 | 22 | Senior | 2.2j | 3.0j | 5.0j | Antigravity | Lead Developer | SPRINT-0009 | 2.2j | Aucun (doublons, fusion, PDF synthèse, scopes granulaires livrés) | Moyen | 2026-07-05 |
+| TICKET-1301 | PATIENT_COMPLIANCE | Task | Rendre le téléphone optionnel à la création | Full-stack | DONE | P1 | 1 | Senior | 0.1j | 0.15j | 0.25j | Antigravity | Lead Developer | SPRINT-0009 | 0.1j | Aucun (phone nullable, migration V24) | Faible | 2026-07-05 |
+| TICKET-1302 | PATIENT_COMPLIANCE | Task | Service de détection de doublons (Levenshtein) | Backend | DONE | P1 | 5 | Senior | 0.5j | 0.7j | 1.1j | Antigravity | Lead Developer | SPRINT-0009 | 0.5j | Aucun (PatientSimilarityService + PatientDuplicateCandidateEntity + migration V24) | Moyen | 2026-07-05 |
+| TICKET-1303 | PATIENT_COMPLIANCE | Task | Logique transactionnelle de fusion de dossiers | Backend | DONE | P1 | 5 | Senior | 0.5j | 0.7j | 1.1j | Antigravity | Lead Developer | SPRINT-0009 | 0.5j | Aucun (mergePatients() avec reassignation des 11 entités, audit, historique) | Moyen | 2026-07-05 |
+| TICKET-1304 | PATIENT_COMPLIANCE | Task | IHM d'administration des doublons et assistant de fusion | Frontend | DONE | P1 | 3 | Senior | 0.3j | 0.4j | 0.7j | Antigravity | Lead Developer | SPRINT-0009 | 0.3j | Aucun (DuplicatesPageComponent + modal assistant de fusion côte à côte) | Faible | 2026-07-05 |
+| TICKET-1305 | PATIENT_COMPLIANCE | Task | Fiche de synthèse médicale en PDF | Full-stack | DONE | P1 | 3 | Senior | 0.3j | 0.4j | 0.7j | Antigravity | Lead Developer | SPRINT-0009 | 0.3j | Aucun (endpoint GET /summary-pdf, PdfGeneratorService, downloadSummaryPdf Angular) | Faible | 2026-07-05 |
+| TICKET-1306 | PATIENT_COMPLIANCE | Task | Scopes granulaires de consentements & canal | Full-stack | DONE | P1 | 3 | Senior | 0.3j | 0.4j | 0.7j | Antigravity | Lead Developer | SPRINT-0009 | 0.3j | Aucun (champs scopes+validation_channel, migration V23, validateAccess()) | Moyen | 2026-07-05 |
+| TICKET-1307 | PATIENT_COMPLIANCE | Task | Scopes granulaires pour les demandes d'accès externes | Full-stack | DONE | P1 | 2 | Senior | 0.2j | 0.3j | 0.5j | Antigravity | Lead Developer | SPRINT-0009 | 0.2j | Aucun (champ scopes sur ExternalAccessRequestEntity, migration V23) | Moyen | 2026-07-05 |
 
 
 ## Statuts autorisés
