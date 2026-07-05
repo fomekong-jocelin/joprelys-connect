@@ -111,6 +111,16 @@ export class PatientPortalService {
     return this.http.post<ExternalAccessResponse>(`/api/patient/access-requests/${id}/reject`, {});
   }
 
+  // TICKET-1306: Mise à jour des scopes granulaires d'un consentement
+  updateConsentScopes(orgId: string, scopes: string, validationChannel: string): Observable<void> {
+    return this.http.post<void>(`/api/patient/consents/${orgId}?status=ACTIVE&scopes=${encodeURIComponent(scopes)}&validationChannel=${encodeURIComponent(validationChannel)}`, {});
+  }
+
+  // TICKET-1307: Approbation d'une demande d'accès avec scopes restreints
+  approveAccessRequestWithScopes(id: string, scopes: string): Observable<ExternalAccessResponse> {
+    return this.http.post<ExternalAccessResponse>(`/api/patient/access-requests/${id}/approve?scopes=${encodeURIComponent(scopes)}`, {});
+  }
+
   getNotifications(): Observable<PatientNotification[]> {
     return this.http.get<PatientNotification[]>('/api/patient/notifications');
   }
@@ -133,6 +143,8 @@ export interface PatientConsent {
   organizationName: string;
   status: string;
   isCreator: boolean;
+  scopes?: string;            // ex: "medical_records,prescriptions,lab_results,allergies_history"
+  validationChannel?: string; // PORTAL | OTP_SMS | OTP_EMAIL
 }
 
 export interface PatientAuditLog {
@@ -155,6 +167,7 @@ export interface ExternalAccessResponse {
   reason: string;
   durationHours: number;
   status: string;
+  scopes?: string;   // ex: "medical_records,prescriptions"
   createdAt: string;
   expiresAt: string | null;
 }

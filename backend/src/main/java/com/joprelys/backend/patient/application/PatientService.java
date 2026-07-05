@@ -232,6 +232,18 @@ public class PatientService {
 		}
 	}
 
+	// WT1 (SCOPES): Validation d'accès pour les sous-ressources avec masquage d'existence (404 au lieu de 403)
+	public void validateAccessForSubResource(UUID patientId, String requiredScope, String notFoundMessage) {
+		try {
+			validateAccess(patientId, requiredScope);
+		} catch (ResponseStatusException e) {
+			if (e.getStatusCode() == org.springframework.http.HttpStatus.FORBIDDEN && "CONSENT_REQUIRED".equals(e.getReason())) {
+				throw new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, notFoundMessage);
+			}
+			throw e;
+		}
+	}
+
 	// WT1 (SCOPES): Vérification de la présence d'un scope dans une liste de scopes
 	private boolean hasScope(String scopesStr, String requiredScope) {
 		if (scopesStr == null || scopesStr.isBlank()) {

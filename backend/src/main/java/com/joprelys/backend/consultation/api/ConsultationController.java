@@ -47,7 +47,7 @@ public class ConsultationController {
 				visitRepository.findPatientIdByVisitId(id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."))
 		);
-		patientService.validateAccess(patientId, "medical_records");
+		patientService.validateAccessForSubResource(patientId, "medical_records", "Visite introuvable.");
 		var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
 		UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
 		try {
@@ -67,7 +67,7 @@ public class ConsultationController {
 				visitRepository.findPatientIdByVisitId(id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."))
 		);
-		patientService.validateAccess(patientId, "medical_records");
+		patientService.validateAccessForSubResource(patientId, "medical_records", "Visite introuvable.");
 		var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
 		UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
 		try {

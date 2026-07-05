@@ -149,11 +149,11 @@ public class GranularScopesSecurityTest {
     }
 
     @Test
-    @DisplayName("GET /api/visits/{id}/consultation: fails with 403 when no consent exists")
+    @DisplayName("GET /api/visits/{id}/consultation: fails with 404 when no consent exists")
     void getConsultation_noConsent_fails() throws Exception {
         mockMvc.perform(get("/api/visits/" + visitB.getId() + "/consultation")
                 .header("Authorization", "Bearer " + tokenDoctorA))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
     }
 
     @Test

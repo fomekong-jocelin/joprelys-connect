@@ -1,12 +1,20 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ExternalAccessResponse, PatientPortalService } from '../services/patient-portal.service';
 import { I18nService } from '../../../core/i18n/i18n.service';
+
+const ACCESS_SCOPES = [
+  { key: 'medical_records',   labelFr: 'Dossier médical' },
+  { key: 'prescriptions',     labelFr: 'Ordonnances' },
+  { key: 'lab_results',       labelFr: 'Résultats de labo' },
+  { key: 'allergies_history', labelFr: 'Allergies & ATCD' },
+];
 
 @Component({
   selector: 'app-patient-requests-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="ui-card-subtle p-5 lg:p-6 flex flex-col gap-4">
       <div class="flex flex-col gap-1 border-b border-[var(--app-border)] pb-4 sm:flex-row sm:items-end sm:justify-between">
@@ -61,6 +69,23 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                       <span class="font-semibold">{{ i18n.t('patient.access.requests.duration') }}</span> 
                       {{ req.durationHours }} {{ i18n.t('patient.access.requests.hours') || 'heures' }}
                     </p>
+                    <!-- TICKET-1307: Scopes granulaires pour l'approbation -->
+                    <div class="pt-2 flex flex-col gap-1">
+                      <p class="text-[10px] font-semibold text-[var(--text-secondary)]">Données autorisées :</p>
+                      <div class="grid grid-cols-2 gap-1">
+                        @for (scope of accessScopes; track scope.key) {
+                          <label class="flex items-center gap-1.5 text-[10px] text-[var(--text-primary)] cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              [checked]="isScopeSelected(req.id, scope.key)"
+                              (change)="toggleRequestScope(req.id, scope.key)"
+                              class="h-3 w-3 rounded border-gray-300 text-[var(--brand-primary)] focus:ring-[var(--brand-primary)]"
+                            />
+                            {{ scope.labelFr }}
+                          </label>
+                        }
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -137,6 +162,9 @@ export class PatientRequestsListComponent implements OnInit {
   readonly isLoading = signal<boolean>(true);
   readonly error = signal<string | null>(null);
   readonly loadingActions = signal<Record<string, boolean>>({});
+  // TICKET-1307: Scopes sélectionnés par demande (par défaut tous actifs)
+  readonly scopeSelections = signal<Record<string, string[]>>({});
+  readonly accessScopes = ACCESS_SCOPES;
 
   ngOnInit(): void {
     this.loadRequests();
@@ -170,7 +198,10 @@ export class PatientRequestsListComponent implements OnInit {
 
   approve(id: string): void {
     this.loadingActions.update(prev => ({ ...prev, [id]: true }));
-    this.portalService.approveAccessRequest(id).subscribe({
+    const selectedScopes = this.scopeSelections()[id]
+      ?? ACCESS_SCOPES.map(s => s.key);
+    const scopesStr = selectedScopes.join(',');
+    this.portalService.approveAccessRequestWithScopes(id, scopesStr).subscribe({
       next: (updated) => {
         this.requests.update(list => list.map(r => r.id === id ? updated : r));
         this.loadingActions.update(prev => ({ ...prev, [id]: false }));
@@ -180,6 +211,19 @@ export class PatientRequestsListComponent implements OnInit {
         this.loadingActions.update(prev => ({ ...prev, [id]: false }));
       }
     });
+  }
+
+  isScopeSelected(reqId: string, scopeKey: string): boolean {
+    const selected = this.scopeSelections()[reqId] ?? ACCESS_SCOPES.map(s => s.key);
+    return selected.includes(scopeKey);
+  }
+
+  toggleRequestScope(reqId: string, scopeKey: string): void {
+    const current = this.scopeSelections()[reqId] ?? ACCESS_SCOPES.map(s => s.key);
+    const updated = current.includes(scopeKey)
+      ? current.filter(s => s !== scopeKey)
+      : [...current, scopeKey];
+    this.scopeSelections.update(prev => ({ ...prev, [reqId]: updated }));
   }
 
   reject(id: string): void {

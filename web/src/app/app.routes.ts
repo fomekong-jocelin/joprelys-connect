@@ -65,6 +65,13 @@ export const routes: Routes = [
     data: { expectedRoles: ['ADMIN_CLINIQUE'] },
   },
   {
+    path: 'clinic/duplicates',
+    loadComponent: () => import('./clinic/duplicates/duplicates-page.component').then((module) => module.DuplicatesPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['ADMIN_CLINIQUE'] },
+  },
+
+  {
     path: 'clinic/consultation/:visitId',
     loadComponent: () => import('./consultation/consultation.component').then(m => m.ConsultationComponent),
     canActivate: [roleGuard],

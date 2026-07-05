@@ -46,7 +46,7 @@ public class PrescriptionController {
 				consultationRepository.findPatientIdByConsultationId(id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Consultation introuvable."))
 		);
-		patientService.validateAccess(patientId, "prescriptions");
+		patientService.validateAccessForSubResource(patientId, "prescriptions", "Consultation introuvable.");
 		var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
 		UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
 		try {
@@ -64,7 +64,7 @@ public class PrescriptionController {
 				consultationRepository.findPatientIdByConsultationId(id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Consultation introuvable."))
 		);
-		patientService.validateAccess(patientId, "prescriptions");
+		patientService.validateAccessForSubResource(patientId, "prescriptions", "Consultation introuvable.");
 		var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
 		UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
 		try {
@@ -88,7 +88,7 @@ public class PrescriptionController {
 				prescriptionRepository.findPatientIdByPrescriptionId(id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ordonnance introuvable."))
 		);
-		patientService.validateAccess(patientId, "prescriptions");
+		patientService.validateAccessForSubResource(patientId, "prescriptions", "Ordonnance introuvable.");
 		var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
 		UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
 		try {
