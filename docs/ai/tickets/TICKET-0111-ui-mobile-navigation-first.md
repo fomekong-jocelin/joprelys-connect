@@ -97,6 +97,10 @@ Rendre l'application mobile-first et intuitive sur les petits écrans (smartphon
   - Réduction du padding interne des composants de cartes `.ui-card` sur mobile de `p-6` (24px) à `p-4` (16px) pour éviter l'effet "vide" sur les côtés.
   - Réorganisation des boutons d'actions principales du Dossier Patient (`Retour`, `Synthèse PDF`, `Ouvrir une visite`/`Démarrer la consultation`) sur mobile : ils s'empilent désormais verticalement et s'étirent sur toute la largeur (`flex flex-col items-stretch`) au lieu d'être compressés côte à côte.
   - Réduction du padding interne des panneaux médicaux de la fiche patient (`Allergies`, `Antécédents`, `Vaccinations`) de `p-5` à `p-4 md:p-5`.
+- **Phase 3 : Résolution du wrap DPU et du bouton Actualiser sur mobile (Demande complémentaire)** :
+  - Ajustement des affichages du numéro DPU dans `patient-list.component.html` et `patient-detail.component.ts` avec `whitespace-nowrap`, `font-mono` et `text-xs` pour empêcher le retour à la ligne inesthétique sur petit écran.
+  - Découpage en blocs flexibles avec gestion de flex-wrap pour les informations secondaires de la fiche d'en-tête patient.
+  - Réorganisation du bloc d'en-tête de la file d'attente sur le tableau de bord (`dashboard.component.html`) pour placer le bouton "Actualiser" directement à côté du titre sur mobile, évitant ainsi son tassement en bout de ligne.
 
 ## 9. Suivi d'exécution
 
@@ -104,6 +108,7 @@ Rendre l'application mobile-first et intuitive sur les petits écrans (smartphon
 |---|---|---:|---:|---:|---|---|
 | 2026-07-05 | Antigravity | 0.15j | 100% | Aucun | Aucun | Implémentation et tests complets validés |
 | 2026-07-05 | Antigravity | 0.05j | 100% | Aucun | Aucun | Phase 2 : Optimisation des paddings et disposition des boutons sur mobile |
+| 2026-07-05 | Antigravity | 0.05j | 100% | Aucun | Aucun | Phase 3 : Résolution du wrap DPU et du bouton Actualiser sur mobile |
 
 ## 10. Tests et vérifications
 

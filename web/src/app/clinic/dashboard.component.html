@@ -178,14 +178,19 @@
       <!-- File d'Attente Active (Clinical Queue) -->
       @if (isClinicalRole()) {
         <div class="mt-10 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
-          <div class="flex items-center justify-between border-b pb-4 mb-6" style="border-color: var(--border-color)">
-            <div>
-              <h2 class="font-display font-bold text-xl text-brand-night dark:text-white">File d'Attente Active</h2>
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4 mb-6" style="border-color: var(--border-color)">
+            <div class="w-full">
+              <div class="flex items-center justify-between sm:justify-start gap-4">
+                <h2 class="font-display font-bold text-xl text-brand-night dark:text-white">File d'Attente Active</h2>
+                <app-ui-button variant="secondary" (pressed)="loadQueue()" class="sm:hidden text-xs">
+                  Actualiser
+                </app-ui-button>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 pr-0 sm:pr-8">
                 La file se remplit après l'ouverture d'une visite depuis le dossier patient. Les constantes se saisissent ici, avant la consultation.
               </p>
             </div>
-            <app-ui-button variant="secondary" (pressed)="loadQueue()">
+            <app-ui-button variant="secondary" (pressed)="loadQueue()" class="hidden sm:inline-block">
               Actualiser
             </app-ui-button>
           </div>

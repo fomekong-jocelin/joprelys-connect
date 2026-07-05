@@ -6,21 +6,21 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-05 (responsivité mobile & paddings TICKET-0111) |
+| Dernière mise à jour | 2026-07-05 (responsivité mobile, paddings, DPU & actualiser TICKET-0111) |
 | Responsable mise à jour | Antigravity |
 | État global | Sprint 0009 — Audit complet des modules et interopérabilité HL7 FHIR |
 | Risques majeurs | Aucun |
 | Prochaine priorité | Validation finale et préparation livraison |
 | Sprint courant | SPRINT-0009 |
-
+| | |
 | Capacité sprint | 15.0j |
-| Charge engagée | 7.35j (Est. Senior) |
+| Charge engagée | 7.40j (Est. Senior) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
-|---|---|---|---|---|---|---|---:|---|---:|---:|---:|---|---|---|---:|---|---|---|
+|---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
 | TICKET-0001 | GOV | Gouvernance | Mettre en place la documentation IA centralisée | Full-stack | DONE | P0 | 3 | Senior | 0.5j | 0.75j | 1j | Gemini | Lead | SPRINT-0001 | 0.5j | Adapter les tests et créer le backlog | Faible | 2026-07-01 |
 | TICKET-0002 | QUAL | Task | Appliquer la checklist de review aux futures PR | Full-stack | READY | P0 | 2 | Intermédiaire | 0.5j | 0.75j | 1j | Lead Developer | Gemini | SPRINT-0006 | 0j | Appliquer la checklist aux PR | Faible | 2026-07-03 |
 | TICKET-AUDIT-MODULES-COMPARISON | QUAL | Gouvernance | Audit et analyse d'écart des modules par rapport au CDC | Full-stack | DONE | P1 | 2 | Tech Lead | 0.2j | 0.3j | 0.5j | Antigravity | Lead | SPRINT-0009 | 0.15j | Aucun (Rapport d'audit rédigé) | Faible | 2026-07-05 |
@@ -33,7 +33,7 @@
 | TICKET-0108 | UI_UX | Task | Alignement esthétique des inputs, checkboxes, radios, et selects | Frontend | DONE | P1 | 2 | Senior | 0.2j | 0.3j | 0.5j | Antigravity | Lead Developer | SPRINT-0009 | 0.2j | Aucun (harmonisation complète et compilation OK) | Faible | 2026-07-05 |
 | TICKET-0109 | QUAL | Bug | Connexion Unifiée, Sélecteur de langue & LazyInit Bug | Full-stack | DONE | P0 | 2 | Intermédiaire | 0.2j | 0.3j | 0.5j | Antigravity | Lead | SPRINT-0003 | 0.25j | Aucun | Faible | 2026-07-02 |
 | TICKET-0110 | UI_UX | Task | Conformité Patient et DPU (Vaccinations, Groupe Sanguin, Email, Doublons) | Full-stack | DONE | P1 | 3 | Senior | 0.3j | 0.5j | 0.8j | Antigravity | Lead Developer | SPRINT-0009 | 0.35j | Aucun (implémentation et tests complets) | Faible | 2026-07-05 |
-| TICKET-0111 | UI_UX | Task | Résolution de la navigation et responsivité mobile (Mobile First App-like) | Frontend | DONE | P0 | 2 | Senior | 0.2j | 0.3j | 0.5j | Antigravity | Lead Developer | SPRINT-0009 | 0.2j | Aucun (Hamburger, Drawer, Backdrop, factorisation menu, suppression double padding, reduction padding container/carte, boutons empiles) | Faible | 2026-07-05 |
+| TICKET-0111 | UI_UX | Task | Résolution de la navigation et responsivité mobile (Mobile First App-like) | Frontend | DONE | P0 | 2 | Senior | 0.25j | 0.3j | 0.5j | Antigravity | Lead Developer | SPRINT-0009 | 0.25j | Aucun (Hamburger, Drawer, Backdrop, factorisation menu, suppression double padding, paddings container/carte/panneaux, boutons empiles, wrap DPU, actualiser mobile) | Faible | 2026-07-05 |
 | EPIC-0001 | AUTH | Epic | Authentification & Gestion des Rôles | Full-stack | BACKLOG | P0 | 11 | Senior | 2.5j | 3.4j | 5.3j | À assigner | Lead | À planifier | 0j | Stories initiales rédigées | Moyen | 2026-07-02 |
 | STORY-0101 | AUTH | User Story | Connexion & Déconnexion Sécurisée | Full-stack | DONE | P0 | 3 | Intermédiaire | 0.5j | 0.65j | 1.1j | Codex | Lead | SPRINT-0002 | 0.5j | Aucun (tests validés avec succès) | Moyen | 2026-07-03 |
 | STORY-0102 | AUTH | User Story | Contrôle d'Accès Basé sur les Rôles (RBAC) | Full-stack | DONE | P0 | 3 | Senior | 0.4j | 0.65j | 1.1j | Gemini | Lead | SPRINT-0002 | 0.4j | Aucun (tests et specs au vert) | Moyen | 2026-07-03 |

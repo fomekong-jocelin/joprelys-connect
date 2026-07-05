@@ -21,6 +21,9 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
     - Réduction du padding interne des cartes `.ui-card` sur mobile de `p-6` à `p-4` pour éviter le vide latéral.
     - Passage des boutons d'actions principales du Dossier Patient en disposition verticale étirée (`flex-col items-stretch`) sur mobile pour supprimer la compression horizontale.
     - Réduction de la marge interne des panneaux médicaux de la fiche patient (`p-5` à `p-4 md:p-5`).
+  - **Phase 3 : Résolution du wrap DPU et du bouton Actualiser sur mobile** :
+    - Remplacement de l'affichage standard du DPU sur mobile par un format `text-xs font-mono whitespace-nowrap` pour empêcher les retours à la ligne indésirables.
+    - Réorganisation de l'en-tête de la file d'attente sur le tableau de bord pour placer le bouton "Actualiser" sur la même ligne que le titre sur mobile, déchargeant ainsi la description en dessous.
 
 - **Module API Joprelys Connect — Sous-tâches 3, 4 & 5 (TICKET-0016)** :
   - `RateLimitingFilter` — filtre HTTP avec bucket token simplifié par IP et par utilisateur. Configurable via `application.yml` (`joprelys.rate-limiting.enabled`, `max-requests-per-window`, `window-seconds`). Désactivé en profil `test`.

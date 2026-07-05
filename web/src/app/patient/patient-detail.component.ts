@@ -57,8 +57,8 @@ import { CardComponent } from '../shared/ui/card.component';
                 <h3 class="font-display font-black text-xl text-slate-800 dark:text-white">
                   Consentement d'accès requis
                 </h3>
-                <p class="text-xs text-slate-400 mt-1">
-                  DPU : <span class="font-mono font-bold text-slate-600 dark:text-slate-400">{{ consentPatient.globalPatientNumber }}</span>
+                <p class="text-xs text-slate-400 mt-1 whitespace-nowrap">
+                  DPU : <span class="font-mono font-bold text-indigo-500 dark:text-indigo-400">{{ consentPatient.globalPatientNumber }}</span>
                 </p>
                 <p class="text-sm text-[var(--text-secondary)] mt-4 leading-relaxed">
                   Le patient <strong>{{ consentPatient.fullName }}</strong> n'a pas accordé d'accès DPU actif pour votre clinique.
@@ -112,9 +112,10 @@ import { CardComponent } from '../shared/ui/card.component';
                       {{ p.status }}
                     </span>
                   </div>
-                  <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                    DPU: <span class="font-mono font-bold text-slate-600 dark:text-slate-400">{{ p.globalPatientNumber }}</span> 
-                    | Etablissement: <span class="font-mono text-slate-600 dark:text-slate-400">{{ p.localPatientNumber }}</span>
+                  <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 flex flex-wrap gap-x-2 gap-y-1">
+                    <span class="whitespace-nowrap">DPU: <strong class="font-mono font-extrabold text-indigo-500 dark:text-indigo-400">{{ p.globalPatientNumber }}</strong></span>
+                    <span class="text-slate-300 dark:text-slate-700 hidden sm:inline">|</span>
+                    <span class="whitespace-nowrap">Etablissement: <strong class="font-mono font-bold text-slate-600 dark:text-slate-400">{{ p.localPatientNumber }}</strong></span>
                   </p>
                 </div>
                 
