@@ -127,13 +127,12 @@ import { Hospitalization, HospitalizationNote } from './patient.models';
                 </div>
 
                 @if (hosp.pdfFilePath) {
-                  <a
-                    [href]="getDownloadUrl(hosp.id)"
-                    target="_blank"
+                  <button
+                    (click)="downloadDischargePdf(hosp)"
                     class="px-2.5 py-1 text-[11px] bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-sm transition-colors flex items-center gap-1 cursor-pointer"
                   >
                     📄 {{ t('patients.hospitalization.downloadPdf') }}
-                  </a>
+                  </button>
                 }
               </div>
             }
@@ -360,7 +359,22 @@ export class PatientHospitalizationComponent implements OnInit {
     });
   }
 
-  getDownloadUrl(id: string): string {
-    return this.patientApi.getDischargePdfUrl(id);
+  downloadDischargePdf(hosp: Hospitalization): void {
+    this.patientApi.downloadDischargePdf(hosp.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `fiche-sortie-${hosp.id}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Error downloading pdf', err);
+        alert('Erreur lors du téléchargement du PDF');
+      }
+    });
   }
 }

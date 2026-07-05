@@ -98,4 +98,9 @@ export class PatientApiService {
   getDischargePdfUrl(id: string): string {
     return `/api/hospitalizations/${id}/pdf`;
   }
+
+  downloadDischargePdf(id: string): Observable<Blob> {
+    return this.http.get(`/api/hospitalizations/${id}/pdf`, { responseType: 'blob' });
+  }
 }
+

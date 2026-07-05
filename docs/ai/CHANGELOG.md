@@ -11,6 +11,11 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **Interopérabilité HL7 FHIR - Mapping (STORY-1701)** : DTOs FHIR minimaux (`FhirPatientDto`, `FhirEncounterDto`, `FhirObservationDto` et leurs sous-structures) et mappers associés (`FhirPatientMapper`, `FhirEncounterMapper`, `FhirObservationMapper`) permettant de projeter à la volée les entités JPA existantes (`PatientEntity`, `VisitEntity`, `VitalsEntity`) au format de ressources standardisé HL7 FHIR R4. Ajout de tests unitaires couvrant l'ensemble de la logique de conversion et de validation des formats.
 - **Interopérabilité HL7 FHIR - Endpoints REST (STORY-1702)** : Contrôleur `FhirController` et service `FhirService` exposant les endpoints REST sécurisés `GET /fhir/Patient/{id}`, `GET /fhir/Encounter/{id}` et `GET /fhir/Observation?patient={patientId}`. Application de l'isolation multi-tenant stricte, de la sécurisation par rôles Spring Security (MEDECIN, INFIRMIER, BIOLOGISTE), de l'audit log d'accès `READ_FHIR_RESOURCE` et d'une suite de tests d'intégration MockMvc complète.
 
+### Fixed
+
+- **Téléchargement PDF de Sortie (BUG)** : Résolution de l'erreur 401 Unauthorized lors du téléchargement de la fiche de sortie d'hospitalisation en remplaçant le lien d'accès direct `<a>` par un téléchargement Angular via `HttpClient` (permettant d'injecter automatiquement l'en-tête de jeton d'authentification Bearer JWT).
+
+
 
 ## [0.9.0] - 2026-07-04
 
