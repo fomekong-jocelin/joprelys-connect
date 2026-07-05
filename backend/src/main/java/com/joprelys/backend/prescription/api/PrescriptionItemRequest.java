@@ -22,5 +22,21 @@ public record PrescriptionItemRequest(
 		String quantity,
 
 		@Size(max = 2000)
-		String instructions
-) {}
+		String instructions,
+
+		@Size(max = 100)
+		String form,
+
+		@Size(max = 100)
+		String route,
+
+		@Size(max = 100)
+		String frequency,
+
+		Boolean substitutionAllowed
+) {
+	// Constructeur secondaire pour compatibilité ascendante
+	public PrescriptionItemRequest(String drugName, String dosage, String posology, String duration, String quantity, String instructions) {
+		this(drugName, dosage, posology, duration, quantity, instructions, null, null, null, true);
+	}
+}

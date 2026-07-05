@@ -34,7 +34,7 @@ public class PrescriptionEntity {
 	private String pinCode;
 
 	@Column(name = "status", nullable = false, length = 20)
-	private String status = "ACTIVE";
+	private String status = "DRAFT";
 
 	@Column(name = "expires_at")
 	private Instant expiresAt;
@@ -44,6 +44,15 @@ public class PrescriptionEntity {
 
 	@Column(name = "transmitted_at")
 	private Instant transmittedAt;
+
+	@Column(name = "issued_at")
+	private Instant issuedAt;
+
+	@Column(name = "visit_id")
+	private UUID visitId;
+
+	@Column(name = "document_id")
+	private UUID documentId;
 
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
@@ -56,6 +65,9 @@ public class PrescriptionEntity {
 	public PrescriptionEntity(ConsultationEntity consultation) {
 		this.id = UUID.randomUUID();
 		this.consultation = consultation;
+		if (consultation != null && consultation.getVisit() != null) {
+			this.visitId = consultation.getVisit().getId();
+		}
 	}
 
 	@PrePersist
@@ -84,6 +96,12 @@ public class PrescriptionEntity {
 	public void setTransmissionStatus(String transmissionStatus) { this.transmissionStatus = transmissionStatus; }
 	public Instant getTransmittedAt() { return transmittedAt; }
 	public void setTransmittedAt(Instant transmittedAt) { this.transmittedAt = transmittedAt; }
+	public Instant getIssuedAt() { return issuedAt; }
+	public void setIssuedAt(Instant issuedAt) { this.issuedAt = issuedAt; }
+	public UUID getVisitId() { return visitId; }
+	public void setVisitId(UUID visitId) { this.visitId = visitId; }
+	public UUID getDocumentId() { return documentId; }
+	public void setDocumentId(UUID documentId) { this.documentId = documentId; }
 	public Instant getCreatedAt() { return createdAt; }
 	public Instant getUpdatedAt() { return updatedAt; }
 }

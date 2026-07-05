@@ -1,6 +1,7 @@
 package com.joprelys.backend.visit.application;
 
 import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationEntity;
+import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionEntity;
 import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionItemEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -673,6 +675,155 @@ public class PdfGeneratorService {
             document.close();
         } catch (DocumentException | IOException e) {
             throw new RuntimeException("Failed to generate patient summary PDF", e);
+        }
+
+        return baos.toByteArray();
+    }
+
+    public byte[] generatePrescriptionPdf(
+            VisitEntity visit,
+            ConsultationEntity consultation,
+            PrescriptionEntity prescription,
+            String clinicName,
+            String clinicAddress,
+            String clinicPhone,
+            String doctorName,
+            byte[] qrCodePngBytes) {
+
+        Document document = new Document(PageSize.A4, 36, 36, 36, 36);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        try {
+            PdfWriter.getInstance(document, baos);
+            document.open();
+
+            // Fonts definitions
+            Font fontTitle = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, Color.BLACK);
+            Font fontSectionHeader = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.BLACK);
+            Font fontBodyBold = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.BLACK);
+            Font fontBody = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.BLACK);
+            Font fontMuted = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.DARK_GRAY);
+            Font fontTableHead = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, Color.BLACK);
+            Font fontTableCell = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.BLACK);
+
+            // 1. En-tête avec Clinique à gauche et QR code à droite (via PdfPTable)
+            PdfPTable headerTable = new PdfPTable(2);
+            headerTable.setWidthPercentage(100f);
+            headerTable.setWidths(new float[]{70f, 30f});
+
+            PdfPCell leftCell = new PdfPCell();
+            leftCell.setBorder(Rectangle.NO_BORDER);
+            leftCell.addElement(new Paragraph(clinicName, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.BLACK)));
+            leftCell.addElement(new Paragraph(clinicAddress != null ? clinicAddress : "", fontMuted));
+            leftCell.addElement(new Paragraph("Tél : " + (clinicPhone != null ? clinicPhone : ""), fontMuted));
+
+            PdfPCell rightCell = new PdfPCell();
+            rightCell.setBorder(Rectangle.NO_BORDER);
+            rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            if (qrCodePngBytes != null) {
+                Image qrCodeImg = Image.getInstance(qrCodePngBytes);
+                qrCodeImg.scaleAbsolute(70f, 70f);
+                qrCodeImg.setAlignment(Element.ALIGN_RIGHT);
+                rightCell.addElement(qrCodeImg);
+            }
+
+            headerTable.addCell(leftCell);
+            headerTable.addCell(rightCell);
+            document.add(headerTable);
+
+            // Ligne de séparation
+            Paragraph separator = new Paragraph("______________________________________________________________________________",
+                    FontFactory.getFont(FontFactory.HELVETICA, 10, Color.LIGHT_GRAY));
+            separator.setAlignment(Element.ALIGN_CENTER);
+            document.add(separator);
+            document.add(new Paragraph(" "));
+
+            // 2. Titre du document
+            Paragraph title = new Paragraph("ORDONNANCE MÉDICALE", fontTitle);
+            title.setAlignment(Element.ALIGN_CENTER);
+            document.add(title);
+            document.add(new Paragraph(" "));
+
+            // 3. Informations Patient & Ordonnance (via PdfPTable)
+            PdfPTable infoTable = new PdfPTable(2);
+            infoTable.setWidthPercentage(100f);
+            infoTable.setWidths(new float[]{50f, 50f});
+
+            PdfPCell patientCell = new PdfPCell();
+            patientCell.setBorder(Rectangle.BOX);
+            patientCell.setBorderWidth(0.5f);
+            patientCell.setPadding(8f);
+            patientCell.addElement(new Paragraph("PATIENT", fontSectionHeader));
+            patientCell.addElement(new Paragraph("Nom complet : " + (visit != null && visit.getPatient() != null ? visit.getPatient().getFullName() : "Inconnu"), fontBodyBold));
+            patientCell.addElement(new Paragraph("DPU : " + (visit != null && visit.getPatient() != null ? visit.getPatient().getGlobalPatientNumber() : "-"), fontBody));
+            if (visit != null && visit.getPatient() != null && visit.getPatient().getBirthDate() != null) {
+                patientCell.addElement(new Paragraph("Date de naissance : " + visit.getPatient().getBirthDate().toString(), fontBody));
+            }
+
+            PdfPCell prescCell = new PdfPCell();
+            prescCell.setBorder(Rectangle.BOX);
+            prescCell.setBorderWidth(0.5f);
+            prescCell.setPadding(8f);
+            prescCell.addElement(new Paragraph("PRESCRIPTION", fontSectionHeader));
+            prescCell.addElement(new Paragraph("N° Ordonnance : " + (prescription.getPrescriptionNumber() != null ? prescription.getPrescriptionNumber() : "-"), fontBodyBold));
+            prescCell.addElement(new Paragraph("Date : " + (prescription.getIssuedAt() != null ? DATE_FORMATTER.format(prescription.getIssuedAt()) : DATE_FORMATTER.format(Instant.now())), fontBody));
+            prescCell.addElement(new Paragraph("Médecin prescripteur : " + (doctorName != null ? doctorName : "Médecin clinicien"), fontBody));
+            if (prescription.getExpiresAt() != null) {
+                prescCell.addElement(new Paragraph("Expire le : " + DATE_FORMATTER.format(prescription.getExpiresAt()), fontBodyBold));
+            }
+
+            infoTable.addCell(patientCell);
+            infoTable.addCell(prescCell);
+            document.add(infoTable);
+            document.add(new Paragraph(" "));
+
+            // 4. Liste des médicaments prescrits (Tableau)
+            Paragraph sectItems = new Paragraph("Médicaments prescrits", fontSectionHeader);
+            document.add(sectItems);
+            document.add(new Paragraph(" "));
+
+            PdfPTable itemsTable = new PdfPTable(7);
+            itemsTable.setWidthPercentage(100f);
+            itemsTable.setWidths(new float[]{25f, 12f, 12f, 15f, 10f, 10f, 16f});
+            itemsTable.getDefaultCell().setBorder(Rectangle.BOX);
+            itemsTable.getDefaultCell().setBorderWidth(0.5f);
+            itemsTable.getDefaultCell().setPadding(5f);
+
+            itemsTable.addCell(new Phrase("Médicament", fontTableHead));
+            itemsTable.addCell(new Phrase("Dosage", fontTableHead));
+            itemsTable.addCell(new Phrase("Forme", fontTableHead));
+            itemsTable.addCell(new Phrase("Posologie", fontTableHead));
+            itemsTable.addCell(new Phrase("Durée", fontTableHead));
+            itemsTable.addCell(new Phrase("Qté", fontTableHead));
+            itemsTable.addCell(new Phrase("Substitution", fontTableHead));
+
+            for (PrescriptionItemEntity item : prescription.getItems()) {
+                itemsTable.addCell(new Phrase(item.getDrugName(), fontTableCell));
+                itemsTable.addCell(new Phrase(item.getDosage(), fontTableCell));
+                itemsTable.addCell(new Phrase(item.getForm() != null ? item.getForm() : "-", fontTableCell));
+                itemsTable.addCell(new Phrase(item.getPosology() != null ? item.getPosology() : "-", fontTableCell));
+                itemsTable.addCell(new Phrase(item.getDuration() != null ? item.getDuration() : "-", fontTableCell));
+                itemsTable.addCell(new Phrase(item.getQuantity() != null ? item.getQuantity() : "-", fontTableCell));
+                itemsTable.addCell(new Phrase(item.isSubstitutionAllowed() ? "Autorisée" : "Interdite", fontTableCell));
+            }
+            document.add(itemsTable);
+            document.add(new Paragraph(" "));
+
+            // Instructions additionnelles
+            for (PrescriptionItemEntity item : prescription.getItems()) {
+                if (item.getInstructions() != null && !item.getInstructions().isBlank()) {
+                    Paragraph inst = new Paragraph("Instructions pour " + item.getDrugName() + " : " + item.getInstructions(), fontMuted);
+                    document.add(inst);
+                }
+            }
+
+            document.add(new Paragraph(" "));
+            Paragraph pinText = new Paragraph("Code de vérification sécurisé (PIN) : " + (prescription.getPinCode() != null ? prescription.getPinCode() : "-"), fontBodyBold);
+            document.add(pinText);
+
+            document.close();
+        } catch (DocumentException | IOException e) {
+            throw new RuntimeException("Failed to generate prescription PDF", e);
         }
 
         return baos.toByteArray();

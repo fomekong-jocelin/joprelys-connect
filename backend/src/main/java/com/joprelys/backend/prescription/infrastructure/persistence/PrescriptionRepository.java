@@ -30,4 +30,10 @@ public interface PrescriptionRepository extends JpaRepository<PrescriptionEntity
 
 	@Query("SELECT p FROM PrescriptionEntity p LEFT JOIN FETCH p.items WHERE p.consultation.visit.patient.id = :patientId AND p.status = 'ACTIVE' ORDER BY p.createdAt DESC")
 	java.util.List<PrescriptionEntity> findActivePrescriptionsByPatientId(@Param("patientId") java.util.UUID patientId);
+
+	@Query("SELECT p FROM PrescriptionEntity p JOIN FETCH p.consultation LEFT JOIN FETCH p.items WHERE p.id = :id")
+	Optional<PrescriptionEntity> findByIdWithConsultationAndItems(@Param("id") UUID id);
+
+	@Query("SELECT p FROM PrescriptionEntity p WHERE p.status = 'ACTIVE'")
+	java.util.List<PrescriptionEntity> findAllActivePrescriptions();
 }

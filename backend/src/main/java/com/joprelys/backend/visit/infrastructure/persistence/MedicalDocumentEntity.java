@@ -5,7 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -22,8 +22,8 @@ public class MedicalDocumentEntity {
     @Id
     private UUID id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "visit_id", nullable = false, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "visit_id", nullable = false)
     private VisitEntity visit;
 
     @Column(name = "document_number", nullable = false, unique = true, length = 100)
@@ -34,6 +34,9 @@ public class MedicalDocumentEntity {
 
     @Column(name = "status", nullable = false, length = 50)
     private String status;
+
+    @Column(name = "document_type", nullable = false, length = 50)
+    private String documentType = "SYNTHESE";
 
     @TenantId
     @Column(name = "organization_id", nullable = false)
@@ -64,8 +67,16 @@ public class MedicalDocumentEntity {
         this.documentNumber = documentNumber;
         this.filePath = filePath;
         this.status = "VALID";
+        this.documentType = "SYNTHESE";
         if (visit != null) {
             this.organizationId = visit.getOrganizationId();
+        }
+    }
+
+    public MedicalDocumentEntity(VisitEntity visit, String documentNumber, String filePath, String documentType) {
+        this(visit, documentNumber, filePath);
+        if (documentType != null) {
+            this.documentType = documentType;
         }
     }
 
@@ -115,6 +126,14 @@ public class MedicalDocumentEntity {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getDocumentType() {
+        return documentType;
+    }
+
+    public void setDocumentType(String documentType) {
+        this.documentType = documentType;
     }
 
     public UUID getOrganizationId() {

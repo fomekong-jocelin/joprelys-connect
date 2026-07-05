@@ -6,7 +6,10 @@ import com.joprelys.backend.prescription.api.SavePrescriptionRequest;
 import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionEntity;
 import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionItemEntity;
 import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository;
+import com.joprelys.backend.visit.application.DocumentService;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -14,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,6 +32,7 @@ public class PrescriptionService {
 	private final com.joprelys.backend.audit.application.AuditService auditService;
 	private final UserAccountRepository userAccountRepository;
 	private final PatientRepository patientRepository;
+	private final DocumentService documentService;
 
 	public PrescriptionService(PrescriptionRepository prescriptionRepository,
 			ConsultationRepository consultationRepository,
@@ -35,7 +40,8 @@ public class PrescriptionService {
 			AlloPharmaClient alloPharmaClient,
 			com.joprelys.backend.audit.application.AuditService auditService,
 			UserAccountRepository userAccountRepository,
-			PatientRepository patientRepository) {
+			PatientRepository patientRepository,
+			@Lazy DocumentService documentService) {
 		this.prescriptionRepository = prescriptionRepository;
 		this.consultationRepository = consultationRepository;
 		this.prescriptionNumberGenerator = prescriptionNumberGenerator;
@@ -43,6 +49,7 @@ public class PrescriptionService {
 		this.auditService = auditService;
 		this.userAccountRepository = userAccountRepository;
 		this.patientRepository = patientRepository;
+		this.documentService = documentService;
 	}
 
 	@Transactional
@@ -55,10 +62,15 @@ public class PrescriptionService {
 					PrescriptionEntity newPresc = new PrescriptionEntity(consultation);
 					newPresc.setPrescriptionNumber(prescriptionNumberGenerator.generateNextPrescriptionNumber());
 					newPresc.setPinCode(generateRandomPin());
-					newPresc.setExpiresAt(java.time.Instant.now().plus(90, java.time.temporal.ChronoUnit.DAYS));
-					newPresc.setStatus("ACTIVE");
+					newPresc.setExpiresAt(Instant.now().plus(90, java.time.temporal.ChronoUnit.DAYS));
+					newPresc.setStatus("DRAFT");
 					return newPresc;
 				});
+
+		// Si l'ordonnance existe déjà, interdire sa modification si elle n'est pas en DRAFT
+		if (prescription.getId() != null && !"DRAFT".equals(prescription.getStatus())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Une ordonnance validée ou active ne peut plus être modifiée.");
+		}
 
 		// Remplacer les items (orphanRemoval)
 		prescription.getItems().clear();
@@ -68,7 +80,8 @@ public class PrescriptionService {
 			prescription.getItems().add(new PrescriptionItemEntity(
 					prescription, req.drugName(), req.dosage(),
 					req.posology(), req.duration(), req.quantity(),
-					req.instructions(), i
+					req.instructions(), i,
+					req.form(), req.route(), req.frequency(), req.substitutionAllowed()
 			));
 		}
 
@@ -84,8 +97,69 @@ public class PrescriptionService {
 	}
 
 	@Transactional
+	public PrescriptionEntity finalizePrescription(UUID prescriptionId, UUID actorUserId) {
+		PrescriptionEntity prescription = prescriptionRepository.findByIdWithConsultationAndItems(prescriptionId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ordonnance introuvable."));
+
+		if (!"DRAFT".equals(prescription.getStatus())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seule une ordonnance au statut DRAFT peut être finalisée.");
+		}
+
+		prescription.setStatus("ACTIVE");
+		prescription.setIssuedAt(Instant.now());
+		prescription = prescriptionRepository.save(prescription);
+
+		// Générer le document PDF associé
+		documentService.generatePrescriptionDocument(prescription.getId(), actorUserId);
+
+		return prescription;
+	}
+
+	@Transactional
+	public PrescriptionEntity cancelPrescription(UUID prescriptionId, UUID actorUserId) {
+		PrescriptionEntity prescription = prescriptionRepository.findByIdWithConsultationAndItems(prescriptionId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ordonnance introuvable."));
+
+		prescription.setStatus("CANCELLED");
+		prescription = prescriptionRepository.save(prescription);
+
+		if (prescription.getDocumentId() != null) {
+			try {
+				documentService.cancelDocument(prescription.getDocumentId(), "Prescription annulée par le médecin.", actorUserId);
+			} catch (Exception e) {
+				// Ignorer si le document est déjà annulé/révoqué
+			}
+		}
+
+		auditService.logSuccess(
+				actorUserId,
+				prescription.getOrganizationId(),
+				prescription.getConsultation().getVisit().getPatient().getId(),
+				"PRESCRIPTION",
+				prescription.getId(),
+				"CANCEL_PRESCRIPTION",
+				"Annulation réussie de l'ordonnance " + prescription.getPrescriptionNumber()
+		);
+
+		return prescription;
+	}
+
+	@Scheduled(cron = "0 0 0 * * ?") // Tous les jours à minuit
+	@Transactional
+	public void expireOutdatedPrescriptions() {
+		List<PrescriptionEntity> activePrescriptions = prescriptionRepository.findAllActivePrescriptions();
+		Instant now = Instant.now();
+		for (PrescriptionEntity prescription : activePrescriptions) {
+			if (prescription.getExpiresAt() != null && prescription.getExpiresAt().isBefore(now)) {
+				prescription.setStatus("EXPIRED");
+				prescriptionRepository.save(prescription);
+			}
+		}
+	}
+
+	@Transactional
 	public PrescriptionEntity transmitPrescription(UUID id, UUID actorUserId, UUID actorOrganizationId, String actorEmail, boolean isPatient) {
-		PrescriptionEntity prescription = prescriptionRepository.findById(id)
+		PrescriptionEntity prescription = prescriptionRepository.findByIdWithConsultationAndItems(id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ordonnance introuvable."));
 
 		// Sécurité : IDOR check pour le patient
@@ -112,7 +186,7 @@ public class PrescriptionService {
 		boolean success = alloPharmaClient.transmit(prescription);
 		if (success) {
 			prescription.setTransmissionStatus("TRANSMITTED");
-			prescription.setTransmittedAt(java.time.Instant.now());
+			prescription.setTransmittedAt(Instant.now());
 			auditService.logSuccess(
 					actorUserId,
 					actorOrganizationId,
@@ -158,12 +232,7 @@ public class PrescriptionService {
 	}
 
 	private String generateRandomPin() {
-		String chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-		java.security.SecureRandom random = new java.security.SecureRandom();
-		StringBuilder sb = new StringBuilder(4);
-		for (int i = 0; i < 4; i++) {
-			sb.append(chars.charAt(random.nextInt(chars.length())));
-		}
-		return sb.toString();
+		int pin = (int) (Math.random() * 9000) + 1000;
+		return String.valueOf(pin);
 	}
 }

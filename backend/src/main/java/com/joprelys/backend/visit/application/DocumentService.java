@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -311,6 +312,88 @@ public class DocumentService {
                 doc.getRevokedAt(),
                 doc.getRevokedByUserId(),
                 doc.getRevocationReason());
+    }
+
+    @Transactional
+    public MedicalDocumentEntity generatePrescriptionDocument(UUID prescriptionId, UUID actorUserId) {
+        // 1. Charger la prescription
+        PrescriptionEntity prescription = prescriptionRepository.findById(prescriptionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ordonnance introuvable."));
+
+        // 2. Charger la visite et la consultation
+        ConsultationEntity consultation = prescription.getConsultation();
+        VisitEntity visit = consultation.getVisit();
+
+        // 3. Charger l'organisation
+        OrganizationEntity organization = organizationRepository.findById(visit.getOrganizationId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organisation introuvable."));
+
+        // 4. Charger le médecin prescripteur
+        String doctorName = "Médecin clinicien";
+        if (actorUserId != null) {
+            doctorName = userAccountRepository.findById(actorUserId)
+                    .map(u -> u.getDisplayName())
+                    .orElse("Médecin clinicien");
+        }
+
+        // 5. Générer le numéro de document
+        String documentNumber = documentNumberGenerator.generateNextDocumentNumber();
+
+        // 6. Instancier l'entité temporairement (document_type = ORDONNANCE)
+        MedicalDocumentEntity doc = new MedicalDocumentEntity(visit, documentNumber, "TEMP_PATH", "ORDONNANCE");
+        UUID documentUuid = doc.getId();
+
+        // 7. Générer l'URL de vérification publique et le QR code
+        String verificationUrl = verificationBaseUrl + "/" + documentUuid;
+        byte[] qrCodeBytes = qrCodeGeneratorService.generateQrCode(verificationUrl, 200, 200);
+
+        // 8. Générer le PDF
+        byte[] pdfBytes = pdfGeneratorService.generatePrescriptionPdf(
+                visit,
+                consultation,
+                prescription,
+                organization.getName(),
+                organization.getAddress(),
+                organization.getPhone(),
+                doctorName,
+                qrCodeBytes
+        );
+
+        // 9. Écrire le fichier PDF sur disque
+        try {
+            Path storagePath = Paths.get(storageDir);
+            if (!Files.exists(storagePath)) {
+                Files.createDirectories(storagePath);
+            }
+            Path filePath = storagePath.resolve(documentNumber + ".pdf");
+            Files.write(filePath, pdfBytes);
+
+            // 10. Mettre à jour le chemin réel et sauvegarder l'entité
+            doc.setFilePath(filePath.toAbsolutePath().toString());
+            var savedDoc = medicalDocumentRepository.save(doc);
+
+            // 11. Mettre à jour la prescription avec le documentId et issuedAt
+            prescription.setDocumentId(savedDoc.getId());
+            prescription.setIssuedAt(Instant.now());
+            prescriptionRepository.save(prescription);
+
+            // 12. Log success
+            if (actorUserId != null) {
+                auditService.logSuccess(
+                        actorUserId,
+                        visit.getOrganizationId(),
+                        visit.getPatient().getId(),
+                        "PRESCRIPTION",
+                        prescription.getId(),
+                        "GENERATE_PRESCRIPTION_DOCUMENT",
+                        "Génération réussie de l'ordonnance PDF n° " + documentNumber + " pour la visite " + visit.getId()
+                );
+            }
+
+            return savedDoc;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to save prescription document", e);
+        }
     }
 
     private UserAccountEntity getCurrentUser() {

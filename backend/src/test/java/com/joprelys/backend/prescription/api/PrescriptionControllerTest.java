@@ -2,6 +2,7 @@ package com.joprelys.backend.prescription.api;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -385,5 +386,37 @@ public class PrescriptionControllerTest {
 		mockMvc.perform(post("/api/prescriptions/" + prescription.getId() + "/transmit")
 						.header("Authorization", "Bearer " + tokenMedecinB))
 				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void givenDraftPrescription_whenFinalize_thenSuccessAndGeneratesPdf() throws Exception {
+		TenantContext.setTenantId(orgA.getId());
+		PrescriptionEntity prescription = new PrescriptionEntity(consultationA);
+		prescription.setPrescriptionNumber("TX-DOC-FINALIZE");
+		prescription.setStatus("DRAFT");
+		prescription = prescriptionRepository.save(prescription);
+		TenantContext.clear();
+
+		mockMvc.perform(post("/api/prescriptions/" + prescription.getId() + "/finalize")
+						.header("Authorization", "Bearer " + tokenMedecinA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("ACTIVE"))
+				.andExpect(jsonPath("$.issuedAt").isNotEmpty())
+				.andExpect(jsonPath("$.documentId").isNotEmpty());
+	}
+
+	@Test
+	void givenActivePrescription_whenCancel_thenSuccess() throws Exception {
+		TenantContext.setTenantId(orgA.getId());
+		PrescriptionEntity prescription = new PrescriptionEntity(consultationA);
+		prescription.setPrescriptionNumber("TX-DOC-CANCEL");
+		prescription.setStatus("ACTIVE");
+		prescription = prescriptionRepository.save(prescription);
+		TenantContext.clear();
+
+		mockMvc.perform(patch("/api/prescriptions/" + prescription.getId() + "/cancel")
+						.header("Authorization", "Bearer " + tokenMedecinA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("CANCELLED"));
 	}
 }

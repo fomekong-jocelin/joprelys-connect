@@ -8,7 +8,13 @@ import java.util.UUID;
 
 public interface MedicalDocumentRepository extends JpaRepository<MedicalDocumentEntity, UUID> {
 
-    Optional<MedicalDocumentEntity> findByVisitId(UUID visitId);
+    @Query("SELECT d FROM MedicalDocumentEntity d WHERE d.visit.id = :visitId AND d.documentType = 'SYNTHESE'")
+    Optional<MedicalDocumentEntity> findByVisitId(@Param("visitId") UUID visitId);
+
+    @Query("SELECT d FROM MedicalDocumentEntity d WHERE d.visit.id = :visitId AND d.documentType = 'ORDONNANCE'")
+    Optional<MedicalDocumentEntity> findPrescriptionDocumentByVisitId(@Param("visitId") UUID visitId);
+
+    Optional<MedicalDocumentEntity> findByDocumentNumber(String documentNumber);
 
     /**
      * Charge le document avec sa VisitEntity et le PatientEntity en une seule requête JOIN FETCH.
@@ -18,7 +24,7 @@ public interface MedicalDocumentRepository extends JpaRepository<MedicalDocument
         SELECT d FROM MedicalDocumentEntity d
         JOIN FETCH d.visit v
         JOIN FETCH v.patient
-        WHERE v.id = :visitId
+        WHERE v.id = :visitId AND d.documentType = 'SYNTHESE'
     """)
     Optional<MedicalDocumentEntity> findByVisitIdWithVisitAndPatient(@Param("visitId") UUID visitId);
 

@@ -11,7 +11,11 @@ public record PrescriptionItemResponse(
 		String duration,
 		String quantity,
 		String instructions,
-		int sortOrder
+		int sortOrder,
+		String form,
+		String route,
+		String frequency,
+		boolean substitutionAllowed
 ) {
 	public static PrescriptionItemResponse fromEntity(PrescriptionItemEntity e) {
 		return new PrescriptionItemResponse(
@@ -22,7 +26,11 @@ public record PrescriptionItemResponse(
 				e.getDuration(),
 				e.getQuantity(),
 				e.getInstructions(),
-				e.getSortOrder()
+				e.getSortOrder(),
+				e.getForm(),
+				e.getRoute(),
+				e.getFrequency(),
+				e.isSubstitutionAllowed()
 		);
 	}
 }

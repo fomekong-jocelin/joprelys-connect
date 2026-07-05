@@ -15,6 +15,9 @@ public record PrescriptionResponse(
 		Instant expiresAt,
 		String transmissionStatus,
 		Instant transmittedAt,
+		Instant issuedAt,
+		UUID visitId,
+		UUID documentId,
 		Instant createdAt,
 		Instant updatedAt
 ) {
@@ -29,6 +32,9 @@ public record PrescriptionResponse(
 				e.getExpiresAt(),
 				e.getTransmissionStatus(),
 				e.getTransmittedAt(),
+				e.getIssuedAt(),
+				e.getVisitId(),
+				e.getDocumentId(),
 				e.getCreatedAt(),
 				e.getUpdatedAt()
 		);
