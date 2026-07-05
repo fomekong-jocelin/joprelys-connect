@@ -9,6 +9,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 ### Added
 
 - **Interopérabilité HL7 FHIR - Mapping (STORY-1701)** : DTOs FHIR minimaux (`FhirPatientDto`, `FhirEncounterDto`, `FhirObservationDto` et leurs sous-structures) et mappers associés (`FhirPatientMapper`, `FhirEncounterMapper`, `FhirObservationMapper`) permettant de projeter à la volée les entités JPA existantes (`PatientEntity`, `VisitEntity`, `VitalsEntity`) au format de ressources standardisé HL7 FHIR R4. Ajout de tests unitaires couvrant l'ensemble de la logique de conversion et de validation des formats.
+- **Interopérabilité HL7 FHIR - Endpoints REST (STORY-1702)** : Contrôleur `FhirController` et service `FhirService` exposant les endpoints REST sécurisés `GET /fhir/Patient/{id}`, `GET /fhir/Encounter/{id}` et `GET /fhir/Observation?patient={patientId}`. Application de l'isolation multi-tenant stricte, de la sécurisation par rôles Spring Security (MEDECIN, INFIRMIER, BIOLOGISTE), de l'audit log d'accès `READ_FHIR_RESOURCE` et d'une suite de tests d'intégration MockMvc complète.
+
 
 ## [0.9.0] - 2026-07-04
 

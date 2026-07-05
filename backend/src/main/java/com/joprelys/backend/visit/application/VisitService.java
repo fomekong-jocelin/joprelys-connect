@@ -103,6 +103,13 @@ public class VisitService {
 	}
 
 	@Transactional(readOnly = true)
+	public VisitEntity getVisitGlobally(UUID id) {
+		return visitRepository.findByIdGlobally(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
+	}
+
+
+	@Transactional(readOnly = true)
 	public List<VisitEntity> getActiveVisits() {
 		return visitRepository.findActiveVisits();
 	}

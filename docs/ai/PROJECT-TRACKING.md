@@ -6,15 +6,15 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-04 |
+| Dernière mise à jour | 2026-07-05 |
 | Responsable mise à jour | Antigravity |
-| État global | Démarrage du Sprint 0009 — Implémentation du mapping HL7 FHIR |
+| État global | Sprint 0009 — Implémentation en cours de l'interopérabilité HL7 FHIR |
 | Risques majeurs | Aucun |
-| Prochaine priorité | STORY-1701: Mapping DTOs FHIR |
+| Prochaine priorité | STORY-1703: Documentation OpenAPI FHIR |
 | Sprint courant | SPRINT-0009 |
 
 | Capacité sprint | 15.0j |
-| Charge engagée | 1.0j (Est. Senior) |
+| Charge engagée | 2.0j (Est. Senior) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
@@ -101,7 +101,7 @@
 | TICKET-1603 | GOV | DevOps | Ajout du dépôt remote git | DevOps | DONE | P2 | 1 | Junior | 0.01j | 0.02j | 0.05j | Antigravity | Lead Developer | SPRINT-0008 | 0.02j | Aucun (remote configuré) | Faible | 2026-07-04 |
 | EPIC-0011 | FHIR | Epic | Interopérabilité HL7 FHIR | Full-stack | TODO | P1 | 13 | Senior | 4.0j | 5.4j | 8.8j | À assigner | Lead Developer | SPRINT-0009 | 0j | Cadrage initial rédigé (FUNCTIONAL-SPEC / TECHNICAL-DESIGN) | Moyen | 2026-07-04 |
 | STORY-1701 | FHIR | User Story | Mapping des entités DPU vers les ressources FHIR (Patient, Encounter, Observation) | Backend | DONE | P1 | 5 | Senior | 1.0j | 1.3j | 2.0j | Antigravity | Lead Developer | SPRINT-0009 | 0.2j | Aucun (DTOs, Mappers et tests unitaires validés) | Moyen | 2026-07-04 |
-| STORY-1702 | FHIR | User Story | Endpoints REST FHIR pour les patients et consultations | Backend | TODO | P1 | 5 | Senior | 1.0j | 1.3j | 2.0j | À assigner | Lead Developer | SPRINT-0009 | 0j | Exposer GET /fhir/Patient/{id} et GET /fhir/Encounter/{id} | Moyen | 2026-07-04 |
+| STORY-1702 | FHIR | User Story | Endpoints REST FHIR pour les patients et consultations | Backend | DONE | P1 | 5 | Senior | 1.0j | 1.3j | 2.0j | Antigravity | Lead Developer | SPRINT-0009 | 0.4j | Aucun (endpoints GET /fhir/Patient, Encounter et Observation et tests validés) | Moyen | 2026-07-05 |
 | STORY-1703 | FHIR | User Story | Portail Développeur & Documentation OpenAPI/Swagger | Documentation | TODO | P2 | 3 | Intermédiaire | 0.7j | 1.0j | 1.7j | À assigner | Lead Developer | SPRINT-0009 | 0j | Rédiger OpenAPI FHIR | Faible | 2026-07-04 |
 
 
