@@ -538,7 +538,7 @@ const FR: TranslationDictionary = {
   'duplicates.status.RESOLVED': 'Résolu',
   'duplicates.status.IGNORED': 'Ignoré',
   'duplicates.ignoreBtn': 'Ignorer le doublon',
-  'duplicates.mergeBtn': 'Ouvrir l''assistant de fusion',
+  'duplicates.mergeBtn': 'Ouvrir l\'assistant de fusion',
   'duplicates.mergeTitle': 'Assistant de Fusion de Dossiers Patients',
   'duplicates.mergeDesc': 'Comparez les informations des deux dossiers et choisissez le dossier principal à conserver. Toutes les données associées (visites, ordonnances, hospitalisations, analyses) seront automatiquement rattachées au dossier conservé, et le dossier secondaire sera archivé.',
   'duplicates.keepPrimary': 'Conserver ce dossier (Principal)',
@@ -547,7 +547,7 @@ const FR: TranslationDictionary = {
   'duplicates.patientA': 'Dossier A',
   'duplicates.patientB': 'Dossier B',
   'duplicates.difference': 'Différence',
-  'duplicates.warnDataTransfer': 'Important : La fusion transférera l''ensemble de l''historique médical (consultations, ordonnances, hospitalisations, etc.) vers le dossier principal. Cette action est irréversible.',
+  'duplicates.warnDataTransfer': 'Important : La fusion transférera l\'ensemble de l\'historique médical (consultations, ordonnances, hospitalisations, etc.) vers le dossier principal. Cette action est irréversible.',
   'duplicates.confirmMergeBtn': 'Confirmer la fusion définitive',
 };
 

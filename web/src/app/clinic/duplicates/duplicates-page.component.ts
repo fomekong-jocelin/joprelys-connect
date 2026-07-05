@@ -1,10 +1,8 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
-import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { AlertComponent } from '../../shared/ui/alert.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
 import { CardComponent } from '../../shared/ui/card.component';
-import { EmptyStateComponent } from '../../shared/ui/empty-state.component';
 import { PatientApiService } from '../../patient/patient-api.service';
 import { Patient, PatientDuplicateCandidate } from '../../patient/patient.models';
 import { I18nService } from '../../core/i18n/i18n.service';
@@ -13,11 +11,9 @@ import { I18nService } from '../../core/i18n/i18n.service';
   selector: 'app-duplicates-page',
   standalone: true,
   imports: [
-    AppShellComponent,
     AlertComponent,
     ButtonComponent,
     CardComponent,
-    EmptyStateComponent,
     DatePipe,
     DecimalPipe,
     NgClass
