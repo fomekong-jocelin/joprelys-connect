@@ -29,6 +29,7 @@ public class LabResultService {
 	private final LabOrderRepository labOrderRepository;
 	private final LabResultRepository labResultRepository;
 	private final AuditService auditService;
+	private final com.joprelys.backend.notification.application.NotificationService notificationService;
 
 	@Value("${joprelys.documents.storage-dir:./storage/documents}")
 	private String storageDir;
@@ -36,10 +37,12 @@ public class LabResultService {
 	public LabResultService(
 			LabOrderRepository labOrderRepository,
 			LabResultRepository labResultRepository,
-			AuditService auditService) {
+			AuditService auditService,
+			com.joprelys.backend.notification.application.NotificationService notificationService) {
 		this.labOrderRepository = labOrderRepository;
 		this.labResultRepository = labResultRepository;
 		this.auditService = auditService;
+		this.notificationService = notificationService;
 	}
 
 	@Transactional(readOnly = true)
@@ -127,6 +130,25 @@ public class LabResultService {
 
 		labOrder.setStatus("VALIDATED");
 		labOrderRepository.save(labOrder);
+
+		// Notifier le patient que des résultats sont disponibles
+		boolean hasCritical = request.results().stream()
+				.anyMatch(r -> "CRITICAL".equals(r.interpretation()) || "ABNORMAL".equals(r.interpretation()));
+
+		String notifTitle = hasCritical
+				? "Résultats d'analyses disponibles — Valeur critique"
+				: "Résultats d'analyses disponibles";
+		String notifType = hasCritical ? "EMERGENCY" : "INFO";
+		String notifMessage = hasCritical
+				? "Vos résultats d'analyses sont disponibles. Une ou plusieurs valeurs nécessitent une attention médicale immédiate."
+				: "Vos résultats d'analyses pour la demande " + labOrder.getExamRequestNumber() + " sont disponibles.";
+
+		notificationService.sendNotification(
+				labOrder.getPatient().getId(),
+				notifTitle,
+				notifMessage,
+				notifType
+		);
 
 		auditService.logSuccess(
 				null,

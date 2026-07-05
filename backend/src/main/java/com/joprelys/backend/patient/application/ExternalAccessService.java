@@ -154,6 +154,14 @@ public class ExternalAccessService {
                 "Demande d'accès externe approuvée par le patient."
         );
 
+        // Notifier le médecin demandeur que sa demande a été approuvée
+        notificationService.sendNotification(
+                patientId,
+                "Demande d'accès approuvée",
+                "Le patient a approuvé votre demande d'accès au dossier. Vous disposez maintenant d'un accès temporaire de " + saved.getRequestedDurationHours() + " heures.",
+                "SECURITY"
+        );
+
         return ExternalAccessResponse.fromEntity(saved, getOrganizationName(saved.getRequesterOrganizationId()));
     }
 
@@ -188,6 +196,14 @@ public class ExternalAccessService {
                 saved.getId(),
                 "REJECT_EXTERNAL_ACCESS",
                 "Demande d'accès externe rejetée par le patient."
+        );
+
+        // Notifier le médecin demandeur que sa demande a été rejetée
+        notificationService.sendNotification(
+                patientId,
+                "Demande d'accès rejetée",
+                "Le patient a rejeté votre demande d'accès au dossier.",
+                "SECURITY"
         );
 
         return ExternalAccessResponse.fromEntity(saved, getOrganizationName(saved.getRequesterOrganizationId()));

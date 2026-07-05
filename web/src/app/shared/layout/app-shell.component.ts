@@ -8,6 +8,7 @@ import { ThemeService } from '../../core/theme/theme.service';
 import { AppLogoComponent } from '../ui/app-logo.component';
 import { BreadcrumbComponent } from '../ui/breadcrumb.component';
 import { ActivePatientService } from '../../patient/active-patient.service';
+import { PatientPortalService } from '../../patient/portal/services/patient-portal.service';
 
 @Component({
   selector: 'app-shell',
@@ -195,9 +196,16 @@ import { ActivePatientService } from '../../patient/active-patient.service';
                           </svg>
                         }
                         @case ('notifications') {
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0M3.124 7.5A8.969 8.969 0 015.292 3m13.416 0a8.969 8.969 0 012.168 4.5" />
-                          </svg>
+                          <div class="relative">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0M3.124 7.5A8.969 8.969 0 015.292 3m13.416 0a8.969 8.969 0 012.168 4.5" />
+                            </svg>
+                            @if (unreadNotificationCount() > 0) {
+                              <span class="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white">
+                                {{ unreadNotificationCount() > 9 ? '9+' : unreadNotificationCount() }}
+                              </span>
+                            }
+                          </div>
                         }
                       }
                     </span>
@@ -243,6 +251,10 @@ export class AppShellComponent {
   private readonly activePatientService = inject(ActivePatientService);
 
   readonly activePatient = this.activePatientService.patient;
+
+  private readonly patientPortalService = inject(PatientPortalService);
+
+  readonly unreadNotificationCount = signal<number>(0);
 
   readonly session = this.tokenStorage.session;
   readonly locale = this.i18n.locale;
@@ -336,6 +348,21 @@ export class AppShellComponent {
 
     return items;
   });
+
+  constructor() {
+    // Charger le badge de notifications non lues si le rôle est PATIENT
+    const currentSession = this.session();
+    if (currentSession?.role === 'PATIENT') {
+      this.loadUnreadNotificationCount();
+    }
+  }
+
+  private loadUnreadNotificationCount(): void {
+    this.patientPortalService.getUnreadNotificationCount().subscribe({
+      next: (count) => this.unreadNotificationCount.set(count),
+      error: () => this.unreadNotificationCount.set(0)
+    });
+  }
 
   private resolveInitialSidebarState(): boolean {
     try {

@@ -4,6 +4,8 @@ import com.joprelys.backend.notification.infrastructure.persistence.Notification
 import com.joprelys.backend.notification.infrastructure.persistence.NotificationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +39,28 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public List<NotificationEntity> getPatientNotifications(UUID patientId) {
         return notificationRepository.findByPatientIdOrderByCreatedAtDesc(patientId);
+    }
+
+    @Transactional(readOnly = true)
+    public long getUnreadCount(UUID patientId) {
+        return notificationRepository.countByPatientIdAndStatus(patientId, "NON_LU");
+    }
+
+    @Transactional(readOnly = true)
+    public Page<NotificationEntity> getNotificationsPaginated(UUID patientId, Pageable pageable) {
+        return notificationRepository.findByPatientIdOrderByCreatedAtDesc(patientId, pageable);
+    }
+
+    @Transactional
+    public void deleteNotification(UUID patientId, UUID notificationId) {
+        var notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Notification introuvable."));
+
+        if (!notification.getPatientId().equals(patientId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cette notification ne vous concerne pas.");
+        }
+
+        notificationRepository.delete(notification);
     }
 
     @Transactional

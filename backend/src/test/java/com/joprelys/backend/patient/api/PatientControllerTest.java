@@ -204,6 +204,61 @@ public class PatientControllerTest {
 	}
 
 	@Test
+	void givenAgentA_whenSearchPatientsWithApprovedExternalAccess_thenSeeExternalPatient() throws Exception {
+		String jsonRequestA = """
+				{
+					"fullName": "Alice A",
+					"gender": "FEMININ",
+					"birthDate": "1990-05-15",
+					"phone": "+237699999999",
+					"city": "Douala"
+				}
+				""";
+		mockMvc.perform(post("/api/patients")
+				.header("Authorization", "Bearer " + tokenAgentA)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(jsonRequestA))
+				.andExpect(status().isCreated());
+
+		String jsonRequestB = """
+				{
+					"fullName": "Bob B",
+					"gender": "MASCULIN",
+					"birthDate": "1992-06-20",
+					"phone": "+237688888888",
+					"city": "Yaoundé"
+				}
+				""";
+		String responseStr = mockMvc.perform(post("/api/patients")
+				.header("Authorization", "Bearer " + tokenAgentB)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(jsonRequestB))
+				.andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
+
+		String bobIdStr = com.fasterxml.jackson.databind.ObjectMapper.class.getDeclaredConstructor()
+				.newInstance().readTree(responseStr).get("id").asText();
+		UUID bobId = UUID.fromString(bobIdStr);
+
+		mockMvc.perform(get("/api/patients?q=Bob")
+				.header("Authorization", "Bearer " + tokenAgentA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.length()").value(0));
+
+		jdbcTemplate.update(
+			"INSERT INTO external_access_requests (id, patient_id, requester_user_id, requester_organization_id, reason, requested_duration_hours, status, scopes, expires_at, created_at, version) " +
+			"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+			UUID.randomUUID(), bobId, userAgentA.getId(), orgA.getId(), "Consultation cardiologie", 24, "APPROUVEE", "medical_records,prescriptions", java.time.Instant.now().plusSeconds(3600), java.time.Instant.now(), 0L
+		);
+
+		mockMvc.perform(get("/api/patients?q=Bob")
+				.header("Authorization", "Bearer " + tokenAgentA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.length()").value(1))
+				.andExpect(jsonPath("$[0].fullName").value("Bob B"));
+	}
+
+	@Test
 	void givenAdminJoprelys_whenAccessPatients_thenForbidden() throws Exception {
 		mockMvc.perform(get("/api/patients")
 				.header("Authorization", "Bearer " + tokenAdminJoprelys))

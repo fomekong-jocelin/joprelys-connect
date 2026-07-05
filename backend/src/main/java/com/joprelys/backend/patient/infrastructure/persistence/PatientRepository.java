@@ -16,6 +16,12 @@ public interface PatientRepository extends JpaRepository<PatientEntity, UUID> {
 			"LOWER(p.globalPatientNumber) LIKE LOWER(CONCAT('%', :query, '%'))")
 	List<PatientEntity> searchPatients(@Param("query") String query);
 
+	@Query(value = "SELECT * FROM patients WHERE " +
+			"LOWER(full_name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+			"phone LIKE CONCAT('%', :query, '%') OR " +
+			"LOWER(global_patient_number) LIKE LOWER(CONCAT('%', :query, '%'))", nativeQuery = true)
+	List<PatientEntity> searchPatientsGlobally(@Param("query") String query);
+
 	boolean existsByGlobalPatientNumber(String globalPatientNumber);
 
 	@Query(value = "SELECT * FROM patients WHERE global_patient_number = :globalPatientNumber", nativeQuery = true)

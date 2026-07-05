@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, map } from 'rxjs';
 import { AuthTokenStorageService } from '../../../auth/auth-token-storage.service';
 import { LoginResponse } from '../../../auth/auth.models';
 
@@ -121,6 +121,12 @@ export class PatientPortalService {
   // TICKET-1307: Approbation d'une demande d'accès avec scopes restreints
   approveAccessRequestWithScopes(id: string, scopes: string): Observable<ExternalAccessResponse> {
     return this.http.post<ExternalAccessResponse>(`/api/patient/access-requests/${id}/approve?scopes=${encodeURIComponent(scopes)}`, {});
+  }
+
+  getUnreadNotificationCount(): Observable<number> {
+    return this.http.get<{ count: number }>('/api/notifications/unread-count').pipe(
+      map(res => res.count)
+    );
   }
 
   getNotifications(): Observable<PatientNotification[]> {

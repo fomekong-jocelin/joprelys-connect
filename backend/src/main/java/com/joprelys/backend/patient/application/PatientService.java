@@ -142,10 +142,30 @@ public class PatientService {
 
 	@Transactional(readOnly = true)
 	public List<PatientEntity> searchPatients(String query) {
+		var actor = getCurrentUser();
+		if (actor == null) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié.");
+		}
+		UUID organizationId = actor.getOrganizationId();
+
 		if (query == null || query.isBlank()) {
 			return patientRepository.findAll();
 		}
-		return patientRepository.searchPatients(query.trim());
+
+		String cleanQuery = query.trim();
+		List<PatientEntity> results = new java.util.ArrayList<>(patientRepository.searchPatients(cleanQuery));
+
+		List<PatientEntity> globalPatients = patientRepository.searchPatientsGlobally(cleanQuery);
+		for (PatientEntity p : globalPatients) {
+			boolean alreadyInResults = results.stream().anyMatch(local -> local.getId().equals(p.getId()));
+			if (!alreadyInResults) {
+				if (checkConsent(p.getId(), organizationId) || checkEmergencyAccess(p.getId(), organizationId)) {
+					results.add(p);
+				}
+			}
+		}
+
+		return results;
 	}
 
 	@Transactional(readOnly = true)

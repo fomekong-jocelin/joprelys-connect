@@ -8,6 +8,14 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- **Module Notifications — Complétion (TICKET-0015)** :
+  - `NotificationController` dédié avec endpoints REST : `GET /api/notifications/unread-count` (badge), `GET /api/notifications` (pagination Pageable), `DELETE /api/notifications/{id}` (suppression avec vérification propriétaire).
+  - Méthodes `getUnreadCount`, `getNotificationsPaginated`, `deleteNotification` ajoutées à `NotificationService`.
+  - Badge de notifications non lues dans la sidebar du portail patient (Angular) — consommation de `/api/notifications/unread-count` avec affichage numérique rouge sur l'icône.
+  - Déclencheurs de notifications manquants : approbation/rejet de demande d'accès externe → notification SECURITY au patient ; téléversement de résultats labo → notification INFO/EMERGENCY au patient selon criticité.
+  - Tests unitaires `NotificationServiceTest` (8 cas : send, getUnreadCount, paginated, markAsRead, markAsRead forbidden, markAllAsRead, delete, delete forbidden).
+  - i18n FR/EN complet pour le badge et les messages de notification.
+
 - **Vaccinations (Module 4 / DPU compliance)** : Conception, migration de base de données (V26), entité `PatientVaccinationEntity`, repository, services backend et endpoints API sous `/api/patients/{patientId}/vaccinations`. Ajout de l'interface d'enregistrement et de visualisation des vaccinations dans le dossier médical frontend.
 - **Groupe Sanguin & Email (Module 3 / DPU compliance)** : Ajout des colonnes `blood_group` et `email` à la table `patients` (migration V25), mapping dans l'entité Java, DTOs backend/frontend, intégration dans le formulaire de création de patient, la fiche de profil d'administration et l'export PDF de synthèse médicale.
 - **Lien Doublons Sidebar (TICKET-1304)** : Intégration du lien `/clinic/duplicates` dans le menu de navigation rétractable pour le rôle ADMIN_CLINIQUE.
