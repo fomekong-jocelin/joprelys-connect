@@ -28,6 +28,11 @@ public class AuthController {
 		return authenticationService.login(request, clientIp(servletRequest));
 	}
 
+	@PostMapping("/verify-otp")
+	public LoginResponse verifyOtp(@Valid @RequestBody VerifyStaffOtpRequest request, HttpServletRequest servletRequest) {
+		return authenticationService.verifyStaffOtp(request, clientIp(servletRequest));
+	}
+
 	@PostMapping("/logout")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void logout(HttpServletRequest request) {

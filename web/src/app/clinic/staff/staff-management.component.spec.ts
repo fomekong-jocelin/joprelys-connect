@@ -56,7 +56,7 @@ describe('StaffManagementComponent', () => {
   it('should invite staff and expose temporary password', () => {
     component.displayName.set('Dr Nouveau');
     component.email.set('nouveau@joprelys.local');
-    component.role.set('MEDECIN');
+    component.selectedRoles.set(['MEDECIN']);
     mockApi.invite.mockReturnValue(of({
       ...staff[0],
       id: 'staff-2',
@@ -79,7 +79,7 @@ describe('StaffManagementComponent', () => {
   it('should update selected staff member', () => {
     component.startEdit(staff[0]);
     component.displayName.set('Dr Alpha Senior');
-    component.role.set('PHARMACIEN');
+    component.selectedRoles.set(['PHARMACIEN']);
     mockApi.update.mockReturnValue(of({
       ...staff[0],
       displayName: 'Dr Alpha Senior',

@@ -8,6 +8,16 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- **Conformité du Module 2 - Gestion des utilisateurs et rôles (TICKET-0113)** :
+  - Ajout de la colonne `last_login_at` à la table `users` (migration Flyway `V29`) pour stocker la date/heure de dernière connexion des professionnels.
+  - Implémentation du support de rôles multiples séparés par des virgules dans le champ `role` existant (ex: `"MEDECIN,PHARMACIEN"`) afin de préserver la structure sans breaking change.
+  - Décodage des rôles multiples dans `JwtAuthenticationFilter` en authorities Spring Security distinctes pour supporter le RBAC multi-rôles de Spring Boot.
+  - Sécurisation forte par authentification double facteur OTP à 6 chiffres (OTP Staff) pour les rôles professionnels sensibles (`ADMIN_JOPRELYS`, `ADMIN_CLINIQUE`, `MEDECIN`, `BIOLOGISTE`, `PHARMACIEN`).
+  - Ajout du endpoint `/api/auth/verify-otp` (autorisé en accès public dans `SecurityConfig`) pour la validation de l'OTP et la génération finale du jeton JWT.
+  - Rénovation de la page de login Angular pour supporter le login double étape (Email/Mot de passe -> OTP à 6 chiffres) pour le personnel ayant des rôles sensibles.
+  - Rénovation de l'IHM d'administration de l'équipe clinique pour permettre la sélection et modification multi-rôles via des cases à cocher (check-boxes) au lieu d'un simple dropdown.
+  - Mise en conformité de l'ensemble de la suite de tests unitaires et d'intégration frontend (Vitest 63/63) et backend (Maven 231/231).
+
 - **Complétion du Module 1 - Gestion des établissements (TICKET-0112)** :
   - Enrichissement de la table `organizations` (migration Flyway `V28`) et de l'entité `OrganizationEntity` avec les propriétés `type` (type d'acteur), `country` (pays), `responsible_name` (nom du responsable) et `api_enabled` (autorisation API).
   - Implémentation du système de clés API par établissement avec empreinte hachée sécurisée (SHA-256) en base de données.

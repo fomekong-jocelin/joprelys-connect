@@ -1,4 +1,4 @@
-export type StaffRole = 'MEDECIN' | 'INFIRMIER' | 'AGENT_ACCUEIL' | 'PHARMACIEN' | 'BIOLOGISTE';
+export type StaffRole = string;
 
 export interface StaffMember {
   readonly id: string;

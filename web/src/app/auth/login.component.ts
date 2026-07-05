@@ -32,6 +32,8 @@ export class LoginComponent {
   readonly error = signal<string | null>(null);
   readonly loading = signal(false);
   readonly session = this.tokenStorage.session;
+  readonly staffStep = signal<1 | 2>(1);
+  readonly staffOtpCode = signal('');
   readonly canSubmit = computed(() =>
     this.isValidEmail(this.email()) && this.password().length > 0 && !this.loading()
   );
@@ -63,6 +65,8 @@ export class LoginComponent {
   setMode(m: LoginMode): void {
     this.mode.set(m);
     this.error.set(null);
+    this.staffStep.set(1);
+    this.staffOtpCode.set('');
     // Reset états patient lors du changement de mode
     if (m === 'patient') {
       this.patientStep.set(1);
@@ -83,10 +87,15 @@ export class LoginComponent {
     }
     this.loading.set(true);
     this.authApi.login({ email: this.email(), password: this.password() }).subscribe({
-      next: () => {
+      next: (res) => {
         this.password.set('');
         this.loading.set(false);
-        this.router.navigate(['/dashboard']);
+        if (res.requiresOtp) {
+          this.staffStep.set(2);
+          this.staffOtpCode.set('');
+        } else {
+          this.router.navigate(['/dashboard']);
+        }
       },
       error: () => {
         this.error.set('Identifiants invalides.');
@@ -95,11 +104,32 @@ export class LoginComponent {
     });
   }
 
+  verifyStaffOtp(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.authApi.verifyStaffOtp(this.email(), this.staffOtpCode()).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.router.navigate(['/dashboard']);
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.error.set(err.error?.detail || 'Code incorrect ou expiré. Réessayez.');
+      }
+    });
+  }
+
   logout(): void {
     this.loading.set(true);
     this.authApi.logout().subscribe({
-      next: () => this.loading.set(false),
-      error: () => this.loading.set(false),
+      next: () => {
+        this.loading.set(false);
+        this.staffStep.set(1);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.staffStep.set(1);
+      },
     });
   }
 
@@ -150,6 +180,7 @@ export class LoginComponent {
   updatePatientPhone(event: Event): void { this.patientPhone.set(this.inputValue(event)); }
   updatePatientBirthDate(event: Event): void { this.patientBirthDate.set(this.inputValue(event)); }
   updateOtpCode(event: Event): void { this.otpCode.set(this.inputValue(event)); }
+  updateStaffOtpCode(event: Event): void { this.staffOtpCode.set(this.inputValue(event)); }
 
   t(key: string): string {
     return this.i18n.t(key);

@@ -8,5 +8,10 @@ public record LoginResponse(
 		Instant expiresAt,
 		String email,
 		String name,
-		String role) {
+		String role,
+		Boolean requiresOtp) {
+
+	public LoginResponse(String accessToken, String tokenType, Instant expiresAt, String email, String name, String role) {
+		this(accessToken, tokenType, expiresAt, email, name, role, false);
+	}
 }

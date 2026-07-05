@@ -15,6 +15,16 @@ export class AuthApiService {
 
   login(request: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiBaseUrl}/login`, request).pipe(
+      tap((response) => {
+        if (!response.requiresOtp) {
+          this.tokenStorage.save(response);
+        }
+      }),
+    );
+  }
+
+  verifyStaffOtp(email: string, otpCode: string): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.apiBaseUrl}/verify-otp`, { email, otpCode }).pipe(
       tap((response) => this.tokenStorage.save(response)),
     );
   }

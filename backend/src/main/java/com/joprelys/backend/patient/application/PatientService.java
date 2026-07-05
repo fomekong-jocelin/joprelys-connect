@@ -175,8 +175,7 @@ public class PatientService {
 
 		var actor = getCurrentUser();
 		if (actor != null) {
-			String role = actor.getRole();
-			boolean isClinicalRole = "MEDECIN".equals(role) || "INFIRMIER".equals(role) || "AGENT_ACCUEIL".equals(role) || "ADMIN_CLINIQUE".equals(role);
+			boolean isClinicalRole = actor.hasRole("MEDECIN") || actor.hasRole("INFIRMIER") || actor.hasRole("AGENT_ACCUEIL") || actor.hasRole("ADMIN_CLINIQUE");
 			if (isClinicalRole) {
 				UUID organizationId = actor.getOrganizationId();
 				boolean hasConsent = checkConsent(patient.getId(), organizationId);
@@ -209,8 +208,7 @@ public class PatientService {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié.");
 		}
 
-		String role = actor.getRole();
-		boolean isStaffRole = "MEDECIN".equals(role) || "INFIRMIER".equals(role) || "AGENT_ACCUEIL".equals(role) || "ADMIN_CLINIQUE".equals(role) || "PHARMACIEN".equals(role) || "BIOLOGISTE".equals(role);
+		boolean isStaffRole = actor.hasRole("MEDECIN") || actor.hasRole("INFIRMIER") || actor.hasRole("AGENT_ACCUEIL") || actor.hasRole("ADMIN_CLINIQUE") || actor.hasRole("PHARMACIEN") || actor.hasRole("BIOLOGISTE");
 
 		if (isStaffRole) {
 			UUID organizationId = actor.getOrganizationId();

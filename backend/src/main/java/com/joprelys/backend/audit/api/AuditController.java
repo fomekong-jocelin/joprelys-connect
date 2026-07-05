@@ -35,7 +35,7 @@ public class AuditController {
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur non trouvé."));
 
 		// Enforce tenant isolation unless user is AUDITEUR
-		if (!"AUDITEUR".equals(user.getRole())) {
+		if (!user.hasRole("AUDITEUR")) {
 			var patient = patientRepository.findById(patientId)
 					.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé."));
 
@@ -74,7 +74,7 @@ public class AuditController {
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur non trouvé."));
 
 		// Enforce tenant isolation unless user is AUDITEUR
-		if (!"AUDITEUR".equals(user.getRole())) {
+		if (!user.hasRole("AUDITEUR")) {
 			if (user.getOrganizationId() == null || !user.getOrganizationId().equals(organizationId)) {
 				throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Accès refusé : vous ne pouvez consulter que les logs de votre propre clinique.");
 			}

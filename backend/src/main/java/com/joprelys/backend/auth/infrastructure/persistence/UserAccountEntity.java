@@ -34,6 +34,9 @@ public class UserAccountEntity {
 	@Column(name = "organization_id")
 	private UUID organizationId;
 
+	@Column(name = "last_login_at")
+	private Instant lastLoginAt;
+
 	@Column(nullable = false)
 	private Instant createdAt;
 
@@ -112,11 +115,26 @@ public class UserAccountEntity {
 		this.enabled = enabled;
 	}
 
+	public Instant getLastLoginAt() {
+		return lastLoginAt;
+	}
+
+	public void setLastLoginAt(Instant lastLoginAt) {
+		this.lastLoginAt = lastLoginAt;
+	}
+
 	public Instant getCreatedAt() {
 		return createdAt;
 	}
 
 	public Instant getUpdatedAt() {
 		return updatedAt;
+	}
+
+	public boolean hasRole(String roleName) {
+		if (this.role == null) return false;
+		return java.util.Arrays.stream(this.role.split(","))
+				.map(String::trim)
+				.anyMatch(roleName::equalsIgnoreCase);
 	}
 }

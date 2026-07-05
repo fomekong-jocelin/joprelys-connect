@@ -226,7 +226,7 @@ public class OrganizationController {
 
 	private OrganizationResponse mapToResponse(OrganizationEntity entity) {
 		UserAccountEntity admin = userAccountRepository.findAllByOrganizationId(entity.getId()).stream()
-				.filter(u -> "ADMIN_CLINIQUE".equals(u.getRole()))
+				.filter(u -> u.hasRole("ADMIN_CLINIQUE"))
 				.findFirst()
 				.orElse(null);
 		String adminEmail = admin != null ? admin.getEmail() : null;

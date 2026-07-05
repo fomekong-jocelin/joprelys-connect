@@ -117,8 +117,11 @@ export class StaffTableComponent {
   readonly editRequested = output<StaffMember>();
   readonly statusToggled = output<StaffMember>();
 
-  roleLabel(role: StaffRole): string {
-    return this.labels().roleLabels[role];
+  roleLabel(role: string): string {
+    if (!role) return '';
+    return role.split(',')
+      .map((r) => this.labels().roleLabels[r.trim() as StaffRole] || r.trim())
+      .join(', ');
   }
 
   statusLabel(member: StaffMember): string {

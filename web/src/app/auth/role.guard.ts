@@ -12,8 +12,12 @@ export const roleGuard: CanActivateFn = (route, state) => {
   }
 
   const expectedRoles = route.data['expectedRoles'] as string[];
-  if (expectedRoles && !expectedRoles.includes(session.role)) {
-    return router.parseUrl('/unauthorized');
+  if (expectedRoles) {
+    const userRoles = session.role.split(',').map((r) => r.trim());
+    const hasRole = userRoles.some((r) => expectedRoles.includes(r));
+    if (!hasRole) {
+      return router.parseUrl('/unauthorized');
+    }
   }
 
   return true;

@@ -10,6 +10,7 @@ export interface LoginResponse {
   readonly email: string;
   readonly name: string;
   readonly role: string;
+  readonly requiresOtp?: boolean;
 }
 
 export interface AuthSession {

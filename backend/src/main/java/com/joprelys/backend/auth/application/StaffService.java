@@ -47,7 +47,9 @@ public class StaffService {
 		return userAccountRepository
 				.findAllByOrganizationIdAndIdNotOrderByDisplayNameAsc(admin.getOrganizationId(), admin.getId())
 				.stream()
-				.filter(account -> MANAGEABLE_ROLES.contains(account.getRole()))
+				.filter(account -> java.util.Arrays.stream(account.getRole().split(","))
+						.map(String::trim)
+						.anyMatch(MANAGEABLE_ROLES::contains))
 				.sorted(Comparator.comparing(UserAccountEntity::getDisplayName))
 				.map(StaffService::toStaffResponse)
 				.toList();
@@ -106,7 +108,9 @@ public class StaffService {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Un administrateur ne peut pas se gérer lui-même.");
 		}
 		UserAccountEntity staff = userAccountRepository.findByIdAndOrganizationId(staffId, admin.getOrganizationId())
-				.filter(account -> MANAGEABLE_ROLES.contains(account.getRole()))
+				.filter(account -> java.util.Arrays.stream(account.getRole().split(","))
+						.map(String::trim)
+						.anyMatch(MANAGEABLE_ROLES::contains))
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Collaborateur non trouvé."));
 		return staff;
 	}
@@ -125,8 +129,10 @@ public class StaffService {
 	}
 
 	private void assertManageableRole(String role) {
-		if (!MANAGEABLE_ROLES.contains(role)) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rôle clinique invalide.");
+		for (String r : role.split(",")) {
+			if (!MANAGEABLE_ROLES.contains(r.trim())) {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rôle clinique invalide : " + r.trim());
+			}
 		}
 	}
 

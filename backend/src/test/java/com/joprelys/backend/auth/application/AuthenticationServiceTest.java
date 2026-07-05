@@ -116,6 +116,75 @@ class AuthenticationServiceTest {
 		verify(authAuditEventRepository).save(any(AuthAuditEventEntity.class));
 	}
 
+	@Test
+	void shouldRequireOtpWhenUserIsSensitive() {
+		UserAccountEntity user = new UserAccountEntity(
+				"medecin@example.com",
+				"Medecin Test",
+				"MEDECIN",
+				"hash");
+		AuthenticationService service = service();
+
+		when(userAccountRepository.findByEmail("medecin@example.com")).thenReturn(Optional.of(user));
+		when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
+
+		LoginResponse response = service.login(new LoginRequest("medecin@example.com", "Password123!"), "127.0.0.1");
+
+		assertEquals(true, response.requiresOtp());
+		assertEquals(null, response.accessToken());
+	}
+
+	@Test
+	void shouldAllowLoginAfterSuccessfulOtpVerification() {
+		UserAccountEntity user = new UserAccountEntity(
+				"medecin@example.com",
+				"Medecin Test",
+				"MEDECIN",
+				"hash");
+		AuthenticationService service = service();
+
+		when(userAccountRepository.findByEmail("medecin@example.com")).thenReturn(Optional.of(user));
+		when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
+		when(jwtService.createToken(user)).thenReturn(new JwtService.CreatedToken(
+				"jwt-token",
+				"token-id",
+				Instant.parse("2026-07-02T10:30:00Z")));
+
+		// Triggers OTP generation
+		LoginResponse initialResponse = service.login(new LoginRequest("medecin@example.com", "Password123!"), "127.0.0.1");
+		assertEquals(true, initialResponse.requiresOtp());
+
+		String otpCode = service.getStaffOtpCodeForTesting("medecin@example.com");
+		com.joprelys.backend.auth.api.VerifyStaffOtpRequest verifyRequest = new com.joprelys.backend.auth.api.VerifyStaffOtpRequest("medecin@example.com", otpCode);
+
+		LoginResponse finalResponse = service.verifyStaffOtp(verifyRequest, "127.0.0.1");
+
+		assertEquals("jwt-token", finalResponse.accessToken());
+		assertEquals("medecin@example.com", finalResponse.email());
+	}
+
+	@Test
+	void shouldFailOtpVerificationWhenOtpIsIncorrect() {
+		UserAccountEntity user = new UserAccountEntity(
+				"medecin@example.com",
+				"Medecin Test",
+				"MEDECIN",
+				"hash");
+		AuthenticationService service = service();
+
+		when(userAccountRepository.findByEmail("medecin@example.com")).thenReturn(Optional.of(user));
+		when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
+
+		// Triggers OTP generation
+		service.login(new LoginRequest("medecin@example.com", "Password123!"), "127.0.0.1");
+
+		com.joprelys.backend.auth.api.VerifyStaffOtpRequest verifyRequest = new com.joprelys.backend.auth.api.VerifyStaffOtpRequest("medecin@example.com", "000000");
+
+		assertThrows(
+				BadCredentialsException.class,
+				() -> service.verifyStaffOtp(verifyRequest, "127.0.0.1"));
+	}
+
 	private AuthenticationService service() {
 		return new AuthenticationService(
 				userAccountRepository,

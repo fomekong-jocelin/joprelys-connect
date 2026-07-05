@@ -47,7 +47,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 				return false;
 			}
-			var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + claims.role()));
+			List<SimpleGrantedAuthority> authorities = java.util.Arrays.stream(claims.role().split(","))
+					.map(r -> new SimpleGrantedAuthority("ROLE_" + r.trim()))
+					.toList();
 			var authentication = new UsernamePasswordAuthenticationToken(claims.email(), token, authorities);
 			SecurityContextHolder.getContext().setAuthentication(authentication);
 

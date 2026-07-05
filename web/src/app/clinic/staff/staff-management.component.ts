@@ -88,19 +88,23 @@ const STAFF_ROLES: readonly StaffRole[] = ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEI
                   />
                 </label>
 
-                <label class="space-y-1.5 sm:col-span-2">
-                  <span class="ui-label">{{ t('staff.role') }} <span class="text-red-500">*</span></span>
-                  <select
-                    class="ui-select"
-                    [value]="role()"
-                    [disabled]="formLoading()"
-                    (change)="setRole($any($event.target).value)"
-                  >
+                <div class="space-y-2 sm:col-span-2">
+                  <span class="ui-label block">{{ t('staff.role') }} <span class="text-red-500">*</span></span>
+                  <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 mt-2">
                     @for (option of roles; track option) {
-                      <option [value]="option">{{ roleLabel(option) }}</option>
+                      <label class="inline-flex items-center gap-2 select-none cursor-pointer">
+                        <input
+                          type="checkbox"
+                          class="ui-checkbox"
+                          [checked]="hasSelectedRole(option)"
+                          [disabled]="formLoading()"
+                          (change)="toggleSelectedRole(option)"
+                        />
+                        <span class="text-sm font-semibold" style="color: var(--text-primary)">{{ roleLabel(option) }}</span>
+                      </label>
                     }
-                  </select>
-                </label>
+                  </div>
+                </div>
               </div>
 
               <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
@@ -143,7 +147,7 @@ export class StaffManagementComponent implements OnInit {
 
   readonly displayName = signal('');
   readonly email = signal('');
-  readonly role = signal<StaffRole>('MEDECIN');
+  readonly selectedRoles = signal<string[]>(['MEDECIN']);
 
   readonly formTitle = computed(() => this.editingStaff() ? this.t('staff.editTitle') : this.t('staff.inviteTitle'));
   readonly submitLabel = computed(() => this.editingStaff() ? this.t('staff.update') : this.t('staff.create'));
@@ -205,7 +209,7 @@ export class StaffManagementComponent implements OnInit {
     this.editingStaff.set(member);
     this.displayName.set(member.displayName);
     this.email.set(member.email);
-    this.role.set(member.role);
+    this.selectedRoles.set(member.role ? member.role.split(',').map((r) => r.trim()) : ['MEDECIN']);
     this.formError.set(null);
     this.showForm.set(true);
   }
@@ -217,7 +221,7 @@ export class StaffManagementComponent implements OnInit {
 
   submitForm(): void {
     this.formError.set(null);
-    if (!this.displayName().trim() || !this.email().trim() || !this.role()) {
+    if (!this.displayName().trim() || !this.email().trim() || this.selectedRoles().length === 0) {
       this.formError.set(this.t('staff.requiredFields'));
       return;
     }
@@ -239,14 +243,23 @@ export class StaffManagementComponent implements OnInit {
     });
   }
 
-  setRole(value: string): void {
-    if (this.roles.includes(value as StaffRole)) {
-      this.role.set(value as StaffRole);
-    }
+  hasSelectedRole(option: string): boolean {
+    return this.selectedRoles().includes(option);
   }
 
-  roleLabel(role: StaffRole): string {
-    return this.tableLabels().roleLabels[role];
+  toggleSelectedRole(option: string): void {
+    this.selectedRoles.update((current) => {
+      if (current.includes(option)) {
+        if (current.length === 1) return current; // Enforce at least one role
+        return current.filter((r) => r !== option);
+      } else {
+        return [...current, option];
+      }
+    });
+  }
+
+  roleLabel(role: string): string {
+    return this.tableLabels().roleLabels[role as StaffRole] || role;
   }
 
   copyTemporaryPassword(): void {
@@ -265,7 +278,7 @@ export class StaffManagementComponent implements OnInit {
     this.api.invite({
       displayName: this.displayName().trim(),
       email: this.email().trim(),
-      role: this.role(),
+      role: this.selectedRoles().join(','),
     }).subscribe({
       next: (created) => {
         this.staff.update((items) => [...items, created]);
@@ -285,7 +298,7 @@ export class StaffManagementComponent implements OnInit {
   private updateStaff(current: StaffMember): void {
     this.api.update(current.id, {
       displayName: this.displayName().trim(),
-      role: this.role(),
+      role: this.selectedRoles().join(','),
     }).subscribe({
       next: (updated) => {
         this.replaceMember(updated);
@@ -308,7 +321,7 @@ export class StaffManagementComponent implements OnInit {
     this.editingStaff.set(null);
     this.displayName.set('');
     this.email.set('');
-    this.role.set('MEDECIN');
+    this.selectedRoles.set(['MEDECIN']);
     this.formError.set(null);
     this.formLoading.set(false);
   }

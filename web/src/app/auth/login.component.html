@@ -108,57 +108,104 @@
       } @else {
         <div class="w-full text-center mb-6">
           <h2 id="login-title" class="font-display font-bold text-2xl tracking-tight text-brand-night dark:text-white mb-1">Ravi de vous revoir</h2>
-          <p class="text-sm text-slate-500 dark:text-slate-400">Connectez-vous à votre espace clinique</p>
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            @if (staffStep() === 1) { Connectez-vous à votre espace clinique }
+            @else { Saisissez le code de sécurité envoyé }
+          </p>
         </div>
 
-        <form class="w-full space-y-5" (submit)="$event.preventDefault(); submit()">
-          <div class="space-y-1.5">
-            <label class="block text-[11px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">Adresse e-mail</label>
-            <input
-              type="email"
-              autocomplete="username"
-              inputmode="email"
-              required
-              [value]="email()"
-              (input)="updateEmail($event)"
-              class="w-full min-h-[46px] px-4 py-2 border border-slate-100 dark:border-slate-800 bg-brand-gray dark:bg-slate-900 rounded-[var(--radius-brand-md)] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-hidden focus:border-brand-cyan focus:bg-white dark:focus:bg-slate-950 transition-all text-sm"
-              placeholder="nom@clinique.com"
-            />
-          </div>
-
-          <div class="space-y-1.5">
-            <div class="flex justify-between items-center">
-              <label class="block text-[11px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">Mot de passe</label>
-              <a routerLink="/forgot-password" class="text-brand-cyan hover:text-[#097b98] font-semibold text-xs transition-colors">{{ t('auth.forgotPassword.link') }}</a>
+        @if (staffStep() === 1) {
+          <form class="w-full space-y-5" (submit)="$event.preventDefault(); submit()">
+            <div class="space-y-1.5">
+              <label class="block text-[11px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">Adresse e-mail</label>
+              <input
+                type="email"
+                autocomplete="username"
+                inputmode="email"
+                required
+                [value]="email()"
+                (input)="updateEmail($event)"
+                class="w-full min-h-[46px] px-4 py-2 border border-slate-100 dark:border-slate-800 bg-brand-gray dark:bg-slate-900 rounded-[var(--radius-brand-md)] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-hidden focus:border-brand-cyan focus:bg-white dark:focus:bg-slate-950 transition-all text-sm"
+                placeholder="nom@clinique.com"
+              />
             </div>
-            <input
-              type="password"
-              autocomplete="current-password"
-              required
-              [value]="password()"
-              (input)="updatePassword($event)"
-              class="w-full min-h-[46px] px-4 py-2 border border-slate-100 dark:border-slate-800 bg-brand-gray dark:bg-slate-900 rounded-[var(--radius-brand-md)] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-hidden focus:border-brand-cyan focus:bg-white dark:focus:bg-slate-950 transition-all text-sm"
-              placeholder="••••••••"
-            />
-          </div>
 
-          @if (error()) {
-            <div class="p-3 border border-red-100/50 dark:border-red-950/20 rounded-[var(--radius-brand-md)] bg-red-50/50 dark:bg-red-950/10 text-xs text-red-700 dark:text-red-400 flex items-center gap-2" role="alert">
-              <svg class="h-4 w-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <span class="font-medium">{{ error() }}</span>
+            <div class="space-y-1.5">
+              <div class="flex justify-between items-center">
+                <label class="block text-[11px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">Mot de passe</label>
+                <a routerLink="/forgot-password" class="text-brand-cyan hover:text-[#097b98] font-semibold text-xs transition-colors">{{ t('auth.forgotPassword.link') }}</a>
+              </div>
+              <input
+                type="password"
+                autocomplete="current-password"
+                required
+                [value]="password()"
+                (input)="updatePassword($event)"
+                class="w-full min-h-[46px] px-4 py-2 border border-slate-100 dark:border-slate-800 bg-brand-gray dark:bg-slate-900 rounded-[var(--radius-brand-md)] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-hidden focus:border-brand-cyan focus:bg-white dark:focus:bg-slate-950 transition-all text-sm"
+                placeholder="••••••••"
+              />
             </div>
-          }
 
-          <button
-            class="w-full min-h-[46px] flex items-center justify-center py-3 px-4 rounded-[var(--radius-brand-md)] text-sm font-semibold text-white bg-brand-cyan hover:bg-[#097b98] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            type="submit"
-            [disabled]="!canSubmit()"
-          >
-            @if (loading()) { Connexion... } @else { Se connecter }
-          </button>
-        </form>
+            @if (error()) {
+              <div class="p-3 border border-red-100/50 dark:border-red-950/20 rounded-[var(--radius-brand-md)] bg-red-50/50 dark:bg-red-950/10 text-xs text-red-700 dark:text-red-400 flex items-center gap-2" role="alert">
+                <svg class="h-4 w-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span class="font-medium">{{ error() }}</span>
+              </div>
+            }
+
+            <button
+              class="w-full min-h-[46px] flex items-center justify-center py-3 px-4 rounded-[var(--radius-brand-md)] text-sm font-semibold text-white bg-brand-cyan hover:bg-[#097b98] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              type="submit"
+              [disabled]="!canSubmit()"
+            >
+              @if (loading()) { Connexion... } @else { Se connecter }
+            </button>
+          </form>
+        } @else {
+          <form class="w-full space-y-4" (submit)="$event.preventDefault(); verifyStaffOtp()">
+            <div class="space-y-1.5">
+              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Code de sécurité (6 chiffres)</label>
+              <input
+                type="text"
+                required
+                [value]="staffOtpCode()"
+                (input)="updateStaffOtpCode($event)"
+                maxlength="6"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                class="w-full min-h-[54px] px-4 py-2 border border-slate-100 dark:border-slate-800 bg-brand-gray dark:bg-slate-900 rounded-[var(--radius-brand-md)] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-brand-cyan focus:bg-white dark:focus:bg-slate-950 text-center text-2xl font-bold tracking-[0.5em]"
+                placeholder="······"
+              />
+            </div>
+
+            @if (error()) {
+              <div class="p-3 border border-red-100/50 rounded-[var(--radius-brand-md)] bg-red-50/50 dark:bg-red-950/10 text-xs text-red-700 dark:text-red-400 flex items-center gap-2">
+                <svg class="h-4 w-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <span class="font-medium">{{ error() }}</span>
+              </div>
+            }
+
+            <button
+              class="w-full min-h-[46px] flex items-center justify-center py-3 px-4 rounded-[var(--radius-brand-md)] text-sm font-semibold text-white bg-brand-cyan hover:bg-[#097b98] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              type="submit"
+              [disabled]="loading() || staffOtpCode().length !== 6"
+            >
+              @if (loading()) { Vérification... } @else { Se connecter }
+            </button>
+
+            <button
+              type="button"
+              (click)="staffStep.set(1); error.set(null)"
+              class="w-full text-center text-xs font-medium text-slate-500 hover:text-brand-cyan transition-colors cursor-pointer"
+            >
+              ← Retour à l'étape précédente
+            </button>
+          </form>
+        }
       }
     }
 
