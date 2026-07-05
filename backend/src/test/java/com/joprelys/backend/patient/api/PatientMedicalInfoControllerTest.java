@@ -71,6 +71,7 @@ public class PatientMedicalInfoControllerTest {
         jdbcTemplate.update("DELETE FROM hospitalizations");
         jdbcTemplate.update("DELETE FROM patient_allergies");
         jdbcTemplate.update("DELETE FROM patient_medical_history");
+        jdbcTemplate.update("DELETE FROM patient_vaccinations");
         jdbcTemplate.update("DELETE FROM external_access_requests");
         jdbcTemplate.update("DELETE FROM patients");
         userAccountRepository.deleteAll();
@@ -187,5 +188,61 @@ public class PatientMedicalInfoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isOngoing").value(false))
                 .andExpect(jsonPath("$.comment").value("Diabète équilibré par le régime"));
+    }
+
+    @Test
+    void givenDoctor_whenAddAndUpdateVaccination_thenSuccess() throws Exception {
+        String addVaccination = """
+                {
+                    "vaccineName": "Fièvre Jaune",
+                    "batchNumber": "LOT-YF-2026",
+                    "administeredAt": "2026-06-01",
+                    "administeredBy": "Dr. House",
+                    "notes": "Dose unique",
+                    "nextDoseAt": "2036-06-01"
+                }
+                """;
+
+        // Add
+        String responseStr = mockMvc.perform(post("/api/patients/" + patientA.getId() + "/vaccinations")
+                .header("Authorization", "Bearer " + tokenDoctorA)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(addVaccination))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.vaccineName").value("Fièvre Jaune"))
+                .andExpect(jsonPath("$.batchNumber").value("LOT-YF-2026"))
+                .andExpect(jsonPath("$.administeredBy").value("Dr. House"))
+                .andReturn().getResponse().getContentAsString();
+
+        String vaccinationId = com.fasterxml.jackson.databind.ObjectMapper.class.getDeclaredConstructor()
+                .newInstance().readTree(responseStr).get("id").asText();
+
+        // Update
+        String updateVaccination = """
+                {
+                    "vaccineName": "Fièvre Jaune (Rappel)",
+                    "batchNumber": "LOT-YF-2026-R",
+                    "administeredAt": "2026-06-01",
+                    "administeredBy": "Dr. House",
+                    "notes": "Rappel de vaccination",
+                    "nextDoseAt": "2046-06-01"
+                }
+                """;
+
+        mockMvc.perform(put("/api/patients/" + patientA.getId() + "/vaccinations/" + vaccinationId)
+                .header("Authorization", "Bearer " + tokenDoctorA)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(updateVaccination))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.vaccineName").value("Fièvre Jaune (Rappel)"))
+                .andExpect(jsonPath("$.batchNumber").value("LOT-YF-2026-R"))
+                .andExpect(jsonPath("$.notes").value("Rappel de vaccination"));
+
+        // List
+        mockMvc.perform(get("/api/patients/" + patientA.getId() + "/vaccinations")
+                .header("Authorization", "Bearer " + tokenDoctorA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].vaccineName").value("Fièvre Jaune (Rappel)"));
     }
 }

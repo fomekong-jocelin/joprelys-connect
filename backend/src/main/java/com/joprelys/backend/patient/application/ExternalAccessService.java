@@ -52,8 +52,8 @@ public class ExternalAccessService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié.");
         }
 
-        PatientEntity patient = patientRepository.findByIdGlobally(request.patientId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé."));
+        PatientEntity patient = patientRepository.findByGlobalPatientNumber(request.patientDpu())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé avec ce numéro DPU."));
 
         UUID requesterOrgId = actor.getOrganizationId();
 

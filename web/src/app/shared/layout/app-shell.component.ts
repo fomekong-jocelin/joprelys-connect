@@ -280,6 +280,7 @@ export class AppShellComponent {
       items.push(
         { path: '/dashboard', label: this.i18n.t('menu.dashboard'), iconName: 'dashboard' },
         { path: '/patients', label: this.i18n.t('menu.patients'), iconName: 'patients' },
+        { path: '/clinic/duplicates', label: this.i18n.t('menu.duplicates'), iconName: 'patients' },
         { path: '/clinic/staff', label: this.i18n.t('menu.staff'), iconName: 'staff' },
         { path: '/pharmacy/stocks', label: this.i18n.t('menu.stocks'), iconName: 'stocks' }
       );

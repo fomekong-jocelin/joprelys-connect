@@ -158,9 +158,9 @@ body {
   }
 
   .ui-input {
-    min-height: 46px;
+    min-height: 42px;
     width: 100%;
-    border-radius: 12px;
+    border-radius: var(--radius-brand-sm);
     border: 1px solid var(--border-input);
     background: var(--bg-input);
     color: var(--text-primary);
@@ -174,9 +174,12 @@ body {
     color: var(--text-muted);
   }
 
+  .ui-input:focus-visible,
   .ui-input:focus {
     border-color: var(--border-input-focus);
     background: var(--app-surface);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+    outline: none;
   }
 
   .ui-checkbox {
@@ -184,12 +187,12 @@ body {
     width: 1.25rem;
     height: 1.25rem;
     border: 2px solid var(--app-border);
-    border-radius: 4px;
+    border-radius: var(--radius-brand-sm);
     background-color: var(--bg-input);
     display: inline-grid;
     place-content: center;
     cursor: pointer;
-    transition: background-color 150ms ease, border-color 150ms ease;
+    transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
   }
 
   .ui-checkbox::before {
@@ -212,7 +215,10 @@ body {
     transform: scale(1);
   }
 
+  .ui-checkbox:focus-visible,
   .ui-checkbox:focus {
+    border-color: var(--border-input-focus);
+    box-shadow: 0 0 0 3px var(--focus-ring);
     outline: none;
   }
 
@@ -226,7 +232,7 @@ body {
     display: inline-grid;
     place-content: center;
     cursor: pointer;
-    transition: background-color 150ms ease, border-color 150ms ease;
+    transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
   }
 
   .ui-radio::before {
@@ -248,14 +254,17 @@ body {
     transform: scale(1);
   }
 
+  .ui-radio:focus-visible,
   .ui-radio:focus {
+    border-color: var(--border-input-focus);
+    box-shadow: 0 0 0 3px var(--focus-ring);
     outline: none;
   }
 
   .ui-select {
-    min-height: 46px;
+    min-height: 42px;
     width: 100%;
-    border-radius: 12px;
+    border-radius: var(--radius-brand-sm);
     border: 1px solid var(--border-input);
     background-color: var(--bg-input);
     color: var(--text-primary);
@@ -276,14 +285,17 @@ body {
     color: var(--text-primary);
   }
 
+  .ui-select:focus-visible,
   .ui-select:focus {
     border-color: var(--border-input-focus);
     background-color: var(--app-surface);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+    outline: none;
   }
 
   .ui-textarea {
     width: 100%;
-    border-radius: 12px;
+    border-radius: var(--radius-brand-sm);
     border: 1px solid var(--border-input);
     background-color: var(--bg-input);
     color: var(--text-primary);
@@ -293,9 +305,42 @@ body {
     transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
   }
 
+  .ui-textarea:focus-visible,
   .ui-textarea:focus {
     border-color: var(--border-input-focus);
     background-color: var(--app-surface);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+    outline: none;
+  }
+
+  /* Interaction States */
+  .ui-input:hover:not(:disabled),
+  .ui-textarea:hover:not(:disabled),
+  .ui-select:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--border-input) 70%, var(--brand-primary));
+  }
+
+  .ui-checkbox:hover:not(:disabled),
+  .ui-radio:hover:not(:disabled) {
+    border-color: var(--brand-primary);
+  }
+
+  .ui-input:disabled,
+  .ui-textarea:disabled,
+  .ui-select:disabled {
+    background-color: color-mix(in srgb, var(--bg-input) 60%, var(--app-bg));
+    color: var(--text-muted);
+    border-color: var(--app-border);
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  .ui-checkbox:disabled,
+  .ui-radio:disabled {
+    background-color: color-mix(in srgb, var(--bg-input) 60%, var(--app-bg));
+    border-color: var(--app-border);
+    cursor: not-allowed;
+    opacity: 0.7;
   }
 
   .ui-button {

@@ -412,6 +412,9 @@ public class PdfGeneratorService {
             col1.addElement(new Paragraph("Nom complet : " + patient.getFullName(), fontBody));
             col1.addElement(new Paragraph("Date de naissance : " + (patient.getBirthDate() != null ? patient.getBirthDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : ""), fontBody));
             col1.addElement(new Paragraph("Genre : " + patient.getGender(), fontBody));
+            if (patient.getBloodGroup() != null && !patient.getBloodGroup().isBlank()) {
+                col1.addElement(new Paragraph("Groupe sanguin : " + patient.getBloodGroup(), fontBody));
+            }
             col1.addElement(new Paragraph("DPU (N° Patient Unique) : " + patient.getGlobalPatientNumber(), fontBody));
             col1.addElement(new Paragraph("N° Dossier Local : " + patient.getLocalPatientNumber(), fontBody));
 
@@ -421,6 +424,9 @@ public class PdfGeneratorService {
                                           (patient.getDistrict() != null ? ", " + patient.getDistrict() : "") + 
                                           (patient.getCity() != null ? ", " + patient.getCity() : ""), fontBody));
             col2.addElement(new Paragraph("Téléphone : " + (patient.getPhone() != null ? patient.getPhone() : "-"), fontBody));
+            if (patient.getEmail() != null && !patient.getEmail().isBlank()) {
+                col2.addElement(new Paragraph("Email : " + patient.getEmail(), fontBody));
+            }
             col2.addElement(new Paragraph("Contact d'urgence : " + (patient.getEmergencyContactName() != null ? patient.getEmergencyContactName() : "-"), fontBody));
             col2.addElement(new Paragraph("Tél. contact d'urgence : " + (patient.getEmergencyContactPhone() != null ? patient.getEmergencyContactPhone() : "-"), fontBody));
 

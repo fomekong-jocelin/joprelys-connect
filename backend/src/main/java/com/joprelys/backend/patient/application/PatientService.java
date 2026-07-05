@@ -116,6 +116,8 @@ public class PatientService {
 				request.allergies(),
 				request.medicalHistory()
 		);
+		patient.setBloodGroup(request.bloodGroup());
+		patient.setEmail(request.email());
 
 		var saved = patientRepository.save(patient);
 

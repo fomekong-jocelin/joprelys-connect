@@ -72,6 +72,26 @@ export interface PatientFormLabels {
               </select>
             </div>
 
+            <!-- Groupe Sanguin -->
+            <div class="flex flex-col">
+              <label class="ui-label mb-1.5 font-bold">Groupe sanguin</label>
+              <select
+                class="ui-select w-full"
+                [value]="bloodGroup()"
+                (change)="onBloodGroupChange($event)"
+              >
+                <option value="">Sélectionner (Optionnel)</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+              </select>
+            </div>
+
             <app-ui-input
               type="date"
               [label]="labels().birthDate"
@@ -84,6 +104,14 @@ export interface PatientFormLabels {
               [placeholder]="labels().phonePlaceholder"
               [required]="true"
               [(value)]="phone"
+            />
+
+            <!-- Adresse Email -->
+            <app-ui-input
+              type="email"
+              label="Adresse email"
+              placeholder="patient@email.com (Optionnel)"
+              [(value)]="email"
             />
 
             <app-ui-input
@@ -183,6 +211,8 @@ export class PatientFormComponent {
   readonly emergencyContactPhone = model('');
   readonly allergies = model('');
   readonly medicalHistory = model('');
+  readonly bloodGroup = model('');
+  readonly email = model('');
 
   readonly submitted = output<void>();
   readonly cancelled = output<void>();
@@ -190,5 +220,10 @@ export class PatientFormComponent {
   onGenderChange(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
     this.gender.set(value);
+  }
+
+  onBloodGroupChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.bloodGroup.set(value);
   }
 }

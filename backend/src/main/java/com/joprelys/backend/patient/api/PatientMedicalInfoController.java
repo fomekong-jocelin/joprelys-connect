@@ -121,4 +121,51 @@ public class PatientMedicalInfoController {
             com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
         }
     }
+
+    @GetMapping("/vaccinations")
+    public List<PatientVaccinationResponse> getVaccinations(@PathVariable UUID patientId) {
+        patientService.validateAccess(patientId, "allergies_history");
+        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
+        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
+        try {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
+            return patientMedicalInfoService.listVaccinations(patientId);
+        } finally {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
+        }
+    }
+
+    @PostMapping("/vaccinations")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE')")
+    public PatientVaccinationResponse addVaccination(
+            @PathVariable UUID patientId,
+            @Valid @RequestBody CreatePatientVaccinationRequest request) {
+        patientService.validateAccess(patientId, "allergies_history");
+        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
+        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
+        try {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
+            return patientMedicalInfoService.addVaccination(patientId, request);
+        } finally {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
+        }
+    }
+
+    @PutMapping("/vaccinations/{vaccinationId}")
+    @PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE')")
+    public PatientVaccinationResponse updateVaccination(
+            @PathVariable UUID patientId,
+            @PathVariable UUID vaccinationId,
+            @Valid @RequestBody CreatePatientVaccinationRequest request) {
+        patientService.validateAccess(patientId, "allergies_history");
+        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
+        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
+        try {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
+            return patientMedicalInfoService.updateVaccination(patientId, vaccinationId, request);
+        } finally {
+            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
+        }
+    }
 }

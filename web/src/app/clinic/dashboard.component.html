@@ -62,6 +62,11 @@
             <a routerLink="/patients" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-[#22d3ee] hover:underline cursor-pointer">
               Gérer les dossiers →
             </a>
+            @if (currentSession.role === 'MEDECIN' || currentSession.role === 'INFIRMIER' || currentSession.role === 'ADMIN_CLINIQUE') {
+              <a routerLink="/clinic/access-request" class="mt-2 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-[#22d3ee] hover:underline cursor-pointer">
+                Demander un accès externe →
+              </a>
+            }
           </div>
         }
 

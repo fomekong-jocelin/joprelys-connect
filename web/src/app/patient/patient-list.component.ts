@@ -54,6 +54,8 @@ export class PatientListComponent implements OnInit {
   readonly emergencyContactPhone = signal('');
   readonly allergies = signal('');
   readonly medicalHistory = signal('');
+  readonly bloodGroup = signal('');
+  readonly email = signal('');
   readonly formLoading = signal(false);
   readonly formError = signal<string | null>(null);
   readonly showCreateForm = signal(false);
@@ -191,6 +193,8 @@ export class PatientListComponent implements OnInit {
         emergencyContactPhone: this.emergencyContactPhone() || undefined,
         allergies: this.allergies() || undefined,
         medicalHistory: this.medicalHistory() || undefined,
+        bloodGroup: this.bloodGroup() || undefined,
+        email: this.email() || undefined,
       })
       .subscribe({
         next: (res) => {
@@ -230,6 +234,8 @@ export class PatientListComponent implements OnInit {
     this.emergencyContactPhone.set('');
     this.allergies.set('');
     this.medicalHistory.set('');
+    this.bloodGroup.set('');
+    this.email.set('');
     this.formError.set(null);
   }
 }

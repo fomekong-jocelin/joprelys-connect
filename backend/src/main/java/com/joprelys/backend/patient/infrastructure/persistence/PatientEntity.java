@@ -64,6 +64,12 @@ public class PatientEntity {
 	@Column(name = "status", nullable = false, length = 20)
 	private String status;
 
+	@Column(name = "blood_group", length = 10)
+	private String bloodGroup;
+
+	@Column(name = "email", length = 255)
+	private String email;
+
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
@@ -230,6 +236,22 @@ public class PatientEntity {
 
 	public void setStatus(String status) {
 		this.status = status;
+	}
+
+	public String getBloodGroup() {
+		return bloodGroup;
+	}
+
+	public void setBloodGroup(String bloodGroup) {
+		this.bloodGroup = bloodGroup;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
 	}
 
 	public Instant getCreatedAt() {

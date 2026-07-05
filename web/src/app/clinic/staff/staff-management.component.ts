@@ -91,7 +91,7 @@ const STAFF_ROLES: readonly StaffRole[] = ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEI
                 <label class="space-y-1.5 sm:col-span-2">
                   <span class="ui-label">{{ t('staff.role') }} <span class="text-red-500">*</span></span>
                   <select
-                    class="ui-input"
+                    class="ui-select"
                     [value]="role()"
                     [disabled]="formLoading()"
                     (change)="setRole($any($event.target).value)"

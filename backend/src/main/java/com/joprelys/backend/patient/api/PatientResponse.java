@@ -21,6 +21,8 @@ public record PatientResponse(
 		String allergies,
 		String medicalHistory,
 		String status,
+		String bloodGroup,
+		String email,
 		Instant createdAt,
 		Instant updatedAt,
 		Boolean emergencyAccessActive

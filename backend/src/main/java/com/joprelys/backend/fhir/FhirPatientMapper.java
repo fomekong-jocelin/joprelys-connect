@@ -58,6 +58,9 @@ public class FhirPatientMapper {
         if (patient.getPhone() != null && !patient.getPhone().isBlank()) {
             telecom.add(new ContactPoint("phone", patient.getPhone()));
         }
+        if (patient.getEmail() != null && !patient.getEmail().isBlank()) {
+            telecom.add(new ContactPoint("email", patient.getEmail()));
+        }
 
         return new FhirPatientDto(id, identifiers, names, gender, birthDate, telecom);
     }

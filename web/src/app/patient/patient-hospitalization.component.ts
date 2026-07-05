@@ -56,7 +56,7 @@ import { Hospitalization, HospitalizationNote } from './patient.models';
                   [(ngModel)]="newNoteContent"
                   name="note"
                   required
-                  class="flex-1 min-h-[40px] px-3.5 py-2 border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-[var(--radius-brand-sm)] text-slate-900 dark:text-white text-xs focus:outline-hidden focus:border-brand-cyan"
+                  class="ui-input flex-1 text-xs"
                   [placeholder]="t('patients.hospitalization.notes.add') + '...'"
                 />
                 <button
@@ -158,7 +158,7 @@ import { Hospitalization, HospitalizationNote } from './patient.models';
               }
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.hospitalization.service') }}*</label>
-                <select [(ngModel)]="serviceName" name="service" class="w-full min-h-[40px] px-3.5 py-2 border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-[var(--radius-brand-sm)] text-slate-900 dark:text-white text-sm focus:outline-hidden focus:border-brand-cyan">
+                <select [(ngModel)]="serviceName" name="service" class="ui-select">
                   <option value="MÉDECINE GÉNÉRALE">Médecine Générale</option>
                   <option value="CHIRURGIE">Chirurgie</option>
                   <option value="PÉDIATRIE">Pédiatrie</option>
@@ -169,16 +169,16 @@ import { Hospitalization, HospitalizationNote } from './patient.models';
               <div class="grid grid-cols-2 gap-4">
                 <div class="space-y-1">
                   <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.hospitalization.room') }}*</label>
-                  <input type="text" [(ngModel)]="roomNumber" name="room" required class="w-full min-h-[40px] px-3.5 py-2 border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-[var(--radius-brand-sm)] text-slate-900 dark:text-white text-sm focus:outline-hidden focus:border-brand-cyan" placeholder="Ex: Ch 101" />
+                  <input type="text" [(ngModel)]="roomNumber" name="room" required class="ui-input" placeholder="Ex: Ch 101" />
                 </div>
                 <div class="space-y-1">
                   <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.hospitalization.bed') }}*</label>
-                  <input type="text" [(ngModel)]="bedNumber" name="bed" required class="w-full min-h-[40px] px-3.5 py-2 border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-[var(--radius-brand-sm)] text-slate-900 dark:text-white text-sm focus:outline-hidden focus:border-brand-cyan" placeholder="Ex: Lit A" />
+                  <input type="text" [(ngModel)]="bedNumber" name="bed" required class="ui-input" placeholder="Ex: Lit A" />
                 </div>
               </div>
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.hospitalization.reason') }}*</label>
-                <textarea [(ngModel)]="admissionReason" name="reason" required rows="3" class="w-full px-3.5 py-2 border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-[var(--radius-brand-sm)] text-slate-900 dark:text-white text-sm focus:outline-hidden focus:border-brand-cyan"></textarea>
+                <textarea [(ngModel)]="admissionReason" name="reason" required rows="3" class="ui-textarea"></textarea>
               </div>
               <footer class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex justify-end gap-2">
                 <button type="button" (click)="showAdmitModal.set(false)" class="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer">{{ t('common.cancel') }}</button>
@@ -202,11 +202,11 @@ import { Hospitalization, HospitalizationNote } from './patient.models';
             <form (submit)="saveDischarge($event)" class="p-5 space-y-4">
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.hospitalization.dischargeDiagnosis') }}*</label>
-                <input type="text" [(ngModel)]="dischargeDiagnosis" name="diag" required class="w-full min-h-[40px] px-3.5 py-2 border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-[var(--radius-brand-sm)] text-slate-900 dark:text-white text-sm focus:outline-hidden focus:border-brand-cyan" />
+                <input type="text" [(ngModel)]="dischargeDiagnosis" name="diag" required class="ui-input" />
               </div>
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.hospitalization.dischargeInstructions') }}*</label>
-                <textarea [(ngModel)]="dischargeInstructions" name="instr" required rows="3" class="w-full px-3.5 py-2 border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-[var(--radius-brand-sm)] text-slate-900 dark:text-white text-sm focus:outline-hidden focus:border-brand-cyan"></textarea>
+                <textarea [(ngModel)]="dischargeInstructions" name="instr" required rows="3" class="ui-textarea"></textarea>
               </div>
               <footer class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex justify-end gap-2">
                 <button type="button" (click)="showDischargeModal.set(false)" class="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer">{{ t('common.cancel') }}</button>

@@ -10,6 +10,8 @@ import {
   CreatePatientAllergyRequest,
   PatientMedicalHistory,
   CreatePatientMedicalHistoryRequest,
+  PatientVaccination,
+  CreatePatientVaccinationRequest,
   Hospitalization,
   CreateHospitalizationRequest,
   HospitalizationNote,
@@ -122,5 +124,17 @@ export class PatientApiService {
   // WT3 (DUPLICATES): Fusionner deux dossiers patients
   mergePatients(primaryId: string, secondaryId: string): Observable<void> {
     return this.http.post<void>('/api/patients/merge', { primaryId, secondaryId });
+  }
+
+  getVaccinations(patientId: string): Observable<PatientVaccination[]> {
+    return this.http.get<PatientVaccination[]>(`/api/patients/${patientId}/vaccinations`);
+  }
+
+  addVaccination(patientId: string, request: CreatePatientVaccinationRequest): Observable<PatientVaccination> {
+    return this.http.post<PatientVaccination>(`/api/patients/${patientId}/vaccinations`, request);
+  }
+
+  updateVaccination(patientId: string, vaccinationId: string, request: CreatePatientVaccinationRequest): Observable<PatientVaccination> {
+    return this.http.put<PatientVaccination>(`/api/patients/${patientId}/vaccinations/${vaccinationId}`, request);
   }
 }

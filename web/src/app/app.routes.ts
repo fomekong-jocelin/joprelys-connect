@@ -70,6 +70,12 @@ export const routes: Routes = [
     canActivate: [roleGuard],
     data: { expectedRoles: ['ADMIN_CLINIQUE'] },
   },
+  {
+    path: 'clinic/access-request',
+    loadComponent: () => import('./clinic/external-access/clinic-access-request.component').then(m => m.ClinicAccessRequestComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'] },
+  },
 
   {
     path: 'clinic/consultation/:visitId',

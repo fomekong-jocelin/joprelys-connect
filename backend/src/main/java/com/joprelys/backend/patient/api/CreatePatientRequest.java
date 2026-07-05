@@ -28,6 +28,8 @@ public record CreatePatientRequest(
 		String emergencyContactName,
 		String emergencyContactPhone,
 		String allergies,
-		String medicalHistory
+		String medicalHistory,
+		String bloodGroup,
+		String email
 ) {
 }

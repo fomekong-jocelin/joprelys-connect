@@ -8,8 +8,9 @@ import jakarta.validation.constraints.Size;
 import java.util.UUID;
 
 public record CreateExternalAccessRequest(
-        @NotNull(message = "L'identifiant du patient est obligatoire.")
-        UUID patientId,
+        @NotBlank(message = "Le numéro DPU du patient est obligatoire.")
+        @Size(min = 5, max = 50, message = "Le numéro DPU doit contenir entre 5 et 50 caractères.")
+        String patientDpu,
 
         @NotBlank(message = "Le motif de la demande est obligatoire.")
         @Size(min = 10, max = 500, message = "Le motif doit contenir entre 10 et 500 caractères.")

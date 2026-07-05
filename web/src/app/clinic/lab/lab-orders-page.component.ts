@@ -147,7 +147,7 @@ import { LabOrder, LabResult } from './lab.models';
                     <div class="mt-3 flex flex-col gap-3 md:flex-row md:items-end">
                       <label class="block md:w-72">
                         <span class="ui-label">{{ t('patients.status') }}</span>
-                        <select class="ui-input lab-input mt-1" [value]="statusDraft()" (change)="statusDraft.set($any($event.target).value)">
+                        <select class="ui-select lab-input mt-1" [value]="statusDraft()" (change)="statusDraft.set($any($event.target).value)">
                           @for (status of allowedStatuses; track status) {
                             <option [value]="status">{{ statusLabel(status) }}</option>
                           }
@@ -214,7 +214,7 @@ import { LabOrder, LabResult } from './lab.models';
                           <input class="ui-input lab-input" formControlName="value" [placeholder]="t('lab.value')" />
                           <input class="ui-input lab-input" formControlName="unit" [placeholder]="t('lab.unit')" />
                           <input class="ui-input lab-input" formControlName="referenceRange" [placeholder]="t('lab.referenceRange')" />
-                          <select class="ui-input lab-input" formControlName="interpretation">
+                          <select class="ui-select lab-input" formControlName="interpretation">
                             <option value="NORMAL">{{ t('lab.interpretation.NORMAL') }}</option>
                             <option value="LOW">{{ t('lab.interpretation.LOW') }}</option>
                             <option value="HIGH">{{ t('lab.interpretation.HIGH') }}</option>

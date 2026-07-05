@@ -19,6 +19,8 @@ public record PatientPortalMeResponse(
         String emergencyContactPhone,
         String allergies,
         String medicalHistory,
+        String bloodGroup,
+        String email,
         List<PatientPortalConsultation> consultations
 ) {
     public record PatientPortalConsultation(

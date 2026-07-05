@@ -79,7 +79,7 @@ const ACCESS_SCOPES = [
                               type="checkbox"
                               [checked]="isScopeSelected(req.id, scope.key)"
                               (change)="toggleRequestScope(req.id, scope.key)"
-                              class="h-3 w-3 rounded border-gray-300 text-[var(--brand-primary)] focus:ring-[var(--brand-primary)]"
+                              class="ui-checkbox"
                             />
                             {{ scope.labelFr }}
                           </label>

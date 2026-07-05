@@ -119,7 +119,7 @@ const CHANNELS = [
                           type="checkbox"
                           [checked]="isScopeEnabled(consent, scope.key)"
                           (change)="toggleScope(consent, scope.key)"
-                          class="h-3.5 w-3.5 rounded border-gray-300 text-[var(--brand-primary)] focus:ring-[var(--brand-primary)]"
+                          class="ui-checkbox"
                         />
                         {{ scope.labelFr }}
                       </label>
@@ -137,7 +137,7 @@ const CHANNELS = [
                             [value]="ch.key"
                             [checked]="(consent.validationChannel ?? 'PORTAL') === ch.key"
                             (change)="setChannel(consent, ch.key)"
-                            class="h-3.5 w-3.5 text-[var(--brand-primary)] focus:ring-[var(--brand-primary)]"
+                            class="ui-radio"
                           />
                           {{ ch.labelFr }}
                         </label>

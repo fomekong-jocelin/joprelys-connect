@@ -129,6 +129,8 @@ public class PatientController {
 				entity.getAllergies(),
 				entity.getMedicalHistory(),
 				entity.getStatus(),
+				entity.getBloodGroup(),
+				entity.getEmail(),
 				entity.getCreatedAt(),
 				entity.getUpdatedAt(),
 				emergencyActive

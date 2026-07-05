@@ -5,13 +5,17 @@ import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.patient.api.CreatePatientAllergyRequest;
 import com.joprelys.backend.patient.api.CreatePatientMedicalHistoryRequest;
+import com.joprelys.backend.patient.api.CreatePatientVaccinationRequest;
 import com.joprelys.backend.patient.api.PatientAllergyResponse;
 import com.joprelys.backend.patient.api.PatientMedicalHistoryResponse;
+import com.joprelys.backend.patient.api.PatientVaccinationResponse;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientAllergyEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientAllergyRepository;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientMedicalHistoryEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientMedicalHistoryRepository;
+import com.joprelys.backend.patient.infrastructure.persistence.PatientVaccinationEntity;
+import com.joprelys.backend.patient.infrastructure.persistence.PatientVaccinationRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -26,17 +30,20 @@ public class PatientMedicalInfoService {
 
     private final PatientAllergyRepository patientAllergyRepository;
     private final PatientMedicalHistoryRepository patientMedicalHistoryRepository;
+    private final PatientVaccinationRepository patientVaccinationRepository;
     private final PatientService patientService;
     private final UserAccountRepository userAccountRepository;
     private final AuditService auditService;
 
     public PatientMedicalInfoService(PatientAllergyRepository patientAllergyRepository,
                                      PatientMedicalHistoryRepository patientMedicalHistoryRepository,
+                                     PatientVaccinationRepository patientVaccinationRepository,
                                      PatientService patientService,
                                      UserAccountRepository userAccountRepository,
                                      AuditService auditService) {
         this.patientAllergyRepository = patientAllergyRepository;
         this.patientMedicalHistoryRepository = patientMedicalHistoryRepository;
+        this.patientVaccinationRepository = patientVaccinationRepository;
         this.patientService = patientService;
         this.userAccountRepository = userAccountRepository;
         this.auditService = auditService;
@@ -184,6 +191,79 @@ public class PatientMedicalInfoService {
         }
 
         return PatientMedicalHistoryResponse.fromEntity(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PatientVaccinationResponse> listVaccinations(UUID patientId) {
+        patientService.getPatientById(patientId);
+
+        return patientVaccinationRepository.findAllByPatientId(patientId).stream()
+                .map(PatientVaccinationResponse::fromEntity)
+                .toList();
+    }
+
+    @Transactional
+    public PatientVaccinationResponse addVaccination(UUID patientId, CreatePatientVaccinationRequest request) {
+        PatientEntity patient = patientService.getPatientById(patientId);
+
+        PatientVaccinationEntity vaccination = new PatientVaccinationEntity(
+                patientId,
+                request.vaccineName(),
+                request.batchNumber(),
+                request.administeredAt(),
+                request.administeredBy(),
+                request.notes(),
+                request.nextDoseAt()
+        );
+
+        PatientVaccinationEntity saved = patientVaccinationRepository.save(vaccination);
+
+        UserAccountEntity actor = getCurrentUser();
+        if (actor != null) {
+            auditService.logSuccess(
+                    actor.getId(),
+                    actor.getOrganizationId(),
+                    patientId,
+                    "PATIENT_VACCINATION",
+                    saved.getId(),
+                    "ADD_VACCINATION",
+                    "Ajout de la vaccination : " + saved.getVaccineName() + " (Lot: " + saved.getBatchNumber() + ") pour " + patient.getFullName()
+            );
+        }
+
+        return PatientVaccinationResponse.fromEntity(saved);
+    }
+
+    @Transactional
+    public PatientVaccinationResponse updateVaccination(UUID patientId, UUID vaccinationId, CreatePatientVaccinationRequest request) {
+        PatientEntity patient = patientService.getPatientById(patientId);
+
+        PatientVaccinationEntity vaccination = patientVaccinationRepository.findByIdAndPatientId(vaccinationId, patientId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vaccination introuvable pour ce patient"));
+
+        vaccination.setVaccineName(request.vaccineName());
+        vaccination.setBatchNumber(request.batchNumber());
+        vaccination.setAdministeredAt(request.administeredAt());
+        vaccination.setAdministeredBy(request.administeredBy());
+        vaccination.setNotes(request.notes());
+        vaccination.setNextDoseAt(request.nextDoseAt());
+
+        PatientVaccinationEntity saved = patientVaccinationRepository.save(vaccination);
+
+        UserAccountEntity actor = getCurrentUser();
+        if (actor != null) {
+            auditService.logSuccess(
+                    actor.getId(),
+                    actor.getOrganizationId(),
+                    patientId,
+                    "PATIENT_VACCINATION",
+                    saved.getId(),
+                    "UPDATE_VACCINATION",
+                    "Mise à jour de la vaccination : " + saved.getVaccineName() + " pour " + patient.getFullName()
+            );
+        }
+
+        return PatientVaccinationResponse.fromEntity(saved);
     }
 
     private UserAccountEntity getCurrentUser() {

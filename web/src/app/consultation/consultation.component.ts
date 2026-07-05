@@ -267,7 +267,7 @@ import { LabOrderApiService } from '../clinic/lab/lab-api.service';
                     type="text"
                     formControlName="followUp"
                     placeholder="Ex: Contrôle dans 7 jours, bilan sanguin NFS à J+10..."
-                    class="ui-input w-full p-3 text-sm rounded-xl transition-colors"
+                    class="ui-input w-full p-3 text-sm transition-colors"
                   />
                 </div>
               </div>
@@ -326,19 +326,19 @@ import { LabOrderApiService } from '../clinic/lab/lab-api.service';
                         @for (item of prescriptionItems.controls; track $index; let i = $index) {
                           <tr [formGroupName]="i" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
                             <td class="py-2 px-3">
-                              <input type="text" formControlName="drugName" placeholder="Ex: Paracétamol" class="ui-input w-full text-xs p-2 rounded-lg" />
+                              <input type="text" formControlName="drugName" placeholder="Ex: Paracétamol" class="ui-input w-full text-xs p-2" />
                             </td>
                             <td class="py-2 px-3">
-                              <input type="text" formControlName="dosage" placeholder="Ex: 500 mg" class="ui-input w-full text-xs p-2 rounded-lg" />
+                              <input type="text" formControlName="dosage" placeholder="Ex: 500 mg" class="ui-input w-full text-xs p-2" />
                             </td>
                             <td class="py-2 px-3">
-                              <input type="text" formControlName="posology" placeholder="Ex: 3x/jour" class="ui-input w-full text-xs p-2 rounded-lg" />
+                              <input type="text" formControlName="posology" placeholder="Ex: 3x/jour" class="ui-input w-full text-xs p-2" />
                             </td>
                             <td class="py-2 px-3">
-                              <input type="text" formControlName="duration" placeholder="Ex: 5 jours" class="ui-input w-full text-xs p-2 rounded-lg" />
+                              <input type="text" formControlName="duration" placeholder="Ex: 5 jours" class="ui-input w-full text-xs p-2" />
                             </td>
                             <td class="py-2 px-3">
-                              <input type="text" formControlName="quantity" placeholder="Ex: 1 boîte" class="ui-input w-full text-xs p-2 rounded-lg" />
+                              <input type="text" formControlName="quantity" placeholder="Ex: 1 boîte" class="ui-input w-full text-xs p-2" />
                             </td>
                             <td class="py-2 px-3 text-right">
                               <button
@@ -373,23 +373,23 @@ import { LabOrderApiService } from '../clinic/lab/lab-api.service';
                         <div class="grid grid-cols-2 gap-2">
                           <div class="col-span-2 space-y-1">
                             <label class="ui-label text-[10px]">Médicament *</label>
-                            <input type="text" formControlName="drugName" placeholder="Nom du médicament" class="ui-input w-full text-xs p-2 rounded-lg" />
+                            <input type="text" formControlName="drugName" placeholder="Nom du médicament" class="ui-input w-full text-xs p-2" />
                           </div>
                           <div class="space-y-1">
                             <label class="ui-label text-[10px]">Dosage *</label>
-                            <input type="text" formControlName="dosage" placeholder="Ex: 500mg" class="ui-input w-full text-xs p-2 rounded-lg" />
+                            <input type="text" formControlName="dosage" placeholder="Ex: 500mg" class="ui-input w-full text-xs p-2" />
                           </div>
                           <div class="space-y-1">
                             <label class="ui-label text-[10px]">Posologie</label>
-                            <input type="text" formControlName="posology" placeholder="Ex: 3x/jour" class="ui-input w-full text-xs p-2 rounded-lg" />
+                            <input type="text" formControlName="posology" placeholder="Ex: 3x/jour" class="ui-input w-full text-xs p-2" />
                           </div>
                           <div class="space-y-1">
                             <label class="ui-label text-[10px]">Durée</label>
-                            <input type="text" formControlName="duration" placeholder="Ex: 5 jours" class="ui-input w-full text-xs p-2 rounded-lg" />
+                            <input type="text" formControlName="duration" placeholder="Ex: 5 jours" class="ui-input w-full text-xs p-2" />
                           </div>
                           <div class="space-y-1">
                             <label class="ui-label text-[10px]">Quantité</label>
-                            <input type="text" formControlName="quantity" placeholder="Ex: 1 boîte" class="ui-input w-full text-xs p-2 rounded-lg" />
+                            <input type="text" formControlName="quantity" placeholder="Ex: 1 boîte" class="ui-input w-full text-xs p-2" />
                           </div>
                         </div>
                       </div>
@@ -439,7 +439,7 @@ import { LabOrderApiService } from '../clinic/lab/lab-api.service';
                         #customExamInput
                         type="text"
                         placeholder="Ex: Hémoglobine, Test Widal, ECBU, Ionogramme..."
-                        class="ui-input flex-1 text-xs p-2 rounded-lg"
+                        class="ui-input flex-1 text-xs p-2"
                         (keyup.enter)="addLabExam(customExamInput.value); customExamInput.value = ''"
                       />
                       <button
@@ -454,7 +454,7 @@ import { LabOrderApiService } from '../clinic/lab/lab-api.service';
 
                   <div class="space-y-1.5">
                     <label class="ui-label text-xs font-semibold">Priorité</label>
-                    <select formControlName="labPriority" class="ui-input w-full text-xs p-2.5 rounded-lg">
+                    <select formControlName="labPriority" class="ui-select w-full text-xs p-2.5">
                       <option value="NORMALE">NORMALE</option>
                       <option value="URGENTE">URGENTE</option>
                     </select>
@@ -468,7 +468,7 @@ import { LabOrderApiService } from '../clinic/lab/lab-api.service';
                     type="text"
                     formControlName="labReason"
                     placeholder="Ex: Fièvre prolongée inexpliquée, bilan annuel de suivi diabétique..."
-                    class="ui-input w-full text-xs p-2.5 rounded-lg"
+                    class="ui-input w-full text-xs p-2.5"
                   />
                 </div>
 

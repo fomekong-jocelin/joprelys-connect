@@ -131,6 +131,8 @@ public class PatientPortalController {
                 patient.getEmergencyContactPhone(),
                 patient.getAllergies(),
                 patient.getMedicalHistory(),
+                patient.getBloodGroup(),
+                patient.getEmail(),
                 consultations
         );
     }

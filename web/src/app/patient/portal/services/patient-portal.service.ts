@@ -55,6 +55,8 @@ export interface PatientPortalMeResponse {
   emergencyContactPhone: string;
   allergies: string;
   medicalHistory: string;
+  bloodGroup?: string;
+  email?: string;
   consultations: PatientPortalConsultation[];
 }
 

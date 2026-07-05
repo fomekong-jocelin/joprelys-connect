@@ -22,7 +22,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
-import java.util.UUID;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -131,11 +130,11 @@ public class ExternalAccessControllerTest {
     void shouldCreateExternalAccessRequestSuccessfully() throws Exception {
         String payload = """
                 {
-                    "patientId": "%s",
+                    "patientDpu": "%s",
                     "reason": "Consultation cardiologique externe urgente",
                     "durationHours": 24
                 }
-                """.formatted(patientB.getId());
+                """.formatted(patientB.getGlobalPatientNumber());
 
         mockMvc.perform(post("/api/external-access/requests")
                         .header("Authorization", "Bearer " + tokenDoctorA)
@@ -152,11 +151,11 @@ public class ExternalAccessControllerTest {
     void shouldFailWhenPatientBelongsToSameOrganization() throws Exception {
         String payload = """
                 {
-                    "patientId": "%s",
+                    "patientDpu": "%s",
                     "reason": "Consultation pour patient du meme etab",
                     "durationHours": 24
                 }
-                """.formatted(patientA.getId());
+                """.formatted(patientA.getGlobalPatientNumber());
 
         mockMvc.perform(post("/api/external-access/requests")
                         .header("Authorization", "Bearer " + tokenDoctorA)
@@ -169,11 +168,11 @@ public class ExternalAccessControllerTest {
     void shouldFailWhenReasonTooShort() throws Exception {
         String payload = """
                 {
-                    "patientId": "%s",
+                    "patientDpu": "%s",
                     "reason": "Court",
                     "durationHours": 24
                 }
-                """.formatted(patientB.getId());
+                """.formatted(patientB.getGlobalPatientNumber());
 
         mockMvc.perform(post("/api/external-access/requests")
                         .header("Authorization", "Bearer " + tokenDoctorA)
@@ -184,14 +183,13 @@ public class ExternalAccessControllerTest {
 
     @Test
     void shouldFailWhenPatientNotFound() throws Exception {
-        UUID nonExistentId = UUID.randomUUID();
         String payload = """
                 {
-                    "patientId": "%s",
+                    "patientDpu": "DPU-JOP-99999999-999999",
                     "reason": "Consultation externe patient inconnu",
                     "durationHours": 24
                 }
-                """.formatted(nonExistentId);
+                """;
 
         mockMvc.perform(post("/api/external-access/requests")
                         .header("Authorization", "Bearer " + tokenDoctorA)
@@ -204,11 +202,11 @@ public class ExternalAccessControllerTest {
     void shouldFailWhenDuplicateRequestPending() throws Exception {
         String payload = """
                 {
-                    "patientId": "%s",
+                    "patientDpu": "%s",
                     "reason": "Premiere demande d'acces externe",
                     "durationHours": 12
                 }
-                """.formatted(patientB.getId());
+                """.formatted(patientB.getGlobalPatientNumber());
 
         // First attempt (success)
         mockMvc.perform(post("/api/external-access/requests")

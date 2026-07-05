@@ -14,6 +14,8 @@ export interface Patient {
   emergencyContactPhone?: string;
   allergies?: string;
   medicalHistory?: string;
+  bloodGroup?: string;
+  email?: string;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -32,6 +34,8 @@ export interface CreatePatientDto {
   emergencyContactPhone?: string;
   allergies?: string;
   medicalHistory?: string;
+  bloodGroup?: string;
+  email?: string;
 }
 
 export interface LabOrder {
@@ -163,4 +167,26 @@ export interface PatientDuplicateCandidate {
   similarityScore: number;
   status: 'PENDING' | 'RESOLVED' | 'IGNORED';
   createdAt: string;
+}
+
+export interface PatientVaccination {
+  id?: string;
+  patientId: string;
+  vaccineName: string;
+  batchNumber?: string;
+  administeredAt: string;
+  administeredBy?: string;
+  notes?: string;
+  nextDoseAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreatePatientVaccinationRequest {
+  vaccineName: string;
+  batchNumber?: string;
+  administeredAt: string;
+  administeredBy?: string;
+  notes?: string;
+  nextDoseAt?: string;
 }

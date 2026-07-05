@@ -78,6 +78,7 @@ interface DispensationLineDraft {
                           [checked]="draftFor(item).available"
                           [disabled]="!canDispenseStatus() || remainingQuantity(item) === 0"
                           (change)="updateAvailability(item.itemId, $any($event.target).checked)"
+                          class="ui-checkbox"
                         />
                         {{ draftFor(item).available ? t('pharmacy.availableYes') : t('pharmacy.availableNo') }}
                       </label>

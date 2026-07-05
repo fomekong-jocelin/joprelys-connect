@@ -28,6 +28,14 @@ import { PatientMedicalInfoComponent } from '../patient-medical-info.component';
               <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ p.phone || 'Non renseigné' }}</span>
             </div>
             <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+              <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Groupe sanguin</span>
+              <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ p.bloodGroup || 'Non renseigné' }}</span>
+            </div>
+            <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+              <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Adresse email</span>
+              <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ p.email || 'Non renseigné' }}</span>
+            </div>
+            <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
               <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Ville</span>
               <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200 capitalize">{{ p.city }}</span>
             </div>

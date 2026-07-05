@@ -3,7 +3,7 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PatientApiService } from './patient-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
-import { PatientAllergy, PatientMedicalHistory } from './patient.models';
+import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './patient.models';
 
 @Component({
   selector: 'app-patient-medical-info',
@@ -153,11 +153,11 @@ import { PatientAllergy, PatientMedicalHistory } from './patient.models';
             <form (submit)="saveAllergy($event)" class="p-5 space-y-4">
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.allergies.substance') }}*</label>
-                <input type="text" [(ngModel)]="allergySubstance" name="substance" required class="w-full min-h-[40px] px-3.5 py-2 border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-[var(--radius-brand-sm)] text-slate-900 dark:text-white text-sm focus:outline-hidden focus:border-brand-cyan" placeholder="Ex: Penicilline" />
+                <input type="text" [(ngModel)]="allergySubstance" name="substance" required class="ui-input" placeholder="Ex: Penicilline" />
               </div>
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.allergies.severity') }}*</label>
-                <select [(ngModel)]="allergySeverity" name="severity" class="w-full min-h-[40px] px-3.5 py-2 border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-[var(--radius-brand-sm)] text-slate-900 dark:text-white text-sm focus:outline-hidden focus:border-brand-cyan">
+                <select [(ngModel)]="allergySeverity" name="severity" class="ui-select">
                   <option value="LOW">{{ t('patients.medicalInfo.allergies.severity.LOW') }}</option>
                   <option value="MEDIUM">{{ t('patients.medicalInfo.allergies.severity.MEDIUM') }}</option>
                   <option value="HIGH">{{ t('patients.medicalInfo.allergies.severity.HIGH') }}</option>
@@ -166,11 +166,11 @@ import { PatientAllergy, PatientMedicalHistory } from './patient.models';
               </div>
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.allergies.reaction') }}</label>
-                <input type="text" [(ngModel)]="allergyReaction" name="reaction" class="w-full min-h-[40px] px-3.5 py-2 border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-[var(--radius-brand-sm)] text-slate-900 dark:text-white text-sm focus:outline-hidden focus:border-brand-cyan" placeholder="Ex: Choc anaphylactique, Urticaire" />
+                <input type="text" [(ngModel)]="allergyReaction" name="reaction" class="ui-input" placeholder="Ex: Choc anaphylactique, Urticaire" />
               </div>
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.allergies.comment') }}</label>
-                <textarea [(ngModel)]="allergyComment" name="comment" rows="2" class="w-full px-3.5 py-2 border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-[var(--radius-brand-sm)] text-slate-900 dark:text-white text-sm focus:outline-hidden focus:border-brand-cyan"></textarea>
+                <textarea [(ngModel)]="allergyComment" name="comment" rows="2" class="ui-textarea"></textarea>
               </div>
               <footer class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex justify-end gap-2">
                 <button type="button" (click)="showAllergyModal.set(false)" class="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer">{{ t('common.cancel') }}</button>
@@ -194,7 +194,7 @@ import { PatientAllergy, PatientMedicalHistory } from './patient.models';
             <form (submit)="saveHistory($event)" class="p-5 space-y-4">
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.history.category') }}*</label>
-                <select [(ngModel)]="historyCategory" name="category" class="w-full min-h-[40px] px-3.5 py-2 border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-[var(--radius-brand-sm)] text-slate-900 dark:text-white text-sm focus:outline-hidden focus:border-brand-cyan">
+                <select [(ngModel)]="historyCategory" name="category" class="ui-select">
                   <option value="MEDICAL">{{ t('patients.medicalInfo.history.category.MEDICAL') }}</option>
                   <option value="SURGICAL">{{ t('patients.medicalInfo.history.category.SURGICAL') }}</option>
                   <option value="FAMILY">{{ t('patients.medicalInfo.history.category.FAMILY') }}</option>
@@ -204,27 +204,121 @@ import { PatientAllergy, PatientMedicalHistory } from './patient.models';
               </div>
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.history.description') }}*</label>
-                <input type="text" [(ngModel)]="historyDescription" name="description" required class="w-full min-h-[40px] px-3.5 py-2 border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-[var(--radius-brand-sm)] text-slate-900 dark:text-white text-sm focus:outline-hidden focus:border-brand-cyan" placeholder="Ex: Diabète type 2, Appendicectomie" />
+                <input type="text" [(ngModel)]="historyDescription" name="description" required class="ui-input" placeholder="Ex: Diabète type 2, Appendicectomie" />
               </div>
               <div class="grid grid-cols-2 gap-4">
                 <div class="space-y-1">
                   <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.history.onsetDate') }}</label>
-                  <input type="date" [(ngModel)]="historyOnsetDate" name="onsetDate" class="w-full min-h-[40px] px-3.5 py-2 border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-[var(--radius-brand-sm)] text-slate-900 dark:text-white text-sm focus:outline-hidden focus:border-brand-cyan" />
+                  <input type="date" [(ngModel)]="historyOnsetDate" name="onsetDate" class="ui-input" />
                 </div>
                 <div class="flex items-center pt-5">
                   <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
-                    <input type="checkbox" [(ngModel)]="historyIsOngoing" name="isOngoing" class="w-4 h-4 rounded-xs border-slate-300 text-brand-cyan focus:ring-brand-cyan" />
+                    <input type="checkbox" [(ngModel)]="historyIsOngoing" name="isOngoing" class="ui-checkbox" />
                     {{ t('patients.medicalInfo.history.isOngoing') }}
                   </label>
                 </div>
               </div>
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.history.comment') }}</label>
-                <textarea [(ngModel)]="historyComment" name="comment" rows="2" class="w-full px-3.5 py-2 border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-[var(--radius-brand-sm)] text-slate-900 dark:text-white text-sm focus:outline-hidden focus:border-brand-cyan"></textarea>
+                <textarea [(ngModel)]="historyComment" name="comment" rows="2" class="ui-textarea"></textarea>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+
+      <!-- Section Vaccinations -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-xl p-5 shadow-xs transition-colors">
+        <div class="flex items-center justify-between mb-4">
+          <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+            <span>💉</span> Vaccinations (DPU Section 9)
+          </h4>
+          <button
+            (click)="openVaccinationModal()"
+            class="px-3 py-1 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/20 dark:hover:bg-teal-900/30 text-teal-600 dark:text-teal-400 text-xs font-bold rounded-[var(--radius-brand-sm)] border border-teal-100 dark:border-teal-900/20 transition-all cursor-pointer flex items-center gap-1"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Ajouter une vaccination
+          </button>
+        </div>
+
+        @if (loadingVaccinations()) {
+          <div class="py-4 text-center text-xs text-slate-400">{{ t('common.loading') }}</div>
+        } @else if (vaccinations().length === 0) {
+          <p class="text-xs text-slate-500 dark:text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/10 p-3 rounded-lg border border-slate-100/50 dark:border-slate-800/40">
+            Aucune vaccination enregistrée pour ce patient.
+          </p>
+        } @else {
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            @for (vac of vaccinations(); track vac.id) {
+              <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg animate-fade-in">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200 block">{{ vac.vaccineName }}</span>
+                    @if (vac.batchNumber) {
+                      <span class="text-[10px] bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 px-1.5 py-0.5 rounded-sm mt-1 inline-block">Lot: {{ vac.batchNumber }}</span>
+                    }
+                    <div class="text-xs text-slate-500 dark:text-slate-400 mt-2 space-y-1">
+                      <p><strong>Date d'administration :</strong> {{ vac.administeredAt | date:'dd/MM/yyyy' }}</p>
+                      @if (vac.administeredBy) {
+                        <p><strong>Par :</strong> {{ vac.administeredBy }}</p>
+                      }
+                      @if (vac.nextDoseAt) {
+                        <p class="text-brand-cyan dark:text-cyan-400 font-bold"><strong>Prochain rappel :</strong> {{ vac.nextDoseAt | date:'dd/MM/yyyy' }}</p>
+                      }
+                      @if (vac.notes) {
+                        <p class="italic text-slate-400 dark:text-slate-500 mt-1">"{{ vac.notes }}"</p>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Modal Vaccinations -->
+      @if (showVaccinationModal()) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <div class="bg-white dark:bg-slate-900 w-full max-w-md p-6 rounded-xl border border-slate-100 dark:border-slate-800/60 shadow-xl">
+            <header class="mb-4">
+              <h4 class="font-display font-black text-base text-slate-800 dark:text-white uppercase tracking-wider">
+                Enregistrer une vaccination
+              </h4>
+            </header>
+            <form (submit)="saveVaccination($event)" class="space-y-4">
+              <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nom du vaccin*</label>
+                <input type="text" [(ngModel)]="vaccineName" name="vaccineName" required class="ui-input" placeholder="Ex: BCG, Tétanos, ROR..." />
+              </div>
+              <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">N° de lot</label>
+                <input type="text" [(ngModel)]="vaccineBatch" name="batchNumber" class="ui-input" placeholder="Ex: AB12345" />
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1">
+                  <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date d'administration*</label>
+                  <input type="date" [(ngModel)]="vaccineDate" name="administeredAt" required class="ui-input" />
+                </div>
+                <div class="space-y-1">
+                  <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Prochain rappel</label>
+                  <input type="date" [(ngModel)]="vaccineNextDate" name="nextDoseAt" class="ui-input" />
+                </div>
+              </div>
+              <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Administré par</label>
+                <input type="text" [(ngModel)]="vaccineAdministeredBy" name="administeredBy" class="ui-input" placeholder="Ex: Dr. House, Cabinet Infirmier..." />
+              </div>
+              <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Notes / Remarques</label>
+                <textarea [(ngModel)]="vaccineNotes" name="notes" rows="2" class="ui-textarea" placeholder="Détails supplémentaires..."></textarea>
               </div>
               <footer class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex justify-end gap-2">
-                <button type="button" (click)="showHistoryModal.set(false)" class="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer">{{ t('common.cancel') }}</button>
-                <button type="submit" class="px-5 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[#097b98] cursor-pointer">{{ t('common.save') }}</button>
+                <button type="button" (click)="showVaccinationModal.set(false)" class="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer">Annuler</button>
+                <button type="submit" class="px-5 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[#097b98] cursor-pointer">Enregistrer</button>
               </footer>
             </form>
           </div>
@@ -243,13 +337,16 @@ export class PatientMedicalInfoComponent implements OnInit {
 
   readonly allergies = signal<PatientAllergy[]>([]);
   readonly history = signal<PatientMedicalHistory[]>([]);
+  readonly vaccinations = signal<PatientVaccination[]>([]);
 
   readonly loadingAllergies = signal<boolean>(false);
   readonly loadingHistory = signal<boolean>(false);
+  readonly loadingVaccinations = signal<boolean>(false);
 
   // Modales
   readonly showAllergyModal = signal<boolean>(false);
   readonly showHistoryModal = signal<boolean>(false);
+  readonly showVaccinationModal = signal<boolean>(false);
 
   // Formulaire Allergies
   allergySubstance = '';
@@ -264,6 +361,14 @@ export class PatientMedicalInfoComponent implements OnInit {
   historyIsOngoing = true;
   historyComment = '';
 
+  // Formulaire Vaccinations
+  vaccineName = '';
+  vaccineBatch = '';
+  vaccineDate = '';
+  vaccineNextDate = '';
+  vaccineAdministeredBy = '';
+  vaccineNotes = '';
+
   readonly historyCategories: Array<'MEDICAL' | 'SURGICAL' | 'FAMILY' | 'OBSTETRICAL' | 'OTHER'> = [
     'MEDICAL', 'SURGICAL', 'FAMILY', 'OBSTETRICAL', 'OTHER'
   ];
@@ -272,6 +377,7 @@ export class PatientMedicalInfoComponent implements OnInit {
     if (this.patientId) {
       this.loadAllergies();
       this.loadHistory();
+      this.loadVaccinations();
     }
   }
 
@@ -294,6 +400,17 @@ export class PatientMedicalInfoComponent implements OnInit {
         this.loadingHistory.set(false);
       },
       error: () => this.loadingHistory.set(false)
+    });
+  }
+
+  loadVaccinations(): void {
+    this.loadingVaccinations.set(true);
+    this.patientApi.getVaccinations(this.patientId).subscribe({
+      next: (data) => {
+        this.vaccinations.set(data);
+        this.loadingVaccinations.set(false);
+      },
+      error: () => this.loadingVaccinations.set(false)
     });
   }
 
@@ -393,6 +510,35 @@ export class PatientMedicalInfoComponent implements OnInit {
       comment: item.comment
     }).subscribe({
       next: () => this.loadHistory()
+    });
+  }
+
+  openVaccinationModal(): void {
+    this.vaccineName = '';
+    this.vaccineBatch = '';
+    this.vaccineDate = new Date().toISOString().split('T')[0];
+    this.vaccineNextDate = '';
+    this.vaccineAdministeredBy = '';
+    this.vaccineNotes = '';
+    this.showVaccinationModal.set(true);
+  }
+
+  saveVaccination(event: Event): void {
+    event.preventDefault();
+    if (!this.vaccineName.trim() || !this.vaccineDate) return;
+
+    this.patientApi.addVaccination(this.patientId, {
+      vaccineName: this.vaccineName.trim(),
+      batchNumber: this.vaccineBatch.trim() || undefined,
+      administeredAt: this.vaccineDate,
+      administeredBy: this.vaccineAdministeredBy.trim() || undefined,
+      notes: this.vaccineNotes.trim() || undefined,
+      nextDoseAt: this.vaccineNextDate || undefined
+    }).subscribe({
+      next: () => {
+        this.showVaccinationModal.set(false);
+        this.loadVaccinations();
+      }
     });
   }
 }

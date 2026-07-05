@@ -42,6 +42,14 @@ import { I18nService } from '../../../core/i18n/i18n.service';
           <span class="font-semibold text-[var(--text-primary)] whitespace-nowrap">{{ patient.phone }}</span>
         </div>
         <div>
+          <span class="ui-label">Groupe sanguin</span>
+          <span class="font-semibold text-[var(--text-primary)]">{{ patient.bloodGroup || '-' }}</span>
+        </div>
+        <div class="col-span-2">
+          <span class="ui-label">Adresse email</span>
+          <span class="font-semibold text-[var(--text-primary)] truncate block" [title]="patient.email">{{ patient.email || '-' }}</span>
+        </div>
+        <div>
           <span class="ui-label">{{ i18n.t('patients.city') }}</span>
           <span class="font-semibold text-[var(--text-primary)]">{{ patient.city }}</span>
         </div>
