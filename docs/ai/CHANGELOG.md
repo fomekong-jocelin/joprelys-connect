@@ -51,6 +51,12 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - Désactivation de l'initialisation par défaut d'une clinique, d'un médecin et d'un pharmacien de test par `AdminUserSeeder` afin de démarrer sur une base de données de préproduction vide de données de test cliniques.
   - Création automatique par défaut d'un unique compte administrateur système avec l'email `admin@joprelys.local` et un mot de passe robuste `Re12#He10@2021!` s'il n'existe pas déjà, pour assurer le démarrage de la plateforme.
 
+- **Résolution dynamique de l'URL de vérification (TICKET-DYNAMIC-VERIFICATION-URL)** :
+  - Création du service `VerificationUrlProvider` pour résoudre dynamiquement l'URL de base à partir des headers HTTP de la requête courante (gestion robuste de `X-Forwarded-Host`, `X-Forwarded-Proto` et du proxy inverse de production).
+  - Normalisation intelligente du host pour rediriger le trafic public de vérification des documents (QR code et liens PDF) vers le domaine principal frontend (`joprelys.com`) même si la requête provient d'un sous-domaine d'API (`api.joprelys.com`).
+  - Injection du provider dans `DocumentService`, `HospitalizationService`, `LabResultService` et `PatientSummaryService` pour remplacer l'URL de base codée en dur.
+  - Mise à jour de la configuration par défaut de `verification-base-url` sur `https://joprelys.com/verify` dans `application.yml`.
+
 ### Fixed
 
 - **Optimisation responsive de la section d'examens biologiques (TICKET-UI-CONSULTATION-LAB-EXAMS-RESPONSIVENESS)** :

@@ -17,6 +17,7 @@ import com.joprelys.backend.patient.application.PatientService;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.visit.application.PdfGeneratorService;
 import com.joprelys.backend.visit.application.QrCodeGeneratorService;
+import com.joprelys.backend.common.application.VerificationUrlProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -45,12 +46,10 @@ public class HospitalizationService {
     private final com.joprelys.backend.visit.application.DocumentNumberGenerator documentNumberGenerator;
     private final com.joprelys.backend.visit.infrastructure.persistence.VisitRepository visitRepository;
     private final com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentRepository medicalDocumentRepository;
+    private final VerificationUrlProvider verificationUrlProvider;
 
     @Value("${joprelys.documents.storage-dir:./storage/documents}")
     private String storageDir;
-
-    @Value("${joprelys.documents.verification-base-url:http://localhost:4200/verify}")
-    private String verificationBaseUrl;
 
     public HospitalizationService(HospitalizationRepository hospitalizationRepository,
                                   HospitalizationNoteRepository hospitalizationNoteRepository,
@@ -62,7 +61,8 @@ public class HospitalizationService {
                                   QrCodeGeneratorService qrCodeGeneratorService,
                                   com.joprelys.backend.visit.application.DocumentNumberGenerator documentNumberGenerator,
                                   com.joprelys.backend.visit.infrastructure.persistence.VisitRepository visitRepository,
-                                  com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentRepository medicalDocumentRepository) {
+                                  com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentRepository medicalDocumentRepository,
+                                  VerificationUrlProvider verificationUrlProvider) {
         this.hospitalizationRepository = hospitalizationRepository;
         this.hospitalizationNoteRepository = hospitalizationNoteRepository;
         this.patientService = patientService;
@@ -74,6 +74,7 @@ public class HospitalizationService {
         this.documentNumberGenerator = documentNumberGenerator;
         this.visitRepository = visitRepository;
         this.medicalDocumentRepository = medicalDocumentRepository;
+        this.verificationUrlProvider = verificationUrlProvider;
     }
 
     @Transactional
@@ -200,7 +201,7 @@ public class HospitalizationService {
         entity.discharge(request.dischargeDiagnosis(), request.dischargeInstructions(), "TEMP_PATH");
 
         // 2. Générer le QR Code de vérification publique pour le PDF de sortie
-        String verificationUrl = verificationBaseUrl + "/hospitalization/" + entity.getId();
+        String verificationUrl = verificationUrlProvider.getVerificationUrl("hospitalization/" + entity.getId());
         byte[] qrCodeBytes = qrCodeGeneratorService.generateQrCode(verificationUrl, 200, 200);
 
         // 3. Générer le PDF
@@ -251,7 +252,7 @@ public class HospitalizationService {
             doc.setHash(hash);
 
             // Renseigner les URLs et QR code
-            String docVerificationUrl = verificationBaseUrl + "/verify/" + doc.getId();
+            String docVerificationUrl = verificationUrlProvider.getVerificationUrl("verify/" + doc.getId());
             String qrCodeUrl = "/api/public/documents/" + doc.getId() + "/qr";
             doc.setVerificationUrl(docVerificationUrl);
             doc.setQrCodeUrl(qrCodeUrl);

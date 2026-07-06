@@ -13,6 +13,7 @@ import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentRepo
 import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.DocumentType;
 import com.joprelys.backend.visit.infrastructure.persistence.DocumentStatus;
+import com.joprelys.backend.common.application.VerificationUrlProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -39,12 +40,10 @@ public class LabResultService {
 	private final com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository userAccountRepository;
 	private final DocumentNumberGenerator documentNumberGenerator;
 	private final MedicalDocumentRepository medicalDocumentRepository;
+	private final VerificationUrlProvider verificationUrlProvider;
 
 	@Value("${joprelys.documents.storage-dir:./storage/documents}")
 	private String storageDir;
-
-	@Value("${joprelys.documents.verification-base-url:http://localhost:4200/verify}")
-	private String verificationBaseUrl;
 
 	public LabResultService(
 			LabOrderRepository labOrderRepository,
@@ -53,7 +52,8 @@ public class LabResultService {
 			com.joprelys.backend.notification.application.NotificationService notificationService,
 			com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository userAccountRepository,
 			DocumentNumberGenerator documentNumberGenerator,
-			MedicalDocumentRepository medicalDocumentRepository) {
+			MedicalDocumentRepository medicalDocumentRepository,
+			VerificationUrlProvider verificationUrlProvider) {
 		this.labOrderRepository = labOrderRepository;
 		this.labResultRepository = labResultRepository;
 		this.auditService = auditService;
@@ -61,6 +61,7 @@ public class LabResultService {
 		this.userAccountRepository = userAccountRepository;
 		this.documentNumberGenerator = documentNumberGenerator;
 		this.medicalDocumentRepository = medicalDocumentRepository;
+		this.verificationUrlProvider = verificationUrlProvider;
 	}
 
 	@Transactional(readOnly = true)
@@ -198,7 +199,7 @@ public class LabResultService {
 				);
 				doc.setHash(hash);
 
-				String verificationUrl = verificationBaseUrl + "/verify/" + doc.getId();
+				String verificationUrl = verificationUrlProvider.getVerificationUrl("verify/" + doc.getId());
 				String qrCodeUrl = "/api/public/documents/" + doc.getId() + "/qr";
 				doc.setVerificationUrl(verificationUrl);
 				doc.setQrCodeUrl(qrCodeUrl);

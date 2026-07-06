@@ -41,7 +41,7 @@ joprelys:
       password: ${JOPRELYS_ADMIN_PASSWORD:}
   documents:
     storage-dir: ${JOPRELYS_DOCUMENTS_STORAGE_DIR:./storage/documents}
-    verification-base-url: ${JOPRELYS_VERIFICATION_BASE_URL:http://localhost:4200/verify}
+    verification-base-url: ${JOPRELYS_VERIFICATION_BASE_URL:https://joprelys.com/verify}
   lab-integration:
     api-key: ${JOPRELYS_LAB_INTEGRATION_API_KEY:lab-partner-secret-token}
 

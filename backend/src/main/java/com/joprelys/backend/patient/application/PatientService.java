@@ -46,8 +46,6 @@ public class PatientService {
 	private final com.joprelys.backend.notification.infrastructure.persistence.NotificationRepository notificationRepository;
 	private final com.joprelys.backend.audit.infrastructure.persistence.AuditLogRepository auditLogRepository;
 
-	@org.springframework.beans.factory.annotation.Value("${joprelys.documents.verification-base-url:http://localhost:4200/verify}")
-	private String verificationBaseUrl;
 
 	public PatientService(PatientRepository patientRepository,
 						  PatientNumberGenerator patientNumberGenerator,

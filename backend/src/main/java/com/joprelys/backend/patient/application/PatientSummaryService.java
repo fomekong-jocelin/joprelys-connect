@@ -13,6 +13,7 @@ import com.joprelys.backend.prescription.infrastructure.persistence.Prescription
 import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
+import com.joprelys.backend.common.application.VerificationUrlProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -43,9 +44,7 @@ public class PatientSummaryService {
     private final com.joprelys.backend.visit.infrastructure.persistence.VitalsRepository vitalsRepository;
     private final com.joprelys.backend.visit.application.PdfGeneratorService pdfGeneratorService;
     private final com.joprelys.backend.visit.application.QrCodeGeneratorService qrCodeGeneratorService;
-
-    @Value("${joprelys.documents.verification-base-url:http://localhost:4200/verify}")
-    private String verificationBaseUrl;
+    private final VerificationUrlProvider verificationUrlProvider;
 
     public PatientSummaryService(PatientRepository patientRepository,
                                  PatientAllergyRepository patientAllergyRepository,
@@ -61,7 +60,8 @@ public class PatientSummaryService {
                                  com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository organizationRepository,
                                  com.joprelys.backend.visit.infrastructure.persistence.VitalsRepository vitalsRepository,
                                  com.joprelys.backend.visit.application.PdfGeneratorService pdfGeneratorService,
-                                 com.joprelys.backend.visit.application.QrCodeGeneratorService qrCodeGeneratorService) {
+                                 com.joprelys.backend.visit.application.QrCodeGeneratorService qrCodeGeneratorService,
+                                 VerificationUrlProvider verificationUrlProvider) {
         this.patientRepository = patientRepository;
         this.patientAllergyRepository = patientAllergyRepository;
         this.patientMedicalHistoryRepository = patientMedicalHistoryRepository;
@@ -77,6 +77,7 @@ public class PatientSummaryService {
         this.vitalsRepository = vitalsRepository;
         this.pdfGeneratorService = pdfGeneratorService;
         this.qrCodeGeneratorService = qrCodeGeneratorService;
+        this.verificationUrlProvider = verificationUrlProvider;
     }
 
     @Transactional(readOnly = true)
@@ -256,7 +257,7 @@ public class PatientSummaryService {
         com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity vitals = vitalsList.isEmpty() ? null : vitalsList.get(0);
 
         // Generate QR Code pointing to verification page of patient summary
-        String verificationUrl = verificationBaseUrl + "/patient-summary/" + patientId;
+        String verificationUrl = verificationUrlProvider.getVerificationUrl("patient-summary/" + patientId);
         byte[] qrCodeBytes = qrCodeGeneratorService.generateQrCode(verificationUrl, 200, 200);
 
         // Generate PDF

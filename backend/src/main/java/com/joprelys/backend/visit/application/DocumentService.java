@@ -27,6 +27,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.List;
+import com.joprelys.backend.common.application.VerificationUrlProvider;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,12 +44,10 @@ public class DocumentService {
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
     private final AuditService auditService;
     private final UserAccountRepository userAccountRepository;
+    private final VerificationUrlProvider verificationUrlProvider;
 
     @Value("${joprelys.documents.storage-dir:./storage/documents}")
     private String storageDir;
-
-    @Value("${joprelys.documents.verification-base-url:http://localhost:4200/verify}")
-    private String verificationBaseUrl;
 
     public DocumentService(
             MedicalDocumentRepository medicalDocumentRepository,
@@ -60,7 +59,8 @@ public class DocumentService {
             PdfGeneratorService pdfGeneratorService,
             org.springframework.jdbc.core.JdbcTemplate jdbcTemplate,
             AuditService auditService,
-            UserAccountRepository userAccountRepository) {
+            UserAccountRepository userAccountRepository,
+            VerificationUrlProvider verificationUrlProvider) {
         this.medicalDocumentRepository = medicalDocumentRepository;
         this.organizationRepository = organizationRepository;
         this.consultationRepository = consultationRepository;
@@ -71,6 +71,7 @@ public class DocumentService {
         this.jdbcTemplate = jdbcTemplate;
         this.auditService = auditService;
         this.userAccountRepository = userAccountRepository;
+        this.verificationUrlProvider = verificationUrlProvider;
     }
 
     public java.util.Optional<com.joprelys.backend.visit.api.DocumentVerificationResponse> verifyDocument(UUID documentId) {
@@ -153,7 +154,7 @@ public class DocumentService {
         }
 
         // 7. Générer l'URL de vérification publique et le QR code
-        String verificationUrl = verificationBaseUrl + "/" + documentUuid;
+        String verificationUrl = verificationUrlProvider.getVerificationUrl(documentUuid.toString());
         String qrCodeUrl = "/api/public/documents/" + documentUuid + "/qr";
         doc.setVerificationUrl(verificationUrl);
         doc.setQrCodeUrl(qrCodeUrl);
@@ -366,7 +367,7 @@ public class DocumentService {
         }
 
         // 8. Générer l'URL de vérification publique et le QR code
-        String verificationUrl = verificationBaseUrl + "/" + documentUuid;
+        String verificationUrl = verificationUrlProvider.getVerificationUrl(documentUuid.toString());
         String qrCodeUrl = "/api/public/documents/" + documentUuid + "/qr";
         doc.setVerificationUrl(verificationUrl);
         doc.setQrCodeUrl(qrCodeUrl);
@@ -431,7 +432,7 @@ public class DocumentService {
 
         String verificationUrl = doc.getVerificationUrl();
         if (verificationUrl == null || verificationUrl.isBlank()) {
-            verificationUrl = verificationBaseUrl + "/" + doc.getId();
+            verificationUrl = verificationUrlProvider.getVerificationUrl(doc.getId().toString());
         }
         return qrCodeGeneratorService.generateQrCode(verificationUrl, 200, 200);
     }

@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-06 (TICKET-PREPROD-ADMIN-CLEANUP : nettoyage de l'admin en dur et des données d'initialisation pour la préproduction) |
+| Dernière mise à jour | 2026-07-06 (TICKET-DYNAMIC-VERIFICATION-URL : résolution dynamique de l'URL de vérification des documents) |
 | Responsable mise à jour | Antigravity |
 | État global | SPRINT-0011 — Alignement modules 4 à 12 du CDC (DPU, soins, documents, consentements) |
 | Risques majeurs | Taille du chantier (9 modules), dette architecture controllers→repositories |
@@ -14,13 +14,14 @@
 | Sprint courant | SPRINT-0011 |
 | | |
 | Capacité sprint | À planifier |
-| Charge engagée | 16.55j (Est. Senior) |
+| Charge engagée | 16.60j (Est. Senior) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
+| TICKET-DYNAMIC-VERIFICATION-URL | DOCS | Task | Résolution dynamique de l'URL de vérification des documents en production | Backend | DONE | P1 | 1 | Backend Engineer | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (URL résolue à partir des headers HTTP de la requête, redirection des sous-domaines API et fallback sur joprelys.com) | Faible | 2026-07-06 |
 | TICKET-PREPROD-ADMIN-CLEANUP | AUTH | Task | Nettoyage de l'administrateur par défaut et des données d'initialisation pour la préproduction | Backend | DONE | P1 | 1 | Backend Engineer | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (admin par défaut configuré avec mot de passe fort, données cliniques d'initialisation désactivées) | Faible | 2026-07-06 |
 | TICKET-UI-CONSULTATION-LAB-EXAMS-RESPONSIVENESS | UI_UX | Bug | Optimisation responsive de la section d'examens de laboratoire de la consultation | Frontend | DONE | P1 | 1 | Intermédiaire | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.03j | Aucun (suggestions d'analyse scrollables horizontalement, bouton d'ajout en absolu/icône) | Faible | 2026-07-06 |
 | TICKET-CLINIC-STAFF-ENRICHED-PROFILES | CLIN_STAFF_ASSETS | Task | Profils enrichis et ressources graphiques (logo, photo, signature, cachet) | Full-stack | DONE | P1 | 5 | Senior | 1.5j | 2.5j | 4.0j | Antigravity | Lead Developer | SPRINT-0011 | 0.5j | Aucun (migration DB V41, upload sécurisé, drag & drop, signature/cachet PDF intégrés, tests et build OK) | Faible | 2026-07-06 |
