@@ -13,13 +13,13 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
     <div class="space-y-6">
       <!-- Section Allergies -->
       <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-xl p-4 md:p-5 shadow-xs transition-colors">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
             <span>🛡️</span> {{ t('patients.medicalInfo.allergies') }}
           </h4>
           <button
             (click)="openAllergyModal()"
-            class="px-3 py-1 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-[var(--radius-brand-sm)] border border-rose-100 dark:border-rose-900/20 transition-all cursor-pointer flex items-center gap-1"
+            class="px-3 py-1 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-[var(--radius-brand-sm)] border border-rose-100 dark:border-rose-900/20 transition-all cursor-pointer flex items-center gap-1 w-fit"
           >
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -73,13 +73,13 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
 
       <!-- Section Antécédents -->
       <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-xl p-4 md:p-5 shadow-xs transition-colors">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
             <span>📋</span> {{ t('patients.medicalInfo.history') }}
           </h4>
           <button
             (click)="openHistoryModal()"
-            class="px-3 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/20 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-[var(--radius-brand-sm)] border border-blue-100 dark:border-blue-900/20 transition-all cursor-pointer flex items-center gap-1"
+            class="px-3 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/20 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-[var(--radius-brand-sm)] border border-blue-100 dark:border-blue-900/20 transition-all cursor-pointer flex items-center gap-1 w-fit"
           >
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -253,13 +253,13 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
 
       <!-- Section Vaccinations -->
       <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-xl p-4 md:p-5 shadow-xs transition-colors">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
             <span>💉</span> {{ t('patients.medicalInfo.vaccinations.title') }}
           </h4>
           <button
             (click)="openVaccinationModal()"
-            class="px-3 py-1 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/20 dark:hover:bg-teal-900/30 text-teal-600 dark:text-teal-400 text-xs font-bold rounded-[var(--radius-brand-sm)] border border-teal-100 dark:border-teal-900/20 transition-all cursor-pointer flex items-center gap-1"
+            class="px-3 py-1 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/20 dark:hover:bg-teal-900/30 text-teal-600 dark:text-teal-400 text-xs font-bold rounded-[var(--radius-brand-sm)] border border-teal-100 dark:border-teal-900/20 transition-all cursor-pointer flex items-center gap-1 w-fit"
           >
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />

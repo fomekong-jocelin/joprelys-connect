@@ -43,6 +43,30 @@ public class UserAccountEntity {
 	@Column(nullable = false)
 	private Instant updatedAt;
 
+	@Column(name = "photo_path", length = 255)
+	private String photoPath;
+
+	@Column(name = "signature_path", length = 255)
+	private String signaturePath;
+
+	@Column(name = "stamp_path", length = 255)
+	private String stampPath;
+
+	@Column(length = 50)
+	private String phone;
+
+	@Column(length = 150)
+	private String specialty;
+
+	@Column(name = "registration_number", length = 100)
+	private String registrationNumber;
+
+	@Column(length = 150)
+	private String department;
+
+	@Column(columnDefinition = "TEXT")
+	private String bio;
+
 	protected UserAccountEntity() {
 	}
 
@@ -129,6 +153,70 @@ public class UserAccountEntity {
 
 	public Instant getUpdatedAt() {
 		return updatedAt;
+	}
+
+	public String getPhotoPath() {
+		return photoPath;
+	}
+
+	public void setPhotoPath(String photoPath) {
+		this.photoPath = photoPath;
+	}
+
+	public String getSignaturePath() {
+		return signaturePath;
+	}
+
+	public void setSignaturePath(String signaturePath) {
+		this.signaturePath = signaturePath;
+	}
+
+	public String getStampPath() {
+		return stampPath;
+	}
+
+	public void setStampPath(String stampPath) {
+		this.stampPath = stampPath;
+	}
+
+	public String getPhone() {
+		return phone;
+	}
+
+	public void setPhone(String phone) {
+		this.phone = phone;
+	}
+
+	public String getSpecialty() {
+		return specialty;
+	}
+
+	public void setSpecialty(String specialty) {
+		this.specialty = specialty;
+	}
+
+	public String getRegistrationNumber() {
+		return registrationNumber;
+	}
+
+	public void setRegistrationNumber(String registrationNumber) {
+		this.registrationNumber = registrationNumber;
+	}
+
+	public String getDepartment() {
+		return department;
+	}
+
+	public void setDepartment(String department) {
+		this.department = department;
+	}
+
+	public String getBio() {
+		return bio;
+	}
+
+	public void setBio(String bio) {
+		this.bio = bio;
 	}
 
 	public boolean hasRole(String roleName) {

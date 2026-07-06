@@ -65,6 +65,12 @@ export const routes: Routes = [
     data: { expectedRoles: ['ADMIN_CLINIQUE'] },
   },
   {
+    path: 'profile',
+    loadComponent: () => import('./profile/profile.component').then((m) => m.ProfileComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEIL', 'PHARMACIEN', 'BIOLOGISTE', 'ADMIN_CLINIQUE'] },
+  },
+  {
     path: 'clinic/duplicates',
     loadComponent: () => import('./clinic/duplicates/duplicates-page.component').then((module) => module.DuplicatesPageComponent),
     canActivate: [roleGuard],

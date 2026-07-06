@@ -93,6 +93,14 @@ public class StaffService {
 
 		staff.setDisplayName(request.displayName().trim());
 		staff.setRole(role);
+		staff.setPhotoPath(request.photoPath());
+		staff.setSignaturePath(request.signaturePath());
+		staff.setStampPath(request.stampPath());
+		staff.setPhone(request.phone());
+		staff.setSpecialty(request.specialty());
+		staff.setRegistrationNumber(request.registrationNumber());
+		staff.setDepartment(request.department());
+		staff.setBio(request.bio());
 		return toStaffResponse(userAccountRepository.save(staff));
 	}
 
@@ -151,7 +159,15 @@ public class StaffService {
 				entity.getDisplayName(),
 				entity.getRole(),
 				entity.isEnabled(),
-				entity.getCreatedAt());
+				entity.getCreatedAt(),
+				entity.getPhotoPath(),
+				entity.getSignaturePath(),
+				entity.getStampPath(),
+				entity.getPhone(),
+				entity.getSpecialty(),
+				entity.getRegistrationNumber(),
+				entity.getDepartment(),
+				entity.getBio());
 	}
 
 	private static String normalizeEmail(String email) {

@@ -1,9 +1,11 @@
 import { Component, computed, inject, signal, OnInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { AlertComponent } from '../../shared/ui/alert.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
+import { FileDragDropComponent } from '../../shared/ui/file-drag-drop.component';
 import { OrganizationApiService } from './organization-api.service';
 import { OrganizationFormComponent, OrganizationFormLabels } from './organization-form.component';
 import { OrganizationTableComponent, OrganizationTableLabels } from './organization-table.component';
@@ -20,12 +22,14 @@ import { FormsModule } from '@angular/forms';
     OrganizationFormComponent,
     OrganizationTableComponent,
     PageHeaderComponent,
+    FileDragDropComponent,
     FormsModule
   ],
 })
 export class OrganizationListComponent implements OnInit {
   private readonly api = inject(OrganizationApiService);
   readonly i18n = inject(I18nService);
+  private readonly http = inject(HttpClient);
 
   readonly list = signal<Organization[]>([]);
   readonly loading = signal(false);
@@ -41,6 +45,9 @@ export class OrganizationListComponent implements OnInit {
   readonly type = signal('CLINIC');
   readonly responsibleName = signal('');
   readonly apiEnabled = signal(true);
+  readonly logoPath = signal<string | null>(null);
+
+  readonly logoViewUrl = computed(() => this.logoPath() ? `/api/public/files/view?path=${this.logoPath()}` : null);
 
   readonly formLoading = signal(false);
   readonly formError = signal<string | null>(null);
@@ -183,7 +190,8 @@ export class OrganizationListComponent implements OnInit {
       country: this.country().trim(),
       type: this.type().trim(),
       responsibleName: this.responsibleName().trim(),
-      apiEnabled: this.apiEnabled()
+      apiEnabled: this.apiEnabled(),
+      logoPath: this.logoPath() || undefined
     }).subscribe({
       next: (res) => {
         this.list.update(items => [...items, res]);
@@ -220,6 +228,7 @@ export class OrganizationListComponent implements OnInit {
     this.type.set('CLINIC');
     this.responsibleName.set('');
     this.apiEnabled.set(true);
+    this.logoPath.set(null);
     this.formError.set(null);
   }
 
@@ -254,6 +263,7 @@ export class OrganizationListComponent implements OnInit {
     this.type.set(org.type || 'CLINIC');
     this.responsibleName.set(org.responsibleName || '');
     this.apiEnabled.set(org.apiEnabled !== undefined ? org.apiEnabled : true);
+    this.logoPath.set(org.logoPath || null);
     this.isEditingSelectedOrg.set(true);
     this.formError.set(null);
   }
@@ -283,7 +293,8 @@ export class OrganizationListComponent implements OnInit {
       country: this.country().trim(),
       type: this.type().trim(),
       responsibleName: this.responsibleName().trim(),
-      apiEnabled: this.apiEnabled()
+      apiEnabled: this.apiEnabled(),
+      logoPath: this.logoPath() || undefined
     }).subscribe({
       next: (res) => {
         const updated: Organization = {
@@ -430,6 +441,21 @@ export class OrganizationListComponent implements OnInit {
     navigator.clipboard.writeText(result.temporaryPassword).then(() => {
       this.adminPasswordCopied.set(true);
       setTimeout(() => this.adminPasswordCopied.set(false), 2000);
+    });
+  }
+
+  onLogoSelected(file: File, uploader: FileDragDropComponent): void {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', 'logo');
+    this.http.post<any>('/api/files/upload', formData).subscribe({
+      next: (res) => {
+        this.logoPath.set(res.filePath);
+        uploader.setPreviewUrl(res.viewUrl, file.name);
+      },
+      error: (err) => {
+        console.error(err);
+      }
     });
   }
 }

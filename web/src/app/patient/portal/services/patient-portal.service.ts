@@ -69,8 +69,8 @@ export class PatientPortalService {
   private readonly http = inject(HttpClient);
   private readonly tokenStorage = inject(AuthTokenStorageService);
 
-  requestOtp(payload: RequestOtpPayload): Observable<void> {
-    return this.http.post<void>('/api/public/patient/auth/otp', payload);
+  requestOtp(payload: RequestOtpPayload): Observable<{ otpCode?: string }> {
+    return this.http.post<{ otpCode?: string }>('/api/public/patient/auth/otp', payload);
   }
 
   verifyOtp(payload: VerifyOtpPayload): Observable<LoginResponse> {

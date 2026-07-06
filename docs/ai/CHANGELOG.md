@@ -6,7 +6,62 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+### Added
+
+- **Menu déroulant des services et filtrage praticiens (TICKET-CLINIC-STAFF-DEPARTMENT-FILTER)** :
+  - Remplacement de la saisie texte libre pour le service/département par un menu déroulant dans la gestion du personnel (`StaffManagementComponent`) et dans le profil utilisateur (`ProfileComponent`), avec possibilité de fallback textuel via l'option "Autre".
+  - Remplacement de la saisie du service clinique lors de l'admission (`PatientDetailComponent`) par un menu déroulant dynamique fusionnant les services prédéfinis et ceux configurés sur les fiches des collaborateurs actifs.
+  - Ajout du filtrage en temps réel des praticiens responsables lors de l'admission : la sélection d'un service restreint automatiquement la liste des praticiens disponibles à ceux rattachés à ce département, avec un mécanisme de repli (fallback) intelligent vers l'orientation ou la liste globale pour éviter tout blocage.
+
+- **Profils enrichis et ressources graphiques (TICKET-CLINIC-STAFF-ENRICHED-PROFILES)** :
+  - Création de la migration DB Flyway V41 (ajout des colonnes photo_path, logo_path, signature_path, stamp_path, bio, etc.).
+  - Création de FileStorageService et FileController sécurisant l'upload (vérification de Magic Numbers, limitation à 2 Mo et mitigation de Path Traversal).
+  - Création de ProfileController pour l'auto-mise à jour du profil par le collaborateur de santé.
+  - Intégration dynamique du logo de la clinique (en-tête) et de la signature & du cachet médecin (en bas de page) sur les documents PDF générés (PdfGeneratorService).
+  - Création du composant Angular réutilisable app-file-drag-drop avec prévisualisation en temps réel.
+  - Création de l'écran "Mon Profil" et adaptation de l'écran d'administration du personnel (StaffManagementComponent) et de création/modification de cliniques (OrganizationFormComponent/OrganizationListComponent) avec chargement par Glisser-Déposer.
+
+- **Refonte Premium de la Page de Gestion des Doublons Patients (TICKET-UI-PATIENT-DUPLICATES-PREMIUM-REDESIGN)** :
+  - Intégration de la page dans l'enveloppe structurelle globale `<app-shell>` et utilisation de `<app-page-header>` pour le titre.
+  - Utilisation du composant d'état vide `<app-empty-state>` pour styliser l'absence de suspicions de doublons.
+  - Refonte graphique complète des fiches suspects en grilles de comparaison side-by-side utilisant la classe de cartes `.ui-card` avec des arrondis limités à 8px.
+  - Modernisation du dialogue modal de fusion avec surbrillance douce (`bg-amber-500/5` / `dark:bg-amber-950/10`) des lignes présentant des divergences d'attributs.
+  - Création de la suite de tests unitaires Vitest associée (`duplicates-page.component.spec.ts`) validant toutes les interactions clés.
+
+- **Refonte Premium de la Page Profil Patient (TICKET-UI-PATIENT-PROFILE-PREMIUM-REDESIGN)** :
+  - Intégration d'une bannière d'identité premium avec un dégradé de marque subtil et un grand avatar circulaire basé sur l'initiale du nom du patient, avec le groupe sanguin en badge superposé.
+  - Ajout d'icônes vectorielles SVG personnalisées et colorées pour chaque section d'informations (Coordonnées, Contact d'urgence, Allergies, Antécédents).
+  - Modernisation des champs de données via des conteneurs `.ui-card-muted` pour une apparence de fiche technique.
+  - Ajout de la clé de traduction `patient.profile.activeStatus` en français et anglais pour labelliser le statut du dossier.
+
+- **Pré-remplissage automatique des codes OTP sur le front-end (TICKET-UI-OTP-AUTOFILL)** :
+  - Ajout de la propriété de configuration `joprelys.security.expose-otp-to-frontend` (défaut `true` pour simplifier la recette/déploiement) dans `application.yml`.
+  - Modification de `LoginResponse` pour intégrer un champ `otpCode` afin de transférer le code généré au front-end si l'exposition est active.
+  - Modification du point d'entrée de connexion patient (`/api/public/patient/auth/otp`) pour retourner le code généré sous format JSON.
+  - Mise à jour de `LoginComponent` et `PatientLoginComponent` sous Angular pour récupérer le code OTP et pré-remplir automatiquement les formulaires de saisie OTP.
+
+- **Nouveau logo et branding officiel (TICKET-UI-BRANDING-LOGO)** :
+  - Intégration du nouveau logo principal et des icônes issues du kit de marque dans les ressources de l'application (`web/src/assets/branding/`).
+  - Remplacement du favicon legacy de l'application par le favicon officiel.
+  - Mise à jour du composant `AppLogoComponent` pour charger le logo principal et afficher uniquement "Connect" (la partie textuelle "Joprelys" étant déjà incluse dans l'image du logo).
+  - Remplacement des logos SVGs et du texte statique hardcodé dans les pages de connexion du personnel, du portail patient et de récupération de mot de passe par l'utilisation centralisée du composant `AppLogoComponent` avec le paramètre `size="lg"`.
+
 ### Fixed
+
+- **Correction des liens inactifs du Tableau de Bord Admin (TICKET-UI-ADMIN-DASHBOARD-LINKS)** :
+  - Remplacement du bouton inactif "Configurer" sous "Configuration Interop" par un lien `routerLink="/organizations"`, redirigeant l'administrateur système vers l'IHM de gestion des établissements où les API keys et l'accès interop de chaque organisation sont configurés.
+  - Remplacement du bouton inactif "Consulter" sous "Journal d'Audit Sécurisé" par un bouton activant un dialogue modal d'information sur la politique de sécurité (Module 14 - FR-AUDIT-002), justifiant la restriction de l'accès des comptes d'administration générale aux logs cliniques.
+  - Ajout de l'état et des méthodes nécessaires dans `DashboardComponent` et intégration du composant modal interactif dans le template HTML.
+
+- **Optimisation de la responsivité du portail pharmacie (TICKET-UI-PHARMACY-VERIFY-RESPONSIVENESS)** :
+  - Ajout de la classe `min-w-0` sur le conteneur Grid principal et sur les deux sections principales (`ui-card-subtle`) de l'écran de vérification des ordonnances, permettant aux éléments de grille de rétrécir correctement sur mobile.
+  - Ajout du style d'hôte `:host { display: block; min-width: 0; }` dans `pharmacy-dispensation-panel.component.ts` pour permettre à ce composant personnalisé de s'adapter et de ne pas forcer sa largeur.
+  - Application de la classe `min-w-0` au conteneur Grid interne et aux cartes internes du panneau de dispensation afin de contraindre la largeur du tableau de délivrance et de permettre le défilement horizontal local sans débordement de l'écran principal.
+
+- **Amélioration de la responsivité des en-têtes du dossier médical et de la gestion de stocks (TICKET-UI-PATIENT-MEDICAL-INFO-RESPONSIVENESS)** :
+  - Modification des en-têtes d'information médicale ("Allergies", "Antécédents", "Vaccinations") pour s'empiler verticalement sur mobile (`flex-col sm:flex-row`) et ainsi éviter le retour à la ligne forcé des titres longs sur les écrans étroits.
+  - Ajout de la classe `w-fit` sur les boutons d'action correspondants pour conserver une largeur proportionnelle au contenu sans étirement sur mobile.
+  - Correction de l'en-tête de la page de gestion des stocks de pharmacie (`pharmacy-stocks.component.ts`) avec la même approche adaptative.
 
 - **Correction de l'erreur 500 au démarrage de la consultation et séparation de l'ordonnance (TICKET-PRESCRIPTION-SEPARATION-AND-CONSULTATION-FIX)** :
   - **Correction de la LazyInitializationException** : Initialisation forcée des proxys Hibernate pour `Patient` et `Vitals` au sein de la transaction JPA de `VisitService.getVisit(id)`, évitant l'erreur HTTP 500 lorsque le DTO est mappé par le contrôleur hors transaction.

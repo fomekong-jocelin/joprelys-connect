@@ -2,10 +2,13 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { AlertComponent } from '../../shared/ui/alert.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
-import { CardComponent } from '../../shared/ui/card.component';
 import { PatientApiService } from '../../patient/patient-api.service';
 import { Patient, PatientDuplicateCandidate } from '../../patient/patient.models';
 import { I18nService } from '../../core/i18n/i18n.service';
+
+import { AppShellComponent } from '../../shared/layout/app-shell.component';
+import { PageHeaderComponent } from '../../shared/ui/page-header.component';
+import { EmptyStateComponent } from '../../shared/ui/empty-state.component';
 
 @Component({
   selector: 'app-duplicates-page',
@@ -13,10 +16,12 @@ import { I18nService } from '../../core/i18n/i18n.service';
   imports: [
     AlertComponent,
     ButtonComponent,
-    CardComponent,
     DatePipe,
     DecimalPipe,
-    NgClass
+    NgClass,
+    AppShellComponent,
+    PageHeaderComponent,
+    EmptyStateComponent
   ],
   templateUrl: './duplicates-page.component.html'
 })

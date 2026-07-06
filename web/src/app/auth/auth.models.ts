@@ -11,6 +11,7 @@ export interface LoginResponse {
   readonly name: string;
   readonly role: string;
   readonly requiresOtp?: boolean;
+  readonly otpCode?: string;
 }
 
 export interface AuthSession {

@@ -9,6 +9,14 @@ public record StaffResponse(
 		String displayName,
 		String role,
 		boolean enabled,
-		Instant createdAt
+		Instant createdAt,
+		String photoPath,
+		String signaturePath,
+		String stampPath,
+		String phone,
+		String specialty,
+		String registrationNumber,
+		String department,
+		String bio
 ) {
 }

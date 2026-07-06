@@ -149,6 +149,7 @@ public class OrganizationController {
 		entity.setType(request.type());
 		entity.setResponsibleName(request.responsibleName());
 		entity.setApiEnabled(request.apiEnabled() != null ? request.apiEnabled() : true);
+		entity.setLogoPath(request.logoPath());
 
 		OrganizationEntity saved = organizationRepository.save(entity);
 		return mapToResponse(saved);

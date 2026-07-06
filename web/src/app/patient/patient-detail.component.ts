@@ -238,13 +238,29 @@ import { StaffMember } from '../clinic/staff/staff.models';
 
             <div class="space-y-1.5">
               <label class="ui-label">Service clinique</label>
-              <input
-                type="text"
-                [(ngModel)]="visitService"
-                placeholder="Ex: Médecine générale (laisser vide pour reprendre l'orientation)"
-                class="ui-input w-full p-3 text-sm focus:border-brand-primary transition-colors"
+              <select
+                [(ngModel)]="selectedVisitService"
+                (ngModelChange)="onServiceChange($event)"
+                class="ui-select focus:border-brand-primary transition-colors"
                 [disabled]="isSubmitting()"
-              />
+              >
+                <option value="">Sélectionner un service...</option>
+                @for (d of getDepartments(); track d) {
+                  <option [value]="d">{{ d }}</option>
+                }
+                <option value="Autre">Autre (Saisir...)</option>
+              </select>
+
+              @if (selectedVisitService === 'Autre') {
+                <input
+                  type="text"
+                  [(ngModel)]="customVisitService"
+                  (ngModelChange)="onCustomServiceInput($event)"
+                  placeholder="Saisir le nom du service..."
+                  class="ui-input w-full mt-2 p-3 text-sm focus:border-brand-primary transition-colors"
+                  [disabled]="isSubmitting()"
+                />
+              }
             </div>
 
             <div class="space-y-1.5">
@@ -322,6 +338,8 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
   visitReason = '';
   visitOrientation = '';
   visitService = '';
+  selectedVisitService = '';
+  customVisitService = '';
   visitMainPractitionerId = '';
   visitArrivalAt = '';
   visitError = '';
@@ -516,6 +534,7 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
 
   getFilteredPractitioners(): StaffMember[] {
     const list = this.staffList();
+    const service = this.visitService;
     const orientation = this.visitOrientation;
     
     const hasRole = (member: StaffMember, role: string) => {
@@ -523,6 +542,18 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
       return member.role.split(',').map(r => r.trim()).includes(role);
     };
 
+    // Filter by selected service first if set
+    if (service) {
+      const filteredByService = list.filter(s => 
+        s.department?.toLowerCase() === service.toLowerCase() &&
+        (hasRole(s, 'MEDECIN') || hasRole(s, 'INFIRMIER') || hasRole(s, 'PHARMACIEN') || hasRole(s, 'BIOLOGISTE'))
+      );
+      if (filteredByService.length > 0) {
+        return filteredByService;
+      }
+    }
+
+    // Fallback to orientation
     if (orientation === 'Médecine générale' || orientation === 'Pédiatrie' || orientation === 'Gynécologie') {
       const filtered = list.filter(s => hasRole(s, 'MEDECIN'));
       if (filtered.length > 0) return filtered;
@@ -538,10 +569,66 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
   }
 
   onOrientationChange(): void {
+    // Sync service with orientation if matched
+    if (this.visitOrientation) {
+      const matchedDept = this.getDepartments().find(d => d.toLowerCase() === this.visitOrientation.toLowerCase());
+      if (matchedDept) {
+        this.selectedVisitService = matchedDept;
+        this.visitService = matchedDept;
+        this.customVisitService = '';
+      } else if (this.visitOrientation === 'Tri / Urgences') {
+        const urgenDept = this.getDepartments().find(d => d.toLowerCase().includes('urgence'));
+        if (urgenDept) {
+          this.selectedVisitService = urgenDept;
+          this.visitService = urgenDept;
+          this.customVisitService = '';
+        }
+      }
+    }
+    this.updateAvailablePractitioners();
+  }
+
+  onServiceChange(val: string): void {
+    this.selectedVisitService = val;
+    if (val !== 'Autre') {
+      this.visitService = val;
+      this.customVisitService = '';
+    } else {
+      this.visitService = this.customVisitService;
+    }
+    this.updateAvailablePractitioners();
+  }
+
+  onCustomServiceInput(val: string): void {
+    this.customVisitService = val;
+    this.visitService = val;
+    this.updateAvailablePractitioners();
+  }
+
+  updateAvailablePractitioners(): void {
     const available = this.getFilteredPractitioners();
     if (!available.some(p => p.id === this.visitMainPractitionerId)) {
       this.visitMainPractitionerId = '';
     }
+  }
+
+  getDepartments(): string[] {
+    const defaultDepts = [
+      'Médecine générale',
+      'Pédiatrie',
+      'Gynécologie',
+      'Urgences',
+      'Pharmacie',
+      'Laboratoire',
+      'Cardiologie'
+    ];
+    const depts = new Set<string>(defaultDepts);
+    this.staffList().forEach(member => {
+      if (member.department) {
+        depts.add(member.department);
+      }
+    });
+    return Array.from(depts).sort();
   }
 
   openModal(): void {
@@ -549,6 +636,8 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
     this.visitReason = '';
     this.visitOrientation = '';
     this.visitService = '';
+    this.selectedVisitService = '';
+    this.customVisitService = '';
     this.visitMainPractitionerId = '';
     
     const now = new Date();

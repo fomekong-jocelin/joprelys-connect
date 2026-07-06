@@ -7,6 +7,14 @@ export interface StaffMember {
   readonly role: StaffRole;
   readonly enabled: boolean;
   readonly createdAt: string;
+  readonly photoPath?: string;
+  readonly signaturePath?: string;
+  readonly stampPath?: string;
+  readonly phone?: string;
+  readonly specialty?: string;
+  readonly registrationNumber?: string;
+  readonly department?: string;
+  readonly bio?: string;
 }
 
 export interface InviteStaffRequest {
@@ -18,6 +26,14 @@ export interface InviteStaffRequest {
 export interface UpdateStaffRequest {
   readonly displayName: string;
   readonly role: StaffRole;
+  readonly photoPath?: string;
+  readonly signaturePath?: string;
+  readonly stampPath?: string;
+  readonly phone?: string;
+  readonly specialty?: string;
+  readonly registrationNumber?: string;
+  readonly department?: string;
+  readonly bio?: string;
 }
 
 export interface InviteStaffResponse extends StaffMember {

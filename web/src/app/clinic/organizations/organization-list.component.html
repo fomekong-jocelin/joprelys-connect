@@ -29,6 +29,7 @@
         [(type)]="type"
         [(responsibleName)]="responsibleName"
         [(apiEnabled)]="apiEnabled"
+        [(logoPath)]="logoPath"
         (submitted)="submit()"
         (cancelled)="cancelCreate()"
       />
@@ -202,6 +203,17 @@
                 (input)="address.set($any($event.target).value)"
                 [disabled]="formLoading()"
               />
+            </div>
+
+            <div class="space-y-1.5">
+              <app-file-drag-drop
+                #editLogoUploader
+                label="Logo de la clinique / établissement"
+                [previewUrl]="logoViewUrl()"
+                (fileSelected)="onLogoSelected($event, editLogoUploader)"
+                (fileRemoved)="logoPath.set(null)"
+              >
+              </app-file-drag-drop>
             </div>
 
             <div class="flex justify-end gap-3 pt-4">

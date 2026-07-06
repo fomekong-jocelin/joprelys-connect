@@ -21,8 +21,8 @@ interface DispensationLineDraft {
   standalone: true,
   imports: [ReactiveFormsModule, ButtonComponent, PharmacyDispensationHistoryComponent],
   template: `
-    <section class="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-      <div class="ui-card-muted p-4 md:p-5">
+    <section class="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)] min-w-0">
+      <div class="ui-card-muted min-w-0 p-4 md:p-5">
         <div class="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div>
             <p class="ui-label">{{ t('pharmacy.dispenseSection') }}</p>
@@ -139,6 +139,11 @@ interface DispensationLineDraft {
     </section>
   `,
   styles: [`
+    :host {
+      display: block;
+      min-width: 0;
+    }
+
     .pharmacy-compact-input,
     .pharmacy-line-input {
       border-radius: var(--radius-brand-sm);

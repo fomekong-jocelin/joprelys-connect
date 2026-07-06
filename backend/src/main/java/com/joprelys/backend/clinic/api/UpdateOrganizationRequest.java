@@ -12,9 +12,10 @@ public record UpdateOrganizationRequest(
 		String country,
 		String type,
 		String responsibleName,
-		Boolean apiEnabled) {
+		Boolean apiEnabled,
+		String logoPath) {
 
 	public UpdateOrganizationRequest(String name, String email, String phone, String address, String city) {
-		this(name, email, phone, address, city, "Cameroun", "CLINIC", "Responsable", true);
+		this(name, email, phone, address, city, "Cameroun", "CLINIC", "Responsable", true, null);
 	}
 }

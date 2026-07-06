@@ -1,10 +1,12 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { AlertComponent } from '../../shared/ui/alert.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
 import { CardComponent } from '../../shared/ui/card.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
+import { FileDragDropComponent } from '../../shared/ui/file-drag-drop.component';
 import { StaffApiService } from './staff-api.service';
 import { StaffMember, StaffRole } from './staff.models';
 import { StaffTableComponent, StaffTableLabels } from './staff-table.component';
@@ -21,6 +23,7 @@ const STAFF_ROLES: readonly StaffRole[] = ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEI
     CardComponent,
     PageHeaderComponent,
     StaffTableComponent,
+    FileDragDropComponent,
   ],
   template: `
     <app-shell>
@@ -107,6 +110,116 @@ const STAFF_ROLES: readonly StaffRole[] = ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEI
                 </div>
               </div>
 
+              @if (editingStaff() !== null) {
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4 pt-4 border-t border-[var(--app-border)]">
+                  <label class="space-y-1.5">
+                    <span class="ui-label">{{ t('profile.phone') }}</span>
+                    <input
+                      class="ui-input"
+                      type="tel"
+                      [value]="phone()"
+                      [placeholder]="t('profile.phonePlaceholder')"
+                      [disabled]="formLoading()"
+                      (input)="phone.set($any($event.target).value)"
+                    />
+                  </label>
+
+                  <div class="space-y-1.5">
+                    <span class="ui-label">{{ t('profile.department') }}</span>
+                    <select
+                      class="ui-select focus:border-brand-primary transition-colors"
+                      [value]="selectedDept()"
+                      [disabled]="formLoading()"
+                      (change)="onDeptChange($any($event.target).value)"
+                    >
+                      <option value="">{{ t('profile.departmentPlaceholder') || 'Choisir un service...' }}</option>
+                      @for (dept of departments; track dept) {
+                        <option [value]="dept">{{ dept }}</option>
+                      }
+                      <option value="Autre">Autre (Saisir...)</option>
+                    </select>
+
+                    @if (selectedDept() === 'Autre') {
+                      <input
+                        class="ui-input mt-2 focus:border-brand-primary transition-colors"
+                        [value]="customDept()"
+                        placeholder="Saisir le nom du service..."
+                        [disabled]="formLoading()"
+                        (input)="onCustomDeptInput($any($event.target).value)"
+                      />
+                    }
+                  </div>
+
+                  @if (isDoctorSelected()) {
+                    <label class="space-y-1.5">
+                      <span class="ui-label">{{ t('profile.specialty') }}</span>
+                      <input
+                        class="ui-input"
+                        [value]="specialty()"
+                        [placeholder]="t('profile.specialtyPlaceholder')"
+                        [disabled]="formLoading()"
+                        (input)="specialty.set($any($event.target).value)"
+                      />
+                    </label>
+
+                    <label class="space-y-1.5">
+                      <span class="ui-label">{{ t('profile.registrationNumber') }}</span>
+                      <input
+                        class="ui-input"
+                        [value]="registrationNumber()"
+                        [placeholder]="t('profile.registrationNumberPlaceholder')"
+                        [disabled]="formLoading()"
+                        (input)="registrationNumber.set($any($event.target).value)"
+                      />
+                    </label>
+                  }
+
+                  <div class="sm:col-span-2">
+                    <label class="space-y-1.5 block">
+                      <span class="ui-label">{{ t('profile.bio') }}</span>
+                      <textarea
+                        class="ui-input h-20 resize-y py-2"
+                        [value]="bio()"
+                        [placeholder]="t('profile.bioPlaceholder')"
+                        [disabled]="formLoading()"
+                        (input)="bio.set($any($event.target).value)"
+                      ></textarea>
+                    </label>
+                  </div>
+
+                  <div class="sm:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                    <app-file-drag-drop
+                      #photoUploader
+                      [label]="t('profile.photoLabel')"
+                      [previewUrl]="photoViewUrl()"
+                      (fileSelected)="onFileSelected($event, 'photo', photoUploader)"
+                      (fileRemoved)="photoPath.set(null)"
+                    >
+                    </app-file-drag-drop>
+
+                    @if (isDoctorSelected()) {
+                      <app-file-drag-drop
+                        #sigUploader
+                        [label]="t('profile.signatureLabel')"
+                        [previewUrl]="signatureViewUrl()"
+                        (fileSelected)="onFileSelected($event, 'signature', sigUploader)"
+                        (fileRemoved)="signaturePath.set(null)"
+                      >
+                      </app-file-drag-drop>
+
+                      <app-file-drag-drop
+                        #stampUploader
+                        [label]="t('profile.stampLabel')"
+                        [previewUrl]="stampViewUrl()"
+                        (fileSelected)="onFileSelected($event, 'stamp', stampUploader)"
+                        (fileRemoved)="stampPath.set(null)"
+                      >
+                      </app-file-drag-drop>
+                    }
+                  </div>
+                </div>
+              }
+
               <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <app-ui-button variant="secondary" class="w-full sm:w-auto" (pressed)="cancelForm()">
                   {{ t('common.cancel') }}
@@ -133,6 +246,7 @@ const STAFF_ROLES: readonly StaffRole[] = ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEI
 export class StaffManagementComponent implements OnInit {
   private readonly api = inject(StaffApiService);
   private readonly i18n = inject(I18nService);
+  private readonly http = inject(HttpClient);
 
   readonly roles = STAFF_ROLES;
   readonly staff = signal<StaffMember[]>([]);
@@ -148,6 +262,26 @@ export class StaffManagementComponent implements OnInit {
   readonly displayName = signal('');
   readonly email = signal('');
   readonly selectedRoles = signal<string[]>(['MEDECIN']);
+
+  readonly phone = signal('');
+  readonly specialty = signal('');
+  readonly registrationNumber = signal('');
+  readonly department = signal('');
+  readonly bio = signal('');
+
+  readonly departments = ['Médecine générale', 'Pédiatrie', 'Gynécologie', 'Urgences', 'Pharmacie', 'Laboratoire', 'Cardiologie'];
+  readonly selectedDept = signal('');
+  readonly customDept = signal('');
+  
+  readonly photoPath = signal<string | null>(null);
+  readonly signaturePath = signal<string | null>(null);
+  readonly stampPath = signal<string | null>(null);
+
+  readonly photoViewUrl = computed(() => this.photoPath() ? `/api/public/files/view?path=${this.photoPath()}` : null);
+  readonly signatureViewUrl = computed(() => this.signaturePath() ? `/api/public/files/view?path=${this.signaturePath()}` : null);
+  readonly stampViewUrl = computed(() => this.stampPath() ? `/api/public/files/view?path=${this.stampPath()}` : null);
+
+  readonly isDoctorSelected = computed(() => this.selectedRoles().includes('MEDECIN'));
 
   readonly formTitle = computed(() => this.editingStaff() ? this.t('staff.editTitle') : this.t('staff.inviteTitle'));
   readonly submitLabel = computed(() => this.editingStaff() ? this.t('staff.update') : this.t('staff.create'));
@@ -210,6 +344,26 @@ export class StaffManagementComponent implements OnInit {
     this.displayName.set(member.displayName);
     this.email.set(member.email);
     this.selectedRoles.set(member.role ? member.role.split(',').map((r) => r.trim()) : ['MEDECIN']);
+    this.phone.set(member.phone || '');
+    this.specialty.set(member.specialty || '');
+    this.registrationNumber.set(member.registrationNumber || '');
+    const dept = member.department || '';
+    this.department.set(dept);
+    if (this.departments.includes(dept)) {
+      this.selectedDept.set(dept);
+      this.customDept.set('');
+    } else if (dept) {
+      this.selectedDept.set('Autre');
+      this.customDept.set(dept);
+    } else {
+      this.selectedDept.set('');
+      this.customDept.set('');
+    }
+
+    this.bio.set(member.bio || '');
+    this.photoPath.set(member.photoPath || null);
+    this.signaturePath.set(member.signaturePath || null);
+    this.stampPath.set(member.stampPath || null);
     this.formError.set(null);
     this.showForm.set(true);
   }
@@ -299,6 +453,14 @@ export class StaffManagementComponent implements OnInit {
     this.api.update(current.id, {
       displayName: this.displayName().trim(),
       role: this.selectedRoles().join(','),
+      photoPath: this.photoPath() || undefined,
+      signaturePath: this.signaturePath() || undefined,
+      stampPath: this.stampPath() || undefined,
+      phone: this.phone().trim() || undefined,
+      specialty: this.specialty().trim() || undefined,
+      registrationNumber: this.registrationNumber().trim() || undefined,
+      department: this.department().trim() || undefined,
+      bio: this.bio().trim() || undefined,
     }).subscribe({
       next: (updated) => {
         this.replaceMember(updated);
@@ -322,8 +484,53 @@ export class StaffManagementComponent implements OnInit {
     this.displayName.set('');
     this.email.set('');
     this.selectedRoles.set(['MEDECIN']);
+    this.phone.set('');
+    this.specialty.set('');
+    this.registrationNumber.set('');
+    this.department.set('');
+    this.selectedDept.set('');
+    this.customDept.set('');
+    this.bio.set('');
+    this.photoPath.set(null);
+    this.signaturePath.set(null);
+    this.stampPath.set(null);
     this.formError.set(null);
     this.formLoading.set(false);
+  }
+
+  onDeptChange(val: string): void {
+    this.selectedDept.set(val);
+    if (val !== 'Autre') {
+      this.department.set(val);
+      this.customDept.set('');
+    } else {
+      this.department.set(this.customDept());
+    }
+  }
+
+  onCustomDeptInput(val: string): void {
+    this.customDept.set(val);
+    this.department.set(val);
+  }
+
+  onFileSelected(file: File, type: 'photo' | 'signature' | 'stamp', component: FileDragDropComponent): void {
+    this.formError.set(null);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+
+    this.http.post<any>('/api/files/upload', formData).subscribe({
+      next: (res) => {
+        if (type === 'photo') this.photoPath.set(res.filePath);
+        if (type === 'signature') this.signaturePath.set(res.filePath);
+        if (type === 'stamp') this.stampPath.set(res.filePath);
+        component.setPreviewUrl(res.viewUrl, file.name);
+      },
+      error: (err) => {
+        console.error(err);
+        this.formError.set(this.t('profile.uploadError') || "Erreur lors du chargement de l'image.");
+      }
+    });
   }
 
   private errorMessage(err: { status?: number; error?: { detail?: string } }, fallback: string): string {

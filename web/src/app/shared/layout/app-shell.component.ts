@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthApiService } from '../../auth/auth-api.service';
 import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
 import { APP_BRAND_CONFIG, AppLocale } from '../../core/config/app-brand.config';
@@ -13,7 +13,7 @@ import { AppShellNavComponent } from './app-shell-nav.component';
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [AppLogoComponent, BreadcrumbComponent, AppShellNavComponent],
+  imports: [AppLogoComponent, BreadcrumbComponent, AppShellNavComponent, RouterLink],
   template: `
     <main class="app-page flex min-h-screen flex-col">
       <header class="app-topbar">
@@ -86,6 +86,18 @@ import { AppShellNavComponent } from './app-shell-nav.component';
                 </div>
                 <div class="ui-avatar shadow-xs select-none">{{ currentSession.name.charAt(0) }}</div>
               </div>
+
+              @if (currentSession.role !== 'PATIENT') {
+                <a
+                  routerLink="/profile"
+                  [title]="profileLabel()"
+                  class="hidden md:inline-flex items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-slate-500 hover:text-brand-cyan hover:bg-[var(--app-surface-muted)] transition-all duration-150 cursor-pointer ml-1"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                  </svg>
+                </a>
+              }
 
               <button
                 type="button"
@@ -288,6 +300,7 @@ export class AppShellComponent {
   readonly locale = this.i18n.locale;
   readonly theme = this.themeService.theme;
   readonly links = APP_BRAND_CONFIG.publicLinks;
+  readonly profileLabel = computed(() => this.i18n.t('shell.profile') || 'Mon Profil');
   readonly logoutLabel = computed(() => this.i18n.t('shell.logout'));
   readonly termsLabel = computed(() => this.i18n.t('shell.terms'));
   readonly privacyLabel = computed(() => this.i18n.t('shell.privacy'));

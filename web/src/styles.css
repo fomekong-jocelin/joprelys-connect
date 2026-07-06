@@ -6,9 +6,9 @@
   --font-sans: 'Inter', sans-serif;
   --font-display: 'Montserrat', sans-serif;
   
-  --color-brand-night: #0A1D3D;
+  --color-brand-night: #001D4A;
   --color-brand-cyan: #0B91B2;
-  --color-brand-green: #16A34A;
+  --color-brand-green: #009730;
   --color-brand-mint: #D1FAE5;
   --color-brand-gray: #F2F4F7;
 }
@@ -37,12 +37,12 @@ body {
   --app-surface: #ffffff;
   --app-surface-muted: #eef6f7;
   --app-border: #d8e5e8;
-  --text-primary: #0a1d3d;
+  --text-primary: #001d4a;
   --text-secondary: #40556f;
   --text-muted: #6d7f95;
   --brand-primary: #0b91b2;
   --brand-primary-hover: #087c99;
-  --brand-success: #16a34a;
+  --brand-success: #009730;
   --brand-danger: #dc2626;
   --focus-ring: rgba(11, 145, 178, 0.18);
   --shadow-panel: 0 18px 45px rgba(10, 29, 61, 0.08);

@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-06 (TICKET-CONSULTATION-ROUTE-FIX : correction de la navigation après clôture de visite) |
+| Dernière mise à jour | 2026-07-06 (TICKET-CLINIC-STAFF-DEPARTMENT-FILTER : menu déroulant des services et filtrage des médecins achevés) |
 | Responsable mise à jour | Antigravity |
 | État global | SPRINT-0011 — Alignement modules 4 à 12 du CDC (DPU, soins, documents, consentements) |
 | Risques majeurs | Taille du chantier (9 modules), dette architecture controllers→repositories |
@@ -14,13 +14,22 @@
 | Sprint courant | SPRINT-0011 |
 | | |
 | Capacité sprint | À planifier |
-| Charge engagée | 16.0j (Est. Senior) |
+| Charge engagée | 16.45j (Est. Senior) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
+| TICKET-CLINIC-STAFF-ENRICHED-PROFILES | CLIN_STAFF_ASSETS | Task | Profils enrichis et ressources graphiques (logo, photo, signature, cachet) | Full-stack | DONE | P1 | 5 | Senior | 1.5j | 2.5j | 4.0j | Antigravity | Lead Developer | SPRINT-0011 | 0.5j | Aucun (migration DB V41, upload sécurisé, drag & drop, signature/cachet PDF intégrés, tests et build OK) | Faible | 2026-07-06 |
+| TICKET-CLINIC-STAFF-DEPARTMENT-FILTER | CLIN_STAFF_ASSETS | Task | Menu déroulant des services et filtrage des médecins lors de l'admission | Frontend | DONE | P1 | 3 | Intermédiaire | 2h | 4h | 8h | Antigravity | Lead Developer | SPRINT-0011 | 0.1j | Aucun (menus déroulants IHM, filtrage par service, tests et build OK) | Faible | 2026-07-06 |
+| TICKET-UI-OTP-AUTOFILL | AUTH | Task | Pré-remplissage automatique des codes OTP sur le front-end | Full-stack | DONE | P1 | 2 | Intermédiaire | 0.15j | 0.25j | 0.5j | Antigravity | Lead Developer | SPRINT-0011 | 0.15j | Aucun (exposition via yml et auto-fill sur l'IHM staff/patient, tests OK) | Faible | 2026-07-06 |
+| TICKET-UI-BRANDING-LOGO | UI_UX | Task | Remplacement du logo Joprelys Connect par le nouveau logo | Frontend | DONE | P1 | 2 | Intermédiaire | 0.1j | 0.2j | 0.4j | Antigravity | Lead Developer | SPRINT-0011 | 0.1j | Aucun (logo principal, icônes, favicon copiés et intégrés, tests OK) | Faible | 2026-07-06 |
+| TICKET-UI-PATIENT-MEDICAL-INFO-RESPONSIVENESS | UI_UX | Bug | Amélioration de la responsivité des en-têtes du dossier médical et de la gestion de stocks | Frontend | DONE | P0 | 1 | Intermédiaire | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (en-têtes rendus responsifs, tests et build OK) | Faible | 2026-07-06 |
+| TICKET-UI-PHARMACY-VERIFY-RESPONSIVENESS | PHARMA | Bug | Optimisation de la responsivité de la vérification et délivrance d'ordonnance | Frontend | DONE | P0 | 1 | Intermédiaire | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (responsivité de la vérification d'ordonnances corrigée et validée, tests et build OK) | Faible | 2026-07-06 |
+| TICKET-UI-PATIENT-PROFILE-PREMIUM-REDESIGN | UI_UX | Bug | Refonte premium de la page profil du patient | Frontend | DONE | P1 | 1 | Intermédiaire | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (IHM profil patient refondue, tests et build de validation OK) | Faible | 2026-07-06 |
+| TICKET-UI-ADMIN-DASHBOARD-LINKS | UI_UX | Bug | Correction des liens inactifs du Tableau de Bord Admin | Frontend | DONE | P1 | 1 | Junior | 0.02j | 0.05j | 0.1j | Antigravity | Lead Developer | SPRINT-0011 | 0.02j | Aucun (liens rendus actifs, interop redirige vers organisations, audit ouvre modal explicatif, tests et build OK) | Faible | 2026-07-06 |
+| TICKET-UI-PATIENT-DUPLICATES-PREMIUM-REDESIGN | UI_UX | Bug | Refonte premium de la gestion des doublons patients | Frontend | DONE | P1 | 2 | Intermédiaire | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (IHM enveloppée dans app-shell, titre normalisé, table de fusion avec surbrillance, tests unitaires créés, tests/build OK) | Faible | 2026-07-06 |
 | TICKET-PRESCRIPTION-SEPARATION-AND-CONSULTATION-FIX | CONS | Bug | Résolution des erreurs de consultation et affichage/téléchargement séparé des ordonnances | Full-stack | DONE | P0 | 3 | Intermédiaire | 0.25j | 0.4j | 0.6j | Antigravity | Lead Developer | SPRINT-0011 | 0.4j | Aucun (Corrigé, tests et build OK) | Faible | 2026-07-06 |
 | TICKET-CONSULTATION-ROUTE-FIX | VISIT | Bug | Correction de la navigation après clôture de visite et erreur 400 | Frontend | DONE | P0 | 1 | Intermédiaire | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (navigation corrigée vers /dashboard) | Faible | 2026-07-06 |
 | TICKET-VISIT-FORM-UX-IMPROVEMENTS | VISIT | Task | Amélioration UX du formulaire d'admission de visite patient | Frontend | DONE | P1 | 2 | Intermédiaire | 0.1j | 0.2j | 0.3j | Antigravity | Lead Developer | SPRINT-0011 | 0.1j | Aucun (formulaire amélioré et testé) | Faible | 2026-07-06 |
@@ -144,6 +153,12 @@
 | STORY-1909 | CDC_ALIGN | User Story | Consentements patient et accès externe conformes CDC | Full-stack | IN_PROGRESS | P0 | 4 | Senior | 1.5j | 2.5j | 4.0j | Antigravity | Lead | SPRINT-0011 | 1.3j | Générer PatientConsent temporaire à l'approbation externe + tests backend/frontend | Moyen | 2026-07-05 |
 | STORY-1910 | CDC_ALIGN | User Story | Portails patient, pro, labo, pharmacie et vérification publique conformes CDC | Frontend | IN_PROGRESS | P0 | 5 | Senior | 2.0j | 3.0j | 5.0j | Antigravity | Lead | SPRINT-0011 | 1.5j | Portail pro (documents, historique patient), refactor consultation, portail labo/pharmacie, vérification publique | Moyen | 2026-07-05 |
 | STORY-1911 | CDC_ALIGN | User Story | Dette technique architecture SOLID, sécurité et design system | Full-stack | READY | P1 | 4 | Tech Lead | 2.0j | 3.0j | 5.0j | À assigner | Lead | SPRINT-0011 | 0j | Refactor controllers/repositories, externalisation secrets, i18n | Moyen | 2026-07-05 |
+| EPIC-0015 | CLIN_STAFF_ASSETS | Epic | Profils enrichis et ressources graphiques (Logos, Signatures, Cachets, Photos) | Full-stack | READY | P1 | 15 | Senior | 1.5j | 2.5j | 4.0j | À assigner | Lead | SPRINT-0011 | 0j | Tâches de spécifications prêtes | Moyen | 2026-07-06 |
+| STORY-2001 | CLIN_STAFF_ASSETS | User Story | Ajout/modification du logo de la clinique | Full-stack | READY | P1 | 3 | Intermédiaire | 0.3j | 0.5j | 0.8j | À assigner | Lead | SPRINT-0011 | 0j | IHM paramètres clinique + upload logo | Faible | 2026-07-06 |
+| STORY-2002 | CLIN_STAFF_ASSETS | User Story | Téléversement signature et cachet par le médecin | Full-stack | READY | P1 | 4 | Senior | 0.4j | 0.7j | 1.1j | À assigner | Lead | SPRINT-0011 | 0j | Téléversement signature/cachet médecin | Moyen | 2026-07-06 |
+| STORY-2003 | CLIN_STAFF_ASSETS | User Story | Profil collaborateur enrichi (photo, spécialité, ordre, bio) | Full-stack | READY | P1 | 3 | Intermédiaire | 0.3j | 0.5j | 0.8j | À assigner | Lead | SPRINT-0011 | 0j | Nouveaux champs profil et photo | Faible | 2026-07-06 |
+| STORY-2004 | CLIN_STAFF_ASSETS | User Story | Composant drag-and-drop interactif avec preview | Frontend | READY | P1 | 2 | Intermédiaire | 0.2j | 0.3j | 0.5j | À assigner | Lead | SPRINT-0011 | 0j | Composant Angular drag-and-drop réutilisable | Faible | 2026-07-06 |
+| STORY-2005 | CLIN_STAFF_ASSETS | User Story | Restitution du logo, signature et cachet dans les PDF | Backend | READY | P1 | 3 | Senior | 0.3j | 0.5j | 0.8j | À assigner | Lead | SPRINT-0011 | 0j | Intégration d'images dans PdfGeneratorService | Moyen | 2026-07-06 |
 
 
 ## Statuts autorisés

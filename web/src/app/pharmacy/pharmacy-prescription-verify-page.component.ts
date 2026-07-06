@@ -24,8 +24,8 @@ import { PharmacyVerifyItem, PharmacyVerifyResponse } from './pharmacy.models';
 
       <div class="app-container-wide pb-10">
 
-        <div class="grid gap-5 lg:grid-cols-[380px_1fr]">
-          <section class="ui-card-subtle p-5 md:p-6">
+        <div class="grid gap-5 lg:grid-cols-[380px_1fr] min-w-0">
+          <section class="ui-card-subtle min-w-0 p-5 md:p-6">
             <p class="ui-label">{{ t('pharmacy.verifySection') }}</p>
             <h2 class="mt-1 font-display text-lg font-extrabold" style="color: var(--text-primary)">
               {{ t('pharmacy.verifyTitle') }}
@@ -69,7 +69,7 @@ import { PharmacyVerifyItem, PharmacyVerifyResponse } from './pharmacy.models';
             </form>
           </section>
 
-          <section class="ui-card-subtle min-h-[420px] p-5 md:p-6">
+          <section class="ui-card-subtle min-w-0 min-h-[420px] p-5 md:p-6">
             @if (!prescription() && !isLoading()) {
               <div class="flex min-h-[360px] flex-col items-center justify-center text-center">
                 <div class="mb-4 grid h-12 w-12 place-items-center border"

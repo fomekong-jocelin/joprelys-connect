@@ -26,7 +26,7 @@ public class PatientAuthService {
         this.jwtService = jwtService;
     }
 
-    public void generateAndSendOtp(String globalPatientNumber, String phone, LocalDate birthDate) {
+    public String generateAndSendOtp(String globalPatientNumber, String phone, LocalDate birthDate) {
         PatientEntity patient = patientRepository.findByGlobalPatientNumber(globalPatientNumber)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient introuvable."));
 
@@ -39,6 +39,7 @@ public class PatientAuthService {
 
         // Impression en console pour la simulation
         System.out.println("[OTP PATIENT] Code de connexion pour DPU " + globalPatientNumber + " : " + code);
+        return code;
     }
 
     public LoginResponse verifyOtp(String globalPatientNumber, String otpCode) {

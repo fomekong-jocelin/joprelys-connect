@@ -1,8 +1,10 @@
-import { Component, input, model, output } from '@angular/core';
+import { Component, computed, inject, input, model, output } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { AlertComponent } from '../../shared/ui/alert.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
 import { CardComponent } from '../../shared/ui/card.component';
 import { InputComponent } from '../../shared/ui/input.component';
+import { FileDragDropComponent } from '../../shared/ui/file-drag-drop.component';
 
 export interface OrganizationFormLabels {
   readonly title: string;
@@ -30,7 +32,7 @@ export interface OrganizationFormLabels {
 @Component({
   selector: 'app-organization-form',
   standalone: true,
-  imports: [AlertComponent, ButtonComponent, CardComponent, InputComponent],
+  imports: [AlertComponent, ButtonComponent, CardComponent, InputComponent, FileDragDropComponent],
   template: `
     <app-ui-card [title]="labels().title" class="mb-8">
       <form class="space-y-5" (submit)="$event.preventDefault(); submitted.emit()">
@@ -115,6 +117,16 @@ export interface OrganizationFormLabels {
               [(value)]="address"
             />
           </div>
+          <div class="sm:col-span-2">
+            <app-file-drag-drop
+              #logoUploader
+              label="Logo de l'établissement"
+              [previewUrl]="logoViewUrl()"
+              (fileSelected)="onLogoSelected($event, logoUploader)"
+              (fileRemoved)="logoPath.set(null)"
+            >
+            </app-file-drag-drop>
+          </div>
         </div>
 
         <div class="flex justify-end gap-3">
@@ -130,6 +142,8 @@ export interface OrganizationFormLabels {
   `,
 })
 export class OrganizationFormComponent {
+  private readonly http = inject(HttpClient);
+
   readonly labels = input.required<OrganizationFormLabels>();
   readonly loading = input(false);
   readonly error = input<string | null>(null);
@@ -143,7 +157,25 @@ export class OrganizationFormComponent {
   readonly type = model('CLINIC');
   readonly responsibleName = model('');
   readonly apiEnabled = model(true);
+  readonly logoPath = model<string | null>(null);
+
+  readonly logoViewUrl = computed(() => this.logoPath() ? `/api/public/files/view?path=${this.logoPath()}` : null);
 
   readonly submitted = output<void>();
   readonly cancelled = output<void>();
+
+  onLogoSelected(file: File, uploader: FileDragDropComponent): void {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', 'logo');
+    this.http.post<any>('/api/files/upload', formData).subscribe({
+      next: (res) => {
+        this.logoPath.set(res.filePath);
+        uploader.setPreviewUrl(res.viewUrl, file.name);
+      },
+      error: (err) => {
+        console.error(err);
+      }
+    });
+  }
 }

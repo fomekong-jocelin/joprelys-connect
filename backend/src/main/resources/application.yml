@@ -27,6 +27,7 @@ spring:
 
 joprelys:
   security:
+    expose-otp-to-frontend: ${JOPRELYS_EXPOSE_OTP:true}
     jwt:
       issuer: ${JOPRELYS_JWT_ISSUER:joprelys-connect}
       audience: ${JOPRELYS_JWT_AUDIENCE:joprelys-clinic}

@@ -19,6 +19,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthenticationService {
+
+	@Value("${joprelys.security.expose-otp-to-frontend:true}")
+	private boolean exposeOtpToFrontend;
 
 	private static final String GENERIC_LOGIN_FAILURE = "Invalid email or password";
 	private static final Set<String> SENSITIVE_ROLES = Set.of(
@@ -103,7 +107,8 @@ public class AuthenticationService {
 					user.getEmail(),
 					user.getDisplayName(),
 					user.getRole(),
-					true
+					true,
+					exposeOtpToFrontend ? code : null
 			);
 		}
 

@@ -26,6 +26,7 @@ export interface CreateOrganizationRequest {
   type: string;
   responsibleName: string;
   apiEnabled: boolean;
+  logoPath?: string;
 }
 
 export interface CreateClinicAdminRequest {

@@ -46,6 +46,9 @@ export class DashboardComponent implements OnInit {
   isSavingVitals = signal(false);
   vitalsError = signal('');
 
+  // Audit security modal state
+  showAuditSecurityModal = signal(false);
+
   vitalsTemp?: number;
   vitalsWeight?: number;
   vitalsHeight?: number;
@@ -281,5 +284,13 @@ export class DashboardComponent implements OnInit {
         this.vitalsError.set(err.error?.detail || err.error?.title || 'Une erreur est survenue lors de l\'enregistrement des constantes.');
       }
     });
+  }
+
+  openAuditSecurityModal(): void {
+    this.showAuditSecurityModal.set(true);
+  }
+
+  closeAuditSecurityModal(): void {
+    this.showAuditSecurityModal.set(false);
   }
 }

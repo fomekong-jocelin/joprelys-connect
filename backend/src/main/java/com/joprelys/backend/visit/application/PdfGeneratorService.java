@@ -5,6 +5,12 @@ import com.joprelys.backend.prescription.infrastructure.persistence.Prescription
 import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionItemEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity;
+import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
+import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
+import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
+import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
+import com.joprelys.backend.file.FileStorageService;
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
@@ -26,12 +32,132 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class PdfGeneratorService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
             .withZone(ZoneId.systemDefault());
+
+    private final FileStorageService fileStorageService;
+    private final OrganizationRepository organizationRepository;
+    private final PatientRepository patientRepository;
+
+    public PdfGeneratorService(
+            FileStorageService fileStorageService,
+            OrganizationRepository organizationRepository,
+            PatientRepository patientRepository) {
+        this.fileStorageService = fileStorageService;
+        this.organizationRepository = organizationRepository;
+        this.patientRepository = patientRepository;
+    }
+
+    private Image getScaledImage(String path, float maxWidth, float maxHeight) {
+        if (path == null || path.isBlank()) return null;
+        try {
+            byte[] bytes = fileStorageService.loadFile(path);
+            if (bytes != null) {
+                Image image = Image.getInstance(bytes);
+                image.scaleToFit(maxWidth, maxHeight);
+                return image;
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to load PDF image asset: " + path + ". Error: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private PdfPTable createHeaderTable(String logoPath, String clinicName, String clinicAddress, String clinicPhone, byte[] qrCodePngBytes, Font fontMuted) {
+        Image logoImg = getScaledImage(logoPath, 70f, 70f);
+
+        PdfPTable headerTable;
+        if (logoImg != null) {
+            headerTable = new PdfPTable(3);
+            headerTable.setWidthPercentage(100f);
+            try {
+                headerTable.setWidths(new float[]{15f, 55f, 30f});
+            } catch (Exception e) {
+                // Ignore
+            }
+
+            PdfPCell logoCell = new PdfPCell();
+            logoCell.setBorder(Rectangle.NO_BORDER);
+            logoCell.addElement(logoImg);
+            headerTable.addCell(logoCell);
+        } else {
+            headerTable = new PdfPTable(2);
+            headerTable.setWidthPercentage(100f);
+            try {
+                headerTable.setWidths(new float[]{70f, 30f});
+            } catch (Exception e) {
+                // Ignore
+            }
+        }
+
+        PdfPCell leftCell = new PdfPCell();
+        leftCell.setBorder(Rectangle.NO_BORDER);
+        leftCell.addElement(new Paragraph(clinicName, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.BLACK)));
+        leftCell.addElement(new Paragraph(clinicAddress != null ? clinicAddress : "", fontMuted));
+        leftCell.addElement(new Paragraph("Tél : " + (clinicPhone != null ? clinicPhone : ""), fontMuted));
+        headerTable.addCell(leftCell);
+
+        PdfPCell rightCell = new PdfPCell();
+        rightCell.setBorder(Rectangle.NO_BORDER);
+        rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        if (qrCodePngBytes != null) {
+            try {
+                Image qrCodeImg = Image.getInstance(qrCodePngBytes);
+                qrCodeImg.scaleAbsolute(70f, 70f);
+                qrCodeImg.setAlignment(Element.ALIGN_RIGHT);
+                rightCell.addElement(qrCodeImg);
+            } catch (Exception e) {
+                // Ignore
+            }
+        }
+        headerTable.addCell(rightCell);
+        
+        return headerTable;
+    }
+
+    private void addSignaturesAndStamp(Document document, UserAccountEntity doctor, Font fontSectionHeader, Font fontBody) throws DocumentException {
+        if (doctor == null) return;
+
+        PdfPTable sigTable = new PdfPTable(2);
+        sigTable.setWidthPercentage(100f);
+        try {
+            sigTable.setWidths(new float[]{50f, 50f});
+        } catch (Exception e) {
+            // Ignore
+        }
+        sigTable.setSpacingBefore(20f);
+
+        PdfPCell sigCell = new PdfPCell();
+        sigCell.setBorder(Rectangle.NO_BORDER);
+        sigCell.addElement(new Paragraph("Signature du Praticien", fontSectionHeader));
+        sigCell.addElement(new Paragraph(doctor.getDisplayName(), fontBody));
+        if (doctor.getRegistrationNumber() != null && !doctor.getRegistrationNumber().isBlank()) {
+            sigCell.addElement(new Paragraph("N° Ordre : " + doctor.getRegistrationNumber(), fontBody));
+        }
+        Image sigImg = getScaledImage(doctor.getSignaturePath(), 120f, 60f);
+        if (sigImg != null) {
+            sigCell.addElement(new Paragraph(" "));
+            sigCell.addElement(sigImg);
+        }
+
+        PdfPCell stampCell = new PdfPCell();
+        stampCell.setBorder(Rectangle.NO_BORDER);
+        stampCell.addElement(new Paragraph("Cachet Professionnel", fontSectionHeader));
+        Image stampImg = getScaledImage(doctor.getStampPath(), 120f, 80f);
+        if (stampImg != null) {
+            stampCell.addElement(new Paragraph(" "));
+            stampCell.addElement(stampImg);
+        }
+
+        sigTable.addCell(sigCell);
+        sigTable.addCell(stampCell);
+        document.add(sigTable);
+    }
 
     public byte[] generatePdf(
             VisitEntity visit,
@@ -59,28 +185,14 @@ public class PdfGeneratorService {
             Font fontTableCell = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.BLACK);
 
             // 1. En-tête avec Clinique à gauche et QR code à droite (via PdfPTable)
-            PdfPTable headerTable = new PdfPTable(2);
-            headerTable.setWidthPercentage(100f);
-            headerTable.setWidths(new float[]{70f, 30f});
-
-            PdfPCell leftCell = new PdfPCell();
-            leftCell.setBorder(Rectangle.NO_BORDER);
-            leftCell.addElement(new Paragraph(clinicName, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.BLACK)));
-            leftCell.addElement(new Paragraph(clinicAddress != null ? clinicAddress : "", fontMuted));
-            leftCell.addElement(new Paragraph("Tél : " + (clinicPhone != null ? clinicPhone : ""), fontMuted));
-
-            PdfPCell rightCell = new PdfPCell();
-            rightCell.setBorder(Rectangle.NO_BORDER);
-            rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            if (qrCodePngBytes != null) {
-                Image qrCodeImg = Image.getInstance(qrCodePngBytes);
-                qrCodeImg.scaleAbsolute(70f, 70f);
-                qrCodeImg.setAlignment(Element.ALIGN_RIGHT);
-                rightCell.addElement(qrCodeImg);
+            String logoPath = null;
+            try {
+                OrganizationEntity org = organizationRepository.findById(visit.getOrganizationId()).orElse(null);
+                logoPath = (org != null) ? org.getLogoPath() : null;
+            } catch (Exception e) {
+                // Ignore
             }
-
-            headerTable.addCell(leftCell);
-            headerTable.addCell(rightCell);
+            PdfPTable headerTable = createHeaderTable(logoPath, clinicName, clinicAddress, clinicPhone, qrCodePngBytes, fontMuted);
             document.add(headerTable);
 
             // Ligne de séparation
@@ -220,8 +332,11 @@ public class PdfGeneratorService {
                 document.add(pTable);
             }
 
+            UserAccountEntity doctor = (consultation != null) ? consultation.getDoctor() : null;
+            addSignaturesAndStamp(document, doctor, fontSectionHeader, fontBody);
+
             document.close();
-        } catch (DocumentException | IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException("Failed to generate PDF", e);
         }
 
@@ -251,28 +366,14 @@ public class PdfGeneratorService {
             Font fontMuted = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.DARK_GRAY);
 
             // 1. En-tête
-            PdfPTable headerTable = new PdfPTable(2);
-            headerTable.setWidthPercentage(100f);
-            headerTable.setWidths(new float[]{70f, 30f});
-
-            PdfPCell leftCell = new PdfPCell();
-            leftCell.setBorder(Rectangle.NO_BORDER);
-            leftCell.addElement(new Paragraph(clinicName, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.BLACK)));
-            leftCell.addElement(new Paragraph(clinicAddress != null ? clinicAddress : "", fontMuted));
-            leftCell.addElement(new Paragraph("Tél : " + (clinicPhone != null ? clinicPhone : ""), fontMuted));
-
-            PdfPCell rightCell = new PdfPCell();
-            rightCell.setBorder(Rectangle.NO_BORDER);
-            rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            if (qrCodePngBytes != null) {
-                Image qrCodeImg = Image.getInstance(qrCodePngBytes);
-                qrCodeImg.scaleAbsolute(70f, 70f);
-                qrCodeImg.setAlignment(Element.ALIGN_RIGHT);
-                rightCell.addElement(qrCodeImg);
+            String logoPath = null;
+            try {
+                OrganizationEntity org = organizationRepository.findById(hospitalization.getOrganizationId()).orElse(null);
+                logoPath = (org != null) ? org.getLogoPath() : null;
+            } catch (Exception e) {
+                // Ignore
             }
-
-            headerTable.addCell(leftCell);
-            headerTable.addCell(rightCell);
+            PdfPTable headerTable = createHeaderTable(logoPath, clinicName, clinicAddress, clinicPhone, qrCodePngBytes, fontMuted);
             document.add(headerTable);
 
             // Separation line
@@ -326,10 +427,8 @@ public class PdfGeneratorService {
 
             document.add(new Paragraph("Consignes médicales & Prescriptions de sortie :", fontSectionHeader));
             document.add(new Paragraph(hospitalization.getDischargeInstructions() != null ? hospitalization.getDischargeInstructions() : "Non renseigné", fontBody));
-            document.add(new Paragraph(" "));
-
             document.close();
-        } catch (DocumentException | IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException("Failed to generate PDF", e);
         }
 
@@ -360,28 +459,16 @@ public class PdfGeneratorService {
             Font fontTableCell = FontFactory.getFont(FontFactory.HELVETICA, 8, Color.BLACK);
 
             // 1. En-tête avec Clinique à gauche et QR code à droite (via PdfPTable)
-            PdfPTable headerTable = new PdfPTable(2);
-            headerTable.setWidthPercentage(100f);
-            headerTable.setWidths(new float[]{70f, 30f});
-
-            PdfPCell leftCell = new PdfPCell();
-            leftCell.setBorder(Rectangle.NO_BORDER);
-            leftCell.addElement(new Paragraph(clinicName, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.BLACK)));
-            leftCell.addElement(new Paragraph(clinicAddress != null ? clinicAddress : "", fontMuted));
-            leftCell.addElement(new Paragraph("Tél : " + (clinicPhone != null ? clinicPhone : ""), fontMuted));
-
-            PdfPCell rightCell = new PdfPCell();
-            rightCell.setBorder(Rectangle.NO_BORDER);
-            rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            if (qrCodePngBytes != null) {
-                Image qrCodeImg = Image.getInstance(qrCodePngBytes);
-                qrCodeImg.scaleAbsolute(70f, 70f);
-                qrCodeImg.setAlignment(Element.ALIGN_RIGHT);
-                rightCell.addElement(qrCodeImg);
+            String logoPath = null;
+            try {
+                java.util.Optional<PatientEntity> patientOpt = patientRepository.findByGlobalPatientNumber(summary.globalPatientNumber());
+                UUID orgId = patientOpt.map(PatientEntity::getOrganizationId).orElse(null);
+                OrganizationEntity org = (orgId != null) ? organizationRepository.findById(orgId).orElse(null) : null;
+                logoPath = (org != null) ? org.getLogoPath() : null;
+            } catch (Exception e) {
+                // Ignore
             }
-
-            headerTable.addCell(leftCell);
-            headerTable.addCell(rightCell);
+            PdfPTable headerTable = createHeaderTable(logoPath, clinicName, clinicAddress, clinicPhone, qrCodePngBytes, fontMuted);
             document.add(headerTable);
 
             // Separation line
@@ -673,7 +760,7 @@ public class PdfGeneratorService {
             }
 
             document.close();
-        } catch (DocumentException | IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException("Failed to generate patient summary PDF", e);
         }
 
@@ -707,28 +794,14 @@ public class PdfGeneratorService {
             Font fontTableCell = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.BLACK);
 
             // 1. En-tête avec Clinique à gauche et QR code à droite (via PdfPTable)
-            PdfPTable headerTable = new PdfPTable(2);
-            headerTable.setWidthPercentage(100f);
-            headerTable.setWidths(new float[]{70f, 30f});
-
-            PdfPCell leftCell = new PdfPCell();
-            leftCell.setBorder(Rectangle.NO_BORDER);
-            leftCell.addElement(new Paragraph(clinicName, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.BLACK)));
-            leftCell.addElement(new Paragraph(clinicAddress != null ? clinicAddress : "", fontMuted));
-            leftCell.addElement(new Paragraph("Tél : " + (clinicPhone != null ? clinicPhone : ""), fontMuted));
-
-            PdfPCell rightCell = new PdfPCell();
-            rightCell.setBorder(Rectangle.NO_BORDER);
-            rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            if (qrCodePngBytes != null) {
-                Image qrCodeImg = Image.getInstance(qrCodePngBytes);
-                qrCodeImg.scaleAbsolute(70f, 70f);
-                qrCodeImg.setAlignment(Element.ALIGN_RIGHT);
-                rightCell.addElement(qrCodeImg);
+            String logoPath = null;
+            try {
+                OrganizationEntity org = organizationRepository.findById(visit.getOrganizationId()).orElse(null);
+                logoPath = (org != null) ? org.getLogoPath() : null;
+            } catch (Exception e) {
+                // Ignore
             }
-
-            headerTable.addCell(leftCell);
-            headerTable.addCell(rightCell);
+            PdfPTable headerTable = createHeaderTable(logoPath, clinicName, clinicAddress, clinicPhone, qrCodePngBytes, fontMuted);
             document.add(headerTable);
 
             // Ligne de séparation
@@ -821,8 +894,12 @@ public class PdfGeneratorService {
             Paragraph pinText = new Paragraph("Code de vérification sécurisé (PIN) : " + (prescription.getPinCode() != null ? prescription.getPinCode() : "-"), fontBodyBold);
             document.add(pinText);
 
+            UserAccountEntity doctor = (prescription != null && prescription.getConsultation() != null)
+                    ? prescription.getConsultation().getDoctor() : null;
+            addSignaturesAndStamp(document, doctor, fontSectionHeader, fontBody);
+
             document.close();
-        } catch (DocumentException | IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException("Failed to generate prescription PDF", e);
         }
 

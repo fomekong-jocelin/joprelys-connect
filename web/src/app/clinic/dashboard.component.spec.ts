@@ -142,5 +142,13 @@ describe('DashboardComponent', () => {
       painScale: 6
     }));
   });
+
+  it('should manage audit security modal state', () => {
+    expect(component.showAuditSecurityModal()).toBe(false);
+    component.openAuditSecurityModal();
+    expect(component.showAuditSecurityModal()).toBe(true);
+    component.closeAuditSecurityModal();
+    expect(component.showAuditSecurityModal()).toBe(false);
+  });
 });
 

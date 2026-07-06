@@ -5,12 +5,13 @@ import { AuthTokenStorageService } from './auth-token-storage.service';
 import { PatientPortalService } from '../patient/portal/services/patient-portal.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AppLocale } from '../core/config/app-brand.config';
+import { AppLogoComponent } from '../shared/ui/app-logo.component';
 
 type LoginMode = 'staff' | 'patient';
 
 @Component({
   selector: 'app-login',
-  imports: [RouterLink],
+  imports: [RouterLink, AppLogoComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })
@@ -92,7 +93,7 @@ export class LoginComponent {
         this.loading.set(false);
         if (res.requiresOtp) {
           this.staffStep.set(2);
-          this.staffOtpCode.set('');
+          this.staffOtpCode.set(res.otpCode || '');
         } else {
           this.router.navigate(['/dashboard']);
         }
@@ -143,9 +144,12 @@ export class LoginComponent {
       phone: this.patientPhone(),
       birthDate: this.patientBirthDate()
     }).subscribe({
-      next: () => {
+      next: (res) => {
         this.loading.set(false);
         this.patientStep.set(2);
+        if (res && res.otpCode) {
+          this.otpCode.set(res.otpCode);
+        }
       },
       error: (err) => {
         this.loading.set(false);

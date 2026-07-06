@@ -14,7 +14,7 @@ import { AppShellComponent } from '../shared/layout/app-shell.component';
     <app-shell>
       <!-- En-tête de la page -->
       <header class="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800/80 sticky top-0 z-30 transition-colors">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div class="flex items-center gap-3">
             <button 
               (click)="goBack()"

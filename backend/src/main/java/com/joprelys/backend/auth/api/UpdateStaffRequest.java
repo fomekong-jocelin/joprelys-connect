@@ -5,6 +5,14 @@ import jakarta.validation.constraints.Size;
 
 public record UpdateStaffRequest(
 		@NotBlank @Size(min = 3) String displayName,
-		@NotBlank String role
+		@NotBlank String role,
+		String photoPath,
+		String signaturePath,
+		String stampPath,
+		String phone,
+		String specialty,
+		String registrationNumber,
+		String department,
+		String bio
 ) {
 }
