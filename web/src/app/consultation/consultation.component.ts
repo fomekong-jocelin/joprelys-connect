@@ -368,7 +368,7 @@ export class ConsultationComponent implements OnInit {
         next: () => {
           this.isClosing.set(false);
           this.isSaving.set(false);
-          this.router.navigate(['/clinic/visits']);
+          this.router.navigate(['/dashboard']);
         },
         error: (err) => {
           this.isClosing.set(false);
@@ -388,6 +388,6 @@ export class ConsultationComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/clinic/visits']);
+    this.router.navigate(['/dashboard']);
   }
 }

@@ -8,6 +8,25 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+- **Correction de l'erreur 500 au démarrage de la consultation et séparation de l'ordonnance (TICKET-PRESCRIPTION-SEPARATION-AND-CONSULTATION-FIX)** :
+  - **Correction de la LazyInitializationException** : Initialisation forcée des proxys Hibernate pour `Patient` et `Vitals` au sein de la transaction JPA de `VisitService.getVisit(id)`, évitant l'erreur HTTP 500 lorsque le DTO est mappé par le contrôleur hors transaction.
+  - **Enrichissement de ConsultationResponse** : Ajout des champs `prescriptionDocumentId` (identifiant du PDF de l'ordonnance) et `pinCode` (code PIN de validation de l'ordonnance) dans `ConsultationResponse` et mappage complet depuis `PrescriptionEntity`.
+  - **Ajout de getDetailedConsultationByVisitId** : Nouvelle méthode dans `ConsultationService` pour regrouper de façon transactionnelle tous les détails de consultation, vitaux, examens, et ordonnance, évitant les LazyInitializationException.
+  - **Affichage et Téléchargement séparé de l'ordonnance (UI)** :
+    - Mise à jour du composant Angular `patient-consultations-tab.component.ts` pour afficher le numéro d'ordonnance et le code PIN de validation de la prescription.
+    - Ajout du bouton "Télécharger Ordonnance (PDF)" faisant appel à `downloadPrescriptionPdf(consult)` pour récupérer spécifiquement le document de type `ORDONNANCE` via `/api/documents/{id}/download`.
+    - Restructuration des traductions i18n FR/EN pour différencier le téléchargement de la fiche de consultation (existant) de celui de l'ordonnance, tout en préservant la compatibilité des tests existants du portail patient.
+
+- **Correction de la redirection de route après clôture de visite (TICKET-CONSULTATION-ROUTE-FIX)** :
+  - Remplacement de la navigation vers la route inexistante `/clinic/visits` par `/dashboard` dans `ConsultationComponent` lors de l'annulation (`goBack()`) ou de la clôture de la visite (`handleAfterSaveSuccess()`).
+  - Résolution de l'erreur `400 Bad Request` qui survenait lors des tentatives ultérieures de sauvegarde (la visite étant déjà fermée en base de données après la première clôture réussie).
+  - Validation du build de production et passage des 79 tests unitaires Angular au vert.
+
+- **Correction du chargement des assets de traduction Angular (TICKET-I18N-ASSETS-PATH-FIX)** :
+  - Modification de `web/angular.json` pour ajouter `"output": "assets"` à l'entrée `"input": "src/assets"`, garantissant que les fichiers i18n globaux (54KB) sont bien copiés vers `/assets/i18n/*.json` dans le build et non à la racine `/i18n/*.json`.
+  - Suppression des fichiers doublons obsolètes et incomplets (contenant seulement 3 clés) situés sous `web/public/assets/i18n/` qui interceptaient à tort les appels `/assets/i18n/` et bloquaient toutes les autres clés de traduction de l'application.
+  - Validation du build de production (`npm run build`) et passage des 79 tests unitaires au vert.
+
 - **Résolution des échecs de tests d'intégration H2 (Corrections de contraintes d'unicité et isolation de la base de test)** :
   - **Migration V39 (`V39__fix_medical_documents_h2_unique_constraint.java`)** : Écriture d'une migration Java Flyway dynamique pour supprimer la contrainte d'unicité sur `medical_documents(visit_id)` (introduite par erreur dans la création de table initiale) sous H2 de manière robuste : suppression de la clé étrangère dépendante, reformatage de la colonne via `ALTER COLUMN` pour purger l'attribut d'unicité de H2, suppression de l'index unique et recréation de la clé étrangère.
   - **Migration V40 (`V40__fix_lab_results_result_number_uniqueness.java`)** : Écriture d'une migration Java Flyway dynamique et insensible à la casse (`UPPER(...)`) pour supprimer la contrainte/index d'unicité sur `lab_results(result_number)` sous Postgres et H2 (permettant le multi-analyte et le versioning de résultats) et création d'une contrainte d'unicité composite sur `(result_number, version, analyte_name)`.
@@ -18,6 +37,12 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - Passage de l'ensemble des 240 tests du backend au vert (`BUILD SUCCESS`).
 
 ### Added
+
+- **Amélioration UX du formulaire d'admission de visite patient (TICKET-VISIT-FORM-UX-IMPROVEMENTS)** :
+  - Remplacement du champ texte d'UUID du praticien responsable par un `<select>` alimenté par la liste du personnel de clinique via `StaffApiService`.
+  - Implémentation d'un filtrage dynamique des praticiens en fonction de l'orientation sélectionnée (ex: Médecins pour Médecine générale, Gynécologie, Pédiatrie ; Pharmaciens pour Pharmacie ; Infirmiers pour le Tri).
+  - Pré-remplissage automatique de la date et de l'heure d'arrivée avec l'heure locale courante à l'ouverture du formulaire d'admission.
+  - Validation du build de production et passage de l'ensemble des 79 tests unitaires Angular.
 
 - **Alignement Module 12 — Portails patient, pro, labo, pharmacie et vérification publique conformes CDC (STORY-1910)** :
   - Externalisation complète de l'i18n Angular vers `web/src/assets/i18n/fr.json` et `en.json` (~730 clés) avec chargement via `HttpClient`, `APP_INITIALIZER` et fallback FR.

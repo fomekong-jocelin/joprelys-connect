@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-06 (TICKET-H2-UNIQUE-CONSTRAINTS-FIX : résolution des contraintes uniques H2 et isolation de la base de tests) |
+| Dernière mise à jour | 2026-07-06 (TICKET-CONSULTATION-ROUTE-FIX : correction de la navigation après clôture de visite) |
 | Responsable mise à jour | Antigravity |
 | État global | SPRINT-0011 — Alignement modules 4 à 12 du CDC (DPU, soins, documents, consentements) |
 | Risques majeurs | Taille du chantier (9 modules), dette architecture controllers→repositories |
@@ -21,6 +21,10 @@
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
+| TICKET-PRESCRIPTION-SEPARATION-AND-CONSULTATION-FIX | CONS | Bug | Résolution des erreurs de consultation et affichage/téléchargement séparé des ordonnances | Full-stack | DONE | P0 | 3 | Intermédiaire | 0.25j | 0.4j | 0.6j | Antigravity | Lead Developer | SPRINT-0011 | 0.4j | Aucun (Corrigé, tests et build OK) | Faible | 2026-07-06 |
+| TICKET-CONSULTATION-ROUTE-FIX | VISIT | Bug | Correction de la navigation après clôture de visite et erreur 400 | Frontend | DONE | P0 | 1 | Intermédiaire | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (navigation corrigée vers /dashboard) | Faible | 2026-07-06 |
+| TICKET-VISIT-FORM-UX-IMPROVEMENTS | VISIT | Task | Amélioration UX du formulaire d'admission de visite patient | Frontend | DONE | P1 | 2 | Intermédiaire | 0.1j | 0.2j | 0.3j | Antigravity | Lead Developer | SPRINT-0011 | 0.1j | Aucun (formulaire amélioré et testé) | Faible | 2026-07-06 |
+| TICKET-I18N-ASSETS-PATH-FIX | PAT_PORTAL | Bug | Correction du chemin de chargement des traductions Angular | Front-end | DONE | P0 | 1 | Intermédiaire | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (chemin d'assets corrigé et doublons nettoyés) | Faible | 2026-07-06 |
 | TICKET-I18N-PATIENT-PORTAL-TRANSLATIONS-AUDIT | PAT_PORTAL | Task | Audit et correction des traductions manquantes du portail patient | Frontend | DONE | P1 | 1 | Intermédiaire | 0.2j | 0.3j | 0.5j | Antigravity | Lead | SPRINT-0011 | 0.2j | Aucun (i18n complet du périmètre patient portal, 79 tests au vert) | Faible | 2026-07-05 |
 | TICKET-0001 | GOV | Gouvernance | Mettre en place la documentation IA centralisée | Full-stack | DONE | P0 | 3 | Senior | 0.5j | 0.75j | 1j | Gemini | Lead | SPRINT-0001 | 0.5j | Adapter les tests et créer le backlog | Faible | 2026-07-01 |
 | TICKET-0002 | QUAL | Task | Appliquer la checklist de review aux futures PR | Full-stack | READY | P0 | 2 | Intermédiaire | 0.5j | 0.75j | 1j | Lead Developer | Gemini | SPRINT-0006 | 0j | Appliquer la checklist aux PR | Faible | 2026-07-03 |

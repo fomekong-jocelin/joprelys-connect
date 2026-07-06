@@ -165,6 +165,29 @@ import { ButtonComponent } from '../../shared/ui/button.component';
                     @if (consult.prescriptionItems && consult.prescriptionItems.length > 0) {
                       <div class="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800/40">
                         <h4 class="font-bold text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500">Ordonnance Médicale</h4>
+
+                        @if (consult.prescriptionNumber) {
+                          <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded bg-indigo-50/30 dark:bg-indigo-950/10 border border-indigo-100/50 dark:border-indigo-900/30 gap-2 mb-2">
+                            <div class="text-xs text-slate-600 dark:text-slate-400">
+                              <div>{{ i18n.t('patients.prescriptionNumber') }} : <strong class="font-mono text-indigo-600 dark:text-indigo-400">{{ consult.prescriptionNumber }}</strong></div>
+                              @if (consult.pinCode) {
+                                <div class="mt-1">{{ i18n.t('patients.pinCode') }} : <strong class="font-mono bg-indigo-100 dark:bg-indigo-900/50 px-1.5 py-0.5 rounded text-indigo-700 dark:text-indigo-300">{{ consult.pinCode }}</strong></div>
+                              }
+                            </div>
+                            @if (consult.prescriptionDocumentId) {
+                              <button
+                                type="button"
+                                (click)="downloadPrescriptionPdf(consult); $event.stopPropagation()"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-extrabold bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer transition-colors shadow-xs"
+                              >
+                                <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                {{ i18n.t('patients.downloadPrescription') }}
+                              </button>
+                            }
+                          </div>
+                        }
                         
                         <div class="space-y-2">
                           @for (item of consult.prescriptionItems; track item.id) {
@@ -213,7 +236,7 @@ import { ButtonComponent } from '../../shared/ui/button.component';
                           <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                           </svg>
-                          {{ i18n.t('patients.downloadPdf') }}
+                          {{ i18n.t('patients.downloadConsultation') }}
                         </button>
 
                         @if (canRevoke() && consult.documentStatus === 'VALID') {
@@ -413,7 +436,27 @@ export class PatientConsultationsTabComponent implements OnInit {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Ordonnance_Visite_${consultation.visitNumber}.pdf`;
+        a.download = `Consultation_Visite_${consultation.visitNumber}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.downloadError.set(this.i18n.t('patients.downloadPdfError'));
+      }
+    });
+  }
+
+  downloadPrescriptionPdf(consultation: Consultation): void {
+    if (!consultation.prescriptionDocumentId) return;
+    this.downloadError.set(null);
+    this.consultationApi.downloadDocumentById(consultation.prescriptionDocumentId).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Ordonnance_${consultation.prescriptionNumber || consultation.visitNumber}.pdf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

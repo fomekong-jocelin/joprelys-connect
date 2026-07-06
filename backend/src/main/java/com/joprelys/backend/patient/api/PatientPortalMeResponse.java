@@ -42,6 +42,8 @@ public record PatientPortalMeResponse(
             String prescriptionStatus,
             String prescriptionTransmissionStatus,
             java.time.Instant prescriptionTransmittedAt,
+            UUID prescriptionDocumentId,
+            String pinCode,
             List<com.joprelys.backend.prescription.api.PrescriptionItemResponse> prescriptionItems
     ) {
     }

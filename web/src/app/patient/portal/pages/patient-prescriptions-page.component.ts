@@ -23,6 +23,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
           <app-patient-visits-list
             [consultations]="patientData()!.consultations"
             (download)="onDownloadDocument($event)"
+            (downloadPrescription)="onDownloadPrescription($event)"
             (transmit)="onTransmitPrescription($event)"
           />
         }
@@ -64,6 +65,24 @@ export class PatientPrescriptionsPageComponent implements OnInit {
         const a = document.createElement('a');
         a.href = url;
         a.download = `ordonnance-${visitId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => {
+        alert(this.i18n.t('patients.downloadPdfError'));
+      }
+    });
+  }
+
+  onDownloadPrescription(documentId: string): void {
+    this.portalService.downloadDocumentById(documentId).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ordonnance-${documentId}.pdf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

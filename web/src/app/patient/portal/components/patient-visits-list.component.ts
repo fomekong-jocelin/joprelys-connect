@@ -139,6 +139,30 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                   @if (c.prescriptionItems && c.prescriptionItems.length > 0) {
                     <div class="space-y-2 pt-1">
                       <h4 class="ui-label">{{ i18n.t('patient.visits.prescribedDrugs') }}</h4>
+                      
+                      @if (c.prescriptionNumber) {
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-[var(--radius-brand-md)] bg-indigo-50/30 dark:bg-indigo-950/10 border border-indigo-100/50 dark:border-indigo-900/30 gap-2 mb-2">
+                          <div class="text-xs text-[var(--text-secondary)]">
+                            <div>{{ i18n.t('patients.prescriptionNumber') }} : <strong class="font-mono text-[var(--brand-primary)]">{{ c.prescriptionNumber }}</strong></div>
+                            @if (c.pinCode) {
+                              <div class="mt-1">{{ i18n.t('patients.pinCode') }} : <strong class="font-mono bg-indigo-100 dark:bg-indigo-900/50 px-1.5 py-0.5 rounded text-indigo-700 dark:text-indigo-300">{{ c.pinCode }}</strong></div>
+                            }
+                          </div>
+                          @if (c.prescriptionDocumentId) {
+                            <button
+                              type="button"
+                              (click)="downloadPrescription.emit(c.prescriptionDocumentId); $event.stopPropagation()"
+                              class="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary)]/90 transition-colors cursor-pointer shrink-0"
+                            >
+                              <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                              </svg>
+                              {{ i18n.t('patients.downloadPrescription') }}
+                            </button>
+                          }
+                        </div>
+                      }
+
                       <div class="grid gap-2">
                         @for (item of c.prescriptionItems; track item.id) {
                           <div class="rounded-[var(--radius-brand-md)] bg-[var(--app-surface)] border border-[var(--app-border)] p-3 flex items-start gap-3">
@@ -255,6 +279,7 @@ export class PatientVisitsListComponent {
 
   @Input({ required: true }) consultations: PatientPortalConsultation[] = [];
   @Output() download = new EventEmitter<string>();
+  @Output() downloadPrescription = new EventEmitter<string>();
   @Output() transmit = new EventEmitter<string>();
 
   expandedConsultations: Record<string, boolean> = {};

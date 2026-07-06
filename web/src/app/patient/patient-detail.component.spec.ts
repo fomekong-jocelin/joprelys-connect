@@ -10,6 +10,7 @@ import { ConsultationApiService } from '../consultation/consultation-api.service
 import { I18nService } from '../core/i18n/i18n.service';
 import { AuditApiService } from '../audit/audit-api.service';
 import { PatientApiService } from './patient-api.service';
+import { StaffApiService } from '../clinic/staff/staff-api.service';
 import { of } from 'rxjs';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
@@ -112,6 +113,7 @@ describe('PatientDetail System Tests', () => {
   let mockPatientApi: any;
   let mockI18n: any;
   let mockParentDetail: any;
+  let mockStaffApi: any;
 
   beforeEach(() => {
     mockAuthToken = {
@@ -159,6 +161,10 @@ describe('PatientDetail System Tests', () => {
     mockParentDetail = {
       patient: signal(mockPatient)
     };
+
+    mockStaffApi = {
+      list: vi.fn().mockReturnValue(of([]))
+    };
   });
 
   describe('PatientDetailComponent', () => {
@@ -177,6 +183,7 @@ describe('PatientDetail System Tests', () => {
           { provide: ConsultationApiService, useValue: mockConsultationApi },
           { provide: AuditApiService, useValue: mockAuditApi },
           { provide: PatientApiService, useValue: mockPatientApi },
+          { provide: StaffApiService, useValue: mockStaffApi },
           { provide: I18nService, useValue: mockI18n }
         ]
       }).compileComponents();

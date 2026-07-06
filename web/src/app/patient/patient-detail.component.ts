@@ -13,6 +13,8 @@ import { AppShellComponent } from '../shared/layout/app-shell.component';
 import { AlertComponent } from '../shared/ui/alert.component';
 import { ButtonComponent } from '../shared/ui/button.component';
 import { CardComponent } from '../shared/ui/card.component';
+import { StaffApiService } from '../clinic/staff/staff-api.service';
+import { StaffMember } from '../clinic/staff/staff.models';
 
 @Component({
   selector: 'app-patient-detail',
@@ -220,6 +222,7 @@ import { CardComponent } from '../shared/ui/card.component';
               <label class="ui-label">Orientation <span class="text-red-500">*</span></label>
               <select
                 [(ngModel)]="visitOrientation"
+                (ngModelChange)="onOrientationChange()"
                 class="ui-select focus:border-brand-primary transition-colors"
                 [disabled]="isSubmitting()"
               >
@@ -245,14 +248,17 @@ import { CardComponent } from '../shared/ui/card.component';
             </div>
 
             <div class="space-y-1.5">
-              <label class="ui-label">Praticien responsable (ID)</label>
-              <input
-                type="text"
+              <label class="ui-label">Praticien responsable</label>
+              <select
                 [(ngModel)]="visitMainPractitionerId"
-                placeholder="UUID du praticien responsable (optionnel)"
-                class="ui-input w-full p-3 text-sm focus:border-brand-primary transition-colors"
+                class="ui-select focus:border-brand-primary transition-colors"
                 [disabled]="isSubmitting()"
-              />
+              >
+                <option value="">Sélectionner un praticien (optionnel)</option>
+                @for (p of getFilteredPractitioners(); track p.id) {
+                  <option [value]="p.id">{{ p.displayName }}</option>
+                }
+              </select>
             </div>
 
             <div class="space-y-1.5">
@@ -291,6 +297,7 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly patientApi = inject(PatientApiService);
   private readonly activePatientService = inject(ActivePatientService);
+  private readonly staffApi = inject(StaffApiService);
   readonly i18n = inject(I18nService);
 
   readonly loadedPatient = signal<Patient | null>(null);
@@ -324,6 +331,7 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
   criticalAllergiesSubstances = computed(() => 
     this.criticalAllergies().map(a => a.substance).join(', ')
   );
+  readonly staffList = signal<StaffMember[]>([]);
 
   readonly session = this.tokenStorage.session;
   readonly submitLabel = computed(() => this.isSubmitting() ? 'Enregistrement...' : "Valider l'admission");
@@ -372,6 +380,12 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Load staff list for practitioners dropdown
+    this.staffApi.list().subscribe({
+      next: (list) => this.staffList.set(list.filter(s => s.enabled)),
+      error: () => {}
+    });
+
     // If navigation details were supplied via Router state, use them immediately
     const statePatient = window.history.state?.patient as Patient | undefined;
     if (statePatient) {
@@ -500,13 +514,48 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
     }
   }
 
+  getFilteredPractitioners(): StaffMember[] {
+    const list = this.staffList();
+    const orientation = this.visitOrientation;
+    
+    const hasRole = (member: StaffMember, role: string) => {
+      if (!member.role) return false;
+      return member.role.split(',').map(r => r.trim()).includes(role);
+    };
+
+    if (orientation === 'Médecine générale' || orientation === 'Pédiatrie' || orientation === 'Gynécologie') {
+      const filtered = list.filter(s => hasRole(s, 'MEDECIN'));
+      if (filtered.length > 0) return filtered;
+    } else if (orientation === 'Pharmacie') {
+      const filtered = list.filter(s => hasRole(s, 'PHARMACIEN'));
+      if (filtered.length > 0) return filtered;
+    } else if (orientation === 'Tri / Urgences') {
+      const filtered = list.filter(s => hasRole(s, 'INFIRMIER') || hasRole(s, 'MEDECIN'));
+      if (filtered.length > 0) return filtered;
+    }
+    
+    return list.filter(s => hasRole(s, 'MEDECIN') || hasRole(s, 'INFIRMIER') || hasRole(s, 'PHARMACIEN') || hasRole(s, 'BIOLOGISTE'));
+  }
+
+  onOrientationChange(): void {
+    const available = this.getFilteredPractitioners();
+    if (!available.some(p => p.id === this.visitMainPractitionerId)) {
+      this.visitMainPractitionerId = '';
+    }
+  }
+
   openModal(): void {
     this.showVisitModal = true;
     this.visitReason = '';
     this.visitOrientation = '';
     this.visitService = '';
     this.visitMainPractitionerId = '';
-    this.visitArrivalAt = '';
+    
+    const now = new Date();
+    const offsetMs = now.getTimezoneOffset() * 60000;
+    const localISODate = new Date(now.getTime() - offsetMs).toISOString().slice(0, 16);
+    this.visitArrivalAt = localISODate;
+    
     this.visitError = '';
   }
 

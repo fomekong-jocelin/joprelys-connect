@@ -37,6 +37,8 @@ export interface PatientPortalConsultation {
   prescriptionStatus?: string | null;
   prescriptionTransmissionStatus?: string | null;
   prescriptionTransmittedAt?: string | null;
+  prescriptionDocumentId?: string | null;
+  pinCode?: string | null;
   prescriptionItems?: PrescriptionItem[];
 }
 
@@ -87,6 +89,10 @@ export class PatientPortalService {
     return this.http.get(`/api/patient/visits/${visitId}/document`, {
       responseType: 'blob'
     });
+  }
+
+  downloadDocumentById(documentId: string): Observable<Blob> {
+    return this.http.get(`/api/patient/documents/${documentId}/download`, { responseType: 'blob' });
   }
 
   getConsents(): Observable<PatientConsent[]> {

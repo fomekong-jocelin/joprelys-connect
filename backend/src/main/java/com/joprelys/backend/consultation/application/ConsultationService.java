@@ -117,4 +117,19 @@ public class ConsultationService {
 				})
 				.toList();
 	}
+
+	@Transactional(readOnly = true)
+	public ConsultationResponse getDetailedConsultationByVisitId(UUID visitId) {
+		var c = consultationRepository.findByVisitId(visitId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Aucune consultation trouvée pour cette visite."));
+		var doc = medicalDocumentRepository.findByVisitId(visitId).orElse(null);
+		var vitals = VitalsResponse.fromEntity(c.getVisit().getVitals());
+		var prescriptionOpt = prescriptionRepository.findByConsultationId(c.getId());
+		var prescriptionItems = prescriptionOpt
+				.map(p -> p.getItems().stream()
+						.map(PrescriptionItemResponse::fromEntity)
+						.toList())
+				.orElse(List.of());
+		return ConsultationResponse.fromEntity(c, doc, vitals, prescriptionItems, prescriptionOpt.orElse(null));
+	}
 }

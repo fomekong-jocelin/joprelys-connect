@@ -26,6 +26,8 @@ export interface Consultation {
   prescriptionStatus?: string;
   prescriptionTransmissionStatus?: string;
   prescriptionTransmittedAt?: string;
+  prescriptionDocumentId?: string;
+  pinCode?: string;
   prescriptionItems?: PrescriptionItem[];
 }
 

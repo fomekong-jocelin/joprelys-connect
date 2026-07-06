@@ -101,6 +101,8 @@ public class PatientPortalController {
                     String prescriptionStatus = prescriptionOpt.map(p -> p.getStatus()).orElse(null);
                     String prescriptionTransmissionStatus = prescriptionOpt.map(p -> p.getTransmissionStatus()).orElse(null);
                     java.time.Instant prescriptionTransmittedAt = prescriptionOpt.map(p -> p.getTransmittedAt()).orElse(null);
+                    UUID prescriptionDocumentId = prescriptionOpt.map(p -> p.getDocumentId()).orElse(null);
+                    String pinCode = prescriptionOpt.map(p -> p.getPinCode()).orElse(null);
 
                     return new PatientPortalMeResponse.PatientPortalConsultation(
                             c.getVisit().getId(),
@@ -121,6 +123,8 @@ public class PatientPortalController {
                             prescriptionStatus,
                             prescriptionTransmissionStatus,
                             prescriptionTransmittedAt,
+                            prescriptionDocumentId,
+                            pinCode,
                             prescriptionItems
                     );
                 })
@@ -195,6 +199,25 @@ public class PatientPortalController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable pour cette visite."));
 
         // Vérification de sécurité de l'accès au document
+        if (!doc.getVisit().getPatient().getId().equals(patient.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Vous n'êtes pas autorisé à accéder à ce document.");
+        }
+
+        byte[] pdfBytes = documentService.loadDocumentFile(doc);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + doc.getDocumentNumber() + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
+    }
+
+    @GetMapping("/documents/{documentId}/download")
+    public ResponseEntity<byte[]> downloadOwnDocumentById(@PathVariable UUID documentId, Authentication authentication) {
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
+
+        MedicalDocumentEntity doc = medicalDocumentRepository.findByIdWithVisitAndPatient(documentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable."));
+
         if (!doc.getVisit().getPatient().getId().equals(patient.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Vous n'êtes pas autorisé à accéder à ce document.");
         }

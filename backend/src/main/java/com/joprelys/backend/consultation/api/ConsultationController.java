@@ -85,11 +85,7 @@ public class ConsultationController {
 		UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
 		try {
 			com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-			var consultation = consultationService.getConsultationByVisitId(id)
-					.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-							"Aucune consultation trouvée pour cette visite."));
-			var doc = medicalDocumentRepository.findByVisitId(id).orElse(null);
-			return ConsultationResponse.fromEntity(consultation, doc);
+			return consultationService.getDetailedConsultationByVisitId(id);
 		} finally {
 			com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
 		}

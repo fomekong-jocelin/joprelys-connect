@@ -184,8 +184,16 @@ public class VisitService {
 
 	@Transactional(readOnly = true)
 	public VisitEntity getVisit(UUID id) {
-		return visitRepository.findById(id)
+		VisitEntity visit = visitRepository.findById(id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
+		if (visit.getPatient() != null) {
+			visit.getPatient().getFullName();
+			visit.getPatient().getGlobalPatientNumber();
+		}
+		if (visit.getVitals() != null) {
+			visit.getVitals().getTemperature();
+		}
+		return visit;
 	}
 
 	@Transactional(readOnly = true)
