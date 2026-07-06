@@ -8,6 +8,13 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- **Navigation patient mobile, validation d'ordonnances et indicateurs de téléchargement (TICKET-UI-PATIENT-DETAIL-AND-PRESCRIPTION-FIXES)** :
+  - Ajout d'une barre d'onglets horizontale scrollable sur mobile (`block md:hidden`) dans `PatientDetailComponent` avec un style de défilement personnalisé (scroll-bar ultra-fine et élégante, couleur de marque pour l'onglet actif s'adaptant aux thèmes clair et sombre, et défilement automatique `scrollIntoView` de l'onglet actif lors du changement de route) afin de permettre aux praticiens sur smartphone d'accéder aux sous-sections (Profil, Consultations, Analyses, Hospitalisations, Sécurité/Audit) de la fiche du patient actif.
+  - Finalisation automatique des ordonnances à l'état `DRAFT` lors de la clôture d'une visite dans `VisitService.closeVisit(...)`, passant leur statut à `ACTIVE` et générant automatiquement le PDF associé pour éliminer les blocages de délivrance côté pharmacie.
+  - Intégration d'un indicateur de téléchargement et d'une désactivation de boutons lors du téléchargement des comptes-rendus ou des ordonnances dans le portail patient (`PatientPrescriptionsPageComponent` et `PatientVisitsListComponent`), offrant une meilleure réactivité visuelle à l'utilisateur.
+
+
+
 - **Menu déroulant des services et filtrage praticiens (TICKET-CLINIC-STAFF-DEPARTMENT-FILTER)** :
   - Remplacement de la saisie texte libre pour le service/département par un menu déroulant dans la gestion du personnel (`StaffManagementComponent`) et dans le profil utilisateur (`ProfileComponent`), avec possibilité de fallback textuel via l'option "Autre".
   - Remplacement de la saisie du service clinique lors de l'admission (`PatientDetailComponent`) par un menu déroulant dynamique fusionnant les services prédéfinis et ceux configurés sur les fiches des collaborateurs actifs.
@@ -62,6 +69,12 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - Validation du chargement dynamique des logos d'établissements (via `OrganizationEntity`), signatures et cachets (via `UserAccountEntity`) sur l'ensemble des documents PDF.
 
 ### Fixed
+
+- **Navigation et IHM multi-rôles (TICKET-UI-MULTI-ROLE-NAVIGATION-FIX)** :
+  - Modification de `AppShellNavComponent` pour découper la liste des rôles dans la session (séparée par des virgules) et fusionner de manière unique les éléments de menu de chaque rôle de l'utilisateur.
+  - Ajout du helper `hasRole` dans `DashboardComponent` et refonte de `dashboard.component.html` pour masquer ou afficher conditionnellement les sections de tableau de bord en fonction de tous les rôles actifs de l'utilisateur.
+  - Correction de `PatientDetailComponent`, `PatientHospitalizationComponent`, `PatientConsultationsTabComponent` et `PatientAuditTrailTabComponent` pour valider les actions, listes de médecins responsables et filtres de modification sur tous les rôles de l'utilisateur.
+  - Résolution du problème d'écran de navigation vide pour les profils ayant plusieurs rôles cliniques accumulés.
 
 - **Optimisation responsive de la section d'examens biologiques (TICKET-UI-CONSULTATION-LAB-EXAMS-RESPONSIVENESS)** :
   - Refonte des suggestions rapides d'analyses avec `overflow-x-auto whitespace-nowrap scrollbar-none` et des boutons avec `flex-shrink-0` pour permettre un défilement horizontal fluide sur mobile sans former de lignes irrégulières (effet "escalier").

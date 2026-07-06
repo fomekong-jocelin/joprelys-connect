@@ -60,14 +60,22 @@ export class DashboardComponent implements OnInit {
   vitalsResp?: number;
   vitalsPain?: number;
 
-  readonly isClinicalRole = computed(() => {
+  hasRole(allowedRoles: string[] | string): boolean {
     const role = this.session()?.role;
-    return role === 'MEDECIN' || role === 'AGENT_ACCUEIL' || role === 'INFIRMIER' || role === 'ADMIN_CLINIQUE';
+    if (!role) return false;
+    const roles = role.split(',').map((r) => r.trim());
+    if (Array.isArray(allowedRoles)) {
+      return roles.some((r) => allowedRoles.includes(r));
+    }
+    return roles.includes(allowedRoles);
+  }
+
+  readonly isClinicalRole = computed(() => {
+    return this.hasRole(['MEDECIN', 'AGENT_ACCUEIL', 'INFIRMIER', 'ADMIN_CLINIQUE']);
   });
 
   readonly canCloseVisit = computed(() => {
-    const role = this.session()?.role;
-    return role === 'MEDECIN' || role === 'ADMIN_CLINIQUE';
+    return this.hasRole(['MEDECIN', 'ADMIN_CLINIQUE']);
   });
 
   ngOnInit(): void {

@@ -183,7 +183,7 @@ import { StaffApiService } from '../clinic/staff/staff-api.service';
                 <select [(ngModel)]="responsiblePractitionerId" name="practitioner" required class="ui-select">
                   <option value="">-- {{ t('patients.hospitalization.selectPractitioner') }} --</option>
                   @for (p of staffList(); track p.id) {
-                    @if (p.role === 'MEDECIN' || p.role === 'ADMIN_CLINIQUE') {
+                    @if (hasRole(p.role, ['MEDECIN', 'ADMIN_CLINIQUE'])) {
                       <option [value]="p.id">{{ p.displayName }} ({{ p.role }})</option>
                     }
                   }
@@ -349,9 +349,18 @@ export class PatientHospitalizationComponent implements OnInit {
     });
   }
 
+  hasRole(roleStr: string | undefined, allowedRoles: string[] | string): boolean {
+    if (!roleStr) return false;
+    const roles = roleStr.split(',').map((r) => r.trim());
+    if (Array.isArray(allowedRoles)) {
+      return roles.some((r) => allowedRoles.includes(r));
+    }
+    return roles.includes(allowedRoles);
+  }
+
   canModify(): boolean {
     const role = this.session()?.role;
-    return ['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'].includes(role || '');
+    return this.hasRole(role, ['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE']);
   }
 
   openAdmitModal(): void {

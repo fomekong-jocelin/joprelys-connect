@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-06 (TICKET-PDF-FOOTER-MENTION : ajout de la mention légale Joprelys HealthTech au bas des documents PDF) |
+| Dernière mise à jour | 2026-07-06 (TICKET-UI-PATIENT-DETAIL-AND-PRESCRIPTION-FIXES : navigation patient mobile, finalisation ordonnances et indicateurs chargement) |
 | Responsable mise à jour | Antigravity |
 | État global | SPRINT-0011 — Alignement modules 4 à 12 du CDC (DPU, soins, documents, consentements) |
 | Risques majeurs | Taille du chantier (9 modules), dette architecture controllers→repositories |
@@ -14,13 +14,15 @@
 | Sprint courant | SPRINT-0011 |
 | | |
 | Capacité sprint | À planifier |
-| Charge engagée | 16.65j (Est. Senior) |
+| Charge engagée | 16.95j (Est. Senior) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
+| TICKET-UI-PATIENT-DETAIL-AND-PRESCRIPTION-FIXES | UI_UX | Bug | Navigation patient mobile, finalisation d'ordonnances et indicateurs de téléchargement | Full-stack | DONE | P0 | 3 | Senior | 0.15j | 0.3j | 0.6j | Antigravity | Lead Developer | SPRINT-0011 | 0.15j | Aucun (barre d'onglets mobile, auto-finalisation d'ordonnance à la clôture de visite, loader de téléchargement PDF) | Faible | 2026-07-06 |
+| TICKET-UI-MULTI-ROLE-NAVIGATION-FIX | UI_UX | Bug | Correction de la navigation et des IHM pour les profils multi-rôles | Frontend | DONE | P0 | 2 | Intermédiaire | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (navigation, dashboard, détails patients, hospitalisation adaptés au multi-rôle) | Faible | 2026-07-06 |
 | TICKET-PDF-FOOTER-MENTION | DOCS | Task | Ajout de la mention de marque au bas des documents PDF générés | Backend | DONE | P1 | 1 | Backend Engineer | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (mention légale centrée insérée, logos/signatures/cachets validés dynamiques) | Faible | 2026-07-06 |
 | TICKET-DYNAMIC-VERIFICATION-URL | DOCS | Task | Résolution dynamique de l'URL de vérification des documents en production | Backend | DONE | P1 | 1 | Backend Engineer | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (URL résolue à partir des headers HTTP de la requête, redirection des sous-domaines API et fallback sur joprelys.com) | Faible | 2026-07-06 |
 | TICKET-PREPROD-ADMIN-CLEANUP | AUTH | Task | Nettoyage de l'administrateur par défaut et des données d'initialisation pour la préproduction | Backend | DONE | P1 | 1 | Backend Engineer | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (admin par défaut configuré avec mot de passe fort, données cliniques d'initialisation désactivées) | Faible | 2026-07-06 |

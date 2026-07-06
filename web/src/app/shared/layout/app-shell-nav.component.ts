@@ -125,58 +125,57 @@ export class AppShellNavComponent {
     const currentSession = this.session();
     if (!currentSession) return [];
 
-    const role = currentSession.role;
+    const roles = currentSession.role.split(',').map((r) => r.trim());
     const items: NavItem[] = [];
 
-    if (role === 'ADMIN_JOPRELYS') {
-      items.push(
-        { path: '/dashboard', label: this.i18n.t('menu.dashboard'), iconName: 'dashboard' },
-        { path: '/organizations', label: this.i18n.t('menu.clinics'), iconName: 'clinics' },
-        { path: '/clinic/lab-orders', label: this.i18n.t('menu.labOrders'), iconName: 'labOrders' },
-        { path: '/pharmacy/prescriptions', label: this.i18n.t('menu.prescriptions'), iconName: 'prescriptions' },
-        { path: '/pharmacy/stocks', label: this.i18n.t('menu.stocks'), iconName: 'stocks' }
-      );
-    } else if (role === 'ADMIN_CLINIQUE') {
-      items.push(
-        { path: '/dashboard', label: this.i18n.t('menu.dashboard'), iconName: 'dashboard' },
-        { path: '/patients', label: this.i18n.t('menu.patients'), iconName: 'patients' },
-        { path: '/clinic/duplicates', label: this.i18n.t('menu.duplicates'), iconName: 'patients' },
-        { path: '/clinic/staff', label: this.i18n.t('menu.staff'), iconName: 'staff' },
-        { path: '/pharmacy/stocks', label: this.i18n.t('menu.stocks'), iconName: 'stocks' }
-      );
-    } else if (role === 'AGENT_ACCUEIL' || role === 'INFIRMIER' || role === 'MEDECIN') {
-      items.push(
-        { path: '/dashboard', label: this.i18n.t('menu.dashboard'), iconName: 'dashboard' },
-        { path: '/patients', label: this.i18n.t('menu.patients'), iconName: 'patients' }
-      );
-    } else if (role === 'BIOLOGISTE') {
-      items.push(
-        { path: '/clinic/lab-orders', label: this.i18n.t('menu.labOrders'), iconName: 'labOrders' }
-      );
-    } else if (role === 'PHARMACIEN') {
-      items.push(
-        { path: '/pharmacy/prescriptions', label: this.i18n.t('menu.prescriptions'), iconName: 'prescriptions' },
-        { path: '/pharmacy/stocks', label: this.i18n.t('menu.stocks'), iconName: 'stocks' }
-      );
-    } else if (role === 'PATIENT') {
-      items.push(
-        { path: '/patient/dashboard', label: this.i18n.t('menu.patientDashboard'), iconName: 'dashboard' },
-        { path: '/patient/profile', label: this.i18n.t('menu.patientProfile'), iconName: 'patients' },
-        { path: '/patient/summary', label: this.i18n.t('menu.patientSummary'), iconName: 'prescriptions' },
-        { path: '/patient/prescriptions', label: this.i18n.t('menu.patientPrescriptions'), iconName: 'prescriptions' },
-        { path: '/patient/results', label: this.i18n.t('menu.patientResults'), iconName: 'labOrders' },
-        { path: '/patient/documents', label: this.i18n.t('menu.patientDocuments'), iconName: 'audit' },
-        { path: '/patient/qr-code', label: this.i18n.t('menu.patientQrCode'), iconName: 'patients' },
-        { path: '/patient/consents', label: this.i18n.t('menu.patientConsents'), iconName: 'consents' },
-        { path: '/patient/privacy', label: this.i18n.t('menu.patientPrivacy'), iconName: 'consents' },
-        { path: '/patient/audit', label: this.i18n.t('menu.patientAudit'), iconName: 'audit' },
-        { path: '/patient/requests', label: this.i18n.t('menu.patientRequests'), iconName: 'requests' },
-        { path: '/patient/notifications', label: this.i18n.t('menu.patientNotifications'), iconName: 'notifications' }
-      );
+    const addUniqueItem = (item: NavItem) => {
+      if (!items.some(i => i.path === item.path)) {
+        items.push(item);
+      }
+    };
+
+    if (roles.includes('ADMIN_JOPRELYS')) {
+      addUniqueItem({ path: '/dashboard', label: this.i18n.t('menu.dashboard'), iconName: 'dashboard' });
+      addUniqueItem({ path: '/organizations', label: this.i18n.t('menu.clinics'), iconName: 'clinics' });
+      addUniqueItem({ path: '/clinic/lab-orders', label: this.i18n.t('menu.labOrders'), iconName: 'labOrders' });
+      addUniqueItem({ path: '/pharmacy/prescriptions', label: this.i18n.t('menu.prescriptions'), iconName: 'prescriptions' });
+      addUniqueItem({ path: '/pharmacy/stocks', label: this.i18n.t('menu.stocks'), iconName: 'stocks' });
+    }
+    if (roles.includes('ADMIN_CLINIQUE')) {
+      addUniqueItem({ path: '/dashboard', label: this.i18n.t('menu.dashboard'), iconName: 'dashboard' });
+      addUniqueItem({ path: '/patients', label: this.i18n.t('menu.patients'), iconName: 'patients' });
+      addUniqueItem({ path: '/clinic/duplicates', label: this.i18n.t('menu.duplicates'), iconName: 'patients' });
+      addUniqueItem({ path: '/clinic/staff', label: this.i18n.t('menu.staff'), iconName: 'staff' });
+      addUniqueItem({ path: '/pharmacy/stocks', label: this.i18n.t('menu.stocks'), iconName: 'stocks' });
+    }
+    if (roles.includes('AGENT_ACCUEIL') || roles.includes('INFIRMIER') || roles.includes('MEDECIN')) {
+      addUniqueItem({ path: '/dashboard', label: this.i18n.t('menu.dashboard'), iconName: 'dashboard' });
+      addUniqueItem({ path: '/patients', label: this.i18n.t('menu.patients'), iconName: 'patients' });
+    }
+    if (roles.includes('BIOLOGISTE')) {
+      addUniqueItem({ path: '/clinic/lab-orders', label: this.i18n.t('menu.labOrders'), iconName: 'labOrders' });
+    }
+    if (roles.includes('PHARMACIEN')) {
+      addUniqueItem({ path: '/pharmacy/prescriptions', label: this.i18n.t('menu.prescriptions'), iconName: 'prescriptions' });
+      addUniqueItem({ path: '/pharmacy/stocks', label: this.i18n.t('menu.stocks'), iconName: 'stocks' });
+    }
+    if (roles.includes('PATIENT')) {
+      addUniqueItem({ path: '/patient/dashboard', label: this.i18n.t('menu.patientDashboard'), iconName: 'dashboard' });
+      addUniqueItem({ path: '/patient/profile', label: this.i18n.t('menu.patientProfile'), iconName: 'patients' });
+      addUniqueItem({ path: '/patient/summary', label: this.i18n.t('menu.patientSummary'), iconName: 'prescriptions' });
+      addUniqueItem({ path: '/patient/prescriptions', label: this.i18n.t('menu.patientPrescriptions'), iconName: 'prescriptions' });
+      addUniqueItem({ path: '/patient/results', label: this.i18n.t('menu.patientResults'), iconName: 'labOrders' });
+      addUniqueItem({ path: '/patient/documents', label: this.i18n.t('menu.patientDocuments'), iconName: 'audit' });
+      addUniqueItem({ path: '/patient/qr-code', label: this.i18n.t('menu.patientQrCode'), iconName: 'patients' });
+      addUniqueItem({ path: '/patient/consents', label: this.i18n.t('menu.patientConsents'), iconName: 'consents' });
+      addUniqueItem({ path: '/patient/privacy', label: this.i18n.t('menu.patientPrivacy'), iconName: 'consents' });
+      addUniqueItem({ path: '/patient/audit', label: this.i18n.t('menu.patientAudit'), iconName: 'audit' });
+      addUniqueItem({ path: '/patient/requests', label: this.i18n.t('menu.patientRequests'), iconName: 'requests' });
+      addUniqueItem({ path: '/patient/notifications', label: this.i18n.t('menu.patientNotifications'), iconName: 'notifications' });
     }
 
     const activePatientObj = this.activePatient();
-    if (activePatientObj && role !== 'PATIENT') {
+    if (activePatientObj && !roles.includes('PATIENT')) {
       const id = activePatientObj.id;
       const patientName = activePatientObj.fullName;
       const patientsIndex = items.findIndex(i => i.path === '/patients');
@@ -190,7 +189,7 @@ export class AppShellNavComponent {
         ];
 
         const allowedAuditRoles = ['MEDECIN', 'ADMIN_CLINIQUE', 'AUDITEUR'];
-        if (allowedAuditRoles.includes(role)) {
+        if (roles.some(r => allowedAuditRoles.includes(r))) {
           subItems.push({ path: `/patients/${id}/audit-trail`, label: this.i18n.t('menu.patientDetail.audit'), iconName: 'audit', indent: true });
         }
 

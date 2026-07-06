@@ -21,6 +21,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationRepository;
+import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository;
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 
 @Service
 public class VisitService {
@@ -33,6 +37,9 @@ public class VisitService {
 	private final VisitCorrectionRepository visitCorrectionRepository;
 	private final AuditService auditService;
 	private final ObjectMapper objectMapper;
+	private final ConsultationRepository consultationRepository;
+	private final PrescriptionRepository prescriptionRepository;
+	private final UserAccountRepository userAccountRepository;
 
 	@SuppressWarnings("checkstyle:ParameterNumber")
 	public VisitService(
@@ -43,7 +50,10 @@ public class VisitService {
 			@org.springframework.context.annotation.Lazy DocumentService documentService,
 			VisitCorrectionRepository visitCorrectionRepository,
 			AuditService auditService,
-			ObjectMapper objectMapper) {
+			ObjectMapper objectMapper,
+			ConsultationRepository consultationRepository,
+			PrescriptionRepository prescriptionRepository,
+			UserAccountRepository userAccountRepository) {
 		this.visitRepository = visitRepository;
 		this.patientRepository = patientRepository;
 		this.visitNumberGenerator = visitNumberGenerator;
@@ -52,6 +62,9 @@ public class VisitService {
 		this.visitCorrectionRepository = visitCorrectionRepository;
 		this.auditService = auditService;
 		this.objectMapper = objectMapper;
+		this.consultationRepository = consultationRepository;
+		this.prescriptionRepository = prescriptionRepository;
+		this.userAccountRepository = userAccountRepository;
 	}
 
 	@Transactional
@@ -98,6 +111,29 @@ public class VisitService {
 		}
 
 		VisitEntity savedVisit = visitRepository.save(visit);
+
+		// Finalize draft prescriptions associated with this visit's consultations
+		consultationRepository.findByVisitId(visit.getId()).ifPresent(consultation -> {
+			prescriptionRepository.findByConsultationId(consultation.getId()).ifPresent(prescription -> {
+				if ("DRAFT".equals(prescription.getStatus())) {
+					prescription.setStatus("ACTIVE");
+					prescription.setIssuedAt(Instant.now());
+					prescriptionRepository.save(prescription);
+
+					// Get actor user ID from SecurityContextHolder
+					UUID actorUserId = null;
+					var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+					if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
+						actorUserId = userAccountRepository.findByEmail(auth.getName().trim().toLowerCase())
+								.map(UserAccountEntity::getId)
+								.orElse(null);
+					}
+
+					documentService.generatePrescriptionDocument(prescription.getId(), actorUserId);
+				}
+			});
+		});
+
 		documentService.generateAndSaveDocument(savedVisit);
 
 		return savedVisit;

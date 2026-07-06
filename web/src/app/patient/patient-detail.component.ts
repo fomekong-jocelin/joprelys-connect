@@ -1,7 +1,7 @@
 import { Component, computed, inject, input, OnInit, OnDestroy, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { PatientApiService } from './patient-api.service';
 import { ActivePatientService } from './active-patient.service';
 import { AuthTokenStorageService } from '../auth/auth-token-storage.service';
@@ -23,11 +23,31 @@ import { StaffMember } from '../clinic/staff/staff.models';
     CommonModule,
     FormsModule,
     RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
     AppShellComponent,
     AlertComponent,
     ButtonComponent,
     CardComponent,
   ],
+  styles: [`
+    /* Scrollbar thin and elegant on mobile */
+    .mobile-tab-scroll::-webkit-scrollbar {
+      height: 4px;
+    }
+    .mobile-tab-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .mobile-tab-scroll::-webkit-scrollbar-thumb {
+      background: var(--app-border);
+      border-radius: 2px;
+    }
+    .mobile-tab-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: var(--app-border) transparent;
+      -webkit-overflow-scrolling: touch;
+    }
+  `],
   template: `
     <app-shell>
       <div class="app-container py-8">
@@ -171,6 +191,50 @@ import { StaffMember } from '../clinic/staff/staff.models';
                   </div>
                 </div>
               }
+
+              <!-- Mobile Tab Navigation (visible only on mobile/tablet) -->
+              <div class="block md:hidden border-b border-slate-100 dark:border-slate-800/80 mb-4 overflow-x-auto mobile-tab-scroll">
+                <nav class="flex space-x-6 pb-2 min-w-max px-1">
+                  <a
+                    [routerLink]="['/patients', p.id, 'profile']"
+                    routerLinkActive="border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold active-mobile-tab"
+                    [routerLinkActiveOptions]="{ exact: true }"
+                    class="border-b-2 border-transparent pb-2 text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
+                  >
+                    {{ i18n.t('menu.patientDetail.profile') || 'Profil' }}
+                  </a>
+                  <a
+                    [routerLink]="['/patients', p.id, 'consultations']"
+                    routerLinkActive="border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold active-mobile-tab"
+                    class="border-b-2 border-transparent pb-2 text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
+                  >
+                    {{ i18n.t('menu.patientDetail.consultations') || 'Consultations' }}
+                  </a>
+                  <a
+                    [routerLink]="['/patients', p.id, 'lab-orders']"
+                    routerLinkActive="border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold active-mobile-tab"
+                    class="border-b-2 border-transparent pb-2 text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
+                  >
+                    {{ i18n.t('menu.patientDetail.labOrders') || 'Analyses' }}
+                  </a>
+                  <a
+                    [routerLink]="['/patients', p.id, 'hospitalizations']"
+                    routerLinkActive="border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold active-mobile-tab"
+                    class="border-b-2 border-transparent pb-2 text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
+                  >
+                    {{ i18n.t('menu.patientDetail.hospitalization') || 'Hospitalisations' }}
+                  </a>
+                  @if (canViewAudit()) {
+                    <a
+                      [routerLink]="['/patients', p.id, 'audit-trail']"
+                      routerLinkActive="border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold active-mobile-tab"
+                      class="border-b-2 border-transparent pb-2 text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
+                    >
+                      {{ i18n.t('menu.patientDetail.audit') || 'Sécurité/Audit' }}
+                    </a>
+                  }
+                </nav>
+              </div>
 
               <!-- Child Tab Views direct rendering without nested tabs -->
               <div class="mt-2">
@@ -317,6 +381,7 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
   readonly i18n = inject(I18nService);
 
   readonly loadedPatient = signal<Patient | null>(null);
+  private routerSub?: any;
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
@@ -356,24 +421,32 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
 
   readonly canAdmit = computed(() => {
     const role = this.session()?.role;
+    if (!role) return false;
+    const roles = role.split(',').map((r) => r.trim());
     const allowedRoles = ['AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'];
-    return allowedRoles.includes(role || '') && this.activeVisit() === null;
+    return roles.some((r) => allowedRoles.includes(r)) && this.activeVisit() === null;
   });
 
   readonly canStartConsultation = computed(() => {
     const role = this.session()?.role;
-    return (role === 'MEDECIN' || role === 'ADMIN_CLINIQUE') && this.activeVisit() !== null;
+    if (!role) return false;
+    const roles = role.split(',').map((r) => r.trim());
+    return roles.some((r) => r === 'MEDECIN' || r === 'ADMIN_CLINIQUE') && this.activeVisit() !== null;
   });
 
   readonly canViewAudit = computed(() => {
     const role = this.session()?.role;
-    return role === 'MEDECIN' || role === 'ADMIN_CLINIQUE' || role === 'AUDITEUR';
+    if (!role) return false;
+    const roles = role.split(',').map((r) => r.trim());
+    return roles.some((r) => r === 'MEDECIN' || r === 'ADMIN_CLINIQUE' || r === 'AUDITEUR');
   });
 
   readonly canDownloadSummary = computed(() => {
     const role = this.session()?.role;
+    if (!role) return false;
+    const roles = role.split(',').map((r) => r.trim());
     const allowedRoles = ['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'];
-    return allowedRoles.includes(role || '');
+    return roles.some((r) => allowedRoles.includes(r));
   });
 
   downloadSummaryPdf(): void {
@@ -424,10 +497,26 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
         this.initializeDetails();
       }
     });
+
+    // Scroll active mobile tab into view on route change
+    this.routerSub = this.router.events.subscribe(() => {
+      this.scrollActiveTabIntoView();
+    });
+    this.scrollActiveTabIntoView();
   }
 
   ngOnDestroy(): void {
     this.activePatientService.patient.set(null);
+    this.routerSub?.unsubscribe();
+  }
+
+  scrollActiveTabIntoView(): void {
+    setTimeout(() => {
+      const activeTabEl = document.querySelector('.active-mobile-tab');
+      if (activeTabEl) {
+        activeTabEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }, 150);
   }
 
   loadPatient(id: string): void {

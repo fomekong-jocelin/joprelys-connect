@@ -484,7 +484,9 @@ export class PatientConsultationsTabComponent implements OnInit {
 
   canRevoke(): boolean {
     const role = this.session()?.role;
-    return role === 'MEDECIN' || role === 'ADMIN_CLINIQUE';
+    if (!role) return false;
+    const roles = role.split(',').map((r) => r.trim());
+    return roles.some((r) => r === 'MEDECIN' || r === 'ADMIN_CLINIQUE');
   }
 
   openRevokeModal(consultation: Consultation): void {

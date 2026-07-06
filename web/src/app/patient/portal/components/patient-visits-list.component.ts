@@ -151,13 +151,14 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                           @if (c.prescriptionDocumentId) {
                             <button
                               type="button"
+                              [disabled]="downloadingId === c.prescriptionDocumentId"
                               (click)="downloadPrescription.emit(c.prescriptionDocumentId); $event.stopPropagation()"
-                              class="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary)]/90 transition-colors cursor-pointer shrink-0"
+                              class="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary)]/90 disabled:opacity-50 transition-colors cursor-pointer shrink-0"
                             >
                               <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                               </svg>
-                              {{ i18n.t('patients.downloadPrescription') }}
+                              {{ downloadingId === c.prescriptionDocumentId ? i18n.t('patient.summary.downloading') || 'Téléchargement...' : i18n.t('patients.downloadPrescription') }}
                             </button>
                           }
                         </div>
@@ -197,10 +198,11 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                       @if (c.documentStatus === 'VALID') {
                         <button
                           type="button"
+                          [disabled]="downloadingId === c.visitId"
                           (click)="download.emit(c.visitId); $event.stopPropagation()"
-                          class="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold rounded-[var(--radius-brand-sm)] border border-[var(--brand-primary)] text-[var(--brand-primary)] hover:bg-[var(--brand-primary)] hover:text-white transition-colors cursor-pointer"
+                          class="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold rounded-[var(--radius-brand-sm)] border border-[var(--brand-primary)] text-[var(--brand-primary)] hover:bg-[var(--brand-primary)] hover:text-white disabled:opacity-50 transition-colors cursor-pointer"
                         >
-                          {{ i18n.t('patients.downloadPdf') }}
+                          {{ downloadingId === c.visitId ? i18n.t('patient.summary.downloading') || 'Téléchargement...' : i18n.t('patients.downloadPdf') }}
                         </button>
                       } @else if (c.documentStatus === 'REVOQUE') {
                         <span class="text-[10px] font-extrabold uppercase tracking-wide px-3 py-1.5 rounded-[var(--radius-brand-sm)] bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-amber-700 dark:text-amber-400">
@@ -278,6 +280,7 @@ export class PatientVisitsListComponent {
   readonly i18n = inject(I18nService);
 
   @Input({ required: true }) consultations: PatientPortalConsultation[] = [];
+  @Input() downloadingId = '';
   @Output() download = new EventEmitter<string>();
   @Output() downloadPrescription = new EventEmitter<string>();
   @Output() transmit = new EventEmitter<string>();

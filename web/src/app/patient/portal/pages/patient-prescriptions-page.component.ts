@@ -22,6 +22,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
         } @else if (patientData()) {
           <app-patient-visits-list
             [consultations]="patientData()!.consultations"
+            [downloadingId]="downloadingId()"
             (download)="onDownloadDocument($event)"
             (downloadPrescription)="onDownloadPrescription($event)"
             (transmit)="onTransmitPrescription($event)"
@@ -37,6 +38,7 @@ export class PatientPrescriptionsPageComponent implements OnInit {
 
   readonly patientData = signal<PatientPortalMeResponse | null>(null);
   readonly isLoading = signal(false);
+  readonly downloadingId = signal('');
   readonly error = signal('');
 
   ngOnInit(): void {
@@ -59,26 +61,31 @@ export class PatientPrescriptionsPageComponent implements OnInit {
   }
 
   onDownloadDocument(visitId: string): void {
+    this.downloadingId.set(visitId);
     this.portalService.downloadDocument(visitId).subscribe({
       next: (blob) => {
+        this.downloadingId.set('');
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `ordonnance-${visitId}.pdf`;
+        a.download = `document-consultation-${visitId}.pdf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
       },
       error: () => {
+        this.downloadingId.set('');
         alert(this.i18n.t('patients.downloadPdfError'));
       }
     });
   }
 
   onDownloadPrescription(documentId: string): void {
+    this.downloadingId.set(documentId);
     this.portalService.downloadDocumentById(documentId).subscribe({
       next: (blob) => {
+        this.downloadingId.set('');
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -89,6 +96,7 @@ export class PatientPrescriptionsPageComponent implements OnInit {
         window.URL.revokeObjectURL(url);
       },
       error: () => {
+        this.downloadingId.set('');
         alert(this.i18n.t('patients.downloadPdfError'));
       }
     });
