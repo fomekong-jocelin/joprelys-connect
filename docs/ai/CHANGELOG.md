@@ -46,6 +46,11 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - Mise à jour du composant `AppLogoComponent` pour charger le logo principal et afficher uniquement "Connect" (la partie textuelle "Joprelys" étant déjà incluse dans l'image du logo).
   - Remplacement des logos SVGs et du texte statique hardcodé dans les pages de connexion du personnel, du portail patient et de récupération de mot de passe par l'utilisation centralisée du composant `AppLogoComponent` avec le paramètre `size="lg"`.
 
+- **Configuration et initialisation de préproduction (TICKET-PREPROD-ADMIN-CLEANUP)** :
+  - Suppression des identifiants d'initialisation en dur (email, name, password) de `application.yml`.
+  - Désactivation de l'initialisation par défaut d'une clinique, d'un médecin et d'un pharmacien de test par `AdminUserSeeder` afin de démarrer sur une base de données de préproduction vide de données de test cliniques.
+  - Création automatique par défaut d'un unique compte administrateur système avec l'email `admin@joprelys.local` et un mot de passe robuste `Re12#He10@2021!` s'il n'existe pas déjà, pour assurer le démarrage de la plateforme.
+
 ### Fixed
 
 - **Optimisation responsive de la section d'examens biologiques (TICKET-UI-CONSULTATION-LAB-EXAMS-RESPONSIVENESS)** :

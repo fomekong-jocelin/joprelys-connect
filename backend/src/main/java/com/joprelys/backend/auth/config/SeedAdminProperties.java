@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record SeedAdminProperties(boolean enabled, String email, String name, String password) {
 
 	public boolean isComplete() {
-		return enabled && hasText(email) && hasText(name) && hasText(password);
+		return enabled;
 	}
 
 	private static boolean hasText(String value) {
