@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-06 (TICKET-CLINIC-STAFF-DEPARTMENT-FILTER : menu déroulant des services et filtrage des médecins achevés) |
+| Dernière mise à jour | 2026-07-06 (TICKET-UI-CONSULTATION-LAB-EXAMS-RESPONSIVENESS : optimisation responsive de la section d'examens de laboratoire) |
 | Responsable mise à jour | Antigravity |
 | État global | SPRINT-0011 — Alignement modules 4 à 12 du CDC (DPU, soins, documents, consentements) |
 | Risques majeurs | Taille du chantier (9 modules), dette architecture controllers→repositories |
@@ -14,13 +14,14 @@
 | Sprint courant | SPRINT-0011 |
 | | |
 | Capacité sprint | À planifier |
-| Charge engagée | 16.45j (Est. Senior) |
+| Charge engagée | 16.50j (Est. Senior) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
+| TICKET-UI-CONSULTATION-LAB-EXAMS-RESPONSIVENESS | UI_UX | Bug | Optimisation responsive de la section d'examens de laboratoire de la consultation | Frontend | DONE | P1 | 1 | Intermédiaire | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.03j | Aucun (suggestions d'analyse scrollables horizontalement, bouton d'ajout en absolu/icône) | Faible | 2026-07-06 |
 | TICKET-CLINIC-STAFF-ENRICHED-PROFILES | CLIN_STAFF_ASSETS | Task | Profils enrichis et ressources graphiques (logo, photo, signature, cachet) | Full-stack | DONE | P1 | 5 | Senior | 1.5j | 2.5j | 4.0j | Antigravity | Lead Developer | SPRINT-0011 | 0.5j | Aucun (migration DB V41, upload sécurisé, drag & drop, signature/cachet PDF intégrés, tests et build OK) | Faible | 2026-07-06 |
 | TICKET-CLINIC-STAFF-DEPARTMENT-FILTER | CLIN_STAFF_ASSETS | Task | Menu déroulant des services et filtrage des médecins lors de l'admission | Frontend | DONE | P1 | 3 | Intermédiaire | 2h | 4h | 8h | Antigravity | Lead Developer | SPRINT-0011 | 0.1j | Aucun (menus déroulants IHM, filtrage par service, tests et build OK) | Faible | 2026-07-06 |
 | TICKET-UI-OTP-AUTOFILL | AUTH | Task | Pré-remplissage automatique des codes OTP sur le front-end | Full-stack | DONE | P1 | 2 | Intermédiaire | 0.15j | 0.25j | 0.5j | Antigravity | Lead Developer | SPRINT-0011 | 0.15j | Aucun (exposition via yml et auto-fill sur l'IHM staff/patient, tests OK) | Faible | 2026-07-06 |

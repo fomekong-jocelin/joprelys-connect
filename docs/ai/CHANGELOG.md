@@ -48,6 +48,11 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+- **Optimisation responsive de la section d'examens biologiques (TICKET-UI-CONSULTATION-LAB-EXAMS-RESPONSIVENESS)** :
+  - Refonte des suggestions rapides d'analyses avec `overflow-x-auto whitespace-nowrap scrollbar-none` et des boutons avec `flex-shrink-0` pour permettre un défilement horizontal fluide sur mobile sans former de lignes irrégulières (effet "escalier").
+  - Ajout de la classe utilitaire `.scrollbar-none` dans `web/src/styles.css` pour masquer la barre de défilement horizontal.
+  - Intégration du bouton "Ajouter" de l'examen personnalisé en absolu à l'intérieur de l'input de texte (`absolute right-1`), s'adaptant de manière adaptative (icône plus (+) sur mobile, libellé complet sur desktop) pour éviter de compacter le champ de saisie de texte.
+
 - **Correction des liens inactifs du Tableau de Bord Admin (TICKET-UI-ADMIN-DASHBOARD-LINKS)** :
   - Remplacement du bouton inactif "Configurer" sous "Configuration Interop" par un lien `routerLink="/organizations"`, redirigeant l'administrateur système vers l'IHM de gestion des établissements où les API keys et l'accès interop de chaque organisation sont configurés.
   - Remplacement du bouton inactif "Consulter" sous "Journal d'Audit Sécurisé" par un bouton activant un dialogue modal d'information sur la politique de sécurité (Module 14 - FR-AUDIT-002), justifiant la restriction de l'accès des comptes d'administration générale aux logs cliniques.

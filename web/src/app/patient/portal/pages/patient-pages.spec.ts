@@ -48,6 +48,7 @@ describe('PatientProfilePageComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideI18nTesting(),
+        provideRouter([]),
         { provide: PatientPortalService, useValue: portalService }
       ]
     });
@@ -69,6 +70,7 @@ describe('PatientProfilePageComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideI18nTesting(),
+        provideRouter([]),
         { provide: PatientPortalService, useValue: portalService }
       ]
     });
@@ -93,6 +95,7 @@ describe('PatientDocumentsPageComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideI18nTesting(),
+        provideRouter([]),
         { provide: PatientPortalService, useValue: portalService }
       ]
     });
@@ -113,6 +116,7 @@ describe('PatientDocumentsPageComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideI18nTesting(),
+        provideRouter([]),
         { provide: PatientPortalService, useValue: portalService }
       ]
     });
@@ -134,6 +138,7 @@ describe('PatientQrCodePageComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideI18nTesting(),
+        provideRouter([]),
         { provide: PatientPortalService, useValue: portalService }
       ]
     });

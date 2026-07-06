@@ -426,4 +426,14 @@ body {
   .ui-table tr:hover td {
     background: color-mix(in srgb, var(--app-surface-muted) 72%, transparent);
   }
+
+  /* Utilities */
+  .scrollbar-none {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
 }
+
