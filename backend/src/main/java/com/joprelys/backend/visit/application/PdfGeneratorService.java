@@ -335,6 +335,8 @@ public class PdfGeneratorService {
             UserAccountEntity doctor = (consultation != null) ? consultation.getDoctor() : null;
             addSignaturesAndStamp(document, doctor, fontSectionHeader, fontBody);
 
+            addFooterMention(document, fontMuted);
+
             document.close();
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate PDF", e);
@@ -427,6 +429,9 @@ public class PdfGeneratorService {
 
             document.add(new Paragraph("Consignes médicales & Prescriptions de sortie :", fontSectionHeader));
             document.add(new Paragraph(hospitalization.getDischargeInstructions() != null ? hospitalization.getDischargeInstructions() : "Non renseigné", fontBody));
+
+            addFooterMention(document, fontMuted);
+
             document.close();
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate PDF", e);
@@ -759,6 +764,8 @@ public class PdfGeneratorService {
                 document.add(new Paragraph("Aucun résultat biologique critique récent.", fontMuted));
             }
 
+            addFooterMention(document, fontMuted);
+
             document.close();
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate patient summary PDF", e);
@@ -898,11 +905,20 @@ public class PdfGeneratorService {
                     ? prescription.getConsultation().getDoctor() : null;
             addSignaturesAndStamp(document, doctor, fontSectionHeader, fontBody);
 
+            addFooterMention(document, fontMuted);
+
             document.close();
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate prescription PDF", e);
         }
 
         return baos.toByteArray();
+    }
+
+    private void addFooterMention(Document document, Font font) throws DocumentException {
+        Paragraph footerParagraph = new Paragraph("Propulsé par Joprelys HealthTech — Document généré électroniquement", font);
+        footerParagraph.setAlignment(Element.ALIGN_CENTER);
+        footerParagraph.setSpacingBefore(15f);
+        document.add(footerParagraph);
     }
 }

@@ -57,6 +57,10 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - Injection du provider dans `DocumentService`, `HospitalizationService`, `LabResultService` et `PatientSummaryService` pour remplacer l'URL de base codée en dur.
   - Mise à jour de la configuration par défaut de `verification-base-url` sur `https://joprelys.com/verify` dans `application.yml`.
 
+- **Mention de marque au bas des PDFs (TICKET-PDF-FOOTER-MENTION)** :
+  - Ajout de la mention légale centrée "Propulsé par Joprelys HealthTech — Document généré électroniquement" au bas de tous les types de fichiers PDF générés par la plateforme (`generatePdf`, `generateHospitalizationDischargePdf`, `generatePatientSummaryPdf` et `generatePrescriptionPdf`).
+  - Validation du chargement dynamique des logos d'établissements (via `OrganizationEntity`), signatures et cachets (via `UserAccountEntity`) sur l'ensemble des documents PDF.
+
 ### Fixed
 
 - **Optimisation responsive de la section d'examens biologiques (TICKET-UI-CONSULTATION-LAB-EXAMS-RESPONSIVENESS)** :
