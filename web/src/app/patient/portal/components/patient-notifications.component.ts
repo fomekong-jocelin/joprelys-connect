@@ -11,9 +11,9 @@ import { I18nService } from '../../../core/i18n/i18n.service';
     <div class="ui-card-subtle p-5 lg:p-6 flex flex-col gap-4">
       <div class="flex flex-col gap-2 border-b border-[var(--app-border)] pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p class="ui-label">{{ i18n.t('patient.notifications.label') || 'Communication & Sécurité' }}</p>
+          <p class="ui-label">{{ i18n.t('patient.notifications.label') }}</p>
           <h3 class="font-display text-xl font-extrabold" style="color: var(--text-primary)">
-            {{ i18n.t('patient.notifications.title') || 'Centre de Notifications' }}
+            {{ i18n.t('patient.notifications.title') }}
           </h3>
         </div>
         @if (unreadCount() > 0) {
@@ -22,7 +22,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
             (click)="markAllAsRead()"
             class="px-3 py-1.5 text-xs font-bold rounded-[var(--radius-brand-sm)] border border-[var(--brand-primary)] text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5 transition-colors cursor-pointer"
           >
-            {{ i18n.t('patient.notifications.markAllRead') || 'Tout marquer comme lu' }}
+            {{ i18n.t('patient.notifications.markAllRead') }}
           </button>
         }
       </div>
@@ -60,7 +60,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                     {{ notif.title }}
                   </h4>
                   @if (notif.status === 'NON_LU') {
-                    <span class="w-2 h-2 rounded-full bg-[var(--brand-primary)] shrink-0" title="Nouvelle notification"></span>
+                    <span class="w-2 h-2 rounded-full bg-[var(--brand-primary)] shrink-0" [title]="i18n.t('patient.notifications.newTooltip')"></span>
                   }
                 </div>
                 <p class="text-xs text-[var(--text-secondary)] leading-relaxed">
@@ -77,13 +77,13 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                   (click)="markAsRead(notif.id)"
                   class="self-center px-2 py-1 text-[10px] font-bold rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] transition-colors cursor-pointer shrink-0"
                 >
-                  {{ i18n.t('patient.notifications.markRead') || 'Marquer lu' }}
+                  {{ i18n.t('patient.notifications.markRead') }}
                 </button>
               }
             </div>
           } @empty {
             <div class="flex flex-col items-center justify-center p-8 border border-dashed border-[var(--app-border)] rounded-[var(--radius-brand-md)] text-[var(--text-muted)] bg-[var(--app-surface-muted)]">
-              <p class="text-sm font-semibold">{{ i18n.t('patient.notifications.empty') || 'Aucune notification reçue.' }}</p>
+              <p class="text-sm font-semibold">{{ i18n.t('patient.notifications.empty') }}</p>
             </div>
           }
         </div>
@@ -118,7 +118,7 @@ export class PatientNotificationsComponent implements OnInit {
         this.countUpdated.emit(this.unreadCount());
       },
       error: () => {
-        this.error.set(this.i18n.t('patient.notifications.loadError') || 'Impossible de charger les notifications.');
+        this.error.set(this.i18n.t('patient.notifications.loadError'));
         this.isLoading.set(false);
       }
     });
@@ -131,7 +131,7 @@ export class PatientNotificationsComponent implements OnInit {
         this.countUpdated.emit(this.unreadCount());
       },
       error: () => {
-        alert(this.i18n.t('patient.notifications.updateError') || 'Erreur de mise à jour.');
+        alert(this.i18n.t('patient.notifications.updateError'));
       }
     });
   }
@@ -143,7 +143,7 @@ export class PatientNotificationsComponent implements OnInit {
         this.countUpdated.emit(0);
       },
       error: () => {
-        alert(this.i18n.t('patient.notifications.updateError') || 'Erreur de mise à jour.');
+        alert(this.i18n.t('patient.notifications.updateError'));
       }
     });
   }

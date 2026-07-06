@@ -16,4 +16,7 @@ public interface LabOrderRepository extends JpaRepository<LabOrderEntity, UUID> 
 	List<LabOrderEntity> findAllByOrderByCreatedAtDesc();
 
 	long countByExamRequestNumberStartingWith(String prefix);
+
+	@org.springframework.data.jpa.repository.Query(value = "SELECT * FROM lab_orders WHERE id = :id", nativeQuery = true)
+	Optional<LabOrderEntity> findByIdGlobally(@org.springframework.data.repository.query.Param("id") UUID id);
 }

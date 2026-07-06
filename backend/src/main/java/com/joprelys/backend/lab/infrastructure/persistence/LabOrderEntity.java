@@ -3,16 +3,11 @@ package com.joprelys.backend.lab.infrastructure.persistence;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import org.hibernate.annotations.TenantId;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -44,11 +39,15 @@ public class LabOrderEntity {
 	@Column(name = "target_organization_id")
 	private UUID targetOrganizationId;
 
-	@Column(name = "exam_type", nullable = false, length = 30)
-	private String examType;
+	@Column(name = "source_organization_id")
+	private UUID sourceOrganizationId;
 
-	@Column(name = "exams", nullable = false, columnDefinition = "TEXT")
-	private String exams;
+	@Column(name = "exam_type", nullable = false, length = 30)
+	@Enumerated(EnumType.STRING)
+	private ExamType examType;
+
+	@OneToMany(mappedBy = "labOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<LabOrderItemEntity> items = new ArrayList<>();
 
 	@Column(name = "reason")
 	private String reason;
@@ -57,7 +56,8 @@ public class LabOrderEntity {
 	private String priority;
 
 	@Column(name = "status", nullable = false, length = 30)
-	private String status;
+	@Enumerated(EnumType.STRING)
+	private LabOrderStatus status;
 
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
@@ -71,10 +71,11 @@ public class LabOrderEntity {
 			VisitEntity visit,
 			UserAccountEntity requesterPractitioner,
 			UUID targetOrganizationId,
-			String examType,
-			String exams,
+			ExamType examType,
+			List<String> exams,
 			String reason,
-			String priority) {
+			String priority,
+			UUID sourceOrganizationId) {
 		this.id = UUID.randomUUID();
 		this.examRequestNumber = examRequestNumber;
 		this.patient = patient;
@@ -82,10 +83,15 @@ public class LabOrderEntity {
 		this.requesterPractitioner = requesterPractitioner;
 		this.targetOrganizationId = targetOrganizationId;
 		this.examType = examType;
-		this.exams = exams;
 		this.reason = reason;
 		this.priority = priority != null ? priority : "NORMALE";
-		this.status = "REQUESTED";
+		this.status = LabOrderStatus.REQUESTED;
+		this.sourceOrganizationId = sourceOrganizationId;
+		if (exams != null) {
+			for (String exam : exams) {
+				this.items.add(new LabOrderItemEntity(this, exam));
+			}
+		}
 	}
 
 	@PrePersist
@@ -145,20 +151,28 @@ public class LabOrderEntity {
 		this.targetOrganizationId = targetOrganizationId;
 	}
 
-	public String getExamType() {
+	public UUID getSourceOrganizationId() {
+		return sourceOrganizationId;
+	}
+
+	public void setSourceOrganizationId(UUID sourceOrganizationId) {
+		this.sourceOrganizationId = sourceOrganizationId;
+	}
+
+	public ExamType getExamType() {
 		return examType;
 	}
 
-	public void setExamType(String examType) {
+	public void setExamType(ExamType examType) {
 		this.examType = examType;
 	}
 
-	public String getExams() {
-		return exams;
+	public List<LabOrderItemEntity> getItems() {
+		return items;
 	}
 
-	public void setExams(String exams) {
-		this.exams = exams;
+	public void setItems(List<LabOrderItemEntity> items) {
+		this.items = items;
 	}
 
 	public String getReason() {
@@ -177,11 +191,11 @@ public class LabOrderEntity {
 		this.priority = priority;
 	}
 
-	public String getStatus() {
+	public LabOrderStatus getStatus() {
 		return status;
 	}
 
-	public void setStatus(String status) {
+	public void setStatus(LabOrderStatus status) {
 		this.status = status;
 	}
 

@@ -53,7 +53,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                 </span>
                 <span [class]="log.status === 'SUCCESS' ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300' : 'bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-300'"
                       class="px-2 py-0.5 rounded-[var(--radius-brand-xs)] font-bold text-[10px] uppercase leading-tight">
-                  {{ log.status }}
+                  {{ i18n.t('patient.audit.status.' + log.status) }}
                 </span>
               </div>
               <div class="flex items-center justify-between gap-2">
@@ -94,12 +94,12 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                     </span>
                   </td>
                   <td class="py-2.5 pr-4 text-[11px] text-[var(--text-secondary)] italic max-w-[180px] truncate" [title]="log.reason || ''">
-                    {{ log.reason || '—' }}
+                    {{ log.reason || i18n.t('patient.audit.noReason') }}
                   </td>
                   <td class="py-2.5 text-right">
                     <span [class]="log.status === 'SUCCESS' ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300' : 'bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-300'"
                           class="px-2 py-0.5 rounded-[var(--radius-brand-xs)] font-bold text-[10px] uppercase">
-                      {{ log.status }}
+                      {{ i18n.t('patient.audit.status.' + log.status) }}
                     </span>
                   </td>
                 </tr>

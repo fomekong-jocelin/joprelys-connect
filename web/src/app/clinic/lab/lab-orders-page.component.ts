@@ -7,7 +7,7 @@ import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
 import { LabOrderApiService } from './lab-api.service';
-import { LabOrder, LabResult } from './lab.models';
+import { LabOrder, LabResult, LabOrderStatus } from './lab.models';
 
 @Component({
   selector: 'app-lab-orders-page',
@@ -198,6 +198,17 @@ import { LabOrder, LabResult } from './lab.models';
                         <input class="ui-input lab-input mt-1" formControlName="validatorName" />
                       </label>
                       <label class="block">
+                        <span class="ui-label">{{ t('lab.statusSelect') }}</span>
+                        <select class="ui-select lab-input mt-1" formControlName="status">
+                          <option value="DRAFT">{{ t('lab.status.DRAFT') }}</option>
+                          <option value="VALIDATED">{{ t('lab.status.VALIDATED') }}</option>
+                        </select>
+                      </label>
+                      <label class="block">
+                        <span class="ui-label">{{ t('lab.conclusion') }}</span>
+                        <textarea class="ui-input lab-input mt-1" formControlName="conclusion" rows="2"></textarea>
+                      </label>
+                      <label class="block">
                         <span class="ui-label">{{ t('lab.sampleCollectedAt') }}</span>
                         <input class="ui-input lab-input mt-1" type="datetime-local" formControlName="sampleCollectedAt" />
                       </label>
@@ -362,12 +373,22 @@ export class LabOrdersPageComponent {
   readonly statusSuccess = signal('');
   readonly pdfBase64 = signal('');
   readonly patientResults = signal<LabResult[]>([]);
-  readonly statusDraft = signal('REQUESTED');
-  readonly allowedStatuses = ['REQUESTED', 'SAMPLE_COLLECTED', 'IN_PROGRESS', 'RESULT_AVAILABLE', 'VALIDATED', 'CANCELLED'];
+  readonly statusDraft = signal<LabOrderStatus>(LabOrderStatus.REQUESTED);
+  readonly allowedStatuses = [
+    'REQUESTED',
+    'AWAITING_PAYMENT',
+    'PAID',
+    'SAMPLE_COLLECTED',
+    'IN_PROGRESS',
+    'RESULT_AVAILABLE',
+    'VALIDATED',
+    'CANCELLED'
+  ];
 
   readonly resultForm = this.fb.nonNullable.group({
     apiKey: ['', Validators.required],
     validatorName: ['', Validators.required],
+    status: ['VALIDATED', Validators.required],
     sampleCollectedAt: [''],
     validatedAt: [''],
     conclusion: [''],
@@ -405,7 +426,7 @@ export class LabOrdersPageComponent {
 
   selectOrder(order: LabOrder): void {
     this.selectedOrder.set(order);
-    this.statusDraft.set(order.status);
+    this.statusDraft.set(order.status as LabOrderStatus);
     this.submitError.set('');
     this.submitSuccess.set('');
     this.statusError.set('');
@@ -435,6 +456,7 @@ export class LabOrdersPageComponent {
     this.labApi.uploadResults({
       examRequestNumber: order.examRequestNumber,
       validatorName: raw.validatorName.trim(),
+      status: raw.status,
       sampleCollectedAt: this.toIso(raw.sampleCollectedAt),
       resultAt: this.toIso(raw.validatedAt),
       validatedAt: this.toIso(raw.validatedAt),
@@ -501,8 +523,9 @@ export class LabOrdersPageComponent {
   }
 
   statusColor(status: string): string {
-    if (status === 'VALIDATED' || status === 'RESULT_AVAILABLE') return 'var(--brand-success)';
+    if (status === 'VALIDATED' || status === 'RESULT_AVAILABLE' || status === 'PAID') return 'var(--brand-success)';
     if (status === 'CANCELLED') return 'var(--brand-danger)';
+    if (status === 'AWAITING_PAYMENT') return 'color-mix(in srgb, var(--brand-danger) 60%, var(--brand-primary))';
     return 'var(--brand-primary)';
   }
 

@@ -1,8 +1,9 @@
 package com.joprelys.backend.lab.api;
 
-import jakarta.validation.constraints.NotBlank;
+import com.joprelys.backend.lab.infrastructure.persistence.LabOrderStatus;
+import jakarta.validation.constraints.NotNull;
 
 public record UpdateLabOrderStatusRequest(
-		@NotBlank(message = "Le statut est obligatoire.")
-		String status
+		@NotNull(message = "Le statut est obligatoire.")
+		LabOrderStatus status
 ) {}

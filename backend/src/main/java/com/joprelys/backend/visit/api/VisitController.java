@@ -124,4 +124,15 @@ public class VisitController {
 				.map(VitalsResponse::fromEntity)
 				.orElse(null);
 	}
+
+	@GetMapping("/patient/{patientId}")
+	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	@Operation(summary = "Lister les visites d'un patient", description = "Retourne la liste complète des visites d'un patient.", responses = {
+			@ApiResponse(responseCode = "200", description = "Liste des visites retournée")
+	})
+	public List<VisitResponse> getPatientVisits(@PathVariable UUID patientId) {
+		return visitService.getPatientVisits(patientId).stream()
+				.map(VisitResponse::fromEntity)
+				.toList();
+	}
 }

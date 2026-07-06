@@ -262,7 +262,10 @@ public class PatientService {
 			var consentOpt = patientConsentRepository.findByPatientIdAndOrganizationId(patientId, organizationId);
 			if (consentOpt.isPresent()) {
 				var consent = consentOpt.get();
-				if ("ACTIVE".equals(consent.getStatus())) {
+				boolean isActive = "ACTIVE".equals(consent.getStatus()) || "APPROVED".equals(consent.getStatus());
+				// FR-CONSENT-003 : vérifier l'expiration
+				boolean notExpired = consent.getExpiresAt() == null || consent.getExpiresAt().isAfter(java.time.Instant.now());
+				if (isActive && notExpired) {
 					if (hasScope(consent.getScopes(), requiredScope)) {
 						return;
 					}
@@ -316,7 +319,11 @@ public class PatientService {
 	private boolean checkConsent(UUID patientId, UUID organizationId) {
 		var consent = patientConsentRepository.findByPatientIdAndOrganizationId(patientId, organizationId);
 		if (consent.isPresent()) {
-			return "ACTIVE".equals(consent.get().getStatus());
+			var c = consent.get();
+			boolean isActive = "ACTIVE".equals(c.getStatus()) || "APPROVED".equals(c.getStatus());
+			// FR-CONSENT-003 : vérifier l'expiration
+			boolean notExpired = c.getExpiresAt() == null || c.getExpiresAt().isAfter(java.time.Instant.now());
+			return isActive && notExpired;
 		}
 		var patient = patientRepository.findByIdGlobally(patientId).orElse(null);
 		if (patient != null && patient.getOrganizationId() != null && patient.getOrganizationId().equals(organizationId)) {

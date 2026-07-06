@@ -132,6 +132,10 @@ export interface Hospitalization {
   dischargeDiagnosis?: string;
   dischargeInstructions?: string;
   pdfFilePath?: string;
+  hospitalizationNumber: string;
+  visitId: string;
+  responsiblePractitionerId: string;
+  documentId?: string;
 }
 
 export interface CreateHospitalizationRequest {
@@ -140,6 +144,8 @@ export interface CreateHospitalizationRequest {
   roomNumber: string;
   bedNumber: string;
   admissionReason: string;
+  visitId: string;
+  responsiblePractitionerId: string;
 }
 
 export interface HospitalizationNote {

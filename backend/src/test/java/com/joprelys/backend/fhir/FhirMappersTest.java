@@ -193,7 +193,7 @@ class FhirMappersTest {
 
     @Test
     void testObservationMapper_EmptyInput() {
-        List<FhirObservationDto> observations = FhirObservationMapper.toFhir(null);
+        List<FhirObservationDto> observations = FhirObservationMapper.toFhir((com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity) null);
         assertThat(observations).isEmpty();
     }
 }

@@ -8,10 +8,13 @@ import { AppLogoComponent } from '../shared/ui/app-logo.component';
 interface VerificationMetadata {
   documentNumber: string;
   status: 'VALID' | 'REVOKED' | 'REPLACED' | string;
+  documentType: string;
   clinicName: string;
   doctorName: string;
+  serviceName: string;
   patientName: string;
   issuedAt: string;
+  legalNotice: string;
 }
 
 @Component({
@@ -32,7 +35,7 @@ interface VerificationMetadata {
         <div class="sm:mx-auto sm:w-full sm:max-w-xl">
           @if (isLoading()) {
             <!-- Loading State -->
-            <div class="bg-white dark:bg-slate-900 shadow-2xl rounded-3xl border border-slate-100 dark:border-slate-800/80 p-8 md:p-10 text-center space-y-4">
+            <div class="bg-white dark:bg-slate-900 shadow-2xl rounded border border-slate-100 dark:border-slate-800/80 p-8 md:p-10 text-center space-y-4">
               <div class="relative flex justify-center items-center">
                 <div class="w-16 h-16 rounded-full border-4 border-indigo-100 dark:border-indigo-950 border-t-indigo-600 dark:border-t-indigo-400 animate-spin"></div>
               </div>
@@ -42,7 +45,7 @@ interface VerificationMetadata {
             </div>
           } @else {
             <!-- Card Wrapper -->
-            <div class="bg-white dark:bg-slate-900 shadow-2xl rounded-3xl border border-slate-100 dark:border-slate-800/80 p-8 md:p-10 relative overflow-hidden transition-all duration-300 hover:shadow-indigo-500/5">
+            <div class="bg-white dark:bg-slate-900 shadow-2xl rounded border border-slate-100 dark:border-slate-800/80 p-8 md:p-10 relative overflow-hidden transition-all duration-300 hover:shadow-indigo-500/5">
               
               <!-- Background glows for premium look -->
               <div class="absolute -top-40 -right-40 w-80 h-80 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
@@ -63,7 +66,7 @@ interface VerificationMetadata {
                   <h2 class="text-xl md:text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
                     {{ i18n.t('verify.status.valid') }}
                   </h2>
-                } @else if (status() === 'REVOKED' || status() === 'REVOQUE' || status() === 'REPLACED') {
+                } @else if (status() === 'REVOKED' || status() === 'REVOQUE' || status() === 'REPLACED' || status() === 'REMPLACE') {
                   <!-- Warning/Notice State (Revoked or Replaced) -->
                   <div class="relative">
                     <div class="absolute inset-0 bg-amber-500/20 rounded-full blur-xl animate-pulse"></div>
@@ -110,7 +113,7 @@ interface VerificationMetadata {
                     <div class="grid grid-cols-1 gap-y-5 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-4">
                       
                       <!-- Document Number -->
-                      <div class="sm:col-span-2 bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100/50 dark:border-slate-800/50">
+                      <div class="sm:col-span-2 bg-slate-50 dark:bg-slate-800/30 rounded p-4 border border-slate-100/50 dark:border-slate-800/50">
                         <span class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
                           {{ i18n.t('verify.documentNumber') }}
                         </span>
@@ -118,6 +121,18 @@ interface VerificationMetadata {
                           {{ metadata()?.documentNumber }}
                         </span>
                       </div>
+
+                      <!-- Document Type -->
+                      @if (metadata()?.documentType) {
+                        <div class="sm:col-span-2">
+                          <span class="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-0.5">
+                            {{ i18n.t('verify.documentType') }}
+                          </span>
+                          <span class="text-sm font-bold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 rounded inline-block">
+                            {{ metadata()?.documentType }}
+                          </span>
+                        </div>
+                      }
 
                       <!-- Patient Name -->
                       <div class="sm:col-span-2">
@@ -149,6 +164,18 @@ interface VerificationMetadata {
                         </span>
                       </div>
 
+                      <!-- Service Name -->
+                      @if (metadata()?.serviceName) {
+                        <div>
+                          <span class="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-0.5">
+                            {{ i18n.t('verify.serviceName') }}
+                          </span>
+                          <span class="text-sm font-bold text-slate-700 dark:text-slate-300">
+                            {{ metadata()?.serviceName }}
+                          </span>
+                        </div>
+                      }
+
                       <!-- Issued Date -->
                       <div class="sm:col-span-2">
                         <span class="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-0.5">
@@ -163,8 +190,25 @@ interface VerificationMetadata {
                   </div>
                 }
 
+                <!-- Legal Notice (from CDC / backend) -->
+                @if (metadata()?.legalNotice) {
+                  <div class="w-full text-left bg-amber-50 dark:bg-amber-950/20 rounded p-4 border border-amber-100 dark:border-amber-900/30">
+                    <div class="flex items-start gap-2.5">
+                      <span class="text-base shrink-0 select-none">⚖️</span>
+                      <div class="space-y-0.5">
+                        <span class="text-xs font-black text-amber-800 dark:text-amber-300">
+                          {{ i18n.t('verify.legalNotice') }}
+                        </span>
+                        <p class="text-[11px] font-medium leading-relaxed text-amber-700 dark:text-amber-400">
+                          {{ metadata()?.legalNotice }}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                }
+
                 <!-- Medical Confidentiality Warning Footer -->
-                <div class="w-full text-left bg-slate-50 dark:bg-slate-800/20 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/40">
+                <div class="w-full text-left bg-slate-50 dark:bg-slate-800/20 rounded p-4 border border-slate-100 dark:border-slate-800/40">
                   <div class="flex items-start gap-2.5">
                     <span class="text-base shrink-0 select-none">🔒</span>
                     <div class="space-y-0.5">
@@ -209,7 +253,7 @@ export class VerificationComponent implements OnInit {
   readonly i18n = inject(I18nService);
 
   readonly isLoading = signal(true);
-  readonly status = signal<'VALID' | 'REVOKED' | 'REVOQUE' | 'REPLACED' | 'CANCELLED' | 'ANNULE' | 'INVALID'>('INVALID');
+  readonly status = signal<'VALID' | 'REVOKED' | 'REVOQUE' | 'REPLACED' | 'REMPLACE' | 'CANCELLED' | 'ANNULE' | 'INVALID'>('INVALID');
   readonly metadata = signal<VerificationMetadata | null>(null);
 
   ngOnInit(): void {

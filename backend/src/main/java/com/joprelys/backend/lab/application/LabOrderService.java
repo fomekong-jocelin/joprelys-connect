@@ -6,17 +6,19 @@ import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepositor
 import com.joprelys.backend.lab.api.CreateLabOrderRequest;
 import com.joprelys.backend.lab.api.LabOrderResponse;
 import com.joprelys.backend.lab.infrastructure.persistence.LabOrderEntity;
+import com.joprelys.backend.lab.infrastructure.persistence.LabOrderItemEntity;
 import com.joprelys.backend.lab.infrastructure.persistence.LabOrderRepository;
+import com.joprelys.backend.lab.infrastructure.persistence.LabOrderStatus;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -29,9 +31,6 @@ public class LabOrderService {
 	private final VisitRepository visitRepository;
 	private final UserAccountRepository userAccountRepository;
 	private final AuditService auditService;
-	private static final Set<String> ALLOWED_STATUSES = Set.of(
-			"REQUESTED", "SAMPLE_COLLECTED", "IN_PROGRESS", "RESULT_AVAILABLE", "VALIDATED", "CANCELLED"
-	);
 
 	public LabOrderService(
 			LabOrderRepository labOrderRepository,
@@ -68,9 +67,6 @@ public class LabOrderService {
 		String sequence = String.format("%06d", countToday + 1);
 		String examRequestNumber = prefix + sequence;
 
-		// Concaténer la liste d'examens sous forme de chaîne de caractères
-		String examsJoined = String.join(",", request.exams());
-
 		LabOrderEntity entity = new LabOrderEntity(
 				examRequestNumber,
 				patient,
@@ -78,9 +74,10 @@ public class LabOrderService {
 				practitioner,
 				request.targetOrganizationId(),
 				request.examType(),
-				examsJoined,
+				request.exams(),
 				request.reason(),
-				request.priority()
+				request.priority(),
+				organizationId
 		);
 		entity.setOrganizationId(organizationId);
 
@@ -109,28 +106,45 @@ public class LabOrderService {
 	}
 
 	@Transactional
-	public LabOrderResponse updateStatus(UUID orderId, String status) {
-		if (!ALLOWED_STATUSES.contains(status)) {
-			throw new IllegalArgumentException("Statut laboratoire non autorisé");
-		}
-		LabOrderEntity entity = labOrderRepository.findById(orderId)
+	public LabOrderResponse updateStatus(UUID orderId, LabOrderStatus status, String practitionerEmail) {
+		LabOrderEntity entity = labOrderRepository.findByIdGlobally(orderId)
 				.orElseThrow(() -> new IllegalArgumentException("Demande d'examen introuvable"));
-		entity.setStatus(status);
-		LabOrderEntity saved = labOrderRepository.save(entity);
-		auditService.logSuccess(
-				null,
-				saved.getOrganizationId(),
-				saved.getPatient().getId(),
-				"LAB_ORDER",
-				saved.getId(),
-				"UPDATE_LAB_ORDER_STATUS",
-				"Changement de statut laboratoire : " + status
-		);
-		return mapToResponse(saved);
+
+		UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
+		try {
+			com.joprelys.backend.auth.security.TenantContext.setTenantId(entity.getOrganizationId());
+
+			UserAccountEntity operator = userAccountRepository.findByEmail(practitionerEmail)
+					.orElseThrow(() -> new IllegalArgumentException("Praticien introuvable"));
+
+			if (entity.getTargetOrganizationId() != null && !entity.getTargetOrganizationId().equals(operator.getOrganizationId())) {
+				throw new org.springframework.web.server.ResponseStatusException(
+						org.springframework.http.HttpStatus.FORBIDDEN,
+						"Seul le laboratoire cible peut modifier le statut de cette demande"
+				);
+			}
+
+			entity.setStatus(status);
+			LabOrderEntity saved = labOrderRepository.save(entity);
+			auditService.logSuccess(
+					null,
+					saved.getOrganizationId(),
+					saved.getPatient().getId(),
+					"LAB_ORDER",
+					saved.getId(),
+					"UPDATE_LAB_ORDER_STATUS",
+					"Changement de statut laboratoire : " + status.name()
+			);
+			return mapToResponse(saved);
+		} finally {
+			com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
+		}
 	}
 
 	private LabOrderResponse mapToResponse(LabOrderEntity entity) {
-		List<String> examsList = List.of(entity.getExams().split(",\s*"));
+		List<String> examsList = entity.getItems().stream()
+				.map(LabOrderItemEntity::getExamName)
+				.collect(Collectors.toList());
 		return new LabOrderResponse(
 				entity.getId(),
 				entity.getExamRequestNumber(),
@@ -139,7 +153,7 @@ public class LabOrderService {
 				entity.getVisit() != null ? entity.getVisit().getId() : null,
 				entity.getRequesterPractitioner().getId(),
 				entity.getRequesterPractitioner().getDisplayName(),
-				entity.getOrganizationId(),
+				entity.getSourceOrganizationId(),
 				entity.getTargetOrganizationId(),
 				entity.getExamType(),
 				examsList,

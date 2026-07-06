@@ -16,8 +16,23 @@ public record MedicalSummaryResponse(
         List<TreatmentSummaryDto> activePrescriptions,
         List<VisitSummaryDto> recentVisits,
         List<DiagnosticSummaryDto> recentDiagnostics,
-        List<CriticalResultSummaryDto> criticalResults
+        List<CriticalResultSummaryDto> criticalResults,
+        List<HospitalizationSummaryDto> hospitalizations
 ) {
+    public record HospitalizationSummaryDto(
+            UUID id,
+            String hospitalizationNumber,
+            String serviceName,
+            String roomNumber,
+            String bedNumber,
+            String admissionReason,
+            String status,
+            java.time.Instant admittedAt,
+            java.time.Instant dischargedAt,
+            String dischargeDiagnosis,
+            String dischargeInstructions
+    ) {}
+
     public record AllergySummaryDto(
             UUID id,
             String substance,

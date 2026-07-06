@@ -1,0 +1,16 @@
+package com.joprelys.backend.visit.infrastructure.persistence;
+
+public enum DocumentType {
+    FICHE_ACCUEIL,
+    FICHE_PATIENT,
+    COMPTE_RENDU_CONSULTATION,
+    ORDONNANCE,
+    DEMANDE_EXAMEN,
+    RESULTAT_LABORATOIRE,
+    COMPTE_RENDU_IMAGERIE,
+    CERTIFICAT_MEDICAL,
+    FICHE_HOSPITALISATION,
+    FICHE_SORTIE,
+    RESUME_MEDICAL,
+    CONSENTEMENT_SIGNE
+}

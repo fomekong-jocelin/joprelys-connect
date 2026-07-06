@@ -22,11 +22,9 @@ public class DocumentNumberGenerator {
         String dateStr = LocalDate.now().format(DATE_FORMATTER);
         String docPrefix = "DOC-" + dateStr + "-";
 
-        // Utilisation de JdbcTemplate pour contourner le filtre @TenantId de Hibernate et compter au niveau global
-        String sql = "SELECT COUNT(*) FROM medical_documents WHERE document_number LIKE ?";
-        Long count = jdbcTemplate.queryForObject(sql, Long.class, docPrefix + "%");
-        long nextSeq = (count != null ? count : 0L) + 1;
+        Long nextSeq = jdbcTemplate.queryForObject("SELECT nextval('medical_document_number_seq')", Long.class);
+        long nextVal = nextSeq != null ? nextSeq : 1L;
 
-        return String.format("%s%06d", docPrefix, nextSeq);
+        return String.format("%s%06d", docPrefix, nextVal);
     }
 }

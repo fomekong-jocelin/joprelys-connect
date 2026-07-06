@@ -13,11 +13,14 @@ import com.joprelys.backend.lab.infrastructure.persistence.LabOrderEntity;
 import com.joprelys.backend.lab.infrastructure.persistence.LabOrderRepository;
 import com.joprelys.backend.lab.infrastructure.persistence.LabResultEntity;
 import com.joprelys.backend.lab.infrastructure.persistence.LabResultRepository;
+import com.joprelys.backend.lab.infrastructure.persistence.ExamType;
+import com.joprelys.backend.lab.infrastructure.persistence.LabOrderStatus;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import org.junit.jupiter.api.BeforeEach;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -118,10 +121,11 @@ public class LabIntegrationControllerTest {
 				visit,
 				doctor,
 				null,
-				"LABORATOIRE",
-				"[\"GLYSEMIE_A_JEUN\"]",
+				ExamType.LABORATOIRE,
+				List.of("GLYSEMIE_A_JEUN"),
 				"Suspicion de diabète",
-				"NORMALE"
+				"NORMALE",
+				org.getId()
 		);
 		labOrder.setOrganizationId(org.getId());
 		labOrder = labOrderRepository.save(labOrder);
@@ -219,7 +223,7 @@ public class LabIntegrationControllerTest {
 		// Vérifications :
 		// 1. Statut du LabOrder passé à VALIDATED
 		LabOrderEntity updatedOrder = labOrderRepository.findById(labOrder.getId()).orElseThrow();
-		assertEquals("VALIDATED", updatedOrder.getStatus());
+		assertEquals(LabOrderStatus.VALIDATED, updatedOrder.getStatus());
 
 		// 2. Création du résultat d'analyse
 		List<LabResultEntity> results = labResultRepository.findAll();
@@ -289,5 +293,91 @@ public class LabIntegrationControllerTest {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(payload))
 				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void testVersioningAndImmutability() throws Exception {
+		String mockPdfBase64 = "JVBERi0xLjQKSGVsbG8gUERGCg==";
+
+		// 1. Upload initial (Version 1)
+		String payloadV1 = """
+				{
+				  "examRequestNumber": "%s",
+				  "validatorName": "Dr. Jean Biologiste",
+				  "sampleCollectedAt": "2026-07-03T07:30:00Z",
+				  "resultAt": "2026-07-03T10:00:00Z",
+				  "validatedAt": "2026-07-03T10:15:00Z",
+				  "conclusion": "Glycémie élevée",
+				  "status": "VALIDATED",
+				  "results": [
+				    {
+				      "analyteName": "Glucose à jeun",
+				      "value": "1.45",
+				      "unit": "g/L",
+				      "referenceRange": "0.70 - 1.10",
+				      "interpretation": "ELEVE",
+				      "comment": "Patient à jeun"
+				    }
+				  ],
+				  "pdfBase64": "%s"
+				}
+				""".formatted(labOrder.getExamRequestNumber(), mockPdfBase64);
+
+		mockMvc.perform(post("/api/public/lab-integration/upload")
+						.header("X-API-KEY", "lab-partner-secret-token")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(payloadV1))
+				.andExpect(status().isCreated());
+
+		TenantContext.setTenantId(org.getId());
+		List<LabResultEntity> resultsV1 = labResultRepository.findAll();
+		assertEquals(1, resultsV1.size());
+		LabResultEntity firstResult = resultsV1.getFirst();
+		assertEquals(1, firstResult.getVersion());
+		assertEquals("VALIDATED", firstResult.getStatus().name());
+
+		// 2. Upload correctif (Création d'une Version 2 à cause du statut VALIDATED)
+		String payloadV2 = """
+				{
+				  "examRequestNumber": "%s",
+				  "validatorName": "Dr. Jean Biologiste",
+				  "sampleCollectedAt": "2026-07-03T07:30:00Z",
+				  "resultAt": "2026-07-03T10:00:00Z",
+				  "validatedAt": "2026-07-03T10:15:00Z",
+				  "conclusion": "Glycémie rectifiée",
+				  "status": "VALIDATED",
+				  "results": [
+				    {
+				      "analyteName": "Glucose à jeun",
+				      "value": "1.35",
+				      "unit": "g/L",
+				      "referenceRange": "0.70 - 1.10",
+				      "interpretation": "ELEVE",
+				      "comment": "Patient à jeun"
+				    }
+				  ],
+				  "pdfBase64": "%s"
+				}
+				""".formatted(labOrder.getExamRequestNumber(), mockPdfBase64);
+
+		mockMvc.perform(post("/api/public/lab-integration/upload")
+						.header("X-API-KEY", "lab-partner-secret-token")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(payloadV2))
+				.andExpect(status().isCreated());
+
+		TenantContext.setTenantId(org.getId());
+		List<LabResultEntity> allResults = labResultRepository.findAll();
+		assertEquals(2, allResults.size()); // Version 1 et Version 2 coexistent
+
+		LabResultEntity v2Result = allResults.stream()
+				.filter(r -> r.getVersion() == 2)
+				.findFirst().orElseThrow();
+		assertEquals("1.35", v2Result.getValue());
+		assertEquals(firstResult.getId(), v2Result.getParentResult().getId());
+
+		// Nettoyer les fichiers créés
+		Files.deleteIfExists(Paths.get(firstResult.getPdfFilePath()));
+		Files.deleteIfExists(Paths.get(v2Result.getPdfFilePath()));
 	}
 }

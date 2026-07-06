@@ -2,6 +2,8 @@ package com.joprelys.backend.visit.infrastructure.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -12,8 +14,6 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.TenantId;
 import java.time.Instant;
 import java.util.UUID;
-
-// STORY-0603 — Révocation et annulation de documents médicaux
 
 @Entity
 @Table(name = "medical_documents")
@@ -33,10 +33,30 @@ public class MedicalDocumentEntity {
     private String filePath;
 
     @Column(name = "status", nullable = false, length = 50)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private DocumentStatus status;
 
     @Column(name = "document_type", nullable = false, length = 50)
-    private String documentType = "SYNTHESE";
+    @Enumerated(EnumType.STRING)
+    private DocumentType documentType = DocumentType.COMPTE_RENDU_CONSULTATION;
+
+    @Column(name = "hash", length = 64)
+    private String hash;
+
+    @Column(name = "qr_code_url", length = 500)
+    private String qrCodeUrl;
+
+    @Column(name = "verification_url", length = 500)
+    private String verificationUrl;
+
+    @Column(name = "author_user_id")
+    private UUID authorUserId;
+
+    @Column(name = "version", nullable = false)
+    private int version = 1;
+
+    @Column(name = "previous_document_id")
+    private UUID previousDocumentId;
 
     @TenantId
     @Column(name = "organization_id", nullable = false)
@@ -66,17 +86,29 @@ public class MedicalDocumentEntity {
         this.visit = visit;
         this.documentNumber = documentNumber;
         this.filePath = filePath;
-        this.status = "VALID";
-        this.documentType = "SYNTHESE";
+        this.status = DocumentStatus.VALID;
+        this.documentType = DocumentType.COMPTE_RENDU_CONSULTATION;
+        this.version = 1;
         if (visit != null) {
             this.organizationId = visit.getOrganizationId();
         }
     }
 
-    public MedicalDocumentEntity(VisitEntity visit, String documentNumber, String filePath, String documentType) {
+    public MedicalDocumentEntity(VisitEntity visit, String documentNumber, String filePath, DocumentType documentType) {
         this(visit, documentNumber, filePath);
         if (documentType != null) {
             this.documentType = documentType;
+        }
+    }
+
+    public MedicalDocumentEntity(VisitEntity visit, String documentNumber, String filePath, String documentTypeStr) {
+        this(visit, documentNumber, filePath);
+        if (documentTypeStr != null) {
+            try {
+                this.documentType = DocumentType.valueOf(documentTypeStr);
+            } catch (IllegalArgumentException e) {
+                this.documentType = DocumentType.COMPTE_RENDU_CONSULTATION;
+            }
         }
     }
 
@@ -120,19 +152,19 @@ public class MedicalDocumentEntity {
         this.filePath = filePath;
     }
 
-    public String getStatus() {
+    public DocumentStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(DocumentStatus status) {
         this.status = status;
     }
 
-    public String getDocumentType() {
+    public DocumentType getDocumentType() {
         return documentType;
     }
 
-    public void setDocumentType(String documentType) {
+    public void setDocumentType(DocumentType documentType) {
         this.documentType = documentType;
     }
 
@@ -153,8 +185,20 @@ public class MedicalDocumentEntity {
     }
 
     // STORY-0603 — méthode métier de révocation
-    public void revoke(UUID revokedByUserId, String reason, String newStatus) {
+    public void revoke(UUID revokedByUserId, String reason, DocumentStatus newStatus) {
         this.status = newStatus;
+        this.revokedAt = Instant.now();
+        this.revokedByUserId = revokedByUserId;
+        this.revocationReason = reason;
+        this.updatedAt = Instant.now();
+    }
+
+    public void revoke(UUID revokedByUserId, String reason, String newStatusStr) {
+        try {
+            this.status = DocumentStatus.valueOf(newStatusStr);
+        } catch (IllegalArgumentException e) {
+            this.status = DocumentStatus.REVOQUE;
+        }
         this.revokedAt = Instant.now();
         this.revokedByUserId = revokedByUserId;
         this.revocationReason = reason;
@@ -171,5 +215,53 @@ public class MedicalDocumentEntity {
 
     public String getRevocationReason() {
         return revocationReason;
+    }
+
+    public String getHash() {
+        return hash;
+    }
+
+    public void setHash(String hash) {
+        this.hash = hash;
+    }
+
+    public String getQrCodeUrl() {
+        return qrCodeUrl;
+    }
+
+    public void setQrCodeUrl(String qrCodeUrl) {
+        this.qrCodeUrl = qrCodeUrl;
+    }
+
+    public String getVerificationUrl() {
+        return verificationUrl;
+    }
+
+    public void setVerificationUrl(String verificationUrl) {
+        this.verificationUrl = verificationUrl;
+    }
+
+    public UUID getAuthorUserId() {
+        return authorUserId;
+    }
+
+    public void setAuthorUserId(UUID authorUserId) {
+        this.authorUserId = authorUserId;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
+    }
+
+    public UUID getPreviousDocumentId() {
+        return previousDocumentId;
+    }
+
+    public void setPreviousDocumentId(UUID previousDocumentId) {
+        this.previousDocumentId = previousDocumentId;
     }
 }

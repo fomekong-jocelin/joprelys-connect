@@ -115,7 +115,7 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
                             }
                             @if (item.important) {
                               <span class="px-1.5 py-0.5 rounded-sm text-[9px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-100 dark:border-rose-900/20 flex items-center gap-1 animate-pulse">
-                                ⚠️ Important
+                                ⚠️ {{ t('patients.medicalInfo.history.important') }}
                               </span>
                             }
                           </div>
@@ -169,7 +169,7 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
             <form (submit)="saveAllergy($event)" class="p-5 space-y-4">
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.allergies.substance') }}*</label>
-                <input type="text" [(ngModel)]="allergySubstance" name="substance" required class="ui-input" placeholder="Ex: Penicilline" />
+                <input type="text" [(ngModel)]="allergySubstance" name="substance" required class="ui-input" placeholder="{{ t('patients.medicalInfo.allergies.substancePlaceholder') }}" />
               </div>
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.allergies.severity') }}*</label>
@@ -182,7 +182,7 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
               </div>
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.allergies.reaction') }}</label>
-                <input type="text" [(ngModel)]="allergyReaction" name="reaction" class="ui-input" placeholder="Ex: Choc anaphylactique, Urticaire" />
+                <input type="text" [(ngModel)]="allergyReaction" name="reaction" class="ui-input" placeholder="{{ t('patients.medicalInfo.allergies.reactionPlaceholder') }}" />
               </div>
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.allergies.comment') }}</label>
@@ -215,14 +215,14 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
                   <option value="SURGICAL">{{ t('patients.medicalInfo.history.category.SURGICAL') }}</option>
                   <option value="FAMILY">{{ t('patients.medicalInfo.history.category.FAMILY') }}</option>
                   <option value="OBSTETRICAL">{{ t('patients.medicalInfo.history.category.OBSTETRICAL') }}</option>
-                  <option value="ALLERGIC">Allergique</option>
-                  <option value="SOCIAL">Social / Habitudes</option>
+                  <option value="ALLERGIC">{{ t('patients.medicalInfo.history.category.ALLERGIC') }}</option>
+                  <option value="SOCIAL">{{ t('patients.medicalInfo.history.category.SOCIAL') }}</option>
                   <option value="OTHER">{{ t('patients.medicalInfo.history.category.OTHER') }}</option>
                 </select>
               </div>
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.history.description') }}*</label>
-                <input type="text" [(ngModel)]="historyDescription" name="description" required class="ui-input" placeholder="Ex: Diabète type 2, Appendicectomie" />
+                <input type="text" [(ngModel)]="historyDescription" name="description" required class="ui-input" placeholder="{{ t('patients.medicalInfo.history.descriptionPlaceholder') }}" />
               </div>
               <div class="grid grid-cols-3 gap-4">
                 <div class="space-y-1 col-span-1">
@@ -238,7 +238,7 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
                 <div class="flex items-center pt-5 justify-end col-span-1">
                   <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
                     <input type="checkbox" [(ngModel)]="historyIsImportant" name="important" class="ui-checkbox" />
-                    Important
+                    {{ t('patients.medicalInfo.history.importantLabel') }}
                   </label>
                 </div>
               </div>
@@ -255,7 +255,7 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
       <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-xl p-4 md:p-5 shadow-xs transition-colors">
         <div class="flex items-center justify-between mb-4">
           <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-            <span>💉</span> Vaccinations (DPU Section 9)
+            <span>💉</span> {{ t('patients.medicalInfo.vaccinations.title') }}
           </h4>
           <button
             (click)="openVaccinationModal()"
@@ -264,7 +264,7 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
-            Ajouter une vaccination
+            {{ t('patients.medicalInfo.vaccinations.add') }}
           </button>
         </div>
 
@@ -272,7 +272,7 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
           <div class="py-4 text-center text-xs text-slate-400">{{ t('common.loading') }}</div>
         } @else if (vaccinations().length === 0) {
           <p class="text-xs text-slate-500 dark:text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/10 p-3 rounded-lg border border-slate-100/50 dark:border-slate-800/40">
-            Aucune vaccination enregistrée pour ce patient.
+            {{ t('patients.medicalInfo.vaccinations.empty') }}
           </p>
         } @else {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -282,15 +282,15 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
                   <div>
                     <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200 block">{{ vac.vaccineName }}</span>
                     @if (vac.batchNumber) {
-                      <span class="text-[10px] bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 px-1.5 py-0.5 rounded-sm mt-1 inline-block">Lot: {{ vac.batchNumber }}</span>
+                      <span class="text-[10px] bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 px-1.5 py-0.5 rounded-sm mt-1 inline-block">{{ t('patients.medicalInfo.vaccinations.batchNumber') }}: {{ vac.batchNumber }}</span>
                     }
                     <div class="text-xs text-slate-500 dark:text-slate-400 mt-2 space-y-1">
-                      <p><strong>Date d'administration :</strong> {{ vac.administeredAt | date:'dd/MM/yyyy' }}</p>
+                      <p><strong>{{ t('patients.medicalInfo.vaccinations.administeredAt') }} :</strong> {{ vac.administeredAt | date:'dd/MM/yyyy' }}</p>
                       @if (vac.administeredBy) {
-                        <p><strong>Par :</strong> {{ vac.administeredBy }}</p>
+                        <p><strong>{{ t('patients.medicalInfo.vaccinations.administeredBy') }} :</strong> {{ vac.administeredBy }}</p>
                       }
                       @if (vac.nextDoseAt) {
-                        <p class="text-brand-cyan dark:text-cyan-400 font-bold"><strong>Prochain rappel :</strong> {{ vac.nextDoseAt | date:'dd/MM/yyyy' }}</p>
+                        <p class="text-brand-cyan dark:text-cyan-400 font-bold"><strong>{{ t('patients.medicalInfo.vaccinations.nextDoseAt') }} :</strong> {{ vac.nextDoseAt | date:'dd/MM/yyyy' }}</p>
                       }
                       @if (vac.notes) {
                         <p class="italic text-slate-400 dark:text-slate-500 mt-1">"{{ vac.notes }}"</p>
@@ -310,39 +310,39 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
           <div class="bg-white dark:bg-slate-900 w-full max-w-md p-6 rounded-xl border border-slate-100 dark:border-slate-800/60 shadow-xl">
             <header class="mb-4">
               <h4 class="font-display font-black text-base text-slate-800 dark:text-white uppercase tracking-wider">
-                Enregistrer une vaccination
+                {{ t('patients.medicalInfo.vaccinations.add') }}
               </h4>
             </header>
             <form (submit)="saveVaccination($event)" class="space-y-4">
               <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nom du vaccin*</label>
-                <input type="text" [(ngModel)]="vaccineName" name="vaccineName" required class="ui-input" placeholder="Ex: BCG, Tétanos, ROR..." />
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.vaccinations.vaccineName') }}*</label>
+                <input type="text" [(ngModel)]="vaccineName" name="vaccineName" required class="ui-input" placeholder="{{ t('patients.medicalInfo.vaccinations.vaccineNamePlaceholder') }}" />
               </div>
               <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">N° de lot</label>
-                <input type="text" [(ngModel)]="vaccineBatch" name="batchNumber" class="ui-input" placeholder="Ex: AB12345" />
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.vaccinations.batchNumber') }}</label>
+                <input type="text" [(ngModel)]="vaccineBatch" name="batchNumber" class="ui-input" placeholder="{{ t('patients.medicalInfo.vaccinations.batchNumberPlaceholder') }}" />
               </div>
               <div class="grid grid-cols-2 gap-4">
                 <div class="space-y-1">
-                  <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date d'administration*</label>
+                  <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.vaccinations.administeredAt') }}*</label>
                   <input type="date" [(ngModel)]="vaccineDate" name="administeredAt" required class="ui-input" />
                 </div>
                 <div class="space-y-1">
-                  <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Prochain rappel</label>
+                  <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.vaccinations.nextDoseAt') }}</label>
                   <input type="date" [(ngModel)]="vaccineNextDate" name="nextDoseAt" class="ui-input" />
                 </div>
               </div>
               <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Administré par</label>
-                <input type="text" [(ngModel)]="vaccineAdministeredBy" name="administeredBy" class="ui-input" placeholder="Ex: Dr. House, Cabinet Infirmier..." />
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.vaccinations.administeredBy') }}</label>
+                <input type="text" [(ngModel)]="vaccineAdministeredBy" name="administeredBy" class="ui-input" placeholder="{{ t('patients.medicalInfo.vaccinations.administeredByPlaceholder') }}" />
               </div>
               <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Notes / Remarques</label>
-                <textarea [(ngModel)]="vaccineNotes" name="notes" rows="2" class="ui-textarea" placeholder="Détails supplémentaires..."></textarea>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.medicalInfo.vaccinations.notes') }}</label>
+                <textarea [(ngModel)]="vaccineNotes" name="notes" rows="2" class="ui-textarea" placeholder="{{ t('patients.medicalInfo.vaccinations.notesPlaceholder') }}"></textarea>
               </div>
               <footer class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex justify-end gap-2">
-                <button type="button" (click)="showVaccinationModal.set(false)" class="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer">Annuler</button>
-                <button type="submit" class="px-5 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[#097b98] cursor-pointer">Enregistrer</button>
+                <button type="button" (click)="showVaccinationModal.set(false)" class="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer">{{ t('common.cancel') }}</button>
+                <button type="submit" class="px-5 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[#097b98] cursor-pointer">{{ t('common.save') }}</button>
               </footer>
             </form>
           </div>
@@ -498,7 +498,7 @@ export class PatientMedicalInfoComponent implements OnInit {
 
   deleteAllergy(allergy: PatientAllergy): void {
     if (!allergy.id) return;
-    if (confirm("Voulez-vous vraiment supprimer cette allergie ?")) {
+    if (confirm(this.i18n.t('patients.medicalInfo.allergies.deleteConfirm'))) {
       this.patientApi.deleteAllergy(this.patientId, allergy.id).subscribe({
         next: () => this.loadAllergies()
       });
@@ -540,7 +540,7 @@ export class PatientMedicalInfoComponent implements OnInit {
 
   deleteHistory(item: PatientMedicalHistory): void {
     if (!item.id) return;
-    if (confirm("Voulez-vous vraiment supprimer cet antécédent ?")) {
+    if (confirm(this.i18n.t('patients.medicalInfo.history.deleteConfirm'))) {
       this.patientApi.deleteMedicalHistory(this.patientId, item.id).subscribe({
         next: () => this.loadHistory()
       });

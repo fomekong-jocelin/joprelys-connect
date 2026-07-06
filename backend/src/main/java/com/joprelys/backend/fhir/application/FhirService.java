@@ -29,6 +29,7 @@ public class FhirService {
 	private final PatientRepository patientRepository;
 	private final VisitService visitService;
 	private final VitalsRepository vitalsRepository;
+	private final com.joprelys.backend.lab.infrastructure.persistence.LabResultRepository labResultRepository;
 	private final AuditService auditService;
 	private final UserAccountRepository userAccountRepository;
 
@@ -37,12 +38,14 @@ public class FhirService {
 			PatientRepository patientRepository,
 			VisitService visitService,
 			VitalsRepository vitalsRepository,
+			com.joprelys.backend.lab.infrastructure.persistence.LabResultRepository labResultRepository,
 			AuditService auditService,
 			UserAccountRepository userAccountRepository) {
 		this.patientService = patientService;
 		this.patientRepository = patientRepository;
 		this.visitService = visitService;
 		this.vitalsRepository = vitalsRepository;
+		this.labResultRepository = labResultRepository;
 		this.auditService = auditService;
 		this.userAccountRepository = userAccountRepository;
 	}
@@ -103,10 +106,15 @@ public class FhirService {
 		PatientEntity patient = patientService.getPatientById(patientId);
 		
 		List<VitalsEntity> vitalsList = vitalsRepository.findAllByPatientId(patientId);
+		List<com.joprelys.backend.lab.infrastructure.persistence.LabResultEntity> labResults = labResultRepository.findByPatientIdOrderByCreatedAtDesc(patientId);
 		
 		List<FhirObservationDto> observations = vitalsList.stream()
 				.flatMap(v -> FhirObservationMapper.toFhir(v).stream())
-				.collect(Collectors.toList());
+				.collect(Collectors.toCollection(java.util.ArrayList::new));
+
+		for (com.joprelys.backend.lab.infrastructure.persistence.LabResultEntity lr : labResults) {
+			observations.add(FhirObservationMapper.toFhir(lr));
+		}
 		
 		var actor = getCurrentUser();
 		if (actor != null) {
@@ -129,6 +137,44 @@ public class FhirService {
 				"Bundle",
 				"searchset",
 				observations.size(),
+				entries
+		);
+	}
+
+	@Transactional(readOnly = true)
+	public FhirBundleDto<FhirDiagnosticReportDto> getDiagnosticReports(UUID patientId) {
+		PatientEntity patient = patientService.getPatientById(patientId);
+
+		List<com.joprelys.backend.lab.infrastructure.persistence.LabResultEntity> labResults = labResultRepository.findByPatientIdOrderByCreatedAtDesc(patientId);
+
+		java.util.Map<String, List<com.joprelys.backend.lab.infrastructure.persistence.LabResultEntity>> groupedResults = labResults.stream()
+				.collect(Collectors.groupingBy(com.joprelys.backend.lab.infrastructure.persistence.LabResultEntity::getResultNumber));
+
+		List<FhirDiagnosticReportDto> reports = groupedResults.values().stream()
+				.map(FhirDiagnosticReportMapper::toFhir)
+				.collect(Collectors.toList());
+
+		var actor = getCurrentUser();
+		if (actor != null) {
+			auditService.logSuccess(
+					actor.getId(),
+					actor.getOrganizationId(),
+					patient.getId(),
+					"DiagnosticReport",
+					patient.getId(),
+					"READ_FHIR_RESOURCE",
+					"Accès FHIR à la liste des ressources DiagnosticReport pour le patient : " + patient.getFullName()
+			);
+		}
+
+		List<FhirBundleDto.BundleEntry<FhirDiagnosticReportDto>> entries = reports.stream()
+				.map(FhirBundleDto.BundleEntry::new)
+				.collect(Collectors.toList());
+
+		return new FhirBundleDto<>(
+				"Bundle",
+				"searchset",
+				reports.size(),
 				entries
 		);
 	}

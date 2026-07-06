@@ -1,5 +1,6 @@
 package com.joprelys.backend.lab.api;
 
+import com.joprelys.backend.lab.infrastructure.persistence.ExamType;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
@@ -14,7 +15,7 @@ public record CreateLabOrderRequest(
 		UUID targetOrganizationId,
 
 		@NotNull(message = "Le type d'examen est requis")
-		String examType,
+		ExamType examType,
 
 		@NotEmpty(message = "La liste des examens ne doit pas être vide")
 		List<String> exams,

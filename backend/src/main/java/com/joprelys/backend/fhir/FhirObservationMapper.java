@@ -227,4 +227,50 @@ public class FhirObservationMapper {
                 null
         );
     }
+
+    public static FhirObservationDto toFhir(com.joprelys.backend.lab.infrastructure.persistence.LabResultEntity result) {
+        String patientId = result.getPatient() != null && result.getPatient().getId() != null
+                ? result.getPatient().getId().toString() : null;
+        String encounterId = result.getLabOrder() != null && result.getLabOrder().getId() != null
+                ? result.getLabOrder().getId().toString() : null;
+
+        Reference subjectRef = patientId != null ? new Reference("Patient/" + patientId) : null;
+        Reference encounterRef = encounterId != null ? new Reference("Encounter/" + encounterId) : null;
+        String effectiveDateTime = result.getValidatedAt() != null
+                ? result.getValidatedAt().toString()
+                : (result.getCreatedAt() != null ? result.getCreatedAt().toString() : null);
+
+        CodeableConcept code = new CodeableConcept(
+                new Coding("http://loinc.org", "laboratory", result.getAnalyteName()),
+                result.getAnalyteName()
+        );
+
+        BigDecimal numericVal = null;
+        try {
+            numericVal = new BigDecimal(result.getValue());
+        } catch (Exception ignored) {}
+
+        Quantity valueQuantity = numericVal != null
+                ? new Quantity(numericVal, result.getUnit(), "http://unitsofmeasure.org", result.getUnit())
+                : null;
+
+        List<CodeableConcept> category = List.of(
+                new CodeableConcept(
+                        new Coding("http://terminology.hl7.org/CodeSystem/observation-category", "laboratory", "Laboratory"),
+                        "Laboratory"
+                )
+        );
+
+        return new FhirObservationDto(
+                result.getId().toString(),
+                result.getStatus() != null ? result.getStatus().name().toLowerCase() : "final",
+                category,
+                code,
+                subjectRef,
+                encounterRef,
+                effectiveDateTime,
+                valueQuantity,
+                null
+        );
+    }
 }

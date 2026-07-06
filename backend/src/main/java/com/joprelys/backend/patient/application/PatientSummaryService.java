@@ -37,6 +37,7 @@ public class PatientSummaryService {
     private final PatientService patientService;
     private final AuditService auditService;
     private final UserAccountRepository userAccountRepository;
+    private final com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository hospitalizationRepository;
     
     private final com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository organizationRepository;
     private final com.joprelys.backend.visit.infrastructure.persistence.VitalsRepository vitalsRepository;
@@ -56,6 +57,7 @@ public class PatientSummaryService {
                                  PatientService patientService,
                                  AuditService auditService,
                                  UserAccountRepository userAccountRepository,
+                                 com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository hospitalizationRepository,
                                  com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository organizationRepository,
                                  com.joprelys.backend.visit.infrastructure.persistence.VitalsRepository vitalsRepository,
                                  com.joprelys.backend.visit.application.PdfGeneratorService pdfGeneratorService,
@@ -70,6 +72,7 @@ public class PatientSummaryService {
         this.patientService = patientService;
         this.auditService = auditService;
         this.userAccountRepository = userAccountRepository;
+        this.hospitalizationRepository = hospitalizationRepository;
         this.organizationRepository = organizationRepository;
         this.vitalsRepository = vitalsRepository;
         this.pdfGeneratorService = pdfGeneratorService;
@@ -189,6 +192,24 @@ public class PatientSummaryService {
                 ))
                 .collect(Collectors.toList());
 
+        // 7. Hospitalisations
+        List<MedicalSummaryResponse.HospitalizationSummaryDto> hospitalizations = hospitalizationRepository
+                .findByPatientIdOrderByAdmittedAtDesc(patientId).stream()
+                .map(h -> new MedicalSummaryResponse.HospitalizationSummaryDto(
+                        h.getId(),
+                        h.getHospitalizationNumber(),
+                        h.getServiceName(),
+                        h.getRoomNumber(),
+                        h.getBedNumber(),
+                        h.getAdmissionReason(),
+                        h.getStatus(),
+                        h.getAdmittedAt(),
+                        h.getDischargedAt(),
+                        h.getDischargeDiagnosis(),
+                        h.getDischargeInstructions()
+                ))
+                .collect(Collectors.toList());
+
         // Audit Log
         UserAccountEntity actor = getCurrentUser();
         if (actor != null) {
@@ -215,7 +236,8 @@ public class PatientSummaryService {
                 activePrescriptions,
                 recentVisits,
                 recentDiagnostics,
-                criticalResults
+                criticalResults,
+                hospitalizations
         );
     }
 

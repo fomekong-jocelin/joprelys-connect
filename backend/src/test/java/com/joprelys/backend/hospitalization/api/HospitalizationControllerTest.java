@@ -46,6 +46,9 @@ public class HospitalizationControllerTest {
     private com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository hospitalizationRepository;
 
     @Autowired
+    private com.joprelys.backend.visit.infrastructure.persistence.VisitRepository visitRepository;
+
+    @Autowired
     private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @Autowired
@@ -104,6 +107,33 @@ public class HospitalizationControllerTest {
 
     @Test
     void givenDoctor_whenAdmitAndDischargePatient_thenSuccess() throws Exception {
+        TenantContext.setTenantId(org.getId());
+        
+        // Créer les visites de test
+        com.joprelys.backend.visit.infrastructure.persistence.VisitEntity visitA = new com.joprelys.backend.visit.infrastructure.persistence.VisitEntity(
+                patientA,
+                "VIS-H-001",
+                "Motif de visite A",
+                "Médecine générale",
+                "MÉDECINE GÉNÉRALE",
+                doctor.getId(),
+                java.time.Instant.now()
+        );
+        visitA = visitRepository.save(visitA);
+
+        com.joprelys.backend.visit.infrastructure.persistence.VisitEntity visitB = new com.joprelys.backend.visit.infrastructure.persistence.VisitEntity(
+                patientB,
+                "VIS-H-002",
+                "Motif de visite B",
+                "Médecine générale",
+                "MÉDECINE GÉNÉRALE",
+                doctor.getId(),
+                java.time.Instant.now()
+        );
+        visitB = visitRepository.save(visitB);
+
+        TenantContext.clear();
+
         // 1. Admit Patient A in Room 101, Bed A
         String admitRequest = String.format("""
                 {
@@ -111,9 +141,11 @@ public class HospitalizationControllerTest {
                     "serviceName": "PÉDIATRIE",
                     "roomNumber": "101",
                     "bedNumber": "Lit A",
-                    "admissionReason": "Surveillance post-opératoire"
+                    "admissionReason": "Surveillance post-opératoire",
+                    "visitId": "%s",
+                    "responsiblePractitionerId": "%s"
                 }
-                """, patientA.getId());
+                """, patientA.getId(), visitA.getId(), doctor.getId());
 
         String responseStr = mockMvc.perform(post("/api/hospitalizations")
                 .header("Authorization", "Bearer " + tokenDoctor)
@@ -135,9 +167,11 @@ public class HospitalizationControllerTest {
                     "serviceName": "PÉDIATRIE",
                     "roomNumber": "101",
                     "bedNumber": "Lit A",
-                    "admissionReason": "Fièvre élevée"
+                    "admissionReason": "Fièvre élevée",
+                    "visitId": "%s",
+                    "responsiblePractitionerId": "%s"
                 }
-                """, patientB.getId());
+                """, patientB.getId(), visitB.getId(), doctor.getId());
 
         mockMvc.perform(post("/api/hospitalizations")
                 .header("Authorization", "Bearer " + tokenDoctor)

@@ -4,10 +4,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { of, throwError } from 'rxjs';
+import { provideI18nTesting } from '../../testing/i18n-testing';
 import { PharmacyApiService } from './pharmacy-api.service';
 import { PharmacyDispensationPanelComponent } from './pharmacy-dispensation-panel.component';
 import { PharmacyPrescriptionVerifyPageComponent } from './pharmacy-prescription-verify-page.component';
-import { I18nService } from '../core/i18n/i18n.service';
 
 describe('PharmacyApiService', () => {
   let service: PharmacyApiService;
@@ -126,7 +126,7 @@ describe('PharmacyPrescriptionVerifyPageComponent', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: PharmacyApiService, useValue: pharmacyApi },
-        I18nService,
+        provideI18nTesting(),
       ],
     }).compileComponents();
 

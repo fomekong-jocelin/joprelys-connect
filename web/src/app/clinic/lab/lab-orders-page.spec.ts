@@ -7,7 +7,9 @@ import { LabOrderApiService } from './lab-api.service';
 import { LabOrdersPageComponent } from './lab-orders-page.component';
 import { I18nService } from '../../core/i18n/i18n.service';
 
-const labOrder = {
+import { ExamType, LabOrderStatus, LabOrder } from './lab.models';
+
+const labOrder: LabOrder = {
   id: 'order-1',
   examRequestNumber: 'EXAM-REQ-20260703-000042',
   patientId: 'patient-1',
@@ -15,11 +17,11 @@ const labOrder = {
   requesterPractitionerId: 'doctor-1',
   requesterPractitionerName: 'Dr Alpha',
   sourceOrganizationId: 'org-1',
-  examType: 'BIOLOGY',
+  examType: ExamType.LABORATOIRE,
   exams: ['NFS', 'Glycemie'],
   reason: 'Controle',
   priority: 'NORMALE',
-  status: 'REQUESTED',
+  status: LabOrderStatus.REQUESTED,
   createdAt: '2026-07-03T09:00:00Z',
 };
 
@@ -117,7 +119,7 @@ describe('LabOrdersPageComponent', () => {
 
   it('should update selected order status', () => {
     const component = fixture.componentInstance;
-    component.statusDraft.set('IN_PROGRESS');
+    component.statusDraft.set(LabOrderStatus.IN_PROGRESS);
 
     component.updateStatus(labOrder);
 
@@ -163,7 +165,7 @@ describe('LabOrdersPageComponent', () => {
 
   it('should filter orders by search query and priority', () => {
     const component = fixture.componentInstance;
-    const labOrder2 = {
+    const labOrder2: LabOrder = {
       ...labOrder,
       id: 'order-2',
       examRequestNumber: 'EXAM-REQ-20260703-999999',

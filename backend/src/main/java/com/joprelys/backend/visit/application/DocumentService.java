@@ -10,12 +10,13 @@ import com.joprelys.backend.consultation.infrastructure.persistence.Consultation
 import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionEntity;
 import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionItemEntity;
 import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository;
+import com.joprelys.backend.visit.infrastructure.persistence.DocumentStatus;
+import com.joprelys.backend.visit.infrastructure.persistence.DocumentType;
 import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -73,10 +74,11 @@ public class DocumentService {
     }
 
     public java.util.Optional<com.joprelys.backend.visit.api.DocumentVerificationResponse> verifyDocument(UUID documentId) {
-        String sql = "SELECT d.document_number, d.status, d.created_at, " +
+        String sql = "SELECT d.document_number, d.status, d.document_type, d.created_at, " +
                      "       o.name as clinic_name, " +
                      "       p.full_name as patient_name, " +
-                     "       u.display_name as doctor_name " +
+                     "       u.display_name as doctor_name, " +
+                     "       v.service_name as service_name " +
                      "FROM medical_documents d " +
                      "JOIN visits v ON d.visit_id = v.id " +
                      "JOIN patients p ON v.patient_id = p.id " +
@@ -86,14 +88,20 @@ public class DocumentService {
                      "WHERE d.id = ?";
 
         try {
-            return java.util.Optional.ofNullable(jdbcTemplate.queryForObject(sql, (rs, rowNum) -> new com.joprelys.backend.visit.api.DocumentVerificationResponse(
-                    rs.getString("document_number"),
-                    rs.getString("status"),
-                    rs.getString("clinic_name"),
-                    rs.getString("doctor_name") != null ? rs.getString("doctor_name") : "Non spécifié",
-                    rs.getString("patient_name"),
-                    rs.getTimestamp("created_at").toInstant()
-            ), documentId));
+            return java.util.Optional.ofNullable(jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
+                String docTypeStr = rs.getString("document_type");
+                return new com.joprelys.backend.visit.api.DocumentVerificationResponse(
+                        rs.getString("document_number"),
+                        rs.getString("status"),
+                        docTypeStr != null ? docTypeStr : "COMPTE_RENDU_CONSULTATION",
+                        rs.getString("clinic_name"),
+                        rs.getString("doctor_name") != null ? rs.getString("doctor_name") : "Non spécifié",
+                        rs.getString("service_name") != null ? rs.getString("service_name") : "Non spécifié",
+                        rs.getString("patient_name"),
+                        rs.getTimestamp("created_at").toInstant(),
+                        "Ce document ne donne pas accès au dossier médical complet"
+                );
+            }, documentId));
         } catch (org.springframework.dao.EmptyResultDataAccessException e) {
             return java.util.Optional.empty();
         }
@@ -123,14 +131,36 @@ public class DocumentService {
         String documentNumber = documentNumberGenerator.generateNextDocumentNumber();
 
         // 5. Instancier l'entité temporairement pour avoir son ID généré (UUID opaque)
-        MedicalDocumentEntity doc = new MedicalDocumentEntity(visit, documentNumber, "TEMP_PATH");
+        MedicalDocumentEntity doc = new MedicalDocumentEntity(visit, documentNumber, "TEMP_PATH", DocumentType.COMPTE_RENDU_CONSULTATION);
         UUID documentUuid = doc.getId();
 
-        // 6. Générer l'URL de vérification publique et le QR code
+        // 6. Gestion du versionnement
+        List<MedicalDocumentEntity> previousDocs = medicalDocumentRepository.findAllByVisitIdAndDocumentTypeOrderByVersionDesc(visit.getId(), DocumentType.COMPTE_RENDU_CONSULTATION);
+        if (!previousDocs.isEmpty()) {
+            MedicalDocumentEntity previous = previousDocs.get(0);
+            previous.setStatus(DocumentStatus.REMPLACE);
+            medicalDocumentRepository.save(previous);
+            doc.setPreviousDocumentId(previous.getId());
+            doc.setVersion(previous.getVersion() + 1);
+        } else {
+            doc.setVersion(1);
+        }
+
+        // Auteur
+        UserAccountEntity actor = getCurrentUser();
+        if (actor != null) {
+            doc.setAuthorUserId(actor.getId());
+        }
+
+        // 7. Générer l'URL de vérification publique et le QR code
         String verificationUrl = verificationBaseUrl + "/" + documentUuid;
+        String qrCodeUrl = "/api/public/documents/" + documentUuid + "/qr";
+        doc.setVerificationUrl(verificationUrl);
+        doc.setQrCodeUrl(qrCodeUrl);
+
         byte[] qrCodeBytes = qrCodeGeneratorService.generateQrCode(verificationUrl, 200, 200);
 
-        // 7. Générer le PDF
+        // 8. Générer le PDF
         byte[] pdfBytes = pdfGeneratorService.generatePdf(
                 visit,
                 consultation,
@@ -141,7 +171,10 @@ public class DocumentService {
                 qrCodeBytes
         );
 
-        // 8. Écrire le fichier PDF sur disque
+        // Calculer le hash SHA-256 du PDF
+        doc.setHash(calculateSha256(pdfBytes));
+
+        // 9. Écrire le fichier PDF sur disque
         try {
             Path storagePath = Paths.get(storageDir);
             if (!Files.exists(storagePath)) {
@@ -150,11 +183,10 @@ public class DocumentService {
             Path filePath = storagePath.resolve(documentNumber + ".pdf");
             Files.write(filePath, pdfBytes);
 
-            // 9. Mettre à jour le chemin réel et sauvegarder l'entité
+            // 10. Mettre à jour le chemin réel et sauvegarder l'entité
             doc.setFilePath(filePath.toAbsolutePath().toString());
             var savedDoc = medicalDocumentRepository.save(doc);
 
-            var actor = getCurrentUser();
             if (actor != null) {
                 auditService.logSuccess(
                         actor.getId(),
@@ -211,20 +243,6 @@ public class DocumentService {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // STORY-0603 — Révocation et annulation de documents médicaux
-    // -------------------------------------------------------------------------
-
-    /**
-     * Révoque un document (statut : REVOQUE).
-     * Action réservée aux rôles MEDECIN et ADMIN_CLINIQUE.
-     * Un document déjà révoqué ou annulé ne peut pas être révoqué une seconde fois.
-     *
-     * @param documentId UUID opaque du document médical
-     * @param reason     Motif de révocation (obligatoire pour l'audit)
-     * @param actorId    UUID de l'utilisateur qui effectue la révocation
-     * @return DocumentStatusResponse avec les métadonnées de traçabilité
-     */
     @Transactional
     public com.joprelys.backend.visit.api.DocumentStatusResponse revokeDocument(
             UUID documentId, String reason, UUID actorId) {
@@ -234,13 +252,13 @@ public class DocumentService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Document introuvable : " + documentId));
 
-        if (!"VALID".equals(doc.getStatus())) {
+        if (doc.getStatus() != DocumentStatus.VALID) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "Ce document ne peut pas être révoqué car son statut actuel est : " + doc.getStatus());
         }
 
-        doc.revoke(actorId, reason, "REVOQUE");
+        doc.revoke(actorId, reason, DocumentStatus.REVOQUE);
         medicalDocumentRepository.save(doc);
 
         var user = userAccountRepository.findById(actorId).orElse(null);
@@ -258,24 +276,12 @@ public class DocumentService {
         return new com.joprelys.backend.visit.api.DocumentStatusResponse(
                 doc.getId(),
                 doc.getDocumentNumber(),
-                doc.getStatus(),
+                doc.getStatus().name(),
                 doc.getRevokedAt(),
                 doc.getRevokedByUserId(),
                 doc.getRevocationReason());
     }
 
-    /**
-     * Annule un document (statut : ANNULE).
-     * Action réservée aux rôles ADMIN_CLINIQUE et MEDECIN.
-     * Différence sémantique avec la révocation :
-     *   REVOQUE = document invalide mais historiquement référençable
-     *   ANNULE  = document considéré comme n'ayant jamais dû exister
-     *
-     * @param documentId UUID opaque du document médical
-     * @param reason     Motif d'annulation (obligatoire pour l'audit)
-     * @param actorId    UUID de l'utilisateur qui effectue l'annulation
-     * @return DocumentStatusResponse avec les métadonnées de traçabilité
-     */
     @Transactional
     public com.joprelys.backend.visit.api.DocumentStatusResponse cancelDocument(
             UUID documentId, String reason, UUID actorId) {
@@ -285,12 +291,12 @@ public class DocumentService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Document introuvable : " + documentId));
 
-        if ("ANNULE".equals(doc.getStatus())) {
+        if (doc.getStatus() == DocumentStatus.ANNULE) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT, "Ce document est déjà annulé.");
         }
 
-        doc.revoke(actorId, reason, "ANNULE");
+        doc.revoke(actorId, reason, DocumentStatus.ANNULE);
         medicalDocumentRepository.save(doc);
 
         var user = userAccountRepository.findById(actorId).orElse(null);
@@ -308,7 +314,7 @@ public class DocumentService {
         return new com.joprelys.backend.visit.api.DocumentStatusResponse(
                 doc.getId(),
                 doc.getDocumentNumber(),
-                doc.getStatus(),
+                doc.getStatus().name(),
                 doc.getRevokedAt(),
                 doc.getRevokedByUserId(),
                 doc.getRevocationReason());
@@ -340,14 +346,34 @@ public class DocumentService {
         String documentNumber = documentNumberGenerator.generateNextDocumentNumber();
 
         // 6. Instancier l'entité temporairement (document_type = ORDONNANCE)
-        MedicalDocumentEntity doc = new MedicalDocumentEntity(visit, documentNumber, "TEMP_PATH", "ORDONNANCE");
+        MedicalDocumentEntity doc = new MedicalDocumentEntity(visit, documentNumber, "TEMP_PATH", DocumentType.ORDONNANCE);
         UUID documentUuid = doc.getId();
 
-        // 7. Générer l'URL de vérification publique et le QR code
+        // 7. Versionnement logic
+        List<MedicalDocumentEntity> previousDocs = medicalDocumentRepository.findAllByVisitIdAndDocumentTypeOrderByVersionDesc(visit.getId(), DocumentType.ORDONNANCE);
+        if (!previousDocs.isEmpty()) {
+            MedicalDocumentEntity previous = previousDocs.get(0);
+            previous.setStatus(DocumentStatus.REMPLACE);
+            medicalDocumentRepository.save(previous);
+            doc.setPreviousDocumentId(previous.getId());
+            doc.setVersion(previous.getVersion() + 1);
+        } else {
+            doc.setVersion(1);
+        }
+
+        if (actorUserId != null) {
+            doc.setAuthorUserId(actorUserId);
+        }
+
+        // 8. Générer l'URL de vérification publique et le QR code
         String verificationUrl = verificationBaseUrl + "/" + documentUuid;
+        String qrCodeUrl = "/api/public/documents/" + documentUuid + "/qr";
+        doc.setVerificationUrl(verificationUrl);
+        doc.setQrCodeUrl(qrCodeUrl);
+
         byte[] qrCodeBytes = qrCodeGeneratorService.generateQrCode(verificationUrl, 200, 200);
 
-        // 8. Générer le PDF
+        // 9. Générer le PDF
         byte[] pdfBytes = pdfGeneratorService.generatePrescriptionPdf(
                 visit,
                 consultation,
@@ -359,7 +385,10 @@ public class DocumentService {
                 qrCodeBytes
         );
 
-        // 9. Écrire le fichier PDF sur disque
+        // Hash
+        doc.setHash(calculateSha256(pdfBytes));
+
+        // 10. Écrire le fichier PDF sur disque
         try {
             Path storagePath = Paths.get(storageDir);
             if (!Files.exists(storagePath)) {
@@ -368,16 +397,16 @@ public class DocumentService {
             Path filePath = storagePath.resolve(documentNumber + ".pdf");
             Files.write(filePath, pdfBytes);
 
-            // 10. Mettre à jour le chemin réel et sauvegarder l'entité
+            // 11. Mettre à jour le chemin réel et sauvegarder l'entité
             doc.setFilePath(filePath.toAbsolutePath().toString());
             var savedDoc = medicalDocumentRepository.save(doc);
 
-            // 11. Mettre à jour la prescription avec le documentId et issuedAt
+            // 12. Mettre à jour la prescription avec le documentId et issuedAt
             prescription.setDocumentId(savedDoc.getId());
             prescription.setIssuedAt(Instant.now());
             prescriptionRepository.save(prescription);
 
-            // 12. Log success
+            // 13. Log success
             if (actorUserId != null) {
                 auditService.logSuccess(
                         actorUserId,
@@ -393,6 +422,34 @@ public class DocumentService {
             return savedDoc;
         } catch (Exception e) {
             throw new RuntimeException("Failed to save prescription document", e);
+        }
+    }
+
+    public byte[] getQrCodeBytes(UUID documentId) {
+        MedicalDocumentEntity doc = medicalDocumentRepository.findById(documentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable : " + documentId));
+
+        String verificationUrl = doc.getVerificationUrl();
+        if (verificationUrl == null || verificationUrl.isBlank()) {
+            verificationUrl = verificationBaseUrl + "/" + doc.getId();
+        }
+        return qrCodeGeneratorService.generateQrCode(verificationUrl, 200, 200);
+    }
+
+    private String calculateSha256(byte[] data) {
+        if (data == null) return "";
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = digest.digest(data);
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hashBytes) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
         }
     }
 

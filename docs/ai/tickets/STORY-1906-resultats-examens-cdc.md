@@ -6,7 +6,7 @@
 | **Epic** | EPIC-0014 |
 | **Type** | User Story |
 | **Titre** | Alignement Module 9 — Résultats d’examens conformes CDC |
-| **Statut** | READY |
+| **Statut** | DONE |
 | **Priorité** | P0 |
 | **Stack** | Full-stack |
 | **Profil recommandé** | Senior Backend |
@@ -14,7 +14,7 @@
 | **Estimation Intermédiaire** | 2.5j |
 | **Estimation Junior** | 4.0j |
 | **Sprint cible** | SPRINT-0011 |
-| **Assigné** | À assigner |
+| **Assigné** | Antigravity |
 | **Reviewer** | Lead Developer |
 | **Dernière MAJ** | 2026-07-05 |
 
@@ -30,21 +30,21 @@ Le CDC exige que les résultats d’examens aient un cycle de vie strict (brouil
 
 ### Backend
 
-- [ ] `LabResultEntity` contient `status` (`DRAFT`, `VALIDATED`, `CANCELLED`).
-- [ ] `validator_user_id` remplace `validator_name` (UUID lié à `users`).
-- [ ] `conclusion` est persisté.
-- [ ] `document_id` lie le résultat à `medical_documents`.
-- [ ] FR-RESULT-001 : un résultat `VALIDATED` ne peut plus être modifié ; toute modification génère une nouvelle version (ou nouvelle entité liée).
-- [ ] FR-RESULT-004 : endpoint d’export structuré (`GET /api/patients/{id}/exam-results/export?format=csv|json`).
-- [ ] FR-RESULT-005 : endpoint FHIR `GET /fhir/DiagnosticReport?patient={id}` et `GET /fhir/Observation?patient={id}`.
-- [ ] `result_number` généré via séquence DB ou UUID sûr en concurrence.
+- [x] `LabResultEntity` contient `status` (`DRAFT`, `VALIDATED`, `CANCELLED`).
+- [x] `validator_user_id` remplace `validator_name` (UUID lié à `users`).
+- [x] `conclusion` est persisté.
+- [x] `document_id` lie le résultat à `medical_documents`.
+- [x] FR-RESULT-001 : un résultat `VALIDATED` ne peut plus être modifié ; toute modification génère une nouvelle version (ou nouvelle entité liée).
+- [x] FR-RESULT-004 : endpoint d’export structuré (`GET /api/patients/{id}/exam-results/export?format=csv|json`).
+- [x] FR-RESULT-005 : endpoint FHIR `GET /fhir/DiagnosticReport?patient={id}` et `GET /fhir/Observation?patient={id}`.
+- [x] `result_number` généré via séquence DB ou UUID sûr en concurrence.
 
 ### Frontend
 
-- [ ] Page "Mes résultats" dans le portail patient (`/patient/results`).
-- [ ] Écran de validation de résultat dans le portail labo.
-- [ ] Affichage de la conclusion et du statut de validation.
-- [ ] Internationalisation FR/EN.
+- [x] Page "Mes résultats" dans le portail patient (`/patient/results`).
+- [x] Écran de validation de résultat dans le portail labo.
+- [x] Affichage de la conclusion et du statut de validation.
+- [x] Internationalisation FR/EN.
 
 ---
 
@@ -93,10 +93,10 @@ Le CDC exige que les résultats d’examens aient un cycle de vie strict (brouil
 
 ## 5. Tests attendus
 
-- [ ] Backend : test d’immutabilité d’un résultat validé.
-- [ ] Backend : test d’export CSV/JSON.
-- [ ] Backend : test FHIR DiagnosticReport/Observation.
-- [ ] Frontend : test de la page résultats patient.
+- [x] Backend : test d’immutabilité d’un résultat validé.
+- [x] Backend : test d’export CSV/JSON.
+- [x] Backend : test FHIR DiagnosticReport/Observation.
+- [x] Frontend : test de la page résultats patient.
 
 ---
 

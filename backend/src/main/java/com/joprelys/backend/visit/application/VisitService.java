@@ -244,4 +244,9 @@ public class VisitService {
 		}
 		return vitalsRepository.findByVisitId(visitId);
 	}
+
+	@Transactional(readOnly = true)
+	public List<VisitEntity> getPatientVisits(UUID patientId) {
+		return visitRepository.findByPatientId(patientId);
+	}
 }

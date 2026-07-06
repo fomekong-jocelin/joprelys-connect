@@ -2,6 +2,7 @@ package com.joprelys.backend.lab.api;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -15,7 +16,12 @@ import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
+import com.joprelys.backend.lab.infrastructure.persistence.LabOrderRepository;
+import com.joprelys.backend.lab.infrastructure.persistence.LabOrderStatus;
+import com.joprelys.backend.lab.infrastructure.persistence.ExamType;
+import com.joprelys.backend.lab.infrastructure.persistence.LabOrderEntity;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,9 +66,13 @@ public class LabOrderControllerTest {
 	private UserAccountEntity patientUser;
 	private UserAccountEntity biologist;
 	
+	@Autowired
+	private LabOrderRepository labOrderRepository;
+
 	private String tokenDoctor;
 	private String tokenPatient;
 	private String tokenBiologist;
+	private String tokenOtherBiologist;
 
 	@BeforeEach
 	void setUp() {
@@ -96,6 +106,15 @@ public class LabOrderControllerTest {
 		biologist.setOrganizationId(org.getId());
 		biologist = userAccountRepository.save(biologist);
 		tokenBiologist = jwtService.createToken(biologist).value();
+
+		// Biologiste d'une autre organisation
+		OrganizationEntity otherOrg = new OrganizationEntity("Clinique Autre", "contact@autre.org", "654321", "Adresse", "Douala");
+		otherOrg = organizationRepository.save(otherOrg);
+
+		UserAccountEntity otherBiologist = new UserAccountEntity("autrebiologiste@joprelys.local", "Dr. Autre Biologiste", "BIOLOGISTE", "passhash");
+		otherBiologist.setOrganizationId(otherOrg.getId());
+		otherBiologist = userAccountRepository.save(otherBiologist);
+		tokenOtherBiologist = jwtService.createToken(otherBiologist).value();
 
 		TenantContext.setTenantId(org.getId());
 
@@ -216,5 +235,113 @@ public class LabOrderControllerTest {
 		mockMvc.perform(get("/api/lab-orders")
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenBiologist))
 				.andExpect(status().isOk());
+	}
+
+	@Test
+	void givenBiologistSameOrganization_whenUpdateStatus_thenSuccess() throws Exception {
+		// Créer une demande ciblée sur l'organisation du biologiste
+		LabOrderEntity order = new LabOrderEntity(
+				"EXAM-REQ-20260703-000200",
+				patient,
+				visit,
+				doctor,
+				org.getId(),
+				ExamType.LABORATOIRE,
+				List.of("NFS"),
+				"Bilan",
+				"NORMALE",
+				org.getId()
+		);
+		order.setOrganizationId(org.getId());
+		order = labOrderRepository.save(order);
+
+		String jsonRequest = """
+				{
+					"status": "SAMPLE_COLLECTED"
+				}
+				""";
+
+		mockMvc.perform(patch("/api/lab-orders/" + order.getId() + "/status")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenBiologist)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(jsonRequest))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("SAMPLE_COLLECTED"));
+	}
+
+	@Test
+	void givenBiologistDifferentOrganization_whenUpdateStatusTargeted_thenForbidden() throws Exception {
+		// Créer une demande ciblée sur l'organisation 'org' (clinique pilote)
+		LabOrderEntity order = new LabOrderEntity(
+				"EXAM-REQ-20260703-000201",
+				patient,
+				visit,
+				doctor,
+				org.getId(), // Cible = org
+				ExamType.LABORATOIRE,
+				List.of("NFS"),
+				"Bilan",
+				"NORMALE",
+				org.getId()
+		);
+		order.setOrganizationId(org.getId());
+		order = labOrderRepository.save(order);
+
+		String jsonRequest = """
+				{
+					"status": "SAMPLE_COLLECTED"
+				}
+				""";
+
+		// otherBiologist (qui appartient à otherOrg) ne doit pas pouvoir mettre à jour le statut
+		mockMvc.perform(patch("/api/lab-orders/" + order.getId() + "/status")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenOtherBiologist)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(jsonRequest))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void givenPaymentWorkflow_whenUpdateStatus_thenSuccess() throws Exception {
+		LabOrderEntity order = new LabOrderEntity(
+				"EXAM-REQ-20260703-000202",
+				patient,
+				visit,
+				doctor,
+				org.getId(),
+				ExamType.LABORATOIRE,
+				List.of("NFS"),
+				"Bilan",
+				"NORMALE",
+				org.getId()
+		);
+		order.setOrganizationId(org.getId());
+		order = labOrderRepository.save(order);
+
+		// Passer à AWAITING_PAYMENT
+		String jsonRequest = """
+				{
+					"status": "AWAITING_PAYMENT"
+				}
+				""";
+		mockMvc.perform(patch("/api/lab-orders/" + order.getId() + "/status")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenBiologist)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(jsonRequest))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("AWAITING_PAYMENT"));
+
+		// Passer à PAID
+		jsonRequest = """
+				{
+					"status": "PAID"
+				}
+				""";
+		mockMvc.perform(patch("/api/lab-orders/" + order.getId() + "/status")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenBiologist)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(jsonRequest))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("PAID"));
 	}
 }

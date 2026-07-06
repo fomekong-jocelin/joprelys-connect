@@ -154,6 +154,65 @@ export class PatientPortalService {
       responseType: 'blob'
     });
   }
+
+  getOwnResults(): Observable<any[]> {
+    return this.http.get<any[]>('/api/patient/results');
+  }
+
+  exportResults(patientId: string, format: string): Observable<Blob> {
+    return this.http.get(`/api/patients/${patientId}/exam-results/export?format=${format}`, {
+      responseType: 'blob'
+    });
+  }
+
+  downloadResultPdf(resultId: string): Observable<Blob> {
+    return this.http.get(`/api/patient/results/${resultId}/pdf`, {
+      responseType: 'blob'
+    });
+  }
+
+  // ─── STORY-1909 : Méthodes CDC de gestion des consentements ───────────────
+
+  /** Historique complet des consentements avec types et statuts CDC. */
+  getConsentHistory(): Observable<ConsentHistoryItem[]> {
+    return this.http.get<ConsentHistoryItem[]>('/api/patient/consents/history');
+  }
+
+  /** FR-CONSENT-004 : Révocation d'un consentement approuvé. */
+  revokeConsent(consentId: string): Observable<ConsentHistoryItem> {
+    return this.http.post<ConsentHistoryItem>(`/api/patient/consents/${consentId}/revoke`, {});
+  }
+
+  /** Approbation d'un consentement en attente. */
+  approveConsent(consentId: string): Observable<ConsentHistoryItem> {
+    return this.http.post<ConsentHistoryItem>(`/api/patient/consents/${consentId}/approve`, {});
+  }
+
+  /** Rejet d'un consentement en attente. */
+  rejectConsent(consentId: string): Observable<ConsentHistoryItem> {
+    return this.http.post<ConsentHistoryItem>(`/api/patient/consents/${consentId}/reject`, {});
+  }
+
+  /** STORY-1909 : Révocation d'un accès externe approuvé par le patient. */
+  revokeApprovedAccessRequest(id: string): Observable<ExternalAccessResponse> {
+    return this.http.post<ExternalAccessResponse>(`/api/patient/access-requests/${id}/revoke`, {});
+  }
+
+  /** STORY-1909 : Génère un OTP pour approuver un consentement par canal OTP. */
+  requestConsentOtp(globalPatientNumber: string, consentId: string): Observable<void> {
+    return this.http.post<void>(
+      `/api/public/patient/auth/consent-otp?globalPatientNumber=${encodeURIComponent(globalPatientNumber)}&consentId=${encodeURIComponent(consentId)}`,
+      {}
+    );
+  }
+
+  /** STORY-1909 : Vérifie l'OTP de consentement. */
+  verifyConsentOtp(globalPatientNumber: string, consentId: string, otpCode: string): Observable<void> {
+    return this.http.post<void>(
+      `/api/public/patient/auth/consent-otp/verify?globalPatientNumber=${encodeURIComponent(globalPatientNumber)}&consentId=${encodeURIComponent(consentId)}&otpCode=${encodeURIComponent(otpCode)}`,
+      {}
+    );
+  }
 }
 
 export interface PatientConsent {
@@ -162,7 +221,31 @@ export interface PatientConsent {
   status: string;
   isCreator: boolean;
   scopes?: string;            // ex: "medical_records,prescriptions,lab_results,allergies_history"
-  validationChannel?: string; // PORTAL | OTP_SMS | OTP_EMAIL
+  validationChannel?: string; // PORTAL | OTP_SMS | OTP_EMAIL | AGENT_HABILITE
+}
+
+/**
+ * STORY-1909 — Consentement CDC complet avec type, durée, statut et motif.
+ */
+export interface ConsentHistoryItem {
+  id: string;
+  patientId: string;
+  organizationId: string;
+  /** Statut CDC : REQUESTED | APPROVED | REJECTED | EXPIRED | REVOKED */
+  status: string;
+  /** Type CDC : PONCTUEL | TEMPORAIRE | ETABLISSEMENT | PROFESSIONNEL | LIMITE | URGENCE */
+  consentType: string;
+  requesterUserId?: string;
+  requesterOrganizationId?: string;
+  reason?: string;
+  scopes?: string;
+  validationChannel?: string;
+  requestedAt?: string;
+  approvedAt?: string;
+  /** FR-CONSENT-003 : date d'expiration */
+  expiresAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PatientAuditLog {

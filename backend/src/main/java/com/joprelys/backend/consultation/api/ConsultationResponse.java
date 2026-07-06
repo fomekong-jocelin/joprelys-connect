@@ -77,7 +77,7 @@ public record ConsultationResponse(
 				entity.getCreatedAt(),
 				entity.getUpdatedAt(),
 				document != null ? document.getId() : null,
-				document != null ? document.getStatus() : null,
+				document != null ? document.getStatus() != null ? document.getStatus().name() : null : null,
 				vitals,
 				prescriptionItems,
 				prescription != null ? prescription.getId() : null,

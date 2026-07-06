@@ -2,6 +2,7 @@ package com.joprelys.backend.patient.api;
 
 import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationRepository;
 import com.joprelys.backend.patient.application.PatientAccessGuardService;
+import com.joprelys.backend.patient.application.PatientConsentService;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.visit.application.DocumentService;
@@ -40,6 +41,9 @@ public class PatientPortalController {
     private final com.joprelys.backend.notification.application.NotificationService notificationService;
     private final com.joprelys.backend.prescription.application.PrescriptionService prescriptionService;
     private final com.joprelys.backend.patient.application.PatientSummaryService patientSummaryService;
+    private final com.joprelys.backend.lab.application.LabResultService labResultService;
+    // STORY-1909: Service CDC de gestion des consentements
+    private final PatientConsentService patientConsentService;
 
     public PatientPortalController(
             PatientRepository patientRepository,
@@ -54,7 +58,9 @@ public class PatientPortalController {
             ExternalAccessService externalAccessService,
             com.joprelys.backend.notification.application.NotificationService notificationService,
             com.joprelys.backend.prescription.application.PrescriptionService prescriptionService,
-            com.joprelys.backend.patient.application.PatientSummaryService patientSummaryService) {
+            com.joprelys.backend.patient.application.PatientSummaryService patientSummaryService,
+            com.joprelys.backend.lab.application.LabResultService labResultService,
+            PatientConsentService patientConsentService) {
         this.patientRepository = patientRepository;
         this.consultationRepository = consultationRepository;
         this.medicalDocumentRepository = medicalDocumentRepository;
@@ -68,6 +74,8 @@ public class PatientPortalController {
         this.notificationService = notificationService;
         this.prescriptionService = prescriptionService;
         this.patientSummaryService = patientSummaryService;
+        this.labResultService = labResultService;
+        this.patientConsentService = patientConsentService;
     }
 
     @GetMapping("/me")
@@ -102,7 +110,7 @@ public class PatientPortalController {
                             c.getVisit().getOrientation(), // Orienté vers le service clinique comme nom de clinique/service
                             c.getDiagnosis(),
                             doc != null ? doc.getId() : null,
-                            doc != null ? doc.getStatus() : null,
+                            doc != null ? doc.getStatus() != null ? doc.getStatus().name() : null : null,
                             c.getSymptoms(),
                             c.getClinicalExam(),
                             c.getAdvice(),
@@ -137,6 +145,29 @@ public class PatientPortalController {
                 patient.getEmail(),
                 consultations
         );
+    }
+
+    @GetMapping("/results")
+    public List<com.joprelys.backend.lab.api.LabResultResponse> getOwnResults(Authentication authentication) {
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
+        return labResultService.getPatientResults(patient.getId());
+    }
+
+    @GetMapping("/results/{resultId}/pdf")
+    public ResponseEntity<byte[]> downloadOwnResultPdf(@PathVariable UUID resultId, Authentication authentication) {
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
+        var result = labResultService.getResultById(resultId);
+
+        if (!result.patientId().equals(patient.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Vous n'êtes pas autorisé à accéder à ce résultat.");
+        }
+
+        byte[] pdfBytes = labResultService.getResultPdfBytes(resultId);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"result-" + result.resultNumber() + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
     }
 
     @GetMapping("/medical-summary")
@@ -231,6 +262,49 @@ public class PatientPortalController {
             consent.setValidationChannel("PORTAL");
         }
         patientConsentRepository.save(consent);
+    }
+
+    // ─── STORY-1909 : Endpoints CDC consentements complets ────────────────────
+
+    /** Historique complet des consentements du patient (tous types et statuts CDC). */
+    @GetMapping("/consents/history")
+    public List<ConsentResponse> getConsentHistory(Authentication authentication) {
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
+        return patientConsentService.getConsentHistory(patient.getId());
+    }
+
+    /** FR-CONSENT-004 : Révocation d'un consentement approuvé (APPROVED → REVOKED). */
+    @PostMapping("/consents/{consentId}/revoke")
+    public ConsentResponse revokeConsent(@PathVariable UUID consentId, Authentication authentication) {
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
+        return patientConsentService.revokeConsent(patient.getId(), consentId);
+    }
+
+    /** Approbation d'un consentement en attente (REQUESTED → APPROVED). */
+    @PostMapping("/consents/{consentId}/approve")
+    public ConsentResponse approveConsent(@PathVariable UUID consentId, Authentication authentication) {
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
+        return patientConsentService.approveConsent(patient.getId(), consentId);
+    }
+
+    /** Rejet d'un consentement en attente (REQUESTED → REJECTED). */
+    @PostMapping("/consents/{consentId}/reject")
+    public ConsentResponse rejectConsent(@PathVariable UUID consentId, Authentication authentication) {
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
+        return patientConsentService.rejectConsent(patient.getId(), consentId);
+    }
+
+    // ─── STORY-1909 : Révocation d'un accès externe approuvé ─────────────────
+
+    /**
+     * Le patient révoque un accès externe déjà approuvé (status APPROUVEE → REFUSEE).
+     * Journalise l'action (FR-CONSENT-005).
+     */
+    @PostMapping("/access-requests/{id}/revoke")
+    public ExternalAccessResponse revokeApprovedAccessRequest(
+            @PathVariable UUID id, Authentication authentication) {
+        PatientEntity patient = patientAccessGuardService.resolve(authentication);
+        return externalAccessService.revokeApprovedRequest(patient.getId(), id);
     }
 
     @GetMapping("/audit-logs")

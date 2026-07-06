@@ -5,6 +5,7 @@ import { PatientApiService } from './patient-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AuthTokenStorageService } from '../auth/auth-token-storage.service';
 import { Hospitalization, HospitalizationNote } from './patient.models';
+import { StaffApiService } from '../clinic/staff/staff-api.service';
 
 @Component({
   selector: 'app-patient-hospitalization',
@@ -24,6 +25,12 @@ import { Hospitalization, HospitalizationNote } from './patient.models';
                 {{ activeHospitalization()?.serviceName }} — {{ t('patients.hospitalization.room') }} {{ activeHospitalization()?.roomNumber }} | {{ t('patients.hospitalization.bed') }} {{ activeHospitalization()?.bedNumber }}
               </h4>
               <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                <strong>N° Séjour :</strong> <span class="font-mono font-bold text-slate-700 dark:text-slate-300">{{ activeHospitalization()?.hospitalizationNumber }}</span>
+              </p>
+              <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                <strong>Médecin responsable :</strong> <span class="text-slate-700 dark:text-slate-300">{{ staffMap().get(activeHospitalization()?.responsiblePractitionerId || '') || 'Non spécifié' }}</span>
+              </p>
+              <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                 {{ t('patients.hospitalization.admittedAt') }} : {{ activeHospitalization()?.admittedAt | date:'dd/MM/yyyy HH:mm' }}
               </p>
             </div>
@@ -112,15 +119,21 @@ import { Hospitalization, HospitalizationNote } from './patient.models';
           <div class="divide-y divide-slate-100 dark:divide-slate-800/80">
             @for (hosp of pastHospitalizations(); track hosp.id) {
               <div class="py-3 first:pt-0 last:pb-0 flex justify-between items-start">
-                <div>
+                <div class="space-y-1">
                   <h5 class="text-xs font-bold text-slate-800 dark:text-slate-200">
                     {{ hosp.serviceName }} — {{ t('patients.hospitalization.room') }} {{ hosp.roomNumber }} | {{ hosp.bedNumber }}
                   </h5>
-                  <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                  <p class="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+                    N° Séjour : {{ hosp.hospitalizationNumber }}
+                  </p>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                    Médecin responsable : {{ staffMap().get(hosp.responsiblePractitionerId || '') || 'Non spécifié' }}
+                  </p>
+                  <p class="text-[11px] text-slate-400 dark:text-slate-500">
                     {{ hosp.admittedAt | date:'dd/MM/yyyy' }} @if (hosp.dischargedAt) { au {{ hosp.dischargedAt | date:'dd/MM/yyyy' }} }
                   </p>
                   @if (hosp.dischargeDiagnosis) {
-                    <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                    <p class="text-xs text-slate-600 dark:text-slate-400">
                       <strong>Diag :</strong> {{ hosp.dischargeDiagnosis }}
                     </p>
                   }
@@ -156,6 +169,26 @@ import { Hospitalization, HospitalizationNote } from './patient.models';
                   {{ admitError() }}
                 </div>
               }
+              <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.hospitalization.visit') }}*</label>
+                <select [(ngModel)]="visitId" name="visit" required class="ui-select">
+                  <option value="">-- {{ t('patients.hospitalization.selectVisit') }} --</option>
+                  @for (v of patientVisits(); track v.id) {
+                    <option [value]="v.id">{{ v.visitNumber }} ({{ v.reason }} - {{ v.createdAt | date:'dd/MM/yyyy' }})</option>
+                  }
+                </select>
+              </div>
+              <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.hospitalization.responsiblePractitioner') }}*</label>
+                <select [(ngModel)]="responsiblePractitionerId" name="practitioner" required class="ui-select">
+                  <option value="">-- {{ t('patients.hospitalization.selectPractitioner') }} --</option>
+                  @for (p of staffList(); track p.id) {
+                    @if (p.role === 'MEDECIN' || p.role === 'ADMIN_CLINIQUE') {
+                      <option [value]="p.id">{{ p.displayName }} ({{ p.role }})</option>
+                    }
+                  }
+                </select>
+              </div>
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.hospitalization.service') }}*</label>
                 <select [(ngModel)]="serviceName" name="service" class="ui-select">
@@ -225,12 +258,15 @@ export class PatientHospitalizationComponent implements OnInit {
   private readonly patientApi = inject(PatientApiService);
   private readonly tokenStorage = inject(AuthTokenStorageService);
   private readonly i18n = inject(I18nService);
+  private readonly staffApi = inject(StaffApiService);
 
   readonly t = (key: string) => this.i18n.t(key);
 
   readonly list = signal<Hospitalization[]>([]);
   readonly notes = signal<HospitalizationNote[]>([]);
   readonly loadingNotes = signal<boolean>(false);
+  readonly staffList = signal<any[]>([]);
+  readonly patientVisits = signal<any[]>([]);
 
   // Modales
   readonly showAdmitModal = signal<boolean>(false);
@@ -242,6 +278,8 @@ export class PatientHospitalizationComponent implements OnInit {
   roomNumber = '';
   bedNumber = '';
   admissionReason = '';
+  visitId = '';
+  responsiblePractitionerId = '';
 
   // Formulaire de sortie
   dischargeDiagnosis = '';
@@ -260,10 +298,32 @@ export class PatientHospitalizationComponent implements OnInit {
     this.list().filter(h => h.status !== 'EN_COURS')
   );
 
+  readonly staffMap = computed(() => {
+    const map = new Map<string, string>();
+    for (const p of this.staffList()) {
+      map.set(p.id, p.displayName);
+    }
+    return map;
+  });
+
   ngOnInit(): void {
     if (this.patientId) {
       this.loadHospitalizations();
+      this.loadStaff();
+      this.loadVisits();
     }
+  }
+
+  loadStaff(): void {
+    this.staffApi.list().subscribe({
+      next: (data) => this.staffList.set(data)
+    });
+  }
+
+  loadVisits(): void {
+    this.patientApi.getPatientVisits(this.patientId).subscribe({
+      next: (data) => this.patientVisits.set(data)
+    });
   }
 
   loadHospitalizations(): void {
@@ -298,13 +358,16 @@ export class PatientHospitalizationComponent implements OnInit {
     this.roomNumber = '';
     this.bedNumber = '';
     this.admissionReason = '';
+    this.visitId = '';
+    this.responsiblePractitionerId = '';
     this.admitError.set(null);
+    this.loadVisits();
     this.showAdmitModal.set(true);
   }
 
   saveAdmission(event: Event): void {
     event.preventDefault();
-    if (!this.roomNumber.trim() || !this.bedNumber.trim() || !this.admissionReason.trim()) return;
+    if (!this.roomNumber.trim() || !this.bedNumber.trim() || !this.admissionReason.trim() || !this.visitId || !this.responsiblePractitionerId) return;
 
     this.admitError.set(null);
     this.patientApi.admitPatient({
@@ -312,7 +375,9 @@ export class PatientHospitalizationComponent implements OnInit {
       serviceName: this.serviceName,
       roomNumber: this.roomNumber.trim(),
       bedNumber: this.bedNumber.trim(),
-      admissionReason: this.admissionReason.trim()
+      admissionReason: this.admissionReason.trim(),
+      visitId: this.visitId,
+      responsiblePractitionerId: this.responsiblePractitionerId
     }).subscribe({
       next: () => {
         this.showAdmitModal.set(false);

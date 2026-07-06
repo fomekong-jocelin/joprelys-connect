@@ -19,4 +19,7 @@ public interface HospitalizationRepository extends JpaRepository<Hospitalization
 
     @Query("SELECT h FROM HospitalizationEntity h WHERE h.roomNumber = :roomNumber AND h.bedNumber = :bedNumber AND h.status = 'EN_COURS'")
     Optional<HospitalizationEntity> findActiveByBed(@Param("roomNumber") String roomNumber, @Param("bedNumber") String bedNumber);
+
+    @Query(value = "SELECT nextval('hospitalization_number_seq')", nativeQuery = true)
+    Long getNextHospitalizationNumberSequenceValue();
 }

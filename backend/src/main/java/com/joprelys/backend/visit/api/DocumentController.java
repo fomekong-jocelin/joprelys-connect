@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.UUID;
@@ -80,6 +81,30 @@ public class DocumentController {
     })
     public DocumentVerificationResponse verifyAnonymously(@Parameter(description = "Identifiant du document") @PathVariable UUID id) {
         return documentService.verifyDocument(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable."));
+    }
+
+    @GetMapping(value = "/api/public/documents/{id}/qr", produces = MediaType.IMAGE_PNG_VALUE)
+    @Operation(summary = "Télécharger le QR Code d'un document (public)", description = "Récupère l'image PNG du QR Code associé à un document.")
+    public ResponseEntity<byte[]> getQrCode(@PathVariable UUID id) {
+        byte[] qrBytes = documentService.getQrCodeBytes(id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .body(qrBytes);
+    }
+
+    @GetMapping("/api/public/documents/search")
+    @Operation(summary = "Rechercher un document par numéro (public)",
+            description = "Retourne l'identifiant du document correspondant au numéro fourni, sans données sensibles.")
+    public ResponseEntity<java.util.Map<String, Object>> searchDocumentByNumber(
+            @RequestParam("number") String documentNumber) {
+        return medicalDocumentRepository.findByDocumentNumber(documentNumber)
+                .map(doc -> {
+                    java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+                    result.put("id", doc.getId().toString());
+                    result.put("documentNumber", doc.getDocumentNumber());
+                    return ResponseEntity.ok(result);
+                })
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable."));
     }
 

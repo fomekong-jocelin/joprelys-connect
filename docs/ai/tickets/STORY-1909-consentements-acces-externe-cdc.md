@@ -6,7 +6,7 @@
 | **Epic** | EPIC-0014 |
 | **Type** | User Story |
 | **Titre** | Alignement Module 12 — Consentements patient et accès externe conformes CDC |
-| **Statut** | READY |
+| **Statut** | IN_PROGRESS |
 | **Priorité** | P0 |
 | **Stack** | Full-stack |
 | **Profil recommandé** | Senior Backend + Frontend Intermédiaire |
@@ -14,7 +14,7 @@
 | **Estimation Intermédiaire** | 2.5j |
 | **Estimation Junior** | 4.0j |
 | **Sprint cible** | SPRINT-0011 |
-| **Assigné** | À assigner |
+| **Assigné** | Antigravity |
 | **Reviewer** | Lead Developer |
 | **Dernière MAJ** | 2026-07-05 |
 
@@ -30,22 +30,22 @@ Le CDC définit plusieurs types de consentement (ponctuel, temporaire, par étab
 
 ### Backend
 
-- [ ] `PatientConsentEntity` contient `requester_user_id`, `requester_organization_id`, `reason`, `requested_at`, `approved_at`, `expires_at`, `consent_type` (enum), `validation_channel` (enum).
-- [ ] Statuts : `REQUESTED`, `APPROVED`, `REJECTED`, `EXPIRED`, `REVOKED`.
-- [ ] Types de consentement : `PONCTUEL`, `TEMPORAIRE`, `ETABLISSEMENT`, `PROFESSIONNEL`, `LIMITE`, `URGENCE`.
-- [ ] FR-CONSENT-003 : chaque consentement a une durée (`expires_at`).
-- [ ] FR-CONSENT-004 : le patient peut révoquer un consentement.
-- [ ] FR-CONSENT-005 : tout accès basé sur consentement est journalisé.
+- [x] `PatientConsentEntity` contient `requester_user_id`, `requester_organization_id`, `reason`, `requested_at`, `approved_at`, `expires_at`, `consent_type` (enum), `validation_channel` (enum).
+- [x] Statuts : `REQUESTED`, `APPROVED`, `REJECTED`, `EXPIRED`, `REVOKED`.
+- [x] Types de consentement : `PONCTUEL`, `TEMPORAIRE`, `ETABLISSEMENT`, `PROFESSIONNEL`, `LIMITE`, `URGENCE`.
+- [x] FR-CONSENT-003 : chaque consentement a une durée (`expires_at`).
+- [x] FR-CONSENT-004 : le patient peut révoquer un consentement.
+- [x] FR-CONSENT-005 : tout accès basé sur consentement est journalisé.
 - [ ] Une demande d’accès externe approuvée génère un `PatientConsent` temporaire.
-- [ ] Le patient peut révoquer une demande d’accès externe déjà approuvée.
-- [ ] OTP d’approbation disponible comme canal de validation.
+- [x] Le patient peut révoquer une demande d’accès externe déjà approuvée.
+- [x] OTP d’approbation disponible comme canal de validation.
 
 ### Frontend
 
-- [ ] Interface de gestion des consentements avec types et durées.
-- [ ] Interface de révocation des accès approuvés.
-- [ ] Affichage de l’historique des consentements.
-- [ ] Internationalisation FR/EN.
+- [x] Interface de gestion des consentements avec types et durées.
+- [x] Interface de révocation des accès approuvés.
+- [x] Affichage de l’historique des consentements.
+- [x] Internationalisation FR/EN.
 
 ---
 
@@ -53,20 +53,20 @@ Le CDC définit plusieurs types de consentement (ponctuel, temporaire, par étab
 
 ### Backend
 
-1. Migration V38 : remodeler `patient_consents` avec les nouveaux champs.
-2. Créer enums `ConsentType`, `ConsentStatus`, `ValidationChannel`.
-3. Modifier `PatientService.validateAccess()` pour prendre en compte `expires_at` et les types.
-4. Modifier `ExternalAccessService` pour créer un `PatientConsent` temporaire à l’approbation.
-5. Ajouter endpoint de révocation côté patient.
-6. Implémenter OTP d’approbation via `PatientAuthService`.
-7. Tests.
+1. [x] Migration V38 : remodeler `patient_consents` avec les nouveaux champs.
+2. [x] Créer enums `ConsentType`, `ConsentStatus`, `ValidationChannel`.
+3. [x] Modifier `PatientService.validateAccess()` pour prendre en compte `expires_at` et les types.
+4. [ ] Modifier `ExternalAccessService` pour créer un `PatientConsent` temporaire à l’approbation.
+5. [x] Ajouter endpoint de révocation côté patient.
+6. [x] Implémenter OTP d’approbation via `PatientAuthService`.
+7. [ ] Tests.
 
 ### Frontend
 
-1. Modifier `patient-consents-list.component.ts` et `patient-consents-page.component.ts`.
-2. Modifier `patient-requests-list.component.ts` pour la révocation.
-3. Mettre à jour `patient-portal.service.ts`.
-4. Tests.
+1. [x] Modifier `patient-consents-list.component.ts` et `patient-consents-page.component.ts`.
+2. [x] Modifier `patient-requests-list.component.ts` pour la révocation.
+3. [x] Mettre à jour `patient-portal.service.ts`.
+4. [ ] Tests.
 
 ---
 
@@ -100,8 +100,6 @@ Le CDC définit plusieurs types de consentement (ponctuel, temporaire, par étab
 - [ ] Backend : test d’OTP d’approbation.
 - [ ] Frontend : test de l’interface de consentements.
 
----
-
 ## 6. Dépendances
 
 - STORY-1901 pour la validation des scopes dans la synthèse.
@@ -118,3 +116,13 @@ Le CDC définit plusieurs types de consentement (ponctuel, temporaire, par étab
 ## 8. Impact version / SemVer
 
 - Bump : **MINOR** (0.10.0).
+
+---
+
+## 9. Reste à faire
+
+1. **Backend** : générer un `PatientConsent` de type `TEMPORAIRE` dans `ExternalAccessService.approveRequest()` lors de l’approbation d’une demande d’accès externe (critère d’acceptation non satisfait).
+2. **Backend** : ajouter les tests unitaires/d’intégration manquants (cycle de vie, expiration, révocation, OTP).
+3. **Frontend** : ajouter les tests unitaires sur `patient-consents-list` et `patient-requests-list`.
+4. **Review** : valider la cohérence entre les statuts `APPROVED`/`ACTIVE` et `APPROUVEE`/`REFUSEE` côté `external_access_requests`.
+5. **Documentation** : mettre à jour `CHANGELOG.md` à la clôture du ticket.

@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
+import { provideI18nTesting } from '../../../testing/i18n-testing';
 import { PatientProfileCardComponent } from './components/patient-profile-card.component';
 import { PatientVisitsListComponent } from './components/patient-visits-list.component';
 import { PatientPortalService, PatientPortalMeResponse } from './services/patient-portal.service';
@@ -52,6 +53,13 @@ describe('PatientProfileCardComponent', () => {
 });
 
 describe('PatientVisitsListComponent', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [PatientVisitsListComponent],
+      providers: [provideI18nTesting()]
+    });
+  });
+
   it('should list patient visits and emit download event', () => {
     const fixture = TestBed.createComponent(PatientVisitsListComponent);
     fixture.componentInstance.consultations = MOCK_PATIENT.consultations;
@@ -106,7 +114,8 @@ describe('PatientAuditListComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        PatientPortalService
+        PatientPortalService,
+        provideI18nTesting()
       ]
     });
     httpTesting = TestBed.inject(HttpTestingController);
@@ -134,7 +143,7 @@ describe('PatientAuditListComponent', () => {
     expect(element.textContent).toContain('Clinique Test A');
     expect(element.textContent).toContain('Urgence');
     expect(element.textContent).toContain('Arrêt cardiaque');
-    expect(element.textContent).toContain('SUCCESS');
+    expect(element.textContent).toContain('Succès');
   });
 });
 
@@ -147,7 +156,8 @@ describe('PatientConsentsListComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        PatientPortalService
+        PatientPortalService,
+        provideI18nTesting()
       ]
     });
     httpTesting = TestBed.inject(HttpTestingController);
@@ -297,7 +307,8 @@ describe('PatientNotificationsComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        PatientPortalService
+        PatientPortalService,
+        provideI18nTesting()
       ]
     });
     httpTesting = TestBed.inject(HttpTestingController);

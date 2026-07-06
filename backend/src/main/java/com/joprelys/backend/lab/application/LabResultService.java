@@ -8,6 +8,11 @@ import com.joprelys.backend.lab.infrastructure.persistence.LabOrderEntity;
 import com.joprelys.backend.lab.infrastructure.persistence.LabOrderRepository;
 import com.joprelys.backend.lab.infrastructure.persistence.LabResultEntity;
 import com.joprelys.backend.lab.infrastructure.persistence.LabResultRepository;
+import com.joprelys.backend.visit.application.DocumentNumberGenerator;
+import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentRepository;
+import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentEntity;
+import com.joprelys.backend.visit.infrastructure.persistence.DocumentType;
+import com.joprelys.backend.visit.infrastructure.persistence.DocumentStatus;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -21,6 +26,7 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -30,26 +36,49 @@ public class LabResultService {
 	private final LabResultRepository labResultRepository;
 	private final AuditService auditService;
 	private final com.joprelys.backend.notification.application.NotificationService notificationService;
+	private final com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository userAccountRepository;
+	private final DocumentNumberGenerator documentNumberGenerator;
+	private final MedicalDocumentRepository medicalDocumentRepository;
 
 	@Value("${joprelys.documents.storage-dir:./storage/documents}")
 	private String storageDir;
+
+	@Value("${joprelys.documents.verification-base-url:http://localhost:4200/verify}")
+	private String verificationBaseUrl;
 
 	public LabResultService(
 			LabOrderRepository labOrderRepository,
 			LabResultRepository labResultRepository,
 			AuditService auditService,
-			com.joprelys.backend.notification.application.NotificationService notificationService) {
+			com.joprelys.backend.notification.application.NotificationService notificationService,
+			com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository userAccountRepository,
+			DocumentNumberGenerator documentNumberGenerator,
+			MedicalDocumentRepository medicalDocumentRepository) {
 		this.labOrderRepository = labOrderRepository;
 		this.labResultRepository = labResultRepository;
 		this.auditService = auditService;
 		this.notificationService = notificationService;
+		this.userAccountRepository = userAccountRepository;
+		this.documentNumberGenerator = documentNumberGenerator;
+		this.medicalDocumentRepository = medicalDocumentRepository;
 	}
 
 	@Transactional(readOnly = true)
 	public java.util.List<LabResultResponse> getPatientResults(UUID patientId) {
-		return labResultRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
-				.stream()
+		java.util.List<LabResultEntity> allResults = labResultRepository.findByPatientIdOrderByCreatedAtDesc(patientId);
+		
+		java.util.Map<String, LabResultEntity> latestMap = new java.util.HashMap<>();
+		for (LabResultEntity r : allResults) {
+			String key = r.getResultNumber() + "_" + r.getAnalyteName();
+			LabResultEntity existing = latestMap.get(key);
+			if (existing == null || r.getVersion() > existing.getVersion()) {
+				latestMap.put(key, r);
+			}
+		}
+		
+		return latestMap.values().stream()
 				.map(LabResultResponse::fromEntity)
+				.sorted((a, b) -> b.createdAt().compareTo(a.createdAt()))
 				.toList();
 	}
 
@@ -58,7 +87,7 @@ public class LabResultService {
 		LabOrderEntity labOrder = labOrderRepository.findByExamRequestNumber(request.examRequestNumber())
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Demande d'examen introuvable."));
 
-		if ("CANCELLED".equals(labOrder.getStatus())) {
+		if (labOrder.getStatus() == com.joprelys.backend.lab.infrastructure.persistence.LabOrderStatus.CANCELLED) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Impossible de téléverser des résultats sur une demande annulée.");
 		}
 
@@ -104,16 +133,116 @@ public class LabResultService {
 			}
 		}
 
-		String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-		long nextVal = labResultRepository.count() + 1;
-		String resultNumber = String.format("EXAM-RES-%s-%06d", dateStr, nextVal);
+		java.util.List<LabResultEntity> existingResults = labResultRepository.findByLabOrderId(labOrder.getId());
+		boolean hasValidated = existingResults.stream()
+				.anyMatch(r -> r.getStatus() == com.joprelys.backend.lab.infrastructure.persistence.LabResultStatus.VALIDATED);
+
+		String resultNumber;
+		int nextVersion = 1;
+
+		if (!existingResults.isEmpty()) {
+			resultNumber = existingResults.get(0).getResultNumber();
+			if (hasValidated) {
+				int maxVersion = existingResults.stream()
+						.mapToInt(LabResultEntity::getVersion)
+						.max()
+						.orElse(1);
+				nextVersion = maxVersion + 1;
+			} else {
+				// Tous sont DRAFT, on les supprime pour recréer proprement à la version 1
+				labResultRepository.deleteAll(existingResults);
+				nextVersion = 1;
+			}
+		} else {
+			String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+			Long seqVal;
+			try {
+				seqVal = labResultRepository.getNextResultNumberSequenceValue();
+			} catch (Exception e) {
+				seqVal = labResultRepository.count() + 1;
+			}
+			resultNumber = String.format("EXAM-RES-%s-%06d", dateStr, seqVal);
+		}
+
+		com.joprelys.backend.lab.infrastructure.persistence.LabResultStatus finalStatus =
+				request.status() != null ? request.status() : com.joprelys.backend.lab.infrastructure.persistence.LabResultStatus.VALIDATED;
+		UUID validatorUserId = request.validatorUserId();
+		if (validatorUserId == null && request.validatorName() != null && !request.validatorName().isBlank()) {
+			validatorUserId = userAccountRepository.findAll().stream()
+					.filter(u -> u.getDisplayName().equalsIgnoreCase(request.validatorName().trim()))
+					.map(com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity::getId)
+					.findFirst()
+					.orElse(null);
+		}
+
+		UUID savedDocId = null;
+		if (pdfFilePath != null) {
+			try {
+				byte[] pdfBytes = Files.readAllBytes(Paths.get(pdfFilePath));
+				java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+				byte[] hashBytes = digest.digest(pdfBytes);
+				StringBuilder hexString = new StringBuilder();
+				for (byte b : hashBytes) {
+					String hex = Integer.toHexString(0xff & b);
+					if (hex.length() == 1) hexString.append('0');
+					hexString.append(hex);
+				}
+				String hash = hexString.toString();
+
+				String docNum = documentNumberGenerator.generateNextDocumentNumber();
+				MedicalDocumentEntity doc = new MedicalDocumentEntity(
+						labOrder.getVisit(),
+						docNum,
+						pdfFilePath,
+						DocumentType.RESULTAT_LABORATOIRE
+				);
+				doc.setHash(hash);
+
+				String verificationUrl = verificationBaseUrl + "/verify/" + doc.getId();
+				String qrCodeUrl = "/api/public/documents/" + doc.getId() + "/qr";
+				doc.setVerificationUrl(verificationUrl);
+				doc.setQrCodeUrl(qrCodeUrl);
+
+				if (validatorUserId != null) {
+					doc.setAuthorUserId(validatorUserId);
+				}
+
+				List<MedicalDocumentEntity> previousDocs = medicalDocumentRepository.findAllByVisitIdAndDocumentTypeOrderByVersionDesc(labOrder.getVisit().getId(), DocumentType.RESULTAT_LABORATOIRE);
+				if (!previousDocs.isEmpty()) {
+					MedicalDocumentEntity previous = previousDocs.get(0);
+					previous.setStatus(DocumentStatus.REMPLACE);
+					medicalDocumentRepository.save(previous);
+					doc.setPreviousDocumentId(previous.getId());
+					doc.setVersion(previous.getVersion() + 1);
+				} else {
+					doc.setVersion(1);
+				}
+
+				MedicalDocumentEntity savedDoc = medicalDocumentRepository.save(doc);
+				savedDocId = savedDoc.getId();
+			} catch (Exception e) {
+				// failed to register PDF as medical document
+			}
+		}
 
 		for (LabResultItem item : request.results()) {
+			final int currentMaxVersion = nextVersion - 1;
+			LabResultEntity parentResult = existingResults.stream()
+					.filter(r -> r.getVersion() == currentMaxVersion && r.getAnalyteName().equals(item.analyteName()))
+					.findFirst()
+					.orElse(null);
+
 			LabResultEntity resultEntity = new LabResultEntity(
 					resultNumber,
 					labOrder,
 					labOrder.getPatient(),
 					request.validatorName(),
+					finalStatus,
+					validatorUserId,
+					request.conclusion(),
+					savedDocId, // documentId relié
+					nextVersion,
+					parentResult,
 					item.analyteName(),
 					item.value(),
 					item.unit(),
@@ -128,7 +257,11 @@ public class LabResultService {
 			labResultRepository.save(resultEntity);
 		}
 
-		labOrder.setStatus("VALIDATED");
+		if (finalStatus == com.joprelys.backend.lab.infrastructure.persistence.LabResultStatus.VALIDATED) {
+			labOrder.setStatus(com.joprelys.backend.lab.infrastructure.persistence.LabOrderStatus.VALIDATED);
+		} else {
+			labOrder.setStatus(com.joprelys.backend.lab.infrastructure.persistence.LabOrderStatus.RESULT_AVAILABLE);
+		}
 		labOrderRepository.save(labOrder);
 
 		// Notifier le patient que des résultats sont disponibles
@@ -159,5 +292,28 @@ public class LabResultService {
 				"UPLOAD_LAB_RESULTS",
 				"Téléversement de résultats d'analyses pour la demande " + labOrder.getExamRequestNumber()
 		);
+	}
+
+	@Transactional(readOnly = true)
+	public byte[] getResultPdfBytes(UUID resultId) {
+		LabResultEntity result = labResultRepository.findById(resultId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Résultat introuvable."));
+
+		if (result.getPdfFilePath() == null || result.getPdfFilePath().isBlank()) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Aucun fichier PDF associé à ce résultat.");
+		}
+
+		try {
+			return java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(result.getPdfFilePath()));
+		} catch (java.io.IOException e) {
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur lors de la lecture du fichier PDF.", e);
+		}
+	}
+
+	@Transactional(readOnly = true)
+	public LabResultResponse getResultById(UUID resultId) {
+		LabResultEntity result = labResultRepository.findById(resultId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Résultat introuvable."));
+		return LabResultResponse.fromEntity(result);
 	}
 }

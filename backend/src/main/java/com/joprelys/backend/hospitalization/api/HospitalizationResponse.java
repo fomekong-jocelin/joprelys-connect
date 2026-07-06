@@ -18,7 +18,11 @@ public record HospitalizationResponse(
         Instant dischargedAt,
         String dischargeDiagnosis,
         String dischargeInstructions,
-        String pdfFilePath
+        String pdfFilePath,
+        String hospitalizationNumber,
+        UUID visitId,
+        UUID responsiblePractitionerId,
+        UUID documentId
 ) {
     public static HospitalizationResponse fromEntity(HospitalizationEntity entity) {
         return new HospitalizationResponse(
@@ -35,7 +39,11 @@ public record HospitalizationResponse(
                 entity.getDischargedAt(),
                 entity.getDischargeDiagnosis(),
                 entity.getDischargeInstructions(),
-                entity.getPdfFilePath()
+                entity.getPdfFilePath(),
+                entity.getHospitalizationNumber(),
+                entity.getVisitId(),
+                entity.getResponsiblePractitionerId(),
+                entity.getDocumentId()
         );
     }
 }

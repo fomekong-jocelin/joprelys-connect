@@ -215,6 +215,51 @@ public class ExternalAccessService {
                 .orElse("Établissement inconnu");
     }
 
+    /**
+     * STORY-1909 : Révocation d'un accès externe approuvé par le patient (FR-CONSENT-004).
+     * Passe le statut de APPROUVEE à REFUSEE et journalise l'action.
+     */
+    @Transactional
+    public ExternalAccessResponse revokeApprovedRequest(UUID patientId, UUID requestId) {
+        ExternalAccessRequestEntity request = externalAccessRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Demande d'accès introuvable."));
+
+        if (!request.getPatientId().equals(patientId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cette demande ne vous concerne pas.");
+        }
+
+        if (!"APPROUVEE".equals(request.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Seule une demande approuvée peut être révoquée par le patient.");
+        }
+
+        request.setStatus("REFUSEE");
+        request.setExpiresAt(Instant.now()); // Expire immédiatement
+        ExternalAccessRequestEntity saved = externalAccessRequestRepository.save(request);
+
+        UUID actorOrgId = request.getRequesterOrganizationId();
+        PatientEntity patient = patientRepository.findByIdGlobally(patientId).orElse(null);
+        if (patient != null && patient.getOrganizationId() != null) {
+            actorOrgId = patient.getOrganizationId();
+        }
+
+        auditService.logSuccess(
+                patientId, actorOrgId, patientId,
+                "EXTERNAL_ACCESS_REQUEST", saved.getId(),
+                "REVOKE_EXTERNAL_ACCESS",
+                "Accès externe révoqué par le patient (FR-CONSENT-004). Org=" + saved.getRequesterOrganizationId()
+        );
+
+        notificationService.sendNotification(
+                patientId,
+                "Accès externe révoqué",
+                "Vous avez révoqué l'accès de l'établissement " + getOrganizationName(saved.getRequesterOrganizationId()) + " à votre dossier.",
+                "SECURITY"
+        );
+
+        return ExternalAccessResponse.fromEntity(saved, getOrganizationName(saved.getRequesterOrganizationId()));
+    }
+
     private UserAccountEntity getCurrentUser() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {

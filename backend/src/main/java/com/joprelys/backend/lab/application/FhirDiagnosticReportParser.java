@@ -54,6 +54,8 @@ public class FhirDiagnosticReportParser {
             return new LabResultUploadRequest(
                     examRequestNumber,
                     resolvedValidatorName,
+                    null,          // validatorUserId
+                    com.joprelys.backend.lab.infrastructure.persistence.LabResultStatus.VALIDATED,
                     null,          // sampleCollectedAt non standard en FHIR DiagnosticReport
                     resultAt,
                     validatedAt,

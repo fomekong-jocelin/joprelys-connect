@@ -3,15 +3,16 @@ package com.joprelys.backend.visit.infrastructure.persistence;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface MedicalDocumentRepository extends JpaRepository<MedicalDocumentEntity, UUID> {
 
-    @Query("SELECT d FROM MedicalDocumentEntity d WHERE d.visit.id = :visitId AND d.documentType = 'SYNTHESE'")
+    @Query("SELECT d FROM MedicalDocumentEntity d WHERE d.visit.id = :visitId AND d.documentType = com.joprelys.backend.visit.infrastructure.persistence.DocumentType.COMPTE_RENDU_CONSULTATION AND d.status = com.joprelys.backend.visit.infrastructure.persistence.DocumentStatus.VALID")
     Optional<MedicalDocumentEntity> findByVisitId(@Param("visitId") UUID visitId);
 
-    @Query("SELECT d FROM MedicalDocumentEntity d WHERE d.visit.id = :visitId AND d.documentType = 'ORDONNANCE'")
+    @Query("SELECT d FROM MedicalDocumentEntity d WHERE d.visit.id = :visitId AND d.documentType = com.joprelys.backend.visit.infrastructure.persistence.DocumentType.ORDONNANCE AND d.status = com.joprelys.backend.visit.infrastructure.persistence.DocumentStatus.VALID")
     Optional<MedicalDocumentEntity> findPrescriptionDocumentByVisitId(@Param("visitId") UUID visitId);
 
     Optional<MedicalDocumentEntity> findByDocumentNumber(String documentNumber);
@@ -24,7 +25,7 @@ public interface MedicalDocumentRepository extends JpaRepository<MedicalDocument
         SELECT d FROM MedicalDocumentEntity d
         JOIN FETCH d.visit v
         JOIN FETCH v.patient
-        WHERE v.id = :visitId AND d.documentType = 'SYNTHESE'
+        WHERE v.id = :visitId AND d.documentType = com.joprelys.backend.visit.infrastructure.persistence.DocumentType.COMPTE_RENDU_CONSULTATION AND d.status = com.joprelys.backend.visit.infrastructure.persistence.DocumentStatus.VALID
     """)
     Optional<MedicalDocumentEntity> findByVisitIdWithVisitAndPatient(@Param("visitId") UUID visitId);
 
@@ -39,4 +40,8 @@ public interface MedicalDocumentRepository extends JpaRepository<MedicalDocument
         WHERE d.id = :documentId
     """)
     Optional<MedicalDocumentEntity> findByIdWithVisitAndPatient(@Param("documentId") UUID documentId);
+
+    @Query("SELECT d FROM MedicalDocumentEntity d WHERE d.visit.id = :visitId AND d.documentType = :documentType ORDER BY d.version DESC")
+    List<MedicalDocumentEntity> findAllByVisitIdAndDocumentTypeOrderByVersionDesc(
+            @Param("visitId") UUID visitId, @Param("documentType") DocumentType documentType);
 }

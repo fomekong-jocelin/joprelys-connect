@@ -35,6 +35,18 @@ public class HospitalizationEntity {
     @Column(name = "admission_reason", nullable = false)
     private String admissionReason;
 
+    @Column(name = "hospitalization_number", nullable = false, length = 50)
+    private String hospitalizationNumber;
+
+    @Column(name = "visit_id")
+    private UUID visitId;
+
+    @Column(name = "responsible_practitioner_id")
+    private UUID responsiblePractitionerId;
+
+    @Column(name = "document_id")
+    private UUID documentId;
+
     @Column(name = "status", nullable = false, length = 20)
     private String status; // EN_COURS, SORTI
 
@@ -71,6 +83,21 @@ public class HospitalizationEntity {
         this.admissionReason = admissionReason;
         this.status = "EN_COURS";
         this.admittedAt = Instant.now();
+        this.hospitalizationNumber = "HOSP-TEMP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    public HospitalizationEntity(UUID patientId, String serviceName, String roomNumber, String bedNumber, String admissionReason, String hospitalizationNumber, UUID visitId, UUID responsiblePractitionerId) {
+        this.id = UUID.randomUUID();
+        this.patientId = patientId;
+        this.serviceName = serviceName;
+        this.roomNumber = roomNumber;
+        this.bedNumber = bedNumber;
+        this.admissionReason = admissionReason;
+        this.hospitalizationNumber = hospitalizationNumber;
+        this.visitId = visitId;
+        this.responsiblePractitionerId = responsiblePractitionerId;
+        this.status = "EN_COURS";
+        this.admittedAt = Instant.now();
     }
 
     @PrePersist
@@ -101,6 +128,10 @@ public class HospitalizationEntity {
     public String getRoomNumber() { return roomNumber; }
     public String getBedNumber() { return bedNumber; }
     public String getAdmissionReason() { return admissionReason; }
+    public String getHospitalizationNumber() { return hospitalizationNumber; }
+    public UUID getVisitId() { return visitId; }
+    public UUID getResponsiblePractitionerId() { return responsiblePractitionerId; }
+    public UUID getDocumentId() { return documentId; }
     public String getStatus() { return status; }
     public Instant getAdmittedAt() { return admittedAt; }
     public Instant getDischargedAt() { return dischargedAt; }
@@ -115,4 +146,8 @@ public class HospitalizationEntity {
     public void setBedNumber(String bedNumber) { this.bedNumber = bedNumber; }
     public void setAdmissionReason(String reason) { this.admissionReason = reason; }
     public void setPatientId(java.util.UUID patientId) { this.patientId = patientId; }
+    public void setHospitalizationNumber(String hospitalizationNumber) { this.hospitalizationNumber = hospitalizationNumber; }
+    public void setVisitId(UUID visitId) { this.visitId = visitId; }
+    public void setResponsiblePractitionerId(UUID responsiblePractitionerId) { this.responsiblePractitionerId = responsiblePractitionerId; }
+    public void setDocumentId(UUID documentId) { this.documentId = documentId; }
 }

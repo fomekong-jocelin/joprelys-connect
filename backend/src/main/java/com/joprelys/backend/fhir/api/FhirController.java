@@ -70,4 +70,20 @@ public class FhirController {
 			@RequestParam("patient") @Parameter(description = "Identifiant unique du patient (UUID)") UUID patientId) {
 		return fhirService.getObservations(patientId);
 	}
+
+	@GetMapping("/DiagnosticReport")
+	@Operation(
+			summary = "Récupérer les Comptes-rendus d'examens d'un Patient (DiagnosticReport FHIR)",
+			description = "Retourne un Bundle FHIR contenant l'ensemble des comptes-rendus de laboratoire d'un patient.",
+			responses = {
+					@ApiResponse(responseCode = "200", description = "Bundle de rapports retourné avec succès"),
+					@ApiResponse(responseCode = "401", description = "Utilisateur non authentifié"),
+					@ApiResponse(responseCode = "403", description = "Accès interdit (rôle insuffisant ou consentement requis)"),
+					@ApiResponse(responseCode = "404", description = "Patient introuvable")
+			}
+	)
+	public FhirBundleDto<FhirDiagnosticReportDto> getDiagnosticReports(
+			@RequestParam("patient") @Parameter(description = "Identifiant unique du patient (UUID)") UUID patientId) {
+		return fhirService.getDiagnosticReports(patientId);
+	}
 }

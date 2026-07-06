@@ -9,6 +9,7 @@ import { VisitApiService } from '../visit/visit-api.service';
 import { Consultation, Prescription } from './consultation.models';
 import { Vitals } from '../visit/visit.models';
 import { LabOrderApiService } from '../clinic/lab/lab-api.service';
+import { ExamType } from '../clinic/lab/lab.models';
 import { I18nService } from '../core/i18n/i18n.service';
 
 @Component({
@@ -340,7 +341,7 @@ export class ConsultationComponent implements OnInit {
       const request = {
         patientId: this.patientId,
         visitId: this.visitId || undefined,
-        examType: 'LABORATOIRE',
+        examType: ExamType.LABORATOIRE,
         exams: examsList,
         reason: this.form.get('labReason')?.value || undefined,
         priority: this.form.get('labPriority')?.value || 'NORMALE'

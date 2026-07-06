@@ -1,3 +1,23 @@
+export enum ExamType {
+  LABORATOIRE = 'LABORATOIRE',
+  IMAGERIE = 'IMAGERIE',
+  CARDIOLOGIE = 'CARDIOLOGIE',
+  ORL = 'ORL',
+  OPHTALMOLOGIE = 'OPHTALMOLOGIE',
+  AUTRE = 'AUTRE'
+}
+
+export enum LabOrderStatus {
+  REQUESTED = 'REQUESTED',
+  AWAITING_PAYMENT = 'AWAITING_PAYMENT',
+  PAID = 'PAID',
+  SAMPLE_COLLECTED = 'SAMPLE_COLLECTED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  RESULT_AVAILABLE = 'RESULT_AVAILABLE',
+  VALIDATED = 'VALIDATED',
+  CANCELLED = 'CANCELLED'
+}
+
 export interface LabOrder {
   id: string;
   examRequestNumber: string;
@@ -8,11 +28,11 @@ export interface LabOrder {
   requesterPractitionerName: string;
   sourceOrganizationId: string;
   targetOrganizationId?: string;
-  examType: string;
+  examType: ExamType;
   exams: string[];
   reason?: string;
   priority: string;
-  status: string;
+  status: LabOrderStatus;
   createdAt: string;
 }
 
@@ -20,7 +40,7 @@ export interface CreateLabOrderRequest {
   patientId: string;
   visitId?: string;
   targetOrganizationId?: string;
-  examType: string;
+  examType: ExamType;
   exams: string[];
   reason?: string;
   priority?: string;
@@ -38,6 +58,8 @@ export interface LabResultItemRequest {
 export interface LabResultUploadRequest {
   examRequestNumber: string;
   validatorName: string;
+  validatorUserId?: string;
+  status?: string;
   sampleCollectedAt?: string;
   resultAt?: string;
   validatedAt?: string;
@@ -52,6 +74,12 @@ export interface LabResult {
   examRequestNumber: string;
   patientId: string;
   validatorName: string;
+  status?: string;
+  validatorUserId?: string;
+  conclusion?: string;
+  documentId?: string;
+  version: number;
+  parentResultId?: string;
   analyteName: string;
   value: string;
   unit?: string;

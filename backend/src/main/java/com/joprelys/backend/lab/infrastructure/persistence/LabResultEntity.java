@@ -35,8 +35,28 @@ public class LabResultEntity {
 	@Column(name = "organization_id", nullable = false)
 	private UUID organizationId;
 
-	@Column(name = "validator_name", nullable = false, length = 150)
+	@Column(name = "validator_name", length = 150)
 	private String validatorName;
+
+	@jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+	@Column(name = "status", nullable = false, length = 20)
+	private LabResultStatus status = LabResultStatus.VALIDATED;
+
+	@Column(name = "validator_user_id")
+	private UUID validatorUserId;
+
+	@Column(name = "conclusion")
+	private String conclusion;
+
+	@Column(name = "document_id")
+	private UUID documentId;
+
+	@Column(name = "version", nullable = false)
+	private int version = 1;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "parent_result_id")
+	private LabResultEntity parentResult;
 
 	@Column(name = "analyte_name", nullable = false, length = 100)
 	private String analyteName;
@@ -105,6 +125,52 @@ public class LabResultEntity {
 		this.sampleCollectedAt = sampleCollectedAt;
 		this.resultAt = resultAt;
 		this.validatedAt = validatedAt;
+		this.status = LabResultStatus.VALIDATED;
+	}
+
+	public LabResultEntity(
+			String resultNumber,
+			LabOrderEntity labOrder,
+			PatientEntity patient,
+			String validatorName,
+			LabResultStatus status,
+			UUID validatorUserId,
+			String conclusion,
+			UUID documentId,
+			int version,
+			LabResultEntity parentResult,
+			String analyteName,
+			String value,
+			String unit,
+			String referenceRange,
+			String interpretation,
+			String comment,
+			String pdfFilePath,
+			Instant sampleCollectedAt,
+			Instant resultAt,
+			Instant validatedAt) {
+		this.id = UUID.randomUUID();
+		this.resultNumber = resultNumber;
+		this.labOrder = labOrder;
+		this.patient = patient;
+		this.organizationId = labOrder.getOrganizationId();
+		this.validatorName = validatorName;
+		this.status = status != null ? status : LabResultStatus.DRAFT;
+		this.validatorUserId = validatorUserId;
+		this.conclusion = conclusion;
+		this.documentId = documentId;
+		this.version = version;
+		this.parentResult = parentResult;
+		this.analyteName = analyteName;
+		this.value = value;
+		this.unit = unit;
+		this.referenceRange = referenceRange;
+		this.interpretation = interpretation != null ? interpretation : "NORMAL";
+		this.comment = comment;
+		this.pdfFilePath = pdfFilePath;
+		this.sampleCollectedAt = sampleCollectedAt;
+		this.resultAt = resultAt;
+		this.validatedAt = validatedAt;
 	}
 
 	@PrePersist
@@ -138,6 +204,54 @@ public class LabResultEntity {
 
 	public String getValidatorName() {
 		return validatorName;
+	}
+
+	public LabResultStatus getStatus() {
+		return status;
+	}
+
+	public void setStatus(LabResultStatus status) {
+		this.status = status;
+	}
+
+	public UUID getValidatorUserId() {
+		return validatorUserId;
+	}
+
+	public void setValidatorUserId(UUID validatorUserId) {
+		this.validatorUserId = validatorUserId;
+	}
+
+	public String getConclusion() {
+		return conclusion;
+	}
+
+	public void setConclusion(String conclusion) {
+		this.conclusion = conclusion;
+	}
+
+	public UUID getDocumentId() {
+		return documentId;
+	}
+
+	public void setDocumentId(UUID documentId) {
+		this.documentId = documentId;
+	}
+
+	public int getVersion() {
+		return version;
+	}
+
+	public void setVersion(int version) {
+		this.version = version;
+	}
+
+	public LabResultEntity getParentResult() {
+		return parentResult;
+	}
+
+	public void setParentResult(LabResultEntity parentResult) {
+		this.parentResult = parentResult;
 	}
 
 	public String getAnalyteName() {

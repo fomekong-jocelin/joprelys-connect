@@ -14,5 +14,9 @@ public record CreateHospitalizationRequest(
         @NotBlank(message = "Le numéro de lit est obligatoire.")
         String bedNumber,
         @NotBlank(message = "Le motif d'admission est obligatoire.")
-        String admissionReason
+        String admissionReason,
+        @NotNull(message = "La visite associée est obligatoire.")
+        UUID visitId,
+        @NotNull(message = "Le médecin responsable est obligatoire.")
+        UUID responsiblePractitionerId
 ) {}

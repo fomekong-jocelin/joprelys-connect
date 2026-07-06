@@ -6,7 +6,103 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+### Fixed
+
+- **Résolution des échecs de tests d'intégration H2 (Corrections de contraintes d'unicité et isolation de la base de test)** :
+  - **Migration V39 (`V39__fix_medical_documents_h2_unique_constraint.java`)** : Écriture d'une migration Java Flyway dynamique pour supprimer la contrainte d'unicité sur `medical_documents(visit_id)` (introduite par erreur dans la création de table initiale) sous H2 de manière robuste : suppression de la clé étrangère dépendante, reformatage de la colonne via `ALTER COLUMN` pour purger l'attribut d'unicité de H2, suppression de l'index unique et recréation de la clé étrangère.
+  - **Migration V40 (`V40__fix_lab_results_result_number_uniqueness.java`)** : Écriture d'une migration Java Flyway dynamique et insensible à la casse (`UPPER(...)`) pour supprimer la contrainte/index d'unicité sur `lab_results(result_number)` sous Postgres et H2 (permettant le multi-analyte et le versioning de résultats) et création d'une contrainte d'unicité composite sur `(result_number, version, analyte_name)`.
+  - **Isolation et robustesse de la base de test** :
+    - Remplacement du nom de la base H2 en mémoire dans `application-test.yml` de `testdb` à `testdb_fresh` pour éviter tout conflit de cache ou d'historique de migrations corrompues lors des lancements successifs dans le même JVM.
+    - Ajout de l'annotation `@ActiveProfiles("test")` sur `JoprelysBackendApplicationTests` pour éviter qu'il n'essaie de s'exécuter sur le profil par défaut (et donc d'interroger la base Postgres locale).
+    - Nettoyage des instructions de débogage temporaires de base de données dans `LabIntegrationControllerTest.java`.
+  - Passage de l'ensemble des 240 tests du backend au vert (`BUILD SUCCESS`).
+
 ### Added
+
+- **Alignement Module 12 — Portails patient, pro, labo, pharmacie et vérification publique conformes CDC (STORY-1910)** :
+  - Externalisation complète de l'i18n Angular vers `web/src/assets/i18n/fr.json` et `en.json` (~730 clés) avec chargement via `HttpClient`, `APP_INITIALIZER` et fallback FR.
+  - Création de `AppTitleService` et mise à jour dynamique du titre de page (`<title>`) via les données de route ; mise à jour de `index.html` et `app.ts`.
+  - Refactor de `app-shell.component.ts` (547 → 359 lignes) par extraction de la navigation dans `app-shell-nav.component.ts` pour respecter la limite de 500 lignes.
+  - Création des pages patient manquantes : `/patient/profile`, `/patient/documents`, `/patient/qr-code`, `/patient/privacy` avec i18n FR/EN, design system Tailwind v4 et gestion des états vide/erreur.
+  - Mise à jour des routes dans `app.routes.ts` avec les clés de titre et intégration du menu patient dans `app-shell-nav.component.ts`.
+  - Déplacement du helper de test i18n vers `src/testing/i18n-testing.ts` et exclusion de `src/testing/**/*.ts` dans `tsconfig.app.json` pour isoler le code Node.js du build applicatif.
+  - Tests unitaires Vitest pour les nouvelles pages patient (`patient-pages.spec.ts`, 7 tests) et correction des tests existants (`patient-portal.spec.ts`, `pharmacy-portal.spec.ts`).
+  - Compilation Angular (`npm run build`) et 79 tests unitaires (`npm run test`) au vert.
+  - Documentation : `docs/features/STORY-1910/FUNCTIONAL-SPEC.md`, `TECHNICAL-DESIGN.md`.
+
+- **Audit et correction des traductions manquantes du portail patient (TICKET-I18N-PATIENT-PORTAL-TRANSLATIONS-AUDIT)** :
+  - Remplacement des textes codés en dur dans le portail patient (dashboard, login, synthèse médicale, résultats, demandes d'accès, consentements, audit, notifications, profil, vaccinations) par des clés i18n.
+  - Traduction des statuts/enum affichés bruts (`patient.access.requests.status.*`, `patient.audit.status.*`, `patient.consent.status.*`, `patient.consent.type.*`, `patient.consent.channel.*`).
+  - Ajout d'environ 136 clés dans `web/src/assets/i18n/fr.json` et `en.json`.
+  - Mise à jour du test `patient-portal.spec.ts` rendu obsolète par la traduction du statut d'audit (`SUCCESS` -> `Succès`).
+  - Compilation Angular (`npm run build`) et 79 tests unitaires (`npm run test`) au vert.
+  - Ticket : `docs/ai/tickets/TICKET-I18N-PATIENT-PORTAL-TRANSLATIONS-AUDIT.md`.
+
+- **Alignement Module 11 — Documents médicaux vérifiables conformes CDC (STORY-1908)** :
+  - Migration DB `V37__medical_documents_cdc_alignment.sql` : ajout des colonnes `qr_code_url`, `verification_url`, `author_user_id`, `version`, `previous_document_id` à `medical_documents` ; création de la séquence `medical_document_number_seq` ; migration des types legacy `SYNTHESE` → `COMPTE_RENDU_CONSULTATION` ; ajout de la contrainte CHECK sur `status`.
+  - `DocumentType.java` (nouveau) : enum des 12 types CDC (COMPTE_RENDU_CONSULTATION, ORDONNANCE, RESULTAT_LABORATOIRE, FICHE_SORTIE, etc.).
+  - `DocumentStatus.java` (nouveau) : enum VALID, REVOQUE, ANNULE, REMPLACE.
+  - `MedicalDocumentEntity` : mappage des enums, versionnement (previousDocumentId, version), auteur, URLs, QR code et hash.
+  - `MedicalDocumentRepository` : ajout de `findAllByVisitIdAndDocumentTypeOrderByVersionDesc()`.
+  - `DocumentNumberGenerator` : séquence DB garantissant l'unicité en cluster.
+  - `DocumentService` : calcul SHA-256 du PDF, versionnement automatique, exposition QR code.
+  - `DocumentVerificationResponse` : ajout des champs `documentType`, `serviceName`, `legalNotice`.
+  - `DocumentController` : endpoint public `GET /api/public/documents/search?number=` pour recherche par numéro de document, endpoint `GET /api/public/documents/{id}/qr` pour image QR.
+  - `HospitalizationService` : intégration du versionnement et de la génération du document `FICHE_SORTIE` dans `medical_documents` avec hash et URLs corrects.
+  - `LabResultService` : injection de `DocumentNumberGenerator` et `MedicalDocumentRepository` ; enregistrement automatique du PDF labo comme `RESULTAT_LABORATOIRE` dans `medical_documents` avec hash SHA-256, versionnement, auteur et URLs.
+  - `ConsultationResponse` et `PatientPortalController` : correction de la conversion `DocumentStatus` enum → String (appel `.name()`).
+  - Frontend Angular :
+    - `document-search.component.ts` (nouveau) : page publique `/verify` avec formulaire de recherche par numéro de document + i18n FR/EN.
+    - `verification.component.ts` : affichage des nouveaux champs `documentType`, `serviceName`, `legalNotice` (mention légale CDC) ; correction des radius (rounded-3xl/2xl → rounded) ; gestion du statut `REMPLACE`.
+    - `consultation-api.service.ts` : ajout de `verifyDocumentByNumber()`.
+    - `app.routes.ts` : ajout de la route `/verify` (sans ID) pour le formulaire de recherche.
+    - `i18n.service.ts` : ajout des clés FR/EN `verify.documentType`, `verify.serviceName`, `verify.legalNotice`, `verify.search.*`.
+  - Compilation backend Maven : BUILD SUCCESS (232 fichiers compilés, 0 erreur).
+
+- **Alignement Module 10 — Hospitalisations conformes CDC (STORY-1907)** :
+
+  - Migration DB `V36__hospitalizations_cdc_alignment.sql` : ajout de la séquence `hospitalization_number_seq` et des colonnes `hospitalization_number`, `visit_id`, `responsible_practitioner_id` et `document_id` à la table `hospitalizations`. Ajout de la colonne `hash` à la table `medical_documents`.
+  - `HospitalizationEntity` : ajout du support de versioning, du numéro unique d'hospitalisation, du lien visite, du médecin responsable et de la fiche de sortie.
+  - `HospitalizationService` :
+    - `admitPatient` : génération d'un numéro d'hospitalisation unique (`HOSP-YYYYMMDD-XXXXXX`), lien avec la visite et le médecin responsable, et validation d'unicité de lit (un lit ne peut être occupé que par plus d'un séjour actif 'EN_COURS').
+    - `dischargePatient` : génération de la fiche de sortie officielle avec calcul du hash SHA-256 du PDF de sortie, enregistrement dans `medical_documents` sous le type `FICHE_SORTIE` et liaison de l'ID du document généré.
+  - `PatientSummaryService` : intégration de l'historique complet des hospitalisations du patient dans la synthèse médicale.
+  - `VisitController` & `VisitService` : ajout de l'endpoint `GET /api/visits/patient/{patientId}` pour récupérer toutes les visites d'un patient.
+  - `HospitalizationControllerTest` : mise à jour et validation avec création de visites de test, vérification d'unicité concurrentielle, de notes d'évolution et téléchargement du PDF de sortie officiel.
+  - Frontend Angular :
+    - `patient-hospitalization.component.ts` : refonte du formulaire d'admission pour y ajouter les menus déroulants de sélection de la visite associée et du médecin responsable (chargement dynamique). Affichage du numéro de séjour et du médecin responsable dans le séjour en cours et les anciens séjours.
+    - `patient-api.service.ts` : ajout de la méthode `getPatientVisits(patientId)` pour requêter l'API.
+    - `i18n.service.ts` : ajout des clés d'internationalisation FR/EN pour les nouveaux concepts d'hospitalisation.
+    - Compilation Angular build de production et 72 tests unitaires Vitest validés avec succès.
+
+- **Alignement Module 9 — Résultats d'examens conformes CDC (STORY-1906)** :
+  - Migration DB `V35__lab_results_cdc_alignment.sql` : ajout de la séquence `lab_result_number_seq` et des colonnes `status` (DRAFT, VALIDATED, CANCELLED), `validator_user_id`, `conclusion`, `document_id`, `version` et `parent_result_id`.
+  - `LabResultEntity` : mappage des attributs status (enum `LabResultStatus`), validatorUserId, conclusion, documentId, version et parentResultId.
+  - `LabResultService` : implémentation de l'immutabilité et du versioning (un résultat VALIDATED génère une nouvelle version en préservant le même numéro de résultat). Ajout de la recherche de validateur par nom pour intégration API et filtrage automatique des anciennes versions dans `getPatientResults`.
+  - `PatientPortalController` : ajout de l'endpoint `GET /api/patient/results` (récupération des analyses biologiques de l'utilisateur connecté sans paramètre d'URL pour prévenir toute vulnérabilité IDOR) et `GET /api/patient/results/{resultId}/pdf` pour télécharger le compte-rendu biologique en PDF.
+  - `LabOrderController` : ajout de l'endpoint `GET /api/lab-orders/results/{resultId}/pdf` pour les professionnels de santé.
+  - `PatientExamResultsController` : endpoint d'exportation structurée CSV/JSON (`GET /api/patients/{id}/exam-results/export?format=csv|json`).
+  - FHIR diagnostic report et observation endpoints : intégration du parser et mapping FHIR pour les DiagnosticReport et Observations biologiques.
+  - Tests unitaires et d'intégration : ajout de tests dans `LabIntegrationControllerTest.java` (immutabilité, versioning, export) et correction d'ambiguïté dans `FhirMappersTest.java`.
+  - Frontend Angular :
+    - Page de résultats patient **"Mes Analyses & Résultats"** (`/patient/results`) affichant l'historique des examens, les badges d'interprétation couleur, les conclusions cliniques, l'exportation CSV/JSON et le téléchargement PDF.
+    - Ajout de la carte d'accès rapide sur le Tableau de bord Patient.
+    - Ajout du lien de navigation dans la Sidebar de l'App Shell.
+    - Support multilingue FR/EN complet dans `i18n.service.ts`.
+
+- **Alignement Module 8 — Examens médicaux conformes CDC (STORY-1905)** :
+  - Migration Flyway Java `V34__lab_orders_cdc_alignment.java` : ajout de la colonne `source_organization_id`, création de la table `lab_order_items` (migration des données CSV historiques de manière compatible H2/PostgreSQL).
+  - `LabOrderItemEntity` : création pour modéliser les items d'examens individuels.
+  - `LabOrderEntity` : refactorisation pour porter la relation `@OneToMany` avec les items et utiliser les nouveaux enums `ExamType` et `LabOrderStatus`.
+  - `LabOrderService` : refactorisation d' `updateStatus()` pour sécuriser la modification en validant que seul le biologiste de l'organisation cible peut modifier le statut de la demande. Utilisation de `findByIdGlobally()` et d'un basculement de `TenantContext` pour prendre en compte le multi-tenancy.
+  - `LabOrderController` : support de l'autorisation et de la transmission de l'identité du biologiste lors du changement de statut.
+  - Tests unitaires et d'intégration backend : validation dans `LabOrderControllerTest.java` et `LabIntegrationControllerTest.java` (sécurité, cycle de vie du paiement, et intégrité de la base).
+  - Frontend Angular :
+    - `lab.models.ts` : typage fort avec les enums `ExamType` and `LabOrderStatus`.
+    - `consultation.component.ts` : utilisation de l'enum `ExamType.LABORATOIRE` pour le formulaire de demande d'examen.
+    - `lab-orders-page.component.ts` : intégration du workflow de paiement (statuts `AWAITING_PAYMENT` et `PAID`) et liaison avec les items d'examens.
+    - `i18n.service.ts` : ajout des traductions françaises et anglaises pour les nouveaux statuts d'examens.
+    - Tests unitaires frontend Vitest : mise à niveau de `lab-orders-page.spec.ts` pour utiliser les types et enums typés forts.
 
 - **Alignement Module 4 — Dossier patient partagé et synthèse médicale conforme CDC (STORY-1901)** :
   - `PatientSummaryService` : service d'orchestration pour composer la synthèse médicale structurée (DPU, identité, allergies actives, antécédents importants/en cours, traitements actifs, 3 dernières visites, 3 derniers diagnostics, derniers résultats critiques) et génération du PDF.

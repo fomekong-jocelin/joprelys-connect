@@ -5,10 +5,10 @@ import { ExternalAccessResponse, PatientPortalService } from '../services/patien
 import { I18nService } from '../../../core/i18n/i18n.service';
 
 const ACCESS_SCOPES = [
-  { key: 'medical_records',   labelFr: 'Dossier médical' },
-  { key: 'prescriptions',     labelFr: 'Ordonnances' },
-  { key: 'lab_results',       labelFr: 'Résultats de labo' },
-  { key: 'allergies_history', labelFr: 'Allergies & ATCD' },
+  { key: 'medical_records' },
+  { key: 'prescriptions' },
+  { key: 'lab_results' },
+  { key: 'allergies_history' },
 ];
 
 @Component({
@@ -19,7 +19,7 @@ const ACCESS_SCOPES = [
     <div class="ui-card-subtle p-5 lg:p-6 flex flex-col gap-4">
       <div class="flex flex-col gap-1 border-b border-[var(--app-border)] pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p class="ui-label">{{ i18n.t('patient.access.requests.label') || 'Sécurité & Accès' }}</p>
+          <p class="ui-label">{{ i18n.t('patient.access.requests.label') }}</p>
           <h3 class="font-display text-xl font-extrabold" style="color: var(--text-primary)">
             {{ i18n.t('patient.access.requests.title') }}
           </h3>
@@ -27,7 +27,7 @@ const ACCESS_SCOPES = [
       </div>
 
       <p class="text-xs text-[var(--text-secondary)] leading-relaxed">
-        {{ i18n.t('patient.access.requests.subtitle') || "Gérez les demandes d'accès formulées par des cliniques ou praticiens externes au réseau Joprelys Connect." }}
+        {{ i18n.t('patient.access.requests.subtitle') }}
       </p>
 
       @if (isLoading()) {
@@ -44,7 +44,7 @@ const ACCESS_SCOPES = [
           <!-- Section 1 : Demandes en attente -->
           <div class="flex flex-col gap-3">
             <h4 class="font-display font-bold text-sm text-[var(--text-primary)]">
-              {{ i18n.t('patient.access.requests.pending') || 'Demandes en attente' }}
+              {{ i18n.t('patient.access.requests.pending') }}
               <span class="ml-1 text-xs px-2 py-0.5 rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
                 {{ pendingRequests().length }}
               </span>
@@ -66,12 +66,12 @@ const ACCESS_SCOPES = [
                       <span class="font-semibold">{{ i18n.t('patient.access.requests.reason') }}</span> {{ req.reason }}
                     </p>
                     <p class="text-[10px] text-[var(--text-muted)]">
-                      <span class="font-semibold">{{ i18n.t('patient.access.requests.duration') }}</span> 
-                      {{ req.durationHours }} {{ i18n.t('patient.access.requests.hours') || 'heures' }}
+                      <span class="font-semibold">{{ i18n.t('patient.access.requests.duration') }}</span>
+                      {{ req.durationHours }} {{ i18n.t('patient.access.requests.hours') }}
                     </p>
                     <!-- TICKET-1307: Scopes granulaires pour l'approbation -->
                     <div class="pt-2 flex flex-col gap-1">
-                      <p class="text-[10px] font-semibold text-[var(--text-secondary)]">Données autorisées :</p>
+                      <p class="text-[10px] font-semibold text-[var(--text-secondary)]">{{ i18n.t('patient.access.requests.authorizedData') }}</p>
                       <div class="grid grid-cols-2 gap-1">
                         @for (scope of accessScopes; track scope.key) {
                           <label class="flex items-center gap-1.5 text-[10px] text-[var(--text-primary)] cursor-pointer select-none">
@@ -81,7 +81,7 @@ const ACCESS_SCOPES = [
                               (change)="toggleRequestScope(req.id, scope.key)"
                               class="ui-checkbox"
                             />
-                            {{ scope.labelFr }}
+                            {{ i18n.t('patient.access.requests.scope.' + scope.key) }}
                           </label>
                         }
                       </div>
@@ -118,7 +118,7 @@ const ACCESS_SCOPES = [
           <!-- Section 2 : Historique des demandes -->
           <div class="flex flex-col gap-3 border-t border-[var(--app-border)] pt-5">
             <h4 class="font-display font-bold text-sm text-[var(--text-primary)]">
-              {{ i18n.t('patient.access.requests.history') || 'Historique des accès' }}
+              {{ i18n.t('patient.access.requests.history') }}
             </h4>
 
             @for (req of historicalRequests(); track req.id) {
@@ -129,7 +129,7 @@ const ACCESS_SCOPES = [
                       {{ req.requesterOrganizationName }}
                     </h5>
                     <span [class]="statusClass(req.status)">
-                      {{ req.status }}
+                      {{ i18n.t('patient.access.requests.status.' + req.status) }}
                     </span>
                   </div>
                   <p class="text-xs text-[var(--text-secondary)] truncate">
@@ -137,10 +137,22 @@ const ACCESS_SCOPES = [
                   </p>
                   @if (req.status === 'APPROUVEE' && req.expiresAt) {
                     <p class="text-[10px] text-emerald-600 dark:text-emerald-400">
-                      {{ i18n.t('patient.access.requests.expires') || 'Expire le :' }} {{ req.expiresAt | date:'medium' }}
+                      {{ i18n.t('patient.access.requests.expires') }} {{ req.expiresAt | date:'medium' }}
                     </p>
                   }
                 </div>
+                <!-- STORY-1909 : Révocation d'un accès approuvé encore valide -->
+                @if (req.status === 'APPROUVEE' && req.expiresAt && isStillValid(req.expiresAt)) {
+                  <button
+                    type="button"
+                    id="btn-revoke-access-{{ req.id }}"
+                    (click)="revokeApproved(req.id)"
+                    [disabled]="isActionLoading(req.id)"
+                    class="shrink-0 px-3 py-1.5 text-xs font-bold rounded-[var(--radius-brand-sm)] border border-rose-300 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors disabled:opacity-50"
+                  >
+                    {{ isActionLoading(req.id) ? '...' : i18n.t('patient.access.requests.revoke') }}
+                  </button>
+                }
               </div>
             } @empty {
               <div class="text-xs text-[var(--text-muted)] italic">
@@ -178,7 +190,7 @@ export class PatientRequestsListComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: () => {
-        this.error.set(this.i18n.t('patient.access.requests.loadError') || "Impossible de charger les demandes d'accès.");
+        this.error.set(this.i18n.t('patient.access.requests.loadError'));
         this.isLoading.set(false);
       }
     });
@@ -207,7 +219,7 @@ export class PatientRequestsListComponent implements OnInit {
         this.loadingActions.update(prev => ({ ...prev, [id]: false }));
       },
       error: () => {
-        alert(this.i18n.t('patient.access.requests.updateError') || 'Erreur lors de la validation.');
+        alert(this.i18n.t('patient.access.requests.approveError'));
         this.loadingActions.update(prev => ({ ...prev, [id]: false }));
       }
     });
@@ -234,10 +246,31 @@ export class PatientRequestsListComponent implements OnInit {
         this.loadingActions.update(prev => ({ ...prev, [id]: false }));
       },
       error: () => {
-        alert(this.i18n.t('patient.access.requests.updateError') || 'Erreur lors du rejet.');
+        alert(this.i18n.t('patient.access.requests.rejectError'));
         this.loadingActions.update(prev => ({ ...prev, [id]: false }));
       }
     });
+  }
+
+  /** STORY-1909 : Révocation d'un accès externe déjà approuvé (FR-CONSENT-004). */
+  revokeApproved(id: string): void {
+    this.loadingActions.update(prev => ({ ...prev, [id]: true }));
+    this.portalService.revokeApprovedAccessRequest(id).subscribe({
+      next: (updated) => {
+        this.requests.update(list => list.map(r => r.id === id ? updated : r));
+        this.loadingActions.update(prev => ({ ...prev, [id]: false }));
+      },
+      error: () => {
+        alert(this.i18n.t('patient.access.requests.revokeError'));
+        this.loadingActions.update(prev => ({ ...prev, [id]: false }));
+      }
+    });
+  }
+
+  /** Vérifie si un accès approuvé est encore valide (non expiré). */
+  isStillValid(expiresAt: string | null): boolean {
+    if (!expiresAt) return false;
+    return new Date(expiresAt) > new Date();
   }
 
   statusClass(status: string): string {

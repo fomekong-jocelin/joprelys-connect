@@ -106,8 +106,10 @@ public class LabOrderController {
 	})
 	public LabOrderResponse updateStatus(
 			@Parameter(description = "Identifiant de la demande d'examen") @PathVariable UUID id,
-			@Valid @RequestBody UpdateLabOrderStatusRequest request) {
-		return labOrderService.updateStatus(id, request.status());
+			@Valid @RequestBody UpdateLabOrderStatusRequest request,
+			Authentication authentication) {
+		String practitionerEmail = authentication.getName();
+		return labOrderService.updateStatus(id, request.status(), practitionerEmail);
 	}
 
 	@GetMapping("/patient/{patientId}/results")
@@ -126,5 +128,17 @@ public class LabOrderController {
 		} finally {
 			com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
 		}
+	}
+
+	@GetMapping("/results/{resultId}/pdf")
+	@PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE', 'BIOLOGISTE')")
+	@Operation(summary = "Télécharger le PDF d'un résultat d'examen", description = "Retourne le fichier PDF correspondant au résultat d'examen donné.")
+	public org.springframework.http.ResponseEntity<byte[]> downloadResultPdf(@PathVariable UUID resultId) {
+		var result = labResultService.getResultById(resultId);
+		byte[] pdfBytes = labResultService.getResultPdfBytes(resultId);
+		return org.springframework.http.ResponseEntity.ok()
+				.header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"result-" + result.resultNumber() + ".pdf\"")
+				.contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+				.body(pdfBytes);
 	}
 }

@@ -42,6 +42,9 @@ public class HospitalizationService {
     private final OrganizationRepository organizationRepository;
     private final PdfGeneratorService pdfGeneratorService;
     private final QrCodeGeneratorService qrCodeGeneratorService;
+    private final com.joprelys.backend.visit.application.DocumentNumberGenerator documentNumberGenerator;
+    private final com.joprelys.backend.visit.infrastructure.persistence.VisitRepository visitRepository;
+    private final com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentRepository medicalDocumentRepository;
 
     @Value("${joprelys.documents.storage-dir:./storage/documents}")
     private String storageDir;
@@ -56,7 +59,10 @@ public class HospitalizationService {
                                   AuditService auditService,
                                   OrganizationRepository organizationRepository,
                                   PdfGeneratorService pdfGeneratorService,
-                                  QrCodeGeneratorService qrCodeGeneratorService) {
+                                  QrCodeGeneratorService qrCodeGeneratorService,
+                                  com.joprelys.backend.visit.application.DocumentNumberGenerator documentNumberGenerator,
+                                  com.joprelys.backend.visit.infrastructure.persistence.VisitRepository visitRepository,
+                                  com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentRepository medicalDocumentRepository) {
         this.hospitalizationRepository = hospitalizationRepository;
         this.hospitalizationNoteRepository = hospitalizationNoteRepository;
         this.patientService = patientService;
@@ -65,6 +71,9 @@ public class HospitalizationService {
         this.organizationRepository = organizationRepository;
         this.pdfGeneratorService = pdfGeneratorService;
         this.qrCodeGeneratorService = qrCodeGeneratorService;
+        this.documentNumberGenerator = documentNumberGenerator;
+        this.visitRepository = visitRepository;
+        this.medicalDocumentRepository = medicalDocumentRepository;
     }
 
     @Transactional
@@ -81,13 +90,21 @@ public class HospitalizationService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Le lit demandé est déjà occupé par un autre séjour.");
         });
 
-        // 3. Créer l'hospitalisation
+        // 3. Générer le numéro unique
+        Long seqVal = hospitalizationRepository.getNextHospitalizationNumberSequenceValue();
+        String dateStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String hospitalizationNumber = String.format("HOSP-%s-%06d", dateStr, seqVal);
+
+        // 4. Créer l'hospitalisation
         HospitalizationEntity entity = new HospitalizationEntity(
                 request.patientId(),
                 request.serviceName(),
                 request.roomNumber(),
                 request.bedNumber(),
-                request.admissionReason()
+                request.admissionReason(),
+                hospitalizationNumber,
+                request.visitId(),
+                request.responsiblePractitionerId()
         );
 
         HospitalizationEntity saved = hospitalizationRepository.save(entity);
@@ -205,7 +222,66 @@ public class HospitalizationService {
             Path filePath = storagePath.resolve("discharge-" + entity.getId() + ".pdf");
             Files.write(filePath, pdfBytes);
 
+            // Calculer le hash SHA-256 du PDF
+            String hash = "";
+            try {
+                java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+                byte[] hashBytes = digest.digest(pdfBytes);
+                StringBuilder hexString = new StringBuilder();
+                for (byte b : hashBytes) {
+                    String hex = Integer.toHexString(0xff & b);
+                    if (hex.length() == 1) hexString.append('0');
+                    hexString.append(hex);
+                }
+                hash = hexString.toString();
+            } catch (java.security.NoSuchAlgorithmException ignored) {}
+
+            // Charger la visite
+            com.joprelys.backend.visit.infrastructure.persistence.VisitEntity visit = visitRepository.findById(entity.getVisitId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite associée à l'hospitalisation introuvable."));
+
+            // Créer le document médical
+            String docNum = documentNumberGenerator.generateNextDocumentNumber();
+            com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentEntity doc = new com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentEntity(
+                    visit,
+                    docNum,
+                    filePath.toString(),
+                    com.joprelys.backend.visit.infrastructure.persistence.DocumentType.FICHE_SORTIE
+            );
+            doc.setHash(hash);
+
+            // Renseigner les URLs et QR code
+            String docVerificationUrl = verificationBaseUrl + "/verify/" + doc.getId();
+            String qrCodeUrl = "/api/public/documents/" + doc.getId() + "/qr";
+            doc.setVerificationUrl(docVerificationUrl);
+            doc.setQrCodeUrl(qrCodeUrl);
+
+            // Auteur
+            if (entity.getResponsiblePractitionerId() != null) {
+                doc.setAuthorUserId(entity.getResponsiblePractitionerId());
+            } else {
+                UserAccountEntity actor = getCurrentUser();
+                if (actor != null) {
+                    doc.setAuthorUserId(actor.getId());
+                }
+            }
+
+            // Versionnement
+            List<com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentEntity> previousDocs = medicalDocumentRepository.findAllByVisitIdAndDocumentTypeOrderByVersionDesc(visit.getId(), com.joprelys.backend.visit.infrastructure.persistence.DocumentType.FICHE_SORTIE);
+            if (!previousDocs.isEmpty()) {
+                com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentEntity previous = previousDocs.get(0);
+                previous.setStatus(com.joprelys.backend.visit.infrastructure.persistence.DocumentStatus.REMPLACE);
+                medicalDocumentRepository.save(previous);
+                doc.setPreviousDocumentId(previous.getId());
+                doc.setVersion(previous.getVersion() + 1);
+            } else {
+                doc.setVersion(1);
+            }
+
+            com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentEntity savedDoc = medicalDocumentRepository.save(doc);
+
             entity.discharge(request.dischargeDiagnosis(), request.dischargeInstructions(), filePath.toString());
+            entity.setDocumentId(savedDoc.getId());
             HospitalizationEntity saved = hospitalizationRepository.save(entity);
 
             UserAccountEntity actor = getCurrentUser();

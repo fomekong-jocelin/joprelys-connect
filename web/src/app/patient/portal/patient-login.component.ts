@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { PatientPortalService } from './services/patient-portal.service';
 import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
 import { FormsModule } from '@angular/forms';
+import { I18nService } from '../../core/i18n/i18n.service';
 
 @Component({
   selector: 'app-patient-login',
@@ -34,13 +35,13 @@ import { FormsModule } from '@angular/forms';
 
         <div class="w-full text-center mb-6">
           <h2 class="font-display font-bold text-2xl tracking-tight text-[#0A1D3D] dark:text-white mb-2">
-            Espace Patient Sécurisé
+            {{ i18n.t('patient.login.title') }}
           </h2>
           <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">
             @if (step() === 1) {
-              Connectez-vous pour accéder à vos ordonnances
+              {{ i18n.t('patient.login.step1Subtitle') }}
             } @else {
-              Saisissez le code de sécurité envoyé à votre clinique
+              {{ i18n.t('patient.login.step2Subtitle') }}
             }
           </p>
         </div>
@@ -49,7 +50,7 @@ import { FormsModule } from '@angular/forms';
         @if (step() === 1) {
           <form class="w-full space-y-4" (submit)="$event.preventDefault(); requestOtp()">
             <div class="space-y-1">
-              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Numéro DPU</label>
+              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">{{ i18n.t('patient.login.dpu') }}</label>
               <input
                 type="text"
                 required
@@ -61,7 +62,7 @@ import { FormsModule } from '@angular/forms';
             </div>
 
             <div class="space-y-1">
-              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Téléphone</label>
+              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">{{ i18n.t('patients.phone') }}</label>
               <input
                 type="tel"
                 required
@@ -73,7 +74,7 @@ import { FormsModule } from '@angular/forms';
             </div>
 
             <div class="space-y-1">
-              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date de naissance</label>
+              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">{{ i18n.t('patients.birthDate') }}</label>
               <input
                 type="date"
                 required
@@ -95,9 +96,9 @@ import { FormsModule } from '@angular/forms';
               [disabled]="loading() || !globalPatientNumber() || !phone() || !birthDate()"
             >
               @if (loading()) {
-                Demande en cours...
+                {{ i18n.t('patient.login.requesting') }}
               } @else {
-                Recevoir le code de sécurité
+                {{ i18n.t('patient.login.submit') }}
               }
             </button>
           </form>
@@ -105,7 +106,7 @@ import { FormsModule } from '@angular/forms';
           <!-- Step 2: Input OTP -->
           <form class="w-full space-y-4" (submit)="$event.preventDefault(); verifyOtp()">
             <div class="space-y-1">
-              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Code de sécurité (OTP)</label>
+              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">{{ i18n.t('patient.login.otp') }}</label>
               <input
                 type="text"
                 required
@@ -129,9 +130,9 @@ import { FormsModule } from '@angular/forms';
               [disabled]="loading() || otpCode().length !== 6"
             >
               @if (loading()) {
-                Vérification...
+                {{ i18n.t('patient.login.verifying') }}
               } @else {
-                Se connecter
+                {{ i18n.t('patient.login.verify') }}
               }
             </button>
 
@@ -140,14 +141,14 @@ import { FormsModule } from '@angular/forms';
               (click)="step.set(1); error.set('')"
               class="w-full text-center text-xs font-semibold text-[var(--brand-primary)] hover:underline cursor-pointer"
             >
-              Retour à l'étape précédente
+              {{ i18n.t('patient.login.back') }}
             </button>
           </form>
         }
 
         <div class="mt-6 text-center text-xs text-slate-500">
-          Connexion clinique ?
-          <a routerLink="/" class="text-[var(--brand-primary)] hover:underline font-semibold ml-1">Espace Clinique</a>
+          {{ i18n.t('patient.login.clinicLogin') }}
+          <a routerLink="/" class="text-[var(--brand-primary)] hover:underline font-semibold ml-1">{{ i18n.t('patient.login.clinicSpace') }}</a>
         </div>
       </div>
     </main>
@@ -157,6 +158,7 @@ export class PatientLoginComponent {
   private readonly portalService = inject(PatientPortalService);
   private readonly tokenStorage = inject(AuthTokenStorageService);
   private readonly router = inject(Router);
+  readonly i18n = inject(I18nService);
 
   readonly step = signal<number>(1);
   readonly loading = signal(false);
@@ -191,7 +193,7 @@ export class PatientLoginComponent {
       },
       error: (err) => {
         this.loading.set(false);
-        this.error.set(err.error?.detail || "Informations incorrectes.");
+        this.error.set(err.error?.detail || this.i18n.t('patient.login.error.invalidCredentials'));
       }
     });
   }
@@ -209,7 +211,7 @@ export class PatientLoginComponent {
       },
       error: (err) => {
         this.loading.set(false);
-        this.error.set(err.error?.detail || "Code incorrect.");
+        this.error.set(err.error?.detail || this.i18n.t('patient.login.error.invalidOtp'));
       }
     });
   }

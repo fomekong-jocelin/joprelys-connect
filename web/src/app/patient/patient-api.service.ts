@@ -149,4 +149,8 @@ export class PatientApiService {
   getMedicalSummary(patientId: string): Observable<any> {
     return this.http.get<any>(`/api/patients/${patientId}/medical-summary`);
   }
+
+  getPatientVisits(patientId: string): Observable<any[]> {
+    return this.http.get<any[]>(`/api/visits/patient/${patientId}`);
+  }
 }

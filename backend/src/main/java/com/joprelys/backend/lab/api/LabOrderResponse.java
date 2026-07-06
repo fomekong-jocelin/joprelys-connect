@@ -1,5 +1,7 @@
 package com.joprelys.backend.lab.api;
 
+import com.joprelys.backend.lab.infrastructure.persistence.ExamType;
+import com.joprelys.backend.lab.infrastructure.persistence.LabOrderStatus;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -14,10 +16,10 @@ public record LabOrderResponse(
 		String requesterPractitionerName,
 		UUID sourceOrganizationId,
 		UUID targetOrganizationId,
-		String examType,
+		ExamType examType,
 		List<String> exams,
 		String reason,
 		String priority,
-		String status,
+		LabOrderStatus status,
 		Instant createdAt
 ) {}

@@ -80,6 +80,59 @@ public class PatientAuthService {
         }
     }
 
+    /**
+     * STORY-1909 : Génère un OTP pour valider l'approbation d'un consentement.
+     * Utilisé quand le canal de validation est OTP_SMS ou OTP_EMAIL.
+     *
+     * @param globalPatientNumber le numéro DPU du patient
+     * @param consentId           l'identifiant du consentement à approuver
+     */
+    public void generateConsentOtp(String globalPatientNumber, String consentId) {
+        patientRepository.findByGlobalPatientNumber(globalPatientNumber)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient introuvable."));
+
+        String code = String.format("%06d", random.nextInt(1000000));
+        String key = "CONSENT_" + globalPatientNumber + "_" + consentId;
+        otpMap.put(key, new OtpData(code, Instant.now(), 0));
+
+        // Simulation : affichage console (en prod → SMS/email)
+        System.out.println("[OTP CONSENT] Code pour DPU=" + globalPatientNumber
+                + " consentId=" + consentId + " : " + code);
+    }
+
+    /**
+     * STORY-1909 : Vérifie l'OTP de consentement et retourne true si valide.
+     *
+     * @param globalPatientNumber le numéro DPU
+     * @param consentId           l'identifiant du consentement
+     * @param otpCode             le code saisi par le patient
+     */
+    public boolean verifyConsentOtp(String globalPatientNumber, String consentId, String otpCode) {
+        String key = "CONSENT_" + globalPatientNumber + "_" + consentId;
+        OtpData otpData = otpMap.get(key);
+
+        if (otpData == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aucun OTP actif pour ce consentement.");
+        }
+        if (otpData.isExpired()) {
+            otpMap.remove(key);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le code OTP a expiré.");
+        }
+        if (otpData.code().equals(otpCode)) {
+            otpMap.remove(key);
+            return true;
+        } else {
+            int newAttempts = otpData.attempts() + 1;
+            if (newAttempts >= 3) {
+                otpMap.remove(key);
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Trop de tentatives. Veuillez régénérer un OTP.");
+            }
+            otpMap.put(key, new OtpData(otpData.code(), otpData.createdAt(), newAttempts));
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Code OTP incorrect.");
+        }
+    }
+
     private static String normalizePhone(String phone) {
         if (phone == null) return "";
         String digits = phone.replaceAll("[^0-9]", "");
