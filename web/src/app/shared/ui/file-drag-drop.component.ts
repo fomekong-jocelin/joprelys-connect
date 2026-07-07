@@ -91,7 +91,7 @@ import { CommonModule } from '@angular/common';
 export class FileDragDropComponent {
   readonly label = input<string | null>(null);
   readonly required = input<boolean>(false);
-  readonly accept = input<string>('image/png, image/jpeg');
+  readonly accept = input<string>('image/png, image/jpeg, image/webp');
   readonly maxSizeMb = input<number>(2);
   
   readonly fileSelected = output<File>();

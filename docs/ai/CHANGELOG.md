@@ -8,6 +8,11 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- **Support du format WEBP pour l'upload d'images (TKT-WEBP-SUPPORT-FIX)** :
+  - Support de la validation d'en-tête (Magic Numbers) pour les fichiers images WebP au backend (vérification de `"RIFF"` et `"WEBP"`).
+  - Détection d'extension `.webp` et fallback de sauvegarde directe sans redimensionnement au backend.
+  - Ajout du type MIME `image/webp` dans l'endpoint de visualisation `/api/public/files/view`.
+  - Intégration de `image/webp` par défaut dans le filtre `accept` du composant frontend `FileDragDropComponent`.
 - **Harmonisation complète des couleurs UI & thèmes (TKT-COLOR-HARMONIZATION)** :
   - Centralisation de toutes les couleurs de l'application via des variables CSS sémantiques dans `styles.css`.
   - Élimination de toutes les couleurs hexadécimales hardcodées, des overrides locaux (`hover:bg-[#097b98]`, `active:bg-[#076881]`, `dark:text-[#22d3ee]`) et des styles inline pour assurer la conformité avec le Brand Kit Joprelys et l'accessibilité WCAG 2.1 AA (contrastes ≥ 4.5:1 pour tout texte).

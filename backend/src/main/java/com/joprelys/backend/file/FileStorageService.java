@@ -53,6 +53,8 @@ public class FileStorageService {
 			String extension = "png"; // default
 			if (originalFilename != null && (originalFilename.toLowerCase().endsWith(".jpg") || originalFilename.toLowerCase().endsWith(".jpeg"))) {
 				extension = "jpg";
+			} else if (originalFilename != null && originalFilename.toLowerCase().endsWith(".webp")) {
+				extension = "webp";
 			}
 			String uniqueFilename = UUID.randomUUID().toString() + "." + extension;
 
@@ -164,25 +166,38 @@ public class FileStorageService {
 
 	private void validateImageHeader(MultipartFile file) {
 		try (InputStream is = file.getInputStream()) {
-			byte[] header = new byte[8];
+			byte[] header = new byte[12];
 			int readBytes = is.read(header);
-			if (readBytes < 3) {
+			if (readBytes < 4) {
 				throw new IllegalArgumentException("Fichier trop court pour être une image valide.");
 			}
 
 			// Vérification PNG: 89 50 4E 47 0D 0A 1A 0A
-			boolean isPng = (header[0] & 0xFF) == 0x89 &&
+			boolean isPng = readBytes >= 4 &&
+					(header[0] & 0xFF) == 0x89 &&
 					(header[1] & 0xFF) == 0x50 &&
 					(header[2] & 0xFF) == 0x4E &&
 					(header[3] & 0xFF) == 0x47;
 
 			// Vérification JPEG: FF D8 FF
-			boolean isJpeg = (header[0] & 0xFF) == 0xFF &&
+			boolean isJpeg = readBytes >= 3 &&
+					(header[0] & 0xFF) == 0xFF &&
 					(header[1] & 0xFF) == 0xD8 &&
 					(header[2] & 0xFF) == 0xFF;
 
-			if (!isPng && !isJpeg) {
-				throw new IllegalArgumentException("Type de fichier non autorisé. Seuls les formats PNG et JPEG/JPG réels sont acceptés.");
+			// Vérification WebP: "RIFF" .... "WEBP"
+			boolean isWebp = readBytes >= 12 &&
+					(header[0] & 0xFF) == 0x52 && // 'R'
+					(header[1] & 0xFF) == 0x49 && // 'I'
+					(header[2] & 0xFF) == 0x46 && // 'F'
+					(header[3] & 0xFF) == 0x46 && // 'F'
+					(header[8] & 0xFF) == 0x57 && // 'W'
+					(header[9] & 0xFF) == 0x45 && // 'E'
+					(header[10] & 0xFF) == 0x42 && // 'B'
+					(header[11] & 0xFF) == 0x50;   // 'P'
+
+			if (!isPng && !isJpeg && !isWebp) {
+				throw new IllegalArgumentException("Type de fichier non autorisé. Seuls les formats PNG, JPEG/JPG et WEBP réels sont acceptés.");
 			}
 		} catch (IOException e) {
 			throw new RuntimeException("Erreur lors de l'analyse du format du fichier.", e);

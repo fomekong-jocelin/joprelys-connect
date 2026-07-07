@@ -52,6 +52,8 @@ public class FileController {
 				mediaType = MediaType.IMAGE_PNG;
 			} else if (path.toLowerCase().endsWith(".jpg") || path.toLowerCase().endsWith(".jpeg")) {
 				mediaType = MediaType.IMAGE_JPEG;
+			} else if (path.toLowerCase().endsWith(".webp")) {
+				mediaType = MediaType.parseMediaType("image/webp");
 			}
 
 			return ResponseEntity.ok()
