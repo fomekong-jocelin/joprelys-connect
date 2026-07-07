@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -71,7 +72,7 @@ public class PharmacyService {
 		if (prescription.getExpiresAt() != null && prescription.getExpiresAt().isBefore(Instant.now())) {
 			if (!"EXPIRED".equals(prescription.getStatus())) {
 				prescription.setStatus("EXPIRED");
-				jdbcTemplate.update("UPDATE prescriptions SET status = 'EXPIRED', updated_at = ? WHERE id = ?", Instant.now(), prescription.getId());
+				jdbcTemplate.update("UPDATE prescriptions SET status = 'EXPIRED', updated_at = ? WHERE id = ?", Timestamp.from(Instant.now()), prescription.getId());
 			}
 		}
 
@@ -216,7 +217,7 @@ public class PharmacyService {
 		if (anyItemDispensed) {
 			String newStatus = allItemsFullyDispensed ? "FULLY_DISPENSED" : "PARTIALLY_DISPENSED";
 			prescription.setStatus(newStatus);
-			jdbcTemplate.update("UPDATE prescriptions SET status = ?, updated_at = ? WHERE id = ?", newStatus, Instant.now(), prescription.getId());
+			jdbcTemplate.update("UPDATE prescriptions SET status = ?, updated_at = ? WHERE id = ?", newStatus, Timestamp.from(Instant.now()), prescription.getId());
 		}
 
 		// Query patientId globally using raw SQL to bypass TenantId restrictions, handling potential EmptyResultDataAccessException
@@ -265,22 +266,48 @@ public class PharmacyService {
 
 		failedAttempts.remove(prescriptionNumber);
 
-		return dispensationRepository.findByPrescriptionIdOrderByDispensedAtDesc(prescription.getId()).stream()
-				.map(dispensation -> new PharmacyDispensationHistoryResponse(
-						dispensation.getId(),
-						dispensation.getDispensedAt(),
-						dispensation.getPharmacyName(),
-						dispensation.getPharmacistLicense(),
-						dispensation.getItems().stream()
-								.map(item -> new PharmacyDispensationHistoryItemResponse(
-										item.getPrescriptionItem().getId(),
-										item.getPrescriptionItem().getDrugName(),
-										item.getQuantityDispensed(),
-										item.getSubstitutedWith()
-								))
-								.toList()
-				))
-				.toList();
+		// Utilise du SQL natif via JdbcTemplate pour contourner le filtre @TenantId de Hibernate.
+		// Sur un endpoint public, il n'y a pas de contexte de tenant actif, ce qui rend
+		// les requêtes Spring Data JPA traversant des relations @TenantId (@ManyToOne vers PrescriptionEntity)
+		// invisibles (retournent une liste vide). Le pattern SQL natif est identique à verifyPrescription().
+		String dispensationsSql =
+				"SELECT d.id AS disp_id, d.dispensed_at, d.pharmacy_name, d.pharmacist_license " +
+				"FROM prescription_dispensations d " +
+				"WHERE d.prescription_id = ? " +
+				"ORDER BY d.dispensed_at DESC";
+
+		List<Map<String, Object>> dispensationRows = jdbcTemplate.queryForList(dispensationsSql, prescription.getId());
+
+		return dispensationRows.stream().map(row -> {
+			UUID dispensationId = row.get("disp_id") instanceof UUID uuid ? uuid : UUID.fromString(row.get("disp_id").toString());
+			Instant dispensedAt = row.get("dispensed_at") instanceof Timestamp ts ? ts.toInstant()
+					: row.get("dispensed_at") instanceof java.sql.Timestamp ts2 ? ts2.toInstant()
+					: Instant.parse(row.get("dispensed_at").toString());
+			String pharmacyName = (String) row.get("pharmacy_name");
+			String pharmacistLicense = (String) row.get("pharmacist_license");
+
+			String itemsSql =
+					"SELECT di.id AS item_id, pi.id AS prescription_item_id, pi.drug_name, " +
+					"di.quantity_dispensed, di.substituted_with " +
+					"FROM dispensation_items di " +
+					"JOIN prescription_items pi ON di.prescription_item_id = pi.id " +
+					"WHERE di.dispensation_id = ?";
+
+			List<PharmacyDispensationHistoryItemResponse> items = jdbcTemplate.queryForList(itemsSql, dispensationId)
+					.stream()
+					.map(itemRow -> {
+						UUID prescriptionItemId = itemRow.get("prescription_item_id") instanceof UUID uid
+								? uid : UUID.fromString(itemRow.get("prescription_item_id").toString());
+						String drugName = (String) itemRow.get("drug_name");
+						Integer quantityDispensed = itemRow.get("quantity_dispensed") instanceof Number n
+								? n.intValue() : 0;
+						String substitutedWith = (String) itemRow.get("substituted_with");
+						return new PharmacyDispensationHistoryItemResponse(prescriptionItemId, drugName, quantityDispensed, substitutedWith);
+					})
+					.toList();
+
+			return new PharmacyDispensationHistoryResponse(dispensationId, dispensedAt, pharmacyName, pharmacistLicense, items);
+		}).toList();
 	}
 
 	private void checkLockout(String prescriptionNumber) {

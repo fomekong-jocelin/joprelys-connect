@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-07 (TKT-DASHBOARD-CLEANUP : Suppression du widget de statut interopérabilité du dashboard) |
+| Dernière mise à jour | 2026-07-07 (TICKET-PHARMA-HISTORY-EMPTY : Correction historique de dispensation vide sur endpoint public — filtre @TenantId Hibernate) |
 | Responsable mise à jour | Antigravity |
 | État global | SPRINT-0011 — Alignement modules 4 à 12 du CDC (DPU, soins, documents, consentements) |
 | Risques majeurs | Taille du chantier (9 modules), dette architecture controllers→repositories |
@@ -21,6 +21,8 @@
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
+| TICKET-UI-PHARMACY-DISPENSATION-LAYOUT | UI_UX | Task | Amélioration du layout et de la disposition du panneau de dispensation en pharmacie (suppression du scroll) | Frontend | DONE | P1 | 1 | Intermédiaire | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (correction appliquée et validée par build/tests) | Faible | 2026-07-07 |
+| TICKET-UI-ACCESS-CONTROL-AND-MODALS | UI_UX | Bug | Correction des permissions staff, visibilité des menus/onglets, z-index des modales, et boutons radio de rôles | Full-stack | DONE | P0 | 3 | Senior | 0.2j | 0.35j | 0.6j | Antigravity | Lead Developer | SPRINT-0011 | 0.2j | Aucun (corrigé, tests et builds passés avec succès) | Faible | 2026-07-07 |
 | TKT-DASHBOARD-CLEANUP | UI_UX | Task | Nettoyage du widget Statut Services Interop du tableau de bord | Frontend | DONE | P2 | 1 | Intermédiaire | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (widget supprimé du template HTML, build Angular OK) | Faible | 2026-07-07 |
 | TKT-LAB-ORDERS-500-ERROR-FIX | CDC_ALIGN | Bug | Résolution de l'erreur 500 sur création demande d'examen labo | Backend | DONE | P0 | 1 | Senior | 0.1j | 0.15j | 0.25j | Antigravity | Lead Developer | SPRINT-0011 | 0.1j | Aucun (comptage global SQL natif countByExamRequestNumberStartingWithGlobally, tests OK) | Faible | 2026-07-07 |
 | TKT-VERIFICATION-AND-CONSULTATION-FIX | CDC_ALIGN | Bug | Résolution double verify d'authentification et erreur 500 consultation | Full-stack | DONE | P0 | 2 | Senior | 0.15j | 0.25j | 0.4j | Antigravity | Lead Developer | SPRINT-0011 | 0.15j | Aucun (double verify nettoyé, routes Angular ajoutées, countGlobally native query ajouté, build OK) | Faible | 2026-07-07 |
