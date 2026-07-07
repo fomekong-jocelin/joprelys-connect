@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-07 (TKT-LAB-ORDERS-500-ERROR-FIX : Résolution erreur 500 sur création de demandes d'examens) |
+| Dernière mise à jour | 2026-07-07 (TKT-DASHBOARD-CLEANUP : Suppression du widget de statut interopérabilité du dashboard) |
 | Responsable mise à jour | Antigravity |
 | État global | SPRINT-0011 — Alignement modules 4 à 12 du CDC (DPU, soins, documents, consentements) |
 | Risques majeurs | Taille du chantier (9 modules), dette architecture controllers→repositories |
@@ -21,6 +21,7 @@
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
+| TKT-DASHBOARD-CLEANUP | UI_UX | Task | Nettoyage du widget Statut Services Interop du tableau de bord | Frontend | DONE | P2 | 1 | Intermédiaire | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (widget supprimé du template HTML, build Angular OK) | Faible | 2026-07-07 |
 | TKT-LAB-ORDERS-500-ERROR-FIX | CDC_ALIGN | Bug | Résolution de l'erreur 500 sur création demande d'examen labo | Backend | DONE | P0 | 1 | Senior | 0.1j | 0.15j | 0.25j | Antigravity | Lead Developer | SPRINT-0011 | 0.1j | Aucun (comptage global SQL natif countByExamRequestNumberStartingWithGlobally, tests OK) | Faible | 2026-07-07 |
 | TKT-VERIFICATION-AND-CONSULTATION-FIX | CDC_ALIGN | Bug | Résolution double verify d'authentification et erreur 500 consultation | Full-stack | DONE | P0 | 2 | Senior | 0.15j | 0.25j | 0.4j | Antigravity | Lead Developer | SPRINT-0011 | 0.15j | Aucun (double verify nettoyé, routes Angular ajoutées, countGlobally native query ajouté, build OK) | Faible | 2026-07-07 |
 | TKT-PHARMACY-DISPENSATION-ERROR-DIAGNOSTIC | CDC_ALIGN | Bug | Diagnostic et résolution des causes d'erreur de dispensation en pharmacie | Full-stack | DONE | P0 | 1 | Senior | 0.1j | 0.2j | 0.3j | Antigravity | Lead Developer | SPRINT-0011 | 0.2j | Aucun (quantités textuelles tolérées, troncatures de sécurité et gestion robuste du patientId en audit log) | Faible | 2026-07-07 |

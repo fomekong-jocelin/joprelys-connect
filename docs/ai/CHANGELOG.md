@@ -8,6 +8,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+- **Nettoyage du tableau de bord (TKT-DASHBOARD-CLEANUP)** :
+  - Suppression complète du widget inutile "Statut Services Interop" du template [dashboard.component.html](file:///C:/MES-APPLICATIONS/joprelys-connect/web/src/app/clinic/dashboard.component.html) pour désencombrer l'interface utilisateur des professionnels de santé.
 - **Résolution de l'erreur 500 sur la création des demandes d'examens de laboratoire (TKT-LAB-ORDERS-500-ERROR-FIX)** :
   - Remplacement de `labOrderRepository.countByExamRequestNumberStartingWith(prefix)` par `countByExamRequestNumberStartingWithGlobally(prefix)` (utilisant une requête SQL native sans filtrage Hibernate de tenant) lors de la génération de `exam_request_number` dans `LabOrderService.java`. Cela élimine les collisions d'unicité sur les numéros d'examens créés en parallèle dans différentes cliniques.
 - **Correction et robustesse de la dispensation en pharmacie (TKT-PHARMACY-DISPENSATION-ERROR-DIAGNOSTIC)** :
