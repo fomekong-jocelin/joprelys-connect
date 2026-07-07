@@ -8,6 +8,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+- **Résolution de l'erreur 500 sur la création des demandes d'examens de laboratoire (TKT-LAB-ORDERS-500-ERROR-FIX)** :
+  - Remplacement de `labOrderRepository.countByExamRequestNumberStartingWith(prefix)` par `countByExamRequestNumberStartingWithGlobally(prefix)` (utilisant une requête SQL native sans filtrage Hibernate de tenant) lors de la génération de `exam_request_number` dans `LabOrderService.java`. Cela élimine les collisions d'unicité sur les numéros d'examens créés en parallèle dans différentes cliniques.
 - **Correction et robustesse de la dispensation en pharmacie (TKT-PHARMACY-DISPENSATION-ERROR-DIAGNOSTIC)** :
   - Tolérance pour les prescriptions à posologie libre ou non quantifiée (ex: "Selon besoin") : suppression du blocage de quantité dispensée si la quantité prescrite parsée est nulle (`qtyPrescribed == 0`).
   - Ajout de validations de taille `@Size` dans `PharmacyDispenseRequest.java` et troncatures automatiques de sécurité dans `PharmacyService.java` pour le nom de la pharmacie (max 200) et le numéro de licence du pharmacien (max 50) afin d'éviter des erreurs SQL 500.

@@ -63,7 +63,7 @@ public class LabOrderService {
 		// Générer le numéro unique EXAM-REQ-YYYYMMDD-XXXXXX
 		String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 		String prefix = "EXAM-REQ-" + dateStr + "-";
-		long countToday = labOrderRepository.countByExamRequestNumberStartingWith(prefix);
+		long countToday = labOrderRepository.countByExamRequestNumberStartingWithGlobally(prefix);
 		String sequence = String.format("%06d", countToday + 1);
 		String examRequestNumber = prefix + sequence;
 

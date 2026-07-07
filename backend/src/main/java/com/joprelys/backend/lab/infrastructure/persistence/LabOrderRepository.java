@@ -17,6 +17,9 @@ public interface LabOrderRepository extends JpaRepository<LabOrderEntity, UUID> 
 
 	long countByExamRequestNumberStartingWith(String prefix);
 
+	@org.springframework.data.jpa.repository.Query(value = "SELECT COUNT(*) FROM lab_orders WHERE exam_request_number LIKE CONCAT(:prefix, '%')", nativeQuery = true)
+	long countByExamRequestNumberStartingWithGlobally(@org.springframework.data.repository.query.Param("prefix") String prefix);
+
 	@org.springframework.data.jpa.repository.Query(value = "SELECT * FROM lab_orders WHERE id = :id", nativeQuery = true)
 	Optional<LabOrderEntity> findByIdGlobally(@org.springframework.data.repository.query.Param("id") UUID id);
 }
