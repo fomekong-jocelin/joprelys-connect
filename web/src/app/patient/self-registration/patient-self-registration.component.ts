@@ -4,6 +4,8 @@ import { AlertComponent } from '../../shared/ui/alert.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
 import { CardComponent } from '../../shared/ui/card.component';
 import { InputComponent } from '../../shared/ui/input.component';
+import { AppLogoComponent } from '../../shared/ui/app-logo.component';
+import { ThemeService } from '../../core/theme/theme.service';
 import { PatientApiService } from '../patient-api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { PatientPreRegistrationRequest } from '../patient.models';
@@ -11,13 +13,15 @@ import { PatientPreRegistrationRequest } from '../patient.models';
 @Component({
   selector: 'app-patient-self-registration',
   standalone: true,
-  imports: [AlertComponent, ButtonComponent, CardComponent, InputComponent],
+  imports: [AlertComponent, ButtonComponent, CardComponent, InputComponent, AppLogoComponent],
   templateUrl: './patient-self-registration.component.html',
 })
 export class PatientSelfRegistrationComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly patientApiService = inject(PatientApiService);
   readonly i18n = inject(I18nService);
+  private readonly themeService = inject(ThemeService);
+  readonly theme = this.themeService.theme;
 
   // Identifiant d'organisation extrait de l'URL
   organizationId = signal<string | null>(null);
@@ -93,6 +97,11 @@ export class PatientSelfRegistrationComponent implements OnInit {
 
   toggleLanguage(): void {
     this.i18n.toggle();
+  }
+
+  toggleTheme(): void {
+    const nextTheme = this.theme() === 'dark' ? 'light' : 'dark';
+    this.themeService.setTheme(nextTheme);
   }
 
   setAdmissionType(isNew: boolean): void {

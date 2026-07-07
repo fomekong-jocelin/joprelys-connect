@@ -2,26 +2,40 @@
   <!-- Header / Topbar publique -->
   <header class="border-b bg-white dark:bg-slate-900 px-6 py-4 flex items-center justify-between shadow-xs" style="border-color: var(--border-color)">
     <div class="flex items-center gap-2">
-      <!-- Logo vectoriel stylisé en ligne -->
-      <svg class="h-7 w-7 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
-        <path d="M12 6v12M6 12h12"/>
-      </svg>
-      <span class="font-bold text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400 bg-clip-text text-transparent">
-        Joprelys Connect
-      </span>
+      <!-- Logo officiel Joprelys Connect -->
+      <app-logo></app-logo>
     </div>
 
-    <!-- Toggle de langue -->
-    <button 
-      (click)="toggleLanguage()" 
-      class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-    >
-      <span class="uppercase">{{ i18n.locale() }}</span>
-      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-      </svg>
-    </button>
+    <!-- Actions header (Theme & Langue) -->
+    <div class="flex items-center gap-2">
+      <!-- Toggle de thème -->
+      <button 
+        type="button"
+        (click)="toggleTheme()" 
+        class="flex items-center justify-center w-8 h-8 rounded-[4px] border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition cursor-pointer"
+      >
+        @if (theme() === 'dark') {
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m0 13.5V21M4.978 4.978l1.59 1.59m10.862 10.862l1.59 1.59M3 12h2.25m13.5 0H21M4.978 19.022l1.59-1.59m10.862-10.862l1.59-1.59M12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" />
+          </svg>
+        } @else {
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+          </svg>
+        }
+      </button>
+
+      <!-- Toggle de langue -->
+      <button 
+        (click)="toggleLanguage()" 
+        class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+      >
+        <span class="uppercase">{{ i18n.locale() }}</span>
+        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+      </button>
+    </div>
   </header>
 
   <!-- Contenu principal -->
@@ -81,24 +95,23 @@
 
           <!-- SECTION 1 : Type d'admission -->
           <div class="space-y-3">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border-b pb-1">
+            <h3 class="text-xs font-bold uppercase tracking-wider border-b pb-1" style="color: var(--brand-primary); border-color: var(--brand-primary)">
               {{ i18n.t('selfRegistration.step1Title') }}
             </h3>
             
             <div class="grid grid-cols-1 gap-3">
               <label 
                 class="flex items-start p-3 rounded-[6px] border cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition"
-                [class.border-indigo-500]="isNewAdmission()"
-                [class.bg-indigo-500/5]="isNewAdmission()"
-                [class.border-slate-200]="!isNewAdmission()"
-                [class.dark:border-slate-800]="!isNewAdmission()"
+                [style.border-color]="isNewAdmission() ? 'var(--brand-primary)' : 'var(--app-border)'"
+                [style.background-color]="isNewAdmission() ? 'color-mix(in srgb, var(--brand-primary) 7%, transparent)' : 'transparent'"
               >
                 <input 
                   type="radio" 
                   name="admissionType" 
                   [checked]="isNewAdmission()"
                   (change)="setAdmissionType(true)" 
-                  class="mt-1 mr-3 h-4 w-4 text-indigo-600 border-slate-300 focus:ring-indigo-500"
+                  class="mt-1 mr-3 h-4 w-4"
+                  style="accent-color: var(--brand-primary)"
                 />
                 <div>
                   <span class="text-sm font-semibold block">{{ i18n.t('selfRegistration.admissionNew') }}</span>
@@ -107,17 +120,16 @@
 
               <label 
                 class="flex items-start p-3 rounded-[6px] border cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition"
-                [class.border-indigo-500]="!isNewAdmission()"
-                [class.bg-indigo-500/5]="!isNewAdmission()"
-                [class.border-slate-200]="!isNewAdmission()"
-                [class.dark:border-slate-800]="!isNewAdmission()"
+                [style.border-color]="!isNewAdmission() ? 'var(--brand-primary)' : 'var(--app-border)'"
+                [style.background-color]="!isNewAdmission() ? 'color-mix(in srgb, var(--brand-primary) 7%, transparent)' : 'transparent'"
               >
                 <input 
                   type="radio" 
                   name="admissionType" 
                   [checked]="!isNewAdmission()"
                   (change)="setAdmissionType(false)" 
-                  class="mt-1 mr-3 h-4 w-4 text-indigo-600 border-slate-300 focus:ring-indigo-500"
+                  class="mt-1 mr-3 h-4 w-4"
+                  style="accent-color: var(--brand-primary)"
                 />
                 <div>
                   <span class="text-sm font-semibold block">{{ i18n.t('selfRegistration.admissionExisting') }}</span>
@@ -129,7 +141,7 @@
 
           <!-- SECTION 2 : Vos informations d'identité -->
           <div class="space-y-4">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border-b pb-1">
+            <h3 class="text-xs font-bold uppercase tracking-wider border-b pb-1" style="color: var(--brand-primary); border-color: var(--brand-primary)">
               {{ i18n.t('selfRegistration.step2Title') }}
             </h3>
 
@@ -190,7 +202,7 @@
 
           <!-- SECTION 3 : Vos coordonnées de contact -->
           <div class="space-y-4">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border-b pb-1">
+            <h3 class="text-xs font-bold uppercase tracking-wider border-b pb-1" style="color: var(--brand-primary); border-color: var(--brand-primary)">
               {{ i18n.t('selfRegistration.step3Title') }}
             </h3>
 
@@ -218,7 +230,7 @@
 
           <!-- SECTION 4 : Contact d'urgence -->
           <div class="space-y-4">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border-b pb-1">
+            <h3 class="text-xs font-bold uppercase tracking-wider border-b pb-1" style="color: var(--brand-primary); border-color: var(--brand-primary)">
               {{ i18n.t('selfRegistration.step4Title') }}
             </h3>
 
@@ -254,14 +266,15 @@
           <!-- SECTION 5 : Validation de sécurité (Captcha Médical) -->
           <div class="space-y-4 p-4 rounded-[6px] border bg-slate-50/50 dark:bg-slate-900/50" style="border-color: var(--border-color)">
             <div class="flex justify-between items-center border-b pb-1">
-              <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+              <h3 class="text-xs font-bold uppercase tracking-wider" style="color: var(--brand-primary)">
                 {{ i18n.t('selfRegistration.step5Title') }}
               </h3>
               <button 
                 type="button" 
                 (click)="loadCaptcha()" 
                 [disabled]="captchaLoading()"
-                class="text-xxs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                class="text-xxs font-semibold hover:underline flex items-center gap-1"
+                style="color: var(--brand-primary)"
               >
                 <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M9 11l3 3L22 4" />
@@ -274,7 +287,7 @@
 
             @if (captchaLoading()) {
               <div class="flex items-center justify-center py-4">
-                <div class="h-5 w-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                <div class="h-5 w-5 border-2 border-[var(--brand-primary)] border-t-transparent rounded-full animate-spin"></div>
               </div>
             } @else if (captchaQuestion()) {
               <div class="space-y-3">
