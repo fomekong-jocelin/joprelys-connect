@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-06 (TICKET-UI-PATIENT-DETAIL-AND-PRESCRIPTION-FIXES : navigation patient mobile, finalisation ordonnances et indicateurs chargement) |
+| Dernière mise à jour | 2026-07-07 (STORY-0305 : Tableau de Bord d'Accueil & Validation Back-office Angular terminé et testé avec succès) |
 | Responsable mise à jour | Antigravity |
 | État global | SPRINT-0011 — Alignement modules 4 à 12 du CDC (DPU, soins, documents, consentements) |
 | Risques majeurs | Taille du chantier (9 modules), dette architecture controllers→repositories |
@@ -21,6 +21,8 @@
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
+| TICKET-DEMO-PARCOURS-COMPLET | CDC_ALIGN | Documentation | Guide de démo — Parcours utilisateur complet de la création patient aux examens labo | Documentation | DONE | P1 | 2 | Tech Lead | 0.3j | 0.5j | 0.8j | Antigravity | Lead Developer | SPRINT-0011 | 0.3j | Aucun (document de démo rédigé, ticket et suivi mis à jour) | Faible | 2026-07-07 |
+| TICKET-QR-CODE-PATIENT-ADMISSION-ADR | CDC_ALIGN | Architecture | Cadrage et ADR pour l'enregistrement patient autonome via QR Code | Full-stack | DONE | P1 | 2 | Tech Lead | 0.2j | 0.3j | 0.5j | Antigravity | Lead Developer | SPRINT-0011 | 0.15j | Aucun (ADR-0003 et spécifications rédigées) | Moyen | 2026-07-07 |
 | TICKET-UI-PATIENT-DETAIL-AND-PRESCRIPTION-FIXES | UI_UX | Bug | Navigation patient mobile, finalisation d'ordonnances et indicateurs de téléchargement | Full-stack | DONE | P0 | 3 | Senior | 0.15j | 0.3j | 0.6j | Antigravity | Lead Developer | SPRINT-0011 | 0.15j | Aucun (barre d'onglets mobile, auto-finalisation d'ordonnance à la clôture de visite, loader de téléchargement PDF) | Faible | 2026-07-06 |
 | TICKET-UI-MULTI-ROLE-NAVIGATION-FIX | UI_UX | Bug | Correction de la navigation et des IHM pour les profils multi-rôles | Frontend | DONE | P0 | 2 | Intermédiaire | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (navigation, dashboard, détails patients, hospitalisation adaptés au multi-rôle) | Faible | 2026-07-06 |
 | TICKET-PDF-FOOTER-MENTION | DOCS | Task | Ajout de la mention de marque au bas des documents PDF générés | Backend | DONE | P1 | 1 | Backend Engineer | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (mention légale centrée insérée, logos/signatures/cachets validés dynamiques) | Faible | 2026-07-06 |
@@ -68,6 +70,9 @@
 | EPIC-0003 | PAT | Epic | Dossier Patient Unique (DPU) & Recherche | Full-stack | BACKLOG | P0 | 8 | Senior | 2j | 2.6j | 4j | À assigner | Lead | À planifier | 0j | Stories initiales rédigées | Moyen | 2026-07-01 |
 | STORY-0301 | PAT | User Story | Enregistrement Patient & Génération du DPU | Full-stack | DONE | P0 | 3 | Intermédiaire | 1j | 1.3j | 2.2j | Antigravity | Lead | SPRINT-0002 | 0.65j | Aucun | Moyen | 2026-07-03 |
 | STORY-0302 | PAT | User Story | Recherche de Patients Multicritères | Full-stack | DONE | P0 | 3 | Intermédiaire | 0.5j | 0.65j | 1.1j | Antigravity | Lead | SPRINT-0002 | 0.1j | Aucun | Faible | 2026-07-03 |
+| STORY-0303 | PAT | User Story | API Backend d'enregistrement temporaire et validation | Backend | DONE | P1 | 5 | Senior | 2.0j | 3.0j | 5.0j | Antigravity | Tech Lead | SPRINT-0012 | 1.5j | Aucun (Socle backend, migration V42, captcha médical, audit, tests unitaires et MockMvc au vert) | Moyen | 2026-07-07 |
+| STORY-0304 | PAT | User Story | Formulaire Mobile Public de Pré-enregistrement | Frontend | DONE | P1 | 3 | Intermédiaire | 1.0j | 1.5j | 2.5j | Antigravity | Lead Developer | SPRINT-0012 | 0.8j | Aucun (Interface publique Angular /public/register, double liaison par signaux, captcha médical, i18n FR/EN, 7 tests unitaires Vitest au vert) | Faible | 2026-07-07 |
+| STORY-0305 | PAT | User Story | Tableau de Bord d'Accueil & Validation Back-office | Frontend | DONE | P1 | 3 | Intermédiaire | 1.5j | 2.5j | 4.0j | Antigravity | Lead Developer | SPRINT-0012 | 1.1j | Aucun (Interface de validation d'accueil /clinic/admissions/pre-registrations, tiroir side-by-side de fusion/création avec doublons, badge menu, download PDF, 8 tests Vitest au vert) | Moyen | 2026-07-07 |
 | TICKET-UI-DPU-PATIENT-TABLE-READABILITY | PAT | UI/UX | Lisibilité du tableau patients DPU | Frontend | DONE | P2 | 0.5 | Intermédiaire | 0.03j | 0.05j | 0.08j | Codex | Lead | SPRINT-0004 | 0.05j | Aucun | Faible | 2026-07-03 |
 | EPIC-0004 | VISIT | Epic | Gestion des Visites & Constantes Vitales | Full-stack | READY | P0 | 5 | Intermédiaire | 1.5j | 2j | 3j | Antigravity / Codex | Lead | SPRINT-0002 | 1.50j | STORY-0402 terminée, STORY-0401 en review | Moyen | 2026-07-02 |
 | STORY-0401 | VISIT | User Story | Ouverture & Clôture de Visite Patient | Full-stack | DONE | P0 | 2 | Junior | 0.5j | 0.65j | 1.1j | Antigravity | Lead | SPRINT-0002 | 0.5j | Aucun (tests unitaires et intégration validés avec succès) | Faible | 2026-07-03 |

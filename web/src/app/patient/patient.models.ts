@@ -198,3 +198,71 @@ export interface CreatePatientVaccinationRequest {
   notes?: string;
   nextDoseAt?: string;
 }
+
+export interface MedicalCaptchaResponse {
+  captchaId: string;
+  question: string;
+}
+
+export interface PatientPreRegistrationRequest {
+  organizationId: string;
+  firstName: string;
+  lastName: string;
+  gender: string;
+  birthDate: string;
+  bloodGroup?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelation?: string;
+  captchaId: string;
+  captchaAnswer: string;
+}
+
+export interface PatientPreRegistrationResponse {
+  id: string;
+  organizationId: string;
+  firstName: string;
+  lastName: string;
+  gender: string;
+  birthDate: string;
+  bloodGroup?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelation?: string;
+  status: 'AWAITING_VALIDATION' | 'VALIDATED' | 'REJECTED';
+  createdAt: string;
+  validatedAt?: string;
+  validatedBy?: string;
+  similarityScore?: number;
+  similarPatientId?: string;
+  similarPatientName?: string;
+}
+
+export interface PreRegistrationValidationRequest {
+  firstName: string;
+  lastName: string;
+  gender: string;
+  birthDate: string;
+  bloodGroup?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelation?: string;
+  reconcileWithPatientId?: string;
+}
+
+export interface PreRegistrationPage {
+  content: PatientPreRegistrationResponse[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+}

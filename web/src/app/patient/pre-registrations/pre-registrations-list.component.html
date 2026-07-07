@@ -1,0 +1,416 @@
+<app-shell>
+  <app-page-header
+    [title]="t('preRegistrations.title')"
+    [subtitle]="t('preRegistrations.subtitle')"
+  ></app-page-header>
+
+  <div class="app-container pb-12">
+    <!-- Messages d'erreur ou de succès -->
+    @if (error()) {
+      <app-ui-alert tone="error" class="mb-6">{{ error() }}</app-ui-alert>
+    }
+    @if (successMessage()) {
+      <app-ui-alert tone="info" class="mb-6">{{ successMessage() }}</app-ui-alert>
+    }
+
+    <!-- Barre d'outils et filtres -->
+    <div class="mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 border rounded-[6px]" style="border-color: var(--border-color)">
+      <div class="flex items-center gap-2">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+          {{ t('preRegistrations.tableTitle') }}
+        </h3>
+      </div>
+      
+      <!-- Actions et filtres -->
+      <div class="flex flex-wrap gap-2 items-center">
+        <app-ui-button (pressed)="openQrModal()" variant="secondary" class="flex items-center gap-1.5 py-1.5">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>
+          QR Code d'Admission
+        </app-ui-button>
+
+        <span class="text-slate-300 dark:text-slate-700 hidden sm:inline">|</span>
+
+        <button 
+          (click)="setFilter('AWAITING_VALIDATION')"
+          [class]="filter() === 'AWAITING_VALIDATION' ? 'px-3 py-1.5 text-xs font-bold rounded-[4px] bg-indigo-600 text-white' : 'px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 transition'"
+        >
+          {{ t('preRegistrations.filterPending') }}
+        </button>
+        <button 
+          (click)="setFilter('VALIDATED')"
+          [class]="filter() === 'VALIDATED' ? 'px-3 py-1.5 text-xs font-bold rounded-[4px] bg-indigo-600 text-white' : 'px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 transition'"
+        >
+          {{ t('preRegistrations.filterValidated') }}
+        </button>
+        <button 
+          (click)="setFilter('REJECTED')"
+          [class]="filter() === 'REJECTED' ? 'px-3 py-1.5 text-xs font-bold rounded-[4px] bg-indigo-600 text-white' : 'px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 transition'"
+        >
+          {{ t('preRegistrations.filterRejected') }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Contenu Principal -->
+    @if (isLoading()) {
+      <div class="flex justify-center items-center py-16">
+        <div class="animate-spin rounded-full h-8 w-8 border-2 border-indigo-600 border-t-transparent"></div>
+        <span class="ml-3 text-sm font-semibold text-slate-500 dark:text-slate-400">{{ t('common.loading') }}</span>
+      </div>
+    } @else if (preRegistrations().length === 0) {
+      <app-empty-state [message]="t('preRegistrations.empty')"></app-empty-state>
+    } @else {
+      <!-- Tableaux des admissions temporaires -->
+      <div class="bg-white dark:bg-slate-900 border rounded-[6px] overflow-hidden shadow-xs" style="border-color: var(--border-color)">
+        <table class="w-full border-collapse text-left text-sm">
+          <thead class="bg-slate-50 dark:bg-slate-950 border-b text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400" style="border-color: var(--border-color)">
+            <tr>
+              <th class="px-6 py-3.5">{{ t('preRegistrations.patient') }}</th>
+              <th class="px-6 py-3.5">{{ t('preRegistrations.birthDate') }}</th>
+              <th class="px-6 py-3.5">{{ t('preRegistrations.submittedAt') }}</th>
+              <th class="px-6 py-3.5">{{ t('preRegistrations.status') }}</th>
+              <th class="px-6 py-3.5 text-right">{{ t('preRegistrations.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
+            @for (preReg of preRegistrations(); track preReg.id) {
+              <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-950/20 transition-colors">
+                <td class="px-6 py-4">
+                  <div class="font-bold text-slate-900 dark:text-white">
+                    {{ preReg.lastName }} {{ preReg.firstName }}
+                  </div>
+                  <div class="text-xxs text-slate-400 dark:text-slate-500">
+                    {{ preReg.phone || '-' }} | {{ preReg.email || '-' }}
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-slate-600 dark:text-slate-400">
+                  {{ preReg.birthDate | date:'dd/MM/yyyy' }} ({{ preReg.gender === 'MASCULIN' ? 'M' : 'F' }})
+                </td>
+                <td class="px-6 py-4 text-slate-600 dark:text-slate-400">
+                  {{ preReg.createdAt | date:'dd/MM/yyyy HH:mm' }}
+                </td>
+                <td class="px-6 py-4">
+                  @switch (preReg.status) {
+                    @case ('AWAITING_VALIDATION') {
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xxs font-black bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300">
+                        {{ t('preRegistrations.status.AWAITING_VALIDATION') }}
+                      </span>
+                    }
+                    @case ('VALIDATED') {
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xxs font-black bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300">
+                        {{ t('preRegistrations.status.VALIDATED') }}
+                      </span>
+                    }
+                    @case ('REJECTED') {
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xxs font-black bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300">
+                        {{ t('preRegistrations.status.REJECTED') }}
+                      </span>
+                    }
+                  }
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <div class="flex justify-end gap-2">
+                    <app-ui-button variant="secondary" (pressed)="openDetails(preReg)">
+                      {{ t('preRegistrations.details') }}
+                    </app-ui-button>
+                    @if (preReg.status === 'AWAITING_VALIDATION') {
+                      <button 
+                        (click)="rejectRequest(preReg.id)"
+                        [disabled]="actionLoading()"
+                        class="px-2.5 py-1.5 text-xs font-semibold rounded-[4px] text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 disabled:opacity-50 transition"
+                      >
+                        {{ t('preRegistrations.reject') }}
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="mt-4 flex items-center justify-between">
+        <div class="text-xs text-slate-500 dark:text-slate-400">
+          Total : <b>{{ totalElements() }}</b> demandes
+        </div>
+        <div class="flex gap-2">
+          <button 
+            [disabled]="page() === 0 || actionLoading()"
+            (click)="prevPage()"
+            class="px-3 py-1.5 text-xs font-bold rounded-[4px] border border-slate-200 dark:border-slate-800 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-900 transition"
+          >
+            Précédent
+          </button>
+          <button 
+            [disabled]="(page() + 1) >= totalPages() || actionLoading()"
+            (click)="nextPage()"
+            class="px-3 py-1.5 text-xs font-bold rounded-[4px] border border-slate-200 dark:border-slate-800 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-900 transition"
+          >
+            Suivant
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+</app-shell>
+
+<!-- Tiroir de détails coulissant (Drawer) -->
+@if (selectedPreRegistration(); as preReg) {
+  <div class="fixed inset-0 z-50 flex justify-end bg-slate-900/60 backdrop-blur-xs animate-fade-in" (click)="closeDetails()">
+    <div 
+      class="bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 w-full max-w-2xl h-full shadow-2xl flex flex-col overflow-y-auto animate-slide-in"
+      (click)="$event.stopPropagation()"
+    >
+      <!-- En-tête du Drawer -->
+      <div class="px-6 py-4 border-b flex items-center justify-between bg-slate-50 dark:bg-slate-950" style="border-color: var(--border-color)">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white">
+            {{ t('preRegistrations.drawerTitle') }}
+          </h2>
+          <p class="text-xxs text-slate-400 dark:text-slate-500">
+            Soumis le {{ preReg.createdAt | date:'dd/MM/yyyy à HH:mm' }}
+          </p>
+        </div>
+        <button 
+          (click)="closeDetails()" 
+          class="p-1 rounded-[4px] text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+        >
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Corps du Drawer -->
+      <div class="p-6 space-y-6 flex-1">
+        <!-- ALERTE DE DOUBLON POTENTIEL (Patient déjà existant détecté par le backend) -->
+        @if (preReg.similarPatientId) {
+          <div class="p-4 rounded-[6px] border border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20 text-xs">
+            <div class="flex items-start gap-2.5 text-amber-800 dark:text-amber-300 font-bold mb-1">
+              <svg class="h-4.5 w-4.5 text-amber-600 dark:text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>{{ t('preRegistrations.similarityAlert') }}</span>
+            </div>
+            <p class="text-xxs text-amber-700/80 dark:text-amber-400/80 mb-3">
+              {{ t('preRegistrations.similarityWarning') }}
+            </p>
+
+            <!-- Comparaison side-by-side de la demande et du dossier existant -->
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Demande soumise -->
+              <div class="p-3 bg-white dark:bg-slate-900 border rounded-[4px] space-y-1.5" style="border-color: var(--border-color)">
+                <div class="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500">Demande En ligne</div>
+                <div class="font-bold text-slate-800 dark:text-slate-200 truncate">{{ preReg.lastName }} {{ preReg.firstName }}</div>
+                <div class="text-xxs">🎂 {{ preReg.birthDate | date:'dd/MM/yyyy' }}</div>
+                <div class="text-xxs">📞 {{ preReg.phone || '-' }}</div>
+                <div class="text-xxs">🏠 {{ preReg.address || '-' }}</div>
+              </div>
+
+              <!-- Patient similaire existant -->
+              <div class="p-3 bg-white dark:bg-slate-900 border rounded-[4px] space-y-1.5" style="border-color: var(--border-color)">
+                <div class="flex items-center justify-between">
+                  <span class="text-[9px] font-black uppercase text-amber-600 dark:text-amber-400">Dossier Existant</span>
+                  <span class="text-[9px] font-black bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 px-1 rounded-xs">
+                    {{ preReg.similarityScore | number:'1.0-0' }}%
+                  </span>
+                </div>
+                <div class="font-bold text-slate-800 dark:text-slate-200 truncate">{{ preReg.similarPatientName }}</div>
+                <div class="text-xxs">🎂 {{ preReg.birthDate | date:'dd/MM/yyyy' }}</div>
+                <!-- Coordonnées existantes, le backend utilisera similarPatientId pour charger ou fusionner -->
+                <div class="text-xxs text-slate-400 italic">Identifiant unique :</div>
+                <div class="text-[10px] font-mono text-slate-500 truncate">{{ preReg.similarPatientId }}</div>
+              </div>
+            </div>
+            
+            <!-- Type de validation conditionnel -->
+            <div class="mt-4 flex flex-col gap-2">
+              <label class="flex items-center p-2.5 rounded-[4px] bg-white dark:bg-slate-900 border cursor-pointer">
+                <input 
+                  type="radio" 
+                  name="reconciliationOption" 
+                  [checked]="reconcileOption() === 'NEW'"
+                  (change)="setReconcileOption('NEW')" 
+                  class="h-4 w-4 text-indigo-600"
+                />
+                <span class="ml-2 text-xxs font-semibold text-slate-700 dark:text-slate-300">
+                  {{ t('preRegistrations.validateNew') }}
+                </span>
+              </label>
+              <label class="flex items-center p-2.5 rounded-[4px] bg-white dark:bg-slate-900 border cursor-pointer">
+                <input 
+                  type="radio" 
+                  name="reconciliationOption" 
+                  [checked]="reconcileOption() === 'MERGE'"
+                  (change)="setReconcileOption('MERGE')" 
+                  class="h-4 w-4 text-indigo-600"
+                />
+                <span class="ml-2 text-xxs font-semibold text-slate-700 dark:text-slate-300">
+                  {{ t('preRegistrations.mergeWith') }}
+                </span>
+              </label>
+            </div>
+          </div>
+        }
+
+        <!-- Section 1 : Identité administrative -->
+        <div class="space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border-b pb-1">
+            {{ t('preRegistrations.identity') }}
+          </h3>
+          <div class="grid grid-cols-2 gap-4 text-xs">
+            <div>
+              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Nom de famille</span>
+              <span class="font-semibold">{{ preReg.lastName }}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Prénom</span>
+              <span class="font-semibold">{{ preReg.firstName }}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Genre</span>
+              <span class="font-semibold">{{ preReg.gender === 'MASCULIN' ? t('selfRegistration.genderMale') : t('selfRegistration.genderFemale') }}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Date de naissance</span>
+              <span class="font-semibold">{{ preReg.birthDate | date:'dd/MM/yyyy' }}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Groupe sanguin</span>
+              <span class="font-semibold">{{ preReg.bloodGroup || '-' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2 : Coordonnées de contact -->
+        <div class="space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border-b pb-1">
+            {{ t('preRegistrations.contact') }}
+          </h3>
+          <div class="grid grid-cols-2 gap-4 text-xs">
+            <div>
+              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Téléphone</span>
+              <span class="font-semibold">{{ preReg.phone || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Adresse e-mail</span>
+              <span class="font-semibold">{{ preReg.email || '-' }}</span>
+            </div>
+            <div class="col-span-2">
+              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Adresse de résidence</span>
+              <span class="font-semibold">{{ preReg.address || '-' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3 : Contact d'urgence -->
+        <div class="space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border-b pb-1">
+            {{ t('preRegistrations.emergency') }}
+          </h3>
+          <div class="grid grid-cols-2 gap-4 text-xs">
+            <div>
+              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Nom complet</span>
+              <span class="font-semibold">{{ preReg.emergencyContactName || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Téléphone</span>
+              <span class="font-semibold">{{ preReg.emergencyContactPhone || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Lien de parenté</span>
+              <span class="font-semibold">
+                @if (preReg.emergencyContactRelation) {
+                  @switch (preReg.emergencyContactRelation) {
+                    @case ('SPOUSE') { {{ t('selfRegistration.relationSpouse') }} }
+                    @case ('PARENT') { {{ t('selfRegistration.relationParent') }} }
+                    @case ('CHILD') { {{ t('selfRegistration.relationChild') }} }
+                    @case ('SIBLING') { {{ t('selfRegistration.relationSibling') }} }
+                    @case ('OTHER') { {{ t('selfRegistration.relationOther') }} }
+                  }
+                } @else {
+                  -
+                }
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions de validation en bas du Drawer -->
+      <div class="px-6 py-4 border-t bg-slate-50 dark:bg-slate-950 flex justify-between items-center" style="border-color: var(--border-color)">
+        <div>
+          @if (preReg.status !== 'AWAITING_VALIDATION') {
+            <!-- Si déjà validé, offrir le bouton d'impression direct -->
+            @if (preReg.status === 'VALIDATED') {
+              <app-ui-button (pressed)="downloadSummaryPdf(validatedPatientId() || preReg.similarPatientId || '')">
+                {{ t('preRegistrations.downloadCard') }}
+              </app-ui-button>
+            }
+          }
+        </div>
+        <div class="flex gap-3">
+          <app-ui-button variant="secondary" (pressed)="closeDetails()" [disabled]="actionLoading()">
+            {{ t('preRegistrations.close') }}
+          </app-ui-button>
+          @if (preReg.status === 'AWAITING_VALIDATION') {
+            <app-ui-button variant="primary" (pressed)="validateRequest(preReg)" [disabled]="actionLoading()">
+              {{ t('preRegistrations.validate') }}
+            </app-ui-button>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal QR Code de la Clinique -->
+@if (showQrCodeModal()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in" (click)="closeQrModal()">
+    <div class="bg-white dark:bg-slate-900 border rounded-[6px] max-w-md w-full shadow-2xl p-6 relative" (click)="$event.stopPropagation()">
+      <button 
+        (click)="closeQrModal()" 
+        class="absolute top-4 right-4 p-1 rounded-[4px] text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+      >
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+
+      <div class="text-center space-y-4">
+        <h3 class="text-base font-bold text-slate-900 dark:text-white">
+          QR Code d'Admission Clinique
+        </h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400">
+          Affichez ce QR Code à l'accueil de votre clinique. Les patients pourront le scanner pour remplir directement leur fiche d'admission sur leur smartphone.
+        </p>
+
+        @if (getQrCodeUrl()) {
+          <div class="flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-950 border rounded-[6px]" style="border-color: var(--border-color)">
+            <img [src]="getQrCodeUrl()" width="220" height="220" alt="QR Code d'Admission" class="bg-white p-2 rounded border" />
+          </div>
+        } @else {
+          <div class="p-4 text-xs text-amber-600">
+            Erreur : Impossible de résoudre l'identifiant de la clinique. Veuillez vous reconnecter.
+          </div>
+        }
+
+        <div class="pt-4 flex gap-3">
+          <app-ui-button (pressed)="closeQrModal()" variant="secondary" class="flex-1">
+            Fermer
+          </app-ui-button>
+          <app-ui-button (pressed)="printQrCode()" variant="primary" class="flex-1" [disabled]="!getQrCodeUrl()">
+            Imprimer
+          </app-ui-button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

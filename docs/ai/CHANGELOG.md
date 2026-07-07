@@ -8,10 +8,45 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- **API Backend pour l'enregistrement temporaire et la validation (Self-Registration) (STORY-0303)** :
+  - Création du socle persistant avec la migration Flyway `V42__create_patient_pre_registrations.sql` et l'entité multi-tenant `PatientPreRegistrationEntity`.
+  - Service `MedicalCaptchaService` robuste gérant les questions de physiologie et de bon sens médical en cache local avec expiration à 10 minutes et suppression après usage unique.
+  - Endpoints publics `/api/public/pre-registrations/captcha` et `/api/public/pre-registrations` pour la génération et soumission d'admission autonome avec captcha et rate limiting global.
+  - Endpoints privés/sécurisés `/api/pre-registrations` pour le listing, le détail, le rejet et la validation par l'agent d'accueil.
+  - Intégration de la réconciliation et déduplication assistée lors de la validation avec `PatientSimilarityService` et création du patient officiel en base.
+  - Nettoyage automatique des pré-enregistrements abandonnés après 24 heures via un job planifié `@Scheduled`.
+  - Validation complète par tests d'intégration MockMvc de bout en bout (`PatientPreRegistrationControllerTest.java`).
+- **Formulaire Mobile Public de Pré-enregistrement (Self-Registration) (STORY-0304)** :
+  - Création de la route publique Angular `/public/register?orgId={uuid}` accessible sans authentification.
+  - Implémentation du composant responsive `PatientSelfRegistrationComponent` (HTML séparé) avec gestion des types d'admission (nouvelle admission vs retour patient).
+  - Validation réactive basée sur les signaux Angular pour l'identité, les coordonnées et les informations de contact d'urgence.
+  - Intégration du captcha médical dynamique respectueux de la vie privée (chargement de la question depuis le backend, rafraîchissement manuel possible, validation à la soumission et rechargement en cas d'échec).
+  - Ajout des traductions complètes FR/EN dans `fr.json` et `en.json` pour l'ensemble du formulaire et de ses notifications.
+  - Écriture de 7 tests unitaires Vitest rigoureux validant le comportement du composant (`patient-self-registration.component.spec.ts`), tous passant au vert.
+- **Tableau de Bord d'Accueil & Validation Back-office (Self-Registration) (STORY-0305)** :
+  - Création du composant responsive `PreRegistrationsListComponent` (HTML séparé) et de sa route sécurisée `/clinic/admissions/pre-registrations` pour les agents d'accueil et les administrateurs de cliniques.
+  - Ajout d'un badge rouge dynamique au menu de navigation de la Sidebar ("Admissions") affichant le nombre de demandes en attente de validation en tâche de fond (actualisation toutes les 30 secondes).
+  - Implémentation de la vue tableau paginée avec filtrage par statut (En attente, Validé, Rejeté).
+  - Conception d'un tiroir (Drawer) latéral de détails affichant toutes les sections d'identité administrative, coordonnées et contacts d'urgence.
+  - Intégration d'un panneau d'aide à la décision comparatif side-by-side si le patient présente une forte similarité en base (score de similarité fourni par le backend) pour éviter les doublons.
+  - Mise à disposition d'une option de validation à double choix : création d'un nouveau dossier patient ou fusion/réconciliation avec le dossier existant détecté par le backend.
+  - Déclenchement automatique du téléchargement de la fiche d'admission physique (PDF de synthèse) dès la validation d'une demande.
+  - Ajout des traductions complètes FR/EN dans `fr.json` et `en.json` pour l'ensemble de la console d'accueil et des boutons d'actions.
+  - Écriture de 8 tests unitaires Vitest rigoureux validant l'affichage, les filtres, la réconciliation et le téléchargement du PDF (`pre-registrations-list.component.spec.ts`), tous passant au vert.
+- **Cadrage et ADR pour l'enregistrement patient autonome via QR Code (TICKET-QR-CODE-PATIENT-ADMISSION-ADR)** :
+  - Création et acceptation de l'ADR-0003 définissant l'architecture sécurisée par Zone Tampon (Staging Area) pour éviter l'exposition des PII (données d'identité personnelles) et le spam sur les formulaires publics.
+  - Sécurisation renforcée du formulaire public à l'aide d'un **Captcha Médical respectueux de la vie privée (sans cookies tiers)** généré par le backend.
+  - Rédaction des spécifications fonctionnelles (`FUNCTIONAL-SPEC.md`) et techniques (`TECHNICAL-DESIGN.md`) détaillant l'entité temporaire `PatientPreRegistrationEntity`, l'API REST publique, l'intégration du service de doublons (`PatientSimilarityService`), l'algorithme de réconciliation et de déduplication, ainsi que le job d'auto-nettoyage à 24h.
+  - Découpage Scrum et création de trois User Stories d'implémentation : **STORY-0303** (Backend & Validation API), **STORY-0304** (Formulaire mobile public avec captcha) et **STORY-0305** (Tableau de bord back-office & réconciliation d'accueil).
 - **Navigation patient mobile, validation d'ordonnances et indicateurs de téléchargement (TICKET-UI-PATIENT-DETAIL-AND-PRESCRIPTION-FIXES)** :
   - Ajout d'une barre d'onglets horizontale scrollable sur mobile (`block md:hidden`) dans `PatientDetailComponent` avec un style de défilement personnalisé (scroll-bar ultra-fine et élégante, couleur de marque pour l'onglet actif s'adaptant aux thèmes clair et sombre, et défilement automatique `scrollIntoView` de l'onglet actif lors du changement de route) afin de permettre aux praticiens sur smartphone d'accéder aux sous-sections (Profil, Consultations, Analyses, Hospitalisations, Sécurité/Audit) de la fiche du patient actif.
   - Finalisation automatique des ordonnances à l'état `DRAFT` lors de la clôture d'une visite dans `VisitService.closeVisit(...)`, passant leur statut à `ACTIVE` et générant automatiquement le PDF associé pour éliminer les blocages de délivrance côté pharmacie.
   - Intégration d'un indicateur de téléchargement et d'une désactivation de boutons lors du téléchargement des comptes-rendus ou des ordonnances dans le portail patient (`PatientPrescriptionsPageComponent` et `PatientVisitsListComponent`), offrant une meilleure réactivité visuelle à l'utilisateur.
+- **Guide de démo — Parcours utilisateur complet (TICKET-DEMO-PARCOURS-COMPLET)** :
+  - Rédaction d'un document de démo opérationnel dans `docs/features/demo-parcours-complet/DEMO-PARCOURS-COMPLET.md` couvrant l'ensemble du parcours métier : création patient, admission, constantes vitales, consultation, prescription, pharmacie, laboratoire et portail patient.
+  - Inclusion des rôles intervenants, des écrans Angular, des actions clés, des données de test, des flux de statuts, des endpoints API et d'une checklist avant démo.
+  - Mise à jour du suivi projet (`docs/ai/PROJECT-TRACKING.md`) et du ticket correspondant (`docs/ai/tickets/TICKET-DEMO-PARCOURS-COMPLET.md`).
+
 
 
 

@@ -1,7 +1,8 @@
-import { Component, computed, inject, input, output } from '@angular/core';
+import { Component, computed, inject, input, output, OnInit, OnDestroy, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { ActivePatientService } from '../../patient/active-patient.service';
+import { PatientApiService } from '../../patient/patient-api.service';
 
 export interface NavItem {
   path: string;
@@ -99,6 +100,18 @@ export interface NavItem {
                   }
                 </div>
               }
+              @case ('preRegistrations') {
+                <div class="relative">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  </svg>
+                  @if (pendingPreRegistrationsCount() > 0) {
+                    <span class="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white">
+                      {{ pendingPreRegistrationsCount() > 99 ? '99+' : pendingPreRegistrationsCount() }}
+                    </span>
+                  }
+                </div>
+              }
             }
           </span>
           @if (!sidebarCollapsed() || isMobile()) {
@@ -109,9 +122,13 @@ export interface NavItem {
     }
   `,
 })
-export class AppShellNavComponent {
+export class AppShellNavComponent implements OnInit, OnDestroy {
   readonly i18n = inject(I18nService);
   readonly activePatientService = inject(ActivePatientService);
+  private readonly patientApiService = inject(PatientApiService);
+
+  pendingPreRegistrationsCount = signal(0);
+  private intervalId: any;
 
   readonly session = input.required<{ role: string; name: string } | null>();
   readonly sidebarCollapsed = input<boolean>(false);
@@ -120,6 +137,32 @@ export class AppShellNavComponent {
   readonly linkClicked = output<void>();
 
   readonly activePatient = this.activePatientService.patient;
+
+  ngOnInit(): void {
+    this.refreshPendingCount();
+    // Rafraîchir toutes les 30 secondes
+    this.intervalId = setInterval(() => this.refreshPendingCount(), 30000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+    }
+  }
+
+  private refreshPendingCount(): void {
+    const currentSession = this.session();
+    if (!currentSession) return;
+    const roles = currentSession.role.split(',').map((r) => r.trim());
+    if (roles.includes('AGENT_ACCUEIL') || roles.includes('ADMIN_CLINIQUE')) {
+      this.patientApiService.getPendingPreRegistrations(0, 1).subscribe({
+        next: (res) => {
+          this.pendingPreRegistrationsCount.set(res.totalElements);
+        },
+        error: () => {}
+      });
+    }
+  }
 
   readonly menuItems = computed(() => {
     const currentSession = this.session();
@@ -144,6 +187,7 @@ export class AppShellNavComponent {
     if (roles.includes('ADMIN_CLINIQUE')) {
       addUniqueItem({ path: '/dashboard', label: this.i18n.t('menu.dashboard'), iconName: 'dashboard' });
       addUniqueItem({ path: '/patients', label: this.i18n.t('menu.patients'), iconName: 'patients' });
+      addUniqueItem({ path: '/clinic/admissions/pre-registrations', label: this.i18n.t('menu.preRegistrations'), iconName: 'preRegistrations' });
       addUniqueItem({ path: '/clinic/duplicates', label: this.i18n.t('menu.duplicates'), iconName: 'patients' });
       addUniqueItem({ path: '/clinic/staff', label: this.i18n.t('menu.staff'), iconName: 'staff' });
       addUniqueItem({ path: '/pharmacy/stocks', label: this.i18n.t('menu.stocks'), iconName: 'stocks' });
@@ -151,6 +195,9 @@ export class AppShellNavComponent {
     if (roles.includes('AGENT_ACCUEIL') || roles.includes('INFIRMIER') || roles.includes('MEDECIN')) {
       addUniqueItem({ path: '/dashboard', label: this.i18n.t('menu.dashboard'), iconName: 'dashboard' });
       addUniqueItem({ path: '/patients', label: this.i18n.t('menu.patients'), iconName: 'patients' });
+      if (roles.includes('AGENT_ACCUEIL')) {
+        addUniqueItem({ path: '/clinic/admissions/pre-registrations', label: this.i18n.t('menu.preRegistrations'), iconName: 'preRegistrations' });
+      }
     }
     if (roles.includes('BIOLOGISTE')) {
       addUniqueItem({ path: '/clinic/lab-orders', label: this.i18n.t('menu.labOrders'), iconName: 'labOrders' });

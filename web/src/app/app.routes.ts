@@ -77,6 +77,12 @@ export const routes: Routes = [
     data: { expectedRoles: ['ADMIN_CLINIQUE'] },
   },
   {
+    path: 'clinic/admissions/pre-registrations',
+    loadComponent: () => import('./patient/pre-registrations/pre-registrations-list.component').then(m => m.PreRegistrationsListComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['AGENT_ACCUEIL', 'ADMIN_CLINIQUE'] }
+  },
+  {
     path: 'clinic/access-request',
     loadComponent: () => import('./clinic/external-access/clinic-access-request.component').then(m => m.ClinicAccessRequestComponent),
     canActivate: [roleGuard],
@@ -122,6 +128,11 @@ export const routes: Routes = [
   {
     path: 'forgot-password',
     loadComponent: () => import('./auth/forgot-password.component').then((module) => module.ForgotPasswordComponent),
+  },
+  {
+    path: 'public/register',
+    loadComponent: () => import('./patient/self-registration/patient-self-registration.component').then(m => m.PatientSelfRegistrationComponent),
+    data: { title: 'title.public.selfRegistration' }
   },
   {
     path: 'patient/login',

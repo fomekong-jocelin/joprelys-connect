@@ -16,7 +16,12 @@ import {
   CreateHospitalizationRequest,
   HospitalizationNote,
   DischargeHospitalizationRequest,
-  PatientDuplicateCandidate
+  PatientDuplicateCandidate,
+  MedicalCaptchaResponse,
+  PatientPreRegistrationRequest,
+  PatientPreRegistrationResponse,
+  PreRegistrationValidationRequest,
+  PreRegistrationPage
 } from './patient.models';
 
 @Injectable({
@@ -152,5 +157,33 @@ export class PatientApiService {
 
   getPatientVisits(patientId: string): Observable<any[]> {
     return this.http.get<any[]>(`/api/visits/patient/${patientId}`);
+  }
+
+  // --- Enregistrement Autonome (Public) ---
+
+  getPublicCaptcha(): Observable<MedicalCaptchaResponse> {
+    return this.http.get<MedicalCaptchaResponse>('/api/public/pre-registrations/captcha');
+  }
+
+  submitPublicPreRegistration(request: PatientPreRegistrationRequest): Observable<PatientPreRegistrationResponse> {
+    return this.http.post<PatientPreRegistrationResponse>('/api/public/pre-registrations', request);
+  }
+
+  // --- Enregistrement Autonome (Privé) ---
+
+  getPendingPreRegistrations(page: number, size: number): Observable<PreRegistrationPage> {
+    return this.http.get<PreRegistrationPage>(`/api/pre-registrations?page=${page}&size=${size}`);
+  }
+
+  getPreRegistrationById(id: string): Observable<PatientPreRegistrationResponse> {
+    return this.http.get<PatientPreRegistrationResponse>(`/api/pre-registrations/${id}`);
+  }
+
+  validatePreRegistration(id: string, request: PreRegistrationValidationRequest): Observable<{ patientId: string; status: string }> {
+    return this.http.post<{ patientId: string; status: string }>(`/api/pre-registrations/${id}/validate`, request);
+  }
+
+  rejectPreRegistration(id: string): Observable<void> {
+    return this.http.post<void>(`/api/pre-registrations/${id}/reject`, {});
   }
 }
