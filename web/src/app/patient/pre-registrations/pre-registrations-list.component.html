@@ -66,73 +66,75 @@
       <app-empty-state [message]="t('preRegistrations.empty')"></app-empty-state>
     } @else {
       <!-- Tableaux des admissions temporaires -->
-      <div class="bg-white dark:bg-slate-900 border rounded-[6px] overflow-hidden shadow-xs" style="border-color: var(--border-color)">
-        <table class="w-full border-collapse text-left text-sm">
-          <thead class="bg-slate-50 dark:bg-slate-950 border-b text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400" style="border-color: var(--border-color)">
-            <tr>
-              <th class="px-6 py-3.5">{{ t('preRegistrations.patient') }}</th>
-              <th class="px-6 py-3.5">{{ t('preRegistrations.birthDate') }}</th>
-              <th class="px-6 py-3.5">{{ t('preRegistrations.submittedAt') }}</th>
-              <th class="px-6 py-3.5">{{ t('preRegistrations.status') }}</th>
-              <th class="px-6 py-3.5 text-right">{{ t('preRegistrations.actions') }}</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
-            @for (preReg of preRegistrations(); track preReg.id) {
-              <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-950/20 transition-colors">
-                <td class="px-6 py-4">
-                  <div class="font-bold text-slate-900 dark:text-white">
-                    {{ preReg.lastName }} {{ preReg.firstName }}
-                  </div>
-                  <div class="text-xxs text-slate-400 dark:text-slate-500">
-                    {{ preReg.phone || '-' }} | {{ preReg.email || '-' }}
-                  </div>
-                </td>
-                <td class="px-6 py-4 text-slate-600 dark:text-slate-400">
-                  {{ preReg.birthDate | date:'dd/MM/yyyy' }} ({{ preReg.gender === 'MASCULIN' ? 'M' : 'F' }})
-                </td>
-                <td class="px-6 py-4 text-slate-600 dark:text-slate-400">
-                  {{ preReg.createdAt | date:'dd/MM/yyyy HH:mm' }}
-                </td>
-                <td class="px-6 py-4">
-                  @switch (preReg.status) {
-                    @case ('AWAITING_VALIDATION') {
-                      <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xxs font-black bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300">
-                        {{ t('preRegistrations.status.AWAITING_VALIDATION') }}
-                      </span>
-                    }
-                    @case ('VALIDATED') {
-                      <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xxs font-black bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300">
-                        {{ t('preRegistrations.status.VALIDATED') }}
-                      </span>
-                    }
-                    @case ('REJECTED') {
-                      <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xxs font-black bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300">
-                        {{ t('preRegistrations.status.REJECTED') }}
-                      </span>
-                    }
-                  }
-                </td>
-                <td class="px-6 py-4 text-right">
-                  <div class="flex justify-end gap-2">
-                    <app-ui-button variant="secondary" (pressed)="openDetails(preReg)">
-                      {{ t('preRegistrations.details') }}
-                    </app-ui-button>
-                    @if (preReg.status === 'AWAITING_VALIDATION') {
-                      <button 
-                        (click)="rejectRequest(preReg.id)"
-                        [disabled]="actionLoading()"
-                        class="px-2.5 py-1.5 text-xs font-semibold rounded-[4px] text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 disabled:opacity-50 transition"
-                      >
-                        {{ t('preRegistrations.reject') }}
-                      </button>
-                    }
-                  </div>
-                </td>
+      <div class="bg-white dark:bg-slate-900 border rounded-[6px] shadow-xs overflow-hidden" style="border-color: var(--border-color)">
+        <div class="overflow-x-auto w-full">
+          <table class="min-w-[700px] w-full border-collapse text-left text-sm">
+            <thead class="bg-slate-50 dark:bg-slate-950 border-b text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400" style="border-color: var(--border-color)">
+              <tr>
+                <th class="px-6 py-3.5">{{ t('preRegistrations.patient') }}</th>
+                <th class="px-6 py-3.5">{{ t('preRegistrations.birthDate') }}</th>
+                <th class="px-6 py-3.5">{{ t('preRegistrations.submittedAt') }}</th>
+                <th class="px-6 py-3.5">{{ t('preRegistrations.status') }}</th>
+                <th class="px-6 py-3.5 text-right">{{ t('preRegistrations.actions') }}</th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
+              @for (preReg of preRegistrations(); track preReg.id) {
+                <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-950/20 transition-colors">
+                  <td class="px-6 py-4">
+                    <div class="font-bold text-slate-900 dark:text-white">
+                      {{ preReg.lastName }} {{ preReg.firstName }}
+                    </div>
+                    <div class="text-xxs text-slate-400 dark:text-slate-500">
+                      {{ preReg.phone || '-' }} | {{ preReg.email || '-' }}
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 text-slate-600 dark:text-slate-400">
+                    {{ preReg.birthDate | date:'dd/MM/yyyy' }} ({{ preReg.gender === 'MASCULIN' ? 'M' : 'F' }})
+                  </td>
+                  <td class="px-6 py-4 text-slate-600 dark:text-slate-400">
+                    {{ preReg.createdAt | date:'dd/MM/yyyy HH:mm' }}
+                  </td>
+                  <td class="px-6 py-4">
+                    @switch (preReg.status) {
+                      @case ('AWAITING_VALIDATION') {
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xxs font-black bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300">
+                          {{ t('preRegistrations.status.AWAITING_VALIDATION') }}
+                        </span>
+                      }
+                      @case ('VALIDATED') {
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xxs font-black bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300">
+                          {{ t('preRegistrations.status.VALIDATED') }}
+                        </span>
+                      }
+                      @case ('REJECTED') {
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xxs font-black bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300">
+                          {{ t('preRegistrations.status.REJECTED') }}
+                        </span>
+                      }
+                    }
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    <div class="flex justify-end gap-2">
+                      <app-ui-button variant="secondary" (pressed)="openDetails(preReg)">
+                        {{ t('preRegistrations.details') }}
+                      </app-ui-button>
+                      @if (preReg.status === 'AWAITING_VALIDATION') {
+                        <button 
+                          (click)="rejectRequest(preReg.id)"
+                          [disabled]="actionLoading()"
+                          class="px-2.5 py-1.5 text-xs font-semibold rounded-[4px] text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 disabled:opacity-50 transition"
+                        >
+                          {{ t('preRegistrations.reject') }}
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Pagination -->

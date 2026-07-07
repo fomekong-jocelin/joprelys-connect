@@ -71,7 +71,7 @@ public class PatientPreRegistrationController {
     }
 
     @PostMapping("/api/pre-registrations/{id}/validate")
-    @PreAuthorize("hasRole('AGENT_ACCUEIL')")
+    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE')")
     public ValidationResponse validatePreRegistration(
             @PathVariable UUID id,
             @Valid @RequestBody PreRegistrationValidationRequest request) {
@@ -81,7 +81,7 @@ public class PatientPreRegistrationController {
     }
 
     @PostMapping("/api/pre-registrations/{id}/reject")
-    @PreAuthorize("hasRole('AGENT_ACCUEIL')")
+    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void rejectPreRegistration(@PathVariable UUID id) {
         UUID actorId = getCurrentUserActorId();
