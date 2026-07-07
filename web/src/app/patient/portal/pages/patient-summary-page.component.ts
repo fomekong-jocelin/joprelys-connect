@@ -12,12 +12,12 @@ import { I18nService } from '../../../core/i18n/i18n.service';
     <app-shell>
       <div class="app-container py-6 space-y-6">
         <!-- Header Section -->
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between border-b border-slate-200 dark:border-slate-800 pb-5 gap-4">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between border-b border-[var(--app-border)] pb-5 gap-4">
           <div>
-            <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            <h1 class="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
               {{ i18n.t('patient.summary.title') }}
             </h1>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <p class="mt-1 text-sm text-[var(--text-muted)]">
               {{ i18n.t('patient.summary.subtitle') }}
             </p>
           </div>
@@ -56,33 +56,33 @@ import { I18nService } from '../../../core/i18n/i18n.service';
             <!-- Left Side: Identity Info & Vitals -->
             <div class="lg:col-span-1 space-y-6">
               <!-- Identity Card -->
-              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-sm rounded-[6px]">
-                <h2 class="text-base font-bold text-slate-900 dark:text-white mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
+              <div class="bg-[var(--app-surface)] border border-[var(--app-border)] p-5 shadow-sm rounded-[6px]">
+                <h2 class="text-base font-bold text-[var(--text-primary)] mb-4 border-b border-[var(--app-border)] pb-2">
                   {{ i18n.t('patient.summary.identity') }}
                 </h2>
                 <div class="space-y-3 text-sm">
                   <div>
-                    <span class="block text-xs font-medium text-slate-400 dark:text-slate-500 uppercase">{{ i18n.t('patient.profile.fullName') }}</span>
-                    <span class="font-semibold text-slate-800 dark:text-slate-200">{{ summary()?.fullName }}</span>
+                    <span class="block text-xs font-medium text-[var(--text-muted)] uppercase">{{ i18n.t('patient.profile.fullName') }}</span>
+                    <span class="font-semibold text-[var(--text-primary)]">{{ summary()?.fullName }}</span>
                   </div>
                   <div>
-                    <span class="block text-xs font-medium text-slate-400 dark:text-slate-500 uppercase">{{ i18n.t('patient.summary.dpuLabel') }}</span>
-                    <span class="font-mono text-slate-700 dark:text-slate-300">{{ summary()?.globalPatientNumber }}</span>
+                    <span class="block text-xs font-medium text-[var(--text-muted)] uppercase">{{ i18n.t('patient.summary.dpuLabel') }}</span>
+                    <span class="font-mono text-[var(--text-secondary)]">{{ summary()?.globalPatientNumber }}</span>
                   </div>
                   <div class="grid grid-cols-2 gap-4">
                     <div>
-                      <span class="block text-xs font-medium text-slate-400 dark:text-slate-500 uppercase">{{ i18n.t('patient.profile.birthDate') }}</span>
-                      <span class="text-slate-700 dark:text-slate-300">{{ summary()?.birthDate | date:'dd/MM/yyyy' }}</span>
+                      <span class="block text-xs font-medium text-[var(--text-muted)] uppercase">{{ i18n.t('patient.profile.birthDate') }}</span>
+                      <span class="text-[var(--text-secondary)]">{{ summary()?.birthDate | date:'dd/MM/yyyy' }}</span>
                     </div>
                     <div>
-                      <span class="block text-xs font-medium text-slate-400 dark:text-slate-500 uppercase">{{ i18n.t('patient.profile.gender') }}</span>
-                      <span class="text-slate-700 dark:text-slate-300">{{ summary()?.gender }}</span>
+                      <span class="block text-xs font-medium text-[var(--text-muted)] uppercase">{{ i18n.t('patient.profile.gender') }}</span>
+                      <span class="text-[var(--text-secondary)]">{{ summary()?.gender }}</span>
                     </div>
                   </div>
                   @if (summary()?.bloodGroup) {
                     <div>
-                      <span class="block text-xs font-medium text-slate-400 dark:text-slate-500 uppercase">{{ i18n.t('patient.profile.bloodGroup') }}</span>
-                      <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-[4px] bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-300 border border-red-100 dark:border-red-900/30">
+                      <span class="block text-xs font-medium text-[var(--text-muted)] uppercase">{{ i18n.t('patient.profile.bloodGroup') }}</span>
+                      <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-[4px] bg-[var(--brand-danger-subtle)] text-[var(--brand-danger-text)] border border-[var(--brand-danger-border)]">
                         {{ summary()?.bloodGroup }}
                       </span>
                     </div>
@@ -91,33 +91,33 @@ import { I18nService } from '../../../core/i18n/i18n.service';
               </div>
 
               <!-- Vitals Card (If any vitals from last visits) -->
-              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-sm rounded-[6px]">
-                <h2 class="text-base font-bold text-slate-900 dark:text-white mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
+              <div class="bg-[var(--app-surface)] border border-[var(--app-border)] p-5 shadow-sm rounded-[6px]">
+                <h2 class="text-base font-bold text-[var(--text-primary)] mb-4 border-b border-[var(--app-border)] pb-2">
                   {{ i18n.t('patient.summary.recentVitals') }}
                 </h2>
                 @if (summary()?.recentDiagnostics?.[0]?.vitals; as vt) {
                   <div class="grid grid-cols-2 gap-4 text-sm">
-                    <div class="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-[4px]">
-                      <span class="block text-xs text-slate-400">{{ i18n.t('patient.visits.temperature') }}</span>
-                      <span class="text-base font-bold text-slate-800 dark:text-slate-200">{{ vt.temperature ? vt.temperature + ' °C' : '-' }}</span>
+                    <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/40 rounded-[4px]">
+                      <span class="block text-xs text-[var(--text-muted)]">{{ i18n.t('patient.visits.temperature') }}</span>
+                      <span class="text-base font-bold text-[var(--text-primary)]">{{ vt.temperature ? vt.temperature + ' °C' : '-' }}</span>
                     </div>
-                    <div class="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-[4px]">
-                      <span class="block text-xs text-slate-400">{{ i18n.t('patient.summary.bloodPressure') }}</span>
-                      <span class="text-base font-bold text-slate-800 dark:text-slate-200">
+                    <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/40 rounded-[4px]">
+                      <span class="block text-xs text-[var(--text-muted)]">{{ i18n.t('patient.summary.bloodPressure') }}</span>
+                      <span class="text-base font-bold text-[var(--text-primary)]">
                         {{ vt.systolic && vt.diastolic ? vt.systolic + '/' + vt.diastolic + ' mmHg' : '-' }}
                       </span>
                     </div>
-                    <div class="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-[4px]">
-                      <span class="block text-xs text-slate-400">{{ i18n.t('patient.visits.pulse') }}</span>
-                      <span class="text-base font-bold text-slate-800 dark:text-slate-200">{{ vt.pulse ? vt.pulse + ' bpm' : '-' }}</span>
+                    <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/40 rounded-[4px]">
+                      <span class="block text-xs text-[var(--text-muted)]">{{ i18n.t('patient.visits.pulse') }}</span>
+                      <span class="text-base font-bold text-[var(--text-primary)]">{{ vt.pulse ? vt.pulse + ' bpm' : '-' }}</span>
                     </div>
-                    <div class="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-[4px]">
-                      <span class="block text-xs text-slate-400">{{ i18n.t('patient.summary.spo2') }}</span>
-                      <span class="text-base font-bold text-slate-800 dark:text-slate-200">{{ vt.spo2 ? vt.spo2 + ' %' : '-' }}</span>
+                    <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/40 rounded-[4px]">
+                      <span class="block text-xs text-[var(--text-muted)]">{{ i18n.t('patient.summary.spo2') }}</span>
+                      <span class="text-base font-bold text-[var(--text-primary)]">{{ vt.spo2 ? vt.spo2 + ' %' : '-' }}</span>
                     </div>
                   </div>
                 } @else {
-                  <p class="text-sm text-slate-500 dark:text-slate-400 italic">{{ i18n.t('patient.summary.noVitals') }}</p>
+                  <p class="text-sm text-[var(--text-muted)] italic">{{ i18n.t('patient.summary.noVitals') }}</p>
                 }
               </div>
             </div>
@@ -125,9 +125,9 @@ import { I18nService } from '../../../core/i18n/i18n.service';
             <!-- Right Side: Medical Records Lists -->
             <div class="lg:col-span-2 space-y-6">
               <!-- Allergies Section (Card Widget with gravity) -->
-              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-sm rounded-[6px]">
-                <div class="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
-                  <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center">
+              <div class="bg-[var(--app-surface)] border border-[var(--app-border)] p-5 shadow-sm rounded-[6px]">
+                <div class="flex items-center justify-between mb-4 border-b border-[var(--app-border)] pb-2">
+                  <h2 class="text-base font-bold text-[var(--text-primary)] flex items-center">
                     <svg class="h-5 w-5 text-amber-500 mr-2" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                     </svg>
@@ -139,7 +139,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                   <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-sm text-left">
                       <thead>
-                        <tr class="text-slate-400 font-semibold uppercase text-xs">
+                        <tr class="text-[var(--text-muted)] font-semibold uppercase text-xs">
                           <th class="py-2">{{ i18n.t('patients.medicalInfo.allergies.substance') }}</th>
                           <th class="py-2">{{ i18n.t('patients.medicalInfo.allergies.severity') }}</th>
                           <th class="py-2">{{ i18n.t('patients.medicalInfo.allergies.reaction') }}</th>
@@ -148,14 +148,14 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                       </thead>
                       <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                         @for (allergy of summary()?.allergies; track allergy.id) {
-                          <tr class="text-slate-700 dark:text-slate-300">
-                            <td class="py-2.5 font-medium text-slate-900 dark:text-white">{{ allergy.substance }}</td>
+                          <tr class="text-[var(--text-secondary)]">
+                            <td class="py-2.5 font-medium text-[var(--text-primary)]">{{ allergy.substance }}</td>
                             <td class="py-2.5">
                               <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-[4px] border"
                                     [ngClass]="{
-                                      'bg-red-50 text-red-700 border-red-100 dark:bg-red-950/20 dark:text-red-300 dark:border-red-900/30': allergy.severity === 'HIGH',
-                                      'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/20 dark:text-amber-300 dark:border-amber-900/30': allergy.severity === 'MEDIUM',
-                                      'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-300 dark:border-emerald-900/30': allergy.severity === 'LOW'
+                                      'bg-[var(--brand-danger-subtle)] text-red-700 border-[var(--brand-danger-border)] dark:bg-red-950/20 dark:text-[var(--brand-danger-text)] dark:border-red-900/30': allergy.severity === 'HIGH',
+                                      'bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)] border-amber-100 dark:bg-amber-950/20 dark:text-amber-300 dark:border-amber-900/30': allergy.severity === 'MEDIUM',
+                                      'bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)] border-emerald-100 dark:bg-emerald-950/20 dark:text-[var(--brand-success-text)] dark:border-emerald-900/30': allergy.severity === 'LOW'
                                     }">
                                 {{ i18n.t('patients.medicalInfo.allergies.severity.' + allergy.severity) }}
                               </span>
@@ -168,17 +168,17 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                     </table>
                   </div>
                 } @else {
-                  <p class="text-sm text-slate-500 dark:text-slate-400 italic">
+                  <p class="text-sm text-[var(--text-muted)] italic">
                     {{ i18n.t('patient.summary.noAllergies') }}
                   </p>
                 }
               </div>
 
               <!-- Critical Lab Results Section (Alert card widget) -->
-              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-sm rounded-[6px]">
-                <div class="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
-                  <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center">
-                    <svg class="h-5 w-5 text-red-500 mr-2" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <div class="bg-[var(--app-surface)] border border-[var(--app-border)] p-5 shadow-sm rounded-[6px]">
+                <div class="flex items-center justify-between mb-4 border-b border-[var(--app-border)] pb-2">
+                  <h2 class="text-base font-bold text-[var(--text-primary)] flex items-center">
+                    <svg class="h-5 w-5 text-[var(--brand-danger)] mr-2" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.249-8.25-3.286Zm0 13.036h.008v.008H12v-.008Z" />
                     </svg>
                     {{ i18n.t('patient.summary.results') }}
@@ -188,13 +188,13 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                 @if (summary()?.criticalResults?.length) {
                   <div class="space-y-3">
                     @for (result of summary()?.criticalResults; track result.id) {
-                      <div class="flex items-start justify-between p-3 rounded-[4px] bg-red-50/50 dark:bg-red-950/10 border border-red-200/50 dark:border-red-900/30 text-sm">
+                      <div class="flex items-start justify-between p-3 rounded-[4px] bg-[var(--brand-danger-subtle)]/50 dark:bg-red-950/10 border border-red-200/50 dark:border-red-900/30 text-sm">
                         <div>
-                          <span class="block font-semibold text-red-900 dark:text-red-300">{{ result.analyteName }}</span>
-                          <span class="text-xs text-slate-500 dark:text-slate-400">{{ i18n.t('patient.summary.analyzedAt') }} {{ result.validatedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                          <span class="block font-semibold text-red-900 dark:text-[var(--brand-danger-text)]">{{ result.analyteName }}</span>
+                          <span class="text-xs text-[var(--text-muted)]">{{ i18n.t('patient.summary.analyzedAt') }} {{ result.validatedAt | date:'dd/MM/yyyy HH:mm' }}</span>
                         </div>
                         <div class="text-right">
-                          <span class="block font-bold text-red-700 dark:text-red-400">{{ result.value }} {{ result.unit }}</span>
+                          <span class="block font-bold text-[var(--brand-danger-text)]">{{ result.value }} {{ result.unit }}</span>
                           <span class="inline-flex items-center px-1.5 py-0.5 text-xs font-semibold rounded-[4px] bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200 uppercase">
                             {{ i18n.t('lab.interpretation.' + result.interpretation) }}
                           </span>
@@ -203,22 +203,22 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                     }
                   </div>
                 } @else {
-                  <p class="text-sm text-slate-500 dark:text-slate-400 italic">
+                  <p class="text-sm text-[var(--text-muted)] italic">
                     {{ i18n.t('patient.summary.noResults') }}
                   </p>
                 }
               </div>
 
               <!-- Medical History Section -->
-              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-sm rounded-[6px]">
-                <h2 class="text-base font-bold text-slate-900 dark:text-white mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
+              <div class="bg-[var(--app-surface)] border border-[var(--app-border)] p-5 shadow-sm rounded-[6px]">
+                <h2 class="text-base font-bold text-[var(--text-primary)] mb-4 border-b border-[var(--app-border)] pb-2">
                   {{ i18n.t('patient.summary.history') }}
                 </h2>
                 @if (summary()?.medicalHistory?.length) {
                   <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-sm text-left">
                       <thead>
-                        <tr class="text-slate-400 font-semibold uppercase text-xs">
+                        <tr class="text-[var(--text-muted)] font-semibold uppercase text-xs">
                           <th class="py-2">{{ i18n.t('patients.medicalInfo.history.category') }}</th>
                           <th class="py-2">{{ i18n.t('patients.medicalInfo.history.description') }}</th>
                           <th class="py-2">{{ i18n.t('patients.medicalInfo.history.onsetDate') }}</th>
@@ -227,14 +227,14 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                       </thead>
                       <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                         @for (h of summary()?.medicalHistory; track h.id) {
-                          <tr class="text-slate-700 dark:text-slate-300">
-                            <td class="py-2.5 font-medium text-slate-900 dark:text-white">{{ i18n.t('patients.medicalInfo.history.category.' + h.category) }}</td>
+                          <tr class="text-[var(--text-secondary)]">
+                            <td class="py-2.5 font-medium text-[var(--text-primary)]">{{ i18n.t('patients.medicalInfo.history.category.' + h.category) }}</td>
                             <td class="py-2.5">{{ h.description }}</td>
                             <td class="py-2.5">{{ h.onsetDate | date:'dd/MM/yyyy' }}</td>
                             <td class="py-2.5">
                               <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-[4px]"
                                     [ngClass]="{
-                                      'bg-amber-50 text-amber-700 border border-amber-100 dark:bg-amber-950/20 dark:text-amber-300 dark:border-amber-900/30': h.important,
+                                      'bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)] border border-amber-100 dark:bg-amber-950/20 dark:text-amber-300 dark:border-amber-900/30': h.important,
                                       'bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-950/20 dark:text-blue-300 dark:border-blue-900/30': !h.important
                                     }">
                                 {{ h.important ? ('⚠️ ' + i18n.t('patients.medicalInfo.history.important')) : '' }} {{ h.isOngoing ? i18n.t('patients.medicalInfo.history.isOngoing') : '' }}
@@ -246,35 +246,35 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                     </table>
                   </div>
                 } @else {
-                  <p class="text-sm text-slate-500 dark:text-slate-400 italic">
+                  <p class="text-sm text-[var(--text-muted)] italic">
                     {{ i18n.t('patient.summary.noHistory') }}
                   </p>
                 }
               </div>
 
               <!-- Ongoing Treatments Section -->
-              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-sm rounded-[6px]">
-                <h2 class="text-base font-bold text-slate-900 dark:text-white mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
+              <div class="bg-[var(--app-surface)] border border-[var(--app-border)] p-5 shadow-sm rounded-[6px]">
+                <h2 class="text-base font-bold text-[var(--text-primary)] mb-4 border-b border-[var(--app-border)] pb-2">
                   {{ i18n.t('patient.summary.treatments') }}
                 </h2>
                 @if (summary()?.activePrescriptions?.length) {
                   <div class="space-y-4">
                     @for (prescription of summary()?.activePrescriptions; track prescription.id) {
-                      <div class="border border-slate-100 dark:border-slate-800 rounded-[6px] p-4 bg-slate-50/50 dark:bg-slate-800/20">
+                      <div class="border border-[var(--app-border)] rounded-[6px] p-4 bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/20">
                         <div class="flex items-center justify-between mb-3">
-                          <span class="font-semibold text-slate-900 dark:text-white">{{ i18n.t('patient.summary.prescriptionNumber') }} {{ prescription.prescriptionNumber }}</span>
-                          <span class="text-xs text-slate-500">{{ i18n.t('patient.summary.prescriptionDate') }} {{ prescription.createdAt | date:'dd/MM/yyyy' }}</span>
+                          <span class="font-semibold text-[var(--text-primary)]">{{ i18n.t('patient.summary.prescriptionNumber') }} {{ prescription.prescriptionNumber }}</span>
+                          <span class="text-xs text-[var(--text-muted)]">{{ i18n.t('patient.summary.prescriptionDate') }} {{ prescription.createdAt | date:'dd/MM/yyyy' }}</span>
                         </div>
                         <ul class="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
                           @for (item of prescription.items; track item.drugName) {
                             <li class="py-2 flex justify-between items-start">
                               <div>
-                                <span class="font-medium text-slate-900 dark:text-white block">{{ item.drugName }}</span>
-                                <span class="text-xs text-slate-500">{{ item.instructions }}</span>
+                                <span class="font-medium text-[var(--text-primary)] block">{{ item.drugName }}</span>
+                                <span class="text-xs text-[var(--text-muted)]">{{ item.instructions }}</span>
                               </div>
                               <div class="text-right text-xs">
-                                <span class="block font-semibold text-slate-700 dark:text-slate-300">{{ item.posology }}</span>
-                                <span class="text-slate-400">{{ i18n.t('patient.visits.durationPrefix') }} {{ item.duration }}</span>
+                                <span class="block font-semibold text-[var(--text-secondary)]">{{ item.posology }}</span>
+                                <span class="text-[var(--text-muted)]">{{ i18n.t('patient.visits.durationPrefix') }} {{ item.duration }}</span>
                               </div>
                             </li>
                           }
@@ -283,7 +283,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                     }
                   </div>
                 } @else {
-                  <p class="text-sm text-slate-500 dark:text-slate-400 italic">
+                  <p class="text-sm text-[var(--text-muted)] italic">
                     {{ i18n.t('patient.summary.noTreatments') }}
                   </p>
                 }
@@ -292,8 +292,8 @@ import { I18nService } from '../../../core/i18n/i18n.service';
               <!-- History Lists Grid: Visits & Diagnostics -->
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Visits Card -->
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-sm rounded-[6px]">
-                  <h2 class="text-base font-bold text-slate-900 dark:text-white mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
+                <div class="bg-[var(--app-surface)] border border-[var(--app-border)] p-5 shadow-sm rounded-[6px]">
+                  <h2 class="text-base font-bold text-[var(--text-primary)] mb-4 border-b border-[var(--app-border)] pb-2">
                     {{ i18n.t('patient.summary.visits') }}
                   </h2>
                   @if (summary()?.recentVisits?.length) {
@@ -301,12 +301,12 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                       @for (v of summary()?.recentVisits; track v.id) {
                         <li class="py-2.5">
                           <div class="flex justify-between items-center">
-                            <span class="font-semibold text-slate-900 dark:text-white">{{ v.visitNumber }}</span>
-                            <span class="text-xs text-slate-500">{{ v.createdAt | date:'dd/MM/yyyy' }}</span>
+                            <span class="font-semibold text-[var(--text-primary)]">{{ v.visitNumber }}</span>
+                            <span class="text-xs text-[var(--text-muted)]">{{ v.createdAt | date:'dd/MM/yyyy' }}</span>
                           </div>
-                          <p class="text-xs text-slate-600 dark:text-slate-400 mt-0.5">{{ i18n.t('patient.summary.visitReason') }} {{ v.reason }}</p>
+                          <p class="text-xs text-[var(--text-secondary)] mt-0.5">{{ i18n.t('patient.summary.visitReason') }} {{ v.reason }}</p>
                           @if (v.service) {
-                            <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300 mt-1">
+                            <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-slate-100 dark:bg-[var(--bg-input)] text-slate-800 dark:text-[var(--text-secondary)] mt-1">
                               {{ v.service }}
                             </span>
                           }
@@ -314,15 +314,15 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                       }
                     </ul>
                   } @else {
-                    <p class="text-sm text-slate-500 dark:text-slate-400 italic">
+                    <p class="text-sm text-[var(--text-muted)] italic">
                       {{ i18n.t('patient.summary.noVisits') }}
                     </p>
                   }
                 </div>
 
                 <!-- Diagnostics Card -->
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-sm rounded-[6px]">
-                  <h2 class="text-base font-bold text-slate-900 dark:text-white mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
+                <div class="bg-[var(--app-surface)] border border-[var(--app-border)] p-5 shadow-sm rounded-[6px]">
+                  <h2 class="text-base font-bold text-[var(--text-primary)] mb-4 border-b border-[var(--app-border)] pb-2">
                     {{ i18n.t('patient.summary.diagnostics') }}
                   </h2>
                   @if (summary()?.recentDiagnostics?.length) {
@@ -330,18 +330,18 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                       @for (d of summary()?.recentDiagnostics; track d.id) {
                         <li class="py-2.5">
                           <div class="flex justify-between items-center">
-                            <span class="font-semibold text-slate-900 dark:text-white">{{ d.finalDiagnosis || d.diagnosis }}</span>
-                            <span class="text-xs text-slate-500">{{ d.createdAt | date:'dd/MM/yyyy' }}</span>
+                            <span class="font-semibold text-[var(--text-primary)]">{{ d.finalDiagnosis || d.diagnosis }}</span>
+                            <span class="text-xs text-[var(--text-muted)]">{{ d.createdAt | date:'dd/MM/yyyy' }}</span>
                           </div>
-                          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ i18n.t('patient.visits.doctor') }}: {{ d.doctorName }}</p>
+                          <p class="text-xs text-[var(--text-muted)] mt-0.5">{{ i18n.t('patient.visits.doctor') }}: {{ d.doctorName }}</p>
                           @if (d.conclusion) {
-                            <p class="text-xs text-slate-600 dark:text-slate-300 italic mt-1 bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-[4px]">{{ d.conclusion }}</p>
+                            <p class="text-xs text-[var(--text-secondary)] italic mt-1 bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/40 p-1.5 rounded-[4px]">{{ d.conclusion }}</p>
                           }
                         </li>
                       }
                     </ul>
                   } @else {
-                    <p class="text-sm text-slate-500 dark:text-slate-400 italic">
+                    <p class="text-sm text-[var(--text-muted)] italic">
                       {{ i18n.t('patient.summary.noDiagnostics') }}
                     </p>
                   }

@@ -22,7 +22,7 @@ import { AppShellNavComponent } from './app-shell-nav.component';
             <button
               type="button"
               (click)="toggleMobileMenu()"
-              class="inline-flex md:hidden items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-slate-500 hover:text-brand-cyan hover:bg-[var(--app-surface-muted)] transition-all duration-150 cursor-pointer"
+              class="inline-flex md:hidden items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--text-muted)] hover:text-brand-cyan hover:bg-[var(--app-surface-muted)] transition-all duration-150 cursor-pointer"
               [attr.aria-label]="mobileMenuOpen() ? 'Close menu' : 'Open menu'"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
@@ -40,15 +40,15 @@ import { AppShellNavComponent } from './app-shell-nav.component';
               <button
                 type="button"
                 (click)="setLang('fr')"
-                [class]="locale() === 'fr' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer'"
+                [class]="locale() === 'fr' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'"
               >
                 FR
               </button>
-              <span class="text-slate-300 dark:text-slate-700">|</span>
+              <span style="color:var(--divider)">|</span>
               <button
                 type="button"
                 (click)="setLang('en')"
-                [class]="locale() === 'en' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer'"
+                [class]="locale() === 'en' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'"
               >
                 EN
               </button>
@@ -59,7 +59,7 @@ import { AppShellNavComponent } from './app-shell-nav.component';
               (click)="toggleTheme()"
               [title]="themeTooltip()"
               [attr.aria-label]="themeTooltip()"
-              class="hidden md:inline-flex items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-slate-500 dark:text-slate-400 hover:text-brand-cyan hover:bg-[var(--app-surface-muted)] transition-all duration-150 cursor-pointer"
+              class="hidden md:inline-flex items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--text-muted)] hover:text-brand-cyan hover:bg-[var(--app-surface-muted)] transition-all duration-150 cursor-pointer"
             >
               @if (theme() === 'dark') {
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
@@ -72,15 +72,15 @@ import { AppShellNavComponent } from './app-shell-nav.component';
               }
             </button>
 
-            <div class="hidden md:block h-6 w-px bg-slate-200 dark:bg-slate-800"></div>
+            <div class="hidden md:block h-6 w-px" style="background:var(--divider)"></div>
 
             @if (session(); as currentSession) {
               <div class="flex items-center gap-3">
                 <div class="hidden text-right sm:flex sm:flex-col justify-center">
-                  <span class="font-display text-sm font-extrabold leading-none text-slate-800 dark:text-slate-200">
+                  <span class="font-display text-sm font-extrabold leading-none" style="color:var(--text-primary)">
                     {{ currentSession.name }}
                   </span>
-                  <span class="text-[0.68rem] font-extrabold uppercase tracking-wider mt-1 text-slate-400 dark:text-slate-500">
+                  <span class="text-[0.68rem] font-extrabold uppercase tracking-wider mt-1" style="color:var(--text-muted)">
                     {{ currentSession.role }}
                   </span>
                 </div>
@@ -91,7 +91,7 @@ import { AppShellNavComponent } from './app-shell-nav.component';
                 <a
                   routerLink="/profile"
                   [title]="profileLabel()"
-                  class="hidden md:inline-flex items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-slate-500 hover:text-brand-cyan hover:bg-[var(--app-surface-muted)] transition-all duration-150 cursor-pointer ml-1"
+                  class="hidden md:inline-flex items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--text-muted)] hover:text-brand-cyan hover:bg-[var(--app-surface-muted)] transition-all duration-150 cursor-pointer ml-1"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
@@ -103,7 +103,7 @@ import { AppShellNavComponent } from './app-shell-nav.component';
                 type="button"
                 (click)="logout()"
                 [title]="logoutLabel()"
-                class="hidden md:inline-flex items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-200 dark:hover:border-red-900 transition-all duration-150 cursor-pointer ml-1"
+                class="hidden md:inline-flex items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--text-muted)] hover:text-[var(--brand-danger-text)] hover:bg-[var(--brand-danger-subtle)] hover:border-[var(--brand-danger-border)] transition-all duration-150 cursor-pointer ml-1"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" class="w-4.5 h-4.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
@@ -127,7 +127,7 @@ import { AppShellNavComponent } from './app-shell-nav.component';
                 (click)="toggleSidebar()"
                 [title]="sidebarCollapsed() ? i18n.t('shell.sidebar.expand') : i18n.t('shell.sidebar.collapse')"
                 [attr.aria-label]="sidebarCollapsed() ? i18n.t('shell.sidebar.expand') : i18n.t('shell.sidebar.collapse')"
-                class="inline-flex items-center justify-center w-8 h-8 rounded-sm hover:bg-[var(--app-surface-muted)] text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer"
+                class="inline-flex items-center justify-center w-8 h-8 rounded-sm hover:bg-[var(--app-surface-muted)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
               >
                 @if (sidebarCollapsed()) {
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
@@ -155,7 +155,7 @@ import { AppShellNavComponent } from './app-shell-nav.component';
         @if (session() && mobileMenuOpen()) {
           <div class="fixed inset-0 z-[100] flex md:hidden">
             <div
-              class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+              class="fixed inset-0 bg-[var(--overlay-bg)] backdrop-blur-xs transition-opacity"
               (click)="closeMobileMenu()"
             ></div>
 
@@ -164,7 +164,7 @@ import { AppShellNavComponent } from './app-shell-nav.component';
                 <button
                   type="button"
                   (click)="closeMobileMenu()"
-                  class="inline-flex items-center justify-center w-8 h-8 rounded-sm hover:bg-[var(--app-surface-muted)] text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer"
+                  class="inline-flex items-center justify-center w-8 h-8 rounded-sm hover:bg-[var(--app-surface-muted)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                   aria-label="Close menu"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
@@ -182,10 +182,10 @@ import { AppShellNavComponent } from './app-shell-nav.component';
                   <div class="flex items-center gap-3">
                     <div class="ui-avatar shadow-xs select-none">{{ currentSession.name.charAt(0) }}</div>
                     <div class="flex flex-col">
-                      <span class="font-display text-sm font-extrabold leading-none text-slate-800 dark:text-slate-200">
+                      <span class="font-display text-sm font-extrabold leading-none" style="color:var(--text-primary)">
                         {{ currentSession.name }}
                       </span>
-                      <span class="text-[0.65rem] font-extrabold uppercase tracking-wider mt-1 text-slate-400 dark:text-slate-500">
+                      <span class="text-[0.65rem] font-extrabold uppercase tracking-wider mt-1" style="color:var(--text-muted)">
                         {{ currentSession.role }}
                       </span>
                     </div>
@@ -207,12 +207,12 @@ import { AppShellNavComponent } from './app-shell-nav.component';
 
               <div class="border-t border-[var(--app-border)] p-4 space-y-4">
                 <div class="flex items-center justify-between">
-                  <span class="text-xs font-bold text-slate-500 dark:text-slate-400">Thème</span>
+                  <span class="text-xs font-bold" style="color:var(--text-muted)">Thème</span>
                   <button
                     type="button"
                     (click)="toggleTheme()"
                     [title]="themeTooltip()"
-                    class="inline-flex items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-slate-500 dark:text-slate-400 hover:text-brand-cyan transition-all duration-150 cursor-pointer"
+                    class="inline-flex items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--text-muted)] hover:text-[var(--brand-cyan)] transition-all duration-150 cursor-pointer"
                   >
                     @if (theme() === 'dark') {
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
@@ -227,20 +227,20 @@ import { AppShellNavComponent } from './app-shell-nav.component';
                 </div>
 
                 <div class="flex items-center justify-between">
-                  <span class="text-xs font-bold text-slate-500 dark:text-slate-400">Langue</span>
+                  <span class="text-xs font-bold" style="color:var(--text-muted)">Langue</span>
                   <div class="flex items-center gap-1.5 text-xs font-bold border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2.5 py-1.5 rounded-sm select-none">
                     <button
                       type="button"
                       (click)="setLang('fr')"
-                      [class]="locale() === 'fr' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer'"
+                      [class]="locale() === 'fr' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'"
                     >
                       FR
                     </button>
-                    <span class="text-slate-300 dark:text-slate-700">|</span>
+                    <span style="color:var(--divider)">|</span>
                     <button
                       type="button"
                       (click)="setLang('en')"
-                      [class]="locale() === 'en' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer'"
+                      [class]="locale() === 'en' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'"
                     >
                       EN
                     </button>
@@ -251,7 +251,7 @@ import { AppShellNavComponent } from './app-shell-nav.component';
                   <button
                     type="button"
                     (click)="logout(); closeMobileMenu()"
-                    class="flex w-full items-center justify-center gap-2 py-2.5 rounded-sm border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/20 text-red-600 hover:bg-red-100 transition-all duration-150 cursor-pointer text-sm font-bold"
+                    class="ui-button-logout"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />

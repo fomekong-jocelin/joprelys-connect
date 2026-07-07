@@ -38,11 +38,11 @@ export interface OrganizationTableLabels {
         <!-- Vue Mobile -->
         <div class="space-y-3 md:hidden">
           @for (org of organizations(); track org.id) {
-            <article class="ui-card-muted p-4 border border-slate-100 dark:border-slate-800/80 rounded-lg">
+            <article class="ui-card-muted p-4 border border-[var(--app-border)]/80 rounded-lg">
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
-                  <h3 class="font-extrabold text-slate-800 dark:text-white hover:text-brand-cyan cursor-pointer transition-colors" (click)="detailRequested.emit(org)">{{ org.name }}</h3>
-                  <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ org.city }}</p>
+                  <h3 class="font-extrabold text-[var(--text-primary)] hover:text-brand-cyan cursor-pointer transition-colors" (click)="detailRequested.emit(org)">{{ org.name }}</h3>
+                  <p class="mt-1 text-sm text-[var(--text-muted)]">{{ org.city }}</p>
                 </div>
                 <app-status-badge
                   [active]="org.status === 'ACTIVE'"
@@ -52,26 +52,26 @@ export interface OrganizationTableLabels {
 
               <dl class="mt-4 space-y-3 text-xs">
                 <div>
-                  <dt class="font-semibold text-slate-400 uppercase tracking-wider text-[10px]">{{ labels().contact }}</dt>
-                  <dd class="mt-1 text-slate-700 dark:text-slate-300 break-all">{{ org.email }}</dd>
+                  <dt class="font-semibold text-[var(--text-muted)] uppercase tracking-wider text-[10px]">{{ labels().contact }}</dt>
+                  <dd class="mt-1 text-[var(--text-secondary)] break-all">{{ org.email }}</dd>
                   @if (org.phone) {
-                    <dd class="mt-1 text-slate-500 dark:text-slate-400">{{ org.phone }}</dd>
+                    <dd class="mt-1 text-[var(--text-muted)]">{{ org.phone }}</dd>
                   }
                 </div>
                 @if (org.address) {
                   <div>
-                    <dt class="font-semibold text-slate-400 uppercase tracking-wider text-[10px]">{{ labels().address }}</dt>
-                    <dd class="mt-1 text-slate-700 dark:text-slate-300">{{ org.address }}</dd>
+                    <dt class="font-semibold text-[var(--text-muted)] uppercase tracking-wider text-[10px]">{{ labels().address }}</dt>
+                    <dd class="mt-1 text-[var(--text-secondary)]">{{ org.address }}</dd>
                   </div>
                 }
                 <div>
-                  <dt class="font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Administrateur</dt>
-                  <dd class="mt-1 text-slate-700 dark:text-slate-300">
+                  <dt class="font-semibold text-[var(--text-muted)] uppercase tracking-wider text-[10px]">Administrateur</dt>
+                  <dd class="mt-1 text-[var(--text-secondary)]">
                     @if (org.adminEmail) {
-                      <span class="font-bold text-slate-800 dark:text-slate-200">{{ org.adminDisplayName }}</span>
-                      <span class="text-slate-400 dark:text-slate-500 font-mono text-[11px] block mt-0.5">{{ org.adminEmail }}</span>
+                      <span class="font-bold text-[var(--text-primary)]">{{ org.adminDisplayName }}</span>
+                      <span class="text-[var(--text-muted)] font-mono text-[11px] block mt-0.5">{{ org.adminEmail }}</span>
                     } @else {
-                      <span class="text-slate-400 dark:text-slate-500 italic">Aucun administrateur affecté</span>
+                      <span class="text-[var(--text-muted)] italic">Aucun administrateur affecté</span>
                     }
                   </dd>
                 </div>
@@ -101,42 +101,42 @@ export interface OrganizationTableLabels {
         <div class="hidden overflow-x-auto md:block">
           <table class="ui-table w-full">
             <thead>
-              <tr class="border-b border-slate-100 dark:border-slate-800/80">
-                <th class="py-3 px-4 text-left font-bold text-xs uppercase tracking-wider text-slate-400">{{ labels().clinic }}</th>
-                <th class="py-3 px-4 text-left font-bold text-xs uppercase tracking-wider text-slate-400">{{ labels().city }}</th>
-                <th class="py-3 px-4 text-left font-bold text-xs uppercase tracking-wider text-slate-400">{{ labels().contact }}</th>
-                <th class="py-3 px-4 text-left font-bold text-xs uppercase tracking-wider text-slate-400">Administrateur</th>
-                <th class="py-3 px-4 text-left font-bold text-xs uppercase tracking-wider text-slate-400">{{ labels().status }}</th>
-                <th class="py-3 px-4 text-right font-bold text-xs uppercase tracking-wider text-slate-400 whitespace-nowrap">{{ labels().actions }}</th>
+              <tr class="border-b border-[var(--app-border)]/80">
+                <th class="py-3 px-4 text-left font-bold text-xs uppercase tracking-wider text-[var(--text-muted)]">{{ labels().clinic }}</th>
+                <th class="py-3 px-4 text-left font-bold text-xs uppercase tracking-wider text-[var(--text-muted)]">{{ labels().city }}</th>
+                <th class="py-3 px-4 text-left font-bold text-xs uppercase tracking-wider text-[var(--text-muted)]">{{ labels().contact }}</th>
+                <th class="py-3 px-4 text-left font-bold text-xs uppercase tracking-wider text-[var(--text-muted)]">Administrateur</th>
+                <th class="py-3 px-4 text-left font-bold text-xs uppercase tracking-wider text-[var(--text-muted)]">{{ labels().status }}</th>
+                <th class="py-3 px-4 text-right font-bold text-xs uppercase tracking-wider text-[var(--text-muted)] whitespace-nowrap">{{ labels().actions }}</th>
               </tr>
             </thead>
             <tbody>
               @for (org of organizations(); track org.id) {
-                <tr class="border-b border-slate-50 dark:border-slate-850 hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors">
+                <tr class="border-b border-slate-50 dark:border-slate-850 hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-900/30 transition-colors">
                   <td class="py-4 px-4 align-middle">
                     <div
-                      class="font-extrabold text-slate-900 dark:text-white hover:text-brand-cyan cursor-pointer transition-colors whitespace-nowrap"
+                      class="font-extrabold text-[var(--text-primary)] hover:text-brand-cyan cursor-pointer transition-colors whitespace-nowrap"
                       (click)="detailRequested.emit(org)"
                     >
                       {{ org.name }}
                     </div>
                     @if (org.address) {
-                      <div class="mt-0.5 text-xs text-slate-400 dark:text-slate-500 max-w-[220px] truncate" [title]="org.address">{{ org.address }}</div>
+                      <div class="mt-0.5 text-xs text-[var(--text-muted)] max-w-[220px] truncate" [title]="org.address">{{ org.address }}</div>
                     }
                   </td>
-                  <td class="py-4 px-4 align-middle text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ org.city }}</td>
-                  <td class="py-4 px-4 align-middle text-slate-700 dark:text-slate-300">
+                  <td class="py-4 px-4 align-middle text-[var(--text-secondary)] whitespace-nowrap">{{ org.city }}</td>
+                  <td class="py-4 px-4 align-middle text-[var(--text-secondary)]">
                     <div class="text-sm font-semibold whitespace-nowrap">{{ org.email }}</div>
                     @if (org.phone) {
-                      <div class="mt-0.5 text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">{{ org.phone }}</div>
+                      <div class="mt-0.5 text-xs text-[var(--text-muted)] whitespace-nowrap">{{ org.phone }}</div>
                     }
                   </td>
                   <td class="py-4 px-4 align-middle">
                     @if (org.adminEmail) {
-                      <div class="text-sm font-bold text-slate-850 dark:text-slate-200 whitespace-nowrap">{{ org.adminDisplayName }}</div>
-                      <div class="text-xs text-slate-400 dark:text-slate-500 font-mono mt-0.5 whitespace-nowrap">{{ org.adminEmail }}</div>
+                      <div class="text-sm font-bold text-slate-850 dark:text-[var(--text-primary)] whitespace-nowrap">{{ org.adminDisplayName }}</div>
+                      <div class="text-xs text-[var(--text-muted)] font-mono mt-0.5 whitespace-nowrap">{{ org.adminEmail }}</div>
                     } @else {
-                      <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-red-50 dark:bg-red-950/20 text-red-650 dark:text-red-400 whitespace-nowrap">
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--brand-danger-subtle)] text-red-650 dark:text-red-400 whitespace-nowrap">
                         Aucun admin
                       </span>
                     }

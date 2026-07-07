@@ -48,11 +48,11 @@
           </div>
 
           <div>
-            <h3 class="font-display font-black text-xl text-slate-800 dark:text-white">
+            <h3 class="font-display font-black text-xl text-[var(--text-primary)]">
               Consentement d'accès requis
             </h3>
-            <p class="text-xs text-slate-400 mt-1 whitespace-nowrap">
-              DPU : <span class="font-mono font-bold text-indigo-500 dark:text-indigo-400">{{ patient.globalPatientNumber }}</span>
+            <p class="text-xs text-[var(--text-muted)] mt-1 whitespace-nowrap">
+              DPU : <span class="font-mono font-bold text-[var(--brand-info-text)] dark:text-indigo-400">{{ patient.globalPatientNumber }}</span>
             </p>
             <p class="text-sm text-[var(--text-secondary)] mt-4 leading-relaxed">
               Le patient <strong>{{ patient.fullName }}</strong> n'a pas accordé d'accès DPU actif pour votre clinique.
@@ -64,7 +64,7 @@
             <app-ui-alert tone="error" class="w-full text-left">{{ err }}</app-ui-alert>
           }
 
-          <div class="w-full border-t border-slate-100 dark:border-slate-800/80 pt-6 flex flex-col gap-4">
+          <div class="w-full border-t border-[var(--app-border)]/80 pt-6 flex flex-col gap-4">
             <div class="text-left w-full">
               <label for="emergency-reason" class="ui-label block mb-2">Justification d'accès d'urgence (obligatoire)</label>
               <textarea
@@ -132,7 +132,7 @@
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
                     <h3 class="truncate font-extrabold" style="color: var(--text-primary)">{{ patient.fullName }}</h3>
-                    <p class="mt-1 text-xs font-mono font-extrabold tracking-normal text-indigo-500 dark:text-indigo-400 whitespace-nowrap">{{ patient.globalPatientNumber }}</p>
+                    <p class="mt-1 text-xs font-mono font-extrabold tracking-normal text-[var(--brand-info-text)] dark:text-indigo-400 whitespace-nowrap">{{ patient.globalPatientNumber }}</p>
                   </div>
                   <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">
                     {{ patient.gender }}
@@ -187,7 +187,7 @@
                       <div class="max-w-[180px] truncate font-extrabold" style="color: var(--text-primary)" [title]="patient.fullName">{{ patient.fullName }}</div>
                       <div class="mt-0.5 max-w-[180px] truncate text-xs text-gray-400" [title]="patient.city">{{ patient.city }}</div>
                     </td>
-                    <td class="whitespace-nowrap font-mono text-sm font-extrabold tracking-wide text-indigo-500 dark:text-indigo-400">{{ patient.globalPatientNumber }}</td>
+                    <td class="whitespace-nowrap font-mono text-sm font-extrabold tracking-wide text-[var(--brand-info-text)] dark:text-indigo-400">{{ patient.globalPatientNumber }}</td>
                     <td class="whitespace-nowrap font-mono text-sm font-extrabold tracking-wide text-emerald-500 dark:text-emerald-400">{{ patient.localPatientNumber }}</td>
                     <td class="whitespace-nowrap">{{ patient.gender }}</td>
                     <td class="whitespace-nowrap">{{ patient.phone }}</td>

@@ -124,7 +124,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                     }
                     @if (c.advice) {
                       <section class="rounded-[var(--radius-brand-md)] border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/40 dark:bg-emerald-950/10 p-3">
-                        <span class="ui-label text-emerald-700 dark:text-emerald-300">{{ i18n.t('patient.visits.advice') }}</span>
+                        <span class="ui-label text-[var(--brand-success-text)]">{{ i18n.t('patient.visits.advice') }}</span>
                         <p class="mt-1.5 text-sm font-semibold text-[var(--text-primary)] leading-relaxed">{{ c.advice }}</p>
                       </section>
                     }
@@ -145,7 +145,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                           <div class="text-xs text-[var(--text-secondary)]">
                             <div>{{ i18n.t('patients.prescriptionNumber') }} : <strong class="font-mono text-[var(--brand-primary)]">{{ c.prescriptionNumber }}</strong></div>
                             @if (c.pinCode) {
-                              <div class="mt-1">{{ i18n.t('patients.pinCode') }} : <strong class="font-mono bg-indigo-100 dark:bg-indigo-900/50 px-1.5 py-0.5 rounded text-indigo-700 dark:text-indigo-300">{{ c.pinCode }}</strong></div>
+                              <div class="mt-1">{{ i18n.t('patients.pinCode') }} : <strong class="font-mono bg-indigo-100 dark:bg-indigo-900/50 px-1.5 py-0.5 rounded text-indigo-700 dark:text-brand-cyan">{{ c.pinCode }}</strong></div>
                             }
                           </div>
                           @if (c.prescriptionDocumentId) {
@@ -205,7 +205,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                           {{ downloadingId === c.visitId ? i18n.t('patient.summary.downloading') || 'Téléchargement...' : i18n.t('patients.downloadPdf') }}
                         </button>
                       } @else if (c.documentStatus === 'REVOQUE') {
-                        <span class="text-[10px] font-extrabold uppercase tracking-wide px-3 py-1.5 rounded-[var(--radius-brand-sm)] bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-amber-700 dark:text-amber-400">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wide px-3 py-1.5 rounded-[var(--radius-brand-sm)] bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-[var(--brand-warning-text)]">
                           {{ i18n.t('patient.visits.revoked') }}
                         </span>
                       } @else if (c.documentStatus === 'ANNULE') {
@@ -236,7 +236,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                             {{ i18n.t('patient.prescription.transmitted') }}
                           </span>
                         } @else if (c.prescriptionTransmissionStatus === 'PENDING') {
-                          <span class="text-[10px] font-extrabold uppercase tracking-wide px-3 py-1.5 rounded-[var(--radius-brand-sm)] bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-amber-700 dark:text-amber-400 animate-pulse">
+                          <span class="text-[10px] font-extrabold uppercase tracking-wide px-3 py-1.5 rounded-[var(--radius-brand-sm)] bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-[var(--brand-warning-text)] animate-pulse">
                             {{ i18n.t('patient.prescription.pending') }}
                           </span>
                         } @else if (c.prescriptionTransmissionStatus === 'FAILED') {
@@ -244,7 +244,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                             {{ i18n.t('patient.prescription.failed') }}
                           </span>
                         } @else {
-                          <span class="text-[10px] font-extrabold uppercase tracking-wide px-3 py-1.5 rounded-[var(--radius-brand-sm)] bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-900/40 text-slate-700 dark:text-slate-400">
+                          <span class="text-[10px] font-extrabold uppercase tracking-wide px-3 py-1.5 rounded-[var(--radius-brand-sm)] bg-[var(--app-surface-muted)] dark:bg-[var(--brand-danger-subtle)] border border-[var(--app-border)] dark:border-slate-900/40 text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
                             {{ i18n.t('patient.prescription.notTransmitted') }}
                           </span>
                         }

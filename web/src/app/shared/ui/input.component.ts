@@ -7,16 +7,19 @@ import { Component, input, model } from '@angular/core';
     <div class="space-y-1.5 w-full">
       @if (label()) {
         <label class="ui-label">
-          {{ label() }} @if (required()) { <span class="text-red-500">*</span> }
+          {{ label() }} @if (required()) {
+            <span style="color:var(--brand-danger);" aria-hidden="true">*</span>
+          }
         </label>
       }
-      <input 
-        [type]="type()" 
+      <input
+        [type]="type()"
         [placeholder]="placeholder()"
         [value]="value()"
         (input)="value.set($any($event.target).value)"
         class="ui-input"
         [required]="required()"
+        [attr.aria-required]="required() ? 'true' : null"
       />
     </div>
   `

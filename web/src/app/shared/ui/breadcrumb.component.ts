@@ -15,16 +15,35 @@ interface BreadcrumbItem {
   imports: [RouterLink],
   template: `
     @if (breadcrumbs().length > 0) {
-      <nav class="flex items-center space-x-2 px-4 md:px-6 py-3 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] text-xs font-semibold text-slate-500 select-none">
-        <a routerLink="/" class="hover:text-slate-900 dark:hover:text-slate-200 transition-colors">
+      <nav
+        class="flex items-center space-x-2 px-4 md:px-6 py-3 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] text-xs font-semibold select-none"
+        style="color:var(--text-muted)"
+        aria-label="Fil d'Ariane"
+      >
+        <a
+          routerLink="/"
+          class="transition-colors"
+          style="color:var(--text-muted)"
+          [style.color]="'var(--text-muted)'"
+          onmouseenter="this.style.color='var(--text-primary)'"
+          onmouseleave="this.style.color='var(--text-muted)'"
+        >
           {{ i18n.t('breadcrumb.home') }}
         </a>
         @for (item of breadcrumbs(); track item.url; let last = $last) {
-          <span class="text-slate-400 dark:text-slate-600">/</span>
+          <span aria-hidden="true" style="color:var(--divider)">/</span>
           @if (last) {
-            <span class="text-slate-800 dark:text-slate-300 font-bold truncate max-w-[200px]">{{ item.label }}</span>
+            <span class="font-bold truncate max-w-[200px]" style="color:var(--text-primary)" aria-current="page">
+              {{ item.label }}
+            </span>
           } @else {
-            <a [routerLink]="item.url" class="hover:text-slate-900 dark:hover:text-slate-200 transition-colors truncate max-w-[150px]">
+            <a
+              [routerLink]="item.url"
+              class="transition-colors truncate max-w-[150px]"
+              style="color:var(--text-muted)"
+              onmouseenter="this.style.color='var(--text-primary)'"
+              onmouseleave="this.style.color='var(--text-muted)'"
+            >
               {{ item.label }}
             </a>
           }
@@ -74,15 +93,11 @@ export class BreadcrumbComponent {
       // Retrieve label from route data or fallback to route path or key in i18n
       let label = route.data['breadcrumb'] || '';
       if (!label) {
-        // Fallback to translating the path in i18n
-        // e.g. path 'organizations' -> i18n key 'breadcrumb.organizations'
-        const cleanPath = routeConfig.path.replace(/:[^\/]+/g, '*'); // replace route params with '*'
+        const cleanPath = routeConfig.path.replace(/:[^\/]+/g, '*');
         const i18nKey = `breadcrumb.${cleanPath.replace(/\//g, '.')}`;
         const translated = this.i18n.t(i18nKey);
-        // If translation is the key itself, try fallback to capitalized segment
         label = translated !== i18nKey ? translated : this.capitalize(resolvedSegments.join(' '));
       } else {
-        // Resolve dynamic placeholder/keys from route data
         label = this.i18n.t(label);
       }
 

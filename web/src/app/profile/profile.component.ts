@@ -92,7 +92,7 @@ import { FileDragDropComponent } from '../shared/ui/file-drag-drop.component';
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   
                   <label class="space-y-1.5">
-                    <span class="ui-label">{{ t('profile.displayName') }} <span class="text-red-500">*</span></span>
+                    <span class="ui-label">{{ t('profile.displayName') }} <span class="text-[var(--brand-danger)]">*</span></span>
                     <input
                       class="ui-input"
                       [value]="displayName()"
@@ -106,7 +106,7 @@ import { FileDragDropComponent } from '../shared/ui/file-drag-drop.component';
                   <label class="space-y-1.5">
                     <span class="ui-label">{{ t('profile.email') }}</span>
                     <input
-                      class="ui-input bg-slate-100/70 dark:bg-slate-800/70 cursor-not-allowed"
+                      class="ui-input bg-slate-100/70 dark:bg-[var(--bg-input)]/70 cursor-not-allowed"
                       [value]="email()"
                       disabled
                     />
@@ -152,7 +152,7 @@ import { FileDragDropComponent } from '../shared/ui/file-drag-drop.component';
 
                   @if (isDoctor()) {
                     <label class="space-y-1.5">
-                      <span class="ui-label">{{ t('profile.specialty') }} <span class="text-red-500">*</span></span>
+                      <span class="ui-label">{{ t('profile.specialty') }} <span class="text-[var(--brand-danger)]">*</span></span>
                       <input
                         class="ui-input"
                         [value]="specialty()"
@@ -164,7 +164,7 @@ import { FileDragDropComponent } from '../shared/ui/file-drag-drop.component';
                     </label>
 
                     <label class="space-y-1.5">
-                      <span class="ui-label">{{ t('profile.registrationNumber') }} <span class="text-red-500">*</span></span>
+                      <span class="ui-label">{{ t('profile.registrationNumber') }} <span class="text-[var(--brand-danger)]">*</span></span>
                       <input
                         class="ui-input"
                         [value]="registrationNumber()"

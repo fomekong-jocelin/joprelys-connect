@@ -16,32 +16,32 @@
 
         <!-- Role-Specific: ADMIN_JOPRELYS -->
         @if (hasRole('ADMIN_JOPRELYS')) {
-          <div class="col-span-1 md:col-span-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+          <div class="col-span-1 md:col-span-3 bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-6">
-              <div class="w-10 h-10 rounded-xl bg-brand-night/10 dark:bg-slate-800 flex items-center justify-center text-brand-night dark:text-slate-300">
+              <div class="w-10 h-10 rounded-xl bg-brand-night/10 dark:bg-[var(--bg-input)] flex items-center justify-center text-brand-night dark:text-[var(--text-secondary)]">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <h2 class="font-display font-bold text-xl text-brand-night dark:text-white">Administration du Système</h2>
+              <h2 class="font-display font-bold text-xl text-[var(--text-primary)]">Administration du Système</h2>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <div class="p-5 bg-brand-gray dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl">
-                <h3 class="font-semibold text-brand-night dark:text-slate-200 text-sm">Cliniques Pilotes</h3>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">Créer et configurer les cliniques pilotes (organisations), modifier leur statut d'activité.</p>
-                <a routerLink="/organizations" class="mt-4 inline-block text-xs font-semibold text-brand-cyan dark:text-[#22d3ee] hover:underline cursor-pointer">Accéder</a>
+              <div class="p-5 bg-brand-gray dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl">
+                <h3 class="font-semibold text-brand-night dark:text-[var(--text-primary)] text-sm">Cliniques Pilotes</h3>
+                <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">Créer et configurer les cliniques pilotes (organisations), modifier leur statut d'activité.</p>
+                <a routerLink="/organizations" class="mt-4 inline-block text-xs font-semibold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">Accéder</a>
               </div>
-              <div class="p-5 bg-brand-gray dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl">
-                <h3 class="font-semibold text-brand-night dark:text-slate-200 text-sm">Journal d'Audit Sécurisé</h3>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">Consulter les historiques de connexions et les actions d'interopérabilité.</p>
-                <button (click)="openAuditSecurityModal()" class="mt-4 text-xs font-semibold text-brand-cyan dark:text-[#22d3ee] hover:underline cursor-pointer">Consulter</button>
+              <div class="p-5 bg-brand-gray dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl">
+                <h3 class="font-semibold text-brand-night dark:text-[var(--text-primary)] text-sm">Journal d'Audit Sécurisé</h3>
+                <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">Consulter les historiques de connexions et les actions d'interopérabilité.</p>
+                <button (click)="openAuditSecurityModal()" class="mt-4 text-xs font-semibold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">Consulter</button>
               </div>
-              <div class="p-5 bg-brand-gray dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl">
-                <h3 class="font-semibold text-brand-night dark:text-slate-200 text-sm">Configuration Interop</h3>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">Gérer les connexions API de Mandacare, AllôPharma et laboratoires.</p>
-                <a routerLink="/organizations" class="mt-4 inline-block text-xs font-semibold text-brand-cyan dark:text-[#22d3ee] hover:underline cursor-pointer">Configurer</a>
+              <div class="p-5 bg-brand-gray dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl">
+                <h3 class="font-semibold text-brand-night dark:text-[var(--text-primary)] text-sm">Configuration Interop</h3>
+                <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">Gérer les connexions API de Mandacare, AllôPharma et laboratoires.</p>
+                <a routerLink="/organizations" class="mt-4 inline-block text-xs font-semibold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">Configurer</a>
               </div>
             </div>
           </div>
@@ -49,21 +49,21 @@
 
         <!-- Role-Specific: Clinical Roles (Dossiers Cliniques) -->
         @if (hasRole(['MEDECIN', 'AGENT_ACCUEIL', 'INFIRMIER', 'ADMIN_CLINIQUE'])) {
-          <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-4">
               <div class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan dark:text-cyan-400">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <h2 class="font-display font-bold text-lg text-brand-night dark:text-white">Dossiers Cliniques</h2>
+              <h2 class="font-display font-bold text-lg text-[var(--text-primary)]">Dossiers Cliniques</h2>
             </div>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">Consulter les dossiers patients uniques, ajouter des observations médicales et rédiger de nouvelles prescriptions.</p>
-            <a routerLink="/patients" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-[#22d3ee] hover:underline cursor-pointer">
+            <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">Consulter les dossiers patients uniques, ajouter des observations médicales et rédiger de nouvelles prescriptions.</p>
+            <a routerLink="/patients" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
               Gérer les dossiers →
             </a>
             @if (hasRole(['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'])) {
-              <a routerLink="/clinic/access-request" class="mt-2 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-[#22d3ee] hover:underline cursor-pointer">
+              <a routerLink="/clinic/access-request" class="mt-2 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
                 Demander un accès externe →
               </a>
             }
@@ -71,34 +71,34 @@
         }
 
         @if (hasRole(['BIOLOGISTE', 'ADMIN_JOPRELYS'])) {
-          <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-4">
               <div class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan dark:text-cyan-400">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3h8l-1 1v4.5l4.5 7.8A3 3 0 0116.9 21H7.1a3 3 0 01-2.6-4.7L9 8.5V4L8 3z" />
                 </svg>
               </div>
-              <h2 class="font-display font-bold text-lg text-brand-night dark:text-white">{{ t('lab.dashboardTitle') }}</h2>
+              <h2 class="font-display font-bold text-lg text-[var(--text-primary)]">{{ t('lab.dashboardTitle') }}</h2>
             </div>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">{{ t('lab.dashboardSubtitle') }}</p>
-            <a routerLink="/clinic/lab-orders" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-[#22d3ee] hover:underline cursor-pointer">
+            <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('lab.dashboardSubtitle') }}</p>
+            <a routerLink="/clinic/lab-orders" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
               {{ t('lab.dashboardLink') }}
             </a>
           </div>
         }
 
         @if (hasRole('ADMIN_CLINIQUE')) {
-          <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-4">
               <div class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan dark:text-cyan-400">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m6-4a4 4 0 11-8 0 4 4 0 018 0zm6 2a3 3 0 10-3-5.197" />
                 </svg>
               </div>
-              <h2 class="font-display font-bold text-lg text-brand-night dark:text-white">{{ t('staff.dashboardTitle') }}</h2>
+              <h2 class="font-display font-bold text-lg text-[var(--text-primary)]">{{ t('staff.dashboardTitle') }}</h2>
             </div>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">{{ t('staff.dashboardSubtitle') }}</p>
-            <a routerLink="/clinic/staff" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-[#22d3ee] hover:underline cursor-pointer">
+            <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('staff.dashboardSubtitle') }}</p>
+            <a routerLink="/clinic/staff" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
               {{ t('staff.dashboardLink') }}
             </a>
           </div>
@@ -106,17 +106,17 @@
 
         <!-- Role-Specific: PHARMACIEN -->
         @if (hasRole(['PHARMACIEN', 'ADMIN_JOPRELYS'])) {
-          <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-4">
               <div class="w-9 h-9 rounded-lg bg-brand-green/10 dark:bg-brand-green/20 flex items-center justify-center text-brand-green">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 9.172V5L8 4z" />
                 </svg>
               </div>
-              <h2 class="font-display font-bold text-lg text-brand-night dark:text-white">Validation Ordonnances</h2>
+              <h2 class="font-display font-bold text-lg text-[var(--text-primary)]">Validation Ordonnances</h2>
             </div>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">Rechercher les ordonnances partagées, valider la délivrance des médicaments et signaler les contre-indications.</p>
-            <a routerLink="/pharmacy/prescriptions" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-[#22d3ee] hover:underline cursor-pointer">
+            <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">Rechercher les ordonnances partagées, valider la délivrance des médicaments et signaler les contre-indications.</p>
+            <a routerLink="/pharmacy/prescriptions" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
               Valider les prescriptions →
             </a>
           </div>
@@ -124,17 +124,17 @@
 
         <!-- Role-Specific: PHARMACIEN / ADMIN_CLINIQUE (Stocks) -->
         @if (hasRole(['PHARMACIEN', 'ADMIN_CLINIQUE'])) {
-          <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-4">
               <div class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
               </div>
-              <h2 class="font-display font-bold text-lg text-brand-night dark:text-white">{{ t('pharmacy.stocks.title') }}</h2>
+              <h2 class="font-display font-bold text-lg text-[var(--text-primary)]">{{ t('pharmacy.stocks.title') }}</h2>
             </div>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">{{ t('pharmacy.stocks.subtitle') }}</p>
-            <a routerLink="/pharmacy/stocks" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-[#22d3ee] hover:underline cursor-pointer">
+            <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('pharmacy.stocks.subtitle') }}</p>
+            <a routerLink="/pharmacy/stocks" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
               Gérer l'inventaire →
             </a>
           </div>
@@ -142,30 +142,30 @@
 
 
         <!-- General Info Card -->
-        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+        <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
           <div class="flex items-center gap-3 mb-4">
-            <div class="w-9 h-9 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-600 dark:text-yellow-400">
+            <div class="w-9 h-9 rounded-lg bg-yellow-500/10 flex items-center justify-center text-[var(--brand-warning-text)] dark:text-yellow-400">
               <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 class="font-display font-bold text-lg text-brand-night dark:text-white">Statut Services Interop</h2>
+            <h2 class="font-display font-bold text-lg text-[var(--text-primary)]">Statut Services Interop</h2>
           </div>
           <ul class="text-xs space-y-3">
             <li class="flex items-center justify-between border-b border-slate-50 dark:border-slate-800/40 pb-2">
-              <span class="text-slate-500 dark:text-slate-400">API Mandacare</span>
+              <span class="text-[var(--text-muted)]">API Mandacare</span>
               <span class="inline-flex items-center gap-1.5 font-semibold text-brand-green">
                 <span class="w-2 h-2 rounded-full bg-brand-green animate-pulse"></span> Connecté
               </span>
             </li>
             <li class="flex items-center justify-between border-b border-slate-50 dark:border-slate-800/40 pb-2">
-              <span class="text-slate-500 dark:text-slate-400">API AllôPharma</span>
+              <span class="text-[var(--text-muted)]">API AllôPharma</span>
               <span class="inline-flex items-center gap-1.5 font-semibold text-brand-green">
                 <span class="w-2 h-2 rounded-full bg-brand-green animate-pulse"></span> Connecté
               </span>
             </li>
             <li class="flex items-center justify-between">
-              <span class="text-slate-500 dark:text-slate-400">Base PostgreSQL</span>
+              <span class="text-[var(--text-muted)]">Base PostgreSQL</span>
               <span class="inline-flex items-center gap-1.5 font-semibold text-brand-green">
                 <span class="w-2 h-2 rounded-full bg-brand-green animate-pulse"></span> Opérationnelle
               </span>
@@ -177,15 +177,15 @@
 
       <!-- File d'Attente Active (Clinical Queue) -->
       @if (isClinicalRole()) {
-        <div class="mt-10 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+        <div class="mt-10 bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4 mb-6" style="border-color: var(--border-color)">
             <div class="w-full">
               <div class="flex items-center justify-between sm:justify-start gap-4">
-                <h2 class="font-display font-bold text-base sm:text-xl text-brand-night dark:text-white">File d'Attente Active</h2>
+                <h2 class="font-display font-bold text-base sm:text-xl text-[var(--text-primary)]">File d'Attente Active</h2>
                 <button
                   type="button"
                   (click)="loadQueue()"
-                  class="p-2 sm:hidden rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  class="p-2 sm:hidden rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-slate-100 dark:text-[var(--text-muted)] dark:hover:text-[var(--text-primary)] dark:hover:bg-slate-800 transition-colors cursor-pointer"
                   title="Actualiser"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
@@ -193,7 +193,7 @@
                   </svg>
                 </button>
               </div>
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 pr-0 sm:pr-8">
+              <p class="text-xs text-[var(--text-muted)] mt-1.5 pr-0 sm:pr-8">
                 La file se remplit après l'ouverture d'une visite depuis le dossier patient. Les constantes se saisissent ici, avant la consultation.
               </p>
             </div>
@@ -207,7 +207,7 @@
               Chargement de la file d'attente...
             </div>
           } @else if (queueError()) {
-            <div class="p-4 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-red-700 dark:text-red-300 font-semibold leading-relaxed">
+            <div class="p-4 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-xl text-xs text-[var(--brand-danger-text)] font-semibold leading-relaxed">
               {{ queueError() }}
             </div>
           } @else if (activeVisits().length === 0) {
@@ -228,8 +228,8 @@
                 </thead>
                 <tbody class="divide-y" style="border-color: var(--border-color)">
                   @for (visit of activeVisits(); track visit.id) {
-                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                      <td class="py-4 px-4 text-sm font-bold text-brand-cyan dark:text-[#22d3ee]">{{ visit.visitNumber }}</td>
+                    <tr class="hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800/30 transition-colors">
+                      <td class="py-4 px-4 text-sm font-bold text-brand-cyan dark:text-brand-cyan">{{ visit.visitNumber }}</td>
                       <td class="py-4 px-4">
                         <span class="font-bold text-sm block" style="color: var(--text-primary)">{{ visit.patientName }}</span>
                         <span class="text-xs font-medium block" style="color: var(--text-muted)">{{ visit.patientDpu }}</span>
@@ -238,12 +238,12 @@
                         {{ visit.createdAt | date:'HH:mm' }}
                       </td>
                       <td class="py-4 px-4">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[var(--brand-info-subtle)] text-[var(--brand-info-text)]  dark:text-brand-cyan whitespace-nowrap">
                           {{ visit.orientation }}
                         </span>
                       </td>
                       <td class="py-4 px-4">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]  dark:text-[var(--brand-success-text)] whitespace-nowrap">
                           {{ visit.status }}
                         </span>
                       </td>
@@ -264,7 +264,7 @@
                             <button
                               (click)="openCloseConfirmModal(visit.id)"
                               title="Clôturer la visite"
-                              class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-colors cursor-pointer">
+                              class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[var(--brand-danger)] bg-[var(--brand-danger-subtle)]0/10 hover:bg-[var(--brand-danger-subtle)]0/20 transition-colors cursor-pointer">
                               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                               </svg>
@@ -281,9 +281,9 @@
             <!-- Mobile Card View -->
             <div class="md:hidden space-y-4">
               @for (visit of activeVisits(); track visit.id) {
-                <div class="p-4 bg-brand-gray dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl space-y-3">
+                <div class="p-4 bg-brand-gray dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl space-y-3">
                   <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-brand-cyan dark:text-[#22d3ee]">{{ visit.visitNumber }}</span>
+                    <span class="text-xs font-bold text-brand-cyan dark:text-brand-cyan">{{ visit.visitNumber }}</span>
                     <span class="text-xs font-semibold" style="color: var(--text-muted)">{{ visit.createdAt | date:'HH:mm' }}</span>
                   </div>
                   <div>
@@ -296,27 +296,27 @@
 
                   <!-- Vitals Mobile view -->
                   @if (visit.vitals) {
-                    <div class="p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/50 rounded-xl grid grid-cols-2 gap-2 text-xs font-semibold">
+                    <div class="p-3 bg-[var(--app-surface)] border border-[var(--app-border)]/50 rounded-xl grid grid-cols-2 gap-2 text-xs font-semibold">
                       @if (visit.vitals.temperature) {
-                        <div class="text-slate-500 dark:text-slate-400">Temp : <strong class="text-slate-800 dark:text-white">{{ visit.vitals.temperature }}°C</strong></div>
+                        <div class="text-[var(--text-muted)]">Temp : <strong class="text-[var(--text-primary)]">{{ visit.vitals.temperature }}°C</strong></div>
                       }
                       @if (visit.vitals.systolic || visit.vitals.diastolic) {
-                        <div class="text-slate-500 dark:text-slate-400">TA : <strong class="text-slate-800 dark:text-white">{{ visit.vitals.systolic }}/{{ visit.vitals.diastolic }}</strong></div>
+                        <div class="text-[var(--text-muted)]">TA : <strong class="text-[var(--text-primary)]">{{ visit.vitals.systolic }}/{{ visit.vitals.diastolic }}</strong></div>
                       }
                       @if (visit.vitals.pulse) {
-                        <div class="text-slate-500 dark:text-slate-400">Pouls : <strong class="text-slate-800 dark:text-white">{{ visit.vitals.pulse }} bpm</strong></div>
+                        <div class="text-[var(--text-muted)]">Pouls : <strong class="text-[var(--text-primary)]">{{ visit.vitals.pulse }} bpm</strong></div>
                       }
                       @if (visit.vitals.spo2) {
-                        <div class="text-slate-500 dark:text-slate-400">SpO2 : <strong class="text-slate-800 dark:text-white">{{ visit.vitals.spo2 }}%</strong></div>
+                        <div class="text-[var(--text-muted)]">SpO2 : <strong class="text-[var(--text-primary)]">{{ visit.vitals.spo2 }}%</strong></div>
                       }
                       @if (visit.vitals.bmi) {
-                        <div class="text-slate-500 dark:text-slate-400">IMC : <span class="inline-flex items-center px-1 py-0.25 rounded-md font-bold text-[10px]" [class]="getBmiClass(visit.vitals.bmi)">{{ visit.vitals.bmi }}</span></div>
+                        <div class="text-[var(--text-muted)]">IMC : <span class="inline-flex items-center px-1 py-0.25 rounded-md font-bold text-[10px]" [class]="getBmiClass(visit.vitals.bmi)">{{ visit.vitals.bmi }}</span></div>
                       }
                     </div>
                   }
 
-                  <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/40">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 whitespace-nowrap">
+                  <div class="flex items-center justify-between pt-2 border-t border-[var(--app-border)]/40">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-[var(--brand-info-subtle)] text-[var(--brand-info-text)]  dark:text-brand-cyan whitespace-nowrap">
                       {{ visit.orientation }}
                     </span>
                     <div class="inline-flex items-center gap-1">
@@ -335,7 +335,7 @@
                         <button
                           (click)="openCloseConfirmModal(visit.id)"
                           title="Clôturer la visite"
-                          class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-colors cursor-pointer">
+                          class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[var(--brand-danger)] bg-[var(--brand-danger-subtle)]0/10 hover:bg-[var(--brand-danger-subtle)]0/20 transition-colors cursor-pointer">
                           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                           </svg>
@@ -354,10 +354,10 @@
 
   <!-- Vitals Form Modal Dialogue -->
   @if (showVitalsModal() && selectedVisitForVitals(); as selectedVisit) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in">
-      <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-2xl max-w-xl w-full shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-bg)] backdrop-blur-sm p-4 animate-fade-in">
+      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-2xl max-w-xl w-full shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
         <!-- Close button -->
-        <button (click)="closeVitalsModal()" class="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+        <button (click)="closeVitalsModal()" class="absolute top-4 right-4 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] dark:hover:text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800 cursor-pointer transition-colors">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -371,18 +371,18 @@
             </svg>
           </div>
           <div>
-            <h3 class="font-display font-black text-lg text-brand-night dark:text-white leading-tight">Enregistrement des Constantes</h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Patient : <strong class="text-slate-700 dark:text-slate-300">{{ selectedVisit.patientName }}</strong> ({{ selectedVisit.patientDpu }})
+            <h3 class="font-display font-black text-lg text-[var(--text-primary)] leading-tight">Enregistrement des Constantes</h3>
+            <p class="text-xs text-[var(--text-muted)] mt-0.5">
+              Patient : <strong class="text-[var(--text-secondary)]">{{ selectedVisit.patientName }}</strong> ({{ selectedVisit.patientDpu }})
             </p>
           </div>
         </div>
 
-        <hr class="border-slate-100 dark:border-slate-800/80 my-4" />
+        <hr class="border-[var(--app-border)]/80 my-4" />
 
         @if (vitalsError()) {
-          <div class="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-red-700 dark:text-red-300 font-semibold mb-4 leading-relaxed flex items-start gap-2">
-            <svg class="w-4 h-4 shrink-0 text-red-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <div class="p-3 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-xl text-xs text-[var(--brand-danger-text)] font-semibold mb-4 leading-relaxed flex items-start gap-2">
+            <svg class="w-4 h-4 shrink-0 text-[var(--brand-danger)] mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <span>{{ vitalsError() }}</span>
@@ -391,8 +391,8 @@
 
         <div class="space-y-5">
           <!-- Section 1 : Paramètres Physiques & BMI -->
-          <div class="p-4 bg-slate-50/50 dark:bg-slate-950/15 border border-slate-100 dark:border-slate-800/50 rounded-xl space-y-4">
-            <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+          <div class="p-4 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-[var(--app-border)]/50 rounded-xl space-y-4">
+            <h4 class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
               <span>📏</span> Mesures Anthropométriques
             </h4>
             <div class="grid grid-cols-2 gap-4">
@@ -410,10 +410,10 @@
                     [class.focus:border-red-500]="isWeightInvalid()"
                     [disabled]="isSavingVitals()"
                   />
-                  <span class="absolute right-3 top-2.5 text-xs font-bold text-slate-400">kg</span>
+                  <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">kg</span>
                 </div>
                 @if (isWeightInvalid()) {
-                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 1 et 500 kg.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 1 et 500 kg.</p>
                 }
               </div>
 
@@ -430,10 +430,10 @@
                     [class.focus:border-red-500]="isHeightInvalid()"
                     [disabled]="isSavingVitals()"
                   />
-                  <span class="absolute right-3 top-2.5 text-xs font-bold text-slate-400">cm</span>
+                  <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">cm</span>
                 </div>
                 @if (isHeightInvalid()) {
-                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 30 et 250 cm.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 30 et 250 cm.</p>
                 }
               </div>
             </div>
@@ -457,8 +457,8 @@
           </div>
 
           <!-- Section 2 : Cardiovasculaire & SpO2 -->
-          <div class="p-4 bg-slate-50/50 dark:bg-slate-950/15 border border-slate-100 dark:border-slate-800/50 rounded-xl space-y-4">
-            <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+          <div class="p-4 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-[var(--app-border)]/50 rounded-xl space-y-4">
+            <h4 class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
               <span>🩺</span> Cardio-Respiratoire
             </h4>
 
@@ -476,10 +476,10 @@
                     [class.focus:border-red-500]="isPulseInvalid()"
                     [disabled]="isSavingVitals()"
                   />
-                  <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-slate-400">bpm</span>
+                  <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">bpm</span>
                 </div>
                 @if (isPulseInvalid()) {
-                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 20 et 250.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 20 et 250.</p>
                 }
               </div>
 
@@ -496,10 +496,10 @@
                     [class.focus:border-red-500]="isSpo2Invalid()"
                     [disabled]="isSavingVitals()"
                   />
-                  <span class="absolute right-3 top-2.5 text-xs font-bold text-slate-400">%</span>
+                  <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">%</span>
                 </div>
                 @if (isSpo2Invalid()) {
-                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 50 et 100%.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 50 et 100%.</p>
                 }
               </div>
 
@@ -516,10 +516,10 @@
                     [class.focus:border-red-500]="isSystolicInvalid()"
                     [disabled]="isSavingVitals()"
                   />
-                  <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-slate-400">mmHg</span>
+                  <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">mmHg</span>
                 </div>
                 @if (isSystolicInvalid()) {
-                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 40 et 250.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 40 et 250.</p>
                 }
               </div>
 
@@ -536,10 +536,10 @@
                     [class.focus:border-red-500]="isDiastolicInvalid()"
                     [disabled]="isSavingVitals()"
                   />
-                  <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-slate-400">mmHg</span>
+                  <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">mmHg</span>
                 </div>
                 @if (isDiastolicInvalid()) {
-                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 30 et 150.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 30 et 150.</p>
                 }
               </div>
 
@@ -556,18 +556,18 @@
                     [class.focus:border-red-500]="isRespInvalid()"
                     [disabled]="isSavingVitals()"
                   />
-                  <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-slate-400">cycles/min</span>
+                  <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">cycles/min</span>
                 </div>
                 @if (isRespInvalid()) {
-                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 5 et 100 cycles/min.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 5 et 100 cycles/min.</p>
                 }
               </div>
             </div>
           </div>
 
           <!-- Section 3 : Métabolisme & Température -->
-          <div class="p-4 bg-slate-50/50 dark:bg-slate-950/15 border border-slate-100 dark:border-slate-800/50 rounded-xl space-y-4">
-            <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+          <div class="p-4 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-[var(--app-border)]/50 rounded-xl space-y-4">
+            <h4 class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
               <span>🌡️</span> Thermique & Glycémique
             </h4>
             <div class="grid grid-cols-2 gap-4">
@@ -585,10 +585,10 @@
                     [class.focus:border-red-500]="isTempInvalid()"
                     [disabled]="isSavingVitals()"
                   />
-                  <span class="absolute right-3 top-2.5 text-xs font-bold text-slate-400">°C</span>
+                  <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">°C</span>
                 </div>
                 @if (isTempInvalid()) {
-                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 30 et 45°C.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 30 et 45°C.</p>
                 }
               </div>
 
@@ -606,18 +606,18 @@
                     [class.focus:border-red-500]="isGlycemiaInvalid()"
                     [disabled]="isSavingVitals()"
                   />
-                  <span class="absolute right-3 top-2.5 text-xs font-bold text-slate-400">g/L</span>
+                  <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">g/L</span>
                 </div>
                 @if (isGlycemiaInvalid()) {
-                  <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 0.1 et 10.0 g/L.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 0.1 et 10.0 g/L.</p>
                 }
               </div>
             </div>
           </div>
 
           <!-- Section 4 : Douleur (Échelle 0-10) -->
-          <div class="p-4 bg-slate-50/50 dark:bg-slate-950/15 border border-slate-100 dark:border-slate-800/50 rounded-xl space-y-4">
-            <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+          <div class="p-4 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-[var(--app-border)]/50 rounded-xl space-y-4">
+            <h4 class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
               <span>😣</span> Douleur
             </h4>
             <div class="space-y-2">
@@ -625,10 +625,10 @@
                 <label class="ui-label text-[11px]">Échelle de douleur (0 = aucune — 10 = maximale)</label>
                 @if (vitalsPain !== undefined && vitalsPain !== null) {
                   <span class="text-xs font-extrabold px-2 py-0.5 rounded-md"
-                    [class]="vitalsPain === 0 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/25 dark:text-emerald-300' :
-                             vitalsPain <= 3 ? 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/25 dark:text-yellow-300' :
+                    [class]="vitalsPain === 0 ? 'bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)] bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]' :
+                             vitalsPain <= 3 ? 'bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)] bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]' :
                              vitalsPain <= 6 ? 'bg-orange-50 text-orange-700 dark:bg-orange-950/25 dark:text-orange-300' :
-                             'bg-red-50 text-red-700 dark:bg-red-950/25 dark:text-red-300'">
+                             'bg-[var(--brand-danger-subtle)] text-red-700  dark:text-[var(--brand-danger-text)]'">
                     {{ vitalsPain }}/10
                   </span>
                 }
@@ -644,13 +644,13 @@
                   [class.border-red-500]="isPainInvalid()"
                   [disabled]="isSavingVitals()"
                 />
-                <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-slate-400">/10</span>
+                <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">/10</span>
               </div>
               @if (isPainInvalid()) {
-                <p class="text-[10px] text-red-500 font-bold leading-none mt-1">Doit être entre 0 (aucune douleur) et 10 (douleur maximale).</p>
+                <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 0 (aucune douleur) et 10 (douleur maximale).</p>
               }
               <!-- Indicateurs visuels de l'échelle -->
-              <div class="flex justify-between text-[9px] font-bold text-slate-400 dark:text-slate-600 px-1">
+              <div class="flex justify-between text-[9px] font-bold text-[var(--text-muted)] dark:text-[var(--text-secondary)] px-1">
                 <span>0 Aucune</span>
                 <span>2-3 Légère</span>
                 <span>4-6 Modérée</span>
@@ -662,14 +662,14 @@
         </div>
 
         <!-- Actions -->
-        <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80">
+        <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-[var(--app-border)]/80">
           <app-ui-button variant="secondary" (pressed)="closeVitalsModal()" [disabled]="isSavingVitals()">
             Annuler
           </app-ui-button>
           <app-ui-button variant="primary" (pressed)="submitVitals()" [disabled]="isSavingVitals() || isAnyVitalInvalid()">
             <span class="flex items-center gap-1.5">
               @if (isSavingVitals()) {
-                <div class="w-3.5 h-3.5 rounded-full border-2 border-slate-200 border-t-white animate-spin"></div>
+                <div class="w-3.5 h-3.5 rounded-full border-2 border-[var(--app-border)] border-t-white animate-spin"></div>
                 Enregistrement...
               } @else {
                 Enregistrer les constantes
@@ -684,26 +684,26 @@
   <!-- Details Slide-over Drawer / Bottom Sheet -->
   @if (showVisitDrawer() && selectedVisitForDrawer(); as selectedVisit) {
     <!-- Backdrop overlay -->
-    <div class="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-300 animate-fade-in"
+    <div class="fixed inset-0 z-40 bg-[var(--overlay-bg)] backdrop-blur-xs transition-opacity duration-300 animate-fade-in"
          (click)="closeVisitDrawer()"></div>
 
     <!-- Drawer Panel Container -->
-    <div class="fixed inset-x-0 bottom-0 md:inset-y-0 md:right-0 md:left-auto w-full md:max-w-md h-[80vh] md:h-full bg-white dark:bg-slate-900 rounded-t-3xl md:rounded-t-none border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 shadow-2xl z-50 flex flex-col drawer-panel transition-all duration-300">
+    <div class="fixed inset-x-0 bottom-0 md:inset-y-0 md:right-0 md:left-auto w-full md:max-w-md h-[80vh] md:h-full bg-[var(--app-surface)] rounded-t-3xl md:rounded-t-none border-t md:border-t-0 md:border-l border-[var(--app-border)] shadow-2xl z-50 flex flex-col drawer-panel transition-all duration-300">
 
       <!-- Drawer Header -->
-      <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/20 rounded-t-3xl md:rounded-t-none">
+      <div class="px-6 py-4 border-b border-[var(--app-border)]/80 flex items-center justify-between bg-[var(--app-surface-muted)] dark:bg-[var(--brand-danger-subtle)] rounded-t-3xl md:rounded-t-none">
         <div>
           <div class="flex items-center gap-2">
             <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-brand-cyan/10 text-brand-cyan uppercase tracking-wider">
               Visite active
             </span>
-            <span class="text-xs font-bold text-slate-500 dark:text-slate-400">
+            <span class="text-xs font-bold text-[var(--text-muted)]">
               {{ selectedVisit.visitNumber }}
             </span>
           </div>
-          <h3 class="font-display font-extrabold text-base text-brand-night dark:text-white mt-1">Détails de l'admission</h3>
+          <h3 class="font-display font-extrabold text-base text-[var(--text-primary)] mt-1">Détails de l'admission</h3>
         </div>
-        <button (click)="closeVisitDrawer()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+        <button (click)="closeVisitDrawer()" class="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] dark:hover:text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] cursor-pointer transition-colors">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -713,18 +713,18 @@
       <!-- Drawer Body (scrollable) -->
       <div class="flex-1 overflow-y-auto px-6 py-5 space-y-6">
         <!-- Patient Info Card -->
-        <div class="p-4 rounded-2xl bg-brand-gray dark:bg-slate-950 border border-slate-100 dark:border-slate-800/50">
+        <div class="p-4 rounded-2xl bg-brand-gray dark:bg-[var(--app-bg)] border border-[var(--app-border)]/50">
           <span class="ui-label text-[10px] opacity-80 mb-1">Patient</span>
-          <h4 class="font-display font-extrabold text-sm text-brand-night dark:text-white">{{ selectedVisit.patientName }}</h4>
-          <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mt-0.5">DPU : {{ selectedVisit.patientDpu }}</span>
+          <h4 class="font-display font-extrabold text-sm text-[var(--text-primary)]">{{ selectedVisit.patientName }}</h4>
+          <span class="text-xs font-semibold text-[var(--text-muted)] block mt-0.5">DPU : {{ selectedVisit.patientDpu }}</span>
         </div>
 
         <!-- Visit General Details Grid -->
         <div class="grid grid-cols-2 gap-4">
           <!-- Admission time -->
-          <div class="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800/60 bg-white dark:bg-slate-900 shadow-3xs">
+          <div class="p-3.5 rounded-xl border border-[var(--app-border)]/60 bg-[var(--app-surface)] shadow-3xs">
             <span class="ui-label text-[10px] mb-1">Heure d'arrivée</span>
-            <div class="flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-white">
+            <div class="flex items-center gap-1.5 text-sm font-bold text-[var(--text-primary)]">
               <svg class="w-4 h-4 text-brand-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -733,17 +733,17 @@
           </div>
 
           <!-- Orientation -->
-          <div class="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800/60 bg-white dark:bg-slate-900 shadow-3xs">
+          <div class="p-3.5 rounded-xl border border-[var(--app-border)]/60 bg-[var(--app-surface)] shadow-3xs">
             <span class="ui-label text-[10px] mb-1">Orientation</span>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 mt-0.5 whitespace-nowrap">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[var(--brand-info-subtle)] text-[var(--brand-info-text)]  dark:text-brand-cyan mt-0.5 whitespace-nowrap">
               {{ selectedVisit.orientation }}
             </span>
           </div>
 
           <!-- Motif de visite (Col-span-2) -->
-          <div class="col-span-2 p-4 rounded-xl border border-slate-100 dark:border-slate-800/60 bg-white dark:bg-slate-900 shadow-3xs space-y-1">
+          <div class="col-span-2 p-4 rounded-xl border border-[var(--app-border)]/60 bg-[var(--app-surface)] shadow-3xs space-y-1">
             <span class="ui-label text-[10px]">Motif de la visite</span>
-            <p class="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">{{ selectedVisit.reason }}</p>
+            <p class="text-sm font-medium text-[var(--text-secondary)] leading-relaxed">{{ selectedVisit.reason }}</p>
           </div>
         </div>
 
@@ -764,81 +764,81 @@
             <div class="grid grid-cols-2 gap-3">
               <!-- Temperature -->
               @if (selectedVisit.vitals.temperature) {
-                <div class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl flex items-center justify-between">
-                  <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
+                  <span class="text-xs text-[var(--text-muted)] font-semibold flex items-center gap-1">
                     🌡️ Temp
                   </span>
-                  <strong class="text-sm text-slate-800 dark:text-white font-extrabold">{{ selectedVisit.vitals.temperature }}°C</strong>
+                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.temperature }}°C</strong>
                 </div>
               }
 
               <!-- Pouls -->
               @if (selectedVisit.vitals.pulse) {
-                <div class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl flex items-center justify-between">
-                  <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
+                  <span class="text-xs text-[var(--text-muted)] font-semibold flex items-center gap-1">
                     ❤️ Pouls
                   </span>
-                  <strong class="text-sm text-slate-800 dark:text-white font-extrabold">{{ selectedVisit.vitals.pulse }} bpm</strong>
+                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.pulse }} bpm</strong>
                 </div>
               }
 
               <!-- SpO2 -->
               @if (selectedVisit.vitals.spo2) {
-                <div class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl flex items-center justify-between">
-                  <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
+                  <span class="text-xs text-[var(--text-muted)] font-semibold flex items-center gap-1">
                     🫁 SpO2
                   </span>
-                  <strong class="text-sm text-slate-800 dark:text-white font-extrabold">{{ selectedVisit.vitals.spo2 }}%</strong>
+                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.spo2 }}%</strong>
                 </div>
               }
 
               <!-- Fréquence respiratoire -->
               @if (selectedVisit.vitals.respiratoryRate) {
-                <div class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl flex items-center justify-between">
-                  <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
+                  <span class="text-xs text-[var(--text-muted)] font-semibold flex items-center gap-1">
                     🌀 Respiration
                   </span>
-                  <strong class="text-sm text-slate-800 dark:text-white font-extrabold">{{ selectedVisit.vitals.respiratoryRate }} /min</strong>
+                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.respiratoryRate }} /min</strong>
                 </div>
               }
 
               <!-- Poids -->
               @if (selectedVisit.vitals.weight) {
-                <div class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl flex items-center justify-between">
-                  <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
+                  <span class="text-xs text-[var(--text-muted)] font-semibold flex items-center gap-1">
                     ⚖️ Poids
                   </span>
-                  <strong class="text-sm text-slate-800 dark:text-white font-extrabold">{{ selectedVisit.vitals.weight }} kg</strong>
+                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.weight }} kg</strong>
                 </div>
               }
 
               <!-- Taille -->
               @if (selectedVisit.vitals.height) {
-                <div class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl flex items-center justify-between">
-                  <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
+                  <span class="text-xs text-[var(--text-muted)] font-semibold flex items-center gap-1">
                     📏 Taille
                   </span>
-                  <strong class="text-sm text-slate-800 dark:text-white font-extrabold">{{ selectedVisit.vitals.height }} cm</strong>
+                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.height }} cm</strong>
                 </div>
               }
 
               <!-- Tension Artérielle -->
               @if (selectedVisit.vitals.systolic || selectedVisit.vitals.diastolic) {
-                <div class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl flex items-center justify-between col-span-2">
-                  <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between col-span-2">
+                  <span class="text-xs text-[var(--text-muted)] font-semibold flex items-center gap-1">
                     🩺 Tension artérielle
                   </span>
-                  <strong class="text-sm text-slate-800 dark:text-white font-extrabold">{{ selectedVisit.vitals.systolic }}/{{ selectedVisit.vitals.diastolic }} mmHg</strong>
+                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.systolic }}/{{ selectedVisit.vitals.diastolic }} mmHg</strong>
                 </div>
               }
 
               <!-- Glycémie -->
               @if (selectedVisit.vitals.glycemia) {
-                <div class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/40 rounded-xl flex items-center justify-between col-span-2">
-                  <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between col-span-2">
+                  <span class="text-xs text-[var(--text-muted)] font-semibold flex items-center gap-1">
                     🍬 Glycémie
                   </span>
-                  <strong class="text-sm text-slate-800 dark:text-white font-extrabold">{{ selectedVisit.vitals.glycemia }} g/L</strong>
+                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.glycemia }} g/L</strong>
                 </div>
               }
 
@@ -861,8 +861,8 @@
             </div>
           } @else {
             <!-- Empty state vitals card -->
-            <div class="p-5 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-center space-y-3 bg-slate-50/20 dark:bg-slate-950/10">
-              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
+            <div class="p-5 border border-dashed border-[var(--app-border)] rounded-xl text-center space-y-3 bg-[var(--app-surface-muted)]/20 dark:bg-[var(--app-bg)]/10">
+              <p class="text-xs text-[var(--text-muted)] leading-relaxed font-semibold">
                 Aucune constante vitale de tri initial n'a été renseignée pour cette visite.
               </p>
               <app-ui-button variant="secondary" (pressed)="openVitalsModal(selectedVisit)">
@@ -874,7 +874,7 @@
       </div>
 
       <!-- Drawer Footer -->
-      <div class="p-6 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/20 flex gap-3 flex-wrap">
+      <div class="p-6 border-t border-[var(--app-border)]/80 bg-[var(--app-surface-muted)] dark:bg-[var(--brand-danger-subtle)] flex gap-3 flex-wrap">
         @if (canCloseVisit()) {
           <app-ui-button variant="primary" class="flex-1" (pressed)="startConsultation(selectedVisit.id)">
             <span class="flex items-center gap-1.5">
@@ -899,25 +899,25 @@
   <!-- Close Visit Confirmation Modal -->
   @if (showCloseConfirmModal()) {
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-      <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-2xl max-w-sm w-full shadow-2xl p-6 relative">
+      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-2xl max-w-sm w-full shadow-2xl p-6 relative">
         <div class="flex items-center gap-3 mb-4">
-          <div class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/20 flex items-center justify-center text-red-500 shrink-0">
+          <div class="w-10 h-10 rounded-xl bg-[var(--brand-danger-subtle)] flex items-center justify-center text-[var(--brand-danger)] shrink-0">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
           <div>
-            <h3 class="font-display font-bold text-base text-brand-night dark:text-white">Clôturer la visite</h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Cette action est irréversible.</p>
+            <h3 class="font-display font-bold text-base text-[var(--text-primary)]">Clôturer la visite</h3>
+            <p class="text-xs text-[var(--text-muted)] mt-0.5">Cette action est irréversible.</p>
           </div>
         </div>
 
-        <p class="text-sm text-slate-600 dark:text-slate-300 mb-5 leading-relaxed">
+        <p class="text-sm text-[var(--text-secondary)] mb-5 leading-relaxed">
           Voulez-vous vraiment clôturer cette visite ? Un document médical sera généré automatiquement.
         </p>
 
         @if (closeVisitError()) {
-          <div class="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-red-700 dark:text-red-300 font-semibold mb-4 leading-relaxed">
+          <div class="p-3 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-xl text-xs text-[var(--brand-danger-text)] font-semibold mb-4 leading-relaxed">
             {{ closeVisitError() }}
           </div>
         }
@@ -929,7 +929,7 @@
           <app-ui-button variant="primary" (pressed)="confirmCloseVisit()" [disabled]="isClosingVisit()">
             <span class="flex items-center gap-1.5">
               @if (isClosingVisit()) {
-                <div class="w-3.5 h-3.5 rounded-full border-2 border-slate-200 border-t-white animate-spin"></div>
+                <div class="w-3.5 h-3.5 rounded-full border-2 border-[var(--app-border)] border-t-white animate-spin"></div>
                 Clôture...
               } @else {
                 Confirmer la clôture
@@ -943,9 +943,9 @@
 
   <!-- Audit Security Explanation Modal -->
   @if (showAuditSecurityModal()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in">
-      <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-2xl max-w-md w-full shadow-2xl p-6 relative">
-        <button (click)="closeAuditSecurityModal()" class="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-bg)] backdrop-blur-sm p-4 animate-fade-in">
+      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-2xl max-w-md w-full shadow-2xl p-6 relative">
+        <button (click)="closeAuditSecurityModal()" class="absolute top-4 right-4 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] dark:hover:text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800 cursor-pointer transition-colors">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -958,11 +958,11 @@
             </svg>
           </div>
           <div>
-            <h3 class="font-display font-black text-lg text-brand-night dark:text-white leading-tight">Accès Journal d'Audit</h3>
+            <h3 class="font-display font-black text-lg text-[var(--text-primary)] leading-tight">Accès Journal d'Audit</h3>
           </div>
         </div>
 
-        <div class="space-y-3 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+        <div class="space-y-3 text-sm text-[var(--text-secondary)] leading-relaxed">
           <p>
             Conformément à la réglementation sur la protection des données de santé (<strong>Module 14 - FR-AUDIT-002</strong>) et aux exigences d'isolation multi-tenant, le journal d'audit est immuable.
           </p>
@@ -974,7 +974,7 @@
           </p>
         </div>
 
-        <div class="flex justify-end mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80">
+        <div class="flex justify-end mt-6 pt-4 border-t border-[var(--app-border)]/80">
           <app-ui-button variant="primary" (pressed)="closeAuditSecurityModal()">
             Compris
           </app-ui-button>

@@ -136,7 +136,7 @@ const ACCESS_SCOPES = [
                     <span class="font-semibold">{{ i18n.t('patient.access.requests.reason') }}</span> {{ req.reason }}
                   </p>
                   @if (req.status === 'APPROUVEE' && req.expiresAt) {
-                    <p class="text-[10px] text-emerald-600 dark:text-emerald-400">
+                    <p class="text-[10px] text-[var(--brand-success-text)]">
                       {{ i18n.t('patient.access.requests.expires') }} {{ req.expiresAt | date:'medium' }}
                     </p>
                   }

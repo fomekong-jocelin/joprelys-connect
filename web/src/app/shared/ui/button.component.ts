@@ -29,7 +29,7 @@ export class ButtonComponent {
       primary: 'ui-button ui-button-primary',
       secondary: 'ui-button ui-button-secondary',
       link: 'ui-link text-sm',
-      danger: 'ui-link text-sm text-red-600 hover:text-red-700',
+      danger: 'ui-button ui-button-danger',
     };
     return `${variants[this.variant()]} ${this.class()}`;
   }

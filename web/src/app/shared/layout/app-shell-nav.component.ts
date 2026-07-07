@@ -20,7 +20,7 @@ export interface NavItem {
     @for (item of menuItems(); track (item.path + '-' + item.label)) {
       @if (item.isHeader) {
         @if (!sidebarCollapsed() || isMobile()) {
-          <div class="px-3 pt-4 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+          <div class="ui-nav-header">
             {{ item.label }}
           </div>
         } @else {
@@ -34,7 +34,7 @@ export interface NavItem {
           [class.pl-8]="item.indent && (!sidebarCollapsed() || isMobile())"
           [title]="(sidebarCollapsed() && !isMobile()) ? item.label : ''"
           (click)="isMobile() ? linkClicked.emit() : null"
-          class="flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-[var(--app-surface-muted)] hover:text-slate-900 dark:hover:text-slate-200 transition-colors no-underline"
+          class="ui-nav-link"
         >
           <span class="flex items-center justify-center w-5 h-5 flex-shrink-0">
             @switch (item.iconName) {
@@ -94,7 +94,7 @@ export interface NavItem {
                     <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0M3.124 7.5A8.969 8.969 0 015.292 3m13.416 0a8.969 8.969 0 012.168 4.5" />
                   </svg>
                   @if (unreadCount() > 0) {
-                    <span class="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white">
+                    <span class="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-bold" style="background:var(--brand-danger);color:var(--text-inverse);">
                       {{ unreadCount() > 9 ? '9+' : unreadCount() }}
                     </span>
                   }
@@ -106,7 +106,7 @@ export interface NavItem {
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                   </svg>
                   @if (pendingPreRegistrationsCount() > 0) {
-                    <span class="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white">
+                    <span class="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-bold" style="background:var(--brand-danger);color:var(--text-inverse);">
                       {{ pendingPreRegistrationsCount() > 99 ? '99+' : pendingPreRegistrationsCount() }}
                     </span>
                   }

@@ -1,6 +1,6 @@
-<div class="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col">
+<div class="min-h-screen bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] text-slate-900 dark:text-slate-100 flex flex-col">
   <!-- Header / Topbar publique -->
-  <header class="border-b bg-white dark:bg-slate-900 px-6 py-4 flex items-center justify-between shadow-xs" style="border-color: var(--border-color)">
+  <header class="border-b bg-[var(--app-surface)] px-6 py-4 flex items-center justify-between shadow-xs" style="border-color: var(--border-color)">
     <div class="flex items-center gap-2">
       <!-- Logo officiel Joprelys Connect -->
       <app-logo></app-logo>
@@ -12,7 +12,7 @@
       <button 
         type="button"
         (click)="toggleTheme()" 
-        class="flex items-center justify-center w-8 h-8 rounded-[4px] border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition cursor-pointer"
+        class="flex items-center justify-center w-8 h-8 rounded-[4px] border border-[var(--app-border)] hover:bg-[var(--app-surface-muted)] text-[var(--text-muted)] transition cursor-pointer"
       >
         @if (theme() === 'dark') {
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
@@ -28,7 +28,7 @@
       <!-- Toggle de langue -->
       <button 
         (click)="toggleLanguage()" 
-        class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+        class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-[var(--app-border)] hover:bg-[var(--app-surface-muted)] transition cursor-pointer"
       >
         <span class="uppercase">{{ i18n.locale() }}</span>
         <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -50,7 +50,7 @@
             </svg>
           </div>
           <h3 class="text-base font-bold mb-2">{{ i18n.t('selfRegistration.errorOrgMissing') }}</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
+          <p class="text-xs text-[var(--text-muted)] max-w-xs mx-auto">
             Please make sure you have scanned the official QR Code located on the counter of your hospital.
           </p>
         </div>
@@ -59,18 +59,18 @@
       <!-- Écran de Succès -->
       <app-ui-card [title]="i18n.t('selfRegistration.successTitle')">
         <div class="text-center py-6 space-y-4">
-          <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
+          <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-emerald-100  text-[var(--brand-success-text)]">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
           </div>
           
           <div class="space-y-1">
-            <h3 class="text-lg font-bold text-emerald-600 dark:text-emerald-400">{{ i18n.t('selfRegistration.successTitle') }}</h3>
+            <h3 class="text-lg font-bold text-[var(--brand-success-text)]">{{ i18n.t('selfRegistration.successTitle') }}</h3>
             <p class="text-sm font-semibold">{{ i18n.t('selfRegistration.successMessage') }}</p>
           </div>
 
-          <div class="bg-slate-100 dark:bg-slate-900 p-4 rounded-[6px] text-xs text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800">
+          <div class="bg-[var(--bg-input)] p-4 rounded-[6px] text-xs text-[var(--text-secondary)] border border-[var(--app-border)]">
             {{ i18n.t('selfRegistration.successInstructions') }}
           </div>
 
@@ -85,7 +85,7 @@
       <!-- Formulaire principal -->
       <app-ui-card [title]="i18n.t('selfRegistration.cardTitle')" class="w-full">
         <div class="mb-6">
-          <p class="text-xs text-slate-500 dark:text-slate-400">{{ i18n.t('selfRegistration.subtitle') }}</p>
+          <p class="text-xs text-[var(--text-muted)]">{{ i18n.t('selfRegistration.subtitle') }}</p>
         </div>
 
         <form class="space-y-6" (submit)="$event.preventDefault(); submitForm()">
@@ -101,7 +101,7 @@
             
             <div class="grid grid-cols-1 gap-3">
               <label 
-                class="flex items-start p-3 rounded-[6px] border cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition"
+                class="flex items-start p-3 rounded-[6px] border cursor-pointer hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-900 transition"
                 [style.border-color]="isNewAdmission() ? 'var(--brand-primary)' : 'var(--app-border)'"
                 [style.background-color]="isNewAdmission() ? 'color-mix(in srgb, var(--brand-primary) 7%, transparent)' : 'transparent'"
               >
@@ -119,7 +119,7 @@
               </label>
 
               <label 
-                class="flex items-start p-3 rounded-[6px] border cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition"
+                class="flex items-start p-3 rounded-[6px] border cursor-pointer hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-900 transition"
                 [style.border-color]="!isNewAdmission() ? 'var(--brand-primary)' : 'var(--app-border)'"
                 [style.background-color]="!isNewAdmission() ? 'color-mix(in srgb, var(--brand-primary) 7%, transparent)' : 'transparent'"
               >
@@ -133,7 +133,7 @@
                 />
                 <div>
                   <span class="text-sm font-semibold block">{{ i18n.t('selfRegistration.admissionExisting') }}</span>
-                  <span class="text-xxs text-slate-500 dark:text-slate-400 block mt-0.5">{{ i18n.t('selfRegistration.existingHelp') }}</span>
+                  <span class="text-xxs text-[var(--text-muted)] block mt-0.5">{{ i18n.t('selfRegistration.existingHelp') }}</span>
                 </div>
               </label>
             </div>
@@ -264,7 +264,7 @@
           </div>
 
           <!-- SECTION 5 : Validation de sécurité (Captcha Médical) -->
-          <div class="space-y-4 p-4 rounded-[6px] border bg-slate-50/50 dark:bg-slate-900/50" style="border-color: var(--border-color)">
+          <div class="space-y-4 p-4 rounded-[6px] border bg-[var(--app-surface-muted)] dark:bg-slate-900/50" style="border-color: var(--border-color)">
             <div class="flex justify-between items-center border-b pb-1">
               <h3 class="text-xs font-bold uppercase tracking-wider" style="color: var(--brand-primary)">
                 {{ i18n.t('selfRegistration.step5Title') }}
@@ -283,7 +283,7 @@
               </button>
             </div>
 
-            <p class="text-xs text-slate-500 dark:text-slate-400">{{ i18n.t('selfRegistration.captchaHelp') }}</p>
+            <p class="text-xs text-[var(--text-muted)]">{{ i18n.t('selfRegistration.captchaHelp') }}</p>
 
             @if (captchaLoading()) {
               <div class="flex items-center justify-center py-4">
@@ -291,7 +291,7 @@
               </div>
             } @else if (captchaQuestion()) {
               <div class="space-y-3">
-                <div class="p-3 bg-white dark:bg-slate-900 border rounded-[4px] text-xs font-semibold text-slate-700 dark:text-slate-300" style="border-color: var(--border-color)">
+                <div class="p-3 bg-[var(--app-surface)] border rounded-[4px] text-xs font-semibold text-[var(--text-secondary)]" style="border-color: var(--border-color)">
                   {{ captchaQuestion() }}
                 </div>
                 
@@ -317,7 +317,7 @@
   </main>
 
   <!-- Footer public -->
-  <footer class="border-t py-4 text-center text-xxs text-slate-400 dark:text-slate-500" style="border-color: var(--border-color)">
+  <footer class="border-t py-4 text-center text-xxs text-[var(--text-muted)]" style="border-color: var(--border-color)">
     Propulsé par Joprelys HealthTech &copy; 2026. Tous droits réservés.
   </footer>
 </div>

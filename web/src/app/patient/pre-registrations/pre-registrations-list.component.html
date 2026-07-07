@@ -14,9 +14,9 @@
     }
 
     <!-- Barre d'outils et filtres -->
-    <div class="mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 border rounded-[6px]" style="border-color: var(--border-color)">
+    <div class="mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-[var(--app-surface)] p-4 border rounded-[6px]" style="border-color: var(--border-color)">
       <div class="flex items-center gap-2">
-        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-[var(--text-muted)]">
           {{ t('preRegistrations.tableTitle') }}
         </h3>
       </div>
@@ -33,23 +33,23 @@
           QR Code d'Admission
         </app-ui-button>
 
-        <span class="text-slate-300 dark:text-slate-700 hidden sm:inline">|</span>
+        <span class="text-slate-300 dark:text-[var(--text-secondary)] hidden sm:inline">|</span>
 
         <button 
           (click)="setFilter('AWAITING_VALIDATION')"
-          [class]="filter() === 'AWAITING_VALIDATION' ? 'px-3 py-1.5 text-xs font-bold rounded-[4px] bg-[var(--brand-primary)] text-white' : 'px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 transition'"
+          [class]="filter() === 'AWAITING_VALIDATION' ? 'px-3 py-1.5 text-xs font-bold rounded-[4px] bg-[var(--brand-primary)] text-white' : 'px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-[var(--app-border)] text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-900 transition'"
         >
           {{ t('preRegistrations.filterPending') }}
         </button>
         <button 
           (click)="setFilter('VALIDATED')"
-          [class]="filter() === 'VALIDATED' ? 'px-3 py-1.5 text-xs font-bold rounded-[4px] bg-[var(--brand-primary)] text-white' : 'px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 transition'"
+          [class]="filter() === 'VALIDATED' ? 'px-3 py-1.5 text-xs font-bold rounded-[4px] bg-[var(--brand-primary)] text-white' : 'px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-[var(--app-border)] text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-900 transition'"
         >
           {{ t('preRegistrations.filterValidated') }}
         </button>
         <button 
           (click)="setFilter('REJECTED')"
-          [class]="filter() === 'REJECTED' ? 'px-3 py-1.5 text-xs font-bold rounded-[4px] bg-[var(--brand-primary)] text-white' : 'px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 transition'"
+          [class]="filter() === 'REJECTED' ? 'px-3 py-1.5 text-xs font-bold rounded-[4px] bg-[var(--brand-primary)] text-white' : 'px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-[var(--app-border)] text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-900 transition'"
         >
           {{ t('preRegistrations.filterRejected') }}
         </button>
@@ -60,16 +60,16 @@
     @if (isLoading()) {
       <div class="flex justify-center items-center py-16">
         <div class="animate-spin rounded-full h-8 w-8 border-2 border-[var(--brand-primary)] border-t-transparent"></div>
-        <span class="ml-3 text-sm font-semibold text-slate-500 dark:text-slate-400">{{ t('common.loading') }}</span>
+        <span class="ml-3 text-sm font-semibold text-[var(--text-muted)]">{{ t('common.loading') }}</span>
       </div>
     } @else if (preRegistrations().length === 0) {
       <app-empty-state [message]="t('preRegistrations.empty')"></app-empty-state>
     } @else {
       <!-- Tableaux des admissions temporaires -->
-      <div class="bg-white dark:bg-slate-900 border rounded-[6px] shadow-xs overflow-hidden" style="border-color: var(--border-color)">
+      <div class="bg-[var(--app-surface)] border rounded-[6px] shadow-xs overflow-hidden" style="border-color: var(--border-color)">
         <div class="overflow-x-auto w-full">
           <table class="min-w-[700px] w-full border-collapse text-left text-sm">
-            <thead class="bg-slate-50 dark:bg-slate-950 border-b text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400" style="border-color: var(--border-color)">
+            <thead class="bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border-b text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]" style="border-color: var(--border-color)">
               <tr>
                 <th class="px-6 py-3.5">{{ t('preRegistrations.patient') }}</th>
                 <th class="px-6 py-3.5">{{ t('preRegistrations.birthDate') }}</th>
@@ -80,19 +80,19 @@
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
               @for (preReg of preRegistrations(); track preReg.id) {
-                <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-950/20 transition-colors">
+                <tr class="hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-950/20 transition-colors">
                   <td class="px-6 py-4">
-                    <div class="font-bold text-slate-900 dark:text-white">
+                    <div class="font-bold text-[var(--text-primary)]">
                       {{ preReg.lastName }} {{ preReg.firstName }}
                     </div>
-                    <div class="text-xxs text-slate-400 dark:text-slate-500">
+                    <div class="text-xxs text-[var(--text-muted)]">
                       {{ preReg.phone || '-' }} | {{ preReg.email || '-' }}
                     </div>
                   </td>
-                  <td class="px-6 py-4 text-slate-600 dark:text-slate-400">
+                  <td class="px-6 py-4 text-[var(--text-secondary)]">
                     {{ preReg.birthDate | date:'dd/MM/yyyy' }} ({{ preReg.gender === 'MASCULIN' ? 'M' : 'F' }})
                   </td>
-                  <td class="px-6 py-4 text-slate-600 dark:text-slate-400">
+                  <td class="px-6 py-4 text-[var(--text-secondary)]">
                     {{ preReg.createdAt | date:'dd/MM/yyyy HH:mm' }}
                   </td>
                   <td class="px-6 py-4">
@@ -103,7 +103,7 @@
                         </span>
                       }
                       @case ('VALIDATED') {
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xxs font-black bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xxs font-black bg-emerald-50  text-[var(--brand-success-text)]">
                           {{ t('preRegistrations.status.VALIDATED') }}
                         </span>
                       }
@@ -139,21 +139,21 @@
 
       <!-- Pagination -->
       <div class="mt-4 flex items-center justify-between">
-        <div class="text-xs text-slate-500 dark:text-slate-400">
+        <div class="text-xs text-[var(--text-muted)]">
           Total : <b>{{ totalElements() }}</b> demandes
         </div>
         <div class="flex gap-2">
           <button 
             [disabled]="page() === 0 || actionLoading()"
             (click)="prevPage()"
-            class="px-3 py-1.5 text-xs font-bold rounded-[4px] border border-slate-200 dark:border-slate-800 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-900 transition"
+            class="px-3 py-1.5 text-xs font-bold rounded-[4px] border border-[var(--app-border)] disabled:opacity-40 hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-900 transition"
           >
             Précédent
           </button>
           <button 
             [disabled]="(page() + 1) >= totalPages() || actionLoading()"
             (click)="nextPage()"
-            class="px-3 py-1.5 text-xs font-bold rounded-[4px] border border-slate-200 dark:border-slate-800 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-900 transition"
+            class="px-3 py-1.5 text-xs font-bold rounded-[4px] border border-[var(--app-border)] disabled:opacity-40 hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-900 transition"
           >
             Suivant
           </button>
@@ -165,24 +165,24 @@
 
 <!-- Tiroir de détails coulissant (Drawer) -->
 @if (selectedPreRegistration(); as preReg) {
-  <div class="fixed inset-0 z-50 flex justify-end bg-slate-900/60 backdrop-blur-xs animate-fade-in" (click)="closeDetails()">
+  <div class="fixed inset-0 z-50 flex justify-end bg-[var(--overlay-bg)] backdrop-blur-xs animate-fade-in" (click)="closeDetails()">
     <div 
-      class="bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 w-full max-w-2xl h-full shadow-2xl flex flex-col overflow-y-auto animate-slide-in"
+      class="bg-[var(--app-surface)] border-l border-[var(--app-border)] w-full max-w-2xl h-full shadow-2xl flex flex-col overflow-y-auto animate-slide-in"
       (click)="$event.stopPropagation()"
     >
       <!-- En-tête du Drawer -->
-      <div class="px-6 py-4 border-b flex items-center justify-between bg-slate-50 dark:bg-slate-950" style="border-color: var(--border-color)">
+      <div class="px-6 py-4 border-b flex items-center justify-between bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)]" style="border-color: var(--border-color)">
         <div>
-          <h2 class="text-base font-bold text-slate-900 dark:text-white">
+          <h2 class="text-base font-bold text-[var(--text-primary)]">
             {{ t('preRegistrations.drawerTitle') }}
           </h2>
-          <p class="text-xxs text-slate-400 dark:text-slate-500">
+          <p class="text-xxs text-[var(--text-muted)]">
             Soumis le {{ preReg.createdAt | date:'dd/MM/yyyy à HH:mm' }}
           </p>
         </div>
         <button 
           (click)="closeDetails()" 
-          class="p-1 rounded-[4px] text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+          class="p-1 rounded-[4px] text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] transition"
         >
           <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M6 18L18 6M6 6l12 12"/>
@@ -195,7 +195,7 @@
         <!-- ALERTE DE DOUBLON POTENTIEL (Patient déjà existant détecté par le backend) -->
         @if (preReg.similarPatientId) {
           <div class="p-4 rounded-[6px] border border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20 text-xs">
-            <div class="flex items-start gap-2.5 text-amber-800 dark:text-amber-300 font-bold mb-1">
+            <div class="flex items-start gap-2.5 text-[var(--brand-warning-text)] font-bold mb-1">
               <svg class="h-4.5 w-4.5 text-amber-600 dark:text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
@@ -208,33 +208,33 @@
             <!-- Comparaison side-by-side de la demande et du dossier existant -->
             <div class="grid grid-cols-2 gap-4">
               <!-- Demande soumise -->
-              <div class="p-3 bg-white dark:bg-slate-900 border rounded-[4px] space-y-1.5" style="border-color: var(--border-color)">
-                <div class="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500">Demande En ligne</div>
-                <div class="font-bold text-slate-800 dark:text-slate-200 truncate">{{ preReg.lastName }} {{ preReg.firstName }}</div>
+              <div class="p-3 bg-[var(--app-surface)] border rounded-[4px] space-y-1.5" style="border-color: var(--border-color)">
+                <div class="text-[9px] font-black uppercase text-[var(--text-muted)]">Demande En ligne</div>
+                <div class="font-bold text-[var(--text-primary)] truncate">{{ preReg.lastName }} {{ preReg.firstName }}</div>
                 <div class="text-xxs">🎂 {{ preReg.birthDate | date:'dd/MM/yyyy' }}</div>
                 <div class="text-xxs">📞 {{ preReg.phone || '-' }}</div>
                 <div class="text-xxs">🏠 {{ preReg.address || '-' }}</div>
               </div>
 
               <!-- Patient similaire existant -->
-              <div class="p-3 bg-white dark:bg-slate-900 border rounded-[4px] space-y-1.5" style="border-color: var(--border-color)">
+              <div class="p-3 bg-[var(--app-surface)] border rounded-[4px] space-y-1.5" style="border-color: var(--border-color)">
                 <div class="flex items-center justify-between">
                   <span class="text-[9px] font-black uppercase text-amber-600 dark:text-amber-400">Dossier Existant</span>
-                  <span class="text-[9px] font-black bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 px-1 rounded-xs">
+                  <span class="text-[9px] font-black bg-amber-100 dark:bg-amber-950/40 text-[var(--brand-warning-text)] px-1 rounded-xs">
                     {{ preReg.similarityScore | number:'1.0-0' }}%
                   </span>
                 </div>
-                <div class="font-bold text-slate-800 dark:text-slate-200 truncate">{{ preReg.similarPatientName }}</div>
+                <div class="font-bold text-[var(--text-primary)] truncate">{{ preReg.similarPatientName }}</div>
                 <div class="text-xxs">🎂 {{ preReg.birthDate | date:'dd/MM/yyyy' }}</div>
                 <!-- Coordonnées existantes, le backend utilisera similarPatientId pour charger ou fusionner -->
-                <div class="text-xxs text-slate-400 italic">Identifiant unique :</div>
-                <div class="text-[10px] font-mono text-slate-500 truncate">{{ preReg.similarPatientId }}</div>
+                <div class="text-xxs text-[var(--text-muted)] italic">Identifiant unique :</div>
+                <div class="text-[10px] font-mono text-[var(--text-muted)] truncate">{{ preReg.similarPatientId }}</div>
               </div>
             </div>
             
             <!-- Type de validation conditionnel -->
             <div class="mt-4 flex flex-col gap-2">
-              <label class="flex items-center p-2.5 rounded-[4px] bg-white dark:bg-slate-900 border cursor-pointer">
+              <label class="flex items-center p-2.5 rounded-[4px] bg-[var(--app-surface)] border cursor-pointer">
                 <input 
                   type="radio" 
                   name="reconciliationOption" 
@@ -243,11 +243,11 @@
                   class="h-4 w-4"
                   style="accent-color: var(--brand-primary)"
                 />
-                <span class="ml-2 text-xxs font-semibold text-slate-700 dark:text-slate-300">
+                <span class="ml-2 text-xxs font-semibold text-[var(--text-secondary)]">
                   {{ t('preRegistrations.validateNew') }}
                 </span>
               </label>
-              <label class="flex items-center p-2.5 rounded-[4px] bg-white dark:bg-slate-900 border cursor-pointer">
+              <label class="flex items-center p-2.5 rounded-[4px] bg-[var(--app-surface)] border cursor-pointer">
                 <input 
                   type="radio" 
                   name="reconciliationOption" 
@@ -256,7 +256,7 @@
                   class="h-4 w-4"
                   style="accent-color: var(--brand-primary)"
                 />
-                <span class="ml-2 text-xxs font-semibold text-slate-700 dark:text-slate-300">
+                <span class="ml-2 text-xxs font-semibold text-[var(--text-secondary)]">
                   {{ t('preRegistrations.mergeWith') }}
                 </span>
               </label>
@@ -271,23 +271,23 @@
           </h3>
           <div class="grid grid-cols-2 gap-4 text-xs">
             <div>
-              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Nom de famille</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">Nom de famille</span>
               <span class="font-semibold">{{ preReg.lastName }}</span>
             </div>
             <div>
-              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Prénom</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">Prénom</span>
               <span class="font-semibold">{{ preReg.firstName }}</span>
             </div>
             <div>
-              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Genre</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">Genre</span>
               <span class="font-semibold">{{ preReg.gender === 'MASCULIN' ? t('selfRegistration.genderMale') : t('selfRegistration.genderFemale') }}</span>
             </div>
             <div>
-              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Date de naissance</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">Date de naissance</span>
               <span class="font-semibold">{{ preReg.birthDate | date:'dd/MM/yyyy' }}</span>
             </div>
             <div>
-              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Groupe sanguin</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">Groupe sanguin</span>
               <span class="font-semibold">{{ preReg.bloodGroup || '-' }}</span>
             </div>
           </div>
@@ -300,15 +300,15 @@
           </h3>
           <div class="grid grid-cols-2 gap-4 text-xs">
             <div>
-              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Téléphone</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">Téléphone</span>
               <span class="font-semibold">{{ preReg.phone || '-' }}</span>
             </div>
             <div>
-              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Adresse e-mail</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">Adresse e-mail</span>
               <span class="font-semibold">{{ preReg.email || '-' }}</span>
             </div>
             <div class="col-span-2">
-              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Adresse de résidence</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">Adresse de résidence</span>
               <span class="font-semibold">{{ preReg.address || '-' }}</span>
             </div>
           </div>
@@ -321,15 +321,15 @@
           </h3>
           <div class="grid grid-cols-2 gap-4 text-xs">
             <div>
-              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Nom complet</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">Nom complet</span>
               <span class="font-semibold">{{ preReg.emergencyContactName || '-' }}</span>
             </div>
             <div>
-              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Téléphone</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">Téléphone</span>
               <span class="font-semibold">{{ preReg.emergencyContactPhone || '-' }}</span>
             </div>
             <div>
-              <span class="text-slate-400 dark:text-slate-500 block mb-0.5">Lien de parenté</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">Lien de parenté</span>
               <span class="font-semibold">
                 @if (preReg.emergencyContactRelation) {
                   @switch (preReg.emergencyContactRelation) {
@@ -349,7 +349,7 @@
       </div>
 
       <!-- Actions de validation en bas du Drawer -->
-      <div class="px-6 py-4 border-t bg-slate-50 dark:bg-slate-950 flex justify-between items-center" style="border-color: var(--border-color)">
+      <div class="px-6 py-4 border-t bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] flex justify-between items-center" style="border-color: var(--border-color)">
         <div>
           @if (preReg.status !== 'AWAITING_VALIDATION') {
             <!-- Si déjà validé, offrir le bouton d'impression direct -->
@@ -377,11 +377,11 @@
 
 <!-- Modal QR Code de la Clinique -->
 @if (showQrCodeModal()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in" (click)="closeQrModal()">
-    <div class="bg-white dark:bg-slate-900 border rounded-[6px] max-w-md w-full shadow-2xl p-6 relative" (click)="$event.stopPropagation()">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-bg)] backdrop-blur-xs p-4 animate-fade-in" (click)="closeQrModal()">
+    <div class="bg-[var(--app-surface)] border rounded-[6px] max-w-md w-full shadow-2xl p-6 relative" (click)="$event.stopPropagation()">
       <button 
         (click)="closeQrModal()" 
-        class="absolute top-4 right-4 p-1 rounded-[4px] text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+        class="absolute top-4 right-4 p-1 rounded-[4px] text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] transition"
       >
         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M6 18L18 6M6 6l12 12"/>
@@ -389,15 +389,15 @@
       </button>
 
       <div class="text-center space-y-4">
-        <h3 class="text-base font-bold text-slate-900 dark:text-white">
+        <h3 class="text-base font-bold text-[var(--text-primary)]">
           QR Code d'Admission Clinique
         </h3>
-        <p class="text-xs text-slate-500 dark:text-slate-400">
+        <p class="text-xs text-[var(--text-muted)]">
           Affichez ce QR Code à l'accueil de votre clinique. Les patients pourront le scanner pour remplir directement leur fiche d'admission sur leur smartphone.
         </p>
 
         @if (getQrCodeUrl()) {
-          <div class="flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-950 border rounded-[6px]" style="border-color: var(--border-color)">
+          <div class="flex flex-col items-center justify-center p-4 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border rounded-[6px]" style="border-color: var(--border-color)">
             <img [src]="getQrCodeUrl()" width="220" height="220" alt="QR Code d'Admission" class="bg-white p-2 rounded border" />
           </div>
         } @else {

@@ -11,57 +11,57 @@ import { PatientMedicalInfoComponent } from '../patient-medical-info.component';
     @if (parent.patient(); as p) {
       <div class="space-y-6 animate-fade-in">
         <div>
-          <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">
+          <h3 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)] mb-4">
             Informations Administratives
           </h3>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
-              <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Sexe</span>
-              <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ p.gender }}</span>
+            <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+              <span class="ui-label block text-[10px] text-[var(--text-muted)]">Sexe</span>
+              <span class="font-extrabold text-sm text-[var(--text-primary)]">{{ p.gender }}</span>
             </div>
-            <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
-              <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Date de naissance (âge)</span>
-              <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ p.birthDate }} ({{ age() }} ans)</span>
+            <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+              <span class="ui-label block text-[10px] text-[var(--text-muted)]">Date de naissance (âge)</span>
+              <span class="font-extrabold text-sm text-[var(--text-primary)]">{{ p.birthDate }} ({{ age() }} ans)</span>
             </div>
-            <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
-              <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Téléphone</span>
-              <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ p.phone || 'Non renseigné' }}</span>
+            <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+              <span class="ui-label block text-[10px] text-[var(--text-muted)]">Téléphone</span>
+              <span class="font-extrabold text-sm text-[var(--text-primary)]">{{ p.phone || 'Non renseigné' }}</span>
             </div>
-            <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
-              <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Groupe sanguin</span>
-              <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ p.bloodGroup || 'Non renseigné' }}</span>
+            <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+              <span class="ui-label block text-[10px] text-[var(--text-muted)]">Groupe sanguin</span>
+              <span class="font-extrabold text-sm text-[var(--text-primary)]">{{ p.bloodGroup || 'Non renseigné' }}</span>
             </div>
-            <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
-              <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Adresse email</span>
-              <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ p.email || 'Non renseigné' }}</span>
+            <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+              <span class="ui-label block text-[10px] text-[var(--text-muted)]">Adresse email</span>
+              <span class="font-extrabold text-sm text-[var(--text-primary)]">{{ p.email || 'Non renseigné' }}</span>
             </div>
-            <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
-              <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Ville</span>
-              <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200 capitalize">{{ p.city }}</span>
+            <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+              <span class="ui-label block text-[10px] text-[var(--text-muted)]">Ville</span>
+              <span class="font-extrabold text-sm text-[var(--text-primary)] capitalize">{{ p.city }}</span>
             </div>
-            <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
-              <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Quartier / District</span>
-              <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ p.district || 'Non renseigné' }}</span>
+            <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+              <span class="ui-label block text-[10px] text-[var(--text-muted)]">Quartier / District</span>
+              <span class="font-extrabold text-sm text-[var(--text-primary)]">{{ p.district || 'Non renseigné' }}</span>
             </div>
-            <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
-              <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Adresse Géographique</span>
-              <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ p.address || 'Non renseignée' }}</span>
+            <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+              <span class="ui-label block text-[10px] text-[var(--text-muted)]">Adresse Géographique</span>
+              <span class="font-extrabold text-sm text-[var(--text-primary)]">{{ p.address || 'Non renseignée' }}</span>
             </div>
           </div>
         </div>
 
         <div>
-          <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">
+          <h3 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)] mb-4">
             Contact d'Urgence
           </h3>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
-              <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Nom Complet</span>
-              <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ p.emergencyContactName || 'Non renseigné' }}</span>
+            <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+              <span class="ui-label block text-[10px] text-[var(--text-muted)]">Nom Complet</span>
+              <span class="font-extrabold text-sm text-[var(--text-primary)]">{{ p.emergencyContactName || 'Non renseigné' }}</span>
             </div>
-            <div class="p-3 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
-              <span class="ui-label block text-[10px] text-slate-400 dark:text-slate-500">Téléphone</span>
-              <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200">{{ p.emergencyContactPhone || 'Non renseigné' }}</span>
+            <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-slate-100/50 dark:border-slate-800/40 rounded-lg">
+              <span class="ui-label block text-[10px] text-[var(--text-muted)]">Téléphone</span>
+              <span class="font-extrabold text-sm text-[var(--text-primary)]">{{ p.emergencyContactPhone || 'Non renseigné' }}</span>
             </div>
           </div>
         </div>

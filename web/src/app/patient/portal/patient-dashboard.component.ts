@@ -14,7 +14,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
       <div class="app-container py-6 flex flex-col gap-6">
         <!-- Welcome Section -->
         <div class="bg-gradient-to-r from-[var(--brand-primary)]/10 to-[var(--brand-primary)]/5 p-6 rounded-lg border border-[var(--app-border)]">
-          <h1 class="font-display text-2xl lg:text-3xl font-extrabold text-brand-night dark:text-white">
+          <h1 class="font-display text-2xl lg:text-3xl font-extrabold text-[var(--text-primary)]">
             @if (patientData()) {
               {{ i18n.t('patient.dashboard.greeting') }}, {{ (patientData()!.fullName.split(' ')[0]) || patientData()!.fullName }}
             } @else {
@@ -38,7 +38,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
           <div class="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6 items-start">
             <!-- Left Side: Profile Card -->
             <div class="space-y-4">
-              <h2 class="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              <h2 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
                 {{ i18n.t('patient.dashboard.profileCardTitle') }}
               </h2>
               <app-patient-profile-card [patient]="p" />
@@ -46,7 +46,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
 
             <!-- Right Side: Quick Cards Grid -->
             <div class="space-y-4">
-              <h2 class="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              <h2 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
                 {{ i18n.t('patient.dashboard.shortcutsTitle') }}
               </h2>
               
@@ -55,7 +55,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
                 <div class="bg-[var(--app-surface)] border border-[var(--app-border)] p-5 rounded-lg flex flex-col justify-between h-44 shadow-sm hover:shadow-md transition-shadow">
                   <div>
                     <div class="flex items-center justify-between">
-                      <h3 class="font-display font-extrabold text-slate-800 dark:text-white text-base">{{ i18n.t('patient.dashboard.card.prescriptions.title') }}</h3>
+                      <h3 class="font-display font-extrabold text-[var(--text-primary)] text-base">{{ i18n.t('patient.dashboard.card.prescriptions.title') }}</h3>
                       <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
                         {{ p.consultations.length }} {{ i18n.t(p.consultations.length > 1 ? 'patient.dashboard.card.prescriptions.activePlural' : 'patient.dashboard.card.prescriptions.active') }}
                       </span>
@@ -76,7 +76,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
                 <div class="bg-[var(--app-surface)] border border-[var(--app-border)] p-5 rounded-lg flex flex-col justify-between h-44 shadow-sm hover:shadow-md transition-shadow">
                   <div>
                     <div class="flex items-center justify-between">
-                      <h3 class="font-display font-extrabold text-slate-800 dark:text-white text-base">{{ i18n.t('patient.dashboard.card.consents.title') }}</h3>
+                      <h3 class="font-display font-extrabold text-[var(--text-primary)] text-base">{{ i18n.t('patient.dashboard.card.consents.title') }}</h3>
                       <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                     </div>
                     <p class="text-xs text-[var(--text-secondary)] mt-2 leading-relaxed">
@@ -95,8 +95,8 @@ import { I18nService } from '../../core/i18n/i18n.service';
                 <div class="bg-[var(--app-surface)] border border-[var(--app-border)] p-5 rounded-lg flex flex-col justify-between h-44 shadow-sm hover:shadow-md transition-shadow">
                   <div>
                     <div class="flex items-center justify-between">
-                      <h3 class="font-display font-extrabold text-slate-800 dark:text-white text-base">{{ i18n.t('patient.dashboard.card.audit.title') }}</h3>
-                      <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      <h3 class="font-display font-extrabold text-[var(--text-primary)] text-base">{{ i18n.t('patient.dashboard.card.audit.title') }}</h3>
+                      <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-[var(--text-secondary)] dark:bg-[var(--bg-input)] dark:text-[var(--text-secondary)]">
                         {{ i18n.t('patient.dashboard.card.audit.badge') }}
                       </span>
                     </div>
@@ -116,8 +116,8 @@ import { I18nService } from '../../core/i18n/i18n.service';
                 <div class="bg-[var(--app-surface)] border border-[var(--app-border)] p-5 rounded-lg flex flex-col justify-between h-44 shadow-sm hover:shadow-md transition-shadow">
                   <div>
                     <div class="flex items-center justify-between">
-                      <h3 class="font-display font-extrabold text-slate-800 dark:text-white text-base">{{ i18n.t('patient.dashboard.card.requests.title') }}</h3>
-                      <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-indigo-50 text-indigo-600 dark:bg-indigo-950/20 dark:text-indigo-400">
+                      <h3 class="font-display font-extrabold text-[var(--text-primary)] text-base">{{ i18n.t('patient.dashboard.card.requests.title') }}</h3>
+                      <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-indigo-50 text-[var(--brand-info-text)] dark:bg-indigo-950/20 dark:text-indigo-400">
                         {{ i18n.t('patient.dashboard.card.requests.badge') }}
                       </span>
                     </div>
@@ -137,8 +137,8 @@ import { I18nService } from '../../core/i18n/i18n.service';
                 <div class="bg-[var(--app-surface)] border border-[var(--app-border)] p-5 rounded-lg flex flex-col justify-between h-44 shadow-sm hover:shadow-md transition-shadow">
                   <div>
                     <div class="flex items-center justify-between">
-                      <h3 class="font-display font-extrabold text-slate-800 dark:text-white text-base">{{ i18n.t('patient.dashboard.card.results.title') }}</h3>
-                      <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400">
+                      <h3 class="font-display font-extrabold text-[var(--text-primary)] text-base">{{ i18n.t('patient.dashboard.card.results.title') }}</h3>
+                      <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-50 text-[var(--brand-success-text)] dark:bg-emerald-950/20 dark:text-emerald-400">
                         {{ i18n.t('patient.dashboard.card.results.badge') }}
                       </span>
                     </div>

@@ -10,26 +10,26 @@ import { ConsultationApiService } from '../consultation/consultation-api.service
   standalone: true,
   imports: [FormsModule, AppLogoComponent],
   template: `
-    <div class="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-between py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
+    <div class="min-h-screen bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] flex flex-col justify-between py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
       <div class="flex-grow flex flex-col justify-center">
         <!-- Logo and header -->
         <div class="sm:mx-auto sm:w-full sm:max-w-md flex flex-col items-center mb-8">
           <app-logo [showName]="true"></app-logo>
-          <p class="mt-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <p class="mt-3 text-center text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             {{ i18n.t('verify.search.subtitle') }}
           </p>
         </div>
 
         <div class="sm:mx-auto sm:w-full sm:max-w-lg">
-          <div class="bg-white dark:bg-slate-900 shadow-xl rounded border border-slate-100 dark:border-slate-800/80 p-8 md:p-10 relative overflow-hidden">
+          <div class="bg-[var(--app-surface)] shadow-xl rounded border border-[var(--app-border)]/80 p-8 md:p-10 relative overflow-hidden">
 
             <!-- Background accent -->
-            <div class="absolute -top-32 -right-32 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -top-32 -right-32 w-64 h-64 bg-[var(--brand-primary-subtle)] rounded-full blur-3xl pointer-events-none"></div>
 
-            <h1 class="text-2xl font-black text-slate-900 dark:text-white mb-2">
+            <h1 class="text-2xl font-black text-[var(--text-primary)] mb-2">
               {{ i18n.t('verify.search.title') }}
             </h1>
-            <p class="text-sm text-slate-500 dark:text-slate-400 mb-8">
+            <p class="text-sm text-[var(--text-muted)] mb-8">
               {{ i18n.t('verify.search.subtitle') }}
             </p>
 
@@ -38,7 +38,7 @@ import { ConsultationApiService } from '../consultation/consultation-api.service
               <div>
                 <label
                   for="docNumberInput"
-                  class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                  class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
                   {{ i18n.t('verify.search.label') }}
                 </label>
                 <input
@@ -47,7 +47,7 @@ import { ConsultationApiService } from '../consultation/consultation-api.service
                   [(ngModel)]="documentNumber"
                   [placeholder]="i18n.t('verify.search.placeholder')"
                   (keyup.enter)="search()"
-                  class="w-full px-4 py-3 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 text-slate-900 dark:text-white placeholder-slate-400 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400 transition-all duration-200" />
+                  class="w-full px-4 py-3 rounded bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/60 border border-[var(--app-border)] dark:border-slate-700/80 text-[var(--text-primary)] placeholder-slate-400 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400 transition-all duration-200" />
               </div>
 
               <!-- Error message -->
@@ -82,14 +82,14 @@ import { ConsultationApiService } from '../consultation/consultation-api.service
             </div>
 
             <!-- Legal notice -->
-            <div class="mt-8 bg-slate-50 dark:bg-slate-800/20 rounded p-4 border border-slate-100 dark:border-slate-800/40">
+            <div class="mt-8 bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/20 rounded p-4 border border-[var(--app-border)]/40">
               <div class="flex items-start gap-2.5">
                 <span class="text-base shrink-0 select-none">🔒</span>
                 <div class="space-y-0.5">
-                  <span class="text-xs font-black text-slate-700 dark:text-slate-300">
+                  <span class="text-xs font-black text-[var(--text-secondary)]">
                     {{ i18n.t('verify.rgpdTitle') }}
                   </span>
-                  <p class="text-[11px] font-medium leading-relaxed text-slate-500 dark:text-slate-400">
+                  <p class="text-[11px] font-medium leading-relaxed text-[var(--text-muted)]">
                     {{ i18n.t('verify.rgpdWarning') }}
                   </p>
                 </div>
@@ -100,7 +100,7 @@ import { ConsultationApiService } from '../consultation/consultation-api.service
       </div>
 
       <!-- Footer -->
-      <div class="mt-8 text-center text-xs font-medium text-slate-400 dark:text-slate-500">
+      <div class="mt-8 text-center text-xs font-medium text-[var(--text-muted)]">
         &copy; 2026 Joprelys HealthTech. All rights reserved.
       </div>
     </div>

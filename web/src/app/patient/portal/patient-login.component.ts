@@ -11,7 +11,7 @@ import { AppLogoComponent } from '../../shared/ui/app-logo.component';
   standalone: true,
   imports: [FormsModule, RouterLink, AppLogoComponent],
   template: `
-    <main class="min-h-screen flex flex-col items-center justify-center p-6 bg-white dark:bg-slate-950 transition-colors duration-300">
+    <main class="min-h-screen flex flex-col items-center justify-center p-6 bg-[var(--app-bg)] transition-colors duration-300">
       <div class="w-full max-w-[400px] flex flex-col items-center py-8">
         <!-- Logo -->
         <div class="mb-8">
@@ -19,10 +19,10 @@ import { AppLogoComponent } from '../../shared/ui/app-logo.component';
         </div>
 
         <div class="w-full text-center mb-6">
-          <h2 class="font-display font-bold text-2xl tracking-tight text-[#0A1D3D] dark:text-white mb-2">
+          <h2 class="font-display font-bold text-2xl tracking-tight text-[var(--text-primary)] dark:text-white mb-2">
             {{ i18n.t('patient.login.title') }}
           </h2>
-          <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">
+          <p class="text-sm text-[var(--text-muted)] font-medium">
             @if (step() === 1) {
               {{ i18n.t('patient.login.step1Subtitle') }}
             } @else {
@@ -35,42 +35,42 @@ import { AppLogoComponent } from '../../shared/ui/app-logo.component';
         @if (step() === 1) {
           <form class="w-full space-y-4" (submit)="$event.preventDefault(); requestOtp()">
             <div class="space-y-1">
-              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">{{ i18n.t('patient.login.dpu') }}</label>
+              <label class="block text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ i18n.t('patient.login.dpu') }}</label>
               <input
                 type="text"
                 required
                 [(ngModel)]="globalPatientNumber"
                 name="globalPatientNumber"
-                class="w-full min-h-[46px] px-4 py-2 border border-slate-100 dark:border-slate-800 bg-[var(--bg-input)] dark:bg-slate-900 rounded-[var(--radius-brand-md)] text-slate-900 dark:text-white focus:outline-hidden focus:border-[var(--brand-primary)] focus:bg-white dark:focus:bg-slate-950 text-sm"
+                class="w-full min-h-[46px] px-4 py-2 border border-[var(--app-border)] bg-[var(--bg-input)] dark:bg-slate-900 rounded-[var(--radius-brand-md)] text-[var(--text-primary)] focus:outline-hidden focus:border-[var(--brand-primary)] focus:bg-white dark:focus:bg-slate-950 text-sm"
                 placeholder="PAT-YYYYMMDD-XXXXXX"
               />
             </div>
 
             <div class="space-y-1">
-              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">{{ i18n.t('patients.phone') }}</label>
+              <label class="block text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ i18n.t('patients.phone') }}</label>
               <input
                 type="tel"
                 required
                 [(ngModel)]="phone"
                 name="phone"
-                class="w-full min-h-[46px] px-4 py-2 border border-slate-100 dark:border-slate-800 bg-[var(--bg-input)] dark:bg-slate-900 rounded-[var(--radius-brand-md)] text-slate-900 dark:text-white focus:outline-hidden focus:border-[var(--brand-primary)] focus:bg-white dark:focus:bg-slate-950 text-sm"
+                class="w-full min-h-[46px] px-4 py-2 border border-[var(--app-border)] bg-[var(--bg-input)] dark:bg-slate-900 rounded-[var(--radius-brand-md)] text-[var(--text-primary)] focus:outline-hidden focus:border-[var(--brand-primary)] focus:bg-white dark:focus:bg-slate-950 text-sm"
                 placeholder="+237 699 99 99 99"
               />
             </div>
 
             <div class="space-y-1">
-              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">{{ i18n.t('patients.birthDate') }}</label>
+              <label class="block text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ i18n.t('patients.birthDate') }}</label>
               <input
                 type="date"
                 required
                 [(ngModel)]="birthDate"
                 name="birthDate"
-                class="w-full min-h-[46px] px-4 py-2 border border-slate-100 dark:border-slate-800 bg-[var(--bg-input)] dark:bg-slate-900 rounded-[var(--radius-brand-md)] text-slate-900 dark:text-white focus:outline-hidden focus:border-[var(--brand-primary)] focus:bg-white dark:focus:bg-slate-950 text-sm"
+                class="w-full min-h-[46px] px-4 py-2 border border-[var(--app-border)] bg-[var(--bg-input)] dark:bg-slate-900 rounded-[var(--radius-brand-md)] text-[var(--text-primary)] focus:outline-hidden focus:border-[var(--brand-primary)] focus:bg-white dark:focus:bg-slate-950 text-sm"
               />
             </div>
 
             @if (error()) {
-              <div class="p-3 border border-red-100 dark:border-red-950/20 rounded-[var(--radius-brand-md)] bg-red-50/50 dark:bg-red-950/10 text-xs text-red-700 dark:text-red-400 flex items-center gap-2 font-medium">
+              <div class="p-3 border border-[var(--brand-danger-border)] dark:border-red-950/20 rounded-[var(--radius-brand-md)] bg-[var(--brand-danger-subtle)]/50 dark:bg-red-950/10 text-xs text-[var(--brand-danger-text)] flex items-center gap-2 font-medium">
                 {{ error() }}
               </div>
             }
@@ -91,20 +91,20 @@ import { AppLogoComponent } from '../../shared/ui/app-logo.component';
           <!-- Step 2: Input OTP -->
           <form class="w-full space-y-4" (submit)="$event.preventDefault(); verifyOtp()">
             <div class="space-y-1">
-              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">{{ i18n.t('patient.login.otp') }}</label>
+              <label class="block text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ i18n.t('patient.login.otp') }}</label>
               <input
                 type="text"
                 required
                 [(ngModel)]="otpCode"
                 name="otpCode"
                 maxlength="6"
-                class="w-full min-h-[46px] px-4 py-2 border border-slate-100 dark:border-slate-800 bg-[var(--bg-input)] dark:bg-slate-900 rounded-[var(--radius-brand-md)] text-slate-900 dark:text-white focus:outline-hidden focus:border-[var(--brand-primary)] focus:bg-white dark:focus:bg-slate-950 text-center text-xl font-bold tracking-widest"
+                class="w-full min-h-[46px] px-4 py-2 border border-[var(--app-border)] bg-[var(--bg-input)] dark:bg-slate-900 rounded-[var(--radius-brand-md)] text-[var(--text-primary)] focus:outline-hidden focus:border-[var(--brand-primary)] focus:bg-white dark:focus:bg-slate-950 text-center text-xl font-bold tracking-widest"
                 placeholder="000000"
               />
             </div>
 
             @if (error()) {
-              <div class="p-3 border border-red-100 dark:border-red-950/20 rounded-[var(--radius-brand-md)] bg-red-50/50 dark:bg-red-950/10 text-xs text-red-700 dark:text-red-400 flex items-center gap-2 font-medium">
+              <div class="p-3 border border-[var(--brand-danger-border)] dark:border-red-950/20 rounded-[var(--radius-brand-md)] bg-[var(--brand-danger-subtle)]/50 dark:bg-red-950/10 text-xs text-[var(--brand-danger-text)] flex items-center gap-2 font-medium">
                 {{ error() }}
               </div>
             }
@@ -131,7 +131,7 @@ import { AppLogoComponent } from '../../shared/ui/app-logo.component';
           </form>
         }
 
-        <div class="mt-6 text-center text-xs text-slate-500">
+        <div class="mt-6 text-center text-xs text-[var(--text-muted)]">
           {{ i18n.t('patient.login.clinicLogin') }}
           <a routerLink="/" class="text-[var(--brand-primary)] hover:underline font-semibold ml-1">{{ i18n.t('patient.login.clinicSpace') }}</a>
         </div>

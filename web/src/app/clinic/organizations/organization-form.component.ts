@@ -73,12 +73,12 @@ export interface OrganizationFormLabels {
           />
           <div class="space-y-1.5 w-full">
             <label class="ui-label">
-              {{ labels().type }} <span class="text-red-500">*</span>
+              {{ labels().type }} <span class="text-[var(--brand-danger)]">*</span>
             </label>
             <select
               [value]="type()"
               (change)="type.set($any($event.target).value)"
-              class="ui-input bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+              class="ui-input bg-[var(--app-surface)] text-slate-900 dark:text-slate-100"
               required
             >
               <option value="HOSPITAL">Hôpital</option>
@@ -104,9 +104,9 @@ export interface OrganizationFormLabels {
               id="apiEnabled"
               [checked]="apiEnabled()"
               (change)="apiEnabled.set($any($event.target).checked)"
-              class="h-5 w-5 rounded border-slate-300 dark:border-slate-700 text-brand-primary focus:ring-brand-primary cursor-pointer"
+              class="h-5 w-5 rounded border-[var(--app-border)] dark:border-slate-700 text-brand-primary focus:ring-brand-primary cursor-pointer"
             />
-            <label for="apiEnabled" class="text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+            <label for="apiEnabled" class="text-sm font-semibold text-[var(--text-secondary)] cursor-pointer">
               {{ labels().apiEnabled }}
             </label>
           </div>

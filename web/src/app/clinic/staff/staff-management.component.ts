@@ -69,7 +69,7 @@ const STAFF_ROLES: readonly StaffRole[] = ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEI
 
               <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label class="space-y-1.5">
-                  <span class="ui-label">{{ t('staff.displayName') }} <span class="text-red-500">*</span></span>
+                  <span class="ui-label">{{ t('staff.displayName') }} <span class="text-[var(--brand-danger)]">*</span></span>
                   <input
                     class="ui-input"
                     [value]="displayName()"
@@ -80,7 +80,7 @@ const STAFF_ROLES: readonly StaffRole[] = ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEI
                 </label>
 
                 <label class="space-y-1.5">
-                  <span class="ui-label">{{ t('staff.email') }} <span class="text-red-500">*</span></span>
+                  <span class="ui-label">{{ t('staff.email') }} <span class="text-[var(--brand-danger)]">*</span></span>
                   <input
                     class="ui-input"
                     type="email"
@@ -92,7 +92,7 @@ const STAFF_ROLES: readonly StaffRole[] = ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEI
                 </label>
 
                 <div class="space-y-2 sm:col-span-2">
-                  <span class="ui-label block">{{ t('staff.role') }} <span class="text-red-500">*</span></span>
+                  <span class="ui-label block">{{ t('staff.role') }} <span class="text-[var(--brand-danger)]">*</span></span>
                   <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 mt-2">
                     @for (option of roles; track option) {
                       <label class="inline-flex items-center gap-2 select-none cursor-pointer">

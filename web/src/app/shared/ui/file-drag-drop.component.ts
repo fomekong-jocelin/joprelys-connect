@@ -8,19 +8,18 @@ import { CommonModule } from '@angular/common';
   template: `
     <div class="space-y-1.5 w-full">
       @if (label()) {
-        <label class="ui-label block text-sm font-medium text-slate-700">
-          {{ label() }} @if (required()) { <span class="text-red-500">*</span> }
+        <label class="ui-label block text-sm font-medium text-[var(--text-secondary)]">
+          {{ label() }} @if (required()) { <span class="text-[var(--brand-danger)]">*</span> }
         </label>
       }
 
       <div
         class="relative border-2 border-dashed rounded-md p-6 flex flex-col items-center justify-center text-center transition-all duration-200 cursor-pointer min-h-[160px]"
-        [class.border-indigo-500]="isDragOver()"
-        [class.bg-indigo-50/20]="isDragOver()"
-        [class.border-slate-300]="!isDragOver() && !previewUrl()"
-        [class.border-emerald-500]="!isDragOver() && previewUrl()"
-        [class.hover:border-indigo-400]="!previewUrl()"
-        [class.bg-slate-50/50]="!isDragOver()"
+        [class.border-[var(--brand-primary)]]="isDragOver()"
+        [class.bg-[var(--brand-primary-subtle)]]="isDragOver()"
+        [class.border-[var(--app-border)]]="!isDragOver() && !previewUrl()"
+        [class.border-[var(--brand-success)]]="!isDragOver() && previewUrl()"
+        [class.bg-[var(--app-surface-muted)]]="!isDragOver()"
         (dragover)="onDragOver($event)"
         (dragleave)="onDragLeave()"
         (drop)="onDrop($event)"
@@ -40,15 +39,15 @@ import { CommonModule } from '@angular/common';
             <img
               [src]="previewUrl()"
               alt="Preview"
-              class="max-h-[140px] max-w-full object-contain rounded border border-slate-200 shadow-sm"
+              class="max-h-[140px] max-w-full object-contain rounded border border-[var(--app-border)] shadow-sm"
             />
             <div class="flex items-center space-x-2">
-              <span class="text-xs text-slate-500 truncate max-w-[200px]" *ngIf="selectedFileName()">
+              <span class="text-xs truncate max-w-[200px]" style="color:var(--text-muted)" *ngIf="selectedFileName()">
                 {{ selectedFileName() }}
               </span>
               <button
                 type="button"
-                class="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1 rounded bg-red-50 hover:bg-red-100 transition-colors"
+                class="text-xs text-[var(--brand-danger-text)] hover:text-[var(--brand-danger-hover)] font-medium px-2 py-1 rounded bg-[var(--brand-danger-subtle)] hover:bg-[var(--brand-danger-muted)] transition-colors"
                 (click)="removeFile()"
               >
                 Supprimer
@@ -59,7 +58,7 @@ import { CommonModule } from '@angular/common';
           <!-- Zone vide pour glisser-déposer -->
           <div class="flex flex-col items-center justify-center space-y-2 pointer-events-none">
             <svg
-              class="w-10 h-10 text-slate-400"
+              class="w-10 h-10 text-[var(--text-muted)]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -72,10 +71,10 @@ import { CommonModule } from '@angular/common';
                 d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
               ></path>
             </svg>
-            <p class="text-sm font-medium text-slate-600">
-              Glissez-déposez l'image ici, ou <span class="text-indigo-600">parcourez</span>
+            <p class="text-sm font-medium text-[var(--text-secondary)]">
+              Glissez-déposez l'image ici, ou <span class="text-[var(--brand-info-text)]">parcourez</span>
             </p>
-            <p class="text-xs text-slate-400">
+            <p class="text-xs" style="color:var(--text-muted)">
               Format {{ accept() }} (Max. {{ maxSizeMb() }} Mo)
             </p>
           </div>
@@ -83,7 +82,7 @@ import { CommonModule } from '@angular/common';
       </div>
 
       @if (errorMessage()) {
-        <p class="text-xs text-red-600 font-medium mt-1">{{ errorMessage() }}</p>
+        <p class="text-xs text-[var(--brand-danger-text)] font-medium mt-1">{{ errorMessage() }}</p>
       }
     </div>
   `,

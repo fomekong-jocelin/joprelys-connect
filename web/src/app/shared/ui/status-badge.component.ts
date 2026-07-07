@@ -6,9 +6,16 @@ import { Component, input } from '@angular/core';
   template: `
     <span
       class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-extrabold"
-      [class]="active() ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'"
+      [style.background]="active() ? 'var(--brand-success-subtle)' : 'var(--brand-danger-subtle)'"
+      [style.color]="active() ? 'var(--brand-success-text)' : 'var(--brand-danger-text)'"
+      [style.border]="active()
+        ? '1px solid color-mix(in srgb, var(--brand-success-muted) 80%, transparent)'
+        : '1px solid var(--brand-danger-border)'"
     >
-      <span class="h-1.5 w-1.5 rounded-full" [class]="active() ? 'bg-green-600' : 'bg-red-600'"></span>
+      <span
+        class="h-1.5 w-1.5 rounded-full"
+        [style.background]="active() ? 'var(--brand-success)' : 'var(--brand-danger)'"
+      ></span>
       {{ label() }}
     </span>
   `,

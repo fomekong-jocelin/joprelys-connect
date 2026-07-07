@@ -32,12 +32,12 @@ interface GroupedResult {
     <app-shell>
       <div class="app-container py-6 space-y-6">
         <!-- Header -->
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between border-b border-slate-200 dark:border-slate-800 pb-5 gap-4">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between border-b border-[var(--app-border)] pb-5 gap-4">
           <div>
-            <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            <h1 class="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
               {{ t('patient.results.title') }}
             </h1>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <p class="mt-1 text-sm text-[var(--text-muted)]">
               {{ t('patient.results.subtitle') }}
             </p>
           </div>
@@ -46,14 +46,14 @@ interface GroupedResult {
             <button
               (click)="exportData('csv')"
               [disabled]="isLoading() || groupedResults().length === 0"
-              class="inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 disabled:opacity-50 cursor-pointer transition-colors shadow-sm rounded-[6px]"
+              class="inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-semibold text-[var(--text-secondary)] dark:text-[var(--text-primary)] bg-white dark:bg-[var(--bg-input)] border border-[var(--app-border)] dark:border-slate-700 hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-700/50 disabled:opacity-50 cursor-pointer transition-colors shadow-sm rounded-[6px]"
             >
               {{ t('patient.results.exportCsv') }}
             </button>
             <button
               (click)="exportData('json')"
               [disabled]="isLoading() || groupedResults().length === 0"
-              class="inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 disabled:opacity-50 cursor-pointer transition-colors shadow-sm rounded-[6px]"
+              class="inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-semibold text-[var(--text-secondary)] dark:text-[var(--text-primary)] bg-white dark:bg-[var(--bg-input)] border border-[var(--app-border)] dark:border-slate-700 hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-700/50 disabled:opacity-50 cursor-pointer transition-colors shadow-sm rounded-[6px]"
             >
               {{ t('patient.results.exportJson') }}
             </button>
@@ -69,29 +69,29 @@ interface GroupedResult {
             {{ error() }}
           </div>
         } @else if (groupedResults().length === 0) {
-          <div class="text-center py-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm rounded-[6px]">
-            <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div class="text-center py-16 bg-[var(--app-surface)] border border-[var(--app-border)] shadow-sm rounded-[6px]">
+            <svg class="mx-auto h-12 w-12 text-[var(--text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <h3 class="mt-4 text-sm font-semibold text-slate-900 dark:text-white">{{ t('patient.results.emptyTitle') }}</h3>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('patient.results.emptyText') }}</p>
+            <h3 class="mt-4 text-sm font-semibold text-[var(--text-primary)]">{{ t('patient.results.emptyTitle') }}</h3>
+            <p class="mt-1 text-sm text-[var(--text-muted)]">{{ t('patient.results.emptyText') }}</p>
           </div>
         } @else {
           <div class="space-y-6">
             @for (group of groupedResults(); track group.resultNumber) {
-              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm rounded-[6px] overflow-hidden">
+              <div class="bg-[var(--app-surface)] border border-[var(--app-border)] shadow-sm rounded-[6px] overflow-hidden">
                 <!-- Card Header -->
-                <div class="bg-slate-50 dark:bg-slate-800/50 px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/50 px-5 py-4 border-b border-[var(--app-border)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
                     <div class="flex items-center gap-2">
-                      <span class="font-mono text-sm font-bold text-slate-900 dark:text-white">
+                      <span class="font-mono text-sm font-bold text-[var(--text-primary)]">
                         {{ group.resultNumber }}
                       </span>
-                      <span class="text-xs text-slate-400 dark:text-slate-500">
+                      <span class="text-xs text-[var(--text-muted)]">
                         ({{ t('lab.exams') }} : {{ group.examRequestNumber }})
                       </span>
                     </div>
-                    <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    <div class="mt-1 text-xs text-[var(--text-muted)]">
                       {{ t('lab.validatedAt') }} : {{ (group.validatedAt || group.createdAt) | date:'medium' }} · {{ t('lab.validatorName') }} : {{ group.validatorName }}
                     </div>
                   </div>
@@ -110,7 +110,7 @@ interface GroupedResult {
                 <!-- Card Body -->
                 <div class="p-5 space-y-4">
                   @if (group.conclusion) {
-                    <div class="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 text-slate-700 dark:text-slate-300 text-sm rounded-[4px]">
+                    <div class="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 text-[var(--text-secondary)] text-sm rounded-[4px]">
                       <span class="font-semibold block mb-1">{{ t('patient.results.conclusion') }}</span>
                       {{ group.conclusion }}
                     </div>
@@ -120,7 +120,7 @@ interface GroupedResult {
                   <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse text-sm">
                       <thead>
-                        <tr class="border-b border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 text-xs uppercase font-semibold">
+                        <tr class="border-b border-[var(--app-border)] text-[var(--text-muted)] text-xs uppercase font-semibold">
                           <th class="py-2.5">{{ t('lab.analyteName') }}</th>
                           <th class="py-2.5 text-right">{{ t('lab.value') }}</th>
                           <th class="py-2.5 text-center">{{ t('lab.referenceRange') }}</th>
@@ -129,12 +129,12 @@ interface GroupedResult {
                       </thead>
                       <tbody class="divide-y divide-slate-100 dark:divide-slate-800/50">
                         @for (item of group.items; track item.analyteName) {
-                          <tr class="text-slate-700 dark:text-slate-300">
+                          <tr class="text-[var(--text-secondary)]">
                             <td class="py-3 font-medium">{{ item.analyteName }}</td>
                             <td class="py-3 text-right">
-                              <span class="font-bold text-slate-900 dark:text-white">{{ item.value }}</span> {{ item.unit || '' }}
+                              <span class="font-bold text-[var(--text-primary)]">{{ item.value }}</span> {{ item.unit || '' }}
                             </td>
-                            <td class="py-3 text-center text-slate-500 dark:text-slate-400">
+                            <td class="py-3 text-center text-[var(--text-muted)]">
                               {{ item.referenceRange || '-' }}
                             </td>
                             <td class="py-3 text-right">
@@ -278,7 +278,7 @@ export class PatientResultsPageComponent implements OnInit {
   getInterpretationClasses(inter?: string): Record<string, boolean> {
     if (!inter) {
       return {
-        'bg-slate-50 dark:bg-slate-800/40 text-slate-700 dark:text-slate-300 border-slate-100 dark:border-slate-800/50': true
+        'bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/40 text-[var(--text-secondary)] border-[var(--app-border)]/50': true
       };
     }
     switch (inter.toUpperCase()) {
@@ -293,7 +293,7 @@ export class PatientResultsPageComponent implements OnInit {
         };
       default:
         return {
-          'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900/30': true
+          'bg-emerald-50 dark:bg-emerald-950/20 text-[var(--brand-success-text)] border-emerald-100 dark:border-emerald-900/30': true
         };
     }
   }

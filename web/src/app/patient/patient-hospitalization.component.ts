@@ -15,22 +15,22 @@ import { StaffApiService } from '../clinic/staff/staff-api.service';
     <div class="space-y-6">
       @if (activeHospitalization()) {
         <!-- Vue Hospitalisation Active -->
-        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-xl p-5 shadow-xs transition-colors space-y-6">
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100 dark:border-slate-800/80">
+        <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-xl p-5 shadow-xs transition-colors space-y-6">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-[var(--app-border)]/80">
             <div>
               <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-teal-50 text-teal-700 dark:bg-teal-950/30 dark:text-teal-300 uppercase tracking-wider mb-2">
                 {{ t('patients.hospitalization.status.EN_COURS') }}
               </span>
-              <h4 class="text-base font-extrabold text-slate-800 dark:text-white">
+              <h4 class="text-base font-extrabold text-[var(--text-primary)]">
                 {{ activeHospitalization()?.serviceName }} — {{ t('patients.hospitalization.room') }} {{ activeHospitalization()?.roomNumber }} | {{ t('patients.hospitalization.bed') }} {{ activeHospitalization()?.bedNumber }}
               </h4>
-              <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                <strong>N° Séjour :</strong> <span class="font-mono font-bold text-slate-700 dark:text-slate-300">{{ activeHospitalization()?.hospitalizationNumber }}</span>
+              <p class="text-xs text-[var(--text-muted)] mt-1">
+                <strong>N° Séjour :</strong> <span class="font-mono font-bold text-[var(--text-secondary)]">{{ activeHospitalization()?.hospitalizationNumber }}</span>
               </p>
-              <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                <strong>Médecin responsable :</strong> <span class="text-slate-700 dark:text-slate-300">{{ staffMap().get(activeHospitalization()?.responsiblePractitionerId || '') || 'Non spécifié' }}</span>
+              <p class="text-xs text-[var(--text-muted)] mt-0.5">
+                <strong>Médecin responsable :</strong> <span class="text-[var(--text-secondary)]">{{ staffMap().get(activeHospitalization()?.responsiblePractitionerId || '') || 'Non spécifié' }}</span>
               </p>
-              <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+              <p class="text-xs text-[var(--text-muted)] mt-0.5">
                 {{ t('patients.hospitalization.admittedAt') }} : {{ activeHospitalization()?.admittedAt | date:'dd/MM/yyyy HH:mm' }}
               </p>
             </div>
@@ -46,13 +46,13 @@ import { StaffApiService } from '../clinic/staff/staff-api.service';
           </div>
 
           <!-- Motif d'admission -->
-          <div class="p-3 bg-slate-50/50 dark:bg-slate-950/10 border border-slate-100/50 dark:border-slate-800/40 rounded-lg text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+          <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)]/10 border border-slate-100/50 dark:border-slate-800/40 rounded-lg text-xs leading-relaxed text-[var(--text-secondary)]">
             <strong>{{ t('patients.hospitalization.reason') }} :</strong> {{ activeHospitalization()?.admissionReason }}
           </div>
 
           <!-- Section Notes d'évolution -->
           <div class="space-y-4 pt-2">
-            <h5 class="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <h5 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
               💬 {{ t('patients.hospitalization.notes') }}
             </h5>
 
@@ -68,7 +68,7 @@ import { StaffApiService } from '../clinic/staff/staff-api.service';
                 />
                 <button
                   type="submit"
-                  class="px-4 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[#097b98] cursor-pointer"
+                  class="px-4 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[var(--brand-primary-hover)] cursor-pointer"
                 >
                   {{ t('common.save') }}
                 </button>
@@ -76,18 +76,18 @@ import { StaffApiService } from '../clinic/staff/staff-api.service';
             }
 
             @if (loadingNotes()) {
-              <div class="text-center text-xs text-slate-400">{{ t('common.loading') }}</div>
+              <div class="text-center text-xs text-[var(--text-muted)]">{{ t('common.loading') }}</div>
             } @else if (notes().length === 0) {
-              <p class="text-xs text-slate-500 italic">{{ t('patients.hospitalization.notes.empty') }}</p>
+              <p class="text-xs text-[var(--text-muted)] italic">{{ t('patients.hospitalization.notes.empty') }}</p>
             } @else {
-              <div class="relative border-l border-slate-100 dark:border-slate-800 pl-4 space-y-4 mt-2">
+              <div class="relative border-l border-[var(--app-border)] pl-4 space-y-4 mt-2">
                 @for (note of notes(); track note.id) {
                   <div class="relative">
                     <span class="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-brand-cyan border-2 border-white dark:border-slate-900"></span>
                     <div class="text-xs">
-                      <span class="font-bold text-slate-700 dark:text-slate-300">{{ note.authorName }}</span>
-                      <span class="text-slate-400 ml-2">{{ note.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
-                      <p class="text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">{{ note.noteContent }}</p>
+                      <span class="font-bold text-[var(--text-secondary)]">{{ note.authorName }}</span>
+                      <span class="text-[var(--text-muted)] ml-2">{{ note.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                      <p class="text-[var(--text-secondary)] mt-1 leading-relaxed">{{ note.noteContent }}</p>
                     </div>
                   </div>
                 }
@@ -97,12 +97,12 @@ import { StaffApiService } from '../clinic/staff/staff-api.service';
         </div>
       } @else {
         <!-- Aucun séjour actif -->
-        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-xl p-8 shadow-xs text-center transition-colors">
-          <p class="text-slate-500 dark:text-slate-400 italic mb-4">{{ t('patients.hospitalization.empty') }}</p>
+        <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-xl p-8 shadow-xs text-center transition-colors">
+          <p class="text-[var(--text-muted)] italic mb-4">{{ t('patients.hospitalization.empty') }}</p>
           @if (canModify()) {
             <button
               (click)="openAdmitModal()"
-              class="px-4 py-2 bg-brand-cyan hover:bg-[#097b98] text-white text-xs font-extrabold rounded-[var(--radius-brand-sm)] transition-all cursor-pointer inline-flex items-center gap-1.5"
+              class="px-4 py-2 bg-brand-cyan hover:bg-[var(--brand-primary-hover)] text-white text-xs font-extrabold rounded-[var(--radius-brand-sm)] transition-all cursor-pointer inline-flex items-center gap-1.5"
             >
               🏥 {{ t('patients.hospitalization.admit') }}
             </button>
@@ -112,28 +112,28 @@ import { StaffApiService } from '../clinic/staff/staff-api.service';
 
       <!-- Historique des anciens séjours -->
       @if (pastHospitalizations().length > 0) {
-        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-xl p-5 shadow-xs transition-colors">
-          <h4 class="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">
+        <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-xl p-5 shadow-xs transition-colors">
+          <h4 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)] mb-4">
             📜 Historique des Hospitalisations
           </h4>
           <div class="divide-y divide-slate-100 dark:divide-slate-800/80">
             @for (hosp of pastHospitalizations(); track hosp.id) {
               <div class="py-3 first:pt-0 last:pb-0 flex justify-between items-start">
                 <div class="space-y-1">
-                  <h5 class="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <h5 class="text-xs font-bold text-[var(--text-primary)]">
                     {{ hosp.serviceName }} — {{ t('patients.hospitalization.room') }} {{ hosp.roomNumber }} | {{ hosp.bedNumber }}
                   </h5>
-                  <p class="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+                  <p class="text-[10px] text-[var(--text-muted)] font-mono">
                     N° Séjour : {{ hosp.hospitalizationNumber }}
                   </p>
-                  <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                  <p class="text-[11px] text-[var(--text-muted)]">
                     Médecin responsable : {{ staffMap().get(hosp.responsiblePractitionerId || '') || 'Non spécifié' }}
                   </p>
-                  <p class="text-[11px] text-slate-400 dark:text-slate-500">
+                  <p class="text-[11px] text-[var(--text-muted)]">
                     {{ hosp.admittedAt | date:'dd/MM/yyyy' }} @if (hosp.dischargedAt) { au {{ hosp.dischargedAt | date:'dd/MM/yyyy' }} }
                   </p>
                   @if (hosp.dischargeDiagnosis) {
-                    <p class="text-xs text-slate-600 dark:text-slate-400">
+                    <p class="text-xs text-[var(--text-secondary)]">
                       <strong>Diag :</strong> {{ hosp.dischargeDiagnosis }}
                     </p>
                   }
@@ -142,7 +142,7 @@ import { StaffApiService } from '../clinic/staff/staff-api.service';
                 @if (hosp.pdfFilePath) {
                   <button
                     (click)="downloadDischargePdf(hosp)"
-                    class="px-2.5 py-1 text-[11px] bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-sm transition-colors flex items-center gap-1 cursor-pointer"
+                    class="px-2.5 py-1 text-[11px] bg-[var(--app-surface-muted)] hover:bg-slate-100 dark:bg-[var(--bg-input)] dark:hover:bg-slate-700/80 border border-[var(--app-border)] dark:border-slate-700 text-[var(--text-secondary)] font-semibold rounded-sm transition-colors flex items-center gap-1 cursor-pointer"
                   >
                     📄 {{ t('patients.hospitalization.downloadPdf') }}
                   </button>
@@ -156,21 +156,21 @@ import { StaffApiService } from '../clinic/staff/staff-api.service';
       <!-- Modale Admission -->
       @if (showAdmitModal()) {
         <div class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-xl w-full max-w-[420px] shadow-lg overflow-hidden">
-            <header class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <h3 class="font-display font-bold text-brand-night dark:text-white">{{ t('patients.hospitalization.admit') }}</h3>
-              <button (click)="showAdmitModal.set(false)" class="p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer">
+          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-xl w-full max-w-[420px] shadow-lg overflow-hidden">
+            <header class="px-5 py-4 border-b border-[var(--app-border)] flex items-center justify-between">
+              <h3 class="font-display font-bold text-[var(--text-primary)]">{{ t('patients.hospitalization.admit') }}</h3>
+              <button (click)="showAdmitModal.set(false)" class="p-1 text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] rounded-lg cursor-pointer">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </header>
             <form (submit)="saveAdmission($event)" class="p-5 space-y-4">
               @if (admitError()) {
-                <div class="p-2.5 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-lg text-xs text-red-700 dark:text-red-300 font-semibold leading-relaxed">
+                <div class="p-2.5 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-lg text-xs text-[var(--brand-danger-text)] font-semibold leading-relaxed">
                   {{ admitError() }}
                 </div>
               }
               <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.hospitalization.visit') }}*</label>
+                <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.visit') }}*</label>
                 <select [(ngModel)]="visitId" name="visit" required class="ui-select">
                   <option value="">-- {{ t('patients.hospitalization.selectVisit') }} --</option>
                   @for (v of patientVisits(); track v.id) {
@@ -179,7 +179,7 @@ import { StaffApiService } from '../clinic/staff/staff-api.service';
                 </select>
               </div>
               <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.hospitalization.responsiblePractitioner') }}*</label>
+                <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.responsiblePractitioner') }}*</label>
                 <select [(ngModel)]="responsiblePractitionerId" name="practitioner" required class="ui-select">
                   <option value="">-- {{ t('patients.hospitalization.selectPractitioner') }} --</option>
                   @for (p of staffList(); track p.id) {
@@ -190,7 +190,7 @@ import { StaffApiService } from '../clinic/staff/staff-api.service';
                 </select>
               </div>
               <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.hospitalization.service') }}*</label>
+                <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.service') }}*</label>
                 <select [(ngModel)]="serviceName" name="service" class="ui-select">
                   <option value="MÉDECINE GÉNÉRALE">Médecine Générale</option>
                   <option value="CHIRURGIE">Chirurgie</option>
@@ -201,21 +201,21 @@ import { StaffApiService } from '../clinic/staff/staff-api.service';
               </div>
               <div class="grid grid-cols-2 gap-4">
                 <div class="space-y-1">
-                  <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.hospitalization.room') }}*</label>
+                  <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.room') }}*</label>
                   <input type="text" [(ngModel)]="roomNumber" name="room" required class="ui-input" placeholder="Ex: Ch 101" />
                 </div>
                 <div class="space-y-1">
-                  <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.hospitalization.bed') }}*</label>
+                  <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.bed') }}*</label>
                   <input type="text" [(ngModel)]="bedNumber" name="bed" required class="ui-input" placeholder="Ex: Lit A" />
                 </div>
               </div>
               <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.hospitalization.reason') }}*</label>
+                <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.reason') }}*</label>
                 <textarea [(ngModel)]="admissionReason" name="reason" required rows="3" class="ui-textarea"></textarea>
               </div>
-              <footer class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex justify-end gap-2">
-                <button type="button" (click)="showAdmitModal.set(false)" class="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer">{{ t('common.cancel') }}</button>
-                <button type="submit" class="px-5 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[#097b98] cursor-pointer">{{ t('common.save') }}</button>
+              <footer class="pt-4 border-t border-[var(--app-border)]/80 flex justify-end gap-2">
+                <button type="button" (click)="showAdmitModal.set(false)" class="px-4 py-2 border border-[var(--app-border)] rounded-[var(--radius-brand-sm)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800/40 cursor-pointer">{{ t('common.cancel') }}</button>
+                <button type="submit" class="px-5 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[var(--brand-primary-hover)] cursor-pointer">{{ t('common.save') }}</button>
               </footer>
             </form>
           </div>
@@ -225,25 +225,25 @@ import { StaffApiService } from '../clinic/staff/staff-api.service';
       <!-- Modale Décharge / Sortie -->
       @if (showDischargeModal()) {
         <div class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-xl w-full max-w-[420px] shadow-lg overflow-hidden">
-            <header class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <h3 class="font-display font-bold text-brand-night dark:text-white">{{ t('patients.hospitalization.discharge') }}</h3>
-              <button (click)="showDischargeModal.set(false)" class="p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer">
+          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-xl w-full max-w-[420px] shadow-lg overflow-hidden">
+            <header class="px-5 py-4 border-b border-[var(--app-border)] flex items-center justify-between">
+              <h3 class="font-display font-bold text-[var(--text-primary)]">{{ t('patients.hospitalization.discharge') }}</h3>
+              <button (click)="showDischargeModal.set(false)" class="p-1 text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] rounded-lg cursor-pointer">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </header>
             <form (submit)="saveDischarge($event)" class="p-5 space-y-4">
               <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.hospitalization.dischargeDiagnosis') }}*</label>
+                <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.dischargeDiagnosis') }}*</label>
                 <input type="text" [(ngModel)]="dischargeDiagnosis" name="diag" required class="ui-input" />
               </div>
               <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('patients.hospitalization.dischargeInstructions') }}*</label>
+                <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.dischargeInstructions') }}*</label>
                 <textarea [(ngModel)]="dischargeInstructions" name="instr" required rows="3" class="ui-textarea"></textarea>
               </div>
-              <footer class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex justify-end gap-2">
-                <button type="button" (click)="showDischargeModal.set(false)" class="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer">{{ t('common.cancel') }}</button>
-                <button type="submit" class="px-5 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[#097b98] cursor-pointer">{{ t('common.save') }}</button>
+              <footer class="pt-4 border-t border-[var(--app-border)]/80 flex justify-end gap-2">
+                <button type="button" (click)="showDischargeModal.set(false)" class="px-4 py-2 border border-[var(--app-border)] rounded-[var(--radius-brand-sm)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800/40 cursor-pointer">{{ t('common.cancel') }}</button>
+                <button type="submit" class="px-5 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[var(--brand-primary-hover)] cursor-pointer">{{ t('common.save') }}</button>
               </footer>
             </form>
           </div>

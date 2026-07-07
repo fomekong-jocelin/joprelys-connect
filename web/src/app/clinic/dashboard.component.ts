@@ -177,11 +177,11 @@ export class DashboardComponent implements OnInit {
   }
 
   getBmiClass(bmi?: number): string {
-    if (!bmi) return 'bg-slate-50 text-slate-600 dark:bg-slate-900 dark:text-slate-400';
-    if (bmi < 18.5) return 'bg-amber-50 text-amber-700 dark:bg-amber-950/25 dark:text-amber-300';
-    if (bmi < 25) return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/25 dark:text-emerald-300';
-    if (bmi < 30) return 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/25 dark:text-yellow-300';
-    return 'bg-red-50 text-red-700 dark:bg-red-950/25 dark:text-red-300';
+    if (!bmi) return 'bg-[var(--app-surface-muted)] text-[var(--text-secondary)] dark:bg-slate-900 dark:text-[var(--text-muted)]';
+    if (bmi < 18.5) return 'bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)] bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]';
+    if (bmi < 25) return 'bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)] bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]';
+    if (bmi < 30) return 'bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)] bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]';
+    return 'bg-[var(--brand-danger-subtle)] text-red-700  dark:text-[var(--brand-danger-text)]';
   }
 
   isTempInvalid(): boolean {

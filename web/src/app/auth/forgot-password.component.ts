@@ -9,13 +9,14 @@ import { AppLogoComponent } from '../shared/ui/app-logo.component';
   standalone: true,
   imports: [RouterLink, AppLogoComponent],
   template: `
-    <main class="min-h-screen flex flex-col items-center justify-center p-6 bg-white dark:bg-slate-950 transition-colors duration-300 relative">
+    <main class="min-h-screen flex flex-col items-center justify-center p-6 transition-colors duration-300 relative"
+      style="background:var(--app-bg); color:var(--text-primary)">
       <!-- Sélecteur de langue -->
       <div class="fixed top-4 right-4 z-50">
-        <div class="flex items-center gap-1.5 text-xs font-bold border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-2.5 py-1.5 rounded-sm shadow-sm select-none">
-          <button type="button" (click)="setLang('fr')" [class]="locale() === 'fr' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer'">FR</button>
-          <span class="text-slate-300 dark:text-slate-700">|</span>
-          <button type="button" (click)="setLang('en')" [class]="locale() === 'en' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer'">EN</button>
+        <div class="flex items-center gap-1.5 text-xs font-bold border border-[var(--app-border)] bg-[var(--app-surface)] px-2.5 py-1.5 rounded-sm shadow-sm select-none">
+          <button type="button" (click)="setLang('fr')" [class]="locale() === 'fr' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'">FR</button>
+          <span style="color:var(--divider)">|</span>
+          <button type="button" (click)="setLang('en')" [class]="locale() === 'en' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'">EN</button>
         </div>
       </div>
 
@@ -25,38 +26,39 @@ import { AppLogoComponent } from '../shared/ui/app-logo.component';
           <app-logo size="lg"></app-logo>
         </div>
 
-        <div class="w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 p-6 rounded-[var(--radius-brand-md)] shadow-sm">
+        <div class="ui-card w-full p-6">
           @if (step() === 1) {
             <div class="text-center mb-6">
-              <h2 class="font-display font-bold text-xl text-brand-night dark:text-white mb-1">{{ t('auth.forgotPassword.title') }}</h2>
-              <p class="text-xs text-slate-500 dark:text-slate-400">{{ t('auth.forgotPassword.subtitle') }}</p>
+              <h2 class="font-display font-bold text-xl mb-1" style="color:var(--text-primary)">{{ t('auth.forgotPassword.title') }}</h2>
+              <p class="text-xs" style="color:var(--text-muted)">{{ t('auth.forgotPassword.subtitle') }}</p>
             </div>
 
             <form class="space-y-4" (submit)="$event.preventDefault(); submitRequest()">
               <div class="space-y-1.5">
-                <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">{{ t('auth.forgotPassword.email') }}</label>
-                <input type="email" [value]="email()" (input)="updateEmail($event)" required class="w-full min-h-[44px] px-4 py-2 border border-slate-100 dark:border-slate-800 bg-brand-gray dark:bg-slate-950 rounded-[var(--radius-brand-md)] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-brand-cyan text-sm" placeholder="nom@clinique.com" />
+                <label class="ui-label">{{ t('auth.forgotPassword.email') }}</label>
+                <input type="email" [value]="email()" (input)="updateEmail($event)" required aria-required="true" class="ui-input" placeholder="nom@clinique.com" />
               </div>
 
               @if (error()) {
-                <div class="p-3 bg-red-50 dark:bg-red-950/20 text-xs text-red-700 dark:text-red-400 rounded-md font-semibold">{{ error() }}</div>
+                <div class="ui-alert-danger" role="alert" aria-live="assertive">{{ error() }}</div>
               }
 
-              <button type="submit" [disabled]="!canSubmitEmail()" class="w-full min-h-[44px] flex items-center justify-center py-2.5 px-4 rounded-[var(--radius-brand-md)] text-sm font-semibold text-white bg-brand-cyan hover:bg-[#097b98] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+              <button type="submit" [disabled]="!canSubmitEmail()" class="ui-button ui-button-primary w-full">
                 @if (loading()) { {{ t('common.saving') }} } @else { {{ t('auth.forgotPassword.submitRequest') }} }
               </button>
             </form>
           } @else if (step() === 2) {
             <div class="text-center mb-6">
-              <h2 class="font-display font-bold text-xl text-brand-night dark:text-white mb-1">{{ t('auth.forgotPassword.otpTitle') }}</h2>
-              <p class="text-xs text-slate-500 dark:text-slate-400">{{ t('auth.forgotPassword.otpSubtitle') }}</p>
+              <h2 class="font-display font-bold text-xl mb-1" style="color:var(--text-primary)">{{ t('auth.forgotPassword.otpTitle') }}</h2>
+              <p class="text-xs" style="color:var(--text-muted)">{{ t('auth.forgotPassword.otpSubtitle') }}</p>
             </div>
 
             @if (receivedOtpCode(); as code) {
-              <div class="mb-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-md">
-                <p class="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider mb-1">{{ t('auth.forgotPassword.pilotWarning') }}</p>
-                <p class="text-xs text-amber-600 dark:text-amber-300">{{ t('auth.forgotPassword.pilotDesc') }}</p>
-                <code class="mt-2 inline-flex rounded-sm bg-white dark:bg-slate-800 px-3 py-1.5 font-mono text-lg font-extrabold text-amber-800 dark:text-amber-300">
+              <div class="mb-4 p-3 rounded-[var(--radius-brand-md)] border" style="background:var(--brand-warning-subtle); border-color:var(--brand-warning-border)">
+                <p class="text-[10px] font-bold uppercase tracking-wider mb-1" style="color:var(--brand-warning-text)">{{ t('auth.forgotPassword.pilotWarning') }}</p>
+                <p class="text-xs" style="color:var(--brand-warning-text)">{{ t('auth.forgotPassword.pilotDesc') }}</p>
+                <code class="mt-2 inline-flex rounded-sm px-3 py-1.5 font-mono text-lg font-extrabold"
+                  style="background:var(--brand-warning-code-bg); color:var(--brand-warning-text)">
                   {{ code }}
                 </code>
               </div>
@@ -64,42 +66,43 @@ import { AppLogoComponent } from '../shared/ui/app-logo.component';
 
             <form class="space-y-4" (submit)="$event.preventDefault(); submitReset()">
               <div class="space-y-1.5">
-                <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">{{ t('auth.forgotPassword.code') }}</label>
-                <input type="text" [value]="otpCode()" (input)="updateOtpCode($event)" required class="w-full min-h-[44px] px-4 py-2 border border-slate-100 dark:border-slate-800 bg-brand-gray dark:bg-slate-950 rounded-[var(--radius-brand-md)] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-brand-cyan text-sm" placeholder="E.g. 123456" />
+                <label class="ui-label">{{ t('auth.forgotPassword.code') }}</label>
+                <input type="text" [value]="otpCode()" (input)="updateOtpCode($event)" required aria-required="true" class="ui-input" placeholder="E.g. 123456" />
               </div>
 
               <div class="space-y-1.5">
-                <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">{{ t('auth.forgotPassword.newPassword') }}</label>
-                <input type="password" [value]="newPassword()" (input)="updateNewPassword($event)" required class="w-full min-h-[44px] px-4 py-2 border border-slate-100 dark:border-slate-800 bg-brand-gray dark:bg-slate-950 rounded-[var(--radius-brand-md)] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-brand-cyan text-sm" placeholder="••••••••" />
+                <label class="ui-label">{{ t('auth.forgotPassword.newPassword') }}</label>
+                <input type="password" [value]="newPassword()" (input)="updateNewPassword($event)" required aria-required="true" class="ui-input" placeholder="••••••••" />
               </div>
 
               <div class="space-y-1.5">
-                <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">{{ t('auth.forgotPassword.confirmPassword') }}</label>
-                <input type="password" [value]="confirmPassword()" (input)="updateConfirmPassword($event)" required class="w-full min-h-[44px] px-4 py-2 border border-slate-100 dark:border-slate-800 bg-brand-gray dark:bg-slate-950 rounded-[var(--radius-brand-md)] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-brand-cyan text-sm" placeholder="••••••••" />
+                <label class="ui-label">{{ t('auth.forgotPassword.confirmPassword') }}</label>
+                <input type="password" [value]="confirmPassword()" (input)="updateConfirmPassword($event)" required aria-required="true" class="ui-input" placeholder="••••••••" />
               </div>
 
               @if (error()) {
-                <div class="p-3 bg-red-50 dark:bg-red-950/20 text-xs text-red-700 dark:text-red-400 rounded-md font-semibold">{{ error() }}</div>
+                <div class="ui-alert-danger" role="alert" aria-live="assertive">{{ error() }}</div>
               }
 
-              <button type="submit" [disabled]="!canSubmitReset()" class="w-full min-h-[44px] flex items-center justify-center py-2.5 px-4 rounded-[var(--radius-brand-md)] text-sm font-semibold text-white bg-brand-cyan hover:bg-[#097b98] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+              <button type="submit" [disabled]="!canSubmitReset()" class="ui-button ui-button-primary w-full">
                 @if (loading()) { {{ t('common.saving') }} } @else { {{ t('auth.forgotPassword.submitReset') }} }
               </button>
             </form>
           } @else if (step() === 3) {
             <div class="text-center py-4 space-y-4">
-              <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 text-2xl">✓</span>
-              <h2 class="font-display font-bold text-xl text-brand-night dark:text-white mb-1">{{ t('auth.forgotPassword.successTitle') }}</h2>
-              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{{ t('auth.forgotPassword.successDesc') }}</p>
-              <button (click)="goToLogin()" class="w-full min-h-[44px] flex items-center justify-center py-2.5 px-4 rounded-[var(--radius-brand-md)] text-sm font-semibold text-white bg-brand-cyan hover:bg-[#097b98] transition-colors cursor-pointer">
+              <span class="inline-flex items-center justify-center w-12 h-12 rounded-full text-2xl"
+                style="background:var(--brand-success-subtle); color:var(--brand-success-text)">✓</span>
+              <h2 class="font-display font-bold text-xl mb-1" style="color:var(--text-primary)">{{ t('auth.forgotPassword.successTitle') }}</h2>
+              <p class="text-xs leading-relaxed" style="color:var(--text-muted)">{{ t('auth.forgotPassword.successDesc') }}</p>
+              <button (click)="goToLogin()" class="ui-button ui-button-primary w-full">
                 {{ t('auth.forgotPassword.backToLogin') }}
               </button>
             </div>
           }
 
           @if (step() < 3) {
-            <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/60 text-center">
-              <a routerLink="/" class="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-brand-cyan dark:hover:text-brand-cyan transition-colors">
+            <div class="mt-4 pt-4 border-t border-[var(--app-border)] text-center">
+              <a routerLink="/" class="ui-link text-xs">
                 ← {{ t('auth.forgotPassword.backToLogin') }}
               </a>
             </div>

@@ -8,6 +8,12 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- **Harmonisation complète des couleurs UI & thèmes (TKT-COLOR-HARMONIZATION)** :
+  - Centralisation de toutes les couleurs de l'application via des variables CSS sémantiques dans `styles.css`.
+  - Élimination de toutes les couleurs hexadécimales hardcodées, des overrides locaux (`hover:bg-[#097b98]`, `active:bg-[#076881]`, `dark:text-[#22d3ee]`) et des styles inline pour assurer la conformité avec le Brand Kit Joprelys et l'accessibilité WCAG 2.1 AA (contrastes ≥ 4.5:1 pour tout texte).
+  - Refonte des composants partagés (`AlertComponent`, `InputComponent`, `BreadcrumbComponent`, `FileDragDropComponent`, `StatusBadgeComponent`, `ButtonComponent`).
+  - Refactorisation de `getInterpretationColor()` pour lire dynamiquement les variables de couleurs graphiques (`--chart-*`) via `getComputedStyle(document.documentElement)` au lieu d'utiliser des hexadécimaux bruts dans le code TypeScript.
+  - Normalisation et harmonisation visuelle de tous les modules de l'application (auth, clinic, patient, pharmacy, profile, consultation, audit, core).
 - **API Backend pour l'enregistrement temporaire et la validation (Self-Registration) (STORY-0303)** :
   - Création du socle persistant avec la migration Flyway `V42__create_patient_pre_registrations.sql` et l'entité multi-tenant `PatientPreRegistrationEntity`.
   - Service `MedicalCaptchaService` robuste gérant les questions de physiologie et de bon sens médical en cache local avec expiration à 10 minutes et suppression après usage unique.

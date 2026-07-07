@@ -99,7 +99,7 @@ const CONSENT_STATUSES = ['REQUESTED', 'APPROVED', 'ACTIVE', 'REJECTED', 'EXPIRE
                         {{ consent.organizationName }}
                       </h4>
                       @if (consent.isCreator) {
-                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-[var(--brand-success-text)] mt-0.5">
                           <span class="w-1 h-1 rounded-full bg-emerald-500"></span>
                           {{ i18n.t('patient.consent.creator') }}
                         </span>
@@ -240,7 +240,7 @@ const CONSENT_STATUSES = ['REQUESTED', 'APPROVED', 'ACTIVE', 'REJECTED', 'EXPIRE
                           <span>{{ i18n.t('patient.consent.requestedAt') }} {{ item.requestedAt | date:'dd/MM/yyyy HH:mm' }}</span>
                         }
                         @if (item.approvedAt) {
-                          <span class="text-emerald-600 dark:text-emerald-400">{{ i18n.t('patient.consent.approvedAt') }} {{ item.approvedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                          <span class="text-[var(--brand-success-text)]">{{ i18n.t('patient.consent.approvedAt') }} {{ item.approvedAt | date:'dd/MM/yyyy HH:mm' }}</span>
                         }
                         @if (item.expiresAt) {
                           <span [class]="isExpired(item.expiresAt) ? 'text-rose-500' : 'text-amber-600 dark:text-amber-400'">
@@ -496,7 +496,7 @@ export class PatientConsentsListComponent implements OnInit {
   statusCss(status: string): string {
     switch (status) {
       case 'REQUESTED':
-        return 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 text-amber-700 dark:text-amber-400';
+        return 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 text-[var(--brand-warning-text)]';
       case 'APPROVED':
       case 'ACTIVE':
         return 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-400';
@@ -504,9 +504,9 @@ export class PatientConsentsListComponent implements OnInit {
       case 'REVOKED':
         return 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40 text-rose-700 dark:text-rose-400';
       case 'EXPIRED':
-        return 'bg-slate-50 dark:bg-slate-800/20 border-slate-200 dark:border-slate-700/40 text-slate-500 dark:text-slate-400';
+        return 'bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/20 border-[var(--app-border)] dark:border-slate-700/40 text-[var(--text-muted)]';
       default:
-        return 'bg-slate-50 border-slate-200 text-slate-500';
+        return 'bg-[var(--app-surface-muted)] border-[var(--app-border)] text-[var(--text-muted)]';
     }
   }
 

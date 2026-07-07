@@ -51,7 +51,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                 <span [class]="getActionBadgeClass(log.action)" class="px-2 py-0.5 rounded-[var(--radius-brand-xs)] font-bold text-[10px] uppercase leading-tight">
                   {{ formatActionName(log.action) }}
                 </span>
-                <span [class]="log.status === 'SUCCESS' ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300' : 'bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-300'"
+                <span [class]="log.status === 'SUCCESS' ? 'bg-emerald-50 dark:bg-emerald-950/20 text-[var(--brand-success-text)]' : 'bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-300'"
                       class="px-2 py-0.5 rounded-[var(--radius-brand-xs)] font-bold text-[10px] uppercase leading-tight">
                   {{ i18n.t('patient.audit.status.' + log.status) }}
                 </span>
@@ -97,7 +97,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                     {{ log.reason || i18n.t('patient.audit.noReason') }}
                   </td>
                   <td class="py-2.5 text-right">
-                    <span [class]="log.status === 'SUCCESS' ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300' : 'bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-300'"
+                    <span [class]="log.status === 'SUCCESS' ? 'bg-emerald-50 dark:bg-emerald-950/20 text-[var(--brand-success-text)]' : 'bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-300'"
                           class="px-2 py-0.5 rounded-[var(--radius-brand-xs)] font-bold text-[10px] uppercase">
                       {{ i18n.t('patient.audit.status.' + log.status) }}
                     </span>
@@ -189,9 +189,9 @@ export class PatientAuditListComponent implements OnInit {
         return 'bg-blue-100 dark:bg-blue-950/30 text-blue-800 dark:text-blue-300';
       case 'VIEW_PORTAL_DASHBOARD':
       case 'READ_AUDIT':
-        return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300';
+        return 'bg-slate-100 dark:bg-[var(--bg-input)] text-[var(--text-secondary)]';
       default:
-        return 'bg-indigo-100 dark:bg-indigo-950/30 text-indigo-800 dark:text-indigo-300';
+        return 'bg-indigo-100  text-indigo-800 dark:text-brand-cyan';
     }
   }
 }

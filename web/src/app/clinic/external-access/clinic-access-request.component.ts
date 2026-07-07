@@ -42,7 +42,7 @@ const ACCESS_SCOPES = [
 
         <div class="ui-card-subtle p-5 lg:p-6 flex flex-col gap-5 max-w-2xl">
           @if (success()) {
-            <div class="p-4 rounded-[var(--radius-brand-md)] bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-sm font-semibold flex items-start gap-3">
+            <div class="p-4 rounded-[var(--radius-brand-md)] bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 text-[var(--brand-success-text)] text-sm font-semibold flex items-start gap-3">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 shrink-0 mt-0.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -59,7 +59,7 @@ const ACCESS_SCOPES = [
           } @else {
             <!-- DPU Patient -->
             <div class="space-y-1.5">
-              <label for="dpu" class="ui-label">{{ i18n.t('clinic.accessRequest.dpuLabel') }} <span class="text-red-500">*</span></label>
+              <label for="dpu" class="ui-label">{{ i18n.t('clinic.accessRequest.dpuLabel') }} <span class="text-[var(--brand-danger)]">*</span></label>
               <input
                 id="dpu"
                 type="text"
@@ -72,7 +72,7 @@ const ACCESS_SCOPES = [
 
             <!-- Motif -->
             <div class="space-y-1.5">
-              <label for="reason" class="ui-label">{{ i18n.t('clinic.accessRequest.reasonLabel') }} <span class="text-red-500">*</span></label>
+              <label for="reason" class="ui-label">{{ i18n.t('clinic.accessRequest.reasonLabel') }} <span class="text-[var(--brand-danger)]">*</span></label>
               <textarea
                 id="reason"
                 class="ui-textarea w-full min-h-[100px]"
@@ -84,7 +84,7 @@ const ACCESS_SCOPES = [
 
             <!-- Durée -->
             <div class="space-y-1.5">
-              <label for="duration" class="ui-label">{{ i18n.t('clinic.accessRequest.durationLabel') }} <span class="text-red-500">*</span></label>
+              <label for="duration" class="ui-label">{{ i18n.t('clinic.accessRequest.durationLabel') }} <span class="text-[var(--brand-danger)]">*</span></label>
               <select
                 id="duration"
                 class="ui-select w-full"

@@ -54,7 +54,7 @@ import { StaffMember } from '../clinic/staff/staff.models';
         @if (loading()) {
           <div class="py-12 text-center">
             <div class="inline-block w-8 h-8 rounded-full border-4 border-indigo-200 border-t-indigo-600 animate-spin"></div>
-            <p class="mt-2 text-sm font-bold text-slate-400 dark:text-slate-500">Chargement du dossier patient...</p>
+            <p class="mt-2 text-sm font-bold text-[var(--text-muted)]">Chargement du dossier patient...</p>
           </div>
         } @else if (error(); as err) {
           <app-ui-card>
@@ -76,11 +76,11 @@ import { StaffMember } from '../clinic/staff/staff.models';
               </div>
 
               <div>
-                <h3 class="font-display font-black text-xl text-slate-800 dark:text-white">
+                <h3 class="font-display font-black text-xl text-[var(--text-primary)]">
                   Consentement d'accès requis
                 </h3>
-                <p class="text-xs text-slate-400 mt-1 whitespace-nowrap">
-                  DPU : <span class="font-mono font-bold text-indigo-500 dark:text-indigo-400">{{ consentPatient.globalPatientNumber }}</span>
+                <p class="text-xs text-[var(--text-muted)] mt-1 whitespace-nowrap">
+                  DPU : <span class="font-mono font-bold text-[var(--brand-info-text)] dark:text-indigo-400">{{ consentPatient.globalPatientNumber }}</span>
                 </p>
                 <p class="text-sm text-[var(--text-secondary)] mt-4 leading-relaxed">
                   Le patient <strong>{{ consentPatient.fullName }}</strong> n'a pas accordé d'accès DPU actif pour votre clinique.
@@ -92,7 +92,7 @@ import { StaffMember } from '../clinic/staff/staff.models';
                 <app-ui-alert tone="error" class="w-full text-left">{{ err }}</app-ui-alert>
               }
 
-              <div class="w-full border-t border-slate-100 dark:border-slate-800/80 pt-6 flex flex-col gap-4">
+              <div class="w-full border-t border-[var(--app-border)]/80 pt-6 flex flex-col gap-4">
                 <div class="text-left w-full">
                   <label for="emergency-reason" class="ui-label block mb-2">Justification d'accès d'urgence (obligatoire)</label>
                   <textarea
@@ -126,18 +126,18 @@ import { StaffMember } from '../clinic/staff/staff.models';
             <div class="space-y-6">
               
               <!-- En-tête : Nom du Patient, Numéros & Actions principales -->
-              <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b border-slate-100 dark:border-slate-800/80 gap-4">
+              <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b border-[var(--app-border)]/80 gap-4">
                 <div>
                   <div class="flex items-center gap-3">
-                    <h2 class="text-xl font-black text-slate-800 dark:text-white">{{ p.fullName }}</h2>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300 uppercase tracking-wider">
+                    <h2 class="text-xl font-black text-[var(--text-primary)]">{{ p.fullName }}</h2>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)] dark:bg-green-950/30 dark:text-green-300 uppercase tracking-wider">
                       {{ p.status }}
                     </span>
                   </div>
-                  <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 flex flex-wrap gap-x-2 gap-y-1">
-                    <span class="whitespace-nowrap">DPU: <strong class="font-mono font-extrabold text-indigo-500 dark:text-indigo-400">{{ p.globalPatientNumber }}</strong></span>
-                    <span class="text-slate-300 dark:text-slate-700 hidden sm:inline">|</span>
-                    <span class="whitespace-nowrap">Etablissement: <strong class="font-mono font-bold text-slate-600 dark:text-slate-400">{{ p.localPatientNumber }}</strong></span>
+                  <p class="text-xs text-[var(--text-muted)] mt-1 flex flex-wrap gap-x-2 gap-y-1">
+                    <span class="whitespace-nowrap">DPU: <strong class="font-mono font-extrabold text-[var(--brand-info-text)] dark:text-indigo-400">{{ p.globalPatientNumber }}</strong></span>
+                    <span class="text-slate-300 dark:text-[var(--text-secondary)] hidden sm:inline">|</span>
+                    <span class="whitespace-nowrap">Etablissement: <strong class="font-mono font-bold text-[var(--text-secondary)]">{{ p.localPatientNumber }}</strong></span>
                   </p>
                 </div>
                 
@@ -149,7 +149,7 @@ import { StaffMember } from '../clinic/staff/staff.models';
                   @if (canDownloadSummary()) {
                     <button
                       (click)="downloadSummaryPdf()"
-                      class="grow sm:grow-0 text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center justify-center gap-1.5 font-bold transition-all cursor-pointer shadow-xs"
+                      class="grow sm:grow-0 text-xs px-3 py-1.5 rounded-lg border border-[var(--app-border)] text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800/50 flex items-center justify-center gap-1.5 font-bold transition-all cursor-pointer shadow-xs"
                       title="Télécharger la synthèse médicale (PDF)"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-brand-primary">
@@ -181,7 +181,7 @@ import { StaffMember } from '../clinic/staff/staff.models';
               }
 
               @if (criticalAllergies().length > 0) {
-                <div class="p-4 rounded-sm bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/40 text-red-800 dark:text-red-300 text-sm font-bold flex items-center gap-3">
+                <div class="p-4 rounded-sm bg-[var(--brand-danger-subtle)] border border-red-200 dark:border-red-800/40 text-red-800 dark:text-[var(--brand-danger-text)] text-sm font-bold flex items-center gap-3">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5 animate-bounce">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
@@ -193,34 +193,34 @@ import { StaffMember } from '../clinic/staff/staff.models';
               }
 
               <!-- Mobile Tab Navigation (visible only on mobile/tablet) -->
-              <div class="block md:hidden border-b border-slate-100 dark:border-slate-800/80 mb-4 overflow-x-auto mobile-tab-scroll">
+              <div class="block md:hidden border-b border-[var(--app-border)]/80 mb-4 overflow-x-auto mobile-tab-scroll">
                 <nav class="flex space-x-6 pb-2 min-w-max px-1">
                   <a
                     [routerLink]="['/patients', p.id, 'profile']"
                     routerLinkActive="border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold active-mobile-tab"
                     [routerLinkActiveOptions]="{ exact: true }"
-                    class="border-b-2 border-transparent pb-2 text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
+                    class="border-b-2 border-transparent pb-2 text-sm font-semibold text-[var(--text-muted)] hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
                   >
                     {{ i18n.t('menu.patientDetail.profile') || 'Profil' }}
                   </a>
                   <a
                     [routerLink]="['/patients', p.id, 'consultations']"
                     routerLinkActive="border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold active-mobile-tab"
-                    class="border-b-2 border-transparent pb-2 text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
+                    class="border-b-2 border-transparent pb-2 text-sm font-semibold text-[var(--text-muted)] hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
                   >
                     {{ i18n.t('menu.patientDetail.consultations') || 'Consultations' }}
                   </a>
                   <a
                     [routerLink]="['/patients', p.id, 'lab-orders']"
                     routerLinkActive="border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold active-mobile-tab"
-                    class="border-b-2 border-transparent pb-2 text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
+                    class="border-b-2 border-transparent pb-2 text-sm font-semibold text-[var(--text-muted)] hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
                   >
                     {{ i18n.t('menu.patientDetail.labOrders') || 'Analyses' }}
                   </a>
                   <a
                     [routerLink]="['/patients', p.id, 'hospitalizations']"
                     routerLinkActive="border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold active-mobile-tab"
-                    class="border-b-2 border-transparent pb-2 text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
+                    class="border-b-2 border-transparent pb-2 text-sm font-semibold text-[var(--text-muted)] hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
                   >
                     {{ i18n.t('menu.patientDetail.hospitalization') || 'Hospitalisations' }}
                   </a>
@@ -228,7 +228,7 @@ import { StaffMember } from '../clinic/staff/staff.models';
                     <a
                       [routerLink]="['/patients', p.id, 'audit-trail']"
                       routerLinkActive="border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold active-mobile-tab"
-                      class="border-b-2 border-transparent pb-2 text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
+                      class="border-b-2 border-transparent pb-2 text-sm font-semibold text-[var(--text-muted)] hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
                     >
                       {{ i18n.t('menu.patientDetail.audit') || 'Sécurité/Audit' }}
                     </a>
@@ -250,22 +250,22 @@ import { StaffMember } from '../clinic/staff/staff.models';
     <!-- Admission Modal Dialogue -->
     @if (showVisitModal) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-2xl max-w-md w-full shadow-2xl p-6 relative">
+        <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-2xl max-w-md w-full shadow-2xl p-6 relative">
           <!-- Close button -->
-          <button (click)="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer">
+          <button (click)="closeModal()" class="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-secondary)] dark:hover:text-[var(--text-secondary)] cursor-pointer">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
 
           <!-- Header -->
-          <h3 class="font-display font-bold text-lg text-brand-night dark:text-white mb-2">Admettre le Patient</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mb-6">
+          <h3 class="font-display font-bold text-lg text-[var(--text-primary)] mb-2">Admettre le Patient</h3>
+          <p class="text-xs text-[var(--text-muted)] mb-6">
             Ouvrir une visite clinique pour <strong>{{ patient()?.fullName }}</strong> et l'orienter.
           </p>
 
           @if (visitError) {
-            <div class="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-red-700 dark:text-red-300 font-semibold mb-4 leading-relaxed">
+            <div class="p-3 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-xl text-xs text-[var(--brand-danger-text)] font-semibold mb-4 leading-relaxed">
               {{ visitError }}
             </div>
           }
@@ -273,7 +273,7 @@ import { StaffMember } from '../clinic/staff/staff.models';
           <!-- Form -->
           <div class="space-y-4">
             <div class="space-y-1.5">
-              <label class="ui-label">Motif de visite <span class="text-red-500">*</span></label>
+              <label class="ui-label">Motif de visite <span class="text-[var(--brand-danger)]">*</span></label>
               <textarea
                 [(ngModel)]="visitReason"
                 placeholder="Ex: Fièvre et toux sèche depuis 2 jours"
@@ -283,7 +283,7 @@ import { StaffMember } from '../clinic/staff/staff.models';
             </div>
 
             <div class="space-y-1.5">
-              <label class="ui-label">Orientation <span class="text-red-500">*</span></label>
+              <label class="ui-label">Orientation <span class="text-[var(--brand-danger)]">*</span></label>
               <select
                 [(ngModel)]="visitOrientation"
                 (ngModelChange)="onOrientationChange()"
