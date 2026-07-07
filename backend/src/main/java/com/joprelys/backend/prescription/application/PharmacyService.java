@@ -150,10 +150,19 @@ public class PharmacyService {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cette ordonnance a expiré.");
 		}
 
+		String pharmacyName = request.pharmacyName();
+		if (pharmacyName != null && pharmacyName.length() > 200) {
+			pharmacyName = pharmacyName.substring(0, 200);
+		}
+		String pharmacistLicense = request.pharmacistLicense();
+		if (pharmacistLicense != null && pharmacistLicense.length() > 50) {
+			pharmacistLicense = pharmacistLicense.substring(0, 50);
+		}
+
 		PrescriptionDispensationEntity dispensation = new PrescriptionDispensationEntity(
 				prescription,
-				request.pharmacyName(),
-				request.pharmacistLicense()
+				pharmacyName,
+				pharmacistLicense
 		);
 
 		boolean allItemsFullyDispensed = true;
@@ -168,7 +177,8 @@ public class PharmacyService {
 			int qtyAlreadyDispensed = dispensationItemRepository.sumQuantityDispensedByPrescriptionItemId(item.getId());
 			int qtyPrescribed = parseQuantity(item.getQuantity());
 
-			if (qtyAlreadyDispensed + dispItem.quantityDispensed() > qtyPrescribed) {
+			// Si qtyPrescribed <= 0, cela signifie que la quantité n'est pas chiffrée de manière stricte (ex: "Selon besoin"), la limite n'est pas bloquante.
+			if (qtyPrescribed > 0 && (qtyAlreadyDispensed + dispItem.quantityDispensed() > qtyPrescribed)) {
 				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantité dispensée excède la quantité prescrite pour le médicament : " + item.getDrugName());
 			}
 
@@ -180,7 +190,7 @@ public class PharmacyService {
 			);
 			dispensation.getItems().add(itemEntity);
 
-			if (qtyAlreadyDispensed + dispItem.quantityDispensed() < qtyPrescribed) {
+			if (qtyPrescribed > 0 && (qtyAlreadyDispensed + dispItem.quantityDispensed() < qtyPrescribed)) {
 				allItemsFullyDispensed = false;
 			}
 			if (dispItem.quantityDispensed() > 0) {
@@ -195,7 +205,7 @@ public class PharmacyService {
 			if (!requestContains) {
 				int qtyAlreadyDispensed = dispensationItemRepository.sumQuantityDispensedByPrescriptionItemId(item.getId());
 				int qtyPrescribed = parseQuantity(item.getQuantity());
-				if (qtyAlreadyDispensed < qtyPrescribed) {
+				if (qtyPrescribed > 0 && qtyAlreadyDispensed < qtyPrescribed) {
 					allItemsFullyDispensed = false;
 				}
 			}
@@ -209,13 +219,25 @@ public class PharmacyService {
 			jdbcTemplate.update("UPDATE prescriptions SET status = ?, updated_at = ? WHERE id = ?", newStatus, Instant.now(), prescription.getId());
 		}
 
-		// Query patientId globally using raw SQL to bypass TenantId restrictions
-		String patientIdSql = "SELECT v.patient_id " +
-				"FROM prescriptions pr " +
-				"JOIN consultations c ON pr.consultation_id = c.id " +
-				"JOIN visits v ON c.visit_id = v.id " +
-				"WHERE pr.id = ?";
-		UUID patientId = jdbcTemplate.queryForObject(patientIdSql, UUID.class, prescription.getId());
+		// Query patientId globally using raw SQL to bypass TenantId restrictions, handling potential EmptyResultDataAccessException
+		UUID patientId = null;
+		try {
+			String patientIdSql = "SELECT v.patient_id " +
+					"FROM prescriptions pr " +
+					"JOIN consultations c ON pr.consultation_id = c.id " +
+					"JOIN visits v ON c.visit_id = v.id " +
+					"WHERE pr.id = ?";
+			patientId = jdbcTemplate.queryForObject(patientIdSql, UUID.class, prescription.getId());
+		} catch (org.springframework.dao.EmptyResultDataAccessException e) {
+			// Fallback: essayer de récupérer le patientId via visit_id directement
+			if (prescription.getVisitId() != null) {
+				try {
+					patientId = jdbcTemplate.queryForObject("SELECT patient_id FROM visits WHERE id = ?", UUID.class, prescription.getVisitId());
+				} catch (org.springframework.dao.EmptyResultDataAccessException ex) {
+					// Ignorer
+				}
+			}
+		}
 
 		// Audit log
 		auditService.logSuccess(
@@ -225,7 +247,7 @@ public class PharmacyService {
 				"PRESCRIPTION",
 				prescription.getId(),
 				"PHARMACY_DISPENSED",
-				"Dispensation par pharmacie : " + request.pharmacyName() + " (Licence: " + request.pharmacistLicense() + ")"
+				"Dispensation par pharmacie : " + pharmacyName + " (Licence: " + pharmacistLicense + ")"
 		);
 	}
 

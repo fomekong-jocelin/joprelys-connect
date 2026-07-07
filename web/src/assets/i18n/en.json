@@ -539,6 +539,7 @@
   "pharmacy.pharmacistLicense": "Pharmacist license",
   "pharmacy.pharmacistLicensePlaceholder": "E.g. LIC-12345",
   "pharmacy.remaining": "Remaining",
+  "pharmacy.unlimitedQuantity": "Unlimited",
   "pharmacy.available": "Available",
   "pharmacy.availableYes": "Yes",
   "pharmacy.availableNo": "No",

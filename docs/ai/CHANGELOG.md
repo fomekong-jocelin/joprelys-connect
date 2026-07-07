@@ -6,8 +6,25 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+### Fixed
+
+- **Correction et robustesse de la dispensation en pharmacie (TKT-PHARMACY-DISPENSATION-ERROR-DIAGNOSTIC)** :
+  - Tolérance pour les prescriptions à posologie libre ou non quantifiée (ex: "Selon besoin") : suppression du blocage de quantité dispensée si la quantité prescrite parsée est nulle (`qtyPrescribed == 0`).
+  - Ajout de validations de taille `@Size` dans `PharmacyDispenseRequest.java` et troncatures automatiques de sécurité dans `PharmacyService.java` pour le nom de la pharmacie (max 200) et le numéro de licence du pharmacien (max 50) afin d'éviter des erreurs SQL 500.
+  - Sécurisation de la récupération du `patientId` dans l'audit log avec une requête SQL robuste et un bloc try-catch (`EmptyResultDataAccessException`), garantissant que la dispensation ne plante pas en cas d'anomalie de l'historique d'audit.
+- **Correction du lien d'authentification publique de document (TKT-VERIFICATION-AND-CONSULTATION-FIX)** :
+  - Nettoyage automatique des préfixes `verify/` ou `/` dans `VerificationUrlProvider.java` pour éviter le doublement du segment de chemin `/verify/verify/...`.
+  - Ajout de routes Angular de secours `/verify/patient-summary/:documentId` et `/verify/hospitalization/:documentId` redirigeant vers `VerificationComponent` afin de prévenir les pages blanches du routeur pour d'anciens formats d'URLs.
+- **Résolution de l'erreur 500 sur l'enregistrement de consultation (TKT-VERIFICATION-AND-CONSULTATION-FIX)** :
+  - Remplacement de `consultationRepository.count()` par `consultationRepository.countGlobally()` (utilisant une requête SQL native sans filtrage Hibernate de tenant) lors de la génération de `document_number` dans `ConsultationService.java`. Cela évite les collisions de numéros de documents uniques entre différentes cliniques.
+
 ### Added
 
+- **Résolution de la disparition des images WebP après sauvegarde (TKT-WEBP-SUPPORT-FIX-2)** :
+  - Lecture des octets du fichier en mémoire dès le début de l'upload pour éviter les blocages de flux Tomcat sous Windows.
+  - Conversion automatique en PNG et forçage de l'extension en `.png` lorsqu'une image WebP doit être redimensionnée (cohérence absolue de type MIME).
+  - Écriture directe des octets bruts sous l'extension `.webp` si aucun redimensionnement n'est requis ou si le format WebP n'est pas lisible par le JDK.
+  - Création de tests unitaires dédiés `FileStorageServiceTest.java`.
 - **Support du format WEBP pour l'upload d'images (TKT-WEBP-SUPPORT-FIX)** :
   - Support de la validation d'en-tête (Magic Numbers) pour les fichiers images WebP au backend (vérification de `"RIFF"` et `"WEBP"`).
   - Détection d'extension `.webp` et fallback de sauvegarde directe sans redimensionnement au backend.

@@ -12,9 +12,11 @@ public record PharmacyDispenseRequest(
 		String pinCode,
 
 		@NotBlank(message = "Le nom de la pharmacie est obligatoire.")
+		@jakarta.validation.constraints.Size(max = 200, message = "Le nom de la pharmacie ne doit pas dépasser 200 caractères.")
 		String pharmacyName,
 
 		@NotBlank(message = "Le numéro de licence du pharmacien est obligatoire.")
+		@jakarta.validation.constraints.Size(max = 50, message = "Le numéro de licence ne doit pas dépasser 50 caractères.")
 		String pharmacistLicense,
 
 		@NotEmpty(message = "La liste des médicaments délivrés ne peut pas être vide.")

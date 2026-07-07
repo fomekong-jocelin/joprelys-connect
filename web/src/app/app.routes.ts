@@ -114,6 +114,14 @@ export const routes: Routes = [
     loadComponent: () => import('./consultation/verification.component').then(m => m.VerificationComponent),
   },
   {
+    path: 'verify/patient-summary/:documentId',
+    loadComponent: () => import('./consultation/verification.component').then(m => m.VerificationComponent),
+  },
+  {
+    path: 'verify/hospitalization/:documentId',
+    loadComponent: () => import('./consultation/verification.component').then(m => m.VerificationComponent),
+  },
+  {
     path: 'pharmacy/prescriptions',
     loadComponent: () => import('./pharmacy/pharmacy-prescription-verify-page.component').then(m => m.PharmacyPrescriptionVerifyPageComponent),
     canActivate: [roleGuard],

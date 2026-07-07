@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-07 (TKT-WEBP-SUPPORT-FIX : Support du format WEBP pour l'upload d'images résolu et testé) |
+| Dernière mise à jour | 2026-07-07 (TKT-VERIFICATION-AND-CONSULTATION-FIX : Résolution bug double verify et 500 consultation) |
 | Responsable mise à jour | Antigravity |
 | État global | SPRINT-0011 — Alignement modules 4 à 12 du CDC (DPU, soins, documents, consentements) |
 | Risques majeurs | Taille du chantier (9 modules), dette architecture controllers→repositories |
@@ -21,6 +21,9 @@
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
+| TKT-VERIFICATION-AND-CONSULTATION-FIX | CDC_ALIGN | Bug | Résolution double verify d'authentification et erreur 500 consultation | Full-stack | DONE | P0 | 2 | Senior | 0.15j | 0.25j | 0.4j | Antigravity | Lead Developer | SPRINT-0011 | 0.15j | Aucun (double verify nettoyé, routes Angular ajoutées, countGlobally native query ajouté, build OK) | Faible | 2026-07-07 |
+| TKT-PHARMACY-DISPENSATION-ERROR-DIAGNOSTIC | CDC_ALIGN | Bug | Diagnostic et résolution des causes d'erreur de dispensation en pharmacie | Full-stack | DONE | P0 | 1 | Senior | 0.1j | 0.2j | 0.3j | Antigravity | Lead Developer | SPRINT-0011 | 0.2j | Aucun (quantités textuelles tolérées, troncatures de sécurité et gestion robuste du patientId en audit log) | Faible | 2026-07-07 |
+| TKT-WEBP-SUPPORT-FIX-2 | CLIN_STAFF_ASSETS | Bug | Résolution de la disparition des images WebP après sauvegarde (Windows & Concurrence de flux) | Full-stack | DONE | P0 | 1 | Senior | 0.1j | 0.2j | 0.3j | Antigravity | Lead Developer | SPRINT-0011 | 0.1j | Aucun (correction validée par tests et build OK) | Faible | 2026-07-07 |
 | TKT-WEBP-SUPPORT-FIX | CLIN_STAFF_ASSETS | Bug | Support du format WEBP pour l'upload d'images (Magic Numbers & MediaType) | Full-stack | DONE | P1 | 1 | Senior | 0.1j | 0.2j | 0.3j | Antigravity | Lead Developer | SPRINT-0011 | 0.1j | Aucun (correction validée par tests et compilation OK) | Faible | 2026-07-07 |
 | TKT-COLOR-HARMONIZATION | UI_UX | Task | Harmonisation des couleurs UI (thèmes clair/sombre, conformité WCAG) | Frontend | DONE | P1 | 2 | Senior | 0.5j | 0.8j | 1.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.5j | Aucun (harmonisation complète et compilation OK) | Faible | 2026-07-07 |
 | TICKET-DEMO-PARCOURS-COMPLET | CDC_ALIGN | Documentation | Guide de démo — Parcours utilisateur complet de la création patient aux examens labo | Documentation | DONE | P1 | 2 | Tech Lead | 0.3j | 0.5j | 0.8j | Antigravity | Lead Developer | SPRINT-0011 | 0.3j | Aucun (document de démo rédigé, ticket et suivi mis à jour) | Faible | 2026-07-07 |

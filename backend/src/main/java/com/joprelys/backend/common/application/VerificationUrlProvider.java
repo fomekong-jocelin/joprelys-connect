@@ -20,10 +20,16 @@ public class VerificationUrlProvider {
 		if (path == null || path.isBlank()) {
 			return baseUrl;
 		}
-		if (path.startsWith("/")) {
-			return baseUrl + path;
+		
+		String cleanPath = path;
+		if (cleanPath.startsWith("/")) {
+			cleanPath = cleanPath.substring(1);
 		}
-		return baseUrl + "/" + path;
+		if (cleanPath.startsWith("verify/")) {
+			cleanPath = cleanPath.substring(7);
+		}
+		
+		return baseUrl + "/" + cleanPath;
 	}
 
 	private String getDynamicVerificationBaseUrl() {

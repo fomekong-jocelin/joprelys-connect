@@ -28,4 +28,7 @@ public interface ConsultationRepository extends JpaRepository<ConsultationEntity
 
 	@Query(value = "SELECT v.patient_id FROM consultations c JOIN visits v ON c.visit_id = v.id WHERE c.id = :consultationId", nativeQuery = true)
 	Optional<Object> findPatientIdByConsultationId(@Param("consultationId") UUID consultationId);
+
+	@Query(value = "SELECT COUNT(*) FROM consultations", nativeQuery = true)
+	long countGlobally();
 }

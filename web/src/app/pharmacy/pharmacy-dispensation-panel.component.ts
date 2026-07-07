@@ -70,13 +70,21 @@ interface DispensationLineDraft {
                         {{ item.dosage || '-' }} · {{ item.quantity }}
                       </span>
                     </td>
-                    <td>{{ remainingQuantity(item) }}</td>
+                    <td>
+                      @if (isQuantityFlexible(item)) {
+                        <span class="text-xs italic" style="color: var(--text-muted)">
+                          {{ t('pharmacy.unlimitedQuantity') }}
+                        </span>
+                      } @else {
+                        {{ remainingQuantity(item) }}
+                      }
+                    </td>
                     <td>
                       <label class="inline-flex items-center gap-2 text-xs font-bold" style="color: var(--text-secondary)">
                         <input
                           type="checkbox"
                           [checked]="draftFor(item).available"
-                          [disabled]="!canDispenseStatus() || remainingQuantity(item) === 0"
+                          [disabled]="!canDispenseStatus() || (remainingQuantity(item) === 0 && !isQuantityFlexible(item))"
                           (change)="updateAvailability(item.itemId, $any($event.target).checked)"
                           class="ui-checkbox"
                         />
@@ -88,9 +96,9 @@ interface DispensationLineDraft {
                         class="ui-input pharmacy-line-input"
                         type="number"
                         min="0"
-                        [max]="remainingQuantity(item)"
+                        [max]="isQuantityFlexible(item) ? 9999 : remainingQuantity(item)"
                         [value]="draftFor(item).quantityDispensed"
-                        [disabled]="!canDispenseStatus() || remainingQuantity(item) === 0 || !draftFor(item).available"
+                        [disabled]="!canDispenseStatus() || (remainingQuantity(item) === 0 && !isQuantityFlexible(item)) || !draftFor(item).available"
                         (input)="updateQuantity(item.itemId, $any($event.target).value)"
                       />
                     </td>
@@ -233,7 +241,16 @@ export class PharmacyDispensationPanelComponent implements OnChanges {
     return ['ACTIVE', 'PARTIALLY_DISPENSED'].includes(this.prescription?.status);
   }
 
+  isQuantityFlexible(item: PharmacyVerifyItem): boolean {
+    if (!item.quantity) return true;
+    const digits = item.quantity.replace(/[^0-9]/g, '');
+    return digits.length === 0;
+  }
+
   remainingQuantity(item: PharmacyVerifyItem): number {
+    if (this.isQuantityFlexible(item)) {
+      return 9999;
+    }
     return Math.max(this.parseQuantity(item.quantity) - item.quantityAlreadyDispensed, 0);
   }
 
@@ -305,7 +322,7 @@ export class PharmacyDispensationPanelComponent implements OnChanges {
   private resetLineDrafts(): void {
     const drafts = Object.fromEntries((this.prescription?.items ?? []).map((item) => [
       item.itemId,
-      { available: this.remainingQuantity(item) > 0, quantityDispensed: 0, substitutedWith: '' },
+      { available: this.isQuantityFlexible(item) || this.remainingQuantity(item) > 0, quantityDispensed: 0, substitutedWith: '' },
     ]));
     this.lineDrafts.set(drafts);
   }

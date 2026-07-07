@@ -92,7 +92,7 @@ public class ConsultationService {
 
 	private String generateDocumentNumber() {
 		String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-		long count = consultationRepository.count() + 1;
+		long count = consultationRepository.countGlobally() + 1;
 		return String.format("DOC-CONS-%s-%06d", date, count);
 	}
 

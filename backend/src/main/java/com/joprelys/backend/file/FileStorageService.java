@@ -38,8 +38,16 @@ public class FileStorageService {
 			throw new IllegalArgumentException("La taille du fichier dépasse la limite autorisée de 10 Mo.");
 		}
 
+		// Charger les octets en mémoire dès le début pour éviter les accès concurrents ou les flux fermés (notamment sur Windows)
+		byte[] fileBytes;
+		try {
+			fileBytes = file.getBytes();
+		} catch (IOException e) {
+			throw new RuntimeException("Impossible de lire les données du fichier.", e);
+		}
+
 		// Validations strictes de sécurité (Magic Numbers)
-		validateImageHeader(file);
+		validateImageHeader(fileBytes);
 
 		// Nettoyer et normaliser le sous-dossier (ex: logo, photo, signature, stamp)
 		String cleanSubDir = subDirType.replaceAll("[^a-zA-Z0-9_-]", "");
@@ -48,7 +56,7 @@ public class FileStorageService {
 		try {
 			Files.createDirectories(targetFolder);
 
-			// Générer un nom unique pour éviter les conflits et effacer les noms originaux malveillants
+			// Détecter l'extension d'origine
 			String originalFilename = file.getOriginalFilename();
 			String extension = "png"; // default
 			if (originalFilename != null && (originalFilename.toLowerCase().endsWith(".jpg") || originalFilename.toLowerCase().endsWith(".jpeg"))) {
@@ -56,17 +64,13 @@ public class FileStorageService {
 			} else if (originalFilename != null && originalFilename.toLowerCase().endsWith(".webp")) {
 				extension = "webp";
 			}
-			String uniqueFilename = UUID.randomUUID().toString() + "." + extension;
 
-			Path destinationFile = targetFolder.resolve(uniqueFilename).normalize();
+			// Traiter l'image en mémoire
+			boolean isRedimensionne = false;
+			byte[] finalBytesToSave = fileBytes;
+			String finalExtension = extension;
 
-			// Protection stricte contre le Path Traversal
-			if (!destinationFile.getParent().startsWith(this.rootLocation)) {
-				throw new SecurityException("Tentative d'écriture hors du répertoire autorisé.");
-			}
-
-			// Compression et redimensionnement de l'image
-			try (InputStream inputStream = file.getInputStream()) {
+			try (InputStream inputStream = new java.io.ByteArrayInputStream(fileBytes)) {
 				java.awt.image.BufferedImage originalImage = javax.imageio.ImageIO.read(inputStream);
 				if (originalImage != null) {
 					// Définir la dimension maximale autorisée (ex: 800px pour les photos, 500px pour les logos/signatures)
@@ -98,37 +102,56 @@ public class FileStorageService {
 						g.dispose();
 						
 						originalImage = resizedImage;
+						isRedimensionne = true;
 					}
 
-					// Enregistrer avec compression
-					if ("jpg".equals(extension)) {
-						java.util.Iterator<javax.imageio.ImageWriter> writers = javax.imageio.ImageIO.getImageWritersByFormatName("jpg");
-						if (writers.hasNext()) {
-							javax.imageio.ImageWriter writer = writers.next();
-							javax.imageio.ImageWriteParam param = writer.getDefaultWriteParam();
-							param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
-							param.setCompressionQuality(0.75f); // 75% qualité
-							
-							try (javax.imageio.stream.ImageOutputStream ios = javax.imageio.ImageIO.createImageOutputStream(destinationFile.toFile())) {
-								writer.setOutput(ios);
-								writer.write(null, new javax.imageio.IIOImage(originalImage, null, null), param);
-							} finally {
-								writer.dispose();
+					if (isRedimensionne) {
+						// Si redimensionné, on compresse et sauvegarde
+						java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+						if ("jpg".equals(extension)) {
+							java.util.Iterator<javax.imageio.ImageWriter> writers = javax.imageio.ImageIO.getImageWritersByFormatName("jpg");
+							if (writers.hasNext()) {
+								javax.imageio.ImageWriter writer = writers.next();
+								javax.imageio.ImageWriteParam param = writer.getDefaultWriteParam();
+								param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
+								param.setCompressionQuality(0.75f); // 75% qualité
+								
+								try (javax.imageio.stream.ImageOutputStream ios = javax.imageio.ImageIO.createImageOutputStream(baos)) {
+									writer.setOutput(ios);
+									writer.write(null, new javax.imageio.IIOImage(originalImage, null, null), param);
+								} finally {
+									writer.dispose();
+								}
+							} else {
+								javax.imageio.ImageIO.write(originalImage, "jpg", baos);
 							}
 						} else {
-							javax.imageio.ImageIO.write(originalImage, "jpg", destinationFile.toFile());
+							// Si c'est un WebP redimensionné, on doit le sauvegarder au format PNG en forçant l'extension à png
+							// car le JDK standard ne sait pas écrire du WebP.
+							if ("webp".equals(extension)) {
+								finalExtension = "png";
+							}
+							javax.imageio.ImageIO.write(originalImage, "png", baos);
 						}
-					} else {
-						// Sauvegarde en PNG (avec transparence)
-						javax.imageio.ImageIO.write(originalImage, "png", destinationFile.toFile());
-					}
-				} else {
-					// Fallback au fichier brut si la lecture de l'image échoue
-					try (InputStream fallbackStream = file.getInputStream()) {
-						Files.copy(fallbackStream, destinationFile, StandardCopyOption.REPLACE_EXISTING);
+						finalBytesToSave = baos.toByteArray();
 					}
 				}
+			} catch (Exception e) {
+				// En cas d'erreur de lecture d'image (ex: format WebP non géré par ImageIO),
+				// on garde le fichier brut d'origine sans modification.
 			}
+
+			// Générer un nom unique avec l'extension finale appropriée (png, jpg, webp)
+			String uniqueFilename = UUID.randomUUID().toString() + "." + finalExtension;
+			Path destinationFile = targetFolder.resolve(uniqueFilename).normalize();
+
+			// Protection stricte contre le Path Traversal
+			if (!destinationFile.getParent().startsWith(this.rootLocation)) {
+				throw new SecurityException("Tentative d'écriture hors du répertoire autorisé.");
+			}
+
+			// Écriture du fichier final
+			Files.write(destinationFile, finalBytesToSave);
 
 			// Retourne le chemin d'accès relatif (ex: uploads/logo/filename.png)
 			return "uploads/" + cleanSubDir + "/" + uniqueFilename;
@@ -164,43 +187,41 @@ public class FileStorageService {
 		}
 	}
 
-	private void validateImageHeader(MultipartFile file) {
-		try (InputStream is = file.getInputStream()) {
-			byte[] header = new byte[12];
-			int readBytes = is.read(header);
-			if (readBytes < 4) {
-				throw new IllegalArgumentException("Fichier trop court pour être une image valide.");
-			}
+	private void validateImageHeader(byte[] fileBytes) {
+		int readBytes = Math.min(fileBytes.length, 12);
+		if (readBytes < 4) {
+			throw new IllegalArgumentException("Fichier trop court pour être une image valide.");
+		}
 
-			// Vérification PNG: 89 50 4E 47 0D 0A 1A 0A
-			boolean isPng = readBytes >= 4 &&
-					(header[0] & 0xFF) == 0x89 &&
-					(header[1] & 0xFF) == 0x50 &&
-					(header[2] & 0xFF) == 0x4E &&
-					(header[3] & 0xFF) == 0x47;
+		byte[] header = new byte[12];
+		System.arraycopy(fileBytes, 0, header, 0, readBytes);
 
-			// Vérification JPEG: FF D8 FF
-			boolean isJpeg = readBytes >= 3 &&
-					(header[0] & 0xFF) == 0xFF &&
-					(header[1] & 0xFF) == 0xD8 &&
-					(header[2] & 0xFF) == 0xFF;
+		// Vérification PNG: 89 50 4E 47 0D 0A 1A 0A
+		boolean isPng = readBytes >= 4 &&
+				(header[0] & 0xFF) == 0x89 &&
+				(header[1] & 0xFF) == 0x50 &&
+				(header[2] & 0xFF) == 0x4E &&
+				(header[3] & 0xFF) == 0x47;
 
-			// Vérification WebP: "RIFF" .... "WEBP"
-			boolean isWebp = readBytes >= 12 &&
-					(header[0] & 0xFF) == 0x52 && // 'R'
-					(header[1] & 0xFF) == 0x49 && // 'I'
-					(header[2] & 0xFF) == 0x46 && // 'F'
-					(header[3] & 0xFF) == 0x46 && // 'F'
-					(header[8] & 0xFF) == 0x57 && // 'W'
-					(header[9] & 0xFF) == 0x45 && // 'E'
-					(header[10] & 0xFF) == 0x42 && // 'B'
-					(header[11] & 0xFF) == 0x50;   // 'P'
+		// Vérification JPEG: FF D8 FF
+		boolean isJpeg = readBytes >= 3 &&
+				(header[0] & 0xFF) == 0xFF &&
+				(header[1] & 0xFF) == 0xD8 &&
+				(header[2] & 0xFF) == 0xFF;
 
-			if (!isPng && !isJpeg && !isWebp) {
-				throw new IllegalArgumentException("Type de fichier non autorisé. Seuls les formats PNG, JPEG/JPG et WEBP réels sont acceptés.");
-			}
-		} catch (IOException e) {
-			throw new RuntimeException("Erreur lors de l'analyse du format du fichier.", e);
+		// Vérification WebP: "RIFF" .... "WEBP"
+		boolean isWebp = readBytes >= 12 &&
+				(header[0] & 0xFF) == 0x52 && // 'R'
+				(header[1] & 0xFF) == 0x49 && // 'I'
+				(header[2] & 0xFF) == 0x46 && // 'F'
+				(header[3] & 0xFF) == 0x46 && // 'F'
+				(header[8] & 0xFF) == 0x57 && // 'W'
+				(header[9] & 0xFF) == 0x45 && // 'E'
+				(header[10] & 0xFF) == 0x42 && // 'B'
+				(header[11] & 0xFF) == 0x50;   // 'P'
+
+		if (!isPng && !isJpeg && !isWebp) {
+			throw new IllegalArgumentException("Type de fichier non autorisé. Seuls les formats PNG, JPEG/JPG et WEBP réels sont acceptés.");
 		}
 	}
 }
