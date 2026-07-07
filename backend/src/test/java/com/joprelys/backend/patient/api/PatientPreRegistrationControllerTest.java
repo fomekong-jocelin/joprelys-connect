@@ -63,11 +63,13 @@ public class PatientPreRegistrationControllerTest {
     @BeforeEach
     void setUp() {
         TenantContext.clear();
+        jdbcTemplate.update("SET REFERENTIAL_INTEGRITY FALSE");
         jdbcTemplate.update("DELETE FROM audit_logs");
         jdbcTemplate.update("DELETE FROM patient_pre_registrations");
         jdbcTemplate.update("DELETE FROM patients");
         userAccountRepository.deleteAll();
         organizationRepository.deleteAll();
+        jdbcTemplate.update("SET REFERENTIAL_INTEGRITY TRUE");
 
         // Create Organization
         orgA = new OrganizationEntity("Clinique Test A", "contacta@joprelys.local", "123", "Street A", "Douala");

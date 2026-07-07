@@ -31,8 +31,11 @@ public class FileStorageService {
 			throw new IllegalArgumentException("Le fichier est vide.");
 		}
 
-		if (file.getSize() > maxFileSize) {
-			throw new IllegalArgumentException("La taille du fichier dépasse la limite autorisée de 2 Mo.");
+		// Augmenté à 10 Mo pour permettre le chargement de grandes photos de smartphones,
+		// qui seront compressées immédiatement lors du stockage.
+		long maxUploadSize = 10 * 1024 * 1024; // 10 MB
+		if (file.getSize() > maxUploadSize) {
+			throw new IllegalArgumentException("La taille du fichier dépasse la limite autorisée de 10 Mo.");
 		}
 
 		// Validations strictes de sécurité (Magic Numbers)
@@ -47,11 +50,11 @@ public class FileStorageService {
 
 			// Générer un nom unique pour éviter les conflits et effacer les noms originaux malveillants
 			String originalFilename = file.getOriginalFilename();
-			String extension = ".png"; // default
-			if (originalFilename != null && originalFilename.toLowerCase().endsWith(".jpg") || originalFilename != null && originalFilename.toLowerCase().endsWith(".jpeg")) {
-				extension = ".jpg";
+			String extension = "png"; // default
+			if (originalFilename != null && (originalFilename.toLowerCase().endsWith(".jpg") || originalFilename.toLowerCase().endsWith(".jpeg"))) {
+				extension = "jpg";
 			}
-			String uniqueFilename = UUID.randomUUID().toString() + extension;
+			String uniqueFilename = UUID.randomUUID().toString() + "." + extension;
 
 			Path destinationFile = targetFolder.resolve(uniqueFilename).normalize();
 
@@ -60,8 +63,69 @@ public class FileStorageService {
 				throw new SecurityException("Tentative d'écriture hors du répertoire autorisé.");
 			}
 
+			// Compression et redimensionnement de l'image
 			try (InputStream inputStream = file.getInputStream()) {
-				Files.copy(inputStream, destinationFile, StandardCopyOption.REPLACE_EXISTING);
+				java.awt.image.BufferedImage originalImage = javax.imageio.ImageIO.read(inputStream);
+				if (originalImage != null) {
+					// Définir la dimension maximale autorisée (ex: 800px pour les photos, 500px pour les logos/signatures)
+					int maxDimension = "photo".equalsIgnoreCase(cleanSubDir) ? 800 : 500;
+					int originalWidth = originalImage.getWidth();
+					int originalHeight = originalImage.getHeight();
+
+					if (originalWidth > maxDimension || originalHeight > maxDimension) {
+						// Calculer le ratio d'aspect
+						double ratio = (double) originalWidth / originalHeight;
+						int newWidth, newHeight;
+						if (originalWidth > originalHeight) {
+							newWidth = maxDimension;
+							newHeight = (int) (maxDimension / ratio);
+						} else {
+							newHeight = maxDimension;
+							newWidth = (int) (maxDimension * ratio);
+						}
+
+						// Redimensionner l'image
+						int imageType = originalImage.getType() == 0 ? java.awt.image.BufferedImage.TYPE_INT_ARGB : originalImage.getType();
+						if ("jpg".equals(extension)) {
+							imageType = java.awt.image.BufferedImage.TYPE_INT_RGB;
+						}
+						java.awt.image.BufferedImage resizedImage = new java.awt.image.BufferedImage(newWidth, newHeight, imageType);
+						java.awt.Graphics2D g = resizedImage.createGraphics();
+						g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+						g.drawImage(originalImage, 0, 0, newWidth, newHeight, null);
+						g.dispose();
+						
+						originalImage = resizedImage;
+					}
+
+					// Enregistrer avec compression
+					if ("jpg".equals(extension)) {
+						java.util.Iterator<javax.imageio.ImageWriter> writers = javax.imageio.ImageIO.getImageWritersByFormatName("jpg");
+						if (writers.hasNext()) {
+							javax.imageio.ImageWriter writer = writers.next();
+							javax.imageio.ImageWriteParam param = writer.getDefaultWriteParam();
+							param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
+							param.setCompressionQuality(0.75f); // 75% qualité
+							
+							try (javax.imageio.stream.ImageOutputStream ios = javax.imageio.ImageIO.createImageOutputStream(destinationFile.toFile())) {
+								writer.setOutput(ios);
+								writer.write(null, new javax.imageio.IIOImage(originalImage, null, null), param);
+							} finally {
+								writer.dispose();
+							}
+						} else {
+							javax.imageio.ImageIO.write(originalImage, "jpg", destinationFile.toFile());
+						}
+					} else {
+						// Sauvegarde en PNG (avec transparence)
+						javax.imageio.ImageIO.write(originalImage, "png", destinationFile.toFile());
+					}
+				} else {
+					// Fallback au fichier brut si la lecture de l'image échoue
+					try (InputStream fallbackStream = file.getInputStream()) {
+						Files.copy(fallbackStream, destinationFile, StandardCopyOption.REPLACE_EXISTING);
+					}
+				}
 			}
 
 			// Retourne le chemin d'accès relatif (ex: uploads/logo/filename.png)

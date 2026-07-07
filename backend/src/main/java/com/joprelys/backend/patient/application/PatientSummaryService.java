@@ -247,7 +247,10 @@ public class PatientSummaryService {
         MedicalSummaryResponse summary = getMedicalSummary(patientId);
 
         // Get organization details
-        var orgOpt = organizationRepository.findById(summary.patientId());
+        UUID orgId = patientRepository.findById(patientId)
+                .map(com.joprelys.backend.patient.infrastructure.persistence.PatientEntity::getOrganizationId)
+                .orElse(null);
+        var orgOpt = orgId != null ? organizationRepository.findById(orgId) : java.util.Optional.<com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity>empty();
         String orgName = orgOpt.map(o -> o.getName()).orElse("Clinique Joprelys");
         String orgAddress = orgOpt.map(o -> o.getAddress()).orElse("");
         String orgPhone = orgOpt.map(o -> o.getPhone()).orElse("");
