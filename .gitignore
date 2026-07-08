@@ -143,3 +143,11 @@ generated/
 .claude/cache/
 .gemini/cache/
 *.scratch.md
+
+# Trauma Center / Clinic real documents and extracted text
+doc_reel_trauma_center/*.docx
+doc_reel_trauma_center/extracted/
+
+# Brand Kit
+joprelys_brand_kit_final_nouveau_logo_complet/
+

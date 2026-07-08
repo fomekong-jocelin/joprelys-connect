@@ -132,18 +132,18 @@ import { FileDragDropComponent } from '../shared/ui/file-drag-drop.component';
                       [disabled]="loading()"
                       (change)="onDeptChange($any($event.target).value)"
                     >
-                      <option value="">{{ t('profile.departmentPlaceholder') || 'Choisir un service...' }}</option>
-                      @for (dept of departments; track dept) {
-                        <option [value]="dept">{{ dept }}</option>
+                      <option value="">{{ t('patient.visit.servicePlaceholder') || 'Choisir un service...' }}</option>
+                      @for (dept of departments; track dept.value) {
+                        <option [value]="dept.value">{{ t(dept.labelKey) }}</option>
                       }
-                      <option value="Autre">Autre (Saisir...)</option>
+                      <option value="Autre">{{ t('staff.departments.other') }}</option>
                     </select>
 
                     @if (selectedDept() === 'Autre') {
                       <input
                         class="ui-input mt-2 focus:border-brand-primary transition-colors"
                         [value]="customDept()"
-                        placeholder="Saisir le nom du service..."
+                        [placeholder]="t('staff.departments.customPlaceholder')"
                         [disabled]="loading()"
                         (input)="onCustomDeptInput($any($event.target).value)"
                       />
@@ -219,7 +219,15 @@ export class ProfileComponent implements OnInit {
   readonly bio = signal('');
   readonly role = signal('');
 
-  readonly departments = ['Médecine générale', 'Pédiatrie', 'Gynécologie', 'Urgences', 'Pharmacie', 'Laboratoire', 'Cardiologie'];
+  readonly departments = [
+    { value: 'Médecine générale', labelKey: 'staff.departments.general' },
+    { value: 'Pédiatrie', labelKey: 'staff.departments.pediatrics' },
+    { value: 'Gynécologie', labelKey: 'staff.departments.gynecology' },
+    { value: 'Urgences', labelKey: 'staff.departments.emergency' },
+    { value: 'Pharmacie', labelKey: 'staff.departments.pharmacy' },
+    { value: 'Laboratoire', labelKey: 'staff.departments.laboratory' },
+    { value: 'Cardiologie', labelKey: 'staff.departments.cardiology' }
+  ];
   readonly selectedDept = signal('');
   readonly customDept = signal('');
 
@@ -256,7 +264,7 @@ export class ProfileComponent implements OnInit {
         
         const dept = data.department || '';
         this.department.set(dept);
-        if (this.departments.includes(dept)) {
+        if (this.departments.some(d => d.value === dept)) {
           this.selectedDept.set(dept);
           this.customDept.set('');
         } else if (dept) {

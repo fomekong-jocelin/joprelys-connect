@@ -27,7 +27,8 @@ public class PatientAuthService {
     }
 
     public String generateAndSendOtp(String globalPatientNumber, String phone, LocalDate birthDate) {
-        PatientEntity patient = patientRepository.findByGlobalPatientNumber(globalPatientNumber)
+        String normalizedDpu = normalizePatientNumber(globalPatientNumber);
+        PatientEntity patient = patientRepository.findByGlobalPatientNumber(normalizedDpu)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient introuvable."));
 
         if (!normalizePhone(patient.getPhone()).equals(normalizePhone(phone)) || !patient.getBirthDate().equals(birthDate)) {
@@ -35,28 +36,29 @@ public class PatientAuthService {
         }
 
         String code = String.format("%06d", random.nextInt(1000000));
-        otpMap.put(globalPatientNumber, new OtpData(code, Instant.now(), 0));
+        otpMap.put(normalizedDpu, new OtpData(code, Instant.now(), 0));
 
         // Impression en console pour la simulation
-        System.out.println("[OTP PATIENT] Code de connexion pour DPU " + globalPatientNumber + " : " + code);
+        System.out.println("[OTP PATIENT] Code de connexion pour DPU " + normalizedDpu + " : " + code);
         return code;
     }
 
     public LoginResponse verifyOtp(String globalPatientNumber, String otpCode) {
-        OtpData otpData = otpMap.get(globalPatientNumber);
+        String normalizedDpu = normalizePatientNumber(globalPatientNumber);
+        OtpData otpData = otpMap.get(normalizedDpu);
 
         if (otpData == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aucune demande de connexion active.");
         }
 
         if (otpData.isExpired()) {
-            otpMap.remove(globalPatientNumber);
+            otpMap.remove(normalizedDpu);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le code de sécurité a expiré.");
         }
 
         if (otpData.code().equals(otpCode)) {
-            otpMap.remove(globalPatientNumber);
-            PatientEntity patient = patientRepository.findByGlobalPatientNumber(globalPatientNumber)
+            otpMap.remove(normalizedDpu);
+            PatientEntity patient = patientRepository.findByGlobalPatientNumber(normalizedDpu)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient introuvable."));
 
             JwtService.CreatedToken token = jwtService.createPatientToken(patient);
@@ -72,10 +74,10 @@ public class PatientAuthService {
         } else {
             int newAttempts = otpData.attempts() + 1;
             if (newAttempts >= 3) {
-                otpMap.remove(globalPatientNumber);
+                otpMap.remove(normalizedDpu);
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Trop de tentatives infructueuses. Veuillez régénérer un code.");
             } else {
-                otpMap.put(globalPatientNumber, new OtpData(otpData.code(), otpData.createdAt(), newAttempts));
+                otpMap.put(normalizedDpu, new OtpData(otpData.code(), otpData.createdAt(), newAttempts));
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Code de sécurité incorrect.");
             }
         }
@@ -89,15 +91,16 @@ public class PatientAuthService {
      * @param consentId           l'identifiant du consentement à approuver
      */
     public void generateConsentOtp(String globalPatientNumber, String consentId) {
-        patientRepository.findByGlobalPatientNumber(globalPatientNumber)
+        String normalizedDpu = normalizePatientNumber(globalPatientNumber);
+        patientRepository.findByGlobalPatientNumber(normalizedDpu)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient introuvable."));
 
         String code = String.format("%06d", random.nextInt(1000000));
-        String key = "CONSENT_" + globalPatientNumber + "_" + consentId;
+        String key = "CONSENT_" + normalizedDpu + "_" + consentId;
         otpMap.put(key, new OtpData(code, Instant.now(), 0));
 
         // Simulation : affichage console (en prod → SMS/email)
-        System.out.println("[OTP CONSENT] Code pour DPU=" + globalPatientNumber
+        System.out.println("[OTP CONSENT] Code pour DPU=" + normalizedDpu
                 + " consentId=" + consentId + " : " + code);
     }
 
@@ -141,6 +144,15 @@ public class PatientAuthService {
             return digits.substring(digits.length() - 9);
         }
         return digits;
+    }
+
+    /**
+     * Normalise le numéro DPU : supprime les espaces de début/fin et convertit en majuscules.
+     * Rend la recherche robuste aux erreurs de saisie courantes (casse, espaces).
+     */
+    private static String normalizePatientNumber(String number) {
+        if (number == null) return "";
+        return number.trim().toUpperCase();
     }
 
     private record OtpData(String code, Instant createdAt, int attempts) {

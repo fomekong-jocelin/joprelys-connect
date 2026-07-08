@@ -97,11 +97,12 @@ const STAFF_ROLES: readonly StaffRole[] = ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEI
                     @for (option of roles; track option) {
                       <label class="inline-flex items-center gap-2 select-none cursor-pointer">
                         <input
-                          type="checkbox"
-                          class="ui-checkbox"
+                          type="radio"
+                          name="staffRole"
+                          class="ui-radio"
                           [checked]="hasSelectedRole(option)"
                           [disabled]="formLoading()"
-                          (change)="toggleSelectedRole(option)"
+                          (change)="setSingleRole(option)"
                         />
                         <span class="text-sm font-semibold" style="color: var(--text-primary)">{{ roleLabel(option) }}</span>
                       </label>
@@ -132,18 +133,18 @@ const STAFF_ROLES: readonly StaffRole[] = ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEI
                       [disabled]="formLoading()"
                       (change)="onDeptChange($any($event.target).value)"
                     >
-                      <option value="">{{ t('profile.departmentPlaceholder') || 'Choisir un service...' }}</option>
-                      @for (dept of departments; track dept) {
-                        <option [value]="dept">{{ dept }}</option>
+                      <option value="">{{ t('patient.visit.servicePlaceholder') || 'Choisir un service...' }}</option>
+                      @for (dept of departments; track dept.value) {
+                        <option [value]="dept.value">{{ t(dept.labelKey) }}</option>
                       }
-                      <option value="Autre">Autre (Saisir...)</option>
+                      <option value="Autre">{{ t('staff.departments.other') }}</option>
                     </select>
 
                     @if (selectedDept() === 'Autre') {
                       <input
                         class="ui-input mt-2 focus:border-brand-primary transition-colors"
                         [value]="customDept()"
-                        placeholder="Saisir le nom du service..."
+                        [placeholder]="t('staff.departments.customPlaceholder')"
                         [disabled]="formLoading()"
                         (input)="onCustomDeptInput($any($event.target).value)"
                       />
@@ -269,7 +270,15 @@ export class StaffManagementComponent implements OnInit {
   readonly department = signal('');
   readonly bio = signal('');
 
-  readonly departments = ['Médecine générale', 'Pédiatrie', 'Gynécologie', 'Urgences', 'Pharmacie', 'Laboratoire', 'Cardiologie'];
+  readonly departments = [
+    { value: 'Médecine générale', labelKey: 'staff.departments.general' },
+    { value: 'Pédiatrie', labelKey: 'staff.departments.pediatrics' },
+    { value: 'Gynécologie', labelKey: 'staff.departments.gynecology' },
+    { value: 'Urgences', labelKey: 'staff.departments.emergency' },
+    { value: 'Pharmacie', labelKey: 'staff.departments.pharmacy' },
+    { value: 'Laboratoire', labelKey: 'staff.departments.laboratory' },
+    { value: 'Cardiologie', labelKey: 'staff.departments.cardiology' }
+  ];
   readonly selectedDept = signal('');
   readonly customDept = signal('');
   
@@ -349,7 +358,7 @@ export class StaffManagementComponent implements OnInit {
     this.registrationNumber.set(member.registrationNumber || '');
     const dept = member.department || '';
     this.department.set(dept);
-    if (this.departments.includes(dept)) {
+    if (this.departments.some(d => d.value === dept)) {
       this.selectedDept.set(dept);
       this.customDept.set('');
     } else if (dept) {
@@ -401,15 +410,8 @@ export class StaffManagementComponent implements OnInit {
     return this.selectedRoles().includes(option);
   }
 
-  toggleSelectedRole(option: string): void {
-    this.selectedRoles.update((current) => {
-      if (current.includes(option)) {
-        if (current.length === 1) return current; // Enforce at least one role
-        return current.filter((r) => r !== option);
-      } else {
-        return [...current, option];
-      }
-    });
+  setSingleRole(option: string): void {
+    this.selectedRoles.set([option]);
   }
 
   roleLabel(role: string): string {

@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/staff")
-@PreAuthorize("hasRole('ADMIN_CLINIQUE')")
 public class StaffController {
 
 	private final StaffService staffService;
@@ -28,17 +27,20 @@ public class StaffController {
 	}
 
 	@GetMapping
+	@PreAuthorize("hasAnyRole('ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN')")
 	public List<StaffResponse> list(Authentication authentication) {
 		return staffService.listStaff(authentication);
 	}
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
+	@PreAuthorize("hasRole('ADMIN_CLINIQUE')")
 	public InviteStaffResponse invite(@Valid @RequestBody InviteStaffRequest request, Authentication authentication) {
 		return staffService.inviteStaff(request, authentication);
 	}
 
 	@PutMapping("/{id}")
+	@PreAuthorize("hasRole('ADMIN_CLINIQUE')")
 	public StaffResponse update(
 			@PathVariable UUID id,
 			@Valid @RequestBody UpdateStaffRequest request,
@@ -47,6 +49,7 @@ public class StaffController {
 	}
 
 	@PostMapping("/{id}/toggle")
+	@PreAuthorize("hasRole('ADMIN_CLINIQUE')")
 	public StaffResponse toggle(@PathVariable UUID id, Authentication authentication) {
 		return staffService.toggleStatus(id, authentication);
 	}

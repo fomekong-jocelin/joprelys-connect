@@ -47,14 +47,11 @@ export class LoginComponent {
   readonly otpCode = signal('');
 
   constructor() {
-    // Rediriger si session staff active
+    // Rediriger si session active vers la page d'accueil correspondante au rôle
     effect(() => {
       const s = this.session();
-      if (s && s.role !== 'PATIENT') {
-        this.router.navigate(['/dashboard']);
-      }
-      if (s && s.role === 'PATIENT') {
-        this.router.navigate(['/patient/dashboard']);
+      if (s) {
+        this.router.navigate([this.getLandingPage(s.role)]);
       }
     });
   }
@@ -83,7 +80,7 @@ export class LoginComponent {
   submit(): void {
     this.error.set(null);
     if (!this.canSubmit()) {
-      this.error.set('Renseignez un e-mail valide et un mot de passe.');
+      this.error.set(this.t('login.error.requiredFields'));
       return;
     }
     this.loading.set(true);
@@ -95,11 +92,11 @@ export class LoginComponent {
           this.staffStep.set(2);
           this.staffOtpCode.set(res.otpCode || '');
         } else {
-          this.router.navigate(['/dashboard']);
+          this.router.navigate([this.getLandingPage(res.role || '')]);
         }
       },
       error: () => {
-        this.error.set('Identifiants invalides.');
+        this.error.set(this.t('login.error.invalidCredentials'));
         this.loading.set(false);
       },
     });
@@ -111,11 +108,12 @@ export class LoginComponent {
     this.authApi.verifyStaffOtp(this.email(), this.staffOtpCode()).subscribe({
       next: () => {
         this.loading.set(false);
-        this.router.navigate(['/dashboard']);
+        const s = this.session();
+        this.router.navigate([this.getLandingPage(s?.role || '')]);
       },
       error: (err) => {
         this.loading.set(false);
-        this.error.set(err.error?.detail || 'Code incorrect ou expiré. Réessayez.');
+        this.error.set(err.error?.detail || this.t('login.error.invalidOtp'));
       }
     });
   }
@@ -140,8 +138,8 @@ export class LoginComponent {
     this.loading.set(true);
     this.error.set(null);
     this.portalService.requestOtp({
-      globalPatientNumber: this.patientNumber(),
-      phone: this.patientPhone(),
+      globalPatientNumber: this.patientNumber().trim().toUpperCase(),
+      phone: this.patientPhone().trim(),
       birthDate: this.patientBirthDate()
     }).subscribe({
       next: (res) => {
@@ -153,7 +151,7 @@ export class LoginComponent {
       },
       error: (err) => {
         this.loading.set(false);
-        this.error.set(err.error?.detail || 'Informations incorrectes. Vérifiez votre numéro DPU, téléphone et date de naissance.');
+        this.error.set(err.error?.detail || this.t('login.error.invalidPatientInfo'));
       }
     });
   }
@@ -162,8 +160,8 @@ export class LoginComponent {
     this.loading.set(true);
     this.error.set(null);
     this.portalService.verifyOtp({
-      globalPatientNumber: this.patientNumber(),
-      otpCode: this.otpCode()
+      globalPatientNumber: this.patientNumber().trim().toUpperCase(),
+      otpCode: this.otpCode().trim()
     }).subscribe({
       next: () => {
         this.loading.set(false);
@@ -171,7 +169,7 @@ export class LoginComponent {
       },
       error: (err) => {
         this.loading.set(false);
-        this.error.set(err.error?.detail || 'Code incorrect ou expiré. Réessayez.');
+        this.error.set(err.error?.detail || this.t('login.error.invalidOtp'));
       }
     });
   }
@@ -192,6 +190,20 @@ export class LoginComponent {
 
   private inputValue(event: Event): string {
     return event.target instanceof HTMLInputElement ? event.target.value : '';
+  }
+
+  getLandingPage(role: string): string {
+    const roles = role.split(',').map((r) => r.trim());
+    if (roles.includes('PATIENT')) {
+      return '/patient/dashboard';
+    }
+    if (roles.includes('BIOLOGISTE')) {
+      return '/clinic/lab-orders';
+    }
+    if (roles.includes('PHARMACIEN')) {
+      return '/pharmacy/prescriptions';
+    }
+    return '/dashboard';
   }
 
   private isValidEmail(value: string): boolean {

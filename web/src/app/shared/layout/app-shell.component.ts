@@ -30,7 +30,7 @@ import { AppShellNavComponent } from './app-shell-nav.component';
               </svg>
             </button>
 
-            <a routerLink="/dashboard" class="inline-flex w-fit">
+            <a [routerLink]="getLandingPage()" class="inline-flex w-fit">
               <app-logo />
             </a>
           </div>
@@ -361,6 +361,22 @@ export class AppShellComponent {
   toggleTheme(): void {
     const nextTheme = this.theme() === 'dark' ? 'light' : 'dark';
     this.themeService.setTheme(nextTheme);
+  }
+
+  getLandingPage(): string {
+    const role = this.session()?.role;
+    if (!role) return '/';
+    const roles = role.split(',').map((r) => r.trim());
+    if (roles.includes('PATIENT')) {
+      return '/patient/dashboard';
+    }
+    if (roles.includes('BIOLOGISTE')) {
+      return '/clinic/lab-orders';
+    }
+    if (roles.includes('PHARMACIEN')) {
+      return '/pharmacy/prescriptions';
+    }
+    return '/dashboard';
   }
 
   logout(): void {

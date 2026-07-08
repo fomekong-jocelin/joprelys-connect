@@ -115,7 +115,7 @@ public class PatientPreRegistrationControllerTest {
             answer = "5";
         } else if (questionLower.contains("liquide rouge") || questionLower.contains("veines")) {
             answer = "sang";
-        } else if (questionLower.contains("squelette") || questionLower.contains("os")) {
+        } else if (questionLower.contains("squelette")) {
             answer = "os";
         } else if (questionLower.contains("nerveux") || questionLower.contains("central")) {
             answer = "cerveau";
@@ -162,7 +162,7 @@ public class PatientPreRegistrationControllerTest {
             answer2 = "5";
         } else if (questionLower2.contains("liquide rouge") || questionLower2.contains("veines")) {
             answer2 = "sang";
-        } else if (questionLower2.contains("squelette") || questionLower2.contains("os")) {
+        } else if (questionLower2.contains("squelette")) {
             answer2 = "os";
         } else if (questionLower2.contains("nerveux") || questionLower2.contains("central")) {
             answer2 = "cerveau";

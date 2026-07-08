@@ -21,7 +21,7 @@ interface DispensationLineDraft {
   standalone: true,
   imports: [ReactiveFormsModule, ButtonComponent, PharmacyDispensationHistoryComponent],
   template: `
-    <section class="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)] min-w-0">
+    <section class="flex flex-col gap-6 min-w-0">
       <div class="ui-card-muted min-w-0 p-4 md:p-5">
         <div class="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div>
@@ -51,7 +51,7 @@ interface DispensationLineDraft {
           </div>
 
           <div class="overflow-x-auto">
-            <table class="ui-table min-w-[780px]">
+            <table class="ui-table min-w-[650px]">
               <thead>
                 <tr>
                   <th>{{ t('pharmacy.drug') }}</th>

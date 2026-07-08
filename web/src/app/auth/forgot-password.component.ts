@@ -36,7 +36,7 @@ import { AppLogoComponent } from '../shared/ui/app-logo.component';
             <form class="space-y-4" (submit)="$event.preventDefault(); submitRequest()">
               <div class="space-y-1.5">
                 <label class="ui-label">{{ t('auth.forgotPassword.email') }}</label>
-                <input type="email" [value]="email()" (input)="updateEmail($event)" required aria-required="true" class="ui-input" placeholder="nom@clinique.com" />
+                <input type="email" [value]="email()" (input)="updateEmail($event)" required aria-required="true" class="ui-input" [placeholder]="t('forgotPassword.emailPlaceholder')" />
               </div>
 
               @if (error()) {
@@ -67,7 +67,7 @@ import { AppLogoComponent } from '../shared/ui/app-logo.component';
             <form class="space-y-4" (submit)="$event.preventDefault(); submitReset()">
               <div class="space-y-1.5">
                 <label class="ui-label">{{ t('auth.forgotPassword.code') }}</label>
-                <input type="text" [value]="otpCode()" (input)="updateOtpCode($event)" required aria-required="true" class="ui-input" placeholder="E.g. 123456" />
+                <input type="text" [value]="otpCode()" (input)="updateOtpCode($event)" required aria-required="true" class="ui-input" [placeholder]="t('forgotPassword.otpPlaceholder')" />
               </div>
 
               <div class="space-y-1.5">
@@ -158,7 +158,7 @@ export class ForgotPasswordComponent {
       },
       error: (err) => {
         this.loading.set(false);
-        this.error.set(err.error?.detail || err.error?.title || 'Une erreur est survenue.');
+        this.error.set(err.error?.detail || err.error?.title || this.t('forgotPassword.error.generic'));
       }
     });
   }
@@ -186,7 +186,7 @@ export class ForgotPasswordComponent {
       },
       error: (err) => {
         this.loading.set(false);
-        this.error.set(err.error?.detail || err.error?.title || 'Code incorrect ou expiré.');
+        this.error.set(err.error?.detail || err.error?.title || this.t('forgotPassword.error.invalidCode'));
       }
     });
   }

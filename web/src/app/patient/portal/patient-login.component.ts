@@ -42,7 +42,7 @@ import { AppLogoComponent } from '../../shared/ui/app-logo.component';
                 [(ngModel)]="globalPatientNumber"
                 name="globalPatientNumber"
                 class="w-full min-h-[46px] px-4 py-2 border border-[var(--app-border)] bg-[var(--bg-input)] dark:bg-slate-900 rounded-[var(--radius-brand-md)] text-[var(--text-primary)] focus:outline-hidden focus:border-[var(--brand-primary)] focus:bg-white dark:focus:bg-slate-950 text-sm"
-                placeholder="PAT-YYYYMMDD-XXXXXX"
+                placeholder="DPU-JOP-AAAAMMJJ-000001"
               />
             </div>
 
@@ -78,7 +78,7 @@ import { AppLogoComponent } from '../../shared/ui/app-logo.component';
             <button
               class="w-full min-h-[46px] flex items-center justify-center gap-2 py-3 px-4 rounded-[var(--radius-brand-md)] text-sm font-semibold text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] focus:outline-hidden transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               type="submit"
-              [disabled]="loading() || !globalPatientNumber() || !phone() || !birthDate()"
+              [disabled]="loading() || !globalPatientNumber || !phone || !birthDate"
             >
               @if (loading()) {
                 {{ i18n.t('patient.login.requesting') }}
@@ -112,7 +112,7 @@ import { AppLogoComponent } from '../../shared/ui/app-logo.component';
             <button
               class="w-full min-h-[46px] flex items-center justify-center gap-2 py-3 px-4 rounded-[var(--radius-brand-md)] text-sm font-semibold text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] focus:outline-hidden transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               type="submit"
-              [disabled]="loading() || otpCode().length !== 6"
+              [disabled]="loading() || otpCode.length !== 6"
             >
               @if (loading()) {
                 {{ i18n.t('patient.login.verifying') }}
@@ -149,11 +149,13 @@ export class PatientLoginComponent {
   readonly loading = signal(false);
   readonly error = signal('');
 
-  // Form bindings
-  globalPatientNumber = signal('');
-  phone = signal('');
-  birthDate = signal('');
-  otpCode = signal('');
+  // Form bindings — propriétés string simples requises pour [(ngModel)]
+  // Les signals WritableSignal ne sont pas compatibles avec [(ngModel)] car ngModel
+  // réassigne la référence au lieu d'appeler .set(), vidant ainsi les valeurs.
+  globalPatientNumber = '';
+  phone = '';
+  birthDate = '';
+  otpCode = '';
 
   constructor() {
     effect(() => {
@@ -168,15 +170,15 @@ export class PatientLoginComponent {
     this.loading.set(true);
     this.error.set('');
     this.portalService.requestOtp({
-      globalPatientNumber: this.globalPatientNumber(),
-      phone: this.phone(),
-      birthDate: this.birthDate()
+      globalPatientNumber: this.globalPatientNumber.trim().toUpperCase(),
+      phone: this.phone.trim(),
+      birthDate: this.birthDate
     }).subscribe({
       next: (res) => {
         this.loading.set(false);
         this.step.set(2);
         if (res && res.otpCode) {
-          this.otpCode.set(res.otpCode);
+          this.otpCode = res.otpCode;
         }
       },
       error: (err) => {
@@ -190,8 +192,8 @@ export class PatientLoginComponent {
     this.loading.set(true);
     this.error.set('');
     this.portalService.verifyOtp({
-      globalPatientNumber: this.globalPatientNumber(),
-      otpCode: this.otpCode()
+      globalPatientNumber: this.globalPatientNumber.trim().toUpperCase(),
+      otpCode: this.otpCode.trim()
     }).subscribe({
       next: () => {
         this.loading.set(false);

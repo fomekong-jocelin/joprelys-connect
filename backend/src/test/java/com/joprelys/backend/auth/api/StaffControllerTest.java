@@ -135,10 +135,10 @@ public class StaffControllerTest {
 	}
 
 	@Test
-	void givenMedecin_whenListStaff_thenReturnsForbidden() throws Exception {
+	void givenMedecin_whenListStaff_thenReturnsSuccess() throws Exception {
 		mockMvc.perform(get("/api/staff")
 						.header("Authorization", "Bearer " + tokenMedecinA))
-				.andExpect(status().isForbidden());
+				.andExpect(status().isOk());
 	}
 
 	@Test

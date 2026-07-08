@@ -29,6 +29,10 @@ export class PatientListComponent implements OnInit {
   private readonly i18n = inject(I18nService);
   private readonly router = inject(Router);
 
+  t(key: string): string {
+    return this.i18n.t(key);
+  }
+
   readonly list = signal<Patient[]>([]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -161,7 +165,7 @@ export class PatientListComponent implements OnInit {
       },
       error: (err) => {
         this.emergencyLoading.set(false);
-        this.emergencyError.set(err.error?.detail || err.error?.title || "Erreur lors du déclenchement de l'accès d'urgence.");
+        this.emergencyError.set(err.error?.detail || err.error?.title || this.t('patient.consent.emergencyAccessError'));
       }
     });
   }

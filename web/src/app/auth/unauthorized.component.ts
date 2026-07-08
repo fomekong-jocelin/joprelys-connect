@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
+import { I18nService } from '../core/i18n/i18n.service';
 
 @Component({
   selector: 'app-unauthorized',
@@ -20,15 +21,15 @@ import { AppShellComponent } from '../shared/layout/app-shell.component';
           </div>
 
           <div class="space-y-2">
-            <h1 class="font-display font-bold text-2xl" style="color:var(--text-primary)">Accès refusé</h1>
-            <p class="text-sm" style="color:var(--text-muted)">Vous n'avez pas les autorisations nécessaires pour accéder à cette page.</p>
+            <h1 class="font-display font-bold text-2xl" style="color:var(--text-primary)">{{ t('unauthorized.title') }}</h1>
+            <p class="text-sm" style="color:var(--text-muted)">{{ t('unauthorized.message') }}</p>
           </div>
 
           <button
             (click)="goBack()"
             class="ui-button ui-button-primary w-full"
           >
-            Retour au tableau de bord
+            {{ t('unauthorized.backButton') }}
           </button>
         </div>
       </div>
@@ -37,6 +38,11 @@ import { AppShellComponent } from '../shared/layout/app-shell.component';
 })
 export class UnauthorizedComponent {
   private readonly router = inject(Router);
+  private readonly i18n = inject(I18nService);
+
+  t(key: string): string {
+    return this.i18n.t(key);
+  }
 
   goBack(): void {
     this.router.navigate(['/dashboard']);

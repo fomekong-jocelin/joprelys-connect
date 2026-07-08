@@ -54,14 +54,14 @@ import { StaffMember } from '../clinic/staff/staff.models';
         @if (loading()) {
           <div class="py-12 text-center">
             <div class="inline-block w-8 h-8 rounded-full border-4 border-indigo-200 border-t-indigo-600 animate-spin"></div>
-            <p class="mt-2 text-sm font-bold text-[var(--text-muted)]">Chargement du dossier patient...</p>
+            <p class="mt-2 text-sm font-bold text-[var(--text-muted)]">{{ i18n.t('patient.detail.loading') }}</p>
           </div>
         } @else if (error(); as err) {
           <app-ui-card>
             <app-ui-alert tone="error" class="mb-6">{{ err }}</app-ui-alert>
             <div class="flex justify-end">
               <app-ui-button variant="secondary" (pressed)="goBack()">
-                Retour
+                {{ i18n.t('common.back') }}
               </app-ui-button>
             </div>
           </app-ui-card>
@@ -77,14 +77,13 @@ import { StaffMember } from '../clinic/staff/staff.models';
 
               <div>
                 <h3 class="font-display font-black text-xl text-[var(--text-primary)]">
-                  Consentement d'accès requis
+                  {{ i18n.t('patient.consent.title') }}
                 </h3>
                 <p class="text-xs text-[var(--text-muted)] mt-1 whitespace-nowrap">
-                  DPU : <span class="font-mono font-bold text-[var(--brand-info-text)] dark:text-indigo-400">{{ consentPatient.globalPatientNumber }}</span>
+                  {{ i18n.t('patient.consent.dpuLabel') }} <span class="font-mono font-bold text-[var(--brand-info-text)] dark:text-indigo-400">{{ consentPatient.globalPatientNumber }}</span>
                 </p>
                 <p class="text-sm text-[var(--text-secondary)] mt-4 leading-relaxed">
-                  Le patient <strong>{{ consentPatient.fullName }}</strong> n'a pas accordé d'accès DPU actif pour votre clinique.
-                  Vous ne pouvez pas consulter ses données médicales.
+                  {{ i18n.t('patient.consent.noAccessMessage') }}
                 </p>
               </div>
 
@@ -94,11 +93,11 @@ import { StaffMember } from '../clinic/staff/staff.models';
 
               <div class="w-full border-t border-[var(--app-border)]/80 pt-6 flex flex-col gap-4">
                 <div class="text-left w-full">
-                  <label for="emergency-reason" class="ui-label block mb-2">Justification d'accès d'urgence (obligatoire)</label>
+                  <label for="emergency-reason" class="ui-label block mb-2">{{ i18n.t('patient.consent.emergencyJustificationLabel') }}</label>
                   <textarea
                     id="emergency-reason"
                     class="ui-input w-full min-h-[80px]"
-                    placeholder="Ex: Patient inconscient, arrêt cardiaque, accident nécessitant l'accès immédiat au dossier médical..."
+                    [placeholder]="i18n.t('patient.consent.emergencyReasonPlaceholder')"
                     [value]="emergencyReason()"
                     (input)="emergencyReason.set($any($event.target).value)"
                     style="color: var(--text-primary); background-color: var(--bg-card);"
@@ -107,7 +106,7 @@ import { StaffMember } from '../clinic/staff/staff.models';
 
                 <div class="flex items-center justify-between gap-3 w-full">
                   <app-ui-button variant="secondary" (pressed)="goBack()" class="grow">
-                    Annuler
+                    {{ i18n.t('common.cancel') }}
                   </app-ui-button>
                   <app-ui-button
                     variant="primary"
@@ -115,7 +114,7 @@ import { StaffMember } from '../clinic/staff/staff.models';
                     [disabled]="!emergencyReason().trim() || emergencyLoading()"
                     (pressed)="triggerEmergencyAccess()"
                   >
-                    {{ emergencyLoading() ? 'Activation...' : 'Procédure d\'urgence (Brise-Glace)' }}
+                    {{ emergencyLoading() ? i18n.t('patient.consent.activating') : i18n.t('patient.consent.breakGlassButton') }}
                   </app-ui-button>
                 </div>
               </div>
@@ -135,37 +134,37 @@ import { StaffMember } from '../clinic/staff/staff.models';
                     </span>
                   </div>
                   <p class="text-xs text-[var(--text-muted)] mt-1 flex flex-wrap gap-x-2 gap-y-1">
-                    <span class="whitespace-nowrap">DPU: <strong class="font-mono font-extrabold text-[var(--brand-info-text)] dark:text-indigo-400">{{ p.globalPatientNumber }}</strong></span>
+                    <span class="whitespace-nowrap">{{ i18n.t('patient.detail.dpuLabel') }} <strong class="font-mono font-extrabold text-[var(--brand-info-text)] dark:text-indigo-400">{{ p.globalPatientNumber }}</strong></span>
                     <span class="text-slate-300 dark:text-[var(--text-secondary)] hidden sm:inline">|</span>
-                    <span class="whitespace-nowrap">Etablissement: <strong class="font-mono font-bold text-[var(--text-secondary)]">{{ p.localPatientNumber }}</strong></span>
+                    <span class="whitespace-nowrap">{{ i18n.t('patient.detail.establishmentLabel') }} <strong class="font-mono font-bold text-[var(--text-secondary)]">{{ p.localPatientNumber }}</strong></span>
                   </p>
                 </div>
                 
                 <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                   <app-ui-button variant="secondary" (pressed)="goBack()" class="grow sm:grow-0 text-xs">
-                    Retour
+                    {{ i18n.t('common.back') }}
                   </app-ui-button>
 
                   @if (canDownloadSummary()) {
                     <button
                       (click)="downloadSummaryPdf()"
                       class="grow sm:grow-0 text-xs px-3 py-1.5 rounded-lg border border-[var(--app-border)] text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800/50 flex items-center justify-center gap-1.5 font-bold transition-all cursor-pointer shadow-xs"
-                      title="Télécharger la synthèse médicale (PDF)"
+                      [title]="i18n.t('patient.detail.downloadSummaryTitle')"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-brand-primary">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                       </svg>
-                      <span>Synthèse PDF</span>
+                      <span>{{ i18n.t('patient.detail.downloadSummaryLabel') }}</span>
                     </button>
                   }
                   
                   @if (canStartConsultation()) {
                     <app-ui-button variant="primary" (pressed)="goToConsultation()" class="grow sm:grow-0 text-xs">
-                      Démarrer la consultation
+                      {{ i18n.t('patient.detail.startConsultation') }}
                     </app-ui-button>
                   } @else if (canAdmit()) {
                     <app-ui-button variant="primary" (pressed)="openModal()" class="grow sm:grow-0 text-xs">
-                      Ouvrir une visite
+                      {{ i18n.t('patient.detail.openVisit') }}
                     </app-ui-button>
                   }
                 </div>
@@ -176,7 +175,7 @@ import { StaffMember } from '../clinic/staff/staff.models';
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
-                  <span>Procédure d'urgence "Brise-Glace" active : accès temporaire tracé dans le journal d'audit de sécurité.</span>
+                  <span>{{ i18n.t('patient.detail.breakGlassActive') }}</span>
                 </div>
               }
 
@@ -186,7 +185,7 @@ import { StaffMember } from '../clinic/staff/staff.models';
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                   <div>
-                    <span>Attention : allergies critiques ou sévères détectées pour ce patient :</span>
+                    <span>{{ i18n.t('patient.detail.criticalAllergiesWarning') }}</span>
                     <span class="ml-1 font-extrabold">{{ criticalAllergiesSubstances() }}</span>
                   </div>
                 </div>
@@ -201,36 +200,38 @@ import { StaffMember } from '../clinic/staff/staff.models';
                     [routerLinkActiveOptions]="{ exact: true }"
                     class="border-b-2 border-transparent pb-2 text-sm font-semibold text-[var(--text-muted)] hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
                   >
-                    {{ i18n.t('menu.patientDetail.profile') || 'Profil' }}
+                    {{ i18n.t('menu.patientDetail.profile') }}
                   </a>
-                  <a
-                    [routerLink]="['/patients', p.id, 'consultations']"
-                    routerLinkActive="border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold active-mobile-tab"
-                    class="border-b-2 border-transparent pb-2 text-sm font-semibold text-[var(--text-muted)] hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
-                  >
-                    {{ i18n.t('menu.patientDetail.consultations') || 'Consultations' }}
-                  </a>
-                  <a
-                    [routerLink]="['/patients', p.id, 'lab-orders']"
-                    routerLinkActive="border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold active-mobile-tab"
-                    class="border-b-2 border-transparent pb-2 text-sm font-semibold text-[var(--text-muted)] hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
-                  >
-                    {{ i18n.t('menu.patientDetail.labOrders') || 'Analyses' }}
-                  </a>
-                  <a
-                    [routerLink]="['/patients', p.id, 'hospitalizations']"
-                    routerLinkActive="border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold active-mobile-tab"
-                    class="border-b-2 border-transparent pb-2 text-sm font-semibold text-[var(--text-muted)] hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
-                  >
-                    {{ i18n.t('menu.patientDetail.hospitalization') || 'Hospitalisations' }}
-                  </a>
+                  @if (canViewClinicalData()) {
+                    <a
+                      [routerLink]="['/patients', p.id, 'consultations']"
+                      routerLinkActive="border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold active-mobile-tab"
+                      class="border-b-2 border-transparent pb-2 text-sm font-semibold text-[var(--text-muted)] hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
+                    >
+                      {{ i18n.t('menu.patientDetail.consultations') }}
+                    </a>
+                    <a
+                      [routerLink]="['/patients', p.id, 'lab-orders']"
+                      routerLinkActive="border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold active-mobile-tab"
+                      class="border-b-2 border-transparent pb-2 text-sm font-semibold text-[var(--text-muted)] hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
+                    >
+                      {{ i18n.t('menu.patientDetail.labOrders') }}
+                    </a>
+                    <a
+                      [routerLink]="['/patients', p.id, 'hospitalizations']"
+                      routerLinkActive="border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold active-mobile-tab"
+                      class="border-b-2 border-transparent pb-2 text-sm font-semibold text-[var(--text-muted)] hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
+                    >
+                      {{ i18n.t('menu.patientDetail.hospitalization') }}
+                    </a>
+                  }
                   @if (canViewAudit()) {
                     <a
                       [routerLink]="['/patients', p.id, 'audit-trail']"
                       routerLinkActive="border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold active-mobile-tab"
                       class="border-b-2 border-transparent pb-2 text-sm font-semibold text-[var(--text-muted)] hover:text-slate-900 dark:hover:text-slate-100 no-underline transition-all"
                     >
-                      {{ i18n.t('menu.patientDetail.audit') || 'Sécurité/Audit' }}
+                      {{ i18n.t('menu.patientDetail.audit') }}
                     </a>
                   }
                 </nav>
@@ -250,7 +251,7 @@ import { StaffMember } from '../clinic/staff/staff.models';
     <!-- Admission Modal Dialogue -->
     @if (showVisitModal) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-        <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-2xl max-w-md w-full shadow-2xl p-6 relative">
+        <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-lg max-w-md w-full shadow-2xl p-6 relative">
           <!-- Close button -->
           <button (click)="closeModal()" class="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-secondary)] dark:hover:text-[var(--text-secondary)] cursor-pointer">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -259,9 +260,9 @@ import { StaffMember } from '../clinic/staff/staff.models';
           </button>
 
           <!-- Header -->
-          <h3 class="font-display font-bold text-lg text-[var(--text-primary)] mb-2">Admettre le Patient</h3>
+          <h3 class="font-display font-bold text-lg text-[var(--text-primary)] mb-2">{{ i18n.t('patient.visit.admitTitle') }}</h3>
           <p class="text-xs text-[var(--text-muted)] mb-6">
-            Ouvrir une visite clinique pour <strong>{{ patient()?.fullName }}</strong> et l'orienter.
+            {{ i18n.t('patient.visit.admitSubtitle') }}
           </p>
 
           @if (visitError) {
@@ -273,46 +274,46 @@ import { StaffMember } from '../clinic/staff/staff.models';
           <!-- Form -->
           <div class="space-y-4">
             <div class="space-y-1.5">
-              <label class="ui-label">Motif de visite <span class="text-[var(--brand-danger)]">*</span></label>
+              <label class="ui-label">{{ i18n.t('patient.visit.reasonLabel') }} <span class="text-[var(--brand-danger)]">*</span></label>
               <textarea
                 [(ngModel)]="visitReason"
-                placeholder="Ex: Fièvre et toux sèche depuis 2 jours"
+                [placeholder]="i18n.t('patient.visit.reasonPlaceholder')"
                 class="ui-textarea min-h-[80px] p-3 text-sm focus:border-brand-primary transition-colors"
                 [disabled]="isSubmitting()"
               ></textarea>
             </div>
 
             <div class="space-y-1.5">
-              <label class="ui-label">Orientation <span class="text-[var(--brand-danger)]">*</span></label>
+              <label class="ui-label">{{ i18n.t('patient.visit.orientationLabel') }} <span class="text-[var(--brand-danger)]">*</span></label>
               <select
                 [(ngModel)]="visitOrientation"
                 (ngModelChange)="onOrientationChange()"
                 class="ui-select focus:border-brand-primary transition-colors"
                 [disabled]="isSubmitting()"
               >
-                <option value="" disabled selected>Choisir une orientation...</option>
-                <option value="Médecine générale">Médecine générale</option>
-                <option value="Tri / Urgences">Tri / Urgences</option>
-                <option value="Pédiatrie">Pédiatrie</option>
-                <option value="Gynécologie">Gynécologie</option>
-                <option value="Pharmacie">Pharmacie</option>
-                <option value="Autre">Autre</option>
+                <option value="" disabled selected>{{ i18n.t('patient.visit.orientationPlaceholder') }}</option>
+                <option value="Médecine générale">{{ i18n.t('patient.visit.orientation.general') }}</option>
+                <option value="Tri / Urgences">{{ i18n.t('patient.visit.orientation.emergency') }}</option>
+                <option value="Pédiatrie">{{ i18n.t('patient.visit.orientation.pediatrics') }}</option>
+                <option value="Gynécologie">{{ i18n.t('patient.visit.orientation.gynecology') }}</option>
+                <option value="Pharmacie">{{ i18n.t('patient.visit.orientation.pharmacy') }}</option>
+                <option value="Autre">{{ i18n.t('common.other') }}</option>
               </select>
             </div>
 
             <div class="space-y-1.5">
-              <label class="ui-label">Service clinique</label>
+              <label class="ui-label">{{ i18n.t('patient.visit.serviceLabel') }}</label>
               <select
                 [(ngModel)]="selectedVisitService"
                 (ngModelChange)="onServiceChange($event)"
                 class="ui-select focus:border-brand-primary transition-colors"
                 [disabled]="isSubmitting()"
               >
-                <option value="">Sélectionner un service...</option>
+                <option value="">{{ i18n.t('patient.visit.servicePlaceholder') }}</option>
                 @for (d of getDepartments(); track d) {
                   <option [value]="d">{{ d }}</option>
                 }
-                <option value="Autre">Autre (Saisir...)</option>
+                <option value="Autre">{{ i18n.t('patient.visit.serviceOther') }}</option>
               </select>
 
               @if (selectedVisitService === 'Autre') {
@@ -320,7 +321,7 @@ import { StaffMember } from '../clinic/staff/staff.models';
                   type="text"
                   [(ngModel)]="customVisitService"
                   (ngModelChange)="onCustomServiceInput($event)"
-                  placeholder="Saisir le nom du service..."
+                  [placeholder]="i18n.t('patient.visit.serviceCustomPlaceholder')"
                   class="ui-input w-full mt-2 p-3 text-sm focus:border-brand-primary transition-colors"
                   [disabled]="isSubmitting()"
                 />
@@ -328,13 +329,13 @@ import { StaffMember } from '../clinic/staff/staff.models';
             </div>
 
             <div class="space-y-1.5">
-              <label class="ui-label">Praticien responsable</label>
+              <label class="ui-label">{{ i18n.t('patient.visit.practitionerLabel') }}</label>
               <select
                 [(ngModel)]="visitMainPractitionerId"
                 class="ui-select focus:border-brand-primary transition-colors"
                 [disabled]="isSubmitting()"
               >
-                <option value="">Sélectionner un praticien (optionnel)</option>
+                <option value="">{{ i18n.t('patient.visit.practitionerPlaceholder') }}</option>
                 @for (p of getFilteredPractitioners(); track p.id) {
                   <option [value]="p.id">{{ p.displayName }}</option>
                 }
@@ -342,7 +343,7 @@ import { StaffMember } from '../clinic/staff/staff.models';
             </div>
 
             <div class="space-y-1.5">
-              <label class="ui-label">Date / Heure d'arrivée</label>
+              <label class="ui-label">{{ i18n.t('patient.visit.arrivalDateLabel') }}</label>
               <input
                 type="datetime-local"
                 [(ngModel)]="visitArrivalAt"
@@ -355,7 +356,7 @@ import { StaffMember } from '../clinic/staff/staff.models';
           <!-- Actions -->
           <div class="flex justify-end gap-3 mt-8">
             <app-ui-button variant="secondary" (pressed)="closeModal()" [disabled]="isSubmitting()">
-              Annuler
+              {{ i18n.t('common.cancel') }}
             </app-ui-button>
             <app-ui-button variant="primary" (pressed)="submitVisit()" [disabled]="isSubmitting() || !visitReason || !visitOrientation">
               {{ submitLabel() }}
@@ -417,7 +418,7 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
   readonly staffList = signal<StaffMember[]>([]);
 
   readonly session = this.tokenStorage.session;
-  readonly submitLabel = computed(() => this.isSubmitting() ? 'Enregistrement...' : "Valider l'admission");
+  readonly submitLabel = computed(() => this.isSubmitting() ? this.i18n.t('common.saving') : this.i18n.t('patient.visit.submitLabel'));
 
   readonly canAdmit = computed(() => {
     const role = this.session()?.role;
@@ -432,6 +433,14 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
     if (!role) return false;
     const roles = role.split(',').map((r) => r.trim());
     return roles.some((r) => r === 'MEDECIN' || r === 'ADMIN_CLINIQUE') && this.activeVisit() !== null;
+  });
+
+  readonly canViewClinicalData = computed(() => {
+    const role = this.session()?.role;
+    if (!role) return false;
+    const roles = role.split(',').map((r) => r.trim());
+    const allowedRoles = ['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'];
+    return roles.some((r) => allowedRoles.includes(r));
   });
 
   readonly canViewAudit = computed(() => {
@@ -465,7 +474,7 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('Error downloading summary pdf', err);
-        alert('Erreur lors du téléchargement du PDF de synthèse');
+        alert(this.i18n.t('patient.detail.downloadPdfError'));
       }
     });
   }
@@ -539,10 +548,10 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
           if (!this.patient()) {
             const fallbackPatient: Patient = {
               id: id,
-              fullName: err.error?.fullName || 'Patient',
-              globalPatientNumber: err.error?.globalPatientNumber || 'Inconnu',
-              localPatientNumber: 'Inconnu',
-              gender: 'Inconnu',
+              fullName: err.error?.fullName || this.i18n.t('patient.fallback.name'),
+              globalPatientNumber: err.error?.globalPatientNumber || this.i18n.t('common.unknown'),
+              localPatientNumber: this.i18n.t('common.unknown'),
+              gender: this.i18n.t('common.unknown'),
               birthDate: '',
               phone: '',
               city: '',
@@ -555,7 +564,7 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
           }
           this.consentRequiredPatient.set(this.patient());
         } else {
-          this.error.set(err.error?.detail || err.error?.title || "Impossible de charger le dossier patient.");
+          this.error.set(err.error?.detail || err.error?.title || this.i18n.t('patient.detail.loadError'));
         }
       }
     });
@@ -604,7 +613,7 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.emergencyLoading.set(false);
-        this.emergencyError.set(err.error?.detail || err.error?.title || "Erreur lors du déclenchement de l'accès d'urgence.");
+        this.emergencyError.set(err.error?.detail || err.error?.title || this.i18n.t('patient.consent.emergencyAccessError'));
       }
     });
   }
@@ -769,7 +778,7 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isSubmitting.set(false);
-        this.visitError = err.error?.detail || err.error?.title || 'Une erreur est survenue lors de l\'ouverture de la visite.';
+        this.visitError = err.error?.detail || err.error?.title || this.i18n.t('patient.visit.openError');
       }
     });
   }

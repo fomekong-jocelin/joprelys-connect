@@ -34,27 +34,32 @@ export const routes: Routes = [
       {
         path: 'profile',
         loadComponent: () => import('./patient/detail/patient-profile-tab.component').then(m => m.PatientProfileTabComponent),
-        data: { breadcrumb: 'breadcrumb.patients.profile' }
+        canActivate: [roleGuard],
+        data: { expectedRoles: ['AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'], breadcrumb: 'breadcrumb.patients.profile' }
       },
       {
         path: 'consultations',
         loadComponent: () => import('./patient/detail/patient-consultations-tab.component').then(m => m.PatientConsultationsTabComponent),
-        data: { breadcrumb: 'breadcrumb.patients.consultations' }
+        canActivate: [roleGuard],
+        data: { expectedRoles: ['INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'], breadcrumb: 'breadcrumb.patients.consultations' }
       },
       {
         path: 'hospitalizations',
         loadComponent: () => import('./patient/detail/patient-hospitalizations-tab.component').then(m => m.PatientHospitalizationsTabComponent),
-        data: { breadcrumb: 'breadcrumb.patients.hospitalizations' }
+        canActivate: [roleGuard],
+        data: { expectedRoles: ['INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'], breadcrumb: 'breadcrumb.patients.hospitalizations' }
       },
       {
         path: 'lab-orders',
         loadComponent: () => import('./patient/detail/patient-lab-orders-tab.component').then(m => m.PatientLabOrdersTabComponent),
-        data: { breadcrumb: 'breadcrumb.patients.lab-orders' }
+        canActivate: [roleGuard],
+        data: { expectedRoles: ['INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'], breadcrumb: 'breadcrumb.patients.lab-orders' }
       },
       {
         path: 'audit-trail',
         loadComponent: () => import('./patient/detail/patient-audit-trail-tab.component').then(m => m.PatientAuditTrailTabComponent),
-        data: { breadcrumb: 'breadcrumb.patients.audit-trail' }
+        canActivate: [roleGuard],
+        data: { expectedRoles: ['MEDECIN', 'ADMIN_CLINIQUE', 'AUDITEUR'], breadcrumb: 'breadcrumb.patients.audit-trail' }
       }
     ]
   },

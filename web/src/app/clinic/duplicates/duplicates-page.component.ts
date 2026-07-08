@@ -92,7 +92,7 @@ export class DuplicatesPageComponent implements OnInit {
       },
       error: (err) => {
         this.isProcessing.set(false);
-        this.actionError.set(err.error?.detail || 'Erreur lors du rejet du candidat.');
+        this.actionError.set(err.error?.detail || this.t('duplicates.error.ignore'));
       }
     });
   }
@@ -118,7 +118,7 @@ export class DuplicatesPageComponent implements OnInit {
       },
       error: (err) => {
         this.isProcessing.set(false);
-        this.actionError.set(err.error?.detail || 'Erreur lors de la fusion des dossiers.');
+        this.actionError.set(err.error?.detail || this.t('duplicates.error.merge'));
       }
     });
   }

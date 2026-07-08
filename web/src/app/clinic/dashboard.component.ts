@@ -107,7 +107,7 @@ export class DashboardComponent implements OnInit {
       },
       error: (err) => {
         this.isLoadingQueue.set(false);
-        this.queueError.set(err.error?.detail || 'Impossible de charger la file d\'attente active.');
+        this.queueError.set(err.error?.detail || this.t('dashboard.queue.loadError'));
       }
     });
   }
@@ -155,7 +155,7 @@ export class DashboardComponent implements OnInit {
       },
       error: (err) => {
         this.isClosingVisit.set(false);
-        this.closeVisitError.set(err.error?.detail || 'Erreur lors de la clôture de la visite.');
+        this.closeVisitError.set(err.error?.detail || this.t('dashboard.queue.closeError'));
       }
     });
   }
@@ -289,7 +289,7 @@ export class DashboardComponent implements OnInit {
       },
       error: (err) => {
         this.isSavingVitals.set(false);
-        this.vitalsError.set(err.error?.detail || err.error?.title || 'Une erreur est survenue lors de l\'enregistrement des constantes.');
+        this.vitalsError.set(err.error?.detail || err.error?.title || this.t('dashboard.vitals.saveError'));
       }
     });
   }

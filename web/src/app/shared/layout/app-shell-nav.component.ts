@@ -229,11 +229,17 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
       if (patientsIndex !== -1) {
         const subItems: NavItem[] = [
           { path: '', label: `Dossier: ${patientName.split(' ')[0]}`, iconName: 'patients', isHeader: true },
-          { path: `/patients/${id}/profile`, label: this.i18n.t('menu.patientDetail.profile'), iconName: 'patients', indent: true },
-          { path: `/patients/${id}/consultations`, label: this.i18n.t('menu.patientDetail.consultations'), iconName: 'prescriptions', indent: true },
-          { path: `/patients/${id}/lab-orders`, label: this.i18n.t('menu.patientDetail.labOrders'), iconName: 'labOrders', indent: true },
-          { path: `/patients/${id}/hospitalizations`, label: this.i18n.t('menu.patientDetail.hospitalization'), iconName: 'stocks', indent: true }
+          { path: `/patients/${id}/profile`, label: this.i18n.t('menu.patientDetail.profile'), iconName: 'patients', indent: true }
         ];
+
+        const allowedClinicalRoles = ['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'];
+        if (roles.some(r => allowedClinicalRoles.includes(r))) {
+          subItems.push(
+            { path: `/patients/${id}/consultations`, label: this.i18n.t('menu.patientDetail.consultations'), iconName: 'prescriptions', indent: true },
+            { path: `/patients/${id}/lab-orders`, label: this.i18n.t('menu.patientDetail.labOrders'), iconName: 'labOrders', indent: true },
+            { path: `/patients/${id}/hospitalizations`, label: this.i18n.t('menu.patientDetail.hospitalization'), iconName: 'stocks', indent: true }
+          );
+        }
 
         const allowedAuditRoles = ['MEDECIN', 'ADMIN_CLINIQUE', 'AUDITEUR'];
         if (roles.some(r => allowedAuditRoles.includes(r))) {

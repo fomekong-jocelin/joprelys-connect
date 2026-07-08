@@ -39,3 +39,10 @@ Rendre l'interface de recherche et de délivrance d'ordonnances entièrement ada
 - Le texte d'explication ne déborde pas et revient à la ligne normalement.
 - Le panneau de dispensation (`app-pharmacy-dispensation-panel`) s'adapte sans provoquer de défilement horizontal de la page entière.
 - La compilation et les tests de l'application Angular se déroulent sans erreur.
+
+## 8. Évolution Desktop (Amélioration ergonomique du tableau)
+Afin d'éviter que le tableau de délivrance des médicaments ne soit trop contracté sur les écrans d'ordinateurs classiques et n'affiche une barre de défilement horizontal inconfortable, l'interface a été restructurée :
+- **Disposition verticale** : Le formulaire de dispensation active et l'historique des délivrances enregistrées ne sont plus affichés côte à côte en Grid, mais l'un après l'autre verticalement (Flex-Col).
+- **Aération visuelle** : Le tableau de délivrance bénéficie de 100% de la largeur du conteneur de droite, lui offrant un confort de lecture optimal et éliminant tout défilement horizontal sur écran desktop.
+- **Largeur minimale fluide** : Le tableau a une largeur minimale redimensionnée à `650px` au lieu de `780px`, assurant une flexibilité idéale sur les écrans plus étroits.
+

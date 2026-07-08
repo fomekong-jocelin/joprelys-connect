@@ -24,24 +24,24 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <h2 class="font-display font-bold text-xl text-[var(--text-primary)]">Administration du Système</h2>
+              <h2 class="font-display font-bold text-xl text-[var(--text-primary)]">{{ t('dashboard.admin.title') }}</h2>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <div class="p-5 bg-brand-gray dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl">
-                <h3 class="font-semibold text-brand-night dark:text-[var(--text-primary)] text-sm">Cliniques Pilotes</h3>
-                <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">Créer et configurer les cliniques pilotes (organisations), modifier leur statut d'activité.</p>
-                <a routerLink="/organizations" class="mt-4 inline-block text-xs font-semibold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">Accéder</a>
+                <h3 class="font-semibold text-brand-night dark:text-[var(--text-primary)] text-sm">{{ t('dashboard.admin.clinics.title') }}</h3>
+                <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('dashboard.admin.clinics.desc') }}</p>
+                <a routerLink="/organizations" class="mt-4 inline-block text-xs font-semibold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">{{ t('common.access') }}</a>
               </div>
               <div class="p-5 bg-brand-gray dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl">
-                <h3 class="font-semibold text-brand-night dark:text-[var(--text-primary)] text-sm">Journal d'Audit Sécurisé</h3>
-                <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">Consulter les historiques de connexions et les actions d'interopérabilité.</p>
-                <button (click)="openAuditSecurityModal()" class="mt-4 text-xs font-semibold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">Consulter</button>
+                <h3 class="font-semibold text-brand-night dark:text-[var(--text-primary)] text-sm">{{ t('dashboard.admin.audit.title') }}</h3>
+                <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('dashboard.admin.audit.desc') }}</p>
+                <button (click)="openAuditSecurityModal()" class="mt-4 text-xs font-semibold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">{{ t('common.consult') }}</button>
               </div>
               <div class="p-5 bg-brand-gray dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl">
-                <h3 class="font-semibold text-brand-night dark:text-[var(--text-primary)] text-sm">Configuration Interop</h3>
-                <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">Gérer les connexions API de Mandacare, AllôPharma et laboratoires.</p>
-                <a routerLink="/organizations" class="mt-4 inline-block text-xs font-semibold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">Configurer</a>
+                <h3 class="font-semibold text-brand-night dark:text-[var(--text-primary)] text-sm">{{ t('dashboard.admin.interop.title') }}</h3>
+                <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('dashboard.admin.interop.desc') }}</p>
+                <a routerLink="/organizations" class="mt-4 inline-block text-xs font-semibold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">{{ t('common.configure') }}</a>
               </div>
             </div>
           </div>
@@ -56,15 +56,15 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <h2 class="font-display font-bold text-lg text-[var(--text-primary)]">Dossiers Cliniques</h2>
+              <h2 class="font-display font-bold text-lg text-[var(--text-primary)]">{{ t('dashboard.clinical.records.title') }}</h2>
             </div>
-            <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">Consulter les dossiers patients uniques, ajouter des observations médicales et rédiger de nouvelles prescriptions.</p>
+            <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('dashboard.clinical.records.desc') }}</p>
             <a routerLink="/patients" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
-              Gérer les dossiers →
+              {{ t('dashboard.clinical.records.manageLink') }}
             </a>
             @if (hasRole(['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'])) {
               <a routerLink="/clinic/access-request" class="mt-2 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
-                Demander un accès externe →
+                {{ t('dashboard.clinical.records.requestExternalLink') }}
               </a>
             }
           </div>
@@ -113,11 +113,11 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 9.172V5L8 4z" />
                 </svg>
               </div>
-              <h2 class="font-display font-bold text-lg text-[var(--text-primary)]">Validation Ordonnances</h2>
+              <h2 class="font-display font-bold text-lg text-[var(--text-primary)]">{{ t('dashboard.pharmacy.prescriptions.title') }}</h2>
             </div>
-            <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">Rechercher les ordonnances partagées, valider la délivrance des médicaments et signaler les contre-indications.</p>
+            <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('dashboard.pharmacy.prescriptions.desc') }}</p>
             <a routerLink="/pharmacy/prescriptions" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
-              Valider les prescriptions →
+              {{ t('dashboard.pharmacy.prescriptions.validateLink') }}
             </a>
           </div>
         }
@@ -135,7 +135,7 @@
             </div>
             <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('pharmacy.stocks.subtitle') }}</p>
             <a routerLink="/pharmacy/stocks" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
-              Gérer l'inventaire →
+              {{ t('pharmacy.stocks.manageLink') || 'Gérer l\'inventaire →' }}
             </a>
           </div>
         }
@@ -151,12 +151,12 @@
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4 mb-6" style="border-color: var(--border-color)">
             <div class="w-full">
               <div class="flex items-center justify-between sm:justify-start gap-4">
-                <h2 class="font-display font-bold text-base sm:text-xl text-[var(--text-primary)]">File d'Attente Active</h2>
+                <h2 class="font-display font-bold text-base sm:text-xl text-[var(--text-primary)]">{{ t('dashboard.queue.title') }}</h2>
                 <button
                   type="button"
                   (click)="loadQueue()"
                   class="p-2 sm:hidden rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-slate-100 dark:text-[var(--text-muted)] dark:hover:text-[var(--text-primary)] dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                  title="Actualiser"
+                  [title]="t('common.refresh')"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -164,36 +164,36 @@
                 </button>
               </div>
               <p class="text-xs text-[var(--text-muted)] mt-1.5 pr-0 sm:pr-8">
-                La file se remplit après l'ouverture d'une visite depuis le dossier patient. Les constantes se saisissent ici, avant la consultation.
+                {{ t('dashboard.queue.desc') }}
               </p>
             </div>
             <app-ui-button variant="secondary" (pressed)="loadQueue()" class="hidden sm:inline-block">
-              Actualiser
+              {{ t('common.refresh') }}
             </app-ui-button>
           </div>
 
           @if (isLoadingQueue()) {
             <div class="py-10 text-center text-sm font-semibold" style="color: var(--text-muted)">
-              Chargement de la file d'attente...
+              {{ t('dashboard.queue.loading') }}
             </div>
           } @else if (queueError()) {
             <div class="p-4 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-xl text-xs text-[var(--brand-danger-text)] font-semibold leading-relaxed">
               {{ queueError() }}
             </div>
           } @else if (activeVisits().length === 0) {
-            <app-empty-state message="Aucun patient dans la file d'attente active. Ouvrez une visite depuis un dossier patient pour l'afficher ici."></app-empty-state>
+            <app-empty-state [message]="t('dashboard.queue.empty')"></app-empty-state>
           } @else {
             <!-- Desktop Table View -->
             <div class="hidden md:block overflow-x-auto">
               <table class="w-full text-left border-collapse">
                 <thead>
                   <tr class="border-b" style="border-color: var(--border-color)">
-                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">N° Visite</th>
-                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">Patient (DPU)</th>
-                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider whitespace-nowrap" style="color: var(--text-muted)">Arrivée</th>
-                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">Orientation</th>
-                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">Statut</th>
-                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider text-right" style="color: var(--text-muted)">Actions</th>
+                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">{{ t('dashboard.queue.table.visitNumber') }}</th>
+                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">{{ t('dashboard.queue.table.patient') }}</th>
+                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider whitespace-nowrap" style="color: var(--text-muted)">{{ t('dashboard.queue.table.arrival') }}</th>
+                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">{{ t('dashboard.queue.table.orientation') }}</th>
+                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">{{ t('dashboard.queue.table.status') }}</th>
+                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider text-right" style="color: var(--text-muted)">{{ t('dashboard.queue.table.actions') }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y" style="border-color: var(--border-color)">
@@ -222,7 +222,7 @@
                           <!-- Bouton Détails -->
                           <button
                             (click)="openVisitDrawer(visit)"
-                            title="Voir les détails"
+                            [title]="t('patient.list.viewRecord')"
                             class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-brand-cyan bg-brand-cyan/10 hover:bg-brand-cyan/20 transition-colors cursor-pointer">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -233,7 +233,7 @@
                           @if (canCloseVisit()) {
                             <button
                               (click)="openCloseConfirmModal(visit.id)"
-                              title="Clôturer la visite"
+                              [title]="t('dashboard.close.title')"
                               class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[var(--brand-danger)] bg-[var(--brand-danger-subtle)]0/10 hover:bg-[var(--brand-danger-subtle)]0/20 transition-colors cursor-pointer">
                               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -261,7 +261,7 @@
                     <span class="text-xs font-medium block" style="color: var(--text-muted)">{{ visit.patientDpu }}</span>
                   </div>
                   <div class="text-xs leading-relaxed" style="color: var(--text-secondary)">
-                    <strong>Motif :</strong> {{ visit.reason }}
+                    <strong>{{ t('dashboard.drawer.visitReason') }} :</strong> {{ visit.reason }}
                   </div>
 
                   <!-- Vitals Mobile view -->
@@ -293,7 +293,7 @@
                       <!-- Bouton Détails -->
                       <button
                         (click)="openVisitDrawer(visit)"
-                        title="Voir les détails"
+                        [title]="t('patient.list.viewRecord')"
                         class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-brand-cyan bg-brand-cyan/10 hover:bg-brand-cyan/20 transition-colors cursor-pointer">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -304,7 +304,7 @@
                       @if (canCloseVisit()) {
                         <button
                           (click)="openCloseConfirmModal(visit.id)"
-                          title="Clôturer la visite"
+                          [title]="t('dashboard.close.title')"
                           class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[var(--brand-danger)] bg-[var(--brand-danger-subtle)]0/10 hover:bg-[var(--brand-danger-subtle)]0/20 transition-colors cursor-pointer">
                           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -324,8 +324,8 @@
 
   <!-- Vitals Form Modal Dialogue -->
   @if (showVitalsModal() && selectedVisitForVitals(); as selectedVisit) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-bg)] backdrop-blur-sm p-4 animate-fade-in">
-      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-2xl max-w-xl w-full shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-[var(--overlay-bg)] backdrop-blur-sm p-4 animate-fade-in">
+      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-lg max-w-xl w-full shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
         <!-- Close button -->
         <button (click)="closeVitalsModal()" class="absolute top-4 right-4 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] dark:hover:text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800 cursor-pointer transition-colors">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -341,9 +341,9 @@
             </svg>
           </div>
           <div>
-            <h3 class="font-display font-black text-lg text-[var(--text-primary)] leading-tight">Enregistrement des Constantes</h3>
+            <h3 class="font-display font-black text-lg text-[var(--text-primary)] leading-tight">{{ t('dashboard.vitals.title') }}</h3>
             <p class="text-xs text-[var(--text-muted)] mt-0.5">
-              Patient : <strong class="text-[var(--text-secondary)]">{{ selectedVisit.patientName }}</strong> ({{ selectedVisit.patientDpu }})
+              {{ t('dashboard.vitals.patient') }} : <strong class="text-[var(--text-secondary)]">{{ selectedVisit.patientName }}</strong> ({{ selectedVisit.patientDpu }})
             </p>
           </div>
         </div>
@@ -363,12 +363,12 @@
           <!-- Section 1 : Paramètres Physiques & BMI -->
           <div class="p-4 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-[var(--app-border)]/50 rounded-xl space-y-4">
             <h4 class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
-              <span>📏</span> Mesures Anthropométriques
+              <span>📏</span> {{ t('dashboard.vitals.measurementsTitle') }}
             </h4>
             <div class="grid grid-cols-2 gap-4">
               <!-- Poids -->
               <div class="space-y-1">
-                <label class="ui-label text-[11px]">Poids (Kg)</label>
+                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.weight') }} (Kg)</label>
                 <div class="relative">
                   <input
                     type="number"
@@ -383,13 +383,13 @@
                   <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">kg</span>
                 </div>
                 @if (isWeightInvalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 1 et 500 kg.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.weight') }}</p>
                 }
               </div>
 
               <!-- Taille -->
               <div class="space-y-1">
-                <label class="ui-label text-[11px]">Taille (Cm)</label>
+                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.height') }} (Cm)</label>
                 <div class="relative">
                   <input
                     type="number"
@@ -403,7 +403,7 @@
                   <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">cm</span>
                 </div>
                 @if (isHeightInvalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 30 et 250 cm.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.height') }}</p>
                 }
               </div>
             </div>
@@ -413,12 +413,12 @@
               <div class="p-3 rounded-lg border flex items-center justify-between shadow-3xs transition-colors duration-300"
                    [class]="getBmiClass(computedBmi) + ' border-current/10'">
                 <div class="space-y-0.5">
-                  <span class="text-[9px] font-extrabold uppercase tracking-wider opacity-85 block">Indice de Masse Corporelle</span>
+                  <span class="text-[9px] font-extrabold uppercase tracking-wider opacity-85 block">{{ t('dashboard.vitals.bmi') }}</span>
                   <p class="text-xs font-bold opacity-75">
-                    @if (computedBmi < 18.5) { Insuffisance pondérale }
-                    @else if (computedBmi < 25) { Corpulence normale }
-                    @else if (computedBmi < 30) { Surpoids }
-                    @else { Obésité }
+                    @if (computedBmi < 18.5) { {{ t('dashboard.vitals.bmi.underweight') }} }
+                    @else if (computedBmi < 25) { {{ t('dashboard.vitals.bmi.normal') }} }
+                    @else if (computedBmi < 30) { {{ t('dashboard.vitals.bmi.overweight') }} }
+                    @else { {{ t('dashboard.vitals.bmi.obese') }} }
                   </p>
                 </div>
                 <span class="font-display font-extrabold text-lg tracking-tight">{{ computedBmi }}</span>
@@ -429,13 +429,13 @@
           <!-- Section 2 : Cardiovasculaire & SpO2 -->
           <div class="p-4 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-[var(--app-border)]/50 rounded-xl space-y-4">
             <h4 class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
-              <span>🩺</span> Cardio-Respiratoire
+              <span>🩺</span> {{ t('dashboard.vitals.cardioTitle') }}
             </h4>
 
             <div class="grid grid-cols-2 gap-4">
               <!-- Pouls -->
               <div class="space-y-1">
-                <label class="ui-label text-[11px]">Pouls (BPM)</label>
+                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.pulse') }} (BPM)</label>
                 <div class="relative">
                   <input
                     type="number"
@@ -449,13 +449,13 @@
                   <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">bpm</span>
                 </div>
                 @if (isPulseInvalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 20 et 250.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.pulse') }}</p>
                 }
               </div>
 
               <!-- SpO2 -->
               <div class="space-y-1">
-                <label class="ui-label text-[11px]">SpO2 (%)</label>
+                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.spo2') }} (%)</label>
                 <div class="relative">
                   <input
                     type="number"
@@ -469,13 +469,13 @@
                   <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">%</span>
                 </div>
                 @if (isSpo2Invalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 50 et 100%.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.spo2') }}</p>
                 }
               </div>
 
               <!-- Tension Systolique -->
               <div class="space-y-1">
-                <label class="ui-label text-[11px]">Tension Systolique</label>
+                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.systolic') }}</label>
                 <div class="relative">
                   <input
                     type="number"
@@ -489,13 +489,13 @@
                   <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">mmHg</span>
                 </div>
                 @if (isSystolicInvalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 40 et 250.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.systolic') }}</p>
                 }
               </div>
 
               <!-- Tension Diastolique -->
               <div class="space-y-1">
-                <label class="ui-label text-[11px]">Tension Diastolique</label>
+                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.diastolic') }}</label>
                 <div class="relative">
                   <input
                     type="number"
@@ -509,13 +509,13 @@
                   <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">mmHg</span>
                 </div>
                 @if (isDiastolicInvalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 30 et 150.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.diastolic') }}</p>
                 }
               </div>
 
               <!-- Fréquence Respiratoire (Full Row) -->
               <div class="space-y-1 col-span-2">
-                <label class="ui-label text-[11px]">Fréquence Respiratoire</label>
+                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.respRate') }}</label>
                 <div class="relative">
                   <input
                     type="number"
@@ -529,7 +529,7 @@
                   <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">cycles/min</span>
                 </div>
                 @if (isRespInvalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 5 et 100 cycles/min.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.respRate') }}</p>
                 }
               </div>
             </div>
@@ -538,12 +538,12 @@
           <!-- Section 3 : Métabolisme & Température -->
           <div class="p-4 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-[var(--app-border)]/50 rounded-xl space-y-4">
             <h4 class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
-              <span>🌡️</span> Thermique & Glycémique
+              <span>🌡️</span> {{ t('dashboard.vitals.thermicTitle') }}
             </h4>
             <div class="grid grid-cols-2 gap-4">
               <!-- Température -->
               <div class="space-y-1">
-                <label class="ui-label text-[11px]">Température (°C)</label>
+                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.temp') }} (°C)</label>
                 <div class="relative">
                   <input
                     type="number"
@@ -558,13 +558,13 @@
                   <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">°C</span>
                 </div>
                 @if (isTempInvalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 30 et 45°C.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.temp') }}</p>
                 }
               </div>
 
               <!-- Glycémie -->
               <div class="space-y-1">
-                <label class="ui-label text-[11px]">Glycémie (G/L)</label>
+                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.glycemia') }} (G/L)</label>
                 <div class="relative">
                   <input
                     type="number"
@@ -579,7 +579,7 @@
                   <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">g/L</span>
                 </div>
                 @if (isGlycemiaInvalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 0.1 et 10.0 g/L.</p>
+                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.glycemia') }}</p>
                 }
               </div>
             </div>
@@ -588,11 +588,11 @@
           <!-- Section 4 : Douleur (Échelle 0-10) -->
           <div class="p-4 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-[var(--app-border)]/50 rounded-xl space-y-4">
             <h4 class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
-              <span>😣</span> Douleur
+              <span>😣</span> {{ t('dashboard.vitals.pain') }}
             </h4>
             <div class="space-y-2">
               <div class="flex items-center justify-between">
-                <label class="ui-label text-[11px]">Échelle de douleur (0 = aucune — 10 = maximale)</label>
+                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.painScaleLabel') }}</label>
                 @if (vitalsPain !== undefined && vitalsPain !== null) {
                   <span class="text-xs font-extrabold px-2 py-0.5 rounded-md"
                     [class]="vitalsPain === 0 ? 'bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)] bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]' :
@@ -617,15 +617,15 @@
                 <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">/10</span>
               </div>
               @if (isPainInvalid()) {
-                <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">Doit être entre 0 (aucune douleur) et 10 (douleur maximale).</p>
+                <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.pain') }}</p>
               }
               <!-- Indicateurs visuels de l'échelle -->
               <div class="flex justify-between text-[9px] font-bold text-[var(--text-muted)] dark:text-[var(--text-secondary)] px-1">
-                <span>0 Aucune</span>
-                <span>2-3 Légère</span>
-                <span>4-6 Modérée</span>
-                <span>7-9 Intense</span>
-                <span>10 Insupportable</span>
+                <span>{{ t('dashboard.vitals.pain.none') }}</span>
+                <span>{{ t('dashboard.vitals.pain.mild') }}</span>
+                <span>{{ t('dashboard.vitals.pain.moderate') }}</span>
+                <span>{{ t('dashboard.vitals.pain.severe') }}</span>
+                <span>{{ t('dashboard.vitals.pain.unbearable') }}</span>
               </div>
             </div>
           </div>
@@ -634,15 +634,15 @@
         <!-- Actions -->
         <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-[var(--app-border)]/80">
           <app-ui-button variant="secondary" (pressed)="closeVitalsModal()" [disabled]="isSavingVitals()">
-            Annuler
+            {{ t('common.cancel') }}
           </app-ui-button>
           <app-ui-button variant="primary" (pressed)="submitVitals()" [disabled]="isSavingVitals() || isAnyVitalInvalid()">
             <span class="flex items-center gap-1.5">
               @if (isSavingVitals()) {
                 <div class="w-3.5 h-3.5 rounded-full border-2 border-[var(--app-border)] border-t-white animate-spin"></div>
-                Enregistrement...
+                {{ t('common.saving') }}
               } @else {
-                Enregistrer les constantes
+                {{ t('dashboard.vitals.title') }}
               }
             </span>
           </app-ui-button>
@@ -665,13 +665,13 @@
         <div>
           <div class="flex items-center gap-2">
             <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-brand-cyan/10 text-brand-cyan uppercase tracking-wider">
-              Visite active
+              {{ t('dashboard.drawer.activeVisit') }}
             </span>
             <span class="text-xs font-bold text-[var(--text-muted)]">
               {{ selectedVisit.visitNumber }}
             </span>
           </div>
-          <h3 class="font-display font-extrabold text-base text-[var(--text-primary)] mt-1">Détails de l'admission</h3>
+          <h3 class="font-display font-extrabold text-base text-[var(--text-primary)] mt-1">{{ t('dashboard.drawer.title') }}</h3>
         </div>
         <button (click)="closeVisitDrawer()" class="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] dark:hover:text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] cursor-pointer transition-colors">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -684,7 +684,7 @@
       <div class="flex-1 overflow-y-auto px-6 py-5 space-y-6">
         <!-- Patient Info Card -->
         <div class="p-4 rounded-2xl bg-brand-gray dark:bg-[var(--app-bg)] border border-[var(--app-border)]/50">
-          <span class="ui-label text-[10px] opacity-80 mb-1">Patient</span>
+          <span class="ui-label text-[10px] opacity-80 mb-1">{{ t('dashboard.vitals.patient') }}</span>
           <h4 class="font-display font-extrabold text-sm text-[var(--text-primary)]">{{ selectedVisit.patientName }}</h4>
           <span class="text-xs font-semibold text-[var(--text-muted)] block mt-0.5">DPU : {{ selectedVisit.patientDpu }}</span>
         </div>
@@ -693,7 +693,7 @@
         <div class="grid grid-cols-2 gap-4">
           <!-- Admission time -->
           <div class="p-3.5 rounded-xl border border-[var(--app-border)]/60 bg-[var(--app-surface)] shadow-3xs">
-            <span class="ui-label text-[10px] mb-1">Heure d'arrivée</span>
+            <span class="ui-label text-[10px] mb-1">{{ t('dashboard.drawer.arrivalTime') }}</span>
             <div class="flex items-center gap-1.5 text-sm font-bold text-[var(--text-primary)]">
               <svg class="w-4 h-4 text-brand-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -704,7 +704,7 @@
 
           <!-- Orientation -->
           <div class="p-3.5 rounded-xl border border-[var(--app-border)]/60 bg-[var(--app-surface)] shadow-3xs">
-            <span class="ui-label text-[10px] mb-1">Orientation</span>
+            <span class="ui-label text-[10px] mb-1">{{ t('dashboard.queue.table.orientation') }}</span>
             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[var(--brand-info-subtle)] text-[var(--brand-info-text)]  dark:text-brand-cyan mt-0.5 whitespace-nowrap">
               {{ selectedVisit.orientation }}
             </span>
@@ -720,13 +720,15 @@
         <!-- Vitals Section -->
         <div class="space-y-3">
           <div class="flex items-center justify-between">
-            <h5 class="ui-label text-[10px]">Constantes de tri initial</h5>
-            <button (click)="openVitalsModal(selectedVisit)" class="text-xs font-extrabold text-brand-cyan hover:underline inline-flex items-center gap-1 cursor-pointer">
-              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-              {{ selectedVisit.vitals ? 'Modifier' : 'Saisir' }}
-            </button>
+            <h5 class="ui-label text-[10px]">{{ t('dashboard.drawer.triageVitals') }}</h5>
+            @if (hasRole(['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'])) {
+              <button (click)="openVitalsModal(selectedVisit)" class="text-xs font-extrabold text-brand-cyan hover:underline inline-flex items-center gap-1 cursor-pointer">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                {{ selectedVisit.vitals ? t('common.edit') : t('common.enter') }}
+              </button>
+            }
           </div>
 
           @if (selectedVisit.vitals) {
@@ -817,12 +819,12 @@
                 <div class="p-3.5 rounded-xl border col-span-2 flex items-center justify-between shadow-3xs"
                      [class]="getBmiClass(selectedVisit.vitals.bmi) + ' border-current/10'">
                   <div class="space-y-0.5">
-                    <span class="text-[10px] font-extrabold uppercase tracking-wider opacity-85">Indice de Masse Corporelle</span>
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider opacity-85">{{ t('dashboard.vitals.bmi') }}</span>
                     <p class="text-xs font-bold opacity-75">
-                      @if (selectedVisit.vitals.bmi < 18.5) { Insuffisance pondérale }
-                      @else if (selectedVisit.vitals.bmi < 25) { Corpulence normale }
-                      @else if (selectedVisit.vitals.bmi < 30) { Surpoids }
-                      @else { Obésité }
+                      @if (selectedVisit.vitals.bmi < 18.5) { {{ t('dashboard.vitals.bmi.underweight') }} }
+                      @else if (selectedVisit.vitals.bmi < 25) { {{ t('dashboard.vitals.bmi.normal') }} }
+                      @else if (selectedVisit.vitals.bmi < 30) { {{ t('dashboard.vitals.bmi.overweight') }} }
+                      @else { {{ t('dashboard.vitals.bmi.obese') }} }
                     </p>
                   </div>
                   <span class="font-display font-extrabold text-xl tracking-tight">{{ selectedVisit.vitals.bmi }}</span>
@@ -833,11 +835,13 @@
             <!-- Empty state vitals card -->
             <div class="p-5 border border-dashed border-[var(--app-border)] rounded-xl text-center space-y-3 bg-[var(--app-surface-muted)]/20 dark:bg-[var(--app-bg)]/10">
               <p class="text-xs text-[var(--text-muted)] leading-relaxed font-semibold">
-                Aucune constante vitale de tri initial n'a été renseignée pour cette visite.
+                {{ t('dashboard.drawer.noVitals') }}
               </p>
-              <app-ui-button variant="secondary" (pressed)="openVitalsModal(selectedVisit)">
-                Saisir les constantes
-              </app-ui-button>
+              @if (hasRole(['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'])) {
+                <app-ui-button variant="secondary" (pressed)="openVitalsModal(selectedVisit)">
+                  {{ t('dashboard.vitals.title') }}
+                </app-ui-button>
+              }
             </div>
           }
         </div>
@@ -851,15 +855,15 @@
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Démarrer la consultation
+              {{ t('patient.detail.startConsultation') }}
             </span>
           </app-ui-button>
           <app-ui-button variant="secondary" class="flex-1" (pressed)="openCloseConfirmModal(selectedVisit.id)">
-            Clôturer la visite
+            {{ t('dashboard.close.title') }}
           </app-ui-button>
         }
         <app-ui-button variant="secondary" [class]="canCloseVisit() ? 'w-24' : 'flex-1'" (pressed)="closeVisitDrawer()">
-          Fermer
+          {{ t('dashboard.drawer.closeButton') }}
         </app-ui-button>
       </div>
 
@@ -868,8 +872,8 @@
 
   <!-- Close Visit Confirmation Modal -->
   @if (showCloseConfirmModal()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-2xl max-w-sm w-full shadow-2xl p-6 relative">
+    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
+      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-lg max-w-md w-full shadow-2xl p-6 relative">
         <div class="flex items-center gap-3 mb-4">
           <div class="w-10 h-10 rounded-xl bg-[var(--brand-danger-subtle)] flex items-center justify-center text-[var(--brand-danger)] shrink-0">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -877,13 +881,13 @@
             </svg>
           </div>
           <div>
-            <h3 class="font-display font-bold text-base text-[var(--text-primary)]">Clôturer la visite</h3>
-            <p class="text-xs text-[var(--text-muted)] mt-0.5">Cette action est irréversible.</p>
+            <h3 class="font-display font-bold text-base text-[var(--text-primary)]">{{ t('dashboard.close.title') }}</h3>
+            <p class="text-xs text-[var(--text-muted)] mt-0.5">{{ t('dashboard.close.subtitle') }}</p>
           </div>
         </div>
 
         <p class="text-sm text-[var(--text-secondary)] mb-5 leading-relaxed">
-          Voulez-vous vraiment clôturer cette visite ? Un document médical sera généré automatiquement.
+          {{ t('dashboard.close.message') }}
         </p>
 
         @if (closeVisitError()) {
@@ -894,15 +898,15 @@
 
         <div class="flex justify-end gap-3">
           <app-ui-button variant="secondary" (pressed)="cancelCloseConfirm()" [disabled]="isClosingVisit()">
-            Annuler
+            {{ t('common.cancel') }}
           </app-ui-button>
           <app-ui-button variant="primary" (pressed)="confirmCloseVisit()" [disabled]="isClosingVisit()">
             <span class="flex items-center gap-1.5">
               @if (isClosingVisit()) {
                 <div class="w-3.5 h-3.5 rounded-full border-2 border-[var(--app-border)] border-t-white animate-spin"></div>
-                Clôture...
+                {{ t('dashboard.close.closing') }}
               } @else {
-                Confirmer la clôture
+                {{ t('dashboard.close.confirmButton') }}
               }
             </span>
           </app-ui-button>
@@ -913,8 +917,8 @@
 
   <!-- Audit Security Explanation Modal -->
   @if (showAuditSecurityModal()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-bg)] backdrop-blur-sm p-4 animate-fade-in">
-      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-2xl max-w-md w-full shadow-2xl p-6 relative">
+    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-[var(--overlay-bg)] backdrop-blur-sm p-4 animate-fade-in">
+      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-lg max-w-md w-full shadow-2xl p-6 relative">
         <button (click)="closeAuditSecurityModal()" class="absolute top-4 right-4 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] dark:hover:text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800 cursor-pointer transition-colors">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -928,25 +932,19 @@
             </svg>
           </div>
           <div>
-            <h3 class="font-display font-black text-lg text-[var(--text-primary)] leading-tight">Accès Journal d'Audit</h3>
+            <h3 class="font-display font-black text-lg text-[var(--text-primary)] leading-tight">{{ t('dashboard.auditExplanation.title') }}</h3>
           </div>
         </div>
 
         <div class="space-y-3 text-sm text-[var(--text-secondary)] leading-relaxed">
-          <p>
-            Conformément à la réglementation sur la protection des données de santé (<strong>Module 14 - FR-AUDIT-002</strong>) et aux exigences d'isolation multi-tenant, le journal d'audit est immuable.
-          </p>
-          <p>
-            Pour garantir le secret médical (ségrégation des responsabilités), les administrateurs généraux (<strong>ADMIN_JOPRELYS</strong>) ne sont pas autorisés à consulter les logs contenant des informations cliniques.
-          </p>
-          <p>
-            Veuillez utiliser un compte d'établissement habilité (rôle <strong>AUDITEUR</strong> ou <strong>ADMIN_CLINIQUE</strong>) pour consulter les historiques d'audit correspondants.
-          </p>
+          <p [innerHTML]="t('dashboard.auditExplanation.p1')"></p>
+          <p [innerHTML]="t('dashboard.auditExplanation.p2')"></p>
+          <p [innerHTML]="t('dashboard.auditExplanation.p3')"></p>
         </div>
 
         <div class="flex justify-end mt-6 pt-4 border-t border-[var(--app-border)]/80">
           <app-ui-button variant="primary" (pressed)="closeAuditSecurityModal()">
-            Compris
+            {{ t('common.understood') }}
           </app-ui-button>
         </div>
       </div>

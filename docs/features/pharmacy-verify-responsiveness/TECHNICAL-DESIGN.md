@@ -42,3 +42,9 @@ Cela permettra à la classe `.overflow-x-auto` d'exécuter correctement son rôl
 
 ## 8. Impact SemVer prévu
 - **Bump SemVer** : `PATCH` (Correction de bug purement visuelle et non disruptive).
+
+## 9. Évolution Desktop : Disposition verticale
+Pour éliminer le rétrécissement du tableau causé par le panneau d'historique placé à droite (colonne de ~320px), la structure de layout a été modifiée :
+- **`app-pharmacy-dispensation-panel`** : la balise `<section>` passe de la classe de grille `grid xl:grid-cols-[...]` à une classe flexible `flex flex-col gap-6`.
+- **Largeur minimale du tableau** : passée de `min-w-[780px]` à `min-w-[650px]` dans le template HTML du composant pour une meilleure adaptabilité sans scroll sur de multiples résolutions d'écran de bureau.
+

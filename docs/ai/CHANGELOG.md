@@ -6,7 +6,51 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+### Documentation
+
+- **CDC V2 — Cahier des charges enrichi depuis les documents réels et les spécifications logicielles TC2CDK (TICKET-CDC-V2-ENRICHISSEMENT & TICKET-CDC-V2-COMPARISON-ENRICHMENT)** :
+  - Analyse de 4 documents réels (Manuel de procédures, dossiers cliniques et facturation) et comparaison avec le document [SPECIFICATION_LOGICIEL_GESTION_CLINIQUE_TC2CDK.md](file:///C:/MES-APPLICATIONS/joprelys-connect/doc_reel_trauma_center/SPECIFICATION_LOGICIEL_GESTION_CLINIQUE_TC2CDK.md).
+  - Création et écrasement du fichier de spécifications consolidées [Cahier_des_charges_Joprelys_Connect_V2.md](file:///C:/MES-APPLICATIONS/joprelys-connect/Cahier_des_charges_Joprelys_Connect_V2.md) (version 2.0, 2026-07-08).
+  - Ajout et structuration de 17 nouveaux modules cliniques, financiers et logistiques :
+    - **Module 4-bis** — Urgences & Réanimation (fiche d'urgence, constantes critiques, protocole de réanimation, stabilisation).
+    - **Module 5-bis** — Circuit patient complet (accueil, reçu de consultation, orientation, sortie contre avis médical, registre des visiteurs d'hospitalisés).
+    - **Module 10-bis** — Compte rendu opératoire (équipe opératoire, type d'intervention/anesthésie, horaires, étapes, constatations, complications, matériel).
+    - **Module 10-ter** — Suivi post-opératoire (conduite à tenir, protocole perfusion/analgésie/antibiothérapie, suivi journalier J1 à Jn, décision de sortie).
+    - **Module 10-quater** — Consentement opératoire et pré-anesthésique (distinct des consentements d'accès).
+    - **Module 10-quinquies** — Kinésithérapie (prescription de rééducation, suivi des séances).
+    - **Module 17** — Facturation médicale avec coefficients K (Consultation, K chirurgien, K anesthésiste, K bloc, soins AMI, hébergement journalier, visites week-end).
+    - **Module 17-bis** — Achats & Fournisseurs (demandes internes d'achat, comparatif 3 offres, bons de commande, bordereaux de réception).
+    - **Module 17-ter** — Gestion des stocks matériels & consommables (mouvements, fiches de stock, inventaires périodiques, bons de sortie).
+    - **Module 17-quater** — Gestion des immobilisations (immatriculation, codification, tableaux d'amortissement, maintenance).
+    - **Module 17-quinquies** — Comptabilité générale OHADA (recettes, dépenses, banque, caisse, OD ; écritures types d'achats/factures/paie, bilan, compte de résultat, annexe).
+    - **Module 17-sexies** — Comptabilité analytique & Budget (lignes budgétaires, fiches d'engagement, contrôle de disponibilité).
+    - **Module 18** — Gestion des décès (certificats provisoire/final, genre de mort, permis d'inhumer, blocage documents si créances).
+    - **Module 19** — Registre de garde et passation de service (rapport de garde, passation financière, matériel d'urgence).
+    - **Module 19-bis** — Ressources Humaines & Paie (dossiers employés, contrats, sanctions, calcul paie, bulletins de paie).
+    - **Module 20** — Liste de préparation obstétricale (listes vêtements bébé, consommables, médicaments pédiatriques).
+    - **Module 20-bis** — Restauration (menus, régimes, commandes repas).
+    - **Module 21** — Statistiques & Tableaux de bord (indicateurs cliniques et financiers de pilotage).
+  - Enrichissement global des modules existants (Établissements, Utilisateurs, Patient, Dossier patient, Hospitalisation, Prescriptions, Documents PDF avec 25 types, API avec 15 endpoints, Modèle de données à 32 tables).
+  - Mapping FHIR R4 enrichi et roadmap mise à jour (phases 6, 7 et 8 added ; epics 09 à 14).
+
+
+
 ### Fixed
+
+- **Amélioration de la disposition du panneau de dispensation en pharmacie (TICKET-UI-PHARMACY-DISPENSATION-LAYOUT)** :
+  - Restructuration du layout de `app-pharmacy-dispensation-panel` en remplaçant la grille `xl:grid-cols-[...]` par un layout flexible vertical (`flex-col`) pour placer le formulaire de dispensation active et l'historique de délivrances l'un sous l'autre.
+  - Suppression de la barre de défilement horizontale inconfortable en offrant 100% de la largeur du conteneur au tableau des médicaments.
+  - Abaissement de la largeur minimale du tableau de `780px` à `650px` pour une meilleure adaptabilité et réactivité sur les écrans de taille moyenne.
+
+- **Correction des permissions, visibilité des menus et onglets, z-index des modales, et boutons radio de rôles (TICKET-UI-ACCESS-CONTROL-AND-MODALS)** :
+  - Déplacement de `@PreAuthorize("hasRole('ADMIN_CLINIQUE')")` au niveau des méthodes dans `StaffController.java` pour autoriser `AGENT_ACCUEIL`, `INFIRMIER` et `MEDECIN` à appeler `GET /api/staff` lors de la sélection du praticien responsable d'une admission patient.
+  - Protection par `roleGuard` des sous-routes de patient (`/patients/:id/consultations`, `/patients/:id/lab-orders`, `/patients/:id/hospitalizations`, `/patients/:id/audit-trail`) dans [app.routes.ts](file:///C:/MES-APPLICATIONS/joprelys-connect/web/src/app/app.routes.ts).
+  - Masquage des onglets cliniques et d'audit pour `AGENT_ACCUEIL` sur mobile (dans [patient-detail.component.ts](file:///C:/MES-APPLICATIONS/joprelys-connect/web/src/app/patient/patient-detail.component.ts)) et desktop (dans [app-shell-nav.component.ts](file:///C:/MES-APPLICATIONS/joprelys-connect/web/src/app/shared/layout/app-shell-nav.component.ts)).
+  - Restriction de la saisie des constantes vitales aux rôles `MEDECIN`, `INFIRMIER` et `ADMIN_CLINIQUE` dans [dashboard.component.html](file:///C:/MES-APPLICATIONS/joprelys-connect/web/src/app/clinic/dashboard.component.html) (masquage des boutons de saisie pour `AGENT_ACCUEIL`).
+  - Augmentation du z-index à `z-[60]` et correction du border-radius à `rounded-lg` de toutes les modales du dashboard (saisie constantes, clôture visite, explication audit) et de l'admission patient afin qu'elles s'affichent correctement devant le tiroir de visite (drawer `z-50`) et respectent la charte graphique (8px max).
+  - Remplacement des cases à cocher de sélection de rôles par des boutons radio (`ui-radio`) exclusifs lors de la création/modification de collaborateur dans [staff-management.component.ts](file:///C:/MES-APPLICATIONS/joprelys-connect/web/src/app/clinic/staff/staff-management.component.ts) pour empêcher l'accumulation accidentelle de rôles.
+  - Redirection dynamique après connexion (landing page) vers leurs espaces dédiés respectifs pour les rôles `BIOLOGISTE` (vers `/clinic/lab-orders`) et `PHARMACIEN` (vers `/pharmacy/prescriptions`) au lieu de la route `/dashboard` générique (pour laquelle `BIOLOGISTE` n'a pas les droits), résolvant les redirections en boucle vers `/unauthorized` et les erreurs d'accès lors de leur connexion.
+  - Liaison dynamique du logo de l'en-tête de l'application (`app-shell.component.ts`) pour rediriger l'utilisateur vers son espace de travail (landing page) selon son rôle.
 
 - **Nettoyage du tableau de bord (TKT-DASHBOARD-CLEANUP)** :
   - Suppression complète du widget inutile "Statut Services Interop" du template [dashboard.component.html](file:///C:/MES-APPLICATIONS/joprelys-connect/web/src/app/clinic/dashboard.component.html) pour désencombrer l'interface utilisateur des professionnels de santé.

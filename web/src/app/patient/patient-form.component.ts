@@ -1,8 +1,9 @@
-import { Component, input, model, output } from '@angular/core';
+import { Component, inject, input, model, output } from '@angular/core';
 import { AlertComponent } from '../shared/ui/alert.component';
 import { ButtonComponent } from '../shared/ui/button.component';
 import { CardComponent } from '../shared/ui/card.component';
 import { InputComponent } from '../shared/ui/input.component';
+import { I18nService } from '../core/i18n/i18n.service';
 
 export interface PatientFormLabels {
   readonly title: string;
@@ -49,7 +50,7 @@ export interface PatientFormLabels {
         <!-- Section 1 : Identité administrative -->
         <div>
           <h3 class="mb-3 font-bold border-b pb-1 text-sm uppercase tracking-wider" style="color: var(--text-muted)">
-            Identity & Administration
+            {{ t('patient.form.section.identity') }}
           </h3>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <app-ui-input
@@ -74,13 +75,13 @@ export interface PatientFormLabels {
 
             <!-- Groupe Sanguin -->
             <div class="flex flex-col">
-              <label class="ui-label mb-1.5 font-bold">Groupe sanguin</label>
+              <label class="ui-label mb-1.5 font-bold">{{ t('patient.form.bloodGroup') }}</label>
               <select
                 class="ui-select w-full"
                 [value]="bloodGroup()"
                 (change)="onBloodGroupChange($event)"
               >
-                <option value="">Sélectionner (Optionnel)</option>
+                <option value="">{{ t('patient.form.bloodGroupPlaceholder') }}</option>
                 <option value="O+">O+</option>
                 <option value="O-">O-</option>
                 <option value="A+">A+</option>
@@ -109,8 +110,8 @@ export interface PatientFormLabels {
             <!-- Adresse Email -->
             <app-ui-input
               type="email"
-              label="Adresse email"
-              placeholder="patient@email.com (Optionnel)"
+              [label]="t('patient.form.email')"
+              [placeholder]="t('patient.form.emailPlaceholder')"
               [(value)]="email"
             />
 
@@ -159,7 +160,7 @@ export interface PatientFormLabels {
         <!-- Section 3 : Informations Médicales -->
         <div class="pt-4 border-t" style="border-color: var(--border-color)">
           <h3 class="mb-3 font-bold text-sm uppercase tracking-wider" style="color: var(--text-muted)">
-            Medical History & Allergies
+            {{ t('patient.form.section.medicalHistory') }}
           </h3>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div class="flex flex-col">
@@ -196,6 +197,12 @@ export interface PatientFormLabels {
   `,
 })
 export class PatientFormComponent {
+  private readonly i18n = inject(I18nService);
+
+  t(key: string): string {
+    return this.i18n.t(key);
+  }
+
   readonly labels = input.required<PatientFormLabels>();
   readonly loading = input(false);
   readonly error = input<string | null>(null);
