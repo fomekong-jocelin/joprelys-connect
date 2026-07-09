@@ -32,4 +32,8 @@ export class VisitApiService {
   getVitals(id: string): Observable<Vitals> {
     return this.http.get<Vitals>(`/api/visits/${id}/vitals`);
   }
+
+  getPatientVisits(patientId: string): Observable<Visit[]> {
+    return this.http.get<Visit[]>(`/api/visits/patient/${patientId}`);
+  }
 }

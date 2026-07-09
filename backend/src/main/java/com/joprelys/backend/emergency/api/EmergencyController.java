@@ -1,0 +1,107 @@
+package com.joprelys.backend.emergency.api;
+
+import com.joprelys.backend.emergency.application.EmergencyService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/emergencies")
+@Tag(name = "Urgences & Réanimation", description = "Gestion de l'admission et des soins d'urgences critiques")
+public class EmergencyController {
+
+	private final EmergencyService emergencyService;
+
+	public EmergencyController(EmergencyService emergencyService) {
+		this.emergencyService = emergencyService;
+	}
+
+	@PostMapping
+	@PreAuthorize("hasAnyRole('INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	@Operation(summary = "Enregistrer une urgence", description = "Ouvre un dossier d'urgence critique pour un patient.", responses = {
+			@ApiResponse(responseCode = "200", description = "Dossier d'urgence ouvert avec succès")
+	})
+	public EmergencyResponse create(
+			@Valid @RequestBody CreateEmergencyRequest request,
+			Authentication authentication) {
+		var claims = (com.joprelys.backend.auth.security.JwtClaims) authentication.getDetails();
+		UUID userId = UUID.fromString(claims.subject());
+		var emergency = emergencyService.createEmergency(request, userId);
+		return EmergencyResponse.fromEntity(emergency);
+	}
+
+	@GetMapping("/active")
+	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	@Operation(summary = "Lister les urgences actives", description = "Retourne la liste des dossiers d'urgences en cours (non stabilisés).", responses = {
+			@ApiResponse(responseCode = "200", description = "Liste récupérée avec succès")
+	})
+	public List<EmergencyResponse> getActive() {
+		return emergencyService.getActiveEmergencies().stream()
+				.map(EmergencyResponse::fromEntity)
+				.toList();
+	}
+
+	@GetMapping("/{id}")
+	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	@Operation(summary = "Récupérer un dossier d'urgence", description = "Retourne les détails et l'historique de réanimation d'un dossier d'urgence.", responses = {
+			@ApiResponse(responseCode = "200", description = "Dossier d'urgence trouvé"),
+			@ApiResponse(responseCode = "404", description = "Introuvable")
+	})
+	public EmergencyResponse getById(@Parameter(description = "Identifiant du dossier d'urgence") @PathVariable UUID id) {
+		var emergency = emergencyService.getEmergency(id);
+		return EmergencyResponse.fromEntity(emergency);
+	}
+
+	@PostMapping("/{id}/resuscitation")
+	@PreAuthorize("hasAnyRole('INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	@Operation(summary = "Ajouter un soin de réanimation", description = "Enregistre une action de soins horodatée (bolus, voie, médicament) sur le patient.", responses = {
+			@ApiResponse(responseCode = "200", description = "Soin enregistré avec succès"),
+			@ApiResponse(responseCode = "404", description = "Introuvable")
+	})
+	public ResuscitationLogResponse addResuscitationLog(
+			@Parameter(description = "Identifiant du dossier d'urgence") @PathVariable UUID id,
+			@Valid @RequestBody AddResuscitationLogRequest request,
+			Authentication authentication) {
+		var claims = (com.joprelys.backend.auth.security.JwtClaims) authentication.getDetails();
+		UUID userId = UUID.fromString(claims.subject());
+		var log = emergencyService.addResuscitationLog(id, request, userId);
+		return ResuscitationLogResponse.fromEntity(log);
+	}
+
+	@PostMapping("/{id}/stabilize")
+	@PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE')")
+	@Operation(summary = "Stabiliser le patient", description = "Marque la fin des soins d'urgences, stabilise les constantes et oriente le patient (bloc, hospitalisation, sortie).", responses = {
+			@ApiResponse(responseCode = "200", description = "Patient marqué comme stabilisé avec succès"),
+			@ApiResponse(responseCode = "404", description = "Introuvable")
+	})
+	public EmergencyResponse stabilize(
+			@Parameter(description = "Identifiant du dossier d'urgence") @PathVariable UUID id,
+			@RequestParam String orientation) {
+		var emergency = emergencyService.stabilizeEmergency(id, orientation);
+		return EmergencyResponse.fromEntity(emergency);
+	}
+
+	@GetMapping("/patient/{patientId}")
+	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	@Operation(summary = "Lister les dossiers d'urgences d'un patient", description = "Retourne l'historique complet des dossiers d'urgences (y compris stabilisés) d'un patient.", responses = {
+			@ApiResponse(responseCode = "200", description = "Historique récupéré avec succès")
+	})
+	public List<EmergencyResponse> getPatientEmergencies(@PathVariable UUID patientId) {
+		return emergencyService.getPatientEmergencies(patientId).stream()
+				.map(EmergencyResponse::fromEntity)
+				.toList();
+	}
+}

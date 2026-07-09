@@ -129,8 +129,8 @@ body {
   --focus-ring: rgba(11, 145, 178, 0.18);
 
   /* Ombres */
-  --shadow-panel: 0 18px 45px rgba(10, 29, 61, 0.08);
-  --shadow-panel-subtle: 0 10px 28px rgba(10, 29, 61, 0.06);
+  --shadow-panel: 0 4px 16px rgba(10, 29, 61, 0.07);
+  --shadow-panel-subtle: 0 2px 8px rgba(10, 29, 61, 0.04);
 
   /* Diviseurs */
   --divider: #d8e5e8;
@@ -223,8 +223,8 @@ body {
   --focus-ring: rgba(34, 168, 200, 0.22);
 
   /* Ombres */
-  --shadow-panel: 0 18px 45px rgba(0, 0, 0, 0.28);
-  --shadow-panel-subtle: 0 10px 28px rgba(0, 0, 0, 0.22);
+  --shadow-panel: 0 4px 16px rgba(0, 0, 0, 0.22);
+  --shadow-panel-subtle: 0 2px 8px rgba(0, 0, 0, 0.16);
 
   /* Diviseurs */
   --divider: #21314b;
@@ -287,21 +287,21 @@ body {
   .ui-card {
     background: var(--app-surface);
     border: 1px solid var(--app-border);
-    border-radius: 8px;
+    border-radius: var(--radius-brand-lg);
     box-shadow: var(--shadow-panel);
   }
 
   .ui-card-subtle {
     background: var(--app-surface);
     border: 1px solid var(--app-border);
-    border-radius: 8px;
+    border-radius: var(--radius-brand-lg);
     box-shadow: var(--shadow-panel-subtle);
   }
 
   .ui-card-muted {
     background: var(--app-surface-muted);
     border: 1px solid var(--app-border);
-    border-radius: 8px;
+    border-radius: var(--radius-brand-lg);
   }
 
   /* ---- Avatar ---- */
@@ -562,7 +562,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border-radius: 6px;
+    border-radius: var(--radius-brand-sm);
     padding: 0 1rem;
     font-size: 0.82rem;
     font-weight: 800;

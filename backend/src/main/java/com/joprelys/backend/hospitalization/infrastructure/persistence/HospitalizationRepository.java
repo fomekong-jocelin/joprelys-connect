@@ -9,6 +9,8 @@ import java.util.UUID;
 
 public interface HospitalizationRepository extends JpaRepository<HospitalizationEntity, UUID> {
 
+    Optional<HospitalizationEntity> findByVisitId(UUID visitId);
+
     List<HospitalizationEntity> findByPatientIdOrderByAdmittedAtDesc(UUID patientId);
 
     @Query("SELECT h FROM HospitalizationEntity h WHERE h.patientId = :patientId AND h.status = 'EN_COURS'")

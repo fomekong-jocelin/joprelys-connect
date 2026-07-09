@@ -72,6 +72,6 @@ describe('LoginComponent', () => {
 
     httpTesting.expectOne('/api/auth/login').flush({}, { status: 401, statusText: 'Unauthorized' });
 
-    expect(component.error()).toBe('Identifiants invalides.');
+    expect(component.error()).toBe('login.error.invalidCredentials');
   });
 });

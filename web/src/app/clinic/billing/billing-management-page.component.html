@@ -1,0 +1,288 @@
+    <app-shell>
+      <app-page-header
+        [title]="t('billing.title', 'Gestion de la Facturation & Caisse')"
+        [subtitle]="t('billing.subtitle', 'Générez les factures de soins, gérez les conventions d\'assurance, appliquez la grille tarifaire et encaissez les règlements.')"
+      ></app-page-header>
+      <div class="app-container pb-12 space-y-6">
+      <div class="flex border-b border-[var(--app-border)]/60 gap-4">
+        <button
+          (click)="activeTab.set('billing')"
+          [class]="activeTab() === 'billing' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs' : 'pb-2 text-xs text-[var(--text-muted)]'"
+        >
+          <app-ui-icon name="stethoscope" />
+          {{ t('billing.tabBilling', 'Facturation de patients') }}
+        </button>
+        <button
+          (click)="activeTab.set('conventions')"
+          [class]="activeTab() === 'conventions' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs' : 'pb-2 text-xs text-[var(--text-muted)]'"
+        >
+          <app-ui-icon name="handshake" />
+          {{ t('billing.conventions', "Conventions d'Assurance") }}
+        </button>
+        <button
+          (click)="activeTab.set('tariffs')"
+          [class]="activeTab() === 'tariffs' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs' : 'pb-2 text-xs text-[var(--text-muted)]'"
+        >
+          <app-ui-icon name="table-cells" />
+          {{ t('billing.tariffs', 'Grille Tarifaire (Actes K)') }}
+        </button>
+      </div>
+      @if (successMessage()) {
+        <div class="ui-alert-success text-xs">
+          <app-ui-icon name="check" />
+          {{ successMessage() }}
+        </div>
+      }
+      @if (errorMessage()) {
+        <div class="ui-alert-danger text-xs">
+          <app-ui-icon name="x-mark" />
+          {{ errorMessage() }}
+        </div>
+      }
+      @if (activeTab() === 'billing') {
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="space-y-6">
+            <div class="ui-card-subtle p-4">
+              <h2 class="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <app-ui-icon name="magnifying-glass" />
+                {{ t('billing.searchPatient', 'Rechercher un Patient') }}
+              </h2>
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  [(ngModel)]="searchQuery"
+                  (keyup.enter)="searchPatients()"
+                  [placeholder]="t('billing.searchPlaceholder', 'Nom, Téléphone, DPU...')"
+                  class="ui-input text-xs flex-1"
+                />
+                <button (click)="searchPatients()" class="ui-button ui-button-primary">
+                  {{ t('common.search', 'Chercher') }}
+                </button>
+              </div>
+              @if (patients().length > 0) {
+                <div class="mt-3 divide-y divide-[var(--app-border)]/40 max-h-60 overflow-y-auto">
+                  @for (p of patients(); track p.id) {
+                    <button
+                      (click)="selectPatient(p)"
+                      [class]="selectedPatient()?.id === p.id ? 'w-full text-left p-2 bg-[var(--app-surface-muted)] text-brand-cyan font-bold text-xs' : 'w-full text-left p-2 hover:bg-[var(--app-surface-muted)] text-xs text-[var(--text-primary)]'"
+                    >
+                      <div class="font-bold">{{ p.fullName }}</div>
+                      <div class="text-[10px] text-[var(--text-muted)] flex justify-between">
+                        <span>{{ t('patients.globalNumber', 'DPU') }}: {{ p.globalPatientNumber }}</span>
+                        <span class="flex items-center gap-1"><app-ui-icon name="phone" class="text-[var(--text-muted)]" /> {{ p.phone || '-' }}</span>
+                      </div>
+                    </button>
+                  }
+                </div>
+              } @else if (searched()) {
+                <p class="text-[10px] text-[var(--text-muted)] mt-2 italic">
+                  {{ t('patients.empty', 'Aucun patient trouvé.') }}
+                </p>
+              }
+            </div>
+            @if (selectedPatient(); as patient) {
+              <div class="ui-card-subtle p-4 space-y-3">
+                <div class="border-b border-[var(--app-border)]/40 pb-2">
+                  <h3 class="font-bold text-xs text-[var(--text-primary)]">{{ patient.fullName }}</h3>
+                  <p class="text-[10px] text-[var(--text-muted)]">DPU: {{ patient.globalPatientNumber }}</p>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[10px] text-[var(--text-secondary)]">
+                  <div><strong>{{ t('patients.gender', 'Sexe') }} :</strong> {{ patient.gender === 'M' ? t('billing.gender.male', 'Masculin') : t('billing.gender.female', 'Féminin') }}</div>
+                  <div><strong>{{ t('patients.birthDate', 'Né(e) le') }} :</strong> {{ patient.birthDate }}</div>
+                  <div><strong>{{ t('patients.phone', 'Tél') }} :</strong> {{ patient.phone || '-' }}</div>
+                  <div><strong>{{ t('patients.city', 'Ville') }} :</strong> {{ patient.city || '-' }}</div>
+                </div>
+                <div class="border-t border-[var(--app-border)]/40 pt-3 space-y-2">
+                  <label class="text-[10px] font-bold text-[var(--text-primary)] uppercase tracking-wider block">
+                    {{ t('billing.selectVisit', 'Sélectionner une visite') }} :
+                  </label>
+                  <select
+                    [(ngModel)]="selectedVisitId"
+                    (change)="onVisitSelected()"
+                    class="ui-select text-xs w-full"
+                  >
+                    <option value="">-- {{ t('billing.visitPlaceholder', 'Visite ambulatoire ou séjour active') }} --</option>
+                    @for (v of patientVisits(); track v.id) {
+                      <option [value]="v.id">
+                        {{ v.visitNumber }} - {{ v.reason }} ({{ v.status }})
+                      </option>
+                    }
+                  </select>
+                </div>
+              </div>
+            } @else {
+              <div class="ui-card-muted border-dashed p-6 text-center text-xs text-[var(--text-muted)]">
+                {{ t('billing.selectPatient', 'Sélectionnez un patient pour continuer') }}
+              </div>
+            }
+          </div>
+          <div class="lg:col-span-2 space-y-6">
+            @if (selectedPatient()) {
+              <div class="ui-card-subtle p-4 space-y-4">
+                <div class="flex justify-between items-center border-b border-[var(--app-border)]/40 pb-2">
+                  <h3 class="font-bold text-xs text-[var(--text-primary)] uppercase tracking-wider">
+                    <app-ui-icon name="document-text" />
+                    {{ t('billing.newInvoice', 'Émettre une Facture') }}
+                  </h3>
+                  <div class="flex gap-2">
+                    <button
+                      (click)="precalculateFromVisit()"
+                      [disabled]="!selectedVisitId()"
+                      class="ui-button ui-button-secondary disabled:opacity-50"
+                    >
+                      <app-ui-icon name="arrow-path" />
+                      {{ t('billing.precalculate', 'Pré-calculer') }}
+                    </button>
+                    <button
+                      (click)="addCustomItem()"
+                      class="ui-button ui-button-secondary"
+                    >
+                      <app-ui-icon name="plus" />
+                      {{ t('billing.addItem', 'Ajouter une ligne') }}
+                    </button>
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="text-[10px] font-bold text-[var(--text-secondary)] block mb-1">
+                      {{ t('billing.conventionLabel', 'Convention de Tiers-Payant (Optionnelle)') }} :
+                    </label>
+                    <select
+                      [(ngModel)]="selectedConventionId"
+                      (change)="recalculateTotals()"
+                      class="ui-select text-xs w-full"
+                    >
+                      <option value="">{{ t('billing.conventionNone', 'Aucune (Part patient 100%)') }}</option>
+                      @for (c of conventions(); track c.id) {
+                        <option [value]="c.id">{{ c.name }} ({{ c.coveragePercentage * 100 }}%)</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+                @if (invoiceItems().length > 0) {
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr class="bg-[var(--app-surface-muted)] border-b border-[var(--app-border)] text-[10px] font-bold text-[var(--text-secondary)]">
+                          <th class="p-2">{{ t('billing.itemLabel', 'Prestation / Médicament') }}</th>
+                          <th class="p-2 w-28">{{ t('billing.itemType', 'Type') }}</th>
+                          <th class="p-2 w-24">{{ t('billing.unitPrice', 'Prix Unit.') }}</th>
+                          <th class="p-2 w-20">{{ t('billing.qty', 'Qté') }}</th>
+                          <th class="p-2 w-20">{{ t('billing.coeff', 'Coeff') }}</th>
+                          <th class="p-2 w-24 text-right">{{ t('billing.total', 'Total') }}</th>
+                          <th class="p-2 w-10"></th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-[var(--app-border)]/40">
+                        @for (item of invoiceItems(); track $index) {
+                          <tr class="hover:bg-[var(--app-surface-muted)]/30">
+                            <td class="p-2">
+                              <input
+                                type="text"
+                                [(ngModel)]="item.label"
+                                class="ui-input text-xs w-full py-0.5 bg-transparent border-0 focus:bg-[var(--app-surface)] focus:ring-1 focus:ring-brand-cyan rounded-[var(--radius-brand-sm)]"
+                              />
+                            </td>
+                            <td class="p-2">
+                              <select
+                                [(ngModel)]="item.itemType"
+                                (change)="recalculateTotals()"
+                                class="ui-select text-[10px] py-0.5 bg-transparent border-0 focus:bg-[var(--app-surface)] rounded-[var(--radius-brand-sm)] w-full"
+                              >
+                                <option value="CONSULTATION">{{ t('billing.itemType.consultation', 'Consultation') }}</option>
+                                <option value="K_SURGEON">{{ t('billing.itemType.kSurgeon', 'Acte Chirurg. K') }}</option>
+                                <option value="K_ANESTHESIST">{{ t('billing.itemType.kAnesthesist', 'Acte Anesth. K') }}</option>
+                                <option value="K_BLOC">{{ t('billing.itemType.kBloc', 'Frais Bloc K') }}</option>
+                                <option value="AMI_CARE">{{ t('billing.itemType.amiCare', 'Soins Infirmiers') }}</option>
+                                <option value="STAY_FEE">{{ t('billing.itemType.stayFee', 'Frais Séjour') }}</option>
+                                <option value="MEDICATION">{{ t('billing.itemType.medication', 'Médicament') }}</option>
+                              </select>
+                            </td>
+                            <td class="p-2">
+                              <input
+                                type="number"
+                                [(ngModel)]="item.unitPrice"
+                                (ngModelChange)="recalculateTotals()"
+                                class="ui-input text-xs text-right w-full py-0.5 bg-transparent border-0 focus:bg-[var(--app-surface)] rounded-[var(--radius-brand-sm)]"
+                              />
+                            </td>
+                            <td class="p-2">
+                              <input
+                                type="number"
+                                [(ngModel)]="item.quantity"
+                                (ngModelChange)="recalculateTotals()"
+                                class="ui-input text-xs text-center w-full py-0.5 bg-transparent border-0 focus:bg-[var(--app-surface)] rounded-[var(--radius-brand-sm)]"
+                              />
+                            </td>
+                            <td class="p-2">
+                              <input
+                                type="number"
+                                [(ngModel)]="item.coefficient"
+                                (ngModelChange)="recalculateTotals()"
+                                placeholder="1.0"
+                                class="ui-input text-xs text-center w-full py-0.5 bg-transparent border-0 focus:bg-[var(--app-surface)] rounded-[var(--radius-brand-sm)]"
+                              />
+                            </td>
+                            <td class="p-2 text-right font-bold text-[var(--text-primary)]">
+                              {{ ((item.unitPrice || 0) * (item.quantity || 0) * (item.coefficient || 1.0)) | number:'1.0-0' }} FCFA
+                            </td>
+                            <td class="p-2 text-center">
+                              <button (click)="removeItem($index)" class="text-[var(--brand-danger)] hover:text-[var(--brand-danger-hover)] text-xs font-bold p-1 rounded-[var(--radius-brand-sm)]">
+                                <app-ui-icon name="trash" class="text-base" />
+                              </button>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="bg-[var(--app-surface-muted)] border border-[var(--app-border)]/60 rounded-[var(--radius-brand-sm)] p-4 text-xs space-y-2 max-w-md ml-auto">
+                    <div class="flex justify-between">
+                      <span class="text-[var(--text-secondary)]">{{ t('billing.grossTotal', 'Montant Brut Total') }} :</span>
+                      <span class="font-bold">{{ calculatedTotal() | number:'1.0-0' }} FCFA</span>
+                    </div>
+                    @if (selectedConventionId()) {
+                      <div class="flex justify-between text-blue-600 dark:text-blue-400">
+                        <span>{{ t('billing.insuranceShare', 'Part Tiers Payant (Assurance)') }} :</span>
+                        <span>- {{ calculatedInsuranceShare() | number:'1.0-0' }} FCFA</span>
+                      </div>
+                    }
+                    <div class="flex justify-between border-t border-[var(--app-border)] pt-2 text-sm font-bold text-[var(--text-primary)]">
+                      <span>{{ t('billing.patientShare', 'Part Patient (À régler)') }} :</span>
+                      <span>{{ calculatedPatientShare() | number:'1.0-0' }} FCFA</span>
+                    </div>
+                  </div>
+                  <div class="flex justify-end gap-2 pt-2">
+                    <button
+                      (click)="saveInvoice()"
+                      [disabled]="savingInvoice()"
+                      class="ui-button ui-button-primary disabled:opacity-50"
+                    >
+                      @if (savingInvoice()) {
+                        {{ t('billing.generating', 'Génération en cours...') }}
+                      } @else {
+                        <app-ui-icon name="document-text" />
+                        {{ t('billing.emitInvoice', 'Émettre la Facture') }}
+                      }
+                    </button>
+                  </div>
+                } @else {
+                  <div class="p-6 text-center text-[10px] text-[var(--text-muted)] italic border border-dashed border-[var(--app-border)] rounded-[var(--radius-brand-sm)]">
+                    {{ t('billing.emptyInvoice', 'Aucun acte ni produit ajouté pour cette facture. Utilisez "Pré-calculer" ou "+ Ajouter une ligne".') }}
+                  </div>
+                }
+              </div>
+              <app-billing-invoice-history
+                [invoices]="invoices()"
+                [translate]="translate"
+                (printPdf)="printInvoicePdf($event)"
+                (openPayment)="openPaymentModal($event)"
+              ></app-billing-invoice-history>
+            }
+          </div>
+        </div>
+      }
+      <app-billing-admin-tabs [activeTab]="activeTab()" [conventions]="conventions()" [tariffs]="tariffs()" [translate]="translate" (createConvention)="saveConvention($event)" (saveTariff)="saveTariff($event)"></app-billing-admin-tabs>
+    </div>
+    <app-billing-payment-modal [visible]="showPaymentModal()" [invoice]="paymentInvoice()" [saving]="savingPayment()" [translate]="translate" (close)="closePaymentModal()" (submitPayment)="submitPayment($event)"></app-billing-payment-modal>
+    </app-shell>

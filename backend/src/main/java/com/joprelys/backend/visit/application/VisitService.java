@@ -291,6 +291,6 @@ public class VisitService {
 
 	@Transactional(readOnly = true)
 	public List<VisitEntity> getPatientVisits(UUID patientId) {
-		return visitRepository.findByPatientId(patientId);
+		return visitRepository.findByPatientIdWithPatientAndVitals(patientId);
 	}
 }

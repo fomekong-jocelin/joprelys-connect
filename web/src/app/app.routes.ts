@@ -82,6 +82,18 @@ export const routes: Routes = [
     data: { expectedRoles: ['ADMIN_CLINIQUE'] },
   },
   {
+    path: 'clinic/reception',
+    loadComponent: () => import('./reception/reception-logs.component').then((m) => m.ReceptionLogsComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['AGENT_ACCUEIL', 'ADMIN_CLINIQUE'] },
+  },
+  {
+    path: 'clinic/emergencies',
+    loadComponent: () => import('./emergency/emergency-dashboard.component').then((m) => m.EmergencyDashboardComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'] },
+  },
+  {
     path: 'clinic/admissions/pre-registrations',
     loadComponent: () => import('./patient/pre-registrations/pre-registrations-list.component').then(m => m.PreRegistrationsListComponent),
     canActivate: [roleGuard],
@@ -92,6 +104,18 @@ export const routes: Routes = [
     loadComponent: () => import('./clinic/external-access/clinic-access-request.component').then(m => m.ClinicAccessRequestComponent),
     canActivate: [roleGuard],
     data: { expectedRoles: ['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'] },
+  },
+  {
+    path: 'clinic/spatial',
+    loadComponent: () => import('./clinic/spatial/spatial-management-page.component').then(m => m.SpatialManagementPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'] },
+  },
+  {
+    path: 'clinic/billing',
+    loadComponent: () => import('./clinic/billing/billing-management-page.component').then(m => m.BillingManagementPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['AGENT_ACCUEIL', 'ADMIN_CLINIQUE'] },
   },
 
   {

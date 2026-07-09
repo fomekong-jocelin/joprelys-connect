@@ -16,6 +16,9 @@ public interface VisitRepository extends JpaRepository<VisitEntity, UUID> {
 	// WT3 (DUPLICATES): Find all visits for a patient (used during merge)
 	List<VisitEntity> findByPatientId(UUID patientId);
 
+	@Query("SELECT v FROM VisitEntity v JOIN FETCH v.patient LEFT JOIN FETCH v.vitals WHERE v.patient.id = :patientId ORDER BY v.createdAt DESC")
+	List<VisitEntity> findByPatientIdWithPatientAndVitals(@Param("patientId") UUID patientId);
+
 	@Query(value = "SELECT * FROM visits WHERE id = :id", nativeQuery = true)
 	java.util.Optional<VisitEntity> findByIdGlobally(@Param("id") UUID id);
 

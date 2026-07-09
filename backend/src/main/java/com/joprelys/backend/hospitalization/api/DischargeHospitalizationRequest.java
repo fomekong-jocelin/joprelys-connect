@@ -6,5 +6,6 @@ public record DischargeHospitalizationRequest(
         @NotBlank(message = "Le diagnostic final de sortie est obligatoire.")
         String dischargeDiagnosis,
         @NotBlank(message = "Les consignes de sortie sont obligatoires.")
-        String dischargeInstructions
+        String dischargeInstructions,
+        Boolean againstMedicalAdvice
 ) {}

@@ -1,261 +1,24 @@
 import { Component, Input, OnInit, inject, signal, computed } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PatientApiService } from './patient-api.service';
+import { SpatialApiService } from './spatial-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AuthTokenStorageService } from '../auth/auth-token-storage.service';
-import { Hospitalization, HospitalizationNote } from './patient.models';
+import { Hospitalization, HospitalizationNote, Ward, Bed, WardOccupancy } from './patient.models';
 import { StaffApiService } from '../clinic/staff/staff-api.service';
 
 @Component({
   selector: 'app-patient-hospitalization',
   standalone: true,
-  imports: [DatePipe, FormsModule],
-  template: `
-    <div class="space-y-6">
-      @if (activeHospitalization()) {
-        <!-- Vue Hospitalisation Active -->
-        <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-xl p-5 shadow-xs transition-colors space-y-6">
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-[var(--app-border)]/80">
-            <div>
-              <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-teal-50 text-teal-700 dark:bg-teal-950/30 dark:text-teal-300 uppercase tracking-wider mb-2">
-                {{ t('patients.hospitalization.status.EN_COURS') }}
-              </span>
-              <h4 class="text-base font-extrabold text-[var(--text-primary)]">
-                {{ activeHospitalization()?.serviceName }} — {{ t('patients.hospitalization.room') }} {{ activeHospitalization()?.roomNumber }} | {{ t('patients.hospitalization.bed') }} {{ activeHospitalization()?.bedNumber }}
-              </h4>
-              <p class="text-xs text-[var(--text-muted)] mt-1">
-                <strong>N° Séjour :</strong> <span class="font-mono font-bold text-[var(--text-secondary)]">{{ activeHospitalization()?.hospitalizationNumber }}</span>
-              </p>
-              <p class="text-xs text-[var(--text-muted)] mt-0.5">
-                <strong>Médecin responsable :</strong> <span class="text-[var(--text-secondary)]">{{ staffMap().get(activeHospitalization()?.responsiblePractitionerId || '') || 'Non spécifié' }}</span>
-              </p>
-              <p class="text-xs text-[var(--text-muted)] mt-0.5">
-                {{ t('patients.hospitalization.admittedAt') }} : {{ activeHospitalization()?.admittedAt | date:'dd/MM/yyyy HH:mm' }}
-              </p>
-            </div>
-
-            @if (canModify()) {
-              <button
-                (click)="openDischargeModal()"
-                class="px-4 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400 text-xs font-extrabold rounded-[var(--radius-brand-sm)] border border-rose-100 dark:border-rose-900/20 transition-all cursor-pointer flex items-center gap-1.5"
-              >
-                🚪 {{ t('patients.hospitalization.discharge') }}
-              </button>
-            }
-          </div>
-
-          <!-- Motif d'admission -->
-          <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)]/10 border border-slate-100/50 dark:border-slate-800/40 rounded-lg text-xs leading-relaxed text-[var(--text-secondary)]">
-            <strong>{{ t('patients.hospitalization.reason') }} :</strong> {{ activeHospitalization()?.admissionReason }}
-          </div>
-
-          <!-- Section Notes d'évolution -->
-          <div class="space-y-4 pt-2">
-            <h5 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
-              💬 {{ t('patients.hospitalization.notes') }}
-            </h5>
-
-            @if (canModify()) {
-              <form (submit)="saveNote($event)" class="flex gap-2">
-                <input
-                  type="text"
-                  [(ngModel)]="newNoteContent"
-                  name="note"
-                  required
-                  class="ui-input flex-1 text-xs"
-                  [placeholder]="t('patients.hospitalization.notes.add') + '...'"
-                />
-                <button
-                  type="submit"
-                  class="px-4 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[var(--brand-primary-hover)] cursor-pointer"
-                >
-                  {{ t('common.save') }}
-                </button>
-              </form>
-            }
-
-            @if (loadingNotes()) {
-              <div class="text-center text-xs text-[var(--text-muted)]">{{ t('common.loading') }}</div>
-            } @else if (notes().length === 0) {
-              <p class="text-xs text-[var(--text-muted)] italic">{{ t('patients.hospitalization.notes.empty') }}</p>
-            } @else {
-              <div class="relative border-l border-[var(--app-border)] pl-4 space-y-4 mt-2">
-                @for (note of notes(); track note.id) {
-                  <div class="relative">
-                    <span class="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-brand-cyan border-2 border-white dark:border-slate-900"></span>
-                    <div class="text-xs">
-                      <span class="font-bold text-[var(--text-secondary)]">{{ note.authorName }}</span>
-                      <span class="text-[var(--text-muted)] ml-2">{{ note.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
-                      <p class="text-[var(--text-secondary)] mt-1 leading-relaxed">{{ note.noteContent }}</p>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-          </div>
-        </div>
-      } @else {
-        <!-- Aucun séjour actif -->
-        <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-xl p-8 shadow-xs text-center transition-colors">
-          <p class="text-[var(--text-muted)] italic mb-4">{{ t('patients.hospitalization.empty') }}</p>
-          @if (canModify()) {
-            <button
-              (click)="openAdmitModal()"
-              class="px-4 py-2 bg-brand-cyan hover:bg-[var(--brand-primary-hover)] text-white text-xs font-extrabold rounded-[var(--radius-brand-sm)] transition-all cursor-pointer inline-flex items-center gap-1.5"
-            >
-              🏥 {{ t('patients.hospitalization.admit') }}
-            </button>
-          }
-        </div>
-      }
-
-      <!-- Historique des anciens séjours -->
-      @if (pastHospitalizations().length > 0) {
-        <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-xl p-5 shadow-xs transition-colors">
-          <h4 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)] mb-4">
-            📜 Historique des Hospitalisations
-          </h4>
-          <div class="divide-y divide-slate-100 dark:divide-slate-800/80">
-            @for (hosp of pastHospitalizations(); track hosp.id) {
-              <div class="py-3 first:pt-0 last:pb-0 flex justify-between items-start">
-                <div class="space-y-1">
-                  <h5 class="text-xs font-bold text-[var(--text-primary)]">
-                    {{ hosp.serviceName }} — {{ t('patients.hospitalization.room') }} {{ hosp.roomNumber }} | {{ hosp.bedNumber }}
-                  </h5>
-                  <p class="text-[10px] text-[var(--text-muted)] font-mono">
-                    N° Séjour : {{ hosp.hospitalizationNumber }}
-                  </p>
-                  <p class="text-[11px] text-[var(--text-muted)]">
-                    Médecin responsable : {{ staffMap().get(hosp.responsiblePractitionerId || '') || 'Non spécifié' }}
-                  </p>
-                  <p class="text-[11px] text-[var(--text-muted)]">
-                    {{ hosp.admittedAt | date:'dd/MM/yyyy' }} @if (hosp.dischargedAt) { au {{ hosp.dischargedAt | date:'dd/MM/yyyy' }} }
-                  </p>
-                  @if (hosp.dischargeDiagnosis) {
-                    <p class="text-xs text-[var(--text-secondary)]">
-                      <strong>Diag :</strong> {{ hosp.dischargeDiagnosis }}
-                    </p>
-                  }
-                </div>
-
-                @if (hosp.pdfFilePath) {
-                  <button
-                    (click)="downloadDischargePdf(hosp)"
-                    class="px-2.5 py-1 text-[11px] bg-[var(--app-surface-muted)] hover:bg-slate-100 dark:bg-[var(--bg-input)] dark:hover:bg-slate-700/80 border border-[var(--app-border)] dark:border-slate-700 text-[var(--text-secondary)] font-semibold rounded-sm transition-colors flex items-center gap-1 cursor-pointer"
-                  >
-                    📄 {{ t('patients.hospitalization.downloadPdf') }}
-                  </button>
-                }
-              </div>
-            }
-          </div>
-        </div>
-      }
-
-      <!-- Modale Admission -->
-      @if (showAdmitModal()) {
-        <div class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-xl w-full max-w-[420px] shadow-lg overflow-hidden">
-            <header class="px-5 py-4 border-b border-[var(--app-border)] flex items-center justify-between">
-              <h3 class="font-display font-bold text-[var(--text-primary)]">{{ t('patients.hospitalization.admit') }}</h3>
-              <button (click)="showAdmitModal.set(false)" class="p-1 text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] rounded-lg cursor-pointer">
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </header>
-            <form (submit)="saveAdmission($event)" class="p-5 space-y-4">
-              @if (admitError()) {
-                <div class="p-2.5 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-lg text-xs text-[var(--brand-danger-text)] font-semibold leading-relaxed">
-                  {{ admitError() }}
-                </div>
-              }
-              <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.visit') }}*</label>
-                <select [(ngModel)]="visitId" name="visit" required class="ui-select">
-                  <option value="">-- {{ t('patients.hospitalization.selectVisit') }} --</option>
-                  @for (v of patientVisits(); track v.id) {
-                    <option [value]="v.id">{{ v.visitNumber }} ({{ v.reason }} - {{ v.createdAt | date:'dd/MM/yyyy' }})</option>
-                  }
-                </select>
-              </div>
-              <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.responsiblePractitioner') }}*</label>
-                <select [(ngModel)]="responsiblePractitionerId" name="practitioner" required class="ui-select">
-                  <option value="">-- {{ t('patients.hospitalization.selectPractitioner') }} --</option>
-                  @for (p of staffList(); track p.id) {
-                    @if (hasRole(p.role, ['MEDECIN', 'ADMIN_CLINIQUE'])) {
-                      <option [value]="p.id">{{ p.displayName }} ({{ p.role }})</option>
-                    }
-                  }
-                </select>
-              </div>
-              <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.service') }}*</label>
-                <select [(ngModel)]="serviceName" name="service" class="ui-select">
-                  <option value="MÉDECINE GÉNÉRALE">Médecine Générale</option>
-                  <option value="CHIRURGIE">Chirurgie</option>
-                  <option value="PÉDIATRIE">Pédiatrie</option>
-                  <option value="URGENCES">Urgences</option>
-                  <option value="SOINS INTENSIFS">Soins Intensifs</option>
-                </select>
-              </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div class="space-y-1">
-                  <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.room') }}*</label>
-                  <input type="text" [(ngModel)]="roomNumber" name="room" required class="ui-input" placeholder="Ex: Ch 101" />
-                </div>
-                <div class="space-y-1">
-                  <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.bed') }}*</label>
-                  <input type="text" [(ngModel)]="bedNumber" name="bed" required class="ui-input" placeholder="Ex: Lit A" />
-                </div>
-              </div>
-              <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.reason') }}*</label>
-                <textarea [(ngModel)]="admissionReason" name="reason" required rows="3" class="ui-textarea"></textarea>
-              </div>
-              <footer class="pt-4 border-t border-[var(--app-border)]/80 flex justify-end gap-2">
-                <button type="button" (click)="showAdmitModal.set(false)" class="px-4 py-2 border border-[var(--app-border)] rounded-[var(--radius-brand-sm)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800/40 cursor-pointer">{{ t('common.cancel') }}</button>
-                <button type="submit" class="px-5 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[var(--brand-primary-hover)] cursor-pointer">{{ t('common.save') }}</button>
-              </footer>
-            </form>
-          </div>
-        </div>
-      }
-
-      <!-- Modale Décharge / Sortie -->
-      @if (showDischargeModal()) {
-        <div class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-xl w-full max-w-[420px] shadow-lg overflow-hidden">
-            <header class="px-5 py-4 border-b border-[var(--app-border)] flex items-center justify-between">
-              <h3 class="font-display font-bold text-[var(--text-primary)]">{{ t('patients.hospitalization.discharge') }}</h3>
-              <button (click)="showDischargeModal.set(false)" class="p-1 text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] rounded-lg cursor-pointer">
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </header>
-            <form (submit)="saveDischarge($event)" class="p-5 space-y-4">
-              <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.dischargeDiagnosis') }}*</label>
-                <input type="text" [(ngModel)]="dischargeDiagnosis" name="diag" required class="ui-input" />
-              </div>
-              <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.dischargeInstructions') }}*</label>
-                <textarea [(ngModel)]="dischargeInstructions" name="instr" required rows="3" class="ui-textarea"></textarea>
-              </div>
-              <footer class="pt-4 border-t border-[var(--app-border)]/80 flex justify-end gap-2">
-                <button type="button" (click)="showDischargeModal.set(false)" class="px-4 py-2 border border-[var(--app-border)] rounded-[var(--radius-brand-sm)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800/40 cursor-pointer">{{ t('common.cancel') }}</button>
-                <button type="submit" class="px-5 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[var(--brand-primary-hover)] cursor-pointer">{{ t('common.save') }}</button>
-              </footer>
-            </form>
-          </div>
-        </div>
-      }
-    </div>
-  `
+  imports: [DatePipe, FormsModule, CommonModule],
+  templateUrl: './patient-hospitalization.component.html'
 })
 export class PatientHospitalizationComponent implements OnInit {
   @Input({ required: true }) patientId!: string;
 
   private readonly patientApi = inject(PatientApiService);
+  private readonly spatialApi = inject(SpatialApiService);
   private readonly tokenStorage = inject(AuthTokenStorageService);
   private readonly i18n = inject(I18nService);
   private readonly staffApi = inject(StaffApiService);
@@ -271,7 +34,68 @@ export class PatientHospitalizationComponent implements OnInit {
   // Modales
   readonly showAdmitModal = signal<boolean>(false);
   readonly showDischargeModal = signal<boolean>(false);
+  readonly showTransferModal = signal<boolean>(false);
   readonly admitError = signal<string | null>(null);
+  readonly transferError = signal<string | null>(null);
+  readonly transferSuccessMsg = signal<string | null>(null);
+
+  // Consentements
+  readonly consents = signal<any[]>([]);
+  readonly showAddConsent = signal<boolean>(false);
+  consentType = 'ANESTHESIA';
+  patientSignaturePresent = false;
+  witnessName = '';
+  consentFile: File | null = null;
+
+  // Soins journaliers, médicaments et consommables
+  readonly dailyCares = signal<any[]>([]);
+  readonly medAdministrations = signal<any[]>([]);
+  readonly consumptions = signal<any[]>([]);
+  activeTab = 'notes';
+
+  readonly showAddCare = signal<boolean>(false);
+  careType = 'PANSEMENT';
+  careDescription = '';
+  careBillable = false;
+  carePrice: number | null = null;
+
+  readonly showAddMedAdmin = signal<boolean>(false);
+  medAdminName = '';
+  medAdminDose = '';
+  medAdminPrescriptionItemId: string | null = null;
+
+  readonly showAddConsumption = signal<boolean>(false);
+  consumptionName = '';
+  consumptionQty = 1;
+  consumptionPrice = 0.0;
+
+  // Bloc opératoire & CRO
+  readonly operatingReports = signal<any[]>([]);
+  readonly showAddReport = signal<boolean>(false);
+  procedureName = '';
+  procedureDescription = '';
+  preOperativeDiagnosis = '';
+  postOperativeDiagnosis = '';
+  anesthesiaType = 'GÉNÉRALE';
+  anesthesiaDescription = '';
+  kSurgeonValue = 0.0;
+  kAnesthesistValue = 0.0;
+  kBlocValue = 0.0;
+  surgeonId = '';
+  anesthetistId = '';
+  readonly implantsInForm = signal<any[]>([]);
+
+  newImplantName = '';
+  newImplantLot = '';
+  newImplantQty = 1;
+  newImplantPrice = 0.0;
+  newImplantManufacturer = '';
+
+  // Spatiale & Admission/Transfert
+  readonly wards = signal<Ward[]>([]);
+  readonly freeBeds = signal<{ id: string; roomNumber: string; bedNumber: string }[]>([]);
+  readonly selectedWardId = signal<string>('');
+  readonly selectedBedId = signal<string>('');
 
   // Formulaire d'admission
   serviceName = 'MÉDECINE GÉNÉRALE';
@@ -284,6 +108,7 @@ export class PatientHospitalizationComponent implements OnInit {
   // Formulaire de sortie
   dischargeDiagnosis = '';
   dischargeInstructions = '';
+  againstMedicalAdvice = false;
 
   // Formulaire de note
   newNoteContent = '';
@@ -333,8 +158,19 @@ export class PatientHospitalizationComponent implements OnInit {
         const active = this.activeHospitalization();
         if (active) {
           this.loadNotes(active.id);
+          this.loadConsents(active.id);
+          this.loadDailyCares(active.id);
+          this.loadMedAdministrations(active.id);
+          this.loadConsumptions(active.id);
+          this.loadOperatingReports(active.id);
         }
       }
+    });
+  }
+
+  loadConsents(hospId: string): void {
+    this.patientApi.getConsents(hospId).subscribe({
+      next: (data) => this.consents.set(data)
     });
   }
 
@@ -363,14 +199,79 @@ export class PatientHospitalizationComponent implements OnInit {
     return this.hasRole(role, ['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE']);
   }
 
+  loadWardsForAdmission(): void {
+    this.spatialApi.listWards().subscribe({
+      next: (data) => {
+        this.wards.set(data);
+        if (data.length > 0) {
+          // Preselect ward matching current serviceName or first ward
+          const currentWard = data.find(w => w.name.toLowerCase() === this.serviceName.toLowerCase()) || data[0];
+          this.selectedWardId.set(currentWard.id);
+          this.serviceName = currentWard.name;
+          this.loadFreeBedsForWard(currentWard.id);
+        }
+      }
+    });
+  }
+
+  loadFreeBedsForWard(wardId: string): void {
+    if (!wardId) {
+      this.freeBeds.set([]);
+      return;
+    }
+    this.spatialApi.getWardOccupancy(wardId).subscribe({
+      next: (occ) => {
+        const bedsList: { id: string; roomNumber: string; bedNumber: string }[] = [];
+        for (const room of occ.rooms) {
+          for (const bed of room.beds) {
+            if (bed.status === 'FREE') {
+              bedsList.push({
+                id: bed.id,
+                roomNumber: room.roomNumber,
+                bedNumber: bed.bedNumber
+              });
+            }
+          }
+        }
+        this.freeBeds.set(bedsList);
+        this.selectedBedId.set('');
+        this.roomNumber = '';
+        this.bedNumber = '';
+      }
+    });
+  }
+
+  onAdmissionWardChange(): void {
+    const ward = this.wards().find(w => w.id === this.selectedWardId());
+    if (ward) {
+      this.serviceName = ward.name;
+      this.loadFreeBedsForWard(ward.id);
+    }
+  }
+
+  onAdmissionBedChange(): void {
+    const bed = this.freeBeds().find(b => b.id === this.selectedBedId());
+    if (bed) {
+      this.roomNumber = bed.roomNumber;
+      this.bedNumber = bed.bedNumber;
+    } else {
+      this.roomNumber = '';
+      this.bedNumber = '';
+    }
+  }
+
   openAdmitModal(): void {
     this.roomNumber = '';
     this.bedNumber = '';
     this.admissionReason = '';
     this.visitId = '';
     this.responsiblePractitionerId = '';
+    this.selectedWardId.set('');
+    this.selectedBedId.set('');
+    this.freeBeds.set([]);
     this.admitError.set(null);
     this.loadVisits();
+    this.loadWardsForAdmission();
     this.showAdmitModal.set(true);
   }
 
@@ -398,6 +299,50 @@ export class PatientHospitalizationComponent implements OnInit {
     });
   }
 
+  openTransferModal(): void {
+    this.transferError.set(null);
+    this.transferSuccessMsg.set(null);
+    this.selectedWardId.set('');
+    this.selectedBedId.set('');
+    this.freeBeds.set([]);
+
+    this.spatialApi.listWards().subscribe({
+      next: (data) => {
+        this.wards.set(data);
+        const active = this.activeHospitalization();
+        if (active && data.length > 0) {
+          const currentWard = data.find(w => w.name.toLowerCase() === active.serviceName.toLowerCase()) || data[0];
+          this.selectedWardId.set(currentWard.id);
+          this.loadFreeBedsForWard(currentWard.id);
+        }
+      }
+    });
+    this.showTransferModal.set(true);
+  }
+
+  saveTransfer(event: Event): void {
+    event.preventDefault();
+    const active = this.activeHospitalization();
+    const bedId = this.selectedBedId();
+    if (!active || !bedId) return;
+
+    this.transferError.set(null);
+    this.transferSuccessMsg.set(null);
+
+    this.spatialApi.transferPatient(active.id, bedId).subscribe({
+      next: () => {
+        this.transferSuccessMsg.set(this.t('patients.hospitalization.transferSuccess'));
+        setTimeout(() => {
+          this.showTransferModal.set(false);
+          this.loadHospitalizations();
+        }, 1500);
+      },
+      error: (err) => {
+        this.transferError.set(err.error?.detail || err.error?.title || this.t('patients.hospitalization.transferError'));
+      }
+    });
+  }
+
   saveNote(event: Event): void {
     event.preventDefault();
     const active = this.activeHospitalization();
@@ -414,6 +359,7 @@ export class PatientHospitalizationComponent implements OnInit {
   openDischargeModal(): void {
     this.dischargeDiagnosis = '';
     this.dischargeInstructions = '';
+    this.againstMedicalAdvice = false;
     this.showDischargeModal.set(true);
   }
 
@@ -424,7 +370,8 @@ export class PatientHospitalizationComponent implements OnInit {
 
     this.patientApi.dischargePatient(active.id, {
       dischargeDiagnosis: this.dischargeDiagnosis.trim(),
-      dischargeInstructions: this.dischargeInstructions.trim()
+      dischargeInstructions: this.dischargeInstructions.trim(),
+      againstMedicalAdvice: this.againstMedicalAdvice
     }).subscribe({
       next: () => {
         this.showDischargeModal.set(false);
@@ -448,6 +395,245 @@ export class PatientHospitalizationComponent implements OnInit {
       error: (err) => {
         console.error('Error downloading pdf', err);
         alert('Erreur lors du téléchargement du PDF');
+      }
+    });
+  }
+
+  downloadEntryPdf(hosp: Hospitalization): void {
+    this.patientApi.downloadEntryPdf(hosp.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `billet-entree-${hosp.id}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Error downloading entry pdf', err);
+        alert('Erreur lors du téléchargement du billet d\'entrée');
+      }
+    });
+  }
+
+  onConsentFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.consentFile = input.files[0];
+    } else {
+      this.consentFile = null;
+    }
+  }
+
+  saveConsent(event: Event): void {
+    event.preventDefault();
+    const active = this.activeHospitalization();
+    if (!active) return;
+
+    const formData = new FormData();
+    formData.append('consentType', this.consentType);
+    formData.append('patientSignaturePresent', String(this.patientSignaturePresent));
+    formData.append('witnessName', this.witnessName.trim());
+    if (this.consentFile) {
+      formData.append('file', this.consentFile);
+    }
+
+    this.patientApi.addConsent(active.id, formData).subscribe({
+      next: () => {
+        this.showAddConsent.set(false);
+        this.consentFile = null;
+        this.witnessName = '';
+        this.patientSignaturePresent = false;
+        this.loadConsents(active.id);
+      },
+      error: (err) => {
+        console.error('Error saving consent', err);
+        alert('Erreur lors de l\'enregistrement du consentement');
+      }
+    });
+  }
+
+  downloadConsentFile(documentId: string): void {
+    window.open(`/api/documents/${documentId}/download`, '_blank');
+  }
+
+  loadDailyCares(hospId: string): void {
+    this.patientApi.getDailyCares(hospId).subscribe({
+      next: (data) => this.dailyCares.set(data)
+    });
+  }
+
+  loadMedAdministrations(hospId: string): void {
+    this.patientApi.getMedicationAdministrations(hospId).subscribe({
+      next: (data) => this.medAdministrations.set(data)
+    });
+  }
+
+  loadConsumptions(hospId: string): void {
+    this.patientApi.getPatientConsumptions(hospId).subscribe({
+      next: (data) => this.consumptions.set(data)
+    });
+  }
+
+  saveDailyCare(event: Event): void {
+    event.preventDefault();
+    const active = this.activeHospitalization();
+    if (!active || !this.careType.trim()) return;
+
+    this.patientApi.addDailyCare(active.id, {
+      careType: this.careType.trim(),
+      description: this.careDescription.trim(),
+      billable: this.careBillable,
+      price: this.careBillable ? this.carePrice : null,
+      performedAt: new Date().toISOString()
+    }).subscribe({
+      next: () => {
+        this.showAddCare.set(false);
+        this.careDescription = '';
+        this.careBillable = false;
+        this.carePrice = null;
+        this.loadDailyCares(active.id);
+      },
+      error: (err) => {
+        console.error('Error saving care', err);
+        alert('Erreur lors de l\'enregistrement du soin');
+      }
+    });
+  }
+
+  saveMedAdmin(event: Event): void {
+    event.preventDefault();
+    const active = this.activeHospitalization();
+    if (!active || !this.medAdminName.trim() || !this.medAdminDose.trim()) return;
+
+    this.patientApi.addMedicationAdministration(active.id, {
+      medicationName: this.medAdminName.trim(),
+      dose: this.medAdminDose.trim(),
+      prescriptionItemId: this.medAdminPrescriptionItemId,
+      administeredAt: new Date().toISOString()
+    }).subscribe({
+      next: () => {
+        this.showAddMedAdmin.set(false);
+        this.medAdminName = '';
+        this.medAdminDose = '';
+        this.medAdminPrescriptionItemId = null;
+        this.loadMedAdministrations(active.id);
+      },
+      error: (err) => {
+        console.error('Error saving med admin', err);
+        alert('Erreur lors de l\'enregistrement de l\'administration');
+      }
+    });
+  }
+
+  savePatientConsumption(event: Event): void {
+    event.preventDefault();
+    const active = this.activeHospitalization();
+    if (!active || !this.consumptionName.trim() || this.consumptionQty < 1) return;
+
+    this.patientApi.addPatientConsumption(active.id, {
+      itemName: this.consumptionName.trim(),
+      quantity: this.consumptionQty,
+      unitPrice: this.consumptionPrice,
+      consumedAt: new Date().toISOString()
+    }).subscribe({
+      next: () => {
+        this.showAddConsumption.set(false);
+        this.consumptionName = '';
+        this.consumptionQty = 1;
+        this.consumptionPrice = 0.0;
+        this.loadConsumptions(active.id);
+      },
+      error: (err) => {
+        console.error('Error saving consumption', err);
+        alert('Erreur lors de l\'enregistrement de la consommation');
+      }
+    });
+  }
+
+  loadOperatingReports(hospId: string): void {
+    this.patientApi.getOperatingReports(hospId).subscribe({
+      next: (data) => this.operatingReports.set(data)
+    });
+  }
+
+  addImplantToList(): void {
+    if (!this.newImplantName.trim()) return;
+    this.implantsInForm.update(list => [...list, {
+      implantName: this.newImplantName.trim(),
+      lotNumber: this.newImplantLot.trim(),
+      quantity: this.newImplantQty,
+      unitPrice: this.newImplantPrice,
+      manufacturer: this.newImplantManufacturer.trim()
+    }]);
+    this.newImplantName = '';
+    this.newImplantLot = '';
+    this.newImplantQty = 1;
+    this.newImplantPrice = 0.0;
+    this.newImplantManufacturer = '';
+  }
+
+  removeImplantFromList(index: number): void {
+    this.implantsInForm.update(list => list.filter((_, i) => i !== index));
+  }
+
+  saveOperatingReport(event: Event): void {
+    event.preventDefault();
+    const active = this.activeHospitalization();
+    if (!active || !this.procedureName.trim()) return;
+
+    this.patientApi.createOperatingReport(active.id, {
+      procedureName: this.procedureName.trim(),
+      procedureDescription: this.procedureDescription.trim(),
+      preOperativeDiagnosis: this.preOperativeDiagnosis.trim(),
+      postOperativeDiagnosis: this.postOperativeDiagnosis.trim(),
+      anesthesiaType: this.anesthesiaType.trim(),
+      anesthesiaDescription: this.anesthesiaDescription.trim(),
+      kSurgeonValue: this.kSurgeonValue,
+      kAnesthesistValue: this.kAnesthesistValue,
+      kBlocValue: this.kBlocValue,
+      surgeonId: this.surgeonId ? this.surgeonId : null,
+      anesthetistId: this.anesthetistId ? this.anesthetistId : null,
+      implants: this.implantsInForm()
+    }).subscribe({
+      next: () => {
+        this.showAddReport.set(false);
+        this.procedureName = '';
+        this.procedureDescription = '';
+        this.preOperativeDiagnosis = '';
+        this.postOperativeDiagnosis = '';
+        this.anesthesiaType = 'GÉNÉRALE';
+        this.anesthesiaDescription = '';
+        this.kSurgeonValue = 0.0;
+        this.kAnesthesistValue = 0.0;
+        this.kBlocValue = 0.0;
+        this.surgeonId = '';
+        this.anesthetistId = '';
+        this.implantsInForm.set([]);
+        this.loadOperatingReports(active.id);
+      },
+      error: (err) => {
+        console.error('Error saving operating report', err);
+        alert('Erreur lors de l\'enregistrement du compte-rendu opératoire');
+      }
+    });
+  }
+
+  validateReport(reportId: string): void {
+    if (!confirm('Êtes-vous sûr de vouloir valider ce compte-rendu opératoire ? Cette action le rendra immuable et générera les actes de facturation.')) return;
+    
+    this.patientApi.validateOperatingReport(reportId).subscribe({
+      next: () => {
+        const active = this.activeHospitalization();
+        if (active) {
+          this.loadOperatingReports(active.id);
+        }
+      },
+      error: (err) => {
+        console.error('Error validating report', err);
+        alert('Erreur lors de la validation du compte-rendu opératoire');
       }
     });
   }

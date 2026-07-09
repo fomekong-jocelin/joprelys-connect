@@ -71,6 +71,44 @@ public class GlobalExceptionHandler {
                 .body(new ApiErrorResponse("NOT_FOUND", ex.getMessage(), traceId));
     }
 
+    @ExceptionHandler({
+            org.springframework.orm.ObjectOptimisticLockingFailureException.class,
+            org.springframework.dao.OptimisticLockingFailureException.class,
+            org.hibernate.StaleObjectStateException.class,
+            org.hibernate.StaleStateException.class,
+            org.springframework.transaction.TransactionSystemException.class
+    })
+    ResponseEntity<ApiErrorResponse> handleOptimisticLocking(Exception ex) {
+        Throwable cause = ex;
+        while (cause.getCause() != null && cause != cause.getCause()) {
+            cause = cause.getCause();
+        }
+
+        if (cause instanceof org.hibernate.StaleObjectStateException ||
+            cause instanceof org.hibernate.StaleStateException ||
+            cause instanceof org.springframework.orm.ObjectOptimisticLockingFailureException ||
+            cause instanceof org.springframework.dao.OptimisticLockingFailureException) {
+
+            String traceId = getTraceId();
+            log.warn("[trace_id={}] Optimistic locking failure: {}", traceId, cause.getMessage());
+
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new ApiErrorResponse("CONFLICT", "Cette ressource a été modifiée par un autre utilisateur. Veuillez rafraîchir et réessayer.", traceId));
+        }
+
+        if (ex instanceof org.springframework.transaction.TransactionSystemException) {
+            String traceId = getTraceId();
+            log.error("[trace_id={}] Transaction system failure: {}", traceId, ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiErrorResponse("INTERNAL_ERROR", "Une erreur interne de transaction est survenue.", traceId));
+        }
+
+        String traceId = getTraceId();
+        log.warn("[trace_id={}] Locking failure fallback: {}", traceId, ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiErrorResponse("CONFLICT", "Cette ressource a été modifiée par un autre utilisateur.", traceId));
+    }
+
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiErrorResponse> handleGeneric(Exception ex) {
         String traceId = getTraceId();

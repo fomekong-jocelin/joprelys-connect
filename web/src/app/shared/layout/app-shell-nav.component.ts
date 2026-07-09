@@ -187,6 +187,10 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
     if (roles.includes('ADMIN_CLINIQUE')) {
       addUniqueItem({ path: '/dashboard', label: this.i18n.t('menu.dashboard'), iconName: 'dashboard' });
       addUniqueItem({ path: '/patients', label: this.i18n.t('menu.patients'), iconName: 'patients' });
+      addUniqueItem({ path: '/clinic/spatial', label: this.i18n.t('menu.spatial'), iconName: 'stocks' });
+      addUniqueItem({ path: '/clinic/billing', label: this.i18n.t('menu.billing'), iconName: 'audit' });
+      addUniqueItem({ path: '/clinic/reception', label: this.i18n.t('menu.reception'), iconName: 'staff' });
+      addUniqueItem({ path: '/clinic/emergencies', label: this.i18n.t('menu.emergencies'), iconName: 'dashboard' });
       addUniqueItem({ path: '/clinic/admissions/pre-registrations', label: this.i18n.t('menu.preRegistrations'), iconName: 'preRegistrations' });
       addUniqueItem({ path: '/clinic/duplicates', label: this.i18n.t('menu.duplicates'), iconName: 'patients' });
       addUniqueItem({ path: '/clinic/staff', label: this.i18n.t('menu.staff'), iconName: 'staff' });
@@ -195,8 +199,14 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
     if (roles.includes('AGENT_ACCUEIL') || roles.includes('INFIRMIER') || roles.includes('MEDECIN')) {
       addUniqueItem({ path: '/dashboard', label: this.i18n.t('menu.dashboard'), iconName: 'dashboard' });
       addUniqueItem({ path: '/patients', label: this.i18n.t('menu.patients'), iconName: 'patients' });
+      addUniqueItem({ path: '/clinic/spatial', label: this.i18n.t('menu.spatial'), iconName: 'stocks' });
       if (roles.includes('AGENT_ACCUEIL')) {
         addUniqueItem({ path: '/clinic/admissions/pre-registrations', label: this.i18n.t('menu.preRegistrations'), iconName: 'preRegistrations' });
+        addUniqueItem({ path: '/clinic/reception', label: this.i18n.t('menu.reception'), iconName: 'staff' });
+        addUniqueItem({ path: '/clinic/billing', label: this.i18n.t('menu.billing'), iconName: 'audit' });
+      }
+      if (roles.includes('INFIRMIER') || roles.includes('MEDECIN')) {
+        addUniqueItem({ path: '/clinic/emergencies', label: this.i18n.t('menu.emergencies'), iconName: 'dashboard' });
       }
     }
     if (roles.includes('BIOLOGISTE')) {

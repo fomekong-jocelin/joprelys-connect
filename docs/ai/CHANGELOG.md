@@ -1,12 +1,152 @@
 # Changelog
 
+# Changelog
+
 Tous les changements notables du projet doivent être documentés ici.
 
 Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Bloc opératoire, CRO, anesthésie et implants (STORY-2104)** :
+  - Création du script de migration Flyway `V48__operating_reports_implants.sql` introduisant les tables `operating_reports` et `surgical_implants` avec isolation multi-tenant, colonnes auditives et index.
+  - Implémentation des entités JPA `OperatingReportEntity` et `SurgicalImplantEntity` avec validation `@Version` de verrouillage optimiste et isolation tenant.
+  - Création des interfaces JPA `OperatingReportRepository` et `SurgicalImplantRepository`.
+  - Implémentation du service applicatif découplé `OperatingReportService` pour la création, le listing et la validation médicale des comptes-rendus opératoires (CRO) et implants.
+  - Exposition des endpoints correspondants dans `HospitalizationController`.
+  - Intégration dans `BillingService.precalculateInvoice` pour répercuter automatiquement les coefficients K chirurgicaux (Chirurgien, Anesthésiste, Bloc) et les implants/consommables utilisés après la validation médicale du CRO.
+  - Ajout des signatures de service et méthodes REST d'API Angular dans `PatientApiService`.
+  - Conception de l'onglet premium "Bloc & CRO" dans `patient-hospitalization.component.html/ts` permettant la saisie du protocole opératoire, des coefficients K, et la traçabilité des implants (lot, quantité, prix) avec validation finale immuable.
+
+- **Soins journaliers, médicaments et consommables en hospitalisation (STORY-2103)** :
+  - Création du script de migration Flyway `V47__hospitalization_care_meds_consumables.sql` introduisant les tables `hospitalization_daily_cares`, `medication_administrations`, et `patient_consumptions` avec isolation multi-tenant et index clés.
+  - Implémentation des entités JPA `HospitalizationDailyCareEntity`, `MedicationAdministrationEntity`, et `PatientConsumptionEntity` avec isolation `@TenantId` et annotations `@Version` pour la prévention de concurrence.
+  - Création de la classe de service découplée `HospitalizationCareService` respectant strictement les responsabilités SOLID et la limite de 500 lignes de code.
+  - Exposition des endpoints de consignation et de consultation de soins, médicaments administrés, et consommables dans `HospitalizationController`.
+  - Intégration dans le moteur de calcul `BillingService.precalculateInvoice` pour répercuter automatiquement les soins journaliers facturables et les consommations patient dans les factures générées.
+  - Implémentation du client d'API Angular dans `PatientApiService`.
+  - Conception d'un système d'onglets premium dynamique dans l'écran de séjour hospitalier de l'IHM Angular (`patient-hospitalization.component.html` & `.ts`) pour enregistrer et suivre de façon fluide les soins, les administrations de médicaments et les consommables consommés.
+
+- **Séjour Hospitalier Complet, Documents d'Entrée/Sortie et Consentements (STORY-2102)** :
+  - Création du script de migration Flyway `V46__hospitalization_complete_stay_tables.sql` introduisant la table `surgical_consents` (avec colonnes `id`, `hospitalization_id`, `organization_id`, `consent_type`, `patient_signature_present`, `witness_name`, `document_id`, `created_at`, `updated_at`, `version`) pour le stockage structuré des consentements opératoires.
+  - Ajout des colonnes `against_medical_advice` (boolean) et `entry_pdf_file_path` (varchar) dans la table `hospitalizations`.
+  - Implémentation de l'entité JPA `SurgicalConsentEntity` avec isolation multi-tenant (`@TenantId`) et gestion de version (`@Version`), et de son repository JPA associé.
+  - Implémentation de la génération du Billet d'entrée PDF (`generateHospitalizationEntryPdf`) dans `PdfGeneratorService` incluant les logos, cachets, signatures, et détails d'admission du patient.
+  - Mise à jour de la génération du PDF de sortie pour adapter le titre ("Fiche de Sortie contre Avis Médical") et insérer une mention claire et avertissement de décharge si le séjour s'est terminé par une sortie contre avis médical.
+  - Enrichissement de `HospitalizationService` et de `HospitalizationController` pour supporter le téléchargement du Billet d'entrée, la clôture de séjour avec l'indicateur optionnel `againstMedicalAdvice` (statut `SORTI_CONTRE_AVIS`), la création/récupération de consentements opératoires (Anesthésie ou Chirurgie) rattachés à l'hospitalisation active, avec ou sans fichier physique (GED).
+  - Ajout d'une suite de tests d'intégration dans `HospitalizationControllerTest.java` validant le billet d'entrée, la sortie contre avis, et les consentements.
+  - Intégration dans l'interface Angular (`patient-api.service.ts`, `patient-hospitalization.component.ts`, `patient-hospitalization.component.html`) pour permettre de télécharger le billet d'entrée, de cocher "Sortie contre avis médical" lors de la décharge, et d'ajouter/consulter les consentements opératoires avec upload de fichier.
+
+- **Facturation Médicale (Actes K & Conventions) (STORY-1913)** :
+  - Création du script de migration Flyway `V45__create_billing_tables.sql` définissant les tables `insurance_conventions`, `tariff_grid`, `invoices`, `invoice_items` et `payments`.
+  - Implémentation des entités JPA Spring Boot (`InsuranceConventionEntity`, `TariffGridEntity`, `InvoiceEntity`, `InvoiceItemEntity`, `PaymentEntity`) avec isolation multi-tenant (`@TenantId`) et relations JPA nécessaires.
+  - Écriture du moteur de calcul financier `BillingService` gérant le précalcul automatique (frais de séjour à la nuitée, consultations, actes chirurgicaux avec coefficients K, médicaments de la visite) et la création séquentielle unique de factures (`FAC-yyyyMMdd-XXXXXX`).
+  - Développement de la méthode `generateInvoicePdf` dans `PdfGeneratorService` générant une facture PDF structurée avec OpenPDF (logo, signatures, cachet, répartition tiers-payant, part patient).
+  - Création des contrôleurs REST `/api/invoices/*` et `/api/payments/*` avec endpoints de précalcul, création, règlements de caisse, et téléchargement PDF sécurisé.
+  - Résolution des échecs de proxies JPA Hibernate (`LazyInitializationException`) dans la génération PDF en utilisant des requêtes `JOIN FETCH` robustes (`findByIdWithDetails`) pour charger de façon transactionnelle la convention et les lignes de facture.
+  - Création du service Angular `BillingApiService` pour relier l'application aux nouveaux endpoints de facturation.
+  - Développement de l'IHM Angular `BillingManagementPageComponent` sous Tailwind CSS v4 avec thèmes clair/sombre, arrondis sobres (<= 8px), recherche patient, précalcul en un clic, édition dynamique de lignes, règlements de caisse en modal, et configurations de conventions et tarifs.
+  - Intégration i18n complète (traductions fr/en) pour l'ensemble du module de facturation.
+  - Suite de tests d'intégration backend dans `InvoiceControllerTest.java` et build de production Angular passés avec succès.
+
+- **Gestion Spatiale des Lits & Chambres (STORY-1912)** :
+  - Création du script de migration Flyway `V44__create_spatial_tables.sql` pour les tables `wards`, `rooms`, `beds` et `bed_assignments`.
+  - Implémentation des entités JPA Spring Boot (`WardEntity`, `RoomEntity`, `BedEntity`, `BedAssignmentEntity`, `BedStatus` enum) avec isolation multi-tenant et verrouillage optimiste.
+  - Création du contrôleur REST `SpatialController` exposant des endpoints sécurisés pour le listing, l'occupation par service, la modification rapide de statut, et les transferts transactionnels.
+  - Implémentation du service Angular `SpatialApiService` pour communiquer avec les nouveaux endpoints de gestion spatiale.
+  - Création de l'interface utilisateur réactive `SpatialManagementPageComponent` sous Tailwind CSS v4 avec grille d'occupation temps réel et actions rapides sur les lits (Libérer, Maintenance) respectant les contraintes graphiques (coins sobres <= 8px).
+  - Intégration de la sélection de lit libre par service lors de l'admission dans le Drawer d'hospitalisation de `PatientHospitalizationComponent`.
+  - Intégration de la fonctionnalité de transfert de lit/service avec boîte de dialogue interactive pour les hospitalisés actifs.
+  - Gestion du cycle de vie du lit avec mise en statut `CLEANING` automatique lors d'une sortie ou d'un transfert de lit.
+  - Gestion robuste des exceptions de verrouillage concurrent avec capture globale de `ObjectOptimisticLockingFailureException`, `TransactionSystemException` et mapping en statut HTTP 409 Conflict.
+  - Intégration i18n complète (traductions fr/en).
+  - Suite complète de tests d'intégration backend passés avec succès.
+
+- **Modèle de données Accueil & Urgences (STORY-1601)** :
+  - Création du script de migration Flyway `V43__create_emergencies_and_reception_tables.sql` pour les tables `reception_logs`, `emergencies` et `resuscitation_logs`.
+  - Implémentation des entités JPA Spring Boot (`ReceptionLogEntity`, `EmergencyEntity`, `ResuscitationLogEntity`) avec Hibernate `@TenantId` pour l'isolation multi-tenant.
+  - Création des repositories Spring Data associés.
+
+- **Registre d'accueil - Secrétariat (STORY-1602 & STORY-1604)** :
+  - Implémentation des endpoints REST pour enregistrer les arrivées et départs à l'accueil.
+  - Création de l'IHM `ReceptionLogsComponent` avec Reactive Forms et validation multi-type (Visiteur, Audience, Patient).
+  - Liaison dynamique aux sélecteurs Patient et Staff de l'établissement.
+  - Intégration de la route `/clinic/reception` et du lien dans le menu de navigation principal (Shell Nav).
+  - Internationalisation complète (traductions fr/en).
+
+- **Tableau de bord des Urgences & Réanimation (STORY-1603 & STORY-1605)** :
+  - Création des endpoints d'admission d'urgence, de soins de réanimation horodatés et de stabilisation avec orientation.
+  - Implémentation de la page `EmergencyDashboardComponent` avec indicateurs colorés par niveau de triage (Choc, Urgence, etc.).
+
+### Fixed
+
+- **Correction du démarrage frontend lié aux icônes (BUG-20260709-frontend-icon-startup-fix)** :
+  - Remplacement des anciens sélecteurs `<app-icon>` dans `BillingEstimatesComponent` par le composant partagé `app-ui-icon`.
+  - Alignement des noms d'icônes sur la liste supportée par `IconComponent` (`document-text`, `plus`, `trash`, `check`, `x-mark`, `receipt-percent`, `arrow-path`).
+  - Désactivation ciblée de `optimization.fonts.inline` dans la configuration Angular de production pour éviter l'échec de build quand Google Fonts est inaccessible depuis un environnement local ou CI sans accès Internet.
+  - Validation : build Angular production OK, build développement OK, tests Angular OK (101 tests), démarrage `ng serve` compilé.
+
+- **Refactor UI Hospitalisation & Facturation (STORY-2101 / EPIC-0017)** :
+  - Extraction des templates inline de `BillingManagementPageComponent` et `PatientHospitalizationComponent` vers des fichiers HTML dédiés.
+  - Création de `BillingInvoiceHistoryComponent`, `BillingAdminTabsComponent` et `BillingPaymentModalComponent` pour découper l'écran de facturation sans changer les contrats API ni le comportement utilisateur.
+  - Réduction des tailles sous les limites de gouvernance : facturation TS 315 lignes / HTML 288 lignes ; hospitalisation TS 335 lignes / HTML 280 lignes.
+  - Correction de l'échappement de l'apostrophe dans le template HTML externe de facturation.
+  - Validation Angular : `npm run build` OK et `npm run test -- --watch=false` OK avec 101 tests passés.
+
+- **Alignement design system et intégration Layout (TICKET-UI-SPATIAL-BILLING-DESIGN-FIX)** :
+  - Intégration de `AppShellComponent` et `PageHeaderComponent` aux pages Gestion Spatiale (`/clinic/spatial`) et Facturation (`/clinic/billing`).
+  - Correction de l'absence de sidebar, de topbar (header), de breadcrumb et de footer sur ces pages.
+  - Résolution des problèmes d'application du thème (clair/sombre) sur ces deux pages grâce à l'enveloppement dans le layout global de l'AppShell.
+  - Alignement des titres et sélecteurs de service via `app-page-header` et encapsulation du contenu principal dans des conteneurs `.app-container` avec marges normalisées.
+  - Remplacement des emojis par le composant d'icônes SVG `app-ui-icon`, correction des arrondis (4px pour boutons/inputs, 8px max pour les cartes) et des ombres selon le design system.
+  - Build Angular de production passé avec succès.
+  - Intégration de la route `/clinic/emergencies` et accès réservé au personnel soignant (Infirmiers, Médecins, Admins).
+  - Internationalisation complète (traductions fr/en).
+
+### Fixed
+
+- **Correction de l'erreur 401 Unauthorized sur le téléchargement du PDF de facture (BUG-20260708-invoice-pdf-401-error)** :
+  - Ajout de la méthode `downloadInvoicePdf(invoiceId)` dans `BillingApiService` pour récupérer le PDF sous forme de blob binaire via le client HTTP d'Angular, ce qui permet l'injection automatique du token JWT par l'intercepteur de sécurité.
+  - Mise à jour de la méthode `printInvoicePdf` dans `BillingManagementPageComponent` pour charger le blob, générer une URL locale via `window.URL.createObjectURL` et l'ouvrir dans un nouvel onglet, évitant ainsi le rejet 401 lors de la navigation directe du navigateur.
+
+- **Correction de l'erreur 500 sur la création de factures (BUG-20260708-invoice-creation-500-error)** :
+  - Correction de la requête SQL native `getNextInvoiceNumberSequenceValue` dans `InvoiceRepository.java` en remplaçant la syntaxe de séquence H2 `SELECT NEXT VALUE FOR invoice_number_seq` par la syntaxe standard compatible PostgreSQL `SELECT nextval('invoice_number_seq')`.
+  - Maintien de la compatibilité avec la base de données H2 de test (exécutée en mode PostgreSQL).
+
+- **Correction du crash de démarrage JPA multi-tenant et initialisation lits & services (BUG-20260708-spatial-wards-500-error)** :
+  - Résolution de l'erreur `PropertyValueException: assigned tenant id differs from current tenant id` lors de l'exécution de `AdminUserSeeder.seedSpatialData()` au démarrage du backend.
+  - Implémentation d'une configuration temporaire du tenant courant dans le context `TenantContext.setTenantId(org.getId())` pour chaque clinique lors de l'initialisation des lits, services et chambres par défaut, suivie d'un appel systématique à `TenantContext.clear()` dans un bloc `finally`.
+  - Ajout de tests unitaires dans `AdminUserSeederTest.java` pour valider la génération correcte des entités spatiales de chaque clinique.
+  - Résolution de l'impasse fonctionnelle où l'utilisateur ne pouvait pas admettre un patient ou voir l'occupation spatiale en raison de dropdowns vides dans les formulaires d'admission et de transfert.
+
+- **Correction LazyInitializationException (TICKET-0115)** :
+  - Optimisation de la récupération des visites d'un patient via une requête `JOIN FETCH` (patient et constantes vitales), résolvant l'erreur HTTP 500 sur l'écran d'hospitalisation/visites.
+
+- **Conservation de l'historique de réanimation (TICKET-0115)** :
+  - Implémentation du endpoint `GET /api/emergencies/patient/{patientId}` et de la section "Passages aux Urgences" dans la synthèse médicale du patient, évitant la perte de traçabilité des soins critiques une fois l'urgence stabilisée.
+
 ### Documentation
+
+- **Audit EPIC-0017 — Facturation/Caisse non complète** :
+  - Mise à jour du ticket `EPIC-0017-hospitalisation-facturation-caisse-complete.md`, du backlog PM et de la spécification fonctionnelle pour acter que le module actuel reste partiel.
+  - Clarification de l'état réel : factures/paiements/PDF existants, devis/avoirs/créances amorcés mais UX principale incomplète, absence de vraie caisse avec sessions, reçus, clôture journalière, mouvements et écritures OHADA.
+  - Priorisation documentaire : finaliser `STORY-2105`, puis implémenter `STORY-2106` comme vrai module caisse avant bordereaux assurance et OHADA.
+
+- **Cadrage EPIC-0017 — Complétion Hospitalisation, Facturation et Caisse** :
+  - Création du ticket de cadrage `docs/ai/tickets/EPIC-0017-hospitalisation-facturation-caisse-complete.md`.
+  - Création de la documentation Documentation First dans `docs/features/hospitalisation-facturation-caisse-complete/` : spécification fonctionnelle, conception technique, contrat API cible, modèle de données cible et plan de test.
+  - Ajout du backlog PM `docs/pm/backlog/EPIC-0017-hospitalisation-facturation-caisse-complete.md` avec découpage EPIC -> stories -> tasks, estimations et critères d'acceptation.
+  - Identification des écarts CDC restants : séjour hospitalier structuré, bloc/CRO, soins journaliers, devis/proforma, créances, reçus, sessions de caisse, clôture journalière et imputations OHADA minimales.
+  - Signalement d'une dette de conformité architecture : `BillingManagementPageComponent` et `PatientHospitalizationComponent` dépassent la limite de 500 lignes et doivent être refactorés en première story.
+
+- **CDC V2.1 — Ajout des modules manquants et tables SQL (TICKET-001-ANALYSE-ALIGNEMENT-CDC)** :
+  - Complétion du Cahier des charges (Version 2.1) suite à l'analyse d'alignement avec les documents réels.
+  - Ajout du **Module 10-sexies** (Gestion Spatiale : Lits & Chambres).
+  - Ajout du **Module 11-bis** (Gestion Électronique des Documents - GED).
+  - Ajout du **Module 17-septies** (Conventions & Assurances - Tiers Payant).
+  - Mise à jour de la section 9 "Modèle de données" avec l'intégration des tables manquantes pour la Comptabilité OHADA, les Caisses/Trésorerie, la Traçabilité des implants, et les Rendez-vous.
 
 - **CDC V2 — Cahier des charges enrichi depuis les documents réels et les spécifications logicielles TC2CDK (TICKET-CDC-V2-ENRICHISSEMENT & TICKET-CDC-V2-COMPARISON-ENRICHMENT)** :
   - Analyse de 4 documents réels (Manuel de procédures, dossiers cliniques et facturation) et comparaison avec le document [SPECIFICATION_LOGICIEL_GESTION_CLINIQUE_TC2CDK.md](file:///C:/MES-APPLICATIONS/joprelys-connect/doc_reel_trauma_center/SPECIFICATION_LOGICIEL_GESTION_CLINIQUE_TC2CDK.md).
@@ -36,6 +176,10 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 
 ### Fixed
+
+- **Correction Erreur 500 sur enregistrement soin de réanimation (BUG-20260708-resuscitation-log-500-error)** :
+  - Suppression de l'appel de persistance explicite redondant dans `EmergencyService` pour éviter une `NonUniqueObjectException` provoquée par le cascading et le pre-assigned UUID de `ResuscitationLogEntity`.
+  - Intégration du test d'intégration `EmergencyControllerTest.java` et isolation des données de test de la base partagée.
 
 - **Amélioration de la disposition du panneau de dispensation en pharmacie (TICKET-UI-PHARMACY-DISPENSATION-LAYOUT)** :
   - Restructuration du layout de `app-pharmacy-dispensation-panel` en remplaçant la grille `xl:grid-cols-[...]` par un layout flexible vertical (`flex-col`) pour placer le formulaire de dispensation active et l'historique de délivrances l'un sous l'autre.

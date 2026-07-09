@@ -6,8 +6,8 @@
 
 | Champ | Valeur |
 |---|---|
-| Version courante | 0.10.0 |
-| Dernière release | 2026-07-05 |
+| Version courante | 0.10.1 |
+| Dernière release | 2026-07-08 |
 | Stratégie | SemVer |
 | Source de vérité | `VERSION` + `docs/ai/CHANGELOG.md` |
 
@@ -15,11 +15,11 @@
 
 | Module | Version | Type de version | Dernière release | Compatibilité | Notes |
 |---|---:|---|---|---|---|
-| Backend Spring Boot | 0.10.0 | SemVer | 2026-07-05 | API v0 | Synthèse médicale structurée conforme CDC, validations de sécurité patient |
-| Angular Web | 0.10.0 | SemVer | 2026-07-05 | API v0 | Page "Ma synthèse médicale" et téléchargement PDF |
+| Backend Spring Boot | 0.10.1 | SemVer | 2026-07-08 | API v0 | Correction de l'erreur 500 sur création de factures (séquence PostgreSQL) |
+| Angular Web | 0.10.1 | SemVer | 2026-07-08 | API v0 | Page "Ma synthèse médicale" et téléchargement PDF |
 | Flutter Mobile | 0.3.0 | SemVer | 2026-07-01 | API v0 | À adapter au projet |
-| API Contract | 0.10.0 | SemVer | 2026-07-05 | v0 | Endpoints synthèse médicale et gestion de la sécurité |
-| Database Schema | 0.10.0 | Migration versionnée | 2026-07-05 | v0 | Flyway v32 (soft delete et flag important) |
+| API Contract | 0.10.1 | SemVer | 2026-07-08 | v0 | Endpoints synthèse médicale et gestion de la sécurité |
+| Database Schema | 0.10.1 | Migration versionnée | 2026-07-08 | v0 | Flyway v32 (soft delete et flag important) |
 
 ## Compatibilité API / clients
 

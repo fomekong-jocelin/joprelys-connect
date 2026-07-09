@@ -119,6 +119,54 @@ export class PatientApiService {
     return this.http.get(`/api/hospitalizations/${id}/pdf`, { responseType: 'blob' });
   }
 
+  downloadEntryPdf(id: string): Observable<Blob> {
+    return this.http.get(`/api/hospitalizations/${id}/entry-pdf`, { responseType: 'blob' });
+  }
+
+  getConsents(hospitalizationId: string): Observable<any[]> {
+    return this.http.get<any[]>(`/api/hospitalizations/${hospitalizationId}/consents`);
+  }
+
+  addConsent(hospitalizationId: string, formData: FormData): Observable<any> {
+    return this.http.post<any>(`/api/hospitalizations/${hospitalizationId}/consents`, formData);
+  }
+
+  addDailyCare(hospId: string, request: any): Observable<any> {
+    return this.http.post<any>(`/api/hospitalizations/${hospId}/daily-cares`, request);
+  }
+
+  getDailyCares(hospId: string): Observable<any[]> {
+    return this.http.get<any[]>(`/api/hospitalizations/${hospId}/daily-cares`);
+  }
+
+  addMedicationAdministration(hospId: string, request: any): Observable<any> {
+    return this.http.post<any>(`/api/hospitalizations/${hospId}/medication-administrations`, request);
+  }
+
+  getMedicationAdministrations(hospId: string): Observable<any[]> {
+    return this.http.get<any[]>(`/api/hospitalizations/${hospId}/medication-administrations`);
+  }
+
+  addPatientConsumption(hospId: string, request: any): Observable<any> {
+    return this.http.post<any>(`/api/hospitalizations/${hospId}/patient-consumptions`, request);
+  }
+
+  getPatientConsumptions(hospId: string): Observable<any[]> {
+    return this.http.get<any[]>(`/api/hospitalizations/${hospId}/patient-consumptions`);
+  }
+
+  createOperatingReport(hospId: string, request: any): Observable<any> {
+    return this.http.post<any>(`/api/hospitalizations/${hospId}/operating-reports`, request);
+  }
+
+  getOperatingReports(hospId: string): Observable<any[]> {
+    return this.http.get<any[]>(`/api/hospitalizations/${hospId}/operating-reports`);
+  }
+
+  validateOperatingReport(reportId: string): Observable<any> {
+    return this.http.post<any>(`/api/hospitalizations/operating-reports/${reportId}/validate`, {});
+  }
+
   // WT2 (PDF): Téléchargement du PDF de synthèse médicale patient
   downloadSummaryPdf(id: string): Observable<Blob> {
     return this.http.get(`/api/patients/${id}/summary-pdf`, { responseType: 'blob' });

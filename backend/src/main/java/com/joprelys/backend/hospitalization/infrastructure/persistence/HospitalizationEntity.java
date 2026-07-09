@@ -113,7 +113,11 @@ public class HospitalizationEntity {
     }
 
     public void discharge(String diagnosis, String instructions, String pdfPath) {
-        this.status = "SORTI";
+        discharge(diagnosis, instructions, pdfPath, "SORTI");
+    }
+
+    public void discharge(String diagnosis, String instructions, String pdfPath, String finalStatus) {
+        this.status = finalStatus;
         this.dischargedAt = Instant.now();
         this.dischargeDiagnosis = diagnosis;
         this.dischargeInstructions = instructions;

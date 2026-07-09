@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { PatientApiService } from './patient-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './patient.models';
+import { EmergencyApiService } from '../emergency/emergency-api.service';
+import { EmergencyRecord } from '../emergency/emergency.models';
 
 @Component({
   selector: 'app-patient-medical-info',
@@ -348,6 +350,99 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
           </div>
         </div>
       }
+
+      <!-- Section Urgences & Réanimation (Historique) -->
+      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-xl p-4 md:p-5 shadow-xs transition-colors">
+        <div class="flex items-center justify-between mb-4">
+          <h4 class="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
+            <span>🚨</span> {{ t('patients.medicalInfo.emergencies.title') || 'Passages aux Urgences' }}
+          </h4>
+        </div>
+
+        @if (loadingEmergencies()) {
+          <div class="py-4 text-center text-xs text-[var(--text-muted)]">{{ t('common.loading') }}</div>
+        } @else if (emergencies().length === 0) {
+          <p class="text-xs text-[var(--text-muted)] italic bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)]/10 p-3 rounded-lg border border-slate-100/50 dark:border-slate-800/40">
+            {{ t('patients.medicalInfo.emergencies.empty') || 'Aucun passage aux urgences enregistré pour ce patient.' }}
+          </p>
+        } @else {
+          <div class="space-y-4">
+            @for (em of emergencies(); track em.id) {
+              <div class="p-4 bg-[var(--app-surface-muted)] dark:bg-slate-800/10 border border-slate-100/50 dark:border-slate-800/60 rounded-lg space-y-3 animate-fade-in">
+                <div class="flex justify-between items-start flex-wrap gap-2">
+                  <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="font-extrabold text-sm text-[var(--text-primary)]">
+                        {{ em.createdAt | date:'dd/MM/yyyy HH:mm' }}
+                      </span>
+                      <span [class]="getTriageClass(em.triageLevel)">
+                        {{ em.triageLevel }}
+                      </span>
+                      @if (em.stabilizedAt) {
+                        <span class="px-1.5 py-0.5 rounded-sm text-[10px] font-bold bg-green-50 text-green-600 dark:bg-green-950/30 dark:text-green-300 border border-green-100 dark:border-green-900/20">
+                          💚 {{ t('emergency.status.stabilized') || 'Stabilisé' }} ({{ em.orientation }})
+                        </span>
+                      } @else {
+                        <span class="px-1.5 py-0.5 rounded-sm text-[10px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-100 dark:border-rose-900/20 animate-pulse">
+                          ⚡ {{ t('emergency.status.active') || 'Urgence Active' }}
+                        </span>
+                      }
+                    </div>
+                    <p class="text-xs text-[var(--text-secondary)] mt-1.5">
+                      <strong>{{ t('emergency.chiefComplaint') || 'Motif d\'admission' }} :</strong> {{ em.chiefComplaint }}
+                    </p>
+                  </div>
+                  
+                  <div class="text-xs text-[var(--text-muted)] space-y-1">
+                    <p>
+                      <strong>Mode d'arrivée :</strong> {{ em.arrivalMode }}
+                    </p>
+                    <p>
+                      <strong>Constantes :</strong> 
+                      @if (em.initialBpSystolic) {
+                        <span>{{ em.initialBpSystolic }}/{{ em.initialBpDiastolic }} mmHg, </span>
+                      }
+                      @if (em.initialHr) {
+                        <span>{{ em.initialHr }} bpm, </span>
+                      }
+                      @if (em.initialTemp) {
+                        <span>{{ em.initialTemp }}°C</span>
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                @if (em.resuscitationLogs && em.resuscitationLogs.length > 0) {
+                  <div class="border-t border-[var(--app-border)]/60 pt-3">
+                    <h5 class="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)] mb-2">
+                      📋 Actions de Réanimation
+                    </h5>
+                    <div class="space-y-1.5 max-h-40 overflow-y-auto">
+                      @for (log of em.resuscitationLogs; track log.id) {
+                        <div class="flex justify-between items-start text-xs p-2 bg-[var(--app-surface)] rounded-md border border-[var(--app-border)]/40">
+                          <div>
+                            <span class="font-semibold text-[var(--text-primary)]">
+                              {{ getCareTypeLabel(log.actionType) }} - {{ log.description }}
+                            </span>
+                            @if (log.quantity) {
+                              <span class="text-[10px] text-brand-primary font-bold ml-2">
+                                ({{ log.quantity }} {{ log.unit }})
+                              </span>
+                            }
+                          </div>
+                          <span class="text-[10px] text-[var(--text-muted)]">
+                            {{ log.administeredAt | date:'HH:mm' }}
+                          </span>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
     </div>
   `
 })
@@ -355,6 +450,7 @@ export class PatientMedicalInfoComponent implements OnInit {
   @Input({ required: true }) patientId!: string;
 
   private readonly patientApi = inject(PatientApiService);
+  private readonly emergencyApi = inject(EmergencyApiService);
   private readonly i18n = inject(I18nService);
 
   readonly t = (key: string) => this.i18n.t(key);
@@ -362,10 +458,12 @@ export class PatientMedicalInfoComponent implements OnInit {
   readonly allergies = signal<PatientAllergy[]>([]);
   readonly history = signal<PatientMedicalHistory[]>([]);
   readonly vaccinations = signal<PatientVaccination[]>([]);
+  readonly emergencies = signal<EmergencyRecord[]>([]);
 
   readonly loadingAllergies = signal<boolean>(false);
   readonly loadingHistory = signal<boolean>(false);
   readonly loadingVaccinations = signal<boolean>(false);
+  readonly loadingEmergencies = signal<boolean>(false);
 
   // Modales
   readonly showAllergyModal = signal<boolean>(false);
@@ -403,6 +501,7 @@ export class PatientMedicalInfoComponent implements OnInit {
       this.loadAllergies();
       this.loadHistory();
       this.loadVaccinations();
+      this.loadEmergencies();
     }
   }
 
@@ -574,5 +673,40 @@ export class PatientMedicalInfoComponent implements OnInit {
         this.loadVaccinations();
       }
     });
+  }
+
+  loadEmergencies(): void {
+    this.loadingEmergencies.set(true);
+    this.emergencyApi.getPatientEmergencies(this.patientId).subscribe({
+      next: (data) => {
+        this.emergencies.set(data);
+        this.loadingEmergencies.set(false);
+      },
+      error: () => this.loadingEmergencies.set(false)
+    });
+  }
+
+  getTriageClass(level: string): string {
+    switch (level) {
+      case 'RED':
+        return 'px-1.5 py-0.5 rounded-sm text-[10px] font-black bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200/50 dark:border-red-900/20';
+      case 'ORANGE':
+        return 'px-1.5 py-0.5 rounded-sm text-[10px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400 border border-orange-200/50 dark:border-orange-900/20';
+      case 'YELLOW':
+        return 'px-1.5 py-0.5 rounded-sm text-[10px] font-semibold bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400';
+      case 'GREEN':
+        return 'px-1.5 py-0.5 rounded-sm text-[10px] font-semibold bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400';
+      default:
+        return 'px-1.5 py-0.5 rounded-sm text-[10px] font-semibold bg-slate-100 text-[var(--text-secondary)] dark:bg-[var(--bg-input)] dark:text-[var(--text-muted)]';
+    }
+  }
+
+  getCareTypeLabel(type: string): string {
+    switch (type) {
+      case 'VASCULAR_ACCESS': return 'VVP';
+      case 'FLUID_BOLUS': return 'Remplissage';
+      case 'MEDICATION': return 'Médication';
+      default: return type;
+    }
   }
 }

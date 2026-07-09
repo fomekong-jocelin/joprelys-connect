@@ -1,9 +1,9 @@
 # Cahier des charges complet — Joprelys Connect V2
 
 **Projet :** Joprelys Connect  
-**Version :** 2.0  
+**Version :** 2.1  
 **Date :** 2026-07-08  
-**Basée sur :** Version 1.0 (2026-07-01)  
+**Basée sur :** Version 2.0 (2026-07-08)  
 **Produit :** Plateforme d'interopérabilité santé, dossier patient partagé et documents médicaux vérifiables  
 **Éditeur envisagé :** Joprelys HealthTech  
 **Slogan court recommandé :** Parce que chaque vie compte.  
@@ -17,6 +17,7 @@
 |---|---|---|---|
 | 1.0 | 2026-07-01 | Équipe Joprelys | Version initiale |
 | 2.0 | 2026-07-08 | Antigravity | Enrichissement complet depuis les documents réels TC2CDK (Manuel procédures, rapports hospitalisation, facture chirurgie) et alignement rigoureux sur les spécifications logicielles cliniques (Ajout de 9 nouveaux modules et consolidation structurelle) |
+| 2.1 | 2026-07-08 | Antigravity | Ajout des modules GED, Lits/Chambres, Assurances/Conventions et intégration des tables SQL manquantes (Comptabilité OHADA, Trésorerie, Traçabilité). |
 
 ---
 
@@ -327,9 +328,41 @@ Chaque contact physique ou administratif à l'accueil donne lieu à une inscript
 
 ---
 
+## Module 10-sexies — Gestion Spatiale (Lits & Chambres) **(V2.1 — nouveau)**
+
+### Objectif
+
+Gérer la cartographie de la clinique pour le suivi des hospitalisations.
+
+### Données
+
+- **Service (Ward)** : Maternité, Chirurgie, Médecine générale.
+- **Chambre (Room)** : Numéro, capacité, confort (VIP, standard).
+- **Lit (Bed)** : Identifiant unique, statut (occupé, libre, en nettoyage, en maintenance).
+
+### Exigences
+
+- **FR-SPACE-001** : Une hospitalisation doit être obligatoirement associée à un lit libre.
+- **FR-SPACE-002** : Le tableau de bord doit afficher le plan de la clinique et l'occupation des lits en temps réel.
+
+---
+
 ## Module 11 — Documents médicaux vérifiables
 
 *(identique à V1 + liste complète des 25 documents de la V2)*
+
+---
+
+## Module 11-bis — Gestion Électronique des Documents (GED) **(V2.1 — nouveau)**
+
+### Objectif
+
+Stocker de façon sécurisée les documents physiques numérisés ou importés.
+
+### Exigences
+
+- **FR-GED-001** : Permettre l'upload de fichiers (PDF, JPEG) liés au dossier patient (ex: consentements signés manuscrits, radiographies externes).
+- **FR-GED-002** : Stockage sécurisé sur un bucket cloud (S3/MinIO) avec contrôle d'accès strict (RBAC).
 
 ---
 
@@ -509,6 +542,25 @@ Si le crédit est insuffisant, l'engagement est bloqué et nécessite une dérog
 
 ---
 
+## Module 17-septies — Conventions & Assurances (Tiers Payant) **(V2.1 — nouveau)**
+
+### Objectif
+
+Gérer la prise en charge des patients par des assurances, mutuelles ou entreprises partenaires, et calculer les restes à charge.
+
+### Données
+
+- **Assurance** : Nom, contacts, conditions générales.
+- **Contrat/Convention** : Taux de couverture (ex: 80% / 20%), plafonds, actes exclus.
+- **Tiers Payant** : Part patient, part assurance, factures adressées aux assurances.
+
+### Exigences
+
+- **FR-INS-001** : Lors de la facturation, le système doit ventiler automatiquement le montant entre la part patient et la part assurance.
+- **FR-INS-002** : Le module doit générer les bordereaux mensuels de créances à envoyer aux compagnies d'assurance.
+
+---
+
 ## Module 18 — Gestion des décès
 
 *(identique à V2 initial)*
@@ -589,16 +641,18 @@ Fournir des rapports et graphiques d'activité pour le pilotage stratégique de 
 
 ## 9. Modèle de données recommandé (enrichi)
 
-Le modèle de données s'organise autour des 32 tables de la base de données :
+Le modèle de données s'organise autour des tables principales suivantes (réparties par domaines) :
 1. **Établissements & Sécurité** : `organizations`, `organization_specialties`, `users`, `roles`, `permissions`, `audit_logs`, `api_clients`, `api_keys`.
-2. **Dossier Clinique** : `patients`, `patient_identifiers`, `patient_duplicate_candidates`, `visits`, `consultations`, `vital_signs`, `allergies`, `medical_histories`, `diagnoses`, `prescriptions`, `prescription_items`, `exam_requests`, `exam_results`, `hospitalizations`, `or_reports`, `daily_followups`, `surgical_consents`, `physio_prescriptions`, `physio_sessions`, `obstetric_prep_lists`, `reception_logs`, `discharge_against_advice`.
+2. **Dossier Clinique & Documents** : `patients`, `patient_identifiers`, `patient_duplicate_candidates`, `patient_documents` (GED), `visits`, `appointments` (Rendez-vous), `consultations`, `vital_signs`, `allergies`, `medical_histories`, `diagnoses`, `prescriptions`, `prescription_items`, `exam_requests`, `exam_results`, `hospitalizations`, `or_reports`, `or_schedules` (Planning bloc), `daily_followups`, `surgical_consents`, `physio_prescriptions`, `physio_sessions`, `obstetric_prep_lists`, `reception_logs`, `discharge_against_advice`.
 3. **Urgences & Réanimation** : `emergencies`, `resuscitation_protocols`.
-4. **Facturation & Finance** : `invoices`, `invoice_lines`, `k_tariffs`, `estimates`, `receivables`, `payment_records`.
-5. **Achats & Stocks** : `purchase_requests`, `purchase_orders`, `suppliers`, `inventory_items`, `inventory_transactions`.
-6. **Immobilisations** : `assets`, `asset_maintenance_records`.
-7. **RH & Paie** : `employees`, `employee_contracts`, `payrolls`, `attendance_logs`, `leave_requests`.
-8. **Restauration** : `meals`, `meal_orders`.
-9. **Garde & Staff** : `shift_reports`, `staff_meetings`.
+4. **Gestion Spatiale (Hospitalisation)** : `wards` (Services), `rooms` (Chambres), `beds` (Lits).
+5. **Facturation, Assurances & Trésorerie** : `invoices`, `invoice_lines`, `k_tariffs`, `estimates`, `insurances`, `insurance_contracts`, `third_party_payments`, `receivables`, `payment_records`, `cash_registers` (Caisses), `cash_register_sessions` (Clôtures), `bank_accounts`.
+6. **Comptabilité OHADA & Budget** : `accounting_accounts` (Plan comptable), `accounting_journals`, `accounting_entries` (Écritures), `accounting_lines`, `budgets`, `budget_lines`.
+7. **Achats & Stocks** : `purchase_requests`, `purchase_orders`, `suppliers`, `inventory_items`, `inventory_categories`, `inventory_transactions`, `implant_trackings` (Traçabilité matériel implantable).
+8. **Immobilisations** : `assets`, `asset_maintenance_records`.
+9. **RH & Paie** : `employees`, `employee_contracts`, `payrolls`, `attendance_logs`, `leave_requests`.
+10. **Restauration** : `meals`, `meal_orders`.
+11. **Garde & Staff** : `shift_reports`, `staff_meetings`.
 
 ---
 

@@ -1,0 +1,274 @@
+<app-shell>
+  <app-page-header
+    [title]="t('reception.title')"
+    [subtitle]="t('reception.subtitle')"
+  >
+    <app-ui-button variant="primary" (pressed)="openModal()" class="shrink-0">
+      <div class="flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+        <span>{{ t('reception.addBtn') }}</span>
+      </div>
+    </app-ui-button>
+  </app-page-header>
+
+  <div class="app-container pb-12">
+    <!-- Alert Messages -->
+    @if (error()) {
+      <app-ui-alert tone="error" class="mb-6" (close)="error.set(null)">{{ error() }}</app-ui-alert>
+    }
+
+    <!-- Filtering Panel -->
+    <div class="flex items-center gap-3 mb-6 bg-[var(--app-surface)] border border-[var(--app-border)]/60 p-3 rounded-lg shadow-xs">
+      <span class="text-xs font-black text-[var(--text-muted)] uppercase tracking-wider">{{ t('reception.filterBy') }}</span>
+      <div class="flex gap-2">
+        <button
+          (click)="filterType.set('ALL')"
+          [class.bg-[var(--app-surface-muted)]]="filterType() === 'ALL'"
+          [class.text-brand-cyan]="filterType() === 'ALL'"
+          class="px-3 py-1 text-xs font-extrabold rounded-md cursor-pointer transition-colors border border-[var(--app-border)]/40 hover:bg-[var(--app-surface-muted)]"
+        >
+          {{ t('reception.filter.all') }}
+        </button>
+        <button
+          (click)="filterType.set('VISITOR')"
+          [class.bg-[var(--app-surface-muted)]]="filterType() === 'VISITOR'"
+          [class.text-brand-cyan]="filterType() === 'VISITOR'"
+          class="px-3 py-1 text-xs font-extrabold rounded-md cursor-pointer transition-colors border border-[var(--app-border)]/40 hover:bg-[var(--app-surface-muted)]"
+        >
+          {{ t('reception.filter.visitor') }}
+        </button>
+        <button
+          (click)="filterType.set('AUDIENCE')"
+          [class.bg-[var(--app-surface-muted)]]="filterType() === 'AUDIENCE'"
+          [class.text-brand-cyan]="filterType() === 'AUDIENCE'"
+          class="px-3 py-1 text-xs font-extrabold rounded-md cursor-pointer transition-colors border border-[var(--app-border)]/40 hover:bg-[var(--app-surface-muted)]"
+        >
+          {{ t('reception.filter.audience') }}
+        </button>
+        <button
+          (click)="filterType.set('PATIENT')"
+          [class.bg-[var(--app-surface-muted)]]="filterType() === 'PATIENT'"
+          [class.text-brand-cyan]="filterType() === 'PATIENT'"
+          class="px-3 py-1 text-xs font-extrabold rounded-md cursor-pointer transition-colors border border-[var(--app-border)]/40 hover:bg-[var(--app-surface-muted)]"
+        >
+          {{ t('reception.filter.patient') }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    @if (isLoading()) {
+      <div class="flex justify-center items-center py-16">
+        <div class="animate-spin rounded-full h-8 w-8 border-2 border-brand-primary border-t-transparent"></div>
+        <span class="ml-3 text-sm font-semibold text-[var(--text-muted)]">{{ t('common.loading') }}</span>
+      </div>
+    } @else if (filteredLogs().length === 0) {
+      <app-empty-state [message]="t('reception.empty')"></app-empty-state>
+    } @else {
+      <div class="ui-card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="ui-table">
+            <thead>
+              <tr>
+                <th>{{ t('reception.table.type') }}</th>
+                <th>{{ t('reception.table.visitor') }}</th>
+                <th>{{ t('reception.table.idDocument') }}</th>
+                <th>{{ t('reception.table.reasonTarget') }}</th>
+                <th>{{ t('reception.table.arrival') }}</th>
+                <th>{{ t('reception.table.departure') }}</th>
+                <th class="text-right">{{ t('reception.table.actions') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (log of filteredLogs(); track log.id) {
+                <tr class="hover:bg-[var(--app-surface-muted)]/40 transition-colors">
+                  <td>
+                    <span 
+                      [class.bg-sky-100]="log.logType === 'VISITOR'"
+                      [class.text-sky-700]="log.logType === 'VISITOR'"
+                      [class.bg-amber-100]="log.logType === 'AUDIENCE'"
+                      [class.text-amber-700]="log.logType === 'AUDIENCE'"
+                      [class.bg-emerald-100]="log.logType === 'PATIENT'"
+                      [class.text-emerald-700]="log.logType === 'PATIENT'"
+                      class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-black uppercase tracking-wider"
+                    >
+                      {{ t('reception.type.' + log.logType.toLowerCase()) }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="font-extrabold text-[var(--text-primary)] font-display">{{ log.firstName }} {{ log.lastName }}</div>
+                  </td>
+                  <td>
+                    @if (log.idDocumentType) {
+                      <div class="text-sm font-semibold text-[var(--text-secondary)]">{{ log.idDocumentType }}</div>
+                      <div class="text-xs text-[var(--text-muted)] font-mono">{{ log.idDocumentNumber }}</div>
+                    } @else {
+                      <span class="text-xs text-[var(--text-muted)] italic">-</span>
+                    }
+                  </td>
+                  <td>
+                    @if (log.logType === 'VISITOR' && log.targetPatientId) {
+                      <div class="text-xs font-black text-brand-primary uppercase tracking-wider mb-0.5">{{ t('reception.target.visitor') }}</div>
+                      <div class="text-sm font-extrabold text-[var(--text-primary)]">👉 {{ getPatientName(log.targetPatientId) }}</div>
+                    } @else if (log.logType === 'AUDIENCE' && log.targetStaffId) {
+                      <div class="text-xs font-black text-brand-primary uppercase tracking-wider mb-0.5">{{ t('reception.target.audience') }}</div>
+                      <div class="text-sm font-extrabold text-[var(--text-primary)]">👤 {{ getStaffName(log.targetStaffId) }}</div>
+                    } @else {
+                      <div class="text-xs font-black text-brand-primary uppercase tracking-wider mb-0.5">{{ t('reception.target.patient') }}</div>
+                      <span class="text-sm font-semibold text-[var(--text-secondary)]">{{ log.reason || '-' }}</span>
+                    }
+                  </td>
+                  <td>
+                    <div class="text-sm font-bold text-[var(--text-primary)]">{{ log.arrivalAt | date:'HH:mm' }}</div>
+                    <div class="text-[10px] font-semibold text-[var(--text-muted)]">{{ log.arrivalAt | date:'dd/MM/yyyy' }}</div>
+                  </td>
+                  <td>
+                    @if (log.departureAt) {
+                      <div class="text-sm font-bold text-[var(--brand-success-text)]">{{ log.departureAt | date:'HH:mm' }}</div>
+                      <div class="text-[10px] font-semibold text-[var(--text-muted)]">{{ log.departureAt | date:'dd/MM/yyyy' }}</div>
+                    } @else {
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-[10px] font-black bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]">
+                        {{ t('reception.status.inside') }}
+                      </span>
+                    }
+                  </td>
+                  <td class="text-right">
+                    @if (!log.departureAt) {
+                      <app-ui-button variant="secondary" size="small" (pressed)="recordDeparture(log)" [disabled]="isProcessing()">
+                        {{ t('reception.departureBtn') }}
+                      </app-ui-button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  </div>
+</app-shell>
+
+<!-- Add Entry Modal -->
+@if (isModalOpen()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-bg)] backdrop-blur-sm p-4 animate-fade-in">
+    <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-lg max-w-lg w-full shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto flex flex-col">
+      
+      <!-- Close button -->
+      <button (click)="closeModal()" class="absolute top-4 right-4 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] cursor-pointer transition-colors">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      <!-- Header -->
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary shrink-0">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="font-display font-black text-lg text-[var(--text-primary)] leading-tight">
+            {{ t('reception.modal.title') }}
+          </h3>
+          <p class="text-xs text-[var(--text-muted)] mt-0.5">
+            {{ t('reception.modal.desc') }}
+          </p>
+        </div>
+      </div>
+
+      <form [formGroup]="logForm" (ngSubmit)="onSubmit()" class="space-y-4">
+        <!-- Log Type Selection -->
+        <div>
+          <label class="ui-label">{{ t('reception.form.type') }}</label>
+          <select formControlName="logType" class="ui-input">
+            <option value="VISITOR">{{ t('reception.form.type.visitor') }}</option>
+            <option value="AUDIENCE">{{ t('reception.form.type.audience') }}</option>
+            <option value="PATIENT">{{ t('reception.form.type.patient') }}</option>
+          </select>
+        </div>
+
+        <!-- Names -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="ui-label">{{ t('reception.form.firstName') }}</label>
+            <input type="text" formControlName="firstName" class="ui-input" [placeholder]="t('reception.form.firstName.placeholder')" />
+            @if (logForm.get('firstName')?.touched && logForm.get('firstName')?.errors?.['required']) {
+              <div class="text-[var(--brand-danger)] text-xs font-semibold mt-1">{{ t('reception.form.required') }}</div>
+            }
+          </div>
+          <div>
+            <label class="ui-label">{{ t('reception.form.lastName') }}</label>
+            <input type="text" formControlName="lastName" class="ui-input" [placeholder]="t('reception.form.lastName.placeholder')" />
+            @if (logForm.get('lastName')?.touched && logForm.get('lastName')?.errors?.['required']) {
+              <div class="text-[var(--brand-danger)] text-xs font-semibold mt-1">{{ t('reception.form.required') }}</div>
+            }
+          </div>
+        </div>
+
+        <!-- ID Documents (only if not PATIENT) -->
+        @if (logForm.get('logType')?.value !== 'PATIENT') {
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="ui-label">{{ t('reception.form.idDocumentType') }}</label>
+              <select formControlName="idDocumentType" class="ui-input">
+                <option value="CNI">CNI</option>
+                <option value="PASSEPORT">Passeport</option>
+                <option value="AUTRE">Autre</option>
+              </select>
+            </div>
+            <div>
+              <label class="ui-label">{{ t('reception.form.idDocumentNumber') }}</label>
+              <input type="text" formControlName="idDocumentNumber" class="ui-input" [placeholder]="t('reception.form.idDocumentNumber.placeholder')" />
+            </div>
+          </div>
+        }
+
+        <!-- Target Patient selection (only if VISITOR) -->
+        @if (logForm.get('logType')?.value === 'VISITOR') {
+          <div>
+            <label class="ui-label">{{ t('reception.form.targetPatient') }}</label>
+            <select formControlName="targetPatientId" class="ui-input">
+              <option value="">-- {{ t('reception.form.selectPatient') }} --</option>
+              @for (p of patients(); track p.id) {
+                <option [value]="p.id">{{ p.fullName }} ({{ p.globalPatientNumber }})</option>
+              }
+            </select>
+          </div>
+        }
+
+        <!-- Target Staff selection (only if AUDIENCE) -->
+        @if (logForm.get('logType')?.value === 'AUDIENCE') {
+          <div>
+            <label class="ui-label">{{ t('reception.form.targetStaff') }}</label>
+            <select formControlName="targetStaffId" class="ui-input">
+              <option value="">-- {{ t('reception.form.selectStaff') }} --</option>
+              @for (s of staff(); track s.id) {
+                <option [value]="s.id">{{ s.displayName }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <!-- Reason -->
+        <div>
+          <label class="ui-label">{{ t('reception.form.reason') }}</label>
+          <textarea formControlName="reason" class="ui-input h-20 resize-none" [placeholder]="t('reception.form.reason.placeholder')"></textarea>
+        </div>
+
+        <!-- Footer buttons -->
+        <div class="flex justify-end gap-3 pt-4 border-t border-[var(--app-border)]/80 mt-6">
+          <app-ui-button variant="secondary" (pressed)="closeModal()" [disabled]="isProcessing()">
+            {{ t('common.cancel') }}
+          </app-ui-button>
+          <app-ui-button variant="primary" (pressed)="onSubmit()" [disabled]="isProcessing()">
+            {{ isProcessing() ? t('common.saving') : t('common.save') }}
+          </app-ui-button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

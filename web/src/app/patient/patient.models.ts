@@ -164,6 +164,7 @@ export interface CreateHospitalizationNoteRequest {
 export interface DischargeHospitalizationRequest {
   dischargeDiagnosis: string;
   dischargeInstructions: string;
+  againstMedicalAdvice?: boolean;
 }
 
 
@@ -265,4 +266,137 @@ export interface PreRegistrationPage {
   totalPages: number;
   size: number;
   number: number;
+}
+
+export interface Ward {
+  id: string;
+  name: string;
+}
+
+export interface Bed {
+  id: string;
+  roomId: string;
+  bedNumber: string;
+  status: 'FREE' | 'OCCUPIED' | 'CLEANING' | 'MAINTENANCE';
+  version: number;
+}
+
+export interface RoomOccupancy {
+  id: string;
+  roomNumber: string;
+  capacity: number;
+  comfortLevel: string;
+  beds: Bed[];
+}
+
+export interface WardOccupancy {
+  id: string;
+  name: string;
+  rooms: RoomOccupancy[];
+  totalBedsCount: number;
+  occupiedBedsCount: number;
+}
+
+export interface BedAssignment {
+  id: string;
+  hospitalizationId: string;
+  bedId: string;
+  assignedAt: string;
+  releasedAt?: string;
+}
+
+export interface InsuranceConvention {
+  id: string;
+  name: string;
+  coveragePercentage: number;
+}
+
+export interface TariffGrid {
+  id: string;
+  keyLetter: string;
+  unitValue: number;
+}
+
+export interface InvoiceItem {
+  id?: string;
+  label: string;
+  itemType: 'CONSULTATION' | 'K_SURGEON' | 'K_ANESTHESIST' | 'K_BLOC' | 'AMI_CARE' | 'STAY_FEE' | 'MEDICATION';
+  unitPrice: number;
+  quantity: number;
+  coefficient?: number;
+  totalItemAmount?: number;
+}
+
+export interface Invoice {
+  id: string;
+  patientId: string;
+  visitId?: string;
+  invoiceNumber: string;
+  insuranceConvention?: InsuranceConvention;
+  totalAmount: number;
+  patientShare: number;
+  insuranceShare: number;
+  status: 'PENDING' | 'PARTIALLY_PAID' | 'PAID' | 'PROFORMA' | 'VALIDATED' | 'CANCELLED';
+  items: InvoiceItem[];
+  createdAt: string;
+  validatedAt?: string;
+  validatedByUserId?: string;
+  discountAmount?: number;
+  discountReason?: string;
+}
+
+export interface EstimateItem {
+  id?: string;
+  label: string;
+  itemType: string;
+  unitPrice: number;
+  quantity: number;
+  totalAmount?: number;
+}
+
+export interface Estimate {
+  id: string;
+  patientId: string;
+  visitId?: string;
+  estimateNumber: string;
+  totalAmount: number;
+  patientShare: number;
+  insuranceShare: number;
+  status: 'DRAFT' | 'ACCEPTED' | 'REJECTED' | 'INVOICED';
+  items: EstimateItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreditNote {
+  id: string;
+  invoiceId: string;
+  creditNoteNumber: string;
+  amount: number;
+  reason: string;
+  status: 'ACTIVE' | 'CANCELLED';
+  createdAt: string;
+}
+
+export interface Receivable {
+  id: string;
+  invoiceId: string;
+  debtorType: 'PATIENT' | 'INSURANCE';
+  debtorId: string;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  status: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID';
+  dueDate?: string;
+  createdAt: string;
+}
+
+export interface Payment {
+  id: string;
+  invoiceId: string;
+  amount: number;
+  paymentMethod: 'CASH' | 'CHECK' | 'BANK_TRANSFER';
+  referenceNumber?: string;
+  receivedByUserId: string;
+  createdAt: string;
 }

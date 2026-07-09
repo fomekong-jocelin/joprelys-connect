@@ -386,7 +386,11 @@ public class PdfGeneratorService {
             document.add(new Paragraph(" "));
 
             // 2. Document Title
-            Paragraph title = new Paragraph("FICHE DE SORTIE D'HOSPITALISATION", fontTitle);
+            String titleStr = "FICHE DE SORTIE D'HOSPITALISATION";
+            if ("SORTI_CONTRE_AVIS".equals(hospitalization.getStatus())) {
+                titleStr = "FICHE DE SORTIE CONTRE AVIS MÉDICAL";
+            }
+            Paragraph title = new Paragraph(titleStr, fontTitle);
             title.setAlignment(Element.ALIGN_CENTER);
             document.add(title);
             document.add(new Paragraph(" "));
@@ -429,6 +433,91 @@ public class PdfGeneratorService {
 
             document.add(new Paragraph("Consignes médicales & Prescriptions de sortie :", fontSectionHeader));
             document.add(new Paragraph(hospitalization.getDischargeInstructions() != null ? hospitalization.getDischargeInstructions() : "Non renseigné", fontBody));
+
+            addFooterMention(document, fontMuted);
+
+            document.close();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate PDF", e);
+        }
+
+        return baos.toByteArray();
+    }
+
+    public byte[] generateHospitalizationEntryPdf(
+            com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationEntity hospitalization,
+            com.joprelys.backend.patient.infrastructure.persistence.PatientEntity patient,
+            String clinicName,
+            String clinicAddress,
+            String clinicPhone,
+            byte[] qrCodePngBytes) {
+
+        Document document = new Document(PageSize.A4, 36, 36, 36, 36);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        try {
+            PdfWriter.getInstance(document, baos);
+            document.open();
+
+            // Fonts definitions
+            Font fontTitle = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, Color.BLACK);
+            Font fontSectionHeader = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.BLACK);
+            Font fontBody = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.BLACK);
+            Font fontMuted = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.DARK_GRAY);
+
+            // 1. En-tête
+            String logoPath = null;
+            try {
+                OrganizationEntity org = organizationRepository.findById(hospitalization.getOrganizationId()).orElse(null);
+                logoPath = (org != null) ? org.getLogoPath() : null;
+            } catch (Exception e) {
+                // Ignore
+            }
+            PdfPTable headerTable = createHeaderTable(logoPath, clinicName, clinicAddress, clinicPhone, qrCodePngBytes, fontMuted);
+            document.add(headerTable);
+
+            // Separation line
+            Paragraph separator = new Paragraph("______________________________________________________________________________",
+                    FontFactory.getFont(FontFactory.HELVETICA, 10, Color.LIGHT_GRAY));
+            separator.setAlignment(Element.ALIGN_CENTER);
+            document.add(separator);
+            document.add(new Paragraph(" "));
+
+            // 2. Document Title
+            Paragraph title = new Paragraph("BILLET D'ENTRÉE D'HOSPITALISATION", fontTitle);
+            title.setAlignment(Element.ALIGN_CENTER);
+            document.add(title);
+            document.add(new Paragraph(" "));
+
+            // 3. Information Tables
+            PdfPTable infoTable = new PdfPTable(2);
+            infoTable.setWidthPercentage(100f);
+            infoTable.setWidths(new float[]{50f, 50f});
+
+            PdfPCell stayCell = new PdfPCell();
+            stayCell.setBorder(Rectangle.NO_BORDER);
+            stayCell.addElement(new Paragraph("Détails d'Admission", fontSectionHeader));
+            stayCell.addElement(new Paragraph("Numéro d'hospitalisation : " + hospitalization.getHospitalizationNumber(), fontBody));
+            stayCell.addElement(new Paragraph("Service : " + hospitalization.getServiceName(), fontBody));
+            stayCell.addElement(new Paragraph("Chambre : " + hospitalization.getRoomNumber() + " | Lit : " + hospitalization.getBedNumber(), fontBody));
+            stayCell.addElement(new Paragraph("Admis le : " + DATE_FORMATTER.format(hospitalization.getAdmittedAt()), fontBody));
+
+            PdfPCell patientCell = new PdfPCell();
+            patientCell.setBorder(Rectangle.NO_BORDER);
+            patientCell.addElement(new Paragraph("Informations du Patient", fontSectionHeader));
+            patientCell.addElement(new Paragraph("Nom : " + patient.getFullName(), fontBody));
+            patientCell.addElement(new Paragraph("DPU : " + patient.getGlobalPatientNumber(), fontBody));
+            patientCell.addElement(new Paragraph("Tél : " + patient.getPhone(), fontBody));
+
+            infoTable.addCell(stayCell);
+            infoTable.addCell(patientCell);
+            document.add(infoTable);
+            document.add(new Paragraph(" "));
+
+            // 4. Clinical Details
+            document.add(new Paragraph("Motif d'hospitalisation :", fontSectionHeader));
+            document.add(new Paragraph(hospitalization.getAdmissionReason(), fontBody));
+            document.add(new Paragraph(" "));
 
             addFooterMention(document, fontMuted);
 
@@ -910,6 +999,177 @@ public class PdfGeneratorService {
             document.close();
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate prescription PDF", e);
+        }
+
+        return baos.toByteArray();
+    }
+
+    public byte[] generateInvoicePdf(
+            com.joprelys.backend.billing.infrastructure.persistence.InvoiceEntity invoice,
+            PatientEntity patient,
+            String clinicName,
+            String clinicAddress,
+            String clinicPhone,
+            byte[] qrCodePngBytes,
+            String cashierName,
+            double totalPaid) {
+        Document document = new Document(PageSize.A4, 36f, 36f, 36f, 36f);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        try {
+            PdfWriter.getInstance(document, baos);
+            document.open();
+
+            Font fontTitle = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.BLACK);
+            Font fontSectionHeader = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.BLACK);
+            Font fontBody = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.BLACK);
+            Font fontBodyBold = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, Color.BLACK);
+            Font fontMuted = FontFactory.getFont(FontFactory.HELVETICA, 8, Color.GRAY);
+            Font fontTableHead = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, Color.BLACK);
+            Font fontTableCell = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.BLACK);
+
+            // 1. Header
+            String logoPath = null;
+            try {
+                OrganizationEntity org = organizationRepository.findById(invoice.getOrganizationId()).orElse(null);
+                logoPath = (org != null) ? org.getLogoPath() : null;
+            } catch (Exception ignored) {}
+
+            PdfPTable headerTable = createHeaderTable(logoPath, clinicName, clinicAddress, clinicPhone, qrCodePngBytes, fontMuted);
+            document.add(headerTable);
+
+            // Separator
+            Paragraph separator = new Paragraph("______________________________________________________________________________",
+                    FontFactory.getFont(FontFactory.HELVETICA, 10, Color.LIGHT_GRAY));
+            separator.setAlignment(Element.ALIGN_CENTER);
+            document.add(separator);
+            document.add(new Paragraph(" "));
+
+            // 2. Title
+            Paragraph title = new Paragraph("FACTURE DE SOINS MÉDICAUX", fontTitle);
+            title.setAlignment(Element.ALIGN_CENTER);
+            document.add(title);
+            document.add(new Paragraph(" "));
+
+            // 3. Info Table (Patient / Invoice Details)
+            PdfPTable infoTable = new PdfPTable(2);
+            infoTable.setWidthPercentage(100f);
+            infoTable.setWidths(new float[]{50f, 50f});
+
+            PdfPCell patientCell = new PdfPCell();
+            patientCell.setBorder(Rectangle.BOX);
+            patientCell.setBorderWidth(0.5f);
+            patientCell.setPadding(8f);
+            patientCell.addElement(new Paragraph("PATIENT", fontSectionHeader));
+            patientCell.addElement(new Paragraph("Nom complet : " + patient.getFullName(), fontBodyBold));
+            patientCell.addElement(new Paragraph("DPU : " + patient.getGlobalPatientNumber(), fontBody));
+            if (patient.getPhone() != null) {
+                patientCell.addElement(new Paragraph("Tél : " + patient.getPhone(), fontBody));
+            }
+
+            PdfPCell invoiceCell = new PdfPCell();
+            invoiceCell.setBorder(Rectangle.BOX);
+            invoiceCell.setBorderWidth(0.5f);
+            invoiceCell.setPadding(8f);
+            invoiceCell.addElement(new Paragraph("FACTURE", fontSectionHeader));
+            invoiceCell.addElement(new Paragraph("N° Facture : " + invoice.getInvoiceNumber(), fontBodyBold));
+            invoiceCell.addElement(new Paragraph("Date : " + DATE_FORMATTER.format(invoice.getCreatedAt()), fontBody));
+            invoiceCell.addElement(new Paragraph("Statut : " + invoice.getStatus().name(), fontBodyBold));
+            if (invoice.getInsuranceConvention() != null) {
+                invoiceCell.addElement(new Paragraph("Convention : " + invoice.getInsuranceConvention().getName() + " (" + (int)(invoice.getInsuranceConvention().getCoveragePercentage()*100) + "%)", fontBody));
+            }
+
+            infoTable.addCell(patientCell);
+            infoTable.addCell(invoiceCell);
+            document.add(infoTable);
+            document.add(new Paragraph(" "));
+
+            // 4. Invoice Items Table
+            Paragraph sectItems = new Paragraph("Prestations & Actes facturés", fontSectionHeader);
+            document.add(sectItems);
+            document.add(new Paragraph(" "));
+
+            PdfPTable itemsTable = new PdfPTable(5);
+            itemsTable.setWidthPercentage(100f);
+            itemsTable.setWidths(new float[]{45f, 15f, 10f, 10f, 20f});
+            itemsTable.getDefaultCell().setBorder(Rectangle.BOX);
+            itemsTable.getDefaultCell().setBorderWidth(0.5f);
+            itemsTable.getDefaultCell().setPadding(5f);
+
+            itemsTable.addCell(new Phrase("Libellé Prestation", fontTableHead));
+            itemsTable.addCell(new Phrase("Type", fontTableHead));
+            itemsTable.addCell(new Phrase("Prix Unitaire", fontTableHead));
+            itemsTable.addCell(new Phrase("Qté / Coeff", fontTableHead));
+            itemsTable.addCell(new Phrase("Total (FCFA)", fontTableHead));
+
+            for (com.joprelys.backend.billing.infrastructure.persistence.InvoiceItemEntity item : invoice.getItems()) {
+                itemsTable.addCell(new Phrase(item.getLabel(), fontTableCell));
+                itemsTable.addCell(new Phrase(item.getItemType().name(), fontTableCell));
+                itemsTable.addCell(new Phrase(String.format("%,.0f", item.getUnitPrice()), fontTableCell));
+
+                String qtyOrCoeff = String.format("%,.1f", item.getQuantity());
+                if (item.getCoefficient() != null && item.getCoefficient() != 1.0) {
+                    qtyOrCoeff += " x " + String.format("%,.1f", item.getCoefficient());
+                }
+                itemsTable.addCell(new Phrase(qtyOrCoeff, fontTableCell));
+
+                itemsTable.addCell(new Phrase(String.format("%,.0f", item.getTotalItemAmount()), fontTableCell));
+            }
+            document.add(itemsTable);
+            document.add(new Paragraph(" "));
+
+            // 5. Totals & Répartition Table
+            PdfPTable totalsTable = new PdfPTable(2);
+            totalsTable.setWidthPercentage(100f);
+            totalsTable.setWidths(new float[]{65f, 35f});
+
+            PdfPCell emptyCell = new PdfPCell();
+            emptyCell.setBorder(Rectangle.NO_BORDER);
+            totalsTable.addCell(emptyCell);
+
+            PdfPCell costCell = new PdfPCell();
+            costCell.setBorder(Rectangle.BOX);
+            costCell.setBorderWidth(0.5f);
+            costCell.setPadding(8f);
+
+            costCell.addElement(new Paragraph(String.format("Montant Total : %,.0f FCFA", invoice.getTotalAmount()), fontBodyBold));
+            if (invoice.getInsuranceConvention() != null) {
+                costCell.addElement(new Paragraph(String.format("Part Assurance : %,.0f FCFA", invoice.getInsuranceShare()), fontBody));
+                costCell.addElement(new Paragraph(String.format("Part Patient (Ticket Mod.) : %,.0f FCFA", invoice.getPatientShare()), fontBodyBold));
+            }
+            costCell.addElement(new Paragraph(String.format("Règlements reçus : %,.0f FCFA", totalPaid), fontBody));
+
+            double balance = invoice.getPatientShare() - totalPaid;
+            costCell.addElement(new Paragraph(String.format("Solde Dû : %,.0f FCFA", Math.max(0.0, balance)), fontBodyBold));
+
+            totalsTable.addCell(costCell);
+            document.add(totalsTable);
+            document.add(new Paragraph(" "));
+
+            // Signatures
+            PdfPTable sigTable = new PdfPTable(2);
+            sigTable.setWidthPercentage(100f);
+            sigTable.setWidths(new float[]{50f, 50f});
+            sigTable.setSpacingBefore(15f);
+
+            PdfPCell cashierCell = new PdfPCell();
+            cashierCell.setBorder(Rectangle.NO_BORDER);
+            cashierCell.addElement(new Paragraph("Signature Caissier", fontSectionHeader));
+            cashierCell.addElement(new Paragraph(cashierName != null ? cashierName : "Caisse centrale", fontBody));
+            sigTable.addCell(cashierCell);
+
+            PdfPCell stampCell = new PdfPCell();
+            stampCell.setBorder(Rectangle.NO_BORDER);
+            stampCell.addElement(new Paragraph("Cachet de l'Établissement", fontSectionHeader));
+            sigTable.addCell(stampCell);
+
+            document.add(sigTable);
+
+            addFooterMention(document, fontMuted);
+
+            document.close();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate invoice PDF", e);
         }
 
         return baos.toByteArray();
