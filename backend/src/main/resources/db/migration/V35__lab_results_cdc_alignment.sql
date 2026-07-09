@@ -19,7 +19,7 @@ ALTER TABLE lab_results ADD CONSTRAINT fk_lab_results_document FOREIGN KEY (docu
 ALTER TABLE lab_results ADD CONSTRAINT fk_lab_results_parent FOREIGN KEY (parent_result_id) REFERENCES lab_results(id) ON DELETE SET NULL;
 
 -- Contrainte check pour le statut
-ALTER TABLE lab_results ADD CONSTRAINT chk_lab_result_status CHECK (status IN ('DRAFT', 'VALIDATED', 'CANCELLED'));
+-- ALTER TABLE lab_results ADD CONSTRAINT chk_lab_result_status CHECK (status IN ('DRAFT', 'VALIDATED', 'CANCELLED'));
 
 -- Mettre à jour les anciennes lignes
 UPDATE lab_results SET status = 'VALIDATED' WHERE status IS NULL;

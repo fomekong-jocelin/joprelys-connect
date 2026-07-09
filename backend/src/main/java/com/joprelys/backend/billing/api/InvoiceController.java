@@ -91,7 +91,7 @@ public class InvoiceController {
     }
 
     @PostMapping("/{id}/payments")
-    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER')")
+    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER', 'CAISSIER', 'DAF')")
     @Operation(summary = "Enregistrer un règlement", description = "Enregistre un paiement sur une facture.")
     public ResponseEntity<PaymentResponse> addPayment(@PathVariable UUID id,
                                                       @Valid @RequestBody PaymentRequest request) {
@@ -100,7 +100,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/{id}/payments")
-    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER')")
+    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER', 'CAISSIER', 'DAF')")
     @Operation(summary = "Lister les règlements d'une facture", description = "Récupère tous les paiements enregistrés pour une facture.")
     public ResponseEntity<List<PaymentResponse>> listPayments(@PathVariable UUID id) {
         List<PaymentResponse> list = billingService.listPayments(id);

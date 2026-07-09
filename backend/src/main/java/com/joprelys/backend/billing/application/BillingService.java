@@ -5,6 +5,9 @@ import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.billing.api.*;
 import com.joprelys.backend.billing.infrastructure.persistence.*;
+import com.joprelys.backend.cash.application.CashRegisterService;
+import com.joprelys.backend.cash.infrastructure.persistence.CashRegisterSessionEntity;
+import com.joprelys.backend.cash.api.CashMovementRequest;
 import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationEntity;
 import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationRepository;
 import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationEntity;
@@ -57,6 +60,7 @@ public class BillingService {
     private final HospitalizationDailyCareRepository dailyCareRepository;
     private final PatientConsumptionRepository patientConsumptionRepository;
     private final OperatingReportRepository operatingReportRepository;
+    private final CashRegisterService cashRegisterService;
 
     public BillingService(InvoiceRepository invoiceRepository,
                           InvoiceItemRepository invoiceItemRepository,
@@ -73,7 +77,8 @@ public class BillingService {
                           AuditService auditService,
                           HospitalizationDailyCareRepository dailyCareRepository,
                           PatientConsumptionRepository patientConsumptionRepository,
-                          OperatingReportRepository operatingReportRepository) {
+                          OperatingReportRepository operatingReportRepository,
+                          CashRegisterService cashRegisterService) {
         this.invoiceRepository = invoiceRepository;
         this.invoiceItemRepository = invoiceItemRepository;
         this.paymentRepository = paymentRepository;
@@ -90,6 +95,7 @@ public class BillingService {
         this.dailyCareRepository = dailyCareRepository;
         this.patientConsumptionRepository = patientConsumptionRepository;
         this.operatingReportRepository = operatingReportRepository;
+        this.cashRegisterService = cashRegisterService;
     }
 
     private UserAccountEntity getCurrentUser() {
@@ -431,6 +437,11 @@ public class BillingService {
         UUID orgId = actor != null ? actor.getOrganizationId() : null;
         UUID actorId = actor != null ? actor.getId() : UUID.randomUUID();
 
+        // BR-HFC-005 : Un encaissement doit être rattaché à une session de caisse ouverte
+        CashRegisterSessionEntity session = cashRegisterService.findActiveSessionForUser(actorId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Paiement sans session ouverte : veuillez d'abord ouvrir une session de caisse."));
+
         InvoiceEntity invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Facture introuvable"));
 
@@ -459,7 +470,21 @@ public class BillingService {
 
         PaymentEntity payment = new PaymentEntity(invoice, request.amount(), request.method(), request.reference(), actorId);
         payment.setOrganizationId(orgId);
+        payment.setCashSessionId(session.getId());
         PaymentEntity saved = paymentRepository.save(payment);
+
+        // Enregistrer automatiquement le mouvement de caisse
+        cashRegisterService.addMovement(new CashMovementRequest(
+                "IN",
+                request.amount(),
+                "Règlement facture N° " + invoice.getInvoiceNumber(),
+                request.method().name(),
+                request.reference(),
+                false
+        ));
+
+        // Générer le reçu numéroté
+        cashRegisterService.createReceiptForPayment(saved);
 
         // Update invoice status
         double newTotalPaid = totalPaid + request.amount();

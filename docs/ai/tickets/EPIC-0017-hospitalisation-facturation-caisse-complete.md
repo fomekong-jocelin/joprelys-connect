@@ -114,9 +114,9 @@ Constats vérifiés dans le code :
 | STORY-2102 | Séjour hospitalier complet et documents d'entrée/sortie | P0 | 5 | Senior Full-stack | 1.5j | DONE |
 | STORY-2103 | Soins journaliers, administration médicaments et consommables | P0 | 8 | Senior Full-stack | 2.0j | DONE |
 | STORY-2104 | Bloc opératoire, CRO, anesthésie et implants | P0 | 8 | Senior Backend + Frontend intermédiaire | 2.0j | DONE |
-| STORY-2105 | Devis, factures validées, remises, avoirs et créances | P0 | 8 | Senior Full-stack | 2.0j | IN_PROGRESS |
-| STORY-2106 | Caisse recettes/dépenses et clôture journalière | P0 | 8 | Senior Full-stack | 2.0j | READY |
-| STORY-2107 | Bordereaux assurance et tiers payant avancé | P1 | 5 | Senior Backend | 1.2j | READY |
+| STORY-2105 | Devis, factures validées, remises, avoirs et créances | P0 | 8 | Senior Full-stack | 2.0j | DONE |
+| STORY-2106 | Caisse recettes/dépenses et clôture journalière | P0 | 8 | Senior Full-stack | 2.0j | DONE |
+| STORY-2107 | Bordereaux assurance et tiers payant avancé | P1 | 5 | Senior Backend | 1.2j | DONE |
 | STORY-2108 | Imputations comptables OHADA minimales | P1 | 8 | Senior Backend + DAF | 2.0j | READY |
 | STORY-2109 | Reporting clinique et financier de contrôle | P1 | 5 | Intermédiaire Full-stack | 1.0j | READY |
 
@@ -150,14 +150,17 @@ Constats vérifiés dans le code :
 - [x] Créer le modèle de données cible.
 - [x] Créer le plan de test cible.
 - [x] Implémenter STORY-2101 — refactor UI hospitalisation/facturation.
-- [ ] Implémenter STORY-2102 à STORY-2109.
-- [ ] Exécuter `backend/mvnw test` quand une story backend est modifiée.
+- [x] Implémenter STORY-2102 à STORY-2105.
+- [x] Implémenter STORY-2106.
+- [x] Implémenter STORY-2107 — bordereaux assurance et tiers-payant.
+- [ ] Implémenter STORY-2108 à STORY-2109 (OHADA et reporting).
+- [x] Exécuter `backend/mvnw test` quand une story backend est modifiée.
 - [x] Exécuter `web/npm run build` et tests Angular pour STORY-2101.
 - [x] Auditer l'état réel facturation/caisse après ajout de `V49` et du composant devis.
-- [ ] Intégrer le parcours devis/avoirs/créances dans la page facturation principale.
-- [ ] Corriger la validation facture si le principal JWT est un email.
-- [ ] Remplacer la numérotation mémoire des devis/avoirs par une séquence robuste tenant-aware.
-- [ ] Créer le vrai module caisse : sessions, reçus, clôture, mouvements.
+- [x] Intégrer le parcours devis/avoirs/créances dans la page facturation principale.
+- [x] Corriger la validation facture si le principal JWT est un email.
+- [x] Remplacer la numérotation mémoire des devis/avoirs by une séquence robuste tenant-aware.
+- [x] Créer le vrai module caisse : sessions, reçus, clôture, mouvements.
 - [ ] Préparer la release MINOR quand le périmètre sera livré.
 
 ---
@@ -187,10 +190,8 @@ Constats vérifiés dans le code :
 
 ## 9. Reste à faire
 
-- Prioriser les stories en sprint planning.
-- Finaliser STORY-2105 : intégration UI, tests API/UI, numérotation robuste et validation facture.
-- Implémenter STORY-2106 en priorité : vrai module caisse, sessions, reçus, clôture journalière et mouvements.
-- Valider avec le DAF les règles de caisse, créances, remises, avoirs, clôture et écritures OHADA.
+- Prioriser les stories en sprint planning (STORY-2107 à STORY-2109).
+- Valider avec le DAF les règles de caisse, clôture, écarts et écritures OHADA.
 - Valider avec le Médecin Chef les documents hospitaliers, CRO, consentements et sorties.
 - Démarrer STORY-2107/2108 après stabilisation de la caisse et validation DAF.
 
@@ -206,3 +207,28 @@ Constats vérifiés dans le code :
 | Fichiers concernés | `billing-management-page.component.ts/html`, `patient-hospitalization.component.ts/html`, `billing-admin-tabs.component.ts`, `billing-invoice-history.component.ts`, `billing-payment-modal.component.ts` |
 | Taille après refactor | Facturation TS 315 lignes, HTML 288 lignes ; Hospitalisation TS 335 lignes, HTML 280 lignes |
 | Tests | `npm run build` OK ; `npm run test -- --watch=false` OK, 101 tests passés |
+
+---
+
+## 11. Suivi STORY-2105
+
+| Élément | Résultat |
+|---|---|
+| Statut | DONE |
+| Date | 2026-07-09 |
+| Changements | Résolution de la numérotation des devis (DEV-...) et avoirs (AV-...) par séquences PostgreSQL (`estimate_number_seq` et `credit_note_number_seq`). Résolution de l'identification de l'utilisateur par e-mail JWT dans la validation de facture. Intégration du composant devis/avoirs/créances `BillingEstimatesComponent` dans le parcours principal de facturation et sélection des factures depuis l'historique. |
+| Fichiers concernés | `V50__add_estimate_and_credit_note_sequences.sql`, `EstimateRepository.java`, `CreditNoteRepository.java`, `EstimateService.java`, `EstimateController.java`, `billing-invoice-history.component.ts`, `billing-management-page.component.ts/html`, `EstimateControllerTest.java` |
+| Tests | `mvn test` OK (263 tests au vert) ; `npm run build` OK ; `npm run test` OK |
+
+---
+
+## 12. Suivi STORY-2106
+
+| Élément | Résultat |
+|---|---|
+| Statut | DONE |
+| Date | 2026-07-09 |
+| Changements | Création des tables de caisses physiques, sessions, mouvements et reçus numérotés (`REC-yyyyMMdd-XXXXXX`) via Flyway V51. Enregistrement des règlements soumis obligatoirement à une session active de caisse. Plafond de dépenses à 100 000 FCFA soumis au double visa. Contrôle des écarts de caisse avec justification obligatoire. Création du contrôleur REST `CashRegisterController` et de ses tests. Création du service d'API Angular et des composants UI découpés (`BillingCashRegisterComponent` pour les sessions et mouvements, et `BillingReceivablesComponent` pour l'affichage des créances). Réorganisation de la page principale de facturation en onglets pour ne pas encombrer l'existant. |
+| Fichiers concernés | `V51__create_cash_register_tables.sql`, `CashRegisterController.java`, `CashRegisterControllerTest.java`, `InvoiceController.java`, `billing-api.service.ts`, `patient.models.ts`, `billing-cash-register.component.ts`, `billing-receivables.component.ts`, `billing-management-page.component.ts/html` |
+| Tests | `mvn test` OK (264 tests passés) ; `npm run build` OK |
+

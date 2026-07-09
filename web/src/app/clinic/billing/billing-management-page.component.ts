@@ -13,6 +13,10 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { BillingAdminTabsComponent } from './billing-admin-tabs.component';
 import { BillingInvoiceHistoryComponent } from './billing-invoice-history.component';
 import { BillingPaymentForm, BillingPaymentModalComponent } from './billing-payment-modal.component';
+import { BillingEstimatesComponent } from './billing-estimates.component';
+import { BillingCashRegisterComponent } from './billing-cash-register.component';
+import { BillingReceivablesComponent } from './billing-receivables.component';
+import { BillingInsuranceBordereauxComponent } from './billing-insurance-bordereaux.component';
 
 @Component({
   selector: 'app-billing-management-page',
@@ -26,6 +30,10 @@ import { BillingPaymentForm, BillingPaymentModalComponent } from './billing-paym
     BillingAdminTabsComponent,
     BillingInvoiceHistoryComponent,
     BillingPaymentModalComponent,
+    BillingEstimatesComponent,
+    BillingCashRegisterComponent,
+    BillingReceivablesComponent,
+    BillingInsuranceBordereauxComponent,
   ],
   templateUrl: './billing-management-page.component.html',
   styles: [`
@@ -46,7 +54,7 @@ export class BillingManagementPageComponent implements OnInit {
   private readonly visitApi = inject(VisitApiService);
   private readonly i18n = inject(I18nService);
 
-  activeTab = signal<'billing' | 'conventions' | 'tariffs'>('billing');
+  activeTab = signal<'facturation' | 'caisse' | 'creances' | 'bordereaux' | 'conventions' | 'tariffs'>('facturation');
   
   // Search & Patient
   searchQuery = '';
@@ -88,6 +96,7 @@ export class BillingManagementPageComponent implements OnInit {
 
   // History
   invoices = signal<Invoice[]>([]);
+  selectedInvoiceForEstimates = signal<Invoice | null>(null);
 
   // Payment Modal
   showPaymentModal = signal(false);
@@ -136,6 +145,7 @@ export class BillingManagementPageComponent implements OnInit {
     this.selectedPatient.set(p);
     this.selectedVisitId.set('');
     this.invoiceItems.set([]);
+    this.selectedInvoiceForEstimates.set(null);
     this.loadPatientHistory(p.id);
     this.patients.set([]);
     this.searched.set(false);

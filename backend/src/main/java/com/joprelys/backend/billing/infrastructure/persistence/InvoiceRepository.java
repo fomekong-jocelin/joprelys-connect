@@ -16,4 +16,22 @@ public interface InvoiceRepository extends JpaRepository<InvoiceEntity, UUID> {
 
     @Query(value = "SELECT nextval('invoice_number_seq')", nativeQuery = true)
     Long getNextInvoiceNumberSequenceValue();
+
+    @Query("SELECT i FROM InvoiceEntity i " +
+           "WHERE i.insuranceConvention.id = :conventionId " +
+           "AND i.status IN :statuses " +
+           "AND COALESCE(i.validatedAt, i.createdAt) >= :start " +
+           "AND COALESCE(i.validatedAt, i.createdAt) <= :end " +
+           "AND i.insuranceBordereauId IS NULL " +
+           "AND i.organizationId = :organizationId " +
+           "AND i.insuranceShare > 0")
+    List<InvoiceEntity> findInvoicesForBordereau(
+            @Param("conventionId") UUID conventionId,
+            @Param("statuses") List<InvoiceStatus> statuses,
+            @Param("start") java.time.Instant start,
+            @Param("end") java.time.Instant end,
+            @Param("organizationId") UUID organizationId
+    );
+
+    List<InvoiceEntity> findByInsuranceBordereauIdAndOrganizationId(UUID insuranceBordereauId, UUID organizationId);
 }

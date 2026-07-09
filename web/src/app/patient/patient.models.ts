@@ -400,3 +400,73 @@ export interface Payment {
   receivedByUserId: string;
   createdAt: string;
 }
+
+export interface CashRegister {
+  id: string;
+  code: string;
+  name: string;
+}
+
+export interface CashSession {
+  id: string;
+  cashRegisterId: string;
+  cashRegisterName: string;
+  openedByUserId: string;
+  openedAt: string;
+  openingBalance: number;
+  closedByUserId?: string;
+  closedAt?: string;
+  closingBalance?: number;
+  declaredBalance?: number;
+  discrepancyAmount?: number;
+  discrepancyReason?: string;
+  status: 'OPEN' | 'CLOSED';
+}
+
+export interface CashMovement {
+  id: string;
+  cashRegisterSessionId: string;
+  movementType: 'IN' | 'OUT' | 'TRANSFER_TO_BANK';
+  amount: number;
+  description: string;
+  paymentMethod: 'CASH' | 'CHECK' | 'BANK_TRANSFER';
+  referenceNumber?: string;
+  createdByUserId: string;
+  createdAt: string;
+}
+
+export interface PaymentReceipt {
+  id: string;
+  paymentId: string;
+  receiptNumber: string;
+  amount: number;
+  paymentMethod: string;
+  createdAt: string;
+}
+
+export type BordereauStatus = 'DRAFT' | 'SENT' | 'PAID' | 'CANCELLED';
+
+export interface Bordereau {
+  id: string;
+  bordereauNumber: string;
+  insuranceConventionId: string;
+  insuranceConventionName: string;
+  startDate: string;
+  endDate: string;
+  totalAmount: number;
+  status: BordereauStatus;
+  createdAt: string;
+}
+
+export interface BordereauInvoiceDto {
+  id: string;
+  invoiceNumber: string;
+  totalAmount: number;
+  insuranceShare: number;
+  patientShare: number;
+  status: string;
+}
+
+export interface BordereauDetails extends Bordereau {
+  invoices: BordereauInvoiceDto[];
+}

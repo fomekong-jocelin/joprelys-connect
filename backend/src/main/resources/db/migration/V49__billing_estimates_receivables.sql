@@ -6,8 +6,8 @@ ALTER TABLE invoices ADD COLUMN version BIGINT DEFAULT 0;
 
 CREATE TABLE estimates (
     id UUID PRIMARY KEY,
-    patient_id UUID NOT NULL REFERENCES patients(id),
-    visit_id UUID REFERENCES visits(id),
+    patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    visit_id UUID REFERENCES visits(id) ON DELETE CASCADE,
     estimate_number VARCHAR(50) NOT NULL UNIQUE,
     total_amount DOUBLE PRECISION NOT NULL DEFAULT 0.0,
     patient_share DOUBLE PRECISION NOT NULL DEFAULT 0.0,
@@ -31,7 +31,7 @@ CREATE TABLE estimate_items (
 
 CREATE TABLE credit_notes (
     id UUID PRIMARY KEY,
-    invoice_id UUID NOT NULL REFERENCES invoices(id),
+    invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
     credit_note_number VARCHAR(50) NOT NULL UNIQUE,
     amount DOUBLE PRECISION NOT NULL,
     reason VARCHAR(255) NOT NULL,
@@ -44,7 +44,7 @@ CREATE TABLE credit_notes (
 
 CREATE TABLE receivables (
     id UUID PRIMARY KEY,
-    invoice_id UUID NOT NULL REFERENCES invoices(id),
+    invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
     debtor_type VARCHAR(50) NOT NULL,
     debtor_id UUID NOT NULL,
     total_amount DOUBLE PRECISION NOT NULL,

@@ -1,5 +1,7 @@
 package com.joprelys.backend.billing.api;
 
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.billing.application.EstimateService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -9,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,9 +25,11 @@ import java.util.UUID;
 public class EstimateController {
 
     private final EstimateService estimateService;
+    private final UserAccountRepository userAccountRepository;
 
-    public EstimateController(EstimateService estimateService) {
+    public EstimateController(EstimateService estimateService, UserAccountRepository userAccountRepository) {
         this.estimateService = estimateService;
+        this.userAccountRepository = userAccountRepository;
     }
 
     // ─── Devis / Proformas ─────────────────────────────────────────────────────
@@ -65,8 +70,10 @@ public class EstimateController {
     @PreAuthorize("hasAnyRole('ADMIN_CLINIQUE', 'MEDECIN')")
     @Operation(summary = "Valider une facture", description = "Valide une facture et la rend immuable. Génère les créances patient et assurance.")
     public ResponseEntity<InvoiceResponse> validateInvoice(@PathVariable UUID id, Authentication authentication) {
-        UUID validatorId = UUID.fromString(authentication.getName());
-        InvoiceResponse response = estimateService.validateInvoice(id, validatorId);
+        String email = authentication.getName();
+        UserAccountEntity user = userAccountRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur introuvable"));
+        InvoiceResponse response = estimateService.validateInvoice(id, user.getId());
         return ResponseEntity.ok(response);
     }
 

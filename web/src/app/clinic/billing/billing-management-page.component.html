@@ -4,29 +4,53 @@
         [subtitle]="t('billing.subtitle', 'Générez les factures de soins, gérez les conventions d\'assurance, appliquez la grille tarifaire et encaissez les règlements.')"
       ></app-page-header>
       <div class="app-container pb-12 space-y-6">
-      <div class="flex border-b border-[var(--app-border)]/60 gap-4">
+      
+      <!-- Flat Tabs -->
+      <div class="flex border-b border-[var(--app-border)]/60 gap-4 mb-6">
         <button
-          (click)="activeTab.set('billing')"
-          [class]="activeTab() === 'billing' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs' : 'pb-2 text-xs text-[var(--text-muted)]'"
+          (click)="activeTab.set('facturation')"
+          [class]="activeTab() === 'facturation' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
         >
-          <app-ui-icon name="stethoscope" />
+          <app-ui-icon name="document-text" />
           {{ t('billing.tabBilling', 'Facturation de patients') }}
         </button>
         <button
+          (click)="activeTab.set('caisse')"
+          [class]="activeTab() === 'caisse' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
+        >
+          <app-ui-icon name="calculator" />
+          Caisse & Sessions
+        </button>
+        <button
+          (click)="activeTab.set('creances')"
+          [class]="activeTab() === 'creances' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
+        >
+          <app-ui-icon name="folder-open" />
+          Suivi des Créances
+        </button>
+        <button
+          (click)="activeTab.set('bordereaux')"
+          [class]="activeTab() === 'bordereaux' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
+        >
+          <app-ui-icon name="document-text" />
+          Bordereaux Assurances
+        </button>
+        <button
           (click)="activeTab.set('conventions')"
-          [class]="activeTab() === 'conventions' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs' : 'pb-2 text-xs text-[var(--text-muted)]'"
+          [class]="activeTab() === 'conventions' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
         >
           <app-ui-icon name="handshake" />
-          {{ t('billing.conventions', "Conventions d'Assurance") }}
+          Conventions d'Assurance
         </button>
         <button
           (click)="activeTab.set('tariffs')"
-          [class]="activeTab() === 'tariffs' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs' : 'pb-2 text-xs text-[var(--text-muted)]'"
+          [class]="activeTab() === 'tariffs' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
         >
           <app-ui-icon name="table-cells" />
-          {{ t('billing.tariffs', 'Grille Tarifaire (Actes K)') }}
+          Grille Tarifaire (Actes K)
         </button>
       </div>
+
       @if (successMessage()) {
         <div class="ui-alert-success text-xs">
           <app-ui-icon name="check" />
@@ -39,7 +63,8 @@
           {{ errorMessage() }}
         </div>
       }
-      @if (activeTab() === 'billing') {
+
+      @if (activeTab() === 'facturation') {
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div class="space-y-6">
             <div class="ui-card-subtle p-4">
@@ -277,12 +302,33 @@
                 [translate]="translate"
                 (printPdf)="printInvoicePdf($event)"
                 (openPayment)="openPaymentModal($event)"
+                (selectInvoice)="selectedInvoiceForEstimates.set($event)"
               ></app-billing-invoice-history>
+
+              <app-billing-estimates
+                [patientId]="selectedPatient()!.id"
+                [invoice]="selectedInvoiceForEstimates()"
+              ></app-billing-estimates>
             }
           </div>
         </div>
       }
-      <app-billing-admin-tabs [activeTab]="activeTab()" [conventions]="conventions()" [tariffs]="tariffs()" [translate]="translate" (createConvention)="saveConvention($event)" (saveTariff)="saveTariff($event)"></app-billing-admin-tabs>
+
+      @if (activeTab() === 'caisse') {
+        <app-billing-cash-register></app-billing-cash-register>
+      }
+
+       @if (activeTab() === 'creances') {
+        <app-billing-receivables></app-billing-receivables>
+      }
+
+      @if (activeTab() === 'bordereaux') {
+        <app-billing-insurance-bordereaux></app-billing-insurance-bordereaux>
+      }
+
+      @if (activeTab() === 'conventions' || activeTab() === 'tariffs') {
+        <app-billing-admin-tabs [activeTab]="$any(activeTab())" [conventions]="conventions()" [tariffs]="tariffs()" [translate]="translate" (createConvention)="saveConvention($event)" (saveTariff)="saveTariff($event)"></app-billing-admin-tabs>
+      }
     </div>
     <app-billing-payment-modal [visible]="showPaymentModal()" [invoice]="paymentInvoice()" [saving]="savingPayment()" [translate]="translate" (close)="closePaymentModal()" (submitPayment)="submitPayment($event)"></app-billing-payment-modal>
     </app-shell>

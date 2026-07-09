@@ -6,12 +6,12 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-09 (EPIC-0017 : audit facturation/caisse, module non complet, STORY-2105 partielle et STORY-2106 à prioriser) |
-| Responsable mise à jour | Codex |
-| État global | SPRINT-0011 — Alignement CDC + cadrage EPIC-0017 Hospitalisation/Facturation/Caisse |
-| Risques majeurs | Taille du chantier, dette architecture controllers→repositories, flux financier/caisse non encore complet, absence de sessions/reçus/clôture caisse, UX devis/avoirs/créances non intégrée |
-| Prochaine priorité | EPIC-0017 — finaliser STORY-2105 puis implémenter STORY-2106 vrai module caisse |
-| Sprint courant | SPRINT-0011 |
+| Dernière mise à jour | 2026-07-09 (EPIC-0017 : STORY-2107 DONE bordereaux assurance et tiers-payant) |
+| Responsable mise à jour | Antigravity |
+| État global | SPRINT-0012 — Alignement CDC + finalisation STORY-2107 Bordereaux assurances |
+| Risques majeurs | Intégration OHADA, rapports financiers |
+| Prochaine priorité | EPIC-0017 — implémenter STORY-2108 (OHADA) et STORY-2109 (rapports) |
+| Sprint courant | SPRINT-0012 |
 | | |
 | Capacité sprint | À planifier |
 | Charge engagée | 17.15j (Est. Senior) |
@@ -26,9 +26,10 @@
 | STORY-2103 | HFC_COMPLETE | User Story | Soins journaliers, médicaments et consommables en hospitalisation | Full-stack | DONE | P0 | 8 | Senior full-stack | 1.5j | 2.0j | 3.5j | Antigravity | Lead Developer | SPRINT-0012 | 1.2j | Aucun (260 tests backend OK, compilation build Angular OK) | Faible | 2026-07-09 |
 | STORY-2102 | HFC_COMPLETE | User Story | Séjour hospitalier complet (documents d'entrée/sortie, sortie contre avis médical, consentements opératoires) | Full-stack | DONE | P0 | 8 | Senior full-stack | 1.8j | 2.5j | 4.0j | Antigravity | Lead Developer | SPRINT-0012 | 1.8j | Aucun (tests unitaires et build Angular OK) | Faible | 2026-07-09 |
 | STORY-2101 | HFC_COMPLETE | User Story | Refactor UI et services volumineux hospitalisation/facturation | Frontend | DONE | P0 | 3 | Senior Frontend | 0.8j | 1.2j | 2.0j | Codex | Lead Frontend | SPRINT-0012 | 0.8j | Aucun (build Angular OK, 101 tests OK) | Faible | 2026-07-09 |
-| EPIC-0017 | HFC_COMPLETE | Epic | Complétion Hospitalisation, Facturation et Caisse selon CDC V2.1 | Full-stack | IN_PROGRESS | P0 | 58 | Senior full-stack + DAF/Médecin Chef | 12.0j | 17.5j | 28.0j | À assigner | Lead Developer + DAF + Médecin Chef | À planifier | 2.6j | Finaliser STORY-2105 puis implémenter STORY-2106 à STORY-2109 après validation DAF/Médecin Chef | Élevé | 2026-07-09 |
-| STORY-2105 | HFC_COMPLETE | User Story | Devis, factures validées, remises, avoirs et créances | Full-stack | IN_PROGRESS | P0 | 8 | Senior full-stack + DAF | 2.0j | 2.8j | 4.5j | À assigner | Lead Developer + DAF | SPRINT-0012 | 0.4j | Intégrer l'UX devis/avoirs/créances, tester les endpoints, fiabiliser numérotation, corriger principal JWT validation facture | Élevé | 2026-07-09 |
-| STORY-2106 | HFC_COMPLETE | User Story | Caisse recettes/dépenses, reçus et clôture journalière | Full-stack | READY | P0 | 8 | Senior full-stack + DAF | 2.0j | 2.8j | 4.5j | À assigner | Lead Developer + DAF | À planifier | 0j | Créer sessions de caisse, reçus numérotés, mouvements, clôture, écart, audit et tests | Élevé | 2026-07-09 |
+| EPIC-0017 | HFC_COMPLETE | Epic | Complétion Hospitalisation, Facturation et Caisse selon CDC V2.1 | Full-stack | IN_PROGRESS | P0 | 58 | Senior full-stack + DAF/Médecin Chef | 12.0j | 17.5j | 28.0j | Antigravity | Lead Developer + DAF + Médecin Chef | À planifier | 7.8j | Prioriser STORY-2108 (OHADA) et STORY-2109 (rapports) après validation DAF/Médecin Chef | Élevé | 2026-07-09 |
+| STORY-2105 | HFC_COMPLETE | User Story | Devis, factures validées, remises, avoirs et créances | Full-stack | DONE | P0 | 8 | Senior full-stack + DAF | 2.0j | 2.8j | 4.5j | Antigravity | Lead Developer + DAF | SPRINT-0012 | 2.0j | Aucun (migration V50, tests backend et build Angular OK) | Faible | 2026-07-09 |
+| STORY-2106 | HFC_COMPLETE | User Story | Caisse recettes/dépenses, reçus et clôture journalière | Full-stack | DONE | P0 | 8 | Senior full-stack + DAF | 2.0j | 2.8j | 4.5j | Antigravity | Lead Developer + DAF | SPRINT-0012 | 2.0j | Aucun (migration V51, contrôleur, reçus, sessions, IHM onglets et tests OK) | Faible | 2026-07-09 |
+| STORY-2107 | HFC_COMPLETE | User Story | Bordereaux d'assurance et tiers-payant avancé | Full-stack | DONE | P0 | 5 | Senior Backend + DAF | 1.2j | 1.8j | 3.0j | Antigravity | Lead Developer + DAF | SPRINT-0012 | 1.2j | Aucun (migration V52, service, contrôleur, tests MockMvc, IHM onglet Bordereaux Assurances, build Angular et tests backend OK) | Faible | 2026-07-09 |
 | BUG-20260708-invoice-pdf-401-error | CDC_ALIGN | Bug | Correction Erreur 401 sur le téléchargement du PDF de facture | Frontend | DONE | P0 | 1 | Senior | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (correction appliquée et build Angular OK) | Faible | 2026-07-08 |
 | BUG-20260708-invoice-creation-500-error | CDC_ALIGN | Bug | Correction Erreur 500 sur la création de facture (séquence PostgreSQL) | Backend | DONE | P0 | 1 | Senior | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0011 | 0.05j | Aucun (correction appliquée et tests OK) | Faible | 2026-07-08 |
 | BUG-20260708-spatial-wards-500-error | CDC_ALIGN | Bug | Correction Crash de démarrage JPA (mismatch Tenant ID) & Services vides | Backend | DONE | P0 | 1 | Senior | 0.1j | 0.2j | 0.3j | Antigravity | Lead Developer | SPRINT-0011 | 0.1j | Aucun (correction TenantContext temporaire dans AdminUserSeeder et tests au vert) | Faible | 2026-07-08 |

@@ -77,6 +77,7 @@ Décision produit : ne pas déclarer le module facturation/caisse complet tant q
 6. Le caissier encaisse la part patient et imprime un reçu/ticket de caisse.
 7. La DAF suit les créances patient/assurance et clôture la caisse journalière.
 8. À la sortie, le médecin valide le billet de sortie et les documents finaux sont remis au patient.
+9. La secrétaire comptable ou la DAF génère un bordereau récapitulatif pour les factures tiers-payant d'une convention d'assurance sur une période donnée, suit son expédition et valide son règlement global pour solder les parts d'assurance.
 
 ## 6. Règles métier
 
@@ -94,11 +95,12 @@ Décision produit : ne pas déclarer le module facturation/caisse complet tant q
 
 ## 7. Critères d'acceptation
 
-- [ ] L'utilisateur peut consulter un dossier de séjour hospitalier complet, non limité à des notes libres.
-- [ ] Une facture peut être créée depuis les actes source et validée comme immuable.
-- [ ] Un reçu de paiement est généré pour chaque encaissement.
-- [ ] La caisse journalière peut être ouverte, clôturée et auditée.
-- [ ] Les créances patient et assurance sont visibles séparément.
+- [x] L'utilisateur peut consulter un dossier de séjour hospitalier complet, non limité à des notes libres.
+- [x] Une facture peut être créée depuis les actes source et validée comme immuable.
+- [x] Un reçu de paiement est généré pour chaque encaissement.
+- [x] La caisse journalière peut être ouverte, clôturée et auditée.
+- [x] Les créances patient et assurance sont visibles séparément.
+- [x] Un bordereau d'assurance peut être généré, envoyé et réglé globalement pour solder les parts d'assurance des factures associées.
 - [ ] Les écritures OHADA minimales sont générées et consultables.
 - [ ] Les rôles caissier, secrétaire comptable, DAF et médecin chef sont pris en compte dans les autorisations.
 - [ ] Les composants Angular impactés sont découpés et i18n FR/EN.
@@ -124,6 +126,7 @@ Décision produit : ne pas déclarer le module facturation/caisse complet tant q
 | `hospitalization.operatingReport` | Compte rendu opératoire | Operative report |
 | `billing.estimate` | Devis / Proforma | Estimate / Proforma |
 | `billing.creditNote` | Avoir | Credit note |
+| `billing.bordereau` | Bordereau d'assurance | Insurance claim statement |
 | `cashRegister.session` | Session de caisse | Cash register session |
 | `cashRegister.close` | Clôturer la caisse | Close cash register |
 | `accounting.entries` | Écritures comptables | Accounting entries |
@@ -151,3 +154,4 @@ Décision produit : ne pas déclarer le module facturation/caisse complet tant q
 | Date | Auteur | Changement |
 |---|---|---|
 | 2026-07-08 | Codex | Création du cadrage initial |
+| 2026-07-09 | Antigravity | Spécification et démarrage de la STORY-2107 (Bordereaux d'assurance) |

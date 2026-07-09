@@ -1,10 +1,10 @@
 package com.joprelys.backend.notification.api;
 
+import com.joprelys.backend.common.api.PageResponse;
 import com.joprelys.backend.notification.application.NotificationService;
 import com.joprelys.backend.notification.infrastructure.persistence.NotificationEntity;
 import com.joprelys.backend.patient.application.PatientAccessGuardService;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -47,12 +47,12 @@ public class NotificationController {
      * Retourne les notifications paginées du patient authentifié.
      */
     @GetMapping
-    public ResponseEntity<Page<NotificationEntity>> getNotifications(
+    public ResponseEntity<PageResponse<NotificationEntity>> getNotifications(
             Authentication authentication,
             Pageable pageable) {
         PatientEntity patient = patientAccessGuardService.resolve(authentication);
-        Page<NotificationEntity> page = notificationService.getNotificationsPaginated(patient.getId(), pageable);
-        return ResponseEntity.ok(page);
+        return ResponseEntity.ok(PageResponse.fromPage(
+                notificationService.getNotificationsPaginated(patient.getId(), pageable)));
     }
 
     /**

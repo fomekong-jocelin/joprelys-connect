@@ -41,7 +41,7 @@ Amener les modules hospitalisation, facturation et caisse au niveau attendu par 
 | STORY-2102 | Séjour hospitalier complet et documents d'entrée/sortie | P0 | 5 | DONE | SPRINT-0012 |
 | STORY-2103 | Soins journaliers, administration médicaments et consommables | P0 | 8 | DONE | SPRINT-0012 |
 | STORY-2104 | Bloc opératoire, CRO, anesthésie et implants | P0 | 8 | DONE | SPRINT-0012 |
-| STORY-2105 | Devis, factures validées, remises, avoirs et créances | P0 | 8 | IN_PROGRESS | SPRINT-0012 |
+| STORY-2105 | Devis, factures validées, remises, avoirs et créances | P0 | 8 | DONE | SPRINT-0012 |
 | STORY-2106 | Caisse recettes/dépenses et clôture journalière | P0 | 8 | READY | À planifier |
 | STORY-2107 | Bordereaux assurance et tiers payant avancé | P1 | 5 | READY | À planifier |
 | STORY-2108 | Imputations comptables OHADA minimales | P1 | 8 | READY | À planifier |
@@ -79,12 +79,12 @@ Priorité planning recommandée :
 | STORY-2104 | TASK-2104-02 | Actes K depuis bloc | Génération lignes facturables | Backend | 0.5j | DAF | Tests calcul |
 | STORY-2104 | TASK-2104-03 | Traçabilité implants | Lots, quantités, document | Backend | 0.4j | Médecin Chef | Tests API |
 | STORY-2104 | TASK-2104-04 | UI bloc/CRO | Saisie et validation | Frontend | 0.6j | Lead Frontend | Angular build/tests |
-| STORY-2105 | TASK-2105-01 | Devis/proforma | Création, PDF, conversion facture | Full-stack | 0.5j | DAF | Tests API/PDF |
-| STORY-2105 | TASK-2105-02 | Validation facture immuable | Statut VALIDATED + historique | Backend | 0.5j | DAF | Tests métier |
-| STORY-2105 | TASK-2105-03 | Avoirs/remises/annulations | Correction contrôlée | Backend | 0.5j | DAF | Tests métier |
-| STORY-2105 | TASK-2105-04 | Créances patient/assurance | Liste et filtres | Full-stack | 0.5j | DAF | Tests API/UI |
-| STORY-2105 | TASK-2105-05 | Intégrer l'UX devis/avoirs/créances | Composant visible dans le parcours principal | Frontend | 0.3j | Lead Frontend | Angular build/tests |
-| STORY-2105 | TASK-2105-06 | Sécuriser numérotation et principal JWT | Numéros robustes + validation facture sans erreur principal | Backend | 0.4j | Lead Backend | Tests API |
+| STORY-2105 | TASK-2105-01 | Devis/proforma | Création, PDF, conversion facture | Full-stack | 0.5j | DAF | DONE — Tests API/PDF |
+| STORY-2105 | TASK-2105-02 | Validation facture immuable | Statut VALIDATED + historique | Backend | 0.5j | DAF | DONE — Tests métier |
+| STORY-2105 | TASK-2105-03 | Avoirs/remises/annulations | Correction contrôlée | Backend | 0.5j | DAF | DONE — Tests métier |
+| STORY-2105 | TASK-2105-04 | Créances patient/assurance | Liste et filtres | Full-stack | 0.5j | DAF | DONE — Tests API/UI |
+| STORY-2105 | TASK-2105-05 | Intégrer l'UX devis/avoirs/créances | Composant visible dans le parcours principal | Frontend | 0.3j | Lead Frontend | DONE — Angular build/tests |
+| STORY-2105 | TASK-2105-06 | Sécuriser numérotation et principal JWT | Numéros robustes + validation facture sans erreur principal | Backend | 0.4j | Lead Backend | DONE — Tests API |
 | STORY-2106 | TASK-2106-01 | Modèle caisse/session | Tables et service | Backend | 0.5j | DAF | Tests migration/service |
 | STORY-2106 | TASK-2106-02 | Paiement rattaché session | Reçu numéroté | Backend | 0.5j | DAF | Tests API |
 | STORY-2106 | TASK-2106-03 | Clôture de caisse | Solde, déclaré, écart | Backend | 0.5j | DAF | Tests métier |

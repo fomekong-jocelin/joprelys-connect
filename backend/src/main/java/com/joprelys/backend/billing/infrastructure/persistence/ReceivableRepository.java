@@ -7,5 +7,6 @@ import java.util.UUID;
 public interface ReceivableRepository extends JpaRepository<ReceivableEntity, UUID> {
     List<ReceivableEntity> findByDebtorIdOrderByCreatedAtDesc(UUID debtorId);
     List<ReceivableEntity> findByInvoiceId(UUID invoiceId);
+    List<ReceivableEntity> findByInvoiceIdAndDebtorTypeIgnoreCase(UUID invoiceId, String debtorType);
     List<ReceivableEntity> findByStatusOrderByCreatedAtDesc(String status);
 }

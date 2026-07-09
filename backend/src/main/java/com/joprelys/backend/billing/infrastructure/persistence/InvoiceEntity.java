@@ -65,6 +65,9 @@ public class InvoiceEntity {
     @Column(name = "discount_reason")
     private String discountReason;
 
+    @Column(name = "insurance_bordereau_id")
+    private UUID insuranceBordereauId;
+
     @Version
     private Long version;
 
@@ -237,6 +240,14 @@ public class InvoiceEntity {
 
     public void setDiscountReason(String discountReason) {
         this.discountReason = discountReason;
+    }
+
+    public UUID getInsuranceBordereauId() {
+        return insuranceBordereauId;
+    }
+
+    public void setInsuranceBordereauId(UUID insuranceBordereauId) {
+        this.insuranceBordereauId = insuranceBordereauId;
     }
 
     public Long getVersion() {

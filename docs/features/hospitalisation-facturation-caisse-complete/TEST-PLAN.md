@@ -19,10 +19,12 @@ Définir les vérifications nécessaires pour livrer les modules hospitalisation
 | Caisse | Clôture calcule solde théorique et écart | Unit + Integration |
 | Caisse | Dépense > 100 000 FCFA requiert double visa | Unit + Integration |
 | Assurance | Bordereau mensuel liste créances tiers payant | Integration |
+| Assurance | Génération de bordereau regroupe factures validées non liées | Unit + Integration |
+| Assurance | Règlement global de bordereau solde la part assurance des factures | Unit + Integration |
 | Comptabilité | Facture validée génère débit 411 / crédit 706 | Unit |
 | Comptabilité | Encaissement caisse génère débit 571 / crédit 411 | Unit |
-| Sécurité | Rôles caissier/DAF/soignant isolés | Security |
-| Multi-tenant | Aucun accès cross-tenant aux factures/caisse | Integration |
+| Sécurité | Rôles caissier/DAF/soignant/secrétaire comptable isolés | Security |
+| Multi-tenant | Aucun accès cross-tenant aux factures/caisse/bordereaux | Integration |
 
 ## 3. Tests Angular attendus
 
@@ -69,3 +71,4 @@ npm run build
 | Date | Auteur | Changement |
 |---|---|---|
 | 2026-07-08 | Codex | Création du plan de test cible |
+| 2026-07-09 | Antigravity | Spécification et démarrage de la STORY-2107 (Bordereaux d'assurance) |

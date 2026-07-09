@@ -296,6 +296,150 @@ Liste les écritures comptables générées automatiquement.
 
 `DAF`, `ADMIN_CLINIQUE`.
 
+### `POST /api/billing/insurance-bordereaux`
+
+#### Description
+
+Génère un bordereau récapitulatif pour les factures tiers-payant validées d'une convention sur une période donnée.
+
+#### Auth / permissions
+
+`SECRETAIRE_COMPTABLE`, `DAF`, `ADMIN_CLINIQUE`.
+
+#### Request
+
+```json
+{
+  "insuranceConventionId": "uuid",
+  "startDate": "2026-07-01",
+  "endDate": "2026-07-31"
+}
+```
+
+#### Response succès
+
+```json
+{
+  "id": "uuid",
+  "bordereauNumber": "BORD-20260709-000001",
+  "insuranceConventionId": "uuid",
+  "startDate": "2026-07-01",
+  "endDate": "2026-07-31",
+  "totalAmount": 1250000.0,
+  "status": "DRAFT",
+  "createdAt": "2026-07-09T09:00:00Z"
+}
+```
+
+### `GET /api/billing/insurance-bordereaux`
+
+#### Description
+
+Liste les bordereaux d'assurance générés.
+
+#### Auth / permissions
+
+`SECRETAIRE_COMPTABLE`, `DAF`, `ADMIN_CLINIQUE`.
+
+#### Response succès
+
+```json
+[
+  {
+    "id": "uuid",
+    "bordereauNumber": "BORD-20260709-000001",
+    "insuranceConventionId": "uuid",
+    "startDate": "2026-07-01",
+    "endDate": "2026-07-31",
+    "totalAmount": 1250000.0,
+    "status": "DRAFT",
+    "createdAt": "2026-07-09T09:00:00Z"
+  }
+]
+```
+
+### `GET /api/billing/insurance-bordereaux/{id}`
+
+#### Description
+
+Retourne les détails d'un bordereau, y compris la liste des factures associées.
+
+#### Auth / permissions
+
+`SECRETAIRE_COMPTABLE`, `DAF`, `ADMIN_CLINIQUE`.
+
+#### Response succès
+
+```json
+{
+  "id": "uuid",
+  "bordereauNumber": "BORD-20260709-000001",
+  "insuranceConventionId": "uuid",
+  "startDate": "2026-07-01",
+  "endDate": "2026-07-31",
+  "totalAmount": 1250000.0,
+  "status": "DRAFT",
+  "createdAt": "2026-07-09T09:00:00Z",
+  "invoices": [
+    {
+      "id": "uuid",
+      "invoiceNumber": "FAC-20260708-000001",
+      "patientName": "Jean Patient",
+      "totalAmount": 150000.0,
+      "insuranceShare": 120000.0,
+      "status": "VALIDATED"
+    }
+  ]
+}
+```
+
+### `POST /api/billing/insurance-bordereaux/{id}/send`
+
+#### Description
+
+Marque le bordereau comme expédié physiquement à l'assurance.
+
+#### Auth / permissions
+
+`SECRETAIRE_COMPTABLE`, `DAF`, `ADMIN_CLINIQUE`.
+
+#### Response succès
+
+```json
+{
+  "id": "uuid",
+  "status": "SENT"
+}
+```
+
+### `POST /api/billing/insurance-bordereaux/{id}/pay`
+
+#### Description
+
+Enregistre le règlement global du bordereau par l'assurance, solder les parts d'assurance des factures associées.
+
+#### Auth / permissions
+
+`DAF`, `ADMIN_CLINIQUE`.
+
+#### Request
+
+```json
+{
+  "amount": 1250000.0,
+  "referenceNumber": "VIREMENT-998822"
+}
+```
+
+#### Response succès
+
+```json
+{
+  "id": "uuid",
+  "status": "PAID"
+}
+```
+
 ## 3. Règles de compatibilité
 
 - [x] Aucun champ public existant supprimé sans version majeure.
@@ -309,3 +453,4 @@ Liste les écritures comptables générées automatiquement.
 | Date | Auteur | Changement |
 |---|---|---|
 | 2026-07-08 | Codex | Création du contrat API cible |
+| 2026-07-09 | Antigravity | Spécification et démarrage de la STORY-2107 (Bordereaux d'assurance) |

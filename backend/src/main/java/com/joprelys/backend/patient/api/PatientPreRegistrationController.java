@@ -1,11 +1,11 @@
 package com.joprelys.backend.patient.api;
 
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import com.joprelys.backend.common.api.PageResponse;
 import com.joprelys.backend.patient.application.MedicalCaptchaService;
 import com.joprelys.backend.patient.application.PatientPreRegistrationService;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientPreRegistrationEntity;
 import jakarta.validation.Valid;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -60,8 +60,8 @@ public class PatientPreRegistrationController {
 
     @GetMapping("/api/pre-registrations")
     @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE')")
-    public Page<PatientPreRegistrationResponse> getPendingPreRegistrations(Pageable pageable) {
-        return preRegistrationService.getPendingPreRegistrations(pageable);
+    public PageResponse<PatientPreRegistrationResponse> getPendingPreRegistrations(Pageable pageable) {
+        return PageResponse.fromPage(preRegistrationService.getPendingPreRegistrations(pageable));
     }
 
     @GetMapping("/api/pre-registrations/{id}")

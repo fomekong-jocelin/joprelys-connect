@@ -8,9 +8,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Service métier pour les devis/proformas, avoirs, créances et validation de factures.
@@ -19,16 +20,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Service
 public class EstimateService {
 
-    private static final String ESTIMATE_PREFIX = "EST-";
+    private static final String ESTIMATE_PREFIX = "DEV-";
     private static final String CREDIT_NOTE_PREFIX = "AV-";
 
     private final EstimateRepository estimateRepository;
     private final CreditNoteRepository creditNoteRepository;
     private final ReceivableRepository receivableRepository;
     private final InvoiceRepository invoiceRepository;
-
-    private final AtomicInteger estimateCounter = new AtomicInteger(1);
-    private final AtomicInteger creditNoteCounter = new AtomicInteger(1);
 
     public EstimateService(EstimateRepository estimateRepository,
                            CreditNoteRepository creditNoteRepository,
@@ -44,7 +42,9 @@ public class EstimateService {
 
     @Transactional
     public EstimateResponse createEstimate(CreateEstimateRequest request) {
-        String number = ESTIMATE_PREFIX + System.currentTimeMillis() + "-" + estimateCounter.getAndIncrement();
+        Long seqVal = estimateRepository.getNextEstimateNumberSequenceValue();
+        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String number = String.format("%s%s-%06d", ESTIMATE_PREFIX, dateStr, seqVal);
         EstimateEntity estimate = new EstimateEntity(request.patientId(), request.visitId(), number);
 
         if (request.items() != null) {
@@ -134,7 +134,9 @@ public class EstimateService {
         if (invoice.getStatus() == InvoiceStatus.CANCELLED) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Impossible de créer un avoir sur une facture annulée.");
         }
-        String number = CREDIT_NOTE_PREFIX + System.currentTimeMillis() + "-" + creditNoteCounter.getAndIncrement();
+        Long seqVal = creditNoteRepository.getNextCreditNoteNumberSequenceValue();
+        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String number = String.format("%s%s-%06d", CREDIT_NOTE_PREFIX, dateStr, seqVal);
         CreditNoteEntity creditNote = new CreditNoteEntity(invoiceId, number, request.amount(), request.reason());
         creditNoteRepository.save(creditNote);
 

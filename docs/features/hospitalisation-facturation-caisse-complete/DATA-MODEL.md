@@ -24,6 +24,7 @@ Les nouvelles tables doivent rester multi-tenant via `organization_id` et compat
 | `invoice_status_history` | Historique des statuts de facture | Nouvelle |
 | `credit_notes` | Avoirs et annulations financières | Nouvelle |
 | `receivables` | Créances patient / assurance | Nouvelle |
+| `insurance_bordereaux` | Bordereaux mensuels de tiers-payant | Nouvelle |
 | `payments` | Paiements | Existante à rattacher aux sessions caisse |
 | `payment_receipts` | Reçus et tickets de caisse | Nouvelle |
 | `cash_registers` | Caisses physiques/logiques | Nouvelle |
@@ -50,6 +51,10 @@ Les nouvelles tables doivent rester multi-tenant via `organization_id` et compat
 | `estimates` | `estimate_number` | VARCHAR(50) | Non | Unique | Numéro proforma |
 | `invoices` | `validated_at` | TIMESTAMP | Oui | Oui | Date validation immuable |
 | `invoices` | `validated_by_user_id` | UUID | Oui | Oui | Validateur |
+| `invoices` | `insurance_bordereau_id` | UUID | Oui | Oui | Bordereau d'assurance rattaché |
+| `insurance_bordereaux` | `bordereau_number` | VARCHAR(50) | Non | Unique | Numéro de bordereau d'assurance |
+| `insurance_bordereaux` | `insurance_convention_id` | UUID | Non | Oui | Convention d'assurance rattachée |
+| `insurance_bordereaux` | `status` | VARCHAR(30) | Non | Oui | DRAFT, SENT, PAID, CANCELLED |
 | `payments` | `cash_session_id` | UUID | Oui | Oui | Session de caisse |
 | `payment_receipts` | `receipt_number` | VARCHAR(50) | Non | Unique | Numéro reçu |
 | `cash_register_sessions` | `status` | VARCHAR(30) | Non | Oui | OPEN, CLOSED, CANCELLED |
@@ -65,9 +70,11 @@ Les nouvelles tables doivent rester multi-tenant via `organization_id` et compat
 | Migration | Type | Backward compatible | Rollback |
 |---|---|---|---|
 | `V46__hospitalization_complete_stay_tables.sql` | Ajout tables séjour/soins/bloc | Oui | Drop tables si non utilisées |
-| `V47__billing_estimates_receivables.sql` | Ajout devis, créances, statuts facture | Oui | Drop tables et colonnes ajoutées |
-| `V48__cash_register_tables.sql` | Ajout caisse et reçus | Oui | Drop tables si aucune donnée prod |
-| `V49__accounting_ohada_minimal_tables.sql` | Ajout journaux et écritures | Oui | Drop tables si aucune donnée prod |
+| `V47__hospitalization_care_meds_consumables.sql` | Ajout tables soins journaliers et consommations | Oui | Drop tables |
+| `V48__operating_reports_implants.sql` | Ajout tables CRO et implants | Oui | Drop tables |
+| `V49__billing_estimates_receivables.sql` | Ajout devis, créances | Oui | Drop tables |
+| `V51__create_cash_register_tables.sql` | Ajout caisse, sessions et reçus | Oui | Drop tables |
+| `V52__create_insurance_bordereaux_table.sql` | Ajout bordereaux d'assurance | Oui | Drop tables et colonnes |
 
 ## 5. Contraintes et index
 
@@ -90,3 +97,4 @@ Les nouvelles tables doivent rester multi-tenant via `organization_id` et compat
 | Date | Auteur | Changement |
 |---|---|---|
 | 2026-07-08 | Codex | Création du modèle de données cible |
+| 2026-07-09 | Antigravity | Spécification et démarrage de la STORY-2107 (Bordereaux d'assurance) |

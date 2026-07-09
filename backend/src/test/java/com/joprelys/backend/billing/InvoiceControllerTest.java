@@ -23,10 +23,12 @@ import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository
 import com.joprelys.backend.prescription.infrastructure.persistence.*;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
+import com.joprelys.backend.cash.infrastructure.persistence.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
@@ -39,6 +41,7 @@ import java.util.UUID;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@DirtiesContext
 public class InvoiceControllerTest {
 
     @Autowired
@@ -78,6 +81,12 @@ public class InvoiceControllerTest {
     private PaymentRepository paymentRepository;
 
     @Autowired
+    private CashRegisterRepository cashRegisterRepository;
+
+    @Autowired
+    private CashRegisterSessionRepository cashRegisterSessionRepository;
+
+    @Autowired
     private JwtService jwtService;
 
     private final ObjectMapper objectMapper = new ObjectMapper()
@@ -101,6 +110,9 @@ public class InvoiceControllerTest {
 
     @BeforeEach
     void setUp() {
+        jdbcTemplate.update("DELETE FROM cash_movements");
+        jdbcTemplate.update("DELETE FROM cash_register_sessions");
+        jdbcTemplate.update("DELETE FROM cash_registers");
         jdbcTemplate.update("DELETE FROM payments");
         jdbcTemplate.update("DELETE FROM invoice_items");
         jdbcTemplate.update("DELETE FROM invoices");
@@ -249,6 +261,16 @@ public class InvoiceControllerTest {
         InvoiceResponse created = objectMapper.readValue(responseStr, InvoiceResponse.class);
 
         // 3. Make partial payment
+        TenantContext.setTenantId(org.getId());
+        CashRegisterEntity register = new CashRegisterEntity("CAISSE-PRINCIPALE", "Caisse Principale");
+        register.setOrganizationId(org.getId());
+        register = cashRegisterRepository.save(register);
+
+        CashRegisterSessionEntity session = new CashRegisterSessionEntity(register, receptionist.getId(), 50000.0);
+        session.setOrganizationId(org.getId());
+        cashRegisterSessionRepository.save(session);
+        TenantContext.clear();
+
         PaymentRequest payReq = new PaymentRequest(3000.0, PaymentMethod.CASH, "REF-1111");
         mockMvc.perform(post("/api/invoices/" + created.id() + "/payments")
                         .header("Authorization", "Bearer " + tokenReceptionist)

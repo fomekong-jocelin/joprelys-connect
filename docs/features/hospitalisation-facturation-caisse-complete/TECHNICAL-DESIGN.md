@@ -46,6 +46,10 @@ CashRegisterController
   -> CashClosingService
   <- cash repositories
 
+InsuranceBordereauController
+  -> InsuranceBordereauService
+  <- billing / bordereau repositories
+
 AccountingController
   -> AccountingEntryService
   -> OhadaPostingPolicy
@@ -206,3 +210,4 @@ Rôles à confirmer ou ajouter : `CAISSIER`, `SECRETAIRE_COMPTABLE`, `DAF`, `MED
 |---|---|---|
 | 2026-07-08 | Codex | Création du cadrage initial |
 | 2026-07-09 | Codex | STORY-2101 : refactor UI facturation/hospitalisation sous les limites de taille |
+| 2026-07-09 | Antigravity | Spécification et démarrage de la STORY-2107 (Bordereaux d'assurance) |

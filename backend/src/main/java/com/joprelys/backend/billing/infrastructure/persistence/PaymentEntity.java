@@ -29,6 +29,9 @@ public class PaymentEntity {
     @Column(name = "received_by_user_id", nullable = false)
     private UUID receivedByUserId;
 
+    @Column(name = "cash_session_id")
+    private UUID cashSessionId;
+
     @TenantId
     @Column(name = "organization_id")
     private UUID organizationId;
@@ -95,6 +98,14 @@ public class PaymentEntity {
 
     public void setReceivedByUserId(UUID receivedByUserId) {
         this.receivedByUserId = receivedByUserId;
+    }
+
+    public UUID getCashSessionId() {
+        return cashSessionId;
+    }
+
+    public void setCashSessionId(UUID cashSessionId) {
+        this.cashSessionId = cashSessionId;
     }
 
     public UUID getOrganizationId() {

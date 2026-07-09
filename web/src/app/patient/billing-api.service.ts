@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { InsuranceConvention, TariffGrid, Invoice, Payment, InvoiceItem, Estimate, CreditNote, Receivable } from './patient.models';
+import { InsuranceConvention, TariffGrid, Invoice, Payment, InvoiceItem, Estimate, CreditNote, Receivable, CashRegister, CashSession, CashMovement, PaymentReceipt } from './patient.models';
 
 @Injectable({
   providedIn: 'root',
@@ -133,6 +133,71 @@ export class BillingApiService {
   updateEstimateStatus(id: string, status: string): Observable<Estimate> {
     const params = new HttpParams().set('status', status);
     return this.http.patch<Estimate>(`/api/estimates/${id}/status`, null, { params });
+  }
+
+  // ── Cash Registers & Sessions ─────────────────────────────────────
+  listCashRegisters(): Observable<CashRegister[]> {
+    return this.http.get<CashRegister[]>('/api/cash-registers');
+  }
+
+  openCashSession(cashRegisterId: string | null, openingBalance: number): Observable<CashSession> {
+    return this.http.post<CashSession>('/api/cash-registers/sessions/open', { cashRegisterId, openingBalance });
+  }
+
+  getActiveCashSession(): Observable<CashSession> {
+    return this.http.get<CashSession>('/api/cash-registers/sessions/active');
+  }
+
+  addCashMovement(request: {
+    movementType: 'IN' | 'OUT' | 'TRANSFER_TO_BANK';
+    amount: number;
+    description: string;
+    paymentMethod: 'CASH' | 'CHECK' | 'BANK_TRANSFER';
+    referenceNumber?: string;
+    doubleVisaApproved?: boolean;
+  }): Observable<CashMovement> {
+    return this.http.post<CashMovement>('/api/cash-registers/movements', request);
+  }
+
+  getSessionMovements(sessionId: string): Observable<CashMovement[]> {
+    return this.http.get<CashMovement[]>(`/api/cash-registers/sessions/${sessionId}/movements`);
+  }
+
+  closeCashSession(declaredBalance: number, discrepancyReason?: string): Observable<CashSession> {
+    return this.http.post<CashSession>('/api/cash-registers/sessions/close', { declaredBalance, discrepancyReason });
+  }
+
+  getPaymentReceipt(paymentId: string): Observable<PaymentReceipt> {
+    return this.http.get<PaymentReceipt>(`/api/cash-registers/payments/${paymentId}/receipt`);
+  }
+
+  listSessionsByRegister(registerId: string): Observable<CashSession[]> {
+    return this.http.get<CashSession[]>(`/api/cash-registers/${registerId}/sessions`);
+  }
+
+  // ── Insurance Bordereaux ──────────────────────────────────────────
+  generateInsuranceBordereau(request: {
+    insuranceConventionId: string;
+    startDate: string;
+    endDate: string;
+  }): Observable<any> {
+    return this.http.post<any>('/api/billing/insurance-bordereaux', request);
+  }
+
+  listInsuranceBordereaux(): Observable<any[]> {
+    return this.http.get<any[]>('/api/billing/insurance-bordereaux');
+  }
+
+  getInsuranceBordereauDetails(id: string): Observable<any> {
+    return this.http.get<any>(`/api/billing/insurance-bordereaux/${id}`);
+  }
+
+  sendInsuranceBordereau(id: string): Observable<any> {
+    return this.http.post<any>(`/api/billing/insurance-bordereaux/${id}/send`, null);
+  }
+
+  payInsuranceBordereau(id: string, amount: number, referenceNumber: string): Observable<any> {
+    return this.http.post<any>(`/api/billing/insurance-bordereaux/${id}/pay`, { amount, referenceNumber });
   }
 }
 

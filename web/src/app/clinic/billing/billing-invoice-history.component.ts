@@ -38,6 +38,10 @@ import { IconComponent } from '../../shared/ui/icon.component';
               </div>
 
               <div class="flex gap-2">
+                <button (click)="selectInvoice.emit(inv)" class="ui-button ui-button-secondary">
+                  <app-ui-icon name="wrench" />
+                  {{ translate('billing.manage', 'Gérer') }}
+                </button>
                 <button (click)="printPdf.emit(inv.id)" class="ui-button ui-button-secondary">
                   <app-ui-icon name="printer" />
                   PDF
@@ -66,6 +70,7 @@ export class BillingInvoiceHistoryComponent {
 
   @Output() printPdf = new EventEmitter<string>();
   @Output() openPayment = new EventEmitter<Invoice>();
+  @Output() selectInvoice = new EventEmitter<Invoice>();
 
   getStatusClass(status: string): string {
     switch (status) {

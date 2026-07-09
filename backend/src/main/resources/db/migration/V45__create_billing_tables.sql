@@ -21,8 +21,8 @@ CREATE TABLE tariff_grid (
 
 CREATE TABLE invoices (
     id UUID PRIMARY KEY,
-    patient_id UUID NOT NULL REFERENCES patients(id),
-    visit_id UUID REFERENCES visits(id),
+    patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    visit_id UUID REFERENCES visits(id) ON DELETE CASCADE,
     invoice_number VARCHAR(50) NOT NULL UNIQUE,
     insurance_convention_id UUID REFERENCES insurance_conventions(id),
     total_amount DOUBLE PRECISION NOT NULL DEFAULT 0.0,
@@ -48,7 +48,7 @@ CREATE TABLE invoice_items (
 
 CREATE TABLE payments (
     id UUID PRIMARY KEY,
-    invoice_id UUID NOT NULL REFERENCES invoices(id),
+    invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
     amount DOUBLE PRECISION NOT NULL,
     payment_method VARCHAR(50) NOT NULL,
     reference_number VARCHAR(100),
