@@ -1,8 +1,8 @@
 name: STORY-2204 — Maintenance tests
 
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches: [feature/story-2204-insurance-workspace]
 
 permissions:
   contents: write
@@ -15,7 +15,7 @@ jobs:
       - name: Checkout feature branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: feature/story-2204-insurance-workspace
           fetch-depth: 0
       - name: Align historical insurance workflows
         shell: bash
@@ -50,10 +50,7 @@ jobs:
           if len(matches) != 2:
               raise SystemExit(f'Expected two FullFinancial send/pay workflows, got {len(matches)}')
 
-          workflow_data = [
-              ('AR-E2E-01', '80000'),
-              ('AR-TEST-DAF', '5000'),
-          ]
+          workflow_data = [('AR-E2E-01', '80000'), ('AR-TEST-DAF', '5000')]
           counter = 0
           def insert_progression(match):
               global counter
@@ -120,4 +117,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .github/workflows/ci.yml backend/src/test/java/com/joprelys/backend/billing/FullFinancialE2ETest.java backend/src/test/java/com/joprelys/backend/cash/CashRegisterControllerTest.java
           git commit -m "test(billing): aligner les parcours E2E assurance"
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          git push origin HEAD:feature/story-2204-insurance-workspace
