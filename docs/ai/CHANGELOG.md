@@ -43,6 +43,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- **Poste caissier simplifié et file d’encaissement (STORY-2203)** : ajout d’une file tenantée des factures patient réellement encaissables, triée par ancienneté, avec recherche et filtres, encaissement total ou partiel, contrôle de session active, référence obligatoire pour chèques/virements, reçu immédiat, rafraîchissement automatique, route dédiée au rôle `CAISSIER`, responsive light/dark, accessibilité clavier et traductions FR/EN.
+
 - **Espace de séjour hospitalier — premier incrément EPIC-0019** : ajout d'un en-tête de séjour réutilisable, avec contexte clinique lisible (statut, numéro, service, chambre/lit, responsable, admission et motif), actions regroupées et navigation d'activités accessible. Les onglets sont maintenant internationalisés FR/EN et le composant est couvert par des tests Angular.
   - Extraction des panneaux de transmissions, soins, administrations médicamenteuses et consommables dans des composants Angular autonomes, avec états vide/erreur, traçabilité de l'auteur et de l'horodatage, traductions FR/EN et tests dédiés.
 
