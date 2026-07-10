@@ -87,7 +87,8 @@
         <input
           id="cashier-queue-search"
           type="search"
-          [(ngModel)]="searchQuery"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
           class="ui-input w-full pl-9 text-xs"
           [placeholder]="t('billing.cashierQueue.searchPlaceholder', 'Patient, DPU, téléphone ou facture')"
         />
@@ -98,7 +99,12 @@
       <label for="cashier-queue-status" class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
         {{ t('billing.cashierQueue.filterLabel', 'État de règlement') }}
       </label>
-      <select id="cashier-queue-status" [(ngModel)]="statusFilter" class="ui-select w-full text-xs">
+      <select
+        id="cashier-queue-status"
+        [ngModel]="statusFilter()"
+        (ngModelChange)="statusFilter.set($event)"
+        class="ui-select w-full text-xs"
+      >
         <option value="ALL">{{ t('billing.cashierQueue.filterAll', 'Toutes les factures') }}</option>
         <option value="PATIENT_DUE">{{ t('billing.cashierQueue.status.due', 'À encaisser') }}</option>
         <option value="PATIENT_PARTIALLY_PAID">{{ t('billing.cashierQueue.status.partial', 'Paiement partiel') }}</option>
@@ -152,7 +158,9 @@
               </div>
               <p class="mt-1 text-[10px] text-[var(--text-muted)]">
                 {{ t('billing.cashierQueue.dpu', 'DPU') }} : {{ item.globalPatientNumber }}
-                @if (item.phone) { · {{ item.phone }} }
+                @if (item.phone) {
+                  <span>· {{ item.phone }}</span>
+                }
               </p>
               <p class="mt-1 text-[10px] text-[var(--text-secondary)]">
                 {{ item.invoiceNumber }} ·
@@ -188,7 +196,7 @@
 </section>
 
 <app-billing-payment-modal
-  [visible]="!!selectedItem()"
+  [visible]="selectedItem() !== null"
   [invoice]="paymentInvoice()"
   [patientName]="selectedItem()?.patientName ?? null"
   [saving]="savingPayment()"
