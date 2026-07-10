@@ -24,6 +24,8 @@ import com.joprelys.backend.hospitalization.infrastructure.persistence.PatientCo
 import com.joprelys.backend.hospitalization.infrastructure.persistence.OperatingReportRepository;
 import com.joprelys.backend.hospitalization.infrastructure.persistence.OperatingReportEntity;
 import com.joprelys.backend.hospitalization.infrastructure.persistence.SurgicalImplantEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -40,6 +42,8 @@ import java.util.UUID;
 
 @Service
 public class BillingService {
+
+    private static final Logger log = LoggerFactory.getLogger(BillingService.class);
 
     private final InvoiceRepository invoiceRepository;
     private final InvoiceItemRepository invoiceItemRepository;
@@ -89,9 +93,11 @@ public class BillingService {
         this.operatingReportRepository = operatingReportRepository;
     }
 
+    // FIX-3: orElseThrow au lieu de orElse(null) pour éviter des données sans organisation
     private UserAccountEntity getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return userAccountRepository.findByEmail(email).orElse(null);
+        return userAccountRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur non connecté"));
     }
 
     private double getTariff(String keyLetter, double defaultValue) {
@@ -110,7 +116,7 @@ public class BillingService {
     @Transactional
     public InsuranceConventionDto createConvention(String name, Double coveragePercentage) {
         UserAccountEntity actor = getCurrentUser();
-        UUID orgId = actor != null ? actor.getOrganizationId() : null;
+        UUID orgId = actor.getOrganizationId();
 
         InsuranceConventionEntity entity = new InsuranceConventionEntity(name, coveragePercentage);
         entity.setOrganizationId(orgId);
@@ -126,7 +132,7 @@ public class BillingService {
     @Transactional
     public TariffGridEntity createOrUpdateTariff(String keyLetter, Double unitValue) {
         UserAccountEntity actor = getCurrentUser();
-        UUID orgId = actor != null ? actor.getOrganizationId() : null;
+        UUID orgId = actor.getOrganizationId();
 
         Optional<TariffGridEntity> existing = tariffGridRepository.findByKeyLetter(keyLetter);
         TariffGridEntity entity;
@@ -183,19 +189,24 @@ public class BillingService {
                 long days = ChronoUnit.DAYS.between(start, end);
                 if (days <= 0) days = 1;
 
+                // FIX-1: requête ciblée au lieu de findAll() + stream().filter() en mémoire
                 String comfort = "STANDARD";
                 double stayPrice = getTariff("ROOM_STANDARD", 10000.0);
                 if (hosp.getRoomNumber() != null) {
                     try {
-                        String comfortLevel = roomRepository.findAll().stream()
-                                .filter(r -> r.getRoomNumber().equalsIgnoreCase(hosp.getRoomNumber()))
-                                .map(r -> r.getComfortLevel())
-                                .findFirst()
-                                .orElse("STANDARD");
-                        stayPrice = getTariff("ROOM_" + comfortLevel.toUpperCase(),
-                                comfortLevel.equalsIgnoreCase("VIP") ? 25000.0 : 10000.0);
-                        comfort = comfortLevel.toUpperCase();
-                    } catch (Exception ignored) {}
+                        Optional<String> comfortOpt = roomRepository
+                                .findByRoomNumberIgnoreCase(hosp.getRoomNumber())
+                                .map(r -> r.getComfortLevel());
+                        if (comfortOpt.isPresent()) {
+                            comfort = comfortOpt.get().toUpperCase();
+                            stayPrice = getTariff("ROOM_" + comfort,
+                                    comfort.equalsIgnoreCase("VIP") ? 25000.0 : 10000.0);
+                        }
+                    } catch (Exception e) {
+                        // FIX-2: log warn au lieu d'avaler silencieusement l'exception
+                        log.warn("[BillingService] Impossible de récupérer le niveau de confort pour la chambre {} : {}",
+                                hosp.getRoomNumber(), e.getMessage());
+                    }
                 }
 
                 invoice.addItem(new InvoiceItemEntity(
@@ -221,7 +232,9 @@ public class BillingService {
                             ));
                         }
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    log.warn("[BillingService] Erreur chargement soins journaliers pour hosp {} : {}", hosp.getId(), e.getMessage());
+                }
 
                 // 2.2 Patient consumptions
                 try {
@@ -236,14 +249,15 @@ public class BillingService {
                                 null
                         ));
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    log.warn("[BillingService] Erreur chargement consommations patient pour hosp {} : {}", hosp.getId(), e.getMessage());
+                }
 
                 // 2.3 Operating reports & implants
                 try {
                     List<OperatingReportEntity> reports = operatingReportRepository.findByHospitalizationIdOrderByOperationDateDesc(hosp.getId());
                     for (OperatingReportEntity op : reports) {
                         if (op.isValidated()) {
-                            // Surgeon fees
                             if (op.getkSurgeonValue() > 0) {
                                 double surgeonPrice = op.getkSurgeonValue() * getTariff("K", 1000.0);
                                 invoice.addItem(new InvoiceItemEntity(
@@ -254,8 +268,6 @@ public class BillingService {
                                         null
                                 ));
                             }
-
-                            // Anesthesist fees
                             if (op.getkAnesthesistValue() > 0) {
                                 double anesthetistPrice = op.getkAnesthesistValue() * getTariff("K", 1000.0);
                                 invoice.addItem(new InvoiceItemEntity(
@@ -266,8 +278,6 @@ public class BillingService {
                                         null
                                 ));
                             }
-
-                            // Operating room (bloc) fees
                             if (op.getkBlocValue() > 0) {
                                 double blocPrice = op.getkBlocValue() * getTariff("K", 1000.0);
                                 invoice.addItem(new InvoiceItemEntity(
@@ -278,8 +288,6 @@ public class BillingService {
                                         null
                                 ));
                             }
-
-                            // Surgical Implants & Consumables
                             if (op.getImplants() != null) {
                                 for (SurgicalImplantEntity implant : op.getImplants()) {
                                     double implantPrice = implant.getUnitPrice() > 0 ? implant.getUnitPrice() : getTariff(implant.getImplantName(), 25000.0);
@@ -294,7 +302,9 @@ public class BillingService {
                             }
                         }
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    log.warn("[BillingService] Erreur chargement CRO/implants pour hosp {} : {}", hosp.getId(), e.getMessage());
+                }
             }
         }
 
@@ -312,7 +322,10 @@ public class BillingService {
                                 if (!cleanQty.isEmpty()) {
                                     qty = Double.parseDouble(cleanQty);
                                 }
-                            } catch (Exception ignored) {}
+                            } catch (Exception e) {
+                                log.warn("[BillingService] Impossible de parser la quantité '{}' pour le médicament {} : {}",
+                                        item.getQuantity(), item.getDrugName(), e.getMessage());
+                            }
 
                             double drugPrice = getTariff(item.getDrugName(), 2500.0);
                             invoice.addItem(new InvoiceItemEntity(
@@ -325,7 +338,9 @@ public class BillingService {
                         }
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.warn("[BillingService] Erreur chargement prescriptions pour visite {} : {}", visitId, e.getMessage());
+            }
         }
 
         return InvoiceResponse.fromEntity(invoice);
@@ -334,7 +349,7 @@ public class BillingService {
     @Transactional
     public InvoiceResponse createInvoice(CreateInvoiceRequest request) {
         UserAccountEntity actor = getCurrentUser();
-        UUID orgId = actor != null ? actor.getOrganizationId() : null;
+        UUID orgId = actor.getOrganizationId();
 
         patientRepository.findById(request.patientId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient introuvable"));
@@ -342,8 +357,7 @@ public class BillingService {
         if (request.visitId() != null) {
             visitRepository.findById(request.visitId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable"));
-            
-            // Check if visit already invoiced
+
             invoiceRepository.findByVisitId(request.visitId()).ifPresent(inv -> {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Une facture existe déjà pour cette visite.");
             });
@@ -355,7 +369,6 @@ public class BillingService {
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Convention d'assurance introuvable"));
         }
 
-        // Generate unique invoice number
         Long seqVal = invoiceRepository.getNextInvoiceNumberSequenceValue();
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String invoiceNumber = String.format("FAC-%s-%06d", dateStr, seqVal);
@@ -376,7 +389,6 @@ public class BillingService {
                 invoice.addItem(item);
             }
         } else {
-            // Auto precalculate fallback
             InvoiceResponse precalc = precalculateInvoice(request.patientId(), request.visitId(), request.insuranceConventionId());
             for (InvoiceItemResponse itemResp : precalc.items()) {
                 InvoiceItemEntity item = new InvoiceItemEntity(
@@ -393,17 +405,15 @@ public class BillingService {
 
         InvoiceEntity saved = invoiceRepository.save(invoice);
 
-        if (actor != null) {
-            auditService.logSuccess(
-                    actor.getId(),
-                    orgId,
-                    request.patientId(),
-                    "BILLING",
-                    saved.getId(),
-                    "CREATE_INVOICE",
-                    "Création de la facture N° " + saved.getInvoiceNumber() + " pour un montant total de " + saved.getTotalAmount() + " FCFA."
-            );
-        }
+        auditService.logSuccess(
+                actor.getId(),
+                orgId,
+                request.patientId(),
+                "BILLING",
+                saved.getId(),
+                "CREATE_INVOICE",
+                "Création de la facture N° " + saved.getInvoiceNumber() + " pour un montant total de " + saved.getTotalAmount() + " FCFA."
+        );
 
         return InvoiceResponse.fromEntity(saved);
     }
