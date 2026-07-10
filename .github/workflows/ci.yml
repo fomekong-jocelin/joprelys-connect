@@ -23,15 +23,23 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
       - name: Build and verify (Maven strict)
-        run: |
-          if ! ./mvnw clean verify -B -Dspring.profiles.active=test > /tmp/backend-build.log 2>&1; then
-            tail -n 30 /tmp/backend-build.log
-            exit 1
-          fi
-          cat /tmp/backend-build.log
+        id: backend_verify
+        continue-on-error: true
+        run: ./mvnw clean verify -B -Dspring.profiles.active=test > backend-build.log 2>&1
         env:
           SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
           JOPRELYS_JWT_SECRET: ci-test-jwt-secret-at-least-32-chars-2026
+      - name: Upload backend diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-ci-diagnostic
+          path: backend/backend-build.log
+          if-no-files-found: error
+          retention-days: 1
+      - name: Enforce backend result
+        if: steps.backend_verify.outcome == 'failure'
+        run: exit 1
 
   frontend-build:
     name: Frontend Angular — Build & Tests
@@ -51,11 +59,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run tests
-        run: |
-          if ! npm test -- --run > /tmp/frontend-tests.log 2>&1; then
-            tail -n 30 /tmp/frontend-tests.log
-            exit 1
-          fi
-          cat /tmp/frontend-tests.log
+        id: frontend_tests
+        continue-on-error: true
+        run: npm test -- --run > frontend-tests.log 2>&1
+      - name: Upload frontend diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-ci-diagnostic
+          path: web/frontend-tests.log
+          if-no-files-found: error
+          retention-days: 1
+      - name: Enforce frontend test result
+        if: steps.frontend_tests.outcome == 'failure'
+        run: exit 1
       - name: Build Angular production
         run: npm run build
