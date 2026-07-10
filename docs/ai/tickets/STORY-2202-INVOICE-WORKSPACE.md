@@ -6,7 +6,7 @@ Product Design + Frontend Engineering + QA.
 
 ## Statut
 
-QA — implémentation terminée et validation automatisée verte ; revue PR et QA visuelle navigateur restantes.
+DONE — implémentation testée par l’utilisateur et fusionnée dans `main` via la PR #15 au commit `f1055f78f7102a1d748a43cfe1012cbc9f38b47a`.
 
 ## Objectif
 
@@ -46,6 +46,7 @@ Permettre à la secrétaire comptable de comprendre immédiatement si elle doit 
 - [x] Couvrir les états critiques et le focus par tests Angular.
 - [x] Exécuter tests Angular, build de production et Maven strict.
 - [x] Mettre à jour le suivi central et le changelog.
+- [x] Réaliser la QA utilisateur et fusionner la PR #15 dans `main`.
 
 ## Critères d’acceptation
 
@@ -59,6 +60,7 @@ Permettre à la secrétaire comptable de comprendre immédiatement si elle doit 
 - [x] Les textes visibles sont internationalisés en français et en anglais.
 - [x] Les thèmes light/dark et les rayons du design system sont respectés dans l’implémentation.
 - [x] Les tests Angular et le build de production sont verts.
+- [x] La validation utilisateur est effectuée avant fusion.
 
 ## Estimation et réalisation
 
@@ -80,6 +82,7 @@ Permettre à la secrétaire comptable de comprendre immédiatement si elle doit 
 - suite backend, H2 et PostgreSQL 16 : ✅ ;
 - cas `PATIENT_DUE`, `PATIENT_PARTIALLY_PAID`, `INSURANCE_DUE`, `SETTLED` et `CANCELLED` : ✅ ;
 - chargement, erreur/retry, vide, sélection et restauration du focus : ✅ ;
+- test utilisateur avant fusion : ✅ ;
 - aucun test désactivé ou contourné.
 
 ## Sécurité et régression
@@ -91,13 +94,18 @@ Permettre à la secrétaire comptable de comprendre immédiatement si elle doit 
 - les données historiques sans synthèse utilisent un fallback de présentation prudent ;
 - le téléchargement PDF et le parcours bordereau restent inchangés.
 
-## Risques restants
+## Fusion
 
-- QA visuelle manuelle à effectuer en 360 px, 768 px et 1440 px, en thèmes light/dark ;
-- validation Product/DAF de la hiérarchie des montants et des libellés ;
-- test navigateur manuel du cycle complet de focus avec lecteur d’écran recommandé ;
+- PR : `#15` — `feat(billing): finaliser le workspace factures orienté tâche` ;
+- branche : `feature/story-2202-invoice-workspace` ;
+- commit de fusion : `f1055f78f7102a1d748a43cfe1012cbc9f38b47a` ;
+- date de fusion : 2026-07-10.
+
+## Risques résiduels
+
 - `BillingManagementPageComponent` reste un composant dense à décomposer dans un chantier ultérieur ;
-- chevauchement fonctionnel à éviter avec STORY-2203 et STORY-2205.
+- surveiller les données historiques sans synthèse de règlement ;
+- éviter le chevauchement fonctionnel avec STORY-2203 et STORY-2205.
 
 ## Impact version
 
@@ -105,7 +113,4 @@ MINOR — amélioration rétrocompatible du parcours et de l’accessibilité, s
 
 ## Reste à faire
 
-- revue de la PR #15 ;
-- QA visuelle light/dark et responsive ;
-- validation Product/DAF ;
-- fusion après approbation.
+Aucun blocage pour STORY-2202. Le suivi post-fusion relève de la maintenance normale et STORY-2203 peut démarrer.
