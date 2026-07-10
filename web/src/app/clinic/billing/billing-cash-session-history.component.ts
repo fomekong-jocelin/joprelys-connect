@@ -39,7 +39,7 @@ export class BillingCashSessionHistoryComponent implements OnInit {
         this.expandedSessionId.set(session.id);
         this.loadSessions();
         this.loadMovements(session.id);
-        queueMicrotask(() => this.host.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+        queueMicrotask(() => this.host.nativeElement.scrollIntoView?.({ behavior: 'smooth', block: 'start' }));
       });
   }
 
