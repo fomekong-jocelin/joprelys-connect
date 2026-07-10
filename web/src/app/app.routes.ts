@@ -117,7 +117,14 @@ export const routes: Routes = [
     canActivate: [roleGuard],
     data: { expectedRoles: ['AGENT_ACCUEIL', 'ADMIN_CLINIQUE'] },
   },
-
+  {
+    // Deep-link vers une facture spécifique : ouvre la page billing sur l'onglet facturation
+    // et pré-sélectionne la facture via le fragment #invoice-<id> géré par BillingManagementPageComponent
+    path: 'clinic/billing/invoice/:invoiceId',
+    loadComponent: () => import('./clinic/billing/billing-management-page.component').then(m => m.BillingManagementPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['AGENT_ACCUEIL', 'ADMIN_CLINIQUE'] },
+  },
   {
     path: 'clinic/consultation/:visitId',
     loadComponent: () => import('./consultation/consultation.component').then(m => m.ConsultationComponent),
