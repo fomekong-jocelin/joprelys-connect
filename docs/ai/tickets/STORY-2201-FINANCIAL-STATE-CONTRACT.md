@@ -6,7 +6,7 @@ Diagnostic + Architecture + Engineering.
 
 ## Statut
 
-QA — implémentation terminée et validation technique entièrement verte ; validation métier DAF/Product et revue PR restantes.
+DONE — PR #14 fusionnée dans `main` le 2026-07-10 au commit `ec891b6b0c1413559e9b99ba0207c3ea9456714b`.
 
 ## Objectif
 
@@ -55,6 +55,7 @@ QA — implémentation terminée et validation technique entièrement verte ; va
 - [x] Valider la suite Maven complète, H2 et PostgreSQL 16.
 - [x] Valider les tests Angular et le build de production.
 - [x] Mettre à jour le suivi central et le changelog.
+- [x] Fusionner la PR #14 dans `main`.
 
 ## Critères d’acceptation
 
@@ -76,6 +77,8 @@ QA — implémentation terminée et validation technique entièrement verte ; va
 | Reviewer | Lead Developer + DAF |
 | Sprint | SPRINT-0014 |
 | Temps passé | 1,2 j |
+| PR | #14 — fusionnée |
+| Commit de fusion | `ec891b6b0c1413559e9b99ba0207c3ea9456714b` |
 
 ## Résultats de validation
 
@@ -96,10 +99,10 @@ QA — implémentation terminée et validation technique entièrement verte ; va
 - encaissement limité aux statuts `VALIDATED` et `PARTIALLY_PAID` ;
 - export Sage 100 maintenu pour les factures `SETTLED`.
 
-## Risques restants
+## Risques résiduels / suivi post-fusion
 
 - données historiques sans créances : reconstruction prudente et idempotente, à surveiller lors du premier déploiement ;
-- évolution sémantique de `PAID` à faire valider par la DAF/Product ;
+- faire confirmer par la DAF/Product les libellés et définitions métier `PAID` / `SETTLED` ;
 - paiement partiel d’un bordereau assurance hors périmètre ;
 - DTO financiers résiduels en `Double` restant une dette séparée.
 
@@ -109,6 +112,4 @@ QA — implémentation terminée et validation technique entièrement verte ; va
 
 ## Reste à faire
 
-- revue de la PR #14 ;
-- validation métier DAF/Product des définitions `PAID` et `SETTLED` ;
-- fusion après approbation.
+Aucune action technique bloquante sur STORY-2201. Les validations métier et la surveillance post-déploiement restent suivies comme activités transverses.
