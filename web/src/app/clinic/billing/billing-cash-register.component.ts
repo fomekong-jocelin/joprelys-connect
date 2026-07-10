@@ -1,43 +1,42 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { BillingApiService } from '../../patient/billing-api.service';
-import { CashSession, CashMovement, CashRegister, CashSessionSummary } from '../../patient/patient.models';
-import { IconComponent } from '../../shared/ui/icon.component';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { BillingApiService } from '../../patient/billing-api.service';
+import { CashMovement, CashRegister, CashSession, CashSessionSummary } from '../../patient/patient.models';
+import { IconComponent } from '../../shared/ui/icon.component';
+import { BillingCashierQueueComponent } from './billing-cashier-queue.component';
 
 @Component({
   selector: 'app-billing-cash-register',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent],
+  imports: [CommonModule, FormsModule, IconComponent, BillingCashierQueueComponent],
   template: `
     <div class="space-y-6">
-      <!-- Alerts -->
       @if (successMessage()) {
-        <div class="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-sm text-xs flex justify-between items-center">
+        <div class="flex items-center justify-between rounded-[var(--radius-brand-sm)] border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-600 dark:text-emerald-400">
           <span>{{ successMessage() }}</span>
-          <button (click)="successMessage.set(null)" [attr.aria-label]="t('common.aria.close', 'Fermer')" class="hover:opacity-70"><app-ui-icon name="x-mark" /></button>
+          <button type="button" (click)="successMessage.set(null)" [attr.aria-label]="t('common.aria.close', 'Fermer')" class="hover:opacity-70"><app-ui-icon name="x-mark" /></button>
         </div>
       }
       @if (errorMessage()) {
-        <div class="p-3 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 rounded-sm text-xs flex justify-between items-center">
+        <div class="flex items-center justify-between rounded-[var(--radius-brand-sm)] border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-600 dark:text-red-400" role="alert">
           <span>{{ errorMessage() }}</span>
-          <button (click)="errorMessage.set(null)" [attr.aria-label]="t('common.aria.close', 'Fermer')" class="hover:opacity-70"><app-ui-icon name="x-mark" /></button>
+          <button type="button" (click)="errorMessage.set(null)" [attr.aria-label]="t('common.aria.close', 'Fermer')" class="hover:opacity-70"><app-ui-icon name="x-mark" /></button>
         </div>
       }
 
-      <!-- Session State -->
       @if (activeSession(); as session) {
-        <!-- Open Session Dashboard -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <!-- Session summary -->
-          <div class="ui-card-subtle p-4 space-y-4 lg:col-span-1">
-            <div class="border-b border-[var(--app-border)]/40 pb-2 flex justify-between items-center">
+        <app-billing-cashier-queue></app-billing-cashier-queue>
+
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div class="ui-card-subtle space-y-4 p-4 lg:col-span-1">
+            <div class="flex items-center justify-between border-b border-[var(--app-border)]/40 pb-2">
               <div>
-                <h3 class="font-bold text-xs text-[var(--text-primary)] uppercase tracking-wider">Session Active</h3>
+                <h3 class="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">Session Active</h3>
                 <p class="text-[10px] text-[var(--text-muted)]">Ouverte le : {{ session.openedAt | date:'dd/MM/yyyy HH:mm' }}</p>
               </div>
-              <span class="px-2 py-0.5 text-[9px] font-bold uppercase rounded-sm bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+              <span class="rounded-[var(--radius-brand-sm)] bg-emerald-500/15 px-2 py-0.5 text-[9px] font-bold uppercase text-emerald-600 dark:text-emerald-400">
                 OUVERTE
               </span>
             </div>
@@ -59,13 +58,13 @@ import { I18nService } from '../../core/i18n/i18n.service';
                 <span>Versements banque :</span>
                 <span class="font-bold text-blue-600 dark:text-blue-400">- {{ bankDeposits() | number:'1.0-0' }} FCFA</span>
               </div>
-              <div class="flex justify-between border-t border-[var(--app-border)]/40 pt-2 font-bold text-sm text-[var(--text-primary)]">
+              <div class="flex justify-between border-t border-[var(--app-border)]/40 pt-2 text-sm font-bold text-[var(--text-primary)]">
                 <span>Solde Théorique :</span>
                 <span>{{ soldeTheorique() | number:'1.0-0' }} FCFA</span>
               </div>
             </div>
 
-            <div class="border-t border-[var(--app-border)]/40 pt-3 space-y-1.5 text-[10px] text-[var(--text-secondary)]">
+            <div class="space-y-1.5 border-t border-[var(--app-border)]/40 pt-3 text-[10px] text-[var(--text-secondary)]">
               <p class="font-bold uppercase tracking-wider text-[var(--text-muted)]">Encaissements hors espèces</p>
               <div class="flex justify-between"><span>Chèques reçus</span><span class="font-semibold">{{ chequeReceipts() | number:'1.0-0' }} FCFA</span></div>
               <div class="flex justify-between"><span>Virements reçus</span><span class="font-semibold">{{ transferReceipts() | number:'1.0-0' }} FCFA</span></div>
@@ -73,23 +72,22 @@ import { I18nService } from '../../core/i18n/i18n.service';
             </div>
 
             <div class="pt-2">
-              <button (click)="openCloseModal()" class="ui-button ui-button-primary w-full justify-center">
+              <button type="button" (click)="openCloseModal()" class="ui-button ui-button-primary w-full justify-center">
                 <app-ui-icon name="check" />
                 Clôturer la Caisse
               </button>
             </div>
           </div>
 
-          <!-- Add Operation -->
-          <div class="ui-card-subtle p-4 space-y-3 lg:col-span-2">
-            <h3 class="font-bold text-xs text-[var(--text-primary)] uppercase tracking-wider border-b border-[var(--app-border)]/40 pb-2">
+          <div class="ui-card-subtle space-y-3 p-4 lg:col-span-2">
+            <h3 class="border-b border-[var(--app-border)]/40 pb-2 text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
               <app-ui-icon name="plus" />
               Consigner une Dépense / Mouvement de Caisse
             </h3>
-            
-            <form (submit)="submitMovement()" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+
+            <form (submit)="submitMovement()" class="grid grid-cols-1 gap-3 text-xs md:grid-cols-2">
               <div>
-                <label class="font-bold text-[var(--text-secondary)] block mb-1">Type de mouvement :</label>
+                <label class="mb-1 block font-bold text-[var(--text-secondary)]">Type de mouvement :</label>
                 <select [(ngModel)]="movType" (ngModelChange)="onMovementTypeChange()" name="movType" class="ui-select w-full" required>
                   <option value="OUT">Dépense (OUT)</option>
                   <option value="TRANSFER_TO_BANK">Versement Banque (TRANSFER_TO_BANK)</option>
@@ -97,17 +95,17 @@ import { I18nService } from '../../core/i18n/i18n.service';
               </div>
 
               <div>
-                <label class="font-bold text-[var(--text-secondary)] block mb-1">Montant (FCFA) :</label>
+                <label class="mb-1 block font-bold text-[var(--text-secondary)]">Montant (FCFA) :</label>
                 <input type="number" [(ngModel)]="movAmount" name="movAmount" class="ui-input w-full" placeholder="Ex: 5000" required />
               </div>
 
               <div class="md:col-span-2">
-                <label class="font-bold text-[var(--text-secondary)] block mb-1">Description / Motif :</label>
+                <label class="mb-1 block font-bold text-[var(--text-secondary)]">Description / Motif :</label>
                 <input type="text" [(ngModel)]="movDescription" name="movDescription" class="ui-input w-full" placeholder="Ex: Achat papier rame" required />
               </div>
 
               <div>
-                <label class="font-bold text-[var(--text-secondary)] block mb-1">{{ movType() === 'TRANSFER_TO_BANK' ? 'Origine du versement :' : 'Mode de règlement :' }}</label>
+                <label class="mb-1 block font-bold text-[var(--text-secondary)]">{{ movType() === 'TRANSFER_TO_BANK' ? 'Origine du versement :' : 'Mode de règlement :' }}</label>
                 <select [(ngModel)]="movMethod" name="movMethod" class="ui-select w-full" required [disabled]="movType() === 'TRANSFER_TO_BANK'">
                   <option value="CASH">Espèces</option>
                   <option value="CHECK">Chèque</option>
@@ -116,28 +114,28 @@ import { I18nService } from '../../core/i18n/i18n.service';
               </div>
 
               <div>
-                <label class="font-bold text-[var(--text-secondary)] block mb-1">{{ movType() === 'TRANSFER_TO_BANK' ? 'Bordereau de dépôt :' : 'Référence (N° chèque, pièce...) :' }}</label>
+                <label class="mb-1 block font-bold text-[var(--text-secondary)]">{{ movType() === 'TRANSFER_TO_BANK' ? 'Bordereau de dépôt :' : 'Référence (N° chèque, pièce...) :' }}</label>
                 <input type="text" [(ngModel)]="movReference" name="movReference" class="ui-input w-full" [placeholder]="movType() === 'TRANSFER_TO_BANK' ? 'Ex: BORD-20260709-001' : 'Optionnel'" [required]="movType() === 'TRANSFER_TO_BANK'" />
               </div>
 
               @if (movType() === 'TRANSFER_TO_BANK') {
-                <p class="md:col-span-2 p-2 bg-blue-500/10 border border-blue-500/30 text-blue-700 dark:text-blue-300 rounded-sm text-[10px]">
+                <p class="rounded-[var(--radius-brand-sm)] border border-blue-500/30 bg-blue-500/10 p-2 text-[10px] text-blue-700 md:col-span-2 dark:text-blue-300">
                   Ce versement diminue le solde espèces attendu à la clôture. Conservez le bordereau de dépôt avec la session.
                 </p>
               }
 
               @if (movAmount() > 100000 && movType() === 'OUT') {
-                <div class="md:col-span-2 p-2 bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 rounded-sm text-[10px] space-y-1">
+                <div class="space-y-1 rounded-[var(--radius-brand-sm)] border border-amber-500/30 bg-amber-500/10 p-2 text-[10px] text-amber-700 md:col-span-2 dark:text-amber-400">
                   <p class="font-bold"><app-ui-icon name="information-circle" /> Seuil de 100 000 FCFA dépassé</p>
                   <p>Cette dépense nécessite le double visa de la DAF et du Médecin Chef.</p>
-                  <label class="flex items-center gap-1.5 cursor-pointer mt-1">
+                  <label class="mt-1 flex cursor-pointer items-center gap-1.5">
                     <input type="checkbox" [(ngModel)]="movDoubleVisaApproved" name="movDoubleVisaApproved" required />
                     <span>Je confirme l'obtention du double visa signé.</span>
                   </label>
                 </div>
               }
 
-              <div class="md:col-span-2 flex justify-end pt-2">
+              <div class="flex justify-end pt-2 md:col-span-2">
                 <button type="submit" [disabled]="savingMovement()" class="ui-button ui-button-secondary disabled:opacity-50">
                   <app-ui-icon name="plus" />
                   Enregistrer l'opération
@@ -147,16 +145,15 @@ import { I18nService } from '../../core/i18n/i18n.service';
           </div>
         </div>
 
-        <!-- Session Movements List -->
-        <div class="ui-card-subtle p-4 space-y-3">
-          <h3 class="font-bold text-xs text-[var(--text-primary)] uppercase tracking-wider border-b border-[var(--app-border)]/40 pb-2">
+        <div class="ui-card-subtle space-y-3 p-4">
+          <h3 class="border-b border-[var(--app-border)]/40 pb-2 text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
             Mouvements de la session
           </h3>
           @if (movements().length > 0) {
             <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs border-collapse">
+              <table class="w-full border-collapse text-left text-xs">
                 <thead>
-                  <tr class="bg-[var(--app-surface-muted)] border-b border-[var(--app-border)] text-[10px] font-bold text-[var(--text-secondary)]">
+                  <tr class="border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] text-[10px] font-bold text-[var(--text-secondary)]">
                     <th class="p-2" scope="col">Date/Heure</th>
                     <th class="p-2" scope="col">Type</th>
                     <th class="p-2" scope="col">Description</th>
@@ -170,7 +167,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
                     <tr class="hover:bg-[var(--app-surface-muted)]/30">
                       <td class="p-2 text-[10px]">{{ m.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
                       <td class="p-2">
-                        <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-sm"
+                        <span class="rounded-[var(--radius-brand-sm)] px-1.5 py-0.5 text-[9px] font-bold"
                               [class.bg-emerald-500\/10]="m.movementType === 'IN'"
                               [class.text-emerald-600]="m.movementType === 'IN'"
                               [class.dark:text-emerald-400]="m.movementType === 'IN'"
@@ -197,26 +194,24 @@ import { I18nService } from '../../core/i18n/i18n.service';
               </table>
             </div>
           } @else {
-            <p class="text-center text-[10px] text-[var(--text-muted)] py-4 italic">Aucun mouvement enregistré pour cette session.</p>
+            <p class="py-4 text-center text-[10px] italic text-[var(--text-muted)]">Aucun mouvement enregistré pour cette session.</p>
           }
         </div>
-
       } @else {
-        <!-- Closed Session State - Form to Open -->
-        <div class="ui-card-subtle p-6 max-w-md mx-auto space-y-4">
-          <div class="text-center space-y-1">
-            <div class="inline-flex items-center justify-center p-3 bg-amber-500/15 text-amber-500 rounded-full mb-2">
+        <div class="ui-card-subtle mx-auto max-w-md space-y-4 p-6">
+          <div class="space-y-1 text-center">
+            <div class="mb-2 inline-flex items-center justify-center rounded-full bg-amber-500/15 p-3 text-amber-500">
               <app-ui-icon name="calculator" class="text-2xl" />
             </div>
-            <h3 class="font-bold text-sm text-[var(--text-primary)]">Caisse Clôturée</h3>
+            <h3 class="text-sm font-bold text-[var(--text-primary)]">Caisse Clôturée</h3>
             <p class="text-xs text-[var(--text-muted)]">
               Vous devez ouvrir une session de caisse avec un fond initial pour pouvoir encaisser les règlements.
             </p>
           </div>
 
-          <form (submit)="submitOpen()" class="space-y-4 text-xs pt-2">
+          <form (submit)="submitOpen()" class="space-y-4 pt-2 text-xs">
             <div>
-              <label class="font-bold text-[var(--text-secondary)] block mb-1">Caisse d'affectation :</label>
+              <label class="mb-1 block font-bold text-[var(--text-secondary)]">Caisse d'affectation :</label>
               <select [(ngModel)]="selectedRegisterId" name="register" class="ui-select w-full">
                 <option value="">Caisse par défaut (Automatique)</option>
                 @for (c of registers(); track c.id) {
@@ -226,7 +221,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
             </div>
 
             <div>
-              <label class="font-bold text-[var(--text-secondary)] block mb-1">Fond de caisse d'ouverture (FCFA) :</label>
+              <label class="mb-1 block font-bold text-[var(--text-secondary)]">Fond de caisse d'ouverture (FCFA) :</label>
               <input type="number" [(ngModel)]="openBalance" name="openBalance" class="ui-input w-full" placeholder="Ex: 50000" required />
             </div>
 
@@ -239,20 +234,19 @@ import { I18nService } from '../../core/i18n/i18n.service';
       }
     </div>
 
-    <!-- Close Session Modal -->
     @if (showCloseModal()) {
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs">
-        <div class="bg-[var(--app-surface)] border border-[var(--app-border)] rounded-sm max-w-md w-full p-5 space-y-4 shadow-xl">
-          <div class="flex justify-between items-center border-b border-[var(--app-border)]/40 pb-2">
-            <h3 class="font-bold text-xs text-[var(--text-primary)] uppercase tracking-wider">Clôturer la Session</h3>
-            <button (click)="openCloseModal()" [attr.aria-label]="t('common.aria.close', 'Fermer')" class="hover:opacity-70 text-[var(--text-muted)]"><app-ui-icon name="x-mark" /></button>
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+        <div class="w-full max-w-md space-y-4 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface)] p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="cash-close-title">
+          <div class="flex items-center justify-between border-b border-[var(--app-border)]/40 pb-2">
+            <h3 id="cash-close-title" class="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">Clôturer la Session</h3>
+            <button type="button" (click)="openCloseModal()" [attr.aria-label]="t('common.aria.close', 'Fermer')" class="text-[var(--text-muted)] hover:opacity-70"><app-ui-icon name="x-mark" /></button>
           </div>
 
           <div class="space-y-2 text-xs">
             <p class="text-[var(--text-secondary)]">
               Veuillez compter la caisse physique et déclarer le montant total d'espèces et de pièces en votre possession.
             </p>
-            <div class="p-2 bg-[var(--app-surface-muted)] rounded-sm flex justify-between font-bold">
+            <div class="flex justify-between rounded-[var(--radius-brand-sm)] bg-[var(--app-surface-muted)] p-2 font-bold">
               <span>Solde théorique attendu :</span>
               <span>{{ soldeTheorique() | number:'1.0-0' }} FCFA</span>
             </div>
@@ -260,15 +254,15 @@ import { I18nService } from '../../core/i18n/i18n.service';
 
           <form (submit)="submitClose()" class="space-y-4 text-xs">
             <div>
-              <label class="font-bold text-[var(--text-secondary)] block mb-1">Montant physique constaté (FCFA) :</label>
+              <label class="mb-1 block font-bold text-[var(--text-secondary)]">Montant physique constaté (FCFA) :</label>
               <input type="number" [(ngModel)]="declaredBalance" name="declaredBalance" class="ui-input w-full" placeholder="Ex: 45000" required />
             </div>
 
             @if (discrepancy() !== 0) {
-              <div class="p-2 bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 rounded-sm text-[10px] space-y-1">
+              <div class="space-y-1 rounded-[var(--radius-brand-sm)] border border-amber-500/30 bg-amber-500/10 p-2 text-[10px] text-amber-700 dark:text-amber-400">
                 <p class="font-bold"><app-ui-icon name="information-circle" /> Écart de caisse détecté : {{ discrepancy() | number:'1.0-0' }} FCFA</p>
-                <label class="font-bold block mt-1">Justification / Motif de l'écart :</label>
-                <input type="text" [(ngModel)]="discrepancyReason" name="discrepancyReason" class="ui-input w-full bg-[var(--app-surface)] text-xs mt-0.5" placeholder="Ex: Erreur rendu monnaie ticket 14" required />
+                <label class="mt-1 block font-bold">Justification / Motif de l'écart :</label>
+                <input type="text" [(ngModel)]="discrepancyReason" name="discrepancyReason" class="ui-input mt-0.5 w-full bg-[var(--app-surface)] text-xs" placeholder="Ex: Erreur rendu monnaie ticket 14" required />
               </div>
             }
 
@@ -282,7 +276,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
         </div>
       </div>
     }
-  `
+  `,
 })
 export class BillingCashRegisterComponent implements OnInit {
   private readonly billingApi = inject(BillingApiService);
@@ -297,12 +291,10 @@ export class BillingCashRegisterComponent implements OnInit {
   movements = signal<CashMovement[]>([]);
   summary = signal<CashSessionSummary | null>(null);
 
-  // Open form
   selectedRegisterId = signal<string>('');
   openBalance = signal<number>(0);
   savingOpen = signal(false);
 
-  // Movement form
   movType = signal<'OUT' | 'TRANSFER_TO_BANK'>('OUT');
   movAmount = signal<number>(0);
   movDescription = signal<string>('');
@@ -311,17 +303,14 @@ export class BillingCashRegisterComponent implements OnInit {
   movDoubleVisaApproved = signal<boolean>(false);
   savingMovement = signal(false);
 
-  // Close form
   showCloseModal = signal(false);
   declaredBalance = signal<number>(0);
   discrepancyReason = signal<string>('');
   savingClose = signal(false);
 
-  // Alerts
   successMessage = signal<string | null>(null);
   errorMessage = signal<string | null>(null);
 
-  // Computeds
   cashReceipts = computed(() => this.summary()?.cashReceipts
     ?? this.movements().filter(m => m.movementType === 'IN' && m.paymentMethod === 'CASH').reduce((acc, m) => acc + m.amount, 0));
 
@@ -343,16 +332,14 @@ export class BillingCashRegisterComponent implements OnInit {
     return this.summary()?.expectedCash ?? session.openingBalance + this.cashReceipts() - this.cashExpenses() - this.bankDeposits();
   });
 
-  discrepancy = computed(() => {
-    return this.declaredBalance() - this.soldeTheorique();
-  });
+  discrepancy = computed(() => this.declaredBalance() - this.soldeTheorique());
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.loadActiveSession();
     this.loadRegisters();
   }
 
-  loadActiveSession() {
+  loadActiveSession(): void {
     this.billingApi.getActiveCashSession().subscribe({
       next: (session) => {
         if (session) {
@@ -369,61 +356,58 @@ export class BillingCashRegisterComponent implements OnInit {
         this.activeSession.set(null);
         this.movements.set([]);
         this.summary.set(null);
-      }
+      },
     });
   }
 
-  loadRegisters() {
+  loadRegisters(): void {
     this.billingApi.listCashRegisters().subscribe({
-      next: (registers) => {
-        this.registers.set(registers);
-      }
+      next: (registers) => this.registers.set(registers),
     });
   }
 
-  loadSessionMovements(sessionId: string) {
+  loadSessionMovements(sessionId: string): void {
     this.billingApi.getSessionMovements(sessionId).subscribe({
-      next: (movements) => this.movements.set(movements)
+      next: (movements) => this.movements.set(movements),
     });
   }
 
-  loadSessionSummary() {
+  loadSessionSummary(): void {
     this.billingApi.getActiveCashSessionSummary().subscribe({
       next: (summary) => this.summary.set(summary),
-      error: () => this.summary.set(null)
+      error: () => this.summary.set(null),
     });
   }
 
-  submitOpen() {
+  submitOpen(): void {
     if (this.openBalance() < 0) return;
     this.savingOpen.set(true);
-    const regId = this.selectedRegisterId() ? this.selectedRegisterId() : null;
-    this.billingApi.openCashSession(regId, this.openBalance()).subscribe({
+    const registerId = this.selectedRegisterId() || null;
+    this.billingApi.openCashSession(registerId, this.openBalance()).subscribe({
       next: (session) => {
         this.savingOpen.set(false);
         this.activeSession.set(session);
-        this.successMessage.set("Session de caisse ouverte avec succès.");
+        this.successMessage.set('Session de caisse ouverte avec succès.');
         this.loadSessionMovements(session.id);
         this.loadSessionSummary();
         this.errorMessage.set(null);
       },
-      error: (err) => {
+      error: (error) => {
         this.savingOpen.set(false);
-        this.errorMessage.set(err.error?.error?.message || "Erreur lors de l'ouverture de la session.");
-      }
+        this.errorMessage.set(error.error?.error?.message || "Erreur lors de l'ouverture de la session.");
+      },
     });
   }
 
-  submitMovement() {
+  submitMovement(): void {
     if (this.movAmount() <= 0 || !this.movDescription()) return;
-    
-    // Protection double visa
+
     if (this.movType() === 'OUT' && this.movAmount() > 100000 && !this.movDoubleVisaApproved()) {
-      this.errorMessage.set("Double visa obligatoire pour les dépenses supérieures à 100 000 FCFA.");
+      this.errorMessage.set('Double visa obligatoire pour les dépenses supérieures à 100 000 FCFA.');
       return;
     }
     if (this.movType() === 'TRANSFER_TO_BANK' && !this.movReference().trim()) {
-      this.errorMessage.set("La référence du bordereau de dépôt est obligatoire.");
+      this.errorMessage.set('La référence du bordereau de dépôt est obligatoire.');
       return;
     }
 
@@ -434,40 +418,39 @@ export class BillingCashRegisterComponent implements OnInit {
       description: this.movDescription(),
       paymentMethod: this.movMethod(),
       referenceNumber: this.movReference(),
-      doubleVisaApproved: this.movDoubleVisaApproved()
+      doubleVisaApproved: this.movDoubleVisaApproved(),
     }).subscribe({
-      next: (m) => {
+      next: (movement) => {
         this.savingMovement.set(false);
-        this.movements.update(list => [...list, m]);
+        this.movements.update((list) => [...list, movement]);
         this.loadSessionSummary();
-        this.successMessage.set("Mouvement de caisse consigné avec succès.");
+        this.successMessage.set('Mouvement de caisse consigné avec succès.');
         this.errorMessage.set(null);
-        // Reset form
         this.movAmount.set(0);
         this.movDescription.set('');
         this.movReference.set('');
         this.movDoubleVisaApproved.set(false);
       },
-      error: (err) => {
+      error: (error) => {
         this.savingMovement.set(false);
-        this.errorMessage.set(err.error?.error?.message || "Erreur lors de l'enregistrement du mouvement.");
-      }
+        this.errorMessage.set(error.error?.error?.message || "Erreur lors de l'enregistrement du mouvement.");
+      },
     });
   }
 
-  onMovementTypeChange() {
+  onMovementTypeChange(): void {
     if (this.movType() === 'TRANSFER_TO_BANK') {
       this.movMethod.set('CASH');
     }
   }
 
-  openCloseModal() {
+  openCloseModal(): void {
     this.declaredBalance.set(this.soldeTheorique());
     this.discrepancyReason.set('');
-    this.showCloseModal.update(v => !v);
+    this.showCloseModal.update((value) => !value);
   }
 
-  submitClose() {
+  submitClose(): void {
     if (this.discrepancy() !== 0 && !this.discrepancyReason().trim()) {
       this.errorMessage.set("Vous devez justifier l'écart de caisse.");
       return;
@@ -483,10 +466,10 @@ export class BillingCashRegisterComponent implements OnInit {
         this.successMessage.set("Caisse clôturée avec succès. L'état théorique et l'écart ont été enregistrés.");
         this.errorMessage.set(null);
       },
-      error: (err) => {
+      error: (error) => {
         this.savingClose.set(false);
-        this.errorMessage.set(err.error?.error?.message || "Erreur lors de la clôture de la caisse.");
-      }
+        this.errorMessage.set(error.error?.error?.message || 'Erreur lors de la clôture de la caisse.');
+      },
     });
   }
 }
