@@ -44,4 +44,14 @@ describe('BillingCashRegisterComponent', () => {
     expect(host.textContent).toContain('Historique des sessions');
     expect(billingApi.listMyCashSessions).toHaveBeenCalledOnce();
   });
+
+  it('renders a full-width responsive opening workspace when no session is active', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    const panel = host.querySelector<HTMLElement>('[data-testid="cash-open-panel"]');
+
+    expect(panel).not.toBeNull();
+    expect(panel?.classList.contains('max-w-md')).toBe(false);
+    expect(panel?.querySelector('form')).not.toBeNull();
+    expect(panel?.textContent).toContain('Paramètres d’ouverture');
+  });
 });
