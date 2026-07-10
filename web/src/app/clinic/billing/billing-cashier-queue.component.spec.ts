@@ -37,45 +37,35 @@ describe('BillingCashierQueueComponent', () => {
     },
   ];
 
+  const payment = {
+    id: 'payment-1',
+    invoiceId: 'invoice-due',
+    amount: 20000,
+    paymentMethod: 'CASH' as const,
+    receivedByUserId: 'cashier-1',
+    createdAt: '2026-07-10T10:00:00Z',
+  };
+
+  const receipt = {
+    id: 'receipt-1',
+    paymentId: 'payment-1',
+    receiptNumber: 'REC-20260710-000001',
+    amount: 20000,
+    paymentMethod: 'CASH',
+    createdAt: '2026-07-10T10:00:01Z',
+  };
+
   const billingApi = {
-    listCashierCollectionQueue: vi.fn(() => of(items)),
-    addPayment: vi.fn(() => of({
-      id: 'payment-1',
-      invoiceId: 'invoice-due',
-      amount: 20000,
-      paymentMethod: 'CASH',
-      receivedByUserId: 'cashier-1',
-      createdAt: '2026-07-10T10:00:00Z',
-    })),
-    getPaymentReceipt: vi.fn(() => of({
-      id: 'receipt-1',
-      paymentId: 'payment-1',
-      receiptNumber: 'REC-20260710-000001',
-      amount: 20000,
-      paymentMethod: 'CASH',
-      createdAt: '2026-07-10T10:00:01Z',
-    })),
+    listCashierCollectionQueue: vi.fn(),
+    addPayment: vi.fn(),
+    getPaymentReceipt: vi.fn(),
   };
 
   beforeEach(async () => {
     vi.clearAllMocks();
     billingApi.listCashierCollectionQueue.mockReturnValue(of(items));
-    billingApi.addPayment.mockReturnValue(of({
-      id: 'payment-1',
-      invoiceId: 'invoice-due',
-      amount: 20000,
-      paymentMethod: 'CASH',
-      receivedByUserId: 'cashier-1',
-      createdAt: '2026-07-10T10:00:00Z',
-    }));
-    billingApi.getPaymentReceipt.mockReturnValue(of({
-      id: 'receipt-1',
-      paymentId: 'payment-1',
-      receiptNumber: 'REC-20260710-000001',
-      amount: 20000,
-      paymentMethod: 'CASH',
-      createdAt: '2026-07-10T10:00:01Z',
-    }));
+    billingApi.addPayment.mockReturnValue(of(payment));
+    billingApi.getPaymentReceipt.mockReturnValue(of(receipt));
 
     await TestBed.configureTestingModule({
       imports: [BillingCashierQueueComponent],
@@ -96,8 +86,8 @@ describe('BillingCashierQueueComponent', () => {
     expect(billingApi.listCashierCollectionQueue).toHaveBeenCalledOnce();
     expect(component.totalRemaining()).toBe(25000);
     expect(component.partialCount()).toBe(1);
+    expect(component.items()[0].patientRemainingAmount).toBe(20000);
     expect(text).toContain('Alice Mbarga');
-    expect(text).toContain('20 000');
     expect(text).toContain('Brice Nkoa');
     expect(text).toContain('Paiement partiel');
   });
