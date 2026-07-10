@@ -11,6 +11,9 @@ describe('BillingCashSessionHistoryComponent', () => {
   let component: BillingCashSessionHistoryComponent;
   let closeEvents: Subject<CashSession>;
 
+  const recentOpenedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const recentClosedAt = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+
   const history: CashSessionHistory = {
     id: 'session-1',
     cashRegisterId: 'register-1',
@@ -18,10 +21,10 @@ describe('BillingCashSessionHistoryComponent', () => {
     reportNumber: 'CLS-20260710-ABCDEF12',
     openedByUserId: 'cashier-1',
     openedByName: 'Pierre Caisse',
-    openedAt: '2026-07-10T08:00:00Z',
+    openedAt: recentOpenedAt,
     closedByUserId: 'cashier-1',
     closedByName: 'Pierre Caisse',
-    closedAt: '2026-07-10T18:00:00Z',
+    closedAt: recentClosedAt,
     status: 'CLOSED',
     openingBalance: 50000,
     cashReceipts: 20000,
@@ -35,15 +38,23 @@ describe('BillingCashSessionHistoryComponent', () => {
     discrepancyResolved: false,
   };
 
+  const oldHistory: CashSessionHistory = {
+    ...history,
+    id: 'session-old',
+    reportNumber: 'CLS-20250101-OLD00001',
+    openedAt: '2025-01-01T08:00:00Z',
+    closedAt: '2025-01-01T18:00:00Z',
+  };
+
   const closedSession: CashSession = {
     id: 'session-1',
     cashRegisterId: 'register-1',
     cashRegisterName: 'Caisse principale',
     openedByUserId: 'cashier-1',
-    openedAt: '2026-07-10T08:00:00Z',
+    openedAt: recentOpenedAt,
     openingBalance: 50000,
     closedByUserId: 'cashier-1',
-    closedAt: '2026-07-10T18:00:00Z',
+    closedAt: recentClosedAt,
     closingBalance: 65000,
     declaredBalance: 65000,
     discrepancyAmount: 0,
@@ -59,7 +70,7 @@ describe('BillingCashSessionHistoryComponent', () => {
     description: 'Règlement facture',
     paymentMethod: 'CASH' as const,
     createdByUserId: 'cashier-1',
-    createdAt: '2026-07-10T10:00:00Z',
+    createdAt: recentClosedAt,
   };
 
   const billingApi = {
@@ -101,14 +112,39 @@ describe('BillingCashSessionHistoryComponent', () => {
   });
 
   it('refreshes and highlights the session immediately after a successful close', () => {
+    component.collapsed.set(true);
     closeEvents.next(closedSession);
     fixture.detectChanges();
 
     expect(billingApi.listMyCashSessions).toHaveBeenCalledTimes(2);
+    expect(component.collapsed()).toBe(false);
     expect(component.highlightedSessionId()).toBe('session-1');
     expect(component.expandedSessionId()).toBe('session-1');
     expect(billingApi.getSessionMovements).toHaveBeenCalledWith('session-1');
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('vient d’être clôturée');
+  });
+
+  it('filters sessions by period and can restore all periods', () => {
+    component.sessions.set([history, oldHistory]);
+
+    component.setPeriod('7');
+    expect(component.filteredSessions().map((session) => session.id)).toEqual(['session-1']);
+
+    component.setPeriod('all');
+    expect(component.filteredSessions().map((session) => session.id)).toEqual(['session-1', 'session-old']);
+  });
+
+  it('collapses and expands the complete history content', () => {
+    component.toggleCollapsed();
+    fixture.detectChanges();
+
+    expect(component.collapsed()).toBe(true);
+    expect((fixture.nativeElement as HTMLElement).querySelector('#cash-history-content')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Afficher l’historique');
+
+    component.toggleCollapsed();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('#cash-history-content')).not.toBeNull();
   });
 
   it('loads the session movements only when details are opened', () => {
