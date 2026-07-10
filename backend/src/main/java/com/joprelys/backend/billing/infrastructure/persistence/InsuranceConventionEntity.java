@@ -2,6 +2,7 @@ package com.joprelys.backend.billing.infrastructure.persistence;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.TenantId;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -15,8 +16,8 @@ public class InsuranceConventionEntity {
     @Column(name = "name", nullable = false, length = 150)
     private String name;
 
-    @Column(name = "coverage_percentage", nullable = false)
-    private Double coveragePercentage;
+    @Column(name = "coverage_percentage", nullable = false, precision = 5, scale = 4)
+    private BigDecimal coveragePercentage;
 
     @TenantId
     @Column(name = "organization_id")
@@ -31,10 +32,10 @@ public class InsuranceConventionEntity {
     protected InsuranceConventionEntity() {
     }
 
-    public InsuranceConventionEntity(String name, Double coveragePercentage) {
+    public InsuranceConventionEntity(String name, BigDecimal coveragePercentage) {
         this.id = UUID.randomUUID();
         this.name = name;
-        this.coveragePercentage = coveragePercentage != null ? coveragePercentage : 0.8;
+        this.coveragePercentage = coveragePercentage != null ? coveragePercentage : new BigDecimal("0.8000");
     }
 
     @PrePersist
@@ -45,43 +46,15 @@ public class InsuranceConventionEntity {
     }
 
     @PreUpdate
-    void preUpdate() {
-        this.updatedAt = Instant.now();
-    }
+    void preUpdate() { this.updatedAt = Instant.now(); }
 
-    public UUID getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public Double getCoveragePercentage() {
-        return coveragePercentage;
-    }
-
-    public void setCoveragePercentage(Double coveragePercentage) {
-        this.coveragePercentage = coveragePercentage;
-    }
-
-    public UUID getOrganizationId() {
-        return organizationId;
-    }
-
-    public void setOrganizationId(UUID organizationId) {
-        this.organizationId = organizationId;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
+    public UUID getId() { return id; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public BigDecimal getCoveragePercentage() { return coveragePercentage; }
+    public void setCoveragePercentage(BigDecimal coveragePercentage) { this.coveragePercentage = coveragePercentage; }
+    public UUID getOrganizationId() { return organizationId; }
+    public void setOrganizationId(UUID organizationId) { this.organizationId = organizationId; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
 }

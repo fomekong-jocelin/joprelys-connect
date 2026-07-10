@@ -2,6 +2,7 @@ package com.joprelys.backend.billing.infrastructure.persistence;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.TenantId;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -16,8 +17,8 @@ public class PaymentEntity {
     @JoinColumn(name = "invoice_id", nullable = false)
     private InvoiceEntity invoice;
 
-    @Column(name = "amount", nullable = false)
-    private Double amount;
+    @Column(name = "amount", nullable = false, precision = 19, scale = 4)
+    private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_method", nullable = false, length = 50)
@@ -42,7 +43,7 @@ public class PaymentEntity {
     protected PaymentEntity() {
     }
 
-    public PaymentEntity(InvoiceEntity invoice, Double amount, PaymentMethod paymentMethod, String referenceNumber, UUID receivedByUserId) {
+    public PaymentEntity(InvoiceEntity invoice, BigDecimal amount, PaymentMethod paymentMethod, String referenceNumber, UUID receivedByUserId) {
         this.id = UUID.randomUUID();
         this.invoice = invoice;
         this.amount = amount;
@@ -52,71 +53,22 @@ public class PaymentEntity {
     }
 
     @PrePersist
-    void prePersist() {
-        this.createdAt = Instant.now();
-    }
+    void prePersist() { this.createdAt = Instant.now(); }
 
-    public UUID getId() {
-        return id;
-    }
-
-    public InvoiceEntity getInvoice() {
-        return invoice;
-    }
-
-    public void setInvoice(InvoiceEntity invoice) {
-        this.invoice = invoice;
-    }
-
-    public Double getAmount() {
-        return amount;
-    }
-
-    public void setAmount(Double amount) {
-        this.amount = amount;
-    }
-
-    public PaymentMethod getPaymentMethod() {
-        return paymentMethod;
-    }
-
-    public void setPaymentMethod(PaymentMethod paymentMethod) {
-        this.paymentMethod = paymentMethod;
-    }
-
-    public String getReferenceNumber() {
-        return referenceNumber;
-    }
-
-    public void setReferenceNumber(String referenceNumber) {
-        this.referenceNumber = referenceNumber;
-    }
-
-    public UUID getReceivedByUserId() {
-        return receivedByUserId;
-    }
-
-    public void setReceivedByUserId(UUID receivedByUserId) {
-        this.receivedByUserId = receivedByUserId;
-    }
-
-    public UUID getCashSessionId() {
-        return cashSessionId;
-    }
-
-    public void setCashSessionId(UUID cashSessionId) {
-        this.cashSessionId = cashSessionId;
-    }
-
-    public UUID getOrganizationId() {
-        return organizationId;
-    }
-
-    public void setOrganizationId(UUID organizationId) {
-        this.organizationId = organizationId;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
+    public UUID getId() { return id; }
+    public InvoiceEntity getInvoice() { return invoice; }
+    public void setInvoice(InvoiceEntity invoice) { this.invoice = invoice; }
+    public BigDecimal getAmount() { return amount; }
+    public void setAmount(BigDecimal amount) { this.amount = amount; }
+    public PaymentMethod getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(PaymentMethod paymentMethod) { this.paymentMethod = paymentMethod; }
+    public String getReferenceNumber() { return referenceNumber; }
+    public void setReferenceNumber(String referenceNumber) { this.referenceNumber = referenceNumber; }
+    public UUID getReceivedByUserId() { return receivedByUserId; }
+    public void setReceivedByUserId(UUID receivedByUserId) { this.receivedByUserId = receivedByUserId; }
+    public UUID getCashSessionId() { return cashSessionId; }
+    public void setCashSessionId(UUID cashSessionId) { this.cashSessionId = cashSessionId; }
+    public UUID getOrganizationId() { return organizationId; }
+    public void setOrganizationId(UUID organizationId) { this.organizationId = organizationId; }
+    public Instant getCreatedAt() { return createdAt; }
 }

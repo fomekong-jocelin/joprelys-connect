@@ -2,6 +2,7 @@ package com.joprelys.backend.billing.infrastructure.persistence;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.TenantId;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -17,8 +18,8 @@ public class TariffGridEntity {
     @Column(name = "key_letter", nullable = false, length = 100)
     private String keyLetter;
 
-    @Column(name = "unit_value", nullable = false)
-    private Double unitValue;
+    @Column(name = "unit_value", nullable = false, precision = 19, scale = 4)
+    private BigDecimal unitValue;
 
     @TenantId
     @Column(name = "organization_id")
@@ -33,7 +34,7 @@ public class TariffGridEntity {
     protected TariffGridEntity() {
     }
 
-    public TariffGridEntity(String keyLetter, Double unitValue) {
+    public TariffGridEntity(String keyLetter, BigDecimal unitValue) {
         this.id = UUID.randomUUID();
         this.keyLetter = keyLetter;
         this.unitValue = unitValue;
@@ -47,43 +48,15 @@ public class TariffGridEntity {
     }
 
     @PreUpdate
-    void preUpdate() {
-        this.updatedAt = Instant.now();
-    }
+    void preUpdate() { this.updatedAt = Instant.now(); }
 
-    public UUID getId() {
-        return id;
-    }
-
-    public String getKeyLetter() {
-        return keyLetter;
-    }
-
-    public void setKeyLetter(String keyLetter) {
-        this.keyLetter = keyLetter;
-    }
-
-    public Double getUnitValue() {
-        return unitValue;
-    }
-
-    public void setUnitValue(Double unitValue) {
-        this.unitValue = unitValue;
-    }
-
-    public UUID getOrganizationId() {
-        return organizationId;
-    }
-
-    public void setOrganizationId(UUID organizationId) {
-        this.organizationId = organizationId;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
+    public UUID getId() { return id; }
+    public String getKeyLetter() { return keyLetter; }
+    public void setKeyLetter(String keyLetter) { this.keyLetter = keyLetter; }
+    public BigDecimal getUnitValue() { return unitValue; }
+    public void setUnitValue(BigDecimal unitValue) { this.unitValue = unitValue; }
+    public UUID getOrganizationId() { return organizationId; }
+    public void setOrganizationId(UUID organizationId) { this.organizationId = organizationId; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
 }
