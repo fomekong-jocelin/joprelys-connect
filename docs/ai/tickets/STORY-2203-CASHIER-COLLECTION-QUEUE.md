@@ -6,7 +6,7 @@ Product Design + Backend Engineering + Frontend Engineering + QA.
 
 ## Statut
 
-QA — implémentation terminée et pipeline permanent entièrement vert ; revue de la PR et QA visuelle navigateur restantes.
+QA — implémentation et documentation terminées, pipeline permanent entièrement vert ; revue de la PR et QA visuelle navigateur restantes.
 
 ## Objectif
 
@@ -101,6 +101,8 @@ Permettre au caissier de traiter les règlements patient depuis une file de trav
 - RBAC `CAISSIER` et refus du rôle clinique : ✅ ;
 - isolation entre deux organisations : ✅ ;
 - recherche, filtres, surpaiement, référence obligatoire, reçu et rafraîchissement : ✅ ;
+- suivi central et entrée `STORY-2203` du changelog : ✅ ;
+- aucun fichier ou workflow de diagnostic dans le diff final : ✅ ;
 - aucun test désactivé ou contourné.
 
 ## Sécurité et régression
