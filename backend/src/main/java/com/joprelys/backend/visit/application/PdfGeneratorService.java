@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -1012,7 +1013,7 @@ public class PdfGeneratorService {
             String clinicPhone,
             byte[] qrCodePngBytes,
             String cashierName,
-            double totalPaid) {
+            BigDecimal totalPaid) {
         Document document = new Document(PageSize.A4, 36f, 36f, 36f, 36f);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
@@ -1076,7 +1077,8 @@ public class PdfGeneratorService {
             invoiceCell.addElement(new Paragraph("Date : " + DATE_FORMATTER.format(invoice.getCreatedAt()), fontBody));
             invoiceCell.addElement(new Paragraph("Statut : " + invoice.getStatus().name(), fontBodyBold));
             if (invoice.getInsuranceConvention() != null) {
-                invoiceCell.addElement(new Paragraph("Convention : " + invoice.getInsuranceConvention().getName() + " (" + (int)(invoice.getInsuranceConvention().getCoveragePercentage()*100) + "%)", fontBody));
+                String coveragePercentage = invoice.getInsuranceConvention().getCoveragePercentage().movePointRight(2).stripTrailingZeros().toPlainString();
+                invoiceCell.addElement(new Paragraph("Convention : " + invoice.getInsuranceConvention().getName() + " (" + coveragePercentage + "%)", fontBody));
             }
 
             infoTable.addCell(patientCell);
@@ -1108,7 +1110,7 @@ public class PdfGeneratorService {
                 itemsTable.addCell(new Phrase(String.format("%,.0f", item.getUnitPrice()), fontTableCell));
 
                 String qtyOrCoeff = String.format("%,.1f", item.getQuantity());
-                if (item.getCoefficient() != null && item.getCoefficient() != 1.0) {
+                if (item.getCoefficient() != null && item.getCoefficient().compareTo(BigDecimal.ONE) != 0) {
                     qtyOrCoeff += " x " + String.format("%,.1f", item.getCoefficient());
                 }
                 itemsTable.addCell(new Phrase(qtyOrCoeff, fontTableCell));
@@ -1139,8 +1141,8 @@ public class PdfGeneratorService {
             }
             costCell.addElement(new Paragraph(String.format("Règlements reçus : %,.0f FCFA", totalPaid), fontBody));
 
-            double balance = invoice.getPatientShare() - totalPaid;
-            costCell.addElement(new Paragraph(String.format("Solde Dû : %,.0f FCFA", Math.max(0.0, balance)), fontBodyBold));
+            BigDecimal balance = invoice.getPatientShare().subtract(totalPaid).max(BigDecimal.ZERO);
+            costCell.addElement(new Paragraph(String.format("Solde Dû : %,.0f FCFA", balance), fontBodyBold));
 
             totalsTable.addCell(costCell);
             document.add(totalsTable);

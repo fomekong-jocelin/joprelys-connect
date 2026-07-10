@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.StringWriter;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -49,16 +50,16 @@ public class AccountingExportService {
                 String libelle = truncate("Facture " + refPiece, 30);
 
                 // Part Patient
-                if (inv.getPatientShare() != null && inv.getPatientShare() > 0) {
-                    lines.add(new AccountingLine("VT", dateStr, "41110000", inv.getPatientId().toString(), refPiece, libelle, inv.getPatientShare(), 0.0));
-                    lines.add(new AccountingLine("VT", dateStr, "70610000", null, refPiece, libelle, 0.0, inv.getPatientShare()));
+                if (inv.getPatientShare() != null && inv.getPatientShare().signum() > 0) {
+                    lines.add(new AccountingLine("VT", dateStr, "41110000", inv.getPatientId().toString(), refPiece, libelle, inv.getPatientShare().doubleValue(), 0.0));
+                    lines.add(new AccountingLine("VT", dateStr, "70610000", null, refPiece, libelle, 0.0, inv.getPatientShare().doubleValue()));
                 }
 
                 // Part Assurance
-                if (inv.getInsuranceShare() != null && inv.getInsuranceShare() > 0 && inv.getInsuranceConvention() != null) {
+                if (inv.getInsuranceShare() != null && inv.getInsuranceShare().signum() > 0 && inv.getInsuranceConvention() != null) {
                     String assuranceId = inv.getInsuranceConvention().getId().toString();
-                    lines.add(new AccountingLine("VT", dateStr, "41120000", assuranceId, refPiece, libelle, inv.getInsuranceShare(), 0.0));
-                    lines.add(new AccountingLine("VT", dateStr, "70610000", null, refPiece, libelle, 0.0, inv.getInsuranceShare()));
+                    lines.add(new AccountingLine("VT", dateStr, "41120000", assuranceId, refPiece, libelle, inv.getInsuranceShare().doubleValue(), 0.0));
+                    lines.add(new AccountingLine("VT", dateStr, "70610000", null, refPiece, libelle, 0.0, inv.getInsuranceShare().doubleValue()));
                 }
             }
         }
@@ -72,8 +73,8 @@ public class AccountingExportService {
 
             if (p.getPaymentMethod() == PaymentMethod.CASH) {
                 // Débit Caisse / Crédit Client Patient
-                lines.add(new AccountingLine("CA", dateStr, "57110000", null, refPiece, libelle, p.getAmount(), 0.0));
-                lines.add(new AccountingLine("CA", dateStr, "41110000", null, refPiece, libelle, 0.0, p.getAmount()));
+                lines.add(new AccountingLine("CA", dateStr, "57110000", null, refPiece, libelle, p.getAmount().doubleValue(), 0.0));
+                lines.add(new AccountingLine("CA", dateStr, "41110000", null, refPiece, libelle, 0.0, p.getAmount().doubleValue()));
             }
         }
 
@@ -107,7 +108,7 @@ public class AccountingExportService {
                 String dateStr = DATE_FORMATTER.format(b.getUpdatedAt());
                 String refPiece = b.getBordereauNumber();
                 String libelle = truncate("Reglement Assurance " + refPiece, 30);
-                Double paidAmount = b.getTotalAmount(); // On considère le total réglé pour cet export
+                Double paidAmount = b.getTotalAmount().doubleValue(); // On considère le total réglé pour cet export
 
                 // Débit Banque 52110000 / Crédit Assurance 41120000
                 lines.add(new AccountingLine("BQ", dateStr, "52110000", null, refPiece, libelle, paidAmount, 0.0));

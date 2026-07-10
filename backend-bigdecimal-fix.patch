@@ -1,0 +1,362 @@
+diff --git a/backend/src/main/java/com/joprelys/backend/accounting/application/AccountingExportService.java b/backend/src/main/java/com/joprelys/backend/accounting/application/AccountingExportService.java
+--- a/backend/src/main/java/com/joprelys/backend/accounting/application/AccountingExportService.java
++++ b/backend/src/main/java/com/joprelys/backend/accounting/application/AccountingExportService.java
+@@ -51,15 +51,15 @@ public class AccountingExportService {
+
+                 // Part Patient
+-                if (inv.getPatientShare() != null && inv.getPatientShare() > 0) {
+-                    lines.add(new AccountingLine("VT", dateStr, "41110000", inv.getPatientId().toString(), refPiece, libelle, inv.getPatientShare(), 0.0));
+-                    lines.add(new AccountingLine("VT", dateStr, "70610000", null, refPiece, libelle, 0.0, inv.getPatientShare()));
++                if (inv.getPatientShare() != null && inv.getPatientShare().signum() > 0) {
++                    lines.add(new AccountingLine("VT", dateStr, "41110000", inv.getPatientId().toString(), refPiece, libelle, inv.getPatientShare().doubleValue(), 0.0));
++                    lines.add(new AccountingLine("VT", dateStr, "70610000", null, refPiece, libelle, 0.0, inv.getPatientShare().doubleValue()));
+                 }
+
+                 // Part Assurance
+-                if (inv.getInsuranceShare() != null && inv.getInsuranceShare() > 0 && inv.getInsuranceConvention() != null) {
++                if (inv.getInsuranceShare() != null && inv.getInsuranceShare().signum() > 0 && inv.getInsuranceConvention() != null) {
+                     String assuranceId = inv.getInsuranceConvention().getId().toString();
+-                    lines.add(new AccountingLine("VT", dateStr, "41120000", assuranceId, refPiece, libelle, inv.getInsuranceShare(), 0.0));
+-                    lines.add(new AccountingLine("VT", dateStr, "70610000", null, refPiece, libelle, 0.0, inv.getInsuranceShare()));
++                    lines.add(new AccountingLine("VT", dateStr, "41120000", assuranceId, refPiece, libelle, inv.getInsuranceShare().doubleValue(), 0.0));
++                    lines.add(new AccountingLine("VT", dateStr, "70610000", null, refPiece, libelle, 0.0, inv.getInsuranceShare().doubleValue()));
+                 }
+@@ -74,8 +74,8 @@ public class AccountingExportService {
+
+             if (p.getPaymentMethod() == PaymentMethod.CASH) {
+                 // Débit Caisse / Crédit Client Patient
+-                lines.add(new AccountingLine("CA", dateStr, "57110000", null, refPiece, libelle, p.getAmount(), 0.0));
+-                lines.add(new AccountingLine("CA", dateStr, "41110000", null, refPiece, libelle, 0.0, p.getAmount()));
++                lines.add(new AccountingLine("CA", dateStr, "57110000", null, refPiece, libelle, p.getAmount().doubleValue(), 0.0));
++                lines.add(new AccountingLine("CA", dateStr, "41110000", null, refPiece, libelle, 0.0, p.getAmount().doubleValue()));
+             }
+@@ -109,7 +109,7 @@ public class AccountingExportService {
+                 String dateStr = DATE_FORMATTER.format(b.getUpdatedAt());
+                 String refPiece = b.getBordereauNumber();
+                 String libelle = truncate("Reglement Assurance " + refPiece, 30);
+-                Double paidAmount = b.getTotalAmount(); // On considère le total réglé pour cet export
++                Double paidAmount = b.getTotalAmount().doubleValue(); // On considère le total réglé pour cet export
+
+diff --git a/backend/src/main/java/com/joprelys/backend/billing/application/EstimateService.java b/backend/src/main/java/com/joprelys/backend/billing/application/EstimateService.java
+--- a/backend/src/main/java/com/joprelys/backend/billing/application/EstimateService.java
++++ b/backend/src/main/java/com/joprelys/backend/billing/application/EstimateService.java
+@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
+ import org.springframework.web.server.ResponseStatusException;
+
++import java.math.BigDecimal;
+ import java.time.Instant;
+ import java.time.LocalDate;
+@@ -52,7 +53,7 @@ public class EstimateService {
+         if (request.items() != null) {
+             for (EstimateItemRequest itemReq : request.items()) {
+                 EstimateItemEntity item = new EstimateItemEntity(
+-                    itemReq.label(), itemReq.itemType(), itemReq.unitPrice(), itemReq.quantity()
++                    itemReq.label(), itemReq.itemType(), BigDecimal.valueOf(itemReq.unitPrice()), BigDecimal.valueOf(itemReq.quantity())
+                 );
+@@ -122,7 +123,7 @@ public class EstimateService {
+                 "Impossible d'appliquer une remise sur une facture " + invoice.getStatus().name().toLowerCase() + ".");
+         }
+-        invoice.setDiscountAmount(request.discountAmount());
++        invoice.setDiscountAmount(BigDecimal.valueOf(request.discountAmount()));
+@@ -139,11 +140,12 @@ public class EstimateService {
+         Long seqVal = creditNoteRepository.getNextCreditNoteNumberSequenceValue();
+         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+         String number = String.format("%s%s-%06d", CREDIT_NOTE_PREFIX, dateStr, seqVal);
+-        CreditNoteEntity creditNote = new CreditNoteEntity(invoiceId, number, request.amount(), request.reason());
++        BigDecimal creditAmount = BigDecimal.valueOf(request.amount());
++        CreditNoteEntity creditNote = new CreditNoteEntity(invoiceId, number, creditAmount, request.reason());
+         creditNoteRepository.save(creditNote);
+
+         // Ajuster les créances si elles existent
+-        adjustReceivablesForCreditNote(invoice, request.amount());
++        adjustReceivablesForCreditNote(invoice, creditAmount);
+@@ -189,18 +191,18 @@ public class EstimateService {
+     }
+
+     private void createReceivablesForInvoice(InvoiceEntity invoice) {
+-        double patientShare = invoice.getPatientShare() != null ? invoice.getPatientShare() : 0.0;
+-        double insuranceShare = invoice.getInsuranceShare() != null ? invoice.getInsuranceShare() : 0.0;
++        BigDecimal patientShare = invoice.getPatientShare() != null ? invoice.getPatientShare() : BigDecimal.ZERO;
++        BigDecimal insuranceShare = invoice.getInsuranceShare() != null ? invoice.getInsuranceShare() : BigDecimal.ZERO;
+
+-        if (patientShare > 0) {
++        if (patientShare.signum() > 0) {
+             ReceivableEntity patientReceivable = new ReceivableEntity(
+                 invoice.getId(), "PATIENT", invoice.getPatientId(), patientShare
+             );
+             receivableRepository.save(patientReceivable);
+         }
+-        if (insuranceShare > 0 && invoice.getInsuranceConvention() != null) {
++        if (insuranceShare.signum() > 0 && invoice.getInsuranceConvention() != null) {
+             ReceivableEntity insuranceReceivable = new ReceivableEntity(
+@@ -208,17 +210,17 @@ public class EstimateService {
+         }
+     }
+
+-    private void adjustReceivablesForCreditNote(InvoiceEntity invoice, double creditAmount) {
++    private void adjustReceivablesForCreditNote(InvoiceEntity invoice, BigDecimal creditAmount) {
+         List<ReceivableEntity> receivables = receivableRepository.findByInvoiceId(invoice.getId());
+         if (receivables.isEmpty()) return;
+
+-        double remaining = creditAmount;
++        BigDecimal remaining = creditAmount;
+         for (ReceivableEntity r : receivables) {
+-            if (remaining <= 0) break;
+-            double reducible = r.getTotalAmount() - r.getPaidAmount();
+-            double reduction = Math.min(remaining, reducible);
+-            r.setPaidAmount(r.getPaidAmount() + reduction);
+-            remaining -= reduction;
++            if (remaining.signum() <= 0) break;
++            BigDecimal reducible = r.getTotalAmount().subtract(r.getPaidAmount()).max(BigDecimal.ZERO);
++            BigDecimal reduction = remaining.min(reducible);
++            r.setPaidAmount(r.getPaidAmount().add(reduction));
++            remaining = remaining.subtract(reduction);
+             receivableRepository.save(r);
+         }
+diff --git a/backend/src/main/java/com/joprelys/backend/billing/api/ReceivableResponse.java b/backend/src/main/java/com/joprelys/backend/billing/api/ReceivableResponse.java
+--- a/backend/src/main/java/com/joprelys/backend/billing/api/ReceivableResponse.java
++++ b/backend/src/main/java/com/joprelys/backend/billing/api/ReceivableResponse.java
+@@ -3,6 +3,7 @@ package com.joprelys.backend.billing.api;
+ import com.joprelys.backend.billing.infrastructure.persistence.ReceivableEntity;
++import java.math.BigDecimal;
+ import java.time.Instant;
+@@ -11,9 +12,9 @@ public record ReceivableResponse(
+     String debtorType,
+     UUID debtorId,
+-    Double totalAmount,
+-    Double paidAmount,
+-    Double remainingAmount,
++    BigDecimal totalAmount,
++    BigDecimal paidAmount,
++    BigDecimal remainingAmount,
+@@ -20,7 +21,9 @@ public record ReceivableResponse(
+     String agingSlice
+ ) {
+     public static ReceivableResponse fromEntity(ReceivableEntity entity) {
+-        double remaining = Math.max(0.0, entity.getTotalAmount() - entity.getPaidAmount());
++        BigDecimal remaining = entity.getTotalAmount()
++                .subtract(entity.getPaidAmount())
++                .max(BigDecimal.ZERO);
+diff --git a/backend/src/main/java/com/joprelys/backend/billing/api/InsuranceBordereauController.java b/backend/src/main/java/com/joprelys/backend/billing/api/InsuranceBordereauController.java
+--- a/backend/src/main/java/com/joprelys/backend/billing/api/InsuranceBordereauController.java
++++ b/backend/src/main/java/com/joprelys/backend/billing/api/InsuranceBordereauController.java
+@@ -1,5 +1,6 @@
+ package com.joprelys.backend.billing.api;
+
++import java.math.BigDecimal;
+@@ -147,9 +148,9 @@ public class InsuranceBordereauController {
+     public record BordereauInvoiceDto(
+             UUID id,
+             String invoiceNumber,
+-            Double totalAmount,
+-            Double insuranceShare,
+-            Double patientShare,
++            BigDecimal totalAmount,
++            BigDecimal insuranceShare,
++            BigDecimal patientShare,
+             String status
+diff --git a/backend/src/main/java/com/joprelys/backend/billing/application/InsuranceBordereauService.java b/backend/src/main/java/com/joprelys/backend/billing/application/InsuranceBordereauService.java
+--- a/backend/src/main/java/com/joprelys/backend/billing/application/InsuranceBordereauService.java
++++ b/backend/src/main/java/com/joprelys/backend/billing/application/InsuranceBordereauService.java
+@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
+ import org.springframework.web.server.ResponseStatusException;
+
++import java.math.BigDecimal;
+ import java.time.Instant;
+@@ -81,9 +82,9 @@ public class InsuranceBordereauService {
+
+         // Calculate insurance total share sum
+-        double totalAmount = invoices.stream()
+-                .mapToDouble(InvoiceEntity::getInsuranceShare)
+-                .sum();
++        BigDecimal totalAmount = invoices.stream()
++                .map(InvoiceEntity::getInsuranceShare)
++                .reduce(BigDecimal.ZERO, BigDecimal::add);
+@@ -181,7 +182,8 @@ public class InsuranceBordereauService {
+                     "Le bordereau doit être au statut SENT pour enregistrer un règlement.");
+         }
+
+-        if (Math.abs(bordereau.getTotalAmount() - amount) > 0.01) {
++        BigDecimal paidAmount = BigDecimal.valueOf(amount);
++        if (bordereau.getTotalAmount().subtract(paidAmount).abs().compareTo(new BigDecimal("0.01")) > 0) {
+             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+diff --git a/backend/src/main/java/com/joprelys/backend/billing/application/BillingPaymentService.java b/backend/src/main/java/com/joprelys/backend/billing/application/BillingPaymentService.java
+--- a/backend/src/main/java/com/joprelys/backend/billing/application/BillingPaymentService.java
++++ b/backend/src/main/java/com/joprelys/backend/billing/application/BillingPaymentService.java
+@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
+ import org.springframework.web.server.ResponseStatusException;
+
++import java.math.BigDecimal;
+ import java.util.List;
+@@ -58,12 +59,12 @@ public class BillingPaymentService {
+                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                         "Paiement sans session ouverte : veuillez d'abord ouvrir une session de caisse."));
+         InvoiceEntity invoice = findPayableInvoice(invoiceId);
+-        double totalPaid = paymentRepository.findByInvoiceId(invoiceId).stream()
+-                .mapToDouble(PaymentEntity::getAmount)
+-                .sum();
+-        double remaining = invoice.getPatientShare() - totalPaid;
+-        if (request.amount() > remaining + 0.01) {
++        BigDecimal totalPaid = paymentRepository.findByInvoiceId(invoiceId).stream()
++                .map(PaymentEntity::getAmount)
++                .reduce(BigDecimal.ZERO, BigDecimal::add);
++        BigDecimal remaining = invoice.getPatientShare().subtract(totalPaid).max(BigDecimal.ZERO);
++        if (request.amount().compareTo(remaining.add(new BigDecimal("0.01"))) > 0) {
+             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+@@ -76,7 +77,7 @@ public class BillingPaymentService {
+                 "IN", request.amount(), "Règlement facture N° " + invoice.getInvoiceNumber(),
+                 request.method().name(), request.reference(), false));
+         cashRegisterService.createReceiptForPayment(saved);
+-        updateInvoicePaymentStatus(invoice, totalPaid + request.amount());
++        updateInvoicePaymentStatus(invoice, totalPaid.add(request.amount()));
+@@ -106,21 +107,21 @@ public class BillingPaymentService {
+         return invoice;
+     }
+
+-    private void settlePatientReceivables(UUID invoiceId, double amount) {
+-        double remainingPayment = amount;
++    private void settlePatientReceivables(UUID invoiceId, BigDecimal amount) {
++        BigDecimal remainingPayment = amount;
+         for (ReceivableEntity receivable : receivableRepository.findByInvoiceIdAndDebtorTypeIgnoreCase(invoiceId, "PATIENT")) {
+-            if (remainingPayment <= 0) {
++            if (remainingPayment.signum() <= 0) {
+                 break;
+             }
+-            double outstanding = receivable.getTotalAmount() - receivable.getPaidAmount();
+-            double appliedAmount = Math.min(outstanding, remainingPayment);
+-            receivable.setPaidAmount(receivable.getPaidAmount() + appliedAmount);
++            BigDecimal outstanding = receivable.getTotalAmount().subtract(receivable.getPaidAmount()).max(BigDecimal.ZERO);
++            BigDecimal appliedAmount = outstanding.min(remainingPayment);
++            receivable.setPaidAmount(receivable.getPaidAmount().add(appliedAmount));
+             receivableRepository.save(receivable);
+-            remainingPayment -= appliedAmount;
++            remainingPayment = remainingPayment.subtract(appliedAmount);
+         }
+     }
+
+-    private void updateInvoicePaymentStatus(InvoiceEntity invoice, double totalPaid) {
+-        invoice.setStatus(Math.abs(totalPaid - invoice.getPatientShare()) < 0.01
++    private void updateInvoicePaymentStatus(InvoiceEntity invoice, BigDecimal totalPaid) {
++        invoice.setStatus(totalPaid.subtract(invoice.getPatientShare()).abs().compareTo(new BigDecimal("0.01")) < 0
+                 ? InvoiceStatus.PAID : InvoiceStatus.PARTIALLY_PAID);
+diff --git a/backend/src/main/java/com/joprelys/backend/billing/api/SettlementPartyResponse.java b/backend/src/main/java/com/joprelys/backend/billing/api/SettlementPartyResponse.java
+--- a/backend/src/main/java/com/joprelys/backend/billing/api/SettlementPartyResponse.java
++++ b/backend/src/main/java/com/joprelys/backend/billing/api/SettlementPartyResponse.java
+@@ -1,11 +1,13 @@
+ package com.joprelys.backend.billing.api;
+
++import java.math.BigDecimal;
++
+ /** Amounts and settlement status for one invoice debtor. */
+ public record SettlementPartyResponse(
+-        Double totalAmount,
+-        Double paidAmount,
+-        Double remainingAmount,
++        BigDecimal totalAmount,
++        BigDecimal paidAmount,
++        BigDecimal remainingAmount,
+         String status
+diff --git a/backend/src/main/java/com/joprelys/backend/billing/application/InvoiceSettlementQueryService.java b/backend/src/main/java/com/joprelys/backend/billing/application/InvoiceSettlementQueryService.java
+--- a/backend/src/main/java/com/joprelys/backend/billing/application/InvoiceSettlementQueryService.java
++++ b/backend/src/main/java/com/joprelys/backend/billing/application/InvoiceSettlementQueryService.java
+@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
+ import org.springframework.transaction.annotation.Transactional;
+
++import java.math.BigDecimal;
+ import java.util.List;
+@@ -18,7 +19,7 @@ import java.util.UUID;
+ @Service
+ public class InvoiceSettlementQueryService {
+
+-    private static final double SETTLED_TOLERANCE = 0.01;
++    private static final BigDecimal SETTLED_TOLERANCE = new BigDecimal("0.01");
+@@ -39,7 +40,7 @@ public class InvoiceSettlementQueryService {
+         List<ReceivableEntity> receivables = receivableRepository.findByInvoiceId(invoice.getId());
+         SettlementPartyResponse patient = partySummary(invoice.getPatientShare(), receivables, "PATIENT");
+-        SettlementPartyResponse insurance = invoice.getInsuranceShare() > SETTLED_TOLERANCE
++        SettlementPartyResponse insurance = invoice.getInsuranceShare().compareTo(SETTLED_TOLERANCE) > 0
+                 ? partySummary(invoice.getInsuranceShare(), receivables, "INSURANCE")
+@@ -50,7 +51,7 @@ public class InvoiceSettlementQueryService {
+         );
+     }
+
+-    private SettlementPartyResponse partySummary(double invoiceShare,
++    private SettlementPartyResponse partySummary(BigDecimal invoiceShare,
+                                                   List<ReceivableEntity> receivables,
+@@ -59,9 +60,11 @@ public class InvoiceSettlementQueryService {
+                 .map(receivable -> new SettlementPartyResponse(
+                         receivable.getTotalAmount(),
+                         receivable.getPaidAmount(),
+-                        Math.max(0.0, receivable.getTotalAmount() - receivable.getPaidAmount()),
++                        receivable.getTotalAmount()
++                                .subtract(receivable.getPaidAmount())
++                                .max(BigDecimal.ZERO),
+                         receivable.getStatus()))
+-                .orElseGet(() -> new SettlementPartyResponse(invoiceShare, 0.0, invoiceShare, "NOT_DUE"));
++                .orElseGet(() -> new SettlementPartyResponse(invoiceShare, BigDecimal.ZERO, invoiceShare, "NOT_DUE"));
+@@ -70,10 +73,10 @@ public class InvoiceSettlementQueryService {
+             return "NOT_YET_DUE";
+         }
+-        if (patient.remainingAmount() > SETTLED_TOLERANCE) {
+-            return patient.paidAmount() > SETTLED_TOLERANCE ? "PATIENT_PARTIALLY_PAID" : "PATIENT_DUE";
++        if (patient.remainingAmount().compareTo(SETTLED_TOLERANCE) > 0) {
++            return patient.paidAmount().compareTo(SETTLED_TOLERANCE) > 0 ? "PATIENT_PARTIALLY_PAID" : "PATIENT_DUE";
+         }
+-        if (insurance != null && insurance.remainingAmount() > SETTLED_TOLERANCE) {
++        if (insurance != null && insurance.remainingAmount().compareTo(SETTLED_TOLERANCE) > 0) {
+diff --git a/backend/src/main/java/com/joprelys/backend/visit/application/PdfGeneratorService.java b/backend/src/main/java/com/joprelys/backend/visit/application/PdfGeneratorService.java
+--- a/backend/src/main/java/com/joprelys/backend/visit/application/PdfGeneratorService.java
++++ b/backend/src/main/java/com/joprelys/backend/visit/application/PdfGeneratorService.java
+@@ -30,6 +30,7 @@ import java.awt.Color;
+ import java.io.ByteArrayOutputStream;
+ import java.io.IOException;
++import java.math.BigDecimal;
+@@ -1036,7 +1037,7 @@ public class PdfGeneratorService {
+             String clinicPhone,
+             byte[] qrCodePngBytes,
+             String cashierName,
+-            double totalPaid) {
++            BigDecimal totalPaid) {
+@@ -1076,7 +1077,12 @@ public class PdfGeneratorService {
+             invoiceCell.addElement(new Paragraph("Date : " + DATE_FORMATTER.format(invoice.getCreatedAt()), fontBody));
+             invoiceCell.addElement(new Paragraph("Statut : " + invoice.getStatus().name(), fontBodyBold));
+             if (invoice.getInsuranceConvention() != null) {
+-                invoiceCell.addElement(new Paragraph("Convention : " + invoice.getInsuranceConvention().getName() + " (" + (int)(invoice.getInsuranceConvention().getCoveragePercentage()*100) + "%)", fontBody));
++                String coveragePercentage = invoice.getInsuranceConvention().getCoveragePercentage()
++                        .movePointRight(2)
++                        .stripTrailingZeros()
++                        .toPlainString();
++                invoiceCell.addElement(new Paragraph("Convention : " + invoice.getInsuranceConvention().getName()
++                        + " (" + coveragePercentage + "%)", fontBody));
+             }
+@@ -1108,7 +1114,7 @@ public class PdfGeneratorService {
+
+                 String qtyOrCoeff = String.format("%,.1f", item.getQuantity());
+-                if (item.getCoefficient() != null && item.getCoefficient() != 1.0) {
++                if (item.getCoefficient() != null && item.getCoefficient().compareTo(BigDecimal.ONE) != 0) {
+@@ -1136,10 +1142,12 @@ public class PdfGeneratorService {
+             if (invoice.getInsuranceConvention() != null) {
+                 costCell.addElement(new Paragraph(String.format("Part Assurance : %,.0f FCFA", invoice.getInsuranceShare()), fontBody));
+                 costCell.addElement(new Paragraph(String.format("Part Patient (Ticket Mod.) : %,.0f FCFA", invoice.getPatientShare()), fontBodyBold));
+             }
+             costCell.addElement(new Paragraph(String.format("Règlements reçus : %,.0f FCFA", totalPaid), fontBody));
+
+-            double balance = invoice.getPatientShare() - totalPaid;
+-            costCell.addElement(new Paragraph(String.format("Solde Dû : %,.0f FCFA", Math.max(0.0, balance)), fontBodyBold));
++            BigDecimal balance = invoice.getPatientShare()
++                    .subtract(totalPaid)
++                    .max(BigDecimal.ZERO);
++            costCell.addElement(new Paragraph(String.format("Solde Dû : %,.0f FCFA", balance), fontBodyBold));
+diff --git a/backend/src/main/java/com/joprelys/backend/cash/api/PaymentReceiptResponse.java b/backend/src/main/java/com/joprelys/backend/cash/api/PaymentReceiptResponse.java
+--- a/backend/src/main/java/com/joprelys/backend/cash/api/PaymentReceiptResponse.java
++++ b/backend/src/main/java/com/joprelys/backend/cash/api/PaymentReceiptResponse.java
+@@ -3,6 +3,7 @@ package com.joprelys.backend.cash.api;
+ import com.joprelys.backend.cash.infrastructure.persistence.PaymentReceiptEntity;
++import java.math.BigDecimal;
+ import java.time.Instant;
+@@ -10,7 +11,7 @@ public record PaymentReceiptResponse(
+     UUID paymentId,
+     String receiptNumber,
+-    Double amount,
++    BigDecimal amount,
+     String paymentMethod,

@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -56,11 +57,11 @@ public class BillingPaymentService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
                         "Paiement sans session ouverte : veuillez d'abord ouvrir une session de caisse."));
         InvoiceEntity invoice = findPayableInvoice(invoiceId);
-        double totalPaid = paymentRepository.findByInvoiceId(invoiceId).stream()
-                .mapToDouble(PaymentEntity::getAmount)
-                .sum();
-        double remaining = invoice.getPatientShare() - totalPaid;
-        if (request.amount() > remaining + 0.01) {
+        BigDecimal totalPaid = paymentRepository.findByInvoiceId(invoiceId).stream()
+                .map(PaymentEntity::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal remaining = invoice.getPatientShare().subtract(totalPaid).max(BigDecimal.ZERO);
+        if (request.amount().compareTo(remaining.add(new BigDecimal("0.01"))) > 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Le montant dépasse le solde restant à payer par le patient (" + remaining + " FCFA).");
         }
@@ -71,10 +72,10 @@ public class BillingPaymentService {
         PaymentEntity saved = paymentRepository.save(payment);
         settlePatientReceivables(invoiceId, request.amount());
         cashRegisterService.addMovement(new CashMovementRequest(
-                "IN", request.amount(), "Règlement facture N° " + invoice.getInvoiceNumber(),
+                "IN", request.amount().doubleValue(), "Règlement facture N° " + invoice.getInvoiceNumber(),
                 request.method().name(), request.reference(), false));
         cashRegisterService.createReceiptForPayment(saved);
-        updateInvoicePaymentStatus(invoice, totalPaid + request.amount());
+        updateInvoicePaymentStatus(invoice, totalPaid.add(request.amount()));
         auditService.logSuccess(actor.getId(), actor.getOrganizationId(), invoice.getPatientId(), "BILLING", saved.getId(),
                 "ADD_PAYMENT", "Enregistrement règlement de " + request.amount() + " FCFA via " + request.method()
                         + " pour la facture N° " + invoice.getInvoiceNumber() + ".");
@@ -104,23 +105,24 @@ public class BillingPaymentService {
         return invoice;
     }
 
-    private void settlePatientReceivables(UUID invoiceId, double amount) {
-        double remainingPayment = amount;
+    private void settlePatientReceivables(UUID invoiceId, BigDecimal amount) {
+        BigDecimal remainingPayment = amount;
         for (ReceivableEntity receivable : receivableRepository.findByInvoiceIdAndDebtorTypeIgnoreCase(invoiceId, "PATIENT")) {
-            if (remainingPayment <= 0) {
+            if (remainingPayment.signum() <= 0) {
                 break;
             }
-            double outstanding = receivable.getTotalAmount() - receivable.getPaidAmount();
-            double appliedAmount = Math.min(outstanding, remainingPayment);
-            receivable.setPaidAmount(receivable.getPaidAmount() + appliedAmount);
+            BigDecimal outstanding = receivable.getTotalAmount().subtract(receivable.getPaidAmount()).max(BigDecimal.ZERO);
+            BigDecimal appliedAmount = outstanding.min(remainingPayment);
+            receivable.setPaidAmount(receivable.getPaidAmount().add(appliedAmount));
             receivableRepository.save(receivable);
-            remainingPayment -= appliedAmount;
+            remainingPayment = remainingPayment.subtract(appliedAmount);
         }
     }
 
-    private void updateInvoicePaymentStatus(InvoiceEntity invoice, double totalPaid) {
-        invoice.setStatus(Math.abs(totalPaid - invoice.getPatientShare()) < 0.01
+    private void updateInvoicePaymentStatus(InvoiceEntity invoice, BigDecimal totalPaid) {
+        invoice.setStatus(totalPaid.subtract(invoice.getPatientShare()).abs().compareTo(new BigDecimal("0.01")) < 0
                 ? InvoiceStatus.PAID : InvoiceStatus.PARTIALLY_PAID);
         invoiceRepository.save(invoice);
     }
 }
+

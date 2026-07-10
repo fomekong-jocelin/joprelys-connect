@@ -9,6 +9,7 @@ import com.joprelys.backend.billing.infrastructure.persistence.ReceivableReposit
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,7 +17,7 @@ import java.util.UUID;
 @Service
 public class InvoiceSettlementQueryService {
 
-    private static final double SETTLED_TOLERANCE = 0.01;
+    private static final BigDecimal SETTLED_TOLERANCE = new BigDecimal("0.01");
 
     private final InvoiceRepository invoiceRepository;
     private final ReceivableRepository receivableRepository;
@@ -37,7 +38,7 @@ public class InvoiceSettlementQueryService {
     private InvoiceSettlementSummaryResponse summarize(InvoiceEntity invoice) {
         List<ReceivableEntity> receivables = receivableRepository.findByInvoiceId(invoice.getId());
         SettlementPartyResponse patient = partySummary(invoice.getPatientShare(), receivables, "PATIENT");
-        SettlementPartyResponse insurance = invoice.getInsuranceShare() > SETTLED_TOLERANCE
+        SettlementPartyResponse insurance = invoice.getInsuranceShare().compareTo(SETTLED_TOLERANCE) > 0
                 ? partySummary(invoice.getInsuranceShare(), receivables, "INSURANCE")
                 : null;
         return new InvoiceSettlementSummaryResponse(
@@ -48,7 +49,7 @@ public class InvoiceSettlementQueryService {
         );
     }
 
-    private SettlementPartyResponse partySummary(double invoiceShare,
+    private SettlementPartyResponse partySummary(BigDecimal invoiceShare,
                                                   List<ReceivableEntity> receivables,
                                                   String debtorType) {
         return receivables.stream()
@@ -57,9 +58,9 @@ public class InvoiceSettlementQueryService {
                 .map(receivable -> new SettlementPartyResponse(
                         receivable.getTotalAmount(),
                         receivable.getPaidAmount(),
-                        Math.max(0.0, receivable.getTotalAmount() - receivable.getPaidAmount()),
+                        receivable.getTotalAmount().subtract(receivable.getPaidAmount()).max(BigDecimal.ZERO),
                         receivable.getStatus()))
-                .orElseGet(() -> new SettlementPartyResponse(invoiceShare, 0.0, invoiceShare, "NOT_DUE"));
+                .orElseGet(() -> new SettlementPartyResponse(invoiceShare, BigDecimal.ZERO, invoiceShare, "NOT_DUE"));
     }
 
     private String collectionStatus(SettlementPartyResponse patient,
@@ -68,10 +69,10 @@ public class InvoiceSettlementQueryService {
         if (noReceivableExists) {
             return "NOT_YET_DUE";
         }
-        if (patient.remainingAmount() > SETTLED_TOLERANCE) {
-            return patient.paidAmount() > SETTLED_TOLERANCE ? "PATIENT_PARTIALLY_PAID" : "PATIENT_DUE";
+        if (patient.remainingAmount().compareTo(SETTLED_TOLERANCE) > 0) {
+            return patient.paidAmount().compareTo(SETTLED_TOLERANCE) > 0 ? "PATIENT_PARTIALLY_PAID" : "PATIENT_DUE";
         }
-        if (insurance != null && insurance.remainingAmount() > SETTLED_TOLERANCE) {
+        if (insurance != null && insurance.remainingAmount().compareTo(SETTLED_TOLERANCE) > 0) {
             return "INSURANCE_DUE";
         }
         return "SETTLED";

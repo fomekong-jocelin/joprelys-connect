@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -79,16 +80,16 @@ public class InsuranceBordereauService {
         String bordereauNumber = String.format("BORD-%s-%06d", dateStr, seqVal);
 
         // Calculate insurance total share sum
-        double totalAmount = invoices.stream()
-                .mapToDouble(InvoiceEntity::getInsuranceShare)
-                .sum();
+        BigDecimal totalAmount = invoices.stream()
+                .map(InvoiceEntity::getInsuranceShare)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         InsuranceBordereauEntity bordereau = new InsuranceBordereauEntity(
                 bordereauNumber,
                 convention,
                 startDate,
                 endDate,
-                totalAmount
+                totalAmount.doubleValue()
         );
         bordereau.setOrganizationId(orgId);
         InsuranceBordereauEntity savedBordereau = bordereauRepository.save(bordereau);
@@ -179,7 +180,8 @@ public class InsuranceBordereauService {
                     "Le bordereau doit être au statut SENT pour enregistrer un règlement.");
         }
 
-        if (Math.abs(bordereau.getTotalAmount() - amount) > 0.01) {
+        BigDecimal paidAmount = BigDecimal.valueOf(amount);
+        if (BigDecimal.valueOf(bordereau.getTotalAmount()).subtract(paidAmount).abs().compareTo(new BigDecimal("0.01")) > 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Le montant réglé (" + amount + " FCFA) ne correspond pas au montant du bordereau (" + bordereau.getTotalAmount() + " FCFA).");
         }
@@ -215,3 +217,4 @@ public class InsuranceBordereauService {
         return saved;
     }
 }
+
