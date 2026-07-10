@@ -5,95 +5,92 @@ on:
     branches: [feature/story-2203-cashier-collection-queue]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  frontend-diagnostic:
-    name: STORY-2203 — Frontend diagnostic
+  diagnostic:
+    if: github.actor != 'github-actions[bot]'
+    name: STORY-2203 — Publish diagnostic summaries
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
     steps:
-      - name: Checkout code
+      - name: Checkout feature branch
         uses: actions/checkout@v4
+        with:
+          ref: feature/story-2203-cashier-collection-queue
+          fetch-depth: 0
+
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
-      - name: Install dependencies
-        run: npm ci
-      - name: Capture Angular build
-        id: build
-        shell: bash
-        run: |
-          set +e
-          npx ng build > "$RUNNER_TEMP/angular-build.log" 2>&1
-          status=$?
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          exit 0
-      - name: Capture Angular tests
-        id: tests
-        shell: bash
-        run: |
-          set +e
-          npx ng test > "$RUNNER_TEMP/angular-tests.log" 2>&1
-          status=$?
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          exit 0
-      - name: Upload frontend diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: story-2203-frontend-diagnostics
-          path: |
-            ${{ runner.temp }}/angular-build.log
-            ${{ runner.temp }}/angular-tests.log
-          if-no-files-found: error
-          retention-days: 1
-      - name: Fail when frontend validation failed
-        if: steps.build.outputs.status != '0' || steps.tests.outputs.status != '0'
-        run: exit 1
 
-  backend-diagnostic:
-    name: STORY-2203 — Backend diagnostic
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
       - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: 'maven'
-      - name: Ensure Maven wrapper is executable
-        run: chmod +x mvnw
-      - name: Capture Maven verification
-        id: maven
+
+      - name: Capture validations
         shell: bash
         env:
           SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
           JOPRELYS_JWT_SECRET: ci-test-jwt-secret-at-least-32-chars-2026
         run: |
           set +e
+          mkdir -p docs/ai/diagnostics
+
+          pushd web >/dev/null
+          npm ci > "$RUNNER_TEMP/npm-ci.log" 2>&1
+          npx ng build > "$RUNNER_TEMP/angular-build.log" 2>&1
+          angular_build_status=$?
+          npx ng test > "$RUNNER_TEMP/angular-tests.log" 2>&1
+          angular_test_status=$?
+          popd >/dev/null
+
+          pushd backend >/dev/null
+          chmod +x mvnw
           ./mvnw clean verify -B -Dspring.profiles.active=test > "$RUNNER_TEMP/maven-verify.log" 2>&1
-          status=$?
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          exit 0
-      - name: Upload backend diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: story-2203-backend-diagnostics
-          path: ${{ runner.temp }}/maven-verify.log
-          if-no-files-found: error
-          retention-days: 1
-      - name: Fail when backend validation failed
-        if: steps.maven.outputs.status != '0'
-        run: exit 1
+          maven_status=$?
+          popd >/dev/null
+
+          {
+            echo "angular_build_status=$angular_build_status"
+            echo "angular_test_status=$angular_test_status"
+            echo "maven_status=$maven_status"
+          } > docs/ai/diagnostics/STORY-2203-STATUS.txt
+
+          {
+            echo "=== ANGULAR BUILD DIAGNOSTIC ==="
+            grep -E -B 3 -A 8 "✘|Error:|error TS|TS[0-9]{4}|NG[0-9]{4}|Application bundle generation failed" "$RUNNER_TEMP/angular-build.log" | tail -n 400
+            echo
+            echo "=== ANGULAR BUILD TAIL ==="
+            tail -n 160 "$RUNNER_TEMP/angular-build.log"
+          } > docs/ai/diagnostics/STORY-2203-ANGULAR-BUILD.txt
+
+          {
+            echo "=== ANGULAR TEST DIAGNOSTIC ==="
+            grep -E -B 3 -A 10 "FAIL|FAILED|Error:|error TS|TS[0-9]{4}|NG[0-9]{4}|AssertionError|Expected|TypeError" "$RUNNER_TEMP/angular-tests.log" | tail -n 500
+            echo
+            echo "=== ANGULAR TEST TAIL ==="
+            tail -n 180 "$RUNNER_TEMP/angular-tests.log"
+          } > docs/ai/diagnostics/STORY-2203-ANGULAR-TESTS.txt
+
+          {
+            echo "=== MAVEN DIAGNOSTIC ==="
+            grep -E -B 3 -A 10 "\[ERROR\]|COMPILATION ERROR|Tests run:|Failures:|Errors:|Caused by:" "$RUNNER_TEMP/maven-verify.log" | tail -n 700
+            echo
+            echo "=== MAVEN TAIL ==="
+            tail -n 220 "$RUNNER_TEMP/maven-verify.log"
+          } > docs/ai/diagnostics/STORY-2203-MAVEN.txt
+
+      - name: Commit diagnostic summaries
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/ai/diagnostics/STORY-2203-*.txt
+          git commit -m "chore(diagnostic): publier les erreurs STORY-2203" || exit 0
+          git push origin HEAD:feature/story-2203-cashier-collection-queue
