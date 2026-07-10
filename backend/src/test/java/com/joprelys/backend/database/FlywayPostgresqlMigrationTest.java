@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@Testcontainers(disabledWithoutDocker = true)
+@Testcontainers
 class FlywayPostgresqlMigrationTest {
 
     private static final List<NumericColumnExpectation> V55_COLUMNS = List.of(
