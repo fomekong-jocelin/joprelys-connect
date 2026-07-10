@@ -21,9 +21,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -80,7 +80,7 @@ class CashierCollectionQueueControllerTest {
         jdbcTemplate.update("DELETE FROM invoice_items");
         jdbcTemplate.update("DELETE FROM invoices");
         jdbcTemplate.update("DELETE FROM patients");
-        jdbcTemplate.update("DELETE FROM user_accounts");
+        jdbcTemplate.update("DELETE FROM users");
         jdbcTemplate.update("DELETE FROM organizations");
 
         OrganizationEntity firstOrganization = organizationRepository.save(new OrganizationEntity(
