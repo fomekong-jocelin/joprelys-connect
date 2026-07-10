@@ -1,0 +1,42 @@
+.cash-history__controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.625rem;
+  width: 100%;
+}
+
+.cash-history__period-field {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--text-secondary);
+  font-size: 0.625rem;
+  font-weight: 700;
+}
+
+.cash-history__period-field .ui-select {
+  min-height: 2.75rem;
+  min-width: 11rem;
+}
+
+.cash-history__toggle,
+.cash-history__refresh {
+  min-height: 2.75rem;
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .cash-history__controls {
+    grid-template-columns: minmax(11rem, 1fr) auto auto;
+    align-items: end;
+  }
+}
+
+@media (min-width: 1024px) {
+  .cash-history__controls {
+    width: auto;
+  }
+
+  .cash-history__period-field {
+    min-width: 12rem;
+  }
+}
