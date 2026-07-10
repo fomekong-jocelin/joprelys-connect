@@ -27,19 +27,22 @@ public class InsuranceBordereauService {
     private final ReceivableRepository receivableRepository;
     private final UserAccountRepository userAccountRepository;
     private final AuditService auditService;
+    private final InvoiceFinancialStateService financialStateService;
 
     public InsuranceBordereauService(InsuranceBordereauRepository bordereauRepository,
                                      InvoiceRepository invoiceRepository,
                                      InsuranceConventionRepository conventionRepository,
                                      ReceivableRepository receivableRepository,
                                      UserAccountRepository userAccountRepository,
-                                     AuditService auditService) {
+                                     AuditService auditService,
+                                     InvoiceFinancialStateService financialStateService) {
         this.bordereauRepository = bordereauRepository;
         this.invoiceRepository = invoiceRepository;
         this.conventionRepository = conventionRepository;
         this.receivableRepository = receivableRepository;
         this.userAccountRepository = userAccountRepository;
         this.auditService = auditService;
+        this.financialStateService = financialStateService;
     }
 
     private UserAccountEntity getCurrentUser() {
@@ -55,15 +58,12 @@ public class InsuranceBordereauService {
         InsuranceConventionEntity convention = conventionRepository.findById(conventionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Convention d'assurance introuvable"));
 
-        // Convert LocalDate parameters to Instant for invoice validatedAt field queries
         Instant startInstant = startDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
-        // Include the entire end date until 23:59:59.999
         Instant endInstant = endDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().minusMillis(1);
 
-        // Find eligible invoices for this convention that are not yet billed in a statement (bordereau)
         List<InvoiceEntity> invoices = invoiceRepository.findInvoicesForBordereau(
                 conventionId,
-                List.of(InvoiceStatus.VALIDATED, InvoiceStatus.PENDING, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.PAID),
+                List.of(InvoiceStatus.VALIDATED, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.PAID),
                 startInstant,
                 endInstant,
                 orgId
@@ -71,15 +71,13 @@ public class InsuranceBordereauService {
 
         if (invoices.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Aucune facture éligible (VALIDATED, PENDING, PARTIALLY_PAID) avec part assurance n'est disponible pour cette convention sur la période sélectionnée.");
+                    "Aucune facture validée avec part assurance n'est disponible pour cette convention sur la période sélectionnée.");
         }
 
-        // Generate robust sequence-based bordereau number (format: BORD-yyyyMMdd-XXXXXX)
         Long seqVal = bordereauRepository.getNextBordereauNumberSequenceValue();
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String bordereauNumber = String.format("BORD-%s-%06d", dateStr, seqVal);
 
-        // Calculate insurance total share sum
         BigDecimal totalAmount = invoices.stream()
                 .map(InvoiceEntity::getInsuranceShare)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -94,7 +92,6 @@ public class InsuranceBordereauService {
         bordereau.setOrganizationId(orgId);
         InsuranceBordereauEntity savedBordereau = bordereauRepository.save(bordereau);
 
-        // Link invoices to the new bordereau statement
         for (InvoiceEntity invoice : invoices) {
             invoice.setInsuranceBordereauId(savedBordereau.getId());
             invoiceRepository.save(invoice);
@@ -189,16 +186,16 @@ public class InsuranceBordereauService {
         bordereau.setStatus(InsuranceBordereauStatus.PAID);
         InsuranceBordereauEntity saved = bordereauRepository.save(bordereau);
 
-        // Fetch all invoices associated with this bordereau statement
         List<InvoiceEntity> invoices = getBordereauInvoices(id);
         for (InvoiceEntity invoice : invoices) {
-            // Settle corresponding insurance receivables for the invoices
+            financialStateService.initializeReceivables(invoice);
             List<ReceivableEntity> receivables = receivableRepository.findByInvoiceIdAndDebtorTypeIgnoreCase(
                     invoice.getId(), "INSURANCE");
             for (ReceivableEntity receivable : receivables) {
                 receivable.setPaidAmount(receivable.getTotalAmount());
                 receivableRepository.save(receivable);
             }
+            financialStateService.synchronize(invoice);
         }
 
         if (actor != null) {
@@ -217,4 +214,3 @@ public class InsuranceBordereauService {
         return saved;
     }
 }
-
