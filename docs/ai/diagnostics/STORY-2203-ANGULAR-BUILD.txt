@@ -1,0 +1,51 @@
+=== ANGULAR BUILD DIAGNOSTIC ===
+❯ Building...
+✔ Building...
+Application bundle generation failed. [16.986 seconds] - 2026-07-10T17:18:28.312Z
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mTS2322: Type '"exclamation-triangle"' is not assignable to type 'UiIconName'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/clinic/billing/billing-cashier-queue.component.html:127:21:
+[37m      127 │         <app-ui-icon [32mname[37m="exclamation-triangle" class="mt-0.5 sh...
+          ╵                      [32m~~~~[0m
+
+  Error occurs in the template of component BillingCashierQueueComponent.
+
+    src/app/clinic/billing/billing-cashier-queue.component.ts:32:15:
+--
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mTS2322: Type '"exclamation-triangle"' is not assignable to type 'UiIconName'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/clinic/billing/billing-payment-modal.component.ts:89:27:
+[37m      89 │               <app-ui-icon [32mname[37m="exclamation-triangle" />
+         ╵                            [32m~~~~[0m
+
+
+
+=== ANGULAR BUILD TAIL ===
+❯ Building...
+✔ Building...
+Application bundle generation failed. [16.986 seconds] - 2026-07-10T17:18:28.312Z
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mTS2322: Type '"exclamation-triangle"' is not assignable to type 'UiIconName'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/clinic/billing/billing-cashier-queue.component.html:127:21:
+[37m      127 │         <app-ui-icon [32mname[37m="exclamation-triangle" class="mt-0.5 sh...
+          ╵                      [32m~~~~[0m
+
+  Error occurs in the template of component BillingCashierQueueComponent.
+
+    src/app/clinic/billing/billing-cashier-queue.component.ts:32:15:
+[37m      32 │   templateUrl: [32m'./billing-cashier-queue.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mTS2322: Type '"exclamation-triangle"' is not assignable to type 'UiIconName'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/clinic/billing/billing-payment-modal.component.ts:89:27:
+[37m      89 │               <app-ui-icon [32mname[37m="exclamation-triangle" />
+         ╵                            [32m~~~~[0m
+
+

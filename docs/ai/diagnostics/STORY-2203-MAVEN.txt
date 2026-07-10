@@ -1,0 +1,817 @@
+=== MAVEN DIAGNOSTIC ===
+2026-07-10T17:19:15.122Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_4411d49a8c0d4bf487ec] Access denied: Access Denied
+2026-07-10T17:19:15.300Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_192cfa292552435e9add] Access denied: Access Denied
+2026-07-10T17:19:15.462Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_8eb9f8ab32744849839c] Access denied: Access Denied
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 16.05 s -- in com.joprelys.backend.clinic.api.OrganizationControllerTest
+[INFO] Running com.joprelys.backend.clinic.api.ClinicControllerTest
+2026-07-10T17:19:15.497Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.clinic.api.ClinicControllerTest]: ClinicControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:15.505Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.clinic.api.ClinicControllerTest
+2026-07-10T17:19:15.506Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.clinic.api.ClinicControllerTest]: ClinicControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:15.512Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.clinic.api.ClinicControllerTest
+2026-07-10T17:19:15.560Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_c0c1d7537854440e9a61] Access denied: Access Denied
+2026-07-10T17:19:15.575Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_6b6650b3f9d0429c9a4d] Access denied: Access Denied
+2026-07-10T17:19:15.599Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_9d0d6bd770fc4997a7d8] Access denied: Access Denied
+2026-07-10T17:19:15.603Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_a9b022850b084b55a402] Access denied: Access Denied
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.157 s -- in com.joprelys.backend.clinic.api.ClinicControllerTest
+[INFO] Running com.joprelys.backend.clinic.api.OrganizationAdminControllerTest
+2026-07-10T17:19:15.656Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.clinic.api.OrganizationAdminControllerTest]: OrganizationAdminControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:15.664Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.clinic.api.OrganizationAdminControllerTest
+2026-07-10T17:19:15.665Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.clinic.api.OrganizationAdminControllerTest]: OrganizationAdminControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:15.734Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.clinic.api.OrganizationAdminControllerTest
+2026-07-10T17:19:19.426Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_97bbe7e9d02145349aba] Access denied: Access Denied
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.859 s -- in com.joprelys.backend.clinic.api.OrganizationAdminControllerTest
+[INFO] Running com.joprelys.backend.billing.EstimateControllerTest
+2026-07-10T17:19:21.520Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.billing.EstimateControllerTest]: EstimateControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:21.548Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.billing.EstimateControllerTest
+2026-07-10T17:19:21.549Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.billing.EstimateControllerTest]: EstimateControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:21.552Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.billing.EstimateControllerTest
+2026-07-10T17:19:21.934Z  INFO 2465 --- [           main] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-07-10T17:19:21.937Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-07-10T17:19:21.939Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.421 s -- in com.joprelys.backend.billing.EstimateControllerTest
+[INFO] Running com.joprelys.backend.billing.InvoiceFinancialStateServiceTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.826 s -- in com.joprelys.backend.billing.InvoiceFinancialStateServiceTest
+[INFO] Running com.joprelys.backend.billing.InvoiceControllerTest
+2026-07-10T17:19:22.811Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.billing.InvoiceControllerTest]: InvoiceControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:22.827Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.billing.InvoiceControllerTest
+2026-07-10T17:19:22.831Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.billing.InvoiceControllerTest]: InvoiceControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:22.841Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.billing.InvoiceControllerTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+--
+2026-07-10T17:19:30.220Z  INFO 2465 --- [           main] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-07-10T17:19:30.222Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Shutdown initiated...
+2026-07-10T17:19:30.224Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Shutdown completed.
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.433 s -- in com.joprelys.backend.billing.InvoiceControllerTest
+[INFO] Running com.joprelys.backend.billing.CashierCollectionQueueServiceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.399 s -- in com.joprelys.backend.billing.CashierCollectionQueueServiceTest
+[INFO] Running com.joprelys.backend.billing.InsuranceBordereauControllerTest
+2026-07-10T17:19:30.657Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.billing.InsuranceBordereauControllerTest]: InsuranceBordereauControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:30.669Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.billing.InsuranceBordereauControllerTest
+2026-07-10T17:19:30.673Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.billing.InsuranceBordereauControllerTest]: InsuranceBordereauControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:30.680Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.billing.InsuranceBordereauControllerTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+--
+2026-07-10T17:19:35.813Z  INFO 2465 --- [           main] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-07-10T17:19:35.815Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Shutdown initiated...
+2026-07-10T17:19:35.818Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Shutdown completed.
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.174 s -- in com.joprelys.backend.billing.InsuranceBordereauControllerTest
+[INFO] Running com.joprelys.backend.billing.FullFinancialE2ETest
+2026-07-10T17:19:35.839Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.billing.FullFinancialE2ETest]: FullFinancialE2ETest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:35.845Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.billing.FullFinancialE2ETest
+2026-07-10T17:19:35.846Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.billing.FullFinancialE2ETest]: FullFinancialE2ETest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:35.849Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.billing.FullFinancialE2ETest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+--
+2026-07-10T17:19:39.635Z  INFO 2465 --- [           main] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-07-10T17:19:39.636Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Shutdown initiated...
+2026-07-10T17:19:39.639Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Shutdown completed.
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.811 s -- in com.joprelys.backend.billing.FullFinancialE2ETest
+[INFO] Running com.joprelys.backend.billing.CashierCollectionQueueControllerTest
+2026-07-10T17:19:39.655Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.billing.CashierCollectionQueueControllerTest]: CashierCollectionQueueControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:39.664Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.billing.CashierCollectionQueueControllerTest
+2026-07-10T17:19:39.665Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.billing.CashierCollectionQueueControllerTest]: CashierCollectionQueueControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:39.669Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.billing.CashierCollectionQueueControllerTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+--
+2026-07-10T17:19:42.432Z  INFO 2465 --- [           main] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-07-10T17:19:42.434Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-5 - Shutdown initiated...
+2026-07-10T17:19:42.435Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-5 - Shutdown completed.
+[ERROR] Tests run: 3, Failures: 0, Errors: 3, Skipped: 0, Time elapsed: 2.785 s <<< FAILURE! -- in com.joprelys.backend.billing.CashierCollectionQueueControllerTest
+[ERROR] com.joprelys.backend.billing.CashierCollectionQueueControllerTest.shouldReturnOnlyCurrentTenantPatientCollectionQueueToCashier -- Time elapsed: 0.023 s <<< ERROR!
+org.springframework.dao.DataIntegrityViolationException: 
+StatementCallback; SQL [DELETE FROM patients]; Referential integrity constraint violation: "CONSTRAINT_96E: PUBLIC.VISITS FOREIGN KEY(PATIENT_ID) REFERENCES PUBLIC.PATIENTS(ID) (UUID '69d0e609-6892-497f-8116-846b7a1f2acd')"; SQL statement:
+DELETE FROM patients [23503-240]
+	at org.springframework.jdbc.support.SQLExceptionSubclassTranslator.doTranslate(SQLExceptionSubclassTranslator.java:106)
+	at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:102)
+	at org.springframework.jdbc.core.JdbcTemplate.translateException(JdbcTemplate.java:1549)
+	at org.springframework.jdbc.core.JdbcTemplate.execute(JdbcTemplate.java:427)
+	at org.springframework.jdbc.core.JdbcTemplate.update(JdbcTemplate.java:580)
+	at com.joprelys.backend.billing.CashierCollectionQueueControllerTest.setUp(CashierCollectionQueueControllerTest.java:82)
+Caused by: org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException: Referential integrity constraint violation: "CONSTRAINT_96E: PUBLIC.VISITS FOREIGN KEY(PATIENT_ID) REFERENCES PUBLIC.PATIENTS(ID) (UUID '69d0e609-6892-497f-8116-846b7a1f2acd')"; SQL statement:
+DELETE FROM patients [23503-240]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:520)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.constraint.ConstraintReferential.checkRow(ConstraintReferential.java:363)
+	at org.h2.constraint.ConstraintReferential.checkRowRefTable(ConstraintReferential.java:380)
+	at org.h2.constraint.ConstraintReferential.checkRow(ConstraintReferential.java:254)
+	at org.h2.table.Table.fireConstraints(Table.java:1208)
+	at org.h2.table.Table.fireAfterRow(Table.java:1226)
+--
+	at org.springframework.jdbc.core.JdbcTemplate.execute(JdbcTemplate.java:412)
+	... 2 more
+
+[ERROR] com.joprelys.backend.billing.CashierCollectionQueueControllerTest.shouldRequireAuthentication -- Time elapsed: 0.010 s <<< ERROR!
+org.springframework.dao.DataIntegrityViolationException: 
+StatementCallback; SQL [DELETE FROM patients]; Referential integrity constraint violation: "CONSTRAINT_96E: PUBLIC.VISITS FOREIGN KEY(PATIENT_ID) REFERENCES PUBLIC.PATIENTS(ID) (UUID '69d0e609-6892-497f-8116-846b7a1f2acd')"; SQL statement:
+DELETE FROM patients [23503-240]
+	at org.springframework.jdbc.support.SQLExceptionSubclassTranslator.doTranslate(SQLExceptionSubclassTranslator.java:106)
+	at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:102)
+	at org.springframework.jdbc.core.JdbcTemplate.translateException(JdbcTemplate.java:1549)
+	at org.springframework.jdbc.core.JdbcTemplate.execute(JdbcTemplate.java:427)
+	at org.springframework.jdbc.core.JdbcTemplate.update(JdbcTemplate.java:580)
+	at com.joprelys.backend.billing.CashierCollectionQueueControllerTest.setUp(CashierCollectionQueueControllerTest.java:82)
+Caused by: org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException: Referential integrity constraint violation: "CONSTRAINT_96E: PUBLIC.VISITS FOREIGN KEY(PATIENT_ID) REFERENCES PUBLIC.PATIENTS(ID) (UUID '69d0e609-6892-497f-8116-846b7a1f2acd')"; SQL statement:
+DELETE FROM patients [23503-240]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:520)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.constraint.ConstraintReferential.checkRow(ConstraintReferential.java:363)
+	at org.h2.constraint.ConstraintReferential.checkRowRefTable(ConstraintReferential.java:380)
+	at org.h2.constraint.ConstraintReferential.checkRow(ConstraintReferential.java:254)
+	at org.h2.table.Table.fireConstraints(Table.java:1208)
+	at org.h2.table.Table.fireAfterRow(Table.java:1226)
+--
+	at org.springframework.jdbc.core.JdbcTemplate.execute(JdbcTemplate.java:412)
+	... 2 more
+
+[ERROR] com.joprelys.backend.billing.CashierCollectionQueueControllerTest.shouldRejectClinicalRoleFromCashierQueue -- Time elapsed: 0.007 s <<< ERROR!
+org.springframework.dao.DataIntegrityViolationException: 
+StatementCallback; SQL [DELETE FROM patients]; Referential integrity constraint violation: "CONSTRAINT_96E: PUBLIC.VISITS FOREIGN KEY(PATIENT_ID) REFERENCES PUBLIC.PATIENTS(ID) (UUID '69d0e609-6892-497f-8116-846b7a1f2acd')"; SQL statement:
+DELETE FROM patients [23503-240]
+	at org.springframework.jdbc.support.SQLExceptionSubclassTranslator.doTranslate(SQLExceptionSubclassTranslator.java:106)
+	at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:102)
+	at org.springframework.jdbc.core.JdbcTemplate.translateException(JdbcTemplate.java:1549)
+	at org.springframework.jdbc.core.JdbcTemplate.execute(JdbcTemplate.java:427)
+	at org.springframework.jdbc.core.JdbcTemplate.update(JdbcTemplate.java:580)
+	at com.joprelys.backend.billing.CashierCollectionQueueControllerTest.setUp(CashierCollectionQueueControllerTest.java:82)
+Caused by: org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException: Referential integrity constraint violation: "CONSTRAINT_96E: PUBLIC.VISITS FOREIGN KEY(PATIENT_ID) REFERENCES PUBLIC.PATIENTS(ID) (UUID '69d0e609-6892-497f-8116-846b7a1f2acd')"; SQL statement:
+DELETE FROM patients [23503-240]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:520)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.constraint.ConstraintReferential.checkRow(ConstraintReferential.java:363)
+	at org.h2.constraint.ConstraintReferential.checkRowRefTable(ConstraintReferential.java:380)
+	at org.h2.constraint.ConstraintReferential.checkRow(ConstraintReferential.java:254)
+	at org.h2.table.Table.fireConstraints(Table.java:1208)
+	at org.h2.table.Table.fireAfterRow(Table.java:1226)
+--
+2026-07-10T17:19:45.235Z  INFO 2465 --- [           main] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-07-10T17:19:45.237Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-6 - Shutdown initiated...
+2026-07-10T17:19:45.238Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-6 - Shutdown completed.
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.788 s -- in com.joprelys.backend.billing.ReceivableReminderControllerTest
+[INFO] Running com.joprelys.backend.consultation.api.ConsultationControllerTest
+2026-07-10T17:19:45.256Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.consultation.api.ConsultationControllerTest]: ConsultationControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:45.277Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.consultation.api.ConsultationControllerTest
+2026-07-10T17:19:45.278Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.consultation.api.ConsultationControllerTest]: ConsultationControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:45.281Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.consultation.api.ConsultationControllerTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+--
+2026-07-10T17:19:47.664Z  INFO 2465 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 3 ms
+2026-07-10T17:19:47.709Z  INFO 2465 --- [           main] c.j.b.c.api.ConsultationControllerTest   : Started ConsultationControllerTest in 2.425 seconds (process running for 50.185)
+2026-07-10T17:19:47.993Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_050a8a34d6534d42a2fa] Access denied: Access Denied
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.202 s -- in com.joprelys.backend.consultation.api.ConsultationControllerTest
+[INFO] Running com.joprelys.backend.auth.api.StaffControllerTest
+2026-07-10T17:19:48.463Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.auth.api.StaffControllerTest]: StaffControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:48.485Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.auth.api.StaffControllerTest
+2026-07-10T17:19:48.486Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.auth.api.StaffControllerTest]: StaffControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:48.488Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.auth.api.StaffControllerTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 10.94 s -- in com.joprelys.backend.auth.api.StaffControllerTest
+[INFO] Running com.joprelys.backend.auth.api.PasswordRecoveryControllerTest
+2026-07-10T17:19:59.408Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.auth.api.PasswordRecoveryControllerTest]: PasswordRecoveryControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:59.412Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.auth.api.PasswordRecoveryControllerTest
+2026-07-10T17:19:59.415Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.auth.api.PasswordRecoveryControllerTest]: PasswordRecoveryControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:19:59.416Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.auth.api.PasswordRecoveryControllerTest
+[PASSWORD RECOVERY] Code de réinitialisation pour medecin@joprelys.local : 783040
+[PASSWORD RECOVERY] Code de réinitialisation pour medecin@joprelys.local : 177639
+[PASSWORD RECOVERY] Tentative pour e-mail avec organisation inactive : medecin.inactive@joprelys.local
+[PASSWORD RECOVERY] Code de réinitialisation pour medecin@joprelys.local : 923019
+[PASSWORD RECOVERY] Code de réinitialisation pour medecin@joprelys.local : 967736
+[PASSWORD RECOVERY] Tentative pour e-mail inconnu ou inactif : inconnu@joprelys.local
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.841 s -- in com.joprelys.backend.auth.api.PasswordRecoveryControllerTest
+[INFO] Running com.joprelys.backend.auth.security.JwtServiceTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in com.joprelys.backend.auth.security.JwtServiceTest
+[INFO] Running com.joprelys.backend.auth.application.AdminUserSeederTest
+2026-07-10T17:20:05.996Z  INFO 2465 --- [           main] c.j.b.auth.application.AdminUserSeeder   : Propriétés d'initialisation de l'administrateur désactivées. Initialisation de l'administrateur ignorée.
+2026-07-10T17:20:06.005Z  INFO 2465 --- [           main] c.j.b.auth.application.AdminUserSeeder   : Création de l'administrateur 'Administrateur Joprelys' (admin@joprelys.local) en base de données...
+2026-07-10T17:20:06.005Z  INFO 2465 --- [           main] c.j.b.auth.application.AdminUserSeeder   : Administrateur créé avec succès en base de données.
+2026-07-10T17:20:06.010Z  INFO 2465 --- [           main] c.j.b.auth.application.AdminUserSeeder   : L'administrateur avec l'email 'admin@joprelys.local' existe déjà en base de données.
+2026-07-10T17:20:06.013Z  INFO 2465 --- [           main] c.j.b.auth.application.AdminUserSeeder   : L'administrateur avec l'email 'admin@joprelys.local' existe déjà en base de données.
+2026-07-10T17:20:06.013Z  INFO 2465 --- [           main] c.j.b.auth.application.AdminUserSeeder   : Initialisation des lits et services pour la clinique 'Clinique Test'...
+2026-07-10T17:20:06.014Z  INFO 2465 --- [           main] c.j.b.auth.application.AdminUserSeeder   : Lits et services par défaut créés avec succès pour 'Clinique Test'.
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.758 s -- in com.joprelys.backend.auth.application.AdminUserSeederTest
+[INFO] Running com.joprelys.backend.auth.application.AuthenticationServiceTest
+[OTP STAFF] Code de connexion pour medecin@example.com : 044206
+[OTP STAFF] Code de connexion pour medecin@example.com : 438952
+[OTP STAFF] Code de connexion pour medecin@example.com : 256938
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.276 s -- in com.joprelys.backend.auth.application.AuthenticationServiceTest
+[INFO] Running com.joprelys.backend.spatial.api.SpatialControllerTest
+2026-07-10T17:20:06.298Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.spatial.api.SpatialControllerTest]: SpatialControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:06.311Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.spatial.api.SpatialControllerTest
+2026-07-10T17:20:06.312Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.spatial.api.SpatialControllerTest]: SpatialControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:06.313Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.spatial.api.SpatialControllerTest
+2026-07-10T17:20:06.436Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=27986290-da57-4a0e-902a-db106adaa33d action=TRANSFER patient=4ff6bd73-2de3-4528-a4b9-737a2a4a3c97 status=SUCCESS
+2026-07-10T17:20:06.486Z  INFO 2465 --- [pool-3-thread-1] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=01ef5b89-4e90-4ca0-bb9f-747cde83fda6 action=TRANSFER patient=6a4c1396-91e8-4af9-8c88-a2219d5a9bed status=SUCCESS
+2026-07-10T17:20:06.490Z  INFO 2465 --- [pool-3-thread-2] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=01ef5b89-4e90-4ca0-bb9f-747cde83fda6 action=TRANSFER patient=288e91ab-4fcc-4c1a-a09c-3c705d8c4a1f status=SUCCESS
+2026-07-10T17:20:06.502Z  WARN 2465 --- [pool-3-thread-2] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_dd9d2b6ff99746b6b1f0] Optimistic locking failure: Unexpected row count (expected row count 1 but was 0) [update beds set bed_number=?,created_at=?,room_id=?,status=?,updated_at=?,version=? where id=? and version=?]
+2026-07-10T17:20:06.542Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=1619e097-5e94-4662-a058-5dfcfff9aeae action=UPDATE_BED_STATUS patient=null status=SUCCESS
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.253 s -- in com.joprelys.backend.spatial.api.SpatialControllerTest
+[INFO] Running com.joprelys.backend.cash.CashRegisterControllerTest
+2026-07-10T17:20:06.557Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.cash.CashRegisterControllerTest]: CashRegisterControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:06.573Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.cash.CashRegisterControllerTest
+2026-07-10T17:20:06.574Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.cash.CashRegisterControllerTest]: CashRegisterControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:06.575Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.cash.CashRegisterControllerTest
+2026-07-10T17:20:06.650Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=1446f2fe-2382-4884-b62b-9eafebe51e19 action=OPEN_CASH_SESSION patient=null status=SUCCESS
+2026-07-10T17:20:06.687Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=1446f2fe-2382-4884-b62b-9eafebe51e19 action=ADD_CASH_MOVEMENT patient=null status=SUCCESS
+2026-07-10T17:20:06.722Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=1446f2fe-2382-4884-b62b-9eafebe51e19 action=ADD_CASH_MOVEMENT patient=null status=SUCCESS
+2026-07-10T17:20:06.731Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=1446f2fe-2382-4884-b62b-9eafebe51e19 action=ADD_PAYMENT patient=15b76117-8ac0-4a96-999d-8716d41092d4 status=SUCCESS
+2026-07-10T17:20:06.783Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=1446f2fe-2382-4884-b62b-9eafebe51e19 action=CLOSE_CASH_SESSION patient=null status=SUCCESS
+--
+2026-07-10T17:20:07.110Z  INFO 2465 --- [           main] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-07-10T17:20:07.111Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-7 - Shutdown initiated...
+2026-07-10T17:20:07.112Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-7 - Shutdown completed.
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.562 s -- in com.joprelys.backend.cash.CashRegisterControllerTest
+[INFO] Running com.joprelys.backend.common.api.GlobalExceptionHandlerTest
+2026-07-10T17:20:07.123Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_test_def] Not found: Élément manquant
+2026-07-10T17:20:07.125Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_test_abc] Access denied: Accès refusé
+2026-07-10T17:20:07.130Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_test_789] Validation error: Email invalide; Nom requis
+2026-07-10T17:20:07.134Z ERROR 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_test_ghi] Unexpected error: Boom
+
+java.lang.RuntimeException: Boom
+	at com.joprelys.backend.common.api.GlobalExceptionHandlerTest.givenGenericException_whenHandle_thenReturnsInternalErrorCode(GlobalExceptionHandlerTest.java:120) ~[test-classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+--
+2026-07-10T17:20:07.145Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_test_123] ResponseStatusException: 404 - Patient introuvable.
+2026-07-10T17:20:07.147Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_unknown] ResponseStatusException: 409 - Conflit.
+2026-07-10T17:20:07.150Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_test_456] ResponseStatusException: 400 - Paramètre invalide.
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.036 s -- in com.joprelys.backend.common.api.GlobalExceptionHandlerTest
+[INFO] Running com.joprelys.backend.common.api.RateLimitingFilterTest
+2026-07-10T17:20:07.159Z  WARN 2465 --- [           main] c.j.b.common.api.RateLimitingFilter      : [trace_id=null] Rate limit exceeded for client: user:doctor@clinic.com
+2026-07-10T17:20:07.160Z  WARN 2465 --- [           main] c.j.b.common.api.RateLimitingFilter      : [trace_id=null] Rate limit exceeded for client: ip:192.168.1.2
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.013 s -- in com.joprelys.backend.common.api.RateLimitingFilterTest
+[INFO] Running com.joprelys.backend.common.application.WebhookServiceTest
+2026-07-10T17:20:07.272Z  INFO 2465 --- [           main] c.j.b.common.application.WebhookService  : [WEBHOOK MOCK] Event: LAB_RESULT_AVAILABLE | URL: https://a.com | Payload: {"patientId":"123"}
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.114 s -- in com.joprelys.backend.common.application.WebhookServiceTest
+[INFO] Running com.joprelys.backend.notification.application.NotificationServiceTest
+2026-07-10T17:20:07.427Z  INFO 2465 --- [           main] c.j.b.n.application.NotificationService  : [NOTIFICATION GATEWAY MOCK] Channel: EMAIL/SMS | Recipient Patient: fc446448-9343-402c-ace6-60ad02d12769 | Title: Test notification | Message: Message de test
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.149 s -- in com.joprelys.backend.notification.application.NotificationServiceTest
+[INFO] Running com.joprelys.backend.lab.api.LabOrderControllerTest
+2026-07-10T17:20:07.434Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.lab.api.LabOrderControllerTest]: LabOrderControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:07.452Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.lab.api.LabOrderControllerTest
+2026-07-10T17:20:07.453Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.lab.api.LabOrderControllerTest]: LabOrderControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:07.455Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.lab.api.LabOrderControllerTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+--
+2026-07-10T17:20:09.589Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_b17275e3727a4bbe9760] Access denied: Access Denied
+2026-07-10T17:20:09.751Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_abe07c52a89d416ea69a] Access denied: Access Denied
+2026-07-10T17:20:09.781Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=UPDATE_LAB_ORDER_STATUS patient=d88797b4-3578-4b39-bd95-729a64720725 status=SUCCESS
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.391 s -- in com.joprelys.backend.lab.api.LabOrderControllerTest
+[INFO] Running com.joprelys.backend.lab.api.LabIntegrationControllerTest
+2026-07-10T17:20:09.823Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.lab.api.LabIntegrationControllerTest]: LabIntegrationControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:09.826Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.lab.api.LabIntegrationControllerTest
+2026-07-10T17:20:09.826Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.lab.api.LabIntegrationControllerTest]: LabIntegrationControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:09.827Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.lab.api.LabIntegrationControllerTest
+2026-07-10T17:20:09.934Z  INFO 2465 --- [           main] c.j.b.n.application.NotificationService  : [NOTIFICATION GATEWAY MOCK] Channel: EMAIL/SMS | Recipient Patient: 49f75ffe-4a71-4e97-a80a-7a7e593d9fab | Title: Résultats d'analyses disponibles | Message: Vos résultats d'analyses pour la demande EXAM-REQ-20260703-000042 sont disponibles.
+2026-07-10T17:20:09.934Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=UPLOAD_LAB_RESULTS patient=49f75ffe-4a71-4e97-a80a-7a7e593d9fab status=SUCCESS
+2026-07-10T17:20:09.954Z  INFO 2465 --- [           main] c.j.b.n.application.NotificationService  : [NOTIFICATION GATEWAY MOCK] Channel: EMAIL/SMS | Recipient Patient: 49f75ffe-4a71-4e97-a80a-7a7e593d9fab | Title: Résultats d'analyses disponibles | Message: Vos résultats d'analyses pour la demande EXAM-REQ-20260703-000042 sont disponibles.
+2026-07-10T17:20:09.954Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=UPLOAD_LAB_RESULTS patient=49f75ffe-4a71-4e97-a80a-7a7e593d9fab status=SUCCESS
+2026-07-10T17:20:09.990Z  INFO 2465 --- [           main] c.j.b.n.application.NotificationService  : [NOTIFICATION GATEWAY MOCK] Channel: EMAIL/SMS | Recipient Patient: 99d9124b-6df7-4a0c-b8cd-6c5cb00f1d85 | Title: Résultats d'analyses disponibles | Message: Vos résultats d'analyses pour la demande EXAM-REQ-20260703-000042 sont disponibles.
+--
+2026-07-10T17:20:10.098Z  INFO 2465 --- [           main] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-07-10T17:20:10.100Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-8 - Shutdown initiated...
+2026-07-10T17:20:10.101Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-8 - Shutdown completed.
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.279 s -- in com.joprelys.backend.lab.api.LabIntegrationControllerTest
+[INFO] Running com.joprelys.backend.lab.FhirDiagnosticReportParserTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.019 s -- in com.joprelys.backend.lab.FhirDiagnosticReportParserTest
+[INFO] Running com.joprelys.backend.hospitalization.api.HospitalizationControllerTest
+2026-07-10T17:20:10.123Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.hospitalization.api.HospitalizationControllerTest]: HospitalizationControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:10.141Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.hospitalization.api.HospitalizationControllerTest
+2026-07-10T17:20:10.142Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.hospitalization.api.HospitalizationControllerTest]: HospitalizationControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:10.143Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.hospitalization.api.HospitalizationControllerTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+--
+2026-07-10T17:20:12.487Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=b1c203a0-455d-4eb1-8f5a-10e17a4adf92 action=ADMISSION patient=09a7a4df-2461-4550-aac9-b9343b38f991 status=SUCCESS
+2026-07-10T17:20:12.495Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=b1c203a0-455d-4eb1-8f5a-10e17a4adf92 action=CONSULTATION patient=09a7a4df-2461-4550-aac9-b9343b38f991 status=SUCCESS
+2026-07-10T17:20:12.531Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=b1c203a0-455d-4eb1-8f5a-10e17a4adf92 action=DOWNLOAD_ENTRY_PDF patient=09a7a4df-2461-4550-aac9-b9343b38f991 status=SUCCESS
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.415 s -- in com.joprelys.backend.hospitalization.api.HospitalizationControllerTest
+[INFO] Running com.joprelys.backend.fhir.FhirControllerTest
+2026-07-10T17:20:12.541Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.fhir.FhirControllerTest]: FhirControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:12.556Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.fhir.FhirControllerTest
+2026-07-10T17:20:12.557Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.fhir.FhirControllerTest]: FhirControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:12.558Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.fhir.FhirControllerTest
+2026-07-10T17:20:12.584Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=1ffcfbde-68fc-4e30-94d2-0f9332f413b3 action=CONSULTATION patient=c5777a31-535c-4d15-bce5-d331adb55d00 status=SUCCESS
+2026-07-10T17:20:12.591Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=1ffcfbde-68fc-4e30-94d2-0f9332f413b3 action=READ_FHIR_RESOURCE patient=c5777a31-535c-4d15-bce5-d331adb55d00 status=SUCCESS
+2026-07-10T17:20:12.640Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=301d1e38-dc97-48e2-a13b-564b3da5ad56 action=CONSULTATION patient=a2748f32-5b52-4f72-95b9-e8081eb35b90 status=SUCCESS
+2026-07-10T17:20:12.641Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=301d1e38-dc97-48e2-a13b-564b3da5ad56 action=READ_FHIR_RESOURCE patient=a2748f32-5b52-4f72-95b9-e8081eb35b90 status=SUCCESS
+2026-07-10T17:20:12.728Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_bef02ba1c22f4cdc9589] Access denied: Access Denied
+2026-07-10T17:20:12.764Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=35b11b28-ba12-41d6-9cf3-a90d06dd3ff9 action=CONSULTATION patient=c5deb283-3e41-4519-81df-2bf1fe356159 status=SUCCESS
+2026-07-10T17:20:12.765Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=35b11b28-ba12-41d6-9cf3-a90d06dd3ff9 action=READ_FHIR_RESOURCE patient=c5deb283-3e41-4519-81df-2bf1fe356159 status=SUCCESS
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.240 s -- in com.joprelys.backend.fhir.FhirControllerTest
+[INFO] Running com.joprelys.backend.fhir.FhirMappersTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in com.joprelys.backend.fhir.FhirMappersTest
+[INFO] Running com.joprelys.backend.JoprelysBackendApplicationTests
+2026-07-10T17:20:12.789Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.JoprelysBackendApplicationTests]: JoprelysBackendApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:12.799Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.JoprelysBackendApplicationTests
+2026-07-10T17:20:12.799Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.JoprelysBackendApplicationTests]: JoprelysBackendApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:12.800Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.JoprelysBackendApplicationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+--
+
+2026-07-10T17:20:14.146Z  INFO 2465 --- [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2026-07-10T17:20:14.385Z  INFO 2465 --- [           main] c.j.b.JoprelysBackendApplicationTests    : Started JoprelysBackendApplicationTests in 1.581 seconds (process running for 76.861)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.608 s -- in com.joprelys.backend.JoprelysBackendApplicationTests
+[INFO] Running STORY-1302 — Granular Scopes and Consent Verification
+2026-07-10T17:20:14.400Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.GranularScopesSecurityTest]: GranularScopesSecurityTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:14.412Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.GranularScopesSecurityTest
+2026-07-10T17:20:14.412Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.GranularScopesSecurityTest]: GranularScopesSecurityTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:14.413Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.GranularScopesSecurityTest
+2026-07-10T17:20:14.560Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=e67fcc57-9bbf-4c8e-9755-191d40119f1e action=CONSULTATION patient=5f892829-ca32-4ffa-a6c6-bd070f4f7825 status=SUCCESS
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.282 s -- in STORY-1302 — Granular Scopes and Consent Verification
+[INFO] Running com.joprelys.backend.patient.api.PatientMedicalInfoControllerTest
+2026-07-10T17:20:14.684Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.api.PatientMedicalInfoControllerTest]: PatientMedicalInfoControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:14.709Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.api.PatientMedicalInfoControllerTest
+2026-07-10T17:20:14.710Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.api.PatientMedicalInfoControllerTest]: PatientMedicalInfoControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:14.712Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.api.PatientMedicalInfoControllerTest
+2026-07-10T17:20:14.743Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=2c6575a9-47c3-4706-8d90-761cf44fcbf6 action=CONSULTATION patient=c6aa058e-7d2b-4b1a-bfa3-721b574ef5df status=SUCCESS
+2026-07-10T17:20:14.747Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=2c6575a9-47c3-4706-8d90-761cf44fcbf6 action=ADD_ALLERGY patient=c6aa058e-7d2b-4b1a-bfa3-721b574ef5df status=SUCCESS
+2026-07-10T17:20:14.762Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=2c6575a9-47c3-4706-8d90-761cf44fcbf6 action=CONSULTATION patient=c6aa058e-7d2b-4b1a-bfa3-721b574ef5df status=SUCCESS
+2026-07-10T17:20:14.792Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=55e6153c-37fc-48a2-a24b-c4b8b1ddc56b action=CONSULTATION patient=610ef907-d525-446a-aa56-122a515c6676 status=SUCCESS
+2026-07-10T17:20:14.795Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=55e6153c-37fc-48a2-a24b-c4b8b1ddc56b action=ADD_HISTORY patient=610ef907-d525-446a-aa56-122a515c6676 status=SUCCESS
+--
+2026-07-10T17:20:14.972Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=a4461759-2338-44bf-bd8a-9027f4feff34 action=CONSULTATION patient=2050dab5-444d-4e8b-94ee-6e7d209287c5 status=SUCCESS
+2026-07-10T17:20:14.995Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=c4532b40-8ab2-43d7-ad24-820c4bbb6f7c action=CONSULTATION patient=9299092a-6c4a-46f3-9153-a84b0453b124 status=SUCCESS
+2026-07-10T17:20:14.998Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=c4532b40-8ab2-43d7-ad24-820c4bbb6f7c action=ADD_HISTORY patient=9299092a-6c4a-46f3-9153-a84b0453b124 status=SUCCESS
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.326 s -- in com.joprelys.backend.patient.api.PatientMedicalInfoControllerTest
+[INFO] Running com.joprelys.backend.patient.api.PatientDuplicatesAndMergingTest
+2026-07-10T17:20:15.015Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.api.PatientDuplicatesAndMergingTest]: PatientDuplicatesAndMergingTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:15.017Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.api.PatientDuplicatesAndMergingTest
+2026-07-10T17:20:15.018Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.api.PatientDuplicatesAndMergingTest]: PatientDuplicatesAndMergingTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:15.020Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.api.PatientDuplicatesAndMergingTest
+2026-07-10T17:20:15.049Z  INFO 2465 --- [           main] c.j.b.p.a.PatientSimilarityService       : Checking duplicates for patient: Jean Dupont (ID: 1a41a71e-cd19-4a7e-87ce-35363fbe61be)
+2026-07-10T17:20:15.053Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=ce2c4cb4-1b48-4e90-a0cb-6debb30f0d88 action=CREATE_PATIENT patient=1a41a71e-cd19-4a7e-87ce-35363fbe61be status=SUCCESS
+2026-07-10T17:20:15.068Z  INFO 2465 --- [           main] c.j.b.p.a.PatientSimilarityService       : Checking duplicates for patient: Jean Dupond (ID: eb6b7437-8b04-4460-9eb6-f1444224ae48)
+2026-07-10T17:20:15.094Z  INFO 2465 --- [           main] c.j.b.p.a.PatientSimilarityService       : Potential duplicate found: Jean Dupond and Jean Dupont with score 90.9090909090909%
+2026-07-10T17:20:15.098Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=ce2c4cb4-1b48-4e90-a0cb-6debb30f0d88 action=CREATE_PATIENT patient=eb6b7437-8b04-4460-9eb6-f1444224ae48 status=SUCCESS
+--
+2026-07-10T17:20:15.177Z  INFO 2465 --- [           main] c.j.b.p.a.PatientSimilarityService       : Potential duplicate found: Jean Dupond and Jean Dupont with score 90.9090909090909%
+2026-07-10T17:20:15.181Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=445b36e8-8e18-445e-8322-c92c7fcf496f action=CREATE_PATIENT patient=198265b5-9a2e-408b-8543-2f78a51dc1c0 status=SUCCESS
+2026-07-10T17:20:15.218Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=c57ee4ca-7621-498c-854a-6923a722a514 action=MERGE_PATIENTS patient=6962338c-c8b6-4686-aba7-70be10643317 status=SUCCESS
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.216 s -- in com.joprelys.backend.patient.api.PatientDuplicatesAndMergingTest
+[INFO] Running com.joprelys.backend.patient.api.PatientPortalControllerTest
+2026-07-10T17:20:15.228Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.api.PatientPortalControllerTest]: PatientPortalControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:15.229Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.api.PatientPortalControllerTest
+2026-07-10T17:20:15.230Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.api.PatientPortalControllerTest]: PatientPortalControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:15.231Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.api.PatientPortalControllerTest
+2026-07-10T17:20:15.244Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=2846c8d0-01f8-46c3-9a31-afbe0c2a518a action=VIEW_PORTAL_DASHBOARD patient=be724cfb-11f9-447d-8abc-766a95c0825c status=SUCCESS
+2026-07-10T17:20:15.311Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=92694491-9b21-40b6-90be-cfd88428960b action=REJECT_EXTERNAL_ACCESS patient=92694491-9b21-40b6-90be-cfd88428960b status=SUCCESS
+2026-07-10T17:20:15.312Z  INFO 2465 --- [           main] c.j.b.n.application.NotificationService  : [NOTIFICATION GATEWAY MOCK] Channel: EMAIL/SMS | Recipient Patient: 92694491-9b21-40b6-90be-cfd88428960b | Title: Demande d'accès rejetée | Message: Le patient a rejeté votre demande d'accès au dossier.
+2026-07-10T17:20:15.342Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=cf8087cf-11fe-4f3f-b0ad-47294ec0525b action=EMERGENCY_DPU_ACCESS patient=dff5f199-1e39-495b-ac34-d6f5a9b9db0a status=SUCCESS
+2026-07-10T17:20:15.342Z  INFO 2465 --- [           main] c.j.b.n.application.NotificationService  : [NOTIFICATION GATEWAY MOCK] Channel: EMAIL/SMS | Recipient Patient: dff5f199-1e39-495b-ac34-d6f5a9b9db0a | Title: Alerte de sécurité : Accès d'urgence | Message: Le praticien medecin.b@testb.org a accédé à votre dossier en mode d'urgence Brise-Glace pour le motif : Suspicion d'arrêt cardio-respiratoire
+--
+2026-07-10T17:20:15.643Z  INFO 2465 --- [           main] c.j.b.p.application.AlloPharmaClient     : AllôPharma Payload Sent: {"prescriptionNumber":"TX-GOOD","doctorName":"Médecin B","organizationId":"f9179480-21eb-44ab-ba6b-6bbf96f91728","items":[]}
+2026-07-10T17:20:15.644Z  INFO 2465 --- [           main] c.j.b.p.application.AlloPharmaClient     : AllôPharma Teletransmission SUCCESS
+2026-07-10T17:20:15.644Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=2bbdda7b-813c-4c6e-953e-3d813f2e0d14 action=TRANSMIT_PRESCRIPTION patient=2bbdda7b-813c-4c6e-953e-3d813f2e0d14 status=SUCCESS
+[INFO] Tests run: 24, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.566 s -- in com.joprelys.backend.patient.api.PatientPortalControllerTest
+[INFO] Running com.joprelys.backend.patient.api.ExternalAccessControllerTest
+2026-07-10T17:20:15.795Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.api.ExternalAccessControllerTest]: ExternalAccessControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:15.797Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.api.ExternalAccessControllerTest
+2026-07-10T17:20:15.798Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.api.ExternalAccessControllerTest]: ExternalAccessControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:15.799Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.api.ExternalAccessControllerTest
+2026-07-10T17:20:15.828Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=b17e5b5f-d9ff-4a9c-a9cf-be80dd8eae47 action=REQUEST_EXTERNAL_ACCESS patient=ad4dcffd-8b0f-4683-85f0-3922a6318355 status=SUCCESS
+2026-07-10T17:20:15.829Z  INFO 2465 --- [           main] c.j.b.n.application.NotificationService  : [NOTIFICATION GATEWAY MOCK] Channel: EMAIL/SMS | Recipient Patient: ad4dcffd-8b0f-4683-85f0-3922a6318355 | Title: Demande d'accès externe | Message: L'établissement Clinique A demande l'accès à votre dossier pour : Consultation cardiologique externe urgente
+2026-07-10T17:20:15.907Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=ea0f56cf-6247-4b72-b6ad-2159a5f7c930 action=REQUEST_EXTERNAL_ACCESS patient=37be91a5-1aba-4a10-b883-25decd5ce00b status=SUCCESS
+2026-07-10T17:20:15.907Z  INFO 2465 --- [           main] c.j.b.n.application.NotificationService  : [NOTIFICATION GATEWAY MOCK] Channel: EMAIL/SMS | Recipient Patient: 37be91a5-1aba-4a10-b883-25decd5ce00b | Title: Demande d'accès externe | Message: L'établissement Clinique A demande l'accès à votre dossier pour : Premiere demande d'acces externe
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.124 s -- in com.joprelys.backend.patient.api.ExternalAccessControllerTest
+[INFO] Running Tâche 5 — Téléchargement PDF Synthèse Médicale
+2026-07-10T17:20:15.921Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.api.PatientSummaryPdfTest]: PatientSummaryPdfTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:15.923Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.api.PatientSummaryPdfTest
+2026-07-10T17:20:15.924Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.api.PatientSummaryPdfTest]: PatientSummaryPdfTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:15.926Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.api.PatientSummaryPdfTest
+2026-07-10T17:20:15.949Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=e035da48-19e3-4663-8692-b8d8c170eae3 action=READ_PATIENT_SUMMARY patient=f22a36d0-d840-4c6c-93eb-9024f350a1ba status=SUCCESS
+2026-07-10T17:20:15.985Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=e035da48-19e3-4663-8692-b8d8c170eae3 action=DOWNLOAD_SUMMARY_PDF patient=f22a36d0-d840-4c6c-93eb-9024f350a1ba status=SUCCESS
+2026-07-10T17:20:16.013Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_e2a59472a749436aac28] Access denied: Access Denied
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.096 s -- in Tâche 5 — Téléchargement PDF Synthèse Médicale
+[INFO] Running com.joprelys.backend.patient.api.PatientPreRegistrationControllerTest
+2026-07-10T17:20:16.018Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.api.PatientPreRegistrationControllerTest]: PatientPreRegistrationControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:16.020Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.api.PatientPreRegistrationControllerTest
+2026-07-10T17:20:16.020Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.api.PatientPreRegistrationControllerTest]: PatientPreRegistrationControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:16.021Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.api.PatientPreRegistrationControllerTest
+2026-07-10T17:20:16.038Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=26fead94-7544-41bc-98bb-7f9ee8010d59 action=PATIENT_PRE_REGISTRATION_REJECTED patient=null status=SUCCESS
+2026-07-10T17:20:16.116Z  INFO 2465 --- [           main] c.j.b.p.a.PatientSimilarityService       : Checking duplicates for patient: DOE John (ID: 74b88f0d-de44-457a-912c-69db6fb2dc21)
+2026-07-10T17:20:16.118Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=85d96f3f-120d-4e29-ace9-2c527b82ac64 action=CREATE_PATIENT patient=74b88f0d-de44-457a-912c-69db6fb2dc21 status=SUCCESS
+2026-07-10T17:20:16.118Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=85d96f3f-120d-4e29-ace9-2c527b82ac64 action=PATIENT_PRE_REGISTRATION_VALIDATED patient=74b88f0d-de44-457a-912c-69db6fb2dc21 status=SUCCESS
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.121 s -- in com.joprelys.backend.patient.api.PatientPreRegistrationControllerTest
+[INFO] Running com.joprelys.backend.patient.api.PatientControllerTest
+2026-07-10T17:20:16.140Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.api.PatientControllerTest]: PatientControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:16.142Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.api.PatientControllerTest
+2026-07-10T17:20:16.142Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.api.PatientControllerTest]: PatientControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:16.143Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.api.PatientControllerTest
+2026-07-10T17:20:16.157Z  INFO 2465 --- [           main] c.j.b.p.a.PatientSimilarityService       : Checking duplicates for patient: Patient Un (ID: b75655d8-4981-46b7-bd5c-0165337589eb)
+2026-07-10T17:20:16.159Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=442bc650-c309-48f7-b1f4-9453f7709a47 action=CREATE_PATIENT patient=b75655d8-4981-46b7-bd5c-0165337589eb status=SUCCESS
+2026-07-10T17:20:16.164Z  INFO 2465 --- [           main] c.j.b.p.a.PatientSimilarityService       : Checking duplicates for patient: Patient Deux (ID: a8a9a8bf-bcc9-4c1e-94ff-ef40aa69dd21)
+2026-07-10T17:20:16.165Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=442bc650-c309-48f7-b1f4-9453f7709a47 action=CREATE_PATIENT patient=a8a9a8bf-bcc9-4c1e-94ff-ef40aa69dd21 status=SUCCESS
+2026-07-10T17:20:16.180Z  INFO 2465 --- [           main] c.j.b.p.a.PatientSimilarityService       : Checking duplicates for patient: Patient Clinique A (ID: f9fe2ff6-58f6-4c90-aed3-1fca184270a2)
+--
+2026-07-10T17:20:16.265Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=ac99e594-2a95-4455-8936-bb593a391342 action=CREATE_PATIENT patient=259a5c0d-acba-4a02-b59b-3f74d7cd3961 status=SUCCESS
+2026-07-10T17:20:16.273Z  INFO 2465 --- [           main] c.j.b.p.a.PatientSimilarityService       : Checking duplicates for patient: Bob B (ID: e12460f4-a2dc-4959-b360-67168f7832ef)
+2026-07-10T17:20:16.275Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=0092e9fb-76c8-4703-8bb3-cbb011321c64 action=CREATE_PATIENT patient=e12460f4-a2dc-4959-b360-67168f7832ef status=SUCCESS
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.160 s -- in com.joprelys.backend.patient.api.PatientControllerTest
+[INFO] Running STORY-1102 — Sécurité IDOR Portail Patient (OWASP A01)
+2026-07-10T17:20:16.301Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.PatientIdorSecurityTest]: PatientIdorSecurityTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:16.302Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.PatientIdorSecurityTest
+2026-07-10T17:20:16.303Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.PatientIdorSecurityTest]: PatientIdorSecurityTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:16.304Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.PatientIdorSecurityTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.073 s -- in STORY-1102 — Sécurité IDOR Portail Patient (OWASP A01)
+[INFO] Running com.joprelys.backend.patient.application.PatientServiceExternalAccessTest
+2026-07-10T17:20:16.376Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.application.PatientServiceExternalAccessTest]: PatientServiceExternalAccessTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:16.396Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.application.PatientServiceExternalAccessTest
+2026-07-10T17:20:16.397Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.patient.application.PatientServiceExternalAccessTest]: PatientServiceExternalAccessTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:16.397Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.patient.application.PatientServiceExternalAccessTest
+2026-07-10T17:20:16.411Z  INFO 2465 --- [           main] .b.p.a.ExternalAccessExpirationScheduler : Expired 1 external access requests automatically.
+2026-07-10T17:20:16.424Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=a03d6c88-be6d-4ed3-847b-283756e0c6de action=EMERGENCY_DPU_ACCESS patient=a7b9b9ce-d4f4-43a5-84a6-ec72995fe6cd status=SUCCESS
+2026-07-10T17:20:16.424Z  INFO 2465 --- [           main] c.j.b.n.application.NotificationService  : [NOTIFICATION GATEWAY MOCK] Channel: EMAIL/SMS | Recipient Patient: a7b9b9ce-d4f4-43a5-84a6-ec72995fe6cd | Title: Alerte de sécurité : Accès d'urgence | Message: Le praticien doctor.a@joprelys.local a accédé à votre dossier en mode d'urgence Brise-Glace pour le motif : Suspicion d'infarctus
+2026-07-10T17:20:16.429Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=a03d6c88-be6d-4ed3-847b-283756e0c6de action=CONSULTATION patient=a7b9b9ce-d4f4-43a5-84a6-ec72995fe6cd status=SUCCESS
+2026-07-10T17:20:16.456Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=500b448a-62ac-4579-beec-134c665113fd action=CONSULTATION patient=f8987b50-f60d-4bc1-b1ee-83e5d25440ac status=SUCCESS
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.098 s -- in com.joprelys.backend.patient.application.PatientServiceExternalAccessTest
+[INFO] Running com.joprelys.backend.accounting.api.AccountingControllerTest
+2026-07-10T17:20:16.490Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.accounting.api.AccountingControllerTest
+2026-07-10T17:20:16.493Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.accounting.api.AccountingControllerTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+--
+2026-07-10T17:20:18.545Z  INFO 2465 --- [           main] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-07-10T17:20:18.545Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-11 - Shutdown initiated...
+2026-07-10T17:20:18.547Z  INFO 2465 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-11 - Shutdown completed.
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.071 s -- in com.joprelys.backend.accounting.api.AccountingControllerTest
+[INFO] Running com.joprelys.backend.database.FlywayPostgresqlMigrationTest
+2026-07-10T17:20:18.589Z  INFO 2465 --- [           main] org.testcontainers.images.PullPolicy     : Image pull policy will be performed by: DefaultPullPolicy()
+2026-07-10T17:20:18.590Z  INFO 2465 --- [           main] o.t.utility.ImageNameSubstitutor         : Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+2026-07-10T17:20:18.597Z  INFO 2465 --- [           main] org.testcontainers.DockerClientFactory   : Testcontainers version: 2.0.5
+2026-07-10T17:20:19.641Z  INFO 2465 --- [           main] o.t.d.DockerClientProviderStrategy       : Found Docker environment with local Unix socket (unix:///var/run/docker.sock)
+2026-07-10T17:20:19.643Z  INFO 2465 --- [           main] org.testcontainers.DockerClientFactory   : Docker host IP address is localhost
+2026-07-10T17:20:19.658Z  INFO 2465 --- [           main] org.testcontainers.DockerClientFactory   : Connected to docker: 
+  Server Version: 28.0.4
+  API Version: 1.48
+  Operating System: Ubuntu 24.04.4 LTS
+--
+2026-07-10T17:20:30.264Z  INFO 2465 --- [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:32769/joprelys_migration_test?loggerLevel=OFF (PostgreSQL 16.14)
+2026-07-10T17:20:30.304Z  INFO 2465 --- [           main] o.f.core.internal.command.DbValidate     : Successfully validated 54 migrations (execution time 00:00.023s)
+2026-07-10T17:20:30.349Z  INFO 2465 --- [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:32769/joprelys_migration_test?loggerLevel=OFF (PostgreSQL 16.14)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 12.19 s -- in com.joprelys.backend.database.FlywayPostgresqlMigrationTest
+[INFO] Running com.joprelys.backend.emergency.api.EmergencyControllerTest
+2026-07-10T17:20:30.758Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.emergency.api.EmergencyControllerTest]: EmergencyControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:30.777Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.emergency.api.EmergencyControllerTest
+2026-07-10T17:20:30.778Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.emergency.api.EmergencyControllerTest]: EmergencyControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:30.779Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.emergency.api.EmergencyControllerTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.087 s -- in com.joprelys.backend.emergency.api.EmergencyControllerTest
+[INFO] Running com.joprelys.backend.file.FileStorageServiceTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.087 s -- in com.joprelys.backend.file.FileStorageServiceTest
+[INFO] Running com.joprelys.backend.audit.api.AuditControllerTest
+2026-07-10T17:20:30.938Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.audit.api.AuditControllerTest]: AuditControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:30.962Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.audit.api.AuditControllerTest
+2026-07-10T17:20:30.963Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.audit.api.AuditControllerTest]: AuditControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:30.964Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.audit.api.AuditControllerTest
+2026-07-10T17:20:30.979Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=adad16a8-a97e-4d49-9dc0-b9923690a24f action=READ_AUDIT patient=61b28bea-d49c-47e2-8275-0000f2454f68 status=SUCCESS
+2026-07-10T17:20:31.076Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=c01371f5-609e-458f-b1fa-2b3b983564c7 action=READ_AUDIT patient=715f4bd3-6da7-4f7d-97e6-1d50df3834ae status=SUCCESS
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.144 s -- in com.joprelys.backend.audit.api.AuditControllerTest
+[INFO] Running com.joprelys.backend.prescription.api.PharmacyControllerTest
+2026-07-10T17:20:31.083Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.prescription.api.PharmacyControllerTest]: PharmacyControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:31.097Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.prescription.api.PharmacyControllerTest
+2026-07-10T17:20:31.098Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.prescription.api.PharmacyControllerTest]: PharmacyControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:31.099Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.prescription.api.PharmacyControllerTest
+2026-07-10T17:20:31.161Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=PHARMACY_DISPENSED patient=21977d51-61bc-4f57-b00a-1990d7fa1f7c status=SUCCESS
+2026-07-10T17:20:31.191Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=PHARMACY_VERIFIED patient=25be7c31-4cec-4200-b58f-f72384cde063 status=SUCCESS
+2026-07-10T17:20:31.212Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=PHARMACY_VERIFIED patient=339b0ccc-de11-4cd7-8906-a0ca04faf9e8 status=SUCCESS
+2026-07-10T17:20:31.234Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=PHARMACY_DISPENSED patient=a032d870-4366-46f5-8bad-588b9d390b9c status=SUCCESS
+2026-07-10T17:20:31.243Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=PHARMACY_VERIFIED patient=a032d870-4366-46f5-8bad-588b9d390b9c status=SUCCESS
+2026-07-10T17:20:31.266Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=PHARMACY_DISPENSED patient=1b773243-cb1d-4c49-bf62-0d4d868bba0d status=SUCCESS
+2026-07-10T17:20:31.275Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=PHARMACY_VERIFIED patient=1b773243-cb1d-4c49-bf62-0d4d868bba0d status=SUCCESS
+2026-07-10T17:20:31.388Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=PHARMACY_DISPENSED patient=796788a3-c25e-4b5c-8c9c-acd62c38f766 status=SUCCESS
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.319 s -- in com.joprelys.backend.prescription.api.PharmacyControllerTest
+[INFO] Running com.joprelys.backend.prescription.api.PrescriptionControllerTest
+2026-07-10T17:20:31.405Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.prescription.api.PrescriptionControllerTest]: PrescriptionControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:31.410Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.prescription.api.PrescriptionControllerTest
+2026-07-10T17:20:31.411Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.prescription.api.PrescriptionControllerTest]: PrescriptionControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:31.416Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.prescription.api.PrescriptionControllerTest
+2026-07-10T17:20:31.513Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_3305af8ea82841b2975f] Access denied: Access Denied
+2026-07-10T17:20:31.585Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=8e88572b-6572-41d9-9bcd-834de280f30d action=CANCEL_PRESCRIPTION patient=77a4fd1f-ce52-4d0a-a3db-6b8afedd0664 status=SUCCESS
+2026-07-10T17:20:31.716Z  INFO 2465 --- [           main] c.j.b.p.application.AlloPharmaClient     : Simulating teletransmission to AllôPharma for prescription: TX-DOC-GOOD
+2026-07-10T17:20:31.716Z  INFO 2465 --- [           main] c.j.b.p.application.AlloPharmaClient     : AllôPharma Payload Sent: {"prescriptionNumber":"TX-DOC-GOOD","doctorName":"Dr. Alpha","organizationId":"5b24254b-a410-4d27-be45-d7be9c04c38a","items":[]}
+2026-07-10T17:20:31.716Z  INFO 2465 --- [           main] c.j.b.p.application.AlloPharmaClient     : AllôPharma Teletransmission SUCCESS
+2026-07-10T17:20:31.717Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=2122f315-06e7-43e7-90fb-4162ae83bd40 action=TRANSMIT_PRESCRIPTION patient=34f984e7-2923-4aac-9929-e9a1c1b8d2a5 status=SUCCESS
+2026-07-10T17:20:31.784Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=9a984893-7ff0-437d-a7fd-0015a6072aa6 action=GENERATE_PRESCRIPTION_DOCUMENT patient=a4098dd2-9aca-414a-a6a2-680e7dec345c status=SUCCESS
+2026-07-10T17:20:31.826Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_6480b20865904286a70d] Access denied: Access Denied
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.465 s -- in com.joprelys.backend.prescription.api.PrescriptionControllerTest
+[INFO] Running com.joprelys.backend.visit.api.DocumentControllerTest
+2026-07-10T17:20:31.871Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.visit.api.DocumentControllerTest]: DocumentControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:31.886Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.visit.api.DocumentControllerTest
+2026-07-10T17:20:31.886Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.visit.api.DocumentControllerTest]: DocumentControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:31.887Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.visit.api.DocumentControllerTest
+2026-07-10T17:20:32.002Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=be0b5097-cbf9-4576-8b46-0e34695e4c47 action=GENERATE_PRESCRIPTION_DOCUMENT patient=29618648-cc28-4ca6-8a75-41225e5e1a2c status=SUCCESS
+2026-07-10T17:20:32.047Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=be0b5097-cbf9-4576-8b46-0e34695e4c47 action=GENERATE_DOCUMENT patient=29618648-cc28-4ca6-8a75-41225e5e1a2c status=SUCCESS
+2026-07-10T17:20:32.072Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_12ccc0a2f0b94e3d91ab] Access denied: Access Denied
+2026-07-10T17:20:32.093Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=41c124a8-16e3-48a1-aff2-41d3f93acfae action=DOWNLOAD_DOCUMENT patient=5f03b54d-f5fb-4946-8c47-aaf66e45b0e3 status=SUCCESS
+2026-07-10T17:20:32.096Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=bfcb9c9c-1ae9-41cf-9f1f-89ea89e58e70 action=DOWNLOAD_DOCUMENT patient=5f03b54d-f5fb-4946-8c47-aaf66e45b0e3 status=SUCCESS
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.229 s -- in com.joprelys.backend.visit.api.DocumentControllerTest
+[INFO] Running com.joprelys.backend.visit.api.DocumentRevocationControllerTest
+2026-07-10T17:20:32.105Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.visit.api.DocumentRevocationControllerTest]: DocumentRevocationControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:32.106Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.visit.api.DocumentRevocationControllerTest
+2026-07-10T17:20:32.107Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.visit.api.DocumentRevocationControllerTest]: DocumentRevocationControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:32.109Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.visit.api.DocumentRevocationControllerTest
+2026-07-10T17:20:32.131Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_0cdabd4e0a3b4a15a6bd] Access denied: Access Denied
+2026-07-10T17:20:32.154Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=b17ee229-0079-462c-ba42-2c0203f30ee1 action=REVOKE_DOCUMENT patient=7c86f77a-c2da-4808-8592-e0ac807b4408 status=SUCCESS
+2026-07-10T17:20:32.172Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=daba853a-bb02-47d4-8653-7c62a494d2df action=CANCEL_DOCUMENT patient=2eb68b75-b1b2-4fdf-b252-f44cae5481dd status=SUCCESS
+2026-07-10T17:20:32.187Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=be69822a-b052-4724-935a-d27e856add6b action=REVOKE_DOCUMENT patient=f913789b-2163-443d-86c7-2572d25867df status=SUCCESS
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.092 s -- in com.joprelys.backend.visit.api.DocumentRevocationControllerTest
+[INFO] Running com.joprelys.backend.visit.api.VisitControllerTest
+2026-07-10T17:20:32.198Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.visit.api.VisitControllerTest]: VisitControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:32.202Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.visit.api.VisitControllerTest
+2026-07-10T17:20:32.202Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.visit.api.VisitControllerTest]: VisitControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:32.203Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.visit.api.VisitControllerTest
+2026-07-10T17:20:32.238Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_e4458065e8e646cd8c7f] Access denied: Access Denied
+2026-07-10T17:20:32.366Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=54ada912-449c-4ebb-8f4b-df8cca3bca89 action=GENERATE_DOCUMENT patient=b6f79305-660c-4816-b98e-81cabac7dd75 status=SUCCESS
+2026-07-10T17:20:32.381Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_e3d0c884833e417a9067] Access denied: Access Denied
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.214 s -- in com.joprelys.backend.visit.api.VisitControllerTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[ERROR] Errors: 
+[ERROR]   CashierCollectionQueueControllerTest.setUp:82 » DataIntegrityViolation StatementCallback; SQL [DELETE FROM patients]; Referential integrity constraint violation: "CONSTRAINT_96E: PUBLIC.VISITS FOREIGN KEY(PATIENT_ID) REFERENCES PUBLIC.PATIENTS(ID) (UUID '69d0e609-6892-497f-8116-846b7a1f2acd')"; SQL statement:
+DELETE FROM patients [23503-240]
+[ERROR]   CashierCollectionQueueControllerTest.setUp:82 » DataIntegrityViolation StatementCallback; SQL [DELETE FROM patients]; Referential integrity constraint violation: "CONSTRAINT_96E: PUBLIC.VISITS FOREIGN KEY(PATIENT_ID) REFERENCES PUBLIC.PATIENTS(ID) (UUID '69d0e609-6892-497f-8116-846b7a1f2acd')"; SQL statement:
+DELETE FROM patients [23503-240]
+[ERROR]   CashierCollectionQueueControllerTest.setUp:82 » DataIntegrityViolation StatementCallback; SQL [DELETE FROM patients]; Referential integrity constraint violation: "CONSTRAINT_96E: PUBLIC.VISITS FOREIGN KEY(PATIENT_ID) REFERENCES PUBLIC.PATIENTS(ID) (UUID '69d0e609-6892-497f-8116-846b7a1f2acd')"; SQL statement:
+DELETE FROM patients [23503-240]
+[INFO] 
+[ERROR] Tests run: 287, Failures: 0, Errors: 3, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  01:46 min
+[INFO] Finished at: 2026-07-10T17:20:32Z
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.6:test (default-test) on project joprelys-backend: 
+[ERROR] 
+[ERROR] See /home/runner/work/joprelys-connect/joprelys-connect/backend/target/surefire-reports for the individual test results.
+[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+
+=== MAVEN TAIL ===
+2026-07-10T17:20:22.460Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  9 pending,  2 downloaded,  0 extracted, (1 KB/? MB)
+2026-07-10T17:20:22.483Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  8 pending,  3 downloaded,  0 extracted, (16 KB/? MB)
+2026-07-10T17:20:22.533Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  8 pending,  3 downloaded,  1 extracted, (16 KB/? MB)
+2026-07-10T17:20:22.557Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  7 pending,  4 downloaded,  1 extracted, (33 KB/? MB)
+2026-07-10T17:20:22.564Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  6 pending,  5 downloaded,  1 extracted, (568 KB/? MB)
+2026-07-10T17:20:22.624Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  6 pending,  5 downloaded,  2 extracted, (1 MB/? MB)
+2026-07-10T17:20:22.639Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  5 pending,  6 downloaded,  2 extracted, (1 MB/? MB)
+2026-07-10T17:20:22.649Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  5 pending,  6 downloaded,  3 extracted, (1 MB/? MB)
+2026-07-10T17:20:22.655Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  4 pending,  7 downloaded,  3 extracted, (1 MB/? MB)
+2026-07-10T17:20:22.678Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  4 pending,  7 downloaded,  4 extracted, (15 MB/? MB)
+2026-07-10T17:20:22.732Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  3 pending,  8 downloaded,  4 extracted, (15 MB/? MB)
+2026-07-10T17:20:22.750Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  2 pending,  9 downloaded,  4 extracted, (15 MB/? MB)
+2026-07-10T17:20:23.005Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  1 pending, 10 downloaded,  4 extracted, (98 MB/? MB)
+2026-07-10T17:20:26.640Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  1 pending, 10 downloaded,  5 extracted, (106 MB/? MB)
+2026-07-10T17:20:26.657Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  1 pending, 10 downloaded,  6 extracted, (106 MB/? MB)
+2026-07-10T17:20:26.682Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  1 pending, 10 downloaded,  7 extracted, (106 MB/? MB)
+2026-07-10T17:20:26.695Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  1 pending, 10 downloaded,  8 extracted, (106 MB/? MB)
+2026-07-10T17:20:26.706Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  1 pending, 10 downloaded,  9 extracted, (106 MB/? MB)
+2026-07-10T17:20:26.715Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pulling image layers:  1 pending, 10 downloaded, 10 extracted, (106 MB/? MB)
+2026-07-10T17:20:26.721Z  INFO 2465 --- [           main] tc.postgres:16-alpine                    : Image postgres:16-alpine pull took PT4.883988136S
+2026-07-10T17:20:26.721Z  INFO 2465 --- [ream--180489640] tc.postgres:16-alpine                    : Pull complete. 11 layers, pulled in 4s (downloaded 106 MB at 26 MB/s)
+2026-07-10T17:20:26.723Z  INFO 2465 --- [           main] tc.postgres:16-alpine                    : Creating container for image: postgres:16-alpine
+2026-07-10T17:20:26.736Z  INFO 2465 --- [           main] tc.postgres:16-alpine                    : Container postgres:16-alpine is starting: d61a4f551448e1cb3877b607c36b4114865889335265b6161f150a9984895713
+2026-07-10T17:20:28.774Z  INFO 2465 --- [           main] tc.postgres:16-alpine                    : Container postgres:16-alpine started in PT2.050455876S
+2026-07-10T17:20:28.775Z  INFO 2465 --- [           main] tc.postgres:16-alpine                    : Container is started (JDBC URL: jdbc:postgresql://localhost:32769/joprelys_migration_test?loggerLevel=OFF)
+2026-07-10T17:20:29.050Z  INFO 2465 --- [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:32769/joprelys_migration_test?loggerLevel=OFF (PostgreSQL 16.14)
+2026-07-10T17:20:29.095Z  INFO 2465 --- [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table "public"."flyway_schema_history" does not exist yet
+2026-07-10T17:20:29.096Z  INFO 2465 --- [           main] o.f.core.internal.command.DbValidate     : Successfully validated 54 migrations (execution time 00:00.019s)
+2026-07-10T17:20:29.109Z  INFO 2465 --- [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table "public"."flyway_schema_history" ...
+2026-07-10T17:20:29.155Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": << Empty Schema >>
+2026-07-10T17:20:29.166Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "1 - create users and auth audit"
+2026-07-10T17:20:29.209Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "2 - create organizations table"
+2026-07-10T17:20:29.236Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "3 - create patients table"
+2026-07-10T17:20:29.261Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "4 - create visits table"
+2026-07-10T17:20:29.285Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "5 - create vitals table"
+2026-07-10T17:20:29.299Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "6 - create consultation table"
+2026-07-10T17:20:29.320Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "7 - create prescription table"
+2026-07-10T17:20:29.341Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "8 - create medical documents table"
+2026-07-10T17:20:29.358Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "9 - add revocation to medical documents"
+2026-07-10T17:20:29.367Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "10 - create audit logs table"
+2026-07-10T17:20:29.381Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "11 - create patient consents and emergency access"
+2026-07-10T17:20:29.400Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "12 - create lab orders table"
+2026-07-10T17:20:29.418Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "13 - create lab results table"
+2026-07-10T17:20:29.436Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "14 - add pharmacy fields and tables"
+2026-07-10T17:20:29.461Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "15 - repair pharmacy schema validation"
+2026-07-10T17:20:29.465Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "prescription_number" of relation "prescriptions" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.466Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "pin_code" of relation "prescriptions" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.467Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "status" of relation "prescriptions" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.467Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "expires_at" of relation "prescriptions" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.470Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: relation "prescription_dispensations" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+2026-07-10T17:20:29.470Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: relation "dispensation_items" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+2026-07-10T17:20:29.471Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: relation "idx_prescription_dispensations_prescription_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+2026-07-10T17:20:29.472Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: relation "idx_dispensation_items_dispensation_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+2026-07-10T17:20:29.472Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: relation "idx_dispensation_items_prescription_item_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+2026-07-10T17:20:29.479Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "16 - repair lab results schema validation"
+2026-07-10T17:20:29.480Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "result_number" of relation "lab_results" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.481Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "lab_order_id" of relation "lab_results" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.481Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "patient_id" of relation "lab_results" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.482Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "organization_id" of relation "lab_results" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.482Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "validator_name" of relation "lab_results" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.483Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "analyte_name" of relation "lab_results" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.487Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "result_value" of relation "lab_results" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.487Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "unit" of relation "lab_results" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.488Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "reference_range" of relation "lab_results" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.488Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "interpretation" of relation "lab_results" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.489Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "comment" of relation "lab_results" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.489Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "pdf_file_path" of relation "lab_results" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.491Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "sample_collected_at" of relation "lab_results" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.492Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "result_at" of relation "lab_results" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.492Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "validated_at" of relation "lab_results" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.493Z  WARN 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: column "created_at" of relation "lab_results" already exists, skipping (SQL State: 42701 - Error Code: 0)
+2026-07-10T17:20:29.508Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "17 - create drug stocks table"
+2026-07-10T17:20:29.529Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "18 - create allergies and history tables"
+2026-07-10T17:20:29.558Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "19 - create hospitalizations tables"
+2026-07-10T17:20:29.583Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "20 - create external access requests table"
+2026-07-10T17:20:29.605Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "21 - create notifications table"
+2026-07-10T17:20:29.621Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "22 - add teletransmission to prescriptions"
+2026-07-10T17:20:29.632Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "23 - granular scopes and validation channel"
+2026-07-10T17:20:29.644Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "24 - patient duplicates schema"
+2026-07-10T17:20:29.661Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "25 - add blood group and email to patients"
+2026-07-10T17:20:29.668Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "26 - create patient vaccinations table"
+2026-07-10T17:20:29.683Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "27 - webhooks schema"
+2026-07-10T17:20:29.696Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "28 - create organization extensions and api keys"
+2026-07-10T17:20:29.714Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "29 - add last login to users"
+2026-07-10T17:20:29.720Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "31 - visits consultations cdc alignment"
+2026-07-10T17:20:29.742Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "32 - allergies history soft delete important"
+2026-07-10T17:20:29.752Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "33 - prescriptions cdc alignment"
+2026-07-10T17:20:29.768Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "34 - lab orders cdc alignment"
+2026-07-10T17:20:29.781Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "35 - lab results cdc alignment"
+2026-07-10T17:20:29.801Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "36 - hospitalizations cdc alignment"
+2026-07-10T17:20:29.824Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "37 - medical documents cdc alignment"
+2026-07-10T17:20:29.836Z  INFO 2465 --- [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: constraint "chk_medical_document_status" of relation "medical_documents" does not exist, skipping
+2026-07-10T17:20:29.843Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "38 - consents external access cdc alignment"
+2026-07-10T17:20:29.861Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "39 - fix medical documents h2 unique constraint"
+2026-07-10T17:20:29.867Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "40 - fix lab results result number uniqueness"
+=== POSTGRES/DEFAULT LAB RESULTS COMPOSITE UNIQUE INDEX CREATED SUCCESSFULLY ===
+2026-07-10T17:20:29.879Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "41 - enrich users and organizations profile"
+2026-07-10T17:20:29.890Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "42 - create patient pre registrations"
+2026-07-10T17:20:29.903Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "43 - create emergencies and reception tables"
+2026-07-10T17:20:29.938Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "44 - create spatial tables"
+2026-07-10T17:20:29.967Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "45 - create billing tables"
+2026-07-10T17:20:29.998Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "46 - hospitalization complete stay tables"
+2026-07-10T17:20:30.014Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "47 - hospitalization care meds consumables"
+2026-07-10T17:20:30.045Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "48 - operating reports implants"
+2026-07-10T17:20:30.073Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "49 - billing estimates receivables"
+2026-07-10T17:20:30.105Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "50 - add estimate and credit note sequences"
+2026-07-10T17:20:30.113Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "51 - create cash register tables"
+2026-07-10T17:20:30.151Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "52 - create insurance bordereaux table"
+2026-07-10T17:20:30.168Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "53 - create receivable reminders table"
+2026-07-10T17:20:30.179Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "54 - add cash session resolution fields"
+2026-07-10T17:20:30.190Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "55 - billing amounts float to numeric"
+2026-07-10T17:20:30.242Z  INFO 2465 --- [           main] o.f.core.internal.command.DbMigrate      : Successfully applied 54 migrations to schema "public", now at version v55 (execution time 00:00.725s)
+2026-07-10T17:20:30.264Z  INFO 2465 --- [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:32769/joprelys_migration_test?loggerLevel=OFF (PostgreSQL 16.14)
+2026-07-10T17:20:30.304Z  INFO 2465 --- [           main] o.f.core.internal.command.DbValidate     : Successfully validated 54 migrations (execution time 00:00.023s)
+2026-07-10T17:20:30.349Z  INFO 2465 --- [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:32769/joprelys_migration_test?loggerLevel=OFF (PostgreSQL 16.14)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 12.19 s -- in com.joprelys.backend.database.FlywayPostgresqlMigrationTest
+[INFO] Running com.joprelys.backend.emergency.api.EmergencyControllerTest
+2026-07-10T17:20:30.758Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.emergency.api.EmergencyControllerTest]: EmergencyControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:30.777Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.emergency.api.EmergencyControllerTest
+2026-07-10T17:20:30.778Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.emergency.api.EmergencyControllerTest]: EmergencyControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:30.779Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.emergency.api.EmergencyControllerTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.087 s -- in com.joprelys.backend.emergency.api.EmergencyControllerTest
+[INFO] Running com.joprelys.backend.file.FileStorageServiceTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.087 s -- in com.joprelys.backend.file.FileStorageServiceTest
+[INFO] Running com.joprelys.backend.audit.api.AuditControllerTest
+2026-07-10T17:20:30.938Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.audit.api.AuditControllerTest]: AuditControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:30.962Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.audit.api.AuditControllerTest
+2026-07-10T17:20:30.963Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.audit.api.AuditControllerTest]: AuditControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:30.964Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.audit.api.AuditControllerTest
+2026-07-10T17:20:30.979Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=adad16a8-a97e-4d49-9dc0-b9923690a24f action=READ_AUDIT patient=61b28bea-d49c-47e2-8275-0000f2454f68 status=SUCCESS
+2026-07-10T17:20:31.076Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=c01371f5-609e-458f-b1fa-2b3b983564c7 action=READ_AUDIT patient=715f4bd3-6da7-4f7d-97e6-1d50df3834ae status=SUCCESS
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.144 s -- in com.joprelys.backend.audit.api.AuditControllerTest
+[INFO] Running com.joprelys.backend.prescription.api.PharmacyControllerTest
+2026-07-10T17:20:31.083Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.prescription.api.PharmacyControllerTest]: PharmacyControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:31.097Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.prescription.api.PharmacyControllerTest
+2026-07-10T17:20:31.098Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.prescription.api.PharmacyControllerTest]: PharmacyControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:31.099Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.prescription.api.PharmacyControllerTest
+2026-07-10T17:20:31.161Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=PHARMACY_DISPENSED patient=21977d51-61bc-4f57-b00a-1990d7fa1f7c status=SUCCESS
+2026-07-10T17:20:31.191Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=PHARMACY_VERIFIED patient=25be7c31-4cec-4200-b58f-f72384cde063 status=SUCCESS
+2026-07-10T17:20:31.212Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=PHARMACY_VERIFIED patient=339b0ccc-de11-4cd7-8906-a0ca04faf9e8 status=SUCCESS
+2026-07-10T17:20:31.234Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=PHARMACY_DISPENSED patient=a032d870-4366-46f5-8bad-588b9d390b9c status=SUCCESS
+2026-07-10T17:20:31.243Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=PHARMACY_VERIFIED patient=a032d870-4366-46f5-8bad-588b9d390b9c status=SUCCESS
+2026-07-10T17:20:31.266Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=PHARMACY_DISPENSED patient=1b773243-cb1d-4c49-bf62-0d4d868bba0d status=SUCCESS
+2026-07-10T17:20:31.275Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=PHARMACY_VERIFIED patient=1b773243-cb1d-4c49-bf62-0d4d868bba0d status=SUCCESS
+2026-07-10T17:20:31.388Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=null action=PHARMACY_DISPENSED patient=796788a3-c25e-4b5c-8c9c-acd62c38f766 status=SUCCESS
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.319 s -- in com.joprelys.backend.prescription.api.PharmacyControllerTest
+[INFO] Running com.joprelys.backend.prescription.api.PrescriptionControllerTest
+2026-07-10T17:20:31.405Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.prescription.api.PrescriptionControllerTest]: PrescriptionControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:31.410Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.prescription.api.PrescriptionControllerTest
+2026-07-10T17:20:31.411Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.prescription.api.PrescriptionControllerTest]: PrescriptionControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:31.416Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.prescription.api.PrescriptionControllerTest
+2026-07-10T17:20:31.513Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_3305af8ea82841b2975f] Access denied: Access Denied
+2026-07-10T17:20:31.585Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=8e88572b-6572-41d9-9bcd-834de280f30d action=CANCEL_PRESCRIPTION patient=77a4fd1f-ce52-4d0a-a3db-6b8afedd0664 status=SUCCESS
+2026-07-10T17:20:31.716Z  INFO 2465 --- [           main] c.j.b.p.application.AlloPharmaClient     : Simulating teletransmission to AllôPharma for prescription: TX-DOC-GOOD
+2026-07-10T17:20:31.716Z  INFO 2465 --- [           main] c.j.b.p.application.AlloPharmaClient     : AllôPharma Payload Sent: {"prescriptionNumber":"TX-DOC-GOOD","doctorName":"Dr. Alpha","organizationId":"5b24254b-a410-4d27-be45-d7be9c04c38a","items":[]}
+2026-07-10T17:20:31.716Z  INFO 2465 --- [           main] c.j.b.p.application.AlloPharmaClient     : AllôPharma Teletransmission SUCCESS
+2026-07-10T17:20:31.717Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=2122f315-06e7-43e7-90fb-4162ae83bd40 action=TRANSMIT_PRESCRIPTION patient=34f984e7-2923-4aac-9929-e9a1c1b8d2a5 status=SUCCESS
+2026-07-10T17:20:31.784Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=9a984893-7ff0-437d-a7fd-0015a6072aa6 action=GENERATE_PRESCRIPTION_DOCUMENT patient=a4098dd2-9aca-414a-a6a2-680e7dec345c status=SUCCESS
+2026-07-10T17:20:31.826Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_6480b20865904286a70d] Access denied: Access Denied
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.465 s -- in com.joprelys.backend.prescription.api.PrescriptionControllerTest
+[INFO] Running com.joprelys.backend.visit.api.DocumentControllerTest
+2026-07-10T17:20:31.871Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.visit.api.DocumentControllerTest]: DocumentControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:31.886Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.visit.api.DocumentControllerTest
+2026-07-10T17:20:31.886Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.visit.api.DocumentControllerTest]: DocumentControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:31.887Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.visit.api.DocumentControllerTest
+2026-07-10T17:20:32.002Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=be0b5097-cbf9-4576-8b46-0e34695e4c47 action=GENERATE_PRESCRIPTION_DOCUMENT patient=29618648-cc28-4ca6-8a75-41225e5e1a2c status=SUCCESS
+2026-07-10T17:20:32.047Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=be0b5097-cbf9-4576-8b46-0e34695e4c47 action=GENERATE_DOCUMENT patient=29618648-cc28-4ca6-8a75-41225e5e1a2c status=SUCCESS
+2026-07-10T17:20:32.072Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_12ccc0a2f0b94e3d91ab] Access denied: Access Denied
+2026-07-10T17:20:32.093Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=41c124a8-16e3-48a1-aff2-41d3f93acfae action=DOWNLOAD_DOCUMENT patient=5f03b54d-f5fb-4946-8c47-aaf66e45b0e3 status=SUCCESS
+2026-07-10T17:20:32.096Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=bfcb9c9c-1ae9-41cf-9f1f-89ea89e58e70 action=DOWNLOAD_DOCUMENT patient=5f03b54d-f5fb-4946-8c47-aaf66e45b0e3 status=SUCCESS
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.229 s -- in com.joprelys.backend.visit.api.DocumentControllerTest
+[INFO] Running com.joprelys.backend.visit.api.DocumentRevocationControllerTest
+2026-07-10T17:20:32.105Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.visit.api.DocumentRevocationControllerTest]: DocumentRevocationControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:32.106Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.visit.api.DocumentRevocationControllerTest
+2026-07-10T17:20:32.107Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.visit.api.DocumentRevocationControllerTest]: DocumentRevocationControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:32.109Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.visit.api.DocumentRevocationControllerTest
+2026-07-10T17:20:32.131Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_0cdabd4e0a3b4a15a6bd] Access denied: Access Denied
+2026-07-10T17:20:32.154Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=b17ee229-0079-462c-ba42-2c0203f30ee1 action=REVOKE_DOCUMENT patient=7c86f77a-c2da-4808-8592-e0ac807b4408 status=SUCCESS
+2026-07-10T17:20:32.172Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=daba853a-bb02-47d4-8653-7c62a494d2df action=CANCEL_DOCUMENT patient=2eb68b75-b1b2-4fdf-b252-f44cae5481dd status=SUCCESS
+2026-07-10T17:20:32.187Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=be69822a-b052-4724-935a-d27e856add6b action=REVOKE_DOCUMENT patient=f913789b-2163-443d-86c7-2572d25867df status=SUCCESS
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.092 s -- in com.joprelys.backend.visit.api.DocumentRevocationControllerTest
+[INFO] Running com.joprelys.backend.visit.api.VisitControllerTest
+2026-07-10T17:20:32.198Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.visit.api.VisitControllerTest]: VisitControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:32.202Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.visit.api.VisitControllerTest
+2026-07-10T17:20:32.202Z  INFO 2465 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.joprelys.backend.visit.api.VisitControllerTest]: VisitControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-10T17:20:32.203Z  INFO 2465 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.joprelys.backend.JoprelysBackendApplication for test class com.joprelys.backend.visit.api.VisitControllerTest
+2026-07-10T17:20:32.238Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_e4458065e8e646cd8c7f] Access denied: Access Denied
+2026-07-10T17:20:32.366Z  INFO 2465 --- [           main] c.j.b.a.application.AuditServiceImpl     : AUDIT LOG: actor=54ada912-449c-4ebb-8f4b-df8cca3bca89 action=GENERATE_DOCUMENT patient=b6f79305-660c-4816-b98e-81cabac7dd75 status=SUCCESS
+2026-07-10T17:20:32.381Z  WARN 2465 --- [           main] c.j.b.common.api.GlobalExceptionHandler  : [trace_id=trc_e3d0c884833e417a9067] Access denied: Access Denied
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.214 s -- in com.joprelys.backend.visit.api.VisitControllerTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[ERROR] Errors: 
+[ERROR]   CashierCollectionQueueControllerTest.setUp:82 » DataIntegrityViolation StatementCallback; SQL [DELETE FROM patients]; Referential integrity constraint violation: "CONSTRAINT_96E: PUBLIC.VISITS FOREIGN KEY(PATIENT_ID) REFERENCES PUBLIC.PATIENTS(ID) (UUID '69d0e609-6892-497f-8116-846b7a1f2acd')"; SQL statement:
+DELETE FROM patients [23503-240]
+[ERROR]   CashierCollectionQueueControllerTest.setUp:82 » DataIntegrityViolation StatementCallback; SQL [DELETE FROM patients]; Referential integrity constraint violation: "CONSTRAINT_96E: PUBLIC.VISITS FOREIGN KEY(PATIENT_ID) REFERENCES PUBLIC.PATIENTS(ID) (UUID '69d0e609-6892-497f-8116-846b7a1f2acd')"; SQL statement:
+DELETE FROM patients [23503-240]
+[ERROR]   CashierCollectionQueueControllerTest.setUp:82 » DataIntegrityViolation StatementCallback; SQL [DELETE FROM patients]; Referential integrity constraint violation: "CONSTRAINT_96E: PUBLIC.VISITS FOREIGN KEY(PATIENT_ID) REFERENCES PUBLIC.PATIENTS(ID) (UUID '69d0e609-6892-497f-8116-846b7a1f2acd')"; SQL statement:
+DELETE FROM patients [23503-240]
+[INFO] 
+[ERROR] Tests run: 287, Failures: 0, Errors: 3, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  01:46 min
+[INFO] Finished at: 2026-07-10T17:20:32Z
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.6:test (default-test) on project joprelys-backend: 
+[ERROR] 
+[ERROR] See /home/runner/work/joprelys-connect/joprelys-connect/backend/target/surefire-reports for the individual test results.
+[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

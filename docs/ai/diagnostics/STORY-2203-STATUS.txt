@@ -1,0 +1,3 @@
+angular_build_status=1
+angular_test_status=1
+maven_status=1
