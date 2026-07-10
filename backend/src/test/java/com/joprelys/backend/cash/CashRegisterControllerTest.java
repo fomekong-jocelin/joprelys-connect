@@ -162,6 +162,12 @@ public class CashRegisterControllerTest {
 
     @Test
     void testOpenCloseSessionAndMovements() throws Exception {
+        // La facture doit être validée avant tout encaissement.
+        mockMvc.perform(post("/api/invoices/" + invoice.getId() + "/validate")
+                        .header("Authorization", "Bearer " + tokenAdmin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("VALIDATED"));
+
         // 1. Essayer de payer la facture sans session ouverte -> 409 CONFLICT
         PaymentRequest payReq = new PaymentRequest(
                 new java.math.BigDecimal("15000.0000"),

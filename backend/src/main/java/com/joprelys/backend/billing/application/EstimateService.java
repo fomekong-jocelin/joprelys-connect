@@ -28,15 +28,18 @@ public class EstimateService {
     private final CreditNoteRepository creditNoteRepository;
     private final ReceivableRepository receivableRepository;
     private final InvoiceRepository invoiceRepository;
+    private final InvoiceFinancialStateService financialStateService;
 
     public EstimateService(EstimateRepository estimateRepository,
                            CreditNoteRepository creditNoteRepository,
                            ReceivableRepository receivableRepository,
-                           InvoiceRepository invoiceRepository) {
+                           InvoiceRepository invoiceRepository,
+                           InvoiceFinancialStateService financialStateService) {
         this.estimateRepository = estimateRepository;
         this.creditNoteRepository = creditNoteRepository;
         this.receivableRepository = receivableRepository;
         this.invoiceRepository = invoiceRepository;
+        this.financialStateService = financialStateService;
     }
 
     // ─── Devis / Proforma ──────────────────────────────────────────────────────
@@ -85,29 +88,26 @@ public class EstimateService {
     @Transactional
     public InvoiceResponse validateInvoice(UUID invoiceId, UUID validatorUserId) {
         InvoiceEntity invoice = findInvoiceOrThrow(invoiceId);
-        if (invoice.getStatus() == InvoiceStatus.VALIDATED || invoice.getStatus() == InvoiceStatus.CANCELLED) {
+        if (invoice.getStatus() != InvoiceStatus.PENDING) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "La facture est déjà " + invoice.getStatus().name().toLowerCase() + " et ne peut plus être modifiée.");
+                "Seule une facture en attente peut être validée. Statut actuel : " + invoice.getStatus().name() + ".");
         }
         invoice.setStatus(InvoiceStatus.VALIDATED);
         invoice.setValidatedAt(Instant.now());
         invoice.setValidatedByUserId(validatorUserId);
         invoiceRepository.save(invoice);
 
-        // Créer les créances patient + assurance si inexistantes
-        List<ReceivableEntity> existing = receivableRepository.findByInvoiceId(invoiceId);
-        if (existing.isEmpty()) {
-            createReceivablesForInvoice(invoice);
-        }
+        financialStateService.initializeReceivables(invoice);
+        financialStateService.synchronize(invoice);
         return InvoiceResponse.fromEntity(invoice);
     }
 
     @Transactional
     public InvoiceResponse cancelInvoice(UUID invoiceId) {
         InvoiceEntity invoice = findInvoiceOrThrow(invoiceId);
-        if (invoice.getStatus() == InvoiceStatus.VALIDATED) {
+        if (invoice.getStatus() != InvoiceStatus.PENDING) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "Une facture validée ne peut pas être annulée directement. Créez un avoir.");
+                "Seule une facture en attente peut être annulée directement. Créez un avoir pour une facture validée ou réglée.");
         }
         invoice.setStatus(InvoiceStatus.CANCELLED);
         invoiceRepository.save(invoice);
@@ -117,9 +117,9 @@ public class EstimateService {
     @Transactional
     public InvoiceResponse applyDiscount(UUID invoiceId, ApplyDiscountRequest request) {
         InvoiceEntity invoice = findInvoiceOrThrow(invoiceId);
-        if (invoice.getStatus() == InvoiceStatus.VALIDATED || invoice.getStatus() == InvoiceStatus.CANCELLED) {
+        if (invoice.getStatus() != InvoiceStatus.PENDING) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "Impossible d'appliquer une remise sur une facture " + invoice.getStatus().name().toLowerCase() + ".");
+                "Une remise ne peut être appliquée que sur une facture en attente. Statut actuel : " + invoice.getStatus().name() + ".");
         }
         invoice.setDiscountAmount(BigDecimal.valueOf(request.discountAmount()));
         invoice.setDiscountReason(request.discountReason());
@@ -142,8 +142,8 @@ public class EstimateService {
         CreditNoteEntity creditNote = new CreditNoteEntity(invoiceId, number, request.amount(), request.reason());
         creditNoteRepository.save(creditNote);
 
-        // Ajuster les créances si elles existent
         adjustReceivablesForCreditNote(invoice, creditAmount);
+        financialStateService.synchronize(invoice);
         return CreditNoteResponse.fromEntity(creditNote);
     }
 
@@ -189,38 +189,20 @@ public class EstimateService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Facture introuvable: " + id));
     }
 
-    private void createReceivablesForInvoice(InvoiceEntity invoice) {
-        BigDecimal patientShare = invoice.getPatientShare() != null ? invoice.getPatientShare() : BigDecimal.ZERO;
-        BigDecimal insuranceShare = invoice.getInsuranceShare() != null ? invoice.getInsuranceShare() : BigDecimal.ZERO;
-
-        if (patientShare.signum() > 0) {
-            ReceivableEntity patientReceivable = new ReceivableEntity(
-                invoice.getId(), "PATIENT", invoice.getPatientId(), patientShare
-            );
-            receivableRepository.save(patientReceivable);
-        }
-        if (insuranceShare.signum() > 0 && invoice.getInsuranceConvention() != null) {
-            ReceivableEntity insuranceReceivable = new ReceivableEntity(
-                invoice.getId(), "INSURANCE",
-                invoice.getInsuranceConvention().getId(), insuranceShare
-            );
-            receivableRepository.save(insuranceReceivable);
-        }
-    }
-
     private void adjustReceivablesForCreditNote(InvoiceEntity invoice, BigDecimal creditAmount) {
         List<ReceivableEntity> receivables = receivableRepository.findByInvoiceId(invoice.getId());
         if (receivables.isEmpty()) return;
 
         BigDecimal remaining = creditAmount;
-        for (ReceivableEntity r : receivables) {
+        for (ReceivableEntity receivable : receivables) {
             if (remaining.signum() <= 0) break;
-            BigDecimal reducible = r.getTotalAmount().subtract(r.getPaidAmount()).max(BigDecimal.ZERO);
+            BigDecimal reducible = receivable.getTotalAmount()
+                    .subtract(receivable.getPaidAmount())
+                    .max(BigDecimal.ZERO);
             BigDecimal reduction = remaining.min(reducible);
-            r.setPaidAmount(r.getPaidAmount().add(reduction));
+            receivable.setPaidAmount(receivable.getPaidAmount().add(reduction));
             remaining = remaining.subtract(reduction);
-            receivableRepository.save(r);
+            receivableRepository.save(receivable);
         }
     }
 }
-

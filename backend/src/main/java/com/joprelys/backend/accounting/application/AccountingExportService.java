@@ -40,8 +40,12 @@ public class AccountingExportService {
     public String generateSage100Export(Instant start, Instant end) {
         List<AccountingLine> lines = new ArrayList<>();
 
-        // 1. Journal des Ventes (Factures VALIDATED, PAID, PARTIALLY_PAID)
-        List<InvoiceStatus> salesStatuses = List.of(InvoiceStatus.VALIDATED, InvoiceStatus.PAID, InvoiceStatus.PARTIALLY_PAID);
+        // 1. Journal des Ventes (toutes les factures validées, quel que soit leur niveau de recouvrement)
+        List<InvoiceStatus> salesStatuses = List.of(
+                InvoiceStatus.VALIDATED,
+                InvoiceStatus.PARTIALLY_PAID,
+                InvoiceStatus.PAID,
+                InvoiceStatus.SETTLED);
         for (InvoiceStatus status : salesStatuses) {
             List<InvoiceEntity> invoices = invoiceRepository.findByStatusAndCreatedAtBetweenOrderByCreatedAtDesc(status, start, end);
             for (InvoiceEntity inv : invoices) {

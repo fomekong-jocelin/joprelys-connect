@@ -88,7 +88,7 @@ export class BillingInvoiceHistoryComponent {
   canCollectPatient(invoice: Invoice): boolean {
     const summary = this.settlements[invoice.id];
     if (!summary) {
-      return invoice.status !== 'PAID' && invoice.status !== 'CANCELLED';
+      return invoice.status !== 'PAID' && invoice.status !== 'SETTLED' && invoice.status !== 'CANCELLED';
     }
     return summary.patient.status === 'UNPAID' || summary.patient.status === 'PARTIALLY_PAID';
   }
@@ -105,6 +105,8 @@ export class BillingInvoiceHistoryComponent {
         return 'bg-amber-500/15 text-amber-600 dark:text-amber-400';
       case 'INSURANCE_DUE':
         return 'bg-blue-500/15 text-blue-600 dark:text-blue-400';
+      case 'CANCELLED':
+        return 'bg-red-500/15 text-red-600 dark:text-red-400';
       default:
         return 'bg-gray-500/15 text-gray-600 dark:text-gray-400';
     }
@@ -122,6 +124,8 @@ export class BillingInvoiceHistoryComponent {
         return this.translate('billing.collection.patientDue', 'Part patient à régler');
       case 'NOT_YET_DUE':
         return this.translate('billing.collection.notYetDue', 'À valider');
+      case 'CANCELLED':
+        return this.translate('billing.collection.cancelled', 'Annulée');
       default:
         return this.translate('billing.invoiceStatus.pending', 'En attente');
     }

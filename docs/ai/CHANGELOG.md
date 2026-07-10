@@ -8,6 +8,10 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+### Changed
+
+- **Contrat d’état financier patient/assurance (STORY-2201)** : définition unique de `PAID` comme part patient soldée avec assurance encore due et de `SETTLED` comme facture totalement soldée ; centralisation des créances et transitions dans `InvoiceFinancialStateService`, synchronisation des paiements patient et assurance, protection de l’immuabilité après validation, adaptation de l’export Sage 100 et extension des contrats Angular.
+
 ### Fixed
 
 - **Baseline CI Maven/Angular (BUG-20260710-CI-BASELINE-EXECUTION)** : le pipeline rend le Maven Wrapper exécutable sur Linux et lance la commande Angular standard sans l’option invalide `--run`, afin que les suites backend/frontend et le build de production soient réellement bloquants.
