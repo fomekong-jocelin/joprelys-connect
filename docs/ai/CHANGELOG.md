@@ -8,7 +8,64 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+### Fixed
+
+- **En-tête d’hospitalisation écrasé (BUG-20260710)** : séparation responsive des informations du séjour et des actions, avec grille d’actions stable pour les libellés longs, repli en colonne sur écrans étroits, espacement interne de la carte et harmonisation du bouton PDF et du titre de séjour.
+
 ### Added
+
+- **Espace de séjour hospitalier — premier incrément EPIC-0019** : ajout d'un en-tête de séjour réutilisable, avec contexte clinique lisible (statut, numéro, service, chambre/lit, responsable, admission et motif), actions regroupées et navigation d'activités accessible. Les onglets sont maintenant internationalisés FR/EN et le composant est couvert par des tests Angular.
+  - Extraction des panneaux de transmissions, soins, administrations médicamenteuses et consommables dans des composants Angular autonomes, avec états vide/erreur, traçabilité de l'auteur et de l'horodatage, traductions FR/EN et tests dédiés.
+
+- **Tests E2E globaux, accessibilité et non-régression (STORY-2116)** : finalisation de l'EPIC-0018 avec validation du cycle financier de bout en bout et conformité accessibilité WCAG sur les écrans financiers :
+  - Enrichissement et exécution réussie du test d'intégration E2E backend `FullFinancialE2ETest.java` (cycle complet : admission → facturation → encaissement patient → bordereau assurance → règlement assurance → versement banque → clôture caisse → export Sage 100).
+  - Ajout de 3 tests RBAC vérifiant le cloisonnement des rôles `AGENT_ACCUEIL`, `CAISSIER` et `DAF` sur les opérations critiques (encaissement, mouvements de caisse, export comptable).
+  - Audit accessibilité des composants Angular financiers :
+    - Ajout d'attributs `aria-label` sur les boutons iconographiques seuls (fermeture de modales, fermeture d'alertes, suppression de ligne de facture).
+    - Ajout de `scope="col"` sur tous les en-têmes des tableaux de facturation, caisse, créances, bordereaux et pilotage DAF.
+    - Ajout d'une règle CSS `:focus-visible` globale de fallback dans `styles.css` pour garantir un anneau de focus visible sur tous les éléments interactifs.
+  - Internationalisation des libellés d'onglets précédemment codés en dur, avec ajout des clés `billing.tabCashRegister`, `billing.tabReceivables`, `billing.tabInsuranceBordereaux`, `billing.tabConventions`, `billing.tabTariffs` et `billing.tabDaf` dans `fr.json` / `en.json`.
+  - Extension de `I18nService.t()` pour accepter une valeur par défaut, facilitant l'utilisation des traductions dans les composants sans propagation explicite de la fonction `translate`.
+  - Validation globale : suite de tests JUnit backend, tests Vitest Angular (101 tests) et build de production Angular réussis.
+
+- **Pilotage DAF et Export Sage 100 (STORY-2115)** : implémentation complète de la console de supervision DAF et de l'exportation comptable au format Sage 100 (OHADA) :
+  - Création du script de migration Flyway `V54__add_cash_session_resolution_fields.sql` pour persister les résolutions d'écarts de caisse par la DAF.
+  - Enrichissement de `CashRegisterSessionEntity` (JPA) et du record `CashSessionResponse` (DTO) avec les nouveaux attributs de traitement : `discrepancyResolved`, `resolutionNotes`, `resolvedByUserId`, `resolvedAt`.
+  - Implémentation du service `AccountingExportService` générant l'exportation comptable au format d'import standard de **Sage 100 Comptabilité** (Colonnes: `Journal`, `Date` en `ddMMyy`, `CompteGeneral`, `CompteTiers`, `RefPiece`, `Libelle` sur 30 caractères maximum, `Debit`, `Credit`), incluant :
+    - Journal des Ventes (`VT`) : Écritures de Ventes (`70610000`) et Clients Patients (`41110000`) / Assurances (`41120000`).
+    - Journal de Caisse (`CA`) : Écritures de règlements Caisse (`57110000`) et Clients Patients (`41110000`).
+    - Écarts de Clôture (`CA`) : Pertes sur écarts (`65600000`) ou Gains exceptionnels (`75600000`).
+    - Journal de Banque (`BQ`) : Règlements d'assurances par bordereaux (`52110000` / `41120000`).
+    - Virements Internes (`CA` et `BQ`) : Écritures de virements internes (`58500000`).
+  - Création du contrôleur `AccountingController` et exposition de l'endpoint sécurisé `GET /api/accounting/export` générant le CSV Sage 100 pour une période donnée.
+  - Ajout des méthodes d'API Angular dans `BillingApiService` pour interroger les endpoints DAF et télécharger l'export CSV.
+  - Création du composant Angular autonome `BillingDafDashboardComponent` affichant la supervision globale des sessions de caisse, le formulaire de traitement des écarts et le module d'exportation comptable Sage 100.
+  - Intégration de l'onglet "Pilotage DAF" visible uniquement par les rôles `DAF` et `ADMIN_CLINIQUE`.
+  - Validation complète par tests d'intégration REST MockMvc (`AccountingControllerTest`) et compilation de production Angular réussis.
+
+- **Poste recouvrement et relances (STORY-2114)** : implémentation complète de la console de recouvrement de créances :
+  - Création de la table Flyway `receivable_reminders` et de l'entité JPA associée pour l'historisation des relances.
+  - Sécurisation RBAC des endpoints de relance (seuls DAF, ADMIN, SECRETAIRE autorisés).
+  - Ajout du calcul dynamique de la tranche de balance âgée (`agingSlice` : 0-30j, 31-60j, 61-90j, >90j) sur les créances retournées par l'API REST.
+  - Création de la modale Angular `BillingReminderModalComponent` permettant de consigner une relance (avec type d'action et statut) et de charger sa timeline chronologique d'historique.
+  - Refonte de `BillingReceivablesComponent` pour afficher les tranches d'ancienneté, filtrer dynamiquement les créances par tranche, et intégrer la modale.
+  - Validation par tests unitaires et tests d'intégration REST MockMvc réussis.
+
+- **Poste caissier et test E2E (STORY-2113)** : validation complète et robuste du poste caissier à travers un test d'intégration de bout en bout (`shouldExecuteFullE2EWorkflow`) simulant tout le cycle de vie financier :
+  - Facture avec tiers-payant (20% patient / 80% assurance).
+  - Paiement en espèces de la part patient par le caissier.
+  - Résolution d'un bug logique dans `InsuranceBordereauService` : inclusion des factures de statut `PAID` ayant une part assurance éligible dans la génération de bordereaux.
+  - Génération, envoi et règlement complet du bordereau d'assurance par l'admin (statut de facture `SETTLED`).
+  - Versement en banque de la caisse espèces avec référence de bordereau de dépôt.
+  - Clôture de session de caisse avec le bon solde physique et 0 écart.
+
+- **Cadrage et validation DAF (STORY-2112 à 2115)** : Formalisation et rédaction du document de validation [DAF-VALIDATION.md](file:///C:/MES-APPLICATIONS/joprelys-connect/docs/features/financial-operations-integrity/DAF-VALIDATION.md) détaillant le cycle de vie des factures avec tiers-payant, les règles de session de caisse, les tranches d'ancienneté du recouvrement et le plan de compte OHADA cible pour les imputations comptables. Préparation et découpage de la STORY-2113 en tâches Scrum prêtes pour le développement (READY).
+
+- **Synthèse de règlement tiers-payant (STORY-2112)** : ajout d'un read model backend et d'un endpoint par patient, distinguant les montants et états patient/assurance. L'historique facture utilise cet état pour afficher notamment « Assurance à recouvrer » au lieu du statut technique ambigu de facture.
+
+- **Intégrité règlement / créance (STORY-2111)** : un paiement facture synchronise désormais, dans la même transaction, la créance patient correspondante. La créance assurance reste distincte jusqu'au règlement du bordereau. Le suivi de créances peut charger tous les statuts, et l'historique facture distingue la part patient réglée lorsqu'une assurance reste à recouvrer.
+
+- **Rapprochement opérationnel de caisse (STORY-2110)** : le solde théorique de clôture distingue désormais les espèces physiques des chèques et virements. Un nouvel endpoint de synthèse expose les encaissements par moyen de règlement, les dépenses espèces et les versements banque. Les versements banque exigent une référence de bordereau et sont contraints à une sortie d'espèces. L'écran caisse affiche le détail de rapprochement avant clôture.
 
 - **Caisse recettes/dépenses, reçus et clôture journalière (STORY-2106)** :
   - Création du script de migration Flyway `V51__create_cash_register_tables.sql` définissant les tables `cash_registers`, `cash_register_sessions`, `cash_movements` et `payment_receipts`.

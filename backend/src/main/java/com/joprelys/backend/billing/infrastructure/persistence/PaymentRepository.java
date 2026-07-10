@@ -6,4 +6,5 @@ import java.util.UUID;
 
 public interface PaymentRepository extends JpaRepository<PaymentEntity, UUID> {
     List<PaymentEntity> findByInvoiceId(UUID invoiceId);
+    List<PaymentEntity> findByCreatedAtBetweenOrderByCreatedAtDesc(java.time.Instant start, java.time.Instant end);
 }

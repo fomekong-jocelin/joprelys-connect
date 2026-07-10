@@ -11,4 +11,5 @@ public interface CashRegisterSessionRepository extends JpaRepository<CashRegiste
     Optional<CashRegisterSessionEntity> findByOpenedByUserIdAndStatus(UUID openedByUserId, String status);
     List<CashRegisterSessionEntity> findByStatus(String status);
     List<CashRegisterSessionEntity> findByCashRegisterIdOrderByOpenedAtDesc(UUID cashRegisterId);
+    List<CashRegisterSessionEntity> findAllByOrderByOpenedAtDesc();
 }

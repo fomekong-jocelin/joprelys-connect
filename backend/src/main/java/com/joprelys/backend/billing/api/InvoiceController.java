@@ -3,6 +3,8 @@ package com.joprelys.backend.billing.api;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import com.joprelys.backend.billing.application.BillingService;
+import com.joprelys.backend.billing.application.BillingPaymentService;
+import com.joprelys.backend.billing.application.InvoiceSettlementQueryService;
 import com.joprelys.backend.billing.infrastructure.persistence.InvoiceEntity;
 import com.joprelys.backend.billing.infrastructure.persistence.InvoiceRepository;
 import com.joprelys.backend.billing.infrastructure.persistence.PaymentEntity;
@@ -33,6 +35,8 @@ import java.util.UUID;
 public class InvoiceController {
 
     private final BillingService billingService;
+    private final BillingPaymentService billingPaymentService;
+    private final InvoiceSettlementQueryService invoiceSettlementQueryService;
     private final InvoiceRepository invoiceRepository;
     private final PaymentRepository paymentRepository;
     private final PatientRepository patientRepository;
@@ -41,6 +45,8 @@ public class InvoiceController {
     private final QrCodeGeneratorService qrCodeGeneratorService;
 
     public InvoiceController(BillingService billingService,
+                             BillingPaymentService billingPaymentService,
+                             InvoiceSettlementQueryService invoiceSettlementQueryService,
                              InvoiceRepository invoiceRepository,
                              PaymentRepository paymentRepository,
                              PatientRepository patientRepository,
@@ -48,6 +54,8 @@ public class InvoiceController {
                              PdfGeneratorService pdfGeneratorService,
                              QrCodeGeneratorService qrCodeGeneratorService) {
         this.billingService = billingService;
+        this.billingPaymentService = billingPaymentService;
+        this.invoiceSettlementQueryService = invoiceSettlementQueryService;
         this.invoiceRepository = invoiceRepository;
         this.paymentRepository = paymentRepository;
         this.patientRepository = patientRepository;
@@ -82,6 +90,13 @@ public class InvoiceController {
         return ResponseEntity.ok(list);
     }
 
+    @GetMapping("/settlement-summaries")
+    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER', 'CAISSIER', 'DAF')")
+    @Operation(summary = "Synthèse de règlement des factures", description = "Retourne les montants dus et réglés par patient et assurance pour un patient.")
+    public ResponseEntity<List<InvoiceSettlementSummaryResponse>> listSettlementSummaries(@RequestParam UUID patientId) {
+        return ResponseEntity.ok(invoiceSettlementQueryService.listByPatient(patientId));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER')")
     @Operation(summary = "Détails d'une facture", description = "Récupère les détails d'une facture par son identifiant.")
@@ -95,7 +110,7 @@ public class InvoiceController {
     @Operation(summary = "Enregistrer un règlement", description = "Enregistre un paiement sur une facture.")
     public ResponseEntity<PaymentResponse> addPayment(@PathVariable UUID id,
                                                       @Valid @RequestBody PaymentRequest request) {
-        PaymentResponse response = billingService.addPayment(id, request);
+        PaymentResponse response = billingPaymentService.addPayment(id, request);
         return ResponseEntity.ok(response);
     }
 
@@ -103,7 +118,7 @@ public class InvoiceController {
     @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER', 'CAISSIER', 'DAF')")
     @Operation(summary = "Lister les règlements d'une facture", description = "Récupère tous les paiements enregistrés pour une facture.")
     public ResponseEntity<List<PaymentResponse>> listPayments(@PathVariable UUID id) {
-        List<PaymentResponse> list = billingService.listPayments(id);
+        List<PaymentResponse> list = billingPaymentService.listPayments(id);
         return ResponseEntity.ok(list);
     }
 

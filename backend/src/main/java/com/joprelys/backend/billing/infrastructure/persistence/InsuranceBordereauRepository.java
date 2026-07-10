@@ -13,4 +13,5 @@ public interface InsuranceBordereauRepository extends JpaRepository<InsuranceBor
     Long getNextBordereauNumberSequenceValue();
 
     List<InsuranceBordereauEntity> findByOrganizationIdOrderByCreatedAtDesc(UUID organizationId);
+    List<InsuranceBordereauEntity> findByCreatedAtBetweenOrderByCreatedAtDesc(java.time.Instant start, java.time.Instant end);
 }

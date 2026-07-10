@@ -8,4 +8,5 @@ import java.util.UUID;
 @Repository
 public interface CashMovementRepository extends JpaRepository<CashMovementEntity, UUID> {
     List<CashMovementEntity> findByCashRegisterSessionId(UUID sessionId);
+    List<CashMovementEntity> findByCreatedAtBetweenOrderByCreatedAtDesc(java.time.Instant start, java.time.Instant end);
 }

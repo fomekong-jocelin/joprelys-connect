@@ -20,8 +20,8 @@ export class I18nService {
     await this.loadLocale(this.locale());
   }
 
-  t(key: string): string {
-    return this.dictionary()[key] ?? key;
+  t(key: string, defaultValue?: string): string {
+    return this.dictionary()[key] ?? defaultValue ?? key;
   }
 
   async setLocale(lang: AppLocale): Promise<void> {

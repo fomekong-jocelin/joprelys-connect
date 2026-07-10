@@ -235,6 +235,17 @@ body {
 }
 
 /* ============================================================
+   GLOBAL FOCUS VISIBLE FALLBACK
+   Tout élément focusable bénéficie d'un anneau visible.
+   Les composants dédiés (.ui-input, .ui-button, etc.) surchargent
+   cette règle grâce à une spécificité supérieure.
+   ============================================================ */
+:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+/* ============================================================
    COMPOSANTS UI — Classes centralisées
    ============================================================ */
 @layer components {

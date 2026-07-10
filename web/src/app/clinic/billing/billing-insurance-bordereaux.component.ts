@@ -81,12 +81,12 @@ import { extractApiErrorMessage } from '../../shared/utils/api-error.utils';
               <table class="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr class="bg-[var(--app-surface-muted)] border-b border-[var(--app-border)] text-[10px] font-bold text-[var(--text-secondary)]">
-                    <th class="p-2">N° Bordereau</th>
-                    <th class="p-2">Assurance / Convention</th>
-                    <th class="p-2">Période</th>
-                    <th class="p-2 text-right">Montant Total</th>
-                    <th class="p-2">Statut</th>
-                    <th class="p-2 text-center">Actions</th>
+                    <th class="p-2" scope="col">N° Bordereau</th>
+                    <th class="p-2" scope="col">Assurance / Convention</th>
+                    <th class="p-2" scope="col">Période</th>
+                    <th class="p-2 text-right" scope="col">Montant Total</th>
+                    <th class="p-2" scope="col">Statut</th>
+                    <th class="p-2 text-center" scope="col">Actions</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-[var(--app-border)]/40">
@@ -186,11 +186,11 @@ import { extractApiErrorMessage } from '../../shared/utils/api-error.utils';
               <table class="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr class="bg-[var(--app-surface-muted)]/60 border-b border-[var(--app-border)]/60 text-[10px] font-bold text-[var(--text-secondary)]">
-                    <th class="p-2">N° Facture</th>
-                    <th class="p-2 text-right">Montant Total</th>
-                    <th class="p-2 text-right">Part Patient</th>
-                    <th class="p-2 text-right">Part Assurance</th>
-                    <th class="p-2">Statut</th>
+                    <th class="p-2" scope="col">N° Facture</th>
+                    <th class="p-2 text-right" scope="col">Montant Total</th>
+                    <th class="p-2 text-right" scope="col">Part Patient</th>
+                    <th class="p-2 text-right" scope="col">Part Assurance</th>
+                    <th class="p-2" scope="col">Statut</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-[var(--app-border)]/40">

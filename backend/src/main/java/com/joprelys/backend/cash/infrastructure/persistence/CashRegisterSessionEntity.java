@@ -59,6 +59,18 @@ public class CashRegisterSessionEntity {
     @Version
     private Long version;
 
+    @Column(name = "discrepancy_resolved", nullable = false)
+    private Boolean discrepancyResolved = false;
+
+    @Column(name = "resolution_notes", length = 1000)
+    private String resolutionNotes;
+
+    @Column(name = "resolved_by_user_id", length = 36)
+    private String resolvedByUserId;
+
+    @Column(name = "resolved_at")
+    private Instant resolvedAt;
+
     protected CashRegisterSessionEntity() {
     }
 
@@ -173,6 +185,38 @@ public class CashRegisterSessionEntity {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public Boolean getDiscrepancyResolved() {
+        return discrepancyResolved;
+    }
+
+    public void setDiscrepancyResolved(Boolean discrepancyResolved) {
+        this.discrepancyResolved = discrepancyResolved;
+    }
+
+    public String getResolutionNotes() {
+        return resolutionNotes;
+    }
+
+    public void setResolutionNotes(String resolutionNotes) {
+        this.resolutionNotes = resolutionNotes;
+    }
+
+    public String getResolvedByUserId() {
+        return resolvedByUserId;
+    }
+
+    public void setResolvedByUserId(String resolvedByUserId) {
+        this.resolvedByUserId = resolvedByUserId;
+    }
+
+    public Instant getResolvedAt() {
+        return resolvedAt;
+    }
+
+    public void setResolvedAt(Instant resolvedAt) {
+        this.resolvedAt = resolvedAt;
     }
 
     public UUID getOrganizationId() {

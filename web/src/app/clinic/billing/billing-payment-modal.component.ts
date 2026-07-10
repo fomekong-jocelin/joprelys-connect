@@ -23,7 +23,7 @@ export interface BillingPaymentForm {
               <app-ui-icon name="banknotes" />
               {{ translate('billing.addPayment', 'Enregistrer un Règlement') }}
             </h3>
-            <button (click)="close.emit()" class="text-xs text-[var(--text-muted)] font-bold p-1 rounded-[var(--radius-brand-sm)] hover:bg-[var(--app-surface-muted)]">
+            <button (click)="close.emit()" [attr.aria-label]="translate('common.aria.close', 'Fermer')" class="text-xs text-[var(--text-muted)] font-bold p-1 rounded-[var(--radius-brand-sm)] hover:bg-[var(--app-surface-muted)]">
               <app-ui-icon name="x-mark" class="text-base" />
             </button>
           </div>

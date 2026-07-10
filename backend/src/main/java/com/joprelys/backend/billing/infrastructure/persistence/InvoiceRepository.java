@@ -34,4 +34,5 @@ public interface InvoiceRepository extends JpaRepository<InvoiceEntity, UUID> {
     );
 
     List<InvoiceEntity> findByInsuranceBordereauIdAndOrganizationId(UUID insuranceBordereauId, UUID organizationId);
+    List<InvoiceEntity> findByStatusAndCreatedAtBetweenOrderByCreatedAtDesc(InvoiceStatus status, java.time.Instant start, java.time.Instant end);
 }

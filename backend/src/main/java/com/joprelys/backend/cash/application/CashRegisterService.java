@@ -133,6 +133,8 @@ public class CashRegisterService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
                         "Impossible d'enregistrer un mouvement : aucune session de caisse n'est ouverte."));
 
+        validateMovement(request);
+
         // Règle BR-HFC-008 : Dépenses > 100 000 FCFA -> Double visa obligatoire
         if ("OUT".equalsIgnoreCase(request.movementType()) && request.amount() > 100000.0) {
             if (request.doubleVisaApproved() == null || !request.doubleVisaApproved()) {
@@ -173,6 +175,16 @@ public class CashRegisterService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public CashSessionSummaryResponse getActiveSessionSummary() {
+        UserAccountEntity actor = getCurrentUser();
+        CashRegisterSessionEntity session = cashRegisterSessionRepository
+                .findByOpenedByUserIdAndStatus(actor.getId(), "OPEN")
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Aucune session de caisse ouverte."));
+        return reconcile(session);
+    }
+
     @Transactional
     public CashSessionResponse closeSession(CloseSessionRequest request) {
         UserAccountEntity actor = getCurrentUser();
@@ -183,18 +195,8 @@ public class CashRegisterService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
                         "Aucune session de caisse ouverte à clôturer."));
 
-        // Calculer le solde théorique
-        List<CashMovementEntity> movements = cashMovementRepository.findByCashRegisterSessionId(session.getId());
-        double totalIn = movements.stream()
-                .filter(m -> "IN".equalsIgnoreCase(m.getMovementType()))
-                .mapToDouble(CashMovementEntity::getAmount)
-                .sum();
-        double totalOut = movements.stream()
-                .filter(m -> "OUT".equalsIgnoreCase(m.getMovementType()) || "TRANSFER_TO_BANK".equalsIgnoreCase(m.getMovementType()))
-                .mapToDouble(CashMovementEntity::getAmount)
-                .sum();
-
-        double closingBalance = session.getOpeningBalance() + totalIn - totalOut;
+        CashSessionSummaryResponse reconciliation = reconcile(session);
+        double closingBalance = reconciliation.expectedCash();
         double discrepancy = request.declaredBalance() - closingBalance;
 
         // Si écart non nul et non justifié, lever exception
@@ -224,6 +226,27 @@ public class CashRegisterService {
         );
 
         return CashSessionResponse.fromEntity(saved);
+    }
+
+    private CashSessionSummaryResponse reconcile(CashRegisterSessionEntity session) {
+        List<CashMovementEntity> movements = cashMovementRepository.findByCashRegisterSessionId(session.getId());
+        return CashSessionReconciliationCalculator.calculate(session, movements);
+    }
+
+    private void validateMovement(CashMovementRequest request) {
+        String type = request.movementType().toUpperCase();
+        String method = request.paymentMethod().toUpperCase();
+        if (!List.of("IN", "OUT", "TRANSFER_TO_BANK").contains(type)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Type de mouvement non pris en charge.");
+        }
+        if (!List.of("CASH", "CHECK", "BANK_TRANSFER").contains(method)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mode de règlement non pris en charge.");
+        }
+        if ("TRANSFER_TO_BANK".equals(type)
+                && (!"CASH".equals(method) || request.referenceNumber() == null || request.referenceNumber().isBlank())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Un versement banque doit correspondre à des espèces et contenir une référence de dépôt.");
+        }
     }
 
     @Transactional
@@ -256,5 +279,41 @@ public class CashRegisterService {
         return cashRegisterSessionRepository.findByCashRegisterIdOrderByOpenedAtDesc(registerId).stream()
                 .map(CashSessionResponse::fromEntity)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CashSessionResponse> listAllSessions() {
+        return cashRegisterSessionRepository.findAllByOrderByOpenedAtDesc().stream()
+                .map(CashSessionResponse::fromEntity)
+                .toList();
+    }
+
+    @Transactional
+    public CashSessionResponse resolveDiscrepancy(UUID sessionId, ResolveDiscrepancyRequest request) {
+        UserAccountEntity currentUser = getCurrentUser();
+        CashRegisterSessionEntity session = cashRegisterSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session introuvable."));
+
+        if (!"CLOSED".equals(session.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seules les sessions clôturées peuvent faire l'objet d'une résolution d'écart.");
+        }
+
+        session.setDiscrepancyResolved(true);
+        session.setResolutionNotes(request.resolutionNotes());
+        session.setResolvedAt(java.time.Instant.now());
+        session.setResolvedByUserId(currentUser.getId().toString());
+
+        CashRegisterSessionEntity saved = cashRegisterSessionRepository.save(session);
+        auditService.logSuccess(
+                currentUser.getId(),
+                currentUser.getOrganizationId(),
+                null,
+                "CASH_SESSION",
+                saved.getId(),
+                "RESOLVE_DISCREPANCY",
+                "Resolution de l'ecart de caisse par la DAF"
+        );
+
+        return CashSessionResponse.fromEntity(saved);
     }
 }

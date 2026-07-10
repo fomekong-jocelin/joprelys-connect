@@ -2,8 +2,9 @@ import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BillingApiService } from '../../patient/billing-api.service';
-import { CashSession, CashMovement, CashRegister } from '../../patient/patient.models';
+import { CashSession, CashMovement, CashRegister, CashSessionSummary } from '../../patient/patient.models';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { I18nService } from '../../core/i18n/i18n.service';
 
 @Component({
   selector: 'app-billing-cash-register',
@@ -15,13 +16,13 @@ import { IconComponent } from '../../shared/ui/icon.component';
       @if (successMessage()) {
         <div class="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-sm text-xs flex justify-between items-center">
           <span>{{ successMessage() }}</span>
-          <button (click)="successMessage.set(null)" class="hover:opacity-70"><app-ui-icon name="x-mark" /></button>
+          <button (click)="successMessage.set(null)" [attr.aria-label]="t('common.aria.close', 'Fermer')" class="hover:opacity-70"><app-ui-icon name="x-mark" /></button>
         </div>
       }
       @if (errorMessage()) {
         <div class="p-3 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 rounded-sm text-xs flex justify-between items-center">
           <span>{{ errorMessage() }}</span>
-          <button (click)="errorMessage.set(null)" class="hover:opacity-70"><app-ui-icon name="x-mark" /></button>
+          <button (click)="errorMessage.set(null)" [attr.aria-label]="t('common.aria.close', 'Fermer')" class="hover:opacity-70"><app-ui-icon name="x-mark" /></button>
         </div>
       }
 
@@ -47,17 +48,28 @@ import { IconComponent } from '../../shared/ui/icon.component';
                 <span class="font-bold text-[var(--text-primary)]">{{ session.openingBalance | number:'1.0-0' }} FCFA</span>
               </div>
               <div class="flex justify-between">
-                <span>Total Recettes (+) :</span>
-                <span class="font-bold text-emerald-600 dark:text-emerald-400">+ {{ totalRecettes() | number:'1.0-0' }} FCFA</span>
+                <span>Encaissements espèces :</span>
+                <span class="font-bold text-emerald-600 dark:text-emerald-400">+ {{ cashReceipts() | number:'1.0-0' }} FCFA</span>
               </div>
               <div class="flex justify-between">
-                <span>Total Dépenses (-) :</span>
-                <span class="font-bold text-red-600 dark:text-red-400">- {{ totalDepenses() | number:'1.0-0' }} FCFA</span>
+                <span>Dépenses espèces :</span>
+                <span class="font-bold text-red-600 dark:text-red-400">- {{ cashExpenses() | number:'1.0-0' }} FCFA</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Versements banque :</span>
+                <span class="font-bold text-blue-600 dark:text-blue-400">- {{ bankDeposits() | number:'1.0-0' }} FCFA</span>
               </div>
               <div class="flex justify-between border-t border-[var(--app-border)]/40 pt-2 font-bold text-sm text-[var(--text-primary)]">
                 <span>Solde Théorique :</span>
                 <span>{{ soldeTheorique() | number:'1.0-0' }} FCFA</span>
               </div>
+            </div>
+
+            <div class="border-t border-[var(--app-border)]/40 pt-3 space-y-1.5 text-[10px] text-[var(--text-secondary)]">
+              <p class="font-bold uppercase tracking-wider text-[var(--text-muted)]">Encaissements hors espèces</p>
+              <div class="flex justify-between"><span>Chèques reçus</span><span class="font-semibold">{{ chequeReceipts() | number:'1.0-0' }} FCFA</span></div>
+              <div class="flex justify-between"><span>Virements reçus</span><span class="font-semibold">{{ transferReceipts() | number:'1.0-0' }} FCFA</span></div>
+              <p class="pt-1 text-[var(--text-muted)]">Ces montants sont tracés, mais ne sont pas inclus dans le comptage physique.</p>
             </div>
 
             <div class="pt-2">
@@ -78,7 +90,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
             <form (submit)="submitMovement()" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
               <div>
                 <label class="font-bold text-[var(--text-secondary)] block mb-1">Type de mouvement :</label>
-                <select [(ngModel)]="movType" name="movType" class="ui-select w-full" required>
+                <select [(ngModel)]="movType" (ngModelChange)="onMovementTypeChange()" name="movType" class="ui-select w-full" required>
                   <option value="OUT">Dépense (OUT)</option>
                   <option value="TRANSFER_TO_BANK">Versement Banque (TRANSFER_TO_BANK)</option>
                 </select>
@@ -95,8 +107,8 @@ import { IconComponent } from '../../shared/ui/icon.component';
               </div>
 
               <div>
-                <label class="font-bold text-[var(--text-secondary)] block mb-1">Mode de règlement :</label>
-                <select [(ngModel)]="movMethod" name="movMethod" class="ui-select w-full" required>
+                <label class="font-bold text-[var(--text-secondary)] block mb-1">{{ movType() === 'TRANSFER_TO_BANK' ? 'Origine du versement :' : 'Mode de règlement :' }}</label>
+                <select [(ngModel)]="movMethod" name="movMethod" class="ui-select w-full" required [disabled]="movType() === 'TRANSFER_TO_BANK'">
                   <option value="CASH">Espèces</option>
                   <option value="CHECK">Chèque</option>
                   <option value="BANK_TRANSFER">Virement</option>
@@ -104,9 +116,15 @@ import { IconComponent } from '../../shared/ui/icon.component';
               </div>
 
               <div>
-                <label class="font-bold text-[var(--text-secondary)] block mb-1">Référence (N° chèque, pièce...) :</label>
-                <input type="text" [(ngModel)]="movReference" name="movReference" class="ui-input w-full" placeholder="Optionnel" />
+                <label class="font-bold text-[var(--text-secondary)] block mb-1">{{ movType() === 'TRANSFER_TO_BANK' ? 'Bordereau de dépôt :' : 'Référence (N° chèque, pièce...) :' }}</label>
+                <input type="text" [(ngModel)]="movReference" name="movReference" class="ui-input w-full" [placeholder]="movType() === 'TRANSFER_TO_BANK' ? 'Ex: BORD-20260709-001' : 'Optionnel'" [required]="movType() === 'TRANSFER_TO_BANK'" />
               </div>
+
+              @if (movType() === 'TRANSFER_TO_BANK') {
+                <p class="md:col-span-2 p-2 bg-blue-500/10 border border-blue-500/30 text-blue-700 dark:text-blue-300 rounded-sm text-[10px]">
+                  Ce versement diminue le solde espèces attendu à la clôture. Conservez le bordereau de dépôt avec la session.
+                </p>
+              }
 
               @if (movAmount() > 100000 && movType() === 'OUT') {
                 <div class="md:col-span-2 p-2 bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 rounded-sm text-[10px] space-y-1">
@@ -139,12 +157,12 @@ import { IconComponent } from '../../shared/ui/icon.component';
               <table class="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr class="bg-[var(--app-surface-muted)] border-b border-[var(--app-border)] text-[10px] font-bold text-[var(--text-secondary)]">
-                    <th class="p-2">Date/Heure</th>
-                    <th class="p-2">Type</th>
-                    <th class="p-2">Description</th>
-                    <th class="p-2 text-right">Montant</th>
-                    <th class="p-2">Règlement</th>
-                    <th class="p-2">Référence</th>
+                    <th class="p-2" scope="col">Date/Heure</th>
+                    <th class="p-2" scope="col">Type</th>
+                    <th class="p-2" scope="col">Description</th>
+                    <th class="p-2 text-right" scope="col">Montant</th>
+                    <th class="p-2" scope="col">Règlement</th>
+                    <th class="p-2" scope="col">Référence</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-[var(--app-border)]/40">
@@ -227,7 +245,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
         <div class="bg-[var(--app-surface)] border border-[var(--app-border)] rounded-sm max-w-md w-full p-5 space-y-4 shadow-xl">
           <div class="flex justify-between items-center border-b border-[var(--app-border)]/40 pb-2">
             <h3 class="font-bold text-xs text-[var(--text-primary)] uppercase tracking-wider">Clôturer la Session</h3>
-            <button (click)="openCloseModal()" class="hover:opacity-70 text-[var(--text-muted)]"><app-ui-icon name="x-mark" /></button>
+            <button (click)="openCloseModal()" [attr.aria-label]="t('common.aria.close', 'Fermer')" class="hover:opacity-70 text-[var(--text-muted)]"><app-ui-icon name="x-mark" /></button>
           </div>
 
           <div class="space-y-2 text-xs">
@@ -268,10 +286,16 @@ import { IconComponent } from '../../shared/ui/icon.component';
 })
 export class BillingCashRegisterComponent implements OnInit {
   private readonly billingApi = inject(BillingApiService);
+  private readonly i18n = inject(I18nService);
+
+  t(key: string, defaultValue: string): string {
+    return this.i18n.t(key, defaultValue);
+  }
 
   activeSession = signal<CashSession | null>(null);
   registers = signal<CashRegister[]>([]);
   movements = signal<CashMovement[]>([]);
+  summary = signal<CashSessionSummary | null>(null);
 
   // Open form
   selectedRegisterId = signal<string>('');
@@ -298,18 +322,25 @@ export class BillingCashRegisterComponent implements OnInit {
   errorMessage = signal<string | null>(null);
 
   // Computeds
-  totalRecettes = computed(() => {
-    return this.movements().filter(m => m.movementType === 'IN').reduce((acc, m) => acc + m.amount, 0);
-  });
+  cashReceipts = computed(() => this.summary()?.cashReceipts
+    ?? this.movements().filter(m => m.movementType === 'IN' && m.paymentMethod === 'CASH').reduce((acc, m) => acc + m.amount, 0));
 
-  totalDepenses = computed(() => {
-    return this.movements().filter(m => m.movementType === 'OUT' || m.movementType === 'TRANSFER_TO_BANK').reduce((acc, m) => acc + m.amount, 0);
-  });
+  chequeReceipts = computed(() => this.summary()?.chequeReceipts
+    ?? this.movements().filter(m => m.movementType === 'IN' && m.paymentMethod === 'CHECK').reduce((acc, m) => acc + m.amount, 0));
+
+  transferReceipts = computed(() => this.summary()?.transferReceipts
+    ?? this.movements().filter(m => m.movementType === 'IN' && m.paymentMethod === 'BANK_TRANSFER').reduce((acc, m) => acc + m.amount, 0));
+
+  cashExpenses = computed(() => this.summary()?.cashExpenses
+    ?? this.movements().filter(m => m.movementType === 'OUT' && m.paymentMethod === 'CASH').reduce((acc, m) => acc + m.amount, 0));
+
+  bankDeposits = computed(() => this.summary()?.bankDeposits
+    ?? this.movements().filter(m => m.movementType === 'TRANSFER_TO_BANK').reduce((acc, m) => acc + m.amount, 0));
 
   soldeTheorique = computed(() => {
     const session = this.activeSession();
     if (!session) return 0;
-    return session.openingBalance + this.totalRecettes() - this.totalDepenses();
+    return this.summary()?.expectedCash ?? session.openingBalance + this.cashReceipts() - this.cashExpenses() - this.bankDeposits();
   });
 
   discrepancy = computed(() => {
@@ -327,14 +358,17 @@ export class BillingCashRegisterComponent implements OnInit {
         if (session) {
           this.activeSession.set(session);
           this.loadSessionMovements(session.id);
+          this.loadSessionSummary();
         } else {
           this.activeSession.set(null);
           this.movements.set([]);
+          this.summary.set(null);
         }
       },
       error: () => {
         this.activeSession.set(null);
         this.movements.set([]);
+        this.summary.set(null);
       }
     });
   }
@@ -353,6 +387,13 @@ export class BillingCashRegisterComponent implements OnInit {
     });
   }
 
+  loadSessionSummary() {
+    this.billingApi.getActiveCashSessionSummary().subscribe({
+      next: (summary) => this.summary.set(summary),
+      error: () => this.summary.set(null)
+    });
+  }
+
   submitOpen() {
     if (this.openBalance() < 0) return;
     this.savingOpen.set(true);
@@ -363,6 +404,7 @@ export class BillingCashRegisterComponent implements OnInit {
         this.activeSession.set(session);
         this.successMessage.set("Session de caisse ouverte avec succès.");
         this.loadSessionMovements(session.id);
+        this.loadSessionSummary();
         this.errorMessage.set(null);
       },
       error: (err) => {
@@ -380,6 +422,10 @@ export class BillingCashRegisterComponent implements OnInit {
       this.errorMessage.set("Double visa obligatoire pour les dépenses supérieures à 100 000 FCFA.");
       return;
     }
+    if (this.movType() === 'TRANSFER_TO_BANK' && !this.movReference().trim()) {
+      this.errorMessage.set("La référence du bordereau de dépôt est obligatoire.");
+      return;
+    }
 
     this.savingMovement.set(true);
     this.billingApi.addCashMovement({
@@ -393,6 +439,7 @@ export class BillingCashRegisterComponent implements OnInit {
       next: (m) => {
         this.savingMovement.set(false);
         this.movements.update(list => [...list, m]);
+        this.loadSessionSummary();
         this.successMessage.set("Mouvement de caisse consigné avec succès.");
         this.errorMessage.set(null);
         // Reset form
@@ -406,6 +453,12 @@ export class BillingCashRegisterComponent implements OnInit {
         this.errorMessage.set(err.error?.error?.message || "Erreur lors de l'enregistrement du mouvement.");
       }
     });
+  }
+
+  onMovementTypeChange() {
+    if (this.movType() === 'TRANSFER_TO_BANK') {
+      this.movMethod.set('CASH');
+    }
   }
 
   openCloseModal() {
@@ -426,6 +479,7 @@ export class BillingCashRegisterComponent implements OnInit {
         this.showCloseModal.set(false);
         this.activeSession.set(null);
         this.movements.set([]);
+        this.summary.set(null);
         this.successMessage.set("Caisse clôturée avec succès. L'état théorique et l'écart ont été enregistrés.");
         this.errorMessage.set(null);
       },

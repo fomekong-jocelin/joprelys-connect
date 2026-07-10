@@ -5,9 +5,6 @@ import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.billing.api.*;
 import com.joprelys.backend.billing.infrastructure.persistence.*;
-import com.joprelys.backend.cash.application.CashRegisterService;
-import com.joprelys.backend.cash.infrastructure.persistence.CashRegisterSessionEntity;
-import com.joprelys.backend.cash.api.CashMovementRequest;
 import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationEntity;
 import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationRepository;
 import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationEntity;
@@ -46,7 +43,6 @@ public class BillingService {
 
     private final InvoiceRepository invoiceRepository;
     private final InvoiceItemRepository invoiceItemRepository;
-    private final PaymentRepository paymentRepository;
     private final InsuranceConventionRepository insuranceConventionRepository;
     private final TariffGridRepository tariffGridRepository;
     private final PatientRepository patientRepository;
@@ -60,11 +56,9 @@ public class BillingService {
     private final HospitalizationDailyCareRepository dailyCareRepository;
     private final PatientConsumptionRepository patientConsumptionRepository;
     private final OperatingReportRepository operatingReportRepository;
-    private final CashRegisterService cashRegisterService;
 
     public BillingService(InvoiceRepository invoiceRepository,
                           InvoiceItemRepository invoiceItemRepository,
-                          PaymentRepository paymentRepository,
                           InsuranceConventionRepository insuranceConventionRepository,
                           TariffGridRepository tariffGridRepository,
                           PatientRepository patientRepository,
@@ -77,11 +71,9 @@ public class BillingService {
                           AuditService auditService,
                           HospitalizationDailyCareRepository dailyCareRepository,
                           PatientConsumptionRepository patientConsumptionRepository,
-                          OperatingReportRepository operatingReportRepository,
-                          CashRegisterService cashRegisterService) {
+                          OperatingReportRepository operatingReportRepository) {
         this.invoiceRepository = invoiceRepository;
         this.invoiceItemRepository = invoiceItemRepository;
-        this.paymentRepository = paymentRepository;
         this.insuranceConventionRepository = insuranceConventionRepository;
         this.tariffGridRepository = tariffGridRepository;
         this.patientRepository = patientRepository;
@@ -95,7 +87,6 @@ public class BillingService {
         this.dailyCareRepository = dailyCareRepository;
         this.patientConsumptionRepository = patientConsumptionRepository;
         this.operatingReportRepository = operatingReportRepository;
-        this.cashRegisterService = cashRegisterService;
     }
 
     private UserAccountEntity getCurrentUser() {
@@ -431,89 +422,4 @@ public class BillingService {
         return InvoiceResponse.fromEntity(entity);
     }
 
-    @Transactional
-    public PaymentResponse addPayment(UUID invoiceId, PaymentRequest request) {
-        UserAccountEntity actor = getCurrentUser();
-        UUID orgId = actor != null ? actor.getOrganizationId() : null;
-        UUID actorId = actor != null ? actor.getId() : UUID.randomUUID();
-
-        // BR-HFC-005 : Un encaissement doit être rattaché à une session de caisse ouverte
-        CashRegisterSessionEntity session = cashRegisterService.findActiveSessionForUser(actorId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
-                        "Paiement sans session ouverte : veuillez d'abord ouvrir une session de caisse."));
-
-        InvoiceEntity invoice = invoiceRepository.findById(invoiceId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Facture introuvable"));
-
-        if (invoice.getStatus() == InvoiceStatus.PAID) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "La facture est déjà entièrement réglée.");
-        }
-
-        if (invoice.getStatus() == InvoiceStatus.CANCELLED) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Impossible d'enregistrer un règlement sur une facture annulée.");
-        }
-
-        if (request.amount() <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le montant du règlement doit être supérieur à zéro.");
-        }
-
-        // Calculate paid so far
-        double totalPaid = paymentRepository.findByInvoiceId(invoiceId).stream()
-                .mapToDouble(PaymentEntity::getAmount)
-                .sum();
-
-        double remaining = invoice.getPatientShare() - totalPaid;
-        if (request.amount() > remaining + 0.01) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Le montant dépasse le solde restant à payer par le patient (" + remaining + " FCFA).");
-        }
-
-        PaymentEntity payment = new PaymentEntity(invoice, request.amount(), request.method(), request.reference(), actorId);
-        payment.setOrganizationId(orgId);
-        payment.setCashSessionId(session.getId());
-        PaymentEntity saved = paymentRepository.save(payment);
-
-        // Enregistrer automatiquement le mouvement de caisse
-        cashRegisterService.addMovement(new CashMovementRequest(
-                "IN",
-                request.amount(),
-                "Règlement facture N° " + invoice.getInvoiceNumber(),
-                request.method().name(),
-                request.reference(),
-                false
-        ));
-
-        // Générer le reçu numéroté
-        cashRegisterService.createReceiptForPayment(saved);
-
-        // Update invoice status
-        double newTotalPaid = totalPaid + request.amount();
-        if (Math.abs(newTotalPaid - invoice.getPatientShare()) < 0.01) {
-            invoice.setStatus(InvoiceStatus.PAID);
-        } else {
-            invoice.setStatus(InvoiceStatus.PARTIALLY_PAID);
-        }
-        invoiceRepository.save(invoice);
-
-        if (actor != null) {
-            auditService.logSuccess(
-                    actor.getId(),
-                    orgId,
-                    invoice.getPatientId(),
-                    "BILLING",
-                    saved.getId(),
-                    "ADD_PAYMENT",
-                    "Enregistrement règlement de " + request.amount() + " FCFA via " + request.method() + " pour la facture N° " + invoice.getInvoiceNumber() + "."
-            );
-        }
-
-        return PaymentResponse.fromEntity(saved);
-    }
-
-    @Transactional(readOnly = true)
-    public List<PaymentResponse> listPayments(UUID invoiceId) {
-        return paymentRepository.findByInvoiceId(invoiceId).stream()
-                .map(PaymentResponse::fromEntity)
-                .toList();
-    }
 }

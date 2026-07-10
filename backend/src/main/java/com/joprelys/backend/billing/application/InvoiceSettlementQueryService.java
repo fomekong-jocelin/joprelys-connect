@@ -1,0 +1,79 @@
+package com.joprelys.backend.billing.application;
+
+import com.joprelys.backend.billing.api.InvoiceSettlementSummaryResponse;
+import com.joprelys.backend.billing.api.SettlementPartyResponse;
+import com.joprelys.backend.billing.infrastructure.persistence.InvoiceEntity;
+import com.joprelys.backend.billing.infrastructure.persistence.InvoiceRepository;
+import com.joprelys.backend.billing.infrastructure.persistence.ReceivableEntity;
+import com.joprelys.backend.billing.infrastructure.persistence.ReceivableRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.UUID;
+
+/** Provides a debtor-level view of invoice settlement for the billing workspace. */
+@Service
+public class InvoiceSettlementQueryService {
+
+    private static final double SETTLED_TOLERANCE = 0.01;
+
+    private final InvoiceRepository invoiceRepository;
+    private final ReceivableRepository receivableRepository;
+
+    public InvoiceSettlementQueryService(InvoiceRepository invoiceRepository,
+                                         ReceivableRepository receivableRepository) {
+        this.invoiceRepository = invoiceRepository;
+        this.receivableRepository = receivableRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public List<InvoiceSettlementSummaryResponse> listByPatient(UUID patientId) {
+        return invoiceRepository.findByPatientIdOrderByCreatedAtDesc(patientId).stream()
+                .map(this::summarize)
+                .toList();
+    }
+
+    private InvoiceSettlementSummaryResponse summarize(InvoiceEntity invoice) {
+        List<ReceivableEntity> receivables = receivableRepository.findByInvoiceId(invoice.getId());
+        SettlementPartyResponse patient = partySummary(invoice.getPatientShare(), receivables, "PATIENT");
+        SettlementPartyResponse insurance = invoice.getInsuranceShare() > SETTLED_TOLERANCE
+                ? partySummary(invoice.getInsuranceShare(), receivables, "INSURANCE")
+                : null;
+        return new InvoiceSettlementSummaryResponse(
+                invoice.getId(),
+                collectionStatus(patient, insurance, receivables.isEmpty()),
+                patient,
+                insurance
+        );
+    }
+
+    private SettlementPartyResponse partySummary(double invoiceShare,
+                                                  List<ReceivableEntity> receivables,
+                                                  String debtorType) {
+        return receivables.stream()
+                .filter(receivable -> debtorType.equalsIgnoreCase(receivable.getDebtorType()))
+                .findFirst()
+                .map(receivable -> new SettlementPartyResponse(
+                        receivable.getTotalAmount(),
+                        receivable.getPaidAmount(),
+                        Math.max(0.0, receivable.getTotalAmount() - receivable.getPaidAmount()),
+                        receivable.getStatus()))
+                .orElseGet(() -> new SettlementPartyResponse(invoiceShare, 0.0, invoiceShare, "NOT_DUE"));
+    }
+
+    private String collectionStatus(SettlementPartyResponse patient,
+                                    SettlementPartyResponse insurance,
+                                    boolean noReceivableExists) {
+        if (noReceivableExists) {
+            return "NOT_YET_DUE";
+        }
+        if (patient.remainingAmount() > SETTLED_TOLERANCE) {
+            return patient.paidAmount() > SETTLED_TOLERANCE ? "PATIENT_PARTIALLY_PAID" : "PATIENT_DUE";
+        }
+        if (insurance != null && insurance.remainingAmount() > SETTLED_TOLERANCE) {
+            return "INSURANCE_DUE";
+        }
+        return "SETTLED";
+    }
+}

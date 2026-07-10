@@ -139,6 +139,7 @@ generated/
 # AI / Local agent scratchpads
 .ai-cache/
 .ai-tmp/
+.m2-test-cache/
 .codex/
 .claude/cache/
 .gemini/cache/

@@ -260,6 +260,11 @@ public class InvoiceControllerTest {
 
         InvoiceResponse created = objectMapper.readValue(responseStr, InvoiceResponse.class);
 
+        mockMvc.perform(post("/api/invoices/" + created.id() + "/validate")
+                        .header("Authorization", "Bearer " + tokenAdmin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("VALIDATED"));
+
         // 3. Make partial payment
         TenantContext.setTenantId(org.getId());
         CashRegisterEntity register = new CashRegisterEntity("CAISSE-PRINCIPALE", "Caisse Principale");
@@ -285,6 +290,24 @@ public class InvoiceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PARTIALLY_PAID"));
 
+        mockMvc.perform(get("/api/invoices/" + created.id() + "/receivables")
+                        .header("Authorization", "Bearer " + tokenReceptionist))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].debtorType").value("PATIENT"))
+                .andExpect(jsonPath("$[0].paidAmount").value(3000.0))
+                .andExpect(jsonPath("$[0].remainingAmount").value(3800.0))
+                .andExpect(jsonPath("$[1].debtorType").value("INSURANCE"))
+                .andExpect(jsonPath("$[1].paidAmount").value(0.0))
+                .andExpect(jsonPath("$[1].remainingAmount").value(27200.0));
+
+        mockMvc.perform(get("/api/invoices/settlement-summaries")
+                        .header("Authorization", "Bearer " + tokenReceptionist)
+                        .param("patientId", patient.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].collectionStatus").value("PATIENT_PARTIALLY_PAID"))
+                .andExpect(jsonPath("$[0].patient.remainingAmount").value(3800.0))
+                .andExpect(jsonPath("$[0].insurance.remainingAmount").value(27200.0));
+
         // 4. Make final payment
         PaymentRequest payFinal = new PaymentRequest(3800.0, PaymentMethod.CASH, "REF-2222");
         mockMvc.perform(post("/api/invoices/" + created.id() + "/payments")
@@ -298,6 +321,22 @@ public class InvoiceControllerTest {
                         .header("Authorization", "Bearer " + tokenReceptionist))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PAID"));
+
+        mockMvc.perform(get("/api/invoices/" + created.id() + "/receivables")
+                        .header("Authorization", "Bearer " + tokenReceptionist))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].paidAmount").value(6800.0))
+                .andExpect(jsonPath("$[0].remainingAmount").value(0.0))
+                .andExpect(jsonPath("$[0].status").value("PAID"))
+                .andExpect(jsonPath("$[1].remainingAmount").value(27200.0));
+
+        mockMvc.perform(get("/api/invoices/settlement-summaries")
+                        .header("Authorization", "Bearer " + tokenReceptionist)
+                        .param("patientId", patient.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].collectionStatus").value("INSURANCE_DUE"))
+                .andExpect(jsonPath("$[0].patient.status").value("PAID"))
+                .andExpect(jsonPath("$[0].insurance.remainingAmount").value(27200.0));
 
         // 5. Download certified PDF
         mockMvc.perform(get("/api/invoices/" + created.id() + "/pdf")

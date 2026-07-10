@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { Invoice } from '../../patient/patient.models';
+import { Invoice, InvoiceSettlementSummary } from '../../patient/patient.models';
 import { IconComponent } from '../../shared/ui/icon.component';
 
 @Component({
@@ -21,8 +21,8 @@ import { IconComponent } from '../../shared/ui/icon.component';
               <div class="space-y-1">
                 <div class="flex items-center gap-2">
                   <span class="font-bold text-xs text-[var(--text-primary)]">{{ inv.invoiceNumber }}</span>
-                  <span [class]="'px-1.5 py-0.5 rounded-[var(--radius-brand-sm)] text-[8px] font-bold ' + getStatusClass(inv.status)">
-                    {{ getStatusLabel(inv.status) }}
+                  <span [class]="'px-1.5 py-0.5 rounded-[var(--radius-brand-sm)] text-[8px] font-bold ' + getCollectionStatusClass(inv)">
+                    {{ getCollectionStatusLabel(inv) }}
                   </span>
                 </div>
                 <div class="text-[10px] text-[var(--text-muted)]">
@@ -66,29 +66,38 @@ import { IconComponent } from '../../shared/ui/icon.component';
 })
 export class BillingInvoiceHistoryComponent {
   @Input({ required: true }) invoices: Invoice[] = [];
+  @Input() settlements: Record<string, InvoiceSettlementSummary> = {};
   @Input({ required: true }) translate!: (key: string, defaultValue: string) => string;
 
   @Output() printPdf = new EventEmitter<string>();
   @Output() openPayment = new EventEmitter<Invoice>();
   @Output() selectInvoice = new EventEmitter<Invoice>();
 
-  getStatusClass(status: string): string {
-    switch (status) {
-      case 'PAID':
+  getCollectionStatusClass(invoice: Invoice): string {
+    switch (this.settlements[invoice.id]?.collectionStatus) {
+      case 'SETTLED':
         return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400';
-      case 'PARTIALLY_PAID':
+      case 'PATIENT_PARTIALLY_PAID':
         return 'bg-amber-500/15 text-amber-600 dark:text-amber-400';
+      case 'INSURANCE_DUE':
+        return 'bg-blue-500/15 text-blue-600 dark:text-blue-400';
       default:
         return 'bg-gray-500/15 text-gray-600 dark:text-gray-400';
     }
   }
 
-  getStatusLabel(status: string): string {
-    switch (status) {
-      case 'PAID':
-        return this.translate('billing.invoiceStatus.paid', 'Payée');
-      case 'PARTIALLY_PAID':
-        return this.translate('billing.invoiceStatus.partiallyPaid', 'Partiellement payée');
+  getCollectionStatusLabel(invoice: Invoice): string {
+    switch (this.settlements[invoice.id]?.collectionStatus) {
+      case 'SETTLED':
+        return this.translate('billing.collection.settled', 'Soldée');
+      case 'INSURANCE_DUE':
+        return this.translate('billing.collection.insuranceDue', 'Assurance à recouvrer');
+      case 'PATIENT_PARTIALLY_PAID':
+        return this.translate('billing.collection.patientPartiallyPaid', 'Part patient partielle');
+      case 'PATIENT_DUE':
+        return this.translate('billing.collection.patientDue', 'Part patient à régler');
+      case 'NOT_YET_DUE':
+        return this.translate('billing.collection.notYetDue', 'À valider');
       default:
         return this.translate('billing.invoiceStatus.pending', 'En attente');
     }

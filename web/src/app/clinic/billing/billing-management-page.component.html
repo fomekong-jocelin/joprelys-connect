@@ -19,36 +19,45 @@
           [class]="activeTab() === 'caisse' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
         >
           <app-ui-icon name="calculator" />
-          Caisse & Sessions
+          {{ t('billing.tabCashRegister', 'Caisse & Sessions') }}
         </button>
         <button
           (click)="activeTab.set('creances')"
           [class]="activeTab() === 'creances' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
         >
           <app-ui-icon name="folder-open" />
-          Suivi des Créances
+          {{ t('billing.tabReceivables', 'Suivi des Créances') }}
         </button>
         <button
           (click)="activeTab.set('bordereaux')"
           [class]="activeTab() === 'bordereaux' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
         >
           <app-ui-icon name="document-text" />
-          Bordereaux Assurances
+          {{ t('billing.tabInsuranceBordereaux', 'Bordereaux Assurances') }}
         </button>
         <button
           (click)="activeTab.set('conventions')"
           [class]="activeTab() === 'conventions' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
         >
           <app-ui-icon name="handshake" />
-          Conventions d'Assurance
+          {{ t('billing.tabConventions', 'Conventions d\'Assurance') }}
         </button>
         <button
           (click)="activeTab.set('tariffs')"
           [class]="activeTab() === 'tariffs' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
         >
           <app-ui-icon name="table-cells" />
-          Grille Tarifaire (Actes K)
+          {{ t('billing.tabTariffs', 'Grille Tarifaire (Actes K)') }}
         </button>
+        @if (isDafOrAdmin()) {
+          <button
+            (click)="activeTab.set('daf')"
+            [class]="activeTab() === 'daf' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
+          >
+            <app-ui-icon name="calculator" />
+            {{ t('billing.tabDaf', 'Pilotage DAF') }}
+          </button>
+        }
       </div>
 
       @if (successMessage()) {
@@ -189,13 +198,13 @@
                     <table class="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr class="bg-[var(--app-surface-muted)] border-b border-[var(--app-border)] text-[10px] font-bold text-[var(--text-secondary)]">
-                          <th class="p-2">{{ t('billing.itemLabel', 'Prestation / Médicament') }}</th>
-                          <th class="p-2 w-28">{{ t('billing.itemType', 'Type') }}</th>
-                          <th class="p-2 w-24">{{ t('billing.unitPrice', 'Prix Unit.') }}</th>
-                          <th class="p-2 w-20">{{ t('billing.qty', 'Qté') }}</th>
-                          <th class="p-2 w-20">{{ t('billing.coeff', 'Coeff') }}</th>
-                          <th class="p-2 w-24 text-right">{{ t('billing.total', 'Total') }}</th>
-                          <th class="p-2 w-10"></th>
+                          <th class="p-2" scope="col">{{ t('billing.itemLabel', 'Prestation / Médicament') }}</th>
+                          <th class="p-2 w-28" scope="col">{{ t('billing.itemType', 'Type') }}</th>
+                          <th class="p-2 w-24" scope="col">{{ t('billing.unitPrice', 'Prix Unit.') }}</th>
+                          <th class="p-2 w-20" scope="col">{{ t('billing.qty', 'Qté') }}</th>
+                          <th class="p-2 w-20" scope="col">{{ t('billing.coeff', 'Coeff') }}</th>
+                          <th class="p-2 w-24 text-right" scope="col">{{ t('billing.total', 'Total') }}</th>
+                          <th class="p-2 w-10" scope="col"></th>
                         </tr>
                       </thead>
                       <tbody class="divide-y divide-[var(--app-border)]/40">
@@ -252,7 +261,7 @@
                               {{ ((item.unitPrice || 0) * (item.quantity || 0) * (item.coefficient || 1.0)) | number:'1.0-0' }} FCFA
                             </td>
                             <td class="p-2 text-center">
-                              <button (click)="removeItem($index)" class="text-[var(--brand-danger)] hover:text-[var(--brand-danger-hover)] text-xs font-bold p-1 rounded-[var(--radius-brand-sm)]">
+                              <button (click)="removeItem($index)" [attr.aria-label]="t('billing.aria.deleteItem', 'Supprimer la ligne')" class="text-[var(--brand-danger)] hover:text-[var(--brand-danger-hover)] text-xs font-bold p-1 rounded-[var(--radius-brand-sm)]">
                                 <app-ui-icon name="trash" class="text-base" />
                               </button>
                             </td>
@@ -328,6 +337,10 @@
 
       @if (activeTab() === 'conventions' || activeTab() === 'tariffs') {
         <app-billing-admin-tabs [activeTab]="$any(activeTab())" [conventions]="conventions()" [tariffs]="tariffs()" [translate]="translate" (createConvention)="saveConvention($event)" (saveTariff)="saveTariff($event)"></app-billing-admin-tabs>
+      }
+
+      @if (activeTab() === 'daf') {
+        <app-billing-daf-dashboard [translate]="translate"></app-billing-daf-dashboard>
       }
     </div>
     <app-billing-payment-modal [visible]="showPaymentModal()" [invoice]="paymentInvoice()" [saving]="savingPayment()" [translate]="translate" (close)="closePaymentModal()" (submitPayment)="submitPayment($event)"></app-billing-payment-modal>

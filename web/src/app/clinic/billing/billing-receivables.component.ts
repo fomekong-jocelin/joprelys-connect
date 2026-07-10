@@ -4,11 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { BillingApiService } from '../../patient/billing-api.service';
 import { Receivable } from '../../patient/patient.models';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { I18nService } from '../../core/i18n/i18n.service';
+import { BillingReminderModalComponent } from './billing-reminder-modal.component';
 
 @Component({
   selector: 'app-billing-receivables',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent],
+  imports: [CommonModule, FormsModule, IconComponent, BillingReminderModalComponent],
   template: `
     <div class="space-y-6">
       <!-- Filter Bar -->
@@ -37,6 +39,17 @@ import { IconComponent } from '../../shared/ui/icon.component';
               <option value="INSURANCE">Assurance (Tiers-Payant)</option>
             </select>
           </div>
+
+          <div>
+            <label class="font-bold text-[var(--text-secondary)] block mb-1">Tranche d'ancienneté :</label>
+            <select [(ngModel)]="agingFilter" (change)="applyFilters()" class="ui-select">
+              <option value="ALL">Toutes les tranches</option>
+              <option value="0_30">Sain (0-30j)</option>
+              <option value="31_60">À relancer (31-60j)</option>
+              <option value="61_90">Urgent (61-90j)</option>
+              <option value="90_PLUS">Contentieux (>90j)</option>
+            </select>
+          </div>
         </div>
 
         <div class="flex gap-2 self-end">
@@ -58,14 +71,15 @@ import { IconComponent } from '../../shared/ui/icon.component';
             <table class="w-full text-left text-xs border-collapse">
               <thead>
                 <tr class="bg-[var(--app-surface-muted)] border-b border-[var(--app-border)] text-[10px] font-bold text-[var(--text-secondary)]">
-                  <th class="p-2">Date Création</th>
-                  <th class="p-2">Facture</th>
-                  <th class="p-2">Débiteur</th>
-                  <th class="p-2 text-right">Montant Initial</th>
-                  <th class="p-2 text-right">Montant Réglé</th>
-                  <th class="p-2 text-right">Solde Restant</th>
-                  <th class="p-2">Statut</th>
-                  <th class="p-2">Action</th>
+                  <th class="p-2" scope="col">Date Création</th>
+                  <th class="p-2" scope="col">Facture</th>
+                  <th class="p-2" scope="col">Débiteur</th>
+                  <th class="p-2 text-right" scope="col">Montant Initial</th>
+                  <th class="p-2 text-right" scope="col">Montant Réglé</th>
+                  <th class="p-2 text-right" scope="col">Solde Restant</th>
+                  <th class="p-2" scope="col">Statut</th>
+                  <th class="p-2" scope="col">Tranche (Aging)</th>
+                  <th class="p-2" scope="col">Action</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-[var(--app-border)]/40">
@@ -98,7 +112,20 @@ import { IconComponent } from '../../shared/ui/icon.component';
                       </span>
                     </td>
                     <td class="p-2">
-                      <button (click)="simulateReminder(r)" class="text-xs text-[var(--brand-cyan)] hover:underline">
+                      <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-sm"
+                            [class.bg-emerald-500\/10]="r.agingSlice === '0_30'"
+                            [class.text-emerald-600]="r.agingSlice === '0_30'"
+                            [class.bg-blue-500\/10]="r.agingSlice === '31_60'"
+                            [class.text-blue-600]="r.agingSlice === '31_60'"
+                            [class.bg-amber-500\/10]="r.agingSlice === '61_90'"
+                            [class.text-amber-600]="r.agingSlice === '61_90'"
+                            [class.bg-rose-500\/10]="r.agingSlice === '90_PLUS'"
+                            [class.text-rose-600]="r.agingSlice === '90_PLUS'">
+                        {{ r.agingSlice === '0_30' ? '0-30j (Sain)' : r.agingSlice === '31_60' ? '31-60j' : r.agingSlice === '61_90' ? '61-90j' : '>90j (Juridique)' }}
+                      </span>
+                    </td>
+                    <td class="p-2">
+                      <button (click)="openReminderModal(r)" class="text-xs text-[var(--brand-cyan)] hover:underline flex items-center gap-1">
                         <app-ui-icon name="information-circle" />
                         Relancer
                       </button>
@@ -113,19 +140,33 @@ import { IconComponent } from '../../shared/ui/icon.component';
         }
       </div>
 
-      <!-- Success Alert for Simulation -->
+      <!-- Success Alert -->
       @if (reminderSentMessage()) {
         <div class="fixed bottom-4 right-4 z-50 p-3 bg-emerald-500 text-white rounded-sm text-xs shadow-lg flex gap-2 items-center">
           <app-ui-icon name="check" />
           <span>{{ reminderSentMessage() }}</span>
-          <button (click)="reminderSentMessage.set(null)" class="hover:opacity-75 font-bold"><app-ui-icon name="x-mark" /></button>
+          <button (click)="reminderSentMessage.set(null)" [attr.aria-label]="t('common.aria.close', 'Fermer')" class="hover:opacity-75 font-bold"><app-ui-icon name="x-mark" /></button>
         </div>
       }
+
+      <!-- Reminder Modal -->
+      <app-billing-reminder-modal
+        [visible]="reminderModalVisible()"
+        [receivable]="selectedReceivable()"
+        [saving]="savingReminder()"
+        (close)="reminderModalVisible.set(false)"
+        (submitReminder)="onReminderSubmitted($event)"
+      />
     </div>
   `
 })
 export class BillingReceivablesComponent implements OnInit {
   private readonly billingApi = inject(BillingApiService);
+  private readonly i18n = inject(I18nService);
+
+  t(key: string, defaultValue: string): string {
+    return this.i18n.t(key, defaultValue);
+  }
 
   receivables = signal<Receivable[]>([]);
   filteredReceivables = signal<Receivable[]>([]);
@@ -134,8 +175,14 @@ export class BillingReceivablesComponent implements OnInit {
   statusFilter = signal<string>('ALL');
   searchDebtor = signal<string>('');
   debtorTypeFilter = signal<string>('ALL');
+  agingFilter = signal<string>('ALL');
 
   reminderSentMessage = signal<string | null>(null);
+
+  // Modal State
+  reminderModalVisible = signal<boolean>(false);
+  selectedReceivable = signal<Receivable | null>(null);
+  savingReminder = signal<boolean>(false);
 
   totalRemaining = computed(() => {
     return this.filteredReceivables().reduce((acc, r) => acc + r.remainingAmount, 0);
@@ -146,8 +193,7 @@ export class BillingReceivablesComponent implements OnInit {
   }
 
   loadAllReceivables() {
-    // Par défaut, charge toutes les créances impayées
-    this.billingApi.getReceivablesByStatus('UNPAID').subscribe({
+    this.billingApi.getReceivablesByStatus('ALL').subscribe({
       next: (data) => {
         this.receivables.set(data);
         this.applyFilters();
@@ -174,13 +220,34 @@ export class BillingReceivablesComponent implements OnInit {
       result = result.filter(r => r.debtorId.toLowerCase().includes(term));
     }
 
+    // Filtre par balance âgée (agingSlice)
+    if (this.agingFilter() !== 'ALL') {
+      result = result.filter(r => r.agingSlice === this.agingFilter());
+    }
+
     this.filteredReceivables.set(result);
   }
 
-  simulateReminder(r: Receivable) {
-    this.reminderSentMessage.set(`Simulation de relance envoyée pour le débiteur ${r.debtorId} (Reste à payer : ${r.remainingAmount} FCFA).`);
-    setTimeout(() => {
-      this.reminderSentMessage.set(null);
-    }, 4000);
+  openReminderModal(r: Receivable) {
+    this.selectedReceivable.set(r);
+    this.reminderModalVisible.set(true);
+  }
+
+  onReminderSubmitted(form: any) {
+    const receivable = this.selectedReceivable();
+    if (!receivable) return;
+
+    this.savingReminder.set(true);
+    this.billingApi.recordReminder(receivable.id, form).subscribe({
+      next: () => {
+        this.savingReminder.set(false);
+        this.reminderModalVisible.set(false);
+        this.reminderSentMessage.set(`L'action de relance a bien été consignée.`);
+        setTimeout(() => this.reminderSentMessage.set(null), 4000);
+        this.loadAllReceivables();
+      },
+      error: () => {
+      }
+    });
   }
 }

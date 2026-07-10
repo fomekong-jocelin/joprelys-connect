@@ -167,6 +167,10 @@ public class EstimateService {
 
     @Transactional(readOnly = true)
     public List<ReceivableResponse> getReceivablesByStatus(String status) {
+        if ("ALL".equalsIgnoreCase(status)) {
+            return receivableRepository.findAllByOrderByCreatedAtDesc()
+                .stream().map(ReceivableResponse::fromEntity).toList();
+        }
         return receivableRepository.findByStatusOrderByCreatedAtDesc(status)
             .stream().map(ReceivableResponse::fromEntity).toList();
     }

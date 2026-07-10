@@ -17,7 +17,11 @@ public record CashSessionResponse(
     Double declaredBalance,
     Double discrepancyAmount,
     String discrepancyReason,
-    String status
+    String status,
+    Boolean discrepancyResolved,
+    String resolutionNotes,
+    String resolvedByUserId,
+    Instant resolvedAt
 ) {
     public static CashSessionResponse fromEntity(CashRegisterSessionEntity entity) {
         return new CashSessionResponse(
@@ -33,7 +37,11 @@ public record CashSessionResponse(
             entity.getDeclaredBalance(),
             entity.getDiscrepancyAmount(),
             entity.getDiscrepancyReason(),
-            entity.getStatus()
+            entity.getStatus(),
+            entity.getDiscrepancyResolved(),
+            entity.getResolutionNotes(),
+            entity.getResolvedByUserId(),
+            entity.getResolvedAt()
         );
     }
 }

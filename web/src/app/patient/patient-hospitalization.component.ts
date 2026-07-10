@@ -5,13 +5,18 @@ import { PatientApiService } from './patient-api.service';
 import { SpatialApiService } from './spatial-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AuthTokenStorageService } from '../auth/auth-token-storage.service';
-import { Hospitalization, HospitalizationNote, Ward, Bed, WardOccupancy } from './patient.models';
+import { Hospitalization, Ward } from './patient.models';
 import { StaffApiService } from '../clinic/staff/staff-api.service';
+import { HospitalizationStayHeaderComponent } from './hospitalization-stay-header.component';
+import { HospitalizationNotesPanelComponent } from './hospitalization-notes-panel.component';
+import { HospitalizationDailyCarePanelComponent } from './hospitalization-daily-care-panel.component';
+import { HospitalizationMedicationPanelComponent } from './hospitalization-medication-panel.component';
+import { HospitalizationConsumptionPanelComponent } from './hospitalization-consumption-panel.component';
 
 @Component({
   selector: 'app-patient-hospitalization',
   standalone: true,
-  imports: [DatePipe, FormsModule, CommonModule],
+  imports: [DatePipe, FormsModule, CommonModule, HospitalizationStayHeaderComponent, HospitalizationNotesPanelComponent, HospitalizationDailyCarePanelComponent, HospitalizationMedicationPanelComponent, HospitalizationConsumptionPanelComponent],
   templateUrl: './patient-hospitalization.component.html'
 })
 export class PatientHospitalizationComponent implements OnInit {
@@ -23,11 +28,9 @@ export class PatientHospitalizationComponent implements OnInit {
   private readonly i18n = inject(I18nService);
   private readonly staffApi = inject(StaffApiService);
 
-  readonly t = (key: string) => this.i18n.t(key);
+  readonly t = (key: string, defaultValue?: string) => this.i18n.t(key, defaultValue);
 
   readonly list = signal<Hospitalization[]>([]);
-  readonly notes = signal<HospitalizationNote[]>([]);
-  readonly loadingNotes = signal<boolean>(false);
   readonly staffList = signal<any[]>([]);
   readonly patientVisits = signal<any[]>([]);
 
@@ -47,27 +50,7 @@ export class PatientHospitalizationComponent implements OnInit {
   witnessName = '';
   consentFile: File | null = null;
 
-  // Soins journaliers, médicaments et consommables
-  readonly dailyCares = signal<any[]>([]);
-  readonly medAdministrations = signal<any[]>([]);
-  readonly consumptions = signal<any[]>([]);
   activeTab = 'notes';
-
-  readonly showAddCare = signal<boolean>(false);
-  careType = 'PANSEMENT';
-  careDescription = '';
-  careBillable = false;
-  carePrice: number | null = null;
-
-  readonly showAddMedAdmin = signal<boolean>(false);
-  medAdminName = '';
-  medAdminDose = '';
-  medAdminPrescriptionItemId: string | null = null;
-
-  readonly showAddConsumption = signal<boolean>(false);
-  consumptionName = '';
-  consumptionQty = 1;
-  consumptionPrice = 0.0;
 
   // Bloc opératoire & CRO
   readonly operatingReports = signal<any[]>([]);
@@ -109,9 +92,6 @@ export class PatientHospitalizationComponent implements OnInit {
   dischargeDiagnosis = '';
   dischargeInstructions = '';
   againstMedicalAdvice = false;
-
-  // Formulaire de note
-  newNoteContent = '';
 
   readonly session = this.tokenStorage.session;
 
@@ -157,11 +137,7 @@ export class PatientHospitalizationComponent implements OnInit {
         this.list.set(data);
         const active = this.activeHospitalization();
         if (active) {
-          this.loadNotes(active.id);
           this.loadConsents(active.id);
-          this.loadDailyCares(active.id);
-          this.loadMedAdministrations(active.id);
-          this.loadConsumptions(active.id);
           this.loadOperatingReports(active.id);
         }
       }
@@ -174,16 +150,6 @@ export class PatientHospitalizationComponent implements OnInit {
     });
   }
 
-  loadNotes(hospId: string): void {
-    this.loadingNotes.set(true);
-    this.patientApi.getHospitalizationNotes(hospId).subscribe({
-      next: (data) => {
-        this.notes.set(data);
-        this.loadingNotes.set(false);
-      },
-      error: () => this.loadingNotes.set(false)
-    });
-  }
 
   hasRole(roleStr: string | undefined, allowedRoles: string[] | string): boolean {
     if (!roleStr) return false;
@@ -343,18 +309,6 @@ export class PatientHospitalizationComponent implements OnInit {
     });
   }
 
-  saveNote(event: Event): void {
-    event.preventDefault();
-    const active = this.activeHospitalization();
-    if (!active || !this.newNoteContent.trim()) return;
-
-    this.patientApi.addHospitalizationNote(active.id, this.newNoteContent.trim()).subscribe({
-      next: () => {
-        this.newNoteContent = '';
-        this.loadNotes(active.id);
-      }
-    });
-  }
 
   openDischargeModal(): void {
     this.dischargeDiagnosis = '';
@@ -457,100 +411,6 @@ export class PatientHospitalizationComponent implements OnInit {
 
   downloadConsentFile(documentId: string): void {
     window.open(`/api/documents/${documentId}/download`, '_blank');
-  }
-
-  loadDailyCares(hospId: string): void {
-    this.patientApi.getDailyCares(hospId).subscribe({
-      next: (data) => this.dailyCares.set(data)
-    });
-  }
-
-  loadMedAdministrations(hospId: string): void {
-    this.patientApi.getMedicationAdministrations(hospId).subscribe({
-      next: (data) => this.medAdministrations.set(data)
-    });
-  }
-
-  loadConsumptions(hospId: string): void {
-    this.patientApi.getPatientConsumptions(hospId).subscribe({
-      next: (data) => this.consumptions.set(data)
-    });
-  }
-
-  saveDailyCare(event: Event): void {
-    event.preventDefault();
-    const active = this.activeHospitalization();
-    if (!active || !this.careType.trim()) return;
-
-    this.patientApi.addDailyCare(active.id, {
-      careType: this.careType.trim(),
-      description: this.careDescription.trim(),
-      billable: this.careBillable,
-      price: this.careBillable ? this.carePrice : null,
-      performedAt: new Date().toISOString()
-    }).subscribe({
-      next: () => {
-        this.showAddCare.set(false);
-        this.careDescription = '';
-        this.careBillable = false;
-        this.carePrice = null;
-        this.loadDailyCares(active.id);
-      },
-      error: (err) => {
-        console.error('Error saving care', err);
-        alert('Erreur lors de l\'enregistrement du soin');
-      }
-    });
-  }
-
-  saveMedAdmin(event: Event): void {
-    event.preventDefault();
-    const active = this.activeHospitalization();
-    if (!active || !this.medAdminName.trim() || !this.medAdminDose.trim()) return;
-
-    this.patientApi.addMedicationAdministration(active.id, {
-      medicationName: this.medAdminName.trim(),
-      dose: this.medAdminDose.trim(),
-      prescriptionItemId: this.medAdminPrescriptionItemId,
-      administeredAt: new Date().toISOString()
-    }).subscribe({
-      next: () => {
-        this.showAddMedAdmin.set(false);
-        this.medAdminName = '';
-        this.medAdminDose = '';
-        this.medAdminPrescriptionItemId = null;
-        this.loadMedAdministrations(active.id);
-      },
-      error: (err) => {
-        console.error('Error saving med admin', err);
-        alert('Erreur lors de l\'enregistrement de l\'administration');
-      }
-    });
-  }
-
-  savePatientConsumption(event: Event): void {
-    event.preventDefault();
-    const active = this.activeHospitalization();
-    if (!active || !this.consumptionName.trim() || this.consumptionQty < 1) return;
-
-    this.patientApi.addPatientConsumption(active.id, {
-      itemName: this.consumptionName.trim(),
-      quantity: this.consumptionQty,
-      unitPrice: this.consumptionPrice,
-      consumedAt: new Date().toISOString()
-    }).subscribe({
-      next: () => {
-        this.showAddConsumption.set(false);
-        this.consumptionName = '';
-        this.consumptionQty = 1;
-        this.consumptionPrice = 0.0;
-        this.loadConsumptions(active.id);
-      },
-      error: (err) => {
-        console.error('Error saving consumption', err);
-        alert('Erreur lors de l\'enregistrement de la consommation');
-      }
-    });
   }
 
   loadOperatingReports(hospId: string): void {

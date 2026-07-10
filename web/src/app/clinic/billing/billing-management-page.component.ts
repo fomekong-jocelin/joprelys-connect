@@ -5,7 +5,8 @@ import { BillingApiService } from '../../patient/billing-api.service';
 import { PatientApiService } from '../../patient/patient-api.service';
 import { VisitApiService } from '../../visit/visit-api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
-import { Patient, Invoice, InsuranceConvention, TariffGrid, InvoiceItem } from '../../patient/patient.models';
+import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
+import { Patient, Invoice, InvoiceSettlementSummary, InsuranceConvention, TariffGrid, InvoiceItem } from '../../patient/patient.models';
 import { Visit } from '../../visit/visit.models';
 import { IconComponent } from '../../shared/ui/icon.component';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
@@ -17,6 +18,7 @@ import { BillingEstimatesComponent } from './billing-estimates.component';
 import { BillingCashRegisterComponent } from './billing-cash-register.component';
 import { BillingReceivablesComponent } from './billing-receivables.component';
 import { BillingInsuranceBordereauxComponent } from './billing-insurance-bordereaux.component';
+import { BillingDafDashboardComponent } from './billing-daf-dashboard.component';
 
 @Component({
   selector: 'app-billing-management-page',
@@ -34,6 +36,7 @@ import { BillingInsuranceBordereauxComponent } from './billing-insurance-bordere
     BillingCashRegisterComponent,
     BillingReceivablesComponent,
     BillingInsuranceBordereauxComponent,
+    BillingDafDashboardComponent,
   ],
   templateUrl: './billing-management-page.component.html',
   styles: [`
@@ -53,8 +56,24 @@ export class BillingManagementPageComponent implements OnInit {
   private readonly patientApi = inject(PatientApiService);
   private readonly visitApi = inject(VisitApiService);
   private readonly i18n = inject(I18nService);
+  private readonly tokenStorage = inject(AuthTokenStorageService);
 
-  activeTab = signal<'facturation' | 'caisse' | 'creances' | 'bordereaux' | 'conventions' | 'tariffs'>('facturation');
+  activeTab = signal<'facturation' | 'caisse' | 'creances' | 'bordereaux' | 'conventions' | 'tariffs' | 'daf'>('facturation');
+
+  hasRole(allowedRoles: string[] | string): boolean {
+    const role = this.tokenStorage.session()?.role;
+    if (!role) return false;
+    const roles = role.split(',').map((r) => r.trim());
+    if (Array.isArray(allowedRoles)) {
+      return roles.some((r) => allowedRoles.includes(r));
+    }
+    return roles.includes(allowedRoles);
+  }
+
+  readonly isDafOrAdmin = computed(() => {
+    return this.hasRole(['DAF', 'ADMIN_CLINIQUE']);
+  });
+
   
   // Search & Patient
   searchQuery = '';
@@ -96,6 +115,7 @@ export class BillingManagementPageComponent implements OnInit {
 
   // History
   invoices = signal<Invoice[]>([]);
+  invoiceSettlements = signal<Record<string, InvoiceSettlementSummary>>({});
   selectedInvoiceForEstimates = signal<Invoice | null>(null);
 
   // Payment Modal
@@ -169,6 +189,12 @@ export class BillingManagementPageComponent implements OnInit {
     this.billingApi.listInvoices(patientId).subscribe({
       next: (res) => this.invoices.set(res),
       error: () => this.showError('billing.error.load')
+    });
+    this.billingApi.listInvoiceSettlementSummaries(patientId).subscribe({
+      next: (summaries) => this.invoiceSettlements.set(Object.fromEntries(
+        summaries.map((summary) => [summary.invoiceId, summary])
+      )),
+      error: () => this.invoiceSettlements.set({})
     });
   }
 

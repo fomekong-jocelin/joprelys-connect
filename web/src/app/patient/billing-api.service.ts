@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { InsuranceConvention, TariffGrid, Invoice, Payment, InvoiceItem, Estimate, CreditNote, Receivable, CashRegister, CashSession, CashMovement, PaymentReceipt } from './patient.models';
+import { InsuranceConvention, TariffGrid, Invoice, Payment, InvoiceItem, Estimate, CreditNote, Receivable, InvoiceSettlementSummary, CashRegister, CashSession, CashMovement, CashSessionSummary, PaymentReceipt } from './patient.models';
 
 @Injectable({
   providedIn: 'root',
@@ -53,6 +53,11 @@ export class BillingApiService {
   listInvoices(patientId: string): Observable<Invoice[]> {
     const params = new HttpParams().set('patientId', patientId);
     return this.http.get<Invoice[]>('/api/invoices', { params });
+  }
+
+  listInvoiceSettlementSummaries(patientId: string): Observable<InvoiceSettlementSummary[]> {
+    const params = new HttpParams().set('patientId', patientId);
+    return this.http.get<InvoiceSettlementSummary[]>('/api/invoices/settlement-summaries', { params });
   }
 
   getInvoice(id: string): Observable<Invoice> {
@@ -112,6 +117,15 @@ export class BillingApiService {
     return this.http.get<Receivable[]>('/api/receivables/by-status', { params });
   }
 
+  // ── Receivable Reminders ──────────────────────────────────────────
+  recordReminder(receivableId: string, request: { actionType: string; status: string; notes: string }): Observable<any> {
+    return this.http.post<any>(`/api/receivables/${receivableId}/reminders`, request);
+  }
+
+  getReminders(receivableId: string): Observable<any[]> {
+    return this.http.get<any[]>(`/api/receivables/${receivableId}/reminders`);
+  }
+
   // ── Estimates ─────────────────────────────────────────────────────
   createEstimate(request: {
     patientId: string;
@@ -146,6 +160,10 @@ export class BillingApiService {
 
   getActiveCashSession(): Observable<CashSession> {
     return this.http.get<CashSession>('/api/cash-registers/sessions/active');
+  }
+
+  getActiveCashSessionSummary(): Observable<CashSessionSummary> {
+    return this.http.get<CashSessionSummary>('/api/cash-registers/sessions/active/summary');
   }
 
   addCashMovement(request: {
@@ -199,6 +217,20 @@ export class BillingApiService {
   payInsuranceBordereau(id: string, amount: number, referenceNumber: string): Observable<any> {
     return this.http.post<any>(`/api/billing/insurance-bordereaux/${id}/pay`, { amount, referenceNumber });
   }
+
+  // ── DAF Accounting & Supervision ──────────────────────────────────
+  listAllSessions(): Observable<CashSession[]> {
+    return this.http.get<CashSession[]>('/api/cash-registers/sessions');
+  }
+
+  resolveDiscrepancy(sessionId: string, resolutionNotes: string): Observable<CashSession> {
+    return this.http.post<CashSession>(`/api/cash-registers/sessions/${sessionId}/resolve-discrepancy`, { resolutionNotes });
+  }
+
+  exportAccounting(startDate?: string, endDate?: string): Observable<Blob> {
+    let params = new HttpParams();
+    if (startDate) params = params.set('startDate', startDate);
+    if (endDate) params = params.set('endDate', endDate);
+    return this.http.get('/api/accounting/export', { params, responseType: 'blob' });
+  }
 }
-
-

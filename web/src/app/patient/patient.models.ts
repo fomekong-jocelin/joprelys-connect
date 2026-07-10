@@ -389,6 +389,17 @@ export interface Receivable {
   status: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID';
   dueDate?: string;
   createdAt: string;
+  agingSlice?: string;
+}
+
+export interface ReceivableReminder {
+  id: string;
+  receivableId: string;
+  actionType: 'PHONE_CALL' | 'EMAIL' | 'LETTER' | 'VISIT';
+  status: 'PENDING' | 'PROMISED_PAYMENT' | 'DISPUTE' | 'UNREACHABLE';
+  notes?: string;
+  actorId: string;
+  createdAt: string;
 }
 
 export interface Payment {
@@ -421,6 +432,10 @@ export interface CashSession {
   discrepancyAmount?: number;
   discrepancyReason?: string;
   status: 'OPEN' | 'CLOSED';
+  discrepancyResolved: boolean;
+  resolutionNotes?: string;
+  resolvedByUserId?: string;
+  resolvedAt?: string;
 }
 
 export interface CashMovement {
@@ -469,4 +484,29 @@ export interface BordereauInvoiceDto {
 
 export interface BordereauDetails extends Bordereau {
   invoices: BordereauInvoiceDto[];
+}
+
+export interface SettlementParty {
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  status: 'NOT_DUE' | 'UNPAID' | 'PARTIALLY_PAID' | 'PAID';
+}
+
+export interface InvoiceSettlementSummary {
+  invoiceId: string;
+  collectionStatus: 'NOT_YET_DUE' | 'PATIENT_DUE' | 'PATIENT_PARTIALLY_PAID' | 'INSURANCE_DUE' | 'SETTLED';
+  patient: SettlementParty;
+  insurance?: SettlementParty;
+}
+
+export interface CashSessionSummary {
+  sessionId: string;
+  openingCash: number;
+  cashReceipts: number;
+  chequeReceipts: number;
+  transferReceipts: number;
+  cashExpenses: number;
+  bankDeposits: number;
+  expectedCash: number;
 }

@@ -62,7 +62,7 @@ public class InsuranceBordereauService {
         // Find eligible invoices for this convention that are not yet billed in a statement (bordereau)
         List<InvoiceEntity> invoices = invoiceRepository.findInvoicesForBordereau(
                 conventionId,
-                List.of(InvoiceStatus.VALIDATED, InvoiceStatus.PENDING, InvoiceStatus.PARTIALLY_PAID),
+                List.of(InvoiceStatus.VALIDATED, InvoiceStatus.PENDING, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.PAID),
                 startInstant,
                 endInstant,
                 orgId

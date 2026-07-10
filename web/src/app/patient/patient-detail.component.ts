@@ -148,7 +148,7 @@ import { StaffMember } from '../clinic/staff/staff.models';
                   @if (canDownloadSummary()) {
                     <button
                       (click)="downloadSummaryPdf()"
-                      class="grow sm:grow-0 text-xs px-3 py-1.5 rounded-lg border border-[var(--app-border)] text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800/50 flex items-center justify-center gap-1.5 font-bold transition-all cursor-pointer shadow-xs"
+                      class="grow sm:grow-0 min-h-[42px] text-xs px-4 py-2.5 rounded-lg border border-[var(--app-border)] text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800/50 flex items-center justify-center gap-1.5 font-bold transition-all cursor-pointer shadow-xs"
                       [title]="i18n.t('patient.detail.downloadSummaryTitle')"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-brand-primary">

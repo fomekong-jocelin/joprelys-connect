@@ -48,6 +48,13 @@ public class CashRegisterController {
         return ResponseEntity.ok(active);
     }
 
+    @GetMapping("/sessions/active/summary")
+    @PreAuthorize("hasAnyRole('ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'CAISSIER', 'DAF')")
+    @Operation(summary = "Récapitulatif de session active", description = "Retourne le rapprochement des espèces, chèques et virements de la session du caissier connecté")
+    public ResponseEntity<CashSessionSummaryResponse> getActiveSessionSummary() {
+        return ResponseEntity.ok(cashRegisterService.getActiveSessionSummary());
+    }
+
     @PostMapping("/movements")
     @PreAuthorize("hasAnyRole('ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'CAISSIER', 'DAF')")
     @Operation(summary = "Enregistrer un mouvement de caisse", description = "Enregistre une entrée, une sortie ou un versement banque dans la session active")
@@ -81,5 +88,21 @@ public class CashRegisterController {
     @Operation(summary = "Lister l'historique des sessions d'une caisse", description = "Retourne l'historique de toutes les sessions d'une caisse (DAF/Admin)")
     public ResponseEntity<List<CashSessionResponse>> listSessionsByRegister(@PathVariable UUID registerId) {
         return ResponseEntity.ok(cashRegisterService.listSessionsByRegister(registerId));
+    }
+
+    @GetMapping("/sessions")
+    @PreAuthorize("hasAnyRole('ADMIN_CLINIQUE', 'DAF')")
+    @Operation(summary = "Lister toutes les sessions de caisse", description = "Retourne l'historique global de toutes les sessions de caisse de l'établissement (DAF/Admin)")
+    public ResponseEntity<List<CashSessionResponse>> listAllSessions() {
+        return ResponseEntity.ok(cashRegisterService.listAllSessions());
+    }
+
+    @PostMapping("/sessions/{sessionId}/resolve-discrepancy")
+    @PreAuthorize("hasAnyRole('ADMIN_CLINIQUE', 'DAF')")
+    @Operation(summary = "Résoudre un écart de caisse", description = "Permet au DAF d'enregistrer la résolution d'un écart sur une session clôturée")
+    public ResponseEntity<CashSessionResponse> resolveDiscrepancy(
+            @PathVariable UUID sessionId,
+            @Valid @RequestBody ResolveDiscrepancyRequest request) {
+        return ResponseEntity.ok(cashRegisterService.resolveDiscrepancy(sessionId, request));
     }
 }

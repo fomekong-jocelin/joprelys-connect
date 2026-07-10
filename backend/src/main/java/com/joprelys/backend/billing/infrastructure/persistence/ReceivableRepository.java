@@ -9,4 +9,5 @@ public interface ReceivableRepository extends JpaRepository<ReceivableEntity, UU
     List<ReceivableEntity> findByInvoiceId(UUID invoiceId);
     List<ReceivableEntity> findByInvoiceIdAndDebtorTypeIgnoreCase(UUID invoiceId, String debtorType);
     List<ReceivableEntity> findByStatusOrderByCreatedAtDesc(String status);
+    List<ReceivableEntity> findAllByOrderByCreatedAtDesc();
 }
