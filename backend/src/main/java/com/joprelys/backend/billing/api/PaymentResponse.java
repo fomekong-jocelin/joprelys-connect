@@ -2,13 +2,14 @@ package com.joprelys.backend.billing.api;
 
 import com.joprelys.backend.billing.infrastructure.persistence.PaymentEntity;
 import com.joprelys.backend.billing.infrastructure.persistence.PaymentMethod;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
 public record PaymentResponse(
         UUID id,
         UUID invoiceId,
-        Double amount,
+        BigDecimal amount,
         PaymentMethod paymentMethod,
         String referenceNumber,
         UUID receivedByUserId,

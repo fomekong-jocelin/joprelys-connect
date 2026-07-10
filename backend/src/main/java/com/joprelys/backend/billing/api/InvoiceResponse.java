@@ -2,6 +2,7 @@ package com.joprelys.backend.billing.api;
 
 import com.joprelys.backend.billing.infrastructure.persistence.InvoiceEntity;
 import com.joprelys.backend.billing.infrastructure.persistence.InvoiceStatus;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -12,15 +13,15 @@ public record InvoiceResponse(
         UUID visitId,
         String invoiceNumber,
         InsuranceConventionDto insuranceConvention,
-        Double totalAmount,
-        Double patientShare,
-        Double insuranceShare,
+        BigDecimal totalAmount,
+        BigDecimal patientShare,
+        BigDecimal insuranceShare,
         InvoiceStatus status,
         List<InvoiceItemResponse> items,
         Instant createdAt,
         Instant validatedAt,
         UUID validatedByUserId,
-        Double discountAmount,
+        BigDecimal discountAmount,
         String discountReason
 ) {
     public static InvoiceResponse fromEntity(InvoiceEntity entity) {
@@ -43,4 +44,3 @@ public record InvoiceResponse(
         );
     }
 }
-
