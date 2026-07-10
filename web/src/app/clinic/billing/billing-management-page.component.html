@@ -115,6 +115,13 @@
         </div>
       }
 
+      @if (deepLinkLoading()) {
+        <div class="ui-card-subtle flex items-center gap-3 p-4 text-xs text-[var(--text-secondary)]" role="status" aria-live="polite">
+          <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-brand-cyan" aria-hidden="true"></span>
+          {{ t('billing.deepLink.loading', 'Chargement de la facture…') }}
+        </div>
+      }
+
       @if (activeTab() === 'facturation') {
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div class="space-y-6">
@@ -451,6 +458,8 @@
         </div>
         <app-billing-estimates
           [patientId]="selectedPatient()!.id"
+          [visits]="patientVisits()"
+          [initialVisitId]="selectedVisitId()"
           [invoice]="selectedInvoice"
           [settlement]="invoiceSettlements()[selectedInvoice.id]"
           (close)="closeInvoiceDetails()"

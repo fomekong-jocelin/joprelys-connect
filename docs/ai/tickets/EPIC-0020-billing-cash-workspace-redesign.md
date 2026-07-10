@@ -203,6 +203,10 @@ Le détail s'ouvre dans un panneau latéral ou une vue dédiée contenant :
 - [x] L'historique utilise des libellés courts (`Détail`, `Encaisser`) adaptés aux petits écrans.
 - [x] Le détail financier est affiché avant les sections secondaires devis/avoirs.
 - [x] Le paiement informe l'utilisateur lorsqu'aucune session de caisse n'est ouverte et propose d'ouvrir la caisse.
+- [x] L’annulation de facture est protégée par une modale interne accessible et internationalisée.
+- [x] Le devis peut être lié à une visite et transmet le `visitId` sélectionné.
+- [x] Les retours succès/erreur et le chargement deep-link sont visibles.
+- [x] Les tests du panneau devis couvrent les mutations financières critiques.
 - [x] Build Angular et 111 tests frontend réussis.
 - [ ] Validation visuelle navigateur locale : bloquée par la politique d'accès à `localhost` dans l'environnement Codex.
 - [ ] Lot 2 : simplifier l'écran caisse, la file de créances et les bordereaux assurance.

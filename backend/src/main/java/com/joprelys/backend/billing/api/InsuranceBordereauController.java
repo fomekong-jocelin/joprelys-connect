@@ -1,5 +1,7 @@
 package com.joprelys.backend.billing.api;
 
+import java.math.BigDecimal;
+
 import com.joprelys.backend.billing.application.InsuranceBordereauService;
 import com.joprelys.backend.billing.infrastructure.persistence.InsuranceBordereauEntity;
 import com.joprelys.backend.billing.infrastructure.persistence.InvoiceEntity;
@@ -146,9 +148,9 @@ public class InsuranceBordereauController {
     public record BordereauInvoiceDto(
             UUID id,
             String invoiceNumber,
-            Double totalAmount,
-            Double insuranceShare,
-            Double patientShare,
+            BigDecimal totalAmount,
+            BigDecimal insuranceShare,
+            BigDecimal patientShare,
             String status
     ) {
         public static BordereauInvoiceDto fromEntity(InvoiceEntity entity) {

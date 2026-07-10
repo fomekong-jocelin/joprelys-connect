@@ -1,10 +1,12 @@
 package com.joprelys.backend.billing.api;
 
+import java.math.BigDecimal;
+
 /** Amounts and settlement status for one invoice debtor. */
 public record SettlementPartyResponse(
-        Double totalAmount,
-        Double paidAmount,
-        Double remainingAmount,
+        BigDecimal totalAmount,
+        BigDecimal paidAmount,
+        BigDecimal remainingAmount,
         String status
 ) {
 }

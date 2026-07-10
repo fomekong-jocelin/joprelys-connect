@@ -1,6 +1,7 @@
 package com.joprelys.backend.billing.api;
 
 import com.joprelys.backend.billing.infrastructure.persistence.ReceivableEntity;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -9,16 +10,16 @@ public record ReceivableResponse(
     UUID invoiceId,
     String debtorType,
     UUID debtorId,
-    Double totalAmount,
-    Double paidAmount,
-    Double remainingAmount,
+    BigDecimal totalAmount,
+    BigDecimal paidAmount,
+    BigDecimal remainingAmount,
     String status,
     Instant dueDate,
     Instant createdAt,
     String agingSlice
 ) {
     public static ReceivableResponse fromEntity(ReceivableEntity entity) {
-        double remaining = Math.max(0.0, entity.getTotalAmount() - entity.getPaidAmount());
+        BigDecimal remaining = entity.getTotalAmount().subtract(entity.getPaidAmount()).max(BigDecimal.ZERO);
         
         Instant created = entity.getCreatedAt() != null ? entity.getCreatedAt() : Instant.now();
         long days = java.time.temporal.ChronoUnit.DAYS.between(created, Instant.now());

@@ -9,5 +9,8 @@
 | Bordereau | `DRAFT → SENT → PAID`, référence obligatoire au paiement | Integration / E2E |
 | Facture soldée | Aucune action d'encaissement restante | Angular |
 | Avoir | Action séparée, confirmation et audit | Angular / Backend |
+| Annulation facture | Modale maison, aucun `confirm()`, Échap et blocage pendant la requête | Angular |
+| Création devis | `patientId`, `visitId` et lignes transmis ; succès/erreur visibles | Angular |
+| Deep-link facture | Indicateur de chargement rendu avant le panneau de détail | Angular / QA |
 | Accessibilité | Clavier, focus, contraste, labels et responsive | QA |
 | Ligne de devis dans un panneau étroit | Champs contenus, retour en grille 2 puis 1 colonne, action « Supprimer » visible | Angular / QA visuelle |

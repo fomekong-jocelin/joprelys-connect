@@ -1,6 +1,7 @@
 package com.joprelys.backend.cash.api;
 
 import com.joprelys.backend.cash.infrastructure.persistence.PaymentReceiptEntity;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -8,7 +9,7 @@ public record PaymentReceiptResponse(
     UUID id,
     UUID paymentId,
     String receiptNumber,
-    Double amount,
+    BigDecimal amount,
     String paymentMethod,
     Instant createdAt
 ) {

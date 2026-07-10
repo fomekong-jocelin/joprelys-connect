@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -120,7 +121,7 @@ public class EstimateService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "Impossible d'appliquer une remise sur une facture " + invoice.getStatus().name().toLowerCase() + ".");
         }
-        invoice.setDiscountAmount(request.discountAmount());
+        invoice.setDiscountAmount(BigDecimal.valueOf(request.discountAmount()));
         invoice.setDiscountReason(request.discountReason());
         invoiceRepository.save(invoice);
         return InvoiceResponse.fromEntity(invoice);
@@ -137,11 +138,12 @@ public class EstimateService {
         Long seqVal = creditNoteRepository.getNextCreditNoteNumberSequenceValue();
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String number = String.format("%s%s-%06d", CREDIT_NOTE_PREFIX, dateStr, seqVal);
+        BigDecimal creditAmount = BigDecimal.valueOf(request.amount());
         CreditNoteEntity creditNote = new CreditNoteEntity(invoiceId, number, request.amount(), request.reason());
         creditNoteRepository.save(creditNote);
 
         // Ajuster les créances si elles existent
-        adjustReceivablesForCreditNote(invoice, request.amount());
+        adjustReceivablesForCreditNote(invoice, creditAmount);
         return CreditNoteResponse.fromEntity(creditNote);
     }
 
@@ -188,16 +190,16 @@ public class EstimateService {
     }
 
     private void createReceivablesForInvoice(InvoiceEntity invoice) {
-        double patientShare = invoice.getPatientShare() != null ? invoice.getPatientShare() : 0.0;
-        double insuranceShare = invoice.getInsuranceShare() != null ? invoice.getInsuranceShare() : 0.0;
+        BigDecimal patientShare = invoice.getPatientShare() != null ? invoice.getPatientShare() : BigDecimal.ZERO;
+        BigDecimal insuranceShare = invoice.getInsuranceShare() != null ? invoice.getInsuranceShare() : BigDecimal.ZERO;
 
-        if (patientShare > 0) {
+        if (patientShare.signum() > 0) {
             ReceivableEntity patientReceivable = new ReceivableEntity(
                 invoice.getId(), "PATIENT", invoice.getPatientId(), patientShare
             );
             receivableRepository.save(patientReceivable);
         }
-        if (insuranceShare > 0 && invoice.getInsuranceConvention() != null) {
+        if (insuranceShare.signum() > 0 && invoice.getInsuranceConvention() != null) {
             ReceivableEntity insuranceReceivable = new ReceivableEntity(
                 invoice.getId(), "INSURANCE",
                 invoice.getInsuranceConvention().getId(), insuranceShare
@@ -206,18 +208,19 @@ public class EstimateService {
         }
     }
 
-    private void adjustReceivablesForCreditNote(InvoiceEntity invoice, double creditAmount) {
+    private void adjustReceivablesForCreditNote(InvoiceEntity invoice, BigDecimal creditAmount) {
         List<ReceivableEntity> receivables = receivableRepository.findByInvoiceId(invoice.getId());
         if (receivables.isEmpty()) return;
 
-        double remaining = creditAmount;
+        BigDecimal remaining = creditAmount;
         for (ReceivableEntity r : receivables) {
-            if (remaining <= 0) break;
-            double reducible = r.getTotalAmount() - r.getPaidAmount();
-            double reduction = Math.min(remaining, reducible);
-            r.setPaidAmount(r.getPaidAmount() + reduction);
-            remaining -= reduction;
+            if (remaining.signum() <= 0) break;
+            BigDecimal reducible = r.getTotalAmount().subtract(r.getPaidAmount()).max(BigDecimal.ZERO);
+            BigDecimal reduction = remaining.min(reducible);
+            r.setPaidAmount(r.getPaidAmount().add(reduction));
+            remaining = remaining.subtract(reduction);
             receivableRepository.save(r);
         }
     }
 }
+
