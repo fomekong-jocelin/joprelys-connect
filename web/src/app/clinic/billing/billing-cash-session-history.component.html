@@ -62,7 +62,10 @@
                 </span>
               </div>
               <p class="cash-session-card__meta">
-                {{ session.reportNumber }} · {{ session.openedByName }} · {{ session.openedAt | date:'dd/MM/yyyy HH:mm' }}
+                @if (session.reportNumber) {
+                  <span>{{ session.reportNumber }} · </span>
+                }
+                {{ session.openedByName }} · {{ session.openedAt | date:'dd/MM/yyyy HH:mm' }}
                 @if (session.closedAt) {
                   <span> → {{ session.closedAt | date:'dd/MM/yyyy HH:mm' }}</span>
                 }
@@ -78,7 +81,7 @@
               >
                 {{ expandedSessionId() === session.id ? t('common.hideDetails', 'Masquer') : t('common.viewDetails', 'Voir le détail') }}
               </button>
-              @if (session.status === 'CLOSED') {
+              @if (session.status === 'CLOSED' && session.reportNumber) {
                 <button
                   type="button"
                   class="ui-button ui-button-primary"
