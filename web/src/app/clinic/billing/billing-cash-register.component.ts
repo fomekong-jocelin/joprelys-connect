@@ -5,12 +5,19 @@ import { I18nService } from '../../core/i18n/i18n.service';
 import { BillingApiService } from '../../patient/billing-api.service';
 import { CashMovement, CashRegister, CashSession, CashSessionSummary } from '../../patient/patient.models';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { BillingCashSessionHistoryComponent } from './billing-cash-session-history.component';
 import { BillingCashierQueueComponent } from './billing-cashier-queue.component';
 
 @Component({
   selector: 'app-billing-cash-register',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent, BillingCashierQueueComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    IconComponent,
+    BillingCashierQueueComponent,
+    BillingCashSessionHistoryComponent,
+  ],
   template: `
     <div class="space-y-6">
       @if (successMessage()) {
@@ -232,6 +239,8 @@ import { BillingCashierQueueComponent } from './billing-cashier-queue.component'
           </form>
         </div>
       }
+
+      <app-billing-cash-session-history></app-billing-cash-session-history>
     </div>
 
     @if (showCloseModal()) {
