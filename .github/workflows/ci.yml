@@ -1,120 +1,53 @@
-name: STORY-2204 — Maintenance tests
+name: Joprelys Connect — CI Pipeline
 
 on:
   push:
-    branches: [feature/story-2204-insurance-workspace]
-
-permissions:
-  contents: write
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
 
 jobs:
-  align-tests:
-    if: github.actor != 'github-actions[bot]'
+  backend-build:
+    name: Backend — Maven Build & Tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
-      - name: Checkout feature branch
+      - name: Checkout code
         uses: actions/checkout@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
         with:
-          ref: feature/story-2204-insurance-workspace
-          fetch-depth: 0
-      - name: Align historical insurance workflows
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+      - name: Ensure Maven wrapper is executable
+        run: chmod +x mvnw
+      - name: Build and verify (Maven strict)
+        run: ./mvnw clean verify -B -Dspring.profiles.active=test
+        env:
+          SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+          JOPRELYS_JWT_SECRET: ci-test-jwt-secret-at-least-32-chars-2026
 
-          full = Path('backend/src/test/java/com/joprelys/backend/billing/FullFinancialE2ETest.java')
-          text = full.read_text()
-          if 'import java.math.BigDecimal;' not in text:
-              text = text.replace('import java.time.Instant;', 'import java.math.BigDecimal;\nimport java.time.Instant;')
-
-          constructor_values = {
-              '80000.0': 'new BigDecimal("80000.0000")',
-              '8000.0': 'new BigDecimal("8000.0000")',
-              '5000.0': 'new BigDecimal("5000.0000")',
-          }
-          for old, new in constructor_values.items():
-              pattern = rf'(new InsuranceBordereauEntity\([^;]*?),\s*{re.escape(old)}\);'
-              text, count = re.subn(pattern, rf'\1, {new});', text, count=1)
-              if count != 1:
-                  raise SystemExit(f'Expected one constructor replacement for {old}, got {count}')
-
-          send_pay_pattern = re.compile(
-              r'(\s*mockMvc\.perform\(post\("/api/billing/insurance-bordereaux/" \+ bordereau\.getId\(\) \+ "/send"\).*?'
-              r'\.andExpect\(status\(\)\.isOk\(\)\);)'
-              r'(\s*mockMvc\.perform\(post\("/api/billing/insurance-bordereaux/" \+ bordereau\.getId\(\) \+ "/pay"\))',
-              re.DOTALL,
-          )
-          matches = list(send_pay_pattern.finditer(text))
-          if len(matches) != 2:
-              raise SystemExit(f'Expected two FullFinancial send/pay workflows, got {len(matches)}')
-
-          workflow_data = [('AR-E2E-01', '80000'), ('AR-TEST-DAF', '5000')]
-          counter = 0
-          def insert_progression(match):
-              global counter
-              reference, amount = workflow_data[counter]
-              counter += 1
-              progression = f'''\n\n        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/receive")
-                        .header("Authorization", "Bearer " + tokenDaf)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{{\\"insurerReference\\":\\"{reference}\\"}}"))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/accept")
-                        .header("Authorization", "Bearer " + tokenDaf)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{{\\"acceptedAmount\\":{amount},\\"insurerReference\\":\\"{reference}\\"}}"))
-                .andExpect(status().isOk());\n'''
-              return match.group(1) + progression + match.group(2)
-
-          text = send_pay_pattern.sub(insert_progression, text)
-          full.write_text(text)
-
-          cash = Path('backend/src/test/java/com/joprelys/backend/cash/CashRegisterControllerTest.java')
-          text = cash.read_text()
-          if 'import java.math.BigDecimal;' not in text:
-              text = text.replace('import java.time.Instant;', 'import java.math.BigDecimal;\nimport java.time.Instant;')
-          text, count = re.subn(
-              r'new InsuranceBordereauController\.BordereauPaymentRequest\(80000\.0, "CHQ-ASSUR-E2E"\)',
-              'new InsuranceBordereauController.BordereauPaymentRequest(new BigDecimal("80000.0000"), "CHQ-ASSUR-E2E")',
-              text,
-              count=1,
-          )
-          if count != 1:
-              raise SystemExit(f'Expected one CashRegister payment replacement, got {count}')
-
-          cash_pattern = re.compile(
-              r'(\s*mockMvc\.perform\(post\("/api/billing/insurance-bordereaux/" \+ bordereau\.id\(\) \+ "/send"\).*?'
-              r'\.andExpect\(status\(\)\.isOk\(\)\);)'
-              r'(\s*// 9\. Régler le bordereau)',
-              re.DOTALL,
-          )
-          progression = '''\n\n        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.id() + "/receive")
-                        .header("Authorization", "Bearer " + tokenAdmin)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\\"insurerReference\\":\\"AR-CASH-E2E\\"}"))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.id() + "/accept")
-                        .header("Authorization", "Bearer " + tokenAdmin)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\\"acceptedAmount\\":80000}"))
-                .andExpect(status().isOk());\n'''
-          text, count = cash_pattern.subn(lambda match: match.group(1) + progression + match.group(2), text, count=1)
-          if count != 1:
-              raise SystemExit(f'Expected one CashRegister progression insertion, got {count}')
-          cash.write_text(text)
-          PY
-      - name: Restore permanent CI workflow
-        run: |
-          git fetch origin main
-          git show origin/main:.github/workflows/ci.yml > .github/workflows/ci.yml
-      - name: Commit aligned tests
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/workflows/ci.yml backend/src/test/java/com/joprelys/backend/billing/FullFinancialE2ETest.java backend/src/test/java/com/joprelys/backend/cash/CashRegisterControllerTest.java
-          git commit -m "test(billing): aligner les parcours E2E assurance"
-          git push origin HEAD:feature/story-2204-insurance-workspace
+  frontend-build:
+    name: Frontend Angular — Build & Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm test
+      - name: Build Angular production
+        run: npm run build
