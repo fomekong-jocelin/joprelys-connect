@@ -110,6 +110,17 @@ describe('BillingInvoiceHistoryComponent', () => {
     expect(text).toContain('PDF');
   });
 
+  it('keeps a cancelled invoice terminal even when its historical patient party is unpaid', () => {
+    component.settlements = { [invoice.id]: summary('CANCELLED', 20000, 80000) };
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(component.canCollectPatient({ ...invoice, status: 'CANCELLED' })).toBe(false);
+    expect(text).toContain('Annulée');
+    expect(text).not.toContain('Encaisser');
+    expect(text).not.toContain('Suivre l’assurance');
+  });
+
   it('marks the selected invoice and restores focus to its card', () => {
     component.selectedInvoiceId = invoice.id;
     fixture.detectChanges();
