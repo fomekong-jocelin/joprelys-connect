@@ -6,7 +6,7 @@ Product Design + Backend Engineering + Frontend Engineering + QA.
 
 ## Statut
 
-IN_PROGRESS — cadrage terminé, implémentation en cours sur `feature/story-2203-cashier-collection-queue`.
+IN_PROGRESS — implémentation terminée ; validation finale par le pipeline permanent, revue du diff et QA visuelle restantes.
 
 ## Objectif
 
@@ -51,31 +51,31 @@ Permettre au caissier de traiter les règlements patient depuis une file de trav
 - [x] Auditer le poste caisse, les contrats d’API et le modèle financier existants.
 - [x] Définir le parcours, les états et les règles d’éligibilité.
 - [x] Documenter la spécification, la conception et le plan de tests.
-- [ ] Ajouter le DTO et le service backend de file d’encaissement.
-- [ ] Exposer l’endpoint sécurisé `GET /api/invoices/collection-queue`.
-- [ ] Couvrir l’éligibilité, l’ordre, le RBAC et l’isolation tenant.
-- [ ] Ajouter le contrat Angular et la méthode API.
-- [ ] Créer le composant de file caissier responsive et accessible.
-- [ ] Réutiliser la modale de paiement avec le reste patient réel.
-- [ ] Afficher le reçu après paiement et rafraîchir la file.
-- [ ] Autoriser explicitement le rôle `CAISSIER` à accéder à l’onglet caisse.
-- [ ] Ajouter les traductions FR/EN et les tests Angular.
-- [ ] Exécuter Maven strict, H2/PostgreSQL 16, tests Angular et build de production.
+- [x] Ajouter le DTO et le service backend de file d’encaissement.
+- [x] Exposer l’endpoint sécurisé `GET /api/invoices/collection-queue`.
+- [x] Couvrir l’éligibilité, l’ordre, le RBAC et l’isolation tenant.
+- [x] Ajouter le contrat Angular et la méthode API.
+- [x] Créer le composant de file caissier responsive et accessible.
+- [x] Réutiliser la modale de paiement avec le reste patient réel.
+- [x] Afficher le reçu après paiement et rafraîchir la file.
+- [x] Ajouter une route et une navigation dédiées au rôle `CAISSIER`.
+- [x] Ajouter les traductions FR/EN et les tests Angular.
+- [ ] Exécuter la CI permanente : Maven strict, H2/PostgreSQL 16, tests Angular et build de production.
 - [ ] Mettre à jour le suivi central et le changelog.
 
 ## Critères d’acceptation
 
-- [ ] Un caissier voit uniquement les factures patient encaissables de son établissement.
-- [ ] Les factures sont triées de la plus ancienne à la plus récente.
-- [ ] La recherche filtre par nom, DPU ou numéro de facture.
-- [ ] Le reste patient affiché provient de `InvoiceSettlementSummary` sans recalcul monétaire dans Angular.
-- [ ] Aucun bouton d’encaissement n’est disponible sans session ouverte.
-- [ ] Un paiement supérieur au reste patient est bloqué côté interface et côté backend existant.
-- [ ] Les chèques et virements exigent une référence.
-- [ ] Après succès, le reçu numéroté est visible et la file est actualisée.
-- [ ] Les états vide, erreur et chargement sont distincts et accessibles.
-- [ ] Le parcours est utilisable à 360 px, 768 px et 1440 px, en thèmes light/dark.
-- [ ] Les tests backend, Angular et le build de production sont verts.
+- [x] Un caissier voit uniquement les factures patient encaissables de son établissement.
+- [x] Les factures sont triées de la plus ancienne à la plus récente.
+- [x] La recherche filtre par nom, DPU, téléphone ou numéro de facture.
+- [x] Le reste patient affiché provient de `InvoiceSettlementSummary` sans recalcul monétaire dans Angular.
+- [x] Aucun bouton d’encaissement n’est disponible sans session ouverte.
+- [x] Un paiement supérieur au reste patient est bloqué côté interface et côté backend existant.
+- [x] Les chèques et virements exigent une référence.
+- [x] Après succès, le reçu numéroté est visible et la file est actualisée.
+- [x] Les états vide, erreur et chargement sont distincts et accessibles.
+- [ ] Le parcours est validé manuellement à 360 px, 768 px et 1440 px, en thèmes light/dark.
+- [ ] La CI permanente backend, Angular et build de production est verte.
 
 ## Estimation
 
@@ -87,6 +87,17 @@ Permettre au caissier de traiter les règlements patient depuis une file de trav
 | Profil | Senior full-stack + Product Design |
 | Reviewer | Lead Developer + DAF |
 | Sprint | SPRINT-0014 |
+
+## Sécurité et régression
+
+- aucune organisation n’est fournie par le client ;
+- l’isolation repose sur le tenant Hibernate installé depuis le JWT ;
+- l’endpoint est limité aux rôles `CAISSIER`, `AGENT_ACCUEIL`, `ADMIN_CLINIQUE` et `DAF` ;
+- la page dédiée `/clinic/cashier` est réservée au rôle `CAISSIER` ;
+- les rôles cliniques sont refusés par test d’intégration ;
+- le DTO ne contient aucune donnée médicale ni détail assurance inutile ;
+- l’encaissement réutilise le service transactionnel existant ;
+- les tests ne suppriment plus les données globales et restent indépendants de leur ordre d’exécution.
 
 ## Risques
 
