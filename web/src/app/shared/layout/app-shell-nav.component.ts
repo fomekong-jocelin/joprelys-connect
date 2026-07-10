@@ -106,7 +106,7 @@ export interface NavItem {
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                   </svg>
                   @if (pendingPreRegistrationsCount() > 0) {
-                    <span class="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-bold" style="background:var(--brand-danger);color:var(--text-inverse);">
+                    <span class="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[8px] font-bold" style="background:var(--brand-danger);color:var(--text-inverse);">
                       {{ pendingPreRegistrationsCount() > 99 ? '99+' : pendingPreRegistrationsCount() }}
                     </span>
                   }
@@ -140,7 +140,6 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.refreshPendingCount();
-    // Rafraîchir toutes les 30 secondes
     this.intervalId = setInterval(() => this.refreshPendingCount(), 30000);
   }
 
@@ -208,6 +207,10 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
       if (roles.includes('INFIRMIER') || roles.includes('MEDECIN')) {
         addUniqueItem({ path: '/clinic/emergencies', label: this.i18n.t('menu.emergencies'), iconName: 'dashboard' });
       }
+    }
+    if (roles.includes('CAISSIER')) {
+      addUniqueItem({ path: '/dashboard', label: this.i18n.t('menu.dashboard'), iconName: 'dashboard' });
+      addUniqueItem({ path: '/clinic/cashier', label: this.i18n.t('menu.cashier'), iconName: 'audit' });
     }
     if (roles.includes('BIOLOGISTE')) {
       addUniqueItem({ path: '/clinic/lab-orders', label: this.i18n.t('menu.labOrders'), iconName: 'labOrders' });

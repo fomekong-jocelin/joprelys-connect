@@ -1,8 +1,7 @@
 package com.joprelys.backend.billing.api;
 
-import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
-import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import com.joprelys.backend.billing.application.BillingPaymentService;
+import com.joprelys.backend.billing.application.CashierCollectionQueueService;
 import com.joprelys.backend.billing.application.ConventionTariffService;
 import com.joprelys.backend.billing.application.InvoiceCrudService;
 import com.joprelys.backend.billing.application.InvoicePrecalculationService;
@@ -11,6 +10,8 @@ import com.joprelys.backend.billing.infrastructure.persistence.InvoiceEntity;
 import com.joprelys.backend.billing.infrastructure.persistence.InvoiceRepository;
 import com.joprelys.backend.billing.infrastructure.persistence.PaymentRepository;
 import com.joprelys.backend.billing.infrastructure.persistence.TariffGridEntity;
+import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
+import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.visit.application.PdfGeneratorService;
@@ -41,6 +42,7 @@ public class InvoiceController {
     private final ConventionTariffService conventionTariffService;
     private final BillingPaymentService billingPaymentService;
     private final InvoiceSettlementQueryService invoiceSettlementQueryService;
+    private final CashierCollectionQueueService cashierCollectionQueueService;
     private final InvoiceRepository invoiceRepository;
     private final PaymentRepository paymentRepository;
     private final PatientRepository patientRepository;
@@ -53,6 +55,7 @@ public class InvoiceController {
                              ConventionTariffService conventionTariffService,
                              BillingPaymentService billingPaymentService,
                              InvoiceSettlementQueryService invoiceSettlementQueryService,
+                             CashierCollectionQueueService cashierCollectionQueueService,
                              InvoiceRepository invoiceRepository,
                              PaymentRepository paymentRepository,
                              PatientRepository patientRepository,
@@ -64,6 +67,7 @@ public class InvoiceController {
         this.conventionTariffService = conventionTariffService;
         this.billingPaymentService = billingPaymentService;
         this.invoiceSettlementQueryService = invoiceSettlementQueryService;
+        this.cashierCollectionQueueService = cashierCollectionQueueService;
         this.invoiceRepository = invoiceRepository;
         this.paymentRepository = paymentRepository;
         this.patientRepository = patientRepository;
@@ -93,6 +97,16 @@ public class InvoiceController {
     @Operation(summary = "Lister les factures d'un patient", description = "Récupère l'historique des factures d'un patient.")
     public ResponseEntity<List<InvoiceResponse>> listInvoices(@RequestParam UUID patientId) {
         return ResponseEntity.ok(invoiceCrudService.listInvoices(patientId));
+    }
+
+    @GetMapping("/collection-queue")
+    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'CAISSIER', 'DAF')")
+    @Operation(
+            summary = "File d'encaissement patient",
+            description = "Retourne les factures validées dont la part patient reste à encaisser pour le tenant courant."
+    )
+    public ResponseEntity<List<CashierCollectionQueueItemResponse>> listCollectionQueue() {
+        return ResponseEntity.ok(cashierCollectionQueueService.listQueue());
     }
 
     @GetMapping("/settlement-summaries")

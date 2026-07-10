@@ -1,7 +1,23 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { InsuranceConvention, TariffGrid, Invoice, Payment, InvoiceItem, Estimate, CreditNote, Receivable, InvoiceSettlementSummary, CashRegister, CashSession, CashMovement, CashSessionSummary, PaymentReceipt } from './patient.models';
+import { CashierCollectionQueueItem } from './cashier-collection.models';
+import {
+  CashMovement,
+  CashRegister,
+  CashSession,
+  CashSessionSummary,
+  CreditNote,
+  Estimate,
+  InsuranceConvention,
+  Invoice,
+  InvoiceItem,
+  InvoiceSettlementSummary,
+  Payment,
+  PaymentReceipt,
+  Receivable,
+  TariffGrid,
+} from './patient.models';
 
 @Injectable({
   providedIn: 'root',
@@ -53,6 +69,10 @@ export class BillingApiService {
   listInvoices(patientId: string): Observable<Invoice[]> {
     const params = new HttpParams().set('patientId', patientId);
     return this.http.get<Invoice[]>('/api/invoices', { params });
+  }
+
+  listCashierCollectionQueue(): Observable<CashierCollectionQueueItem[]> {
+    return this.http.get<CashierCollectionQueueItem[]>('/api/invoices/collection-queue');
   }
 
   listInvoiceSettlementSummaries(patientId: string): Observable<InvoiceSettlementSummary[]> {
