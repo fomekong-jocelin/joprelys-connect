@@ -36,11 +36,12 @@ public record CashSessionHistoryResponse(
             String openedByName,
             String closedByName,
             String reportNumber) {
+        String closeoutNumber = "CLOSED".equals(session.getStatus()) ? reportNumber : null;
         return new CashSessionHistoryResponse(
                 session.getId(),
                 session.getCashRegister().getId(),
                 session.getCashRegister().getName(),
-                reportNumber,
+                closeoutNumber,
                 session.getOpenedByUserId(),
                 openedByName,
                 session.getOpenedAt(),
