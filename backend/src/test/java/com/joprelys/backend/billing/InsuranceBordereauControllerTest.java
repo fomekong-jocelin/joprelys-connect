@@ -187,7 +187,7 @@ public class InsuranceBordereauControllerTest {
 
         // 4. Record Payment
         InsuranceBordereauController.BordereauPaymentRequest payReq = new InsuranceBordereauController.BordereauPaymentRequest(
-                new java.math.BigDecimal("20000.0000"),
+                20000.0,
                 "VIR-12345"
         );
 
