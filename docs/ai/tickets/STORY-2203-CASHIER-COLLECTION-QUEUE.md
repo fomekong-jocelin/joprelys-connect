@@ -6,7 +6,7 @@ Product Design + Backend Engineering + Frontend Engineering + QA.
 
 ## Statut
 
-IN_PROGRESS — implémentation terminée ; validation finale par le pipeline permanent, revue du diff et QA visuelle restantes.
+QA — implémentation terminée et pipeline permanent entièrement vert ; revue de la PR et QA visuelle navigateur restantes.
 
 ## Objectif
 
@@ -60,8 +60,8 @@ Permettre au caissier de traiter les règlements patient depuis une file de trav
 - [x] Afficher le reçu après paiement et rafraîchir la file.
 - [x] Ajouter une route et une navigation dédiées au rôle `CAISSIER`.
 - [x] Ajouter les traductions FR/EN et les tests Angular.
-- [ ] Exécuter la CI permanente : Maven strict, H2/PostgreSQL 16, tests Angular et build de production.
-- [ ] Mettre à jour le suivi central et le changelog.
+- [x] Exécuter la CI permanente : Maven strict, H2/PostgreSQL 16, tests Angular et build de production.
+- [x] Mettre à jour le suivi central et le changelog.
 
 ## Critères d’acceptation
 
@@ -75,18 +75,33 @@ Permettre au caissier de traiter les règlements patient depuis une file de trav
 - [x] Après succès, le reçu numéroté est visible et la file est actualisée.
 - [x] Les états vide, erreur et chargement sont distincts et accessibles.
 - [ ] Le parcours est validé manuellement à 360 px, 768 px et 1440 px, en thèmes light/dark.
-- [ ] La CI permanente backend, Angular et build de production est verte.
+- [x] La CI permanente backend, Angular et build de production est verte.
 
-## Estimation
+## Estimation et réalisation
 
 | Champ | Valeur |
 |---|---|
 | Priorité | P0 |
 | Story points | 8 |
 | Estimation senior | 2,5 j |
+| Temps passé cumulé | 2,3 j |
 | Profil | Senior full-stack + Product Design |
 | Reviewer | Lead Developer + DAF |
 | Sprint | SPRINT-0014 |
+
+## Résultats de validation
+
+- pipeline permanent sur le commit propre : ✅ ;
+- `npm test` : ✅ ;
+- build Angular de production : ✅ ;
+- Maven `clean verify` : ✅ ;
+- migrations H2 et PostgreSQL 16 via Testcontainers : ✅ ;
+- éligibilité `PATIENT_DUE` et `PATIENT_PARTIALLY_PAID` : ✅ ;
+- exclusion des états assurance, soldé, annulé et non validé : ✅ ;
+- RBAC `CAISSIER` et refus du rôle clinique : ✅ ;
+- isolation entre deux organisations : ✅ ;
+- recherche, filtres, surpaiement, référence obligatoire, reçu et rafraîchissement : ✅ ;
+- aucun test désactivé ou contourné.
 
 ## Sécurité et régression
 
@@ -99,13 +114,21 @@ Permettre au caissier de traiter les règlements patient depuis une file de trav
 - l’encaissement réutilise le service transactionnel existant ;
 - les tests ne suppriment plus les données globales et restent indépendants de leur ordre d’exécution.
 
-## Risques
+## Risques résiduels
 
-- N+1 lors du calcul des synthèses si la file grossit fortement ; une pagination/batch pourra devenir nécessaire après le pilote.
-- Contrats historiques sans créance persistée ; le service financier central fournit déjà un fallback prudent.
-- Confusion entre part patient et part assurance ; la file n’expose que le reste patient encaissable.
-- Double soumission ; les boutons sont bloqués pendant l’enregistrement et le backend conserve ses contrôles transactionnels.
+- QA visuelle manuelle à effectuer en 360 px, 768 px et 1440 px, en thèmes light/dark ;
+- validation Product/DAF de la densité des cartes, des indicateurs et des libellés ;
+- endpoint non paginé pour le pilote : surveiller la volumétrie et les temps de réponse ;
+- le calcul de synthèse par facture pourra nécessiter un traitement batch lorsque la file grandira ;
+- `BillingCashRegisterComponent` reste un composant dense malgré l’extraction de la file.
 
 ## Impact version
 
 MINOR — ajout rétrocompatible d’un endpoint de lecture et d’un nouveau parcours caissier, sans modification de schéma.
+
+## Reste à faire
+
+- revue de la PR #16 ;
+- QA visuelle light/dark et responsive ;
+- validation Product/DAF ;
+- fusion après approbation.
