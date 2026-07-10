@@ -1,6 +1,7 @@
-import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { inject, Injectable } from '@angular/core';
+import { Observable, Subject, tap } from 'rxjs';
+import { CashSessionHistory } from './cash-session-history.models';
 import { CashierCollectionQueueItem } from './cashier-collection.models';
 import {
   CashMovement,
@@ -24,6 +25,9 @@ import {
 })
 export class BillingApiService {
   private readonly http = inject(HttpClient);
+  private readonly cashSessionClosedSubject = new Subject<CashSession>();
+
+  readonly cashSessionClosed$ = this.cashSessionClosedSubject.asObservable();
 
   // ── Conventions ──────────────────────────────────────────────────
   listConventions(): Observable<InsuranceConvention[]> {
@@ -186,6 +190,14 @@ export class BillingApiService {
     return this.http.get<CashSessionSummary>('/api/cash-registers/sessions/active/summary');
   }
 
+  listMyCashSessions(): Observable<CashSessionHistory[]> {
+    return this.http.get<CashSessionHistory[]>('/api/cash-registers/sessions/mine');
+  }
+
+  downloadCashCloseoutReport(sessionId: string): Observable<Blob> {
+    return this.http.get(`/api/cash-registers/sessions/${sessionId}/closeout-report`, { responseType: 'blob' });
+  }
+
   addCashMovement(request: {
     movementType: 'IN' | 'OUT' | 'TRANSFER_TO_BANK';
     amount: number;
@@ -202,7 +214,9 @@ export class BillingApiService {
   }
 
   closeCashSession(declaredBalance: number, discrepancyReason?: string): Observable<CashSession> {
-    return this.http.post<CashSession>('/api/cash-registers/sessions/close', { declaredBalance, discrepancyReason });
+    return this.http.post<CashSession>('/api/cash-registers/sessions/close', { declaredBalance, discrepancyReason }).pipe(
+      tap((session) => this.cashSessionClosedSubject.next(session)),
+    );
   }
 
   getPaymentReceipt(paymentId: string): Observable<PaymentReceipt> {

@@ -14,7 +14,7 @@ import { BillingCashRegisterComponent } from './billing-cash-register.component'
         [title]="t('billing.cashierPage.title', 'Poste caissier')"
         [subtitle]="t('billing.cashierPage.subtitle', 'Traitez les règlements patient, suivez votre session et clôturez la caisse depuis un espace unique.')"
       ></app-page-header>
-      <div class="app-container space-y-6 pb-12">
+      <div class="app-container pb-12">
         <app-billing-cash-register></app-billing-cash-register>
       </div>
     </app-shell>

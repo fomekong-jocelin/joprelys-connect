@@ -1,3 +1,7 @@
+:host {
+  display: block;
+}
+
 .cashier-queue-header {
   display: flex;
   flex-direction: column;

@@ -13,13 +13,19 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
 @Service
 public class CashRegisterService {
+
+    private static final DateTimeFormatter RECEIPT_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final DateTimeFormatter CLOSEOUT_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd")
+            .withZone(ZoneId.systemDefault());
 
     private final CashRegisterRepository cashRegisterRepository;
     private final CashRegisterSessionRepository cashRegisterSessionRepository;
@@ -61,7 +67,7 @@ public class CashRegisterService {
     @Transactional(readOnly = true)
     public List<CashRegisterResponse> listRegisters() {
         UserAccountEntity actor = getCurrentUser();
-        getOrCreateDefaultRegister(actor.getOrganizationId()); // assure qu'au moins une caisse existe
+        getOrCreateDefaultRegister(actor.getOrganizationId());
         return cashRegisterRepository.findAll().stream()
                 .map(CashRegisterResponse::fromEntity)
                 .toList();
@@ -72,16 +78,14 @@ public class CashRegisterService {
         UserAccountEntity actor = getCurrentUser();
         UUID orgId = actor.getOrganizationId();
 
-        // 1. Vérifier si l'utilisateur a déjà une session ouverte
         Optional<CashRegisterSessionEntity> activeSession = cashRegisterSessionRepository
                 .findByOpenedByUserIdAndStatus(actor.getId(), "OPEN");
         if (activeSession.isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Vous avez déjà une session de caisse ouverte sur la caisse : " +
-                    activeSession.get().getCashRegister().getName());
+                            activeSession.get().getCashRegister().getName());
         }
 
-        // 2. Obtenir ou créer la caisse
         UUID registerId = request.cashRegisterId();
         CashRegisterEntity register;
         if (registerId == null) {
@@ -91,7 +95,6 @@ public class CashRegisterService {
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Caisse introuvable"));
         }
 
-        // 3. Ouvrir la session
         CashRegisterSessionEntity session = new CashRegisterSessionEntity(register, actor.getId(), request.openingBalance());
         session.setOrganizationId(orgId);
         CashRegisterSessionEntity saved = cashRegisterSessionRepository.save(session);
@@ -135,7 +138,6 @@ public class CashRegisterService {
 
         validateMovement(request);
 
-        // Règle BR-HFC-008 : Dépenses > 100 000 FCFA -> Double visa obligatoire
         if ("OUT".equalsIgnoreCase(request.movementType()) && request.amount() > 100000.0) {
             if (request.doubleVisaApproved() == null || !request.doubleVisaApproved()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -170,6 +172,9 @@ public class CashRegisterService {
 
     @Transactional(readOnly = true)
     public List<CashMovementResponse> getSessionMovements(UUID sessionId) {
+        UserAccountEntity actor = getCurrentUser();
+        CashRegisterSessionEntity session = findSession(sessionId);
+        assertSessionAccess(actor, session);
         return cashMovementRepository.findByCashRegisterSessionId(sessionId).stream()
                 .map(CashMovementResponse::fromEntity)
                 .toList();
@@ -199,8 +204,8 @@ public class CashRegisterService {
         double closingBalance = reconciliation.expectedCash();
         double discrepancy = request.declaredBalance() - closingBalance;
 
-        // Si écart non nul et non justifié, lever exception
-        if (Math.abs(discrepancy) > 0.01 && (request.discrepancyReason() == null || request.discrepancyReason().trim().isEmpty())) {
+        if (Math.abs(discrepancy) > 0.01
+                && (request.discrepancyReason() == null || request.discrepancyReason().trim().isEmpty())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Un écart de caisse de " + discrepancy + " FCFA a été détecté. Une justification est obligatoire pour clôturer.");
         }
@@ -222,10 +227,81 @@ public class CashRegisterService {
                 "CASH",
                 saved.getId(),
                 "CLOSE_CASH_SESSION",
-                "Clôture de session de caisse. Solde théorique: " + closingBalance + " FCFA, Déclaré: " + request.declaredBalance() + " FCFA, Écart: " + discrepancy + " FCFA."
+                "Clôture de session de caisse. Solde théorique: " + closingBalance + " FCFA, Déclaré: "
+                        + request.declaredBalance() + " FCFA, Écart: " + discrepancy + " FCFA."
         );
 
         return CashSessionResponse.fromEntity(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CashSessionHistoryResponse> listMySessions() {
+        UserAccountEntity actor = getCurrentUser();
+        return cashRegisterSessionRepository.findTop20ByOpenedByUserIdOrderByOpenedAtDesc(actor.getId()).stream()
+                .map(this::toHistoryResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public CashSessionHistoryResponse getSessionHistory(UUID sessionId) {
+        UserAccountEntity actor = getCurrentUser();
+        CashRegisterSessionEntity session = findSession(sessionId);
+        assertSessionAccess(actor, session);
+        return toHistoryResponse(session);
+    }
+
+    @Transactional(readOnly = true)
+    public CashRegisterSessionEntity getClosedSessionForReport(UUID sessionId) {
+        UserAccountEntity actor = getCurrentUser();
+        CashRegisterSessionEntity session = findSession(sessionId);
+        assertSessionAccess(actor, session);
+        if (!"CLOSED".equals(session.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Le bordereau de clôture est disponible uniquement pour une session clôturée.");
+        }
+        return session;
+    }
+
+    public String buildCloseoutReportNumber(CashRegisterSessionEntity session) {
+        java.time.Instant referenceDate = session.getClosedAt() != null ? session.getClosedAt() : session.getOpenedAt();
+        String suffix = session.getId().toString().replace("-", "").substring(0, 8).toUpperCase(Locale.ROOT);
+        return "CLS-" + CLOSEOUT_DATE_FORMAT.format(referenceDate) + "-" + suffix;
+    }
+
+    private CashSessionHistoryResponse toHistoryResponse(CashRegisterSessionEntity session) {
+        CashSessionSummaryResponse summary = reconcile(session);
+        String openedByName = resolveUserName(session.getOpenedByUserId());
+        String closedByName = resolveUserName(session.getClosedByUserId());
+        return CashSessionHistoryResponse.from(
+                session,
+                summary,
+                openedByName,
+                closedByName,
+                buildCloseoutReportNumber(session)
+        );
+    }
+
+    private String resolveUserName(UUID userId) {
+        if (userId == null) {
+            return null;
+        }
+        return userAccountRepository.findById(userId)
+                .map(UserAccountEntity::getDisplayName)
+                .orElse("Utilisateur inconnu");
+    }
+
+    private CashRegisterSessionEntity findSession(UUID sessionId) {
+        return cashRegisterSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session de caisse introuvable."));
+    }
+
+    private void assertSessionAccess(UserAccountEntity actor, CashRegisterSessionEntity session) {
+        boolean supervisor = actor.hasRole("ADMIN_CLINIQUE") || actor.hasRole("DAF");
+        boolean owner = session.getOpenedByUserId().equals(actor.getId());
+        if (!supervisor && !owner) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Vous ne pouvez consulter que vos propres sessions de caisse.");
+        }
     }
 
     private CashSessionSummaryResponse reconcile(CashRegisterSessionEntity session) {
@@ -252,18 +328,14 @@ public class CashRegisterService {
     @Transactional
     public String createReceiptForPayment(PaymentEntity payment) {
         UUID orgId = payment.getOrganizationId();
-
-        // 1. Obtenir le prochain numéro de séquence pour le reçu
         Long nextVal = paymentReceiptRepository.getNextReceiptNumberSequenceValue();
         String formattedSequence = String.format("%06d", nextVal);
-        String todayStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String todayStr = LocalDate.now().format(RECEIPT_DATE_FORMAT);
         String receiptNumber = "REC-" + todayStr + "-" + formattedSequence;
 
-        // 2. Créer le reçu
         PaymentReceiptEntity receipt = new PaymentReceiptEntity(payment, receiptNumber);
         receipt.setOrganizationId(orgId);
         PaymentReceiptEntity saved = paymentReceiptRepository.save(receipt);
-
         return saved.getReceiptNumber();
     }
 
@@ -295,7 +367,8 @@ public class CashRegisterService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session introuvable."));
 
         if (!"CLOSED".equals(session.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seules les sessions clôturées peuvent faire l'objet d'une résolution d'écart.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Seules les sessions clôturées peuvent faire l'objet d'une résolution d'écart.");
         }
 
         session.setDiscrepancyResolved(true);

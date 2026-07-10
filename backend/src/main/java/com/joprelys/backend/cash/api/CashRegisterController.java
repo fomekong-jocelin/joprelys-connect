@@ -1,10 +1,13 @@
 package com.joprelys.backend.cash.api;
 
 import com.joprelys.backend.cash.application.CashRegisterService;
+import com.joprelys.backend.cash.application.CashSessionCloseoutReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -18,9 +21,12 @@ import java.util.UUID;
 public class CashRegisterController {
 
     private final CashRegisterService cashRegisterService;
+    private final CashSessionCloseoutReportService closeoutReportService;
 
-    public CashRegisterController(CashRegisterService cashRegisterService) {
+    public CashRegisterController(CashRegisterService cashRegisterService,
+                                  CashSessionCloseoutReportService closeoutReportService) {
         this.cashRegisterService = cashRegisterService;
+        this.closeoutReportService = closeoutReportService;
     }
 
     @GetMapping
@@ -53,6 +59,26 @@ public class CashRegisterController {
     @Operation(summary = "Récapitulatif de session active", description = "Retourne le rapprochement des espèces, chèques et virements de la session du caissier connecté")
     public ResponseEntity<CashSessionSummaryResponse> getActiveSessionSummary() {
         return ResponseEntity.ok(cashRegisterService.getActiveSessionSummary());
+    }
+
+    @GetMapping("/sessions/mine")
+    @PreAuthorize("hasAnyRole('ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'CAISSIER', 'DAF')")
+    @Operation(summary = "Historique personnel de caisse", description = "Retourne les vingt dernières sessions ouvertes par l'utilisateur connecté avec leur rapprochement financier")
+    public ResponseEntity<List<CashSessionHistoryResponse>> listMySessions() {
+        return ResponseEntity.ok(cashRegisterService.listMySessions());
+    }
+
+    @GetMapping(value = "/sessions/{sessionId}/closeout-report", produces = MediaType.APPLICATION_PDF_VALUE)
+    @PreAuthorize("hasAnyRole('ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'CAISSIER', 'DAF')")
+    @Operation(summary = "Bordereau PDF de clôture", description = "Génère le bordereau récapitulatif d'une session clôturée accessible au caissier propriétaire ou à la supervision")
+    public ResponseEntity<byte[]> downloadCloseoutReport(@PathVariable UUID sessionId) {
+        CashSessionHistoryResponse history = cashRegisterService.getSessionHistory(sessionId);
+        byte[] report = closeoutReportService.generate(sessionId);
+        String filename = "BORDEREAU_CLOTURE_" + history.reportNumber() + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(report);
     }
 
     @PostMapping("/movements")
