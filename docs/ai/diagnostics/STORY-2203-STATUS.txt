@@ -1,4 +1,0 @@
-npm_ci_status=0
-angular_build_status=0
-angular_test_status=0
-maven_status=0
