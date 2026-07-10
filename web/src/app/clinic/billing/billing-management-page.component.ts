@@ -70,8 +70,19 @@ export class BillingManagementPageComponent implements OnInit {
     return roles.includes(allowedRoles);
   }
 
+  /** DAF ou Admin : accès Pilotage DAF + tous les onglets admin */
   readonly isDafOrAdmin = computed(() => {
     return this.hasRole(['DAF', 'ADMIN_CLINIQUE']);
+  });
+
+  /** Admin uniquement : Conventions, Grille tarifaire, Créances, Bordereaux */
+  readonly isAdminOnly = computed(() => {
+    return this.hasRole(['ADMIN_CLINIQUE']);
+  });
+
+  /** Agent accueil + Admin : Facturation patients, Caisse & Sessions */
+  readonly canAccessCaisse = computed(() => {
+    return this.hasRole(['AGENT_ACCUEIL', 'ADMIN_CLINIQUE']);
   });
 
   
