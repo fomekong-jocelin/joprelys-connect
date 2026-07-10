@@ -115,7 +115,7 @@ public class InsuranceBordereauControllerTest {
         tokenAdmin = jwtService.createToken(admin).value();
 
         // Insurance Convention
-        convention = new InsuranceConventionEntity("SAAR Assurance", 0.8);
+        convention = new InsuranceConventionEntity("SAAR Assurance", new java.math.BigDecimal("0.8000"));
         convention.setOrganizationId(org.getId());
         convention = insuranceConventionRepository.save(convention);
 
@@ -130,7 +130,12 @@ public class InsuranceBordereauControllerTest {
         // Invoice VALIDATED
         invoice = new InvoiceEntity(patient.getId(), visit.getId(), "FAC-TEST-001", convention);
         invoice.setOrganizationId(org.getId());
-        InvoiceItemEntity item = new InvoiceItemEntity("Prestation", InvoiceItemType.CONSULTATION, 25000.0, 1.0, null);
+        InvoiceItemEntity item = new InvoiceItemEntity(
+                "Prestation",
+                InvoiceItemType.CONSULTATION,
+                new java.math.BigDecimal("25000.0000"),
+                new java.math.BigDecimal("1.0000"),
+                null);
         item.setOrganizationId(org.getId());
         invoice.addItem(item);
         invoice.setStatus(InvoiceStatus.VALIDATED);
@@ -182,7 +187,7 @@ public class InsuranceBordereauControllerTest {
 
         // 4. Record Payment
         InsuranceBordereauController.BordereauPaymentRequest payReq = new InsuranceBordereauController.BordereauPaymentRequest(
-                20000.0,
+                new java.math.BigDecimal("20000.0000"),
                 "VIR-12345"
         );
 
