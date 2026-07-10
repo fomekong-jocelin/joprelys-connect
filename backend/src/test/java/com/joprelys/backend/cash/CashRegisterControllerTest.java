@@ -368,7 +368,7 @@ public class CashRegisterControllerTest {
                 .filter(r -> "PATIENT".equals(r.getDebtorType()))
                 .findFirst().orElseThrow();
         assertEquals("PAID", updatedPatientRec.getStatus());
-        assertEquals(20000.0, updatedPatientRec.getPaidAmount());
+        assertEquals(new java.math.BigDecimal("20000.0000"), updatedPatientRec.getPaidAmount());
 
         // 7. Générer le bordereau d'assurance
         InsuranceBordereauController.GenerateBordereauRequest genReq =
@@ -405,7 +405,7 @@ public class CashRegisterControllerTest {
                 .filter(r -> "INSURANCE".equals(r.getDebtorType()))
                 .findFirst().orElseThrow();
         assertEquals("PAID", updatedInsuranceRec.getStatus());
-        assertEquals(80000.0, updatedInsuranceRec.getPaidAmount());
+        assertEquals(new java.math.BigDecimal("80000.0000"), updatedInsuranceRec.getPaidAmount());
 
         // Vérifier que la facture est SETTLED dans le read model de synthèse
         mockMvc.perform(get("/api/invoices/settlement-summaries?patientId=" + patient.getId())
