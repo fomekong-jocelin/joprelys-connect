@@ -63,6 +63,7 @@ Rendre la clôture exploitable et auditable sans élargir le périmètre assuran
 ## Résultats de validation
 
 - première CI complète de la PR #17 : ✅ ;
+- revalidation finale sur le diff exact de la PR #17 : ✅ ;
 - tests Angular : ✅ ;
 - build Angular de production : ✅ ;
 - Maven `clean verify` : ✅ ;
@@ -70,8 +71,7 @@ Rendre la clôture exploitable et auditable sans élargir le périmètre assuran
 - test d’historique personnel et des totaux : ✅ ;
 - test du PDF `%PDF-` et de son en-tête de téléchargement : ✅ ;
 - refus d’un autre caissier et d’un rôle clinique : ✅ ;
-- aucun test désactivé ou contourné ;
-- revalidation finale lancée après les durcissements sémantiques et documentaires.
+- aucun test désactivé ou contourné.
 
 ## Hors périmètre
 
