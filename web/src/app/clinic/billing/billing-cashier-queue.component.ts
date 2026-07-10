@@ -188,11 +188,7 @@ export class BillingCashierQueueComponent implements OnInit {
     }
   }
 
-  trackByInvoiceId(_index: number, item: CashierCollectionQueueItem): string {
-    return item.invoiceId;
-  }
-
-  private t(key: string, fallback: string): string {
+  t(key: string, fallback: string): string {
     return this.i18n.t(key, fallback);
   }
 
