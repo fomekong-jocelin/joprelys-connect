@@ -22,109 +22,92 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
 
           full = Path('backend/src/test/java/com/joprelys/backend/billing/FullFinancialE2ETest.java')
           text = full.read_text()
           if 'import java.math.BigDecimal;' not in text:
               text = text.replace('import java.time.Instant;', 'import java.math.BigDecimal;\nimport java.time.Instant;')
-          replacements = {
-              'LocalDate.now().plusDays(1), 80000.0);': 'LocalDate.now().plusDays(1), new BigDecimal("80000.0000"));',
-              'LocalDate.now().plusDays(1), 8000.0);': 'LocalDate.now().plusDays(1), new BigDecimal("8000.0000"));',
-              'LocalDate.now().plusDays(1), 5000.0);': 'LocalDate.now().plusDays(1), new BigDecimal("5000.0000"));',
+
+          constructor_values = {
+              '80000.0': 'new BigDecimal("80000.0000")',
+              '8000.0': 'new BigDecimal("8000.0000")',
+              '5000.0': 'new BigDecimal("5000.0000")',
           }
-          for old, new in replacements.items():
-              if old not in text:
-                  raise SystemExit(f'Missing FullFinancial replacement: {old}')
-              text = text.replace(old, new, 1)
+          for old, new in constructor_values.items():
+              pattern = rf'(new InsuranceBordereauEntity\([^;]*?),\s*{re.escape(old)}\);'
+              text, count = re.subn(pattern, rf'\1, {new});', text, count=1)
+              if count != 1:
+                  raise SystemExit(f'Expected one constructor replacement for {old}, got {count}')
 
-          first_marker = '''        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/send")
-                          .header("Authorization", "Bearer " + tokenDaf))
-                  .andExpect(status().isOk());
+          send_pay_pattern = re.compile(
+              r'(\s*mockMvc\.perform\(post\("/api/billing/insurance-bordereaux/" \+ bordereau\.getId\(\) \+ "/send"\).*?'
+              r'\.andExpect\(status\(\)\.isOk\(\)\);)'
+              r'(\s*mockMvc\.perform\(post\("/api/billing/insurance-bordereaux/" \+ bordereau\.getId\(\) \+ "/pay"\))',
+              re.DOTALL,
+          )
+          matches = list(send_pay_pattern.finditer(text))
+          if len(matches) != 2:
+              raise SystemExit(f'Expected two FullFinancial send/pay workflows, got {len(matches)}')
 
-          mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/pay")'''
-          first_replacement = '''        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/send")
-                          .header("Authorization", "Bearer " + tokenDaf))
-                  .andExpect(status().isOk());
+          workflow_data = [
+              ('AR-E2E-01', '80000'),
+              ('AR-TEST-DAF', '5000'),
+          ]
+          counter = 0
+          def insert_progression(match):
+              global counter
+              reference, amount = workflow_data[counter]
+              counter += 1
+              progression = f'''\n\n        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/receive")
+                        .header("Authorization", "Bearer " + tokenDaf)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{{\\"insurerReference\\":\\"{reference}\\"}}"))
+                .andExpect(status().isOk());
 
-          mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/receive")
-                          .header("Authorization", "Bearer " + tokenDaf)
-                          .contentType(MediaType.APPLICATION_JSON)
-                          .content("{\\"insurerReference\\":\\"AR-E2E-01\\"}"))
-                  .andExpect(status().isOk());
+        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/accept")
+                        .header("Authorization", "Bearer " + tokenDaf)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{{\\"acceptedAmount\\":{amount},\\"insurerReference\\":\\"{reference}\\"}}"))
+                .andExpect(status().isOk());\n'''
+              return match.group(1) + progression + match.group(2)
 
-          mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/accept")
-                          .header("Authorization", "Bearer " + tokenDaf)
-                          .contentType(MediaType.APPLICATION_JSON)
-                          .content("{\\"acceptedAmount\\":80000,\\"insurerReference\\":\\"AR-E2E-01\\"}"))
-                  .andExpect(status().isOk());
-
-          mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/pay")'''
-          if first_marker not in text:
-              raise SystemExit('Missing first FullFinancial workflow marker')
-          text = text.replace(first_marker, first_replacement, 1)
-
-          daf_marker = '''        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/send")
-                          .header("Authorization", "Bearer " + tokenDaf))
-                  .andExpect(status().isOk());
-
-          mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/pay")'''
-          daf_replacement = '''        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/send")
-                          .header("Authorization", "Bearer " + tokenDaf))
-                  .andExpect(status().isOk());
-
-          mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/receive")
-                          .header("Authorization", "Bearer " + tokenDaf)
-                          .contentType(MediaType.APPLICATION_JSON)
-                          .content("{\\"insurerReference\\":\\"AR-TEST-DAF\\"}"))
-                  .andExpect(status().isOk());
-
-          mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/accept")
-                          .header("Authorization", "Bearer " + tokenDaf)
-                          .contentType(MediaType.APPLICATION_JSON)
-                          .content("{\\"acceptedAmount\\":5000}"))
-                  .andExpect(status().isOk());
-
-          mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/pay")'''
-          if daf_marker not in text:
-              raise SystemExit('Missing DAF FullFinancial workflow marker')
-          text = text.replace(daf_marker, daf_replacement, 1)
+          text = send_pay_pattern.sub(insert_progression, text)
           full.write_text(text)
 
           cash = Path('backend/src/test/java/com/joprelys/backend/cash/CashRegisterControllerTest.java')
           text = cash.read_text()
           if 'import java.math.BigDecimal;' not in text:
               text = text.replace('import java.time.Instant;', 'import java.math.BigDecimal;\nimport java.time.Instant;')
-          old_payment = 'new InsuranceBordereauController.BordereauPaymentRequest(80000.0, "CHQ-ASSUR-E2E");'
-          new_payment = 'new InsuranceBordereauController.BordereauPaymentRequest(new BigDecimal("80000.0000"), "CHQ-ASSUR-E2E");'
-          if old_payment not in text:
-              raise SystemExit('Missing CashRegister payment constructor')
-          text = text.replace(old_payment, new_payment, 1)
+          text, count = re.subn(
+              r'new InsuranceBordereauController\.BordereauPaymentRequest\(80000\.0, "CHQ-ASSUR-E2E"\)',
+              'new InsuranceBordereauController.BordereauPaymentRequest(new BigDecimal("80000.0000"), "CHQ-ASSUR-E2E")',
+              text,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit(f'Expected one CashRegister payment replacement, got {count}')
 
-          cash_marker = '''        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.id() + "/send")
-                          .header("Authorization", "Bearer " + tokenAdmin))
-                  .andExpect(status().isOk());
+          cash_pattern = re.compile(
+              r'(\s*mockMvc\.perform\(post\("/api/billing/insurance-bordereaux/" \+ bordereau\.id\(\) \+ "/send"\).*?'
+              r'\.andExpect\(status\(\)\.isOk\(\)\);)'
+              r'(\s*// 9\. Régler le bordereau)',
+              re.DOTALL,
+          )
+          progression = '''\n\n        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.id() + "/receive")
+                        .header("Authorization", "Bearer " + tokenAdmin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\\"insurerReference\\":\\"AR-CASH-E2E\\"}"))
+                .andExpect(status().isOk());
 
-          // 9. Régler le bordereau par l'assurance (80 000 FCFA)'''
-          cash_replacement = '''        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.id() + "/send")
-                          .header("Authorization", "Bearer " + tokenAdmin))
-                  .andExpect(status().isOk());
-
-          mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.id() + "/receive")
-                          .header("Authorization", "Bearer " + tokenAdmin)
-                          .contentType(MediaType.APPLICATION_JSON)
-                          .content("{\\"insurerReference\\":\\"AR-CASH-E2E\\"}"))
-                  .andExpect(status().isOk());
-
-          mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.id() + "/accept")
-                          .header("Authorization", "Bearer " + tokenAdmin)
-                          .contentType(MediaType.APPLICATION_JSON)
-                          .content("{\\"acceptedAmount\\":80000}"))
-                  .andExpect(status().isOk());
-
-          // 9. Régler le bordereau par l'assurance (80 000 FCFA)'''
-          if cash_marker not in text:
-              raise SystemExit('Missing CashRegister workflow marker')
-          text = text.replace(cash_marker, cash_replacement, 1)
+        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.id() + "/accept")
+                        .header("Authorization", "Bearer " + tokenAdmin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\\"acceptedAmount\\":80000}"))
+                .andExpect(status().isOk());\n'''
+          text, count = cash_pattern.subn(lambda match: match.group(1) + progression + match.group(2), text, count=1)
+          if count != 1:
+              raise SystemExit(f'Expected one CashRegister progression insertion, got {count}')
           cash.write_text(text)
           PY
       - name: Restore permanent CI workflow
