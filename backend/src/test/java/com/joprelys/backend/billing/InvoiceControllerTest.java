@@ -185,7 +185,7 @@ public class InvoiceControllerTest {
         hospitalization = hospitalizationRepository.save(hospitalization);
 
         // Setup Convention
-        convention = new InsuranceConventionEntity("AXA Cameroun", 0.80); // 80% coverage
+        convention = new InsuranceConventionEntity("AXA Cameroun", new java.math.BigDecimal("0.8000")); // 80% coverage
         convention.setOrganizationId(org.getId());
         convention = insuranceConventionRepository.save(convention);
     }
@@ -222,11 +222,11 @@ public class InvoiceControllerTest {
     @Test
     void testPrecalculateAndCreateInvoiceWithPayments() throws Exception {
         // Pre-configure ROOM_STANDARD and Artesunate prices
-        TariffGridEntity tRoom = new TariffGridEntity("ROOM_STANDARD", 10000.0);
+        TariffGridEntity tRoom = new TariffGridEntity("ROOM_STANDARD", new java.math.BigDecimal("10000.0000"));
         tRoom.setOrganizationId(org.getId());
         tariffGridRepository.save(tRoom);
 
-        TariffGridEntity tDrug = new TariffGridEntity("Artesunate", 3000.0);
+        TariffGridEntity tDrug = new TariffGridEntity("Artesunate", new java.math.BigDecimal("3000.0000"));
         tDrug.setOrganizationId(org.getId());
         tariffGridRepository.save(tDrug);
 
@@ -276,7 +276,10 @@ public class InvoiceControllerTest {
         cashRegisterSessionRepository.save(session);
         TenantContext.clear();
 
-        PaymentRequest payReq = new PaymentRequest(3000.0, PaymentMethod.CASH, "REF-1111");
+        PaymentRequest payReq = new PaymentRequest(
+                new java.math.BigDecimal("3000.0000"),
+                PaymentMethod.CASH,
+                "REF-1111");
         mockMvc.perform(post("/api/invoices/" + created.id() + "/payments")
                         .header("Authorization", "Bearer " + tokenReceptionist)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -309,7 +312,10 @@ public class InvoiceControllerTest {
                 .andExpect(jsonPath("$[0].insurance.remainingAmount").value(27200.0));
 
         // 4. Make final payment
-        PaymentRequest payFinal = new PaymentRequest(3800.0, PaymentMethod.CASH, "REF-2222");
+        PaymentRequest payFinal = new PaymentRequest(
+                new java.math.BigDecimal("3800.0000"),
+                PaymentMethod.CASH,
+                "REF-2222");
         mockMvc.perform(post("/api/invoices/" + created.id() + "/payments")
                         .header("Authorization", "Bearer " + tokenReceptionist)
                         .contentType(MediaType.APPLICATION_JSON)

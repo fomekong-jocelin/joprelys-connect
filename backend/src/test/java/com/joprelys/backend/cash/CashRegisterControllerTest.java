@@ -149,7 +149,12 @@ public class CashRegisterControllerTest {
         // Invoice
         invoice = new InvoiceEntity(patient.getId(), visit.getId(), "FAC-CS-001", null);
         invoice.setOrganizationId(org.getId());
-        InvoiceItemEntity item = new InvoiceItemEntity("Acte", InvoiceItemType.CONSULTATION, 15000.0, 1.0, null);
+        InvoiceItemEntity item = new InvoiceItemEntity(
+                "Acte",
+                InvoiceItemType.CONSULTATION,
+                new java.math.BigDecimal("15000.0000"),
+                new java.math.BigDecimal("1.0000"),
+                null);
         item.setOrganizationId(org.getId());
         invoice.addItem(item);
         invoice = invoiceRepository.save(invoice);
@@ -158,7 +163,10 @@ public class CashRegisterControllerTest {
     @Test
     void testOpenCloseSessionAndMovements() throws Exception {
         // 1. Essayer de payer la facture sans session ouverte -> 409 CONFLICT
-        PaymentRequest payReq = new PaymentRequest(15000.0, PaymentMethod.CASH, "REF-PAY");
+        PaymentRequest payReq = new PaymentRequest(
+                new java.math.BigDecimal("15000.0000"),
+                PaymentMethod.CASH,
+                "REF-PAY");
         mockMvc.perform(post("/api/invoices/" + invoice.getId() + "/payments")
                         .header("Authorization", "Bearer " + tokenCaissier)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -294,15 +302,22 @@ public class CashRegisterControllerTest {
     @Test
     void shouldExecuteFullE2EWorkflow() throws Exception {
         // 1. Créer une convention d'assurance SAAR (80%)
-        InsuranceConventionEntity saar = new InsuranceConventionEntity("SAAR Assurance", 0.8);
+        InsuranceConventionEntity saar = new InsuranceConventionEntity(
+                "SAAR Assurance",
+                new java.math.BigDecimal("0.8000"));
         saar.setOrganizationId(org.getId());
         saar = insuranceConventionRepository.save(saar);
 
         // 2. Émettre une facture validée de 100 000 FCFA avec cette convention
         InvoiceEntity e2eInvoice = new InvoiceEntity(patient.getId(), visit.getId(), "FAC-E2E-99", saar);
         e2eInvoice.setOrganizationId(org.getId());
-        
-        InvoiceItemEntity item = new InvoiceItemEntity("Prestation Chirurgie", InvoiceItemType.CONSULTATION, 100000.0, 1.0, null);
+
+        InvoiceItemEntity item = new InvoiceItemEntity(
+                "Prestation Chirurgie",
+                InvoiceItemType.CONSULTATION,
+                new java.math.BigDecimal("100000.0000"),
+                new java.math.BigDecimal("1.0000"),
+                null);
         item.setOrganizationId(org.getId());
         e2eInvoice.addItem(item);
         e2eInvoice.setStatus(InvoiceStatus.VALIDATED);
@@ -311,11 +326,19 @@ public class CashRegisterControllerTest {
         e2eInvoice = invoiceRepository.save(e2eInvoice);
 
         // 3. Créer les créances (20% patient = 20000, 80% assurance = 80000)
-        ReceivableEntity patientRec = new ReceivableEntity(e2eInvoice.getId(), "PATIENT", patient.getId(), 20000.0);
+        ReceivableEntity patientRec = new ReceivableEntity(
+                e2eInvoice.getId(),
+                "PATIENT",
+                patient.getId(),
+                new java.math.BigDecimal("20000.0000"));
         patientRec.setOrganizationId(org.getId());
         receivableRepository.save(patientRec);
 
-        ReceivableEntity insuranceRec = new ReceivableEntity(e2eInvoice.getId(), "INSURANCE", saar.getId(), 80000.0);
+        ReceivableEntity insuranceRec = new ReceivableEntity(
+                e2eInvoice.getId(),
+                "INSURANCE",
+                saar.getId(),
+                new java.math.BigDecimal("80000.0000"));
         insuranceRec.setOrganizationId(org.getId());
         receivableRepository.save(insuranceRec);
 
@@ -328,7 +351,10 @@ public class CashRegisterControllerTest {
                 .andExpect(status().isCreated());
 
         // 5. Régler la part patient (20 000 FCFA)
-        PaymentRequest payReq = new PaymentRequest(20000.0, PaymentMethod.CASH, "REF-E2E-PAY");
+        PaymentRequest payReq = new PaymentRequest(
+                new java.math.BigDecimal("20000.0000"),
+                PaymentMethod.CASH,
+                "REF-E2E-PAY");
         mockMvc.perform(post("/api/invoices/" + e2eInvoice.getId() + "/payments")
                         .header("Authorization", "Bearer " + tokenCaissier)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -342,12 +368,12 @@ public class CashRegisterControllerTest {
                 .filter(r -> "PATIENT".equals(r.getDebtorType()))
                 .findFirst().orElseThrow();
         assertEquals("PAID", updatedPatientRec.getStatus());
-        assertEquals(20000.0, updatedPatientRec.getPaidAmount());
+        assertEquals(new java.math.BigDecimal("20000.0000"), updatedPatientRec.getPaidAmount());
 
         // 7. Générer le bordereau d'assurance
-        InsuranceBordereauController.GenerateBordereauRequest genReq = 
+        InsuranceBordereauController.GenerateBordereauRequest genReq =
                 new InsuranceBordereauController.GenerateBordereauRequest(saar.getId(), LocalDate.now().minusDays(1), LocalDate.now().plusDays(1));
-        
+
         String genResult = mockMvc.perform(post("/api/billing/insurance-bordereaux")
                         .header("Authorization", "Bearer " + tokenAdmin)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -355,7 +381,7 @@ public class CashRegisterControllerTest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
 
-        InsuranceBordereauController.BordereauResponse bordereau = 
+        InsuranceBordereauController.BordereauResponse bordereau =
                 objectMapper.readValue(genResult, InsuranceBordereauController.BordereauResponse.class);
 
         // 8. Envoyer le bordereau
@@ -364,7 +390,7 @@ public class CashRegisterControllerTest {
                 .andExpect(status().isOk());
 
         // 9. Régler le bordereau par l'assurance (80 000 FCFA)
-        InsuranceBordereauController.BordereauPaymentRequest bordereauPay = 
+        InsuranceBordereauController.BordereauPaymentRequest bordereauPay =
                 new InsuranceBordereauController.BordereauPaymentRequest(80000.0, "CHQ-ASSUR-E2E");
         mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.id() + "/pay")
                         .header("Authorization", "Bearer " + tokenAdmin)
@@ -379,7 +405,7 @@ public class CashRegisterControllerTest {
                 .filter(r -> "INSURANCE".equals(r.getDebtorType()))
                 .findFirst().orElseThrow();
         assertEquals("PAID", updatedInsuranceRec.getStatus());
-        assertEquals(80000.0, updatedInsuranceRec.getPaidAmount());
+        assertEquals(new java.math.BigDecimal("80000.0000"), updatedInsuranceRec.getPaidAmount());
 
         // Vérifier que la facture est SETTLED dans le read model de synthèse
         mockMvc.perform(get("/api/invoices/settlement-summaries?patientId=" + patient.getId())
