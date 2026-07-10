@@ -35,21 +35,32 @@ import { IconComponent } from '../../shared/ui/icon.component';
                     | {{ translate('billing.invoiceInsurance', 'Assur') }} : {{ inv.insuranceConvention.name }} ({{ inv.insuranceShare | number:'1.0-0' }} FCFA)
                   }
                 </div>
+                @if (isInsuranceDue(inv)) {
+                  <div class="text-[10px] text-blue-700 dark:text-blue-300">
+                    {{ translate('billing.insuranceCollectionHint', 'Part patient réglée. Part assurance à recouvrer via un bordereau.') }}
+                  </div>
+                }
               </div>
 
               <div class="flex gap-2">
                 <button (click)="selectInvoice.emit(inv)" class="ui-button ui-button-secondary">
                   <app-ui-icon name="wrench" />
-                  {{ translate('billing.manage', 'Gérer') }}
+                  {{ translate('billing.details', 'Détail') }}
                 </button>
                 <button (click)="printPdf.emit(inv.id)" class="ui-button ui-button-secondary">
                   <app-ui-icon name="printer" />
                   PDF
                 </button>
-                @if (inv.status !== 'PAID') {
-                  <button (click)="openPayment.emit(inv)" class="ui-button ui-button-primary">
+                @if (canCollectPatient(inv)) {
+                  <button (click)="openPayment.emit(inv)" class="ui-button ui-button-primary" [attr.title]="translate('billing.payPatient', 'Encaisser la part patient')">
                     <app-ui-icon name="banknotes" />
-                    {{ translate('billing.pay', 'Régler') }}
+                    {{ translate('billing.collect', 'Encaisser') }}
+                  </button>
+                }
+                @if (isInsuranceDue(inv)) {
+                  <button (click)="openInsurance.emit(inv)" class="ui-button ui-button-secondary">
+                    <app-ui-icon name="document-text" />
+                    {{ translate('billing.followInsurance', 'Suivre l’assurance') }}
                   </button>
                 }
               </div>
@@ -71,7 +82,20 @@ export class BillingInvoiceHistoryComponent {
 
   @Output() printPdf = new EventEmitter<string>();
   @Output() openPayment = new EventEmitter<Invoice>();
+  @Output() openInsurance = new EventEmitter<Invoice>();
   @Output() selectInvoice = new EventEmitter<Invoice>();
+
+  canCollectPatient(invoice: Invoice): boolean {
+    const summary = this.settlements[invoice.id];
+    if (!summary) {
+      return invoice.status !== 'PAID' && invoice.status !== 'CANCELLED';
+    }
+    return summary.patient.status === 'UNPAID' || summary.patient.status === 'PARTIALLY_PAID';
+  }
+
+  isInsuranceDue(invoice: Invoice): boolean {
+    return this.settlements[invoice.id]?.collectionStatus === 'INSURANCE_DUE';
+  }
 
   getCollectionStatusClass(invoice: Invoice): string {
     switch (this.settlements[invoice.id]?.collectionStatus) {

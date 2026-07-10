@@ -33,6 +33,18 @@ export interface BillingPaymentForm {
             <div>{{ translate('billing.patientShare', 'Part Patient à régler') }} : <strong>{{ invoice.patientShare | number:'1.0-0' }} FCFA</strong></div>
           </div>
 
+          @if (cashSessionOpen === false) {
+            <div class="ui-alert-warning text-xs flex items-start gap-2" role="alert">
+              <app-ui-icon name="information-circle" />
+              <div class="space-y-2">
+                <p>{{ translate('billing.cashSessionRequired', 'Ouvrez une session de caisse avant d’encaisser ce règlement.') }}</p>
+                <button type="button" (click)="openCashRegister.emit()" class="ui-button ui-button-secondary">
+                  {{ translate('billing.openCashRegister', 'Ouvrir la caisse') }}
+                </button>
+              </div>
+            </div>
+          }
+
           <div class="space-y-3">
             <div>
               <label class="text-[10px] font-bold text-[var(--text-secondary)] block mb-1">{{ translate('billing.paymentAmount', 'Montant versé (FCFA)') }} :</label>
@@ -62,7 +74,7 @@ export interface BillingPaymentForm {
               <button (click)="close.emit()" class="ui-button ui-button-secondary">
                 {{ translate('billing.cancel', 'Annuler') }}
               </button>
-              <button (click)="submit()" [disabled]="saving || !amount" class="ui-button ui-button-primary disabled:opacity-50">
+              <button (click)="submit()" [disabled]="saving || !amount || cashSessionOpen === false" class="ui-button ui-button-primary disabled:opacity-50">
                 @if (saving) {
                   {{ translate('common.saving', 'Enregistrement...') }}
                 } @else {
@@ -81,10 +93,12 @@ export class BillingPaymentModalComponent implements OnChanges {
   @Input({ required: true }) visible = false;
   @Input() invoice: Invoice | null = null;
   @Input({ required: true }) saving = false;
+  @Input() cashSessionOpen: boolean | null = null;
   @Input({ required: true }) translate!: (key: string, defaultValue: string) => string;
 
   @Output() close = new EventEmitter<void>();
   @Output() submitPayment = new EventEmitter<BillingPaymentForm>();
+  @Output() openCashRegister = new EventEmitter<void>();
 
   amount: number | null = null;
   method: 'CASH' | 'CHECK' | 'BANK_TRANSFER' = 'CASH';

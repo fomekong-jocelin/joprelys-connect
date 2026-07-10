@@ -112,3 +112,7 @@ Pour une hospitalisation avec chirurgie :
 ## 7. Versioning & SemVer
 
 - **MINOR bump** : Ajout d'une nouvelle fonctionnalité majeure rétrocompatible.
+
+## 8. Responsive navigation
+
+La barre d'onglets de `BillingManagementPageComponent` utilise un conteneur horizontal défilable (`overflow-x-auto`). Les boutons ont une largeur intrinsèque (`shrink-0`, `whitespace-nowrap`) et une hauteur minimale adaptée au tactile. Cette stratégie conserve tous les libellés sans imposer une navigation secondaire ou modifier le contrat de la page.

@@ -118,10 +118,16 @@ export class BillingManagementPageComponent implements OnInit {
   invoiceSettlements = signal<Record<string, InvoiceSettlementSummary>>({});
   selectedInvoiceForEstimates = signal<Invoice | null>(null);
 
+  readonly existingInvoiceForSelectedVisit = computed(() => {
+    const visitId = this.selectedVisitId();
+    return visitId ? this.invoices().find((invoice) => invoice.visitId === visitId) ?? null : null;
+  });
+
   // Payment Modal
   showPaymentModal = signal(false);
   paymentInvoice = signal<Invoice | null>(null);
   savingPayment = signal(false);
+  cashSessionOpen = signal<boolean | null>(null);
 
   // Alerts
   successMessage = signal<string | null>(null);
@@ -131,6 +137,14 @@ export class BillingManagementPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadGlobalConfigs();
+    this.loadCashSessionState();
+  }
+
+  loadCashSessionState(): void {
+    this.billingApi.getActiveCashSession().subscribe({
+      next: (session) => this.cashSessionOpen.set(!!session),
+      error: () => this.cashSessionOpen.set(false),
+    });
   }
 
   t(key: string, defaultValue: string): string {
@@ -249,7 +263,12 @@ export class BillingManagementPageComponent implements OnInit {
 
   saveInvoice(): void {
     const patient = this.selectedPatient();
-    if (!patient) return;
+    if (!patient || this.existingInvoiceForSelectedVisit()) {
+      if (this.existingInvoiceForSelectedVisit()) {
+        this.showError('billing.error.invoiceAlreadyExists');
+      }
+      return;
+    }
 
     this.savingInvoice.set(true);
     this.billingApi.createInvoice({
@@ -269,6 +288,30 @@ export class BillingManagementPageComponent implements OnInit {
         this.showError('billing.error.save');
       }
     });
+  }
+
+  viewExistingInvoice(): void {
+    const invoice = this.existingInvoiceForSelectedVisit();
+    if (invoice) {
+      this.openInvoiceDetails(invoice);
+    }
+  }
+
+  openInvoiceDetails(invoice: Invoice): void {
+    this.selectedInvoiceForEstimates.set(invoice);
+  }
+
+  closeInvoiceDetails(): void {
+    this.selectedInvoiceForEstimates.set(null);
+  }
+
+  openInsuranceFollowUp(): void {
+    this.activeTab.set('bordereaux');
+  }
+
+  openCashRegisterFromPayment(): void {
+    this.closePaymentModal();
+    this.activeTab.set('caisse');
   }
 
   printInvoicePdf(invoiceId: string): void {
@@ -305,6 +348,7 @@ export class BillingManagementPageComponent implements OnInit {
         this.savingPayment.set(false);
         this.showSuccess('billing.success.paymentAdded');
         this.closePaymentModal();
+        this.cashSessionOpen.set(true);
         if (this.selectedPatient()) {
           this.loadPatientHistory(this.selectedPatient()!.id);
         }

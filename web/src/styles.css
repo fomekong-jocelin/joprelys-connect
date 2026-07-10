@@ -862,3 +862,46 @@ body {
     display: none; /* Chrome, Safari and Opera */
   }
 }
+
+/* Estimate lines respond to the actual invoice-detail panel width, not the window. */
+app-billing-estimates .action-form {
+  container-type: inline-size;
+}
+
+app-billing-estimates .remove-line {
+  align-self: end;
+  white-space: nowrap;
+}
+
+@container (max-width: 760px) {
+  app-billing-estimates .estimate-item-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  app-billing-estimates .estimate-item-row .field-label:first-child {
+    grid-column: 1 / -1;
+  }
+
+  app-billing-estimates .remove-line {
+    justify-self: end;
+  }
+
+  app-billing-estimates .form-actions .spacer {
+    display: none;
+  }
+}
+
+@container (max-width: 430px) {
+  app-billing-estimates .estimate-item-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  app-billing-estimates .estimate-item-row .field-label:first-child {
+    grid-column: auto;
+  }
+
+  app-billing-estimates .remove-line {
+    justify-self: stretch;
+    width: 100%;
+  }
+}

@@ -10,6 +10,19 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+- **Détail facture — ligne de devis dans un panneau étroit (TASK-2205)** : les champs s’adaptent désormais à la largeur réelle du formulaire, sans débordement ; l’action de suppression est visible, libellée et traduite en français et en anglais.
+
+- **Détail facture — alignement avec le design system (TASK-2205)** : remplacement des classes visuelles locales incomplètes par `ui-button`, `ui-input` et `ui-select`, avec padding, bordures, fonds de champs, focus visible et couleurs de thème cohérentes.
+
+- **Détail facture — actions devis/avoir (TASK-2205)** : distinction visuelle entre l’historique des devis et les actions de création ; formulaire de devis explicite, action d’avoir traitée comme opération exceptionnelle, libellés persistants et traductions FR/EN ajoutées.
+
+- **Workspace facturation — lot 1 EPIC-0020** : une visite déjà facturée affiche désormais un résumé dédié sans formulaire de création concurrent ; le détail facture s'ouvre dans un panneau latéral et l'action d'encaissement patient utilise un libellé court.
+- **Paiement sans session de caisse** : le modal d'encaissement indique la précondition et propose directement d'ouvrir la caisse, au lieu de laisser l'utilisateur découvrir un `409` après validation.
+
+- **Parcours facture, règlement patient et assurance (BUG-20260710-INVOICE-SETTLEMENT)** : une visite déjà facturée ne peut plus relancer l'émission d'une facture ; l'historique distingue la part patient à régler de la part assurance à recouvrer et propose l'accès aux bordereaux d'assurance.
+
+- **Onglets facturation/caisse non responsifs (BUG-20260710)** : la navigation financière utilise désormais un défilement horizontal sur mobile, avec libellés non compressés, cibles tactiles lisibles et états ARIA cohérents.
+
 - **En-tête d’hospitalisation écrasé (BUG-20260710)** : séparation responsive des informations du séjour et des actions, avec grille d’actions stable pour les libellés longs, repli en colonne sur écrans étroits, espacement interne de la carte et harmonisation du bouton PDF et du titre de séjour.
 
 ### Added

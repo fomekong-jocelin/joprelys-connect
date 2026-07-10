@@ -6,11 +6,11 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-10 (EPIC-0019 : quatre panneaux cliniques extraits, compilés et testés) |
+| Dernière mise à jour | 2026-07-10 (TASK-2205 : correction responsive des lignes de devis compilée et testée ; QA visuelle navigateur à réaliser) |
 | Responsable mise à jour | Codex |
-| État global | EPIC-0019 en cours : shell et quatre panneaux de séjour hospitalier livrés ; EPIC-0018 doit être consolidé avant toute release |
-| Risques majeurs | Poste hospitalisation monolithique, règles cliniques à valider et divergence documentaire EPIC-0018 |
-| Prochaine priorité | Extraire consentements et bloc/CRO, puis valider STORY-2120 avec les référents métier ; réconcilier EPIC-0018 |
+| État global | EPIC-0019 en cours ; EPIC-0020 cadrée pour refondre le workspace facturation/caisse après audit UX des captures utilisateur |
+| Risques majeurs | États facture/créance contradictoires, écran financier trop chargé, validation DAF manquante sur les transitions de règlement |
+| Prochaine priorité | Valider le modèle d'état financier et démarrer STORY-2201 puis STORY-2202 |
 | Sprint courant | SPRINT-0013 |
 | | |
 | Capacité sprint | À planifier |
@@ -23,6 +23,13 @@
 |---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
 | EPIC-0019 | PROFESSIONAL_WORKSPACES | Epic | Postes métier professionnels hospitalisation et caisse | Full-stack | IN_PROGRESS | P0 | 34 | Senior full-stack + UX santé + Médecin Chef + DAF | 10.5j | 14.0j | 23.0j | Codex | Lead Developer + Médecin Chef + DAF | À planifier | 1.6j | Extraction consentements/bloc-CRO, validation métier et consolidation EPIC-0018 | Élevé | 2026-07-10 |
 | EPIC-0018 | FINANCE_OPERATIONS | Epic | Intégrité financière et poste facturation/caisse | Full-stack | IN_PROGRESS | P0 | 34 | Senior full-stack + DAF | 7.5j | 10.0j | 15.0j | Codex | Lead Developer + DAF | À planifier | 3.0j | Stories 2116 et validation DAF | Élevé | 2026-07-09 |
+| EPIC-0020 | FINANCE_UX | Epic | Refonte du workspace Facturation & Caisse orienté tâche | Full-stack + Product Design | IN_PROGRESS | P0 | 36 | Senior full-stack + UX santé + DAF + QA | 11.0j | 14.3j | 20.0j | Codex | Lead Developer + Product/DAF | SPRINT-0014 | 0.8j | Lot 1 livré : création séparée, panneau détail et actions courtes ; caisse/assurance/QA globale restantes | Élevé | 2026-07-10 |
+| STORY-2201 | FINANCE_UX | User Story | Contrat d'état financier unique patient/assurance | Backend / Full-stack | READY | P0 | 5 | Senior | 1.5j | 2.0j | 3.0j | À assigner | Lead Developer + DAF | À planifier | 0j | Dépend de l'arbitrage DAF sur PAID/SETTLED | Élevé | 2026-07-10 |
+| STORY-2202 | FINANCE_UX | User Story | Workspace Factures orienté tâche | Frontend / Product Design | IN_PROGRESS | P0 | 8 | Senior | 2.5j | 3.3j | 4.5j | Codex | Lead Developer + Product/DAF | SPRINT-0014 | 0.8j | Lot 1 livré ; reste à traiter la densité de l'historique et les états de détail/validation | Élevé | 2026-07-10 |
+| STORY-2203 | FINANCE_UX | User Story | Poste caissier simplifié et file d'encaissement | Full-stack | READY | P0 | 8 | Senior | 2.5j | 3.3j | 4.5j | À assigner | Lead Developer + DAF | À planifier | 0j | Dépend de STORY-2201 | Élevé | 2026-07-10 |
+| STORY-2204 | FINANCE_UX | User Story | Poste assurance et progression des bordereaux | Full-stack | READY | P1 | 5 | Senior + intermédiaire | 1.5j | 2.0j | 3.0j | À assigner | DAF + Lead Developer | À planifier | 0j | Dépend de STORY-2201 | Moyen | 2026-07-10 |
+| STORY-2205 | FINANCE_UX | User Story | Détail facture, documents et actions exceptionnelles | Frontend | IN_PROGRESS | P1 | 5 | Senior | 1.5j | 2.0j | 3.0j | Codex | Lead Developer + DAF | SPRINT-0014 | 0.8j | Correction responsive compilée et testée ; QA visuelle navigateur restante | Moyen | 2026-07-10 |
+| STORY-2206 | FINANCE_UX | User Story | QA UX, accessibilité et régression financière | QA / Full-stack | READY | P0 | 5 | Senior QA/full-stack | 1.5j | 2.0j | 3.0j | À assigner | Lead Developer + DAF | À planifier | 0j | Dépend de STORY-2201 à 2205 | Élevé | 2026-07-10 |
 | STORY-2112 | FINANCE_OPERATIONS | Feature | Synthèse de règlement patient / assurance | Full-stack | DONE | P0 | 5 | Senior full-stack | 1.2j | 1.6j | 2.4j | Codex | Lead Developer + DAF | SPRINT-0012 | 1.2j | Validation DAF des libellés métier | Faible | 2026-07-09 |
 | STORY-2113 | FINANCE_OPERATIONS | Feature | Poste caissier: encaissement, reçu, clôture, écarts | Full-stack | DONE | P0 | 8 | Senior full-stack | 2.0j | 2.6j | 4.0j | Codex | Lead Developer + DAF | SPRINT-0013 | 0.4j | Validé par test E2E complet (facture->patient->assurance->banque->clôture) | Faible | 2026-07-09 |
 | STORY-2114 | FINANCE_OPERATIONS | Feature | Poste recouvrement: balance âgée, actions de relance | Full-stack | DONE | P1 | 8 | Senior full-stack | 2.0j | 2.6j | 4.0j | Codex | Lead Developer + DAF | SPRINT-0013 | 2.0j | Réalisé (V53 table, REST, DTO aging slice, modal timeline relances Angular) | Faible | 2026-07-09 |
@@ -215,6 +222,8 @@
 | TICKET-CDC-V2-ENRICHISSEMENT | CDC_ALIGN | Task | Enrichissement du CDC avec les 4 documents réels du cabinet TC2CDK | Documentation | DONE | P0 | 3 | Senior | 1.0j | 1.5j | 2.5j | Antigravity | Lead Developer | SPRINT-0011 | 0.8j | Aucun (CDC V2 créé dans Cahier_des_charges_Joprelys_Connect_V2.md) | Faible | 2026-07-08 |
 | TICKET-CDC-V2-COMPARISON-ENRICHMENT | CDC_ALIGN | Task | Comparaison avec les spécifications de gestion de clinique et enrichissement final du CDC V2 | Documentation | DONE | P0 | 2 | Senior | 0.5j | 0.75j | 1.25j | Antigravity | Lead Developer | SPRINT-0011 | 0.4j | Aucun (CDC V2 enrichi avec Urgences, RH, Achat, Stocks, Budget et Compta OHADA) | Faible | 2026-07-08 |
 | BUG-20260710 | UI_UX | Bug | Correction de l’en-tête d’hospitalisation écrasé | Frontend | DONE | P1 | 1 | Intermédiaire | 0.15j | 0.25j | 0.4j | Antigravity | Lead Developer | SPRINT-0011 | 0.25j | Validation visuelle navigateur à faire | Faible | 2026-07-10 |
+| BUG-20260710-TABS | UI_UX | Bug | Onglets facturation/caisse non responsifs sur mobile | Frontend | DONE | P1 | 1 | Intermédiaire | 0.15j | 0.25j | 0.4j | Codex | Lead Developer | SPRINT-0013 | 0.15j | Validation visuelle manuelle sur appareil réel recommandée | Faible | 2026-07-10 |
+| BUG-20260710-INVOICE-SETTLEMENT | BILLING | Bug | Correction du parcours facture, règlement patient et assurance | Full-stack | DONE | P1 | 3 | Senior | 0.4j | 0.5j | 0.8j | Codex | Lead Developer + DAF | SPRINT-0013 | 0.4j | Validation navigateur avec données réelles à compléter ; build et 111 tests Angular OK | Moyen | 2026-07-10 |
 
 
 ## Statuts autorisés

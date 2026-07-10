@@ -66,3 +66,12 @@ Lors du sprint planning, prévoir explicitement du temps pour :
 - relire la documentation en review.
 
 Une story sans documentation initiale ne doit pas entrer en sprint, sauf urgence explicitement marquée et régularisée avant `DONE`.
+
+## Cadrage EPIC-0020
+
+EPIC-0020 est prête au refinement mais ne doit pas être engagée en développement complet avant :
+
+- l'arbitrage DAF sur `PAID` versus `SETTLED` ;
+- la validation de la vue détail facture (panneau latéral ou route dédiée) ;
+- la disponibilité d'un jeu de données tiers-payant avec paiement patient partiel et règlement assurance ;
+- la réservation d'une capacité de deux sprints à 60–70 % maximum.

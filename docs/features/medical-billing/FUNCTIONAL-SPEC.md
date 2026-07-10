@@ -56,6 +56,10 @@ Le module de facturation médicale a pour but d'automatiser et de sécuriser la 
 ## 7. Critères d’acceptation
 
 - [ ] L'IHM de facturation présente la décomposition claire (Actes K, Soins AMI, Séjour, Pharmacie).
+- [x] L'IHM distingue l'émission d'une nouvelle facture du règlement d'une facture existante.
+- [x] Une visite déjà facturée ne permet pas de relancer l'émission d'une facture.
+- [x] Une facture tiers-payant affiche séparément la part patient à régler et la part assurance à recouvrer.
+- [x] Le règlement assurance s'effectue depuis le parcours `Bordereaux Assurances` : brouillon, envoi, puis règlement avec référence.
 - [ ] L'édition du PDF de facture calcule la répartition Tiers Payant de façon transparente pour le patient.
 - [ ] Une tentative de facturer un patient assuré applique le taux de la convention sélectionnée de façon dynamique.
 
@@ -64,3 +68,5 @@ Le module de facturation médicale a pour but d'automatiser et de sécuriser la 
 | Date | Auteur | Changement |
 |---|---|---|
 | 2026-07-08 | Antigravity | Création initiale |
+| 2026-07-10 | Codex | Navigation des onglets rendue utilisable sur mobile par défilement horizontal |
+| 2026-07-10 | Codex | Audit UX et cadrage EPIC-0020 : séparation des tâches facturation, caisse, créances et assurances |

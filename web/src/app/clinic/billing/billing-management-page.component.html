@@ -5,60 +5,86 @@
       ></app-page-header>
       <div class="app-container pb-12 space-y-6">
       
-      <!-- Flat Tabs -->
-      <div class="flex border-b border-[var(--app-border)]/60 gap-4 mb-6">
+      <!-- Flat Tabs: horizontal scrolling preserves readable labels on narrow screens. -->
+      <nav
+        class="mb-6 overflow-x-auto border-b border-[var(--app-border)]/60"
+        aria-label="Navigation de la facturation et de la caisse"
+      >
+        <div class="flex w-max min-w-full gap-4">
         <button
+          type="button"
           (click)="activeTab.set('facturation')"
-          [class]="activeTab() === 'facturation' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
+          [attr.aria-selected]="activeTab() === 'facturation'"
+          role="tab"
+          [class]="activeTab() === 'facturation' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
         >
           <app-ui-icon name="document-text" />
           {{ t('billing.tabBilling', 'Facturation de patients') }}
         </button>
         <button
+          type="button"
           (click)="activeTab.set('caisse')"
-          [class]="activeTab() === 'caisse' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
+          [attr.aria-selected]="activeTab() === 'caisse'"
+          role="tab"
+          [class]="activeTab() === 'caisse' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
         >
           <app-ui-icon name="calculator" />
           {{ t('billing.tabCashRegister', 'Caisse & Sessions') }}
         </button>
         <button
+          type="button"
           (click)="activeTab.set('creances')"
-          [class]="activeTab() === 'creances' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
+          [attr.aria-selected]="activeTab() === 'creances'"
+          role="tab"
+          [class]="activeTab() === 'creances' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
         >
           <app-ui-icon name="folder-open" />
           {{ t('billing.tabReceivables', 'Suivi des Créances') }}
         </button>
         <button
+          type="button"
           (click)="activeTab.set('bordereaux')"
-          [class]="activeTab() === 'bordereaux' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
+          [attr.aria-selected]="activeTab() === 'bordereaux'"
+          role="tab"
+          [class]="activeTab() === 'bordereaux' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
         >
           <app-ui-icon name="document-text" />
           {{ t('billing.tabInsuranceBordereaux', 'Bordereaux Assurances') }}
         </button>
         <button
+          type="button"
           (click)="activeTab.set('conventions')"
-          [class]="activeTab() === 'conventions' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
+          [attr.aria-selected]="activeTab() === 'conventions'"
+          role="tab"
+          [class]="activeTab() === 'conventions' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
         >
           <app-ui-icon name="handshake" />
           {{ t('billing.tabConventions', 'Conventions d\'Assurance') }}
         </button>
         <button
+          type="button"
           (click)="activeTab.set('tariffs')"
-          [class]="activeTab() === 'tariffs' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
+          [attr.aria-selected]="activeTab() === 'tariffs'"
+          role="tab"
+          [class]="activeTab() === 'tariffs' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
         >
           <app-ui-icon name="table-cells" />
           {{ t('billing.tabTariffs', 'Grille Tarifaire (Actes K)') }}
         </button>
         @if (isDafOrAdmin()) {
           <button
+            type="button"
             (click)="activeTab.set('daf')"
-            [class]="activeTab() === 'daf' ? 'pb-2 border-b-2 border-brand-cyan font-bold text-brand-cyan text-xs flex items-center gap-1.5' : 'pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
+            [attr.aria-selected]="activeTab() === 'daf'"
+            role="tab"
+            [class]="activeTab() === 'daf' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
           >
             <app-ui-icon name="calculator" />
             {{ t('billing.tabDaf', 'Pilotage DAF') }}
           </button>
         }
-      </div>
+        </div>
+      </nav>
 
       @if (successMessage()) {
         <div class="ui-alert-success text-xs">
@@ -156,26 +182,66 @@
                 <div class="flex justify-between items-center border-b border-[var(--app-border)]/40 pb-2">
                   <h3 class="font-bold text-xs text-[var(--text-primary)] uppercase tracking-wider">
                     <app-ui-icon name="document-text" />
-                    {{ t('billing.newInvoice', 'Émettre une Facture') }}
+                    @if (existingInvoiceForSelectedVisit()) {
+                      {{ t('billing.existingInvoiceTitle', 'Facture existante pour cette visite') }}
+                    } @else {
+                      {{ t('billing.newInvoice', 'Émettre une Facture') }}
+                    }
                   </h3>
-                  <div class="flex gap-2">
-                    <button
-                      (click)="precalculateFromVisit()"
-                      [disabled]="!selectedVisitId()"
-                      class="ui-button ui-button-secondary disabled:opacity-50"
-                    >
-                      <app-ui-icon name="arrow-path" />
-                      {{ t('billing.precalculate', 'Pré-calculer') }}
-                    </button>
-                    <button
-                      (click)="addCustomItem()"
-                      class="ui-button ui-button-secondary"
-                    >
-                      <app-ui-icon name="plus" />
-                      {{ t('billing.addItem', 'Ajouter une ligne') }}
-                    </button>
-                  </div>
+                  @if (!existingInvoiceForSelectedVisit()) {
+                    <div class="flex gap-2">
+                      <button
+                        (click)="precalculateFromVisit()"
+                        [disabled]="!selectedVisitId()"
+                        class="ui-button ui-button-secondary disabled:opacity-50"
+                      >
+                        <app-ui-icon name="arrow-path" />
+                        {{ t('billing.precalculate', 'Pré-calculer') }}
+                      </button>
+                      <button
+                        (click)="addCustomItem()"
+                        class="ui-button ui-button-secondary"
+                      >
+                        <app-ui-icon name="plus" />
+                        {{ t('billing.addItem', 'Ajouter une ligne') }}
+                      </button>
+                    </div>
+                  }
                 </div>
+                @if (existingInvoiceForSelectedVisit(); as existingInvoice) {
+                  <div class="border border-brand-cyan/30 bg-brand-cyan/5 p-5 rounded-[var(--radius-brand-sm)] space-y-4">
+                    <div class="flex items-start justify-between gap-4">
+                      <div>
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-brand-cyan">{{ t('billing.existingInvoiceLabel', 'Facture existante') }}</p>
+                        <h4 class="mt-1 text-base font-bold text-[var(--text-primary)]">{{ existingInvoice.invoiceNumber }}</h4>
+                        <p class="mt-1 text-xs text-[var(--text-secondary)]">{{ t('billing.existingInvoiceNextStep', 'Aucune nouvelle facture à créer pour cette visite.') }}</p>
+                      </div>
+                      <span class="text-right text-sm font-bold text-[var(--text-primary)]">{{ existingInvoice.totalAmount | number:'1.0-0' }} FCFA</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-[var(--radius-brand-sm)] p-3">
+                        <span class="block text-[10px] text-[var(--text-muted)]">{{ t('billing.invoicePatient', 'Part patient') }}</span>
+                        <strong>{{ existingInvoice.patientShare | number:'1.0-0' }} FCFA</strong>
+                      </div>
+                      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-[var(--radius-brand-sm)] p-3">
+                        <span class="block text-[10px] text-[var(--text-muted)]">{{ t('billing.invoiceInsurance', 'Part assurance') }}</span>
+                        <strong>{{ existingInvoice.insuranceShare | number:'1.0-0' }} FCFA</strong>
+                      </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <button type="button" (click)="viewExistingInvoice()" class="ui-button ui-button-primary">
+                        <app-ui-icon name="document-text" />
+                        {{ t('billing.openInvoiceDetails', 'Ouvrir le détail') }}
+                      </button>
+                      @if (invoiceSettlements()[existingInvoice.id]?.collectionStatus === 'INSURANCE_DUE') {
+                        <button type="button" (click)="openInsuranceFollowUp()" class="ui-button ui-button-secondary">
+                          <app-ui-icon name="document-text" />
+                          {{ t('billing.followInsurance', 'Suivre l’assurance') }}
+                        </button>
+                      }
+                    </div>
+                  </div>
+                } @else {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label class="text-[10px] font-bold text-[var(--text-secondary)] block mb-1">
@@ -289,11 +355,13 @@
                   <div class="flex justify-end gap-2 pt-2">
                     <button
                       (click)="saveInvoice()"
-                      [disabled]="savingInvoice()"
+                      [disabled]="savingInvoice() || !!existingInvoiceForSelectedVisit()"
                       class="ui-button ui-button-primary disabled:opacity-50"
                     >
                       @if (savingInvoice()) {
                         {{ t('billing.generating', 'Génération en cours...') }}
+                      } @else if (existingInvoiceForSelectedVisit()) {
+                        {{ t('billing.invoiceAlreadyIssued', 'Facture déjà émise') }}
                       } @else {
                         <app-ui-icon name="document-text" />
                         {{ t('billing.emitInvoice', 'Émettre la Facture') }}
@@ -305,19 +373,17 @@
                     {{ t('billing.emptyInvoice', 'Aucun acte ni produit ajouté pour cette facture. Utilisez "Pré-calculer" ou "+ Ajouter une ligne".') }}
                   </div>
                 }
+                }
               </div>
               <app-billing-invoice-history
                 [invoices]="invoices()"
+                [settlements]="invoiceSettlements()"
                 [translate]="translate"
                 (printPdf)="printInvoicePdf($event)"
                 (openPayment)="openPaymentModal($event)"
-                (selectInvoice)="selectedInvoiceForEstimates.set($event)"
+                (openInsurance)="openInsuranceFollowUp()"
+                (selectInvoice)="openInvoiceDetails($event)"
               ></app-billing-invoice-history>
-
-              <app-billing-estimates
-                [patientId]="selectedPatient()!.id"
-                [invoice]="selectedInvoiceForEstimates()"
-              ></app-billing-estimates>
             }
           </div>
         </div>
@@ -343,5 +409,26 @@
         <app-billing-daf-dashboard [translate]="translate"></app-billing-daf-dashboard>
       }
     </div>
-    <app-billing-payment-modal [visible]="showPaymentModal()" [invoice]="paymentInvoice()" [saving]="savingPayment()" [translate]="translate" (close)="closePaymentModal()" (submitPayment)="submitPayment($event)"></app-billing-payment-modal>
-    </app-shell>
+    <app-billing-payment-modal [visible]="showPaymentModal()" [invoice]="paymentInvoice()" [saving]="savingPayment()" [cashSessionOpen]="cashSessionOpen()" [translate]="translate" (close)="closePaymentModal()" (openCashRegister)="openCashRegisterFromPayment()" (submitPayment)="submitPayment($event)"></app-billing-payment-modal>
+    @if (selectedInvoiceForEstimates(); as selectedInvoice) {
+      <div class="fixed inset-0 z-40 bg-black/40" (click)="closeInvoiceDetails()"></div>
+      <aside class="fixed inset-y-0 right-0 z-50 w-full max-w-2xl overflow-y-auto bg-[var(--app-surface)] border-l border-[var(--app-border)] shadow-xl p-4 sm:p-6" role="dialog" aria-modal="true" aria-label="Détail de la facture">
+        <div class="flex items-center justify-between gap-4 mb-5 pb-3 border-b border-[var(--app-border)]/60">
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-brand-cyan">{{ t('billing.invoiceDetails', 'Détail de la facture') }}</p>
+            <h2 class="text-base font-bold text-[var(--text-primary)]">{{ selectedInvoice.invoiceNumber }}</h2>
+          </div>
+          <button type="button" (click)="closeInvoiceDetails()" class="ui-button ui-button-secondary" [attr.aria-label]="t('common.aria.close', 'Fermer')">
+            <app-ui-icon name="x-mark" />
+            {{ t('billing.closeDetails', 'Fermer') }}
+          </button>
+        </div>
+        <app-billing-estimates
+          [patientId]="selectedPatient()!.id"
+          [invoice]="selectedInvoice"
+          [settlement]="invoiceSettlements()[selectedInvoice.id]"
+          (close)="closeInvoiceDetails()"
+        ></app-billing-estimates>
+      </aside>
+    }
+  </app-shell>
