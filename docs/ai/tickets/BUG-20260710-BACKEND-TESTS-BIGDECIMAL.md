@@ -1,24 +1,27 @@
-# BUG-20260710-BACKEND-TESTS-BIGDECIMAL — Tests backend non alignés avec BigDecimal
+# BUG-20260710-BACKEND-TESTS-BIGDECIMAL — Finalisation de l’alignement BigDecimal
 
 ## Mode
 
-Engineering / QA — correction P0 de compilation des tests financiers.
+Engineering / QA — correction P0 de la migration financière et de ses tests.
 
 ## Statut
 
-IN_PROGRESS — compilation à valider par la CI empilée sur le correctif du pipeline.
+QA — implémentation terminée et validation combinée entièrement verte sur la PR temporaire #11.
 
 ## Problème
 
-La migration des montants financiers de `Double` vers `BigDecimal` a été appliquée aux principales entités, DTO et services backend, mais plusieurs fixtures de tests construisent encore ces objets avec des littéraux `double`.
+La migration des montants financiers de `Double` vers `BigDecimal` avait laissé deux incohérences :
 
-La compilation Maven des tests échoue avec 19 erreurs `double cannot be converted to java.math.BigDecimal` réparties dans six classes.
+1. dix-neuf constructions de tests utilisaient encore des littéraux `double` alors que les contrats ciblés attendaient désormais `BigDecimal` ;
+2. `InvoiceItemEntity` déclarait des colonnes `NUMERIC(19,4)` mais conservait parfois une échelle 0 dans les objets non persistés, produisant par exemple `3` au lieu d’une valeur normalisée à quatre décimales.
 
 ## Cause
 
-Les contrats de construction ont évolué, mais les tests associés n’ont pas été migrés dans le même changement.
+Les contrats de construction et le schéma ont évolué sans migration complète des fixtures ni normalisation centrale des valeurs reçues par l’entité.
 
 ## Périmètre
+
+### Tests
 
 - `EstimateControllerTest`
 - `FullFinancialE2ETest`
@@ -27,32 +30,38 @@ Les contrats de construction ont évolué, mais les tests associés n’ont pas 
 - `ReceivableReminderControllerTest`
 - `CashRegisterControllerTest`
 
+### Production
+
+- `InvoiceItemEntity` : normalisation de `unitPrice`, `quantity` et `coefficient` à l’échelle 4 avec `RoundingMode.HALF_UP`.
+
 ## Hors périmètre
 
-- aucune modification de service métier ;
 - aucune modification d’endpoint ;
-- aucune modification de migration Flyway ;
-- aucune évolution des DTO financiers encore restés en `Double` ;
-- aucun changement d’autorisation ou de multi-tenant.
+- aucune nouvelle règle financière ;
+- aucune modification d’autorisation ou de multi-tenant ;
+- aucune modification de migration Flyway dans cette PR ;
+- les DTO financiers imbriqués encore en `Double` restent une dette séparée.
 
 ## Critères d’acceptation
 
-- [x] Les 19 incompatibilités de type identifiées sont remplacées par des `BigDecimal` explicites.
-- [x] Les valeurs financières et leurs intentions restent inchangées.
-- [x] Les échelles monétaires utilisent quatre décimales dans les fixtures concernées.
-- [ ] `./mvnw clean verify -B -Dspring.profiles.active=test` compile tous les tests.
-- [ ] La suite backend complète s’exécute.
-- [ ] Aucun test n’est désactivé, supprimé ou assoupli.
+- [x] Les 19 incompatibilités de type sont remplacées par des `BigDecimal` explicites.
+- [x] Les assertions financières comparent des `BigDecimal` cohérents.
+- [x] Les valeurs d’`InvoiceItemEntity` sont normalisées à quatre décimales avant calcul et exposition API.
+- [x] Les valeurs financières et les règles de calcul restent inchangées.
+- [x] `./mvnw clean verify -B -Dspring.profiles.active=test` réussit.
+- [x] Les 276 tests backend réussissent.
+- [x] Les tests Angular et le build de production réussissent.
+- [x] Aucun test n’est désactivé, supprimé ou assoupli.
 
 ## Règle d’implémentation
 
-Utiliser des valeurs construites depuis une chaîne, par exemple :
+Les valeurs financières de test sont créées depuis une chaîne :
 
 ```java
 new BigDecimal("25000.0000")
 ```
 
-Cela évite d’introduire une approximation binaire dans les données financières de test.
+L’entité centralise l’échelle financière afin d’éviter une représentation différente entre un objet pré-calculé et un objet rechargé depuis la base.
 
 ## Estimation
 
@@ -66,28 +75,31 @@ Cela évite d’introduire une approximation binaire dans les données financiè
 | Profil recommandé | Backend Java intermédiaire / senior |
 | Reviewer | Lead Backend + QA finance |
 
-## Tests attendus
+## Résultats de validation
 
-- compilation des sources de test ;
-- suite Maven complète ;
-- tests E2E financiers ;
-- vérification des assertions monétaires si la compilation révèle des différences de type à l’exécution.
+Validation combinée sur la PR temporaire #11, avec le correctif CI et la migration V55 portable :
 
-## Risques
+- Backend Maven strict : ✅
+- Tests backend : ✅ 276 tests
+- Flyway sur H2 : ✅
+- Tests Angular : ✅
+- Build Angular production : ✅
 
-- assertions historiques comparant encore un `Double` attendu à un `BigDecimal` réel ;
-- DTO financiers imbriqués restant en `Double`, à traiter dans un ticket séparé pour éviter d’élargir le correctif ;
-- migration V55/H2 traitée séparément dans `BUG-20260710-V55-H2-COMPATIBILITY`.
+## Risques résiduels
+
+- certains DTO de bordereaux utilisent encore `Double` ; ils ne sont pas modifiés ici pour préserver le périmètre ;
+- la migration V55/H2 reste traitée séparément dans `BUG-20260710-V55-H2-COMPATIBILITY` ;
+- la validation PostgreSQL réelle reste requise avant une livraison en environnement partagé.
 
 ## Impact version
 
-Aucun bump applicatif : correction de tests uniquement.
+**PATCH** — finalisation rétrocompatible de la précision financière.
 
 ## Checklist
 
-- [x] Ticket créé.
-- [x] Périmètre limité aux tests.
-- [x] Aucun code de production modifié.
-- [ ] CI backend verte.
-- [ ] Résultats documentés.
-- [ ] Suivi projet et changelog mis à jour si nécessaire.
+- [x] Ticket créé et mis à jour.
+- [x] Périmètre limité à l’alignement BigDecimal.
+- [x] Aucun contrat HTTP modifié.
+- [x] CI combinée verte.
+- [x] Résultats documentés.
+- [ ] Suivi projet et changelog à finaliser avant fusion.
