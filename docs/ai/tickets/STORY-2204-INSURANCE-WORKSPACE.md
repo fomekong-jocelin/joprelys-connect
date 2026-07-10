@@ -39,3 +39,7 @@ Le parcours actuel est limité à `DRAFT → SENT → PAID`, impose un règlemen
 - Signature électronique.
 - Lettrage comptable bancaire automatique.
 - Abandon de créance ou remise automatique sur écart accepté.
+
+## Validation
+
+La maintenance E2E aligne les anciens scénarios financiers sur la nouvelle progression assurance, puis restaure le pipeline CI permanent avant la validation complète.
