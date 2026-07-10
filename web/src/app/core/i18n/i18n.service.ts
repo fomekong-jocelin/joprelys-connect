@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { catchError, firstValueFrom, forkJoin, of } from 'rxjs';
 import { APP_BRAND_CONFIG, AppLocale } from '../config/app-brand.config';
 
 type TranslationDictionary = Record<string, string>;
@@ -39,18 +39,15 @@ export class I18nService {
   }
 
   private async loadLocale(lang: AppLocale): Promise<void> {
-    if (this.loaded()[lang]) {
-      // Still need to set the dictionary for this locale in case it was toggled
-      const cached = await firstValueFrom(this.http.get<TranslationDictionary>(`/assets/i18n/${lang}.json`));
-      this.dictionary.set(cached);
-      return;
-    }
-
     try {
-      const dict = await firstValueFrom(
-        this.http.get<TranslationDictionary>(`/assets/i18n/${lang}.json`)
-      );
-      this.dictionary.set(dict);
+      const dictionaries = await firstValueFrom(forkJoin({
+        base: this.http.get<TranslationDictionary>(`/assets/i18n/${lang}.json`),
+        extension: this.http.get<TranslationDictionary>(`/assets/i18n/extensions/${lang}.json`).pipe(
+          catchError(() => of({} as TranslationDictionary))
+        ),
+      }));
+
+      this.dictionary.set({ ...dictionaries.base, ...dictionaries.extension });
       this.loaded.update((state) => ({ ...state, [lang]: true }));
     } catch {
       // Fallback to empty dictionary so keys are displayed instead of crashing.
