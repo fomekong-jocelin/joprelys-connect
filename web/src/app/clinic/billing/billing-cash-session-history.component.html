@@ -33,7 +33,7 @@
         [attr.aria-expanded]="!collapsed()"
         aria-controls="cash-history-content"
       >
-        <app-ui-icon [name]="collapsed() ? 'chevron-down' : 'chevron-up'" />
+        <app-ui-icon name="chevron-down" />
         {{ collapsed()
           ? t('billing.cashHistory.expand', 'Afficher l’historique')
           : t('billing.cashHistory.collapse', 'Réduire l’historique') }}
@@ -78,7 +78,7 @@
         </div>
       } @else if (filteredSessions().length === 0) {
         <div class="cash-history__empty" role="status">
-          <app-ui-icon name="calendar-days" class="text-2xl text-[var(--text-muted)]" />
+          <app-ui-icon name="calendar" class="text-2xl text-[var(--text-muted)]" />
           <h3>{{ t('billing.cashHistory.noPeriodTitle', 'Aucune session sur cette période') }}</h3>
           <p>{{ t('billing.cashHistory.noPeriodHint', 'Sélectionnez une période plus large pour retrouver les anciennes sessions.') }}</p>
         </div>
