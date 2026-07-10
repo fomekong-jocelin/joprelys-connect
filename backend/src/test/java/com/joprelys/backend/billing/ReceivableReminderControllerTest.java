@@ -124,13 +124,22 @@ public class ReceivableReminderControllerTest {
         // Invoice
         invoice = new InvoiceEntity(patient.getId(), visit.getId(), "FAC-REC-001", null);
         invoice.setOrganizationId(org.getId());
-        InvoiceItemEntity item = new InvoiceItemEntity("Prestation", InvoiceItemType.CONSULTATION, 30000.0, 1.0, null);
+        InvoiceItemEntity item = new InvoiceItemEntity(
+                "Prestation",
+                InvoiceItemType.CONSULTATION,
+                new java.math.BigDecimal("30000.0000"),
+                new java.math.BigDecimal("1.0000"),
+                null);
         item.setOrganizationId(org.getId());
         invoice.addItem(item);
         invoice = invoiceRepository.save(invoice);
 
         // Receivable
-        receivable = new ReceivableEntity(invoice.getId(), "PATIENT", patient.getId(), 30000.0);
+        receivable = new ReceivableEntity(
+                invoice.getId(),
+                "PATIENT",
+                patient.getId(),
+                new java.math.BigDecimal("30000.0000"));
         receivable.setOrganizationId(org.getId());
         receivable = receivableRepository.save(receivable);
     }
