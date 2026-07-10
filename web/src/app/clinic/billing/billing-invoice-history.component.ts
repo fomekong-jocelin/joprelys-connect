@@ -46,7 +46,8 @@ export class BillingInvoiceHistoryComponent {
     if (!summary) {
       return invoice.status === 'VALIDATED' || invoice.status === 'PARTIALLY_PAID';
     }
-    return summary.patient.status === 'UNPAID' || summary.patient.status === 'PARTIALLY_PAID';
+    return summary.collectionStatus === 'PATIENT_DUE'
+      || summary.collectionStatus === 'PATIENT_PARTIALLY_PAID';
   }
 
   isInsuranceDue(invoice: Invoice): boolean {
