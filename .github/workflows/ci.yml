@@ -1,50 +1,53 @@
-name: STORY-2204 — Clôture documentaire
+name: Joprelys Connect — CI Pipeline
 
 on:
+  push:
+    branches: [main, develop]
   pull_request:
-    branches: [main]
-
-permissions:
-  contents: write
+    branches: [main, develop]
 
 jobs:
-  update-changelog:
-    if: github.actor != 'github-actions[bot]'
+  backend-build:
+    name: Backend — Maven Build & Tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
-      - name: Checkout closure branch
+      - name: Checkout code
         uses: actions/checkout@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
         with:
-          ref: docs/close-story-2204
-          fetch-depth: 0
-      - name: Insert STORY-2204 changelog entry
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+      - name: Ensure Maven wrapper is executable
+        run: chmod +x mvnw
+      - name: Build and verify (Maven strict)
+        run: ./mvnw clean verify -B -Dspring.profiles.active=test
+        env:
+          SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+          JOPRELYS_JWT_SECRET: ci-test-jwt-secret-at-least-32-chars-2026
 
-          path = Path('docs/ai/CHANGELOG.md')
-          text = path.read_text()
-          marker = '### Added\n\n'
-          entry = ('- **Poste assurance et progression des bordereaux (STORY-2204)** : '
-                   'ajout d’un workspace tenanté pour suivre les bordereaux de `DRAFT` à `SETTLED`, '
-                   'avec réception et référence assureur, acceptation ou rejet motivé, montants réclamés/acceptés/réglés/restants, '
-                   'paiements partiels cumulés sans dépassement, synchronisation des créances assurance, migration `BigDecimal`, '
-                   'RBAC financier, filtres, responsive light/dark, accessibilité clavier et traductions FR/EN.\n')
-          if 'Poste assurance et progression des bordereaux (STORY-2204)' not in text:
-              if marker not in text:
-                  raise SystemExit('Section Added introuvable dans le changelog')
-              text = text.replace(marker, marker + entry + '\n', 1)
-              path.write_text(text)
-          PY
-      - name: Restore permanent CI workflow
-        run: |
-          git fetch origin main
-          git show origin/main:.github/workflows/ci.yml > .github/workflows/ci.yml
-      - name: Commit closure changelog
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/ai/CHANGELOG.md .github/workflows/ci.yml
-          git commit -m "docs(changelog): enregistrer STORY-2204"
-          git push origin HEAD:docs/close-story-2204
+  frontend-build:
+    name: Frontend Angular — Build & Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm test
+      - name: Build Angular production
+        run: npm run build
