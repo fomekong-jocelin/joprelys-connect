@@ -1,0 +1,200 @@
+<section class="ui-card-subtle p-4 sm:p-5 space-y-5" aria-labelledby="cashier-queue-title">
+  <header class="cashier-queue-header">
+    <div class="min-w-0">
+      <p class="text-[10px] font-bold uppercase tracking-wider text-brand-cyan">
+        {{ t('billing.cashierQueue.eyebrow', 'Poste caissier') }}
+      </p>
+      <h2
+        #queueHeading
+        id="cashier-queue-title"
+        tabindex="-1"
+        class="mt-1 flex items-center gap-2 text-base font-bold text-[var(--text-primary)] focus:outline-none"
+      >
+        <app-ui-icon name="banknotes" />
+        {{ t('billing.cashierQueue.title', 'File d’encaissement patient') }}
+      </h2>
+      <p class="mt-1 max-w-2xl text-xs text-[var(--text-muted)]">
+        {{ t('billing.cashierQueue.subtitle', 'Traitez en priorité les factures les plus anciennes dont la part patient reste à régler.') }}
+      </p>
+    </div>
+
+    <button type="button" class="ui-button ui-button-secondary shrink-0" [disabled]="loading()" (click)="loadQueue()">
+      <app-ui-icon name="arrow-path" />
+      {{ t('billing.cashierQueue.refresh', 'Actualiser') }}
+    </button>
+  </header>
+
+  <div class="cashier-queue-kpis" aria-label="Synthèse de la file d’encaissement">
+    <div class="cashier-queue-kpi">
+      <span>{{ t('billing.cashierQueue.pendingCases', 'Dossiers en attente') }}</span>
+      <strong>{{ items().length }}</strong>
+    </div>
+    <div class="cashier-queue-kpi">
+      <span>{{ t('billing.cashierQueue.remainingTotal', 'Total patient restant') }}</span>
+      <strong>{{ totalRemaining() | number:'1.0-0' }} FCFA</strong>
+    </div>
+    <div class="cashier-queue-kpi">
+      <span>{{ t('billing.cashierQueue.partialCases', 'Paiements partiels') }}</span>
+      <strong>{{ partialCount() }}</strong>
+    </div>
+  </div>
+
+  @if (lastPayment(); as payment) {
+    <div class="ui-alert-success cashier-receipt" role="status" aria-live="polite">
+      <div class="flex min-w-0 items-start gap-3">
+        <app-ui-icon name="check" class="mt-0.5 shrink-0" />
+        <div class="min-w-0 space-y-1">
+          <p class="font-bold">
+            {{ t('billing.cashierQueue.paymentSuccess', 'Règlement enregistré avec succès') }}
+          </p>
+          <p class="text-xs">
+            {{ payment.item.patientName }} · {{ payment.item.invoiceNumber }} ·
+            <strong>{{ payment.amount | number:'1.0-0' }} FCFA</strong> ·
+            {{ paymentMethodLabel(payment.method) }}
+          </p>
+          @if (payment.receipt) {
+            <p class="text-xs">
+              {{ t('billing.cashierQueue.receiptNumber', 'Reçu') }} :
+              <strong>{{ payment.receipt.receiptNumber }}</strong>
+              · {{ payment.receipt.createdAt | date:'dd/MM/yyyy HH:mm' }}
+            </p>
+          } @else {
+            <p class="text-xs font-semibold">
+              {{ t('billing.cashierQueue.receiptUnavailable', 'Le paiement est enregistré, mais le reçu n’a pas pu être chargé. Il reste disponible depuis la session de caisse.') }}
+            </p>
+          }
+        </div>
+      </div>
+      <button
+        type="button"
+        class="ui-button ui-button-secondary shrink-0"
+        (click)="clearLastPayment()"
+        [attr.aria-label]="t('billing.cashierQueue.closeReceipt', 'Fermer le reçu')"
+      >
+        <app-ui-icon name="x-mark" />
+        {{ t('common.close', 'Fermer') }}
+      </button>
+    </div>
+  }
+
+  <div class="cashier-queue-filters">
+    <div class="min-w-0 flex-1">
+      <label for="cashier-queue-search" class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+        {{ t('billing.cashierQueue.searchLabel', 'Rechercher dans la file') }}
+      </label>
+      <div class="relative">
+        <app-ui-icon name="magnifying-glass" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+        <input
+          id="cashier-queue-search"
+          type="search"
+          [(ngModel)]="searchQuery"
+          class="ui-input w-full pl-9 text-xs"
+          [placeholder]="t('billing.cashierQueue.searchPlaceholder', 'Patient, DPU, téléphone ou facture')"
+        />
+      </div>
+    </div>
+
+    <div class="cashier-queue-filter-select">
+      <label for="cashier-queue-status" class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+        {{ t('billing.cashierQueue.filterLabel', 'État de règlement') }}
+      </label>
+      <select id="cashier-queue-status" [(ngModel)]="statusFilter" class="ui-select w-full text-xs">
+        <option value="ALL">{{ t('billing.cashierQueue.filterAll', 'Toutes les factures') }}</option>
+        <option value="PATIENT_DUE">{{ t('billing.cashierQueue.status.due', 'À encaisser') }}</option>
+        <option value="PATIENT_PARTIALLY_PAID">{{ t('billing.cashierQueue.status.partial', 'Paiement partiel') }}</option>
+      </select>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="space-y-3" role="status" aria-live="polite">
+      <p class="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+        <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-brand-cyan" aria-hidden="true"></span>
+        {{ t('billing.cashierQueue.loading', 'Chargement de la file d’encaissement…') }}
+      </p>
+      <div class="cashier-queue-skeleton" aria-hidden="true"></div>
+      <div class="cashier-queue-skeleton" aria-hidden="true"></div>
+    </div>
+  } @else if (error()) {
+    <div class="ui-alert-danger flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between" role="alert">
+      <div class="flex items-start gap-2 text-xs">
+        <app-ui-icon name="exclamation-triangle" class="mt-0.5 shrink-0" />
+        <span>{{ t('billing.cashierQueue.loadError', 'Impossible de charger la file d’encaissement.') }}</span>
+      </div>
+      <button type="button" class="ui-button ui-button-secondary" (click)="loadQueue()">
+        <app-ui-icon name="arrow-path" />
+        {{ t('common.retry', 'Réessayer') }}
+      </button>
+    </div>
+  } @else if (items().length === 0) {
+    <div class="cashier-queue-empty" role="status">
+      <app-ui-icon name="check" class="text-2xl text-[var(--brand-success)]" />
+      <h3>{{ t('billing.cashierQueue.emptyTitle', 'Aucun règlement patient en attente') }}</h3>
+      <p>{{ t('billing.cashierQueue.emptyHint', 'Toutes les parts patient validées sont soldées pour le moment.') }}</p>
+    </div>
+  } @else if (filteredItems().length === 0) {
+    <div class="cashier-queue-empty" role="status">
+      <app-ui-icon name="magnifying-glass" class="text-2xl text-[var(--text-muted)]" />
+      <h3>{{ t('billing.cashierQueue.noResultTitle', 'Aucun résultat') }}</h3>
+      <p>{{ t('billing.cashierQueue.noResultHint', 'Modifiez la recherche ou le filtre pour afficher d’autres dossiers.') }}</p>
+    </div>
+  } @else {
+    <ul class="space-y-3" role="list">
+      @for (item of filteredItems(); track item.invoiceId) {
+        <li>
+          <article class="cashier-queue-card">
+            <div class="cashier-queue-card__identity">
+              <div class="flex min-w-0 flex-wrap items-center gap-2">
+                <h3 class="truncate text-sm font-bold text-[var(--text-primary)]">{{ item.patientName }}</h3>
+                <span [class]="'rounded-[var(--radius-brand-sm)] px-2 py-1 text-[9px] font-bold ' + statusClass(item.collectionStatus)">
+                  {{ statusLabel(item.collectionStatus) }}
+                </span>
+              </div>
+              <p class="mt-1 text-[10px] text-[var(--text-muted)]">
+                {{ t('billing.cashierQueue.dpu', 'DPU') }} : {{ item.globalPatientNumber }}
+                @if (item.phone) { · {{ item.phone }} }
+              </p>
+              <p class="mt-1 text-[10px] text-[var(--text-secondary)]">
+                {{ item.invoiceNumber }} ·
+                {{ t('billing.cashierQueue.validatedAt', 'Validée le') }}
+                {{ (item.validatedAt || item.createdAt) | date:'dd/MM/yyyy HH:mm' }}
+              </p>
+            </div>
+
+            <dl class="cashier-queue-card__amounts">
+              <div>
+                <dt>{{ t('billing.cashierQueue.invoiceTotal', 'Total facture') }}</dt>
+                <dd>{{ item.totalAmount | number:'1.0-0' }} FCFA</dd>
+              </div>
+              <div class="cashier-queue-card__remaining">
+                <dt>{{ t('billing.cashierQueue.patientRemaining', 'Reste patient') }}</dt>
+                <dd>{{ item.patientRemainingAmount | number:'1.0-0' }} FCFA</dd>
+              </div>
+            </dl>
+
+            <button
+              type="button"
+              class="ui-button ui-button-primary cashier-queue-card__action"
+              (click)="openPayment(item, $event)"
+            >
+              <app-ui-icon name="banknotes" />
+              {{ t('billing.cashierQueue.collect', 'Encaisser') }}
+            </button>
+          </article>
+        </li>
+      }
+    </ul>
+  }
+</section>
+
+<app-billing-payment-modal
+  [visible]="!!selectedItem()"
+  [invoice]="paymentInvoice()"
+  [patientName]="selectedItem()?.patientName ?? null"
+  [saving]="savingPayment()"
+  [cashSessionOpen]="true"
+  [errorMessage]="paymentError()"
+  [translate]="translate"
+  (close)="closePayment()"
+  (submitPayment)="submitPayment($event)"
+></app-billing-payment-modal>
