@@ -23,7 +23,12 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
       - name: Build and verify (Maven strict)
-        run: ./mvnw clean verify -B -Dspring.profiles.active=test
+        run: |
+          if ! ./mvnw clean verify -B -Dspring.profiles.active=test > /tmp/backend-build.log 2>&1; then
+            tail -n 120 /tmp/backend-build.log
+            exit 1
+          fi
+          cat /tmp/backend-build.log
         env:
           SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
           JOPRELYS_JWT_SECRET: ci-test-jwt-secret-at-least-32-chars-2026
@@ -46,6 +51,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run tests
-        run: npm test -- --run
+        run: |
+          if ! npm test -- --run > /tmp/frontend-tests.log 2>&1; then
+            tail -n 120 /tmp/frontend-tests.log
+            exit 1
+          fi
+          cat /tmp/frontend-tests.log
       - name: Build Angular production
         run: npm run build
