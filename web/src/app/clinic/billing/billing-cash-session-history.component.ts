@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, ElementRef, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
@@ -7,6 +7,8 @@ import { BillingApiService } from '../../patient/billing-api.service';
 import { CashSessionHistory } from '../../patient/cash-session-history.models';
 import { CashMovement } from '../../patient/patient.models';
 import { IconComponent } from '../../shared/ui/icon.component';
+
+type CashHistoryPeriod = '7' | '30' | '90' | 'all';
 
 @Component({
   selector: 'app-billing-cash-session-history',
@@ -24,17 +26,36 @@ export class BillingCashSessionHistoryComponent implements OnInit {
   readonly sessions = signal<CashSessionHistory[]>([]);
   readonly loading = signal(false);
   readonly error = signal(false);
+  readonly collapsed = signal(false);
+  readonly selectedPeriod = signal<CashHistoryPeriod>('30');
   readonly expandedSessionId = signal<string | null>(null);
   readonly highlightedSessionId = signal<string | null>(null);
   readonly loadingMovementsId = signal<string | null>(null);
   readonly downloadingSessionId = signal<string | null>(null);
   readonly movementsBySession = signal<Record<string, CashMovement[]>>({});
 
+  readonly filteredSessions = computed(() => {
+    const period = this.selectedPeriod();
+    const sessions = this.sessions();
+    if (period === 'all') return sessions;
+
+    const cutoff = new Date();
+    cutoff.setHours(0, 0, 0, 0);
+    cutoff.setDate(cutoff.getDate() - Number(period) + 1);
+
+    return sessions.filter((session) => {
+      const referenceDate = session.closedAt ?? session.openedAt;
+      return new Date(referenceDate).getTime() >= cutoff.getTime();
+    });
+  });
+
   ngOnInit(): void {
     this.loadSessions();
     this.billingApi.cashSessionClosed$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((session) => {
+        this.collapsed.set(false);
+        this.selectedPeriod.set('30');
         this.highlightedSessionId.set(session.id);
         this.expandedSessionId.set(session.id);
         this.loadSessions();
@@ -56,6 +77,17 @@ export class BillingCashSessionHistoryComponent implements OnInit {
         next: (sessions) => this.sessions.set(sessions),
         error: () => this.error.set(true),
       });
+  }
+
+  toggleCollapsed(): void {
+    this.collapsed.update((value) => !value);
+  }
+
+  setPeriod(value: string): void {
+    if (value === '7' || value === '30' || value === '90' || value === 'all') {
+      this.selectedPeriod.set(value);
+      this.expandedSessionId.set(null);
+    }
   }
 
   toggleDetails(session: CashSessionHistory): void {
