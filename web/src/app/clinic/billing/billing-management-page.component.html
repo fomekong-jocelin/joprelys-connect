@@ -4,13 +4,13 @@
         [subtitle]="t('billing.subtitle', 'Générez les factures de soins, gérez les conventions d\'assurance, appliquez la grille tarifaire et encaissez les règlements.')"
       ></app-page-header>
       <div class="app-container pb-12 space-y-6">
-      
-      <!-- Flat Tabs: horizontal scrolling preserves readable labels on narrow screens. -->
+
       <nav
         class="mb-6 overflow-x-auto border-b border-[var(--app-border)]/60"
         aria-label="Navigation de la facturation et de la caisse"
       >
         <div class="flex w-max min-w-full gap-4">
+        <!-- Facturation patients : AGENT_ACCUEIL + ADMIN_CLINIQUE -->
         <button
           type="button"
           (click)="activeTab.set('facturation')"
@@ -21,56 +21,72 @@
           <app-ui-icon name="document-text" />
           {{ t('billing.tabBilling', 'Facturation de patients') }}
         </button>
-        <button
-          type="button"
-          (click)="activeTab.set('caisse')"
-          [attr.aria-selected]="activeTab() === 'caisse'"
-          role="tab"
-          [class]="activeTab() === 'caisse' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
-        >
-          <app-ui-icon name="calculator" />
-          {{ t('billing.tabCashRegister', 'Caisse & Sessions') }}
-        </button>
-        <button
-          type="button"
-          (click)="activeTab.set('creances')"
-          [attr.aria-selected]="activeTab() === 'creances'"
-          role="tab"
-          [class]="activeTab() === 'creances' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
-        >
-          <app-ui-icon name="folder-open" />
-          {{ t('billing.tabReceivables', 'Suivi des Créances') }}
-        </button>
-        <button
-          type="button"
-          (click)="activeTab.set('bordereaux')"
-          [attr.aria-selected]="activeTab() === 'bordereaux'"
-          role="tab"
-          [class]="activeTab() === 'bordereaux' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
-        >
-          <app-ui-icon name="document-text" />
-          {{ t('billing.tabInsuranceBordereaux', 'Bordereaux Assurances') }}
-        </button>
-        <button
-          type="button"
-          (click)="activeTab.set('conventions')"
-          [attr.aria-selected]="activeTab() === 'conventions'"
-          role="tab"
-          [class]="activeTab() === 'conventions' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
-        >
-          <app-ui-icon name="handshake" />
-          {{ t('billing.tabConventions', 'Conventions d\'Assurance') }}
-        </button>
-        <button
-          type="button"
-          (click)="activeTab.set('tariffs')"
-          [attr.aria-selected]="activeTab() === 'tariffs'"
-          role="tab"
-          [class]="activeTab() === 'tariffs' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
-        >
-          <app-ui-icon name="table-cells" />
-          {{ t('billing.tabTariffs', 'Grille Tarifaire (Actes K)') }}
-        </button>
+        <!-- Caisse & Sessions : AGENT_ACCUEIL + ADMIN_CLINIQUE -->
+        @if (canAccessCaisse()) {
+          <button
+            type="button"
+            (click)="activeTab.set('caisse')"
+            [attr.aria-selected]="activeTab() === 'caisse'"
+            role="tab"
+            [class]="activeTab() === 'caisse' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
+          >
+            <app-ui-icon name="calculator" />
+            {{ t('billing.tabCashRegister', 'Caisse & Sessions') }}
+          </button>
+        }
+        <!-- Créances : ADMIN_CLINIQUE uniquement -->
+        @if (isAdminOnly()) {
+          <button
+            type="button"
+            (click)="activeTab.set('creances')"
+            [attr.aria-selected]="activeTab() === 'creances'"
+            role="tab"
+            [class]="activeTab() === 'creances' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
+          >
+            <app-ui-icon name="folder-open" />
+            {{ t('billing.tabReceivables', 'Suivi des Créances') }}
+          </button>
+        }
+        <!-- Bordereaux Assurances : ADMIN_CLINIQUE uniquement -->
+        @if (isAdminOnly()) {
+          <button
+            type="button"
+            (click)="activeTab.set('bordereaux')"
+            [attr.aria-selected]="activeTab() === 'bordereaux'"
+            role="tab"
+            [class]="activeTab() === 'bordereaux' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
+          >
+            <app-ui-icon name="document-text" />
+            {{ t('billing.tabInsuranceBordereaux', 'Bordereaux Assurances') }}
+          </button>
+        }
+        <!-- Conventions d'Assurance : ADMIN_CLINIQUE uniquement -->
+        @if (isAdminOnly()) {
+          <button
+            type="button"
+            (click)="activeTab.set('conventions')"
+            [attr.aria-selected]="activeTab() === 'conventions'"
+            role="tab"
+            [class]="activeTab() === 'conventions' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
+          >
+            <app-ui-icon name="handshake" />
+            {{ t('billing.tabConventions', 'Conventions d\'Assurance') }}
+          </button>
+        }
+        <!-- Grille Tarifaire : ADMIN_CLINIQUE uniquement -->
+        @if (isAdminOnly()) {
+          <button
+            type="button"
+            (click)="activeTab.set('tariffs')"
+            [attr.aria-selected]="activeTab() === 'tariffs'"
+            role="tab"
+            [class]="activeTab() === 'tariffs' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
+          >
+            <app-ui-icon name="table-cells" />
+            {{ t('billing.tabTariffs', 'Grille Tarifaire (Actes K)') }}
+          </button>
+        }
+        <!-- Pilotage DAF : DAF + ADMIN_CLINIQUE -->
         @if (isDafOrAdmin()) {
           <button
             type="button"
@@ -79,7 +95,7 @@
             role="tab"
             [class]="activeTab() === 'daf' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
           >
-            <app-ui-icon name="calculator" />
+            <app-ui-icon name="chart-bar" />
             {{ t('billing.tabDaf', 'Pilotage DAF') }}
           </button>
         }
@@ -161,7 +177,7 @@
                     (change)="onVisitSelected()"
                     class="ui-select text-xs w-full"
                   >
-                    <option value="">-- {{ t('billing.visitPlaceholder', 'Visite ambulatoire ou séjour active') }} --</option>
+                    <option value="">-- {{ t('billing.visitPlaceholder', 'Visite ambulatoire ou séjour en cours') }} --</option>
                     @for (v of patientVisits(); track v.id) {
                       <option [value]="v.id">
                         {{ v.visitNumber }} - {{ v.reason }} ({{ v.status }})
@@ -236,7 +252,7 @@
                       @if (invoiceSettlements()[existingInvoice.id]?.collectionStatus === 'INSURANCE_DUE') {
                         <button type="button" (click)="openInsuranceFollowUp()" class="ui-button ui-button-secondary">
                           <app-ui-icon name="document-text" />
-                          {{ t('billing.followInsurance', 'Suivre l’assurance') }}
+                          {{ t('billing.followInsurance', 'Suivre l\'assurance') }}
                         </button>
                       }
                     </div>
@@ -260,6 +276,13 @@
                   </div>
                 </div>
                 @if (invoiceItems().length > 0) {
+                  <!-- Alerte si une ligne est invalide -->
+                  @if (hasInvalidItems()) {
+                    <div class="ui-alert-warning text-xs flex items-center gap-2" role="alert">
+                      <app-ui-icon name="information-circle" />
+                      {{ t('billing.invalidItems', 'Certaines lignes ont un prix ou une quantité invalide (≤ 0). Corrigez avant d\'émettre.') }}
+                    </div>
+                  }
                   <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs border-collapse">
                       <thead>
@@ -275,7 +298,7 @@
                       </thead>
                       <tbody class="divide-y divide-[var(--app-border)]/40">
                         @for (item of invoiceItems(); track $index) {
-                          <tr class="hover:bg-[var(--app-surface-muted)]/30">
+                          <tr [class]="isItemInvalid(item) ? 'bg-red-50 dark:bg-red-950/20 hover:bg-red-100/60' : 'hover:bg-[var(--app-surface-muted)]/30'">
                             <td class="p-2">
                               <input
                                 type="text"
@@ -303,7 +326,8 @@
                                 type="number"
                                 [(ngModel)]="item.unitPrice"
                                 (ngModelChange)="recalculateTotals()"
-                                class="ui-input text-xs text-right w-full py-0.5 bg-transparent border-0 focus:bg-[var(--app-surface)] rounded-[var(--radius-brand-sm)]"
+                                min="0"
+                                [class]="(item.unitPrice ?? 0) <= 0 ? 'ui-input text-xs text-right w-full py-0.5 border border-red-400 focus:ring-red-400 bg-[var(--app-surface)] rounded-[var(--radius-brand-sm)]' : 'ui-input text-xs text-right w-full py-0.5 bg-transparent border-0 focus:bg-[var(--app-surface)] rounded-[var(--radius-brand-sm)]'"
                               />
                             </td>
                             <td class="p-2">
@@ -311,7 +335,8 @@
                                 type="number"
                                 [(ngModel)]="item.quantity"
                                 (ngModelChange)="recalculateTotals()"
-                                class="ui-input text-xs text-center w-full py-0.5 bg-transparent border-0 focus:bg-[var(--app-surface)] rounded-[var(--radius-brand-sm)]"
+                                min="1"
+                                [class]="(item.quantity ?? 0) < 1 ? 'ui-input text-xs text-center w-full py-0.5 border border-red-400 focus:ring-red-400 bg-[var(--app-surface)] rounded-[var(--radius-brand-sm)]' : 'ui-input text-xs text-center w-full py-0.5 bg-transparent border-0 focus:bg-[var(--app-surface)] rounded-[var(--radius-brand-sm)]'"
                               />
                             </td>
                             <td class="p-2">
@@ -319,8 +344,9 @@
                                 type="number"
                                 [(ngModel)]="item.coefficient"
                                 (ngModelChange)="recalculateTotals()"
+                                min="0.01"
                                 placeholder="1.0"
-                                class="ui-input text-xs text-center w-full py-0.5 bg-transparent border-0 focus:bg-[var(--app-surface)] rounded-[var(--radius-brand-sm)]"
+                                [class]="(item.coefficient ?? 1) <= 0 ? 'ui-input text-xs text-center w-full py-0.5 border border-red-400 focus:ring-red-400 bg-[var(--app-surface)] rounded-[var(--radius-brand-sm)]' : 'ui-input text-xs text-center w-full py-0.5 bg-transparent border-0 focus:bg-[var(--app-surface)] rounded-[var(--radius-brand-sm)]'"
                               />
                             </td>
                             <td class="p-2 text-right font-bold text-[var(--text-primary)]">
@@ -355,7 +381,7 @@
                   <div class="flex justify-end gap-2 pt-2">
                     <button
                       (click)="saveInvoice()"
-                      [disabled]="savingInvoice() || !!existingInvoiceForSelectedVisit()"
+                      [disabled]="savingInvoice() || !!existingInvoiceForSelectedVisit() || hasInvalidItems()"
                       class="ui-button ui-button-primary disabled:opacity-50"
                     >
                       @if (savingInvoice()) {
@@ -393,7 +419,7 @@
         <app-billing-cash-register></app-billing-cash-register>
       }
 
-       @if (activeTab() === 'creances') {
+      @if (activeTab() === 'creances') {
         <app-billing-receivables></app-billing-receivables>
       }
 

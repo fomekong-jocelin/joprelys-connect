@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { BillingApiService } from '../../patient/billing-api.service';
 import { PatientApiService } from '../../patient/patient-api.service';
 import { VisitApiService } from '../../visit/visit-api.service';
@@ -40,15 +41,8 @@ import { BillingDafDashboardComponent } from './billing-daf-dashboard.component'
   ],
   templateUrl: './billing-management-page.component.html',
   styles: [`
-    /* Scrollbar minimaliste */
-    ::-webkit-scrollbar {
-      width: 4px;
-      height: 4px;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: var(--app-border);
-      border-radius: 2px;
-    }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 2px; }
   `]
 })
 export class BillingManagementPageComponent implements OnInit {
@@ -57,6 +51,7 @@ export class BillingManagementPageComponent implements OnInit {
   private readonly visitApi = inject(VisitApiService);
   private readonly i18n = inject(I18nService);
   private readonly tokenStorage = inject(AuthTokenStorageService);
+  private readonly route = inject(ActivatedRoute);
 
   activeTab = signal<'facturation' | 'caisse' | 'creances' | 'bordereaux' | 'conventions' | 'tariffs' | 'daf'>('facturation');
 
@@ -64,17 +59,15 @@ export class BillingManagementPageComponent implements OnInit {
     const role = this.tokenStorage.session()?.role;
     if (!role) return false;
     const roles = role.split(',').map((r) => r.trim());
-    if (Array.isArray(allowedRoles)) {
-      return roles.some((r) => allowedRoles.includes(r));
-    }
-    return roles.includes(allowedRoles);
+    return Array.isArray(allowedRoles)
+      ? roles.some((r) => allowedRoles.includes(r))
+      : roles.includes(allowedRoles);
   }
 
-  readonly isDafOrAdmin = computed(() => {
-    return this.hasRole(['DAF', 'ADMIN_CLINIQUE']);
-  });
+  readonly isDafOrAdmin = computed(() => this.hasRole(['DAF', 'ADMIN_CLINIQUE']));
+  readonly isAdminOnly = computed(() => this.hasRole(['ADMIN_CLINIQUE']));
+  readonly canAccessCaisse = computed(() => this.hasRole(['AGENT_ACCUEIL', 'ADMIN_CLINIQUE']));
 
-  
   // Search & Patient
   searchQuery = '';
   searched = signal(false);
@@ -90,28 +83,25 @@ export class BillingManagementPageComponent implements OnInit {
   invoiceItems = signal<InvoiceItem[]>([]);
   savingInvoice = signal(false);
 
-  // Totals calculations
-  calculatedTotal = computed(() => {
-    return this.invoiceItems().reduce((acc, item) => {
-      const price = item.unitPrice || 0;
-      const qty = item.quantity || 0;
-      const coeff = item.coefficient || 1.0;
-      return acc + (price * qty * coeff);
-    }, 0);
-  });
+  // Totals
+  calculatedTotal = computed(() =>
+    this.invoiceItems().reduce((acc, item) => {
+      return acc + ((item.unitPrice || 0) * (item.quantity || 0) * (item.coefficient || 1.0));
+    }, 0)
+  );
 
   calculatedInsuranceShare = computed(() => {
-    const total = this.calculatedTotal();
     const convention = this.conventions().find(c => c.id === this.selectedConventionId());
-    if (!convention) return 0;
-    return total * convention.coveragePercentage;
+    return convention ? this.calculatedTotal() * convention.coveragePercentage : 0;
   });
 
-  calculatedPatientShare = computed(() => {
-    const total = this.calculatedTotal();
-    const insurance = this.calculatedInsuranceShare();
-    return total - insurance;
-  });
+  calculatedPatientShare = computed(() => this.calculatedTotal() - this.calculatedInsuranceShare());
+
+  isItemInvalid(item: InvoiceItem): boolean {
+    return (item.unitPrice ?? 0) <= 0 || (item.quantity ?? 0) < 1 || (item.coefficient ?? 1) <= 0;
+  }
+
+  readonly hasInvalidItems = computed(() => this.invoiceItems().some(item => this.isItemInvalid(item)));
 
   // History
   invoices = signal<Invoice[]>([]);
@@ -133,11 +123,49 @@ export class BillingManagementPageComponent implements OnInit {
   successMessage = signal<string | null>(null);
   errorMessage = signal<string | null>(null);
 
+  /** P1-B — true pendant le chargement initial du deep-link invoice */
+  deepLinkLoading = signal(false);
+
   readonly translate = (key: string, defaultValue: string): string => this.t(key, defaultValue);
 
   ngOnInit(): void {
     this.loadGlobalConfigs();
     this.loadCashSessionState();
+    this.handleDeepLink();
+  }
+
+  /**
+   * P1-B — Si la route contient :invoiceId, charge la facture depuis l'API
+   * et ouvre automatiquement le panneau latéral de détail.
+   * Flux :
+   *   1. billingApi.getInvoice(invoiceId)  → Invoice
+   *   2. patientApi.getById(invoice.patientId) → Patient (non bloquant)
+   *   3. openInvoiceDetails(invoice)
+   */
+  private handleDeepLink(): void {
+    const invoiceId = this.route.snapshot.paramMap.get('invoiceId');
+    if (!invoiceId) return;
+
+    this.deepLinkLoading.set(true);
+    this.activeTab.set('facturation');
+
+    this.billingApi.getInvoice(invoiceId).subscribe({
+      next: (invoice) => {
+        this.patientApi.getById(invoice.patientId).subscribe({
+          next: (patient) => {
+            this.selectedPatient.set(patient);
+            this.loadPatientHistory(patient.id);
+          },
+          error: () => { /* patient non critique pour afficher le panneau */ }
+        });
+        this.openInvoiceDetails(invoice);
+        this.deepLinkLoading.set(false);
+      },
+      error: () => {
+        this.deepLinkLoading.set(false);
+        this.showError('billing.error.invoiceNotFound');
+      }
+    });
   }
 
   loadCashSessionState(): void {
@@ -157,7 +185,6 @@ export class BillingManagementPageComponent implements OnInit {
       next: (res) => this.conventions.set(res),
       error: () => this.showError('billing.error.load')
     });
-
     this.billingApi.listTariffs().subscribe({
       next: (res) => this.tariffs.set(res),
       error: () => this.showError('billing.error.load')
@@ -167,10 +194,7 @@ export class BillingManagementPageComponent implements OnInit {
   searchPatients(): void {
     if (!this.searchQuery.trim()) return;
     this.patientApi.list(this.searchQuery).subscribe({
-      next: (res) => {
-        this.patients.set(res);
-        this.searched.set(true);
-      },
+      next: (res) => { this.patients.set(res); this.searched.set(true); },
       error: () => this.showError('billing.error.load')
     });
   }
@@ -183,12 +207,9 @@ export class BillingManagementPageComponent implements OnInit {
     this.loadPatientHistory(p.id);
     this.patients.set([]);
     this.searched.set(false);
-
-    // Load patient visits
     this.visitApi.getPatientVisits(p.id).subscribe({
       next: (res) => {
         this.patientVisits.set(res);
-        // Auto select active visit if any
         const active = res.find(v => v.status === 'EN_COURS' || v.status === 'ACTIVE');
         if (active) {
           this.selectedVisitId.set(active.id);
@@ -205,49 +226,38 @@ export class BillingManagementPageComponent implements OnInit {
       error: () => this.showError('billing.error.load')
     });
     this.billingApi.listInvoiceSettlementSummaries(patientId).subscribe({
-      next: (summaries) => this.invoiceSettlements.set(Object.fromEntries(
-        summaries.map((summary) => [summary.invoiceId, summary])
-      )),
+      next: (summaries) => this.invoiceSettlements.set(
+        Object.fromEntries(summaries.map(s => [s.invoiceId, s]))
+      ),
       error: () => this.invoiceSettlements.set({})
     });
   }
 
   onVisitSelected(): void {
-    if (this.selectedVisitId()) {
-      this.precalculateFromVisit();
-    } else {
-      this.invoiceItems.set([]);
-    }
+    if (this.selectedVisitId()) this.precalculateFromVisit();
+    else this.invoiceItems.set([]);
   }
 
   precalculateFromVisit(): void {
     const patient = this.selectedPatient();
     if (!patient) return;
-
     this.billingApi.precalculateInvoice(patient.id, this.selectedVisitId() || undefined, this.selectedConventionId() || undefined).subscribe({
       next: (res) => {
         this.invoiceItems.set(res.items);
-        if (res.insuranceConvention) {
-          this.selectedConventionId.set(res.insuranceConvention.id);
-        }
+        if (res.insuranceConvention) this.selectedConventionId.set(res.insuranceConvention.id);
       },
-      error: (err) => {
-        this.showError('billing.noActiveVisit');
-        this.invoiceItems.set([]);
-      }
+      error: () => { this.showError('billing.noActiveVisit'); this.invoiceItems.set([]); }
     });
   }
 
   addCustomItem(): void {
-    const items = [...this.invoiceItems()];
-    items.push({
+    this.invoiceItems.set([...this.invoiceItems(), {
       label: 'Prestation libre',
       itemType: 'CONSULTATION',
       unitPrice: 0,
       quantity: 1,
       coefficient: 1.0
-    });
-    this.invoiceItems.set(items);
+    }]);
   }
 
   removeItem(index: number): void {
@@ -257,19 +267,12 @@ export class BillingManagementPageComponent implements OnInit {
   }
 
   recalculateTotals(): void {
-    // Simply forces computed triggers
     this.invoiceItems.set([...this.invoiceItems()]);
   }
 
   saveInvoice(): void {
     const patient = this.selectedPatient();
-    if (!patient || this.existingInvoiceForSelectedVisit()) {
-      if (this.existingInvoiceForSelectedVisit()) {
-        this.showError('billing.error.invoiceAlreadyExists');
-      }
-      return;
-    }
-
+    if (!patient || this.existingInvoiceForSelectedVisit() || this.hasInvalidItems()) return;
     this.savingInvoice.set(true);
     this.billingApi.createInvoice({
       patientId: patient.id,
@@ -277,71 +280,39 @@ export class BillingManagementPageComponent implements OnInit {
       insuranceConventionId: this.selectedConventionId() || undefined,
       items: this.invoiceItems()
     }).subscribe({
-      next: (res) => {
+      next: () => {
         this.savingInvoice.set(false);
         this.showSuccess('billing.success.invoiceCreated');
         this.invoiceItems.set([]);
         this.loadPatientHistory(patient.id);
       },
-      error: () => {
-        this.savingInvoice.set(false);
-        this.showError('billing.error.save');
-      }
+      error: () => { this.savingInvoice.set(false); this.showError('billing.error.save'); }
     });
   }
 
   viewExistingInvoice(): void {
     const invoice = this.existingInvoiceForSelectedVisit();
-    if (invoice) {
-      this.openInvoiceDetails(invoice);
-    }
+    if (invoice) this.openInvoiceDetails(invoice);
   }
 
-  openInvoiceDetails(invoice: Invoice): void {
-    this.selectedInvoiceForEstimates.set(invoice);
-  }
-
-  closeInvoiceDetails(): void {
-    this.selectedInvoiceForEstimates.set(null);
-  }
-
-  openInsuranceFollowUp(): void {
-    this.activeTab.set('bordereaux');
-  }
-
-  openCashRegisterFromPayment(): void {
-    this.closePaymentModal();
-    this.activeTab.set('caisse');
-  }
+  openInvoiceDetails(invoice: Invoice): void { this.selectedInvoiceForEstimates.set(invoice); }
+  closeInvoiceDetails(): void { this.selectedInvoiceForEstimates.set(null); }
+  openInsuranceFollowUp(): void { this.activeTab.set('bordereaux'); }
+  openCashRegisterFromPayment(): void { this.closePaymentModal(); this.activeTab.set('caisse'); }
 
   printInvoicePdf(invoiceId: string): void {
     this.billingApi.downloadInvoicePdf(invoiceId).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        window.open(url, '_blank');
-      },
-      error: (err) => {
-        console.error('Error downloading invoice PDF:', err);
-        this.showError('billing.error.save');
-      }
+      next: (blob) => { const url = window.URL.createObjectURL(blob); window.open(url, '_blank'); },
+      error: () => this.showError('billing.error.save')
     });
   }
 
-  // Payment Modal actions
-  openPaymentModal(inv: Invoice): void {
-    this.paymentInvoice.set(inv);
-    this.showPaymentModal.set(true);
-  }
-
-  closePaymentModal(): void {
-    this.showPaymentModal.set(false);
-    this.paymentInvoice.set(null);
-  }
+  openPaymentModal(inv: Invoice): void { this.paymentInvoice.set(inv); this.showPaymentModal.set(true); }
+  closePaymentModal(): void { this.showPaymentModal.set(false); this.paymentInvoice.set(null); }
 
   submitPayment(payment: BillingPaymentForm): void {
     const inv = this.paymentInvoice();
     if (!inv) return;
-
     this.savingPayment.set(true);
     this.billingApi.addPayment(inv.id, payment.amount, payment.method, payment.reference).subscribe({
       next: () => {
@@ -349,34 +320,22 @@ export class BillingManagementPageComponent implements OnInit {
         this.showSuccess('billing.success.paymentAdded');
         this.closePaymentModal();
         this.cashSessionOpen.set(true);
-        if (this.selectedPatient()) {
-          this.loadPatientHistory(this.selectedPatient()!.id);
-        }
+        if (this.selectedPatient()) this.loadPatientHistory(this.selectedPatient()!.id);
       },
-      error: () => {
-        this.savingPayment.set(false);
-        this.showError('billing.error.save');
-      }
+      error: () => { this.savingPayment.set(false); this.showError('billing.error.save'); }
     });
   }
 
-  // Configuration management
   saveConvention(convention: { name: string; rate: number }): void {
     this.billingApi.createConvention(convention.name, convention.rate).subscribe({
-      next: () => {
-        this.showSuccess('billing.success.save');
-        this.loadGlobalConfigs();
-      },
+      next: () => { this.showSuccess('billing.success.save'); this.loadGlobalConfigs(); },
       error: () => this.showError('billing.error.save')
     });
   }
 
   saveTariff(tariff: { keyLetter: string; unitValue: number }): void {
     this.billingApi.createOrUpdateTariff(tariff.keyLetter, tariff.unitValue).subscribe({
-      next: () => {
-        this.showSuccess('billing.success.save');
-        this.loadGlobalConfigs();
-      },
+      next: () => { this.showSuccess('billing.success.save'); this.loadGlobalConfigs(); },
       error: () => this.showError('billing.error.save')
     });
   }
