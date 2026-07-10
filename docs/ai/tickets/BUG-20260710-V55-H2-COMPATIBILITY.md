@@ -4,7 +4,7 @@
 
 Diagnostic + Engineering — correction de migration Flyway rétrocompatible.
 
-**Statut :** QA VALIDÉE — migration et suite complète validées sur H2 et PostgreSQL 16 réel via Testcontainers.
+**Statut :** DONE — correctif fusionné dans `main` via la PR #8, validé sur H2 et PostgreSQL 16 réel via Testcontainers.
 
 ## Contexte
 
@@ -61,7 +61,7 @@ Rendre V55 exécutable sur PostgreSQL et H2 sans modifier la sémantique financi
 - [x] Ajouter Testcontainers JUnit Jupiter et PostgreSQL 2.0.5.
 - [x] Ajouter `FlywayPostgresqlMigrationTest` avec PostgreSQL 16.
 - [x] Valider H2, PostgreSQL, Maven, Angular et le build de production via la PR temporaire #12.
-- [ ] Mettre à jour le changelog et le suivi projet avant fusion.
+- [x] Mettre à jour le changelog et le suivi projet après fusion.
 - [x] Ouvrir la Pull Request dédiée : #8.
 
 ## Definition of Done
@@ -73,7 +73,7 @@ Rendre V55 exécutable sur PostgreSQL et H2 sans modifier la sémantique financi
 - [x] Documentation et ticket à jour.
 - [x] Pull Request dédiée ouverte.
 - [ ] Vérifier avant déploiement qu’aucun environnement partagé n’a appliqué l’ancienne empreinte V55.
-- [ ] Changelog et suivi projet finalisés avant fusion.
+- [x] Changelog et suivi projet finalisés après fusion.
 
 ## Estimation et responsabilités
 
@@ -120,4 +120,4 @@ Validation finale sur la PR temporaire #12 :
 
 ## Reste à faire
 
-Finaliser le changelog et le suivi projet, puis vérifier l’historique Flyway des environnements partagés avant fusion/déploiement.
+Aucun travail de code restant. Avant tout déploiement sur un environnement partagé, vérifier `flyway_schema_history` afin de confirmer que l’ancienne empreinte de V55 n’a pas déjà été enregistrée.

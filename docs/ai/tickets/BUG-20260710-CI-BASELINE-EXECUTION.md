@@ -4,7 +4,7 @@
 
 Diagnostic + Engineering CI/CD.
 
-**Statut :** QA — correction minimale terminée et workflow définitif validé dans la PR temporaire #11.
+**Statut :** DONE — correctif fusionné dans `main` via la PR #9 et validé avec la baseline finale de la PR temporaire #12.
 
 ## Problème
 
@@ -58,7 +58,7 @@ Rétablir une baseline CI qui exécute réellement :
 - [x] Remplacer `npm test -- --run` par `npm test`.
 - [x] Exécuter la CI avec le workflow propre.
 - [x] Documenter les échecs applicatifs révélés dans les tickets V55 et BigDecimal.
-- [ ] Mettre à jour le changelog et le suivi projet avant fusion.
+- [x] Mettre à jour le changelog et le suivi projet après fusion.
 - [x] Ouvrir la Pull Request dédiée : #9.
 
 ## Definition of Ready
@@ -75,7 +75,7 @@ Rétablir une baseline CI qui exécute réellement :
 - [x] Les résultats réels des suites sont visibles.
 - [x] Les diagnostics temporaires ont été supprimés.
 - [x] Ticket et documentation à jour.
-- [ ] Changelog et suivi finalisés avant fusion.
+- [x] Changelog et suivi finalisés après fusion.
 
 ## Estimation et responsabilités
 
@@ -92,7 +92,7 @@ Rétablir une baseline CI qui exécute réellement :
 
 ## Résultats de validation
 
-Validation finale sur la PR temporaire #11 avec le workflow définitif :
+Validation finale sur la PR temporaire #12 avec le workflow définitif :
 
 - Backend Maven strict : ✅
 - Tests backend : ✅ 276 tests
@@ -119,4 +119,4 @@ Aucun bump applicatif : correction de pipeline uniquement.
 
 ## Reste à faire
 
-Finaliser le changelog et le suivi projet avant fusion de la PR #9.
+Aucun travail technique restant. La PR #9 est fusionnée et la traçabilité centrale est à jour.

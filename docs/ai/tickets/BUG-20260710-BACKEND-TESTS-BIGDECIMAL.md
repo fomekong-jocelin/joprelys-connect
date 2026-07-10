@@ -6,7 +6,7 @@ Engineering / QA — correction P0 de la migration financière et de ses tests.
 
 ## Statut
 
-QA — implémentation terminée et validation combinée entièrement verte sur la PR temporaire #11.
+DONE — correctif fusionné dans `main` via la PR #10 et validation combinée entièrement verte sur la PR temporaire #12.
 
 ## Problème
 
@@ -77,7 +77,7 @@ L’entité centralise l’échelle financière afin d’éviter une représenta
 
 ## Résultats de validation
 
-Validation combinée sur la PR temporaire #11, avec le correctif CI et la migration V55 portable :
+Validation combinée sur la PR temporaire #12, avec le correctif CI et la migration V55 portable :
 
 - Backend Maven strict : ✅
 - Tests backend : ✅ 276 tests
@@ -88,8 +88,8 @@ Validation combinée sur la PR temporaire #11, avec le correctif CI et la migrat
 ## Risques résiduels
 
 - certains DTO de bordereaux utilisent encore `Double` ; ils ne sont pas modifiés ici pour préserver le périmètre ;
-- la migration V55/H2 reste traitée séparément dans `BUG-20260710-V55-H2-COMPATIBILITY` ;
-- la validation PostgreSQL réelle reste requise avant une livraison en environnement partagé.
+- la migration V55/H2 est corrigée et fusionnée via `BUG-20260710-V55-H2-COMPATIBILITY` ;
+- la validation PostgreSQL 16 est automatisée avec Testcontainers ; la vérification de `flyway_schema_history` reste une précondition de déploiement partagé.
 
 ## Impact version
 
@@ -102,4 +102,4 @@ Validation combinée sur la PR temporaire #11, avec le correctif CI et la migrat
 - [x] Aucun contrat HTTP modifié.
 - [x] CI combinée verte.
 - [x] Résultats documentés.
-- [ ] Suivi projet et changelog à finaliser avant fusion.
+- [x] Suivi projet et changelog finalisés après fusion.

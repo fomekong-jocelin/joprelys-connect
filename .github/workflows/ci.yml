@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: [main, develop]
 
-permissions:
-  contents: write
-
 jobs:
   backend-build:
     name: Backend — Maven Build & Tests
@@ -54,28 +51,3 @@ jobs:
         run: npm test
       - name: Build Angular production
         run: npm run build
-
-  p0-documentation-closure:
-    name: Documentation — Close P0 baseline
-    if: github.event_name == 'pull_request' && github.head_ref == 'docs/p0-baseline-closure'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout closure branch
-        uses: actions/checkout@v4
-        with:
-          ref: docs/p0-baseline-closure
-          fetch-depth: 0
-      - name: Apply targeted documentation updates
-        run: python scripts/temp_close_p0_docs.py
-      - name: Restore permanent workflow and remove temporary files
-        run: |
-          git fetch origin main
-          git checkout origin/main -- .github/workflows/ci.yml
-          rm -f .github/workflows/temp-p0-doc-closure.yml scripts/temp_close_p0_docs.py
-      - name: Commit closure documentation
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/ai/CHANGELOG.md docs/ai/PROJECT-TRACKING.md docs/ai/tickets .github/workflows/ci.yml .github/workflows/temp-p0-doc-closure.yml scripts/temp_close_p0_docs.py
-          git commit -m "docs(p0): clôturer la baseline technique"
-          git push origin HEAD:docs/p0-baseline-closure
