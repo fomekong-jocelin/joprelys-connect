@@ -15,7 +15,10 @@ type CashHistoryPeriod = '7' | '30' | '90' | 'all';
   standalone: true,
   imports: [CommonModule, IconComponent],
   templateUrl: './billing-cash-session-history.component.html',
-  styleUrl: './billing-cash-session-history.component.css',
+  styleUrls: [
+    './billing-cash-session-history.component.css',
+    './billing-cash-session-history-controls.component.css',
+  ],
 })
 export class BillingCashSessionHistoryComponent implements OnInit {
   private readonly billingApi = inject(BillingApiService);
