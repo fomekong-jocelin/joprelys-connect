@@ -29,7 +29,7 @@
   } @else if (error) {
     <div class="ui-alert-danger flex flex-col items-start gap-3 text-xs sm:flex-row sm:items-center sm:justify-between" role="alert">
       <div class="flex items-start gap-2">
-        <app-ui-icon name="exclamation-triangle" />
+        <app-ui-icon name="information-circle" />
         <span>{{ translate('billing.invoiceHistoryError', 'Impossible de charger les factures de ce patient.') }}</span>
       </div>
       <button type="button" class="ui-button ui-button-secondary shrink-0" (click)="retry.emit()">
