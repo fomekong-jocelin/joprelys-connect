@@ -6,7 +6,7 @@ Diagnostic + Architecture + Engineering.
 
 ## Statut
 
-IN_PROGRESS — implémentation terminée, validation finale Maven/Angular en cours.
+QA — implémentation terminée et validation technique entièrement verte ; validation métier DAF/Product et revue PR restantes.
 
 ## Objectif
 
@@ -52,9 +52,9 @@ IN_PROGRESS — implémentation terminée, validation finale Maven/Angular en co
 - [x] Protéger l’immuabilité : annulation et remise uniquement sur facture `PENDING`.
 - [x] Étendre les contrats Angular et masquer l’encaissement sur facture soldée.
 - [x] Couvrir patient seul, tiers payant, assurance avant patient, règlement complet et annulation.
-- [ ] Valider la suite Maven complète, H2 et PostgreSQL 16.
+- [x] Valider la suite Maven complète, H2 et PostgreSQL 16.
 - [x] Valider les tests Angular et le build de production.
-- [ ] Mettre à jour le suivi central et le changelog après validation verte.
+- [x] Mettre à jour le suivi central et le changelog.
 
 ## Critères d’acceptation
 
@@ -77,17 +77,38 @@ IN_PROGRESS — implémentation terminée, validation finale Maven/Angular en co
 | Sprint | SPRINT-0014 |
 | Temps passé | 1,2 j |
 
-## Vérifications intermédiaires
+## Résultats de validation
 
+- Maven `clean verify` : ✅ ;
+- tests backend : ✅ 282 tests ;
+- Flyway H2 : ✅ ;
+- PostgreSQL 16 Testcontainers : ✅ ;
 - tests Angular : ✅ ;
 - build Angular production : ✅ ;
-- 280 tests backend déjà verts lors du diagnostic ;
-- deux échecs historiques identifiés puis corrigés : validation préalable du test caisse et inclusion de `SETTLED` dans l’export Sage ;
-- migration PostgreSQL 16 : ✅ lors de la passe de diagnostic.
+- aucun test désactivé ou contourné.
+
+## Sécurité et régression
+
+- aucun rôle ou endpoint élargi ;
+- créances créées avec l’`organizationId` de la facture ;
+- transactions conservées dans les services applicatifs ;
+- facture `CANCELLED` terminale ;
+- encaissement limité aux statuts `VALIDATED` et `PARTIALLY_PAID` ;
+- export Sage 100 maintenu pour les factures `SETTLED`.
 
 ## Risques restants
 
 - données historiques sans créances : reconstruction prudente et idempotente, à surveiller lors du premier déploiement ;
-- évolution sémantique de `PAID` à communiquer à la DAF/Product ;
-- paiement partiel d’un bordereau assurance reste hors périmètre ;
-- DTO financiers résiduels en `Double` restent une dette séparée.
+- évolution sémantique de `PAID` à faire valider par la DAF/Product ;
+- paiement partiel d’un bordereau assurance hors périmètre ;
+- DTO financiers résiduels en `Double` restant une dette séparée.
+
+## Impact version
+
+**MINOR** — ajout du statut API/persistant `SETTLED` et clarification rétrocompatible du contrat de recouvrement.
+
+## Reste à faire
+
+- revue de la PR #14 ;
+- validation métier DAF/Product des définitions `PAID` et `SETTLED` ;
+- fusion après approbation.
