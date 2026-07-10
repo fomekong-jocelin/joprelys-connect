@@ -12,14 +12,14 @@ describe('BillingPaymentModalComponent', () => {
 
     fixture = TestBed.createComponent(BillingPaymentModalComponent);
     component = fixture.componentInstance;
-    component.translate = (_key, fallback) => fallback;
-    component.visible = true;
-    component.cashSessionOpen = true;
-    component.invoice = {
+    fixture.componentRef.setInput('translate', (_key: string, fallback: string) => fallback);
+    fixture.componentRef.setInput('cashSessionOpen', true);
+    fixture.componentRef.setInput('invoice', {
       id: 'invoice-2203',
       invoiceNumber: 'FAC-20260710-002203',
       patientShare: 15000,
-    };
+    });
+    fixture.componentRef.setInput('visible', true);
     fixture.detectChanges();
   });
 
@@ -60,7 +60,8 @@ describe('BillingPaymentModalComponent', () => {
   });
 
   it('does not allow submission without an open cash session', () => {
-    component.cashSessionOpen = false;
+    fixture.componentRef.setInput('cashSessionOpen', false);
+    fixture.detectChanges();
     expect(component.canSubmit()).toBe(false);
   });
 
@@ -73,7 +74,8 @@ describe('BillingPaymentModalComponent', () => {
   });
 
   it('keeps the dialog open on Escape while saving', () => {
-    component.saving = true;
+    fixture.componentRef.setInput('saving', true);
+    fixture.detectChanges();
     const closeSpy = vi.spyOn(component.close, 'emit');
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
