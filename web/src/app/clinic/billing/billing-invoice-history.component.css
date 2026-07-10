@@ -1,0 +1,115 @@
+.invoice-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: var(--radius-brand-sm);
+  padding: 1rem;
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.invoice-card:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+.invoice-card__content {
+  min-width: 0;
+}
+
+.invoice-amount-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.invoice-amount {
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--app-border) 60%, transparent);
+  border-radius: var(--radius-brand-sm);
+  background: var(--app-surface-muted);
+  padding: 0.625rem 0.75rem;
+}
+
+.invoice-amount dt {
+  color: var(--text-muted);
+  font-size: 0.625rem;
+  line-height: 1rem;
+}
+
+.invoice-amount dd {
+  margin-top: 0.125rem;
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1rem;
+  white-space: nowrap;
+}
+
+.invoice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.invoice-actions .ui-button {
+  min-height: 2.75rem;
+  flex: 1 1 auto;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.invoice-primary-action {
+  order: -1;
+  flex-basis: 100% !important;
+}
+
+.invoice-skeleton {
+  min-height: 8rem;
+  border: 1px solid color-mix(in srgb, var(--app-border) 55%, transparent);
+  border-radius: var(--radius-brand-sm);
+  background: linear-gradient(
+    90deg,
+    var(--app-surface-muted) 25%,
+    var(--app-surface) 50%,
+    var(--app-surface-muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: invoice-skeleton-loading 1.4s ease-in-out infinite;
+}
+
+@keyframes invoice-skeleton-loading {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (min-width: 768px) {
+  .invoice-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .invoice-actions {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+  }
+
+  .invoice-actions .ui-button,
+  .invoice-primary-action {
+    flex: 0 0 auto !important;
+    flex-basis: auto !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .invoice-card {
+    transition: none;
+  }
+
+  .invoice-skeleton {
+    animation: none;
+  }
+}

@@ -1,0 +1,140 @@
+<section class="ui-card-subtle p-4 space-y-4" [attr.aria-labelledby]="historyTitleId">
+  <header class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--app-border)]/40 pb-3">
+    <div>
+      <h3 [id]="historyTitleId" class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+        <app-ui-icon name="folder-open" />
+        {{ translate('billing.invoices', 'Historique des factures') }}
+      </h3>
+      <p class="mt-1 text-[10px] text-[var(--text-muted)]">
+        {{ translate('billing.invoiceHistoryHint', 'Consultez le reste à encaisser et la prochaine action disponible.') }}
+      </p>
+    </div>
+
+    @if (!loading && !error) {
+      <span class="rounded-[var(--radius-brand-sm)] bg-[var(--app-surface-muted)] px-2 py-1 text-[10px] font-bold text-[var(--text-secondary)]">
+        {{ invoices.length }} {{ translate('billing.invoiceCount', 'facture(s)') }}
+      </span>
+    }
+  </header>
+
+  @if (loading) {
+    <div class="space-y-3" role="status" aria-live="polite">
+      <div class="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+        <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-brand-cyan" aria-hidden="true"></span>
+        {{ translate('billing.invoiceHistoryLoading', 'Chargement des factures…') }}
+      </div>
+      <div class="invoice-skeleton" aria-hidden="true"></div>
+      <div class="invoice-skeleton" aria-hidden="true"></div>
+    </div>
+  } @else if (error) {
+    <div class="ui-alert-danger flex flex-col items-start gap-3 text-xs sm:flex-row sm:items-center sm:justify-between" role="alert">
+      <div class="flex items-start gap-2">
+        <app-ui-icon name="information-circle" />
+        <span>{{ translate('billing.invoiceHistoryError', 'Impossible de charger les factures de ce patient.') }}</span>
+      </div>
+      <button type="button" class="ui-button ui-button-secondary shrink-0" (click)="retry.emit()">
+        <app-ui-icon name="arrow-path" />
+        {{ translate('common.retry', 'Réessayer') }}
+      </button>
+    </div>
+  } @else if (invoices.length > 0) {
+    <ul class="space-y-3" role="list">
+      @for (invoice of invoices; track invoice.id) {
+        <li>
+          <article
+            tabindex="-1"
+            [attr.data-invoice-id]="invoice.id"
+            [attr.aria-current]="isSelected(invoice) ? 'true' : null"
+            [class]="isSelected(invoice)
+              ? 'invoice-card border-brand-cyan bg-brand-cyan/5'
+              : 'invoice-card border-[var(--app-border)]/60 bg-[var(--app-surface)]'"
+          >
+            <div class="invoice-card__content">
+              <div class="flex min-w-0 flex-wrap items-center gap-2">
+                <strong class="truncate text-sm text-[var(--text-primary)]">{{ invoice.invoiceNumber }}</strong>
+                <span [class]="'rounded-[var(--radius-brand-sm)] px-2 py-1 text-[9px] font-bold ' + getCollectionStatusClass(invoice)">
+                  {{ getCollectionStatusLabel(invoice) }}
+                </span>
+              </div>
+
+              <p class="mt-1 text-[10px] text-[var(--text-muted)]">
+                {{ translate('billing.issuedAt', 'Émise le') }} {{ invoice.createdAt | date:'dd/MM/yyyy HH:mm' }}
+              </p>
+
+              <dl class="invoice-amount-grid">
+                <div class="invoice-amount">
+                  <dt>{{ translate('billing.invoiceTotal', 'Total') }}</dt>
+                  <dd>{{ invoice.totalAmount | number:'1.0-0' }} FCFA</dd>
+                </div>
+                <div class="invoice-amount">
+                  <dt>{{ getPatientAmountLabel(invoice) }}</dt>
+                  <dd>{{ getPatientRemainingAmount(invoice) | number:'1.0-0' }} FCFA</dd>
+                </div>
+                @if (hasInsuranceShare(invoice)) {
+                  <div class="invoice-amount">
+                    <dt>{{ getInsuranceAmountLabel(invoice) }}</dt>
+                    <dd>{{ getInsuranceRemainingAmount(invoice) | number:'1.0-0' }} FCFA</dd>
+                  </div>
+                }
+              </dl>
+
+              @if (isInsuranceDue(invoice)) {
+                <p class="mt-2 flex items-start gap-1.5 text-[10px] text-blue-700 dark:text-blue-300">
+                  <app-ui-icon name="information-circle" />
+                  {{ translate('billing.insuranceCollectionHint', 'Part patient réglée. Part assurance à recouvrer via un bordereau.') }}
+                </p>
+              }
+            </div>
+
+            <div class="invoice-actions" [attr.aria-label]="translate('billing.invoiceActions', 'Actions de la facture')">
+              @if (canCollectPatient(invoice)) {
+                <button
+                  type="button"
+                  class="ui-button ui-button-primary invoice-primary-action"
+                  (click)="openPayment.emit(invoice)"
+                  [attr.title]="translate('billing.payPatient', 'Encaisser la part patient')"
+                >
+                  <app-ui-icon name="banknotes" />
+                  {{ translate('billing.collect', 'Encaisser') }}
+                </button>
+              } @else if (isInsuranceDue(invoice)) {
+                <button
+                  type="button"
+                  class="ui-button ui-button-primary invoice-primary-action"
+                  (click)="openInsurance.emit(invoice)"
+                >
+                  <app-ui-icon name="document-text" />
+                  {{ translate('billing.followInsurance', 'Suivre l’assurance') }}
+                </button>
+              }
+
+              <button type="button" class="ui-button ui-button-secondary" (click)="selectInvoice.emit(invoice)">
+                <app-ui-icon name="document-text" />
+                {{ translate('billing.details', 'Détail') }}
+              </button>
+              <button
+                type="button"
+                class="ui-button ui-button-secondary"
+                (click)="printPdf.emit(invoice.id)"
+                [attr.aria-label]="translate('billing.downloadInvoicePdf', 'Télécharger la facture en PDF')"
+              >
+                <app-ui-icon name="printer" />
+                PDF
+              </button>
+            </div>
+          </article>
+        </li>
+      }
+    </ul>
+  } @else {
+    <div class="py-8 text-center" role="status">
+      <app-ui-icon name="document-text" class="mx-auto text-2xl text-[var(--text-muted)]" />
+      <p class="mt-2 text-xs font-semibold text-[var(--text-secondary)]">
+        {{ translate('billing.noInvoices', 'Aucune facture émise pour ce patient.') }}
+      </p>
+      <p class="mt-1 text-[10px] text-[var(--text-muted)]">
+        {{ translate('billing.noInvoicesHint', 'Sélectionnez une visite non facturée pour créer la première facture.') }}
+      </p>
+    </div>
+  }
+</section>

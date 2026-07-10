@@ -1,25 +1,42 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import {
+  Component,
+  ElementRef,
+  NgZone,
+  OnInit,
+  ViewChild,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { catchError, finalize, forkJoin, of, take } from 'rxjs';
+import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
+import { I18nService } from '../../core/i18n/i18n.service';
 import { BillingApiService } from '../../patient/billing-api.service';
 import { PatientApiService } from '../../patient/patient-api.service';
-import { VisitApiService } from '../../visit/visit-api.service';
-import { I18nService } from '../../core/i18n/i18n.service';
-import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
-import { Patient, Invoice, InvoiceSettlementSummary, InsuranceConvention, TariffGrid, InvoiceItem } from '../../patient/patient.models';
-import { Visit } from '../../visit/visit.models';
-import { IconComponent } from '../../shared/ui/icon.component';
+import {
+  InsuranceConvention,
+  Invoice,
+  InvoiceItem,
+  InvoiceSettlementSummary,
+  Patient,
+  TariffGrid,
+} from '../../patient/patient.models';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
+import { IconComponent } from '../../shared/ui/icon.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
+import { VisitApiService } from '../../visit/visit-api.service';
+import { Visit } from '../../visit/visit.models';
 import { BillingAdminTabsComponent } from './billing-admin-tabs.component';
+import { BillingCashRegisterComponent } from './billing-cash-register.component';
+import { BillingDafDashboardComponent } from './billing-daf-dashboard.component';
+import { BillingEstimatesComponent } from './billing-estimates.component';
+import { BillingInsuranceBordereauxComponent } from './billing-insurance-bordereaux.component';
 import { BillingInvoiceHistoryComponent } from './billing-invoice-history.component';
 import { BillingPaymentForm, BillingPaymentModalComponent } from './billing-payment-modal.component';
-import { BillingEstimatesComponent } from './billing-estimates.component';
-import { BillingCashRegisterComponent } from './billing-cash-register.component';
 import { BillingReceivablesComponent } from './billing-receivables.component';
-import { BillingInsuranceBordereauxComponent } from './billing-insurance-bordereaux.component';
-import { BillingDafDashboardComponent } from './billing-daf-dashboard.component';
 
 @Component({
   selector: 'app-billing-management-page',
@@ -52,6 +69,13 @@ export class BillingManagementPageComponent implements OnInit {
   private readonly i18n = inject(I18nService);
   private readonly tokenStorage = inject(AuthTokenStorageService);
   private readonly route = inject(ActivatedRoute);
+  private readonly zone = inject(NgZone);
+
+  @ViewChild('invoiceDetailsPanel')
+  private invoiceDetailsPanel?: ElementRef<HTMLElement>;
+
+  @ViewChild(BillingInvoiceHistoryComponent)
+  private invoiceHistory?: BillingInvoiceHistoryComponent;
 
   activeTab = signal<'facturation' | 'caisse' | 'creances' | 'bordereaux' | 'conventions' | 'tariffs' | 'daf'>('facturation');
 
@@ -106,6 +130,8 @@ export class BillingManagementPageComponent implements OnInit {
   // History
   invoices = signal<Invoice[]>([]);
   invoiceSettlements = signal<Record<string, InvoiceSettlementSummary>>({});
+  invoiceHistoryLoading = signal(false);
+  invoiceHistoryError = signal(false);
   selectedInvoiceForEstimates = signal<Invoice | null>(null);
 
   readonly existingInvoiceForSelectedVisit = computed(() => {
@@ -137,10 +163,6 @@ export class BillingManagementPageComponent implements OnInit {
   /**
    * P1-B — Si la route contient :invoiceId, charge la facture depuis l'API
    * et ouvre automatiquement le panneau latéral de détail.
-   * Flux :
-   *   1. billingApi.getInvoice(invoiceId)  → Invoice
-   *   2. patientApi.getById(invoice.patientId) → Patient (non bloquant)
-   *   3. openInvoiceDetails(invoice)
    */
   private handleDeepLink(): void {
     const invoiceId = this.route.snapshot.paramMap.get('invoiceId');
@@ -199,18 +221,18 @@ export class BillingManagementPageComponent implements OnInit {
     });
   }
 
-  selectPatient(p: Patient): void {
-    this.selectedPatient.set(p);
+  selectPatient(patient: Patient): void {
+    this.selectedPatient.set(patient);
     this.selectedVisitId.set('');
     this.invoiceItems.set([]);
     this.selectedInvoiceForEstimates.set(null);
-    this.loadPatientHistory(p.id);
+    this.loadPatientHistory(patient.id);
     this.patients.set([]);
     this.searched.set(false);
-    this.visitApi.getPatientVisits(p.id).subscribe({
-      next: (res) => {
-        this.patientVisits.set(res);
-        const active = res.find(v => v.status === 'EN_COURS' || v.status === 'ACTIVE');
+    this.visitApi.getPatientVisits(patient.id).subscribe({
+      next: (visits) => {
+        this.patientVisits.set(visits);
+        const active = visits.find(visit => visit.status === 'EN_COURS' || visit.status === 'ACTIVE');
         if (active) {
           this.selectedVisitId.set(active.id);
           this.precalculateFromVisit();
@@ -221,16 +243,34 @@ export class BillingManagementPageComponent implements OnInit {
   }
 
   loadPatientHistory(patientId: string): void {
-    this.billingApi.listInvoices(patientId).subscribe({
-      next: (res) => this.invoices.set(res),
-      error: () => this.showError('billing.error.load')
-    });
-    this.billingApi.listInvoiceSettlementSummaries(patientId).subscribe({
-      next: (summaries) => this.invoiceSettlements.set(
-        Object.fromEntries(summaries.map(s => [s.invoiceId, s]))
+    this.invoiceHistoryLoading.set(true);
+    this.invoiceHistoryError.set(false);
+
+    forkJoin({
+      invoices: this.billingApi.listInvoices(patientId),
+      summaries: this.billingApi.listInvoiceSettlementSummaries(patientId).pipe(
+        catchError(() => of([] as InvoiceSettlementSummary[]))
       ),
-      error: () => this.invoiceSettlements.set({})
+    }).pipe(
+      finalize(() => this.invoiceHistoryLoading.set(false))
+    ).subscribe({
+      next: ({ invoices, summaries }) => {
+        this.invoices.set(invoices);
+        this.invoiceSettlements.set(Object.fromEntries(
+          summaries.map(summary => [summary.invoiceId, summary])
+        ));
+      },
+      error: () => {
+        this.invoices.set([]);
+        this.invoiceSettlements.set({});
+        this.invoiceHistoryError.set(true);
+      },
     });
+  }
+
+  retryInvoiceHistory(): void {
+    const patient = this.selectedPatient();
+    if (patient) this.loadPatientHistory(patient.id);
   }
 
   onVisitSelected(): void {
@@ -295,8 +335,19 @@ export class BillingManagementPageComponent implements OnInit {
     if (invoice) this.openInvoiceDetails(invoice);
   }
 
-  openInvoiceDetails(invoice: Invoice): void { this.selectedInvoiceForEstimates.set(invoice); }
-  closeInvoiceDetails(): void { this.selectedInvoiceForEstimates.set(null); }
+  openInvoiceDetails(invoice: Invoice): void {
+    this.selectedInvoiceForEstimates.set(invoice);
+    this.zone.onStable.pipe(take(1)).subscribe(() => this.invoiceDetailsPanel?.nativeElement.focus());
+  }
+
+  closeInvoiceDetails(): void {
+    const invoiceId = this.selectedInvoiceForEstimates()?.id;
+    this.selectedInvoiceForEstimates.set(null);
+    if (invoiceId) {
+      this.zone.onStable.pipe(take(1)).subscribe(() => this.invoiceHistory?.focusInvoice(invoiceId));
+    }
+  }
+
   openInsuranceFollowUp(): void { this.activeTab.set('bordereaux'); }
   openCashRegisterFromPayment(): void { this.closePaymentModal(); this.activeTab.set('caisse'); }
 
@@ -307,20 +358,28 @@ export class BillingManagementPageComponent implements OnInit {
     });
   }
 
-  openPaymentModal(inv: Invoice): void { this.paymentInvoice.set(inv); this.showPaymentModal.set(true); }
-  closePaymentModal(): void { this.showPaymentModal.set(false); this.paymentInvoice.set(null); }
+  openPaymentModal(invoice: Invoice): void {
+    this.paymentInvoice.set(invoice);
+    this.showPaymentModal.set(true);
+  }
+
+  closePaymentModal(): void {
+    this.showPaymentModal.set(false);
+    this.paymentInvoice.set(null);
+  }
 
   submitPayment(payment: BillingPaymentForm): void {
-    const inv = this.paymentInvoice();
-    if (!inv) return;
+    const invoice = this.paymentInvoice();
+    if (!invoice) return;
     this.savingPayment.set(true);
-    this.billingApi.addPayment(inv.id, payment.amount, payment.method, payment.reference).subscribe({
+    this.billingApi.addPayment(invoice.id, payment.amount, payment.method, payment.reference).subscribe({
       next: () => {
         this.savingPayment.set(false);
         this.showSuccess('billing.success.paymentAdded');
         this.closePaymentModal();
         this.cashSessionOpen.set(true);
-        if (this.selectedPatient()) this.loadPatientHistory(this.selectedPatient()!.id);
+        const patient = this.selectedPatient();
+        if (patient) this.loadPatientHistory(patient.id);
       },
       error: () => { this.savingPayment.set(false); this.showError('billing.error.save'); }
     });

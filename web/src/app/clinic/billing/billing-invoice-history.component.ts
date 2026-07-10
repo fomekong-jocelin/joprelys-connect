@@ -1,119 +1,102 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, Output } from '@angular/core';
 import { Invoice, InvoiceSettlementSummary } from '../../patient/patient.models';
 import { IconComponent } from '../../shared/ui/icon.component';
+
+type CollectionStatus = InvoiceSettlementSummary['collectionStatus'];
 
 @Component({
   selector: 'app-billing-invoice-history',
   standalone: true,
   imports: [CommonModule, IconComponent],
-  template: `
-    <div class="ui-card-subtle p-4 space-y-4">
-      <h3 class="font-bold text-xs text-[var(--text-primary)] uppercase tracking-wider border-b border-[var(--app-border)]/40 pb-2">
-        <app-ui-icon name="folder-open" />
-        {{ translate('billing.invoices', 'Historique des Factures') }}
-      </h3>
-
-      @if (invoices.length > 0) {
-        <div class="space-y-3">
-          @for (inv of invoices; track inv.id) {
-            <div class="border border-[var(--app-border)]/60 rounded-[var(--radius-brand-sm)] p-3 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-              <div class="space-y-1">
-                <div class="flex items-center gap-2">
-                  <span class="font-bold text-xs text-[var(--text-primary)]">{{ inv.invoiceNumber }}</span>
-                  <span [class]="'px-1.5 py-0.5 rounded-[var(--radius-brand-sm)] text-[8px] font-bold ' + getCollectionStatusClass(inv)">
-                    {{ getCollectionStatusLabel(inv) }}
-                  </span>
-                </div>
-                <div class="text-[10px] text-[var(--text-muted)]">
-                  {{ translate('billing.issuedAt', 'Émise le') }} : {{ inv.createdAt | date:'dd/MM/yyyy HH:mm' }}
-                </div>
-                <div class="text-[10px] text-[var(--text-secondary)]">
-                  {{ translate('billing.invoiceTotal', 'Total') }} : <strong>{{ inv.totalAmount | number:'1.0-0' }} FCFA</strong> |
-                  {{ translate('billing.invoicePatient', 'Patient') }} : <strong>{{ inv.patientShare | number:'1.0-0' }} FCFA</strong>
-                  @if (inv.insuranceConvention) {
-                    | {{ translate('billing.invoiceInsurance', 'Assur') }} : {{ inv.insuranceConvention.name }} ({{ inv.insuranceShare | number:'1.0-0' }} FCFA)
-                  }
-                </div>
-                @if (isInsuranceDue(inv)) {
-                  <div class="text-[10px] text-blue-700 dark:text-blue-300">
-                    {{ translate('billing.insuranceCollectionHint', 'Part patient réglée. Part assurance à recouvrer via un bordereau.') }}
-                  </div>
-                }
-              </div>
-
-              <div class="flex gap-2">
-                <button (click)="selectInvoice.emit(inv)" class="ui-button ui-button-secondary">
-                  <app-ui-icon name="wrench" />
-                  {{ translate('billing.details', 'Détail') }}
-                </button>
-                <button (click)="printPdf.emit(inv.id)" class="ui-button ui-button-secondary">
-                  <app-ui-icon name="printer" />
-                  PDF
-                </button>
-                @if (canCollectPatient(inv)) {
-                  <button (click)="openPayment.emit(inv)" class="ui-button ui-button-primary" [attr.title]="translate('billing.payPatient', 'Encaisser la part patient')">
-                    <app-ui-icon name="banknotes" />
-                    {{ translate('billing.collect', 'Encaisser') }}
-                  </button>
-                }
-                @if (isInsuranceDue(inv)) {
-                  <button (click)="openInsurance.emit(inv)" class="ui-button ui-button-secondary">
-                    <app-ui-icon name="document-text" />
-                    {{ translate('billing.followInsurance', 'Suivre l’assurance') }}
-                  </button>
-                }
-              </div>
-            </div>
-          }
-        </div>
-      } @else {
-        <div class="text-center text-[10px] text-[var(--text-muted)] py-6">
-          {{ translate('billing.noInvoices', 'Aucune facture émise pour ce patient.') }}
-        </div>
-      }
-    </div>
-  `,
+  templateUrl: './billing-invoice-history.component.html',
+  styleUrl: './billing-invoice-history.component.css',
 })
 export class BillingInvoiceHistoryComponent {
+  readonly historyTitleId = 'billing-invoice-history-title';
+
   @Input({ required: true }) invoices: Invoice[] = [];
   @Input() settlements: Record<string, InvoiceSettlementSummary> = {};
+  @Input() loading = false;
+  @Input() error = false;
+  @Input() selectedInvoiceId: string | null = null;
   @Input({ required: true }) translate!: (key: string, defaultValue: string) => string;
 
   @Output() printPdf = new EventEmitter<string>();
   @Output() openPayment = new EventEmitter<Invoice>();
   @Output() openInsurance = new EventEmitter<Invoice>();
   @Output() selectInvoice = new EventEmitter<Invoice>();
+  @Output() retry = new EventEmitter<void>();
+
+  constructor(private readonly host: ElementRef<HTMLElement>) {}
+
+  focusInvoice(invoiceId: string): void {
+    const cards = Array.from(
+      this.host.nativeElement.querySelectorAll<HTMLElement>('[data-invoice-id]')
+    );
+    cards.find((card) => card.dataset['invoiceId'] === invoiceId)?.focus();
+  }
+
+  isSelected(invoice: Invoice): boolean {
+    return this.selectedInvoiceId === invoice.id;
+  }
 
   canCollectPatient(invoice: Invoice): boolean {
     const summary = this.settlements[invoice.id];
     if (!summary) {
-      return invoice.status !== 'PAID' && invoice.status !== 'SETTLED' && invoice.status !== 'CANCELLED';
+      return invoice.status === 'VALIDATED' || invoice.status === 'PARTIALLY_PAID';
     }
-    return summary.patient.status === 'UNPAID' || summary.patient.status === 'PARTIALLY_PAID';
+    return summary.collectionStatus === 'PATIENT_DUE'
+      || summary.collectionStatus === 'PATIENT_PARTIALLY_PAID';
   }
 
   isInsuranceDue(invoice: Invoice): boolean {
-    return this.settlements[invoice.id]?.collectionStatus === 'INSURANCE_DUE';
+    return this.getCollectionStatus(invoice) === 'INSURANCE_DUE';
+  }
+
+  hasInsuranceShare(invoice: Invoice): boolean {
+    return invoice.insuranceShare > 0 || !!this.settlements[invoice.id]?.insurance;
+  }
+
+  getPatientRemainingAmount(invoice: Invoice): number {
+    return this.settlements[invoice.id]?.patient.remainingAmount ?? invoice.patientShare;
+  }
+
+  getInsuranceRemainingAmount(invoice: Invoice): number {
+    return this.settlements[invoice.id]?.insurance?.remainingAmount ?? invoice.insuranceShare;
+  }
+
+  getPatientAmountLabel(invoice: Invoice): string {
+    return this.settlements[invoice.id]
+      ? this.translate('billing.patientRemaining', 'Reste patient')
+      : this.translate('billing.invoicePatient', 'Part patient');
+  }
+
+  getInsuranceAmountLabel(invoice: Invoice): string {
+    return this.settlements[invoice.id]
+      ? this.translate('billing.insuranceRemaining', 'Reste assurance')
+      : this.translate('billing.invoiceInsurance', 'Part assurance');
   }
 
   getCollectionStatusClass(invoice: Invoice): string {
-    switch (this.settlements[invoice.id]?.collectionStatus) {
+    switch (this.getCollectionStatus(invoice)) {
       case 'SETTLED':
-        return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400';
+        return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
+      case 'PATIENT_DUE':
+        return 'bg-orange-500/15 text-orange-700 dark:text-orange-300';
       case 'PATIENT_PARTIALLY_PAID':
-        return 'bg-amber-500/15 text-amber-600 dark:text-amber-400';
+        return 'bg-amber-500/15 text-amber-700 dark:text-amber-300';
       case 'INSURANCE_DUE':
-        return 'bg-blue-500/15 text-blue-600 dark:text-blue-400';
+        return 'bg-blue-500/15 text-blue-700 dark:text-blue-300';
       case 'CANCELLED':
-        return 'bg-red-500/15 text-red-600 dark:text-red-400';
+        return 'bg-red-500/15 text-red-700 dark:text-red-300';
       default:
-        return 'bg-gray-500/15 text-gray-600 dark:text-gray-400';
+        return 'bg-gray-500/15 text-gray-700 dark:text-gray-300';
     }
   }
 
   getCollectionStatusLabel(invoice: Invoice): string {
-    switch (this.settlements[invoice.id]?.collectionStatus) {
+    switch (this.getCollectionStatus(invoice)) {
       case 'SETTLED':
         return this.translate('billing.collection.settled', 'Soldée');
       case 'INSURANCE_DUE':
@@ -126,8 +109,26 @@ export class BillingInvoiceHistoryComponent {
         return this.translate('billing.collection.notYetDue', 'À valider');
       case 'CANCELLED':
         return this.translate('billing.collection.cancelled', 'Annulée');
+    }
+  }
+
+  private getCollectionStatus(invoice: Invoice): CollectionStatus {
+    const summary = this.settlements[invoice.id];
+    if (summary) return summary.collectionStatus;
+
+    switch (invoice.status) {
+      case 'SETTLED':
+        return 'SETTLED';
+      case 'CANCELLED':
+        return 'CANCELLED';
+      case 'PARTIALLY_PAID':
+        return 'PATIENT_PARTIALLY_PAID';
+      case 'VALIDATED':
+        return 'PATIENT_DUE';
+      case 'PAID':
+        return invoice.insuranceShare > 0 ? 'INSURANCE_DUE' : 'SETTLED';
       default:
-        return this.translate('billing.invoiceStatus.pending', 'En attente');
+        return 'NOT_YET_DUE';
     }
   }
 }
