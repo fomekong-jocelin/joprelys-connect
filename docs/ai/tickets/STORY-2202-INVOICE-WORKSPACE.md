@@ -80,6 +80,7 @@ Permettre à la secrétaire comptable de comprendre immédiatement si elle doit 
 - suite backend, H2 et PostgreSQL 16 : ✅ ;
 - cas `PATIENT_DUE`, `PATIENT_PARTIALLY_PAID`, `INSURANCE_DUE`, `SETTLED` et `CANCELLED` : ✅ ;
 - chargement, erreur/retry, vide, sélection et restauration du focus : ✅ ;
+- diff du composant parent reconstruit depuis `main` pour ne conserver que les changements STORY-2202 ;
 - aucun test désactivé ou contourné.
 
 ## Sécurité et régression
