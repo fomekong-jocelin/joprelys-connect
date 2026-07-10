@@ -124,7 +124,7 @@
   } @else if (error()) {
     <div class="ui-alert-danger flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between" role="alert">
       <div class="flex items-start gap-2 text-xs">
-        <app-ui-icon name="exclamation-triangle" class="mt-0.5 shrink-0" />
+        <app-ui-icon name="information-circle" class="mt-0.5 shrink-0" />
         <span>{{ t('billing.cashierQueue.loadError', 'Impossible de charger la file d’encaissement.') }}</span>
       </div>
       <button type="button" class="ui-button ui-button-secondary" (click)="loadQueue()">

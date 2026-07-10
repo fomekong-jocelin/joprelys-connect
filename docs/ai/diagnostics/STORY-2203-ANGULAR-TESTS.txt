@@ -1,50 +1,106 @@
 === ANGULAR TEST DIAGNOSTIC ===
-✔ Building...
-Application bundle generation failed. [13.241 seconds] - 2026-07-10T17:23:01.439Z
-
-[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mTS2322: Type '"exclamation-triangle"' is not assignable to type 'UiIconName'.[0m [1m[35m[plugin angular-compiler][0m
-
-    src/app/clinic/billing/billing-cashier-queue.component.html:127:21:
-[37m      127 │         <app-ui-icon [32mname[37m="exclamation-triangle" class="mt-0.5 sh...
-          ╵                      [32m~~~~[0m
-
-  Error occurs in the template of component BillingCashierQueueComponent.
-
-    src/app/clinic/billing/billing-cashier-queue.component.ts:32:15:
-[37m      32 │   templateUrl: [32m'./billing-cashier-queue.component.html'[37m,
-         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
-
-
-[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mTS2322: Type '"exclamation-triangle"' is not assignable to type 'UiIconName'.[0m [1m[35m[plugin angular-compiler][0m
-
-    src/app/clinic/billing/billing-payment-modal.component.ts:89:27:
-[37m      89 │               <app-ui-icon [32mname[37m="exclamation-triangle" />
-         ╵                            [32m~~~~[0m
-
-
 
 === ANGULAR TEST TAIL ===
 ❯ Building...
 ✔ Building...
-Application bundle generation failed. [13.241 seconds] - 2026-07-10T17:23:01.439Z
+Initial chunk files                                                       | Names                                                                  |  Raw size
+spec-app-patient-patient-detail.component.js                              | spec-app-patient-patient-detail.component                              | 247.52 kB | 
+spec-app-patient-portal-patient-portal.js                                 | spec-app-patient-portal-patient-portal                                 | 199.83 kB | 
+spec-app-clinic-dashboard.component.js                                    | spec-app-clinic-dashboard.component                                    | 188.42 kB | 
+styles.css                                                                | styles                                                                 | 181.94 kB | 
+spec-app-clinic-organizations-organization-list.component.js              | spec-app-clinic-organizations-organization-list.component              | 158.73 kB | 
+chunk-3AWDHC52.js                                                         | -                                                                      | 110.20 kB | 
+spec-app-patient-portal-pages-patient-pages.js                            | spec-app-patient-portal-pages-patient-pages                            |  96.34 kB | 
+spec-app-clinic-billing-billing-estimates.component.js                    | spec-app-clinic-billing-billing-estimates.component                    |  92.46 kB | 
+chunk-HG3QJFBN.js                                                         | -                                                                      |  88.08 kB | 
+spec-app-patient-pre-registrations-pre-registrations-list.component.js    | spec-app-patient-pre-registrations-pre-registrations-list.component    |  86.36 kB | 
+spec-app-pharmacy-pharmacy-portal.js                                      | spec-app-pharmacy-pharmacy-portal                                      |  83.83 kB | 
+spec-app-patient-patient-list.component.js                                | spec-app-patient-patient-list.component                                |  78.41 kB | 
+spec-app-clinic-lab-lab-orders-page.js                                    | spec-app-clinic-lab-lab-orders-page                                    |  76.36 kB | 
+spec-app-clinic-staff-staff-management.component.js                       | spec-app-clinic-staff-staff-management.component                       |  66.81 kB | 
+spec-app-patient-self-registration-patient-self-registration.component.js | spec-app-patient-self-registration-patient-self-registration.component |  62.40 kB | 
+spec-app-auth-login.component.js                                          | spec-app-auth-login.component                                          |  61.55 kB | 
+spec-app-clinic-duplicates-duplicates-page.component.js                   | spec-app-clinic-duplicates-duplicates-page.component                   |  59.90 kB | 
+spec-app-clinic-billing-billing-cashier-queue.component.js                | spec-app-clinic-billing-billing-cashier-queue.component                |  54.81 kB | 
+spec-app-clinic-billing-billing-insurance-bordereaux.component.js         | spec-app-clinic-billing-billing-insurance-bordereaux.component         |  45.68 kB | 
+spec-app-clinic-billing-billing-invoice-history.component.js              | spec-app-clinic-billing-billing-invoice-history.component              |  39.83 kB | 
+chunk-63NZ37XD.js                                                         | -                                                                      |  37.77 kB | 
+chunk-ZWETJ5FN.js                                                         | -                                                                      |  30.71 kB | 
+spec-app-auth-forgot-password.component.js                                | spec-app-auth-forgot-password.component                                |  29.31 kB | 
+spec-app-patient-hospitalization-daily-care-panel.component.js            | spec-app-patient-hospitalization-daily-care-panel.component            |  26.23 kB | 
+spec-app-patient-hospitalization-consumption-panel.component.js           | spec-app-patient-hospitalization-consumption-panel.component           |  22.56 kB | 
+spec-app-patient-hospitalization-medication-panel.component.js            | spec-app-patient-hospitalization-medication-panel.component            |  20.05 kB | 
+spec-app-patient-hospitalization-notes-panel.component.js                 | spec-app-patient-hospitalization-notes-panel.component                 |  17.27 kB | 
+chunk-HVPOQQVE.js                                                         | -                                                                      |  16.52 kB | 
+spec-app-patient-hospitalization-stay-header.component.js                 | spec-app-patient-hospitalization-stay-header.component                 |  14.68 kB | 
+chunk-Z6LHHUZB.js                                                         | -                                                                      |  10.71 kB | 
+chunk-CADVA6IH.js                                                         | -                                                                      |   8.79 kB | 
+chunk-X4S5IWGQ.js                                                         | -                                                                      |   6.84 kB | 
+chunk-JECAFKOI.js                                                         | -                                                                      |   5.53 kB | 
+spec-app-patient-patient-medical-info.component.js                        | spec-app-patient-patient-medical-info.component                        |   5.29 kB | 
+chunk-BUJPVV5P.js                                                         | -                                                                      |   4.88 kB | 
+chunk-RSTWSNOR.js                                                         | -                                                                      |   4.75 kB | 
+chunk-BSOE2NER.js                                                         | -                                                                      |   4.71 kB | 
+spec-app-app.js                                                           | spec-app-app                                                           |   3.91 kB | 
+chunk-VWFSBW7F.js                                                         | -                                                                      |   3.59 kB | 
+chunk-CERC7TQM.js                                                         | -                                                                      |   3.25 kB | 
+chunk-AFGCFS5U.js                                                         | -                                                                      |   3.23 kB | 
+chunk-TKHE76BP.js                                                         | -                                                                      |   3.12 kB | 
+chunk-PYLSTL7T.js                                                         | -                                                                      |   3.02 kB | 
+spec-app-clinic-billing-billing-payment-modal.component.js                | spec-app-clinic-billing-billing-payment-modal.component                |   2.96 kB | 
+spec-app-auth-role.guard.js                                               | spec-app-auth-role.guard                                               |   2.71 kB | 
+spec-app-auth-auth-token.interceptor.js                                   | spec-app-auth-auth-token.interceptor                                   |   2.69 kB | 
+chunk-PHSNLWLX.js                                                         | -                                                                      |   2.63 kB | 
+init-testbed.js                                                           | init-testbed                                                           |   2.22 kB | 
+chunk-WRLZNYDH.js                                                         | -                                                                      |   1.95 kB | 
+chunk-UWVGNZOJ.js                                                         | -                                                                      |   1.91 kB | 
+spec-app-shared-ui-confirmation-dialog.component.js                       | spec-app-shared-ui-confirmation-dialog.component                       |   1.89 kB | 
+chunk-37SYNOOT.js                                                         | -                                                                      |   1.79 kB | 
+chunk-BBOGXUOR.js                                                         | -                                                                      |   1.73 kB | 
+chunk-K4UQDMLH.js                                                         | -                                                                      |   1.60 kB | 
+chunk-NN6GC7O5.js                                                         | -                                                                      |   1.40 kB | 
+chunk-X3IVQXTH.js                                                         | -                                                                      |   1.13 kB | 
+vitest-mock-patch.js                                                      | vitest-mock-patch                                                      | 939 bytes | 
 
-[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mTS2322: Type '"exclamation-triangle"' is not assignable to type 'UiIconName'.[0m [1m[35m[plugin angular-compiler][0m
+                                                                          | Initial total                                                          |   2.39 MB
 
-    src/app/clinic/billing/billing-cashier-queue.component.html:127:21:
-[37m      127 │         <app-ui-icon [32mname[37m="exclamation-triangle" class="mt-0.5 sh...
-          ╵                      [32m~~~~[0m
-
-  Error occurs in the template of component BillingCashierQueueComponent.
-
-    src/app/clinic/billing/billing-cashier-queue.component.ts:32:15:
-[37m      32 │   templateUrl: [32m'./billing-cashier-queue.component.html'[37m,
-         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+Application bundle generation complete. [12.543 seconds] - 2026-07-10T17:29:44.268Z
 
 
-[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mTS2322: Type '"exclamation-triangle"' is not assignable to type 'UiIconName'.[0m [1m[35m[plugin angular-compiler][0m
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.9 [39m[90m/home/runner/work/joprelys-connect/joprelys-connect/web[39m
 
-    src/app/clinic/billing/billing-payment-modal.component.ts:89:27:
-[37m      89 │               <app-ui-icon [32mname[37m="exclamation-triangle" />
-         ╵                            [32m~~~~[0m
+ [32m✓[39m [30m[46m web [49m[39m src/app/patient/patient-detail.component.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 467[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/patient/portal/patient-portal.spec.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 89[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/pharmacy/pharmacy-portal.spec.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 281[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/patient/pre-registrations/pre-registrations-list.component.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 306[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/clinic/lab/lab-orders-page.spec.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 251[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/patient/portal/pages/patient-pages.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 84[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/clinic/billing/billing-estimates.component.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 321[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/patient/self-registration/patient-self-registration.component.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 137[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/clinic/billing/billing-invoice-history.component.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 118[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/patient/patient-medical-info.component.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/clinic/billing/billing-cashier-queue.component.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 104[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/clinic/dashboard.component.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 120[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/clinic/staff/staff-management.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/clinic/duplicates/duplicates-page.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/auth/forgot-password.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/clinic/billing/billing-payment-modal.component.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 65[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/clinic/organizations/organization-list.component.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/patient/patient-list.component.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/auth/login.component.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/auth/auth-token.interceptor.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/auth/role.guard.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/patient/hospitalization-medication-panel.component.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/patient/hospitalization-stay-header.component.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/patient/hospitalization-daily-care-panel.component.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/patient/hospitalization-notes-panel.component.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/patient/hospitalization-consumption-panel.component.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/shared/ui/confirmation-dialog.component.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/clinic/billing/billing-insurance-bordereaux.component.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m src/app/app.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
 
+[2m Test Files [22m [1m[32m29 passed[39m[22m[90m (29)[39m
+[2m      Tests [22m [1m[32m143 passed[39m[22m[90m (143)[39m
+[2m   Start at [22m 17:29:44
+[2m   Duration [22m 5.84s[2m (transform 1.46s, setup 439ms, import 1.72s, tests 2.68s, environment 655ms)[22m
 

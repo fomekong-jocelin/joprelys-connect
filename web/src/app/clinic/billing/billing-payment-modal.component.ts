@@ -86,7 +86,7 @@ export interface BillingPaymentForm {
 
           @if (errorMessage) {
             <div id="billing-payment-dialog-error" class="ui-alert-danger text-xs" role="alert">
-              <app-ui-icon name="exclamation-triangle" />
+              <app-ui-icon name="information-circle" />
               {{ errorMessage }}
             </div>
           }
