@@ -105,9 +105,9 @@ public class EstimateService {
     @Transactional
     public InvoiceResponse cancelInvoice(UUID invoiceId) {
         InvoiceEntity invoice = findInvoiceOrThrow(invoiceId);
-        if (invoice.getStatus() == InvoiceStatus.VALIDATED) {
+        if (invoice.getStatus() != InvoiceStatus.PENDING) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "Une facture validée ne peut pas être annulée directement. Créez un avoir.");
+                "Seule une facture en attente peut être annulée directement. Créez un avoir pour une facture validée ou réglée.");
         }
         invoice.setStatus(InvoiceStatus.CANCELLED);
         invoiceRepository.save(invoice);
@@ -117,9 +117,9 @@ public class EstimateService {
     @Transactional
     public InvoiceResponse applyDiscount(UUID invoiceId, ApplyDiscountRequest request) {
         InvoiceEntity invoice = findInvoiceOrThrow(invoiceId);
-        if (invoice.getStatus() == InvoiceStatus.VALIDATED || invoice.getStatus() == InvoiceStatus.CANCELLED) {
+        if (invoice.getStatus() != InvoiceStatus.PENDING) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "Impossible d'appliquer une remise sur une facture " + invoice.getStatus().name().toLowerCase() + ".");
+                "Une remise ne peut être appliquée que sur une facture en attente. Statut actuel : " + invoice.getStatus().name() + ".");
         }
         invoice.setDiscountAmount(BigDecimal.valueOf(request.discountAmount()));
         invoice.setDiscountReason(request.discountReason());
