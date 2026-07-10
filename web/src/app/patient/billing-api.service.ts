@@ -4,6 +4,11 @@ import { Observable, Subject, tap } from 'rxjs';
 import { CashSessionHistory } from './cash-session-history.models';
 import { CashierCollectionQueueItem } from './cashier-collection.models';
 import {
+  GenerateInsuranceBordereauRequest,
+  InsuranceBordereau,
+  InsuranceBordereauDetails,
+} from './insurance-bordereau.models';
+import {
   CashMovement,
   CashRegister,
   CashSession,
@@ -20,16 +25,13 @@ import {
   TariffGrid,
 } from './patient.models';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class BillingApiService {
   private readonly http = inject(HttpClient);
   private readonly cashSessionClosedSubject = new Subject<CashSession>();
 
   readonly cashSessionClosed$ = this.cashSessionClosedSubject.asObservable();
 
-  // ── Conventions ──────────────────────────────────────────────────
   listConventions(): Observable<InsuranceConvention[]> {
     return this.http.get<InsuranceConvention[]>('/api/invoices/conventions');
   }
@@ -41,7 +43,6 @@ export class BillingApiService {
     return this.http.post<InsuranceConvention>('/api/invoices/conventions', null, { params });
   }
 
-  // ── Tariffs ───────────────────────────────────────────────────────
   listTariffs(): Observable<TariffGrid[]> {
     return this.http.get<TariffGrid[]>('/api/invoices/tariffs');
   }
@@ -53,7 +54,6 @@ export class BillingApiService {
     return this.http.post<TariffGrid>('/api/invoices/tariffs', null, { params });
   }
 
-  // ── Invoices ──────────────────────────────────────────────────────
   precalculateInvoice(patientId: string, visitId?: string, insuranceConventionId?: string): Observable<Invoice> {
     let params = new HttpParams().set('patientId', patientId);
     if (visitId) params = params.set('visitId', visitId);
@@ -71,8 +71,7 @@ export class BillingApiService {
   }
 
   listInvoices(patientId: string): Observable<Invoice[]> {
-    const params = new HttpParams().set('patientId', patientId);
-    return this.http.get<Invoice[]>('/api/invoices', { params });
+    return this.http.get<Invoice[]>('/api/invoices', { params: new HttpParams().set('patientId', patientId) });
   }
 
   listCashierCollectionQueue(): Observable<CashierCollectionQueueItem[]> {
@@ -80,8 +79,9 @@ export class BillingApiService {
   }
 
   listInvoiceSettlementSummaries(patientId: string): Observable<InvoiceSettlementSummary[]> {
-    const params = new HttpParams().set('patientId', patientId);
-    return this.http.get<InvoiceSettlementSummary[]>('/api/invoices/settlement-summaries', { params });
+    return this.http.get<InvoiceSettlementSummary[]>('/api/invoices/settlement-summaries', {
+      params: new HttpParams().set('patientId', patientId),
+    });
   }
 
   getInvoice(id: string): Observable<Invoice> {
@@ -100,7 +100,6 @@ export class BillingApiService {
     return this.http.post<Invoice>(`/api/invoices/${invoiceId}/discount`, { discountAmount, discountReason });
   }
 
-  // ── Payments ──────────────────────────────────────────────────────
   addPayment(invoiceId: string, amount: number, method: 'CASH' | 'CHECK' | 'BANK_TRANSFER', reference?: string): Observable<Payment> {
     return this.http.post<Payment>(`/api/invoices/${invoiceId}/payments`, { amount, method, reference });
   }
@@ -117,7 +116,6 @@ export class BillingApiService {
     return this.http.get(`/api/invoices/${invoiceId}/pdf`, { responseType: 'blob' });
   }
 
-  // ── Credit Notes ──────────────────────────────────────────────────
   createCreditNote(invoiceId: string, amount: number, reason: string): Observable<CreditNote> {
     return this.http.post<CreditNote>(`/api/invoices/${invoiceId}/credit-notes`, { amount, reason });
   }
@@ -126,10 +124,8 @@ export class BillingApiService {
     return this.http.get<CreditNote[]>(`/api/invoices/${invoiceId}/credit-notes`);
   }
 
-  // ── Receivables ───────────────────────────────────────────────────
   getReceivablesByDebtor(debtorId: string): Observable<Receivable[]> {
-    const params = new HttpParams().set('debtorId', debtorId);
-    return this.http.get<Receivable[]>('/api/receivables', { params });
+    return this.http.get<Receivable[]>('/api/receivables', { params: new HttpParams().set('debtorId', debtorId) });
   }
 
   getReceivablesByInvoice(invoiceId: string): Observable<Receivable[]> {
@@ -137,20 +133,17 @@ export class BillingApiService {
   }
 
   getReceivablesByStatus(status: string): Observable<Receivable[]> {
-    const params = new HttpParams().set('status', status);
-    return this.http.get<Receivable[]>('/api/receivables/by-status', { params });
+    return this.http.get<Receivable[]>('/api/receivables/by-status', { params: new HttpParams().set('status', status) });
   }
 
-  // ── Receivable Reminders ──────────────────────────────────────────
-  recordReminder(receivableId: string, request: { actionType: string; status: string; notes: string }): Observable<any> {
-    return this.http.post<any>(`/api/receivables/${receivableId}/reminders`, request);
+  recordReminder(receivableId: string, request: { actionType: string; status: string; notes: string }): Observable<unknown> {
+    return this.http.post<unknown>(`/api/receivables/${receivableId}/reminders`, request);
   }
 
-  getReminders(receivableId: string): Observable<any[]> {
-    return this.http.get<any[]>(`/api/receivables/${receivableId}/reminders`);
+  getReminders(receivableId: string): Observable<unknown[]> {
+    return this.http.get<unknown[]>(`/api/receivables/${receivableId}/reminders`);
   }
 
-  // ── Estimates ─────────────────────────────────────────────────────
   createEstimate(request: {
     patientId: string;
     visitId?: string;
@@ -160,8 +153,7 @@ export class BillingApiService {
   }
 
   listEstimates(patientId: string): Observable<Estimate[]> {
-    const params = new HttpParams().set('patientId', patientId);
-    return this.http.get<Estimate[]>('/api/estimates', { params });
+    return this.http.get<Estimate[]>('/api/estimates', { params: new HttpParams().set('patientId', patientId) });
   }
 
   getEstimate(id: string): Observable<Estimate> {
@@ -169,11 +161,11 @@ export class BillingApiService {
   }
 
   updateEstimateStatus(id: string, status: string): Observable<Estimate> {
-    const params = new HttpParams().set('status', status);
-    return this.http.patch<Estimate>(`/api/estimates/${id}/status`, null, { params });
+    return this.http.patch<Estimate>(`/api/estimates/${id}/status`, null, {
+      params: new HttpParams().set('status', status),
+    });
   }
 
-  // ── Cash Registers & Sessions ─────────────────────────────────────
   listCashRegisters(): Observable<CashRegister[]> {
     return this.http.get<CashRegister[]>('/api/cash-registers');
   }
@@ -227,32 +219,47 @@ export class BillingApiService {
     return this.http.get<CashSession[]>(`/api/cash-registers/${registerId}/sessions`);
   }
 
-  // ── Insurance Bordereaux ──────────────────────────────────────────
-  generateInsuranceBordereau(request: {
-    insuranceConventionId: string;
-    startDate: string;
-    endDate: string;
-  }): Observable<any> {
-    return this.http.post<any>('/api/billing/insurance-bordereaux', request);
+  generateInsuranceBordereau(request: GenerateInsuranceBordereauRequest): Observable<InsuranceBordereau> {
+    return this.http.post<InsuranceBordereau>('/api/billing/insurance-bordereaux', request);
   }
 
-  listInsuranceBordereaux(): Observable<any[]> {
-    return this.http.get<any[]>('/api/billing/insurance-bordereaux');
+  listInsuranceBordereaux(): Observable<InsuranceBordereau[]> {
+    return this.http.get<InsuranceBordereau[]>('/api/billing/insurance-bordereaux');
   }
 
-  getInsuranceBordereauDetails(id: string): Observable<any> {
-    return this.http.get<any>(`/api/billing/insurance-bordereaux/${id}`);
+  getInsuranceBordereauDetails(id: string): Observable<InsuranceBordereauDetails> {
+    return this.http.get<InsuranceBordereauDetails>(`/api/billing/insurance-bordereaux/${id}`);
   }
 
-  sendInsuranceBordereau(id: string): Observable<any> {
-    return this.http.post<any>(`/api/billing/insurance-bordereaux/${id}/send`, null);
+  sendInsuranceBordereau(id: string): Observable<InsuranceBordereau> {
+    return this.http.post<InsuranceBordereau>(`/api/billing/insurance-bordereaux/${id}/send`, null);
   }
 
-  payInsuranceBordereau(id: string, amount: number, referenceNumber: string): Observable<any> {
-    return this.http.post<any>(`/api/billing/insurance-bordereaux/${id}/pay`, { amount, referenceNumber });
+  receiveInsuranceBordereau(id: string, insurerReference: string): Observable<InsuranceBordereau> {
+    return this.http.post<InsuranceBordereau>(`/api/billing/insurance-bordereaux/${id}/receive`, { insurerReference });
   }
 
-  // ── DAF Accounting & Supervision ──────────────────────────────────
+  acceptInsuranceBordereau(id: string, acceptedAmount: number, insurerReference?: string): Observable<InsuranceBordereau> {
+    return this.http.post<InsuranceBordereau>(`/api/billing/insurance-bordereaux/${id}/accept`, {
+      acceptedAmount,
+      insurerReference,
+    });
+  }
+
+  rejectInsuranceBordereau(id: string, rejectionReason: string, insurerReference?: string): Observable<InsuranceBordereau> {
+    return this.http.post<InsuranceBordereau>(`/api/billing/insurance-bordereaux/${id}/reject`, {
+      rejectionReason,
+      insurerReference,
+    });
+  }
+
+  payInsuranceBordereau(id: string, amount: number, referenceNumber: string): Observable<InsuranceBordereau> {
+    return this.http.post<InsuranceBordereau>(`/api/billing/insurance-bordereaux/${id}/pay`, {
+      amount,
+      referenceNumber,
+    });
+  }
+
   listAllSessions(): Observable<CashSession[]> {
     return this.http.get<CashSession[]>('/api/cash-registers/sessions');
   }
