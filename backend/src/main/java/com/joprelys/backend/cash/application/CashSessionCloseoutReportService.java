@@ -1,7 +1,5 @@
 package com.joprelys.backend.cash.application;
 
-import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
-import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.cash.api.CashMovementResponse;
 import com.joprelys.backend.cash.api.CashSessionHistoryResponse;
 import com.joprelys.backend.cash.infrastructure.persistence.CashRegisterSessionEntity;
@@ -20,7 +18,6 @@ import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -39,20 +36,14 @@ public class CashSessionCloseoutReportService {
 
     private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
             .withZone(ZoneId.systemDefault());
-    private static final NumberFormat MONEY_FORMAT = NumberFormat.getNumberInstance(Locale.FRANCE);
 
     private final CashRegisterService cashRegisterService;
-    private final UserAccountRepository userAccountRepository;
     private final OrganizationRepository organizationRepository;
 
     public CashSessionCloseoutReportService(CashRegisterService cashRegisterService,
-                                            UserAccountRepository userAccountRepository,
                                             OrganizationRepository organizationRepository) {
         this.cashRegisterService = cashRegisterService;
-        this.userAccountRepository = userAccountRepository;
         this.organizationRepository = organizationRepository;
-        MONEY_FORMAT.setMaximumFractionDigits(0);
-        MONEY_FORMAT.setMinimumFractionDigits(0);
     }
 
     @Transactional(readOnly = true)
@@ -102,7 +93,8 @@ public class CashSessionCloseoutReportService {
         clinic.setAlignment(Element.ALIGN_CENTER);
         document.add(clinic);
 
-        String address = safe(organization.getAddress()) + (organization.getCity() == null ? "" : " — " + organization.getCity());
+        String address = safe(organization.getAddress())
+                + (organization.getCity() == null ? "" : " — " + organization.getCity());
         Paragraph contact = new Paragraph(address + " | Tél. " + safe(organization.getPhone()), mutedFont);
         contact.setAlignment(Element.ALIGN_CENTER);
         document.add(contact);
@@ -293,7 +285,10 @@ public class CashSessionCloseoutReportService {
     }
 
     private String formatMoney(Double amount) {
-        return MONEY_FORMAT.format(amount == null ? 0d : amount) + " FCFA";
+        NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRANCE);
+        formatter.setMaximumFractionDigits(0);
+        formatter.setMinimumFractionDigits(0);
+        return formatter.format(amount == null ? 0d : amount) + " FCFA";
     }
 
     private String safe(String value) {
