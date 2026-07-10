@@ -24,8 +24,17 @@ jobs:
           cache: 'maven'
       - name: Ensure Maven wrapper is executable
         run: chmod +x mvnw
-      - name: Build and verify (Maven strict)
-        run: ./mvnw clean verify -B -Dspring.profiles.active=test
+      - name: Build and verify (Maven strict — diagnostic compact)
+        shell: bash
+        run: |
+          if ! ./mvnw clean verify -B -Dspring.profiles.active=test > /tmp/maven.log 2>&1; then
+            echo "===== MAVEN FAILURE SUMMARY ====="
+            grep -E "\[ERROR\]|Failures:|Errors:|Tests run:|COMPILATION ERROR|Caused by:|expected:|but was:" /tmp/maven.log | tail -n 160 || true
+            echo "===== LAST 80 LINES ====="
+            tail -n 80 /tmp/maven.log
+            exit 1
+          fi
+          tail -n 40 /tmp/maven.log
         env:
           SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
           JOPRELYS_JWT_SECRET: ci-test-jwt-secret-at-least-32-chars-2026
