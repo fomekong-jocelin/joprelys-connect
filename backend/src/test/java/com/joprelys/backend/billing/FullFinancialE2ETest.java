@@ -194,6 +194,14 @@ public class FullFinancialE2ETest {
         invoice.addItem(item);
         invoice = invoiceRepository.saveAndFlush(invoice);
 
+        TenantContext.clear();
+        mockMvc.perform(post("/api/invoices/" + invoice.getId() + "/validate")
+                        .header("Authorization", "Bearer " + tokenMedecin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("VALIDATED"));
+        setTenant();
+        invoice = invoiceRepository.findById(invoice.getId()).orElseThrow();
+
         // Déclencher le workflow financier sur la facture
         assertEquals(new java.math.BigDecimal("100000.0000"), invoice.getTotalAmount());
         assertEquals(new java.math.BigDecimal("80000.0000"), invoice.getInsuranceShare());
@@ -249,7 +257,7 @@ public class FullFinancialE2ETest {
         // Vérifier que la facture est complètement réglée
         setTenant();
         InvoiceEntity savedInvoice = invoiceRepository.findById(invoice.getId()).orElseThrow();
-        assertEquals(InvoiceStatus.PAID, savedInvoice.getStatus());
+        assertEquals(InvoiceStatus.SETTLED, savedInvoice.getStatus());
 
         // 6. Versement en Banque (espèces)
         CashMovementRequest movementReq = new CashMovementRequest("TRANSFER_TO_BANK", 15000.0, "Dépôt d'espèces du jour", "CASH", "SLIP-DEPOSIT-01", false);

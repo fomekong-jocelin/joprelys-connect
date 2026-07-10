@@ -206,6 +206,13 @@ public class InsuranceBordereauControllerTest {
         assertFalse(recs.isEmpty());
         assertEquals("PAID", recs.get(0).getStatus());
         assertEquals(new java.math.BigDecimal("20000.0000"), recs.get(0).getPaidAmount());
+
+        InvoiceEntity synchronizedInvoice = invoiceRepository.findById(invoice.getId()).orElseThrow();
+        assertEquals(InvoiceStatus.VALIDATED, synchronizedInvoice.getStatus());
+        List<ReceivableEntity> patientReceivables = receivableRepository
+                .findByInvoiceIdAndDebtorTypeIgnoreCase(invoice.getId(), "PATIENT");
+        assertEquals(1, patientReceivables.size());
+        assertEquals("UNPAID", patientReceivables.get(0).getStatus());
     }
 
     @Test

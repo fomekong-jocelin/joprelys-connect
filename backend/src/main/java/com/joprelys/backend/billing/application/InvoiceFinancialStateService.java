@@ -152,11 +152,14 @@ public class InvoiceFinancialStateService {
                         receivable.getPaidAmount(),
                         receivable.getTotalAmount().subtract(receivable.getPaidAmount()).max(BigDecimal.ZERO),
                         receivable.getStatus()))
-                .orElseGet(() -> new SettlementPartyResponse(
-                        share,
-                        inferredPaidAmount(invoice, debtorType, share),
-                        share.subtract(inferredPaidAmount(invoice, debtorType, share)).max(BigDecimal.ZERO),
-                        fallbackPartyStatus(invoice, share)));
+                .orElseGet(() -> {
+                    BigDecimal inferredPaid = inferredPaidAmount(invoice, debtorType, share);
+                    return new SettlementPartyResponse(
+                            share,
+                            inferredPaid,
+                            share.subtract(inferredPaid).max(BigDecimal.ZERO),
+                            fallbackPartyStatus(invoice, share, inferredPaid));
+                });
     }
 
     private BigDecimal inferredPaidAmount(InvoiceEntity invoice, String debtorType, BigDecimal share) {
@@ -179,12 +182,14 @@ public class InvoiceFinancialStateService {
         return payments.min(patientShare).max(BigDecimal.ZERO);
     }
 
-    private String fallbackPartyStatus(InvoiceEntity invoice, BigDecimal share) {
+    private String fallbackPartyStatus(InvoiceEntity invoice, BigDecimal share, BigDecimal paid) {
         if (share.signum() <= 0 || invoice.getStatus() == InvoiceStatus.PENDING || invoice.getStatus() == InvoiceStatus.PROFORMA) {
             return "NOT_DUE";
         }
-        BigDecimal paid = invoice.getStatus() == InvoiceStatus.SETTLED ? share : BigDecimal.ZERO;
-        return paid.compareTo(share) >= 0 ? "PAID" : "UNPAID";
+        if (paid.compareTo(share) >= 0) {
+            return "PAID";
+        }
+        return paid.signum() > 0 ? "PARTIALLY_PAID" : "UNPAID";
     }
 
     private BigDecimal amountOrZero(BigDecimal amount) {

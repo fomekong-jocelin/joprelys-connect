@@ -336,7 +336,7 @@ export interface Invoice {
   totalAmount: number;
   patientShare: number;
   insuranceShare: number;
-  status: 'PENDING' | 'PARTIALLY_PAID' | 'PAID' | 'PROFORMA' | 'VALIDATED' | 'CANCELLED';
+  status: 'PENDING' | 'PARTIALLY_PAID' | 'PAID' | 'SETTLED' | 'PROFORMA' | 'VALIDATED' | 'CANCELLED';
   items: InvoiceItem[];
   createdAt: string;
   validatedAt?: string;
@@ -495,7 +495,7 @@ export interface SettlementParty {
 
 export interface InvoiceSettlementSummary {
   invoiceId: string;
-  collectionStatus: 'NOT_YET_DUE' | 'PATIENT_DUE' | 'PATIENT_PARTIALLY_PAID' | 'INSURANCE_DUE' | 'SETTLED';
+  collectionStatus: 'NOT_YET_DUE' | 'PATIENT_DUE' | 'PATIENT_PARTIALLY_PAID' | 'INSURANCE_DUE' | 'SETTLED' | 'CANCELLED';
   patient: SettlementParty;
   insurance?: SettlementParty;
 }
