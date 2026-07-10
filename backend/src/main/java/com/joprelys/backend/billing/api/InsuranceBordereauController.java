@@ -1,19 +1,20 @@
 package com.joprelys.backend.billing.api;
 
-import java.math.BigDecimal;
-
 import com.joprelys.backend.billing.application.InsuranceBordereauService;
 import com.joprelys.backend.billing.infrastructure.persistence.InsuranceBordereauEntity;
 import com.joprelys.backend.billing.infrastructure.persistence.InvoiceEntity;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -30,29 +31,25 @@ public class InsuranceBordereauController {
 
     @PostMapping("/api/billing/insurance-bordereaux")
     @PreAuthorize("hasAnyRole('SECRETAIRE_COMPTABLE', 'DAF', 'ADMIN_CLINIQUE')")
-    @Operation(summary = "Générer un bordereau d'assurance", description = "Génère un bordereau récapitulatif pour les factures tiers-payant d'une convention sur une période donnée.")
+    @Operation(summary = "Générer un bordereau d'assurance")
     public ResponseEntity<BordereauResponse> generateBordereau(@Valid @RequestBody GenerateBordereauRequest request) {
         InsuranceBordereauEntity entity = bordereauService.generateBordereau(
-                request.insuranceConventionId(),
-                request.startDate(),
-                request.endDate()
-        );
+                request.insuranceConventionId(), request.startDate(), request.endDate());
         return ResponseEntity.status(HttpStatus.CREATED).body(BordereauResponse.fromEntity(entity));
     }
 
     @GetMapping("/api/billing/insurance-bordereaux")
     @PreAuthorize("hasAnyRole('SECRETAIRE_COMPTABLE', 'DAF', 'ADMIN_CLINIQUE')")
-    @Operation(summary = "Lister les bordereaux", description = "Lister tous les bordereaux d'assurance générés.")
+    @Operation(summary = "Lister les bordereaux")
     public ResponseEntity<List<BordereauResponse>> listBordereaux() {
-        List<BordereauResponse> list = bordereauService.listBordereaux().stream()
+        return ResponseEntity.ok(bordereauService.listBordereaux().stream()
                 .map(BordereauResponse::fromEntity)
-                .toList();
-        return ResponseEntity.ok(list);
+                .toList());
     }
 
     @GetMapping("/api/billing/insurance-bordereaux/{id}")
     @PreAuthorize("hasAnyRole('SECRETAIRE_COMPTABLE', 'DAF', 'ADMIN_CLINIQUE')")
-    @Operation(summary = "Détails d'un bordereau", description = "Retourne les détails d'un bordereau et la liste de ses factures.")
+    @Operation(summary = "Détails d'un bordereau")
     public ResponseEntity<BordereauDetailsResponse> getBordereauDetails(@PathVariable UUID id) {
         InsuranceBordereauEntity entity = bordereauService.getBordereau(id);
         List<InvoiceEntity> invoices = bordereauService.getBordereauInvoices(id);
@@ -61,21 +58,41 @@ public class InsuranceBordereauController {
 
     @PostMapping("/api/billing/insurance-bordereaux/{id}/send")
     @PreAuthorize("hasAnyRole('SECRETAIRE_COMPTABLE', 'DAF', 'ADMIN_CLINIQUE')")
-    @Operation(summary = "Marquer comme envoyé", description = "Passe le statut du bordereau à envoyé (SENT).")
     public ResponseEntity<BordereauResponse> markAsSent(@PathVariable UUID id) {
-        InsuranceBordereauEntity entity = bordereauService.markAsSent(id);
-        return ResponseEntity.ok(BordereauResponse.fromEntity(entity));
+        return ResponseEntity.ok(BordereauResponse.fromEntity(bordereauService.markAsSent(id)));
+    }
+
+    @PostMapping("/api/billing/insurance-bordereaux/{id}/receive")
+    @PreAuthorize("hasAnyRole('SECRETAIRE_COMPTABLE', 'DAF', 'ADMIN_CLINIQUE')")
+    public ResponseEntity<BordereauResponse> markAsReceived(@PathVariable UUID id,
+                                                             @Valid @RequestBody ReceiveBordereauRequest request) {
+        return ResponseEntity.ok(BordereauResponse.fromEntity(
+                bordereauService.markAsReceived(id, request.insurerReference())));
+    }
+
+    @PostMapping("/api/billing/insurance-bordereaux/{id}/accept")
+    @PreAuthorize("hasAnyRole('DAF', 'ADMIN_CLINIQUE')")
+    public ResponseEntity<BordereauResponse> accept(@PathVariable UUID id,
+                                                     @Valid @RequestBody AcceptBordereauRequest request) {
+        return ResponseEntity.ok(BordereauResponse.fromEntity(
+                bordereauService.accept(id, request.acceptedAmount(), request.insurerReference())));
+    }
+
+    @PostMapping("/api/billing/insurance-bordereaux/{id}/reject")
+    @PreAuthorize("hasAnyRole('DAF', 'ADMIN_CLINIQUE')")
+    public ResponseEntity<BordereauResponse> reject(@PathVariable UUID id,
+                                                     @Valid @RequestBody RejectBordereauRequest request) {
+        return ResponseEntity.ok(BordereauResponse.fromEntity(
+                bordereauService.reject(id, request.rejectionReason(), request.insurerReference())));
     }
 
     @PostMapping("/api/billing/insurance-bordereaux/{id}/pay")
     @PreAuthorize("hasAnyRole('DAF', 'ADMIN_CLINIQUE')")
-    @Operation(summary = "Enregistrer le règlement", description = "Enregistre le règlement du bordereau et solde les factures correspondantes.")
-    public ResponseEntity<BordereauResponse> recordPayment(@PathVariable UUID id, @Valid @RequestBody BordereauPaymentRequest request) {
-        InsuranceBordereauEntity entity = bordereauService.recordPayment(id, request.amount(), request.referenceNumber());
-        return ResponseEntity.ok(BordereauResponse.fromEntity(entity));
+    public ResponseEntity<BordereauResponse> recordPayment(@PathVariable UUID id,
+                                                            @Valid @RequestBody BordereauPaymentRequest request) {
+        return ResponseEntity.ok(BordereauResponse.fromEntity(
+                bordereauService.recordPayment(id, request.amount(), request.referenceNumber())));
     }
-
-    // ─── DTO Records ──────────────────────────────────────────────────────────
 
     public record GenerateBordereauRequest(
             @NotNull UUID insuranceConventionId,
@@ -83,9 +100,21 @@ public class InsuranceBordereauController {
             @NotNull LocalDate endDate
     ) {}
 
+    public record ReceiveBordereauRequest(@NotBlank String insurerReference) {}
+
+    public record AcceptBordereauRequest(
+            @NotNull BigDecimal acceptedAmount,
+            String insurerReference
+    ) {}
+
+    public record RejectBordereauRequest(
+            @NotBlank String rejectionReason,
+            String insurerReference
+    ) {}
+
     public record BordereauPaymentRequest(
-            @NotNull Double amount,
-            @NotNull String referenceNumber
+            @NotNull BigDecimal amount,
+            @NotBlank String referenceNumber
     ) {}
 
     public record BordereauResponse(
@@ -95,8 +124,20 @@ public class InsuranceBordereauController {
             String insuranceConventionName,
             LocalDate startDate,
             LocalDate endDate,
-            Double totalAmount,
+            BigDecimal totalAmount,
+            BigDecimal acceptedAmount,
+            BigDecimal paidAmount,
+            BigDecimal remainingAmount,
+            BigDecimal disputedAmount,
+            String insurerReference,
+            String paymentReference,
+            String rejectionReason,
             String status,
+            Instant sentAt,
+            Instant receivedAt,
+            Instant acceptedAt,
+            Instant rejectedAt,
+            Instant settledAt,
             String createdAt
     ) {
         public static BordereauResponse fromEntity(InsuranceBordereauEntity entity) {
@@ -108,7 +149,19 @@ public class InsuranceBordereauController {
                     entity.getStartDate(),
                     entity.getEndDate(),
                     entity.getTotalAmount(),
+                    entity.getAcceptedAmount(),
+                    entity.getPaidAmount(),
+                    entity.getRemainingAmount(),
+                    entity.getDisputedAmount(),
+                    entity.getInsurerReference(),
+                    entity.getPaymentReference(),
+                    entity.getRejectionReason(),
                     entity.getStatus().name(),
+                    entity.getSentAt(),
+                    entity.getReceivedAt(),
+                    entity.getAcceptedAt(),
+                    entity.getRejectedAt(),
+                    entity.getSettledAt(),
                     entity.getCreatedAt().toString()
             );
         }
@@ -121,15 +174,25 @@ public class InsuranceBordereauController {
             String insuranceConventionName,
             LocalDate startDate,
             LocalDate endDate,
-            Double totalAmount,
+            BigDecimal totalAmount,
+            BigDecimal acceptedAmount,
+            BigDecimal paidAmount,
+            BigDecimal remainingAmount,
+            BigDecimal disputedAmount,
+            String insurerReference,
+            String paymentReference,
+            String rejectionReason,
             String status,
+            Instant sentAt,
+            Instant receivedAt,
+            Instant acceptedAt,
+            Instant rejectedAt,
+            Instant settledAt,
             String createdAt,
             List<BordereauInvoiceDto> invoices
     ) {
-        public static BordereauDetailsResponse fromEntity(InsuranceBordereauEntity entity, List<InvoiceEntity> invoices) {
-            List<BordereauInvoiceDto> invoiceDtos = invoices.stream()
-                    .map(BordereauInvoiceDto::fromEntity)
-                    .toList();
+        public static BordereauDetailsResponse fromEntity(InsuranceBordereauEntity entity,
+                                                           List<InvoiceEntity> invoices) {
             return new BordereauDetailsResponse(
                     entity.getId(),
                     entity.getBordereauNumber(),
@@ -138,9 +201,21 @@ public class InsuranceBordereauController {
                     entity.getStartDate(),
                     entity.getEndDate(),
                     entity.getTotalAmount(),
+                    entity.getAcceptedAmount(),
+                    entity.getPaidAmount(),
+                    entity.getRemainingAmount(),
+                    entity.getDisputedAmount(),
+                    entity.getInsurerReference(),
+                    entity.getPaymentReference(),
+                    entity.getRejectionReason(),
                     entity.getStatus().name(),
+                    entity.getSentAt(),
+                    entity.getReceivedAt(),
+                    entity.getAcceptedAt(),
+                    entity.getRejectedAt(),
+                    entity.getSettledAt(),
                     entity.getCreatedAt().toString(),
-                    invoiceDtos
+                    invoices.stream().map(BordereauInvoiceDto::fromEntity).toList()
             );
         }
     }
