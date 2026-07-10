@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
@@ -19,6 +19,7 @@ export class BillingCashSessionHistoryComponent implements OnInit {
   private readonly billingApi = inject(BillingApiService);
   private readonly i18n = inject(I18nService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly sessions = signal<CashSessionHistory[]>([]);
   readonly loading = signal(false);
@@ -38,6 +39,7 @@ export class BillingCashSessionHistoryComponent implements OnInit {
         this.expandedSessionId.set(session.id);
         this.loadSessions();
         this.loadMovements(session.id);
+        queueMicrotask(() => this.host.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' }));
       });
   }
 
