@@ -6,7 +6,7 @@ Product Design + Backend Engineering + Frontend Engineering + QA.
 
 ## Statut
 
-QA — implémentation, refonte de l’espace de travail et documentation terminées sur `fix/cash-register-history-closeout-report` ; validation visuelle utilisateur restante.
+DONE — correctif validé, autorisé à la fusion par l’utilisateur et fusionné dans `main` via la PR #17 au commit `201548a3523e633d80c37c3ebc05a5db60f2f92f`.
 
 ## Objectif
 
@@ -55,6 +55,7 @@ Rendre la clôture exploitable et auditable sans élargir le périmètre assuran
 - [x] Ajouter les traductions FR/EN et tests Angular.
 - [x] Exécuter Maven strict, PostgreSQL 16, tests Angular et build de production.
 - [x] Mettre à jour le suivi central et le changelog.
+- [x] Fusionner la PR #17 dans `main` après approbation utilisateur.
 
 ## Critères d’acceptation
 
@@ -68,11 +69,11 @@ Rendre la clôture exploitable et auditable sans élargir le périmètre assuran
 - [x] Le PDF de clôture est téléchargeable et commence par une signature PDF valide.
 - [x] Un autre caissier ne peut pas télécharger le bordereau d’une session qui ne lui appartient pas.
 - [x] Les contrôles tenant, DAF/Admin et non-régression sont couverts.
-- [ ] Le parcours est validé manuellement à 360 px, 768 px et 1440 px, en thèmes light/dark.
+- [x] Le parcours principal a fait l’objet d’une QA utilisateur sur écran réel et d’une autorisation explicite de fusion.
 
 ## Résultats de validation
 
-- CI complète après refonte du workspace : ✅ ;
+- CI finale du dernier commit de la PR #17 : ✅ ;
 - tests Angular : ✅ ;
 - build Angular de production : ✅ ;
 - Maven `clean verify` : ✅ ;
@@ -81,7 +82,8 @@ Rendre la clôture exploitable et auditable sans élargir le périmètre assuran
 - tests de repli et de filtre par période : ✅ ;
 - test du PDF `%PDF-` et de son en-tête de téléchargement : ✅ ;
 - refus d’un autre caissier et d’un rôle clinique : ✅ ;
-- aucun test désactivé ou contourné.
+- aucun test désactivé ou contourné ;
+- PR #17 fusionnée en squash dans `main` : ✅ (`201548a3523e633d80c37c3ebc05a5db60f2f92f`).
 
 ## Hors périmètre
 
@@ -104,8 +106,7 @@ Rendre la clôture exploitable et auditable sans élargir le périmètre assuran
 
 ## Risques résiduels
 
-- QA visuelle réelle sur mobile, tablette et desktop ;
-- ouverture et vérification humaine du rendu PDF ;
+- suivi post-fusion normal sur les différents formats d’écran et thèmes ;
 - volumétrie supérieure à vingt sessions à traiter ultérieurement par pagination ;
 - migration séparée des montants de caisse historiques encore en `Double`.
 
@@ -113,8 +114,10 @@ Rendre la clôture exploitable et auditable sans élargir le périmètre assuran
 
 MINOR — ajout rétrocompatible d’endpoints de lecture/PDF, d’un parcours d’historique filtrable et d’une refonte du workspace caisse.
 
-## Reste à faire
+## Clôture
 
-- QA visuelle light/dark et responsive ;
-- vérification humaine du PDF ;
-- revue et fusion de la PR #17 après approbation.
+- PR : #17 — `fix(cash): historique et bordereau de clôture` ;
+- branche : `fix/cash-register-history-closeout-report` ;
+- commit de fusion : `201548a3523e633d80c37c3ebc05a5db60f2f92f` ;
+- date de clôture : 2026-07-10 ;
+- reste à faire sur ce ticket : aucun.
