@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { BillingApiService } from '../../patient/billing-api.service';
 import { PatientApiService } from '../../patient/patient-api.service';
 import { VisitApiService } from '../../visit/visit-api.service';
@@ -50,6 +51,7 @@ export class BillingManagementPageComponent implements OnInit {
   private readonly visitApi = inject(VisitApiService);
   private readonly i18n = inject(I18nService);
   private readonly tokenStorage = inject(AuthTokenStorageService);
+  private readonly route = inject(ActivatedRoute);
 
   activeTab = signal<'facturation' | 'caisse' | 'creances' | 'bordereaux' | 'conventions' | 'tariffs' | 'daf'>('facturation');
 
@@ -62,13 +64,8 @@ export class BillingManagementPageComponent implements OnInit {
       : roles.includes(allowedRoles);
   }
 
-  /** DAF ou Admin : accès Pilotage DAF */
   readonly isDafOrAdmin = computed(() => this.hasRole(['DAF', 'ADMIN_CLINIQUE']));
-
-  /** Admin uniquement : Conventions, Grille tarifaire, Créances, Bordereaux */
   readonly isAdminOnly = computed(() => this.hasRole(['ADMIN_CLINIQUE']));
-
-  /** Agent accueil + Admin : Facturation patients, Caisse & Sessions */
   readonly canAccessCaisse = computed(() => this.hasRole(['AGENT_ACCUEIL', 'ADMIN_CLINIQUE']));
 
   // Search & Patient
@@ -100,7 +97,6 @@ export class BillingManagementPageComponent implements OnInit {
 
   calculatedPatientShare = computed(() => this.calculatedTotal() - this.calculatedInsuranceShare());
 
-  /** P1 — true si au moins une ligne a prix ≤ 0 ou quantité < 1 */
   isItemInvalid(item: InvoiceItem): boolean {
     return (item.unitPrice ?? 0) <= 0 || (item.quantity ?? 0) < 1 || (item.coefficient ?? 1) <= 0;
   }
@@ -127,11 +123,52 @@ export class BillingManagementPageComponent implements OnInit {
   successMessage = signal<string | null>(null);
   errorMessage = signal<string | null>(null);
 
+  /** P1-B — true pendant le chargement initial du deep-link invoice */
+  deepLinkLoading = signal(false);
+
   readonly translate = (key: string, defaultValue: string): string => this.t(key, defaultValue);
 
   ngOnInit(): void {
     this.loadGlobalConfigs();
     this.loadCashSessionState();
+    this.handleDeepLink();
+  }
+
+  /**
+   * P1-B — Si la route contient :invoiceId, charge la facture depuis l'API
+   * et ouvre automatiquement le panneau latéral de détail.
+   * Flux :
+   *   1. GET /invoices/:invoiceId  → Invoice
+   *   2. Si invoice.patientId → GET /patients/:patientId pour alimenter selectedPatient
+   *   3. openInvoiceDetails(invoice)
+   */
+  private handleDeepLink(): void {
+    const invoiceId = this.route.snapshot.paramMap.get('invoiceId');
+    if (!invoiceId) return;
+
+    this.deepLinkLoading.set(true);
+    this.activeTab.set('facturation');
+
+    this.billingApi.getInvoiceById(invoiceId).subscribe({
+      next: (invoice) => {
+        // Charger le patient pour que le contexte soit cohérent dans le panneau
+        this.patientApi.getById(invoice.patientId).subscribe({
+          next: (patient) => {
+            this.selectedPatient.set(patient);
+            this.loadPatientHistory(patient.id);
+          },
+          error: () => { /* patient non critique pour afficher le panneau */ }
+        });
+
+        // Ouvrir le panneau immédiatement avec la facture
+        this.openInvoiceDetails(invoice);
+        this.deepLinkLoading.set(false);
+      },
+      error: () => {
+        this.deepLinkLoading.set(false);
+        this.showError('billing.error.invoiceNotFound');
+      }
+    });
   }
 
   loadCashSessionState(): void {
