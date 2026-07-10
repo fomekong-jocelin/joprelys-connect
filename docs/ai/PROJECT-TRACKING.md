@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-10 (TASK-2205 : correction responsive des lignes de devis compilée et testée ; QA visuelle navigateur à réaliser) |
+| Dernière mise à jour | 2026-07-10 (TASK-2207 : correctifs UX devis/annulation/deep-link préparés ; tests automatisés et QA navigateur à valider) |
 | Responsable mise à jour | Codex |
 | État global | EPIC-0019 en cours ; EPIC-0020 cadrée pour refondre le workspace facturation/caisse après audit UX des captures utilisateur |
 | Risques majeurs | États facture/créance contradictoires, écran financier trop chargé, validation DAF manquante sur les transitions de règlement |
@@ -29,6 +29,7 @@
 | STORY-2203 | FINANCE_UX | User Story | Poste caissier simplifié et file d'encaissement | Full-stack | READY | P0 | 8 | Senior | 2.5j | 3.3j | 4.5j | À assigner | Lead Developer + DAF | À planifier | 0j | Dépend de STORY-2201 | Élevé | 2026-07-10 |
 | STORY-2204 | FINANCE_UX | User Story | Poste assurance et progression des bordereaux | Full-stack | READY | P1 | 5 | Senior + intermédiaire | 1.5j | 2.0j | 3.0j | À assigner | DAF + Lead Developer | À planifier | 0j | Dépend de STORY-2201 | Moyen | 2026-07-10 |
 | STORY-2205 | FINANCE_UX | User Story | Détail facture, documents et actions exceptionnelles | Frontend | IN_PROGRESS | P1 | 5 | Senior | 1.5j | 2.0j | 3.0j | Codex | Lead Developer + DAF | SPRINT-0014 | 0.8j | Correction responsive compilée et testée ; QA visuelle navigateur restante | Moyen | 2026-07-10 |
+| TASK-2207 | FINANCE_UX | Correctif UI/UX + tests | Modale annulation, visite devis, feedback et deep-link | Frontend | QA | P2 | 3 | Senior Frontend | 0.8j | 1.2j | 2.0j | Codex | Lead Developer + DAF | SPRINT-0014 | 0.8j | Exécuter Vitest/build puis QA light/dark, clavier et mobile | Moyen | 2026-07-10 |
 | STORY-2206 | FINANCE_UX | User Story | QA UX, accessibilité et régression financière | QA / Full-stack | READY | P0 | 5 | Senior QA/full-stack | 1.5j | 2.0j | 3.0j | À assigner | Lead Developer + DAF | À planifier | 0j | Dépend de STORY-2201 à 2205 | Élevé | 2026-07-10 |
 | STORY-2112 | FINANCE_OPERATIONS | Feature | Synthèse de règlement patient / assurance | Full-stack | DONE | P0 | 5 | Senior full-stack | 1.2j | 1.6j | 2.4j | Codex | Lead Developer + DAF | SPRINT-0012 | 1.2j | Validation DAF des libellés métier | Faible | 2026-07-09 |
 | STORY-2113 | FINANCE_OPERATIONS | Feature | Poste caissier: encaissement, reçu, clôture, écarts | Full-stack | DONE | P0 | 8 | Senior full-stack | 2.0j | 2.6j | 4.0j | Codex | Lead Developer + DAF | SPRINT-0013 | 0.4j | Validé par test E2E complet (facture->patient->assurance->banque->clôture) | Faible | 2026-07-09 |

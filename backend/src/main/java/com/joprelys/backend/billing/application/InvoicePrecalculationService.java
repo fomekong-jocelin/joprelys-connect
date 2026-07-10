@@ -157,8 +157,11 @@ public class InvoicePrecalculationService {
             for (HospitalizationDailyCareEntity dc : cares) {
                 if (dc.isBillable()) {
                     BigDecimal carePrice = dc.getPrice() != null
-                            ? dc.getPrice()
-                            : conventionTariffService.getTariff(dc.getCareType(), new BigDecimal("5000"));
+                            ? BigDecimal.valueOf(dc.getPrice())
+                            : conventionTariffService.getTariff(
+                            dc.getCareType(),
+                            new BigDecimal("5000")
+                    );
                     String label = "Soin : " + dc.getCareType()
                             + (dc.getDescription() != null && !dc.getDescription().isEmpty()
                             ? " (" + dc.getDescription() + ")" : "");
@@ -173,9 +176,14 @@ public class InvoicePrecalculationService {
             List<PatientConsumptionEntity> consumptions =
                     patientConsumptionRepository.findByHospitalizationIdOrderByConsumedAtDesc(hospitalizationId);
             for (PatientConsumptionEntity pc : consumptions) {
-                BigDecimal consPrice = pc.getUnitPrice() != null && pc.getUnitPrice().compareTo(BigDecimal.ZERO) > 0
-                        ? pc.getUnitPrice()
-                        : conventionTariffService.getTariff(pc.getItemName(), new BigDecimal("1500"));
+                Double unitPrice = pc.getUnitPrice();
+
+                BigDecimal consPrice = unitPrice != null && unitPrice > 0
+                        ? BigDecimal.valueOf(unitPrice)
+                        : conventionTariffService.getTariff(
+                        pc.getItemName(),
+                        new BigDecimal("1500")
+                );
                 invoice.addItem(new InvoiceItemEntity(
                         "Consommation : " + pc.getItemName(),
                         InvoiceItemType.MEDICATION,
@@ -222,9 +230,14 @@ public class InvoicePrecalculationService {
 
                 if (op.getImplants() != null) {
                     for (var implant : op.getImplants()) {
-                        BigDecimal implantPrice = implant.getUnitPrice() != null && implant.getUnitPrice().compareTo(BigDecimal.ZERO) > 0
-                                ? implant.getUnitPrice()
-                                : conventionTariffService.getTariff(implant.getImplantName(), new BigDecimal("25000"));
+                        Double implantUnitPrice = implant.getUnitPrice();
+
+                        BigDecimal implantPrice = implantUnitPrice != null && implantUnitPrice > 0
+                                ? BigDecimal.valueOf(implantUnitPrice)
+                                : conventionTariffService.getTariff(
+                                implant.getImplantName(),
+                                new BigDecimal("25000")
+                        );
                         String label = "Implant : " + implant.getImplantName()
                                 + (implant.getLotNumber() != null && !implant.getLotNumber().isEmpty()
                                 ? " (Lot: " + implant.getLotNumber() + ")" : "");

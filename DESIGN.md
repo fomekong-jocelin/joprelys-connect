@@ -133,6 +133,10 @@ Les champs texte utilisent un fond gris clair `var(--bg-input)` avec bordure fin
 ### Cards
 Les conteneurs de cartes utilisent la classe `.ui-card` avec `8px` d'arrondi et l'ombre légère centralisée.
 
+### Confirmation dialogs
+
+Les actions financières destructives utilisent une modale maison, jamais le `confirm()` du navigateur. La surface conserve un rayon sobre compris entre `4px` et `8px`, l’overlay est centralisé, le focus reste visible, la fermeture par Échap est disponible et l’action destructive est clairement distincte dans les thèmes light et dark.
+
 ## Do's and Don'ts
 
 ### Do

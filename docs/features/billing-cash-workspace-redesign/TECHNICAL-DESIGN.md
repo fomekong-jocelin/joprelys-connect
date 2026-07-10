@@ -39,11 +39,16 @@ Les composants de présentation ne recalculent pas les soldes. Ils consomment le
 - Pour les sections devis/avoirs, distinguer les états de lecture des actions de mutation par des groupes visuels dédiés, des libellés persistants, des états ARIA et des tokens de couleur existants ; aucun contrat API n’est requis.
 - La grille de saisie des lignes de devis utilise des colonnes flexibles (`minmax(0, …)`) et des container queries sur le formulaire, afin de s’adapter à la largeur réelle du panneau latéral plutôt qu’à la seule largeur de la fenêtre. L’action de suppression conserve un libellé i18n FR/EN.
 - Préserver l'i18n FR/EN, le thème centralisé et les tokens de radius/ombres.
+- Extraire le template et les styles de `BillingEstimatesComponent` afin de ramener le TypeScript sous la limite de 500 lignes.
+- Réutiliser `ConfirmationDialogComponent` pour les confirmations destructives, avec focus initial, Échap, blocage pendant la requête et restauration du focus.
+- Le parent transmet la liste des visites et la visite active au panneau devis ; le contrat `visitId?` existant est conservé.
 
 ## Tests
 
 - Tests composants des états `PATIENT_DUE`, `PATIENT_PARTIALLY_PAID`, `INSURANCE_DUE`, `SETTLED`.
 - Tests de focus après ouverture du détail.
+- Tests de création de devis avec `visitId`, validation/annulation de facture, avoir et bannières de feedback.
+- Tests de la modale : confirmation, Échap et état pending.
 - Tests de non-émission sur visite déjà facturée.
 - Tests backend paiements partiels/complets et règlement assurance.
 - E2E : facture → caisse → paiement patient → bordereau → paiement assurance → `SETTLED`.

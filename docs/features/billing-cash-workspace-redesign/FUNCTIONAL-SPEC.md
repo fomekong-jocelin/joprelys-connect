@@ -37,6 +37,10 @@ La page actuelle mélange émission, règlement patient, recouvrement assurance,
 - Les devis et avoirs ne sont pas affichés comme des actions de caisse courantes.
 - Dans le détail d’une facture, l’historique des devis est visuellement séparé de l’action « Créer un devis » ; l’avoir est présenté comme une action financière exceptionnelle nécessitant une saisie explicite.
 - La saisie d’une ligne de devis reste intégralement visible dans le panneau de détail, y compris lorsque ce panneau est plus étroit que la fenêtre ; l’action de suppression est lisible et atteignable.
+- L’annulation d’une facture utilise une modale interne accessible ; aucun `confirm()` navigateur n’est autorisé.
+- Un devis peut être lié à une visite du patient et transmet ce `visitId` à l’API.
+- Les mutations devis/facture/avoir affichent un retour succès ou erreur visible.
+- Le chargement d’une facture par deep-link expose un état visuel explicite.
 - Un paiement sans session ouverte est bloqué dans l'interface et renvoie vers l'ouverture de caisse.
 - Les textes sont disponibles en français et en anglais.
 - Le parcours respecte les thèmes light/dark et les rayons sobres du design system.

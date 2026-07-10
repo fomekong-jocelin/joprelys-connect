@@ -10,6 +10,10 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+
+- **Facturation — durcissement UX devis et actions financières (TASK-2207)** : remplacement du `confirm()` natif par une modale maison accessible, liaison du devis à une visite, affichage des retours succès/erreur et rendu du chargement deep-link.
+- **Facturation — maintenabilité et tests (TASK-2207)** : extraction du template/styles de `BillingEstimatesComponent`, ajout d’un composant partagé de confirmation et couverture Vitest des parcours devis, validation, annulation et avoir.
+
 - **Détail facture — ligne de devis dans un panneau étroit (TASK-2205)** : les champs s’adaptent désormais à la largeur réelle du formulaire, sans débordement ; l’action de suppression est visible, libellée et traduite en français et en anglais.
 
 - **Détail facture — alignement avec le design system (TASK-2205)** : remplacement des classes visuelles locales incomplètes par `ui-button`, `ui-input` et `ui-select`, avec padding, bordures, fonds de champs, focus visible et couleurs de thème cohérentes.
