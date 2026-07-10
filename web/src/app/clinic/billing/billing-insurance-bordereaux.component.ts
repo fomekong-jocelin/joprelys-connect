@@ -1,387 +1,332 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize, Observable } from 'rxjs';
+import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
+import { I18nService } from '../../core/i18n/i18n.service';
 import { BillingApiService } from '../../patient/billing-api.service';
-import { InsuranceConvention, Bordereau, BordereauDetails } from '../../patient/patient.models';
+import {
+  BordereauStatus,
+  InsuranceBordereau,
+  InsuranceBordereauDetails,
+} from '../../patient/insurance-bordereau.models';
+import { InsuranceConvention } from '../../patient/patient.models';
 import { IconComponent } from '../../shared/ui/icon.component';
 import { extractApiErrorMessage } from '../../shared/utils/api-error.utils';
+
+type InsuranceActionMode = 'receive' | 'accept' | 'reject' | 'pay';
+type PeriodFilter = '30' | '90' | '365' | 'ALL';
 
 @Component({
   selector: 'app-billing-insurance-bordereaux',
   standalone: true,
   imports: [CommonModule, FormsModule, IconComponent],
-  template: `
-    <div class="space-y-6">
-      <!-- Top Action / Form & Filters -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- Generate Form Card -->
-        <div class="ui-card-subtle p-4 space-y-4">
-          <h3 class="font-bold text-xs text-[var(--text-primary)] uppercase tracking-wider border-b border-[var(--app-border)]/40 pb-2 flex items-center gap-1.5">
-            <app-ui-icon name="plus" />
-            Nouveau Bordereau d'Assurance
-          </h3>
-          
-          <div class="space-y-3 text-xs">
-            <div>
-              <label class="font-bold text-[var(--text-secondary)] block mb-1">Convention d'Assurance :</label>
-              <select [ngModel]="selectedConventionId()" (ngModelChange)="selectedConventionId.set($event)" class="ui-select w-full">
-                <option value="">-- Choisir une convention --</option>
-                @for (c of conventions(); track c.id) {
-                  <option [value]="c.id">{{ c.name }} ({{ c.coveragePercentage * 100 }}%)</option>
-                }
-              </select>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="font-bold text-[var(--text-secondary)] block mb-1">Date Début :</label>
-                <input type="date" [ngModel]="startDate()" (ngModelChange)="startDate.set($event)" class="ui-input w-full" />
-              </div>
-              <div>
-                <label class="font-bold text-[var(--text-secondary)] block mb-1">Date Fin :</label>
-                <input type="date" [ngModel]="endDate()" (ngModelChange)="endDate.set($event)" class="ui-input w-full" />
-              </div>
-            </div>
-
-            <button
-              (click)="generateBordereau()"
-              [disabled]="generating() || !selectedConventionId() || !startDate() || !endDate()"
-              class="ui-button ui-button-primary w-full text-xs py-2 flex items-center justify-center gap-1.5"
-            >
-              @if (generating()) {
-                <span>Génération en cours...</span>
-              } @else {
-                <app-ui-icon name="calculator" />
-                Générer le Bordereau
-              }
-            </button>
-          </div>
-        </div>
-
-        <!-- Bordereaux List / Filtered List -->
-        <div class="lg:col-span-2 ui-card-subtle p-4 space-y-4">
-          <div class="bordereaux-list-header flex flex-col gap-2 border-b border-[var(--app-border)]/40 pb-2 sm:flex-row sm:items-center sm:justify-between">
-            <h3 class="bordereaux-list-title flex items-center gap-1.5 whitespace-nowrap font-bold text-xs text-[var(--text-primary)] uppercase tracking-wider">
-              <app-ui-icon name="document-text" />
-              Liste des Bordereaux Générés
-            </h3>
-            
-            <!-- Inline filter -->
-            <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event); applyFilters()" class="bordereaux-status-filter ui-select w-full max-w-full text-[10px] py-1 sm:w-40 sm:shrink-0">
-              <option value="ALL">Tous les statuts</option>
-              <option value="DRAFT">Brouillons (DRAFT)</option>
-              <option value="SENT">Envoyés (SENT)</option>
-              <option value="PAID">Réglés (PAID)</option>
-            </select>
-          </div>
-
-          @if (filteredBordereaux().length > 0) {
-            <div class="overflow-x-auto max-h-64 overflow-y-auto">
-              <table class="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr class="bg-[var(--app-surface-muted)] border-b border-[var(--app-border)] text-[10px] font-bold text-[var(--text-secondary)]">
-                    <th class="p-2" scope="col">N° Bordereau</th>
-                    <th class="p-2" scope="col">Assurance / Convention</th>
-                    <th class="p-2" scope="col">Période</th>
-                    <th class="p-2 text-right" scope="col">Montant Total</th>
-                    <th class="p-2" scope="col">Statut</th>
-                    <th class="p-2 text-center" scope="col">Actions</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-[var(--app-border)]/40">
-                  @for (b of filteredBordereaux(); track b.id) {
-                    <tr class="hover:bg-[var(--app-surface-muted)]/30">
-                      <td class="p-2 font-mono font-bold text-brand-cyan">{{ b.bordereauNumber }}</td>
-                      <td class="p-2">{{ b.insuranceConventionName }}</td>
-                      <td class="p-2 text-[10px]">{{ b.startDate | date:'dd/MM/yyyy' }} - {{ b.endDate | date:'dd/MM/yyyy' }}</td>
-                      <td class="p-2 text-right font-bold">{{ b.totalAmount | number:'1.0-0' }} FCFA</td>
-                      <td class="p-2">
-                        <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-sm"
-                              [class.bg-gray-500\/10]="b.status === 'DRAFT'"
-                              [class.text-gray-600]="b.status === 'DRAFT'"
-                              [class.bg-blue-500\/10]="b.status === 'SENT'"
-                              [class.text-blue-600]="b.status === 'SENT'"
-                              [class.bg-emerald-500\/10]="b.status === 'PAID'"
-                              [class.text-emerald-600]="b.status === 'PAID'">
-                          {{ b.status }}
-                        </span>
-                      </td>
-                      <td class="p-2 text-center">
-                        <button (click)="viewDetails(b.id)" class="ui-button ui-button-secondary text-[10px] py-1 px-2">
-                          Détails
-                        </button>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          } @else {
-            <p class="text-center text-[10px] text-[var(--text-muted)] py-8 italic">Aucun bordereau trouvé.</p>
-          }
-        </div>
-      </div>
-
-      <!-- Selected Bordereau Details Card -->
-      @if (selectedBordereau()) {
-        <div class="ui-card-subtle p-4 space-y-4">
-          <div class="flex items-center justify-between border-b border-[var(--app-border)]/40 pb-2">
-            <div>
-              <h3 class="font-bold text-xs text-[var(--text-primary)]">
-                Détails du Bordereau : <span class="font-mono text-brand-cyan">{{ selectedBordereau()!.bordereauNumber }}</span>
-              </h3>
-              <p class="text-[10px] text-[var(--text-muted)] mt-0.5">
-                Période: {{ selectedBordereau()!.startDate | date:'dd/MM/yyyy' }} au {{ selectedBordereau()!.endDate | date:'dd/MM/yyyy' }} | Convention: {{ selectedBordereau()!.insuranceConventionName }}
-              </p>
-            </div>
-            
-            <div class="flex gap-2">
-              @if (selectedBordereau()!.status === 'DRAFT') {
-                <button (click)="markAsSent(selectedBordereau()!.id)" class="ui-button ui-button-primary text-xs py-1 px-3 flex items-center gap-1">
-                  <app-ui-icon name="document-text" />
-                  Marquer comme envoyé
-                </button>
-              }
-              @if (selectedBordereau()!.status === 'SENT') {
-                <button (click)="showPaymentForm.set(true)" class="ui-button ui-button-success text-xs py-1 px-3 flex items-center gap-1">
-                  <app-ui-icon name="credit-card" />
-                  Enregistrer le Règlement
-                </button>
-              }
-              <button (click)="selectedBordereau.set(null); showPaymentForm.set(false)" class="ui-button ui-button-secondary text-xs py-1 px-3">
-                Fermer
-              </button>
-            </div>
-          </div>
-
-          <!-- Payment Form Inline -->
-          @if (showPaymentForm()) {
-            <div class="p-3 bg-[var(--app-surface-muted)] border border-brand-cyan/30 rounded-sm grid grid-cols-1 md:grid-cols-3 gap-4 items-end text-xs">
-              <div>
-                <label class="font-bold text-[var(--text-secondary)] block mb-1">Montant Reçu (FCFA) :</label>
-                <input type="number" [ngModel]="paymentAmount()" class="ui-input w-full" disabled />
-              </div>
-              <div>
-                <label class="font-bold text-[var(--text-secondary)] block mb-1">Référence du Règlement :</label>
-                <input type="text" [ngModel]="paymentReference()" (ngModelChange)="paymentReference.set($event)" class="ui-input w-full" placeholder="N° Virement, Chèque..." />
-              </div>
-              <div class="flex gap-2">
-                <button (click)="submitPayment()" [disabled]="!paymentReference().trim()" class="ui-button ui-button-primary flex-1 py-1.5">
-                  Valider le Règlement
-                </button>
-                <button (click)="showPaymentForm.set(false)" class="ui-button ui-button-secondary py-1.5">
-                  Annuler
-                </button>
-              </div>
-            </div>
-          }
-
-          <!-- Linked Invoices Table -->
-          <div class="space-y-2">
-            <h4 class="font-bold text-[10px] uppercase text-[var(--text-secondary)] tracking-wider">
-              Factures associées ({{ selectedBordereau()!.invoices.length }})
-            </h4>
-            <div class="overflow-x-auto max-h-60 overflow-y-auto">
-              <table class="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr class="bg-[var(--app-surface-muted)]/60 border-b border-[var(--app-border)]/60 text-[10px] font-bold text-[var(--text-secondary)]">
-                    <th class="p-2" scope="col">N° Facture</th>
-                    <th class="p-2 text-right" scope="col">Montant Total</th>
-                    <th class="p-2 text-right" scope="col">Part Patient</th>
-                    <th class="p-2 text-right" scope="col">Part Assurance</th>
-                    <th class="p-2" scope="col">Statut</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-[var(--app-border)]/40">
-                  @for (inv of selectedBordereau()!.invoices; track inv.id) {
-                    <tr>
-                      <td class="p-2 font-mono font-bold text-brand-cyan">{{ inv.invoiceNumber }}</td>
-                      <td class="p-2 text-right">{{ inv.totalAmount | number:'1.0-0' }} FCFA</td>
-                      <td class="p-2 text-right">{{ inv.patientShare | number:'1.0-0' }} FCFA</td>
-                      <td class="p-2 text-right font-bold text-brand-cyan">{{ inv.insuranceShare | number:'1.0-0' }} FCFA</td>
-                      <td class="p-2 text-[10px]">{{ inv.status }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- Alert feedbacks -->
-      @if (successFeedback()) {
-        <div class="ui-alert-success text-xs">
-          <app-ui-icon name="check" />
-          {{ successFeedback() }}
-        </div>
-      }
-      @if (errorFeedback()) {
-        <div class="ui-alert-danger text-xs">
-          <app-ui-icon name="x-mark" />
-          {{ errorFeedback() }}
-        </div>
-      }
-    </div>
-  `
+  templateUrl: './billing-insurance-bordereaux.component.html',
+  styleUrl: './billing-insurance-bordereaux.component.css',
 })
 export class BillingInsuranceBordereauxComponent implements OnInit {
   private readonly billingApi = inject(BillingApiService);
+  private readonly tokenStorage = inject(AuthTokenStorageService);
+  private readonly i18n = inject(I18nService);
 
-  conventions = signal<InsuranceConvention[]>([]);
-  bordereaux = signal<Bordereau[]>([]);
-  filteredBordereaux = signal<Bordereau[]>([]);
-  selectedBordereau = signal<BordereauDetails | null>(null);
+  readonly statuses: BordereauStatus[] = [
+    'DRAFT',
+    'SENT',
+    'RECEIVED',
+    'ACCEPTED',
+    'PARTIALLY_PAID',
+    'SETTLED',
+    'REJECTED',
+    'CANCELLED',
+  ];
 
-  // Form signals
-  selectedConventionId = signal<string>('');
-  startDate = signal<string>('');
-  endDate = signal<string>('');
-  generating = signal<boolean>(false);
+  readonly conventions = signal<InsuranceConvention[]>([]);
+  readonly bordereaux = signal<InsuranceBordereau[]>([]);
+  readonly selectedBordereau = signal<InsuranceBordereauDetails | null>(null);
 
-  // Filters
-  statusFilter = signal<string>('ALL');
+  readonly loading = signal(false);
+  readonly loadError = signal(false);
+  readonly detailLoading = signal(false);
+  readonly generating = signal(false);
+  readonly actionSaving = signal(false);
+  readonly generationOpen = signal(false);
 
-  // Payment Form signals
-  showPaymentForm = signal<boolean>(false);
-  paymentAmount = signal<number>(0);
-  paymentReference = signal<string>('');
+  readonly selectedConventionId = signal('');
+  readonly startDate = signal('');
+  readonly endDate = signal('');
 
-  // Alerts
-  successFeedback = signal<string | null>(null);
-  errorFeedback = signal<string | null>(null);
+  readonly searchQuery = signal('');
+  readonly statusFilter = signal<BordereauStatus | 'ALL'>('ALL');
+  readonly conventionFilter = signal('ALL');
+  readonly periodFilter = signal<PeriodFilter>('90');
 
-  ngOnInit() {
+  readonly actionMode = signal<InsuranceActionMode | null>(null);
+  readonly actionBordereau = signal<InsuranceBordereau | null>(null);
+  readonly insurerReference = signal('');
+  readonly acceptedAmount = signal(0);
+  readonly rejectionReason = signal('');
+  readonly paymentAmount = signal(0);
+  readonly paymentReference = signal('');
+
+  readonly successFeedback = signal<string | null>(null);
+  readonly errorFeedback = signal<string | null>(null);
+
+  readonly canDecide = computed(() => this.hasRole(['DAF', 'ADMIN_CLINIQUE']));
+
+  readonly canGenerate = computed(() => {
+    const start = this.startDate();
+    const end = this.endDate();
+    return Boolean(this.selectedConventionId() && start && end && start <= end);
+  });
+
+  readonly activeCount = computed(() => this.bordereaux().filter((item) => {
+    const status = this.normalizedStatus(item.status);
+    return status !== 'SETTLED' && status !== 'REJECTED' && status !== 'CANCELLED';
+  }).length);
+
+  readonly claimedTotal = computed(() => this.bordereaux().reduce((sum, item) => sum + item.totalAmount, 0));
+  readonly paidTotal = computed(() => this.bordereaux().reduce((sum, item) => sum + item.paidAmount, 0));
+  readonly remainingTotal = computed(() => this.bordereaux().reduce((sum, item) => sum + item.remainingAmount, 0));
+
+  readonly filteredBordereaux = computed(() => {
+    const query = this.searchQuery().trim().toLowerCase();
+    const status = this.statusFilter();
+    const conventionId = this.conventionFilter();
+    const period = this.periodFilter();
+    const cutoff = period === 'ALL' ? null : new Date(Date.now() - Number(period) * 86_400_000);
+
+    return this.bordereaux().filter((item) => {
+      const normalized = this.normalizedStatus(item.status);
+      const matchesStatus = status === 'ALL' || normalized === status;
+      const matchesConvention = conventionId === 'ALL' || item.insuranceConventionId === conventionId;
+      const matchesPeriod = cutoff === null || new Date(item.createdAt) >= cutoff;
+      const matchesQuery = !query
+        || item.bordereauNumber.toLowerCase().includes(query)
+        || item.insuranceConventionName.toLowerCase().includes(query)
+        || (item.insurerReference ?? '').toLowerCase().includes(query);
+      return matchesStatus && matchesConvention && matchesPeriod && matchesQuery;
+    });
+  });
+
+  readonly actionTitle = computed(() => {
+    switch (this.actionMode()) {
+      case 'receive': return this.t('billing.insurance.action.receive', 'Réceptionner le bordereau');
+      case 'accept': return this.t('billing.insurance.action.accept', 'Accepter le bordereau');
+      case 'reject': return this.t('billing.insurance.action.reject', 'Rejeter le bordereau');
+      case 'pay': return this.t('billing.insurance.action.pay', 'Enregistrer un règlement');
+      default: return '';
+    }
+  });
+
+  readonly actionValid = computed(() => {
+    const item = this.actionBordereau();
+    if (!item) return false;
+    switch (this.actionMode()) {
+      case 'receive': return this.insurerReference().trim().length > 0;
+      case 'accept': return this.acceptedAmount() > 0 && this.acceptedAmount() <= item.totalAmount;
+      case 'reject': return this.rejectionReason().trim().length > 0;
+      case 'pay': return this.paymentAmount() > 0
+        && this.paymentAmount() <= item.remainingAmount
+        && this.paymentReference().trim().length > 0;
+      default: return false;
+    }
+  });
+
+  ngOnInit(): void {
     this.loadConventions();
     this.loadBordereaux();
   }
 
-  loadConventions() {
+  t(key: string, fallback: string): string {
+    const translated = this.i18n.t(key);
+    return translated === key ? fallback : translated;
+  }
+
+  normalizedStatus(status: BordereauStatus): BordereauStatus {
+    return status === 'PAID' ? 'SETTLED' : status;
+  }
+
+  statusLabel(status: BordereauStatus): string {
+    const normalized = this.normalizedStatus(status);
+    const labels: Record<BordereauStatus, string> = {
+      DRAFT: 'Brouillon',
+      SENT: 'Envoyé',
+      RECEIVED: 'Réceptionné',
+      ACCEPTED: 'Accepté',
+      PARTIALLY_PAID: 'Partiellement réglé',
+      SETTLED: 'Soldé',
+      REJECTED: 'Rejeté',
+      CANCELLED: 'Annulé',
+      PAID: 'Soldé',
+    };
+    return this.t(`billing.insurance.status.${normalized}`, labels[normalized]);
+  }
+
+  loadConventions(): void {
     this.billingApi.listConventions().subscribe({
-      next: (res) => this.conventions.set(res),
-      error: () => this.showError('Erreur de chargement des conventions')
+      next: (items) => this.conventions.set(items),
+      error: () => this.showError(this.t('billing.insurance.conventionError', 'Impossible de charger les conventions.')),
     });
   }
 
-  loadBordereaux() {
-    this.billingApi.listInsuranceBordereaux().subscribe({
-      next: (res) => {
-        this.bordereaux.set(res);
-        this.applyFilters();
+  loadBordereaux(): void {
+    this.loading.set(true);
+    this.loadError.set(false);
+    this.billingApi.listInsuranceBordereaux().pipe(
+      finalize(() => this.loading.set(false)),
+    ).subscribe({
+      next: (items) => this.bordereaux.set(items),
+      error: () => {
+        this.bordereaux.set([]);
+        this.loadError.set(true);
       },
-      error: () => this.showError('Erreur de chargement des bordereaux')
     });
   }
 
-  applyFilters() {
-    const filter = this.statusFilter();
-    if (filter === 'ALL') {
-      this.filteredBordereaux.set(this.bordereaux());
-    } else {
-      this.filteredBordereaux.set(this.bordereaux().filter(b => b.status === filter));
-    }
-  }
-
-  generateBordereau() {
+  generateBordereau(): void {
+    if (!this.canGenerate()) return;
     this.clearFeedbacks();
-
-    const validationError = this.validateGenerateForm();
-    if (validationError) {
-      this.showError(validationError);
-      return;
-    }
-
     this.generating.set(true);
     this.billingApi.generateInsuranceBordereau({
       insuranceConventionId: this.selectedConventionId(),
       startDate: this.startDate(),
-      endDate: this.endDate()
-    }).subscribe({
-      next: (res) => {
-        this.generating.set(false);
+      endDate: this.endDate(),
+    }).pipe(finalize(() => this.generating.set(false))).subscribe({
+      next: (created) => {
         this.selectedConventionId.set('');
         this.startDate.set('');
         this.endDate.set('');
-        this.showSuccess('Bordereau d\'assurance généré avec succès.');
+        this.generationOpen.set(false);
+        this.showSuccess(this.t('billing.insurance.generated', 'Bordereau généré avec succès.'));
         this.loadBordereaux();
+        this.viewDetails(created.id);
       },
-      error: (err) => {
-        this.generating.set(false);
-        this.showError(this.extractErrorMessage(err) || 'Impossible de générer le bordereau. Vérifiez qu\'il existe des factures éligibles pour cette convention et cette période.');
-      }
+      error: (error) => this.showError(
+        extractApiErrorMessage(error)
+        || this.t('billing.insurance.generateError', 'Impossible de générer le bordereau.'),
+      ),
     });
   }
 
-  private validateGenerateForm(): string | null {
-    if (!this.selectedConventionId()) {
-      return 'Veuillez sélectionner une convention d\'assurance.';
-    }
-    if (!this.startDate() || !this.endDate()) {
-      return 'Veuillez renseigner les dates de début et de fin.';
-    }
-    if (this.startDate() > this.endDate()) {
-      return 'La date de début doit être antérieure ou égale à la date de fin.';
-    }
-    return null;
-  }
-
-  viewDetails(id: string) {
-    this.billingApi.getInsuranceBordereauDetails(id).subscribe({
-      next: (res) => {
-        this.selectedBordereau.set(res);
-        this.paymentAmount.set(res.totalAmount);
-        this.paymentReference.set('');
-        this.showPaymentForm.set(false);
-      },
-      error: () => this.showError('Impossible de récupérer les détails du bordereau.')
+  viewDetails(id: string): void {
+    this.detailLoading.set(true);
+    this.billingApi.getInsuranceBordereauDetails(id).pipe(
+      finalize(() => this.detailLoading.set(false)),
+    ).subscribe({
+      next: (details) => this.selectedBordereau.set(details),
+      error: () => this.showError(this.t('billing.insurance.detailsError', 'Impossible de charger les détails.')),
     });
   }
 
-  markAsSent(id: string) {
-    this.billingApi.sendInsuranceBordereau(id).subscribe({
-      next: (res) => {
-        this.showSuccess('Le bordereau a été marqué comme envoyé.');
+  closeDetails(): void {
+    this.selectedBordereau.set(null);
+  }
+
+  markAsSent(id: string): void {
+    this.executeSimpleAction(
+      this.billingApi.sendInsuranceBordereau(id),
+      this.t('billing.insurance.sent', 'Bordereau marqué comme envoyé.'),
+      id,
+    );
+  }
+
+  openAction(item: InsuranceBordereau, mode: InsuranceActionMode): void {
+    this.actionBordereau.set(item);
+    this.actionMode.set(mode);
+    this.insurerReference.set(item.insurerReference ?? '');
+    this.acceptedAmount.set(item.acceptedAmount ?? item.totalAmount);
+    this.rejectionReason.set('');
+    this.paymentAmount.set(item.remainingAmount);
+    this.paymentReference.set('');
+  }
+
+  closeAction(): void {
+    if (this.actionSaving()) return;
+    this.actionMode.set(null);
+    this.actionBordereau.set(null);
+  }
+
+  submitAction(): void {
+    const item = this.actionBordereau();
+    const mode = this.actionMode();
+    if (!item || !mode || !this.actionValid()) return;
+
+    let request: Observable<InsuranceBordereau>;
+    switch (mode) {
+      case 'receive':
+        request = this.billingApi.receiveInsuranceBordereau(item.id, this.insurerReference().trim());
+        break;
+      case 'accept':
+        request = this.billingApi.acceptInsuranceBordereau(
+          item.id,
+          this.acceptedAmount(),
+          this.insurerReference().trim() || undefined,
+        );
+        break;
+      case 'reject':
+        request = this.billingApi.rejectInsuranceBordereau(
+          item.id,
+          this.rejectionReason().trim(),
+          this.insurerReference().trim() || undefined,
+        );
+        break;
+      case 'pay':
+        request = this.billingApi.payInsuranceBordereau(
+          item.id,
+          this.paymentAmount(),
+          this.paymentReference().trim(),
+        );
+        break;
+    }
+
+    this.actionSaving.set(true);
+    request.pipe(finalize(() => this.actionSaving.set(false))).subscribe({
+      next: () => {
+        this.showSuccess(this.t('billing.insurance.actionSuccess', 'Mise à jour enregistrée.'));
+        this.closeAction();
+        this.loadBordereaux();
+        this.viewDetails(item.id);
+      },
+      error: (error) => this.showError(
+        extractApiErrorMessage(error)
+        || this.t('billing.insurance.actionError', 'Impossible d’enregistrer cette action.'),
+      ),
+    });
+  }
+
+  private executeSimpleAction(request: Observable<InsuranceBordereau>, successMessage: string, id: string): void {
+    this.clearFeedbacks();
+    request.subscribe({
+      next: () => {
+        this.showSuccess(successMessage);
+        this.loadBordereaux();
         this.viewDetails(id);
-        this.loadBordereaux();
       },
-      error: () => this.showError('Erreur lors de la mise à jour du statut du bordereau.')
+      error: (error) => this.showError(
+        extractApiErrorMessage(error)
+        || this.t('billing.insurance.actionError', 'Impossible d’enregistrer cette action.'),
+      ),
     });
   }
 
-  submitPayment() {
-    const bordereau = this.selectedBordereau();
-    if (!bordereau) return;
-
-    this.billingApi.payInsuranceBordereau(bordereau.id, this.paymentAmount(), this.paymentReference()).subscribe({
-      next: (res) => {
-        this.showSuccess('Le règlement global a été enregistré avec succès.');
-        this.showPaymentForm.set(false);
-        this.viewDetails(bordereau.id);
-        this.loadBordereaux();
-      },
-      error: (err) => {
-        this.showError(this.extractErrorMessage(err) || 'Impossible d\'enregistrer le règlement. Vérifiez le montant et la référence.');
-      }
-    });
+  private hasRole(allowedRoles: string[]): boolean {
+    const sessionRole = this.tokenStorage.session()?.role;
+    if (!sessionRole) return false;
+    return sessionRole.split(',').map((role) => role.trim()).some((role) => allowedRoles.includes(role));
   }
 
-  private showSuccess(msg: string) {
-    this.successFeedback.set(msg);
-    setTimeout(() => this.successFeedback.set(null), 5000);
-  }
-
-  private showError(msg: string) {
-    this.errorFeedback.set(msg);
-    setTimeout(() => this.errorFeedback.set(null), 5000);
-  }
-
-  private clearFeedbacks() {
-    this.successFeedback.set(null);
+  private showSuccess(message: string): void {
+    this.successFeedback.set(message);
     this.errorFeedback.set(null);
   }
 
-  private extractErrorMessage(err: any): string | null {
-    return extractApiErrorMessage(err);
+  private showError(message: string): void {
+    this.errorFeedback.set(message);
+    this.successFeedback.set(null);
+  }
+
+  private clearFeedbacks(): void {
+    this.successFeedback.set(null);
+    this.errorFeedback.set(null);
   }
 }
