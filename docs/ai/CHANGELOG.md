@@ -10,6 +10,9 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+- **Dossier médical patient — icônes et urgences (BUG-20260710-PATIENT-MEDICAL-ICONS-I18N)** : remplacement des emojis Allergies, Antécédents, Vaccinations et Urgences par des icônes SVG du design system, ajout des traductions FR/EN manquantes de l'historique d'urgence et alignement des surfaces sur le rayon maximal de 8 px.
+
+- **Bordereaux d'assurance — en-tête de liste (BUG-20260710-BORDEREAUX-HEADER)** : le titre « Liste des bordereaux générés » n'est plus comprimé par le filtre de statut ; le filtre a une largeur bornée sur tablette/desktop et reste pleine largeur dans une disposition empilée sur mobile. Un test Angular de non-régression couvre la stratégie responsive.
 
 - **Facturation — durcissement UX devis et actions financières (TASK-2207)** : remplacement du `confirm()` natif par une modale maison accessible, liaison du devis à une visite, affichage des retours succès/erreur et rendu du chargement deep-link.
 - **Facturation — maintenabilité et tests (TASK-2207)** : extraction du template/styles de `BillingEstimatesComponent`, ajout d’un composant partagé de confirmation et couverture Vitest des parcours devis, validation, annulation et avoir.

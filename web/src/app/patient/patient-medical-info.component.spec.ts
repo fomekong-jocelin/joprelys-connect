@@ -4,11 +4,13 @@ import { PatientApiService } from './patient-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { of } from 'rxjs';
 import { signal } from '@angular/core';
+import { EmergencyApiService } from '../emergency/emergency-api.service';
 
 describe('PatientMedicalInfoComponent', () => {
   let component: PatientMedicalInfoComponent;
   let fixture: ComponentFixture<PatientMedicalInfoComponent>;
   let mockApi: any;
+  let mockEmergencyApi: any;
   let mockI18n: any;
 
   beforeEach(async () => {
@@ -22,9 +24,15 @@ describe('PatientMedicalInfoComponent', () => {
       updateMedicalHistory: vi.fn().mockReturnValue(of({ id: 'hist-1', category: 'MEDICAL', description: 'Diabète', isOngoing: false })),
       getVaccinations: vi.fn().mockReturnValue(of([]))
     };
+    mockEmergencyApi = {
+      getPatientEmergencies: vi.fn().mockReturnValue(of([]))
+    };
 
     mockI18n = {
-      t: vi.fn().mockImplementation((key) => key),
+      t: vi.fn().mockImplementation((key: string) => ({
+        'patients.medicalInfo.emergencies.title': 'Passages aux urgences',
+        'patients.medicalInfo.emergencies.empty': 'Aucun passage aux urgences enregistré pour ce patient.'
+      } as Record<string, string>)[key] ?? key),
       locale: signal('fr')
     };
 
@@ -32,6 +40,7 @@ describe('PatientMedicalInfoComponent', () => {
       imports: [PatientMedicalInfoComponent],
       providers: [
         { provide: PatientApiService, useValue: mockApi },
+        { provide: EmergencyApiService, useValue: mockEmergencyApi },
         { provide: I18nService, useValue: mockI18n }
       ]
     }).compileComponents();
@@ -46,6 +55,18 @@ describe('PatientMedicalInfoComponent', () => {
     expect(mockApi.getAllergies).toHaveBeenCalledWith('patient-123');
     expect(mockApi.getMedicalHistory).toHaveBeenCalledWith('patient-123');
     expect(mockApi.getVaccinations).toHaveBeenCalledWith('patient-123');
+    expect(mockEmergencyApi.getPatientEmergencies).toHaveBeenCalledWith('patient-123');
+  });
+
+  it('uses shared SVG icons and resolved emergency translations', () => {
+    const root = fixture.nativeElement as HTMLElement;
+    const visibleText = root.textContent ?? '';
+
+    expect(root.querySelectorAll('app-ui-icon').length).toBeGreaterThanOrEqual(4);
+    expect(visibleText).toContain('Passages aux urgences');
+    expect(visibleText).toContain('Aucun passage aux urgences enregistré pour ce patient.');
+    expect(visibleText).not.toContain('patients.medicalInfo.emergencies.title');
+    expect(visibleText).not.toMatch(/[🛡📋💉🚨💚⚡]/u);
   });
 
   it('should add allergy and reload the allergies list', () => {

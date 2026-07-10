@@ -6,18 +6,20 @@ import { I18nService } from '../core/i18n/i18n.service';
 import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './patient.models';
 import { EmergencyApiService } from '../emergency/emergency-api.service';
 import { EmergencyRecord } from '../emergency/emergency.models';
+import { IconComponent } from '../shared/ui/icon.component';
 
 @Component({
   selector: 'app-patient-medical-info',
   standalone: true,
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, FormsModule, IconComponent],
   template: `
     <div class="space-y-6">
       <!-- Section Allergies -->
-      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-xl p-4 md:p-5 shadow-xs transition-colors">
+      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-lg p-4 md:p-5 shadow-xs transition-colors">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h4 class="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
-            <span>🛡️</span> {{ t('patients.medicalInfo.allergies') }}
+            <app-ui-icon name="shield-check" class="text-[var(--brand-danger)]" />
+            {{ t('patients.medicalInfo.allergies') }}
           </h4>
           <button
             (click)="openAllergyModal()"
@@ -74,10 +76,11 @@ import { EmergencyRecord } from '../emergency/emergency.models';
       </div>
 
       <!-- Section Antécédents -->
-      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-xl p-4 md:p-5 shadow-xs transition-colors">
+      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-lg p-4 md:p-5 shadow-xs transition-colors">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h4 class="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
-            <span>📋</span> {{ t('patients.medicalInfo.history') }}
+            <app-ui-icon name="clipboard-document-list" class="text-[var(--brand-primary)]" />
+            {{ t('patients.medicalInfo.history') }}
           </h4>
           <button
             (click)="openHistoryModal()"
@@ -161,7 +164,7 @@ import { EmergencyRecord } from '../emergency/emergency.models';
       <!-- Modale Ajout Allergie -->
       @if (showAllergyModal()) {
         <div class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-xl w-full max-w-[420px] shadow-lg overflow-hidden">
+          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-lg w-full max-w-[420px] shadow-lg overflow-hidden">
             <header class="px-5 py-4 border-b border-[var(--app-border)] flex items-center justify-between">
               <h3 class="font-display font-bold text-[var(--text-primary)]">{{ t('patients.medicalInfo.allergies.add') }}</h3>
               <button (click)="showAllergyModal.set(false)" class="p-1 text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] rounded-lg cursor-pointer">
@@ -202,7 +205,7 @@ import { EmergencyRecord } from '../emergency/emergency.models';
       <!-- Modale Ajout Antécédent -->
       @if (showHistoryModal()) {
         <div class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-xl w-full max-w-[420px] shadow-lg overflow-hidden">
+          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-lg w-full max-w-[420px] shadow-lg overflow-hidden">
             <header class="px-5 py-4 border-b border-[var(--app-border)] flex items-center justify-between">
               <h3 class="font-display font-bold text-[var(--text-primary)]">{{ t('patients.medicalInfo.history.add') }}</h3>
               <button (click)="showHistoryModal.set(false)" class="p-1 text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] rounded-lg cursor-pointer">
@@ -254,10 +257,11 @@ import { EmergencyRecord } from '../emergency/emergency.models';
       }
 
       <!-- Section Vaccinations -->
-      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-xl p-4 md:p-5 shadow-xs transition-colors">
+      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-lg p-4 md:p-5 shadow-xs transition-colors">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h4 class="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
-            <span>💉</span> {{ t('patients.medicalInfo.vaccinations.title') }}
+            <app-ui-icon name="syringe" class="text-[var(--brand-success)]" />
+            {{ t('patients.medicalInfo.vaccinations.title') }}
           </h4>
           <button
             (click)="openVaccinationModal()"
@@ -309,7 +313,7 @@ import { EmergencyRecord } from '../emergency/emergency.models';
       <!-- Modal Vaccinations -->
       @if (showVaccinationModal()) {
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-          <div class="bg-[var(--app-surface)] w-full max-w-md p-6 rounded-xl border border-[var(--app-border)]/60 shadow-xl">
+          <div class="bg-[var(--app-surface)] w-full max-w-md p-6 rounded-lg border border-[var(--app-border)]/60 shadow-xl">
             <header class="mb-4">
               <h4 class="font-display font-black text-base text-[var(--text-primary)] uppercase tracking-wider">
                 {{ t('patients.medicalInfo.vaccinations.add') }}
@@ -352,10 +356,11 @@ import { EmergencyRecord } from '../emergency/emergency.models';
       }
 
       <!-- Section Urgences & Réanimation (Historique) -->
-      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-xl p-4 md:p-5 shadow-xs transition-colors">
+      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-lg p-4 md:p-5 shadow-xs transition-colors">
         <div class="flex items-center justify-between mb-4">
           <h4 class="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
-            <span>🚨</span> {{ t('patients.medicalInfo.emergencies.title') || 'Passages aux Urgences' }}
+            <app-ui-icon name="bolt" class="text-[var(--brand-warning)]" />
+            {{ t('patients.medicalInfo.emergencies.title') }}
           </h4>
         </div>
 
@@ -363,7 +368,7 @@ import { EmergencyRecord } from '../emergency/emergency.models';
           <div class="py-4 text-center text-xs text-[var(--text-muted)]">{{ t('common.loading') }}</div>
         } @else if (emergencies().length === 0) {
           <p class="text-xs text-[var(--text-muted)] italic bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)]/10 p-3 rounded-lg border border-slate-100/50 dark:border-slate-800/40">
-            {{ t('patients.medicalInfo.emergencies.empty') || 'Aucun passage aux urgences enregistré pour ce patient.' }}
+            {{ t('patients.medicalInfo.emergencies.empty') }}
           </p>
         } @else {
           <div class="space-y-4">
@@ -380,25 +385,27 @@ import { EmergencyRecord } from '../emergency/emergency.models';
                       </span>
                       @if (em.stabilizedAt) {
                         <span class="px-1.5 py-0.5 rounded-sm text-[10px] font-bold bg-green-50 text-green-600 dark:bg-green-950/30 dark:text-green-300 border border-green-100 dark:border-green-900/20">
-                          💚 {{ t('emergency.status.stabilized') || 'Stabilisé' }} ({{ em.orientation }})
+                          <app-ui-icon name="check" />
+                          {{ t('patients.medicalInfo.emergencies.status.stabilized') }} ({{ em.orientation }})
                         </span>
                       } @else {
                         <span class="px-1.5 py-0.5 rounded-sm text-[10px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-100 dark:border-rose-900/20 animate-pulse">
-                          ⚡ {{ t('emergency.status.active') || 'Urgence Active' }}
+                          <app-ui-icon name="bolt" />
+                          {{ t('patients.medicalInfo.emergencies.status.active') }}
                         </span>
                       }
                     </div>
                     <p class="text-xs text-[var(--text-secondary)] mt-1.5">
-                      <strong>{{ t('emergency.chiefComplaint') || 'Motif d\'admission' }} :</strong> {{ em.chiefComplaint }}
+                      <strong>{{ t('patients.medicalInfo.emergencies.chiefComplaint') }} :</strong> {{ em.chiefComplaint }}
                     </p>
                   </div>
                   
                   <div class="text-xs text-[var(--text-muted)] space-y-1">
                     <p>
-                      <strong>Mode d'arrivée :</strong> {{ em.arrivalMode }}
+                      <strong>{{ t('patients.medicalInfo.emergencies.arrivalMode') }} :</strong> {{ em.arrivalMode }}
                     </p>
                     <p>
-                      <strong>Constantes :</strong> 
+                      <strong>{{ t('patients.medicalInfo.emergencies.vitals') }} :</strong>
                       @if (em.initialBpSystolic) {
                         <span>{{ em.initialBpSystolic }}/{{ em.initialBpDiastolic }} mmHg, </span>
                       }
@@ -415,7 +422,8 @@ import { EmergencyRecord } from '../emergency/emergency.models';
                 @if (em.resuscitationLogs && em.resuscitationLogs.length > 0) {
                   <div class="border-t border-[var(--app-border)]/60 pt-3">
                     <h5 class="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)] mb-2">
-                      📋 Actions de Réanimation
+                      <app-ui-icon name="clipboard-document-list" class="mr-1 inline-flex" />
+                      {{ t('patients.medicalInfo.emergencies.resuscitationActions') }}
                     </h5>
                     <div class="space-y-1.5 max-h-40 overflow-y-auto">
                       @for (log of em.resuscitationLogs; track log.id) {
@@ -703,9 +711,9 @@ export class PatientMedicalInfoComponent implements OnInit {
 
   getCareTypeLabel(type: string): string {
     switch (type) {
-      case 'VASCULAR_ACCESS': return 'VVP';
-      case 'FLUID_BOLUS': return 'Remplissage';
-      case 'MEDICATION': return 'Médication';
+      case 'VASCULAR_ACCESS': return this.t('patients.medicalInfo.emergencies.careType.vascularAccess');
+      case 'FLUID_BOLUS': return this.t('patients.medicalInfo.emergencies.careType.fluidBolus');
+      case 'MEDICATION': return this.t('patients.medicalInfo.emergencies.careType.medication');
       default: return type;
     }
   }

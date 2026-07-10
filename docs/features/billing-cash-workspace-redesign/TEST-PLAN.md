@@ -14,3 +14,4 @@
 | Deep-link facture | Indicateur de chargement rendu avant le panneau de détail | Angular / QA |
 | Accessibilité | Clavier, focus, contraste, labels et responsive | QA |
 | Ligne de devis dans un panneau étroit | Champs contenus, retour en grille 2 puis 1 colonne, action « Supprimer » visible | Angular / QA visuelle |
+| En-tête liste des bordereaux | Titre sur une ligne en tablette/desktop, filtre borné ; pile verticale et filtre pleine largeur sur mobile | Angular / QA visuelle |
