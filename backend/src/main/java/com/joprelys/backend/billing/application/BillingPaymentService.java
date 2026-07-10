@@ -35,19 +35,22 @@ public class BillingPaymentService {
     private final CashRegisterService cashRegisterService;
     private final UserAccountRepository userAccountRepository;
     private final AuditService auditService;
+    private final InvoiceFinancialStateService financialStateService;
 
     public BillingPaymentService(InvoiceRepository invoiceRepository,
                                  PaymentRepository paymentRepository,
                                  ReceivableRepository receivableRepository,
                                  CashRegisterService cashRegisterService,
                                  UserAccountRepository userAccountRepository,
-                                 AuditService auditService) {
+                                 AuditService auditService,
+                                 InvoiceFinancialStateService financialStateService) {
         this.invoiceRepository = invoiceRepository;
         this.paymentRepository = paymentRepository;
         this.receivableRepository = receivableRepository;
         this.cashRegisterService = cashRegisterService;
         this.userAccountRepository = userAccountRepository;
         this.auditService = auditService;
+        this.financialStateService = financialStateService;
     }
 
     @Transactional
@@ -57,6 +60,8 @@ public class BillingPaymentService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
                         "Paiement sans session ouverte : veuillez d'abord ouvrir une session de caisse."));
         InvoiceEntity invoice = findPayableInvoice(invoiceId);
+        financialStateService.initializeReceivables(invoice);
+
         BigDecimal totalPaid = paymentRepository.findByInvoiceId(invoiceId).stream()
                 .map(PaymentEntity::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -75,7 +80,7 @@ public class BillingPaymentService {
                 "IN", request.amount().doubleValue(), "Règlement facture N° " + invoice.getInvoiceNumber(),
                 request.method().name(), request.reference(), false));
         cashRegisterService.createReceiptForPayment(saved);
-        updateInvoicePaymentStatus(invoice, totalPaid.add(request.amount()));
+        financialStateService.synchronize(invoice);
         auditService.logSuccess(actor.getId(), actor.getOrganizationId(), invoice.getPatientId(), "BILLING", saved.getId(),
                 "ADD_PAYMENT", "Enregistrement règlement de " + request.amount() + " FCFA via " + request.method()
                         + " pour la facture N° " + invoice.getInvoiceNumber() + ".");
@@ -97,10 +102,18 @@ public class BillingPaymentService {
         InvoiceEntity invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Facture introuvable"));
         if (invoice.getStatus() == InvoiceStatus.PAID) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "La facture est déjà entièrement réglée.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La part patient de cette facture est déjà entièrement réglée.");
+        }
+        if (invoice.getStatus() == InvoiceStatus.SETTLED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La facture est déjà totalement soldée.");
         }
         if (invoice.getStatus() == InvoiceStatus.CANCELLED) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Impossible d'enregistrer un règlement sur une facture annulée.");
+        }
+        if (invoice.getStatus() != InvoiceStatus.VALIDATED
+                && invoice.getStatus() != InvoiceStatus.PARTIALLY_PAID) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La facture doit être validée avant tout encaissement. Statut actuel : " + invoice.getStatus().name() + ".");
         }
         return invoice;
     }
@@ -118,11 +131,4 @@ public class BillingPaymentService {
             remainingPayment = remainingPayment.subtract(appliedAmount);
         }
     }
-
-    private void updateInvoicePaymentStatus(InvoiceEntity invoice, BigDecimal totalPaid) {
-        invoice.setStatus(totalPaid.subtract(invoice.getPatientShare()).abs().compareTo(new BigDecimal("0.01")) < 0
-                ? InvoiceStatus.PAID : InvoiceStatus.PARTIALLY_PAID);
-        invoiceRepository.save(invoice);
-    }
 }
-
