@@ -39,6 +39,7 @@ Fournir au gestionnaire assurance et à la DAF un workspace dédié permettant d
 - Tests Angular : réussis.
 - Build Angular de production : réussi.
 - Pipeline permanent validé avant fusion.
+- Entrée STORY-2204 enregistrée dans `docs/ai/CHANGELOG.md`.
 
 ## Livraison
 - Pull Request : #19
