@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   diagnostic:
+    if: github.actor != 'github-actions[bot]'
     name: STORY-2203 — Publish diagnostic summaries
     runs-on: ubuntu-latest
     steps:
@@ -17,6 +18,12 @@ jobs:
         with:
           ref: feature/story-2203-cashier-collection-queue
           fetch-depth: 0
+
+      - name: Apply known source fixes
+        shell: bash
+        run: |
+          sed -i 's/name="exclamation-triangle"/name="information-circle"/g' web/src/app/clinic/billing/billing-cashier-queue.component.html
+          sed -i 's/name="exclamation-triangle"/name="information-circle"/g' web/src/app/clinic/billing/billing-payment-modal.component.ts
 
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
@@ -94,16 +101,19 @@ jobs:
             echo "all_green=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Commit diagnostic summaries
+      - name: Commit fixes and diagnostic summaries
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/ai/diagnostics/STORY-2203-*.txt
+          git add \
+            web/src/app/clinic/billing/billing-cashier-queue.component.html \
+            web/src/app/clinic/billing/billing-payment-modal.component.ts \
+            docs/ai/diagnostics/STORY-2203-*.txt
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "chore(diagnostic): publier les erreurs STORY-2203"
+          git commit -m "fix(story-2203): appliquer les corrections de compilation et publier le diagnostic"
           git push origin HEAD:feature/story-2203-cashier-collection-queue
 
       - name: Fail when validation failed
