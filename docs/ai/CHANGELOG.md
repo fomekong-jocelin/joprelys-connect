@@ -15,6 +15,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+- **Clôture de caisse — historique et bordereau PDF (BUG-20260710-CASH-CLOSEOUT-HISTORY-REPORT)** : rétablissement des espacements entre cartes, ajout de l’historique personnel tenanté des sessions, rafraîchissement et mise en évidence après clôture, détail différé des mouvements, bordereau PDF numéroté avec rapprochement financier, contrôles propriétaire/DAF/Admin et couverture backend/Angular.
 - **Baseline CI Maven/Angular (BUG-20260710-CI-BASELINE-EXECUTION)** : le pipeline rend le Maven Wrapper exécutable sur Linux et lance la commande Angular standard sans l’option invalide `--run`, afin que les suites backend/frontend et le build de production soient réellement bloquants.
 - **Migration financière V55 (BUG-20260710-V55-H2-COMPATIBILITY)** : remplacement des casts PostgreSQL spécifiques par des conversions atomiques compatibles H2/PostgreSQL, avec validation obligatoire de toutes les migrations sur PostgreSQL 16 via Testcontainers et contrôle des 13 colonnes `NUMERIC`.
 - **Précision financière BigDecimal (BUG-20260710-BACKEND-TESTS-BIGDECIMAL)** : migration des fixtures restées en `double`, assertions monétaires en `BigDecimal` et normalisation à quatre décimales des prix, quantités et coefficients de `InvoiceItemEntity`.
