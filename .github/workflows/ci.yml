@@ -25,7 +25,7 @@ jobs:
       - name: Build and verify (Maven strict)
         run: |
           if ! ./mvnw clean verify -B -Dspring.profiles.active=test > /tmp/backend-build.log 2>&1; then
-            tail -n 120 /tmp/backend-build.log
+            tail -n 30 /tmp/backend-build.log
             exit 1
           fi
           cat /tmp/backend-build.log
@@ -53,7 +53,7 @@ jobs:
       - name: Run tests
         run: |
           if ! npm test -- --run > /tmp/frontend-tests.log 2>&1; then
-            tail -n 120 /tmp/frontend-tests.log
+            tail -n 30 /tmp/frontend-tests.log
             exit 1
           fi
           cat /tmp/frontend-tests.log
