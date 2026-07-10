@@ -205,7 +205,7 @@ public class InsuranceBordereauControllerTest {
                 .toList();
         assertFalse(recs.isEmpty());
         assertEquals("PAID", recs.get(0).getStatus());
-        assertEquals(20000.0, recs.get(0).getPaidAmount());
+        assertEquals(new java.math.BigDecimal("20000.0000"), recs.get(0).getPaidAmount());
     }
 
     @Test
