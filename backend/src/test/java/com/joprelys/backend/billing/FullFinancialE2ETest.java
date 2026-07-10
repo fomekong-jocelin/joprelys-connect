@@ -152,7 +152,9 @@ public class FullFinancialE2ETest {
 
         // Convention d'assurance (80% de prise en charge)
         setTenant();
-        convention = new InsuranceConventionEntity("Assurance Sante E2E", 0.8);
+        convention = new InsuranceConventionEntity(
+                "Assurance Sante E2E",
+                new java.math.BigDecimal("0.8000"));
         convention.setOrganizationId(org.getId());
         convention = insuranceConventionRepository.saveAndFlush(convention);
 
@@ -182,15 +184,20 @@ public class FullFinancialE2ETest {
         setTenant();
         InvoiceEntity invoice = new InvoiceEntity(patient.getId(), visit.getId(), "FAC-E2E-001", convention);
         invoice.setOrganizationId(org.getId());
-        InvoiceItemEntity item = new InvoiceItemEntity("Prestation Acte K", InvoiceItemType.K_SURGEON, 100000.0, 1.0, null);
+        InvoiceItemEntity item = new InvoiceItemEntity(
+                "Prestation Acte K",
+                InvoiceItemType.K_SURGEON,
+                new java.math.BigDecimal("100000.0000"),
+                new java.math.BigDecimal("1.0000"),
+                null);
         item.setOrganizationId(org.getId());
         invoice.addItem(item);
         invoice = invoiceRepository.saveAndFlush(invoice);
 
         // Déclencher le workflow financier sur la facture
-        assertEquals(100000.0, invoice.getTotalAmount());
-        assertEquals(80000.0, invoice.getInsuranceShare());
-        assertEquals(20000.0, invoice.getPatientShare());
+        assertEquals(new java.math.BigDecimal("100000.0000"), invoice.getTotalAmount());
+        assertEquals(new java.math.BigDecimal("80000.0000"), invoice.getInsuranceShare());
+        assertEquals(new java.math.BigDecimal("20000.0000"), invoice.getPatientShare());
 
         // 3. Caissier ouvre une session de caisse
         OpenSessionRequest openReq = new OpenSessionRequest(caissePrincipale.getId(), 5000.0);

@@ -10,6 +10,8 @@ import java.util.UUID;
 @Table(name = "invoice_items")
 public class InvoiceItemEntity {
 
+    private static final int FINANCIAL_SCALE = 4;
+
     @Id
     private UUID id;
 
@@ -47,15 +49,23 @@ public class InvoiceItemEntity {
         this.id = UUID.randomUUID();
         this.label = label;
         this.itemType = itemType;
-        this.unitPrice = unitPrice;
-        this.quantity = quantity != null ? quantity : BigDecimal.ONE;
-        this.coefficient = coefficient;
+        this.unitPrice = normalize(unitPrice);
+        this.quantity = normalize(quantity != null ? quantity : BigDecimal.ONE);
+        this.coefficient = normalizeNullable(coefficient);
         recalculateTotal();
     }
 
     public void recalculateTotal() {
-        BigDecimal mult = coefficient != null ? coefficient : BigDecimal.ONE;
-        this.totalItemAmount = unitPrice.multiply(quantity).multiply(mult).setScale(4, RoundingMode.HALF_UP);
+        BigDecimal mult = coefficient != null ? coefficient : BigDecimal.ONE.setScale(FINANCIAL_SCALE);
+        this.totalItemAmount = unitPrice.multiply(quantity).multiply(mult).setScale(FINANCIAL_SCALE, RoundingMode.HALF_UP);
+    }
+
+    private static BigDecimal normalize(BigDecimal value) {
+        return value.setScale(FINANCIAL_SCALE, RoundingMode.HALF_UP);
+    }
+
+    private static BigDecimal normalizeNullable(BigDecimal value) {
+        return value != null ? normalize(value) : null;
     }
 
     public UUID getId() { return id; }
@@ -66,11 +76,11 @@ public class InvoiceItemEntity {
     public InvoiceItemType getItemType() { return itemType; }
     public void setItemType(InvoiceItemType itemType) { this.itemType = itemType; }
     public BigDecimal getUnitPrice() { return unitPrice; }
-    public void setUnitPrice(BigDecimal unitPrice) { this.unitPrice = unitPrice; recalculateTotal(); }
+    public void setUnitPrice(BigDecimal unitPrice) { this.unitPrice = normalize(unitPrice); recalculateTotal(); }
     public BigDecimal getQuantity() { return quantity; }
-    public void setQuantity(BigDecimal quantity) { this.quantity = quantity; recalculateTotal(); }
+    public void setQuantity(BigDecimal quantity) { this.quantity = normalize(quantity); recalculateTotal(); }
     public BigDecimal getCoefficient() { return coefficient; }
-    public void setCoefficient(BigDecimal coefficient) { this.coefficient = coefficient; recalculateTotal(); }
+    public void setCoefficient(BigDecimal coefficient) { this.coefficient = normalizeNullable(coefficient); recalculateTotal(); }
     public BigDecimal getTotalItemAmount() { return totalItemAmount; }
     public UUID getOrganizationId() { return organizationId; }
     public void setOrganizationId(UUID organizationId) { this.organizationId = organizationId; }
