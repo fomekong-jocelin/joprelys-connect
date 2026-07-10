@@ -22,8 +22,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -40,14 +38,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@DirtiesContext
 class CashierCollectionQueueControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
-
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private OrganizationRepository organizationRepository;
@@ -69,38 +63,32 @@ class CashierCollectionQueueControllerTest {
 
     private String cashierToken;
     private String doctorToken;
+    private String firstDpu;
+    private String firstInvoiceNumber;
 
     @BeforeEach
     void setUp() {
         TenantContext.clear();
-        jdbcTemplate.update("DELETE FROM receivable_reminders");
-        jdbcTemplate.update("DELETE FROM receivables");
-        jdbcTemplate.update("DELETE FROM payment_receipts");
-        jdbcTemplate.update("DELETE FROM payments");
-        jdbcTemplate.update("DELETE FROM invoice_items");
-        jdbcTemplate.update("DELETE FROM invoices");
-        jdbcTemplate.update("DELETE FROM patients");
-        jdbcTemplate.update("DELETE FROM users");
-        jdbcTemplate.update("DELETE FROM organizations");
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
 
         OrganizationEntity firstOrganization = organizationRepository.save(new OrganizationEntity(
-                "Clinique File Caisse",
-                "queue@joprelys.local",
-                "670000001",
+                "Clinique File Caisse " + suffix,
+                "queue-" + suffix + "@joprelys.local",
+                "670" + suffix.substring(0, 6),
                 "Akwa",
                 "Douala"
         ));
         OrganizationEntity secondOrganization = organizationRepository.save(new OrganizationEntity(
-                "Clinique Autre Tenant",
-                "other-queue@joprelys.local",
-                "670000002",
+                "Clinique Autre Tenant " + suffix,
+                "other-queue-" + suffix + "@joprelys.local",
+                "671" + suffix.substring(0, 6),
                 "Bastos",
                 "Yaoundé"
         ));
 
         TenantContext.setTenantId(firstOrganization.getId());
         UserAccountEntity cashier = new UserAccountEntity(
-                "cashier.queue@joprelys.local",
+                "cashier.queue+" + suffix + "@joprelys.local",
                 "Caissier Queue",
                 "CAISSIER",
                 "passhash"
@@ -110,7 +98,7 @@ class CashierCollectionQueueControllerTest {
         cashierToken = jwtService.createToken(cashier).value();
 
         UserAccountEntity doctor = new UserAccountEntity(
-                "doctor.queue@joprelys.local",
+                "doctor.queue+" + suffix + "@joprelys.local",
                 "Médecin Queue",
                 "MEDECIN",
                 "passhash"
@@ -119,20 +107,22 @@ class CashierCollectionQueueControllerTest {
         doctor = userAccountRepository.save(doctor);
         doctorToken = jwtService.createToken(doctor).value();
 
+        firstDpu = "DPU-QUEUE-TENANT-1-" + suffix;
+        firstInvoiceNumber = "FAC-QUEUE-TENANT-1-" + suffix;
         createCollectableInvoice(
                 firstOrganization.getId(),
-                "DPU-QUEUE-TENANT-1",
+                firstDpu,
                 "Patient Premier Tenant",
-                "FAC-QUEUE-TENANT-1"
+                firstInvoiceNumber
         );
 
         TenantContext.clear();
         TenantContext.setTenantId(secondOrganization.getId());
         createCollectableInvoice(
                 secondOrganization.getId(),
-                "DPU-QUEUE-TENANT-2",
+                "DPU-QUEUE-TENANT-2-" + suffix,
                 "Patient Autre Tenant",
-                "FAC-QUEUE-TENANT-2"
+                "FAC-QUEUE-TENANT-2-" + suffix
         );
         TenantContext.clear();
     }
@@ -150,8 +140,8 @@ class CashierCollectionQueueControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].patientName").value("Patient Premier Tenant"))
-                .andExpect(jsonPath("$[0].globalPatientNumber").value("DPU-QUEUE-TENANT-1"))
-                .andExpect(jsonPath("$[0].invoiceNumber").value("FAC-QUEUE-TENANT-1"))
+                .andExpect(jsonPath("$[0].globalPatientNumber").value(firstDpu))
+                .andExpect(jsonPath("$[0].invoiceNumber").value(firstInvoiceNumber))
                 .andExpect(jsonPath("$[0].patientRemainingAmount").value(20000.0))
                 .andExpect(jsonPath("$[0].collectionStatus").value("PATIENT_DUE"));
     }
