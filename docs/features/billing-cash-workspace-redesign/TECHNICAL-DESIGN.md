@@ -39,6 +39,7 @@ Les composants de présentation ne recalculent pas les soldes. Ils consomment le
 - Pour les sections devis/avoirs, distinguer les états de lecture des actions de mutation par des groupes visuels dédiés, des libellés persistants, des états ARIA et des tokens de couleur existants ; aucun contrat API n’est requis.
 - La grille de saisie des lignes de devis utilise des colonnes flexibles (`minmax(0, …)`) et des container queries sur le formulaire, afin de s’adapter à la largeur réelle du panneau latéral plutôt qu’à la seule largeur de la fenêtre. L’action de suppression conserve un libellé i18n FR/EN.
 - Préserver l'i18n FR/EN, le thème centralisé et les tokens de radius/ombres.
+- Dans l'en-tête de la liste des bordereaux, neutraliser le `width: 100%` global de `.ui-select` à partir du breakpoint `sm` avec une largeur utilitaire bornée et non compressible ; conserver une pile verticale et `width: 100%` sous ce breakpoint. Le titre devient non compressible sur tablette/desktop afin d'éviter son retour à la ligne.
 - Extraire le template et les styles de `BillingEstimatesComponent` afin de ramener le TypeScript sous la limite de 500 lignes.
 - Réutiliser `ConfirmationDialogComponent` pour les confirmations destructives, avec focus initial, Échap, blocage pendant la requête et restauration du focus.
 - Le parent transmet la liste des visites et la visite active au panneau devis ; le contrat `visitId?` existant est conservé.

@@ -44,3 +44,4 @@ La page actuelle mélange émission, règlement patient, recouvrement assurance,
 - Un paiement sans session ouverte est bloqué dans l'interface et renvoie vers l'ouverture de caisse.
 - Les textes sont disponibles en français et en anglais.
 - Le parcours respecte les thèmes light/dark et les rayons sobres du design system.
+- Dans la liste des bordereaux d'assurance, le titre reste lisible sur une ligne aux largeurs tablette/desktop ; le filtre de statut conserve une largeur proportionnée à ses libellés et s'étend uniquement lorsque l'en-tête est empilé sur mobile.

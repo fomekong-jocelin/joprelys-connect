@@ -26,7 +26,11 @@ export type UiIconName =
   | 'calculator'
   | 'chart-bar'
   | 'chevron-down'
-  | 'information-circle';
+  | 'information-circle'
+  | 'shield-check'
+  | 'clipboard-document-list'
+  | 'syringe'
+  | 'bolt';
 
 @Component({
   selector: 'app-ui-icon',
@@ -173,6 +177,28 @@ export type UiIconName =
         @case ('information-circle') {
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-[1em] h-[1em]">
             <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zM8.25 9.75h.008v.008H8.25V9.75z" />
+          </svg>
+        }
+        @case ('shield-check') {
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-[1em] h-[1em]">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3.75l7.5 3V12c0 4.5-3 7.5-7.5 8.25C7.5 19.5 4.5 16.5 4.5 12V6.75l7.5-3z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.75 12.25l2.25 2.25 4.5-5" />
+          </svg>
+        }
+        @case ('clipboard-document-list') {
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-[1em] h-[1em]">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5.25h6m-6 0A2.25 2.25 0 0111.25 3h1.5A2.25 2.25 0 0115 5.25m-6 0H6.75A2.25 2.25 0 004.5 7.5v11.25A2.25 2.25 0 006.75 21h10.5a2.25 2.25 0 002.25-2.25V7.5a2.25 2.25 0 00-2.25-2.25H15" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 10.5h.008v.008H8.25V10.5zm2.25 0h5.25m-7.5 4.5h.008v.008H8.25V15zm2.25 0h5.25" />
+          </svg>
+        }
+        @case ('syringe') {
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-[1em] h-[1em]">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6l4.5 4.5-9.75 9.75-4.5.75.75-4.5L13.5 6zM14.25 4.5l5.25 5.25m-3-7.5l5.25 5.25M6.75 14.25l3 3M3 21l2.25-2.25" />
+          </svg>
+        }
+        @case ('bolt') {
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-[1em] h-[1em]">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l9-11.25-1.5 8.25h9l-9 11.25 1.5-8.25h-9z" />
           </svg>
         }
       }

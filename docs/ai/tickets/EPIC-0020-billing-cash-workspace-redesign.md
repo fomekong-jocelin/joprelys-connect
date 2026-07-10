@@ -210,3 +210,4 @@ Le détail s'ouvre dans un panneau latéral ou une vue dédiée contenant :
 - [x] Build Angular et 111 tests frontend réussis.
 - [ ] Validation visuelle navigateur locale : bloquée par la politique d'accès à `localhost` dans l'environnement Codex.
 - [ ] Lot 2 : simplifier l'écran caisse, la file de créances et les bordereaux assurance.
+- [x] Correctif ponctuel du lot 2 : l'en-tête de la liste des bordereaux conserve son titre sur une ligne et un filtre de statut de largeur bornée sur tablette/desktop, avec repli vertical sur mobile.

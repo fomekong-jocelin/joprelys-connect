@@ -75,3 +75,15 @@ EPIC-0020 est prête au refinement mais ne doit pas être engagée en développe
 - la validation de la vue détail facture (panneau latéral ou route dédiée) ;
 - la disponibilité d'un jeu de données tiers-payant avec paiement patient partiel et règlement assurance ;
 - la réservation d'une capacité de deux sprints à 60–70 % maximum.
+
+### Ajustement SPRINT-0014 — Bordereaux d'assurance
+
+- `BUG-20260710-BORDEREAUX-HEADER` est engagé à hauteur de `0,1 j` senior / `1 SP` dans STORY-2204.
+- Le code, les tests Angular et le build sont terminés ; le ticket reste en `QA` jusqu'au contrôle visuel light/dark et responsive.
+- Ce correctif ponctuel n'étend pas le périmètre métier de STORY-2204 et ne consomme pas la capacité prévue pour l'arbitrage DAF de STORY-2201.
+
+### Ajustement SPRINT-0014 — Cohérence du dossier médical patient
+
+- `BUG-20260710-PATIENT-MEDICAL-ICONS-I18N` consomme `0,3 j` senior / `2 SP` pour harmoniser les icônes et compléter l'i18n Urgences.
+- Le ticket reste en `QA` jusqu'au contrôle visuel light/dark.
+- Deux dettes sont exclues du correctif et doivent être planifiées séparément : découpage du composant médical de plus de 500 lignes et compatibilité H2 de la migration V55.

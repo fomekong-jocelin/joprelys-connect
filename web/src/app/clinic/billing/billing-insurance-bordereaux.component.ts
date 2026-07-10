@@ -61,14 +61,14 @@ import { extractApiErrorMessage } from '../../shared/utils/api-error.utils';
 
         <!-- Bordereaux List / Filtered List -->
         <div class="lg:col-span-2 ui-card-subtle p-4 space-y-4">
-          <div class="flex items-center justify-between border-b border-[var(--app-border)]/40 pb-2">
-            <h3 class="font-bold text-xs text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
+          <div class="bordereaux-list-header flex flex-col gap-2 border-b border-[var(--app-border)]/40 pb-2 sm:flex-row sm:items-center sm:justify-between">
+            <h3 class="bordereaux-list-title flex items-center gap-1.5 whitespace-nowrap font-bold text-xs text-[var(--text-primary)] uppercase tracking-wider">
               <app-ui-icon name="document-text" />
               Liste des Bordereaux Générés
             </h3>
             
             <!-- Inline filter -->
-            <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event); applyFilters()" class="ui-select text-[10px] py-1">
+            <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event); applyFilters()" class="bordereaux-status-filter ui-select w-full max-w-full text-[10px] py-1 sm:w-40 sm:shrink-0">
               <option value="ALL">Tous les statuts</option>
               <option value="DRAFT">Brouillons (DRAFT)</option>
               <option value="SENT">Envoyés (SENT)</option>

@@ -6,15 +6,15 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-10 (TASK-2207 : correctifs UX devis/annulation/deep-link préparés ; tests automatisés et QA navigateur à valider) |
+| Dernière mise à jour | 2026-07-10 (BUG icônes DPU : emojis et clés i18n urgences corrigés, 123 tests Angular et build OK ; QA visuelle restante) |
 | Responsable mise à jour | Codex |
 | État global | EPIC-0019 en cours ; EPIC-0020 cadrée pour refondre le workspace facturation/caisse après audit UX des captures utilisateur |
-| Risques majeurs | États facture/créance contradictoires, écran financier trop chargé, validation DAF manquante sur les transitions de règlement |
+| Risques majeurs | États facture/créance contradictoires ; migration V55 incompatible H2 ; `PatientMedicalInfoComponent` monolithique au-dessus de 500 lignes |
 | Prochaine priorité | Valider le modèle d'état financier et démarrer STORY-2201 puis STORY-2202 |
 | Sprint courant | SPRINT-0013 |
 | | |
 | Capacité sprint | À planifier |
-| Charge engagée | 19.65j (Est. Senior) |
+| Charge engagée | 20.05j (Est. Senior) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
@@ -23,11 +23,13 @@
 |---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
 | EPIC-0019 | PROFESSIONAL_WORKSPACES | Epic | Postes métier professionnels hospitalisation et caisse | Full-stack | IN_PROGRESS | P0 | 34 | Senior full-stack + UX santé + Médecin Chef + DAF | 10.5j | 14.0j | 23.0j | Codex | Lead Developer + Médecin Chef + DAF | À planifier | 1.6j | Extraction consentements/bloc-CRO, validation métier et consolidation EPIC-0018 | Élevé | 2026-07-10 |
 | EPIC-0018 | FINANCE_OPERATIONS | Epic | Intégrité financière et poste facturation/caisse | Full-stack | IN_PROGRESS | P0 | 34 | Senior full-stack + DAF | 7.5j | 10.0j | 15.0j | Codex | Lead Developer + DAF | À planifier | 3.0j | Stories 2116 et validation DAF | Élevé | 2026-07-09 |
-| EPIC-0020 | FINANCE_UX | Epic | Refonte du workspace Facturation & Caisse orienté tâche | Full-stack + Product Design | IN_PROGRESS | P0 | 36 | Senior full-stack + UX santé + DAF + QA | 11.0j | 14.3j | 20.0j | Codex | Lead Developer + Product/DAF | SPRINT-0014 | 0.8j | Lot 1 livré : création séparée, panneau détail et actions courtes ; caisse/assurance/QA globale restantes | Élevé | 2026-07-10 |
+| EPIC-0020 | FINANCE_UX | Epic | Refonte du workspace Facturation & Caisse orienté tâche | Full-stack + Product Design | IN_PROGRESS | P0 | 36 | Senior full-stack + UX santé + DAF + QA | 11.0j | 14.3j | 20.0j | Codex | Lead Developer + Product/DAF | SPRINT-0014 | 0.9j | Lot 1 livré et en-tête bordereaux corrigé ; caisse/assurance/QA globale restantes | Élevé | 2026-07-10 |
 | STORY-2201 | FINANCE_UX | User Story | Contrat d'état financier unique patient/assurance | Backend / Full-stack | READY | P0 | 5 | Senior | 1.5j | 2.0j | 3.0j | À assigner | Lead Developer + DAF | À planifier | 0j | Dépend de l'arbitrage DAF sur PAID/SETTLED | Élevé | 2026-07-10 |
 | STORY-2202 | FINANCE_UX | User Story | Workspace Factures orienté tâche | Frontend / Product Design | IN_PROGRESS | P0 | 8 | Senior | 2.5j | 3.3j | 4.5j | Codex | Lead Developer + Product/DAF | SPRINT-0014 | 0.8j | Lot 1 livré ; reste à traiter la densité de l'historique et les états de détail/validation | Élevé | 2026-07-10 |
 | STORY-2203 | FINANCE_UX | User Story | Poste caissier simplifié et file d'encaissement | Full-stack | READY | P0 | 8 | Senior | 2.5j | 3.3j | 4.5j | À assigner | Lead Developer + DAF | À planifier | 0j | Dépend de STORY-2201 | Élevé | 2026-07-10 |
-| STORY-2204 | FINANCE_UX | User Story | Poste assurance et progression des bordereaux | Full-stack | READY | P1 | 5 | Senior + intermédiaire | 1.5j | 2.0j | 3.0j | À assigner | DAF + Lead Developer | À planifier | 0j | Dépend de STORY-2201 | Moyen | 2026-07-10 |
+| STORY-2204 | FINANCE_UX | User Story | Poste assurance et progression des bordereaux | Full-stack | IN_PROGRESS | P1 | 5 | Senior + intermédiaire | 1.5j | 2.0j | 3.0j | Codex | DAF + Lead Developer | SPRINT-0014 | 0.1j | En-tête de liste corrigé ; parcours complet dépend de STORY-2201 | Moyen | 2026-07-10 |
+| BUG-20260710-BORDEREAUX-HEADER | FINANCE_UX | Bug | En-tête de liste des bordereaux d'assurance comprimé | Frontend | QA | P2 | 1 | Frontend intermédiaire | 0.1j | 0.15j | 0.25j | Codex | Lead Frontend + DAF | SPRINT-0014 | 0.1j | QA visuelle manuelle light/dark et responsive | Faible | 2026-07-10 |
+| BUG-20260710-PATIENT-MEDICAL-ICONS-I18N | UI_UX | Bug | Icônes et libellés Urgences incohérents dans le dossier médical patient | Frontend + diagnostic backend | QA | P1 | 2 | Frontend intermédiaire + reviewer backend | 0.3j | 0.5j | 0.8j | Codex | Lead Frontend + Lead Backend | SPRINT-0014 | 0.3j | QA visuelle ; test backend bloqué par V55/H2 ; refactor composant >500 lignes | Moyen | 2026-07-10 |
 | STORY-2205 | FINANCE_UX | User Story | Détail facture, documents et actions exceptionnelles | Frontend | IN_PROGRESS | P1 | 5 | Senior | 1.5j | 2.0j | 3.0j | Codex | Lead Developer + DAF | SPRINT-0014 | 0.8j | Correction responsive compilée et testée ; QA visuelle navigateur restante | Moyen | 2026-07-10 |
 | TASK-2207 | FINANCE_UX | Correctif UI/UX + tests | Modale annulation, visite devis, feedback et deep-link | Frontend | QA | P2 | 3 | Senior Frontend | 0.8j | 1.2j | 2.0j | Codex | Lead Developer + DAF | SPRINT-0014 | 0.8j | Exécuter Vitest/build puis QA light/dark, clavier et mobile | Moyen | 2026-07-10 |
 | STORY-2206 | FINANCE_UX | User Story | QA UX, accessibilité et régression financière | QA / Full-stack | READY | P0 | 5 | Senior QA/full-stack | 1.5j | 2.0j | 3.0j | À assigner | Lead Developer + DAF | À planifier | 0j | Dépend de STORY-2201 à 2205 | Élevé | 2026-07-10 |
