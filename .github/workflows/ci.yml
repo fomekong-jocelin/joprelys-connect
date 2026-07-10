@@ -1,4 +1,4 @@
-name: Joprelys Connect — STORY-2203 Diagnostic
+name: Joprelys Connect — STORY-2203 Cleanup
 
 on:
   pull_request:
@@ -8,9 +8,9 @@ permissions:
   contents: write
 
 jobs:
-  diagnostic:
+  cleanup:
     if: github.actor != 'github-actions[bot]'
-    name: STORY-2203 — Publish diagnostic summaries
+    name: STORY-2203 — Restore permanent CI
     runs-on: ubuntu-latest
     steps:
       - name: Checkout feature branch
@@ -19,103 +19,31 @@ jobs:
           ref: feature/story-2203-cashier-collection-queue
           fetch-depth: 0
 
-      - name: Apply known source fixes
+      - name: Restore permanent files
         shell: bash
         run: |
-          sed -i 's/name="exclamation-triangle"/name="information-circle"/g' web/src/app/clinic/billing/billing-cashier-queue.component.html
-          sed -i 's/name="exclamation-triangle"/name="information-circle"/g' web/src/app/clinic/billing/billing-payment-modal.component.ts
+          git fetch origin main
+          git show origin/main:.github/workflows/ci.yml > .github/workflows/ci.yml
+          python - <<'PY'
+          from pathlib import Path
 
-      - name: Set up Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
+          package_file = Path('web/package.json')
+          content = package_file.read_text(encoding='utf-8')
+          content = content.replace('"test": "ng build"', '"test": "ng test"')
+          content = content.replace('"test": "ng test --include=src/app/clinic/billing/billing-payment-modal.component.spec.ts"', '"test": "ng test"')
+          package_file.write_text(content, encoding='utf-8')
+          PY
+          rm -f web/scripts/ci-test-diagnostic.sh
+          rm -f docs/ai/diagnostics/STORY-2203-*.txt
 
-      - name: Set up Java 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: Capture validations
-        id: validation
-        shell: bash
-        env:
-          SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-          JOPRELYS_JWT_SECRET: ci-test-jwt-secret-at-least-32-chars-2026
-        run: |
-          set +e
-          mkdir -p docs/ai/diagnostics
-
-          pushd web >/dev/null
-          npm ci > "$RUNNER_TEMP/npm-ci.log" 2>&1
-          npm_ci_status=$?
-          npx ng build > "$RUNNER_TEMP/angular-build.log" 2>&1
-          angular_build_status=$?
-          npx ng test > "$RUNNER_TEMP/angular-tests.log" 2>&1
-          angular_test_status=$?
-          popd >/dev/null
-
-          pushd backend >/dev/null
-          chmod +x mvnw
-          ./mvnw clean verify -B -Dspring.profiles.active=test > "$RUNNER_TEMP/maven-verify.log" 2>&1
-          maven_status=$?
-          popd >/dev/null
-
-          {
-            echo "npm_ci_status=$npm_ci_status"
-            echo "angular_build_status=$angular_build_status"
-            echo "angular_test_status=$angular_test_status"
-            echo "maven_status=$maven_status"
-          } > docs/ai/diagnostics/STORY-2203-STATUS.txt
-
-          {
-            echo "=== ANGULAR BUILD DIAGNOSTIC ==="
-            grep -E -B 3 -A 8 "✘|Error:|error TS|TS[0-9]{4}|NG[0-9]{4}|Application bundle generation failed" "$RUNNER_TEMP/angular-build.log" | tail -n 400 || true
-            echo
-            echo "=== ANGULAR BUILD TAIL ==="
-            tail -n 180 "$RUNNER_TEMP/angular-build.log"
-          } > docs/ai/diagnostics/STORY-2203-ANGULAR-BUILD.txt
-
-          {
-            echo "=== ANGULAR TEST DIAGNOSTIC ==="
-            grep -E -B 3 -A 10 "FAIL|FAILED|Error:|error TS|TS[0-9]{4}|NG[0-9]{4}|AssertionError|Expected|TypeError" "$RUNNER_TEMP/angular-tests.log" | tail -n 500 || true
-            echo
-            echo "=== ANGULAR TEST TAIL ==="
-            tail -n 220 "$RUNNER_TEMP/angular-tests.log"
-          } > docs/ai/diagnostics/STORY-2203-ANGULAR-TESTS.txt
-
-          {
-            echo "=== MAVEN DIAGNOSTIC ==="
-            grep -E -B 3 -A 10 "\[ERROR\]|COMPILATION ERROR|Tests run:|Failures:|Errors:|Caused by:" "$RUNNER_TEMP/maven-verify.log" | tail -n 700 || true
-            echo
-            echo "=== MAVEN TAIL ==="
-            tail -n 260 "$RUNNER_TEMP/maven-verify.log"
-          } > docs/ai/diagnostics/STORY-2203-MAVEN.txt
-
-          if [ "$npm_ci_status" -eq 0 ] && [ "$angular_build_status" -eq 0 ] && [ "$angular_test_status" -eq 0 ] && [ "$maven_status" -eq 0 ]; then
-            echo "all_green=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "all_green=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Commit fixes and diagnostic summaries
+      - name: Commit clean branch
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            web/src/app/clinic/billing/billing-cashier-queue.component.html \
-            web/src/app/clinic/billing/billing-payment-modal.component.ts \
-            docs/ai/diagnostics/STORY-2203-*.txt
+          git add -A
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "fix(story-2203): appliquer les corrections de compilation et publier le diagnostic"
+          git commit -m "chore(story-2203): retirer les diagnostics et restaurer la CI"
           git push origin HEAD:feature/story-2203-cashier-collection-queue
-
-      - name: Fail when validation failed
-        if: steps.validation.outputs.all_green != 'true'
-        run: exit 1
