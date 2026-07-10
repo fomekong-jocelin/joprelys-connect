@@ -1,0 +1,171 @@
+<section class="cash-history ui-card-subtle" aria-labelledby="cash-history-title">
+  <header class="cash-history__header">
+    <div class="min-w-0">
+      <p class="cash-history__eyebrow">{{ t('billing.cashHistory.eyebrow', 'Traçabilité de caisse') }}</p>
+      <h2 id="cash-history-title" class="cash-history__title">
+        {{ t('billing.cashHistory.title', 'Historique des sessions') }}
+      </h2>
+      <p class="cash-history__subtitle">
+        {{ t('billing.cashHistory.subtitle', 'Consultez vos dernières clôtures, leurs écarts et les bordereaux associés.') }}
+      </p>
+    </div>
+    <button type="button" class="ui-button ui-button-secondary cash-history__refresh" (click)="loadSessions()" [disabled]="loading()">
+      <app-ui-icon name="arrow-path" />
+      {{ t('common.refresh', 'Actualiser') }}
+    </button>
+  </header>
+
+  @if (highlightedSessionId()) {
+    <div class="cash-history__closed-notice" role="status" aria-live="polite">
+      <app-ui-icon name="check" />
+      <span>{{ t('billing.cashHistory.closedNotice', 'La session vient d’être clôturée. Son récapitulatif est disponible ci-dessous.') }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="cash-history__state" role="status" aria-live="polite">
+      <span class="cash-history__spinner" aria-hidden="true"></span>
+      {{ t('billing.cashHistory.loading', 'Chargement de l’historique…') }}
+    </div>
+  } @else if (error()) {
+    <div class="ui-alert-danger cash-history__error" role="alert">
+      <div class="flex items-start gap-2">
+        <app-ui-icon name="information-circle" class="mt-0.5 shrink-0" />
+        <span>{{ t('billing.cashHistory.error', 'Impossible de charger l’historique de caisse.') }}</span>
+      </div>
+      <button type="button" class="ui-button ui-button-secondary" (click)="loadSessions()">
+        {{ t('common.retry', 'Réessayer') }}
+      </button>
+    </div>
+  } @else if (sessions().length === 0) {
+    <div class="cash-history__empty" role="status">
+      <app-ui-icon name="calculator" class="text-2xl text-[var(--text-muted)]" />
+      <h3>{{ t('billing.cashHistory.emptyTitle', 'Aucune session clôturée') }}</h3>
+      <p>{{ t('billing.cashHistory.emptyHint', 'Les sessions apparaîtront ici après leur ouverture et leur clôture.') }}</p>
+    </div>
+  } @else {
+    <div class="cash-history__list">
+      @for (session of sessions(); track session.id) {
+        <article
+          class="cash-session-card"
+          [class.cash-session-card--highlighted]="highlightedSessionId() === session.id"
+          [attr.aria-labelledby]="'cash-session-' + session.id"
+        >
+          <div class="cash-session-card__topline">
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <h3 [id]="'cash-session-' + session.id" class="cash-session-card__title">
+                  {{ session.cashRegisterName }}
+                </h3>
+                <span class="cash-session-card__status" [class.cash-session-card__status--open]="session.status === 'OPEN'">
+                  {{ session.status === 'CLOSED' ? t('billing.cashHistory.closed', 'Clôturée') : t('billing.cashHistory.open', 'Ouverte') }}
+                </span>
+              </div>
+              <p class="cash-session-card__meta">
+                {{ session.reportNumber }} · {{ session.openedByName }} · {{ session.openedAt | date:'dd/MM/yyyy HH:mm' }}
+                @if (session.closedAt) {
+                  <span> → {{ session.closedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                }
+              </p>
+            </div>
+            <div class="cash-session-card__actions">
+              <button
+                type="button"
+                class="ui-button ui-button-secondary"
+                (click)="toggleDetails(session)"
+                [attr.aria-expanded]="expandedSessionId() === session.id"
+                [attr.aria-controls]="'cash-session-details-' + session.id"
+              >
+                {{ expandedSessionId() === session.id ? t('common.hideDetails', 'Masquer') : t('common.viewDetails', 'Voir le détail') }}
+              </button>
+              @if (session.status === 'CLOSED') {
+                <button
+                  type="button"
+                  class="ui-button ui-button-primary"
+                  (click)="downloadReport(session)"
+                  [disabled]="downloadingSessionId() === session.id"
+                >
+                  {{ downloadingSessionId() === session.id
+                    ? t('billing.cashHistory.downloading', 'Génération…')
+                    : t('billing.cashHistory.downloadReport', 'Télécharger le bordereau') }}
+                </button>
+              }
+            </div>
+          </div>
+
+          <dl class="cash-session-card__metrics">
+            <div>
+              <dt>{{ t('billing.cashHistory.openingBalance', 'Fond initial') }}</dt>
+              <dd>{{ session.openingBalance | number:'1.0-0' }} FCFA</dd>
+            </div>
+            <div>
+              <dt>{{ t('billing.cashHistory.cashReceipts', 'Espèces encaissées') }}</dt>
+              <dd>{{ session.cashReceipts | number:'1.0-0' }} FCFA</dd>
+            </div>
+            <div>
+              <dt>{{ t('billing.cashHistory.expectedCash', 'Solde théorique') }}</dt>
+              <dd>{{ session.expectedCash | number:'1.0-0' }} FCFA</dd>
+            </div>
+            <div>
+              <dt>{{ t('billing.cashHistory.declaredBalance', 'Montant déclaré') }}</dt>
+              <dd>{{ (session.declaredBalance ?? 0) | number:'1.0-0' }} FCFA</dd>
+            </div>
+            <div class="cash-session-card__metric--discrepancy" [class.cash-session-card__metric--alert]="(session.discrepancyAmount ?? 0) !== 0">
+              <dt>{{ t('billing.cashHistory.discrepancy', 'Écart') }}</dt>
+              <dd>{{ (session.discrepancyAmount ?? 0) | number:'1.0-0' }} FCFA</dd>
+            </div>
+          </dl>
+
+          @if (expandedSessionId() === session.id) {
+            <div [id]="'cash-session-details-' + session.id" class="cash-session-card__details">
+              <div class="cash-session-card__secondary-metrics">
+                <div><span>{{ t('billing.cashHistory.cheques', 'Chèques') }}</span><strong>{{ session.chequeReceipts | number:'1.0-0' }} FCFA</strong></div>
+                <div><span>{{ t('billing.cashHistory.transfers', 'Virements') }}</span><strong>{{ session.transferReceipts | number:'1.0-0' }} FCFA</strong></div>
+                <div><span>{{ t('billing.cashHistory.expenses', 'Dépenses espèces') }}</span><strong>{{ session.cashExpenses | number:'1.0-0' }} FCFA</strong></div>
+                <div><span>{{ t('billing.cashHistory.bankDeposits', 'Versements banque') }}</span><strong>{{ session.bankDeposits | number:'1.0-0' }} FCFA</strong></div>
+              </div>
+
+              @if (session.discrepancyReason) {
+                <div class="cash-session-card__reason">
+                  <strong>{{ t('billing.cashHistory.discrepancyReason', 'Justification de l’écart') }}</strong>
+                  <span>{{ session.discrepancyReason }}</span>
+                </div>
+              }
+
+              @if (loadingMovementsId() === session.id) {
+                <p class="cash-session-card__movements-state" role="status">{{ t('billing.cashHistory.loadingMovements', 'Chargement des mouvements…') }}</p>
+              } @else if (movementsFor(session.id).length === 0) {
+                <p class="cash-session-card__movements-state">{{ t('billing.cashHistory.noMovements', 'Aucun mouvement enregistré pour cette session.') }}</p>
+              } @else {
+                <div class="cash-session-card__table-wrapper">
+                  <table class="cash-session-card__table">
+                    <thead>
+                      <tr>
+                        <th scope="col">{{ t('common.date', 'Date') }}</th>
+                        <th scope="col">{{ t('common.type', 'Type') }}</th>
+                        <th scope="col">{{ t('common.description', 'Description') }}</th>
+                        <th scope="col">{{ t('common.paymentMethod', 'Règlement') }}</th>
+                        <th scope="col" class="text-right">{{ t('common.amount', 'Montant') }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (movement of movementsFor(session.id); track movement.id) {
+                        <tr>
+                          <td>{{ movement.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                          <td>{{ movement.movementType }}</td>
+                          <td>{{ movement.description }}</td>
+                          <td>{{ movement.paymentMethod }}</td>
+                          <td class="text-right font-semibold">{{ movement.amount | number:'1.0-0' }} FCFA</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </div>
+          }
+        </article>
+      }
+    </div>
+  }
+</section>
