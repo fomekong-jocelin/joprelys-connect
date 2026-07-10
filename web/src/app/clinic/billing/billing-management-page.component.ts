@@ -138,8 +138,8 @@ export class BillingManagementPageComponent implements OnInit {
    * P1-B — Si la route contient :invoiceId, charge la facture depuis l'API
    * et ouvre automatiquement le panneau latéral de détail.
    * Flux :
-   *   1. GET /invoices/:invoiceId  → Invoice
-   *   2. Si invoice.patientId → GET /patients/:patientId pour alimenter selectedPatient
+   *   1. billingApi.getInvoice(invoiceId)  → Invoice
+   *   2. patientApi.getById(invoice.patientId) → Patient (non bloquant)
    *   3. openInvoiceDetails(invoice)
    */
   private handleDeepLink(): void {
@@ -149,9 +149,8 @@ export class BillingManagementPageComponent implements OnInit {
     this.deepLinkLoading.set(true);
     this.activeTab.set('facturation');
 
-    this.billingApi.getInvoiceById(invoiceId).subscribe({
+    this.billingApi.getInvoice(invoiceId).subscribe({
       next: (invoice) => {
-        // Charger le patient pour que le contexte soit cohérent dans le panneau
         this.patientApi.getById(invoice.patientId).subscribe({
           next: (patient) => {
             this.selectedPatient.set(patient);
@@ -159,8 +158,6 @@ export class BillingManagementPageComponent implements OnInit {
           },
           error: () => { /* patient non critique pour afficher le panneau */ }
         });
-
-        // Ouvrir le panneau immédiatement avec la facture
         this.openInvoiceDetails(invoice);
         this.deepLinkLoading.set(false);
       },
