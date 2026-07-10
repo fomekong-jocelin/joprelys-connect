@@ -6,8 +6,8 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-10 (TASK-2205 : correction responsive des lignes de devis compilée et testée ; QA visuelle navigateur à réaliser) |
-| Responsable mise à jour | Codex |
+| Dernière mise à jour | 2026-07-10 (BUG-20260710-ignore-flutter-changes : alignement de mobile/.gitignore et nettoyage du mapping VCS .idea/vcs.xml pour exclure le SDK Flutter externe) |
+| Responsable mise à jour | Antigravity |
 | État global | EPIC-0019 en cours ; EPIC-0020 cadrée pour refondre le workspace facturation/caisse après audit UX des captures utilisateur |
 | Risques majeurs | États facture/créance contradictoires, écran financier trop chargé, validation DAF manquante sur les transitions de règlement |
 | Prochaine priorité | Valider le modèle d'état financier et démarrer STORY-2201 puis STORY-2202 |
@@ -37,6 +37,7 @@
 | STORY-2116 | FINANCE_OPERATIONS | Feature | Tests E2E, RBAC, accessibilité, non-régression | Full-stack | DONE | P0 | 5 | Senior full-stack | 0.5j | 0.6j | 1.0j | Codex | Lead Developer + DAF | SPRINT-0013 | 0.5j | Terminé — tests backend E2E + Vitest Angular + build prod OK | Faible | 2026-07-09 |
 | STORY-2111 | FINANCE_OPERATIONS | Correctif | Synchronisation règlement facture / créance patient | Full-stack | DONE | P0 | 3 | Senior full-stack | 0.8j | 1.1j | 1.6j | Codex | Lead Developer + DAF | SPRINT-0012 | 0.8j | Validation DAF du modèle d'état suivant | Faible | 2026-07-09 |
 | STORY-2110 | HFC_COMPLETE | Correctif fonctionnel | Rapprochement opérationnel espèces, chèques et virements | Full-stack | DONE | P0 | 2 | Senior full-stack | 0.5j | 0.8j | 1.2j | Codex | Lead Developer + DAF | SPRINT-0012 | 0.5j | Validation DAF des règles de dépôt et coupures/pièces | Moyen | 2026-07-09 |
+| BUG-20260710-ignore-flutter-changes | UI_UX | Bug | Ignorer les répertoires de build locaux Flutter et corriger le mapping VCS IntelliJ | DevOps / Config | DONE | P0 | 1 | Senior | 0.05j | 0.1j | 0.2j | Antigravity | Lead Developer | SPRINT-0013 | 0.03j | Aucun (mobile/.gitignore et .idea/vcs.xml mis à jour et validés) | Faible | 2026-07-10 |
 | BUG-20260709-frontend-icon-startup-fix | UI_UX | Bug | Correction démarrage frontend lié aux icônes et inlining Google Fonts | Frontend | DONE | P0 | 1 | Senior Frontend | 0.1j | 0.15j | 0.25j | Codex | Lead Frontend | SPRINT-0012 | 0.1j | Aucun (build prod/dev OK, 101 tests Angular OK, ng serve compile) | Faible | 2026-07-09 |
 | STORY-2104 | HFC_COMPLETE | User Story | Bloc opératoire, CRO, anesthésie et implants | Full-stack | DONE | P0 | 8 | Senior full-stack | 2.0j | 2.8j | 4.5j | Antigravity | Lead Developer | SPRINT-0012 | 2.0j | Aucun (261 tests backend OK, compilation build Angular OK) | Faible | 2026-07-09 |
 | STORY-2103 | HFC_COMPLETE | User Story | Soins journaliers, médicaments et consommables en hospitalisation | Full-stack | DONE | P0 | 8 | Senior full-stack | 1.5j | 2.0j | 3.5j | Antigravity | Lead Developer | SPRINT-0012 | 1.2j | Aucun (260 tests backend OK, compilation build Angular OK) | Faible | 2026-07-09 |

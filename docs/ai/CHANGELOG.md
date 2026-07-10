@@ -10,6 +10,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+- **Configuration Git & IntelliJ / Projet Flutter (BUG-20260710-ignore-flutter-changes)** : mise à jour et alignement de `mobile/.gitignore` avec le standard `GITIGNORE-STANDARDS.md` pour ignorer tous les répertoires et fichiers locaux de builds et dépendances. De plus, suppression du mapping VCS obsolète du SDK Flutter externe (`$PROJECT_DIR$/../../flutter`) dans `.idea/vcs.xml` qui polluait le volet des commits de l'IDE avec 351 fichiers temporaires du SDK.
+
 - **Détail facture — ligne de devis dans un panneau étroit (TASK-2205)** : les champs s’adaptent désormais à la largeur réelle du formulaire, sans débordement ; l’action de suppression est visible, libellée et traduite en français et en anglais.
 
 - **Détail facture — alignement avec le design system (TASK-2205)** : remplacement des classes visuelles locales incomplètes par `ui-button`, `ui-input` et `ui-select`, avec padding, bordures, fonds de champs, focus visible et couleurs de thème cohérentes.
