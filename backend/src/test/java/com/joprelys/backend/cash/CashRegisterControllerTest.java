@@ -34,6 +34,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import org.springframework.test.annotation.DirtiesContext;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -120,40 +121,34 @@ public class CashRegisterControllerTest {
         userAccountRepository.deleteAll();
         organizationRepository.deleteAll();
 
-        // Org
         org = new OrganizationEntity("Clinique Caisse", "caisse@joprelys.local", "999999", "Avenue Caisse", "Yaounde");
         org = organizationRepository.save(org);
 
         TenantContext.setTenantId(org.getId());
 
-        // Caissier
         caissier = new UserAccountEntity("caissier@joprelys.local", "Pierre Caisse", "CAISSIER", "passhash");
         caissier.setOrganizationId(org.getId());
         caissier = userAccountRepository.save(caissier);
         tokenCaissier = jwtService.createToken(caissier).value();
 
-        // Admin
         UserAccountEntity admin = new UserAccountEntity("admin@joprelys.local", "Admin Caisse", "ADMIN_CLINIQUE", "passhash");
         admin.setOrganizationId(org.getId());
         admin = userAccountRepository.save(admin);
         tokenAdmin = jwtService.createToken(admin).value();
 
-        // Patient
         patient = new PatientEntity("DPU-CS-01", "PAT-CS-01", "Antoine Caisse", "MASCULIN", LocalDate.of(1992, 10, 5), "670000009", "Yaounde", "Bastos", "Street Z", "Luc", "671112233", "Aucune", "Aucun");
         patient = patientRepository.save(patient);
 
-        // Visit
         visit = new VisitEntity(patient, "VIS-CS-01", "Consultation tri", "Général", "MÉDECINE GÉNÉRALE", caissier.getId(), Instant.now());
         visit = visitRepository.save(visit);
 
-        // Invoice
         invoice = new InvoiceEntity(patient.getId(), visit.getId(), "FAC-CS-001", null);
         invoice.setOrganizationId(org.getId());
         InvoiceItemEntity item = new InvoiceItemEntity(
                 "Acte",
                 InvoiceItemType.CONSULTATION,
-                new java.math.BigDecimal("15000.0000"),
-                new java.math.BigDecimal("1.0000"),
+                new BigDecimal("15000.0000"),
+                new BigDecimal("1.0000"),
                 null);
         item.setOrganizationId(org.getId());
         invoice.addItem(item);
@@ -162,15 +157,13 @@ public class CashRegisterControllerTest {
 
     @Test
     void testOpenCloseSessionAndMovements() throws Exception {
-        // La facture doit être validée avant tout encaissement.
         mockMvc.perform(post("/api/invoices/" + invoice.getId() + "/validate")
                         .header("Authorization", "Bearer " + tokenAdmin))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("VALIDATED"));
 
-        // 1. Essayer de payer la facture sans session ouverte -> 409 CONFLICT
         PaymentRequest payReq = new PaymentRequest(
-                new java.math.BigDecimal("15000.0000"),
+                new BigDecimal("15000.0000"),
                 PaymentMethod.CASH,
                 "REF-PAY");
         mockMvc.perform(post("/api/invoices/" + invoice.getId() + "/payments")
@@ -179,8 +172,7 @@ public class CashRegisterControllerTest {
                         .content(objectMapper.writeValueAsString(payReq)))
                 .andExpect(status().isConflict());
 
-        // 2. Ouvrir la session de caisse
-        OpenSessionRequest openReq = new OpenSessionRequest(null, 50000.0); // Caisse par défaut, 50 000 FCFA fond
+        OpenSessionRequest openReq = new OpenSessionRequest(null, 50000.0);
         String responseStr = mockMvc.perform(post("/api/cash-registers/sessions/open")
                         .header("Authorization", "Bearer " + tokenCaissier)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -192,14 +184,12 @@ public class CashRegisterControllerTest {
 
         CashSessionResponse session = objectMapper.readValue(responseStr, CashSessionResponse.class);
 
-        // 3. Essayer de réouvrir une session -> 409 CONFLICT
         mockMvc.perform(post("/api/cash-registers/sessions/open")
                         .header("Authorization", "Bearer " + tokenCaissier)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(openReq)))
                 .andExpect(status().isConflict());
 
-        // 4. Enregistrer une dépense trop élevée sans double visa -> 400 BAD REQUEST
         CashMovementRequest invalidOut = new CashMovementRequest("OUT", 120000.0, "Achat bureau", "CASH", "REF-OUT", false);
         mockMvc.perform(post("/api/cash-registers/movements")
                         .header("Authorization", "Bearer " + tokenCaissier)
@@ -207,7 +197,6 @@ public class CashRegisterControllerTest {
                         .content(objectMapper.writeValueAsString(invalidOut)))
                 .andExpect(status().isBadRequest());
 
-        // 5. Enregistrer la dépense avec double visa -> 200 OK
         CashMovementRequest validOut = new CashMovementRequest("OUT", 120000.0, "Achat bureau", "CASH", "REF-OUT", true);
         mockMvc.perform(post("/api/cash-registers/movements")
                         .header("Authorization", "Bearer " + tokenCaissier)
@@ -216,14 +205,12 @@ public class CashRegisterControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.amount").value(120000.0));
 
-        // 6. Effectuer le paiement sur la facture (doit réussir maintenant)
         mockMvc.perform(post("/api/invoices/" + invoice.getId() + "/payments")
                         .header("Authorization", "Bearer " + tokenCaissier)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(payReq)))
                 .andExpect(status().isOk());
 
-        // 7. Vérifier le reçu de paiement généré
         TenantContext.setTenantId(org.getId());
         PaymentEntity createdPayment = paymentRepository.findByInvoiceId(invoice.getId()).get(0);
         mockMvc.perform(get("/api/cash-registers/payments/" + createdPayment.getId() + "/receipt")
@@ -231,8 +218,6 @@ public class CashRegisterControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.receiptNumber").value(startsWith("REC-")));
 
-        // 8. Clôturer la session de caisse avec écart non justifié -> 400 BAD REQUEST (Solde théorique = 50000 - 120000 + 15000 = -55000)
-        // Disons que l'on déclare avoir -50 000 (donc écart de +5000), sans raison
         CloseSessionRequest closeInvalid = new CloseSessionRequest(-50000.0, "");
         mockMvc.perform(post("/api/cash-registers/sessions/close")
                         .header("Authorization", "Bearer " + tokenCaissier)
@@ -240,7 +225,6 @@ public class CashRegisterControllerTest {
                         .content(objectMapper.writeValueAsString(closeInvalid)))
                 .andExpect(status().isBadRequest());
 
-        // 9. Clôturer avec justification -> 200 OK
         CloseSessionRequest closeValid = new CloseSessionRequest(-50000.0, "Ecart de test justifié");
         mockMvc.perform(post("/api/cash-registers/sessions/close")
                         .header("Authorization", "Bearer " + tokenCaissier)
@@ -307,22 +291,20 @@ public class CashRegisterControllerTest {
 
     @Test
     void shouldExecuteFullE2EWorkflow() throws Exception {
-        // 1. Créer une convention d'assurance SAAR (80%)
         InsuranceConventionEntity saar = new InsuranceConventionEntity(
                 "SAAR Assurance",
-                new java.math.BigDecimal("0.8000"));
+                new BigDecimal("0.8000"));
         saar.setOrganizationId(org.getId());
         saar = insuranceConventionRepository.save(saar);
 
-        // 2. Émettre une facture validée de 100 000 FCFA avec cette convention
         InvoiceEntity e2eInvoice = new InvoiceEntity(patient.getId(), visit.getId(), "FAC-E2E-99", saar);
         e2eInvoice.setOrganizationId(org.getId());
 
         InvoiceItemEntity item = new InvoiceItemEntity(
                 "Prestation Chirurgie",
                 InvoiceItemType.CONSULTATION,
-                new java.math.BigDecimal("100000.0000"),
-                new java.math.BigDecimal("1.0000"),
+                new BigDecimal("100000.0000"),
+                new BigDecimal("1.0000"),
                 null);
         item.setOrganizationId(org.getId());
         e2eInvoice.addItem(item);
@@ -331,12 +313,11 @@ public class CashRegisterControllerTest {
         e2eInvoice.setValidatedByUserId(caissier.getId());
         e2eInvoice = invoiceRepository.save(e2eInvoice);
 
-        // 3. Créer les créances (20% patient = 20000, 80% assurance = 80000)
         ReceivableEntity patientRec = new ReceivableEntity(
                 e2eInvoice.getId(),
                 "PATIENT",
                 patient.getId(),
-                new java.math.BigDecimal("20000.0000"));
+                new BigDecimal("20000.0000"));
         patientRec.setOrganizationId(org.getId());
         receivableRepository.save(patientRec);
 
@@ -344,11 +325,10 @@ public class CashRegisterControllerTest {
                 e2eInvoice.getId(),
                 "INSURANCE",
                 saar.getId(),
-                new java.math.BigDecimal("80000.0000"));
+                new BigDecimal("80000.0000"));
         insuranceRec.setOrganizationId(org.getId());
         receivableRepository.save(insuranceRec);
 
-        // 4. Ouvrir la session de caisse avec 50 000 FCFA
         OpenSessionRequest openReq = new OpenSessionRequest(null, 50000.0);
         mockMvc.perform(post("/api/cash-registers/sessions/open")
                         .header("Authorization", "Bearer " + tokenCaissier)
@@ -356,9 +336,8 @@ public class CashRegisterControllerTest {
                         .content(objectMapper.writeValueAsString(openReq)))
                 .andExpect(status().isCreated());
 
-        // 5. Régler la part patient (20 000 FCFA)
         PaymentRequest payReq = new PaymentRequest(
-                new java.math.BigDecimal("20000.0000"),
+                new BigDecimal("20000.0000"),
                 PaymentMethod.CASH,
                 "REF-E2E-PAY");
         mockMvc.perform(post("/api/invoices/" + e2eInvoice.getId() + "/payments")
@@ -367,16 +346,14 @@ public class CashRegisterControllerTest {
                         .content(objectMapper.writeValueAsString(payReq)))
                 .andExpect(status().isOk());
 
-        // 6. Vérifier que la créance patient passe à PAID et que le solde est 0
         TenantContext.setTenantId(org.getId());
         List<ReceivableEntity> receivables = receivableRepository.findByInvoiceId(e2eInvoice.getId());
         ReceivableEntity updatedPatientRec = receivables.stream()
                 .filter(r -> "PATIENT".equals(r.getDebtorType()))
                 .findFirst().orElseThrow();
         assertEquals("PAID", updatedPatientRec.getStatus());
-        assertEquals(new java.math.BigDecimal("20000.0000"), updatedPatientRec.getPaidAmount());
+        assertEquals(new BigDecimal("20000.0000"), updatedPatientRec.getPaidAmount());
 
-        // 7. Générer le bordereau d'assurance
         InsuranceBordereauController.GenerateBordereauRequest genReq =
                 new InsuranceBordereauController.GenerateBordereauRequest(saar.getId(), LocalDate.now().minusDays(1), LocalDate.now().plusDays(1));
 
@@ -390,36 +367,42 @@ public class CashRegisterControllerTest {
         InsuranceBordereauController.BordereauResponse bordereau =
                 objectMapper.readValue(genResult, InsuranceBordereauController.BordereauResponse.class);
 
-        // 8. Envoyer le bordereau
         mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.id() + "/send")
                         .header("Authorization", "Bearer " + tokenAdmin))
                 .andExpect(status().isOk());
+        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.id() + "/receive")
+                        .header("Authorization", "Bearer " + tokenAdmin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"insurerReference\":\"AR-CASH-E2E\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.id() + "/accept")
+                        .header("Authorization", "Bearer " + tokenAdmin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"acceptedAmount\":80000}"))
+                .andExpect(status().isOk());
 
-        // 9. Régler le bordereau par l'assurance (80 000 FCFA)
         InsuranceBordereauController.BordereauPaymentRequest bordereauPay =
-                new InsuranceBordereauController.BordereauPaymentRequest(80000.0, "CHQ-ASSUR-E2E");
+                new InsuranceBordereauController.BordereauPaymentRequest(new BigDecimal("80000.0000"), "CHQ-ASSUR-E2E");
         mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.id() + "/pay")
                         .header("Authorization", "Bearer " + tokenAdmin)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(bordereauPay)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SETTLED"));
 
-        // 10. Vérifier que la créance assurance passe à PAID
         TenantContext.setTenantId(org.getId());
         List<ReceivableEntity> receivablesAfterPay = receivableRepository.findByInvoiceId(e2eInvoice.getId());
         ReceivableEntity updatedInsuranceRec = receivablesAfterPay.stream()
                 .filter(r -> "INSURANCE".equals(r.getDebtorType()))
                 .findFirst().orElseThrow();
         assertEquals("PAID", updatedInsuranceRec.getStatus());
-        assertEquals(new java.math.BigDecimal("80000.0000"), updatedInsuranceRec.getPaidAmount());
+        assertEquals(new BigDecimal("80000.0000"), updatedInsuranceRec.getPaidAmount());
 
-        // Vérifier que la facture est SETTLED dans le read model de synthèse
         mockMvc.perform(get("/api/invoices/settlement-summaries?patientId=" + patient.getId())
                         .header("Authorization", "Bearer " + tokenCaissier))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.invoiceId=='" + e2eInvoice.getId() + "')].collectionStatus").value("SETTLED"));
 
-        // 11. Consigner un versement banque de 10 000 FCFA
         CashMovementRequest deposit = new CashMovementRequest(
                 "TRANSFER_TO_BANK", 10000.0, "Dépôt SAAR", "CASH", "BORD-E2E-DEP", false);
         mockMvc.perform(post("/api/cash-registers/movements")
@@ -428,7 +411,6 @@ public class CashRegisterControllerTest {
                         .content(objectMapper.writeValueAsString(deposit)))
                 .andExpect(status().isOk());
 
-        // 12. Clôturer la caisse (Attendu = 50000 fonds + 20000 pay patient - 10000 dépôt = 60000 FCFA)
         CloseSessionRequest closeReq = new CloseSessionRequest(60000.0, null);
         mockMvc.perform(post("/api/cash-registers/sessions/close")
                         .header("Authorization", "Bearer " + tokenCaissier)

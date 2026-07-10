@@ -1,0 +1,118 @@
+<section class="insurance-workspace" aria-labelledby="insurance-workspace-title">
+  <header class="workspace-header">
+    <div>
+      <p class="workspace-eyebrow">{{ t('billing.insurance.eyebrow', 'Recouvrement assurance') }}</p>
+      <h2 id="insurance-workspace-title">{{ t('billing.insurance.title', 'Suivi des bordereaux') }}</h2>
+      <p>{{ t('billing.insurance.subtitle', 'Pilotez l’envoi, la réception, l’acceptation et les règlements des assureurs.') }}</p>
+    </div>
+    <button type="button" class="ui-button ui-button-primary" (click)="generationOpen.set(!generationOpen())">
+      <app-ui-icon name="plus" />
+      {{ generationOpen() ? t('common.close', 'Fermer') : t('billing.insurance.new', 'Nouveau bordereau') }}
+    </button>
+  </header>
+
+  @if (successFeedback()) {
+    <div class="ui-alert-success" role="status"><app-ui-icon name="check" />{{ successFeedback() }}</div>
+  }
+  @if (errorFeedback()) {
+    <div class="ui-alert-danger" role="alert"><app-ui-icon name="x-mark" />{{ errorFeedback() }}</div>
+  }
+
+  <div class="kpi-grid" aria-label="Synthèse assurance">
+    <article class="kpi-card"><span>{{ t('billing.insurance.kpi.active', 'Bordereaux actifs') }}</span><strong>{{ activeCount() }}</strong></article>
+    <article class="kpi-card"><span>{{ t('billing.insurance.kpi.claimed', 'Montant réclamé') }}</span><strong>{{ claimedTotal() | number:'1.0-0' }} FCFA</strong></article>
+    <article class="kpi-card"><span>{{ t('billing.insurance.kpi.paid', 'Montant réglé') }}</span><strong>{{ paidTotal() | number:'1.0-0' }} FCFA</strong></article>
+    <article class="kpi-card kpi-card-alert"><span>{{ t('billing.insurance.kpi.remaining', 'Reste à recouvrer') }}</span><strong>{{ remainingTotal() | number:'1.0-0' }} FCFA</strong></article>
+  </div>
+
+  @if (generationOpen()) {
+    <form class="generation-panel" (ngSubmit)="generateBordereau()">
+      <div class="panel-heading">
+        <div><h3>{{ t('billing.insurance.generate.title', 'Générer un bordereau') }}</h3><p>{{ t('billing.insurance.generate.help', 'Regroupez les factures éligibles d’une convention sur une période.') }}</p></div>
+      </div>
+      <div class="generation-grid">
+        <label>
+          <span>{{ t('billing.insurance.convention', 'Convention') }}</span>
+          <select class="ui-select" name="convention" [ngModel]="selectedConventionId()" (ngModelChange)="selectedConventionId.set($event)">
+            <option value="">{{ t('billing.insurance.selectConvention', 'Choisir une convention') }}</option>
+            @for (convention of conventions(); track convention.id) {
+              <option [value]="convention.id">{{ convention.name }} ({{ convention.coveragePercentage * 100 | number:'1.0-0' }} %)</option>
+            }
+          </select>
+        </label>
+        <label><span>{{ t('common.startDate', 'Date de début') }}</span><input class="ui-input" type="date" name="startDate" [ngModel]="startDate()" (ngModelChange)="startDate.set($event)" /></label>
+        <label><span>{{ t('common.endDate', 'Date de fin') }}</span><input class="ui-input" type="date" name="endDate" [ngModel]="endDate()" (ngModelChange)="endDate.set($event)" /></label>
+        <button class="ui-button ui-button-primary generation-submit" type="submit" [disabled]="generating() || !canGenerate()">
+          @if (generating()) { {{ t('common.loading', 'Traitement…') }} } @else { <app-ui-icon name="calculator" />{{ t('billing.insurance.generate.action', 'Générer') }} }
+        </button>
+      </div>
+    </form>
+  }
+
+  <div class="filter-panel">
+    <label class="search-field"><span>{{ t('common.search', 'Rechercher') }}</span><input class="ui-input" type="search" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" [placeholder]="t('billing.insurance.searchPlaceholder', 'N° bordereau ou référence assureur')" /></label>
+    <label><span>{{ t('common.status', 'Statut') }}</span><select class="ui-select" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)"><option value="ALL">{{ t('common.all', 'Tous') }}</option>@for (status of statuses; track status) {<option [value]="status">{{ statusLabel(status) }}</option>}</select></label>
+    <label><span>{{ t('billing.insurance.convention', 'Convention') }}</span><select class="ui-select" [ngModel]="conventionFilter()" (ngModelChange)="conventionFilter.set($event)"><option value="ALL">{{ t('common.all', 'Toutes') }}</option>@for (convention of conventions(); track convention.id) {<option [value]="convention.id">{{ convention.name }}</option>}</select></label>
+    <label><span>{{ t('billing.insurance.period', 'Période') }}</span><select class="ui-select" [ngModel]="periodFilter()" (ngModelChange)="periodFilter.set($event)"><option value="30">30 jours</option><option value="90">90 jours</option><option value="365">12 mois</option><option value="ALL">{{ t('common.all', 'Toutes') }}</option></select></label>
+  </div>
+
+  @if (loading()) {
+    <div class="state-panel" role="status">{{ t('common.loading', 'Chargement…') }}</div>
+  } @else if (loadError()) {
+    <div class="state-panel state-error" role="alert"><p>{{ t('billing.insurance.loadError', 'Impossible de charger les bordereaux.') }}</p><button class="ui-button ui-button-secondary" type="button" (click)="loadBordereaux()">{{ t('common.retry', 'Réessayer') }}</button></div>
+  } @else if (filteredBordereaux().length === 0) {
+    <div class="state-panel"><app-ui-icon name="document-text" /><p>{{ t('billing.insurance.empty', 'Aucun bordereau ne correspond aux filtres.') }}</p></div>
+  } @else {
+    <div class="bordereaux-grid">
+      @for (bordereau of filteredBordereaux(); track bordereau.id) {
+        <article class="bordereau-card" [class.is-selected]="selectedBordereau()?.id === bordereau.id">
+          <div class="card-topline">
+            <div><span class="bordereau-number">{{ bordereau.bordereauNumber }}</span><p>{{ bordereau.insuranceConventionName }}</p></div>
+            <span class="status-badge" [attr.data-status]="normalizedStatus(bordereau.status)">{{ statusLabel(bordereau.status) }}</span>
+          </div>
+          <dl class="amount-grid">
+            <div><dt>{{ t('billing.insurance.claimed', 'Réclamé') }}</dt><dd>{{ bordereau.totalAmount | number:'1.0-0' }} FCFA</dd></div>
+            <div><dt>{{ t('billing.insurance.accepted', 'Accepté') }}</dt><dd>{{ (bordereau.acceptedAmount ?? 0) | number:'1.0-0' }} FCFA</dd></div>
+            <div><dt>{{ t('billing.insurance.paid', 'Réglé') }}</dt><dd>{{ bordereau.paidAmount | number:'1.0-0' }} FCFA</dd></div>
+            <div><dt>{{ t('billing.insurance.remaining', 'Reste') }}</dt><dd>{{ bordereau.remainingAmount | number:'1.0-0' }} FCFA</dd></div>
+          </dl>
+          <div class="card-meta"><span>{{ bordereau.startDate | date:'dd/MM/yyyy' }} – {{ bordereau.endDate | date:'dd/MM/yyyy' }}</span>@if (bordereau.insurerReference) {<span>{{ bordereau.insurerReference }}</span>}</div>
+          <div class="card-actions">
+            <button type="button" class="ui-button ui-button-secondary" (click)="viewDetails(bordereau.id)">{{ t('common.details', 'Détails') }}</button>
+            @if (bordereau.status === 'DRAFT') {<button type="button" class="ui-button ui-button-primary" (click)="markAsSent(bordereau.id)">{{ t('billing.insurance.action.send', 'Envoyer') }}</button>}
+            @if (bordereau.status === 'SENT') {<button type="button" class="ui-button ui-button-primary" (click)="openAction(bordereau, 'receive')">{{ t('billing.insurance.action.receive', 'Réceptionner') }}</button>}
+            @if (bordereau.status === 'RECEIVED' && canDecide()) {<button type="button" class="ui-button ui-button-primary" (click)="openAction(bordereau, 'accept')">{{ t('billing.insurance.action.accept', 'Accepter') }}</button><button type="button" class="ui-button ui-button-danger" (click)="openAction(bordereau, 'reject')">{{ t('billing.insurance.action.reject', 'Rejeter') }}</button>}
+            @if ((bordereau.status === 'ACCEPTED' || bordereau.status === 'PARTIALLY_PAID') && canDecide()) {<button type="button" class="ui-button ui-button-success" (click)="openAction(bordereau, 'pay')"><app-ui-icon name="credit-card" />{{ t('billing.insurance.action.pay', 'Enregistrer un règlement') }}</button>}
+          </div>
+        </article>
+      }
+    </div>
+  }
+
+  @if (selectedBordereau()) {
+    <section class="details-panel" aria-labelledby="bordereau-details-title">
+      <div class="panel-heading">
+        <div><p class="workspace-eyebrow">{{ statusLabel(selectedBordereau()!.status) }}</p><h3 id="bordereau-details-title">{{ selectedBordereau()!.bordereauNumber }}</h3><p>{{ selectedBordereau()!.insuranceConventionName }} · {{ selectedBordereau()!.startDate | date:'dd/MM/yyyy' }} – {{ selectedBordereau()!.endDate | date:'dd/MM/yyyy' }}</p></div>
+        <button type="button" class="ui-button ui-button-secondary" (click)="closeDetails()">{{ t('common.close', 'Fermer') }}</button>
+      </div>
+      @if (selectedBordereau()!.rejectionReason) {<div class="ui-alert-danger"><strong>{{ t('billing.insurance.rejectionReason', 'Motif du rejet') }} :</strong> {{ selectedBordereau()!.rejectionReason }}</div>}
+      <div class="details-amounts"><div><span>{{ t('billing.insurance.claimed', 'Réclamé') }}</span><strong>{{ selectedBordereau()!.totalAmount | number:'1.0-0' }} FCFA</strong></div><div><span>{{ t('billing.insurance.accepted', 'Accepté') }}</span><strong>{{ (selectedBordereau()!.acceptedAmount ?? 0) | number:'1.0-0' }} FCFA</strong></div><div><span>{{ t('billing.insurance.paid', 'Réglé') }}</span><strong>{{ selectedBordereau()!.paidAmount | number:'1.0-0' }} FCFA</strong></div><div><span>{{ t('billing.insurance.disputed', 'Écart') }}</span><strong>{{ selectedBordereau()!.disputedAmount | number:'1.0-0' }} FCFA</strong></div></div>
+      <div class="invoice-table-wrapper"><table><thead><tr><th>{{ t('billing.invoice.number', 'Facture') }}</th><th>{{ t('billing.invoice.total', 'Total') }}</th><th>{{ t('billing.invoice.patientShare', 'Part patient') }}</th><th>{{ t('billing.invoice.insuranceShare', 'Part assurance') }}</th><th>{{ t('common.status', 'Statut') }}</th></tr></thead><tbody>@for (invoice of selectedBordereau()!.invoices; track invoice.id) {<tr><td>{{ invoice.invoiceNumber }}</td><td>{{ invoice.totalAmount | number:'1.0-0' }} FCFA</td><td>{{ invoice.patientShare | number:'1.0-0' }} FCFA</td><td>{{ invoice.insuranceShare | number:'1.0-0' }} FCFA</td><td>{{ invoice.status }}</td></tr>}</tbody></table></div>
+    </section>
+  }
+
+  @if (actionMode() !== null && actionBordereau()) {
+    <div class="modal-backdrop" role="presentation" (click)="closeAction()">
+      <section class="action-dialog" role="dialog" aria-modal="true" aria-labelledby="insurance-action-title" (click)="$event.stopPropagation()">
+        <div class="panel-heading"><div><h3 id="insurance-action-title">{{ actionTitle() }}</h3><p>{{ actionBordereau()!.bordereauNumber }} · {{ actionBordereau()!.insuranceConventionName }}</p></div><button type="button" class="dialog-close" (click)="closeAction()" aria-label="Fermer">×</button></div>
+        <form (ngSubmit)="submitAction()" class="action-form">
+          @if (actionMode() === 'receive' || actionMode() === 'accept' || actionMode() === 'reject') {<label><span>{{ t('billing.insurance.insurerReference', 'Référence assureur') }}</span><input class="ui-input" name="insurerReference" [ngModel]="insurerReference()" (ngModelChange)="insurerReference.set($event)" /></label>}
+          @if (actionMode() === 'accept') {<label><span>{{ t('billing.insurance.acceptedAmount', 'Montant accepté') }}</span><input class="ui-input" type="number" min="0" name="acceptedAmount" [ngModel]="acceptedAmount()" (ngModelChange)="acceptedAmount.set(+$event)" /></label>}
+          @if (actionMode() === 'reject') {<label><span>{{ t('billing.insurance.rejectionReason', 'Motif du rejet') }}</span><textarea class="ui-input" rows="4" name="rejectionReason" [ngModel]="rejectionReason()" (ngModelChange)="rejectionReason.set($event)"></textarea></label>}
+          @if (actionMode() === 'pay') {<label><span>{{ t('billing.insurance.paymentAmount', 'Montant du règlement') }}</span><input class="ui-input" type="number" min="0" name="paymentAmount" [ngModel]="paymentAmount()" (ngModelChange)="paymentAmount.set(+$event)" /></label><label><span>{{ t('billing.insurance.paymentReference', 'Référence du règlement') }}</span><input class="ui-input" name="paymentReference" [ngModel]="paymentReference()" (ngModelChange)="paymentReference.set($event)" /></label>}
+          <div class="dialog-actions"><button type="button" class="ui-button ui-button-secondary" (click)="closeAction()">{{ t('common.cancel', 'Annuler') }}</button><button type="submit" class="ui-button ui-button-primary" [disabled]="actionSaving() || !actionValid()">{{ actionSaving() ? t('common.loading', 'Traitement…') : t('common.confirm', 'Confirmer') }}</button></div>
+        </form>
+      </section>
+    </div>
+  }
+</section>
