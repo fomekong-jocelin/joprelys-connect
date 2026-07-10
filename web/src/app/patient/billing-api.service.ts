@@ -22,6 +22,7 @@ import {
   Payment,
   PaymentReceipt,
   Receivable,
+  ReceivableReminder,
   TariffGrid,
 } from './patient.models';
 
@@ -136,12 +137,12 @@ export class BillingApiService {
     return this.http.get<Receivable[]>('/api/receivables/by-status', { params: new HttpParams().set('status', status) });
   }
 
-  recordReminder(receivableId: string, request: { actionType: string; status: string; notes: string }): Observable<unknown> {
-    return this.http.post<unknown>(`/api/receivables/${receivableId}/reminders`, request);
+  recordReminder(receivableId: string, request: { actionType: string; status: string; notes: string }): Observable<ReceivableReminder> {
+    return this.http.post<ReceivableReminder>(`/api/receivables/${receivableId}/reminders`, request);
   }
 
-  getReminders(receivableId: string): Observable<unknown[]> {
-    return this.http.get<unknown[]>(`/api/receivables/${receivableId}/reminders`);
+  getReminders(receivableId: string): Observable<ReceivableReminder[]> {
+    return this.http.get<ReceivableReminder[]>(`/api/receivables/${receivableId}/reminders`);
   }
 
   createEstimate(request: {
