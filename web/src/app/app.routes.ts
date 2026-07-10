@@ -10,7 +10,7 @@ export const routes: Routes = [
     path: 'dashboard',
     loadComponent: () => import('./clinic/dashboard.component').then((module) => module.DashboardComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['ADMIN_JOPRELYS', 'ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'PHARMACIEN'] },
+    data: { expectedRoles: ['ADMIN_JOPRELYS', 'ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'PHARMACIEN', 'CAISSIER'] },
   },
   {
     path: 'organizations',
@@ -73,7 +73,7 @@ export const routes: Routes = [
     path: 'profile',
     loadComponent: () => import('./profile/profile.component').then((m) => m.ProfileComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEIL', 'PHARMACIEN', 'BIOLOGISTE', 'ADMIN_CLINIQUE'] },
+    data: { expectedRoles: ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEIL', 'PHARMACIEN', 'BIOLOGISTE', 'ADMIN_CLINIQUE', 'CAISSIER'] },
   },
   {
     path: 'clinic/duplicates',
@@ -116,6 +116,12 @@ export const routes: Routes = [
     loadComponent: () => import('./clinic/billing/billing-management-page.component').then(m => m.BillingManagementPageComponent),
     canActivate: [roleGuard],
     data: { expectedRoles: ['AGENT_ACCUEIL', 'ADMIN_CLINIQUE'] },
+  },
+  {
+    path: 'clinic/cashier',
+    loadComponent: () => import('./clinic/billing/billing-cashier-page.component').then(m => m.BillingCashierPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['CAISSIER'] },
   },
   {
     // Deep-link vers une facture spécifique : ouvre la page billing sur l'onglet facturation
