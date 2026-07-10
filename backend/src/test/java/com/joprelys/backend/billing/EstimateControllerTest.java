@@ -131,7 +131,12 @@ public class EstimateControllerTest {
         // Invoice PENDING
         invoice = new InvoiceEntity(patient.getId(), visit.getId(), "FAC-TEST-001", null);
         invoice.setOrganizationId(org.getId());
-        InvoiceItemEntity item = new InvoiceItemEntity("Prestation", InvoiceItemType.CONSULTATION, 25000.0, 1.0, null);
+        InvoiceItemEntity item = new InvoiceItemEntity(
+                "Prestation",
+                InvoiceItemType.CONSULTATION,
+                new java.math.BigDecimal("25000.0000"),
+                new java.math.BigDecimal("1.0000"),
+                null);
         item.setOrganizationId(org.getId());
         invoice.addItem(item);
         invoice = invoiceRepository.save(invoice);
