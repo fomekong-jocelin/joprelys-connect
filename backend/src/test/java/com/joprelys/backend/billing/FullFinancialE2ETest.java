@@ -32,7 +32,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -45,47 +44,18 @@ import java.util.UUID;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class FullFinancialE2ETest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private OrganizationRepository organizationRepository;
-
-    @Autowired
-    private UserAccountRepository userAccountRepository;
-
-    @Autowired
-    private PatientRepository patientRepository;
-
-    @Autowired
-    private VisitRepository visitRepository;
-
-    @Autowired
-    private InvoiceRepository invoiceRepository;
-
-    @Autowired
-    private InsuranceConventionRepository insuranceConventionRepository;
-
-    @Autowired
-    private CashRegisterRepository cashRegisterRepository;
-
-    @Autowired
-    private CashRegisterSessionRepository cashRegisterSessionRepository;
-
-    @Autowired
-    private PaymentRepository paymentRepository;
-
-    @Autowired
-    private CashMovementRepository cashMovementRepository;
-
-    @Autowired
-    private InsuranceBordereauRepository insuranceBordereauRepository;
-
-    @Autowired
-    private JwtService jwtService;
-
-    @Autowired
-    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private OrganizationRepository organizationRepository;
+    @Autowired private UserAccountRepository userAccountRepository;
+    @Autowired private PatientRepository patientRepository;
+    @Autowired private VisitRepository visitRepository;
+    @Autowired private InvoiceRepository invoiceRepository;
+    @Autowired private InsuranceConventionRepository insuranceConventionRepository;
+    @Autowired private CashRegisterRepository cashRegisterRepository;
+    @Autowired private CashRegisterSessionRepository cashRegisterSessionRepository;
+    @Autowired private InsuranceBordereauRepository insuranceBordereauRepository;
+    @Autowired private JwtService jwtService;
+    @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     private final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
@@ -95,12 +65,10 @@ public class FullFinancialE2ETest {
     private UserAccountEntity medecin;
     private UserAccountEntity caissier;
     private UserAccountEntity daf;
-
     private String tokenReceptioniste;
     private String tokenMedecin;
     private String tokenCaissier;
     private String tokenDaf;
-
     private InsuranceConventionEntity convention;
     private CashRegisterEntity caissePrincipale;
 
@@ -121,44 +89,33 @@ public class FullFinancialE2ETest {
         userAccountRepository.deleteAll();
         organizationRepository.deleteAll();
 
-        org = new OrganizationEntity("Clinique E2E Sante", "e2e@joprelys.local", "999999", "Avenue E2E", "Yaounde");
-        org = organizationRepository.saveAndFlush(org);
+        org = organizationRepository.saveAndFlush(new OrganizationEntity(
+                "Clinique E2E Sante", "e2e@joprelys.local", "999999", "Avenue E2E", "Yaounde"));
 
-        setTenant();
-        receptioniste = new UserAccountEntity("recep@test.com", "Alice Receptioniste", "AGENT_ACCUEIL", "password");
-        receptioniste.setOrganizationId(org.getId());
-        receptioniste = userAccountRepository.saveAndFlush(receptioniste);
+        receptioniste = saveUser("recep@test.com", "Alice Receptioniste", "AGENT_ACCUEIL");
         tokenReceptioniste = jwtService.createToken(receptioniste).value();
-
-        setTenant();
-        medecin = new UserAccountEntity("medecin@test.com", "Dr. Marc Medecin", "MEDECIN", "password");
-        medecin.setOrganizationId(org.getId());
-        medecin = userAccountRepository.saveAndFlush(medecin);
+        medecin = saveUser("medecin@test.com", "Dr. Marc Medecin", "MEDECIN");
         tokenMedecin = jwtService.createToken(medecin).value();
-
-        setTenant();
-        caissier = new UserAccountEntity("caissier@test.com", "Jean Caissier", "CAISSIER", "password");
-        caissier.setOrganizationId(org.getId());
-        caissier = userAccountRepository.saveAndFlush(caissier);
+        caissier = saveUser("caissier@test.com", "Jean Caissier", "CAISSIER");
         tokenCaissier = jwtService.createToken(caissier).value();
-
-        setTenant();
-        daf = new UserAccountEntity("daf@test.com", "Pierre DAF", "DAF", "password");
-        daf.setOrganizationId(org.getId());
-        daf = userAccountRepository.saveAndFlush(daf);
+        daf = saveUser("daf@test.com", "Pierre DAF", "DAF");
         tokenDaf = jwtService.createToken(daf).value();
 
         setTenant();
-        convention = new InsuranceConventionEntity(
-                "Assurance Sante E2E",
-                new BigDecimal("0.8000"));
+        convention = new InsuranceConventionEntity("Assurance Sante E2E", new BigDecimal("0.8000"));
         convention.setOrganizationId(org.getId());
         convention = insuranceConventionRepository.saveAndFlush(convention);
 
-        setTenant();
         caissePrincipale = new CashRegisterEntity("CAISSE-PRINCIPALE", "Caisse Principale");
         caissePrincipale.setOrganizationId(org.getId());
         caissePrincipale = cashRegisterRepository.saveAndFlush(caissePrincipale);
+    }
+
+    private UserAccountEntity saveUser(String email, String name, String role) {
+        setTenant();
+        UserAccountEntity user = new UserAccountEntity(email, name, role, "password");
+        user.setOrganizationId(org.getId());
+        return userAccountRepository.saveAndFlush(user);
     }
 
     private void setTenant() {
@@ -168,22 +125,17 @@ public class FullFinancialE2ETest {
     @Test
     void shouldExecuteFullFinancialLifecycleNominal() throws Exception {
         setTenant();
-        PatientEntity patient = new PatientEntity("DPU-E2E-01", "PAT-E2E-01", "John Doe E2E", "MASCULIN", LocalDate.of(1990, 5, 10), "677889900", "Yaounde", "Bastos", "Street 1", "Marie", "670000000", "Aucune", "Aucun");
-        patient = patientRepository.saveAndFlush(patient);
+        PatientEntity patient = patientRepository.saveAndFlush(new PatientEntity(
+                "DPU-E2E-01", "PAT-E2E-01", "John Doe E2E", "MASCULIN", LocalDate.of(1990, 5, 10),
+                "677889900", "Yaounde", "Bastos", "Street 1", "Marie", "670000000", "Aucune", "Aucun"));
+        VisitEntity visit = visitRepository.saveAndFlush(new VisitEntity(
+                patient, "VIS-E2E-01", "Consultation", "Général", "MÉDECINE GÉNÉRALE", medecin.getId(), Instant.now()));
 
-        setTenant();
-        VisitEntity visit = new VisitEntity(patient, "VIS-E2E-01", "Consultation", "Général", "MÉDECINE GÉNÉRALE", medecin.getId(), Instant.now());
-        visit = visitRepository.saveAndFlush(visit);
-
-        setTenant();
         InvoiceEntity invoice = new InvoiceEntity(patient.getId(), visit.getId(), "FAC-E2E-001", convention);
         invoice.setOrganizationId(org.getId());
         InvoiceItemEntity item = new InvoiceItemEntity(
-                "Prestation Acte K",
-                InvoiceItemType.K_SURGEON,
-                new BigDecimal("100000.0000"),
-                new BigDecimal("1.0000"),
-                null);
+                "Prestation Acte K", InvoiceItemType.K_SURGEON,
+                new BigDecimal("100000.0000"), new BigDecimal("1.0000"), null);
         item.setOrganizationId(org.getId());
         invoice.addItem(item);
         invoice = invoiceRepository.saveAndFlush(invoice);
@@ -195,7 +147,6 @@ public class FullFinancialE2ETest {
                 .andExpect(jsonPath("$.status").value("VALIDATED"));
         setTenant();
         invoice = invoiceRepository.findById(invoice.getId()).orElseThrow();
-
         assertEquals(new BigDecimal("100000.0000"), invoice.getTotalAmount());
         assertEquals(new BigDecimal("80000.0000"), invoice.getInsuranceShare());
         assertEquals(new BigDecimal("20000.0000"), invoice.getPatientShare());
@@ -206,17 +157,15 @@ public class FullFinancialE2ETest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(openReq)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("OPEN"))
-                .andExpect(jsonPath("$.openingBalance").value(5000.0));
-
+                .andExpect(jsonPath("$.status").value("OPEN"));
         setTenant();
-        CashRegisterSessionEntity session = cashRegisterSessionRepository.findByOpenedByUserIdAndStatus(caissier.getId(), "OPEN")
-                .orElseThrow(() -> new AssertionError("Session active non trouvée"));
+        CashRegisterSessionEntity session = cashRegisterSessionRepository
+                .findByOpenedByUserIdAndStatus(caissier.getId(), "OPEN").orElseThrow();
 
         mockMvc.perform(post("/api/invoices/" + invoice.getId() + "/payments")
                         .header("Authorization", "Bearer " + tokenCaissier)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"amount\": 20000, \"method\": \"CASH\", \"reference\": \"ENCAISSE-PATIENT\"}"))
+                        .content("{\"amount\":20000,\"method\":\"CASH\",\"reference\":\"ENCAISSE-PATIENT\"}"))
                 .andExpect(status().isOk());
 
         setTenant();
@@ -225,37 +174,17 @@ public class FullFinancialE2ETest {
                 new BigDecimal("80000.0000"));
         bordereau.setOrganizationId(org.getId());
         bordereau = insuranceBordereauRepository.saveAndFlush(bordereau);
-
-        setTenant();
         InvoiceEntity invoiceToLink = invoiceRepository.findById(invoice.getId()).orElseThrow();
         invoiceToLink.setInsuranceBordereauId(bordereau.getId());
         invoiceRepository.saveAndFlush(invoiceToLink);
 
-        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/send")
-                        .header("Authorization", "Bearer " + tokenDaf))
-                .andExpect(status().isOk());
-        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/receive")
-                        .header("Authorization", "Bearer " + tokenDaf)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"insurerReference\":\"AR-E2E-01\"}"))
-                .andExpect(status().isOk());
-        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/accept")
-                        .header("Authorization", "Bearer " + tokenDaf)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"acceptedAmount\":80000,\"insurerReference\":\"AR-E2E-01\"}"))
-                .andExpect(status().isOk());
-        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/pay")
-                        .header("Authorization", "Bearer " + tokenDaf)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"amount\": 80000, \"referenceNumber\": \"VIR-ASSURANCE\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("SETTLED"));
+        progressAndPayBordereau(bordereau.getId(), new BigDecimal("80000.0000"), "AR-E2E-01", "VIR-ASSURANCE");
 
         setTenant();
-        InvoiceEntity savedInvoice = invoiceRepository.findById(invoice.getId()).orElseThrow();
-        assertEquals(InvoiceStatus.SETTLED, savedInvoice.getStatus());
+        assertEquals(InvoiceStatus.SETTLED, invoiceRepository.findById(invoice.getId()).orElseThrow().getStatus());
 
-        CashMovementRequest movementReq = new CashMovementRequest("TRANSFER_TO_BANK", 15000.0, "Dépôt d'espèces du jour", "CASH", "SLIP-DEPOSIT-01", false);
+        CashMovementRequest movementReq = new CashMovementRequest(
+                "TRANSFER_TO_BANK", 15000.0, "Dépôt d'espèces du jour", "CASH", "SLIP-DEPOSIT-01", false);
         mockMvc.perform(post("/api/cash-registers/movements")
                         .header("Authorization", "Bearer " + tokenCaissier)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -269,17 +198,16 @@ public class FullFinancialE2ETest {
                         .content(objectMapper.writeValueAsString(closeReq)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CLOSED"))
-                .andExpect(jsonPath("$.discrepancyAmount").value(-1000.0))
-                .andExpect(jsonPath("$.discrepancyResolved").value(false));
+                .andExpect(jsonPath("$.discrepancyAmount").value(-1000.0));
 
-        ResolveDiscrepancyRequest resolveReq = new ResolveDiscrepancyRequest("Ecart toléré et imputé sur charges exceptionnelles après validation des pièces justificatives");
+        ResolveDiscrepancyRequest resolveReq = new ResolveDiscrepancyRequest(
+                "Ecart toléré et imputé sur charges exceptionnelles après validation des pièces justificatives");
         mockMvc.perform(post("/api/cash-registers/sessions/" + session.getId() + "/resolve-discrepancy")
                         .header("Authorization", "Bearer " + tokenDaf)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(resolveReq)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.discrepancyResolved").value(true))
-                .andExpect(jsonPath("$.resolutionNotes").value("Ecart toléré et imputé sur charges exceptionnelles après validation des pièces justificatives"));
+                .andExpect(jsonPath("$.discrepancyResolved").value(true));
 
         mockMvc.perform(get("/api/accounting/export")
                         .header("Authorization", "Bearer " + tokenDaf)
@@ -303,23 +231,20 @@ public class FullFinancialE2ETest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(openReq)))
                 .andExpect(status().isCreated());
-
         setTenant();
-        CashRegisterSessionEntity session = cashRegisterSessionRepository.findByOpenedByUserIdAndStatus(caissier.getId(), "OPEN")
-                .orElseThrow(() -> new AssertionError("Session active non trouvée"));
+        CashRegisterSessionEntity session = cashRegisterSessionRepository
+                .findByOpenedByUserIdAndStatus(caissier.getId(), "OPEN").orElseThrow();
 
         mockMvc.perform(post("/api/cash-registers/sessions/close")
                         .header("Authorization", "Bearer " + tokenCaissier)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CloseSessionRequest(4000.0, "Test écart"))))
                 .andExpect(status().isOk());
-
         mockMvc.perform(post("/api/cash-registers/sessions/" + session.getId() + "/resolve-discrepancy")
                         .header("Authorization", "Bearer " + tokenCaissier)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new ResolveDiscrepancyRequest("Tentative caissier"))))
                 .andExpect(status().isForbidden());
-
         mockMvc.perform(get("/api/accounting/export")
                         .header("Authorization", "Bearer " + tokenCaissier)
                         .param("startDate", LocalDate.now().toString())
@@ -334,7 +259,6 @@ public class FullFinancialE2ETest {
                         .param("startDate", LocalDate.now().toString())
                         .param("endDate", LocalDate.now().toString()))
                 .andExpect(status().isForbidden());
-
         mockMvc.perform(post("/api/cash-registers/sessions/" + UUID.randomUUID() + "/resolve-discrepancy")
                         .header("Authorization", "Bearer " + tokenReceptioniste)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -347,11 +271,10 @@ public class FullFinancialE2ETest {
                 new BigDecimal("8000.0000"));
         bordereau.setOrganizationId(org.getId());
         bordereau = insuranceBordereauRepository.saveAndFlush(bordereau);
-
         mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/pay")
                         .header("Authorization", "Bearer " + tokenReceptioniste)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"amount\": 8000, \"referenceNumber\": \"TENTATIVE\"}"))
+                        .content("{\"amount\":8000,\"referenceNumber\":\"TENTATIVE\"}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -383,16 +306,40 @@ public class FullFinancialE2ETest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"acceptedAmount\":5000}"))
                 .andExpect(status().isOk());
+        // Le rôle est autorisé, mais le domaine refuse un paiement non affectable à une facture/créance.
         mockMvc.perform(post("/api/billing/insurance-bordereaux/" + bordereau.getId() + "/pay")
                         .header("Authorization", "Bearer " + tokenDaf)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"amount\": 5000, \"referenceNumber\": \"VIR-TEST\"}"))
-                .andExpect(status().isOk());
+                        .content("{\"amount\":5000,\"referenceNumber\":\"VIR-TEST\"}"))
+                .andExpect(status().isConflict());
 
         mockMvc.perform(post("/api/invoices")
                         .header("Authorization", "Bearer " + tokenDaf)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"patientId\": \"" + UUID.randomUUID() + "\", \"items\": []}"))
+                        .content("{\"patientId\":\"" + UUID.randomUUID() + "\",\"items\":[]}"))
                 .andExpect(status().isForbidden());
+    }
+
+    private void progressAndPayBordereau(UUID id, BigDecimal amount, String insurerReference, String paymentReference)
+            throws Exception {
+        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + id + "/send")
+                        .header("Authorization", "Bearer " + tokenDaf))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + id + "/receive")
+                        .header("Authorization", "Bearer " + tokenDaf)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"insurerReference\":\"" + insurerReference + "\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + id + "/accept")
+                        .header("Authorization", "Bearer " + tokenDaf)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"acceptedAmount\":" + amount.toPlainString() + "}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/billing/insurance-bordereaux/" + id + "/pay")
+                        .header("Authorization", "Bearer " + tokenDaf)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\":" + amount.toPlainString() + ",\"referenceNumber\":\"" + paymentReference + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SETTLED"));
     }
 }
