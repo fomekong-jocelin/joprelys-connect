@@ -2,12 +2,13 @@ package com.joprelys.backend.billing.api;
 
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
-import com.joprelys.backend.billing.application.BillingService;
 import com.joprelys.backend.billing.application.BillingPaymentService;
+import com.joprelys.backend.billing.application.ConventionTariffService;
+import com.joprelys.backend.billing.application.InvoiceCrudService;
+import com.joprelys.backend.billing.application.InvoicePrecalculationService;
 import com.joprelys.backend.billing.application.InvoiceSettlementQueryService;
 import com.joprelys.backend.billing.infrastructure.persistence.InvoiceEntity;
 import com.joprelys.backend.billing.infrastructure.persistence.InvoiceRepository;
-import com.joprelys.backend.billing.infrastructure.persistence.PaymentEntity;
 import com.joprelys.backend.billing.infrastructure.persistence.PaymentRepository;
 import com.joprelys.backend.billing.infrastructure.persistence.TariffGridEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
@@ -26,6 +27,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,7 +36,9 @@ import java.util.UUID;
 @Tag(name = "Billing", description = "Gestion de la facturation médicale et des règlements de caisse")
 public class InvoiceController {
 
-    private final BillingService billingService;
+    private final InvoiceCrudService invoiceCrudService;
+    private final InvoicePrecalculationService precalculationService;
+    private final ConventionTariffService conventionTariffService;
     private final BillingPaymentService billingPaymentService;
     private final InvoiceSettlementQueryService invoiceSettlementQueryService;
     private final InvoiceRepository invoiceRepository;
@@ -44,7 +48,9 @@ public class InvoiceController {
     private final PdfGeneratorService pdfGeneratorService;
     private final QrCodeGeneratorService qrCodeGeneratorService;
 
-    public InvoiceController(BillingService billingService,
+    public InvoiceController(InvoiceCrudService invoiceCrudService,
+                             InvoicePrecalculationService precalculationService,
+                             ConventionTariffService conventionTariffService,
                              BillingPaymentService billingPaymentService,
                              InvoiceSettlementQueryService invoiceSettlementQueryService,
                              InvoiceRepository invoiceRepository,
@@ -53,7 +59,9 @@ public class InvoiceController {
                              OrganizationRepository organizationRepository,
                              PdfGeneratorService pdfGeneratorService,
                              QrCodeGeneratorService qrCodeGeneratorService) {
-        this.billingService = billingService;
+        this.invoiceCrudService = invoiceCrudService;
+        this.precalculationService = precalculationService;
+        this.conventionTariffService = conventionTariffService;
         this.billingPaymentService = billingPaymentService;
         this.invoiceSettlementQueryService = invoiceSettlementQueryService;
         this.invoiceRepository = invoiceRepository;
@@ -70,24 +78,21 @@ public class InvoiceController {
     public ResponseEntity<InvoiceResponse> precalculate(@RequestParam UUID patientId,
                                                         @RequestParam(required = false) UUID visitId,
                                                         @RequestParam(required = false) UUID insuranceConventionId) {
-        InvoiceResponse response = billingService.precalculateInvoice(patientId, visitId, insuranceConventionId);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(precalculationService.precalculate(patientId, visitId, insuranceConventionId));
     }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER')")
     @Operation(summary = "Créer une facture", description = "Crée et enregistre une facture pour un patient.")
     public ResponseEntity<InvoiceResponse> createInvoice(@Valid @RequestBody CreateInvoiceRequest request) {
-        InvoiceResponse response = billingService.createInvoice(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(invoiceCrudService.createInvoice(request));
     }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER')")
     @Operation(summary = "Lister les factures d'un patient", description = "Récupère l'historique des factures d'un patient.")
     public ResponseEntity<List<InvoiceResponse>> listInvoices(@RequestParam UUID patientId) {
-        List<InvoiceResponse> list = billingService.listInvoices(patientId);
-        return ResponseEntity.ok(list);
+        return ResponseEntity.ok(invoiceCrudService.listInvoices(patientId));
     }
 
     @GetMapping("/settlement-summaries")
@@ -101,8 +106,7 @@ public class InvoiceController {
     @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER')")
     @Operation(summary = "Détails d'une facture", description = "Récupère les détails d'une facture par son identifiant.")
     public ResponseEntity<InvoiceResponse> getInvoice(@PathVariable UUID id) {
-        InvoiceResponse response = billingService.getInvoice(id);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(invoiceCrudService.getInvoice(id));
     }
 
     @PostMapping("/{id}/payments")
@@ -110,16 +114,14 @@ public class InvoiceController {
     @Operation(summary = "Enregistrer un règlement", description = "Enregistre un paiement sur une facture.")
     public ResponseEntity<PaymentResponse> addPayment(@PathVariable UUID id,
                                                       @Valid @RequestBody PaymentRequest request) {
-        PaymentResponse response = billingPaymentService.addPayment(id, request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(billingPaymentService.addPayment(id, request));
     }
 
     @GetMapping("/{id}/payments")
     @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER', 'CAISSIER', 'DAF')")
     @Operation(summary = "Lister les règlements d'une facture", description = "Récupère tous les paiements enregistrés pour une facture.")
     public ResponseEntity<List<PaymentResponse>> listPayments(@PathVariable UUID id) {
-        List<PaymentResponse> list = billingPaymentService.listPayments(id);
-        return ResponseEntity.ok(list);
+        return ResponseEntity.ok(billingPaymentService.listPayments(id));
     }
 
     @GetMapping(value = "/{id}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
@@ -135,14 +137,12 @@ public class InvoiceController {
         OrganizationEntity org = organizationRepository.findById(invoice.getOrganizationId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Clinique introuvable"));
 
-        double totalPaid = paymentRepository.findByInvoiceId(id).stream()
-                .mapToDouble(PaymentEntity::getAmount)
-                .sum();
+        BigDecimal totalPaid = paymentRepository.findByInvoiceId(id).stream()
+                .map(p -> p.getAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 1. Generate QR Code for public verification of this invoice
         String verificationUrl = "https://joprelys.com/verify/invoice/" + id;
         byte[] qrCodeBytes = qrCodeGeneratorService.generateQrCode(verificationUrl, 150, 150);
-
         String cashierName = authentication != null ? authentication.getName() : "Caissier principal";
 
         byte[] pdfBytes = pdfGeneratorService.generateInvoicePdf(
@@ -166,29 +166,30 @@ public class InvoiceController {
     @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER')")
     @Operation(summary = "Lister les conventions d'assurances", description = "Récupère les conventions paramétrées.")
     public ResponseEntity<List<InsuranceConventionDto>> listConventions() {
-        return ResponseEntity.ok(billingService.listConventions());
+        return ResponseEntity.ok(conventionTariffService.listConventions());
     }
 
     @PostMapping("/conventions")
     @PreAuthorize("hasRole('ADMIN_CLINIQUE')")
     @Operation(summary = "Créer une convention d'assurance", description = "Paramètre une nouvelle convention d'assurance.")
     public ResponseEntity<InsuranceConventionDto> createConvention(@RequestParam String name,
-                                                                   @RequestParam Double coveragePercentage) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(billingService.createConvention(name, coveragePercentage));
+                                                                   @RequestParam BigDecimal coveragePercentage) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(conventionTariffService.createConvention(name, coveragePercentage));
     }
 
     @GetMapping("/tariffs")
     @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER')")
     @Operation(summary = "Lister la grille des tarifs", description = "Récupère la grille tarifaire (K, AMI, etc.).")
     public ResponseEntity<List<TariffGridEntity>> listTariffs() {
-        return ResponseEntity.ok(billingService.listTariffs());
+        return ResponseEntity.ok(conventionTariffService.listTariffs());
     }
 
     @PostMapping("/tariffs")
     @PreAuthorize("hasRole('ADMIN_CLINIQUE')")
     @Operation(summary = "Créer ou mettre à jour un tarif", description = "Ajoute ou modifie un tarif clé de la grille.")
     public ResponseEntity<TariffGridEntity> createOrUpdateTariff(@RequestParam String keyLetter,
-                                                                 @RequestParam Double unitValue) {
-        return ResponseEntity.ok(billingService.createOrUpdateTariff(keyLetter, unitValue));
+                                                                 @RequestParam BigDecimal unitValue) {
+        return ResponseEntity.ok(conventionTariffService.createOrUpdateTariff(keyLetter, unitValue));
     }
 }
