@@ -1,0 +1,120 @@
+from pathlib import Path
+
+
+def replace_required(text: str, old: str, new: str, label: str) -> str:
+    if old not in text:
+        raise SystemExit(f"Pattern missing in {label}: {old!r}")
+    return text.replace(old, new, 1)
+
+
+def update_file(path: str, transform) -> None:
+    file_path = Path(path)
+    original = file_path.read_text(encoding="utf-8")
+    updated = transform(original)
+    if updated == original:
+        raise SystemExit(f"No change produced for {path}")
+    file_path.write_text(updated, encoding="utf-8")
+
+
+def update_ci_ticket(text: str) -> str:
+    label = "CI ticket"
+    text = replace_required(text, "**Statut :** QA — correction minimale terminée et workflow définitif validé dans la PR temporaire #11.", "**Statut :** DONE — correctif fusionné dans `main` via la PR #9 et validé avec la baseline finale de la PR temporaire #12.", label)
+    text = text.replace("PR temporaire #11", "PR temporaire #12")
+    text = replace_required(text, "- [ ] Mettre à jour le changelog et le suivi projet avant fusion.", "- [x] Mettre à jour le changelog et le suivi projet après fusion.", label)
+    text = replace_required(text, "- [ ] Changelog et suivi finalisés avant fusion.", "- [x] Changelog et suivi finalisés après fusion.", label)
+    text = replace_required(text, "Finaliser le changelog et le suivi projet avant fusion de la PR #9.", "Aucun travail technique restant. La PR #9 est fusionnée et la traçabilité centrale est à jour.", label)
+    return text
+
+
+def update_v55_ticket(text: str) -> str:
+    label = "V55 ticket"
+    text = replace_required(text, "**Statut :** QA VALIDÉE — migration et suite complète validées sur H2 et PostgreSQL 16 réel via Testcontainers.", "**Statut :** DONE — correctif fusionné dans `main` via la PR #8, validé sur H2 et PostgreSQL 16 réel via Testcontainers.", label)
+    text = replace_required(text, "- [ ] Mettre à jour le changelog et le suivi projet avant fusion.", "- [x] Mettre à jour le changelog et le suivi projet après fusion.", label)
+    text = replace_required(text, "- [ ] Changelog et suivi projet finalisés avant fusion.", "- [x] Changelog et suivi projet finalisés après fusion.", label)
+    text = replace_required(text, "Finaliser le changelog et le suivi projet, puis vérifier l’historique Flyway des environnements partagés avant fusion/déploiement.", "Aucun travail de code restant. Avant tout déploiement sur un environnement partagé, vérifier `flyway_schema_history` afin de confirmer que l’ancienne empreinte de V55 n’a pas déjà été enregistrée.", label)
+    return text
+
+
+def update_bigdecimal_ticket(text: str) -> str:
+    label = "BigDecimal ticket"
+    text = replace_required(text, "QA — implémentation terminée et validation combinée entièrement verte sur la PR temporaire #11.", "DONE — correctif fusionné dans `main` via la PR #10 et validation combinée entièrement verte sur la PR temporaire #12.", label)
+    text = text.replace("PR temporaire #11", "PR temporaire #12")
+    text = replace_required(text, "- la migration V55/H2 reste traitée séparément dans `BUG-20260710-V55-H2-COMPATIBILITY` ;", "- la migration V55/H2 est corrigée et fusionnée via `BUG-20260710-V55-H2-COMPATIBILITY` ;", label)
+    text = replace_required(text, "- la validation PostgreSQL réelle reste requise avant une livraison en environnement partagé.", "- la validation PostgreSQL 16 est automatisée avec Testcontainers ; la vérification de `flyway_schema_history` reste une précondition de déploiement partagé.", label)
+    text = replace_required(text, "- [ ] Suivi projet et changelog à finaliser avant fusion.", "- [x] Suivi projet et changelog finalisés après fusion.", label)
+    return text
+
+
+update_file("docs/ai/tickets/BUG-20260710-CI-BASELINE-EXECUTION.md", update_ci_ticket)
+update_file("docs/ai/tickets/BUG-20260710-V55-H2-COMPATIBILITY.md", update_v55_ticket)
+update_file("docs/ai/tickets/BUG-20260710-BACKEND-TESTS-BIGDECIMAL.md", update_bigdecimal_ticket)
+
+tracking_path = Path("docs/ai/PROJECT-TRACKING.md")
+tracking = tracking_path.read_text(encoding="utf-8")
+tracking = replace_required(tracking, "| Dernière mise à jour | 2026-07-10 (BUG icônes DPU : emojis et clés i18n urgences corrigés, 123 tests Angular et build OK ; QA visuelle restante) |", "| Dernière mise à jour | 2026-07-10 (baseline P0 clôturée : CI, V55 H2/PostgreSQL et alignement BigDecimal fusionnés ; backend et frontend verts) |", "project tracking")
+tracking = replace_required(tracking, "| Risques majeurs | États facture/créance contradictoires ; migration V55 incompatible H2 ; `PatientMedicalInfoComponent` monolithique au-dessus de 500 lignes |", "| Risques majeurs | États facture/créance contradictoires ; DTO financiers résiduels en `Double` ; `PatientMedicalInfoComponent` monolithique au-dessus de 500 lignes |", "project tracking")
+tracking = replace_required(tracking, "| Sprint courant | SPRINT-0013 |", "| Sprint courant | SPRINT-0014 |", "project tracking")
+tracking = replace_required(tracking, "| Charge engagée | 20.05j (Est. Senior) |", "| Charge engagée | 20.90j (Est. Senior) |", "project tracking")
+tracking = replace_required(tracking, "QA visuelle ; test backend bloqué par V55/H2 ; refactor composant >500 lignes", "QA visuelle ; refactor composant >500 lignes", "project tracking")
+marker = "|---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|\n"
+rows = (
+    "| TASK-20260710-P0-BASELINE-CLOSURE | TECHNICAL_BASELINE | Documentation | Clôture documentaire de la baseline P0 | Documentation / QA | DONE | P0 | 1 | Tech Lead / QA | 0.1j | 0.15j | 0.25j | Codex | Lead Developer | SPRINT-0014 | 0.1j | Aucun | Faible | 2026-07-10 |\n"
+    "| BUG-20260710-CI-BASELINE-EXECUTION | TECHNICAL_BASELINE | Bug CI/CD | Déblocage réel des tests Maven et Angular | CI/CD | DONE | P0 | 1 | DevOps / full-stack intermédiaire | 0.15j | 0.25j | 0.5j | Codex | Lead Developer | SPRINT-0014 | 0.15j | Aucun | Faible | 2026-07-10 |\n"
+    "| BUG-20260710-V55-H2-COMPATIBILITY | TECHNICAL_BASELINE | Bug DB | Migration V55 compatible H2 et PostgreSQL 16 | Backend / SQL | DONE | P0 | 2 | Backend Java / SQL senior | 0.4j | 0.7j | 1.2j | Codex | Lead Backend + référent données | SPRINT-0014 | 0.4j | Vérifier `flyway_schema_history` avant déploiement partagé | Faible | 2026-07-10 |\n"
+    "| BUG-20260710-BACKEND-TESTS-BIGDECIMAL | TECHNICAL_BASELINE | Bug Backend | Alignement BigDecimal des tests et quantités | Backend / QA | DONE | P0 | 2 | Backend Java intermédiaire / senior | 0.3j | 0.5j | 0.8j | Codex | Lead Backend + QA finance | SPRINT-0014 | 0.3j | DTO financiers résiduels en `Double` à traiter séparément | Faible | 2026-07-10 |\n"
+)
+if marker not in tracking:
+    raise SystemExit("Tracking table marker missing")
+if "BUG-20260710-CI-BASELINE-EXECUTION | TECHNICAL_BASELINE" not in tracking:
+    tracking = tracking.replace(marker, marker + rows, 1)
+tracking_path.write_text(tracking, encoding="utf-8")
+
+changelog_path = Path("docs/ai/CHANGELOG.md")
+changelog = changelog_path.read_text(encoding="utf-8")
+fixed_marker = "## [Unreleased]\n\n### Fixed\n"
+entries = (
+    "\n- **Baseline CI Maven/Angular (BUG-20260710-CI-BASELINE-EXECUTION)** : le pipeline rend le Maven Wrapper exécutable sur Linux et lance la commande Angular standard sans l’option invalide `--run`, afin que les suites backend/frontend et le build de production soient réellement bloquants.\n"
+    "- **Migration financière V55 (BUG-20260710-V55-H2-COMPATIBILITY)** : remplacement des casts PostgreSQL spécifiques par des conversions atomiques compatibles H2/PostgreSQL, avec validation obligatoire de toutes les migrations sur PostgreSQL 16 via Testcontainers et contrôle des 13 colonnes `NUMERIC`.\n"
+    "- **Précision financière BigDecimal (BUG-20260710-BACKEND-TESTS-BIGDECIMAL)** : migration des fixtures restées en `double`, assertions monétaires en `BigDecimal` et normalisation à quatre décimales des prix, quantités et coefficients de `InvoiceItemEntity`.\n"
+)
+if fixed_marker not in changelog:
+    raise SystemExit("Changelog Unreleased/Fixed marker missing")
+if "BUG-20260710-CI-BASELINE-EXECUTION" not in changelog:
+    changelog = changelog.replace(fixed_marker, fixed_marker + entries, 1)
+changelog_path.write_text(changelog, encoding="utf-8")
+
+Path("docs/ai/tickets/TASK-20260710-P0-BASELINE-CLOSURE.md").write_text("""# TASK-20260710-P0-BASELINE-CLOSURE — Clôture documentaire de la baseline P0
+
+## Mode
+
+QA Review / Project Tracking.
+
+## Statut
+
+DONE — les tickets CI, V55 et BigDecimal sont fusionnés, clôturés et reportés dans le suivi central et le changelog.
+
+## Périmètre
+
+- passage à `DONE` des tickets `BUG-20260710-CI-BASELINE-EXECUTION`, `BUG-20260710-V55-H2-COMPATIBILITY` et `BUG-20260710-BACKEND-TESTS-BIGDECIMAL` ;
+- correction des références de validation vers la PR temporaire #12 ;
+- mise à jour de `docs/ai/PROJECT-TRACKING.md` ;
+- mise à jour de `docs/ai/CHANGELOG.md` ;
+- aucune modification du code applicatif, du schéma ou du pipeline.
+
+## Validation
+
+- PR #9 fusionnée : CI Maven/Angular ;
+- PR #8 fusionnée : V55 H2/PostgreSQL 16 ;
+- PR #10 fusionnée : alignement BigDecimal ;
+- dernière CI avant fusion : backend Maven, PostgreSQL Testcontainers, tests Angular et build de production verts.
+
+## Risques restants
+
+- vérifier `flyway_schema_history` avant déploiement sur un environnement partagé ;
+- traiter dans un ticket séparé les DTO financiers résiduels en `Double` ;
+- poursuivre `STORY-2201` pour arbitrer le modèle d’état financier `PAID` / `SETTLED`.
+
+## Impact version
+
+Aucun changement applicatif supplémentaire. La baseline fusionnée correspond à un impact **PATCH**.
+""", encoding="utf-8")
