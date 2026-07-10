@@ -195,9 +195,9 @@ public class FullFinancialE2ETest {
         invoice = invoiceRepository.saveAndFlush(invoice);
 
         // Déclencher le workflow financier sur la facture
-        assertEquals(100000.0, invoice.getTotalAmount());
-        assertEquals(80000.0, invoice.getInsuranceShare());
-        assertEquals(20000.0, invoice.getPatientShare());
+        assertEquals(new java.math.BigDecimal("100000.0000"), invoice.getTotalAmount());
+        assertEquals(new java.math.BigDecimal("80000.0000"), invoice.getInsuranceShare());
+        assertEquals(new java.math.BigDecimal("20000.0000"), invoice.getPatientShare());
 
         // 3. Caissier ouvre une session de caisse
         OpenSessionRequest openReq = new OpenSessionRequest(caissePrincipale.getId(), 5000.0);
