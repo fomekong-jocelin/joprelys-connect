@@ -6,50 +6,7 @@ on:
   pull_request:
     branches: [main, develop]
 
-permissions:
-  contents: write
-
 jobs:
-  story-2202-changelog:
-    name: STORY-2202 — Update changelog
-    if: github.event_name == 'pull_request' && github.head_ref == 'feature/story-2202-invoice-workspace'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout feature branch
-        uses: actions/checkout@v4
-        with:
-          ref: feature/story-2202-invoice-workspace
-          fetch-depth: 0
-      - name: Add STORY-2202 changelog entry
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path('docs/ai/CHANGELOG.md')
-          text = path.read_text(encoding='utf-8')
-          marker = '**Workspace Factures orienté tâche (STORY-2202)**'
-          if marker not in text:
-              anchor = next(
-                  line for line in text.splitlines(keepends=True)
-                  if '**Contrat d’état financier patient/assurance (STORY-2201)**' in line
-              )
-              entry = (
-                  '- **Workspace Factures orienté tâche (STORY-2202)** : refonte de l’historique patient en cartes scannables alimentées par `InvoiceSettlementSummary`, distinction des états chargement/erreur/vide, action financière unique selon le recouvrement, sélection visible, panneau de détail accessible avec Échap et restauration du focus, responsive light/dark et traductions FR/EN.\n'
-              )
-              path.write_text(text.replace(anchor, anchor + entry, 1), encoding='utf-8')
-          PY
-      - name: Restore permanent pipeline
-        run: |
-          git fetch origin main
-          git show origin/main:.github/workflows/ci.yml > .github/workflows/ci.yml
-      - name: Commit changelog
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/ai/CHANGELOG.md .github/workflows/ci.yml
-          git diff --cached --quiet || git commit -m "docs(changelog): documenter STORY-2202"
-          git push origin HEAD:feature/story-2202-invoice-workspace
-
   backend-build:
     name: Backend — Maven Build & Tests
     runs-on: ubuntu-latest
