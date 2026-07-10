@@ -2,7 +2,7 @@ export interface CashSessionHistory {
   id: string;
   cashRegisterId: string;
   cashRegisterName: string;
-  reportNumber: string;
+  reportNumber?: string;
   openedByUserId: string;
   openedByName: string;
   openedAt: string;
