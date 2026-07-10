@@ -70,7 +70,7 @@ export class BillingCashSessionHistoryComponent implements OnInit {
   }
 
   downloadReport(session: CashSessionHistory): void {
-    if (session.status !== 'CLOSED' || this.downloadingSessionId()) return;
+    if (session.status !== 'CLOSED' || !session.reportNumber || this.downloadingSessionId()) return;
     this.downloadingSessionId.set(session.id);
     this.billingApi.downloadCashCloseoutReport(session.id)
       .pipe(finalize(() => this.downloadingSessionId.set(null)))
