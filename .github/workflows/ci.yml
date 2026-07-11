@@ -25,23 +25,10 @@ jobs:
       - name: Ensure Maven wrapper is executable
         run: chmod +x mvnw
       - name: Build and verify (Maven strict)
-        shell: bash
-        run: |
-          set +e
-          ./mvnw clean verify -B -Dspring.profiles.active=test > ../rbac-backend.log 2>&1
-          status=$?
-          tail -n 450 ../rbac-backend.log
-          exit $status
+        run: ./mvnw clean verify -B -Dspring.profiles.active=test
         env:
           SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
           JOPRELYS_JWT_SECRET: ci-test-jwt-secret-at-least-32-chars-2026
-      - name: Upload RBAC backend diagnostic
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: rbac-backend-diagnostic
-          path: rbac-backend.log
-          if-no-files-found: error
 
   frontend-build:
     name: Frontend Angular — Build & Tests
