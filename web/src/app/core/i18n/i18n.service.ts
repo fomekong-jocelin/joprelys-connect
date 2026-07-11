@@ -47,6 +47,7 @@ export class I18nService {
         urgTemp: this.optionalDictionary(`/assets/i18n/features/urg-temp/${lang}.json`),
         emergency: this.optionalDictionary(`/assets/i18n/features/emergency/${lang}.json`),
         medicoLegal: this.optionalDictionary(`/assets/i18n/features/medico-legal/${lang}.json`),
+        patientReconciliation: this.optionalDictionary(`/assets/i18n/features/patient-reconciliation/${lang}.json`),
       }));
 
       this.dictionary.set({
@@ -56,6 +57,7 @@ export class I18nService {
         ...dictionaries.urgTemp,
         ...dictionaries.emergency,
         ...dictionaries.medicoLegal,
+        ...dictionaries.patientReconciliation,
       });
       this.loaded.update(state => ({ ...state, [lang]: true }));
     } catch {
