@@ -4,7 +4,11 @@ import jakarta.persistence.LockTimeoutException;
 import jakarta.persistence.PessimisticLockException;
 import java.net.URI;
 import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.CannotSerializeTransactionException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -15,7 +19,11 @@ public class SpatialConcurrencyExceptionHandler {
 
     @ExceptionHandler({
             CannotAcquireLockException.class,
+            CannotSerializeTransactionException.class,
+            DataIntegrityViolationException.class,
+            OptimisticLockingFailureException.class,
             PessimisticLockingFailureException.class,
+            QueryTimeoutException.class,
             PessimisticLockException.class,
             LockTimeoutException.class
     })
