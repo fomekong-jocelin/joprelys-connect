@@ -27,7 +27,7 @@ public class StaffController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('USER_READ', 'USER_MANAGE') or hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('USER_READ', 'USER_MANAGE') or hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN', 'AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN')")
     public List<StaffResponse> list(Authentication authentication) {
         return staffService.listStaff(authentication);
     }
