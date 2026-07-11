@@ -6,8 +6,10 @@ import com.joprelys.backend.emergency.infrastructure.persistence.EmergencyEntity
 import com.joprelys.backend.emergency.infrastructure.persistence.EmergencyRepository;
 import com.joprelys.backend.emergency.infrastructure.persistence.ResuscitationLogEntity;
 import com.joprelys.backend.emergency.medicolegal.application.EmergencyArrivalThirdPartyService;
+import com.joprelys.backend.patient.domain.PatientIdentityStatus;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
+import com.joprelys.backend.patient.reconciliation.application.PatientCanonicalResolver;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -22,20 +24,26 @@ public class EmergencyService {
     private final EmergencyRepository emergencyRepository;
     private final PatientRepository patientRepository;
     private final EmergencyArrivalThirdPartyService arrivalThirdPartyService;
+    private final PatientCanonicalResolver canonicalResolver;
 
     public EmergencyService(
             EmergencyRepository emergencyRepository,
             PatientRepository patientRepository,
-            EmergencyArrivalThirdPartyService arrivalThirdPartyService) {
+            EmergencyArrivalThirdPartyService arrivalThirdPartyService,
+            PatientCanonicalResolver canonicalResolver) {
         this.emergencyRepository = emergencyRepository;
         this.patientRepository = patientRepository;
         this.arrivalThirdPartyService = arrivalThirdPartyService;
+        this.canonicalResolver = canonicalResolver;
     }
 
     @Transactional
     public EmergencyEntity createEmergency(CreateEmergencyRequest request, UUID createdByUserId) {
         PatientEntity patient = patientRepository.findById(request.patientId())
                 .orElseThrow(() -> notFound("PATIENT_NOT_FOUND"));
+        if (patient.getIdentityStatus() == PatientIdentityStatus.MERGED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "PATIENT_ALIAS_READ_ONLY");
+        }
 
         boolean alreadyInEmergency = emergencyRepository.findByStabilizedAtIsNull().stream()
                 .anyMatch(emergency -> emergency.getPatient().getId().equals(request.patientId()));
@@ -116,7 +124,8 @@ public class EmergencyService {
 
     @Transactional(readOnly = true)
     public List<EmergencyEntity> getPatientEmergencies(UUID patientId) {
-        return emergencyRepository.findByPatientIdWithLogs(patientId);
+        var context = canonicalResolver.resolve(patientId);
+        return emergencyRepository.findByPatientIdsWithLogs(context.contributingPatientIds());
     }
 
     private ResponseStatusException notFound(String code) {
