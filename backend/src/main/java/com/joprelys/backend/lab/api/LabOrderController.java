@@ -92,7 +92,7 @@ public class LabOrderController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('LAB_ORDER_READ') or " + LEGACY_LAB_PROCESS_ROLES)
+    @PreAuthorize("hasAuthority('LAB_QUEUE_READ') or " + LEGACY_LAB_PROCESS_ROLES)
     @Operation(summary = "Lister toutes les demandes d'examen", description = "Retourne la liste de toutes les demandes d'examen.", responses = {
             @ApiResponse(responseCode = "200", description = "Liste des demandes d'examen retournée"),
             @ApiResponse(responseCode = "404", description = "Introuvable")
@@ -102,7 +102,7 @@ public class LabOrderController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('LAB_ORDER_READ') or " + LEGACY_LAB_PROCESS_ROLES)
+    @PreAuthorize("hasAuthority('LAB_QUEUE_READ') or " + LEGACY_LAB_PROCESS_ROLES)
     @Operation(summary = "Récupérer une demande d'examen", description = "Retourne les détails d'une demande d'examen par son identifiant.", responses = {
             @ApiResponse(responseCode = "200", description = "Demande d'examen trouvée"),
             @ApiResponse(responseCode = "404", description = "Introuvable")
