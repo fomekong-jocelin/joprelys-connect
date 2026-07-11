@@ -1,5 +1,6 @@
 package com.joprelys.backend.patient.reconciliation.api;
 
+import com.joprelys.backend.patient.reconciliation.application.PatientReconciliationHistoryService;
 import com.joprelys.backend.patient.reconciliation.application.PatientReconciliationWorkflowService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,9 +23,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class PatientReconciliationController {
 
     private final PatientReconciliationWorkflowService workflowService;
+    private final PatientReconciliationHistoryService historyService;
 
-    public PatientReconciliationController(PatientReconciliationWorkflowService workflowService) {
+    public PatientReconciliationController(
+            PatientReconciliationWorkflowService workflowService,
+            PatientReconciliationHistoryService historyService) {
         this.workflowService = workflowService;
+        this.historyService = historyService;
     }
 
     @GetMapping("/queue")
@@ -38,6 +43,13 @@ public class PatientReconciliationController {
     public List<PatientReconciliationCandidateResponse> findCandidates(
             @PathVariable UUID sourcePatientId) {
         return workflowService.findCandidates(sourcePatientId);
+    }
+
+    @GetMapping("/{sourcePatientId}/history")
+    @Operation(summary = "Consulter l’historique immuable des décisions de rapprochement")
+    public List<PatientReconciliationEventResponse> listHistory(
+            @PathVariable UUID sourcePatientId) {
+        return historyService.listHistory(sourcePatientId);
     }
 
     @PostMapping("/{sourcePatientId}/decisions")
