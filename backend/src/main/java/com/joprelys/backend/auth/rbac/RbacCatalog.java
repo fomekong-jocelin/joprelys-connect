@@ -42,7 +42,8 @@ public final class RbacCatalog {
                 permission("EMERGENCY_READ", "URGENCES", "Consulter les urgences", "Consulter les dossiers d'urgence et leur historique."),
                 permission("EMERGENCY_WRITE", "URGENCES", "Prendre en charge une urgence", "Créer une urgence et consigner les soins de réanimation."),
                 permission("EMERGENCY_STABILIZE", "URGENCES", "Stabiliser une urgence", "Clôturer la prise en charge et orienter le patient."),
-                permission("LAB_ORDER_READ", "LABORATOIRE", "Consulter les analyses", "Consulter les demandes et résultats de laboratoire."),
+                permission("LAB_ORDER_READ", "LABORATOIRE", "Consulter les analyses d'un patient", "Consulter les demandes et résultats de laboratoire rattachés à un patient autorisé."),
+                permission("LAB_QUEUE_READ", "LABORATOIRE", "Consulter la file du laboratoire", "Consulter la file globale des demandes d'analyse de l'établissement."),
                 permission("LAB_ORDER_CREATE", "LABORATOIRE", "Prescrire une analyse", "Créer une demande d'analyse pour un patient."),
                 permission("LAB_ORDER_WRITE", "LABORATOIRE", "Traiter les analyses", "Prendre en charge et publier les résultats de laboratoire."),
                 permission("PHARMACY_PRESCRIPTION_READ", "PHARMACIE", "Consulter les prescriptions", "Vérifier les prescriptions destinées à la pharmacie."),
@@ -73,8 +74,8 @@ public final class RbacCatalog {
         Map<String, Set<String>> mappings = new LinkedHashMap<>();
         Set<String> all = permissionCodes();
 
-        mappings.put(ROLE_ADMIN_JOPRELYS, all);
-        mappings.put(ROLE_SUPER_ADMIN, all);
+        mappings.put(ROLE_ADMIN_JOPRELYS, set("ORGANIZATION_MANAGE"));
+        mappings.put(ROLE_SUPER_ADMIN, set("ORGANIZATION_MANAGE"));
         mappings.put(ROLE_ADMIN_CLINIQUE, without(all, "ORGANIZATION_MANAGE"));
         mappings.put("DAF", set(
                 "USER_READ", "RBAC_READ", "BILLING_INVOICE_READ", "CASH_HISTORY_READ", "CASH_DISCREPANCY_RESOLVE",
@@ -98,7 +99,7 @@ public final class RbacCatalog {
                 "PATIENT_READ", "PATIENT_WRITE", "PATIENT_EMERGENCY_ACCESS", "CLINICAL_READ", "CLINICAL_WRITE",
                 "EMERGENCY_READ", "EMERGENCY_WRITE", "LAB_ORDER_READ",
                 "HOSPITALIZATION_READ", "HOSPITALIZATION_MANAGE"));
-        mappings.put("BIOLOGISTE", set("PATIENT_READ", "LAB_ORDER_READ", "LAB_ORDER_WRITE"));
+        mappings.put("BIOLOGISTE", set("PATIENT_READ", "LAB_ORDER_READ", "LAB_QUEUE_READ", "LAB_ORDER_WRITE"));
         mappings.put("PHARMACIEN", set(
                 "PHARMACY_PRESCRIPTION_READ", "PHARMACY_STOCK_MANAGE", "STOCK_READ", "STOCK_MANAGE"));
         mappings.put("GESTIONNAIRE_STOCK", set("STOCK_READ", "STOCK_MANAGE"));
