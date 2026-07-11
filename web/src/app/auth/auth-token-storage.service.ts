@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { AuthSession, LoginResponse } from './auth.models';
+import { AuthSession, CurrentSessionResponse, LoginResponse } from './auth.models';
 
 const SESSION_KEY = 'joprelys.auth.session';
 
@@ -19,13 +19,30 @@ export class AuthTokenStorageService {
       name: response.name,
       role: response.role,
     };
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    this.session.set(session);
+    this.persist(session);
+  }
+
+  updateIdentity(response: CurrentSessionResponse): void {
+    const current = this.session();
+    if (!current) {
+      return;
+    }
+    this.persist({
+      ...current,
+      email: response.email,
+      name: response.name,
+      role: response.role,
+    });
   }
 
   clear(): void {
     sessionStorage.removeItem(SESSION_KEY);
     this.session.set(null);
+  }
+
+  private persist(session: AuthSession): void {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    this.session.set(session);
   }
 
   private readSession(): AuthSession | null {
