@@ -15,8 +15,12 @@ import com.joprelys.backend.patient.infrastructure.persistence.PatientIdentitySt
 import com.joprelys.backend.patient.infrastructure.persistence.PatientIdentityStatusHistoryRepository;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -26,8 +30,10 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class ProvisionalPatientService {
 
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final int MAX_NUMBER_ATTEMPTS = 10;
+
     private final PatientRepository patientRepository;
-    private final PatientNumberGenerator patientNumberGenerator;
     private final PatientIdentityDeclarationRepository declarationRepository;
     private final PatientIdentityStatusHistoryRepository statusHistoryRepository;
     private final UserAccountRepository userAccountRepository;
@@ -35,13 +41,11 @@ public class ProvisionalPatientService {
 
     public ProvisionalPatientService(
             PatientRepository patientRepository,
-            PatientNumberGenerator patientNumberGenerator,
             PatientIdentityDeclarationRepository declarationRepository,
             PatientIdentityStatusHistoryRepository statusHistoryRepository,
             UserAccountRepository userAccountRepository,
             AuditService auditService) {
         this.patientRepository = patientRepository;
-        this.patientNumberGenerator = patientNumberGenerator;
         this.declarationRepository = declarationRepository;
         this.statusHistoryRepository = statusHistoryRepository;
         this.userAccountRepository = userAccountRepository;
@@ -49,7 +53,7 @@ public class ProvisionalPatientService {
     }
 
     @Transactional
-    public synchronized CreationResult create(CreateProvisionalPatientRequest request) {
+    public CreationResult create(CreateProvisionalPatientRequest request) {
         UserAccountEntity actor = requireCurrentActor();
         if (actor.getOrganizationId() == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Un établissement est requis");
@@ -64,13 +68,11 @@ public class ProvisionalPatientService {
                     "Un dossier URG-TEMP ne peut pas être déclaré vérifié à la création");
         }
 
-        PatientNumberGenerator.GeneratedNumbers numbers = patientNumberGenerator.generateNextNumbers();
-        String temporaryNumber = patientNumberGenerator.generateTemporaryPatientNumber();
-
+        ProvisionalNumbers numbers = generateUniqueNumbers();
         PatientEntity patient = PatientEntity.provisionalEmergency(
-                numbers.globalNumber(),
-                numbers.localNumber(),
-                temporaryNumber,
+                numbers.globalPatientNumber(),
+                numbers.localPatientNumber(),
+                numbers.temporaryPatientNumber(),
                 request.apparentGender(),
                 request.estimatedAgeRange(),
                 request.physicalDescription(),
@@ -98,14 +100,31 @@ public class ProvisionalPatientService {
                 "PATIENT_IDENTITY",
                 savedPatient.getId(),
                 "CREATE_PROVISIONAL_EMERGENCY_PATIENT",
-                "Création du dossier " + temporaryNumber);
+                "Création du dossier " + numbers.temporaryPatientNumber());
 
         return new CreationResult(savedPatient, declarations);
     }
 
     @Transactional(readOnly = true)
-    public List<PatientIdentityDeclarationEntity> getDeclarations(java.util.UUID patientId) {
+    public List<PatientIdentityDeclarationEntity> getDeclarations(UUID patientId) {
         return declarationRepository.findAllByPatientIdOrderByDeclaredAtAsc(patientId);
+    }
+
+    private ProvisionalNumbers generateUniqueNumbers() {
+        String date = LocalDate.now().format(DATE_FORMATTER);
+        for (int attempt = 0; attempt < MAX_NUMBER_ATTEMPTS; attempt++) {
+            String random = UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT);
+            String temporary = "URG-TEMP-" + date + "-" + random.substring(0, 6);
+            String global = "DPU-JOP-" + date + "-" + random.substring(0, 12);
+            String local = "PAT-" + date + "-" + random.substring(0, 12);
+            if (!patientRepository.existsByTemporaryPatientNumber(temporary)
+                    && !patientRepository.existsByGlobalPatientNumber(global)) {
+                return new ProvisionalNumbers(global, local, temporary);
+            }
+        }
+        throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Impossible de générer un identifiant URG-TEMP unique");
     }
 
     private List<PatientIdentityDeclarationEntity> saveDeclarations(
@@ -143,12 +162,18 @@ public class ProvisionalPatientService {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié");
         }
-        return userAccountRepository.findByEmail(authentication.getName().trim().toLowerCase())
+        return userAccountRepository.findByEmail(authentication.getName().trim().toLowerCase(Locale.ROOT))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur non trouvé"));
     }
 
     private String normalize(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private record ProvisionalNumbers(
+            String globalPatientNumber,
+            String localPatientNumber,
+            String temporaryPatientNumber) {
     }
 
     public record CreationResult(
