@@ -1,5 +1,6 @@
 package com.joprelys.backend.emergency.api;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -7,13 +8,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.auth.security.JwtService;
+import com.joprelys.backend.auth.security.TenantContext;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import com.joprelys.backend.emergency.infrastructure.persistence.EmergencyEntity;
 import com.joprelys.backend.emergency.infrastructure.persistence.EmergencyRepository;
+import com.joprelys.backend.patient.domain.IdentityConfidenceLevel;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,6 +64,8 @@ public class EmergencyControllerTest {
     void setUp() {
         jdbcTemplate.update("DELETE FROM resuscitation_logs");
         jdbcTemplate.update("DELETE FROM emergencies");
+        jdbcTemplate.update("DELETE FROM patient_identity_declarations");
+        jdbcTemplate.update("DELETE FROM patient_identity_status_history");
         jdbcTemplate.update("DELETE FROM visits");
         jdbcTemplate.update("DELETE FROM patients");
         userAccountRepository.deleteAll();
@@ -74,7 +80,7 @@ public class EmergencyControllerTest {
 
         tokenMedecinA = jwtService.createToken(userMedecinA).value();
 
-        com.joprelys.backend.auth.security.TenantContext.setTenantId(orgA.getId());
+        TenantContext.setTenantId(orgA.getId());
 
         patientA = new PatientEntity("DPU-A", "PAT-A", "Patient A", "MASCULIN", LocalDate.of(1990, 1, 1), "+123", "Douala", "", "", "", "", "", "");
         patientA = patientRepository.save(patientA);
@@ -94,7 +100,7 @@ public class EmergencyControllerTest {
         );
         emergencyA = emergencyRepository.save(emergencyA);
 
-        com.joprelys.backend.auth.security.TenantContext.clear();
+        TenantContext.clear();
     }
 
     @Test
@@ -151,6 +157,58 @@ public class EmergencyControllerTest {
     }
 
     @Test
+    void shouldExposeCompleteProvisionalIdentityInEmergencyDetails() throws Exception {
+        TenantContext.setTenantId(orgA.getId());
+        PatientEntity provisionalPatient = PatientEntity.provisionalEmergency(
+                "DPU-JOP-20260711-999999",
+                "PAT-20260711-999999",
+                "URG-TEMP-20260711-999999",
+                "MASCULIN",
+                "35-45",
+                "Cicatrice au front, chemise bleue",
+                Instant.parse("2026-07-11T13:00:00Z"),
+                "Carrefour Akwa",
+                IdentityConfidenceLevel.NONE
+        );
+        provisionalPatient = patientRepository.save(provisionalPatient);
+
+        EmergencyEntity provisionalEmergency = new EmergencyEntity(
+                provisionalPatient,
+                null,
+                "ACCOMPANIED",
+                "RED",
+                "SHOCK",
+                "Traumatisme crânien, patient inconscient",
+                90,
+                55,
+                52,
+                BigDecimal.valueOf(37.0),
+                "Paul Tamo",
+                "+237699000111",
+                "WITNESS",
+                "CNI 123456789",
+                "Patient trouvé sur la voie publique.",
+                true,
+                userMedecinA.getId()
+        );
+        provisionalEmergency = emergencyRepository.save(provisionalEmergency);
+        TenantContext.clear();
+
+        mockMvc.perform(get("/api/emergencies/" + provisionalEmergency.getId())
+                        .header("Authorization", "Bearer " + tokenMedecinA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.patientName").value("URG-TEMP-20260711-999999"))
+                .andExpect(jsonPath("$.temporaryPatientNumber").value("URG-TEMP-20260711-999999"))
+                .andExpect(jsonPath("$.globalPatientNumber").value("DPU-JOP-20260711-999999"))
+                .andExpect(jsonPath("$.identityStatus").value("PROVISIONAL_URGENCY"))
+                .andExpect(jsonPath("$.apparentGender").value("MASCULIN"))
+                .andExpect(jsonPath("$.estimatedAgeRange").value("35-45"))
+                .andExpect(jsonPath("$.physicalDescription").value("Cicatrice au front, chemise bleue"))
+                .andExpect(jsonPath("$.foundLocation").value("Carrefour Akwa"))
+                .andExpect(jsonPath("$.thirdPartyName").value("Paul Tamo"));
+    }
+
+    @Test
     void testAddResuscitationLog() throws Exception {
         String body = """
                 {
@@ -174,13 +232,12 @@ public class EmergencyControllerTest {
 
     @Test
     void testGetPatientEmergencies() throws Exception {
-        org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder request =
-                org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/emergencies/patient/" + patientA.getId())
-                        .header("Authorization", "Bearer " + tokenMedecinA);
-
-        mockMvc.perform(request)
+        mockMvc.perform(get("/api/emergencies/patient/" + patientA.getId())
+                        .header("Authorization", "Bearer " + tokenMedecinA))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(emergencyA.getId().toString()))
+                .andExpect(jsonPath("$[0].patientName").value("Patient A"))
+                .andExpect(jsonPath("$[0].globalPatientNumber").value("DPU-A"))
                 .andExpect(jsonPath("$[0].chiefComplaint").value("Accident moto"));
     }
 }
