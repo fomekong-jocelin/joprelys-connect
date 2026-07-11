@@ -1,30 +1,40 @@
 package com.joprelys.backend.patient.api;
 
+import com.joprelys.backend.patient.domain.IdentityConfidenceLevel;
+import com.joprelys.backend.patient.domain.PatientIdentityStatus;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
 public record PatientResponse(
-		UUID id,
-		UUID organizationId,
-		String globalPatientNumber,
-		String localPatientNumber,
-		String fullName,
-		String gender,
-		LocalDate birthDate,
-		String phone,
-		String city,
-		String district,
-		String address,
-		String emergencyContactName,
-		String emergencyContactPhone,
-		String allergies,
-		String medicalHistory,
-		String status,
-		String bloodGroup,
-		String email,
-		Instant createdAt,
-		Instant updatedAt,
-		Boolean emergencyAccessActive
-) {
+        UUID id,
+        UUID organizationId,
+        String globalPatientNumber,
+        String localPatientNumber,
+        String fullName,
+        String gender,
+        LocalDate birthDate,
+        String phone,
+        String city,
+        String district,
+        String address,
+        String emergencyContactName,
+        String emergencyContactPhone,
+        String allergies,
+        String medicalHistory,
+        String status,
+        String bloodGroup,
+        String email,
+        Instant createdAt,
+        Instant updatedAt,
+        Boolean emergencyAccessActive,
+        PatientIdentityStatus identityStatus,
+        String temporaryPatientNumber,
+        String displayName,
+        IdentityConfidenceLevel identityConfidenceLevel,
+        String apparentGender,
+        String estimatedAgeRange,
+        String physicalDescription,
+        Instant foundAt,
+        String foundLocation) {
 }
