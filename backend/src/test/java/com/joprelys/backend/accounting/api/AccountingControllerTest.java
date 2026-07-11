@@ -71,6 +71,8 @@ public class AccountingControllerTest {
         jdbcTemplate.update("DELETE FROM payment_receipts");
         jdbcTemplate.update("DELETE FROM payments");
         jdbcTemplate.update("DELETE FROM invoices");
+        jdbcTemplate.update("DELETE FROM visits");
+        jdbcTemplate.update("DELETE FROM patients");
         userAccountRepository.deleteAll();
         organizationRepository.deleteAll();
 
