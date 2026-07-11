@@ -1,128 +1,19 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, HostListener, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AdmissionCompleted, UnifiedAdmissionComponent } from '../admission/unified-admission.component';
 import { I18nService } from '../core/i18n/i18n.service';
-import { AlertComponent } from '../shared/ui/alert.component';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
+import { AlertComponent } from '../shared/ui/alert.component';
 import { ButtonComponent } from '../shared/ui/button.component';
 import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { EmergencyApiService } from './emergency-api.service';
 import { EmergencyRecord } from './emergency.models';
+import { EmergencyMedicoLegalPanelComponent } from './medico-legal/emergency-medico-legal-panel.component';
 
-type EmergencyDetailTab = 'OVERVIEW' | 'IDENTITY' | 'CARE';
-type EmergencyUiTextKey = keyof typeof EMERGENCY_UI_TEXT.fr;
-
-const EMERGENCY_UI_TEXT = {
-  fr: {
-    viewRecord: "Voir le dossier d'urgence",
-    activeFile: "Dossier d'urgence actif",
-    overviewTab: 'Résumé',
-    identityTab: 'Identité & tiers',
-    careTab: 'Soins',
-    patientIdentity: 'Identité du patient',
-    emergencySummary: "Résumé de l'urgence",
-    observableInfo: 'Informations observables',
-    thirdParty: 'Personne ayant amené le patient',
-    noThirdParty: "Aucun tiers n'est associé à ce dossier.",
-    temporaryNumber: 'N° URG-TEMP',
-    globalNumber: 'N° DPU',
-    localNumber: 'N° local',
-    identityStatus: "Statut d'identité",
-    confidence: 'Niveau de confiance',
-    apparentGender: 'Sexe apparent',
-    estimatedAge: "Tranche d'âge estimée",
-    physicalDescription: 'Description physique',
-    foundLocation: 'Lieu de découverte',
-    foundAt: 'Découvert / pris en charge le',
-    arrivalMode: "Mode d'arrivée",
-    arrivalAt: "Heure d'arrivée",
-    triage: 'Niveau de triage',
-    hemodynamic: 'État hémodynamique',
-    complaint: "Motif d'admission",
-    vitals: 'Constantes initiales',
-    bloodPressure: 'Tension',
-    pulse: 'Pouls',
-    temperature: 'Température',
-    name: 'Nom complet',
-    phone: 'Téléphone',
-    relationship: 'Lien avec le patient',
-    idDocument: "Pièce d'identité / référence",
-    circumstances: 'Circonstances déclarées',
-    contactConsent: 'Autorisation de recontact',
-    yes: 'Oui',
-    no: 'Non',
-    unknown: 'Non renseigné',
-    provisional: 'Identité provisoire',
-    declared: 'Identité déclarée',
-    verified: 'Identité vérifiée',
-    merged: 'Dossier rapproché',
-    noneConfidence: 'Non vérifiée',
-    lowConfidence: 'Faible',
-    mediumConfidence: 'Moyenne',
-    highConfidence: 'Élevée',
-    verifiedConfidence: 'Vérifiée',
-    loadingDetails: 'Chargement du dossier complet…',
-    detailsError: "Impossible de charger le détail complet de l'urgence.",
-    broughtBy: 'Amené par',
-    registeredAt: 'Enregistré le',
-  },
-  en: {
-    viewRecord: 'View emergency record',
-    activeFile: 'Active emergency record',
-    overviewTab: 'Summary',
-    identityTab: 'Identity & third party',
-    careTab: 'Care',
-    patientIdentity: 'Patient identity',
-    emergencySummary: 'Emergency summary',
-    observableInfo: 'Observable information',
-    thirdParty: 'Person who brought the patient',
-    noThirdParty: 'No third party is associated with this record.',
-    temporaryNumber: 'URG-TEMP No.',
-    globalNumber: 'DPU No.',
-    localNumber: 'Local No.',
-    identityStatus: 'Identity status',
-    confidence: 'Confidence level',
-    apparentGender: 'Apparent gender',
-    estimatedAge: 'Estimated age range',
-    physicalDescription: 'Physical description',
-    foundLocation: 'Location found',
-    foundAt: 'Found / admitted at',
-    arrivalMode: 'Arrival mode',
-    arrivalAt: 'Arrival time',
-    triage: 'Triage level',
-    hemodynamic: 'Hemodynamic status',
-    complaint: 'Admission reason',
-    vitals: 'Initial vital signs',
-    bloodPressure: 'Blood pressure',
-    pulse: 'Pulse',
-    temperature: 'Temperature',
-    name: 'Full name',
-    phone: 'Phone',
-    relationship: 'Relationship to patient',
-    idDocument: 'Identity document / reference',
-    circumstances: 'Reported circumstances',
-    contactConsent: 'Permission to contact',
-    yes: 'Yes',
-    no: 'No',
-    unknown: 'Not provided',
-    provisional: 'Provisional identity',
-    declared: 'Declared identity',
-    verified: 'Verified identity',
-    merged: 'Merged record',
-    noneConfidence: 'Unverified',
-    lowConfidence: 'Low',
-    mediumConfidence: 'Medium',
-    highConfidence: 'High',
-    verifiedConfidence: 'Verified',
-    loadingDetails: 'Loading complete record…',
-    detailsError: 'Unable to load the complete emergency record.',
-    broughtBy: 'Brought by',
-    registeredAt: 'Registered at',
-  },
-} as const;
+type EmergencyDetailTab = 'OVERVIEW' | 'IDENTITY' | 'CARE' | 'LEGAL';
 
 @Component({
   selector: 'app-emergency-dashboard',
@@ -137,6 +28,7 @@ const EMERGENCY_UI_TEXT = {
     AlertComponent,
     EmptyStateComponent,
     UnifiedAdmissionComponent,
+    EmergencyMedicoLegalPanelComponent,
   ],
   templateUrl: './emergency-dashboard.component.html',
 })
@@ -168,31 +60,19 @@ export class EmergencyDashboardComponent implements OnInit {
     this.loadEmergencies();
   }
 
-  private initCareForm(): void {
-    this.careForm = this.fb.group({
-      actionType: ['VASCULAR_ACCESS', [Validators.required]],
-      description: ['', [Validators.required, Validators.maxLength(255)]],
-      quantity: [null],
-      unit: [''],
-    });
-
-    this.careForm.get('actionType')?.valueChanges.subscribe(type => {
-      let unit = '';
-      const qtyControl = this.careForm.get('quantity');
-
-      if (type === 'FLUID_BOLUS') {
-        unit = 'ml';
-        qtyControl?.setValidators([Validators.required, Validators.min(1)]);
-      } else if (type === 'MEDICATION') {
-        unit = 'mg';
-        qtyControl?.setValidators([Validators.required, Validators.min(0.01)]);
-      } else {
-        qtyControl?.clearValidators();
-        qtyControl?.setValue(null);
-      }
-      qtyControl?.updateValueAndValidity();
-      this.careForm.patchValue({ unit });
-    });
+  @HostListener('document:keydown.escape')
+  handleEscape(): void {
+    if (this.isStabilizeModalOpen()) {
+      this.closeStabilizeModal();
+      return;
+    }
+    if (this.isAdmissionModalOpen()) {
+      this.closeAdmissionModal();
+      return;
+    }
+    if (this.isDrawerOpen()) {
+      this.closeDrawer();
+    }
   }
 
   loadEmergencies(): void {
@@ -202,11 +82,10 @@ export class EmergencyDashboardComponent implements OnInit {
         this.emergencies.set(data);
         this.isLoading.set(false);
         const selected = this.selectedEmergency();
-        if (selected) {
-          const updated = data.find(item => item.id === selected.id);
-          if (updated) this.selectedEmergency.set(updated);
-          else this.closeDrawer();
-        }
+        if (!selected) return;
+        const updated = data.find(item => item.id === selected.id);
+        if (updated) this.selectedEmergency.set(updated);
+        else this.closeDrawer();
       },
       error: () => {
         this.error.set(this.t('emergency.error.load'));
@@ -241,7 +120,7 @@ export class EmergencyDashboardComponent implements OnInit {
     this.isDetailLoading.set(true);
 
     this.emergencyApi.getById(record.id).subscribe({
-      next: detail => {
+      next: (detail) => {
         this.selectedEmergency.set(detail);
         this.isDetailLoading.set(false);
       },
@@ -270,14 +149,12 @@ export class EmergencyDashboardComponent implements OnInit {
     }
 
     this.isProcessing.set(true);
-    const dto = this.careForm.value;
-
-    this.emergencyApi.addResuscitationLog(record.id, dto).subscribe({
+    this.emergencyApi.addResuscitationLog(record.id, this.careForm.value).subscribe({
       next: () => {
         this.careForm.get('description')?.reset();
         this.careForm.get('quantity')?.reset();
         this.isProcessing.set(false);
-        this.loadEmergencies();
+        this.reloadSelectedEmergency(record.id);
       },
       error: () => {
         this.error.set(this.t('emergency.error.addCare'));
@@ -314,7 +191,10 @@ export class EmergencyDashboardComponent implements OnInit {
   }
 
   patientDisplayName(record: EmergencyRecord): string {
-    return record.patientName || record.temporaryPatientNumber || record.globalPatientNumber || this.ui('unknown');
+    return record.patientName
+      || record.temporaryPatientNumber
+      || record.globalPatientNumber
+      || this.ui('unknown');
   }
 
   patientPrimaryNumber(record: EmergencyRecord): string {
@@ -330,68 +210,73 @@ export class EmergencyDashboardComponent implements OnInit {
   }
 
   arrivalLabel(mode: string): string {
-    const labels: Record<string, [string, string]> = {
-      AMBULANCE: ['Ambulance', 'Ambulance'],
-      FIRE_DEPT: ['Sapeurs-pompiers', 'Fire and rescue service'],
-      WALK_IN: ['Arrivée autonome', 'Walk-in'],
-      ACCOMPANIED: ['Amené par un tiers', 'Brought by another person'],
-    };
-    const value = labels[mode];
-    return value ? value[this.i18n.locale() === 'en' ? 1 : 0] : mode;
+    return this.t(`emergency.detail.arrival.${mode.toLowerCase()}`, mode);
   }
 
   triageLabel(level: string): string {
-    const labels: Record<string, [string, string]> = {
-      RED: ['Rouge — détresse vitale', 'Red — life-threatening'],
-      ORANGE: ['Orange — très urgent', 'Orange — very urgent'],
-      YELLOW: ['Jaune — urgent', 'Yellow — urgent'],
-      GREEN: ['Vert — non urgent', 'Green — non-urgent'],
-    };
-    const value = labels[level];
-    return value ? value[this.i18n.locale() === 'en' ? 1 : 0] : level;
+    return this.t(`emergency.detail.triage.${level.toLowerCase()}`, level);
   }
 
   hemodynamicLabel(status: string): string {
-    const labels: Record<string, [string, string]> = {
-      SHOCK: ['Choc', 'Shock'],
-      UNSTABLE: ['Instable', 'Unstable'],
-      STABLE: ['Stable', 'Stable'],
-    };
-    const value = labels[status];
-    return value ? value[this.i18n.locale() === 'en' ? 1 : 0] : status;
+    return this.t(`emergency.detail.hemodynamic.${status.toLowerCase()}`, status);
   }
 
   identityStatusLabel(status?: string): string {
-    const keys: Record<string, EmergencyUiTextKey> = {
-      PROVISIONAL_URGENCY: 'provisional',
-      DECLARED: 'declared',
-      VERIFIED: 'verified',
-      MERGED: 'merged',
-    };
-    return status && keys[status] ? this.ui(keys[status]) : this.ui('unknown');
+    return status
+      ? this.t(`emergency.detail.identityStatus.${status.toLowerCase()}`, status)
+      : this.ui('unknown');
   }
 
   confidenceLabel(confidence?: string): string {
-    const keys: Record<string, EmergencyUiTextKey> = {
-      NONE: 'noneConfidence',
-      LOW: 'lowConfidence',
-      MEDIUM: 'mediumConfidence',
-      HIGH: 'highConfidence',
-      VERIFIED: 'verifiedConfidence',
-    };
-    return confidence && keys[confidence] ? this.ui(keys[confidence]) : this.ui('unknown');
+    return confidence
+      ? this.t(`emergency.detail.confidence.${confidence.toLowerCase()}`, confidence)
+      : this.ui('unknown');
   }
 
   valueOrUnknown(value?: string | null): string {
     return value?.trim() || this.ui('unknown');
   }
 
-  ui(key: EmergencyUiTextKey): string {
-    const locale = this.i18n.locale() === 'en' ? 'en' : 'fr';
-    return EMERGENCY_UI_TEXT[locale][key];
+  ui(key: string): string {
+    return this.t(`emergency.detail.${key}`);
   }
 
-  t(key: string): string {
-    return this.i18n.t(key);
+  t(key: string, fallback?: string): string {
+    return this.i18n.t(key, fallback);
+  }
+
+  private initCareForm(): void {
+    this.careForm = this.fb.group({
+      actionType: ['VASCULAR_ACCESS', [Validators.required]],
+      description: ['', [Validators.required, Validators.maxLength(255)]],
+      quantity: [null],
+      unit: [''],
+    });
+
+    this.careForm.get('actionType')?.valueChanges.subscribe(type => {
+      const quantity = this.careForm.get('quantity');
+      if (type === 'FLUID_BOLUS') {
+        quantity?.setValidators([Validators.required, Validators.min(1)]);
+        this.careForm.patchValue({ unit: 'ml' }, { emitEvent: false });
+      } else if (type === 'MEDICATION') {
+        quantity?.setValidators([Validators.required, Validators.min(0.01)]);
+        this.careForm.patchValue({ unit: 'mg' }, { emitEvent: false });
+      } else {
+        quantity?.clearValidators();
+        quantity?.setValue(null, { emitEvent: false });
+        this.careForm.patchValue({ unit: '' }, { emitEvent: false });
+      }
+      quantity?.updateValueAndValidity({ emitEvent: false });
+    });
+  }
+
+  private reloadSelectedEmergency(emergencyId: string): void {
+    this.emergencyApi.getById(emergencyId).subscribe({
+      next: detail => {
+        this.selectedEmergency.set(detail);
+        this.emergencies.update(items => items.map(item => item.id === detail.id ? detail : item));
+      },
+      error: () => this.detailError.set(this.ui('detailsError')),
+    });
   }
 }
