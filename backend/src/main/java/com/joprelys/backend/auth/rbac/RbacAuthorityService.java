@@ -2,6 +2,9 @@ package com.joprelys.backend.auth.rbac;
 
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -35,12 +38,31 @@ public class RbacAuthorityService {
 
         rbacStore.synchronizeLegacyAssignments(user);
         RbacStore.EffectiveAccess access = rbacStore.loadEffectiveAccess(user.getId(), user.getOrganizationId());
+        if (access.roles().isEmpty()) {
+            Set<String> legacyRoles = legacyRoleCodes(user.getRole());
+            access = new RbacStore.EffectiveAccess(
+                    user.getId(),
+                    legacyRoles,
+                    RbacCatalog.permissionsForLegacyRoles(legacyRoles));
+        }
+
         return Optional.of(new ResolvedAuthorities(
                 user.getId(),
                 user.getEmail(),
                 user.getOrganizationId(),
                 access.roles(),
                 access.permissions()));
+    }
+
+    private static Set<String> legacyRoleCodes(String rawRoles) {
+        if (rawRoles == null || rawRoles.isBlank()) {
+            return Set.of();
+        }
+        return Arrays.stream(rawRoles.split(","))
+                .map(String::trim)
+                .filter(role -> !role.isBlank())
+                .map(role -> role.toUpperCase(Locale.ROOT))
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
     }
 
     public record ResolvedAuthorities(
