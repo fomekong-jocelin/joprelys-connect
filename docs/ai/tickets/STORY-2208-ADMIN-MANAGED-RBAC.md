@@ -154,6 +154,14 @@ Le catalogue couvre également les patients, consultations, soins infirmiers, la
 - [x] CI backend/frontend verte ;
 - [ ] QA visuelle utilisateur sur le sélecteur d'établissement, la matrice et les affectations.
 
+## Validation technique
+
+- frontend Angular : tests et build production verts ;
+- backend Maven strict : vert ;
+- test d'intégration dédié au périmètre `ADMIN_JOPRELYS → établissement sélectionné → lecture utilisateurs/rôles → création rôle` ;
+- Testcontainers PostgreSQL 16 actif lorsque Docker est disponible ;
+- rapports Surefire conservés automatiquement en artefact en cas d'échec CI.
+
 ## Issue GitHub
 
 #23 — feat(rbac): ajouter les rôles métier manquants et une administration des permissions
