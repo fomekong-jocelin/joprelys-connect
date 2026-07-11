@@ -1,5 +1,6 @@
 package com.joprelys.backend.patient.reconciliation.infrastructure.persistence;
 
+import com.joprelys.backend.patient.reconciliation.domain.PatientReconciliationDecision;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,4 +14,8 @@ public interface PatientReconciliationEventRepository
     Optional<PatientReconciliationEventEntity> findByIdempotencyKey(String idempotencyKey);
 
     List<PatientReconciliationEventEntity> findAllBySourcePatient_IdOrderByCreatedAtDesc(UUID sourcePatientId);
+
+    boolean existsBySourcePatient_IdAndDecision(
+            UUID sourcePatientId,
+            PatientReconciliationDecision decision);
 }
