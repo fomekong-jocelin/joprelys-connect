@@ -17,12 +17,6 @@ CREATE UNIQUE INDEX ux_patients_temporary_patient_number
 CREATE INDEX idx_patients_identity_status
     ON patients (organization_id, identity_status);
 
-CREATE TABLE patient_number_counters (
-    counter_key VARCHAR(64) PRIMARY KEY,
-    next_value BIGINT NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL
-);
-
 CREATE TABLE patient_identity_declarations (
     id UUID PRIMARY KEY,
     organization_id UUID NOT NULL,
