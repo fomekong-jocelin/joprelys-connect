@@ -1,4 +1,6 @@
 {
+  "common.refresh": "Refresh",
+  "common.reset": "Reset",
   "menu.patientReconciliation": "URG-TEMP reconciliation",
   "patientReconciliation.eyebrow": "Patient identity",
   "patientReconciliation.title": "URG-TEMP record reconciliation",
@@ -69,5 +71,6 @@
   "patientReconciliation.error.PATIENT_RECONCILIATION_ALREADY_LINKED": "This record is already linked to a patient record.",
   "patientReconciliation.error.PATIENT_ALIAS_ALREADY_ASSIGNED": "This alias is already assigned to another record.",
   "patientReconciliation.error.PATIENT_ALIAS_READ_ONLY": "This URG-TEMP code is a read-only alias. Use the canonical patient record for new care.",
-  "patientReconciliation.error.IDEMPOTENCY_KEY_REUSED": "This operation key has already been used for another record. Reload the page and try again."
+  "patientReconciliation.error.IDEMPOTENCY_KEY_REUSED": "This operation key has already been used for another record. Reload the page and try again.",
+  "patientReconciliation.error.PATIENT_RECONCILIATION_WORKFLOW_REQUIRED": "An URG-TEMP record must be handled through the secure reconciliation workspace."
 }
