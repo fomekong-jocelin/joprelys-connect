@@ -3,12 +3,15 @@ package com.joprelys.backend.patient.api;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.patient.application.PatientService;
 import com.joprelys.backend.patient.application.PatientSummaryService;
+import com.joprelys.backend.patient.domain.PatientIdentityStatus;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
+import com.joprelys.backend.patient.reconciliation.application.PatientCanonicalResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -39,14 +42,17 @@ public class PatientController {
     private final PatientService patientService;
     private final UserAccountRepository userAccountRepository;
     private final PatientSummaryService patientSummaryService;
+    private final PatientCanonicalResolver canonicalResolver;
 
     public PatientController(
             PatientService patientService,
             UserAccountRepository userAccountRepository,
-            PatientSummaryService patientSummaryService) {
+            PatientSummaryService patientSummaryService,
+            PatientCanonicalResolver canonicalResolver) {
         this.patientService = patientService;
         this.userAccountRepository = userAccountRepository;
         this.patientSummaryService = patientSummaryService;
+        this.canonicalResolver = canonicalResolver;
     }
 
     @PostMapping
@@ -69,7 +75,11 @@ public class PatientController {
     public List<PatientResponse> list(
             @RequestParam(value = "q", required = false)
             @Parameter(description = "Terme de recherche") String query) {
-        return patientService.searchPatients(query).stream()
+        LinkedHashMap<UUID, PatientEntity> uniquePatients = new LinkedHashMap<>();
+        patientService.searchPatients(query).stream()
+                .map(this::resolveCanonicalIfMerged)
+                .forEach(patient -> uniquePatients.putIfAbsent(patient.getId(), patient));
+        return uniquePatients.values().stream()
                 .map(this::mapToResponse)
                 .toList();
     }
@@ -117,7 +127,7 @@ public class PatientController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PATIENT_READ') or " + LEGACY_PATIENT_ROLES)
     public PatientResponse getById(@PathVariable UUID id) {
-        return mapToResponse(patientService.getPatientById(id));
+        return mapToResponse(resolveCanonicalIfMerged(patientService.getPatientById(id)));
     }
 
     @GetMapping("/{id}/summary-pdf")
@@ -135,6 +145,13 @@ public class PatientController {
     @Operation(summary = "Obtenir la synthèse médicale d'un patient", description = "Retourne la synthèse médicale structurée d'un patient.")
     public MedicalSummaryResponse getMedicalSummary(@PathVariable UUID id) {
         return patientSummaryService.getMedicalSummary(id);
+    }
+
+    private PatientEntity resolveCanonicalIfMerged(PatientEntity patient) {
+        if (patient.getIdentityStatus() != PatientIdentityStatus.MERGED) {
+            return patient;
+        }
+        return canonicalResolver.resolve(patient.getId()).canonicalPatient();
     }
 
     private PatientResponse mapToResponse(PatientEntity entity) {
