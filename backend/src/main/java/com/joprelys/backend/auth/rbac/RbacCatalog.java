@@ -54,6 +54,7 @@ public final class RbacCatalog {
                 permission("CASH_SESSION_CLOSE", "CAISSE", "Clôturer une caisse", "Clôturer une session de caisse."),
                 permission("CASH_MOVEMENT_WRITE", "CAISSE", "Consigner un mouvement", "Enregistrer une dépense ou un versement banque."),
                 permission("CASH_HISTORY_READ", "CAISSE", "Consulter l'historique caisse", "Consulter les sessions, mouvements et bordereaux de clôture."),
+                permission("CASH_DISCREPANCY_RESOLVE", "CAISSE", "Résoudre un écart de caisse", "Documenter et clôturer le traitement d'un écart de caisse."),
                 permission("INSURANCE_BORDEREAU_READ", "ASSURANCE", "Consulter les bordereaux", "Consulter les bordereaux et créances assurance."),
                 permission("INSURANCE_BORDEREAU_PROGRESS", "ASSURANCE", "Faire progresser un bordereau", "Envoyer, recevoir et documenter un bordereau."),
                 permission("INSURANCE_BORDEREAU_SETTLE", "ASSURANCE", "Accepter et régler un bordereau", "Accepter, rejeter et enregistrer les règlements assurance."),
@@ -70,7 +71,7 @@ public final class RbacCatalog {
         mappings.put(ROLE_SUPER_ADMIN, all);
         mappings.put(ROLE_ADMIN_CLINIQUE, without(all, "ORGANIZATION_MANAGE"));
         mappings.put("DAF", set(
-                "USER_READ", "RBAC_READ", "BILLING_INVOICE_READ", "CASH_HISTORY_READ",
+                "USER_READ", "RBAC_READ", "BILLING_INVOICE_READ", "CASH_HISTORY_READ", "CASH_DISCREPANCY_RESOLVE",
                 "INSURANCE_BORDEREAU_READ", "INSURANCE_BORDEREAU_PROGRESS", "INSURANCE_BORDEREAU_SETTLE",
                 "ACCOUNTING_DASHBOARD_READ", "ACCOUNTING_EXPORT", "AUDIT_READ"));
         mappings.put("SECRETAIRE_COMPTABLE", set(
