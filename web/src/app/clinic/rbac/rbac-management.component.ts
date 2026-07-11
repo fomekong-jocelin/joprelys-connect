@@ -185,6 +185,7 @@ export class RbacManagementComponent implements OnInit {
   }
 
   newRole(): void {
+    this.activeTab.set('roles');
     this.selectedRoleId.set(null);
     this.roleCode.set('');
     this.roleName.set('');
@@ -206,6 +207,29 @@ export class RbacManagementComponent implements OnInit {
     this.selectedPermissionCodes.set([...role.permissions]);
     this.error.set(null);
     this.success.set(null);
+  }
+
+  duplicateSelectedRole(): void {
+    const source = this.selectedRole();
+    if (!source) return;
+
+    this.activeTab.set('roles');
+    this.selectedRoleId.set(null);
+    this.roleCode.set(this.nextAvailableRoleCode(`${source.code}_CUSTOM`));
+    this.roleName.set(`${source.name} personnalisé`);
+    this.roleDescription.set(
+      source.description
+        ? `${source.description} Version personnalisée pour l’établissement.`
+        : `Rôle personnalisé basé sur ${source.name}.`,
+    );
+    this.roleAssignable.set(true);
+    this.roleEnabled.set(true);
+    this.selectedPermissionCodes.set([...source.permissions]);
+    this.error.set(null);
+    this.success.set(this.t(
+      'rbac.roles.duplicateReady',
+      'La copie est prête. Ajustez les permissions puis enregistrez le nouveau rôle.',
+    ));
   }
 
   togglePermission(permissionCode: string): void {
@@ -341,6 +365,21 @@ export class RbacManagementComponent implements OnInit {
     this.selectedRoleId.set(null);
     this.selectedPermissionCodes.set([]);
     this.newRole();
+  }
+
+  private nextAvailableRoleCode(baseCode: string): string {
+    const normalizedBase = baseCode.slice(0, 64);
+    const existingCodes = new Set(this.roles().map((role) => role.code));
+    if (!existingCodes.has(normalizedBase)) return normalizedBase;
+
+    let suffixNumber = 2;
+    while (suffixNumber < 10_000) {
+      const suffix = `_${suffixNumber}`;
+      const candidate = `${normalizedBase.slice(0, 64 - suffix.length)}${suffix}`;
+      if (!existingCodes.has(candidate)) return candidate;
+      suffixNumber += 1;
+    }
+    return `ROLE_${Date.now()}`.slice(0, 64);
   }
 
   private finishRoleSave(role: RbacRole): void {
