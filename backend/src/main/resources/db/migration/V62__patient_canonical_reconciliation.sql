@@ -20,13 +20,13 @@ CREATE TABLE patient_reconciliation_events (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT fk_patient_reconciliation_source
         FOREIGN KEY (source_patient_id, organization_id)
-        REFERENCES patients(id, organization_id),
+        REFERENCES patients(id, organization_id) ON DELETE CASCADE,
     CONSTRAINT fk_patient_reconciliation_candidate
         FOREIGN KEY (candidate_patient_id, organization_id)
         REFERENCES patients(id, organization_id),
     CONSTRAINT fk_patient_reconciliation_corrected_event
         FOREIGN KEY (corrected_event_id)
-        REFERENCES patient_reconciliation_events(id),
+        REFERENCES patient_reconciliation_events(id) ON DELETE CASCADE,
     CONSTRAINT fk_patient_reconciliation_actor
         FOREIGN KEY (created_by_user_id)
         REFERENCES users(id) ON DELETE SET NULL,
@@ -55,13 +55,13 @@ CREATE TABLE patient_canonical_links (
     version BIGINT NOT NULL DEFAULT 0,
     CONSTRAINT fk_patient_canonical_link_source
         FOREIGN KEY (source_patient_id, organization_id)
-        REFERENCES patients(id, organization_id),
+        REFERENCES patients(id, organization_id) ON DELETE CASCADE,
     CONSTRAINT fk_patient_canonical_link_target
         FOREIGN KEY (canonical_patient_id, organization_id)
-        REFERENCES patients(id, organization_id),
+        REFERENCES patients(id, organization_id) ON DELETE CASCADE,
     CONSTRAINT fk_patient_canonical_link_event
         FOREIGN KEY (decision_event_id)
-        REFERENCES patient_reconciliation_events(id),
+        REFERENCES patient_reconciliation_events(id) ON DELETE CASCADE,
     CONSTRAINT chk_patient_canonical_link_distinct
         CHECK (source_patient_id <> canonical_patient_id),
     CONSTRAINT uq_patient_canonical_link_source
@@ -84,10 +84,10 @@ CREATE TABLE patient_identity_aliases (
     version BIGINT NOT NULL DEFAULT 0,
     CONSTRAINT fk_patient_identity_alias_origin
         FOREIGN KEY (origin_patient_id, organization_id)
-        REFERENCES patients(id, organization_id),
+        REFERENCES patients(id, organization_id) ON DELETE CASCADE,
     CONSTRAINT fk_patient_identity_alias_canonical
         FOREIGN KEY (canonical_patient_id, organization_id)
-        REFERENCES patients(id, organization_id),
+        REFERENCES patients(id, organization_id) ON DELETE CASCADE,
     CONSTRAINT fk_patient_identity_alias_actor
         FOREIGN KEY (created_by_user_id)
         REFERENCES users(id) ON DELETE SET NULL,
