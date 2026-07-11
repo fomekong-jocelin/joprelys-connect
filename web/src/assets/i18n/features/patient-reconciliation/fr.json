@@ -69,8 +69,16 @@
   "patientReconciliation.error.PATIENT_RECONCILIATION_TARGET_NOT_ELIGIBLE": "Le DPU sélectionné ne peut pas recevoir ce rapprochement.",
   "patientReconciliation.error.PATIENT_RECONCILIATION_SELF_LINK_FORBIDDEN": "Un dossier ne peut pas être rattaché à lui-même.",
   "patientReconciliation.error.PATIENT_RECONCILIATION_ALREADY_LINKED": "Ce dossier est déjà rattaché à un DPU.",
+  "patientReconciliation.error.PATIENT_RECONCILIATION_CORRECTION_ENDPOINT_REQUIRED": "Utilisez l’action de correction sécurisée pour modifier un rapprochement existant.",
+  "patientReconciliation.error.PATIENT_RECONCILIATION_ACTIVE_LINK_NOT_FOUND": "Aucun rapprochement actif n’a été trouvé pour ce dossier.",
+  "patientReconciliation.error.PATIENT_RECONCILIATION_CORRECTED_EVENT_MISMATCH": "La décision à corriger ne correspond plus au rapprochement actif.",
+  "patientReconciliation.error.PATIENT_RECONCILIATION_REPLACEMENT_UNCHANGED": "Le DPU de remplacement est identique au DPU actuellement rattaché.",
   "patientReconciliation.error.PATIENT_ALIAS_ALREADY_ASSIGNED": "Cet alias appartient déjà à un autre dossier.",
+  "patientReconciliation.error.PATIENT_ALIAS_NOT_FOUND": "L’alias patient est introuvable.",
+  "patientReconciliation.error.PATIENT_ALIAS_REQUIRED": "L’alias patient est obligatoire.",
   "patientReconciliation.error.PATIENT_ALIAS_READ_ONLY": "Ce code URG-TEMP est un alias en lecture seule. Utilisez le DPU canonique pour une nouvelle prise en charge.",
-  "patientReconciliation.error.IDEMPOTENCY_KEY_REUSED": "Cette opération a déjà été utilisée pour un autre dossier. Rechargez la page puis recommencez.",
-  "patientReconciliation.error.PATIENT_RECONCILIATION_WORKFLOW_REQUIRED": "Un dossier URG-TEMP doit être traité depuis l’espace de régularisation sécurisé."
+  "patientReconciliation.error.IDEMPOTENCY_KEY_REQUIRED": "La clé de sécurisation de l’opération est obligatoire.",
+  "patientReconciliation.error.IDEMPOTENCY_KEY_TOO_LONG": "La clé de sécurisation de l’opération est trop longue.",
+  "patientReconciliation.error.IDEMPOTENCY_KEY_REUSED": "Cette clé a déjà été utilisée avec une autre décision. Rechargez la page puis recommencez.",
+  "patientReconciliation.error.PATIENT_RECONCILIATION_WORKFLOW_REQUIRED": "Un dossier participant à un rapprochement doit être traité depuis l’espace de régularisation sécurisé."
 }
