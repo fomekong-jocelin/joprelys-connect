@@ -1,9 +1,10 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { finalize } from 'rxjs';
 import { AdmissionCompleted, UnifiedAdmissionComponent } from '../admission/unified-admission.component';
 import { I18nService } from '../core/i18n/i18n.service';
-import { AlertComponent } from '../shared/ui/alert.component';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
+import { AlertComponent } from '../shared/ui/alert.component';
 import { ButtonComponent } from '../shared/ui/button.component';
 import { CardComponent } from '../shared/ui/card.component';
 import { EmptyStateComponent } from '../shared/ui/empty-state.component';
@@ -35,7 +36,6 @@ export class PatientListComponent implements OnInit {
   readonly searchQuery = signal('');
   readonly selectedPatient = signal<Patient | null>(null);
   readonly showCreateForm = signal(false);
-
   readonly consentRequiredPatient = signal<Patient | null>(null);
   readonly emergencyReason = signal('');
   readonly emergencyLoading = signal(false);
@@ -45,7 +45,7 @@ export class PatientListComponent implements OnInit {
   readonly pageSubtitle = computed(() => this.i18n.t('patients.subtitle'));
   readonly backLabel = computed(() => this.i18n.t('common.back'));
   readonly searchPlaceholder = computed(() => this.i18n.t('patients.searchPlaceholder'));
-  readonly createLabel = computed(() => this.i18n.locale() === 'en' ? 'New admission' : 'Nouvelle admission');
+  readonly createLabel = computed(() => this.i18n.t('admission.title'));
   readonly loadingLabel = computed(() => this.i18n.t('common.loading'));
   readonly emptyLabel = computed(() => this.i18n.t('patients.empty'));
 
@@ -60,15 +60,11 @@ export class PatientListComponent implements OnInit {
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.api.list(this.searchQuery()).subscribe({
-      next: (res) => {
-        this.list.set(res);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.error.set(this.i18n.t('patients.loadError'));
-        this.loading.set(false);
-      },
+    this.api.list(this.searchQuery()).pipe(
+      finalize(() => this.loading.set(false))
+    ).subscribe({
+      next: (patients) => this.list.set(patients),
+      error: () => this.error.set(this.i18n.t('patients.loadError')),
     });
   }
 
@@ -86,11 +82,10 @@ export class PatientListComponent implements OnInit {
 
   onAdmissionCompleted(result: AdmissionCompleted): void {
     this.showCreateForm.set(false);
-    if (result.carePath === 'EMERGENCY') {
-      void this.router.navigate(['/clinic/emergencies']);
-      return;
-    }
-    void this.router.navigate(['/patients', result.patientId]);
+    const route = result.carePath === 'EMERGENCY'
+      ? ['/clinic/emergencies']
+      : ['/patients', result.patientId];
+    void this.router.navigate(route);
   }
 
   viewDetail(patient: Patient): void {
@@ -104,27 +99,26 @@ export class PatientListComponent implements OnInit {
 
   triggerEmergencyAccess(): void {
     const patient = this.consentRequiredPatient();
-    if (!patient || !this.emergencyReason().trim()) return;
+    const reason = this.emergencyReason().trim();
+    if (!patient || !reason || this.emergencyLoading()) return;
 
     this.emergencyLoading.set(true);
     this.emergencyError.set(null);
-
-    this.api.triggerEmergencyAccess(patient.id, this.emergencyReason().trim()).subscribe({
+    this.api.triggerEmergencyAccess(patient.id, reason).pipe(
+      finalize(() => this.emergencyLoading.set(false))
+    ).subscribe({
       next: () => {
-        this.emergencyLoading.set(false);
         this.consentRequiredPatient.set(null);
         this.emergencyReason.set('');
         this.viewDetail(patient);
       },
-      error: (err) => {
-        this.emergencyLoading.set(false);
-        this.emergencyError.set(err.error?.detail || err.error?.title || this.t('patient.consent.emergencyAccessError'));
-      },
+      error: (err) => this.emergencyError.set(
+        err.error?.detail || err.error?.title || this.t('patient.consent.emergencyAccessError')
+      ),
     });
   }
 
   patientDisplayName(patient: Patient): string {
-    const extended = patient as Patient & { displayName?: string; temporaryPatientNumber?: string };
-    return extended.displayName || patient.fullName || extended.temporaryPatientNumber || patient.globalPatientNumber;
+    return patient.displayName || patient.fullName || patient.temporaryPatientNumber || patient.globalPatientNumber;
   }
 }
