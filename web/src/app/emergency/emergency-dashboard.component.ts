@@ -1,18 +1,16 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { AppShellComponent } from '../shared/layout/app-shell.component';
-import { PageHeaderComponent } from '../shared/ui/page-header.component';
-import { ButtonComponent } from '../shared/ui/button.component';
-import { AlertComponent } from '../shared/ui/alert.component';
-import { EmptyStateComponent } from '../shared/ui/empty-state.component';
-import { EmergencyApiService } from './emergency-api.service';
-import { PatientApiService } from '../patient/patient-api.service';
-import { ProvisionalPatientApiService } from '../patient/provisional-patient-api.service';
-import { ProvisionalPatientSummary } from '../patient/provisional-patient.models';
-import { CreateEmergencyRequest, EmergencyRecord } from './emergency.models';
-import { Patient } from '../patient/patient.models';
+import { Router } from '@angular/router';
+import { AdmissionCompleted, UnifiedAdmissionComponent } from '../admission/unified-admission.component';
 import { I18nService } from '../core/i18n/i18n.service';
+import { AlertComponent } from '../shared/ui/alert.component';
+import { AppShellComponent } from '../shared/layout/app-shell.component';
+import { ButtonComponent } from '../shared/ui/button.component';
+import { EmptyStateComponent } from '../shared/ui/empty-state.component';
+import { PageHeaderComponent } from '../shared/ui/page-header.component';
+import { EmergencyApiService } from './emergency-api.service';
+import { EmergencyRecord } from './emergency.models';
 
 @Component({
   selector: 'app-emergency-dashboard',
@@ -26,64 +24,37 @@ import { I18nService } from '../core/i18n/i18n.service';
     ButtonComponent,
     AlertComponent,
     EmptyStateComponent,
+    UnifiedAdmissionComponent,
   ],
   templateUrl: './emergency-dashboard.component.html',
 })
 export class EmergencyDashboardComponent implements OnInit {
   private readonly emergencyApi = inject(EmergencyApiService);
-  private readonly patientApi = inject(PatientApiService);
-  private readonly provisionalPatientApi = inject(ProvisionalPatientApiService);
   private readonly fb = inject(FormBuilder);
+  private readonly router = inject(Router);
   readonly i18n = inject(I18nService);
 
   emergencies = signal<EmergencyRecord[]>([]);
-  patients = signal<Patient[]>([]);
   isLoading = signal(false);
   isProcessing = signal(false);
   error = signal<string | null>(null);
 
-  // New Admission Modal
   isAdmissionModalOpen = signal(false);
-  admissionForm!: FormGroup;
-  createdProvisionalPatient = signal<ProvisionalPatientSummary | null>(null);
-  isCreatingProvisional = signal(false);
-  provisionalError = signal<string | null>(null);
 
-  // Drawer for patient details
   selectedEmergency = signal<EmergencyRecord | null>(null);
   isDrawerOpen = signal(false);
 
-  // Add Care Form (inside drawer)
   careForm!: FormGroup;
 
-  // Stabilize Modal
   isStabilizeModalOpen = signal(false);
   stabilizeOrientation = signal<string>('ADMISSION');
 
   ngOnInit(): void {
-    this.initForms();
+    this.initCareForm();
     this.loadEmergencies();
-    this.loadPatients();
   }
 
-  private initForms(): void {
-    this.admissionForm = this.fb.group({
-      patientMode: ['IDENTIFIED', [Validators.required]],
-      patientId: ['', [Validators.required]],
-      apparentGender: ['UNKNOWN'],
-      estimatedAgeRange: [''],
-      physicalDescription: [''],
-      foundLocation: [''],
-      arrivalMode: ['AMBULANCE', [Validators.required]],
-      triageLevel: ['RED', [Validators.required]],
-      hemodynamicStatus: ['SHOCK', [Validators.required]],
-      chiefComplaint: ['', [Validators.required]],
-      initialBpSystolic: [null, [Validators.min(30), Validators.max(300)]],
-      initialBpDiastolic: [null, [Validators.min(20), Validators.max(200)]],
-      initialHr: [null, [Validators.min(20), Validators.max(250)]],
-      initialTemp: [null, [Validators.min(30), Validators.max(45)]],
-    });
-
+  private initCareForm(): void {
     this.careForm = this.fb.group({
       actionType: ['VASCULAR_ACCESS', [Validators.required]],
       description: ['', [Validators.required, Validators.maxLength(255)]],
@@ -91,7 +62,6 @@ export class EmergencyDashboardComponent implements OnInit {
       unit: [''],
     });
 
-    // Auto-complete unit, set dynamic validators, and clear quantity based on action type
     this.careForm.get('actionType')?.valueChanges.subscribe(type => {
       let unit = '';
       const qtyControl = this.careForm.get('quantity');
@@ -134,106 +104,26 @@ export class EmergencyDashboardComponent implements OnInit {
     });
   }
 
-  private loadPatients(): void {
-    this.patientApi.list().subscribe({
-      next: (data) => this.patients.set(data),
-      error: () => {},
-    });
-  }
-
   openAdmissionModal(): void {
-    this.initForms();
-    this.createdProvisionalPatient.set(null);
-    this.provisionalError.set(null);
     this.isAdmissionModalOpen.set(true);
   }
 
   closeAdmissionModal(): void {
     this.isAdmissionModalOpen.set(false);
-    this.createdProvisionalPatient.set(null);
-    this.provisionalError.set(null);
   }
 
-  setPatientMode(mode: 'IDENTIFIED' | 'PROVISIONAL'): void {
-    this.admissionForm.patchValue({ patientMode: mode, patientId: '' });
-    this.createdProvisionalPatient.set(null);
-    this.provisionalError.set(null);
-  }
-
-  createUrgTempPatient(): void {
-    if (this.isCreatingProvisional() || this.createdProvisionalPatient()) {
+  onAdmissionCompleted(result: AdmissionCompleted): void {
+    this.closeAdmissionModal();
+    if (result.carePath === 'EMERGENCY') {
+      this.loadEmergencies();
       return;
     }
-
-    const value = this.admissionForm.getRawValue();
-    this.isCreatingProvisional.set(true);
-    this.provisionalError.set(null);
-
-    this.provisionalPatientApi.create({
-      apparentGender: this.optional(value.apparentGender),
-      estimatedAgeRange: this.optional(value.estimatedAgeRange),
-      physicalDescription: this.optional(value.physicalDescription),
-      foundLocation: this.optional(value.foundLocation),
-      confidenceLevel: 'NONE',
-      identityDeclarations: [],
-    }).subscribe({
-      next: (response) => {
-        this.createdProvisionalPatient.set(response.patient);
-        this.admissionForm.patchValue({ patientId: response.patient.id });
-        this.isCreatingProvisional.set(false);
-      },
-      error: (err) => {
-        this.provisionalError.set(
-          err.error?.detail || err.error?.message || this.t('emergency.urgTemp.createError')
-        );
-        this.isCreatingProvisional.set(false);
-      },
-    });
-  }
-
-  onSubmitAdmission(): void {
-    if (this.admissionForm.get('patientMode')?.value === 'PROVISIONAL' && !this.createdProvisionalPatient()) {
-      this.provisionalError.set(this.t('emergency.urgTemp.createFirst'));
-      return;
-    }
-
-    if (this.admissionForm.invalid) {
-      this.admissionForm.markAllAsTouched();
-      return;
-    }
-
-    this.isProcessing.set(true);
-    const value = this.admissionForm.getRawValue();
-    const dto: CreateEmergencyRequest = {
-      patientId: value.patientId,
-      arrivalMode: value.arrivalMode,
-      triageLevel: value.triageLevel,
-      hemodynamicStatus: value.hemodynamicStatus,
-      chiefComplaint: value.chiefComplaint,
-      initialBpSystolic: value.initialBpSystolic,
-      initialBpDiastolic: value.initialBpDiastolic,
-      initialHr: value.initialHr,
-      initialTemp: value.initialTemp,
-    };
-
-    this.emergencyApi.create(dto).subscribe({
-      next: () => {
-        this.loadEmergencies();
-        this.loadPatients();
-        this.closeAdmissionModal();
-        this.isProcessing.set(false);
-      },
-      error: (err) => {
-        const msg = err.error?.message || this.t('emergency.error.create');
-        this.error.set(msg);
-        this.isProcessing.set(false);
-      },
-    });
+    void this.router.navigate(['/patients', result.patientId]);
   }
 
   openDrawer(record: EmergencyRecord): void {
     this.selectedEmergency.set(record);
-    this.initForms();
+    this.initCareForm();
     this.isDrawerOpen.set(true);
   }
 
@@ -291,12 +181,6 @@ export class EmergencyDashboardComponent implements OnInit {
         this.isProcessing.set(false);
       },
     });
-  }
-
-  private optional(value: unknown): string | undefined {
-    if (typeof value !== 'string') return undefined;
-    const normalized = value.trim();
-    return normalized.length > 0 ? normalized : undefined;
   }
 
   t(key: string): string {
