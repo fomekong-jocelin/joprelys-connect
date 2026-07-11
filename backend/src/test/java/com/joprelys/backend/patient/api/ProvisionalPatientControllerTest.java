@@ -19,8 +19,6 @@ import com.joprelys.backend.auth.security.JwtService;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import com.joprelys.backend.patient.domain.PatientIdentityStatus;
-import com.joprelys.backend.patient.infrastructure.persistence.PatientIdentityDeclarationRepository;
-import com.joprelys.backend.patient.infrastructure.persistence.PatientIdentityStatusHistoryRepository;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import java.util.Set;
 import java.util.UUID;
@@ -56,12 +54,6 @@ class ProvisionalPatientControllerTest {
 
     @Autowired
     private PatientRepository patientRepository;
-
-    @Autowired
-    private PatientIdentityDeclarationRepository declarationRepository;
-
-    @Autowired
-    private PatientIdentityStatusHistoryRepository statusHistoryRepository;
 
     @Autowired
     private JwtService jwtService;
@@ -119,7 +111,7 @@ class ProvisionalPatientControllerTest {
                 .andReturn().getResponse().getContentAsString();
 
         UUID patientId = UUID.fromString(objectMapper.readTree(response).path("patient").path("id").asText());
-        var patient = patientRepository.findById(patientId).orElseThrow();
+        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
 
         assertEquals(PatientIdentityStatus.PROVISIONAL_URGENCY, patient.getIdentityStatus());
         assertNull(patient.getFullName());
@@ -127,7 +119,10 @@ class ProvisionalPatientControllerTest {
         assertNull(patient.getBirthDate());
         assertNull(patient.getCity());
         assertNull(patient.getPhone());
-        assertEquals(1, statusHistoryRepository.findAllByPatientIdOrderByChangedAtAsc(patientId).size());
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM patient_identity_status_history WHERE patient_id = ?",
+                Integer.class,
+                patientId));
     }
 
     @Test
@@ -164,10 +159,20 @@ class ProvisionalPatientControllerTest {
                 .andReturn().getResponse().getContentAsString();
 
         UUID patientId = UUID.fromString(objectMapper.readTree(response).path("patient").path("id").asText());
-        var declarations = declarationRepository.findAllByPatientIdOrderByDeclaredAtAsc(patientId);
-        assertEquals(1, declarations.size());
-        assertEquals("Nom déclaré non vérifié", declarations.getFirst().getDeclaredValue());
-        assertNotNull(declarations.getFirst().getDeclaredBy());
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM patient_identity_declarations WHERE patient_id = ?",
+                Integer.class,
+                patientId));
+        String declaredValue = jdbcTemplate.queryForObject(
+                "SELECT declared_value FROM patient_identity_declarations WHERE patient_id = ?",
+                String.class,
+                patientId);
+        UUID declaredBy = jdbcTemplate.queryForObject(
+                "SELECT declared_by FROM patient_identity_declarations WHERE patient_id = ?",
+                UUID.class,
+                patientId);
+        assertEquals("Nom déclaré non vérifié", declaredValue);
+        assertNotNull(declaredBy);
     }
 
     @Test
@@ -200,13 +205,17 @@ class ProvisionalPatientControllerTest {
     void shouldGenerateDistinctNumbersForConcurrentCreations() throws Exception {
         var executor = Executors.newFixedThreadPool(2);
         var start = new CountDownLatch(1);
-        Callable<String> create = () -> {
+        Callable<String> createForA = () -> {
             start.await();
             return createMinimal(tokenAgentA);
         };
+        Callable<String> createForB = () -> {
+            start.await();
+            return createMinimal(tokenAgentB);
+        };
 
-        Future<String> first = executor.submit(create);
-        Future<String> second = executor.submit(create);
+        Future<String> first = executor.submit(createForA);
+        Future<String> second = executor.submit(createForB);
         start.countDown();
 
         JsonNode firstJson = objectMapper.readTree(first.get());
@@ -221,9 +230,13 @@ class ProvisionalPatientControllerTest {
         assertNotEquals(firstTemporary, secondTemporary);
         assertNotEquals(firstDpu, secondDpu);
         assertEquals(Set.of(firstTemporary, secondTemporary).size(), 2);
-        assertTrue(patientRepository.existsByTemporaryPatientNumber(firstTemporary));
-        assertTrue(patientRepository.existsByTemporaryPatientNumber(secondTemporary));
+        assertEquals(2, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM patients WHERE temporary_patient_number IN (?, ?)",
+                Integer.class,
+                firstTemporary,
+                secondTemporary));
         assertFalse(firstTemporary.isBlank());
+        assertTrue(secondTemporary.startsWith("URG-TEMP-"));
     }
 
     private String createMinimal(String token) throws Exception {
