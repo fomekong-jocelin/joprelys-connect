@@ -51,6 +51,22 @@ export class PatientProfileTabComponent {
     return status === 'PROVISIONAL_URGENCY' || status === 'DECLARED';
   });
 
+  readonly age = computed(() => {
+    const birthDate = this.parent.patient()?.birthDate;
+    if (!birthDate) return 0;
+
+    const birth = new Date(birthDate);
+    if (Number.isNaN(birth.getTime())) return 0;
+
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDifference = today.getMonth() - birth.getMonth();
+    if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return Math.max(age, 0);
+  });
+
   openIdentityDialog(): void {
     this.identityDialogOpen.set(true);
   }
