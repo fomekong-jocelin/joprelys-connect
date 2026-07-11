@@ -80,14 +80,16 @@ class RbacControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.code == 'DAF')]").exists())
                 .andExpect(jsonPath("$[?(@.code == 'CAISSIER')]").exists())
-                .andExpect(jsonPath("$[?(@.code == 'SECRETAIRE_COMPTABLE')]").exists());
+                .andExpect(jsonPath("$[?(@.code == 'SECRETAIRE_COMPTABLE')]").exists())
+                .andExpect(jsonPath("$[?(@.code == 'SUPER_ADMIN')]").doesNotExist());
 
         mockMvc.perform(get("/api/rbac/permissions")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.code == 'RBAC_MANAGE')]").exists())
                 .andExpect(jsonPath("$[?(@.code == 'CASH_PAYMENT_COLLECT')]").exists())
-                .andExpect(jsonPath("$[?(@.code == 'INSURANCE_BORDEREAU_SETTLE')]").exists());
+                .andExpect(jsonPath("$[?(@.code == 'INSURANCE_BORDEREAU_SETTLE')]").exists())
+                .andExpect(jsonPath("$[?(@.code == 'ORGANIZATION_MANAGE')]").doesNotExist());
     }
 
     @Test
@@ -154,6 +156,19 @@ class RbacControllerTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "roleIds", List.of(roleId("ADMIN_JOPRELYS"))))))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldRejectPlatformPermissionInCustomRole() throws Exception {
+        mockMvc.perform(post("/api/rbac/roles")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "code", "ADMIN_ETABLISSEMENT_ETENDU",
+                                "name", "Administrateur étendu",
+                                "assignable", true,
+                                "permissionCodes", List.of("RBAC_MANAGE", "ORGANIZATION_MANAGE")))))
+                .andExpect(status().isForbidden());
     }
 
     @Test
