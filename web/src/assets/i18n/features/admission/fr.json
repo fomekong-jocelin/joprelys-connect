@@ -105,5 +105,12 @@
   "admission.requiredEmergency": "Renseignez le motif d’admission de l’urgence.",
   "admission.invalidValues": "Vérifiez les valeurs saisies avant de continuer.",
   "admission.loadPatientsError": "Impossible de charger la liste des patients.",
-  "admission.saveError": "Impossible de créer l’admission."
+  "admission.saveError": "Impossible de créer l’admission.",
+  "admission.error.AUTHENTICATION_REQUIRED": "Votre session n’est plus valide. Reconnectez-vous.",
+  "admission.error.ORGANIZATION_REQUIRED": "Aucun établissement n’est associé à votre compte.",
+  "admission.error.EMERGENCY_ADMISSION_REQUEST_ID_REQUIRED": "La référence technique de l’admission est manquante.",
+  "admission.error.EMERGENCY_PROVISIONAL_PATIENT_REQUIRED": "Les informations du patient provisoire sont manquantes.",
+  "admission.error.EMERGENCY_TRIAGE_REQUIRED": "Les informations de triage sont manquantes.",
+  "admission.error.EMERGENCY_THIRD_PARTY_REQUIRED": "Renseignez le nom, le téléphone et le lien de la personne ayant amené le patient.",
+  "admission.error.EMERGENCY_ADMISSION_FAILED": "L’admission d’urgence n’a pas pu être créée. Réessayez sans fermer la fenêtre."
 }
