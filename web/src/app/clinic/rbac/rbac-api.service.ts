@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { finalize, Observable, of, shareReplay, tap } from 'rxjs';
 import {
@@ -51,35 +51,45 @@ export class RbacApiService {
     this.accessRequest$ = null;
   }
 
-  listRoles(): Observable<RbacRole[]> {
-    return this.http.get<RbacRole[]>('/api/rbac/roles');
+  listRoles(organizationId?: string): Observable<RbacRole[]> {
+    return this.http.get<RbacRole[]>('/api/rbac/roles', { params: this.scopeParams(organizationId) });
   }
 
   listPermissions(): Observable<RbacPermission[]> {
     return this.http.get<RbacPermission[]>('/api/rbac/permissions');
   }
 
-  listUsers(): Observable<RbacUserAccess[]> {
-    return this.http.get<RbacUserAccess[]>('/api/rbac/users');
+  listUsers(organizationId?: string): Observable<RbacUserAccess[]> {
+    return this.http.get<RbacUserAccess[]>('/api/rbac/users', { params: this.scopeParams(organizationId) });
   }
 
-  createRole(request: CreateRbacRoleRequest): Observable<RbacRole> {
-    return this.http.post<RbacRole>('/api/rbac/roles', request);
+  createRole(request: CreateRbacRoleRequest, organizationId?: string): Observable<RbacRole> {
+    return this.http.post<RbacRole>('/api/rbac/roles', request, { params: this.scopeParams(organizationId) });
   }
 
-  updateRole(roleId: string, request: UpdateRbacRoleRequest): Observable<RbacRole> {
-    return this.http.put<RbacRole>(`/api/rbac/roles/${roleId}`, request);
+  updateRole(roleId: string, request: UpdateRbacRoleRequest, organizationId?: string): Observable<RbacRole> {
+    return this.http.put<RbacRole>(`/api/rbac/roles/${roleId}`, request, {
+      params: this.scopeParams(organizationId),
+    });
   }
 
-  replaceRolePermissions(roleId: string, permissionCodes: string[]): Observable<RbacRole> {
-    return this.http.put<RbacRole>(`/api/rbac/roles/${roleId}/permissions`, { permissionCodes });
+  replaceRolePermissions(roleId: string, permissionCodes: string[], organizationId?: string): Observable<RbacRole> {
+    return this.http.put<RbacRole>(`/api/rbac/roles/${roleId}/permissions`, { permissionCodes }, {
+      params: this.scopeParams(organizationId),
+    });
   }
 
-  replaceUserRoles(userId: string, roleIds: string[]): Observable<RbacUserAccess> {
-    return this.http.put<RbacUserAccess>(`/api/rbac/users/${userId}/roles`, { roleIds });
+  replaceUserRoles(userId: string, roleIds: string[], organizationId?: string): Observable<RbacUserAccess> {
+    return this.http.put<RbacUserAccess>(`/api/rbac/users/${userId}/roles`, { roleIds }, {
+      params: this.scopeParams(organizationId),
+    });
   }
 
-  listAudit(): Observable<RbacAuditEntry[]> {
-    return this.http.get<RbacAuditEntry[]>('/api/rbac/audit');
+  listAudit(organizationId?: string): Observable<RbacAuditEntry[]> {
+    return this.http.get<RbacAuditEntry[]>('/api/rbac/audit', { params: this.scopeParams(organizationId) });
+  }
+
+  private scopeParams(organizationId?: string): HttpParams {
+    return organizationId ? new HttpParams().set('organizationId', organizationId) : new HttpParams();
   }
 }
