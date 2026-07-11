@@ -1,5 +1,6 @@
 package com.joprelys.backend.patient.api;
 
+import com.joprelys.backend.patient.domain.PatientIdentityStatus;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -25,5 +26,8 @@ public record PatientResponse(
         String email,
         Instant createdAt,
         Instant updatedAt,
-        Boolean emergencyAccessActive) {
+        Boolean emergencyAccessActive,
+        PatientIdentityStatus identityStatus,
+        String temporaryPatientNumber,
+        String displayName) {
 }
