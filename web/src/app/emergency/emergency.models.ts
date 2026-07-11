@@ -40,6 +40,16 @@ export interface EmergencyRecord {
   organizationId: string;
   patientId: string;
   patientName: string;
+  globalPatientNumber: string;
+  localPatientNumber: string;
+  temporaryPatientNumber?: string;
+  identityStatus?: string;
+  identityConfidenceLevel?: string;
+  apparentGender?: string;
+  estimatedAgeRange?: string;
+  physicalDescription?: string;
+  foundAt?: string;
+  foundLocation?: string;
   visitId?: string;
   arrivalMode: string;
   triageLevel: string;
