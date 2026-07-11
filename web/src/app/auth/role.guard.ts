@@ -16,7 +16,10 @@ export const roleGuard: CanActivateFn = (route) => {
 
   const expectedRoles = (route.data['expectedRoles'] as string[] | undefined) ?? [];
   const expectedPermissions = (route.data['expectedPermissions'] as string[] | undefined) ?? [];
-  const allowAnyInternalRole = route.data['allowAnyInternalRole'] === true;
+  const routePath = route.routeConfig?.path ?? '';
+  const isInternalEntryRoute = routePath === 'dashboard'
+    || (routePath === 'profile' && !expectedRoles.includes('PATIENT'));
+  const allowAnyInternalRole = route.data['allowAnyInternalRole'] === true || isInternalEntryRoute;
   const legacyRoles = session.role.split(',').map((role) => role.trim()).filter(Boolean);
 
   if (expectedPermissions.length > 0 || allowAnyInternalRole) {
