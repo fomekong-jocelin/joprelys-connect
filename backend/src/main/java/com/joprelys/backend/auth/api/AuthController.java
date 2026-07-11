@@ -5,6 +5,8 @@ import com.joprelys.backend.auth.security.BearerTokenResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,6 +33,11 @@ public class AuthController {
 	@PostMapping("/verify-otp")
 	public LoginResponse verifyOtp(@Valid @RequestBody VerifyStaffOtpRequest request, HttpServletRequest servletRequest) {
 		return authenticationService.verifyStaffOtp(request, clientIp(servletRequest));
+	}
+
+	@GetMapping("/me")
+	public CurrentSessionResponse currentSession(Authentication authentication) {
+		return authenticationService.currentSession(authentication);
 	}
 
 	@PostMapping("/logout")
