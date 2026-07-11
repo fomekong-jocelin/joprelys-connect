@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -43,8 +44,10 @@ public class RbacController {
 
     @GetMapping("/roles")
     @PreAuthorize(CAN_READ)
-    public List<RbacStore.RoleView> roles(Authentication authentication) {
-        return rbacAdministrationService.listRoles(authentication);
+    public List<RbacStore.RoleView> roles(
+            @RequestParam(required = false) UUID organizationId,
+            Authentication authentication) {
+        return rbacAdministrationService.listRoles(organizationId, authentication);
     }
 
     @GetMapping("/permissions")
@@ -55,17 +58,21 @@ public class RbacController {
 
     @GetMapping("/users")
     @PreAuthorize(CAN_READ)
-    public List<RbacAdministrationService.UserAccessView> users(Authentication authentication) {
-        return rbacAdministrationService.listUsers(authentication);
+    public List<RbacAdministrationService.UserAccessView> users(
+            @RequestParam(required = false) UUID organizationId,
+            Authentication authentication) {
+        return rbacAdministrationService.listUsers(organizationId, authentication);
     }
 
     @PostMapping("/roles")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize(CAN_MANAGE)
     public RbacStore.RoleView createRole(
+            @RequestParam(required = false) UUID organizationId,
             @Valid @RequestBody CreateRoleRequest request,
             Authentication authentication) {
         return rbacAdministrationService.createRole(
+                organizationId,
                 request.code(),
                 request.name(),
                 request.description(),
@@ -78,10 +85,12 @@ public class RbacController {
     @PreAuthorize(CAN_MANAGE)
     public RbacStore.RoleView updateRole(
             @PathVariable UUID roleId,
+            @RequestParam(required = false) UUID organizationId,
             @Valid @RequestBody UpdateRoleRequest request,
             Authentication authentication) {
         return rbacAdministrationService.updateRole(
                 roleId,
+                organizationId,
                 request.code(),
                 request.name(),
                 request.description(),
@@ -94,10 +103,12 @@ public class RbacController {
     @PreAuthorize(CAN_MANAGE)
     public RbacStore.RoleView replaceRolePermissions(
             @PathVariable UUID roleId,
+            @RequestParam(required = false) UUID organizationId,
             @Valid @RequestBody ReplacePermissionsRequest request,
             Authentication authentication) {
         return rbacAdministrationService.replaceRolePermissions(
                 roleId,
+                organizationId,
                 request.permissionCodes(),
                 authentication);
     }
@@ -106,15 +117,22 @@ public class RbacController {
     @PreAuthorize(CAN_MANAGE)
     public RbacAdministrationService.UserAccessView replaceUserRoles(
             @PathVariable UUID userId,
+            @RequestParam(required = false) UUID organizationId,
             @Valid @RequestBody ReplaceUserRolesRequest request,
             Authentication authentication) {
-        return rbacAdministrationService.replaceUserRoles(userId, request.roleIds(), authentication);
+        return rbacAdministrationService.replaceUserRoles(
+                userId,
+                organizationId,
+                request.roleIds(),
+                authentication);
     }
 
     @GetMapping("/audit")
     @PreAuthorize(CAN_READ)
-    public List<RbacStore.AuditView> audit(Authentication authentication) {
-        return rbacAdministrationService.listAudit(authentication);
+    public List<RbacStore.AuditView> audit(
+            @RequestParam(required = false) UUID organizationId,
+            Authentication authentication) {
+        return rbacAdministrationService.listAudit(organizationId, authentication);
     }
 
     public record CreateRoleRequest(
