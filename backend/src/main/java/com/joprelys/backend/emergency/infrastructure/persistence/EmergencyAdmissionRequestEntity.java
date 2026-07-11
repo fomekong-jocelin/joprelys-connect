@@ -31,7 +31,7 @@ public class EmergencyAdmissionRequestEntity {
     @Column(name = "status", nullable = false, length = 24)
     private String status;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
@@ -41,15 +41,20 @@ public class EmergencyAdmissionRequestEntity {
     }
 
     public EmergencyAdmissionRequestEntity(UUID requestId, UUID organizationId) {
+        Instant now = Instant.now();
         this.requestId = requestId;
         this.organizationId = organizationId;
         this.status = PROCESSING;
+        this.createdAt = now;
+        this.updatedAt = now;
     }
 
     @PrePersist
     void prePersist() {
         Instant now = Instant.now();
-        createdAt = now;
+        if (createdAt == null) {
+            createdAt = now;
+        }
         updatedAt = now;
     }
 
