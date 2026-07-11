@@ -18,12 +18,8 @@ ALTER TABLE patients ADD CONSTRAINT chk_patients_verified_identity_required
         OR (full_name IS NOT NULL AND gender IS NOT NULL AND birth_date IS NOT NULL AND city IS NOT NULL)
     );
 
-ALTER TABLE patients ADD CONSTRAINT chk_patients_provisional_number_required
-    CHECK (
-        temporary_patient_number IS NOT NULL
-        OR identity_status = 'VERIFIED'
-        OR identity_status = 'MERGED'
-    );
+ALTER TABLE patients ADD CONSTRAINT chk_patients_identity_reference_required
+    CHECK (full_name IS NOT NULL OR temporary_patient_number IS NOT NULL);
 
 CREATE UNIQUE INDEX ux_patients_temporary_patient_number
     ON patients (temporary_patient_number);
