@@ -92,7 +92,8 @@ public class StaffService {
                 passwordEncoder.encode(temporaryPassword));
         staff.setOrganizationId(admin.getOrganizationId());
 
-        UserAccountEntity saved = userAccountRepository.save(staff);
+        // Flush the user row before the JDBC-based RBAC assignment writes its foreign key.
+        UserAccountEntity saved = userAccountRepository.saveAndFlush(staff);
         rbacStore.replaceUserRoles(saved.getId(), admin.getOrganizationId(), admin.getId(), roles);
         rbacStore.audit(
                 admin.getOrganizationId(),
@@ -130,7 +131,7 @@ public class StaffService {
         staff.setRegistrationNumber(request.registrationNumber());
         staff.setDepartment(request.department());
         staff.setBio(request.bio());
-        UserAccountEntity saved = userAccountRepository.save(staff);
+        UserAccountEntity saved = userAccountRepository.saveAndFlush(staff);
 
         rbacStore.replaceUserRoles(saved.getId(), admin.getOrganizationId(), admin.getId(), roles);
         rbacStore.audit(
