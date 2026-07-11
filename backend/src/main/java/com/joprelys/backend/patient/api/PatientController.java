@@ -30,11 +30,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class PatientController {
 
     private static final String LEGACY_PATIENT_ROLES =
-            "hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
+            "hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')";
     private static final String LEGACY_CLINICAL_ROLES =
-            "hasAnyRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
+            "hasAnyRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE')";
     private static final String LEGACY_ADMIN_ROLES =
-            "hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
+            "hasRole('ADMIN_CLINIQUE')";
 
     private final PatientService patientService;
     private final UserAccountRepository userAccountRepository;
