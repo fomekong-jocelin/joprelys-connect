@@ -1,49 +1,45 @@
 # PROJECT TRACKING — Suivi central technique et delivery
 
-> Ce fichier doit être mis à jour après chaque intervention IA ou humaine.
+> Ce fichier reflète les travaux actifs. L'historique détaillé reste disponible dans Git.
 
 ## Statut global
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-11 — audit des 43 modules du CDC V3.1 et cadrage EPIC-0021 sur `audit/cdc-v3-1-module-delivery` |
+| Dernière mise à jour | 2026-07-11 — report du fournisseur OTP ; préparation sessions/révocation et URG-TEMP |
 | Responsable mise à jour | Codex |
-| État global | RBAC administrable fusionné via PR #24 ; EPIC-0021 en cours pour la complétion module par module ; EPIC-0019/0018/0020 restent à réconcilier avec la nouvelle baseline V3.1 |
-| Risques majeurs | P0 : authentification/sessions non industrialisées ; patient inconscient bloqué par l'identité obligatoire ; urgence exigeant un patient existant ; modules P1/P2 non démontrés ; UAT/NFR/PRA non prouvés |
-| Prochaine priorité | STORY-2301 — Patient URG-TEMP de l'arrivée à la régularisation, après sécurisation immédiate OTP/secrets |
-| Sprint courant | À replanifier après validation du backlog V3.1 |
-| | |
-| Capacité sprint | À calculer |
-| Charge engagée | À recalculer après découpage des lots EPIC-0021 |
-| Dérive globale | Non calculée — baseline delivery en cours de révision |
+| État global | EPIC-0021 en cours ; EPIC-0022 et EPIC-0023 prêts à planifier |
+| Risques majeurs | Sessions et révocation en mémoire ; vrai patient URG-TEMP impossible avec le modèle actuel ; rapprochement DPU sensible |
+| Prochaine priorité | Démarrer en parallèle STORY-2401 (#31) et STORY-2301 (#40) |
+| Capacité | À calculer avant engagement sprint |
+| Charge préparée | 66 SP : sessions/révocation 18 SP + URG-TEMP 48 SP |
 
-## Tableau de suivi consolidé
+## Backlog actif
 
-| ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
-|---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
-| EPIC-0021 | CDC_V3_1_DELIVERY | Epic | Complétion module par module du CDC V3.1 | Produit / Full-stack / Sécurité / QA | IN_PROGRESS | P0 | — | Product + Tech Lead + référents métier | À découper | À découper | À découper | Codex | Product Owner + Tech Lead + Médecin chef + DAF + DPO + QA | À planifier | 1.0j audit | Validation du rapport, création des epics enfants et stories ≤8 SP | Critique | 2026-07-11 |
-| TASK-20260711-CDC-V3-1-GAP-AUDIT | EPIC-0021 | Audit / PM | Audit des 43 modules et 197 exigences du CDC V3.1 | Documentation / Architecture / QA | DONE | P0 | 5 | Senior produit/architecture | 1.0j | 1.5j | 2.5j | Codex | Tech Lead + Product Owner | Hors sprint | 1.0j | Validation métier des statuts et priorités | Élevé | 2026-07-11 |
-| STORY-2208 | SECURITY_RBAC | User Story | RBAC administrable par établissement | Backend / Angular / DB | DONE | P0 | 13 | Senior sécurité/full-stack | Réalisé | Réalisé | Non recommandé | Codex | Lead Developer + sécurité | SPRINT-0014 | Non consolidé | PR #24 fusionnée au commit `817d971c`; délégations/ABAC restent dans EPIC-0021 | Moyen | 2026-07-11 |
-| TASK-20260710-P0-BASELINE-CLOSURE | TECHNICAL_BASELINE | Documentation | Clôture documentaire de la baseline P0 | Documentation / QA | DONE | P0 | 1 | Tech Lead / QA | 0.1j | 0.15j | 0.25j | Codex | Lead Developer | SPRINT-0014 | 0.1j | Aucun | Faible | 2026-07-10 |
-| BUG-20260710-CI-BASELINE-EXECUTION | TECHNICAL_BASELINE | Bug CI/CD | Déblocage réel des tests Maven et Angular | CI/CD | DONE | P0 | 1 | DevOps / full-stack intermédiaire | 0.15j | 0.25j | 0.5j | Codex | Lead Developer | SPRINT-0014 | 0.15j | Aucun | Faible | 2026-07-10 |
-| BUG-20260710-V55-H2-COMPATIBILITY | TECHNICAL_BASELINE | Bug DB | Migration V55 compatible H2 et PostgreSQL 16 | Backend / SQL | DONE | P0 | 2 | Backend Java / SQL senior | 0.4j | 0.7j | 1.2j | Codex | Lead Backend + référent données | SPRINT-0014 | 0.4j | Vérifier `flyway_schema_history` avant déploiement partagé | Faible | 2026-07-10 |
-| BUG-20260710-BACKEND-TESTS-BIGDECIMAL | TECHNICAL_BASELINE | Bug Backend | Alignement BigDecimal des tests et quantités | Backend / QA | DONE | P0 | 2 | Backend Java intermédiaire / senior | 0.3j | 0.5j | 0.8j | Codex | Lead Backend + QA finance | SPRINT-0014 | 0.3j | DTO financiers résiduels en `Double` à traiter séparément | Faible | 2026-07-10 |
-| EPIC-0019 | PROFESSIONAL_WORKSPACES | Epic | Postes métier professionnels hospitalisation et caisse | Full-stack | IN_PROGRESS | P0 | 34 | Senior full-stack + UX santé + Médecin Chef + DAF | 10.5j | 14.0j | 23.0j | Codex | Lead Developer + Médecin Chef + DAF | À replanifier | 1.6j | Réconcilier avec HOS-01 à HOS-05 du CDC V3.1 | Élevé | 2026-07-11 |
-| EPIC-0018 | FINANCE_OPERATIONS | Epic | Intégrité financière et poste facturation/caisse | Full-stack | IN_PROGRESS | P0 | 34 | Senior full-stack + DAF | 7.5j | 10.0j | 15.0j | Codex | Lead Developer + DAF | À replanifier | 3.0j | Réconcilier avec FIN-01 à FIN-04 et faire signer les règles DAF | Moyen | 2026-07-11 |
-| EPIC-0020 | FINANCE_UX | Epic | Refonte du workspace Facturation & Caisse orienté tâche | Full-stack + Product Design | IN_PROGRESS | P0 | 36 | Senior full-stack + UX santé + DAF + QA | 12.5j | 16.0j | 22.5j | Codex | Lead Developer + Product/DAF | À replanifier | 7.1j | QA globale et rapprochement avec les exigences V3.1 | Moyen | 2026-07-11 |
-| STORY-2201 | FINANCE_UX | User Story | Contrat d'état financier unique patient/assurance | Backend / Full-stack | DONE | P0 | 5 | Senior | 1.5j | 2.0j | 3.0j | Codex | Lead Developer + DAF | SPRINT-0014 | 1.2j | Validation métier DAF/Product | Faible | 2026-07-10 |
-| STORY-2202 | FINANCE_UX | User Story | Workspace Factures orienté tâche | Frontend / Product Design | DONE | P0 | 8 | Senior | 2.5j | 3.3j | 4.5j | Codex | Lead Developer + Product/DAF | SPRINT-0014 | 2.0j | PR #15 fusionnée au commit `f1055f78` | Faible | 2026-07-10 |
-| STORY-2203 | FINANCE_UX | User Story | Poste caissier simplifié et file d'encaissement | Full-stack | DONE | P0 | 8 | Senior | 2.5j | 3.3j | 4.5j | Codex | Lead Developer + DAF | SPRINT-0014 | 2.3j | PR #16 fusionnée au commit `c623ba99`; correctif PR #17 clôturé | Faible | 2026-07-10 |
-| BUG-20260710-CASH-CLOSEOUT-HISTORY-REPORT | FINANCE_UX | Correctif P0 | Espacement, historique et bordereau de clôture de caisse | Full-stack + Product Design | DONE | P0 | 5 | Senior full-stack + Product Design | 1.5j | 2.0j | 3.0j | Codex | Lead Developer + DAF | SPRINT-0014 | 1.5j | Aucun ; PR #17 fusionnée au commit `201548a3` | Faible | 2026-07-10 |
-| STORY-2204 | FINANCE_UX | User Story | Poste assurance et progression des bordereaux | Full-stack | DONE | P1 | 5 | Senior + intermédiaire | 1.5j | 2.0j | 3.0j | Codex | DAF + Lead Developer | SPRINT-0014 | Non consolidé | Validation métier post-fusion ; commit `83b4bbfe` | Moyen | 2026-07-11 |
-| BUG-20260710-BORDEREAUX-HEADER | FINANCE_UX | Bug | En-tête de liste des bordereaux d'assurance comprimé | Frontend | QA | P2 | 1 | Frontend intermédiaire | 0.1j | 0.15j | 0.25j | Codex | Lead Frontend + DAF | SPRINT-0014 | 0.1j | QA visuelle manuelle light/dark et responsive | Faible | 2026-07-10 |
-| BUG-20260710-PATIENT-MEDICAL-ICONS-I18N | UI_UX | Bug | Icônes et libellés Urgences incohérents dans le dossier médical patient | Frontend + diagnostic backend | QA | P1 | 2 | Frontend intermédiaire + reviewer backend | 0.3j | 0.5j | 0.8j | Codex | Lead Frontend + Lead Backend | SPRINT-0014 | 0.3j | QA visuelle ; refactor composant >500 lignes | Moyen | 2026-07-10 |
-| STORY-2205 | FINANCE_UX | User Story | Détail facture, documents et actions exceptionnelles | Frontend | IN_PROGRESS | P1 | 5 | Senior | 1.5j | 2.0j | 3.0j | Codex | Lead Developer + DAF | SPRINT-0014 | 0.8j | QA visuelle navigateur restante | Moyen | 2026-07-10 |
-| TASK-2207 | FINANCE_UX | Correctif UI/UX + tests | Modale annulation, visite devis, feedback et deep-link | Frontend | QA | P2 | 3 | Senior Frontend | 0.8j | 1.2j | 2.0j | Codex | Lead Developer + DAF | SPRINT-0014 | 0.8j | Exécuter Vitest/build puis QA light/dark, clavier et mobile | Moyen | 2026-07-10 |
-| STORY-2206 | FINANCE_UX | User Story | QA UX, accessibilité et régression financière | QA / Full-stack | READY | P0 | 5 | Senior QA/full-stack | 1.5j | 2.0j | 3.0j | À assigner | Lead Developer + DAF | À planifier | 0j | Réconcilier avec la DoD module V3.1 | Élevé | 2026-07-11 |
-| STORY-2112 | FINANCE_OPERATIONS | Feature | Synthèse de règlement patient / assurance | Full-stack | DONE | P0 | 5 | Senior full-stack | 1.2j | 1.6j | 2.4j | Codex | Lead Developer + DAF | SPRINT-0012 | 1.2j | Validation DAF des libellés métier | Faible | 2026-07-09 |
-| STORY-2113 | FINANCE_OPERATIONS | Feature | Poste caissier: encaissement, reçu, clôture, écarts | Full-stack | DONE | P0 | 8 | Senior full-stack | 2.0j | 2.6j | 4.0j | Codex | Lead Developer + DAF | SPRINT-0013 | 0.4j | Validé par test E2E financier | Faible | 2026-07-09 |
-| STORY-2114 | FINANCE_OPERATIONS | Feature | Poste recouvrement: balance âgée, actions de relance | Full-stack | DONE | P1 | 8 | Senior full-stack | 2.0j | 2.6j | 4.0j | Codex | Lead Developer + DAF | SPRINT-0013 | 2.0j | Validation métier finale | Faible | 2026-07-09 |
-| STORY-2115 | FINANCE_OPERATIONS | Feature | Pilotage DAF: sessions, exports comptables OHADA | Full-stack | DONE | P1 | 5 | Senior full-stack | 1.0j | 1.3j | 2.0j | Codex | Lead Developer + DAF | SPRINT-0013 | 1.0j | Ne couvre pas une comptabilité générale OHADA complète | Moyen | 2026-07-11 |
-| STORY-2116 | FINANCE_OPERATIONS | Feature | Tests E2E, RBAC, accessibilité, non-régression | Full-stack | DONE | P0 | 5 | Senior full-stack | 0.5j | 0.6j | 1.0j | Codex | Lead Developer + DAF | SPRINT-0013 | 0.5j | Étendre aux parcours V3.1 non financiers | Moyen | 2026-07-11 |
-| STORY-2111 | FINANCE_OPERATIONS | Correctif | Synchronisation règlement facture / créance patient | Full-stack | DONE | P0 | 3 | Senior full-stack | 0.8j | 1.1j | 1.6j | Codex | Lead Developer + DAF | SPRINT-0012 | 0.8j | Remplacé par le contrat unifié STORY-2201 | Faible | 2026-07-10 |
+| ID | Titre | Statut | Priorité | SP | Dépendances | Issue |
+|---|---|---|---:|---:|---|---:|
+| EPIC-0021 | Complétion module par module du CDC V3.1 | IN_PROGRESS | P0 | — | — | #25 |
+| EPIC-0022 | Sessions persistantes et révocation distribuée | READY | P0 | 18 | — | #29 |
+| STORY-2401 | Sessions persistantes et refresh tokens rotatifs | READY | P0 | 8 | — | #31 |
+| STORY-2402 | Révocation, logout-all et détection du rejeu | BLOCKED | P0 | 5 | STORY-2401 | #33 |
+| STORY-2403 | Renouvellement et gestion des sessions Angular | BLOCKED | P0 | 5 | STORY-2401, STORY-2402 | #34 |
+| EPIC-0023 | Patient URG-TEMP de l'arrivée à la régularisation | READY | P0 | 48 | — | #36 |
+| STORY-2301 | Modèle patient provisoire et identifiant URG-TEMP | READY | P0 | 8 | — | #40 |
+| STORY-2302 | Admission urgence et triage sans identité définitive | BLOCKED | P0 | 8 | STORY-2301 | #42 |
+| STORY-2303 | Tiers, incapacité, urgence légale et effets personnels | BLOCKED | P0 | 8 | STORY-2302 | #44 |
+| STORY-2304 | Régularisation et rapprochement avec le DPU | BLOCKED | P0 | 8 | STORY-2301, STORY-2303, ADR | #45 |
+| STORY-2305 | Hospitalisation, documents et finance différée | BLOCKED | P0 | 8 | STORY-2302 à STORY-2304 | #46 |
+| STORY-2306 | Workspace URG-TEMP, E2E et UAT | BLOCKED | P0 | 8 | STORY-2301 à STORY-2305 | #47 |
+
+## Décisions
+
+- Le fournisseur OTP SMS/e-mail est reporté à la fin du projet.
+- Les sessions et la révocation sont traitées immédiatement sans dépendance payante.
+- Les mesures gratuites de sécurité restent obligatoires : aucun OTP en log de production ni exposé au frontend hors profil local/test.
+- Les deux lanes peuvent avancer en parallèle avec deux profils backend seniors distincts.
+
+## Références
+
+- `docs/ai/tickets/EPIC-0022-SESSIONS-AND-REVOCATION.md`
+- `docs/ai/tickets/EPIC-0023-URG-TEMP-END-TO-END.md`
+- `docs/pm/backlog/WAVE-1-SESSIONS-AND-URG-TEMP.md`
