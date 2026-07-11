@@ -141,13 +141,16 @@ public class SpatialService {
         if (!"EN_COURS".equals(hospitalization.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "L'hospitalisation n'est pas active.");
         }
+        if (!bedRepository.existsById(newBedId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Nouveau lit introuvable");
+        }
 
-        BedEntity newBed = bedRepository.findByIdForUpdate(newBedId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nouveau lit introuvable"));
-
-        if (newBed.getStatus() != BedStatus.FREE) {
+        int claimed = bedRepository.claimIfFree(newBedId, BedStatus.FREE, BedStatus.OCCUPIED);
+        if (claimed != 1) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Le lit demandé n'est pas libre.");
         }
+        BedEntity occupiedBed = bedRepository.findById(newBedId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nouveau lit introuvable"));
 
         bedAssignmentRepository.findActiveByHospitalizationId(hospitalizationId).ifPresent(oldAssignment -> {
             oldAssignment.setReleasedAt(Instant.now());
@@ -157,9 +160,6 @@ public class SpatialService {
             oldBed.setStatus(BedStatus.CLEANING);
             bedRepository.save(oldBed);
         });
-
-        newBed.setStatus(BedStatus.OCCUPIED);
-        BedEntity occupiedBed = bedRepository.save(newBed);
 
         hospitalization.setServiceName(occupiedBed.getRoom().getWard().getName());
         hospitalization.setRoomNumber(occupiedBed.getRoom().getRoomNumber());
