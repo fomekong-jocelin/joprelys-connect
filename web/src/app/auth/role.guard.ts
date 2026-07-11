@@ -16,11 +16,18 @@ export const roleGuard: CanActivateFn = (route) => {
 
   const expectedRoles = (route.data['expectedRoles'] as string[] | undefined) ?? [];
   const expectedPermissions = (route.data['expectedPermissions'] as string[] | undefined) ?? [];
+  const allowAnyInternalRole = route.data['allowAnyInternalRole'] === true;
   const legacyRoles = session.role.split(',').map((role) => role.trim()).filter(Boolean);
 
-  if (expectedPermissions.length > 0) {
+  if (expectedPermissions.length > 0 || allowAnyInternalRole) {
     return rbacApi.ensureMyAccess(true).pipe(
       map((access) => {
+        if (allowAnyInternalRole) {
+          const hasInternalRole = access.roles.some((role) => role !== 'PATIENT');
+          if (hasInternalRole) {
+            return true;
+          }
+        }
         const hasPermission = access.permissions.some((permission) => expectedPermissions.includes(permission));
         const hasEffectiveRole = access.roles.some((role) => expectedRoles.includes(role));
         return hasPermission || hasEffectiveRole ? true : router.parseUrl('/unauthorized');
