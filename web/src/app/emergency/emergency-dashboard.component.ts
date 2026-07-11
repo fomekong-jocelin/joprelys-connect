@@ -78,7 +78,7 @@ export class EmergencyDashboardComponent implements OnInit {
   loadEmergencies(): void {
     this.isLoading.set(true);
     this.emergencyApi.getActive().subscribe({
-      next: (data) => {
+      next: data => {
         this.emergencies.set(data);
         this.isLoading.set(false);
         const selected = this.selectedEmergency();
@@ -120,7 +120,7 @@ export class EmergencyDashboardComponent implements OnInit {
     this.isDetailLoading.set(true);
 
     this.emergencyApi.getById(record.id).subscribe({
-      next: (detail) => {
+      next: detail => {
         this.selectedEmergency.set(detail);
         this.isDetailLoading.set(false);
       },
@@ -203,10 +203,6 @@ export class EmergencyDashboardComponent implements OnInit {
 
   isProvisional(record: EmergencyRecord): boolean {
     return record.identityStatus === 'PROVISIONAL_URGENCY' || Boolean(record.temporaryPatientNumber);
-  }
-
-  hasThirdParty(record: EmergencyRecord): boolean {
-    return Boolean(record.thirdPartyName || record.thirdPartyPhone || record.thirdPartyRelationship);
   }
 
   arrivalLabel(mode: string): string {
