@@ -52,19 +52,17 @@ public class ProvisionalPatientRegularizationService {
     @Transactional
     public PatientEntity regularize(UUID patientId, RegularizeProvisionalPatientRequest request) {
         UserAccountEntity actor = requireCurrentActor();
-        PatientEntity patient = patientRepository.findById(patientId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient introuvable"));
+        PatientEntity patient = patientRepository.findByIdForUpdate(patientId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "PATIENT_NOT_FOUND"));
 
         if (actor.getOrganizationId() == null || !actor.getOrganizationId().equals(patient.getOrganizationId())) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient introuvable");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "PATIENT_NOT_FOUND");
         }
 
         PatientIdentityStatus previousStatus = patient.getIdentityStatus();
         if (previousStatus != PatientIdentityStatus.PROVISIONAL_URGENCY
                 && previousStatus != PatientIdentityStatus.DECLARED) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Seul un dossier provisoire ou déclaré peut être régularisé");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "PATIENT_IDENTITY_ALREADY_REGULARIZED");
         }
 
         patient.setFullName(request.fullName());
@@ -97,8 +95,7 @@ public class ProvisionalPatientRegularizationService {
                 "PATIENT_IDENTITY",
                 saved.getId(),
                 "REGULARIZE_PROVISIONAL_PATIENT",
-                "Régularisation du dossier " + saved.getTemporaryPatientNumber()
-                        + " en identité vérifiée : " + saved.getFullName());
+                "Regularized provisional patient identity " + saved.getTemporaryPatientNumber());
         return saved;
     }
 
@@ -145,10 +142,10 @@ public class ProvisionalPatientRegularizationService {
     private UserAccountEntity requireCurrentActor() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED");
         }
         return userAccountRepository.findByEmail(authentication.getName().trim().toLowerCase(Locale.ROOT))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur non trouvé"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED"));
     }
 
     private String normalize(String value) {
