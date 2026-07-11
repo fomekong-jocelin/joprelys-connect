@@ -113,8 +113,13 @@ public class ProvisionalPatientService {
     private ProvisionalNumbers generateUniqueNumbers() {
         String date = LocalDate.now().format(DATE_FORMATTER);
         for (int attempt = 0; attempt < MAX_NUMBER_ATTEMPTS; attempt++) {
-            String random = UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT);
-            String temporary = "URG-TEMP-" + date + "-" + random.substring(0, 6);
+            UUID uuid = UUID.randomUUID();
+            String random = uuid.toString().replace("-", "").toUpperCase(Locale.ROOT);
+            String numericSuffix = String.format(
+                    Locale.ROOT,
+                    "%06d",
+                    Math.floorMod(uuid.getMostSignificantBits(), 1_000_000L));
+            String temporary = "URG-TEMP-" + date + "-" + numericSuffix;
             String global = "DPU-JOP-" + date + "-" + random.substring(0, 12);
             String local = "PAT-" + date + "-" + random.substring(0, 12);
             if (!patientRepository.existsByTemporaryPatientNumber(temporary)
