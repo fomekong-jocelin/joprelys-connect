@@ -105,5 +105,12 @@
   "admission.requiredEmergency": "Enter the emergency admission reason.",
   "admission.invalidValues": "Review the entered values before continuing.",
   "admission.loadPatientsError": "Unable to load the patient list.",
-  "admission.saveError": "Unable to create the admission."
+  "admission.saveError": "Unable to create the admission.",
+  "admission.error.AUTHENTICATION_REQUIRED": "Your session is no longer valid. Sign in again.",
+  "admission.error.ORGANIZATION_REQUIRED": "No healthcare facility is associated with your account.",
+  "admission.error.EMERGENCY_ADMISSION_REQUEST_ID_REQUIRED": "The technical admission reference is missing.",
+  "admission.error.EMERGENCY_PROVISIONAL_PATIENT_REQUIRED": "The provisional patient information is missing.",
+  "admission.error.EMERGENCY_TRIAGE_REQUIRED": "The triage information is missing.",
+  "admission.error.EMERGENCY_THIRD_PARTY_REQUIRED": "Enter the name, phone number and relationship of the person who brought the patient.",
+  "admission.error.EMERGENCY_ADMISSION_FAILED": "The emergency admission could not be created. Try again without closing the window."
 }
