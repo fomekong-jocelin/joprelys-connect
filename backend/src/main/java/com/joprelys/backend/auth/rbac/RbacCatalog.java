@@ -102,7 +102,7 @@ public final class RbacCatalog {
                         entry.getKey(),
                         roleName(entry.getKey()),
                         "Rôle système Joprelys.",
-                        !"PATIENT".equals(entry.getKey()),
+                        isSystemRoleAssignable(entry.getKey()),
                         entry.getValue()))
                 .toList();
     }
@@ -111,9 +111,25 @@ public final class RbacCatalog {
         return Set.of(ROLE_ADMIN_JOPRELYS, ROLE_SUPER_ADMIN, ROLE_ADMIN_CLINIQUE);
     }
 
+    public static Set<String> platformRoleCodes() {
+        return Set.of(ROLE_ADMIN_JOPRELYS, ROLE_SUPER_ADMIN);
+    }
+
     public static Set<String> permissionCodes() {
         return permissions().stream().map(PermissionDefinition::code)
                 .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    public static Set<String> permissionsForLegacyRoles(Set<String> roleCodes) {
+        LinkedHashSet<String> permissions = new LinkedHashSet<>();
+        systemRoles().stream()
+                .filter(role -> roleCodes.contains(role.code()))
+                .forEach(role -> permissions.addAll(role.permissions()));
+        return permissions;
+    }
+
+    private static boolean isSystemRoleAssignable(String code) {
+        return !"PATIENT".equals(code) && !platformRoleCodes().contains(code);
     }
 
     private static PermissionDefinition permission(String code, String domain, String name, String description) {
