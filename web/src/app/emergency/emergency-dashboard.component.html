@@ -34,6 +34,11 @@
                       {{ ui('provisional') }}
                     </span>
                   }
+                  @if (record.thirdPartyRecorded) {
+                    <span class="rounded-sm border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2 py-0.5 text-[10px] font-bold text-[var(--text-muted)]">
+                      {{ ui('thirdPartyRecorded') }}
+                    </span>
+                  }
                   <span class="text-[10px] font-bold text-[var(--text-muted)]">{{ record.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
                 </div>
                 <h3 class="mt-2 truncate font-display text-base font-black text-[var(--text-primary)]" [title]="patientDisplayName(record)">
@@ -69,14 +74,6 @@
             <div class="mt-4 flex-1 border-l-2 border-[var(--brand-primary)] bg-[var(--app-surface-muted)] px-3 py-2.5">
               <p class="line-clamp-3 text-sm font-semibold leading-5 text-[var(--text-secondary)]">{{ record.chiefComplaint }}</p>
             </div>
-
-            @if (record.thirdPartyName) {
-              <div class="mt-3 rounded-sm border border-[var(--app-border)] px-3 py-2 text-xs text-[var(--text-secondary)]">
-                <span class="font-extrabold text-[var(--text-primary)]">{{ ui('broughtBy') }} :</span>
-                {{ record.thirdPartyName }}
-                @if (record.thirdPartyRelationship) { · {{ record.thirdPartyRelationship }} }
-              </div>
-            }
 
             <dl class="mt-4 grid grid-cols-3 gap-2 border-t border-[var(--divider-subtle)] pt-3 text-xs">
               <div>
@@ -139,15 +136,20 @@
             <app-ui-button variant="secondary" (pressed)="openStabilizeModal()" [disabled]="isProcessing()">
               {{ t('emergency.stabilizeBtn') }}
             </app-ui-button>
-            <button type="button" (click)="closeDrawer()" class="rounded-sm p-2 text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)]" aria-label="Fermer">
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <button
+              type="button"
+              (click)="closeDrawer()"
+              class="rounded-sm p-2 text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)]"
+              [attr.aria-label]="ui('close')"
+            >
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
         </div>
 
-        <nav class="mt-4 grid grid-cols-3 gap-1 rounded-sm bg-[var(--app-surface-muted)] p-1" aria-label="Sections du dossier">
+        <nav class="mt-4 grid grid-cols-2 gap-1 rounded-sm bg-[var(--app-surface-muted)] p-1 sm:grid-cols-4" [attr.aria-label]="ui('sections')">
           <button type="button" class="rounded-sm px-2 py-2 text-xs font-extrabold transition-colors" (click)="setDetailTab('OVERVIEW')" [class.bg-[var(--app-surface)]]="detailTab() === 'OVERVIEW'" [class.text-brand-primary]="detailTab() === 'OVERVIEW'" [class.text-[var(--text-muted)]]="detailTab() !== 'OVERVIEW'">
             {{ ui('overviewTab') }}
           </button>
@@ -156,6 +158,9 @@
           </button>
           <button type="button" class="rounded-sm px-2 py-2 text-xs font-extrabold transition-colors" (click)="setDetailTab('CARE')" [class.bg-[var(--app-surface)]]="detailTab() === 'CARE'" [class.text-brand-primary]="detailTab() === 'CARE'" [class.text-[var(--text-muted)]]="detailTab() !== 'CARE'">
             {{ ui('careTab') }}
+          </button>
+          <button type="button" class="rounded-sm px-2 py-2 text-xs font-extrabold transition-colors" (click)="setDetailTab('LEGAL')" [class.bg-[var(--app-surface)]]="detailTab() === 'LEGAL'" [class.text-brand-primary]="detailTab() === 'LEGAL'" [class.text-[var(--text-muted)]]="detailTab() !== 'LEGAL'">
+            {{ ui('legalTab') }}
           </button>
         </nav>
       </header>
@@ -224,21 +229,15 @@
               </section>
             }
 
-            <section class="ui-card-subtle p-4">
-              <h3 class="font-display text-base font-extrabold text-[var(--text-primary)]">{{ ui('thirdParty') }}</h3>
-              @if (hasThirdParty(record)) {
-                <dl class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div><dt class="ui-label">{{ ui('name') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ valueOrUnknown(record.thirdPartyName) }}</dd></div>
-                  <div><dt class="ui-label">{{ ui('phone') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ valueOrUnknown(record.thirdPartyPhone) }}</dd></div>
-                  <div><dt class="ui-label">{{ ui('relationship') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ valueOrUnknown(record.thirdPartyRelationship) }}</dd></div>
-                  <div><dt class="ui-label">{{ ui('idDocument') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ valueOrUnknown(record.thirdPartyIdDocument) }}</dd></div>
-                  <div><dt class="ui-label">{{ ui('contactConsent') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ record.thirdPartyConsentToContact ? ui('yes') : ui('no') }}</dd></div>
-                  <div class="sm:col-span-2"><dt class="ui-label">{{ ui('circumstances') }}</dt><dd class="mt-1 whitespace-pre-wrap text-sm font-semibold leading-6 text-[var(--text-secondary)]">{{ valueOrUnknown(record.thirdPartyCircumstances) }}</dd></div>
-                </dl>
-              } @else {
-                <p class="mt-3 text-sm text-[var(--text-muted)]">{{ ui('noThirdParty') }}</p>
-              }
-            </section>
+            @if (record.thirdPartyRecorded) {
+              <section class="rounded-sm border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-4">
+                <p class="text-sm font-extrabold text-[var(--text-primary)]">{{ ui('thirdPartyProtectedTitle') }}</p>
+                <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">{{ ui('thirdPartyProtectedHint') }}</p>
+                <button type="button" class="mt-3 rounded-sm text-xs font-extrabold text-brand-primary underline-offset-4 hover:underline" (click)="setDetailTab('LEGAL')">
+                  {{ ui('openLegalTab') }}
+                </button>
+              </section>
+            }
           </div>
         }
 
@@ -290,6 +289,10 @@
             </form>
           </div>
         }
+
+        @if (detailTab() === 'LEGAL') {
+          <app-emergency-medico-legal-panel [emergencyId]="record.id" />
+        }
       </div>
     </aside>
   </div>
@@ -297,15 +300,15 @@
 
 @if (isAdmissionModalOpen()) {
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-bg)] p-3 backdrop-blur-sm sm:p-4" role="presentation" (click)="closeAdmissionModal()">
-    <div class="ui-card w-full max-w-2xl overflow-hidden" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+    <div class="ui-card w-full max-w-2xl overflow-hidden" role="dialog" aria-modal="true" [attr.aria-label]="t('admission.title')" (click)="$event.stopPropagation()">
       <app-unified-admission initialCarePath="EMERGENCY" (cancelled)="closeAdmissionModal()" (completed)="onAdmissionCompleted($event)" />
     </div>
   </div>
 }
 
 @if (isStabilizeModalOpen()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-bg)] p-4 backdrop-blur-sm">
-    <div class="ui-card w-full max-w-md p-5">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-bg)] p-4 backdrop-blur-sm" role="presentation" (click)="closeStabilizeModal()">
+    <div class="ui-card w-full max-w-md p-5" role="dialog" aria-modal="true" [attr.aria-label]="t('emergency.stabilize.modal.title')" (click)="$event.stopPropagation()">
       <h3 class="font-display text-lg font-black text-[var(--text-primary)]">{{ t('emergency.stabilize.modal.title') }}</h3>
       <p class="mt-1 text-xs text-[var(--text-muted)]">{{ t('emergency.stabilize.modal.desc') }}</p>
       <div class="mt-4">
