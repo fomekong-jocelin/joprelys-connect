@@ -18,6 +18,8 @@ CREATE TABLE patient_reconciliation_events (
     idempotency_key VARCHAR(120) NOT NULL,
     created_by_user_id UUID,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    CONSTRAINT uq_patient_reconciliation_event_tenant
+        UNIQUE (id, organization_id),
     CONSTRAINT fk_patient_reconciliation_source
         FOREIGN KEY (source_patient_id, organization_id)
         REFERENCES patients(id, organization_id) ON DELETE CASCADE,
@@ -25,11 +27,17 @@ CREATE TABLE patient_reconciliation_events (
         FOREIGN KEY (candidate_patient_id, organization_id)
         REFERENCES patients(id, organization_id),
     CONSTRAINT fk_patient_reconciliation_corrected_event
-        FOREIGN KEY (corrected_event_id)
-        REFERENCES patient_reconciliation_events(id) ON DELETE CASCADE,
+        FOREIGN KEY (corrected_event_id, organization_id)
+        REFERENCES patient_reconciliation_events(id, organization_id) ON DELETE CASCADE,
     CONSTRAINT fk_patient_reconciliation_actor
         FOREIGN KEY (created_by_user_id)
         REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT chk_patient_reconciliation_decision
+        CHECK (decision IN ('CREATE_NEW_DPU', 'LINK_EXISTING_DPU', 'DEFER', 'CORRECT_LINK')),
+    CONSTRAINT chk_patient_reconciliation_previous_status
+        CHECK (previous_identity_status IN ('PROVISIONAL_URGENCY', 'DECLARED', 'VERIFIED', 'MERGED')),
+    CONSTRAINT chk_patient_reconciliation_resulting_status
+        CHECK (resulting_identity_status IN ('PROVISIONAL_URGENCY', 'DECLARED', 'VERIFIED', 'MERGED')),
     CONSTRAINT chk_patient_reconciliation_distinct_patients
         CHECK (candidate_patient_id IS NULL OR candidate_patient_id <> source_patient_id),
     CONSTRAINT chk_patient_reconciliation_score
@@ -60,12 +68,14 @@ CREATE TABLE patient_canonical_links (
         FOREIGN KEY (canonical_patient_id, organization_id)
         REFERENCES patients(id, organization_id) ON DELETE CASCADE,
     CONSTRAINT fk_patient_canonical_link_event
-        FOREIGN KEY (decision_event_id)
-        REFERENCES patient_reconciliation_events(id) ON DELETE CASCADE,
+        FOREIGN KEY (decision_event_id, organization_id)
+        REFERENCES patient_reconciliation_events(id, organization_id) ON DELETE CASCADE,
     CONSTRAINT chk_patient_canonical_link_distinct
         CHECK (source_patient_id <> canonical_patient_id),
+    CONSTRAINT chk_patient_canonical_link_previous_status
+        CHECK (source_previous_identity_status IN ('PROVISIONAL_URGENCY', 'DECLARED', 'VERIFIED')),
     CONSTRAINT uq_patient_canonical_link_source
-        UNIQUE (source_patient_id)
+        UNIQUE (organization_id, source_patient_id)
 );
 
 CREATE INDEX idx_patient_canonical_link_target
@@ -91,6 +101,8 @@ CREATE TABLE patient_identity_aliases (
     CONSTRAINT fk_patient_identity_alias_actor
         FOREIGN KEY (created_by_user_id)
         REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT chk_patient_identity_alias_type
+        CHECK (alias_type IN ('URG_TEMP', 'LOCAL_PATIENT_NUMBER', 'GLOBAL_PATIENT_NUMBER')),
     CONSTRAINT uq_patient_identity_alias
         UNIQUE (organization_id, alias_type, alias_value)
 );
