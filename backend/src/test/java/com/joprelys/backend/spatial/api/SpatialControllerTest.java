@@ -1,5 +1,6 @@
 package com.joprelys.backend.spatial.api;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -15,9 +16,18 @@ import com.joprelys.backend.hospitalization.infrastructure.persistence.Hospitali
 import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
+import com.joprelys.backend.spatial.application.SpatialService;
 import com.joprelys.backend.spatial.infrastructure.persistence.*;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,14 +36,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.time.LocalDate;
-import java.time.Instant;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
+import org.springframework.web.server.ResponseStatusException;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -76,6 +79,9 @@ public class SpatialControllerTest {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private SpatialService spatialService;
+
     private OrganizationEntity org;
     private UserAccountEntity doctor;
     private PatientEntity patientA;
@@ -104,32 +110,27 @@ public class SpatialControllerTest {
         userAccountRepository.deleteAll();
         organizationRepository.deleteAll();
 
-        // Create Org
         org = new OrganizationEntity("Clinique Spatiale", "spatial@joprelys.local", "123456", "Street Spatial", "Douala");
         org = organizationRepository.save(org);
 
         TenantContext.setTenantId(org.getId());
 
-        // Create Doctor
         doctor = new UserAccountEntity("dr.spatial@joprelys.local", "Dr. Spatial", "MEDECIN", "passhash");
         doctor.setOrganizationId(org.getId());
         doctor = userAccountRepository.save(doctor);
 
         tokenDoctor = jwtService.createToken(doctor).value();
 
-        // Create Patients
         patientA = new PatientEntity("DPU-S-00001", "PAT-S-001", "Alice Spatial", "FEMININ", LocalDate.of(1990, 5, 10), "+237699999991", "Douala", "Akwa", "Street A", "Bob", "+237699445566", "Aucune", "Aucun");
         patientB = new PatientEntity("DPU-S-00002", "PAT-S-002", "Bob Spatial", "MASCULIN", LocalDate.of(1985, 7, 20), "+237699999992", "Douala", "Akwa", "Street B", "Alice", "+237699445577", "Aucune", "Aucun");
         patientA = patientRepository.save(patientA);
         patientB = patientRepository.save(patientB);
 
-        // Create Visits
         visitA = new VisitEntity(patientA, "VIS-S-001", "Motif A", "Général", "MÉDECINE GÉNÉRALE", doctor.getId(), Instant.now());
         visitB = new VisitEntity(patientB, "VIS-S-002", "Motif B", "Général", "MÉDECINE GÉNÉRALE", doctor.getId(), Instant.now());
         visitA = visitRepository.save(visitA);
         visitB = visitRepository.save(visitB);
 
-        // Create Ward, Room, Beds
         ward = new WardEntity("Médecine Hommes");
         ward.setOrganizationId(org.getId());
         ward = wardRepository.save(ward);
@@ -147,7 +148,6 @@ public class SpatialControllerTest {
         bedOccupied.setStatus(BedStatus.OCCUPIED);
         bedOccupied = bedRepository.save(bedOccupied);
 
-        // Create Hospitalization for Patient A (admitted in bedOccupied initially)
         hospA = new HospitalizationEntity(
                 patientA.getId(),
                 "Médecine Hommes",
@@ -160,12 +160,10 @@ public class SpatialControllerTest {
         );
         hospA = hospitalizationRepository.save(hospA);
 
-        // Create initial assignment
         BedAssignmentEntity assignmentA = new BedAssignmentEntity(hospA.getId(), bedOccupied);
         assignmentA.setOrganizationId(org.getId());
         bedAssignmentRepository.save(assignmentA);
 
-        // Create Hospitalization for Patient B (awaiting bed assignment / free bed)
         hospB = new HospitalizationEntity(
                 patientB.getId(),
                 "Médecine Hommes",
@@ -231,7 +229,6 @@ public class SpatialControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bedId").value(bedFree.getId().toString()));
 
-        // Verify old bed is CLEANING and new bed is OCCUPIED
         TenantContext.setTenantId(org.getId());
         BedEntity updatedOldBed = bedRepository.findById(bedOccupied.getId()).orElseThrow();
         BedEntity updatedNewBed = bedRepository.findById(bedFree.getId()).orElseThrow();
@@ -262,74 +259,40 @@ public class SpatialControllerTest {
 
     @Test
     void testConcurrencyTransferThrowsConflict() throws Exception {
-        final int numThreads = 2;
-        final ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-        final CountDownLatch startLatch = new CountDownLatch(1);
-        final CountDownLatch finishLatch = new CountDownLatch(numThreads);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        try {
+            Future<Integer> firstTransfer = executor.submit(
+                    () -> executeConcurrentTransfer(hospA.getId(), bedFree.getId(), startLatch));
+            Future<Integer> secondTransfer = executor.submit(
+                    () -> executeConcurrentTransfer(hospB.getId(), bedFree.getId(), startLatch));
 
-        final AtomicInteger successCount = new AtomicInteger(0);
-        final AtomicInteger failureCount = new AtomicInteger(0);
+            startLatch.countDown();
+            int firstStatus = firstTransfer.get(10, TimeUnit.SECONDS);
+            int secondStatus = secondTransfer.get(10, TimeUnit.SECONDS);
 
-        // Pre-run setup for parallel transfer to the same bedFree
-        // We will try to transfer hospA and hospB to bedFree in parallel
-        final String transferRequestA = String.format("""
-                {
-                    "hospitalizationId": "%s",
-                    "newBedId": "%s"
-                }
-                """, hospA.getId(), bedFree.getId());
+            int successCount = (firstStatus == 200 ? 1 : 0) + (secondStatus == 200 ? 1 : 0);
+            int conflictCount = (firstStatus == 409 ? 1 : 0) + (secondStatus == 409 ? 1 : 0);
+            assertEquals(1, successCount, "Une seule hospitalisation doit pouvoir réserver le lit libre.");
+            assertEquals(1, conflictCount, "La seconde réservation concurrente doit être refusée avec un conflit métier.");
+        } finally {
+            executor.shutdownNow();
+        }
+    }
 
-        final String transferRequestB = String.format("""
-                {
-                    "hospitalizationId": "%s",
-                    "newBedId": "%s"
-                }
-                """, hospB.getId(), bedFree.getId());
-
-        executor.submit(() -> {
-            try {
-                startLatch.await();
-                int status = mockMvc.perform(post("/api/spatial/transfers")
-                        .header("Authorization", "Bearer " + tokenDoctor)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(transferRequestA))
-                        .andReturn().getResponse().getStatus();
-                if (status == 200) {
-                    successCount.incrementAndGet();
-                } else if (status == 409) {
-                    failureCount.incrementAndGet();
-                }
-            } catch (Exception ignored) {
-            } finally {
-                finishLatch.countDown();
-            }
-        });
-
-        executor.submit(() -> {
-            try {
-                startLatch.await();
-                int status = mockMvc.perform(post("/api/spatial/transfers")
-                        .header("Authorization", "Bearer " + tokenDoctor)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(transferRequestB))
-                        .andReturn().getResponse().getStatus();
-                if (status == 200) {
-                    successCount.incrementAndGet();
-                } else if (status == 409) {
-                    failureCount.incrementAndGet();
-                }
-            } catch (Exception ignored) {
-            } finally {
-                finishLatch.countDown();
-            }
-        });
-
-        startLatch.countDown();
-        finishLatch.await();
-        executor.shutdown();
-
-        // One should succeed, one should fail (either 409 from optimistic lock or 409 from status check)
-        assert successCount.get() == 1;
-        assert failureCount.get() == 1;
+    private int executeConcurrentTransfer(
+            UUID hospitalizationId,
+            UUID bedId,
+            CountDownLatch startLatch) throws InterruptedException {
+        TenantContext.setTenantId(org.getId());
+        try {
+            startLatch.await();
+            spatialService.transferPatient(hospitalizationId, bedId);
+            return 200;
+        } catch (ResponseStatusException exception) {
+            return exception.getStatusCode().value();
+        } finally {
+            TenantContext.clear();
+        }
     }
 }
