@@ -28,6 +28,10 @@ describe('UnifiedAdmissionComponent', () => {
     updatedAt: '2026-07-11T10:00:00Z',
   };
 
+  const translations: Record<string, string> = {
+    'admission.requiredThirdParty': 'Renseignez le nom, le téléphone et le lien de la personne ayant amené le patient.',
+  };
+
   beforeEach(async () => {
     emergencyApi = {
       create: vi.fn().mockReturnValue(of({ id: 'emergency-1' })),
@@ -36,7 +40,13 @@ describe('UnifiedAdmissionComponent', () => {
     await TestBed.configureTestingModule({
       imports: [UnifiedAdmissionComponent],
       providers: [
-        { provide: I18nService, useValue: { locale: vi.fn().mockReturnValue('fr') } },
+        {
+          provide: I18nService,
+          useValue: {
+            locale: vi.fn().mockReturnValue('fr'),
+            t: vi.fn((key: string, fallback?: string) => translations[key] ?? fallback ?? key),
+          },
+        },
         {
           provide: PatientApiService,
           useValue: {
