@@ -20,37 +20,37 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/staff")
 public class StaffController {
 
-	private final StaffService staffService;
+    private final StaffService staffService;
 
-	public StaffController(StaffService staffService) {
-		this.staffService = staffService;
-	}
+    public StaffController(StaffService staffService) {
+        this.staffService = staffService;
+    }
 
-	@GetMapping
-	@PreAuthorize("hasAnyRole('ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN')")
-	public List<StaffResponse> list(Authentication authentication) {
-		return staffService.listStaff(authentication);
-	}
+    @GetMapping
+    @PreAuthorize("hasAnyAuthority('USER_READ', 'USER_MANAGE') or hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')")
+    public List<StaffResponse> list(Authentication authentication) {
+        return staffService.listStaff(authentication);
+    }
 
-	@PostMapping
-	@ResponseStatus(HttpStatus.CREATED)
-	@PreAuthorize("hasRole('ADMIN_CLINIQUE')")
-	public InviteStaffResponse invite(@Valid @RequestBody InviteStaffRequest request, Authentication authentication) {
-		return staffService.inviteStaff(request, authentication);
-	}
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('USER_MANAGE') or hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')")
+    public InviteStaffResponse invite(@Valid @RequestBody InviteStaffRequest request, Authentication authentication) {
+        return staffService.inviteStaff(request, authentication);
+    }
 
-	@PutMapping("/{id}")
-	@PreAuthorize("hasRole('ADMIN_CLINIQUE')")
-	public StaffResponse update(
-			@PathVariable UUID id,
-			@Valid @RequestBody UpdateStaffRequest request,
-			Authentication authentication) {
-		return staffService.updateStaff(id, request, authentication);
-	}
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('USER_MANAGE') or hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')")
+    public StaffResponse update(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateStaffRequest request,
+            Authentication authentication) {
+        return staffService.updateStaff(id, request, authentication);
+    }
 
-	@PostMapping("/{id}/toggle")
-	@PreAuthorize("hasRole('ADMIN_CLINIQUE')")
-	public StaffResponse toggle(@PathVariable UUID id, Authentication authentication) {
-		return staffService.toggleStatus(id, authentication);
-	}
+    @PostMapping("/{id}/toggle")
+    @PreAuthorize("hasAuthority('USER_MANAGE') or hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')")
+    public StaffResponse toggle(@PathVariable UUID id, Authentication authentication) {
+        return staffService.toggleStatus(id, authentication);
+    }
 }
