@@ -1,8 +1,11 @@
 package com.joprelys.backend.database;
 
+import com.joprelys.backend.auth.rbac.RbacStore;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationInfo;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -18,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 class FlywayPostgresqlMigrationTest {
 
     private static final List<NumericColumnExpectation> V55_COLUMNS = List.of(
@@ -44,7 +47,7 @@ class FlywayPostgresqlMigrationTest {
             .withPassword("joprelys");
 
     @Test
-    void shouldApplyAllMigrationsAndCreateExpectedV55NumericColumns() throws SQLException {
+    void shouldApplyAllMigrationsAndSeedRbacCatalogOnPostgresql() throws SQLException {
         Flyway flyway = Flyway.configure()
                 .dataSource(POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword())
                 .locations("classpath:db/migration")
@@ -57,8 +60,21 @@ class FlywayPostgresqlMigrationTest {
         MigrationInfo current = flyway.info().current();
         assertNotNull(current, "Flyway doit exposer la migration courante");
         assertNotNull(current.getVersion(), "La migration courante doit être versionnée");
-        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 55,
-                "Toutes les migrations jusqu'à V55 doivent être appliquées");
+        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 57,
+                "Toutes les migrations jusqu'au RBAC administrable doivent être appliquées");
+
+        DriverManagerDataSource dataSource = new DriverManagerDataSource(
+                POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword());
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+        new RbacStore(jdbcTemplate).seedCatalog();
+
+        Integer permissionCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM permissions", Integer.class);
+        Integer systemRoleCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM roles WHERE system_role = TRUE", Integer.class);
+        assertNotNull(permissionCount);
+        assertNotNull(systemRoleCount);
+        assertTrue(permissionCount > 0, "Le catalogue des permissions doit être initialisé sur PostgreSQL");
+        assertTrue(systemRoleCount > 0, "Le catalogue des rôles système doit être initialisé sur PostgreSQL");
 
         try (Connection connection = DriverManager.getConnection(
                 POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword())) {

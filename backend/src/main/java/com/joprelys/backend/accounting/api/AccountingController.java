@@ -3,6 +3,10 @@ package com.joprelys.backend.accounting.api;
 import com.joprelys.backend.accounting.application.AccountingExportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -11,11 +15,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 
 @RestController
 @RequestMapping("/api/accounting")
@@ -29,7 +28,7 @@ public class AccountingController {
     }
 
     @GetMapping("/export")
-    @PreAuthorize("hasAnyRole('ADMIN_CLINIQUE', 'DAF')")
+    @PreAuthorize("hasAuthority('ACCOUNTING_EXPORT') or hasAnyRole('ADMIN_CLINIQUE', 'DAF', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')")
     @Operation(summary = "Exporter les écritures comptables OHADA", description = "Génère un export CSV d'import pour Sage 100")
     public ResponseEntity<byte[]> exportSage100(
             @RequestParam(required = false) String startDate,

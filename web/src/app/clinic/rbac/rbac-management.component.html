@@ -1,0 +1,381 @@
+<app-shell>
+  <app-page-header
+    [title]="t('rbac.title', 'Rôles et permissions')"
+    [subtitle]="t('rbac.subtitle', 'Décidez qui peut consulter, modifier, valider ou administrer chaque domaine de la clinique.')"
+    backLink="/dashboard"
+    [backLabel]="t('common.back', 'Retour')"
+  />
+
+  <div class="app-container space-y-6 pb-10">
+    @if (error(); as message) {
+      <app-ui-alert tone="error">{{ message }}</app-ui-alert>
+    }
+    @if (success(); as message) {
+      <app-ui-alert>{{ message }}</app-ui-alert>
+    }
+
+    @if (platformAdministrator()) {
+      <section class="ui-card grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,480px)] lg:items-end">
+        <div>
+          <p class="rbac-eyebrow">{{ t('rbac.scope.eyebrow', 'PÉRIMÈTRE D’ADMINISTRATION') }}</p>
+          <h2 class="mt-1 text-lg font-extrabold text-[var(--text-primary)]">
+            {{ t('rbac.scope.title', 'Établissement administré') }}
+          </h2>
+          <p class="mt-1 max-w-3xl text-sm leading-6 text-[var(--text-muted)]">
+            {{ t('rbac.scope.help', 'Votre compte est administrateur de la plateforme. Sélectionnez la clinique dont vous souhaitez gérer les utilisateurs, les rôles et les permissions.') }}
+          </p>
+        </div>
+        <label class="space-y-1.5">
+          <span class="ui-label">{{ t('rbac.scope.label', 'Clinique sélectionnée') }}</span>
+          <select
+            class="ui-input"
+            [value]="selectedOrganizationId() || ''"
+            [disabled]="loading() || organizations().length === 0"
+            (change)="selectOrganization($any($event.target).value)"
+          >
+            @for (organization of organizations(); track organization.id) {
+              <option [value]="organization.id">
+                {{ organization.name }} — {{ organization.city }}{{ organization.status === 'INACTIVE' ? ' (Inactive)' : '' }}
+              </option>
+            }
+          </select>
+        </label>
+      </section>
+    }
+
+    <section class="rbac-tabs" aria-label="Sections de gestion des accès">
+      <button type="button" [class.active]="activeTab() === 'users'" (click)="setTab('users')">
+        {{ t('rbac.tabs.users', 'Utilisateurs') }}
+      </button>
+      <button type="button" [class.active]="activeTab() === 'roles'" (click)="setTab('roles')">
+        {{ t('rbac.tabs.roles', 'Rôles et matrice') }}
+      </button>
+      <button type="button" [class.active]="activeTab() === 'audit'" (click)="setTab('audit')">
+        {{ t('rbac.tabs.audit', 'Journal des changements') }}
+      </button>
+    </section>
+
+    @if (loading()) {
+      <section class="ui-card p-8 text-center text-sm text-[var(--text-muted)]">
+        {{ t('common.loading', 'Chargement…') }}
+      </section>
+    } @else if (activeTab() === 'users') {
+      <section class="rbac-workspace">
+        <aside class="ui-card rbac-list-panel" aria-label="Utilisateurs de l'établissement">
+          <div class="rbac-panel-heading">
+            <div>
+              <p class="rbac-eyebrow">{{ t('rbac.users.eyebrow', 'AFFECTATIONS') }}</p>
+              <h2>{{ t('rbac.users.title', 'Utilisateurs') }}</h2>
+            </div>
+            <span class="rbac-count">{{ users().length }}</span>
+          </div>
+
+          <div class="rbac-list">
+            @for (user of users(); track user.id) {
+              <button
+                type="button"
+                class="rbac-list-item"
+                [class.selected]="selectedUserId() === user.id"
+                (click)="selectUser(user)"
+              >
+                <span class="rbac-avatar">{{ user.displayName.charAt(0) }}</span>
+                <span class="min-w-0 flex-1 text-left">
+                  <span class="block truncate font-bold text-[var(--text-primary)]">{{ user.displayName }}</span>
+                  <span class="block truncate text-xs text-[var(--text-muted)]">{{ user.email }}</span>
+                  <span class="mt-1 block truncate text-[11px] text-brand-cyan">{{ roleSummary(user) }}</span>
+                </span>
+                <span class="rbac-status" [class.inactive]="!user.enabled">
+                  {{ user.enabled ? t('common.active', 'Actif') : t('common.inactive', 'Inactif') }}
+                </span>
+              </button>
+            } @empty {
+              <p class="p-6 text-center text-sm text-[var(--text-muted)]">
+                {{ t('rbac.users.empty', 'Aucun utilisateur disponible.') }}
+              </p>
+            }
+          </div>
+        </aside>
+
+        <div class="ui-card rbac-editor-panel">
+          @if (selectedUser(); as user) {
+            <div class="rbac-panel-heading border-b border-[var(--app-border)]">
+              <div>
+                <p class="rbac-eyebrow">{{ t('rbac.users.assignment', 'RÔLES ATTRIBUÉS') }}</p>
+                <h2>{{ user.displayName }}</h2>
+                <p class="mt-1 text-sm text-[var(--text-muted)]">{{ user.email }}</p>
+              </div>
+              @if (user.currentUser) {
+                <span class="rbac-self-badge">{{ t('rbac.users.you', 'Votre compte') }}</span>
+              }
+            </div>
+
+            @if (user.currentUser) {
+              <app-ui-alert tone="info">
+                {{ t('rbac.users.selfGuard', 'Pour votre sécurité, vous ne pouvez pas modifier vos propres privilèges.') }}
+              </app-ui-alert>
+            }
+
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              @for (role of assignableRoles(); track role.id) {
+                <label class="rbac-role-choice" [class.checked]="userRoleChecked(role.id)" [class.disabled]="user.currentUser">
+                  <input
+                    type="checkbox"
+                    [checked]="userRoleChecked(role.id)"
+                    [disabled]="user.currentUser || saving()"
+                    (change)="toggleUserRole(role.id)"
+                  />
+                  <span class="min-w-0">
+                    <span class="block font-bold text-[var(--text-primary)]">{{ role.name }}</span>
+                    <span class="mt-1 block text-[11px] text-[var(--text-muted)]">{{ role.code }}</span>
+                    @if (role.description) {
+                      <span class="mt-2 block text-xs leading-5 text-[var(--text-secondary)]">{{ role.description }}</span>
+                    }
+                  </span>
+                </label>
+              }
+            </div>
+
+            <div class="mt-6 border-t border-[var(--app-border)] pt-5">
+              <p class="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                {{ t('rbac.users.effectivePermissions', 'Permissions effectives') }}
+              </p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                @for (permission of user.permissions; track permission) {
+                  <span class="rbac-permission-chip">{{ permission }}</span>
+                } @empty {
+                  <span class="text-sm text-[var(--text-muted)]">{{ t('rbac.noPermission', 'Aucune permission effective.') }}</span>
+                }
+              </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+              <button
+                type="button"
+                class="ui-button ui-button-primary"
+                [disabled]="user.currentUser || saving() || selectedUserRoleIds().length === 0"
+                (click)="saveUserRoles()"
+              >
+                {{ saving() ? t('common.saving', 'Enregistrement…') : t('rbac.users.save', 'Enregistrer les rôles') }}
+              </button>
+            </div>
+          } @else {
+            <div class="p-10 text-center text-sm text-[var(--text-muted)]">
+              {{ t('rbac.users.select', 'Sélectionnez un utilisateur pour gérer ses rôles.') }}
+            </div>
+          }
+        </div>
+      </section>
+    } @else if (activeTab() === 'roles') {
+      <section class="ui-card p-5">
+        <p class="rbac-eyebrow">{{ t('rbac.roles.guide.eyebrow', 'COMMENT ATTRIBUER DES PERMISSIONS') }}</p>
+        <div class="mt-3 grid gap-3 md:grid-cols-3">
+          <div class="rounded-md border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-4">
+            <strong class="block text-sm text-[var(--text-primary)]">1. Choisir une base</strong>
+            <span class="mt-1 block text-xs leading-5 text-[var(--text-muted)]">Sélectionnez un rôle système à copier, ou cliquez sur « Nouveau rôle ».</span>
+          </div>
+          <div class="rounded-md border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-4">
+            <strong class="block text-sm text-[var(--text-primary)]">2. Cocher les droits</strong>
+            <span class="mt-1 block text-xs leading-5 text-[var(--text-muted)]">Dans le rôle personnalisé, cochez uniquement les permissions nécessaires.</span>
+          </div>
+          <div class="rounded-md border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-4">
+            <strong class="block text-sm text-[var(--text-primary)]">3. Affecter le rôle</strong>
+            <span class="mt-1 block text-xs leading-5 text-[var(--text-muted)]">Enregistrez, puis attribuez le rôle depuis l’onglet « Utilisateurs ».</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="rbac-workspace">
+        <aside class="ui-card rbac-list-panel">
+          <div class="rbac-panel-heading">
+            <div>
+              <p class="rbac-eyebrow">{{ t('rbac.roles.eyebrow', 'CATALOGUE') }}</p>
+              <h2>{{ t('rbac.roles.title', 'Rôles') }}</h2>
+            </div>
+            <button type="button" class="ui-button ui-button-secondary text-xs" (click)="newRole()">
+              {{ t('rbac.roles.new', 'Nouveau rôle') }}
+            </button>
+          </div>
+
+          <div class="rbac-list">
+            @for (role of roles(); track role.id) {
+              <button
+                type="button"
+                class="rbac-list-item"
+                [class.selected]="selectedRoleId() === role.id"
+                (click)="selectRole(role)"
+              >
+                <span class="rbac-role-mark">{{ role.name.charAt(0) }}</span>
+                <span class="min-w-0 flex-1 text-left">
+                  <span class="block truncate font-bold text-[var(--text-primary)]">{{ role.name }}</span>
+                  <span class="block truncate text-xs text-[var(--text-muted)]">{{ role.code }}</span>
+                </span>
+                <span class="rbac-status" [class.system]="role.systemRole">
+                  {{ role.systemRole ? t('rbac.roles.system', 'Système') : t('rbac.roles.custom', 'Personnalisé') }}
+                </span>
+              </button>
+            }
+          </div>
+        </aside>
+
+        <div class="ui-card rbac-editor-panel">
+          <div class="rbac-panel-heading border-b border-[var(--app-border)]">
+            <div>
+              <p class="rbac-eyebrow">{{ selectedRole() ? t('rbac.roles.edit', 'CONFIGURATION DU RÔLE') : t('rbac.roles.create', 'NOUVEAU RÔLE') }}</p>
+              <h2>{{ selectedRole()?.name || t('rbac.roles.newTitle', 'Créer un rôle personnalisé') }}</h2>
+            </div>
+            @if (isEditingSystemRole()) {
+              <span class="rbac-self-badge">{{ t('rbac.roles.protected', 'Lecture seule') }}</span>
+            } @else {
+              <span class="rbac-status">{{ t('rbac.roles.editable', 'Modifiable') }}</span>
+            }
+          </div>
+
+          @if (isEditingSystemRole()) {
+            <section class="mb-5 grid gap-4 rounded-md border border-brand-cyan/30 bg-brand-cyan/5 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+              <div>
+                <strong class="block text-sm text-[var(--text-primary)]">{{ t('rbac.roles.systemTitle', 'Ce rôle système sert de modèle sécurisé.') }}</strong>
+                <p class="mt-1 text-sm leading-6 text-[var(--text-muted)]">
+                  {{ t('rbac.roles.systemHelp', 'Ses permissions sont consultables mais non modifiables. Dupliquez-le pour obtenir une copie personnalisée dont vous pourrez cocher ou décocher les droits.') }}
+                </p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" class="ui-button ui-button-primary" (click)="duplicateSelectedRole()">
+                  {{ t('rbac.roles.duplicate', 'Dupliquer ce rôle') }}
+                </button>
+                <button type="button" class="ui-button ui-button-secondary" (click)="newRole()">
+                  {{ t('rbac.roles.createBlank', 'Créer un rôle vide') }}
+                </button>
+              </div>
+            </section>
+          } @else {
+            <app-ui-alert tone="info">
+              {{ t('rbac.roles.customHelp', 'Ce rôle est personnalisable. Cochez les permissions souhaitées dans la matrice, puis cliquez sur « Enregistrer le rôle ».') }}
+            </app-ui-alert>
+          }
+
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <label class="space-y-1.5">
+              <span class="ui-label">{{ t('rbac.roles.code', 'Code') }}</span>
+              <input class="ui-input" [value]="roleCode()" [disabled]="isEditingSystemRole() || saving()" (input)="roleCode.set($any($event.target).value)" />
+            </label>
+            <label class="space-y-1.5">
+              <span class="ui-label">{{ t('rbac.roles.name', 'Nom') }}</span>
+              <input class="ui-input" [value]="roleName()" [disabled]="isEditingSystemRole() || saving()" (input)="roleName.set($any($event.target).value)" />
+            </label>
+            <label class="space-y-1.5 md:col-span-2">
+              <span class="ui-label">{{ t('rbac.roles.description', 'Description') }}</span>
+              <textarea class="ui-input min-h-20 resize-y py-2" [value]="roleDescription()" [disabled]="isEditingSystemRole() || saving()" (input)="roleDescription.set($any($event.target).value)"></textarea>
+            </label>
+            <label class="rbac-switch-row">
+              <input type="checkbox" [checked]="roleAssignable()" [disabled]="isEditingSystemRole() || saving()" (change)="roleAssignable.set($any($event.target).checked)" />
+              <span>
+                <strong>{{ t('rbac.roles.assignable', 'Rôle attribuable') }}</strong>
+                <small>{{ t('rbac.roles.assignableHelp', 'Le rôle peut être affecté aux utilisateurs.') }}</small>
+              </span>
+            </label>
+            @if (selectedRole() && !isEditingSystemRole()) {
+              <label class="rbac-switch-row">
+                <input type="checkbox" [checked]="roleEnabled()" [disabled]="saving()" (change)="roleEnabled.set($any($event.target).checked)" />
+                <span>
+                  <strong>{{ t('rbac.roles.enabled', 'Rôle actif') }}</strong>
+                  <small>{{ t('rbac.roles.enabledHelp', 'Un rôle désactivé ne donne plus aucune permission.') }}</small>
+                </span>
+              </label>
+            }
+          </div>
+
+          <div class="mt-7 space-y-5">
+            <div class="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p class="rbac-eyebrow">{{ t('rbac.permissions.matrix', 'MATRICE DES PERMISSIONS') }}</p>
+                <h3 class="mt-1 text-base font-extrabold text-[var(--text-primary)]">
+                  {{ t('rbac.permissions.title', 'Droits accordés par ce rôle') }}
+                </h3>
+              </div>
+              <span class="rbac-status" [class.system]="isEditingSystemRole()">
+                {{ isEditingSystemRole() ? t('rbac.permissions.readOnly', 'Lecture seule') : t('rbac.permissions.editable', 'Sélection modifiable') }}
+              </span>
+            </div>
+
+            @for (group of groupedPermissions(); track group.domain) {
+              <section class="rbac-permission-group">
+                <h4>{{ group.domain }}</h4>
+                <div class="grid grid-cols-1 gap-2 lg:grid-cols-2">
+                  @for (permission of group.items; track permission.code) {
+                    <label class="rbac-permission-choice" [class.checked]="permissionChecked(permission.code)" [class.disabled]="isEditingSystemRole()">
+                      <input
+                        type="checkbox"
+                        [checked]="permissionChecked(permission.code)"
+                        [disabled]="isEditingSystemRole() || saving()"
+                        (change)="togglePermission(permission.code)"
+                      />
+                      <span>
+                        <strong>{{ permission.name }}</strong>
+                        <small>{{ permission.description }}</small>
+                        <code>{{ permission.code }}</code>
+                      </span>
+                    </label>
+                  }
+                </div>
+              </section>
+            }
+          </div>
+
+          @if (!isEditingSystemRole()) {
+            <div class="mt-6 flex justify-end border-t border-[var(--app-border)] pt-5">
+              <button
+                type="button"
+                class="ui-button ui-button-primary"
+                [disabled]="saving() || !roleCode().trim() || !roleName().trim()"
+                (click)="saveRole()"
+              >
+                {{ saving() ? t('common.saving', 'Enregistrement…') : t('rbac.roles.save', 'Enregistrer le rôle') }}
+              </button>
+            </div>
+          }
+        </div>
+      </section>
+    } @else {
+      <section class="ui-card overflow-hidden">
+        <div class="rbac-panel-heading border-b border-[var(--app-border)]">
+          <div>
+            <p class="rbac-eyebrow">{{ t('rbac.audit.eyebrow', 'TRAÇABILITÉ') }}</p>
+            <h2>{{ t('rbac.audit.title', 'Journal des changements RBAC') }}</h2>
+          </div>
+          <button type="button" class="ui-button ui-button-secondary text-xs" (click)="loadAudit()">
+            {{ t('common.refresh', 'Actualiser') }}
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-left text-sm">
+            <thead class="bg-[var(--app-surface-muted)] text-xs uppercase tracking-wider text-[var(--text-muted)]">
+              <tr>
+                <th class="px-4 py-3">{{ t('rbac.audit.date', 'Date') }}</th>
+                <th class="px-4 py-3">{{ t('rbac.audit.action', 'Action') }}</th>
+                <th class="px-4 py-3">{{ t('rbac.audit.target', 'Cible') }}</th>
+                <th class="px-4 py-3">{{ t('rbac.audit.details', 'Détails') }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[var(--app-border)]">
+              @for (entry of auditEntries(); track entry.id) {
+                <tr>
+                  <td class="whitespace-nowrap px-4 py-3 text-[var(--text-muted)]">{{ entry.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                  <td class="px-4 py-3 font-bold text-[var(--text-primary)]">{{ entry.action }}</td>
+                  <td class="px-4 py-3"><span class="rbac-permission-chip">{{ entry.targetType }}</span></td>
+                  <td class="px-4 py-3 text-[var(--text-secondary)]">{{ entry.details || '—' }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4" class="px-4 py-10 text-center text-[var(--text-muted)]">
+                    {{ t('rbac.audit.empty', 'Aucun changement RBAC enregistré.') }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  </div>
+</app-shell>

@@ -19,23 +19,35 @@ import com.joprelys.backend.visit.application.QrCodeGeneratorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/invoices")
 @Tag(name = "Billing", description = "Gestion de la facturation médicale et des règlements de caisse")
 public class InvoiceController {
+
+    private static final String LEGACY_BILLING_ROLES =
+            "hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
+    private static final String LEGACY_PAYMENT_ROLES =
+            "hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER', 'CAISSIER', 'DAF', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
+    private static final String LEGACY_CASHIER_QUEUE_ROLES =
+            "hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'CAISSIER', 'DAF', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
 
     private final InvoiceCrudService invoiceCrudService;
     private final InvoicePrecalculationService precalculationService;
@@ -50,18 +62,19 @@ public class InvoiceController {
     private final PdfGeneratorService pdfGeneratorService;
     private final QrCodeGeneratorService qrCodeGeneratorService;
 
-    public InvoiceController(InvoiceCrudService invoiceCrudService,
-                             InvoicePrecalculationService precalculationService,
-                             ConventionTariffService conventionTariffService,
-                             BillingPaymentService billingPaymentService,
-                             InvoiceSettlementQueryService invoiceSettlementQueryService,
-                             CashierCollectionQueueService cashierCollectionQueueService,
-                             InvoiceRepository invoiceRepository,
-                             PaymentRepository paymentRepository,
-                             PatientRepository patientRepository,
-                             OrganizationRepository organizationRepository,
-                             PdfGeneratorService pdfGeneratorService,
-                             QrCodeGeneratorService qrCodeGeneratorService) {
+    public InvoiceController(
+            InvoiceCrudService invoiceCrudService,
+            InvoicePrecalculationService precalculationService,
+            ConventionTariffService conventionTariffService,
+            BillingPaymentService billingPaymentService,
+            InvoiceSettlementQueryService invoiceSettlementQueryService,
+            CashierCollectionQueueService cashierCollectionQueueService,
+            InvoiceRepository invoiceRepository,
+            PaymentRepository paymentRepository,
+            PatientRepository patientRepository,
+            OrganizationRepository organizationRepository,
+            PdfGeneratorService pdfGeneratorService,
+            QrCodeGeneratorService qrCodeGeneratorService) {
         this.invoiceCrudService = invoiceCrudService;
         this.precalculationService = precalculationService;
         this.conventionTariffService = conventionTariffService;
@@ -77,69 +90,70 @@ public class InvoiceController {
     }
 
     @PostMapping("/precalculate")
-    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER')")
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_WRITE') or " + LEGACY_BILLING_ROLES)
     @Operation(summary = "Précalculer une facture", description = "Simule le calcul de la facture sans persistance.")
-    public ResponseEntity<InvoiceResponse> precalculate(@RequestParam UUID patientId,
-                                                        @RequestParam(required = false) UUID visitId,
-                                                        @RequestParam(required = false) UUID insuranceConventionId) {
+    public ResponseEntity<InvoiceResponse> precalculate(
+            @RequestParam UUID patientId,
+            @RequestParam(required = false) UUID visitId,
+            @RequestParam(required = false) UUID insuranceConventionId) {
         return ResponseEntity.ok(precalculationService.precalculate(patientId, visitId, insuranceConventionId));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER')")
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_WRITE') or " + LEGACY_BILLING_ROLES)
     @Operation(summary = "Créer une facture", description = "Crée et enregistre une facture pour un patient.")
     public ResponseEntity<InvoiceResponse> createInvoice(@Valid @RequestBody CreateInvoiceRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(invoiceCrudService.createInvoice(request));
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER')")
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ') or " + LEGACY_BILLING_ROLES)
     @Operation(summary = "Lister les factures d'un patient", description = "Récupère l'historique des factures d'un patient.")
     public ResponseEntity<List<InvoiceResponse>> listInvoices(@RequestParam UUID patientId) {
         return ResponseEntity.ok(invoiceCrudService.listInvoices(patientId));
     }
 
     @GetMapping("/collection-queue")
-    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'CAISSIER', 'DAF')")
+    @PreAuthorize("hasAuthority('CASH_QUEUE_READ') or " + LEGACY_CASHIER_QUEUE_ROLES)
     @Operation(
             summary = "File d'encaissement patient",
-            description = "Retourne les factures validées dont la part patient reste à encaisser pour le tenant courant."
-    )
+            description = "Retourne les factures validées dont la part patient reste à encaisser pour le tenant courant.")
     public ResponseEntity<List<CashierCollectionQueueItemResponse>> listCollectionQueue() {
         return ResponseEntity.ok(cashierCollectionQueueService.listQueue());
     }
 
     @GetMapping("/settlement-summaries")
-    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER', 'CAISSIER', 'DAF')")
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ') or " + LEGACY_PAYMENT_ROLES)
     @Operation(summary = "Synthèse de règlement des factures", description = "Retourne les montants dus et réglés par patient et assurance pour un patient.")
     public ResponseEntity<List<InvoiceSettlementSummaryResponse>> listSettlementSummaries(@RequestParam UUID patientId) {
         return ResponseEntity.ok(invoiceSettlementQueryService.listByPatient(patientId));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER')")
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ') or " + LEGACY_BILLING_ROLES)
     @Operation(summary = "Détails d'une facture", description = "Récupère les détails d'une facture par son identifiant.")
     public ResponseEntity<InvoiceResponse> getInvoice(@PathVariable UUID id) {
         return ResponseEntity.ok(invoiceCrudService.getInvoice(id));
     }
 
     @PostMapping("/{id}/payments")
-    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER', 'CAISSIER', 'DAF')")
+    @PreAuthorize("hasAuthority('CASH_PAYMENT_COLLECT') or " + LEGACY_PAYMENT_ROLES)
     @Operation(summary = "Enregistrer un règlement", description = "Enregistre un paiement sur une facture.")
-    public ResponseEntity<PaymentResponse> addPayment(@PathVariable UUID id,
-                                                      @Valid @RequestBody PaymentRequest request) {
+    public ResponseEntity<PaymentResponse> addPayment(
+            @PathVariable UUID id,
+            @Valid @RequestBody PaymentRequest request) {
         return ResponseEntity.ok(billingPaymentService.addPayment(id, request));
     }
 
     @GetMapping("/{id}/payments")
-    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER', 'CAISSIER', 'DAF')")
+    @PreAuthorize("hasAnyAuthority('BILLING_INVOICE_READ', 'CASH_PAYMENT_COLLECT', 'CASH_HISTORY_READ') or " + LEGACY_PAYMENT_ROLES)
     @Operation(summary = "Lister les règlements d'une facture", description = "Récupère tous les paiements enregistrés pour une facture.")
     public ResponseEntity<List<PaymentResponse>> listPayments(@PathVariable UUID id) {
         return ResponseEntity.ok(billingPaymentService.listPayments(id));
     }
 
     @GetMapping(value = "/{id}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER')")
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ') or " + LEGACY_BILLING_ROLES)
     @Operation(summary = "Générer la facture PDF certifiée", description = "Génère et télécharge le fichier PDF d'une facture.")
     public ResponseEntity<byte[]> getPdf(@PathVariable UUID id, Authentication authentication) {
         InvoiceEntity invoice = invoiceRepository.findByIdWithDetails(id)
@@ -152,7 +166,7 @@ public class InvoiceController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Clinique introuvable"));
 
         BigDecimal totalPaid = paymentRepository.findByInvoiceId(id).stream()
-                .map(p -> p.getAmount())
+                .map(payment -> payment.getAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         String verificationUrl = "https://joprelys.com/verify/invoice/" + id;
@@ -167,8 +181,7 @@ public class InvoiceController {
                 org.getPhone(),
                 qrCodeBytes,
                 cashierName,
-                totalPaid
-        );
+                totalPaid);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"FACTURE_" + invoice.getInvoiceNumber() + ".pdf\"")
@@ -177,33 +190,35 @@ public class InvoiceController {
     }
 
     @GetMapping("/conventions")
-    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER')")
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ') or " + LEGACY_BILLING_ROLES)
     @Operation(summary = "Lister les conventions d'assurances", description = "Récupère les conventions paramétrées.")
     public ResponseEntity<List<InsuranceConventionDto>> listConventions() {
         return ResponseEntity.ok(conventionTariffService.listConventions());
     }
 
     @PostMapping("/conventions")
-    @PreAuthorize("hasRole('ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_WRITE') or hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')")
     @Operation(summary = "Créer une convention d'assurance", description = "Paramètre une nouvelle convention d'assurance.")
-    public ResponseEntity<InsuranceConventionDto> createConvention(@RequestParam String name,
-                                                                   @RequestParam BigDecimal coveragePercentage) {
+    public ResponseEntity<InsuranceConventionDto> createConvention(
+            @RequestParam String name,
+            @RequestParam BigDecimal coveragePercentage) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(conventionTariffService.createConvention(name, coveragePercentage));
     }
 
     @GetMapping("/tariffs")
-    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER')")
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ') or " + LEGACY_BILLING_ROLES)
     @Operation(summary = "Lister la grille des tarifs", description = "Récupère la grille tarifaire (K, AMI, etc.).")
     public ResponseEntity<List<TariffGridEntity>> listTariffs() {
         return ResponseEntity.ok(conventionTariffService.listTariffs());
     }
 
     @PostMapping("/tariffs")
-    @PreAuthorize("hasRole('ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_WRITE') or hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')")
     @Operation(summary = "Créer ou mettre à jour un tarif", description = "Ajoute ou modifie un tarif clé de la grille.")
-    public ResponseEntity<TariffGridEntity> createOrUpdateTariff(@RequestParam String keyLetter,
-                                                                 @RequestParam BigDecimal unitValue) {
+    public ResponseEntity<TariffGridEntity> createOrUpdateTariff(
+            @RequestParam String keyLetter,
+            @RequestParam BigDecimal unitValue) {
         return ResponseEntity.ok(conventionTariffService.createOrUpdateTariff(keyLetter, unitValue));
     }
 }

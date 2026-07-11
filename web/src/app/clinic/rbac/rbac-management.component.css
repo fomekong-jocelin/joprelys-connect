@@ -1,0 +1,283 @@
+:host {
+  display: block;
+}
+
+.rbac-tabs {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.rbac-tabs button {
+  min-height: 44px;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  padding: 0.75rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  transition: color 150ms ease, border-color 150ms ease, background-color 150ms ease;
+}
+
+.rbac-tabs button:hover,
+.rbac-tabs button:focus-visible {
+  color: var(--text-primary);
+  background: var(--app-surface-muted);
+  outline: none;
+}
+
+.rbac-tabs button.active {
+  color: var(--brand-primary);
+  border-bottom-color: var(--brand-primary);
+}
+
+.rbac-workspace {
+  display: grid;
+  grid-template-columns: minmax(17rem, 0.78fr) minmax(0, 1.7fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.rbac-list-panel,
+.rbac-editor-panel {
+  overflow: hidden;
+}
+
+.rbac-editor-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+}
+
+.rbac-panel-heading {
+  display: flex;
+  min-height: 4.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+}
+
+.rbac-panel-heading h2 {
+  margin-top: 0.2rem;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.rbac-eyebrow {
+  color: var(--brand-primary);
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.rbac-count {
+  display: inline-flex;
+  min-width: 2rem;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface-muted);
+  color: var(--text-primary);
+  font-weight: 900;
+}
+
+.rbac-list {
+  max-height: 68vh;
+  overflow-y: auto;
+  border-top: 1px solid var(--app-border);
+}
+
+.rbac-list-item {
+  display: flex;
+  width: 100%;
+  min-height: 4.9rem;
+  align-items: center;
+  gap: 0.75rem;
+  border-left: 3px solid transparent;
+  border-bottom: 1px solid var(--app-border);
+  padding: 0.8rem 0.9rem;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.rbac-list-item:hover,
+.rbac-list-item:focus-visible {
+  background: var(--app-surface-muted);
+  outline: none;
+}
+
+.rbac-list-item.selected {
+  border-left-color: var(--brand-primary);
+  background: color-mix(in srgb, var(--brand-primary) 7%, var(--app-surface));
+}
+
+.rbac-avatar,
+.rbac-role-mark {
+  display: inline-flex;
+  width: 2.35rem;
+  height: 2.35rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface-muted);
+  color: var(--brand-primary);
+  font-weight: 900;
+}
+
+.rbac-status,
+.rbac-self-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--brand-success) 35%, var(--app-border));
+  background: color-mix(in srgb, var(--brand-success) 8%, var(--app-surface));
+  padding: 0.25rem 0.45rem;
+  color: var(--brand-success-text, var(--brand-success));
+  font-size: 0.62rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rbac-status.inactive {
+  border-color: var(--app-border);
+  background: var(--app-surface-muted);
+  color: var(--text-muted);
+}
+
+.rbac-status.system,
+.rbac-self-badge {
+  border-color: color-mix(in srgb, var(--brand-primary) 35%, var(--app-border));
+  background: color-mix(in srgb, var(--brand-primary) 8%, var(--app-surface));
+  color: var(--brand-primary);
+}
+
+.rbac-role-choice,
+.rbac-permission-choice,
+.rbac-switch-row {
+  display: flex;
+  min-height: 4.5rem;
+  cursor: pointer;
+  gap: 0.75rem;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  padding: 0.9rem;
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.rbac-role-choice:hover,
+.rbac-role-choice:focus-within,
+.rbac-permission-choice:hover,
+.rbac-permission-choice:focus-within {
+  border-color: color-mix(in srgb, var(--brand-primary) 55%, var(--app-border));
+}
+
+.rbac-role-choice.checked,
+.rbac-permission-choice.checked {
+  border-color: var(--brand-primary);
+  background: color-mix(in srgb, var(--brand-primary) 6%, var(--app-surface));
+  box-shadow: inset 3px 0 0 var(--brand-primary);
+}
+
+.rbac-role-choice.disabled,
+.rbac-permission-choice.disabled {
+  cursor: default;
+  opacity: 0.76;
+}
+
+.rbac-role-choice input,
+.rbac-permission-choice input,
+.rbac-switch-row input {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+  accent-color: var(--brand-primary);
+}
+
+.rbac-permission-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface-muted);
+  padding: 0.3rem 0.5rem;
+  color: var(--text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.rbac-switch-row strong,
+.rbac-permission-choice strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+}
+
+.rbac-switch-row small,
+.rbac-permission-choice small {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.35rem;
+}
+
+.rbac-permission-choice code {
+  display: inline-block;
+  margin-top: 0.35rem;
+  color: var(--brand-primary);
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.rbac-permission-group {
+  border-top: 1px solid var(--app-border);
+  padding-top: 1rem;
+}
+
+.rbac-permission-group h4 {
+  margin-bottom: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 1023px) {
+  .rbac-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .rbac-list {
+    max-height: 22rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .rbac-editor-panel {
+    padding: 1rem;
+  }
+
+  .rbac-panel-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .rbac-status {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

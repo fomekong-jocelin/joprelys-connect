@@ -10,56 +10,56 @@ export const routes: Routes = [
     path: 'dashboard',
     loadComponent: () => import('./clinic/dashboard.component').then((module) => module.DashboardComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['ADMIN_JOPRELYS', 'ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'PHARMACIEN', 'CAISSIER'] },
+    data: { expectedRoles: ['ADMIN_JOPRELYS', 'ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'PHARMACIEN', 'CAISSIER', 'DAF', 'SECRETAIRE_COMPTABLE', 'GESTIONNAIRE_STOCK', 'RESPONSABLE_HOSPITALISATION'] },
   },
   {
     path: 'organizations',
     loadComponent: () => import('./clinic/organizations/organization-list.component').then((module) => module.OrganizationListComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['ADMIN_JOPRELYS'] },
+    data: { expectedRoles: ['ADMIN_JOPRELYS', 'SUPER_ADMIN'] },
   },
   {
     path: 'patients',
     loadComponent: () => import('./patient/patient-list.component').then((module) => module.PatientListComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'] },
+    data: { expectedRoles: ['AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'], expectedPermissions: ['PATIENT_READ'] },
   },
   {
     path: 'patients/:id',
     loadComponent: () => import('./patient/patient-detail.component').then(m => m.PatientDetailComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'] },
+    data: { expectedRoles: ['AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'], expectedPermissions: ['PATIENT_READ'] },
     children: [
       { path: '', redirectTo: 'profile', pathMatch: 'full' },
       {
         path: 'profile',
         loadComponent: () => import('./patient/detail/patient-profile-tab.component').then(m => m.PatientProfileTabComponent),
         canActivate: [roleGuard],
-        data: { expectedRoles: ['AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'], breadcrumb: 'breadcrumb.patients.profile' }
+        data: { expectedRoles: ['AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'], expectedPermissions: ['PATIENT_READ'], breadcrumb: 'breadcrumb.patients.profile' }
       },
       {
         path: 'consultations',
         loadComponent: () => import('./patient/detail/patient-consultations-tab.component').then(m => m.PatientConsultationsTabComponent),
         canActivate: [roleGuard],
-        data: { expectedRoles: ['INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'], breadcrumb: 'breadcrumb.patients.consultations' }
+        data: { expectedRoles: ['INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'], expectedPermissions: ['CLINICAL_READ'], breadcrumb: 'breadcrumb.patients.consultations' }
       },
       {
         path: 'hospitalizations',
         loadComponent: () => import('./patient/detail/patient-hospitalizations-tab.component').then(m => m.PatientHospitalizationsTabComponent),
         canActivate: [roleGuard],
-        data: { expectedRoles: ['INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'], breadcrumb: 'breadcrumb.patients.hospitalizations' }
+        data: { expectedRoles: ['INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'], expectedPermissions: ['HOSPITALIZATION_READ'], breadcrumb: 'breadcrumb.patients.hospitalizations' }
       },
       {
         path: 'lab-orders',
         loadComponent: () => import('./patient/detail/patient-lab-orders-tab.component').then(m => m.PatientLabOrdersTabComponent),
         canActivate: [roleGuard],
-        data: { expectedRoles: ['INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'], breadcrumb: 'breadcrumb.patients.lab-orders' }
+        data: { expectedRoles: ['INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'], expectedPermissions: ['LAB_ORDER_READ'], breadcrumb: 'breadcrumb.patients.lab-orders' }
       },
       {
         path: 'audit-trail',
         loadComponent: () => import('./patient/detail/patient-audit-trail-tab.component').then(m => m.PatientAuditTrailTabComponent),
         canActivate: [roleGuard],
-        data: { expectedRoles: ['MEDECIN', 'ADMIN_CLINIQUE', 'AUDITEUR'], breadcrumb: 'breadcrumb.patients.audit-trail' }
+        data: { expectedRoles: ['MEDECIN', 'ADMIN_CLINIQUE', 'AUDITEUR'], expectedPermissions: ['AUDIT_READ'], breadcrumb: 'breadcrumb.patients.audit-trail' }
       }
     ]
   },
@@ -67,13 +67,19 @@ export const routes: Routes = [
     path: 'clinic/staff',
     loadComponent: () => import('./clinic/staff/staff-management.component').then((module) => module.StaffManagementComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['ADMIN_CLINIQUE'] },
+    data: { expectedRoles: ['ADMIN_CLINIQUE'], expectedPermissions: ['USER_READ'] },
+  },
+  {
+    path: 'clinic/rbac',
+    loadComponent: () => import('./clinic/rbac/rbac-management.component').then((module) => module.RbacManagementComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN'], expectedPermissions: ['RBAC_READ', 'RBAC_MANAGE'] },
   },
   {
     path: 'profile',
     loadComponent: () => import('./profile/profile.component').then((m) => m.ProfileComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEIL', 'PHARMACIEN', 'BIOLOGISTE', 'ADMIN_CLINIQUE', 'CAISSIER'] },
+    data: { expectedRoles: ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEIL', 'PHARMACIEN', 'BIOLOGISTE', 'ADMIN_CLINIQUE', 'CAISSIER', 'DAF', 'SECRETAIRE_COMPTABLE', 'GESTIONNAIRE_STOCK', 'RESPONSABLE_HOSPITALISATION'] },
   },
   {
     path: 'clinic/duplicates',
@@ -115,33 +121,31 @@ export const routes: Routes = [
     path: 'clinic/billing',
     loadComponent: () => import('./clinic/billing/billing-management-page.component').then(m => m.BillingManagementPageComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['AGENT_ACCUEIL', 'ADMIN_CLINIQUE'] },
+    data: { expectedRoles: ['AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'DAF', 'SECRETAIRE_COMPTABLE'], expectedPermissions: ['BILLING_INVOICE_READ', 'INSURANCE_BORDEREAU_READ', 'ACCOUNTING_DASHBOARD_READ'] },
   },
   {
     path: 'clinic/cashier',
     loadComponent: () => import('./clinic/billing/billing-cashier-page.component').then(m => m.BillingCashierPageComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['CAISSIER'] },
+    data: { expectedRoles: ['CAISSIER'], expectedPermissions: ['CASH_QUEUE_READ', 'CASH_PAYMENT_COLLECT'] },
   },
   {
-    // Deep-link vers une facture spécifique : ouvre la page billing sur l'onglet facturation
-    // et pré-sélectionne la facture via le fragment #invoice-<id> géré par BillingManagementPageComponent
     path: 'clinic/billing/invoice/:invoiceId',
     loadComponent: () => import('./clinic/billing/billing-management-page.component').then(m => m.BillingManagementPageComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['AGENT_ACCUEIL', 'ADMIN_CLINIQUE'] },
+    data: { expectedRoles: ['AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'DAF', 'SECRETAIRE_COMPTABLE'], expectedPermissions: ['BILLING_INVOICE_READ'] },
   },
   {
     path: 'clinic/consultation/:visitId',
     loadComponent: () => import('./consultation/consultation.component').then(m => m.ConsultationComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['MEDECIN', 'ADMIN_CLINIQUE'] },
+    data: { expectedRoles: ['MEDECIN', 'ADMIN_CLINIQUE'], expectedPermissions: ['CLINICAL_WRITE'] },
   },
   {
     path: 'clinic/lab-orders',
     loadComponent: () => import('./clinic/lab/lab-orders-page.component').then(m => m.LabOrdersPageComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['BIOLOGISTE', 'ADMIN_JOPRELYS'] },
+    data: { expectedRoles: ['BIOLOGISTE', 'ADMIN_JOPRELYS'], expectedPermissions: ['LAB_ORDER_READ'] },
   },
   {
     path: 'unauthorized',
@@ -167,13 +171,13 @@ export const routes: Routes = [
     path: 'pharmacy/prescriptions',
     loadComponent: () => import('./pharmacy/pharmacy-prescription-verify-page.component').then(m => m.PharmacyPrescriptionVerifyPageComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['PHARMACIEN', 'ADMIN_JOPRELYS'] },
+    data: { expectedRoles: ['PHARMACIEN', 'ADMIN_JOPRELYS'], expectedPermissions: ['PHARMACY_PRESCRIPTION_READ'] },
   },
   {
     path: 'pharmacy/stocks',
     loadComponent: () => import('./pharmacy/pharmacy-stocks.component').then(m => m.PharmacyStocksComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['PHARMACIEN', 'ADMIN_CLINIQUE'] },
+    data: { expectedRoles: ['PHARMACIEN', 'ADMIN_CLINIQUE', 'GESTIONNAIRE_STOCK'], expectedPermissions: ['STOCK_READ', 'STOCK_MANAGE'] },
   },
   {
     path: 'forgot-password',

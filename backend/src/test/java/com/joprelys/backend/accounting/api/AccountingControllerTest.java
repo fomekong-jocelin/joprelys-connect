@@ -1,11 +1,13 @@
 package com.joprelys.backend.accounting.api;
 
 import com.joprelys.backend.accounting.application.AccountingExportService;
-import com.joprelys.backend.auth.infrastructure.persistence.*;
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.auth.security.JwtService;
 import com.joprelys.backend.auth.security.TenantContext;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -21,12 +23,12 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
-
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -47,9 +49,6 @@ public class AccountingControllerTest {
     @Autowired
     private JwtService jwtService;
 
-    @Autowired
-    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
-
     private OrganizationEntity org;
     private String tokenDaf;
     private String tokenCaissier;
@@ -61,34 +60,41 @@ public class AccountingControllerTest {
         public AccountingExportService mockAccountingExportService() {
             AccountingExportService mock = Mockito.mock(AccountingExportService.class);
             Mockito.when(mock.generateSage100Export(any(), any()))
-                   .thenReturn("Journal;Date;CompteGeneral;CompteTiers;RefPiece;Libelle;Debit;Credit\nCA;090726;57110000;;REC-01;Reçu;1000;0");
+                    .thenReturn("Journal;Date;CompteGeneral;CompteTiers;RefPiece;Libelle;Debit;Credit\nCA;090726;57110000;;REC-01;Reçu;1000;0");
             return mock;
         }
     }
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.update("DELETE FROM payment_receipts");
-        jdbcTemplate.update("DELETE FROM payments");
-        jdbcTemplate.update("DELETE FROM invoices");
-        userAccountRepository.deleteAll();
-        organizationRepository.deleteAll();
+        TenantContext.clear();
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
 
-        // Org
-        org = new OrganizationEntity("Clinique Test", "test@test.local", "999999", "Avenue Test", "Yaounde");
-        org = organizationRepository.save(org);
+        org = new OrganizationEntity(
+                "Clinique Comptable " + suffix,
+                "accounting-" + suffix + "@test.local",
+                "999999",
+                "Avenue Test",
+                "Yaounde");
+        org = organizationRepository.saveAndFlush(org);
         TenantContext.setTenantId(org.getId());
 
-        // Créer un utilisateur DAF
-        UserAccountEntity daf = new UserAccountEntity("daf@test.com", "Pierre DAF", "DAF", "password");
+        UserAccountEntity daf = new UserAccountEntity(
+                "daf-" + suffix + "@test.local",
+                "Pierre DAF",
+                "DAF",
+                "password");
         daf.setOrganizationId(org.getId());
-        daf = userAccountRepository.save(daf);
+        daf = userAccountRepository.saveAndFlush(daf);
         tokenDaf = jwtService.createToken(daf).value();
 
-        // Créer un caissier
-        UserAccountEntity caissier = new UserAccountEntity("caissier@test.com", "Jean Caissier", "CAISSIER", "password");
+        UserAccountEntity caissier = new UserAccountEntity(
+                "caissier-" + suffix + "@test.local",
+                "Jean Caissier",
+                "CAISSIER",
+                "password");
         caissier.setOrganizationId(org.getId());
-        caissier = userAccountRepository.save(caissier);
+        caissier = userAccountRepository.saveAndFlush(caissier);
         tokenCaissier = jwtService.createToken(caissier).value();
     }
 

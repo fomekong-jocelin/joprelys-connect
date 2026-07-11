@@ -1,6 +1,7 @@
 import { Component, computed, inject, input, output, OnInit, OnDestroy, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { RbacApiService } from '../../clinic/rbac/rbac-api.service';
 import { ActivePatientService } from '../../patient/active-patient.service';
 import { PatientApiService } from '../../patient/patient-api.service';
 
@@ -126,9 +127,10 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
   readonly i18n = inject(I18nService);
   readonly activePatientService = inject(ActivePatientService);
   private readonly patientApiService = inject(PatientApiService);
+  private readonly rbacApi = inject(RbacApiService);
 
   pendingPreRegistrationsCount = signal(0);
-  private intervalId: any;
+  private intervalId: ReturnType<typeof setInterval> | null = null;
 
   readonly session = input.required<{ role: string; name: string } | null>();
   readonly sidebarCollapsed = input<boolean>(false);
@@ -139,6 +141,7 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
   readonly activePatient = this.activePatientService.patient;
 
   ngOnInit(): void {
+    this.loadEffectiveAccess();
     this.refreshPendingCount();
     this.intervalId = setInterval(() => this.refreshPendingCount(), 30000);
   }
@@ -149,16 +152,23 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
     }
   }
 
+  private loadEffectiveAccess(): void {
+    const currentSession = this.session();
+    if (!currentSession) return;
+    const roles = currentSession.role.split(',').map((role) => role.trim()).filter(Boolean);
+    if (roles.includes('PATIENT')) return;
+    this.rbacApi.ensureMyAccess().subscribe({ error: () => undefined });
+  }
+
   private refreshPendingCount(): void {
     const currentSession = this.session();
     if (!currentSession) return;
-    const roles = currentSession.role.split(',').map((r) => r.trim());
-    if (roles.includes('AGENT_ACCUEIL') || roles.includes('ADMIN_CLINIQUE')) {
+    const roles = currentSession.role.split(',').map((role) => role.trim());
+    const canReadAdmissions = this.rbacApi.hasPermission('PATIENT_READ') || this.rbacApi.hasPermission('PATIENT_WRITE');
+    if (canReadAdmissions || roles.includes('AGENT_ACCUEIL') || roles.includes('ADMIN_CLINIQUE')) {
       this.patientApiService.getPendingPreRegistrations(0, 1).subscribe({
-        next: (res) => {
-          this.pendingPreRegistrationsCount.set(res.totalElements);
-        },
-        error: () => {}
+        next: (res) => this.pendingPreRegistrationsCount.set(res.totalElements),
+        error: () => undefined,
       });
     }
   }
@@ -167,59 +177,65 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
     const currentSession = this.session();
     if (!currentSession) return [];
 
-    const roles = currentSession.role.split(',').map((r) => r.trim());
+    const roles = currentSession.role.split(',').map((role) => role.trim()).filter(Boolean);
+    const permissions = new Set(this.rbacApi.access()?.permissions ?? []);
     const items: NavItem[] = [];
+    const hasRole = (...codes: string[]) => codes.some((code) => roles.includes(code));
+    const hasPermission = (...codes: string[]) => codes.some((code) => permissions.has(code));
 
     const addUniqueItem = (item: NavItem) => {
-      if (!items.some(i => i.path === item.path)) {
+      if (!items.some((existing) => existing.path === item.path)) {
         items.push(item);
       }
     };
 
-    if (roles.includes('ADMIN_JOPRELYS')) {
+    if (!hasRole('PATIENT')) {
       addUniqueItem({ path: '/dashboard', label: this.i18n.t('menu.dashboard'), iconName: 'dashboard' });
+    }
+
+    if (hasRole('ADMIN_JOPRELYS', 'SUPER_ADMIN') || hasPermission('ORGANIZATION_MANAGE')) {
       addUniqueItem({ path: '/organizations', label: this.i18n.t('menu.clinics'), iconName: 'clinics' });
-      addUniqueItem({ path: '/clinic/lab-orders', label: this.i18n.t('menu.labOrders'), iconName: 'labOrders' });
-      addUniqueItem({ path: '/pharmacy/prescriptions', label: this.i18n.t('menu.prescriptions'), iconName: 'prescriptions' });
-      addUniqueItem({ path: '/pharmacy/stocks', label: this.i18n.t('menu.stocks'), iconName: 'stocks' });
     }
-    if (roles.includes('ADMIN_CLINIQUE')) {
-      addUniqueItem({ path: '/dashboard', label: this.i18n.t('menu.dashboard'), iconName: 'dashboard' });
-      addUniqueItem({ path: '/patients', label: this.i18n.t('menu.patients'), iconName: 'patients' });
-      addUniqueItem({ path: '/clinic/spatial', label: this.i18n.t('menu.spatial'), iconName: 'stocks' });
-      addUniqueItem({ path: '/clinic/billing', label: this.i18n.t('menu.billing'), iconName: 'audit' });
-      addUniqueItem({ path: '/clinic/reception', label: this.i18n.t('menu.reception'), iconName: 'staff' });
-      addUniqueItem({ path: '/clinic/emergencies', label: this.i18n.t('menu.emergencies'), iconName: 'dashboard' });
-      addUniqueItem({ path: '/clinic/admissions/pre-registrations', label: this.i18n.t('menu.preRegistrations'), iconName: 'preRegistrations' });
-      addUniqueItem({ path: '/clinic/duplicates', label: this.i18n.t('menu.duplicates'), iconName: 'patients' });
+    if (hasRole('ADMIN_CLINIQUE') || hasPermission('USER_READ', 'USER_MANAGE')) {
       addUniqueItem({ path: '/clinic/staff', label: this.i18n.t('menu.staff'), iconName: 'staff' });
-      addUniqueItem({ path: '/pharmacy/stocks', label: this.i18n.t('menu.stocks'), iconName: 'stocks' });
     }
-    if (roles.includes('AGENT_ACCUEIL') || roles.includes('INFIRMIER') || roles.includes('MEDECIN')) {
-      addUniqueItem({ path: '/dashboard', label: this.i18n.t('menu.dashboard'), iconName: 'dashboard' });
+    if (hasRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN') || hasPermission('RBAC_READ', 'RBAC_MANAGE')) {
+      addUniqueItem({ path: '/clinic/rbac', label: this.i18n.t('menu.rbac', 'Rôles et permissions'), iconName: 'consents' });
+    }
+    if (hasRole('ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN') || hasPermission('PATIENT_READ')) {
       addUniqueItem({ path: '/patients', label: this.i18n.t('menu.patients'), iconName: 'patients' });
-      addUniqueItem({ path: '/clinic/spatial', label: this.i18n.t('menu.spatial'), iconName: 'stocks' });
-      if (roles.includes('AGENT_ACCUEIL')) {
-        addUniqueItem({ path: '/clinic/admissions/pre-registrations', label: this.i18n.t('menu.preRegistrations'), iconName: 'preRegistrations' });
-        addUniqueItem({ path: '/clinic/reception', label: this.i18n.t('menu.reception'), iconName: 'staff' });
-        addUniqueItem({ path: '/clinic/billing', label: this.i18n.t('menu.billing'), iconName: 'audit' });
-      }
-      if (roles.includes('INFIRMIER') || roles.includes('MEDECIN')) {
-        addUniqueItem({ path: '/clinic/emergencies', label: this.i18n.t('menu.emergencies'), iconName: 'dashboard' });
-      }
     }
-    if (roles.includes('CAISSIER')) {
-      addUniqueItem({ path: '/dashboard', label: this.i18n.t('menu.dashboard'), iconName: 'dashboard' });
+    if (hasRole('ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN') || hasPermission('HOSPITALIZATION_READ', 'HOSPITALIZATION_MANAGE')) {
+      addUniqueItem({ path: '/clinic/spatial', label: this.i18n.t('menu.spatial'), iconName: 'stocks' });
+    }
+    if (hasRole('ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'DAF', 'SECRETAIRE_COMPTABLE')
+      || hasPermission('BILLING_INVOICE_READ', 'BILLING_INVOICE_WRITE', 'INSURANCE_BORDEREAU_READ', 'ACCOUNTING_DASHBOARD_READ')) {
+      addUniqueItem({ path: '/clinic/billing', label: this.i18n.t('menu.billing'), iconName: 'audit' });
+    }
+    if (hasRole('CAISSIER') || hasPermission('CASH_QUEUE_READ', 'CASH_PAYMENT_COLLECT', 'CASH_SESSION_OPEN')) {
       addUniqueItem({ path: '/clinic/cashier', label: this.i18n.t('menu.cashier'), iconName: 'audit' });
     }
-    if (roles.includes('BIOLOGISTE')) {
+    if (hasRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE') || hasPermission('PATIENT_WRITE')) {
+      addUniqueItem({ path: '/clinic/reception', label: this.i18n.t('menu.reception'), iconName: 'staff' });
+      addUniqueItem({ path: '/clinic/admissions/pre-registrations', label: this.i18n.t('menu.preRegistrations'), iconName: 'preRegistrations' });
+    }
+    if (hasRole('INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE') || hasPermission('CLINICAL_READ', 'CLINICAL_WRITE')) {
+      addUniqueItem({ path: '/clinic/emergencies', label: this.i18n.t('menu.emergencies'), iconName: 'dashboard' });
+    }
+    if (hasRole('ADMIN_CLINIQUE')) {
+      addUniqueItem({ path: '/clinic/duplicates', label: this.i18n.t('menu.duplicates'), iconName: 'patients' });
+    }
+    if (hasRole('BIOLOGISTE', 'ADMIN_JOPRELYS') || hasPermission('LAB_ORDER_READ', 'LAB_ORDER_WRITE')) {
       addUniqueItem({ path: '/clinic/lab-orders', label: this.i18n.t('menu.labOrders'), iconName: 'labOrders' });
     }
-    if (roles.includes('PHARMACIEN')) {
+    if (hasRole('PHARMACIEN', 'ADMIN_JOPRELYS') || hasPermission('PHARMACY_PRESCRIPTION_READ')) {
       addUniqueItem({ path: '/pharmacy/prescriptions', label: this.i18n.t('menu.prescriptions'), iconName: 'prescriptions' });
+    }
+    if (hasRole('PHARMACIEN', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'GESTIONNAIRE_STOCK') || hasPermission('STOCK_READ', 'STOCK_MANAGE')) {
       addUniqueItem({ path: '/pharmacy/stocks', label: this.i18n.t('menu.stocks'), iconName: 'stocks' });
     }
-    if (roles.includes('PATIENT')) {
+
+    if (hasRole('PATIENT')) {
       addUniqueItem({ path: '/patient/dashboard', label: this.i18n.t('menu.patientDashboard'), iconName: 'dashboard' });
       addUniqueItem({ path: '/patient/profile', label: this.i18n.t('menu.patientProfile'), iconName: 'patients' });
       addUniqueItem({ path: '/patient/summary', label: this.i18n.t('menu.patientSummary'), iconName: 'prescriptions' });
@@ -235,27 +251,25 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
     }
 
     const activePatientObj = this.activePatient();
-    if (activePatientObj && !roles.includes('PATIENT')) {
+    if (activePatientObj && !hasRole('PATIENT')) {
       const id = activePatientObj.id;
       const patientName = activePatientObj.fullName;
-      const patientsIndex = items.findIndex(i => i.path === '/patients');
+      const patientsIndex = items.findIndex((item) => item.path === '/patients');
       if (patientsIndex !== -1) {
         const subItems: NavItem[] = [
           { path: '', label: `Dossier: ${patientName.split(' ')[0]}`, iconName: 'patients', isHeader: true },
-          { path: `/patients/${id}/profile`, label: this.i18n.t('menu.patientDetail.profile'), iconName: 'patients', indent: true }
+          { path: `/patients/${id}/profile`, label: this.i18n.t('menu.patientDetail.profile'), iconName: 'patients', indent: true },
         ];
 
-        const allowedClinicalRoles = ['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'];
-        if (roles.some(r => allowedClinicalRoles.includes(r))) {
+        if (hasRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE') || hasPermission('CLINICAL_READ', 'LAB_ORDER_READ', 'HOSPITALIZATION_READ')) {
           subItems.push(
             { path: `/patients/${id}/consultations`, label: this.i18n.t('menu.patientDetail.consultations'), iconName: 'prescriptions', indent: true },
             { path: `/patients/${id}/lab-orders`, label: this.i18n.t('menu.patientDetail.labOrders'), iconName: 'labOrders', indent: true },
-            { path: `/patients/${id}/hospitalizations`, label: this.i18n.t('menu.patientDetail.hospitalization'), iconName: 'stocks', indent: true }
+            { path: `/patients/${id}/hospitalizations`, label: this.i18n.t('menu.patientDetail.hospitalization'), iconName: 'stocks', indent: true },
           );
         }
 
-        const allowedAuditRoles = ['MEDECIN', 'ADMIN_CLINIQUE', 'AUDITEUR'];
-        if (roles.some(r => allowedAuditRoles.includes(r))) {
+        if (hasRole('MEDECIN', 'ADMIN_CLINIQUE', 'AUDITEUR') || hasPermission('AUDIT_READ')) {
           subItems.push({ path: `/patients/${id}/audit-trail`, label: this.i18n.t('menu.patientDetail.audit'), iconName: 'audit', indent: true });
         }
 

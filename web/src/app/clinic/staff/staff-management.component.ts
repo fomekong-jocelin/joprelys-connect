@@ -1,17 +1,20 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { AlertComponent } from '../../shared/ui/alert.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
 import { CardComponent } from '../../shared/ui/card.component';
-import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { FileDragDropComponent } from '../../shared/ui/file-drag-drop.component';
+import { PageHeaderComponent } from '../../shared/ui/page-header.component';
+import { RbacApiService } from '../rbac/rbac-api.service';
+import { RbacRole } from '../rbac/rbac.models';
 import { StaffApiService } from './staff-api.service';
 import { StaffMember, StaffRole } from './staff.models';
 import { StaffTableComponent, StaffTableLabels } from './staff-table.component';
 
-const STAFF_ROLES: readonly StaffRole[] = ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEIL', 'PHARMACIEN', 'BIOLOGISTE'];
+const NON_STAFF_ROLE_CODES = new Set(['SUPER_ADMIN', 'ADMIN_JOPRELYS', 'ADMIN_CLINIQUE', 'PATIENT']);
 
 @Component({
   selector: 'app-staff-management',
@@ -25,231 +28,15 @@ const STAFF_ROLES: readonly StaffRole[] = ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEI
     StaffTableComponent,
     FileDragDropComponent,
   ],
-  template: `
-    <app-shell>
-      <app-page-header
-        [title]="t('staff.title')"
-        [subtitle]="t('staff.subtitle')"
-        backLink="/dashboard"
-        [backLabel]="t('common.back')"
-      >
-        <app-ui-button class="w-full sm:w-auto" (pressed)="toggleInviteForm()">
-          {{ showForm() ? t('common.cancel') : t('staff.invite') }}
-        </app-ui-button>
-      </app-page-header>
-
-      <div class="app-container space-y-6 pb-10">
-        @if (pageError(); as error) {
-          <app-ui-alert tone="error">{{ error }}</app-ui-alert>
-        }
-
-        @if (temporaryPassword(); as password) {
-          <app-ui-alert>
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p class="font-extrabold">{{ t('staff.temporaryPasswordTitle') }}</p>
-                <p class="mt-1 text-sm">{{ t('staff.temporaryPasswordHelp') }}</p>
-                <code class="mt-2 inline-flex rounded-md bg-white/80 px-3 py-1 font-mono text-base font-extrabold text-cyan-900">
-                  {{ password }}
-                </code>
-              </div>
-              <app-ui-button variant="secondary" (pressed)="copyTemporaryPassword()">
-                {{ copyLabel() }}
-              </app-ui-button>
-            </div>
-          </app-ui-alert>
-        }
-
-        @if (showForm()) {
-          <app-ui-card [title]="formTitle()">
-            <form class="space-y-5" (submit)="$event.preventDefault(); submitForm()">
-              @if (formError(); as error) {
-                <app-ui-alert tone="error">{{ error }}</app-ui-alert>
-              }
-
-              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label class="space-y-1.5">
-                  <span class="ui-label">{{ t('staff.displayName') }} <span class="text-[var(--brand-danger)]">*</span></span>
-                  <input
-                    class="ui-input"
-                    [value]="displayName()"
-                    [placeholder]="t('staff.displayNamePlaceholder')"
-                    [disabled]="formLoading()"
-                    (input)="displayName.set($any($event.target).value)"
-                  />
-                </label>
-
-                <label class="space-y-1.5">
-                  <span class="ui-label">{{ t('staff.email') }} <span class="text-[var(--brand-danger)]">*</span></span>
-                  <input
-                    class="ui-input"
-                    type="email"
-                    [value]="email()"
-                    [placeholder]="t('staff.emailPlaceholder')"
-                    [disabled]="formLoading() || editingStaff() !== null"
-                    (input)="email.set($any($event.target).value)"
-                  />
-                </label>
-
-                <div class="space-y-2 sm:col-span-2">
-                  <span class="ui-label block">{{ t('staff.role') }} <span class="text-[var(--brand-danger)]">*</span></span>
-                  <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 mt-2">
-                    @for (option of roles; track option) {
-                      <label class="inline-flex items-center gap-2 select-none cursor-pointer">
-                        <input
-                          type="radio"
-                          name="staffRole"
-                          class="ui-radio"
-                          [checked]="hasSelectedRole(option)"
-                          [disabled]="formLoading()"
-                          (change)="setSingleRole(option)"
-                        />
-                        <span class="text-sm font-semibold" style="color: var(--text-primary)">{{ roleLabel(option) }}</span>
-                      </label>
-                    }
-                  </div>
-                </div>
-              </div>
-
-              @if (editingStaff() !== null) {
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4 pt-4 border-t border-[var(--app-border)]">
-                  <label class="space-y-1.5">
-                    <span class="ui-label">{{ t('profile.phone') }}</span>
-                    <input
-                      class="ui-input"
-                      type="tel"
-                      [value]="phone()"
-                      [placeholder]="t('profile.phonePlaceholder')"
-                      [disabled]="formLoading()"
-                      (input)="phone.set($any($event.target).value)"
-                    />
-                  </label>
-
-                  <div class="space-y-1.5">
-                    <span class="ui-label">{{ t('profile.department') }}</span>
-                    <select
-                      class="ui-select focus:border-brand-primary transition-colors"
-                      [value]="selectedDept()"
-                      [disabled]="formLoading()"
-                      (change)="onDeptChange($any($event.target).value)"
-                    >
-                      <option value="">{{ t('patient.visit.servicePlaceholder') || 'Choisir un service...' }}</option>
-                      @for (dept of departments; track dept.value) {
-                        <option [value]="dept.value">{{ t(dept.labelKey) }}</option>
-                      }
-                      <option value="Autre">{{ t('staff.departments.other') }}</option>
-                    </select>
-
-                    @if (selectedDept() === 'Autre') {
-                      <input
-                        class="ui-input mt-2 focus:border-brand-primary transition-colors"
-                        [value]="customDept()"
-                        [placeholder]="t('staff.departments.customPlaceholder')"
-                        [disabled]="formLoading()"
-                        (input)="onCustomDeptInput($any($event.target).value)"
-                      />
-                    }
-                  </div>
-
-                  @if (isDoctorSelected()) {
-                    <label class="space-y-1.5">
-                      <span class="ui-label">{{ t('profile.specialty') }}</span>
-                      <input
-                        class="ui-input"
-                        [value]="specialty()"
-                        [placeholder]="t('profile.specialtyPlaceholder')"
-                        [disabled]="formLoading()"
-                        (input)="specialty.set($any($event.target).value)"
-                      />
-                    </label>
-
-                    <label class="space-y-1.5">
-                      <span class="ui-label">{{ t('profile.registrationNumber') }}</span>
-                      <input
-                        class="ui-input"
-                        [value]="registrationNumber()"
-                        [placeholder]="t('profile.registrationNumberPlaceholder')"
-                        [disabled]="formLoading()"
-                        (input)="registrationNumber.set($any($event.target).value)"
-                      />
-                    </label>
-                  }
-
-                  <div class="sm:col-span-2">
-                    <label class="space-y-1.5 block">
-                      <span class="ui-label">{{ t('profile.bio') }}</span>
-                      <textarea
-                        class="ui-input h-20 resize-y py-2"
-                        [value]="bio()"
-                        [placeholder]="t('profile.bioPlaceholder')"
-                        [disabled]="formLoading()"
-                        (input)="bio.set($any($event.target).value)"
-                      ></textarea>
-                    </label>
-                  </div>
-
-                  <div class="sm:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-                    <app-file-drag-drop
-                      #photoUploader
-                      [label]="t('profile.photoLabel')"
-                      [previewUrl]="photoViewUrl()"
-                      (fileSelected)="onFileSelected($event, 'photo', photoUploader)"
-                      (fileRemoved)="photoPath.set(null)"
-                    >
-                    </app-file-drag-drop>
-
-                    @if (isDoctorSelected()) {
-                      <app-file-drag-drop
-                        #sigUploader
-                        [label]="t('profile.signatureLabel')"
-                        [previewUrl]="signatureViewUrl()"
-                        (fileSelected)="onFileSelected($event, 'signature', sigUploader)"
-                        (fileRemoved)="signaturePath.set(null)"
-                      >
-                      </app-file-drag-drop>
-
-                      <app-file-drag-drop
-                        #stampUploader
-                        [label]="t('profile.stampLabel')"
-                        [previewUrl]="stampViewUrl()"
-                        (fileSelected)="onFileSelected($event, 'stamp', stampUploader)"
-                        (fileRemoved)="stampPath.set(null)"
-                      >
-                      </app-file-drag-drop>
-                    }
-                  </div>
-                </div>
-              }
-
-              <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <app-ui-button variant="secondary" class="w-full sm:w-auto" (pressed)="cancelForm()">
-                  {{ t('common.cancel') }}
-                </app-ui-button>
-                <app-ui-button type="submit" class="w-full sm:w-auto" [disabled]="formLoading()">
-                  {{ formLoading() ? t('common.saving') : submitLabel() }}
-                </app-ui-button>
-              </div>
-            </form>
-          </app-ui-card>
-        }
-
-        <app-staff-table
-          [staff]="staff()"
-          [loading]="loading()"
-          [labels]="tableLabels()"
-          (editRequested)="startEdit($event)"
-          (statusToggled)="toggleStatus($event)"
-        />
-      </div>
-    </app-shell>
-  `,
+  templateUrl: './staff-management.component.html',
 })
 export class StaffManagementComponent implements OnInit {
   private readonly api = inject(StaffApiService);
+  private readonly rbacApi = inject(RbacApiService);
   private readonly i18n = inject(I18nService);
   private readonly http = inject(HttpClient);
 
-  readonly roles = STAFF_ROLES;
+  readonly roles = signal<RbacRole[]>([]);
   readonly staff = signal<StaffMember[]>([]);
   readonly loading = signal(false);
   readonly pageError = signal<string | null>(null);
@@ -262,7 +49,7 @@ export class StaffManagementComponent implements OnInit {
 
   readonly displayName = signal('');
   readonly email = signal('');
-  readonly selectedRoles = signal<string[]>(['MEDECIN']);
+  readonly selectedRoles = signal<string[]>([]);
 
   readonly phone = signal('');
   readonly specialty = signal('');
@@ -277,11 +64,11 @@ export class StaffManagementComponent implements OnInit {
     { value: 'Urgences', labelKey: 'staff.departments.emergency' },
     { value: 'Pharmacie', labelKey: 'staff.departments.pharmacy' },
     { value: 'Laboratoire', labelKey: 'staff.departments.laboratory' },
-    { value: 'Cardiologie', labelKey: 'staff.departments.cardiology' }
+    { value: 'Cardiologie', labelKey: 'staff.departments.cardiology' },
   ];
   readonly selectedDept = signal('');
   readonly customDept = signal('');
-  
+
   readonly photoPath = signal<string | null>(null);
   readonly signaturePath = signal<string | null>(null);
   readonly stampPath = signal<string | null>(null);
@@ -309,13 +96,7 @@ export class StaffManagementComponent implements OnInit {
     deactivate: this.t('common.deactivate'),
     active: this.t('common.active'),
     inactive: this.t('common.inactive'),
-    roleLabels: {
-      MEDECIN: this.t('staff.roles.MEDECIN'),
-      INFIRMIER: this.t('staff.roles.INFIRMIER'),
-      AGENT_ACCUEIL: this.t('staff.roles.AGENT_ACCUEIL'),
-      PHARMACIEN: this.t('staff.roles.PHARMACIEN'),
-      BIOLOGISTE: this.t('staff.roles.BIOLOGISTE'),
-    },
+    roleLabels: Object.fromEntries(this.roles().map((role) => [role.code, role.name])) as Record<StaffRole, string>,
   }));
 
   ngOnInit(): void {
@@ -325,13 +106,25 @@ export class StaffManagementComponent implements OnInit {
   load(): void {
     this.loading.set(true);
     this.pageError.set(null);
-    this.api.list().subscribe({
-      next: (members) => {
-        this.staff.set(members);
+    forkJoin({
+      staff: this.api.list(),
+      roles: this.rbacApi.listRoles(),
+    }).subscribe({
+      next: ({ staff, roles }) => {
+        this.staff.set(staff);
+        this.roles.set(roles
+          .filter((role) => role.assignable && role.enabled && !NON_STAFF_ROLE_CODES.has(role.code))
+          .sort((left, right) => {
+            if (left.systemRole !== right.systemRole) return left.systemRole ? -1 : 1;
+            return left.name.localeCompare(right.name);
+          }));
+        if (this.selectedRoles().length === 0) {
+          this.selectedRoles.set(this.defaultSelectedRoles());
+        }
         this.loading.set(false);
       },
-      error: () => {
-        this.pageError.set(this.t('staff.loadError'));
+      error: (error) => {
+        this.pageError.set(this.errorMessage(error, this.t('staff.loadError')));
         this.loading.set(false);
       },
     });
@@ -352,13 +145,13 @@ export class StaffManagementComponent implements OnInit {
     this.editingStaff.set(member);
     this.displayName.set(member.displayName);
     this.email.set(member.email);
-    this.selectedRoles.set(member.role ? member.role.split(',').map((r) => r.trim()) : ['MEDECIN']);
+    this.selectedRoles.set(this.parseRoleCodes(member.role));
     this.phone.set(member.phone || '');
     this.specialty.set(member.specialty || '');
     this.registrationNumber.set(member.registrationNumber || '');
     const dept = member.department || '';
     this.department.set(dept);
-    if (this.departments.some(d => d.value === dept)) {
+    if (this.departments.some((item) => item.value === dept)) {
       this.selectedDept.set(dept);
       this.customDept.set('');
     } else if (dept) {
@@ -402,39 +195,76 @@ export class StaffManagementComponent implements OnInit {
     this.pageError.set(null);
     this.api.toggleStatus(member.id).subscribe({
       next: (updated) => this.replaceMember(updated),
-      error: (err) => this.pageError.set(this.errorMessage(err, this.t('staff.statusError'))),
+      error: (error) => this.pageError.set(this.errorMessage(error, this.t('staff.statusError'))),
     });
   }
 
-  hasSelectedRole(option: string): boolean {
-    return this.selectedRoles().includes(option);
+  hasSelectedRole(roleCode: string): boolean {
+    return this.selectedRoles().includes(roleCode);
   }
 
-  setSingleRole(option: string): void {
-    this.selectedRoles.set([option]);
+  toggleRole(roleCode: string): void {
+    this.selectedRoles.update((current) =>
+      current.includes(roleCode)
+        ? current.filter((code) => code !== roleCode)
+        : [...current, roleCode],
+    );
   }
 
-  roleLabel(role: string): string {
-    return this.tableLabels().roleLabels[role as StaffRole] || role;
+  roleLabel(roleCode: string): string {
+    return this.roles().find((role) => role.code === roleCode)?.name ?? roleCode;
   }
 
   copyTemporaryPassword(): void {
     const password = this.temporaryPassword();
-    if (!password || !navigator.clipboard) {
-      return;
-    }
+    if (!password || !navigator.clipboard) return;
     navigator.clipboard.writeText(password).then(() => this.passwordCopied.set(true));
   }
 
-  t(key: string): string {
-    return this.i18n.t(key);
+  t(key: string, fallback?: string): string {
+    return this.i18n.t(key, fallback);
+  }
+
+  onDeptChange(value: string): void {
+    this.selectedDept.set(value);
+    if (value !== 'Autre') {
+      this.department.set(value);
+      this.customDept.set('');
+    } else {
+      this.department.set(this.customDept());
+    }
+  }
+
+  onCustomDeptInput(value: string): void {
+    this.customDept.set(value);
+    this.department.set(value);
+  }
+
+  onFileSelected(file: File, type: 'photo' | 'signature' | 'stamp', component: FileDragDropComponent): void {
+    this.formError.set(null);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+
+    this.http.post<{ filePath: string; viewUrl: string }>('/api/files/upload', formData).subscribe({
+      next: (response) => {
+        if (type === 'photo') this.photoPath.set(response.filePath);
+        if (type === 'signature') this.signaturePath.set(response.filePath);
+        if (type === 'stamp') this.stampPath.set(response.filePath);
+        component.setPreviewUrl(response.viewUrl, file.name);
+      },
+      error: (error) => {
+        console.error(error);
+        this.formError.set(this.t('profile.uploadError', "Erreur lors du chargement de l'image."));
+      },
+    });
   }
 
   private inviteStaff(): void {
     this.api.invite({
       displayName: this.displayName().trim(),
       email: this.email().trim(),
-      role: this.selectedRoles().join(','),
+      roles: [...this.selectedRoles()],
     }).subscribe({
       next: (created) => {
         this.staff.update((items) => [...items, created]);
@@ -444,8 +274,8 @@ export class StaffManagementComponent implements OnInit {
         this.showForm.set(false);
         this.resetForm();
       },
-      error: (err) => {
-        this.formError.set(this.errorMessage(err, this.t('staff.saveError')));
+      error: (error) => {
+        this.formError.set(this.errorMessage(error, this.t('staff.saveError')));
         this.formLoading.set(false);
       },
     });
@@ -454,7 +284,7 @@ export class StaffManagementComponent implements OnInit {
   private updateStaff(current: StaffMember): void {
     this.api.update(current.id, {
       displayName: this.displayName().trim(),
-      role: this.selectedRoles().join(','),
+      roles: [...this.selectedRoles()],
       photoPath: this.photoPath() || undefined,
       signaturePath: this.signaturePath() || undefined,
       stampPath: this.stampPath() || undefined,
@@ -470,8 +300,8 @@ export class StaffManagementComponent implements OnInit {
         this.showForm.set(false);
         this.resetForm();
       },
-      error: (err) => {
-        this.formError.set(this.errorMessage(err, this.t('staff.saveError')));
+      error: (error) => {
+        this.formError.set(this.errorMessage(error, this.t('staff.saveError')));
         this.formLoading.set(false);
       },
     });
@@ -485,7 +315,7 @@ export class StaffManagementComponent implements OnInit {
     this.editingStaff.set(null);
     this.displayName.set('');
     this.email.set('');
-    this.selectedRoles.set(['MEDECIN']);
+    this.selectedRoles.set(this.defaultSelectedRoles());
     this.phone.set('');
     this.specialty.set('');
     this.registrationNumber.set('');
@@ -500,51 +330,22 @@ export class StaffManagementComponent implements OnInit {
     this.formLoading.set(false);
   }
 
-  onDeptChange(val: string): void {
-    this.selectedDept.set(val);
-    if (val !== 'Autre') {
-      this.department.set(val);
-      this.customDept.set('');
-    } else {
-      this.department.set(this.customDept());
-    }
+  private defaultSelectedRoles(): string[] {
+    const preferred = this.roles().find((role) => role.code === 'MEDECIN');
+    const fallback = preferred ?? this.roles()[0];
+    return fallback ? [fallback.code] : [];
   }
 
-  onCustomDeptInput(val: string): void {
-    this.customDept.set(val);
-    this.department.set(val);
+  private parseRoleCodes(rawRoles: string): string[] {
+    return rawRoles
+      ? [...new Set(rawRoles.split(',').map((role) => role.trim()).filter(Boolean))]
+      : this.defaultSelectedRoles();
   }
 
-  onFileSelected(file: File, type: 'photo' | 'signature' | 'stamp', component: FileDragDropComponent): void {
-    this.formError.set(null);
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', type);
-
-    this.http.post<any>('/api/files/upload', formData).subscribe({
-      next: (res) => {
-        if (type === 'photo') this.photoPath.set(res.filePath);
-        if (type === 'signature') this.signaturePath.set(res.filePath);
-        if (type === 'stamp') this.stampPath.set(res.filePath);
-        component.setPreviewUrl(res.viewUrl, file.name);
-      },
-      error: (err) => {
-        console.error(err);
-        this.formError.set(this.t('profile.uploadError') || "Erreur lors du chargement de l'image.");
-      }
-    });
-  }
-
-  private errorMessage(err: { status?: number; error?: { detail?: string } }, fallback: string): string {
-    if (err.status === 401) {
-      return this.t('common.error.unauthorized');
-    }
-    if (err.status === 403) {
-      return this.t('common.error.forbidden');
-    }
-    if (err.status && err.status >= 500) {
-      return this.t('common.error.server');
-    }
-    return err.error?.detail ?? fallback;
+  private errorMessage(error: { status?: number; error?: { detail?: string } }, fallback: string): string {
+    if (error.status === 401) return this.t('common.error.unauthorized');
+    if (error.status === 403) return this.t('common.error.forbidden');
+    if (error.status && error.status >= 500) return this.t('common.error.server');
+    return error.error?.detail ?? fallback;
   }
 }

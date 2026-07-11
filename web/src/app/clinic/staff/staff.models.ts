@@ -20,12 +20,12 @@ export interface StaffMember {
 export interface InviteStaffRequest {
   readonly email: string;
   readonly displayName: string;
-  readonly role: StaffRole;
+  readonly roles: readonly StaffRole[];
 }
 
 export interface UpdateStaffRequest {
   readonly displayName: string;
-  readonly role: StaffRole;
+  readonly roles: readonly StaffRole[];
   readonly photoPath?: string;
   readonly signaturePath?: string;
   readonly stampPath?: string;

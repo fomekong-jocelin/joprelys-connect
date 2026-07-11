@@ -1,11 +1,16 @@
 package com.joprelys.backend.auth.security;
 
+import com.joprelys.backend.auth.rbac.RbacAuthorityService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.List;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,54 +20,88 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-	private final BearerTokenResolver bearerTokenResolver;
-	private final JwtService jwtService;
-	private final JwtRevocationService jwtRevocationService;
+    private final BearerTokenResolver bearerTokenResolver;
+    private final JwtService jwtService;
+    private final JwtRevocationService jwtRevocationService;
+    private final RbacAuthorityService rbacAuthorityService;
 
-	public JwtAuthenticationFilter(
-			BearerTokenResolver bearerTokenResolver,
-			JwtService jwtService,
-			JwtRevocationService jwtRevocationService) {
-		this.bearerTokenResolver = bearerTokenResolver;
-		this.jwtService = jwtService;
-		this.jwtRevocationService = jwtRevocationService;
-	}
+    public JwtAuthenticationFilter(
+            BearerTokenResolver bearerTokenResolver,
+            JwtService jwtService,
+            JwtRevocationService jwtRevocationService,
+            RbacAuthorityService rbacAuthorityService) {
+        this.bearerTokenResolver = bearerTokenResolver;
+        this.jwtService = jwtService;
+        this.jwtRevocationService = jwtRevocationService;
+        this.rbacAuthorityService = rbacAuthorityService;
+    }
 
-	@Override
-	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-			throws ServletException, IOException {
-		try {
-			if (bearerTokenResolver.resolve(request).map(token -> authenticate(token, response)).orElse(true)) {
-				filterChain.doFilter(request, response);
-			}
-		} finally {
-			TenantContext.clear();
-		}
-	}
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+        try {
+            if (bearerTokenResolver.resolve(request).map(token -> authenticate(token, response)).orElse(true)) {
+                filterChain.doFilter(request, response);
+            }
+        } finally {
+            TenantContext.clear();
+        }
+    }
 
-	private boolean authenticate(String token, HttpServletResponse response) {
-		try {
-			JwtClaims claims = jwtService.parseAndValidate(token);
-			if (jwtRevocationService.isRevoked(claims.tokenId())) {
-				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-				return false;
-			}
-			List<SimpleGrantedAuthority> authorities = java.util.Arrays.stream(claims.role().split(","))
-					.map(r -> new SimpleGrantedAuthority("ROLE_" + r.trim()))
-					.toList();
-			var authentication = new UsernamePasswordAuthenticationToken(claims.email(), token, authorities);
-			authentication.setDetails(claims);
-			SecurityContextHolder.getContext().setAuthentication(authentication);
+    private boolean authenticate(String token, HttpServletResponse response) {
+        try {
+            JwtClaims claims = jwtService.parseAndValidate(token);
+            if (jwtRevocationService.isRevoked(claims.tokenId())) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                return false;
+            }
 
-			if (claims.organizationId() != null && !claims.organizationId().isBlank()) {
-				TenantContext.setTenantId(java.util.UUID.fromString(claims.organizationId()));
-			}
+            Optional<UUID> userId = parseUuid(claims.subject());
+            UUID claimedOrganizationId = parseUuid(claims.organizationId()).orElse(null);
+            Set<SimpleGrantedAuthority> authorities = new LinkedHashSet<>();
+            UUID effectiveOrganizationId = claimedOrganizationId;
 
-			return true;
-		} catch (InvalidTokenException exception) {
-			SecurityContextHolder.clearContext();
-			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-			return false;
-		}
-	}
+            if (userId.isPresent()) {
+                Optional<RbacAuthorityService.ResolvedAuthorities> resolved =
+                        rbacAuthorityService.resolve(userId.get(), claimedOrganizationId);
+                if (resolved.isEmpty()) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return false;
+                }
+                RbacAuthorityService.ResolvedAuthorities access = resolved.get();
+                access.roles().forEach(role -> authorities.add(new SimpleGrantedAuthority("ROLE_" + role)));
+                access.permissions().forEach(permission -> authorities.add(new SimpleGrantedAuthority(permission)));
+                effectiveOrganizationId = access.organizationId();
+            } else {
+                Arrays.stream(claims.role().split(","))
+                        .map(String::trim)
+                        .filter(role -> !role.isBlank())
+                        .forEach(role -> authorities.add(new SimpleGrantedAuthority("ROLE_" + role)));
+            }
+
+            var authentication = new UsernamePasswordAuthenticationToken(claims.email(), token, authorities);
+            authentication.setDetails(claims);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            if (effectiveOrganizationId != null) {
+                TenantContext.setTenantId(effectiveOrganizationId);
+            }
+            return true;
+        } catch (InvalidTokenException exception) {
+            SecurityContextHolder.clearContext();
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return false;
+        }
+    }
+
+    private static Optional<UUID> parseUuid(String value) {
+        if (value == null || value.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(UUID.fromString(value));
+        } catch (IllegalArgumentException exception) {
+            return Optional.empty();
+        }
+    }
 }
