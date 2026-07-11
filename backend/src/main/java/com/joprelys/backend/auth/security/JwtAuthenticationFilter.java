@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -70,7 +71,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 				TenantContext.setTenantId(identity.organizationId());
 			}
 			return true;
-		} catch (InvalidTokenException exception) {
+		} catch (InvalidTokenException | IllegalArgumentException exception) {
 			SecurityContextHolder.clearContext();
 			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 			return false;
@@ -78,14 +79,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	}
 
 	private EffectiveIdentity resolveEffectiveIdentity(JwtClaims claims) {
-		if (containsRole(claims.role(), "PATIENT")) {
+		if (isPatientOnly(claims.role())) {
 			UUID organizationId = claims.organizationId() == null || claims.organizationId().isBlank()
 					? null
 					: UUID.fromString(claims.organizationId());
-			return new EffectiveIdentity(claims.email(), claims.role(), organizationId);
+			return new EffectiveIdentity(claims.email(), "PATIENT", organizationId);
 		}
 
-		UserAccountEntity user = userAccountRepository.findByEmail(claims.email().trim().toLowerCase())
+		UserAccountEntity user = userAccountRepository.findByEmail(
+				claims.email().trim().toLowerCase(Locale.ROOT))
 				.filter(UserAccountEntity::isEnabled)
 				.orElseThrow(() -> new InvalidTokenException("User is disabled or no longer exists"));
 		if (!user.getId().toString().equals(claims.subject())) {
@@ -94,10 +96,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		return new EffectiveIdentity(user.getEmail(), user.getRole(), user.getOrganizationId());
 	}
 
-	private static boolean containsRole(String roles, String expectedRole) {
-		return roles != null && Arrays.stream(roles.split(","))
+	private static boolean isPatientOnly(String roles) {
+		if (roles == null) {
+			return false;
+		}
+		List<String> normalizedRoles = Arrays.stream(roles.split(","))
 				.map(String::trim)
-				.anyMatch(expectedRole::equalsIgnoreCase);
+				.filter(role -> !role.isBlank())
+				.map(role -> role.toUpperCase(Locale.ROOT))
+				.toList();
+		return normalizedRoles.size() == 1 && "PATIENT".equals(normalizedRoles.getFirst());
 	}
 
 	private record EffectiveIdentity(String email, String roles, UUID organizationId) {
