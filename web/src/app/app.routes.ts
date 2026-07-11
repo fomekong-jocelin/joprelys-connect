@@ -10,7 +10,21 @@ export const routes: Routes = [
     path: 'dashboard',
     loadComponent: () => import('./clinic/dashboard.component').then((module) => module.DashboardComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['ADMIN_JOPRELYS', 'ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'PHARMACIEN', 'CAISSIER'] },
+    data: {
+      expectedRoles: [
+        'ADMIN_JOPRELYS',
+        'ADMIN_CLINIQUE',
+        'AGENT_ACCUEIL',
+        'INFIRMIER',
+        'MEDECIN',
+        'PHARMACIEN',
+        'BIOLOGISTE',
+        'CAISSIER',
+        'SECRETAIRE_COMPTABLE',
+        'DAF',
+        'AUDITEUR',
+      ],
+    },
   },
   {
     path: 'organizations',
@@ -73,7 +87,20 @@ export const routes: Routes = [
     path: 'profile',
     loadComponent: () => import('./profile/profile.component').then((m) => m.ProfileComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['MEDECIN', 'INFIRMIER', 'AGENT_ACCUEIL', 'PHARMACIEN', 'BIOLOGISTE', 'ADMIN_CLINIQUE', 'CAISSIER'] },
+    data: {
+      expectedRoles: [
+        'MEDECIN',
+        'INFIRMIER',
+        'AGENT_ACCUEIL',
+        'PHARMACIEN',
+        'BIOLOGISTE',
+        'ADMIN_CLINIQUE',
+        'CAISSIER',
+        'SECRETAIRE_COMPTABLE',
+        'DAF',
+        'AUDITEUR',
+      ],
+    },
   },
   {
     path: 'clinic/duplicates',
@@ -115,7 +142,7 @@ export const routes: Routes = [
     path: 'clinic/billing',
     loadComponent: () => import('./clinic/billing/billing-management-page.component').then(m => m.BillingManagementPageComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['AGENT_ACCUEIL', 'ADMIN_CLINIQUE'] },
+    data: { expectedRoles: ['AGENT_ACCUEIL', 'SECRETAIRE_COMPTABLE', 'DAF', 'ADMIN_CLINIQUE'] },
   },
   {
     path: 'clinic/cashier',
@@ -124,12 +151,10 @@ export const routes: Routes = [
     data: { expectedRoles: ['CAISSIER'] },
   },
   {
-    // Deep-link vers une facture spécifique : ouvre la page billing sur l'onglet facturation
-    // et pré-sélectionne la facture via le fragment #invoice-<id> géré par BillingManagementPageComponent
     path: 'clinic/billing/invoice/:invoiceId',
     loadComponent: () => import('./clinic/billing/billing-management-page.component').then(m => m.BillingManagementPageComponent),
     canActivate: [roleGuard],
-    data: { expectedRoles: ['AGENT_ACCUEIL', 'ADMIN_CLINIQUE'] },
+    data: { expectedRoles: ['AGENT_ACCUEIL', 'SECRETAIRE_COMPTABLE', 'DAF', 'ADMIN_CLINIQUE'] },
   },
   {
     path: 'clinic/consultation/:visitId',
