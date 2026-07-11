@@ -34,8 +34,7 @@ public class PatientReconciliationCandidateService {
 
     @Transactional(readOnly = true)
     public List<PatientReconciliationCandidate> findCandidates(UUID sourcePatientId) {
-        PatientEntity source = patientRepository.findById(sourcePatientId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "PATIENT_NOT_FOUND"));
+        PatientEntity source = requirePatient(sourcePatientId);
 
         return patientRepository.findAllByIdentityStatus(PatientIdentityStatus.VERIFIED).stream()
                 .filter(candidate -> !candidate.getId().equals(source.getId()))
@@ -45,6 +44,25 @@ public class PatientReconciliationCandidateService {
                 .sorted(Comparator.comparing(PatientReconciliationCandidate::score).reversed())
                 .limit(MAX_CANDIDATES)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PatientReconciliationCandidate scoreCandidate(UUID sourcePatientId, UUID candidatePatientId) {
+        PatientEntity source = requirePatient(sourcePatientId);
+        PatientEntity candidate = requirePatient(candidatePatientId);
+        if (source.getId().equals(candidate.getId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "PATIENT_RECONCILIATION_SELF_LINK_FORBIDDEN");
+        }
+        if (candidate.getIdentityStatus() != PatientIdentityStatus.VERIFIED
+                || !"ACTIVE".equals(candidate.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "PATIENT_RECONCILIATION_TARGET_NOT_ELIGIBLE");
+        }
+        return score(source, candidate);
+    }
+
+    private PatientEntity requirePatient(UUID patientId) {
+        return patientRepository.findById(patientId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "PATIENT_NOT_FOUND"));
     }
 
     private PatientReconciliationCandidate score(PatientEntity source, PatientEntity candidate) {
