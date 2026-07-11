@@ -1,5 +1,6 @@
 package com.joprelys.backend.auth.api;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -28,23 +29,12 @@ import org.springframework.test.web.servlet.MockMvc;
 @ActiveProfiles("test")
 public class StaffControllerTest {
 
-	@Autowired
-	private MockMvc mockMvc;
-
-	@Autowired
-	private OrganizationRepository organizationRepository;
-
-	@Autowired
-	private UserAccountRepository userAccountRepository;
-
-	@Autowired
-	private JwtService jwtService;
-
-	@Autowired
-	private PasswordEncoder passwordEncoder;
-
-	@Autowired
-	private JdbcTemplate jdbcTemplate;
+	@Autowired private MockMvc mockMvc;
+	@Autowired private OrganizationRepository organizationRepository;
+	@Autowired private UserAccountRepository userAccountRepository;
+	@Autowired private JwtService jwtService;
+	@Autowired private PasswordEncoder passwordEncoder;
+	@Autowired private JdbcTemplate jdbcTemplate;
 
 	private OrganizationEntity orgA;
 	private OrganizationEntity orgB;
@@ -54,6 +44,7 @@ public class StaffControllerTest {
 	private UserAccountEntity medecinB;
 	private String tokenAdminA;
 	private String tokenMedecinA;
+	private String tokenInfirmierA;
 
 	@BeforeEach
 	void setUp() {
@@ -79,6 +70,7 @@ public class StaffControllerTest {
 
 		tokenAdminA = jwtService.createToken(adminA).value();
 		tokenMedecinA = jwtService.createToken(medecinA).value();
+		tokenInfirmierA = jwtService.createToken(infirmierA).value();
 	}
 
 	@Test
@@ -89,6 +81,18 @@ public class StaffControllerTest {
 				.andExpect(jsonPath("$.length()").value(2))
 				.andExpect(jsonPath("$[0].email").value("medecin.a@joprelys.local"))
 				.andExpect(jsonPath("$[1].email").value("infirmier.a@joprelys.local"));
+	}
+
+	@Test
+	void givenAdmin_whenListRoles_thenReturnsCompleteClinicCatalog() throws Exception {
+		mockMvc.perform(get("/api/staff/roles")
+						.header("Authorization", "Bearer " + tokenAdminA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[*].code", hasItem("CAISSIER")))
+				.andExpect(jsonPath("$[*].code", hasItem("SECRETAIRE_COMPTABLE")))
+				.andExpect(jsonPath("$[*].code", hasItem("DAF")))
+				.andExpect(jsonPath("$[*].code", hasItem("AUDITEUR")))
+				.andExpect(jsonPath("$[*].code", hasItem("ADMIN_CLINIQUE")));
 	}
 
 	@Test
@@ -117,6 +121,42 @@ public class StaffControllerTest {
 	}
 
 	@Test
+	void givenAdmin_whenInviteMultiRoleStaff_thenRolesAreNormalizedAndDeduplicated() throws Exception {
+		String request = """
+				{
+					"email": "finance@joprelys.local",
+					"displayName": "Responsable finance",
+					"role": "caissier, daf, caissier"
+				}
+				""";
+
+		mockMvc.perform(post("/api/staff")
+						.header("Authorization", "Bearer " + tokenAdminA)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(request))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.role").value("DAF,CAISSIER"));
+	}
+
+	@Test
+	void givenAdmin_whenInvitePlatformRole_thenReturnsBadRequest() throws Exception {
+		String request = """
+				{
+					"email": "platform@joprelys.local",
+					"displayName": "Platform admin",
+					"role": "ADMIN_JOPRELYS"
+				}
+				""";
+
+		mockMvc.perform(post("/api/staff")
+						.header("Authorization", "Bearer " + tokenAdminA)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(request))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.detail").value("Rôle clinique invalide : ADMIN_JOPRELYS"));
+	}
+
+	@Test
 	void givenAdmin_whenInviteExistingEmail_thenReturnsBadRequest() throws Exception {
 		String request = """
 				{
@@ -142,6 +182,13 @@ public class StaffControllerTest {
 	}
 
 	@Test
+	void givenNonAdmin_whenListRoles_thenReturnsForbidden() throws Exception {
+		mockMvc.perform(get("/api/staff/roles")
+						.header("Authorization", "Bearer " + tokenMedecinA))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
 	void givenAdminA_whenModifyStaffOfClinicB_thenReturnsNotFound() throws Exception {
 		String request = """
 				{
@@ -158,11 +205,11 @@ public class StaffControllerTest {
 	}
 
 	@Test
-	void givenAdmin_whenUpdateStaff_thenNameAndRoleAreChanged() throws Exception {
+	void givenAdmin_whenUpdateStaff_thenMultipleRolesAreChanged() throws Exception {
 		String request = """
 				{
 					"displayName": "Dr Alpha Senior",
-					"role": "PHARMACIEN"
+					"role": "MEDECIN,DAF"
 				}
 				""";
 
@@ -172,15 +219,39 @@ public class StaffControllerTest {
 						.content(request))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.displayName").value("Dr Alpha Senior"))
-				.andExpect(jsonPath("$.role").value("PHARMACIEN"));
+				.andExpect(jsonPath("$.role").value("DAF,MEDECIN"));
 	}
 
 	@Test
-	void givenAdmin_whenToggleStaffStatus_thenLoginIsBlocked() throws Exception {
+	void givenExistingToken_whenAdminAddsDafRole_thenNewAuthorityIsAppliedImmediately() throws Exception {
+		String request = """
+				{
+					"displayName": "Dr Alpha",
+					"role": "MEDECIN,DAF"
+				}
+				""";
+
+		mockMvc.perform(put("/api/staff/" + medecinA.getId())
+						.header("Authorization", "Bearer " + tokenAdminA)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(request))
+				.andExpect(status().isOk());
+
+		mockMvc.perform(get("/api/accounting/export")
+						.header("Authorization", "Bearer " + tokenMedecinA))
+				.andExpect(status().isOk());
+	}
+
+	@Test
+	void givenAdmin_whenToggleStaffStatus_thenExistingTokenIsBlockedImmediately() throws Exception {
 		mockMvc.perform(post("/api/staff/" + infirmierA.getId() + "/toggle")
 						.header("Authorization", "Bearer " + tokenAdminA))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.enabled").value(false));
+
+		mockMvc.perform(get("/api/staff")
+						.header("Authorization", "Bearer " + tokenInfirmierA))
+				.andExpect(status().isUnauthorized());
 
 		String loginRequest = """
 				{
