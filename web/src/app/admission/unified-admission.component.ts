@@ -258,6 +258,7 @@ export class UnifiedAdmissionComponent implements OnInit {
   readonly isSubmitting = signal(false);
   readonly error = signal<string | null>(null);
   readonly currentStep = signal<AdmissionStep>(1);
+  readonly steps: readonly AdmissionStep[] = [1, 2, 3];
 
   readonly form: FormGroup = this.fb.group({
     carePath: ['NORMAL'],
