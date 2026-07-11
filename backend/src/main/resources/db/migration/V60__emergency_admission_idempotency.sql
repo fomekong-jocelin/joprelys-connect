@@ -6,7 +6,7 @@ CREATE TABLE emergency_admission_requests (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT fk_emergency_admission_request_emergency
-        FOREIGN KEY (emergency_id) REFERENCES emergencies(id)
+        FOREIGN KEY (emergency_id) REFERENCES emergencies(id) ON DELETE CASCADE
 );
 
 CREATE UNIQUE INDEX ux_emergency_admission_request_emergency
