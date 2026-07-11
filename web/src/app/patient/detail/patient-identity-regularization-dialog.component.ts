@@ -1,6 +1,7 @@
 import { Component, inject, input, OnInit, output, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
+import { ApiErrorI18nService } from '../../core/i18n/api-error-i18n.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { AlertComponent } from '../../shared/ui/alert.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
@@ -75,7 +76,13 @@ interface IdentitySourceOption {
               </div>
               <div>
                 <label class="ui-label mb-1.5" for="regularization-birth-date">{{ t('patient.urgTemp.regularization.birthDate') }} *</label>
-                <input id="regularization-birth-date" class="ui-input" type="date" formControlName="birthDate" />
+                <input
+                  id="regularization-birth-date"
+                  class="ui-input"
+                  type="date"
+                  formControlName="birthDate"
+                  [max]="today"
+                />
               </div>
               <div>
                 <label class="ui-label mb-1.5" for="regularization-phone">{{ t('patient.urgTemp.regularization.phone') }}</label>
@@ -168,9 +175,11 @@ export class PatientIdentityRegularizationDialogComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly regularizationApi = inject(ProvisionalPatientRegularizationApiService);
   private readonly i18n = inject(I18nService);
+  private readonly apiErrors = inject(ApiErrorI18nService);
 
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
+  readonly today = new Date().toISOString().slice(0, 10);
   readonly genders = ['MASCULIN', 'FEMININ', 'AUTRE'] as const;
   readonly sourceOptions: readonly IdentitySourceOption[] = [
     { value: 'PATIENT', translationKey: 'patient.urgTemp.regularization.source.PATIENT' },
@@ -232,12 +241,14 @@ export class PatientIdentityRegularizationDialogComponent implements OnInit {
     this.submitting.set(true);
     this.error.set(null);
     this.regularizationApi.regularize(this.patient().id, this.toDto()).pipe(
-      finalize(() => this.submitting.set(false))
+      finalize(() => this.submitting.set(false)),
     ).subscribe({
       next: (updatedPatient) => this.saved.emit(updatedPatient),
-      error: (err) => this.error.set(
-        err.error?.detail || err.error?.title || this.t('patient.urgTemp.regularization.error')
-      ),
+      error: (err) => this.error.set(this.apiErrors.message(
+        err,
+        'patient.urgTemp.error',
+        'patient.urgTemp.regularization.error',
+      )),
     });
   }
 
