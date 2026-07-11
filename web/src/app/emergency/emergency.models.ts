@@ -69,12 +69,7 @@ export interface EmergencyRecord {
   initialBpDiastolic?: number;
   initialHr?: number;
   initialTemp?: number;
-  thirdPartyName?: string;
-  thirdPartyPhone?: string;
-  thirdPartyRelationship?: string;
-  thirdPartyIdDocument?: string;
-  thirdPartyCircumstances?: string;
-  thirdPartyConsentToContact?: boolean;
+  thirdPartyRecorded: boolean;
   stabilizedAt?: string;
   orientation?: string;
   createdByUserId?: string;
