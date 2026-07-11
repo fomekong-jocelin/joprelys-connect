@@ -32,12 +32,6 @@ CREATE TABLE patient_reconciliation_events (
     CONSTRAINT fk_patient_reconciliation_actor
         FOREIGN KEY (created_by_user_id)
         REFERENCES users(id) ON DELETE SET NULL,
-    CONSTRAINT chk_patient_reconciliation_decision
-        CHECK (decision IN ('CREATE_NEW_DPU', 'LINK_EXISTING_DPU', 'DEFER', 'CORRECT_LINK')),
-    CONSTRAINT chk_patient_reconciliation_previous_status
-        CHECK (previous_identity_status IN ('PROVISIONAL_URGENCY', 'DECLARED', 'VERIFIED', 'MERGED')),
-    CONSTRAINT chk_patient_reconciliation_resulting_status
-        CHECK (resulting_identity_status IN ('PROVISIONAL_URGENCY', 'DECLARED', 'VERIFIED', 'MERGED')),
     CONSTRAINT chk_patient_reconciliation_distinct_patients
         CHECK (candidate_patient_id IS NULL OR candidate_patient_id <> source_patient_id),
     CONSTRAINT chk_patient_reconciliation_score
@@ -72,8 +66,6 @@ CREATE TABLE patient_canonical_links (
         REFERENCES patient_reconciliation_events(id, organization_id) ON DELETE CASCADE,
     CONSTRAINT chk_patient_canonical_link_distinct
         CHECK (source_patient_id <> canonical_patient_id),
-    CONSTRAINT chk_patient_canonical_link_previous_status
-        CHECK (source_previous_identity_status IN ('PROVISIONAL_URGENCY', 'DECLARED', 'VERIFIED')),
     CONSTRAINT uq_patient_canonical_link_source
         UNIQUE (organization_id, source_patient_id)
 );
@@ -101,8 +93,6 @@ CREATE TABLE patient_identity_aliases (
     CONSTRAINT fk_patient_identity_alias_actor
         FOREIGN KEY (created_by_user_id)
         REFERENCES users(id) ON DELETE SET NULL,
-    CONSTRAINT chk_patient_identity_alias_type
-        CHECK (alias_type IN ('URG_TEMP', 'LOCAL_PATIENT_NUMBER', 'GLOBAL_PATIENT_NUMBER')),
     CONSTRAINT uq_patient_identity_alias
         UNIQUE (organization_id, alias_type, alias_value)
 );
