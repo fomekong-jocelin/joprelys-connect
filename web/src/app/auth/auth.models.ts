@@ -14,6 +14,12 @@ export interface LoginResponse {
   readonly otpCode?: string;
 }
 
+export interface CurrentSessionResponse {
+  readonly email: string;
+  readonly name: string;
+  readonly role: string;
+}
+
 export interface AuthSession {
   readonly accessToken: string;
   readonly expiresAt: string;
