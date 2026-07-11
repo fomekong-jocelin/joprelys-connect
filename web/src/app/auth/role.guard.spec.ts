@@ -128,6 +128,43 @@ describe('roleGuard', () => {
     expect(await firstValueFrom(result$)).toBe(true);
   });
 
+  it('should allow a custom internal role to enter the dashboard', async () => {
+    sessionSignal.set(session('ROLE_PERSONNALISE'));
+    mockRbacApi.ensureMyAccess.mockReturnValue(of({
+      userId: 'user-4',
+      roles: ['ROLE_PERSONNALISE'],
+      permissions: ['AUDIT_READ'],
+    }));
+
+    const result$ = TestBed.runInInjectionContext(() =>
+      roleGuard({
+        routeConfig: { path: 'dashboard' },
+        data: { expectedRoles: ['ADMIN_CLINIQUE', 'CAISSIER'] },
+      } as any, {} as any),
+    ) as Observable<boolean | string>;
+
+    expect(await firstValueFrom(result$)).toBe(true);
+    expect(mockRbacApi.ensureMyAccess).toHaveBeenCalledWith(true);
+  });
+
+  it('should not treat a patient role as an internal dashboard role', async () => {
+    sessionSignal.set(session('PATIENT'));
+    mockRbacApi.ensureMyAccess.mockReturnValue(of({
+      userId: 'patient-1',
+      roles: ['PATIENT'],
+      permissions: [],
+    }));
+
+    const result$ = TestBed.runInInjectionContext(() =>
+      roleGuard({
+        routeConfig: { path: 'dashboard' },
+        data: { expectedRoles: ['ADMIN_CLINIQUE', 'CAISSIER'] },
+      } as any, {} as any),
+    ) as Observable<boolean | string>;
+
+    expect(await firstValueFrom(result$)).toBe('/unauthorized');
+  });
+
   function session(role: string): AuthSession {
     return {
       accessToken: 'token',
