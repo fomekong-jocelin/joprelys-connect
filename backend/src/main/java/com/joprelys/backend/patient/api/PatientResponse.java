@@ -1,5 +1,6 @@
 package com.joprelys.backend.patient.api;
 
+import com.joprelys.backend.patient.domain.IdentityConfidenceLevel;
 import com.joprelys.backend.patient.domain.PatientIdentityStatus;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -29,5 +30,11 @@ public record PatientResponse(
         Boolean emergencyAccessActive,
         PatientIdentityStatus identityStatus,
         String temporaryPatientNumber,
-        String displayName) {
+        String displayName,
+        IdentityConfidenceLevel identityConfidenceLevel,
+        String apparentGender,
+        String estimatedAgeRange,
+        String physicalDescription,
+        Instant foundAt,
+        String foundLocation) {
 }
