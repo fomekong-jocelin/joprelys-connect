@@ -1,0 +1,103 @@
+<div class="space-y-4">
+  @if (error(); as message) {
+    <app-ui-alert tone="error" (close)="error.set(null)">{{ message }}</app-ui-alert>
+  }
+
+  @if (isLoading()) {
+    <div class="ui-card-muted flex items-center justify-center px-4 py-8 text-sm font-semibold text-[var(--text-muted)]">
+      {{ t('medicoLegal.loading') }}
+    </div>
+  } @else if (dossier(); as data) {
+    <section class="ui-card-subtle p-4">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h3 class="font-display text-base font-extrabold text-[var(--text-primary)]">
+            {{ t('medicoLegal.title') }}
+          </h3>
+          <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+            {{ t('medicoLegal.subtitle') }}
+          </p>
+        </div>
+        @if (isSaving()) {
+          <span class="rounded-sm border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2 py-1 text-[10px] font-bold text-[var(--text-muted)]">
+            {{ t('common.saving') }}
+          </span>
+        }
+      </div>
+
+      <dl class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div class="border border-[var(--app-border)] bg-[var(--app-surface)] p-3 rounded-sm">
+          <dt class="ui-label">{{ t('medicoLegal.summary.thirdParties') }}</dt>
+          <dd class="mt-1 text-lg font-black text-[var(--text-primary)]">{{ data.thirdParties.length }}</dd>
+        </div>
+        <div class="border border-[var(--app-border)] bg-[var(--app-surface)] p-3 rounded-sm">
+          <dt class="ui-label">{{ t('medicoLegal.summary.capacity') }}</dt>
+          <dd class="mt-1 text-xs font-extrabold" [class.text-[var(--brand-danger-text)]]="data.currentCapacity?.status === 'INCAPABLE'" [class.text-[var(--brand-success-text)]]="data.currentCapacity?.status === 'CAPABLE'">
+            {{ data.currentCapacity ? t('medicoLegal.capacity.status.' + data.currentCapacity.status.toLowerCase()) : t('medicoLegal.notRecorded') }}
+          </dd>
+        </div>
+        <div class="border border-[var(--app-border)] bg-[var(--app-surface)] p-3 rounded-sm">
+          <dt class="ui-label">{{ t('medicoLegal.summary.legalBasis') }}</dt>
+          <dd class="mt-1 text-xs font-extrabold text-[var(--text-primary)]">
+            {{ data.activeLegalBasis ? t('medicoLegal.legalBasis.type.' + data.activeLegalBasis.basisType.toLowerCase()) : t('medicoLegal.noneActive') }}
+          </dd>
+        </div>
+        <div class="border border-[var(--app-border)] bg-[var(--app-surface)] p-3 rounded-sm">
+          <dt class="ui-label">{{ t('medicoLegal.summary.belongings') }}</dt>
+          <dd class="mt-1 text-lg font-black text-[var(--text-primary)]">{{ data.belongings.length }}</dd>
+        </div>
+      </dl>
+    </section>
+
+    <nav class="grid grid-cols-2 gap-1 bg-[var(--app-surface-muted)] p-1 rounded-sm sm:grid-cols-4" [attr.aria-label]="t('medicoLegal.sections')">
+      <button type="button" class="rounded-sm px-2 py-2 text-xs font-extrabold transition-colors" (click)="setSection('THIRD_PARTIES')" [class.bg-[var(--app-surface)]]="activeSection() === 'THIRD_PARTIES'" [class.text-brand-primary]="activeSection() === 'THIRD_PARTIES'" [class.text-[var(--text-muted)]]="activeSection() !== 'THIRD_PARTIES'">
+        {{ t('medicoLegal.section.thirdParties') }}
+      </button>
+      <button type="button" class="rounded-sm px-2 py-2 text-xs font-extrabold transition-colors" (click)="setSection('CAPACITY')" [class.bg-[var(--app-surface)]]="activeSection() === 'CAPACITY'" [class.text-brand-primary]="activeSection() === 'CAPACITY'" [class.text-[var(--text-muted)]]="activeSection() !== 'CAPACITY'">
+        {{ t('medicoLegal.section.capacity') }}
+      </button>
+      <button type="button" class="rounded-sm px-2 py-2 text-xs font-extrabold transition-colors" (click)="setSection('LEGAL_BASIS')" [class.bg-[var(--app-surface)]]="activeSection() === 'LEGAL_BASIS'" [class.text-brand-primary]="activeSection() === 'LEGAL_BASIS'" [class.text-[var(--text-muted)]]="activeSection() !== 'LEGAL_BASIS'">
+        {{ t('medicoLegal.section.legalBasis') }}
+      </button>
+      <button type="button" class="rounded-sm px-2 py-2 text-xs font-extrabold transition-colors" (click)="setSection('BELONGINGS')" [class.bg-[var(--app-surface)]]="activeSection() === 'BELONGINGS'" [class.text-brand-primary]="activeSection() === 'BELONGINGS'" [class.text-[var(--text-muted)]]="activeSection() !== 'BELONGINGS'">
+        {{ t('medicoLegal.section.belongings') }}
+      </button>
+    </nav>
+
+    @if (activeSection() === 'THIRD_PARTIES') {
+      <app-emergency-third-parties-section
+        [thirdParties]="data.thirdParties"
+        [identityStatements]="data.identityStatements"
+        [disabled]="isSaving()"
+        (submitted)="addThirdParty($event)"
+      />
+    }
+
+    @if (activeSection() === 'CAPACITY') {
+      <app-emergency-capacity-section
+        [history]="data.capacityHistory"
+        [current]="data.currentCapacity"
+        [disabled]="isSaving()"
+        (submitted)="recordCapacity($event)"
+      />
+    }
+
+    @if (activeSection() === 'LEGAL_BASIS') {
+      <app-emergency-legal-basis-section
+        [legalBases]="data.legalBases"
+        [currentCapacity]="data.currentCapacity"
+        [disabled]="isSaving()"
+        (submitted)="addLegalBasis($event)"
+      />
+    }
+
+    @if (activeSection() === 'BELONGINGS') {
+      <app-emergency-belongings-section
+        [belongings]="data.belongings"
+        [disabled]="isSaving()"
+        (itemSubmitted)="addBelonging($event)"
+        (transferSubmitted)="transferBelonging($event)"
+      />
+    }
+  }
+</div>

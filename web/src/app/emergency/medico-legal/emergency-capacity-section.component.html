@@ -1,0 +1,82 @@
+<section class="space-y-3">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <h4 class="font-display text-base font-extrabold text-[var(--text-primary)]">{{ t('medicoLegal.capacity.title') }}</h4>
+      <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">{{ t('medicoLegal.capacity.hint') }}</p>
+    </div>
+    <app-ui-button variant="secondary" (pressed)="toggleForm()" [disabled]="disabled()">
+      {{ showForm() ? t('common.cancel') : t('medicoLegal.capacity.add') }}
+    </app-ui-button>
+  </div>
+
+  @if (current(); as currentEvent) {
+    <article class="ui-card-subtle border-l-2 p-4" [class.border-l-[var(--brand-danger)]]="currentEvent.status === 'INCAPABLE'" [class.border-l-[var(--brand-success)]]="currentEvent.status === 'CAPABLE'">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p class="ui-label">{{ t('medicoLegal.capacity.current') }}</p>
+          <p class="mt-1 text-sm font-extrabold" [class.text-[var(--brand-danger-text)]]="currentEvent.status === 'INCAPABLE'" [class.text-[var(--brand-success-text)]]="currentEvent.status === 'CAPABLE'">
+            {{ t('medicoLegal.capacity.status.' + currentEvent.status.toLowerCase()) }}
+          </p>
+        </div>
+        <span class="text-xs font-semibold text-[var(--text-muted)]">{{ currentEvent.effectiveAt | date:'dd/MM/yyyy HH:mm' }}</span>
+      </div>
+      <p class="mt-3 whitespace-pre-wrap text-sm font-semibold leading-6 text-[var(--text-secondary)]">{{ currentEvent.clinicalReason }}</p>
+      @if (currentEvent.consciousnessLevel) {
+        <p class="mt-2 text-xs font-bold text-[var(--text-muted)]">{{ t('medicoLegal.capacity.consciousness') }} : {{ t('medicoLegal.capacity.consciousness.' + currentEvent.consciousnessLevel.toLowerCase()) }}</p>
+      }
+    </article>
+  } @else {
+    <p class="ui-card-muted px-4 py-6 text-center text-sm text-[var(--text-muted)]">{{ t('medicoLegal.capacity.empty') }}</p>
+  }
+
+  @if (history().length > 0) {
+    <div class="space-y-2">
+      <p class="ui-label">{{ t('medicoLegal.capacity.history') }}</p>
+      @for (event of history(); track event.id) {
+        <article class="rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-3">
+          <div class="flex items-start justify-between gap-2">
+            <span class="text-xs font-extrabold" [class.text-[var(--brand-danger-text)]]="event.status === 'INCAPABLE'" [class.text-[var(--brand-success-text)]]="event.status === 'CAPABLE'">
+              {{ t('medicoLegal.capacity.status.' + event.status.toLowerCase()) }}
+            </span>
+            <span class="text-[10px] font-semibold text-[var(--text-muted)]">{{ event.effectiveAt | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+          <p class="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{{ event.clinicalReason }}</p>
+        </article>
+      }
+    </div>
+  }
+
+  @if (showForm()) {
+    <form [formGroup]="form" (ngSubmit)="submit()" class="ui-card space-y-4 p-4">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label class="ui-label mb-1.5">{{ t('medicoLegal.capacity.statusLabel') }}</label>
+          <select class="ui-input" formControlName="status">
+            <option value="INCAPABLE">{{ t('medicoLegal.capacity.status.incapable') }}</option>
+            <option value="CAPABLE">{{ t('medicoLegal.capacity.status.capable') }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="ui-label mb-1.5">{{ t('medicoLegal.capacity.consciousness') }}</label>
+          <select class="ui-input" formControlName="consciousnessLevel">
+            <option value="UNCONSCIOUS">{{ t('medicoLegal.capacity.consciousness.unconscious') }}</option>
+            <option value="ALTERED">{{ t('medicoLegal.capacity.consciousness.altered') }}</option>
+            <option value="DROWSY">{{ t('medicoLegal.capacity.consciousness.drowsy') }}</option>
+            <option value="ALERT">{{ t('medicoLegal.capacity.consciousness.alert') }}</option>
+          </select>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="ui-label mb-1.5">{{ t('medicoLegal.capacity.reason') }} *</label>
+          <textarea class="ui-input min-h-24 resize-y py-2.5" formControlName="clinicalReason" [placeholder]="t('medicoLegal.capacity.reasonPlaceholder')"></textarea>
+        </div>
+      </div>
+      <p class="rounded-sm border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-3 py-2 text-xs leading-5 text-[var(--text-muted)]">
+        {{ t('medicoLegal.capacity.appendOnlyHint') }}
+      </p>
+      <div class="flex justify-end gap-2 border-t border-[var(--divider-subtle)] pt-4">
+        <app-ui-button variant="secondary" (pressed)="toggleForm()" [disabled]="disabled()">{{ t('common.cancel') }}</app-ui-button>
+        <app-ui-button variant="primary" (pressed)="submit()" [disabled]="disabled() || form.invalid">{{ t('common.save') }}</app-ui-button>
+      </div>
+    </form>
+  }
+</section>

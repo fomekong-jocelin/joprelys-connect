@@ -45,6 +45,8 @@ export class I18nService {
         extension: this.optionalDictionary(`/assets/i18n/extensions/${lang}.json`),
         admission: this.optionalDictionary(`/assets/i18n/features/admission/${lang}.json`),
         urgTemp: this.optionalDictionary(`/assets/i18n/features/urg-temp/${lang}.json`),
+        emergency: this.optionalDictionary(`/assets/i18n/features/emergency/${lang}.json`),
+        medicoLegal: this.optionalDictionary(`/assets/i18n/features/medico-legal/${lang}.json`),
       }));
 
       this.dictionary.set({
@@ -52,8 +54,10 @@ export class I18nService {
         ...dictionaries.extension,
         ...dictionaries.admission,
         ...dictionaries.urgTemp,
+        ...dictionaries.emergency,
+        ...dictionaries.medicoLegal,
       });
-      this.loaded.update((state) => ({ ...state, [lang]: true }));
+      this.loaded.update(state => ({ ...state, [lang]: true }));
     } catch {
       this.dictionary.set({});
     }
@@ -61,7 +65,7 @@ export class I18nService {
 
   private optionalDictionary(path: string) {
     return this.http.get<TranslationDictionary>(path).pipe(
-      catchError(() => of(EMPTY_DICTIONARY))
+      catchError(() => of(EMPTY_DICTIONARY)),
     );
   }
 

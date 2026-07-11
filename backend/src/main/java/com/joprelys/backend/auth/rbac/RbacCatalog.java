@@ -18,6 +18,9 @@ public final class RbacCatalog {
     public static final String PERMISSION_USER_MANAGE = "USER_MANAGE";
     public static final String PERMISSION_RBAC_READ = "RBAC_READ";
     public static final String PERMISSION_RBAC_MANAGE = "RBAC_MANAGE";
+    public static final String PERMISSION_EMERGENCY_MEDICO_LEGAL_READ = "EMERGENCY_MEDICO_LEGAL_READ";
+    public static final String PERMISSION_EMERGENCY_MEDICO_LEGAL_WRITE = "EMERGENCY_MEDICO_LEGAL_WRITE";
+    public static final String PERMISSION_EMERGENCY_BELONGINGS_WRITE = "EMERGENCY_BELONGINGS_WRITE";
 
     private RbacCatalog() {
     }
@@ -42,6 +45,9 @@ public final class RbacCatalog {
                 permission("EMERGENCY_READ", "URGENCES", "Consulter les urgences", "Consulter les dossiers d'urgence et leur historique."),
                 permission("EMERGENCY_WRITE", "URGENCES", "Prendre en charge une urgence", "Créer une urgence et consigner les soins de réanimation."),
                 permission("EMERGENCY_STABILIZE", "URGENCES", "Stabiliser une urgence", "Clôturer la prise en charge et orienter le patient."),
+                permission(PERMISSION_EMERGENCY_MEDICO_LEGAL_READ, "URGENCES", "Consulter le contexte médico-légal", "Consulter les tiers, la capacité, la base légale et la chaîne de possession d'une urgence."),
+                permission(PERMISSION_EMERGENCY_MEDICO_LEGAL_WRITE, "URGENCES", "Documenter le contexte médico-légal", "Tracer l'incapacité, les déclarations et la base légale de prise en charge urgente."),
+                permission(PERMISSION_EMERGENCY_BELONGINGS_WRITE, "URGENCES", "Gérer les effets personnels", "Inventorier, sceller, transférer et remettre les effets personnels avec une chaîne de possession."),
                 permission("LAB_ORDER_READ", "LABORATOIRE", "Consulter les analyses d'un patient", "Consulter les demandes et résultats de laboratoire rattachés à un patient autorisé."),
                 permission("LAB_QUEUE_READ", "LABORATOIRE", "Consulter la file du laboratoire", "Consulter la file globale des demandes d'analyse de l'établissement."),
                 permission("LAB_ORDER_CREATE", "LABORATOIRE", "Prescrire une analyse", "Créer une demande d'analyse pour un patient."),
@@ -93,19 +99,26 @@ public final class RbacCatalog {
         mappings.put("MEDECIN", set(
                 "PATIENT_READ", "PATIENT_EMERGENCY_ACCESS", "CLINICAL_READ", "CLINICAL_WRITE",
                 "EMERGENCY_READ", "EMERGENCY_WRITE", "EMERGENCY_STABILIZE",
+                PERMISSION_EMERGENCY_MEDICO_LEGAL_READ,
+                PERMISSION_EMERGENCY_MEDICO_LEGAL_WRITE,
+                PERMISSION_EMERGENCY_BELONGINGS_WRITE,
                 "LAB_ORDER_READ", "LAB_ORDER_CREATE", "HOSPITALIZATION_READ", "HOSPITALIZATION_MANAGE",
                 "BILLING_INVOICE_READ", "BILLING_INVOICE_WRITE"));
         mappings.put("INFIRMIER", set(
                 "PATIENT_READ", "PATIENT_WRITE", "PATIENT_EMERGENCY_ACCESS", "CLINICAL_READ", "CLINICAL_WRITE",
-                "EMERGENCY_READ", "EMERGENCY_WRITE", "LAB_ORDER_READ",
-                "HOSPITALIZATION_READ", "HOSPITALIZATION_MANAGE"));
+                "EMERGENCY_READ", "EMERGENCY_WRITE",
+                PERMISSION_EMERGENCY_MEDICO_LEGAL_READ,
+                PERMISSION_EMERGENCY_BELONGINGS_WRITE,
+                "LAB_ORDER_READ", "HOSPITALIZATION_READ", "HOSPITALIZATION_MANAGE"));
         mappings.put("BIOLOGISTE", set("PATIENT_READ", "LAB_ORDER_READ", "LAB_QUEUE_READ", "LAB_ORDER_WRITE"));
         mappings.put("PHARMACIEN", set(
                 "PHARMACY_PRESCRIPTION_READ", "PHARMACY_STOCK_MANAGE", "STOCK_READ", "STOCK_MANAGE"));
         mappings.put("GESTIONNAIRE_STOCK", set("STOCK_READ", "STOCK_MANAGE"));
         mappings.put("RESPONSABLE_HOSPITALISATION", set(
                 "PATIENT_READ", "HOSPITALIZATION_READ", "HOSPITALIZATION_MANAGE"));
-        mappings.put("AUDITEUR", set("AUDIT_READ", "BILLING_INVOICE_READ", "CASH_HISTORY_READ", "ACCOUNTING_DASHBOARD_READ"));
+        mappings.put("AUDITEUR", set(
+                "AUDIT_READ", "BILLING_INVOICE_READ", "CASH_HISTORY_READ", "ACCOUNTING_DASHBOARD_READ",
+                PERMISSION_EMERGENCY_MEDICO_LEGAL_READ));
         mappings.put("PATIENT", Set.of());
 
         return mappings.entrySet().stream()

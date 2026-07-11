@@ -1,0 +1,87 @@
+<section class="space-y-3">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <h4 class="font-display text-base font-extrabold text-[var(--text-primary)]">{{ t('medicoLegal.legalBasis.title') }}</h4>
+      <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">{{ t('medicoLegal.legalBasis.hint') }}</p>
+    </div>
+    <app-ui-button variant="secondary" (pressed)="toggleForm()" [disabled]="disabled()">
+      {{ showForm() ? t('common.cancel') : t('medicoLegal.legalBasis.add') }}
+    </app-ui-button>
+  </div>
+
+  @if (legalBases().length === 0) {
+    <p class="ui-card-muted px-4 py-6 text-center text-sm text-[var(--text-muted)]">{{ t('medicoLegal.legalBasis.empty') }}</p>
+  } @else {
+    <div class="space-y-3">
+      @for (basis of legalBases(); track basis.id) {
+        <article class="ui-card-subtle p-4">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p class="text-sm font-extrabold text-[var(--text-primary)]">{{ t('medicoLegal.legalBasis.type.' + basis.basisType.toLowerCase()) }}</p>
+              <p class="mt-1 text-xs text-[var(--text-muted)]">{{ basis.startsAt | date:'dd/MM/yyyy HH:mm' }}</p>
+            </div>
+            <span class="rounded-sm px-2 py-1 text-[10px] font-black uppercase tracking-wider" [class.bg-[var(--brand-success-subtle)]]="basis.active" [class.text-[var(--brand-success-text)]]="basis.active" [class.bg-[var(--app-surface-muted)]]="!basis.active" [class.text-[var(--text-muted)]]="!basis.active">
+              {{ basis.active ? t('medicoLegal.legalBasis.active') : t('medicoLegal.legalBasis.closed') }}
+            </span>
+          </div>
+          <p class="mt-3 whitespace-pre-wrap text-sm font-semibold leading-6 text-[var(--text-secondary)]">{{ basis.justification }}</p>
+          <div class="mt-3 flex flex-wrap gap-1.5">
+            @for (act of basis.coveredActs; track act) {
+              <span class="rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] px-2 py-1 text-[10px] font-bold text-[var(--text-secondary)]">{{ act }}</span>
+            }
+          </div>
+          @if (basis.closedAt) {
+            <p class="mt-3 border-t border-[var(--divider-subtle)] pt-3 text-xs font-semibold text-[var(--text-muted)]">
+              {{ t('medicoLegal.legalBasis.closedAt') }} {{ basis.closedAt | date:'dd/MM/yyyy HH:mm' }}
+              @if (basis.closureReason) { · {{ t('medicoLegal.legalBasis.closure.' + basis.closureReason.toLowerCase()) }} }
+            </p>
+          } @else if (basis.expiresAt) {
+            <p class="mt-3 border-t border-[var(--divider-subtle)] pt-3 text-xs font-semibold text-[var(--text-muted)]">{{ t('medicoLegal.legalBasis.expiresAt') }} {{ basis.expiresAt | date:'dd/MM/yyyy HH:mm' }}</p>
+          }
+        </article>
+      }
+    </div>
+  }
+
+  @if (showForm()) {
+    <form [formGroup]="form" (ngSubmit)="submit()" class="ui-card space-y-4 p-4">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label class="ui-label mb-1.5">{{ t('medicoLegal.legalBasis.typeLabel') }} *</label>
+          <select class="ui-input" formControlName="basisType">
+            <option value="VITAL_EMERGENCY">{{ t('medicoLegal.legalBasis.type.vital_emergency') }}</option>
+            <option value="PRESUMED_CONSENT">{{ t('medicoLegal.legalBasis.type.presumed_consent') }}</option>
+            <option value="LEGAL_REPRESENTATIVE_CONSENT">{{ t('medicoLegal.legalBasis.type.legal_representative_consent') }}</option>
+            <option value="PUBLIC_SAFETY">{{ t('medicoLegal.legalBasis.type.public_safety') }}</option>
+            <option value="COURT_OR_AUTHORITY_ORDER">{{ t('medicoLegal.legalBasis.type.court_or_authority_order') }}</option>
+            <option value="OTHER">{{ t('medicoLegal.legalBasis.type.other') }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="ui-label mb-1.5">{{ t('medicoLegal.legalBasis.expiresAtLabel') }}</label>
+          <input class="ui-input" type="datetime-local" formControlName="expiresAt" />
+        </div>
+        <div class="sm:col-span-2">
+          <label class="ui-label mb-1.5">{{ t('medicoLegal.legalBasis.justification') }} *</label>
+          <textarea class="ui-input min-h-24 resize-y py-2.5" formControlName="justification" [placeholder]="t('medicoLegal.legalBasis.justificationPlaceholder')"></textarea>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="ui-label mb-1.5">{{ t('medicoLegal.legalBasis.coveredActs') }} *</label>
+          <textarea class="ui-input min-h-20 resize-y py-2.5" formControlName="coveredActs" [placeholder]="t('medicoLegal.legalBasis.coveredActsPlaceholder')"></textarea>
+          <p class="mt-1 text-[11px] text-[var(--text-muted)]">{{ t('medicoLegal.legalBasis.coveredActsHint') }}</p>
+        </div>
+      </div>
+
+      @if (requiresIncapacity() && currentCapacity()?.status !== 'INCAPABLE') {
+        <p class="rounded-sm border border-[var(--brand-warning)] bg-[var(--brand-warning-subtle)] px-3 py-2 text-xs font-semibold leading-5 text-[var(--brand-warning-text)]">
+          {{ t('medicoLegal.legalBasis.incapacityRequired') }}
+        </p>
+      }
+
+      <div class="flex justify-end gap-2 border-t border-[var(--divider-subtle)] pt-4">
+        <app-ui-button variant="secondary" (pressed)="toggleForm()" [disabled]="disabled()">{{ t('common.cancel') }}</app-ui-button>
+        <app-ui-button variant="primary" (pressed)="submit()" [disabled]="disabled() || form.invalid || !canSubmit()">{{ t('common.save') }}</app-ui-button>
+      </div>
+    </form>
+  }
+</section>
