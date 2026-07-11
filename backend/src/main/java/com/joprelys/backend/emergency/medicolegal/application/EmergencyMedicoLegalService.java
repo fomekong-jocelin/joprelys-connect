@@ -29,7 +29,6 @@ import com.joprelys.backend.emergency.medicolegal.infrastructure.persistence.Eme
 import com.joprelys.backend.emergency.medicolegal.infrastructure.persistence.EmergencyThirdPartyRepository;
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -126,7 +125,7 @@ public class EmergencyMedicoLegalService {
             UUID emergencyId,
             RecordEmergencyCapacityRequest request,
             UUID actorUserId) {
-        EmergencyEntity emergency = requireEmergency(emergencyId);
+        EmergencyEntity emergency = requireEmergencyForUpdate(emergencyId);
         UUID organizationId = requireOrganizationId();
         Instant effectiveAt = request.effectiveAt() == null ? Instant.now() : request.effectiveAt();
 
@@ -153,7 +152,7 @@ public class EmergencyMedicoLegalService {
             UUID emergencyId,
             CreateEmergencyLegalBasisRequest request,
             UUID actorUserId) {
-        EmergencyEntity emergency = requireEmergency(emergencyId);
+        EmergencyEntity emergency = requireEmergencyForUpdate(emergencyId);
         UUID organizationId = requireOrganizationId();
         validateCapacityForEmergencyBasis(emergencyId, request.basisType());
 
@@ -217,13 +216,15 @@ public class EmergencyMedicoLegalService {
             TransferEmergencyBelongingRequest request,
             UUID actorUserId) {
         EmergencyEntity emergency = requireEmergency(emergencyId);
+        validateTransferAction(request.action());
+
         EmergencyBelongingEntity belonging = belongingRepository.findByIdForUpdate(belongingId)
                 .orElseThrow(() -> notFound("EMERGENCY_BELONGING_NOT_FOUND"));
         if (!belonging.getEmergency().getId().equals(emergencyId)) {
             throw notFound("EMERGENCY_BELONGING_NOT_FOUND");
         }
 
-        EmergencyBelongingStatus targetStatus = targetStatus(request.action());
+        EmergencyBelongingStatus targetStatus = targetStatus(request.action(), belonging.getCustodyStatus());
         try {
             belonging.applyTransferStatus(targetStatus);
         } catch (IllegalStateException exception) {
@@ -263,6 +264,11 @@ public class EmergencyMedicoLegalService {
                 .orElseThrow(() -> notFound("EMERGENCY_NOT_FOUND"));
     }
 
+    private EmergencyEntity requireEmergencyForUpdate(UUID emergencyId) {
+        return emergencyRepository.findByIdForMedicoLegalUpdate(emergencyId)
+                .orElseThrow(() -> notFound("EMERGENCY_NOT_FOUND"));
+    }
+
     private UUID requireOrganizationId() {
         UUID organizationId = TenantContext.getTenantId();
         if (organizationId == null) {
@@ -296,15 +302,24 @@ public class EmergencyMedicoLegalService {
         }
     }
 
+    private void validateTransferAction(EmergencyBelongingTransferAction action) {
+        if (action == EmergencyBelongingTransferAction.DEPOSITED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "EMERGENCY_BELONGING_DEPOSIT_ALREADY_RECORDED");
+        }
+    }
+
     private void closeActiveLegalBases(UUID emergencyId, Instant closedAt, String reason) {
         legalBasisRepository.findByEmergencyIdOrderByStartsAtAsc(emergencyId).stream()
                 .filter(item -> item.isActiveAt(closedAt))
                 .forEach(item -> item.close(closedAt, reason));
     }
 
-    private EmergencyBelongingStatus targetStatus(EmergencyBelongingTransferAction action) {
+    private EmergencyBelongingStatus targetStatus(
+            EmergencyBelongingTransferAction action,
+            EmergencyBelongingStatus currentStatus) {
         return switch (action) {
-            case DEPOSITED, SEALED -> EmergencyBelongingStatus.IN_CUSTODY;
+            case DEPOSITED -> throw new IllegalArgumentException("EMERGENCY_BELONGING_DEPOSIT_ALREADY_RECORDED");
+            case SEALED -> currentStatus;
             case TRANSFERRED -> EmergencyBelongingStatus.TRANSFERRED;
             case RELEASED, RETURNED -> EmergencyBelongingStatus.RELEASED;
             case DISPOSED -> EmergencyBelongingStatus.DISPOSED;
