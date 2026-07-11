@@ -14,6 +14,35 @@
       <app-ui-alert>{{ message }}</app-ui-alert>
     }
 
+    @if (platformAdministrator()) {
+      <section class="ui-card grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,480px)] lg:items-end">
+        <div>
+          <p class="rbac-eyebrow">{{ t('rbac.scope.eyebrow', 'PÉRIMÈTRE D’ADMINISTRATION') }}</p>
+          <h2 class="mt-1 text-lg font-extrabold text-[var(--text-primary)]">
+            {{ t('rbac.scope.title', 'Établissement administré') }}
+          </h2>
+          <p class="mt-1 max-w-3xl text-sm leading-6 text-[var(--text-muted)]">
+            {{ t('rbac.scope.help', 'Votre compte est administrateur de la plateforme. Sélectionnez la clinique dont vous souhaitez gérer les utilisateurs, les rôles et les permissions.') }}
+          </p>
+        </div>
+        <label class="space-y-1.5">
+          <span class="ui-label">{{ t('rbac.scope.label', 'Clinique sélectionnée') }}</span>
+          <select
+            class="ui-input"
+            [value]="selectedOrganizationId() || ''"
+            [disabled]="loading() || organizations().length === 0"
+            (change)="selectOrganization($any($event.target).value)"
+          >
+            @for (organization of organizations(); track organization.id) {
+              <option [value]="organization.id">
+                {{ organization.name }} — {{ organization.city }}{{ organization.status === 'INACTIVE' ? ' (Inactive)' : '' }}
+              </option>
+            }
+          </select>
+        </label>
+      </section>
+    }
+
     <section class="rbac-tabs" aria-label="Sections de gestion des accès">
       <button type="button" [class.active]="activeTab() === 'users'" (click)="setTab('users')">
         {{ t('rbac.tabs.users', 'Utilisateurs') }}
