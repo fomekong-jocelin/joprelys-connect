@@ -1,24 +1,34 @@
 # STORY-2208 — RBAC administrable par établissement
 
 ## Statut
-IN_PROGRESS
+QA
 
 ## Priorité
 P0 — Sécurité et cohérence des postes métier
 
 ## Problème
 
-Le modèle actuel stocke un rôle sous forme de chaîne libre dans `users.role`. Les rôles peuvent être séparés par des virgules, les contrôles d'accès sont dispersés et l'administrateur clinique ne peut pas définir qui a le droit de réaliser une action.
+Le modèle historique stockait un rôle sous forme de chaîne libre dans `users.role`. Les rôles pouvaient être séparés par des virgules, les contrôles d'accès étaient dispersés et l'administrateur clinique ne pouvait pas définir qui avait le droit de réaliser une action.
 
-Les rôles `DAF`, `CAISSIER` et `SECRETAIRE_COMPTABLE` sont déjà utilisés dans les parcours financiers, mais ils ne sont pas garantis par un catalogue central et ne sont pas administrables.
+Les rôles `DAF`, `CAISSIER` et `SECRETAIRE_COMPTABLE` étaient déjà utilisés dans les parcours financiers, mais ils n'étaient pas garantis par un catalogue central et n'étaient pas administrables.
 
 ## Objectif
 
 Mettre en place un RBAC tenanté permettant à l'administrateur clinique de gérer les rôles, les permissions et les affectations utilisateurs sans modifier le code.
 
+## Périmètres d'administration
+
+- `ADMIN_CLINIQUE` est obligatoirement rattaché à un établissement et ne peut administrer que celui-ci.
+- `ADMIN_JOPRELYS` et `SUPER_ADMIN` sont des comptes plateforme et ne sont pas obligatoirement rattachés à un établissement.
+- un administrateur plateforme doit sélectionner explicitement l'établissement dont il souhaite administrer le RBAC ;
+- le périmètre sélectionné est transmis au backend et validé à chaque lecture ou mutation ;
+- les rôles et permissions plateforme ne sont jamais proposés dans la matrice d'un établissement ;
+- aucun changement cross-tenant n'est autorisé.
+
 ## Rôles système initiaux
 
 - SUPER_ADMIN
+- ADMIN_JOPRELYS
 - ADMIN_CLINIQUE
 - DAF
 - SECRETAIRE_COMPTABLE
@@ -45,12 +55,15 @@ Le champ historique `users.role` reste temporairement disponible pour migrer les
 
 1. Seuls `SUPER_ADMIN` et les utilisateurs disposant de `RBAC_MANAGE` peuvent modifier le RBAC.
 2. Un administrateur clinique ne peut gérer que son établissement.
-3. Un utilisateur ne peut pas modifier ses propres rôles ou permissions.
-4. Le dernier administrateur actif d'un établissement ne peut pas être désactivé ni privé de `RBAC_MANAGE`.
-5. Les rôles système ne peuvent pas être supprimés.
-6. Les changements de permissions doivent invalider les sessions concernées ou être résolus côté serveur à chaque requête.
-7. Le backend reste l'autorité : masquer un bouton dans Angular ne suffit jamais.
-8. Toutes les mutations sont auditées.
+3. Un administrateur plateforme doit sélectionner un établissement avant toute opération RBAC tenantée.
+4. Un utilisateur ne peut pas modifier ses propres rôles ou permissions.
+5. Le dernier administrateur actif d'un établissement ne peut pas être désactivé ni privé de `RBAC_MANAGE`.
+6. Les rôles système ne peuvent pas être supprimés.
+7. Les rôles plateforme ne peuvent pas être attribués depuis l'administration d'une clinique.
+8. Les permissions plateforme ne peuvent pas être ajoutées à un rôle clinique personnalisé.
+9. Les changements de permissions sont résolus côté serveur à chaque requête.
+10. Le backend reste l'autorité : masquer un bouton dans Angular ne suffit jamais.
+11. Toutes les mutations sont auditées.
 
 ## Permissions prioritaires
 
@@ -88,13 +101,13 @@ Le champ historique `users.role` reste temporairement disponible pour migrer les
 - ACCOUNTING_EXPORT
 
 ### Domaines cliniques
-Le catalogue doit aussi couvrir accueil, consultations, soins infirmiers, laboratoire, pharmacie, stock et hospitalisation.
 
-## Découpage
+Le catalogue couvre également les patients, consultations, soins infirmiers, laboratoire, pharmacie, stock, urgences, hospitalisation et gestion des lits.
+
+## Lots réalisés
 
 ### Lot 1 — Socle backend
 - migrations Flyway ;
-- entités et repositories ;
 - catalogue des permissions ;
 - rôles système et matrice par défaut ;
 - migration des utilisateurs existants ;
@@ -112,6 +125,7 @@ Le catalogue doit aussi couvrir accueil, consultations, soins infirmiers, labora
 
 ### Lot 3 — Angular
 - écran Administration > Rôles et permissions ;
+- sélection de l'établissement pour les administrateurs plateforme ;
 - matrice responsive par domaines ;
 - gestion des rôles personnalisés ;
 - affectation des rôles depuis la fiche utilisateur ;
@@ -119,24 +133,26 @@ Le catalogue doit aussi couvrir accueil, consultations, soins infirmiers, labora
 - light/dark, clavier et responsive.
 
 ### Lot 4 — Migration des gardes
-- remplacer progressivement les contrôles de rôles par des permissions ;
-- maintenir une compatibilité transitoire ;
-- supprimer le parsing des rôles séparés par virgules une fois tous les endpoints migrés.
+- contrôles prioritaires migrés vers les permissions ;
+- compatibilité transitoire avec les rôles historiques ;
+- menus et routes dérivés des permissions effectives.
 
 ## Critères d'acceptation
 
-- DAF, CAISSIER et SECRETAIRE_COMPTABLE sont disponibles dans le catalogue système ;
-- un administrateur peut créer un rôle personnalisé ;
-- un administrateur peut associer des permissions à un rôle ;
-- un utilisateur peut recevoir plusieurs rôles ;
-- les permissions effectives sont calculées comme l'union des rôles actifs ;
-- le backend refuse toute action non autorisée ;
-- aucune mutation cross-tenant n'est possible ;
-- aucune auto-élévation de privilège n'est possible ;
-- le dernier administrateur d'un établissement est protégé ;
-- les utilisateurs existants conservent leurs accès après migration ;
-- les changements sont audités ;
-- CI backend/frontend verte.
+- [x] DAF, CAISSIER et SECRETAIRE_COMPTABLE sont disponibles dans le catalogue système ;
+- [x] un administrateur peut créer un rôle personnalisé ;
+- [x] un administrateur peut associer des permissions à un rôle ;
+- [x] un utilisateur peut recevoir plusieurs rôles ;
+- [x] les permissions effectives sont calculées comme l'union des rôles actifs ;
+- [x] le backend refuse toute action non autorisée ;
+- [x] aucune mutation cross-tenant n'est possible ;
+- [x] aucune auto-élévation de privilège n'est possible ;
+- [x] le dernier administrateur d'un établissement est protégé ;
+- [x] les utilisateurs existants conservent leurs accès après migration ;
+- [x] les changements sont audités ;
+- [x] un admin plateforme sans établissement peut sélectionner une clinique et gérer son RBAC ;
+- [x] CI backend/frontend verte ;
+- [ ] QA visuelle utilisateur sur le sélecteur d'établissement, la matrice et les affectations.
 
 ## Issue GitHub
 
