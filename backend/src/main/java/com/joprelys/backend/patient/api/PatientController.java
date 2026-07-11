@@ -5,6 +5,7 @@ import com.joprelys.backend.patient.application.PatientService;
 import com.joprelys.backend.patient.application.PatientSummaryService;
 import com.joprelys.backend.patient.domain.PatientIdentityStatus;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
+import com.joprelys.backend.patient.reconciliation.application.LegacyPatientMergeGuard;
 import com.joprelys.backend.patient.reconciliation.application.PatientCanonicalResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -43,16 +44,19 @@ public class PatientController {
     private final UserAccountRepository userAccountRepository;
     private final PatientSummaryService patientSummaryService;
     private final PatientCanonicalResolver canonicalResolver;
+    private final LegacyPatientMergeGuard legacyPatientMergeGuard;
 
     public PatientController(
             PatientService patientService,
             UserAccountRepository userAccountRepository,
             PatientSummaryService patientSummaryService,
-            PatientCanonicalResolver canonicalResolver) {
+            PatientCanonicalResolver canonicalResolver,
+            LegacyPatientMergeGuard legacyPatientMergeGuard) {
         this.patientService = patientService;
         this.userAccountRepository = userAccountRepository;
         this.patientSummaryService = patientSummaryService;
         this.canonicalResolver = canonicalResolver;
+        this.legacyPatientMergeGuard = legacyPatientMergeGuard;
     }
 
     @PostMapping
@@ -109,6 +113,7 @@ public class PatientController {
     @PreAuthorize("hasAuthority('PATIENT_MERGE') or " + LEGACY_ADMIN_ROLES)
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void merge(@Valid @RequestBody MergePatientsRequest request) {
+        legacyPatientMergeGuard.assertLegacyMergeAllowed(request.primaryId(), request.secondaryId());
         String actorEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         var actor = userAccountRepository.findByEmail(actorEmail.trim().toLowerCase())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED"));
