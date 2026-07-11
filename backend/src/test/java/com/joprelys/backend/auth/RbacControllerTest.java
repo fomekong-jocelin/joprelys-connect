@@ -140,6 +140,23 @@ class RbacControllerTest {
     }
 
     @Test
+    void shouldRejectPlatformRoleAssignmentByClinicAdmin() throws Exception {
+        mockMvc.perform(put("/api/rbac/users/" + staff.getId() + "/roles")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "roleIds", List.of(roleId("SUPER_ADMIN"))))))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(put("/api/rbac/users/" + staff.getId() + "/roles")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "roleIds", List.of(roleId("ADMIN_JOPRELYS"))))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void shouldDenyRbacAdministrationWithoutPermission() throws Exception {
         mockMvc.perform(get("/api/rbac/roles")
                         .header("Authorization", "Bearer " + staffToken))
