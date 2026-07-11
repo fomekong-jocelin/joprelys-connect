@@ -36,8 +36,7 @@ public class ProvisionalPatientIdentityController {
     public PatientResponse regularize(
             @PathVariable UUID id,
             @Valid @RequestBody RegularizeProvisionalPatientRequest request) {
-        PatientEntity entity = regularizationService.regularize(id, request);
-        return map(entity);
+        return map(regularizationService.regularize(id, request));
     }
 
     private PatientResponse map(PatientEntity entity) {
@@ -46,7 +45,7 @@ public class ProvisionalPatientIdentityController {
                 entity.getOrganizationId(),
                 entity.getGlobalPatientNumber(),
                 entity.getLocalPatientNumber(),
-                entity.getDisplayName(),
+                entity.getFullName(),
                 entity.getGender(),
                 entity.getBirthDate(),
                 entity.getPhone(),
