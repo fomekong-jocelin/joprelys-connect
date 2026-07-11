@@ -45,8 +45,10 @@ class RbacControllerTest {
     private UserAccountEntity admin;
     private UserAccountEntity staff;
     private UserAccountEntity outsider;
+    private UserAccountEntity platformAdmin;
     private String adminToken;
     private String staffToken;
+    private String platformAdminToken;
 
     @BeforeEach
     void setUp() {
@@ -65,6 +67,15 @@ class RbacControllerTest {
 
         TenantContext.setTenantId(otherOrganization.getId());
         outsider = saveUser("outsider-" + suffix + "@test.local", "Utilisateur externe", "AGENT_ACCUEIL", otherOrganization.getId());
+
+        TenantContext.clear();
+        platformAdmin = new UserAccountEntity(
+                "platform-" + suffix + "@test.local",
+                "Administrateur Joprelys",
+                "ADMIN_JOPRELYS",
+                "password");
+        platformAdmin = userAccountRepository.saveAndFlush(platformAdmin);
+        platformAdminToken = jwtService.createToken(platformAdmin).value();
         TenantContext.clear();
     }
 
@@ -90,6 +101,41 @@ class RbacControllerTest {
                 .andExpect(jsonPath("$[?(@.code == 'CASH_PAYMENT_COLLECT')]").exists())
                 .andExpect(jsonPath("$[?(@.code == 'INSURANCE_BORDEREAU_SETTLE')]").exists())
                 .andExpect(jsonPath("$[?(@.code == 'ORGANIZATION_MANAGE')]").doesNotExist());
+    }
+
+    @Test
+    void shouldRequireAndApplyClinicScopeForPlatformAdministrator() throws Exception {
+        mockMvc.perform(get("/api/rbac/roles")
+                        .header("Authorization", "Bearer " + platformAdminToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Sélectionnez un établissement à administrer."));
+
+        mockMvc.perform(get("/api/rbac/roles")
+                        .param("organizationId", organization.getId().toString())
+                        .header("Authorization", "Bearer " + platformAdminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.code == 'ADMIN_CLINIQUE')]").exists())
+                .andExpect(jsonPath("$[?(@.code == 'SUPER_ADMIN')]").doesNotExist());
+
+        mockMvc.perform(get("/api/rbac/users")
+                        .param("organizationId", organization.getId().toString())
+                        .header("Authorization", "Bearer " + platformAdminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.email == '" + admin.getEmail() + "')]").exists())
+                .andExpect(jsonPath("$[?(@.email == '" + outsider.getEmail() + "')]").doesNotExist());
+
+        mockMvc.perform(post("/api/rbac/roles")
+                        .param("organizationId", organization.getId().toString())
+                        .header("Authorization", "Bearer " + platformAdminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "code", "SUPERVISEUR_CLINIQUE",
+                                "name", "Superviseur clinique",
+                                "assignable", true,
+                                "permissionCodes", List.of("USER_READ", "CASH_HISTORY_READ")))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.code").value("SUPERVISEUR_CLINIQUE"))
+                .andExpect(jsonPath("$.organizationId").value(organization.getId().toString()));
     }
 
     @Test
