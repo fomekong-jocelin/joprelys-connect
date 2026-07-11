@@ -12,6 +12,18 @@ ALTER TABLE patients ADD COLUMN physical_description TEXT;
 ALTER TABLE patients ADD COLUMN found_at TIMESTAMP WITH TIME ZONE;
 ALTER TABLE patients ADD COLUMN found_location VARCHAR(255);
 
+ALTER TABLE patients ADD CONSTRAINT chk_patients_verified_identity_required
+    CHECK (
+        identity_status <> 'VERIFIED'
+        OR (full_name IS NOT NULL AND gender IS NOT NULL AND birth_date IS NOT NULL AND city IS NOT NULL)
+    );
+
+ALTER TABLE patients ADD CONSTRAINT chk_patients_provisional_number_required
+    CHECK (
+        identity_status NOT IN ('PROVISIONAL_URGENCY', 'DECLARED')
+        OR temporary_patient_number IS NOT NULL
+    );
+
 CREATE UNIQUE INDEX ux_patients_temporary_patient_number
     ON patients (temporary_patient_number);
 CREATE INDEX idx_patients_identity_status
