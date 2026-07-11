@@ -1,3 +1,5 @@
+import { CreateProvisionalPatientRequest } from '../patient/provisional-patient.models';
+
 export interface CreateEmergencyRequest {
   patientId: string;
   arrivalMode: string;
@@ -8,6 +10,20 @@ export interface CreateEmergencyRequest {
   initialBpDiastolic?: number;
   initialHr?: number;
   initialTemp?: number;
+  thirdPartyName?: string;
+  thirdPartyPhone?: string;
+  thirdPartyRelationship?: string;
+  thirdPartyIdDocument?: string;
+  thirdPartyCircumstances?: string;
+  thirdPartyConsentToContact?: boolean;
+}
+
+export type EmergencyTriageRequest = Omit<CreateEmergencyRequest, 'patientId'>;
+
+export interface CreateProvisionalEmergencyAdmissionRequest {
+  requestId: string;
+  patient: CreateProvisionalPatientRequest;
+  emergency: EmergencyTriageRequest;
 }
 
 export interface AddResuscitationLogRequest {
@@ -34,6 +50,16 @@ export interface EmergencyRecord {
   organizationId: string;
   patientId: string;
   patientName: string;
+  globalPatientNumber: string;
+  localPatientNumber: string;
+  temporaryPatientNumber?: string;
+  identityStatus?: string;
+  identityConfidenceLevel?: string;
+  apparentGender?: string;
+  estimatedAgeRange?: string;
+  physicalDescription?: string;
+  foundAt?: string;
+  foundLocation?: string;
   visitId?: string;
   arrivalMode: string;
   triageLevel: string;
@@ -43,6 +69,12 @@ export interface EmergencyRecord {
   initialBpDiastolic?: number;
   initialHr?: number;
   initialTemp?: number;
+  thirdPartyName?: string;
+  thirdPartyPhone?: string;
+  thirdPartyRelationship?: string;
+  thirdPartyIdDocument?: string;
+  thirdPartyCircumstances?: string;
+  thirdPartyConsentToContact?: boolean;
   stabilizedAt?: string;
   orientation?: string;
   createdByUserId?: string;

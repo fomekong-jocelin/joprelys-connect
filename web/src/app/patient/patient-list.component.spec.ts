@@ -1,14 +1,19 @@
-import { TestBed, ComponentFixture } from '@angular/core/testing';
-import { PatientListComponent } from './patient-list.component';
-import { PatientApiService } from './patient-api.service';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
+import { PatientApiService } from './patient-api.service';
+import { PatientListComponent } from './patient-list.component';
 import { Patient } from './patient.models';
-import { provideRouter } from '@angular/router';
 
 describe('PatientListComponent', () => {
   let component: PatientListComponent;
   let fixture: ComponentFixture<PatientListComponent>;
-  let mockApi: any;
+  let router: Router;
+  let mockApi: {
+    list: ReturnType<typeof vi.fn>;
+    getById: ReturnType<typeof vi.fn>;
+    triggerEmergencyAccess: ReturnType<typeof vi.fn>;
+  };
 
   const mockPatients: Patient[] = [
     {
@@ -30,15 +35,16 @@ describe('PatientListComponent', () => {
   beforeEach(async () => {
     mockApi = {
       list: vi.fn().mockReturnValue(of(mockPatients)),
-      create: vi.fn(),
       getById: vi.fn().mockReturnValue(of(mockPatients[0])),
+      triggerEmergencyAccess: vi.fn().mockReturnValue(of(void 0)),
     };
 
     await TestBed.configureTestingModule({
       imports: [PatientListComponent],
       providers: [
         provideRouter([
-          { path: 'patients/:id', redirectTo: '' }
+          { path: 'patients/:id', redirectTo: '' },
+          { path: 'clinic/emergencies', redirectTo: '' },
         ]),
         { provide: PatientApiService, useValue: mockApi },
       ],
@@ -46,6 +52,7 @@ describe('PatientListComponent', () => {
 
     fixture = TestBed.createComponent(PatientListComponent);
     component = fixture.componentInstance;
+    router = TestBed.inject(Router);
     fixture.detectChanges();
   });
 
@@ -55,30 +62,39 @@ describe('PatientListComponent', () => {
     expect(component.loading()).toBe(false);
   });
 
-  it('should call create patient api on submit', () => {
-    component.fullName.set('Jean Dupont');
-    component.gender.set('MASCULIN');
-    component.birthDate.set('1990-05-15');
-    component.phone.set('+237699999999');
-    component.city.set('Douala');
+  it('should open the unified admission workspace', () => {
+    expect(component.showCreateForm()).toBe(false);
 
-    mockApi.create.mockReturnValue(of(mockPatients[0]));
+    component.toggleCreateForm();
 
-    component.submit();
+    expect(component.showCreateForm()).toBe(true);
+  });
 
-    expect(mockApi.create).toHaveBeenCalledWith({
-      fullName: 'Jean Dupont',
-      gender: 'MASCULIN',
-      birthDate: '1990-05-15',
-      phone: '+237699999999',
-      city: 'Douala',
-      district: undefined,
-      address: undefined,
-      emergencyContactName: undefined,
-      emergencyContactPhone: undefined,
-      allergies: undefined,
-      medicalHistory: undefined,
+  it('should navigate to the patient record after a normal admission', () => {
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    component.showCreateForm.set(true);
+
+    component.onAdmissionCompleted({
+      carePath: 'NORMAL',
+      patientId: '1',
+      patientDisplayName: 'Jean Dupont',
+      visitId: 'visit-1',
     });
-    expect(component.list().length).toBe(2);
+
+    expect(component.showCreateForm()).toBe(false);
+    expect(navigateSpy).toHaveBeenCalledWith(['/patients', '1']);
+  });
+
+  it('should navigate to emergency operations after an emergency admission', () => {
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    component.onAdmissionCompleted({
+      carePath: 'EMERGENCY',
+      patientId: 'urg-temp-1',
+      patientDisplayName: 'URG-TEMP-20260711-000001',
+      emergencyId: 'emergency-1',
+    });
+
+    expect(navigateSpy).toHaveBeenCalledWith(['/clinic/emergencies']);
   });
 });

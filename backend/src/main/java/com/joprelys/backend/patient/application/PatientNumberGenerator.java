@@ -10,30 +10,29 @@ import java.time.format.DateTimeFormatter;
 @Service
 public class PatientNumberGenerator {
 
-	private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
-	private final JdbcTemplate jdbcTemplate;
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private final JdbcTemplate jdbcTemplate;
 
-	public PatientNumberGenerator(JdbcTemplate jdbcTemplate) {
-		this.jdbcTemplate = jdbcTemplate;
-	}
+    public PatientNumberGenerator(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
 
-	@Transactional(propagation = Propagation.REQUIRES_NEW)
-	public synchronized GeneratedNumbers generateNextNumbers() {
-		String dateStr = LocalDate.now().format(DATE_FORMATTER);
-		String dpuPrefix = "DPU-JOP-" + dateStr + "-";
-		String localPrefix = "PAT-" + dateStr + "-";
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public synchronized GeneratedNumbers generateNextNumbers() {
+        String dateStr = LocalDate.now().format(DATE_FORMATTER);
+        String dpuPrefix = "DPU-JOP-" + dateStr + "-";
+        String localPrefix = "PAT-" + dateStr + "-";
 
-		// Utilisation de JdbcTemplate pour contourner le filtre @TenantId de Hibernate et compter au niveau global
-		String sql = "SELECT COUNT(*) FROM patients WHERE global_patient_number LIKE ?";
-		Long count = jdbcTemplate.queryForObject(sql, Long.class, dpuPrefix + "%");
-		long nextSeq = (count != null ? count : 0L) + 1;
+        String sql = "SELECT COUNT(*) FROM patients WHERE global_patient_number LIKE ?";
+        Long count = jdbcTemplate.queryForObject(sql, Long.class, dpuPrefix + "%");
+        long nextSeq = (count != null ? count : 0L) + 1;
 
-		String globalNumber = String.format("%s%06d", dpuPrefix, nextSeq);
-		String localNumber = String.format("%s%06d", localPrefix, nextSeq);
+        String globalNumber = String.format("%s%06d", dpuPrefix, nextSeq);
+        String localNumber = String.format("%s%06d", localPrefix, nextSeq);
 
-		return new GeneratedNumbers(globalNumber, localNumber);
-	}
+        return new GeneratedNumbers(globalNumber, localNumber);
+    }
 
-	public record GeneratedNumbers(String globalNumber, String localNumber) {
-	}
+    public record GeneratedNumbers(String globalNumber, String localNumber) {
+    }
 }

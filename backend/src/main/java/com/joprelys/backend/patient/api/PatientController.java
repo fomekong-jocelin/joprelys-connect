@@ -58,13 +58,12 @@ public class PatientController {
             @ApiResponse(responseCode = "409", description = "Patient en doublon détecté")
     })
     public PatientResponse create(@Valid @RequestBody CreatePatientRequest request) {
-        PatientEntity entity = patientService.createPatient(request);
-        return mapToResponse(entity);
+        return mapToResponse(patientService.createPatient(request));
     }
 
     @GetMapping
     @PreAuthorize("hasAuthority('PATIENT_READ') or " + LEGACY_PATIENT_ROLES)
-    @Operation(summary = "Lister les patients", description = "Retourne la liste des patients avec recherche optionnelle par nom, téléphone ou DPU.", responses = {
+    @Operation(summary = "Lister les patients", description = "Retourne la liste des patients avec recherche optionnelle par nom, téléphone, DPU ou numéro URG-TEMP.", responses = {
             @ApiResponse(responseCode = "200", description = "Liste retournée avec succès")
     })
     public List<PatientResponse> list(
@@ -102,7 +101,7 @@ public class PatientController {
     public void merge(@Valid @RequestBody MergePatientsRequest request) {
         String actorEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         var actor = userAccountRepository.findByEmail(actorEmail.trim().toLowerCase())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur non trouvé"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED"));
         patientService.mergePatients(request.primaryId(), request.secondaryId(), actor.getId());
     }
 
@@ -118,8 +117,7 @@ public class PatientController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PATIENT_READ') or " + LEGACY_PATIENT_ROLES)
     public PatientResponse getById(@PathVariable UUID id) {
-        PatientEntity entity = patientService.getPatientById(id);
-        return mapToResponse(entity);
+        return mapToResponse(patientService.getPatientById(id));
     }
 
     @GetMapping("/{id}/summary-pdf")
@@ -166,7 +164,16 @@ public class PatientController {
                 entity.getEmail(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt(),
-                emergencyActive);
+                emergencyActive,
+                entity.getIdentityStatus(),
+                entity.getTemporaryPatientNumber(),
+                entity.getDisplayName(),
+                entity.getIdentityConfidenceLevel(),
+                entity.getApparentGender(),
+                entity.getEstimatedAgeRange(),
+                entity.getPhysicalDescription(),
+                entity.getFoundAt(),
+                entity.getFoundLocation());
     }
 }
 

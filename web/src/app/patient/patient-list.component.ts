@@ -1,13 +1,14 @@
-import { Component, computed, inject, signal, OnInit } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { finalize } from 'rxjs';
+import { AdmissionCompleted, UnifiedAdmissionComponent } from '../admission/unified-admission.component';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
 import { AlertComponent } from '../shared/ui/alert.component';
 import { ButtonComponent } from '../shared/ui/button.component';
-import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { CardComponent } from '../shared/ui/card.component';
 import { EmptyStateComponent } from '../shared/ui/empty-state.component';
-import { PatientFormComponent, PatientFormLabels } from './patient-form.component';
+import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { PatientApiService } from './patient-api.service';
 import { Patient } from './patient.models';
 
@@ -20,8 +21,8 @@ import { Patient } from './patient.models';
     ButtonComponent,
     CardComponent,
     EmptyStateComponent,
-    PatientFormComponent,
     PageHeaderComponent,
+    UnifiedAdmissionComponent,
   ],
 })
 export class PatientListComponent implements OnInit {
@@ -29,119 +30,66 @@ export class PatientListComponent implements OnInit {
   private readonly i18n = inject(I18nService);
   private readonly router = inject(Router);
 
-  t(key: string): string {
-    return this.i18n.t(key);
-  }
-
   readonly list = signal<Patient[]>([]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
-
   readonly searchQuery = signal('');
   readonly selectedPatient = signal<Patient | null>(null);
-
-  // STORY-0803 — Consent Blocking & Break-Glass Signals
+  readonly showCreateForm = signal(false);
   readonly consentRequiredPatient = signal<Patient | null>(null);
   readonly emergencyReason = signal('');
   readonly emergencyLoading = signal(false);
   readonly emergencyError = signal<string | null>(null);
 
-  // Form Signals
-  readonly fullName = signal('');
-  readonly gender = signal('');
-  readonly birthDate = signal('');
-  readonly phone = signal('');
-  readonly city = signal('');
-  readonly district = signal('');
-  readonly address = signal('');
-  readonly emergencyContactName = signal('');
-  readonly emergencyContactPhone = signal('');
-  readonly allergies = signal('');
-  readonly medicalHistory = signal('');
-  readonly bloodGroup = signal('');
-  readonly email = signal('');
-  readonly formLoading = signal(false);
-  readonly formError = signal<string | null>(null);
-  readonly showCreateForm = signal(false);
-
-  // Translation Signals
   readonly pageTitle = computed(() => this.i18n.t('patients.title'));
   readonly pageSubtitle = computed(() => this.i18n.t('patients.subtitle'));
   readonly backLabel = computed(() => this.i18n.t('common.back'));
   readonly searchPlaceholder = computed(() => this.i18n.t('patients.searchPlaceholder'));
-  readonly createLabel = computed(() => this.i18n.t('patients.create'));
+  readonly createLabel = computed(() => this.i18n.t('admission.title'));
   readonly loadingLabel = computed(() => this.i18n.t('common.loading'));
   readonly emptyLabel = computed(() => this.i18n.t('patients.empty'));
-
-  readonly formLabels = computed<PatientFormLabels>(() => ({
-    title: this.i18n.t('patients.createTitle'),
-    fullName: this.i18n.t('patients.fullName'),
-    fullNamePlaceholder: this.i18n.t('patients.fullNamePlaceholder'),
-    gender: this.i18n.t('patients.gender'),
-    genderPlaceholder: this.i18n.t('patients.genderPlaceholder'),
-    genderMale: this.i18n.t('patients.genderMale'),
-    genderFemale: this.i18n.t('patients.genderFemale'),
-    birthDate: this.i18n.t('patients.birthDate'),
-    phone: this.i18n.t('patients.phone'),
-    phonePlaceholder: this.i18n.t('patients.phonePlaceholder'),
-    city: this.i18n.t('patients.city'),
-    cityPlaceholder: this.i18n.t('patients.cityPlaceholder'),
-    district: this.i18n.t('patients.district'),
-    districtPlaceholder: this.i18n.t('patients.districtPlaceholder'),
-    address: this.i18n.t('patients.address'),
-    addressPlaceholder: this.i18n.t('patients.addressPlaceholder'),
-    emergencyContactName: this.i18n.t('patients.emergencyContactName'),
-    emergencyContactNamePlaceholder: this.i18n.t('patients.emergencyContactNamePlaceholder'),
-    emergencyContactPhone: this.i18n.t('patients.emergencyContactPhone'),
-    emergencyContactPhonePlaceholder: this.i18n.t('patients.emergencyContactPhonePlaceholder'),
-    emergencyContact: this.i18n.t('patients.emergencyContact'),
-    allergies: this.i18n.t('patients.allergies'),
-    allergiesPlaceholder: this.i18n.t('patients.allergiesPlaceholder'),
-    medicalHistory: this.i18n.t('patients.medicalHistory'),
-    medicalHistoryPlaceholder: this.i18n.t('patients.medicalHistoryPlaceholder'),
-    cancel: this.i18n.t('common.cancel'),
-    save: this.i18n.t('common.save'),
-    saving: this.i18n.t('common.saving'),
-  }));
 
   ngOnInit(): void {
     this.load();
   }
 
+  t(key: string): string {
+    return this.i18n.t(key);
+  }
+
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.api.list(this.searchQuery()).subscribe({
-      next: (res) => {
-        this.list.set(res);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.error.set(this.i18n.t('patients.loadError'));
-        this.loading.set(false);
-      },
+    this.api.list(this.searchQuery()).pipe(
+      finalize(() => this.loading.set(false))
+    ).subscribe({
+      next: (patients) => this.list.set(patients),
+      error: () => this.error.set(this.i18n.t('patients.loadError')),
     });
   }
 
   onSearchInput(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    this.searchQuery.set(value);
+    this.searchQuery.set((event.target as HTMLInputElement).value);
   }
 
   toggleCreateForm(): void {
     this.showCreateForm.update((visible) => !visible);
-    if (!this.showCreateForm()) {
-      this.resetForm();
-    }
   }
 
   cancelCreate(): void {
     this.showCreateForm.set(false);
-    this.resetForm();
+  }
+
+  onAdmissionCompleted(result: AdmissionCompleted): void {
+    this.showCreateForm.set(false);
+    const route = result.carePath === 'EMERGENCY'
+      ? ['/clinic/emergencies']
+      : ['/patients', result.patientId];
+    void this.router.navigate(route);
   }
 
   viewDetail(patient: Patient): void {
-    this.router.navigate(['/patients', patient.id], { state: { patient } });
+    void this.router.navigate(['/patients', patient.id], { state: { patient } });
   }
 
   closeDetail(): void {
@@ -151,95 +99,26 @@ export class PatientListComponent implements OnInit {
 
   triggerEmergencyAccess(): void {
     const patient = this.consentRequiredPatient();
-    if (!patient || !this.emergencyReason().trim()) return;
+    const reason = this.emergencyReason().trim();
+    if (!patient || !reason || this.emergencyLoading()) return;
 
     this.emergencyLoading.set(true);
     this.emergencyError.set(null);
-
-    this.api.triggerEmergencyAccess(patient.id, this.emergencyReason().trim()).subscribe({
+    this.api.triggerEmergencyAccess(patient.id, reason).pipe(
+      finalize(() => this.emergencyLoading.set(false))
+    ).subscribe({
       next: () => {
-        this.emergencyLoading.set(false);
         this.consentRequiredPatient.set(null);
         this.emergencyReason.set('');
         this.viewDetail(patient);
       },
-      error: (err) => {
-        this.emergencyLoading.set(false);
-        this.emergencyError.set(err.error?.detail || err.error?.title || this.t('patient.consent.emergencyAccessError'));
-      }
+      error: (err) => this.emergencyError.set(
+        err.error?.detail || err.error?.title || this.t('patient.consent.emergencyAccessError')
+      ),
     });
   }
 
-  submit(): void {
-    this.formError.set(null);
-    if (
-      !this.fullName() ||
-      !this.gender() ||
-      !this.birthDate() ||
-      !this.phone() ||
-      !this.city()
-    ) {
-      this.formError.set(this.i18n.t('patients.requiredFields'));
-      return;
-    }
-
-    this.formLoading.set(true);
-    this.api
-      .create({
-        fullName: this.fullName(),
-        gender: this.gender(),
-        birthDate: this.birthDate(),
-        phone: this.phone(),
-        city: this.city(),
-        district: this.district() || undefined,
-        address: this.address() || undefined,
-        emergencyContactName: this.emergencyContactName() || undefined,
-        emergencyContactPhone: this.emergencyContactPhone() || undefined,
-        allergies: this.allergies() || undefined,
-        medicalHistory: this.medicalHistory() || undefined,
-        bloodGroup: this.bloodGroup() || undefined,
-        email: this.email() || undefined,
-      })
-      .subscribe({
-        next: (res) => {
-          this.list.update((items) => [...items, res]);
-          this.formLoading.set(false);
-          this.showCreateForm.set(false);
-          this.resetForm();
-          // Directly open detail of the newly created patient
-          this.viewDetail(res);
-        },
-        error: (err) => {
-          let errorMsg = this.i18n.t('patients.saveError');
-          if (err && err.status === 401) {
-            errorMsg = this.i18n.t('common.error.unauthorized');
-          } else if (err && err.status === 403) {
-            errorMsg = this.i18n.t('common.error.forbidden');
-          } else if (err && err.status >= 500) {
-            errorMsg = this.i18n.t('common.error.server');
-          } else if (err && err.error && err.error.detail) {
-            errorMsg = err.error.detail;
-          }
-          this.formError.set(errorMsg);
-          this.formLoading.set(false);
-        },
-      });
-  }
-
-  resetForm(): void {
-    this.fullName.set('');
-    this.gender.set('');
-    this.birthDate.set('');
-    this.phone.set('');
-    this.city.set('');
-    this.district.set('');
-    this.address.set('');
-    this.emergencyContactName.set('');
-    this.emergencyContactPhone.set('');
-    this.allergies.set('');
-    this.medicalHistory.set('');
-    this.bloodGroup.set('');
-    this.email.set('');
-    this.formError.set(null);
+  patientDisplayName(patient: Patient): string {
+    return patient.displayName || patient.fullName || patient.temporaryPatientNumber || patient.globalPatientNumber;
   }
 }

@@ -56,6 +56,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run tests
-        run: npm test
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee frontend-test.log
+      - name: Upload frontend test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-test-log
+          path: web/frontend-test.log
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Build Angular production
         run: npm run build

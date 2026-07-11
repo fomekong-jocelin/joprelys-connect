@@ -1,3 +1,5 @@
+export type PatientIdentityStatus = 'PROVISIONAL_URGENCY' | 'DECLARED' | 'VERIFIED' | 'MERGED';
+
 export interface Patient {
   id: string;
   organizationId: string;
@@ -20,6 +22,15 @@ export interface Patient {
   createdAt: string;
   updatedAt: string;
   emergencyAccessActive?: boolean;
+  identityStatus?: PatientIdentityStatus;
+  temporaryPatientNumber?: string;
+  displayName?: string;
+  identityConfidenceLevel?: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH' | 'VERIFIED';
+  apparentGender?: string;
+  estimatedAgeRange?: string;
+  physicalDescription?: string;
+  foundAt?: string;
+  foundLocation?: string;
 }
 
 export interface CreatePatientDto {
@@ -166,8 +177,6 @@ export interface DischargeHospitalizationRequest {
   dischargeInstructions: string;
   againstMedicalAdvice?: boolean;
 }
-
-
 
 export interface PatientDuplicateCandidate {
   id: string;

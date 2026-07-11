@@ -5,7 +5,7 @@
     backLink="/dashboard"
     [backLabel]="backLabel()"
   >
-    @if (!showCreateForm() && !selectedPatient()) {
+    @if (!selectedPatient()) {
       <app-ui-button class="w-full sm:w-auto" (pressed)="toggleCreateForm()">
         {{ createLabel() }}
       </app-ui-button>
@@ -17,69 +17,42 @@
       <app-ui-alert tone="error" class="mb-6">{{ err }}</app-ui-alert>
     }
 
-    @if (showCreateForm()) {
-      <app-patient-form
-        [labels]="formLabels()"
-        [loading]="formLoading()"
-        [error]="formError()"
-        [(fullName)]="fullName"
-        [(gender)]="gender"
-        [(birthDate)]="birthDate"
-        [(phone)]="phone"
-        [(city)]="city"
-        [(district)]="district"
-        [(address)]="address"
-        [(emergencyContactName)]="emergencyContactName"
-        [(emergencyContactPhone)]="emergencyContactPhone"
-        [(allergies)]="allergies"
-        [(medicalHistory)]="medicalHistory"
-        [(bloodGroup)]="bloodGroup"
-        [(email)]="email"
-        (submitted)="submit()"
-        (cancelled)="cancelCreate()"
-      />
-    } @else if (consentRequiredPatient(); as patient) {
+    @if (consentRequiredPatient(); as patient) {
       <app-ui-card>
-        <div class="max-w-md mx-auto text-center py-8 flex flex-col items-center gap-6">
-          <div class="p-4 rounded-full bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-rose-600 dark:text-rose-400">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-12 h-12">
+        <div class="mx-auto flex max-w-md flex-col items-center gap-6 py-8 text-center">
+          <div class="rounded-full border border-rose-100 bg-rose-50 p-4 text-rose-600 dark:border-rose-900/30 dark:bg-rose-950/20 dark:text-rose-400">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-12 w-12">
               <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
             </svg>
           </div>
 
           <div>
-            <h3 class="font-display font-black text-xl text-[var(--text-primary)]">
-              {{ t('patient.consent.title') }}
-            </h3>
-            <p class="text-xs text-[var(--text-muted)] mt-1 whitespace-nowrap">
-              {{ t('patient.consent.dpuLabel') }} <span class="font-mono font-bold text-[var(--brand-info-text)] dark:text-indigo-400">{{ patient.globalPatientNumber }}</span>
+            <h3 class="font-display text-xl font-black text-[var(--text-primary)]">{{ t('patient.consent.title') }}</h3>
+            <p class="mt-1 whitespace-nowrap text-xs text-[var(--text-muted)]">
+              {{ t('patient.consent.dpuLabel') }}
+              <span class="font-mono font-bold text-[var(--brand-info-text)] dark:text-indigo-400">{{ patient.globalPatientNumber }}</span>
             </p>
-            <p class="text-sm text-[var(--text-secondary)] mt-4 leading-relaxed">
-              {{ t('patient.consent.noAccessMessage') }}
-            </p>
+            <p class="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">{{ t('patient.consent.noAccessMessage') }}</p>
           </div>
 
           @if (emergencyError(); as err) {
             <app-ui-alert tone="error" class="w-full text-left">{{ err }}</app-ui-alert>
           }
 
-          <div class="w-full border-t border-[var(--app-border)]/80 pt-6 flex flex-col gap-4">
-            <div class="text-left w-full">
-              <label for="emergency-reason" class="ui-label block mb-2">{{ t('patient.consent.emergencyJustificationLabel') }}</label>
+          <div class="flex w-full flex-col gap-4 border-t border-[var(--app-border)]/80 pt-6">
+            <div class="w-full text-left">
+              <label for="emergency-reason" class="ui-label mb-2 block">{{ t('patient.consent.emergencyJustificationLabel') }}</label>
               <textarea
                 id="emergency-reason"
-                class="ui-input w-full min-h-[80px]"
+                class="ui-input min-h-[80px] w-full py-2.5"
                 [placeholder]="t('patient.consent.emergencyReasonPlaceholder')"
                 [value]="emergencyReason()"
                 (input)="emergencyReason.set($any($event.target).value)"
-                style="color: var(--text-primary); background-color: var(--bg-card);"
               ></textarea>
             </div>
 
-            <div class="flex items-center justify-between gap-3 w-full">
-              <app-ui-button variant="secondary" (pressed)="closeDetail()" class="grow">
-                {{ t('common.cancel') }}
-              </app-ui-button>
+            <div class="flex w-full items-center justify-between gap-3">
+              <app-ui-button variant="secondary" (pressed)="closeDetail()" class="grow">{{ t('common.cancel') }}</app-ui-button>
               <app-ui-button
                 variant="primary"
                 class="grow"
@@ -93,8 +66,7 @@
         </div>
       </app-ui-card>
     } @else {
-      <!-- List & Search -->
-      <div class="mb-6 flex gap-3 max-w-lg">
+      <div class="mb-6 flex max-w-lg gap-3">
         <div class="relative flex-1">
           <input
             type="text"
@@ -103,7 +75,6 @@
             [value]="searchQuery()"
             (input)="onSearchInput($event)"
             (keyup.enter)="load()"
-            style="color: var(--text-primary); background-color: var(--bg-card);"
           />
           <span class="absolute left-3 top-3 text-gray-400">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -111,63 +82,44 @@
             </svg>
           </span>
         </div>
-        <app-ui-button (pressed)="load()">
-          {{ t('common.search') }}
-        </app-ui-button>
+        <app-ui-button (pressed)="load()">{{ t('common.search') }}</app-ui-button>
       </div>
 
       <app-ui-card>
         @if (loading()) {
-          <div class="py-10 text-center text-sm font-semibold" style="color: var(--text-secondary)">
-            {{ loadingLabel() }}
-          </div>
+          <div class="py-10 text-center text-sm font-semibold text-[var(--text-secondary)]">{{ loadingLabel() }}</div>
         } @else if (list().length === 0) {
           <app-empty-state [message]="emptyLabel()" />
         } @else {
-          <!-- Mobile Cards -->
           <div class="space-y-3 md:hidden">
             @for (patient of list(); track patient.id) {
               <article class="ui-card-muted p-4">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
-                    <h3 class="truncate font-extrabold" style="color: var(--text-primary)">{{ patient.fullName }}</h3>
-                    <p class="mt-1 text-xs font-mono font-extrabold tracking-normal text-[var(--brand-info-text)] dark:text-indigo-400 whitespace-nowrap">{{ patient.globalPatientNumber }}</p>
+                    <h3 class="truncate font-extrabold text-[var(--text-primary)]">{{ patientDisplayName(patient) }}</h3>
+                    <p class="mt-1 whitespace-nowrap font-mono text-xs font-extrabold tracking-normal text-[var(--brand-info-text)] dark:text-indigo-400">{{ patient.globalPatientNumber }}</p>
                   </div>
-                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">
-                    {{ patient.gender }}
+                  <span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--app-surface)] border border-[var(--app-border)]">
+                    {{ patient.gender || '—' }}
                   </span>
                 </div>
 
                 <dl class="mt-3 space-y-2 text-sm">
-                  <div>
-                    <dt class="ui-label inline">{{ t('patient.list.phone') }} </dt>
-                    <dd class="inline font-medium" style="color: var(--text-secondary)">{{ patient.phone }}</dd>
-                  </div>
-                  <div>
-                    <dt class="ui-label inline">{{ t('patient.list.city') }} </dt>
-                    <dd class="inline font-medium" style="color: var(--text-secondary)">{{ patient.city }}</dd>
-                  </div>
+                  <div><dt class="ui-label inline">{{ t('patient.list.phone') }} </dt><dd class="inline font-medium text-[var(--text-secondary)]">{{ patient.phone || '—' }}</dd></div>
+                  <div><dt class="ui-label inline">{{ t('patient.list.city') }} </dt><dd class="inline font-medium text-[var(--text-secondary)]">{{ patient.city || '—' }}</dd></div>
                 </dl>
 
                 <div class="mt-4">
-                  <app-ui-button class="w-full" variant="secondary" (pressed)="viewDetail(patient)">
-                    {{ t('patient.list.viewRecord') }}
-                  </app-ui-button>
+                  <app-ui-button class="w-full" variant="secondary" (pressed)="viewDetail(patient)">{{ t('patient.list.viewRecord') }}</app-ui-button>
                 </div>
               </article>
             }
           </div>
 
-          <!-- Desktop Table -->
           <div class="hidden overflow-x-auto md:block">
             <table class="ui-table min-w-[1060px]">
               <colgroup>
-                <col class="w-[18%]" />
-                <col class="w-[25%]" />
-                <col class="w-[23%]" />
-                <col class="w-[10%]" />
-                <col class="w-[14%]" />
-                <col class="w-[10%]" />
+                <col class="w-[18%]" /><col class="w-[25%]" /><col class="w-[23%]" /><col class="w-[10%]" /><col class="w-[14%]" /><col class="w-[10%]" />
               </colgroup>
               <thead>
                 <tr>
@@ -183,17 +135,15 @@
                 @for (patient of list(); track patient.id) {
                   <tr>
                     <td>
-                      <div class="max-w-[180px] truncate font-extrabold" style="color: var(--text-primary)" [title]="patient.fullName">{{ patient.fullName }}</div>
-                      <div class="mt-0.5 max-w-[180px] truncate text-xs text-gray-400" [title]="patient.city">{{ patient.city }}</div>
+                      <div class="max-w-[180px] truncate font-extrabold text-[var(--text-primary)]" [title]="patientDisplayName(patient)">{{ patientDisplayName(patient) }}</div>
+                      <div class="mt-0.5 max-w-[180px] truncate text-xs text-[var(--text-muted)]" [title]="patient.city || ''">{{ patient.city || '—' }}</div>
                     </td>
                     <td class="whitespace-nowrap font-mono text-sm font-extrabold tracking-wide text-[var(--brand-info-text)] dark:text-indigo-400">{{ patient.globalPatientNumber }}</td>
-                    <td class="whitespace-nowrap font-mono text-sm font-extrabold tracking-wide text-emerald-500 dark:text-emerald-400">{{ patient.localPatientNumber }}</td>
-                    <td class="whitespace-nowrap">{{ patient.gender }}</td>
-                    <td class="whitespace-nowrap">{{ patient.phone }}</td>
+                    <td class="whitespace-nowrap font-mono text-sm font-extrabold tracking-wide text-[var(--brand-success-text)]">{{ patient.localPatientNumber }}</td>
+                    <td class="whitespace-nowrap">{{ patient.gender || '—' }}</td>
+                    <td class="whitespace-nowrap">{{ patient.phone || '—' }}</td>
                     <td class="whitespace-nowrap text-right">
-                      <app-ui-button variant="link" (pressed)="viewDetail(patient)">
-                        {{ t('patient.list.viewRecord') }}
-                      </app-ui-button>
+                      <app-ui-button variant="link" (pressed)="viewDetail(patient)">{{ t('patient.list.viewRecord') }}</app-ui-button>
                     </td>
                   </tr>
                 }
@@ -205,3 +155,25 @@
     }
   </div>
 </app-shell>
+
+@if (showCreateForm()) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-bg)] p-3 backdrop-blur-sm sm:p-4"
+    role="presentation"
+    (click)="cancelCreate()"
+  >
+    <div
+      class="ui-card w-full max-w-2xl overflow-hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="admission-dialog-title"
+      (click)="$event.stopPropagation()"
+    >
+      <app-unified-admission
+        initialCarePath="NORMAL"
+        (cancelled)="cancelCreate()"
+        (completed)="onAdmissionCompleted($event)"
+      />
+    </div>
+  </div>
+}

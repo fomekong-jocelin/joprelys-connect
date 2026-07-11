@@ -1,264 +1,387 @@
 package com.joprelys.backend.patient.infrastructure.persistence;
 
+import com.joprelys.backend.patient.domain.IdentityConfidenceLevel;
+import com.joprelys.backend.patient.domain.PatientIdentityStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import org.hibernate.annotations.TenantId;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
+import org.hibernate.annotations.TenantId;
 
 @Entity
 @Table(name = "patients")
 public class PatientEntity {
 
-	@Id
-	private UUID id;
+    @Id
+    private UUID id;
 
-	@TenantId
-	@Column(name = "organization_id")
-	private UUID organizationId;
+    @TenantId
+    @Column(name = "organization_id")
+    private UUID organizationId;
 
-	@Column(name = "global_patient_number", nullable = false, unique = true, length = 50)
-	private String globalPatientNumber;
+    @Column(name = "global_patient_number", nullable = false, unique = true, length = 50)
+    private String globalPatientNumber;
 
-	@Column(name = "local_patient_number", nullable = false, unique = true, length = 50)
-	private String localPatientNumber;
+    @Column(name = "local_patient_number", nullable = false, unique = true, length = 50)
+    private String localPatientNumber;
 
-	@Column(name = "full_name", nullable = false)
-	private String fullName;
+    @Column(name = "full_name")
+    private String fullName;
 
-	@Column(name = "gender", nullable = false, length = 20)
-	private String gender;
+    @Column(name = "gender", length = 20)
+    private String gender;
 
-	@Column(name = "birth_date", nullable = false)
-	private LocalDate birthDate;
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
 
-	@Column(name = "phone", length = 50)
-	private String phone;
+    @Column(name = "phone", length = 50)
+    private String phone;
 
-	@Column(name = "city", nullable = false, length = 100)
-	private String city;
+    @Column(name = "city", length = 100)
+    private String city;
 
-	@Column(name = "district", length = 100)
-	private String district;
+    @Column(name = "district", length = 100)
+    private String district;
 
-	@Column(name = "address")
-	private String address;
+    @Column(name = "address")
+    private String address;
 
-	@Column(name = "emergency_contact_name", length = 150)
-	private String emergencyContactName;
+    @Column(name = "emergency_contact_name", length = 150)
+    private String emergencyContactName;
 
-	@Column(name = "emergency_contact_phone", length = 50)
-	private String emergencyContactPhone;
+    @Column(name = "emergency_contact_phone", length = 50)
+    private String emergencyContactPhone;
 
-	@Column(name = "allergies")
-	private String allergies;
+    @Column(name = "allergies")
+    private String allergies;
 
-	@Column(name = "medical_history")
-	private String medicalHistory;
+    @Column(name = "medical_history")
+    private String medicalHistory;
 
-	@Column(name = "status", nullable = false, length = 20)
-	private String status;
+    @Column(name = "status", nullable = false, length = 20)
+    private String status;
 
-	@Column(name = "blood_group", length = 10)
-	private String bloodGroup;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "identity_status", nullable = false, length = 32)
+    private PatientIdentityStatus identityStatus;
 
-	@Column(name = "email", length = 255)
-	private String email;
+    @Column(name = "temporary_patient_number", unique = true, length = 40)
+    private String temporaryPatientNumber;
 
-	@Column(name = "created_at", nullable = false)
-	private Instant createdAt;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "identity_confidence_level", nullable = false, length = 24)
+    private IdentityConfidenceLevel identityConfidenceLevel;
 
-	@Column(name = "updated_at", nullable = false)
-	private Instant updatedAt;
+    @Column(name = "apparent_gender", length = 32)
+    private String apparentGender;
 
-	protected PatientEntity() {
-	}
+    @Column(name = "estimated_age_range", length = 64)
+    private String estimatedAgeRange;
 
-	public PatientEntity(
-			String globalPatientNumber,
-			String localPatientNumber,
-			String fullName,
-			String gender,
-			LocalDate birthDate,
-			String phone,
-			String city,
-			String district,
-			String address,
-			String emergencyContactName,
-			String emergencyContactPhone,
-			String allergies,
-			String medicalHistory) {
-		this.id = UUID.randomUUID();
-		this.globalPatientNumber = globalPatientNumber;
-		this.localPatientNumber = localPatientNumber;
-		this.fullName = fullName;
-		this.gender = gender;
-		this.birthDate = birthDate;
-		this.phone = phone;
-		this.city = city;
-		this.district = district;
-		this.address = address;
-		this.emergencyContactName = emergencyContactName;
-		this.emergencyContactPhone = emergencyContactPhone;
-		this.allergies = allergies;
-		this.medicalHistory = medicalHistory;
-		this.status = "ACTIVE";
-	}
+    @Column(name = "physical_description", columnDefinition = "TEXT")
+    private String physicalDescription;
 
-	@PrePersist
-	void prePersist() {
-		Instant now = Instant.now();
-		createdAt = now;
-		updatedAt = now;
-	}
+    @Column(name = "found_at")
+    private Instant foundAt;
 
-	@PreUpdate
-	void preUpdate() {
-		updatedAt = Instant.now();
-	}
+    @Column(name = "found_location", length = 255)
+    private String foundLocation;
 
-	public UUID getId() {
-		return id;
-	}
+    @Column(name = "blood_group", length = 10)
+    private String bloodGroup;
 
-	public UUID getOrganizationId() {
-		return organizationId;
-	}
+    @Column(name = "email", length = 255)
+    private String email;
 
-	public void setOrganizationId(UUID organizationId) {
-		this.organizationId = organizationId;
-	}
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
 
-	public String getGlobalPatientNumber() {
-		return globalPatientNumber;
-	}
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
 
-	public String getLocalPatientNumber() {
-		return localPatientNumber;
-	}
+    protected PatientEntity() {
+    }
 
-	public String getFullName() {
-		return fullName;
-	}
+    public PatientEntity(
+            String globalPatientNumber,
+            String localPatientNumber,
+            String fullName,
+            String gender,
+            LocalDate birthDate,
+            String phone,
+            String city,
+            String district,
+            String address,
+            String emergencyContactName,
+            String emergencyContactPhone,
+            String allergies,
+            String medicalHistory) {
+        this.id = UUID.randomUUID();
+        this.globalPatientNumber = globalPatientNumber;
+        this.localPatientNumber = localPatientNumber;
+        this.fullName = fullName;
+        this.gender = gender;
+        this.birthDate = birthDate;
+        this.phone = phone;
+        this.city = city;
+        this.district = district;
+        this.address = address;
+        this.emergencyContactName = emergencyContactName;
+        this.emergencyContactPhone = emergencyContactPhone;
+        this.allergies = allergies;
+        this.medicalHistory = medicalHistory;
+        this.status = "ACTIVE";
+        this.identityStatus = PatientIdentityStatus.VERIFIED;
+        this.identityConfidenceLevel = IdentityConfidenceLevel.VERIFIED;
+    }
 
-	public void setFullName(String fullName) {
-		this.fullName = fullName;
-	}
+    public static PatientEntity provisionalEmergency(
+            String globalPatientNumber,
+            String localPatientNumber,
+            String temporaryPatientNumber,
+            String apparentGender,
+            String estimatedAgeRange,
+            String physicalDescription,
+            Instant foundAt,
+            String foundLocation,
+            IdentityConfidenceLevel confidenceLevel) {
+        PatientEntity patient = new PatientEntity();
+        patient.id = UUID.randomUUID();
+        patient.globalPatientNumber = globalPatientNumber;
+        patient.localPatientNumber = localPatientNumber;
+        patient.temporaryPatientNumber = temporaryPatientNumber;
+        patient.apparentGender = normalize(apparentGender);
+        patient.estimatedAgeRange = normalize(estimatedAgeRange);
+        patient.physicalDescription = normalize(physicalDescription);
+        patient.foundAt = foundAt;
+        patient.foundLocation = normalize(foundLocation);
+        patient.status = "ACTIVE";
+        patient.identityStatus = PatientIdentityStatus.PROVISIONAL_URGENCY;
+        patient.identityConfidenceLevel = confidenceLevel == null ? IdentityConfidenceLevel.NONE : confidenceLevel;
+        return patient;
+    }
 
-	public String getGender() {
-		return gender;
-	}
+    private static String normalize(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
 
-	public void setGender(String gender) {
-		this.gender = gender;
-	}
+    @PrePersist
+    void prePersist() {
+        Instant now = Instant.now();
+        createdAt = now;
+        updatedAt = now;
+        if (identityStatus == null) {
+            identityStatus = PatientIdentityStatus.VERIFIED;
+        }
+        if (identityConfidenceLevel == null) {
+            identityConfidenceLevel = identityStatus == PatientIdentityStatus.VERIFIED
+                    ? IdentityConfidenceLevel.VERIFIED
+                    : IdentityConfidenceLevel.NONE;
+        }
+    }
 
-	public LocalDate getBirthDate() {
-		return birthDate;
-	}
+    @PreUpdate
+    void preUpdate() {
+        updatedAt = Instant.now();
+    }
 
-	public void setBirthDate(LocalDate birthDate) {
-		this.birthDate = birthDate;
-	}
+    public void transitionIdentityStatus(PatientIdentityStatus target) {
+        if (target == null) {
+            throw new IllegalArgumentException("Le statut d'identité cible est obligatoire");
+        }
+        if (!identityStatus.canTransitionTo(target)) {
+            throw new IllegalStateException("Transition d'identité interdite : " + identityStatus + " -> " + target);
+        }
+        identityStatus = target;
+        if (target == PatientIdentityStatus.VERIFIED) {
+            identityConfidenceLevel = IdentityConfidenceLevel.VERIFIED;
+        }
+    }
 
-	public String getPhone() {
-		return phone;
-	}
+    public UUID getId() {
+        return id;
+    }
 
-	public void setPhone(String phone) {
-		this.phone = phone;
-	}
+    public UUID getOrganizationId() {
+        return organizationId;
+    }
 
-	public String getCity() {
-		return city;
-	}
+    public void setOrganizationId(UUID organizationId) {
+        this.organizationId = organizationId;
+    }
 
-	public void setCity(String city) {
-		this.city = city;
-	}
+    public String getGlobalPatientNumber() {
+        return globalPatientNumber;
+    }
 
-	public String getDistrict() {
-		return district;
-	}
+    public String getLocalPatientNumber() {
+        return localPatientNumber;
+    }
 
-	public void setDistrict(String district) {
-		this.district = district;
-	}
+    public String getFullName() {
+        return fullName;
+    }
 
-	public String getAddress() {
-		return address;
-	}
+    public void setFullName(String fullName) {
+        this.fullName = normalize(fullName);
+    }
 
-	public void setAddress(String address) {
-		this.address = address;
-	}
+    public String getDisplayName() {
+        return fullName != null && !fullName.isBlank() ? fullName : temporaryPatientNumber;
+    }
 
-	public String getEmergencyContactName() {
-		return emergencyContactName;
-	}
+    public String getGender() {
+        return gender;
+    }
 
-	public void setEmergencyContactName(String emergencyContactName) {
-		this.emergencyContactName = emergencyContactName;
-	}
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
 
-	public String getEmergencyContactPhone() {
-		return emergencyContactPhone;
-	}
+    public LocalDate getBirthDate() {
+        return birthDate;
+    }
 
-	public void setEmergencyContactPhone(String emergencyContactPhone) {
-		this.emergencyContactPhone = emergencyContactPhone;
-	}
+    public void setBirthDate(LocalDate birthDate) {
+        this.birthDate = birthDate;
+    }
 
-	public String getAllergies() {
-		return allergies;
-	}
+    public String getPhone() {
+        return phone;
+    }
 
-	public void setAllergies(String allergies) {
-		this.allergies = allergies;
-	}
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
 
-	public String getMedicalHistory() {
-		return medicalHistory;
-	}
+    public String getCity() {
+        return city;
+    }
 
-	public void setMedicalHistory(String medicalHistory) {
-		this.medicalHistory = medicalHistory;
-	}
+    public void setCity(String city) {
+        this.city = city;
+    }
 
-	public String getStatus() {
-		return status;
-	}
+    public String getDistrict() {
+        return district;
+    }
 
-	public void setStatus(String status) {
-		this.status = status;
-	}
+    public void setDistrict(String district) {
+        this.district = district;
+    }
 
-	public String getBloodGroup() {
-		return bloodGroup;
-	}
+    public String getAddress() {
+        return address;
+    }
 
-	public void setBloodGroup(String bloodGroup) {
-		this.bloodGroup = bloodGroup;
-	}
+    public void setAddress(String address) {
+        this.address = address;
+    }
 
-	public String getEmail() {
-		return email;
-	}
+    public String getEmergencyContactName() {
+        return emergencyContactName;
+    }
 
-	public void setEmail(String email) {
-		this.email = email;
-	}
+    public void setEmergencyContactName(String emergencyContactName) {
+        this.emergencyContactName = emergencyContactName;
+    }
 
-	public Instant getCreatedAt() {
-		return createdAt;
-	}
+    public String getEmergencyContactPhone() {
+        return emergencyContactPhone;
+    }
 
-	public Instant getUpdatedAt() {
-		return updatedAt;
-	}
+    public void setEmergencyContactPhone(String emergencyContactPhone) {
+        this.emergencyContactPhone = emergencyContactPhone;
+    }
+
+    public String getAllergies() {
+        return allergies;
+    }
+
+    public void setAllergies(String allergies) {
+        this.allergies = allergies;
+    }
+
+    public String getMedicalHistory() {
+        return medicalHistory;
+    }
+
+    public void setMedicalHistory(String medicalHistory) {
+        this.medicalHistory = medicalHistory;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public PatientIdentityStatus getIdentityStatus() {
+        return identityStatus;
+    }
+
+    public String getTemporaryPatientNumber() {
+        return temporaryPatientNumber;
+    }
+
+    public IdentityConfidenceLevel getIdentityConfidenceLevel() {
+        return identityConfidenceLevel;
+    }
+
+    public void setIdentityConfidenceLevel(IdentityConfidenceLevel identityConfidenceLevel) {
+        this.identityConfidenceLevel = identityConfidenceLevel;
+    }
+
+    public String getApparentGender() {
+        return apparentGender;
+    }
+
+    public String getEstimatedAgeRange() {
+        return estimatedAgeRange;
+    }
+
+    public String getPhysicalDescription() {
+        return physicalDescription;
+    }
+
+    public Instant getFoundAt() {
+        return foundAt;
+    }
+
+    public String getFoundLocation() {
+        return foundLocation;
+    }
+
+    public String getBloodGroup() {
+        return bloodGroup;
+    }
+
+    public void setBloodGroup(String bloodGroup) {
+        this.bloodGroup = bloodGroup;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
 }

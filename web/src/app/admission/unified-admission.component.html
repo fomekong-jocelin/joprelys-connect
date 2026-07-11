@@ -1,0 +1,407 @@
+<section class="flex max-h-[88vh] flex-col bg-[var(--app-surface)] text-[var(--text-primary)]">
+  <header class="flex items-start justify-between gap-4 border-b border-[var(--app-border)] px-4 py-4 sm:px-5">
+    <div class="min-w-0">
+      <h2 class="font-display text-lg font-extrabold leading-6 text-[var(--text-primary)]">
+        {{ text('title') }}
+      </h2>
+      <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">{{ text('subtitle') }}</p>
+    </div>
+    <button
+      type="button"
+      class="shrink-0 rounded-sm p-2 text-[var(--text-muted)] transition hover:bg-[var(--app-surface-muted)] hover:text-[var(--text-primary)]"
+      (click)="cancelled.emit()"
+      [attr.aria-label]="text('cancel')"
+    >
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </header>
+
+  <nav class="border-b border-[var(--app-border)] px-4 py-3 sm:px-5" [attr.aria-label]="text('stepOf')">
+    <ol class="grid grid-cols-3 gap-2">
+      @for (step of steps; track step) {
+        <li class="min-w-0">
+          <div class="flex items-center gap-2">
+            <span
+              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border text-xs font-extrabold transition-colors"
+              [class.border-[var(--brand-primary)]]="currentStep() >= step"
+              [class.bg-[var(--brand-primary)]]="currentStep() >= step"
+              [class.text-[var(--text-inverse)]]="currentStep() >= step"
+              [class.border-[var(--app-border)]]="currentStep() < step"
+              [class.bg-[var(--app-surface-muted)]]="currentStep() < step"
+              [class.text-[var(--text-muted)]]="currentStep() < step"
+              [attr.aria-current]="currentStep() === step ? 'step' : null"
+            >
+              {{ step }}
+            </span>
+            <span
+              class="truncate text-[11px] font-bold sm:text-xs"
+              [class.text-[var(--text-primary)]]="currentStep() === step"
+              [class.text-[var(--text-muted)]]="currentStep() !== step"
+            >
+              {{ stepLabel(step) }}
+            </span>
+          </div>
+        </li>
+      }
+    </ol>
+    <div class="mt-3 h-1 overflow-hidden rounded-sm bg-[var(--app-surface-muted)]" aria-hidden="true">
+      <div
+        class="h-full bg-[var(--brand-primary)] transition-[width] duration-200"
+        [style.width.%]="progressPercent()"
+      ></div>
+    </div>
+  </nav>
+
+  <form [formGroup]="form" class="flex min-h-0 flex-1 flex-col" (ngSubmit)="submit()">
+    <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+      @if (error(); as message) {
+        <app-ui-alert tone="error" class="mb-4">{{ message }}</app-ui-alert>
+      }
+
+      @if (currentStep() === 1) {
+        <div class="space-y-5">
+          <fieldset>
+            <legend class="ui-label mb-2">{{ text('carePath') }}</legend>
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                class="min-h-12 rounded-sm border px-3 py-2.5 text-left transition-colors"
+                (click)="setCarePath('NORMAL')"
+                [attr.aria-pressed]="carePath === 'NORMAL'"
+                [class.border-[var(--brand-primary)]]="carePath === 'NORMAL'"
+                [class.bg-[var(--brand-primary-subtle)]]="carePath === 'NORMAL'"
+                [class.border-[var(--app-border)]]="carePath !== 'NORMAL'"
+                [class.bg-[var(--app-surface)]]="carePath !== 'NORMAL'"
+              >
+                <span class="block text-sm font-extrabold text-[var(--text-primary)]">{{ text('normal') }}</span>
+                <span class="mt-0.5 block text-xs text-[var(--text-muted)]">{{ text('normalHint') }}</span>
+              </button>
+
+              <button
+                type="button"
+                class="min-h-12 rounded-sm border px-3 py-2.5 text-left transition-colors"
+                (click)="setCarePath('EMERGENCY')"
+                [attr.aria-pressed]="carePath === 'EMERGENCY'"
+                [class.border-[var(--brand-primary)]]="carePath === 'EMERGENCY'"
+                [class.bg-[var(--brand-primary-subtle)]]="carePath === 'EMERGENCY'"
+                [class.border-[var(--app-border)]]="carePath !== 'EMERGENCY'"
+                [class.bg-[var(--app-surface)]]="carePath !== 'EMERGENCY'"
+              >
+                <span class="flex items-center gap-2 text-sm font-extrabold text-[var(--text-primary)]">
+                  <span class="h-2 w-2 rounded-full bg-[var(--brand-danger)]" aria-hidden="true"></span>
+                  {{ text('emergency') }}
+                </span>
+                <span class="mt-0.5 block text-xs text-[var(--text-muted)]">{{ text('emergencyHint') }}</span>
+              </button>
+            </div>
+          </fieldset>
+
+          <fieldset class="border-t border-[var(--divider-subtle)] pt-5">
+            <legend class="ui-label mb-2">{{ text('patientSituation') }}</legend>
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <button
+                type="button"
+                class="min-h-11 rounded-sm border px-3 py-2 text-left text-sm font-bold transition-colors"
+                (click)="setPatientMode('EXISTING')"
+                [attr.aria-pressed]="patientMode === 'EXISTING'"
+                [class.border-[var(--brand-primary)]]="patientMode === 'EXISTING'"
+                [class.bg-[var(--brand-primary-subtle)]]="patientMode === 'EXISTING'"
+                [class.border-[var(--app-border)]]="patientMode !== 'EXISTING'"
+              >{{ text('existing') }}</button>
+
+              <button
+                type="button"
+                class="min-h-11 rounded-sm border px-3 py-2 text-left text-sm font-bold transition-colors"
+                (click)="setPatientMode('NEW')"
+                [attr.aria-pressed]="patientMode === 'NEW'"
+                [class.border-[var(--brand-primary)]]="patientMode === 'NEW'"
+                [class.bg-[var(--brand-primary-subtle)]]="patientMode === 'NEW'"
+                [class.border-[var(--app-border)]]="patientMode !== 'NEW'"
+              >{{ text('new') }}</button>
+
+              @if (carePath === 'EMERGENCY') {
+                <button
+                  type="button"
+                  class="min-h-11 rounded-sm border px-3 py-2 text-left text-sm font-bold transition-colors"
+                  (click)="setPatientMode('PROVISIONAL')"
+                  [attr.aria-pressed]="patientMode === 'PROVISIONAL'"
+                  [class.border-[var(--brand-primary)]]="patientMode === 'PROVISIONAL'"
+                  [class.bg-[var(--brand-primary-subtle)]]="patientMode === 'PROVISIONAL'"
+                  [class.border-[var(--app-border)]]="patientMode !== 'PROVISIONAL'"
+                >{{ text('provisional') }}</button>
+              }
+            </div>
+
+            @if (patientMode === 'EXISTING') {
+              <div class="mt-4">
+                <label class="ui-label mb-1.5" for="admission-patient">{{ text('selectPatient') }}</label>
+                <select id="admission-patient" formControlName="patientId" class="ui-input">
+                  <option value="">{{ text('selectPatientPlaceholder') }}</option>
+                  @for (patient of patients(); track patient.id) {
+                    <option [value]="patient.id">{{ displayPatient(patient) }} — {{ patient.globalPatientNumber }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            @if (patientMode === 'NEW') {
+              <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label class="ui-label mb-1.5" for="admission-full-name">{{ text('fullName') }} *</label>
+                  <input id="admission-full-name" formControlName="fullName" class="ui-input" autocomplete="name" />
+                </div>
+                <div>
+                  <label class="ui-label mb-1.5" for="admission-gender">{{ text('gender') }} *</label>
+                  <select id="admission-gender" formControlName="gender" class="ui-input">
+                    <option value="">{{ text('genderPlaceholder') }}</option>
+                    <option value="MASCULIN">{{ text('male') }}</option>
+                    <option value="FEMININ">{{ text('female') }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="ui-label mb-1.5" for="admission-birth-date">{{ text('birthDate') }} *</label>
+                  <input id="admission-birth-date" type="date" formControlName="birthDate" class="ui-input" />
+                </div>
+                <div>
+                  <label class="ui-label mb-1.5" for="admission-phone">{{ text('phone') }} *</label>
+                  <input id="admission-phone" type="tel" formControlName="phone" class="ui-input" placeholder="+237 6xx xxx xxx" autocomplete="tel" />
+                </div>
+                <div>
+                  <label class="ui-label mb-1.5" for="admission-city">{{ text('city') }} *</label>
+                  <input id="admission-city" formControlName="city" class="ui-input" autocomplete="address-level2" />
+                </div>
+                <div>
+                  <label class="ui-label mb-1.5" for="admission-district">{{ text('district') }}</label>
+                  <input id="admission-district" formControlName="district" class="ui-input" />
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="ui-label mb-1.5" for="admission-address">{{ text('address') }}</label>
+                  <input id="admission-address" formControlName="address" class="ui-input" autocomplete="street-address" />
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="ui-label mb-1.5" for="admission-email">{{ text('email') }}</label>
+                  <input id="admission-email" type="email" formControlName="email" class="ui-input" autocomplete="email" />
+                </div>
+              </div>
+            }
+
+            @if (patientMode === 'PROVISIONAL') {
+              <div class="mt-4 border-l-2 border-[var(--brand-warning)] bg-[var(--brand-warning-subtle)] px-3 py-3">
+                <h3 class="text-sm font-extrabold text-[var(--text-primary)]">{{ text('provisionalTitle') }}</h3>
+                <p class="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{{ text('provisionalHint') }}</p>
+                <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label class="ui-label mb-1.5" for="admission-apparent-gender">{{ text('apparentGender') }}</label>
+                    <select id="admission-apparent-gender" formControlName="apparentGender" class="ui-input">
+                      <option value="UNKNOWN">{{ text('unknown') }}</option>
+                      <option value="MASCULIN">{{ text('male') }}</option>
+                      <option value="FEMININ">{{ text('female') }}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="ui-label mb-1.5" for="admission-estimated-age">{{ text('estimatedAge') }}</label>
+                    <input id="admission-estimated-age" formControlName="estimatedAgeRange" class="ui-input" placeholder="Ex. 35–45" />
+                  </div>
+                  <div class="sm:col-span-2">
+                    <label class="ui-label mb-1.5" for="admission-description">{{ text('physicalDescription') }}</label>
+                    <textarea id="admission-description" formControlName="physicalDescription" class="ui-input min-h-16 resize-y py-2.5"></textarea>
+                  </div>
+                  <div class="sm:col-span-2">
+                    <label class="ui-label mb-1.5" for="admission-found-location">{{ text('foundLocation') }}</label>
+                    <input id="admission-found-location" formControlName="foundLocation" class="ui-input" />
+                  </div>
+                </div>
+              </div>
+            }
+          </fieldset>
+        </div>
+      }
+
+      @if (currentStep() === 2) {
+        @if (carePath === 'NORMAL') {
+          <fieldset>
+            <legend class="ui-label mb-3">{{ text('visit') }}</legend>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div class="sm:col-span-2">
+                <label class="ui-label mb-1.5" for="admission-reason">{{ text('reason') }} *</label>
+                <textarea id="admission-reason" formControlName="reason" class="ui-input min-h-20 resize-y py-2.5"></textarea>
+              </div>
+              <div>
+                <label class="ui-label mb-1.5" for="admission-orientation">{{ text('orientation') }} *</label>
+                <input id="admission-orientation" formControlName="orientation" class="ui-input" />
+              </div>
+              <div>
+                <label class="ui-label mb-1.5" for="admission-service">{{ text('service') }}</label>
+                <input id="admission-service" formControlName="service" class="ui-input" />
+              </div>
+            </div>
+          </fieldset>
+        } @else {
+          <div class="space-y-5">
+            <fieldset>
+              <legend class="ui-label mb-3">{{ text('emergencyArrival') }}</legend>
+              <div>
+                <label class="ui-label mb-1.5" for="admission-arrival">{{ text('arrivalMode') }}</label>
+                <select id="admission-arrival" formControlName="arrivalMode" class="ui-input">
+                  <option value="AMBULANCE">{{ text('ambulance') }}</option>
+                  <option value="FIRE_DEPT">{{ text('fireDept') }}</option>
+                  <option value="WALK_IN">{{ text('walkIn') }}</option>
+                  <option value="ACCOMPANIED">{{ text('accompanied') }}</option>
+                </select>
+              </div>
+            </fieldset>
+
+            @if (isAccompanied) {
+              <fieldset class="border-l-2 border-[var(--brand-primary)] bg-[var(--brand-primary-subtle)] px-3 py-3 sm:px-4">
+                <legend class="sr-only">{{ text('thirdPartyTitle') }}</legend>
+                <h3 class="text-sm font-extrabold text-[var(--text-primary)]">{{ text('thirdPartyTitle') }}</h3>
+                <p class="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{{ text('thirdPartyHint') }}</p>
+
+                <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label class="ui-label mb-1.5" for="third-party-name">{{ text('thirdPartyName') }} *</label>
+                    <input id="third-party-name" formControlName="thirdPartyName" class="ui-input" autocomplete="name" />
+                  </div>
+                  <div>
+                    <label class="ui-label mb-1.5" for="third-party-phone">{{ text('thirdPartyPhone') }} *</label>
+                    <input id="third-party-phone" type="tel" formControlName="thirdPartyPhone" class="ui-input" placeholder="+237 6xx xxx xxx" autocomplete="tel" />
+                  </div>
+                  <div>
+                    <label class="ui-label mb-1.5" for="third-party-relationship">{{ text('thirdPartyRelationship') }} *</label>
+                    <select id="third-party-relationship" formControlName="thirdPartyRelationship" class="ui-input">
+                      <option value="">{{ text('relationshipPlaceholder') }}</option>
+                      <option value="FAMILY">{{ text('relationshipFamily') }}</option>
+                      <option value="FRIEND">{{ text('relationshipFriend') }}</option>
+                      <option value="WITNESS">{{ text('relationshipWitness') }}</option>
+                      <option value="DRIVER">{{ text('relationshipDriver') }}</option>
+                      <option value="POLICE">{{ text('relationshipPolice') }}</option>
+                      <option value="OTHER">{{ text('relationshipOther') }}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="ui-label mb-1.5" for="third-party-id">{{ text('thirdPartyIdDocument') }}</label>
+                    <input id="third-party-id" formControlName="thirdPartyIdDocument" class="ui-input" />
+                    <p class="mt-1 text-[11px] text-[var(--text-muted)]">{{ text('thirdPartyIdDocumentHint') }}</p>
+                  </div>
+                  <div class="sm:col-span-2">
+                    <label class="ui-label mb-1.5" for="third-party-circumstances">{{ text('thirdPartyCircumstances') }}</label>
+                    <textarea id="third-party-circumstances" formControlName="thirdPartyCircumstances" class="ui-input min-h-20 resize-y py-2.5"></textarea>
+                  </div>
+                  <label class="flex cursor-pointer items-start gap-3 sm:col-span-2" for="third-party-consent">
+                    <input id="third-party-consent" type="checkbox" formControlName="thirdPartyConsentToContact" class="ui-checkbox mt-0.5 shrink-0" />
+                    <span class="text-sm leading-5 text-[var(--text-secondary)]">{{ text('consentToContact') }}</span>
+                  </label>
+                </div>
+              </fieldset>
+            }
+          </div>
+        }
+      }
+
+      @if (currentStep() === 3) {
+        <div class="space-y-5">
+          <section class="ui-card-muted p-3 sm:p-4" aria-labelledby="admission-summary-title">
+            <h3 id="admission-summary-title" class="text-sm font-extrabold text-[var(--text-primary)]">{{ text('confirmTitle') }}</h3>
+            <p class="mt-1 text-xs text-[var(--text-muted)]">{{ text('confirmHint') }}</p>
+            <dl class="mt-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt class="ui-label">{{ text('summaryPath') }}</dt>
+                <dd class="mt-1 font-bold text-[var(--text-primary)]">{{ carePath === 'EMERGENCY' ? text('emergency') : text('normal') }}</dd>
+              </div>
+              <div>
+                <dt class="ui-label">{{ text('summaryPatient') }}</dt>
+                <dd class="mt-1 font-bold text-[var(--text-primary)]">{{ patientSummary() }}</dd>
+              </div>
+              @if (carePath === 'EMERGENCY') {
+                <div>
+                  <dt class="ui-label">{{ text('summaryArrival') }}</dt>
+                  <dd class="mt-1 font-bold text-[var(--text-primary)]">{{ arrivalSummary() }}</dd>
+                </div>
+                @if (isAccompanied) {
+                  <div>
+                    <dt class="ui-label">{{ text('summaryThirdParty') }}</dt>
+                    <dd class="mt-1 font-bold text-[var(--text-primary)]">{{ form.get('thirdPartyName')?.value || '—' }}</dd>
+                  </div>
+                }
+              } @else {
+                <div class="sm:col-span-2">
+                  <dt class="ui-label">{{ text('summaryVisit') }}</dt>
+                  <dd class="mt-1 text-[var(--text-secondary)]">{{ form.get('reason')?.value || '—' }}</dd>
+                </div>
+              }
+            </dl>
+          </section>
+
+          @if (carePath === 'EMERGENCY') {
+            <fieldset>
+              <legend class="ui-label mb-3">{{ text('emergencySection') }}</legend>
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label class="ui-label mb-1.5" for="admission-triage">{{ text('triageLevel') }}</label>
+                  <select id="admission-triage" formControlName="triageLevel" class="ui-input">
+                    <option value="RED">🔴 {{ text('red') }}</option>
+                    <option value="ORANGE">🟠 {{ text('orange') }}</option>
+                    <option value="YELLOW">🟡 {{ text('yellow') }}</option>
+                    <option value="GREEN">🟢 {{ text('green') }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="ui-label mb-1.5" for="admission-hemodynamic">{{ text('hemodynamic') }}</label>
+                  <select id="admission-hemodynamic" formControlName="hemodynamicStatus" class="ui-input">
+                    <option value="SHOCK">{{ text('shock') }}</option>
+                    <option value="UNSTABLE">{{ text('unstable') }}</option>
+                    <option value="STABLE">{{ text('stable') }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="ui-label mb-1.5" for="admission-temperature">{{ text('temperature') }}</label>
+                  <input id="admission-temperature" type="number" inputmode="decimal" step="0.1" formControlName="initialTemp" class="ui-input" />
+                </div>
+                <div>
+                  <label class="ui-label mb-1.5" for="admission-pulse">{{ text('pulse') }}</label>
+                  <input id="admission-pulse" type="number" inputmode="numeric" formControlName="initialHr" class="ui-input" />
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="ui-label mb-1.5">{{ text('bp') }}</label>
+                  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                    <input type="number" inputmode="numeric" formControlName="initialBpSystolic" class="ui-input" placeholder="Sys" aria-label="Systolique" />
+                    <span class="text-[var(--text-muted)]">/</span>
+                    <input type="number" inputmode="numeric" formControlName="initialBpDiastolic" class="ui-input" placeholder="Dia" aria-label="Diastolique" />
+                  </div>
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="ui-label mb-1.5" for="admission-complaint">{{ text('complaint') }} *</label>
+                  <textarea id="admission-complaint" formControlName="chiefComplaint" class="ui-input min-h-20 resize-y py-2.5"></textarea>
+                </div>
+              </div>
+            </fieldset>
+          }
+        </div>
+      }
+    </div>
+
+    <footer class="grid grid-cols-2 gap-2 border-t border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-3 sm:flex sm:justify-end sm:px-5">
+      @if (currentStep() === 1) {
+        <app-ui-button variant="secondary" class="w-full sm:w-auto" (pressed)="cancelled.emit()" [disabled]="isSubmitting()">
+          {{ text('cancel') }}
+        </app-ui-button>
+      } @else {
+        <app-ui-button variant="secondary" class="w-full sm:w-auto" (pressed)="previousStep()" [disabled]="isSubmitting()">
+          {{ text('previous') }}
+        </app-ui-button>
+      }
+
+      @if (currentStep() < 3) {
+        <app-ui-button variant="primary" class="w-full sm:w-auto" (pressed)="nextStep()" [disabled]="isLoadingPatients()">
+          {{ text('next') }}
+        </app-ui-button>
+      } @else {
+        <app-ui-button variant="primary" class="w-full sm:w-auto" (pressed)="submit()" [disabled]="isSubmitting() || isLoadingPatients()">
+          {{ isSubmitting() ? text('saving') : (carePath === 'EMERGENCY' ? text('saveEmergency') : text('saveNormal')) }}
+        </app-ui-button>
+      }
+    </footer>
+  </form>
+</section>
