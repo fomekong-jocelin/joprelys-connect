@@ -7,12 +7,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.auth.security.JwtService;
 import com.joprelys.backend.auth.security.TenantContext;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -32,10 +34,11 @@ import org.springframework.test.web.servlet.MockMvc;
 class RbacControllerTest {
 
     @Autowired private MockMvc mockMvc;
-    @Autowired private ObjectMapper objectMapper;
     @Autowired private OrganizationRepository organizationRepository;
     @Autowired private UserAccountRepository userAccountRepository;
     @Autowired private JwtService jwtService;
+
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     private OrganizationEntity organization;
     private OrganizationEntity otherOrganization;
@@ -125,14 +128,14 @@ class RbacControllerTest {
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "roleIds", List.of(UUID.nameUUIDFromBytes("joprelys-role:ADMIN_CLINIQUE".getBytes()))))))
+                                "roleIds", List.of(roleId("ADMIN_CLINIQUE"))))))
                 .andExpect(status().isBadRequest());
 
         mockMvc.perform(put("/api/rbac/users/" + outsider.getId() + "/roles")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "roleIds", List.of(UUID.nameUUIDFromBytes("joprelys-role:AGENT_ACCUEIL".getBytes()))))))
+                                "roleIds", List.of(roleId("AGENT_ACCUEIL"))))))
                 .andExpect(status().isNotFound());
     }
 
@@ -147,5 +150,9 @@ class RbacControllerTest {
         UserAccountEntity user = new UserAccountEntity(email, name, role, "password");
         user.setOrganizationId(organizationId);
         return userAccountRepository.saveAndFlush(user);
+    }
+
+    private static UUID roleId(String code) {
+        return UUID.nameUUIDFromBytes(("joprelys-role:" + code).getBytes(StandardCharsets.UTF_8));
     }
 }
