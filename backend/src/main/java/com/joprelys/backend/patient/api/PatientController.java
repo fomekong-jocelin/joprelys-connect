@@ -58,8 +58,7 @@ public class PatientController {
             @ApiResponse(responseCode = "409", description = "Patient en doublon détecté")
     })
     public PatientResponse create(@Valid @RequestBody CreatePatientRequest request) {
-        PatientEntity entity = patientService.createPatient(request);
-        return mapToResponse(entity);
+        return mapToResponse(patientService.createPatient(request));
     }
 
     @GetMapping
@@ -102,7 +101,7 @@ public class PatientController {
     public void merge(@Valid @RequestBody MergePatientsRequest request) {
         String actorEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         var actor = userAccountRepository.findByEmail(actorEmail.trim().toLowerCase())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur non trouvé"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED"));
         patientService.mergePatients(request.primaryId(), request.secondaryId(), actor.getId());
     }
 
@@ -118,8 +117,7 @@ public class PatientController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PATIENT_READ') or " + LEGACY_PATIENT_ROLES)
     public PatientResponse getById(@PathVariable UUID id) {
-        PatientEntity entity = patientService.getPatientById(id);
-        return mapToResponse(entity);
+        return mapToResponse(patientService.getPatientById(id));
     }
 
     @GetMapping("/{id}/summary-pdf")
@@ -150,7 +148,7 @@ public class PatientController {
                 entity.getOrganizationId(),
                 entity.getGlobalPatientNumber(),
                 entity.getLocalPatientNumber(),
-                entity.getDisplayName(),
+                entity.getFullName(),
                 entity.getGender(),
                 entity.getBirthDate(),
                 entity.getPhone(),
