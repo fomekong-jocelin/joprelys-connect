@@ -137,7 +137,8 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
     if (hasRole('INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE') || hasPermission('CLINICAL_READ', 'CLINICAL_WRITE')) {
       addUniqueItem(this.item('/clinic/emergencies', 'menu.emergencies', 'bolt'));
     }
-    if (hasRole('ADMIN_CLINIQUE')) {
+    if (hasRole('ADMIN_CLINIQUE') || hasPermission('PATIENT_MERGE')) {
+      addUniqueItem(this.item('/clinic/patient-reconciliation', 'menu.patientReconciliation', 'clipboard-document-list'));
       addUniqueItem(this.item('/clinic/duplicates', 'menu.duplicates', 'users'));
     }
     if (hasRole('BIOLOGISTE', 'ADMIN_JOPRELYS') || hasPermission('LAB_ORDER_READ', 'LAB_ORDER_WRITE')) {
