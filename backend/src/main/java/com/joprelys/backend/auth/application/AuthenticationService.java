@@ -1,5 +1,6 @@
 package com.joprelys.backend.auth.application;
 
+import com.joprelys.backend.auth.api.CurrentSessionResponse;
 import com.joprelys.backend.auth.api.LoginRequest;
 import com.joprelys.backend.auth.api.LoginResponse;
 import com.joprelys.backend.auth.api.VerifyStaffOtpRequest;
@@ -20,10 +21,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class AuthenticationService {
@@ -37,8 +41,11 @@ public class AuthenticationService {
 			"ADMIN_CLINIQUE",
 			"MEDECIN",
 			"BIOLOGISTE",
-			"PHARMACIEN"
-	);
+			"PHARMACIEN",
+			"DAF",
+			"SECRETAIRE_COMPTABLE",
+			"CAISSIER",
+			"AUDITEUR");
 
 	private final UserAccountRepository userAccountRepository;
 	private final AuthAuditEventRepository authAuditEventRepository;
@@ -81,16 +88,8 @@ public class AuthenticationService {
 			throw new BadCredentialsException(GENERIC_LOGIN_FAILURE);
 		}
 
-		if (user.getOrganizationId() != null) {
-			OrganizationEntity org = organizationRepository.findById(user.getOrganizationId()).orElse(null);
-			if (org != null && !"ACTIVE".equals(org.getStatus())) {
-				audit(email, ipAddress, false, "INACTIVE_ORGANIZATION");
-				throw new BadCredentialsException("Votre établissement est désactivé.");
-			}
-		}
+		assertOrganizationActive(user, email, ipAddress);
 
-		// FR-USER-005 : les rôles sensibles nécessitent une authentification forte (OTP)
-		// Check if any of the user's roles is sensitive
 		boolean hasSensitiveRole = java.util.Arrays.stream(user.getRole().split(","))
 				.map(String::trim)
 				.anyMatch(SENSITIVE_ROLES::contains);
@@ -98,7 +97,6 @@ public class AuthenticationService {
 		if (hasSensitiveRole) {
 			String code = String.format("%06d", secureRandom.nextInt(1000000));
 			staffOtpMap.put(email, new StaffOtpData(code, email, clock.instant(), 0));
-			// Simulation : envoi console
 			System.out.println("[OTP STAFF] Code de connexion pour " + email + " : " + code);
 			return new LoginResponse(
 					null,
@@ -108,11 +106,9 @@ public class AuthenticationService {
 					user.getDisplayName(),
 					user.getRole(),
 					true,
-					exposeOtpToFrontend ? code : null
-			);
+					exposeOtpToFrontend ? code : null);
 		}
 
-		// Update last login
 		user.setLastLoginAt(clock.instant());
 		userAccountRepository.save(user);
 
@@ -147,25 +143,17 @@ public class AuthenticationService {
 			if (newAttempts >= 3) {
 				staffOtpMap.remove(email);
 				throw new BadCredentialsException("Trop de tentatives infructueuses. Veuillez régénérer un code.");
-			} else {
-				staffOtpMap.put(email, new StaffOtpData(otpData.code(), email, otpData.createdAt(), newAttempts));
-				throw new BadCredentialsException("Code de sécurité incorrect.");
 			}
+			staffOtpMap.put(email, new StaffOtpData(otpData.code(), email, otpData.createdAt(), newAttempts));
+			throw new BadCredentialsException("Code de sécurité incorrect.");
 		}
 
 		staffOtpMap.remove(email);
 		UserAccountEntity user = userAccountRepository.findByEmail(email)
 				.filter(UserAccountEntity::isEnabled)
 				.orElseThrow(() -> new BadCredentialsException("Utilisateur introuvable."));
+		assertOrganizationActive(user, email, ipAddress);
 
-		if (user.getOrganizationId() != null) {
-			OrganizationEntity org = organizationRepository.findById(user.getOrganizationId()).orElse(null);
-			if (org != null && !"ACTIVE".equals(org.getStatus())) {
-				throw new BadCredentialsException("Votre établissement est désactivé.");
-			}
-		}
-
-		// Update last login
 		user.setLastLoginAt(clock.instant());
 		userAccountRepository.save(user);
 
@@ -181,9 +169,31 @@ public class AuthenticationService {
 				false);
 	}
 
+	@Transactional(readOnly = true)
+	public CurrentSessionResponse currentSession(Authentication authentication) {
+		if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required");
+		}
+		UserAccountEntity user = userAccountRepository.findByEmail(normalizeEmail(authentication.getName()))
+				.filter(UserAccountEntity::isEnabled)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required"));
+		return new CurrentSessionResponse(user.getEmail(), user.getDisplayName(), user.getRole());
+	}
+
 	public void logout(String token) {
 		JwtClaims claims = jwtService.parseAndValidate(token);
 		jwtRevocationService.revoke(claims.tokenId(), claims.expiresAt());
+	}
+
+	private void assertOrganizationActive(UserAccountEntity user, String email, String ipAddress) {
+		if (user.getOrganizationId() == null) {
+			return;
+		}
+		OrganizationEntity organization = organizationRepository.findById(user.getOrganizationId()).orElse(null);
+		if (organization != null && !"ACTIVE".equals(organization.getStatus())) {
+			audit(email, ipAddress, false, "INACTIVE_ORGANIZATION");
+			throw new BadCredentialsException("Votre établissement est désactivé.");
+		}
 	}
 
 	private void audit(String email, String ipAddress, boolean success, String failureReason) {
@@ -206,7 +216,7 @@ public class AuthenticationService {
 
 	private record StaffOtpData(String code, String email, Instant createdAt, int attempts) {
 		public boolean isExpired(Instant now) {
-			return createdAt.plusSeconds(300).isBefore(now); // 5 minutes
+			return createdAt.plusSeconds(300).isBefore(now);
 		}
 	}
 }
