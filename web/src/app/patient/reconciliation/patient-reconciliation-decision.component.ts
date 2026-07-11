@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { I18nService } from '../../core/i18n/i18n.service';
 import {
@@ -32,6 +32,9 @@ export class PatientReconciliationDecisionComponent {
   readonly disabled = input(false);
   readonly submitted = output<PatientReconciliationDecisionDto>();
 
+  readonly selectedDecision = signal<PatientReconciliationDecision>('DEFER');
+  readonly requiresCandidate = computed(() => this.selectedDecision() === 'LINK_EXISTING_DPU');
+
   readonly form = new FormGroup<DecisionForm>({
     decision: new FormControl<PatientReconciliationDecision>('DEFER', { nonNullable: true }),
     candidatePatientId: new FormControl('', { nonNullable: true }),
@@ -42,8 +45,6 @@ export class PatientReconciliationDecisionComponent {
       validators: [Validators.required, Validators.maxLength(1500)],
     }),
   });
-
-  readonly requiresCandidate = computed(() => this.form.controls.decision.value === 'LINK_EXISTING_DPU');
 
   readonly sourceTypes: IdentitySourceType[] = [
     'PATIENT',
@@ -65,6 +66,7 @@ export class PatientReconciliationDecisionComponent {
   }
 
   chooseDecision(decision: PatientReconciliationDecision): void {
+    this.selectedDecision.set(decision);
     this.form.controls.decision.setValue(decision);
     if (decision !== 'LINK_EXISTING_DPU') {
       this.form.controls.candidatePatientId.setValue('');
@@ -88,6 +90,7 @@ export class PatientReconciliationDecisionComponent {
   }
 
   reset(): void {
+    this.selectedDecision.set('DEFER');
     this.form.reset({
       decision: 'DEFER',
       candidatePatientId: '',
