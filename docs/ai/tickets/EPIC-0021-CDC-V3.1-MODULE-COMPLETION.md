@@ -151,7 +151,7 @@ Le dépôt possède un socle riche mais la présence d'un écran, d'une table ou
 
 ## Estimation de cadrage
 
-L'ensemble de la V3.1 représente plusieurs vagues de produit et non un sprint unique. Les neuf lots sont estimés initialement entre **764 et 1 165 SP**, avant ateliers de découpage. Toute story supérieure à 8 SP devra être redécoupée.
+L'ensemble de la V3.1 représente plusieurs vagues de produit et non un sprint unique. Les neuf lots sont estimés initialement entre **720 et 1 165 SP**, avant ateliers de découpage. Toute story supérieure à 8 SP devra être redécoupée.
 
 ## Risques
 
