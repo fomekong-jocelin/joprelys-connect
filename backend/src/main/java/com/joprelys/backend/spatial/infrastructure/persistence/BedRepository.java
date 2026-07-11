@@ -1,11 +1,10 @@
 package com.joprelys.backend.spatial.infrastructure.persistence;
 
-import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -21,7 +20,10 @@ public interface BedRepository extends JpaRepository<BedEntity, UUID> {
             @Param("roomNumber") String roomNumber,
             @Param("bedNumber") String bedNumber);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT b FROM BedEntity b WHERE b.id = :bedId")
-    Optional<BedEntity> findByIdForUpdate(@Param("bedId") UUID bedId);
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE BedEntity b SET b.status = :occupiedStatus WHERE b.id = :bedId AND b.status = :freeStatus")
+    int claimIfFree(
+            @Param("bedId") UUID bedId,
+            @Param("freeStatus") BedStatus freeStatus,
+            @Param("occupiedStatus") BedStatus occupiedStatus);
 }
