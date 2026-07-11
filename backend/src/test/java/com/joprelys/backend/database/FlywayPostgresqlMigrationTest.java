@@ -1,6 +1,12 @@
 package com.joprelys.backend.database;
 
 import com.joprelys.backend.auth.rbac.RbacStore;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.List;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationInfo;
 import org.junit.jupiter.api.Test;
@@ -9,13 +15,6 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
-
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -40,6 +39,16 @@ class FlywayPostgresqlMigrationTest {
             new NumericColumnExpectation("insurance_conventions", "coverage_percentage", 5, 4)
     );
 
+    private static final List<String> MEDICO_LEGAL_TABLES = List.of(
+            "emergency_third_parties",
+            "emergency_third_party_qualities",
+            "emergency_identity_statements",
+            "emergency_capacity_events",
+            "emergency_legal_bases",
+            "emergency_legal_basis_acts",
+            "emergency_belongings",
+            "emergency_belonging_transfers");
+
     @Container
     private static final PostgreSQLContainer POSTGRESQL = new PostgreSQLContainer("postgres:16-alpine")
             .withDatabaseName("joprelys_migration_test")
@@ -60,8 +69,8 @@ class FlywayPostgresqlMigrationTest {
         MigrationInfo current = flyway.info().current();
         assertNotNull(current, "Flyway doit exposer la migration courante");
         assertNotNull(current.getVersion(), "La migration courante doit être versionnée");
-        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 59,
-                "Toutes les migrations jusqu'au tiers accompagnant doivent être appliquées");
+        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 61,
+                "Toutes les migrations médico-légales doivent être appliquées");
 
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword());
@@ -76,14 +85,9 @@ class FlywayPostgresqlMigrationTest {
         assertTrue(permissionCount > 0, "Le catalogue des permissions doit être initialisé sur PostgreSQL");
         assertTrue(systemRoleCount > 0, "Le catalogue des rôles système doit être initialisé sur PostgreSQL");
 
-        Integer declarationTableCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'patient_identity_declarations'",
-                Integer.class);
-        Integer historyTableCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'patient_identity_status_history'",
-                Integer.class);
-        assertEquals(1, declarationTableCount);
-        assertEquals(1, historyTableCount);
+        assertTableExists(jdbcTemplate, "patient_identity_declarations");
+        assertTableExists(jdbcTemplate, "patient_identity_status_history");
+        MEDICO_LEGAL_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
 
         Integer thirdPartyColumnCount = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*)
@@ -111,6 +115,15 @@ class FlywayPostgresqlMigrationTest {
             assertColumnNullable(connection, "patients", "birth_date");
             assertColumnNullable(connection, "patients", "city");
         }
+    }
+
+    private static void assertTableExists(JdbcTemplate jdbcTemplate, String tableName) {
+        Integer tableCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = ?
+                """, Integer.class, tableName);
+        assertEquals(1, tableCount, () -> "Table introuvable : " + tableName);
     }
 
     private static void assertNumericColumn(Connection connection, NumericColumnExpectation expectation)
