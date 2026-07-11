@@ -3,14 +3,16 @@ import { of } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import { EmergencyApiService } from '../emergency/emergency-api.service';
 import { PatientApiService } from '../patient/patient-api.service';
-import { ProvisionalPatientApiService } from '../patient/provisional-patient-api.service';
 import { VisitApiService } from '../visit/visit-api.service';
 import { UnifiedAdmissionComponent } from './unified-admission.component';
 
 describe('UnifiedAdmissionComponent', () => {
   let fixture: ComponentFixture<UnifiedAdmissionComponent>;
   let component: UnifiedAdmissionComponent;
-  let emergencyApi: { create: ReturnType<typeof vi.fn> };
+  let emergencyApi: {
+    create: ReturnType<typeof vi.fn>;
+    createProvisionalAdmission: ReturnType<typeof vi.fn>;
+  };
 
   const patient = {
     id: 'patient-1',
@@ -35,6 +37,11 @@ describe('UnifiedAdmissionComponent', () => {
   beforeEach(async () => {
     emergencyApi = {
       create: vi.fn().mockReturnValue(of({ id: 'emergency-1' })),
+      createProvisionalAdmission: vi.fn().mockReturnValue(of({
+        id: 'emergency-provisional-1',
+        patientId: 'patient-provisional-1',
+        patientName: 'URG-TEMP-20260711-000001',
+      })),
     };
 
     await TestBed.configureTestingModule({
@@ -53,10 +60,6 @@ describe('UnifiedAdmissionComponent', () => {
             list: vi.fn().mockReturnValue(of([patient])),
             create: vi.fn().mockReturnValue(of(patient)),
           },
-        },
-        {
-          provide: ProvisionalPatientApiService,
-          useValue: { create: vi.fn().mockReturnValue(of({ patient })) },
         },
         { provide: EmergencyApiService, useValue: emergencyApi },
         { provide: VisitApiService, useValue: { create: vi.fn().mockReturnValue(of({ id: 'visit-1' })) } },
@@ -90,7 +93,7 @@ describe('UnifiedAdmissionComponent', () => {
     expect(component.error()).toContain('nom');
   });
 
-  it('sends the third-party information with the emergency admission', () => {
+  it('sends the third-party information with an existing-patient emergency', () => {
     component.nextStep();
     component.form.patchValue({
       arrivalMode: 'ACCOMPANIED',
@@ -113,5 +116,22 @@ describe('UnifiedAdmissionComponent', () => {
       thirdPartyRelationship: 'WITNESS',
       thirdPartyConsentToContact: true,
     }));
+  });
+
+  it('uses one atomic request for an unknown patient emergency', () => {
+    component.setPatientMode('PROVISIONAL');
+    component.nextStep();
+    component.form.patchValue({ arrivalMode: 'AMBULANCE' });
+    component.nextStep();
+    component.form.patchValue({ chiefComplaint: 'Patient inconscient' });
+
+    component.submit();
+
+    expect(emergencyApi.createProvisionalAdmission).toHaveBeenCalledWith(expect.objectContaining({
+      requestId: expect.any(String),
+      patient: expect.objectContaining({ confidenceLevel: 'NONE' }),
+      emergency: expect.objectContaining({ chiefComplaint: 'Patient inconscient' }),
+    }));
+    expect(emergencyApi.create).not.toHaveBeenCalled();
   });
 });
