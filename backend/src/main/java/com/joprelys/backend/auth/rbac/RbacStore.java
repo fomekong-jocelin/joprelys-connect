@@ -3,6 +3,7 @@ package com.joprelys.backend.auth.rbac;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,7 +29,7 @@ public class RbacStore {
 
     @Transactional
     public void seedCatalog() {
-        Instant now = Instant.now();
+        Timestamp now = sqlTimestamp(Instant.now());
         for (RbacCatalog.PermissionDefinition permission : RbacCatalog.permissions()) {
             Integer count = jdbcTemplate.queryForObject(
                     "SELECT COUNT(*) FROM permissions WHERE code = ?",
@@ -193,7 +194,7 @@ public class RbacStore {
             boolean assignable,
             Set<String> permissionCodes) {
         UUID id = UUID.randomUUID();
-        Instant now = Instant.now();
+        Timestamp now = sqlTimestamp(Instant.now());
         jdbcTemplate.update(
                 "INSERT INTO roles(id, organization_id, code, name, description, system_role, assignable, enabled, created_at, updated_at, version) "
                         + "VALUES (?, ?, ?, ?, ?, FALSE, ?, TRUE, ?, ?, 0)",
@@ -214,7 +215,7 @@ public class RbacStore {
         int updated = jdbcTemplate.update(
                 "UPDATE roles SET code = ?, name = ?, description = ?, assignable = ?, enabled = ?, updated_at = ?, version = version + 1 "
                         + "WHERE id = ? AND organization_id = ? AND system_role = FALSE",
-                code, name, description, assignable, enabled, Instant.now(), roleId, organizationId);
+                code, name, description, assignable, enabled, sqlTimestamp(Instant.now()), roleId, organizationId);
         if (updated == 0) {
             throw new IllegalStateException("Custom role not found");
         }
@@ -232,7 +233,10 @@ public class RbacStore {
             throw new IllegalStateException("Custom role not found");
         }
         replaceRolePermissions(roleId, permissionCodes);
-        jdbcTemplate.update("UPDATE roles SET updated_at = ?, version = version + 1 WHERE id = ?", Instant.now(), roleId);
+        jdbcTemplate.update(
+                "UPDATE roles SET updated_at = ?, version = version + 1 WHERE id = ?",
+                sqlTimestamp(Instant.now()),
+                roleId);
         return findVisibleRole(roleId, organizationId).orElseThrow();
     }
 
@@ -242,7 +246,7 @@ public class RbacStore {
         for (RoleView role : roles) {
             jdbcTemplate.update(
                     "INSERT INTO user_roles(user_id, role_id, organization_id, assigned_by, assigned_at) VALUES (?, ?, ?, ?, ?)",
-                    userId, role.id(), organizationId, assignedBy, Instant.now());
+                    userId, role.id(), organizationId, assignedBy, sqlTimestamp(Instant.now()));
         }
     }
 
@@ -301,7 +305,8 @@ public class RbacStore {
         jdbcTemplate.update(
                 "INSERT INTO rbac_audit_log(id, organization_id, actor_user_id, action, target_type, target_id, details, created_at) "
                         + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                UUID.randomUUID(), organizationId, actorUserId, action, targetType, targetId, details, Instant.now());
+                UUID.randomUUID(), organizationId, actorUserId, action, targetType, targetId, details,
+                sqlTimestamp(Instant.now()));
     }
 
     @Transactional(readOnly = true)
@@ -330,7 +335,7 @@ public class RbacStore {
         if (count != null && count == 0) {
             jdbcTemplate.update(
                     "INSERT INTO user_roles(user_id, role_id, organization_id, assigned_by, assigned_at) VALUES (?, ?, ?, ?, ?)",
-                    userId, roleId, organizationId, assignedBy, Instant.now());
+                    userId, roleId, organizationId, assignedBy, sqlTimestamp(Instant.now()));
         }
     }
 
@@ -365,6 +370,10 @@ public class RbacStore {
                 rs.getBoolean("assignable"),
                 rs.getBoolean("enabled"),
                 Set.of());
+    }
+
+    private static Timestamp sqlTimestamp(Instant instant) {
+        return Timestamp.from(instant);
     }
 
     public record RoleView(
