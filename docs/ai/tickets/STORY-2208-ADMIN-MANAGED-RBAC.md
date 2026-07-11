@@ -16,11 +16,11 @@ Les rôles `DAF`, `CAISSIER` et `SECRETAIRE_COMPTABLE` étaient déjà utilisés
 
 Mettre en place un RBAC tenanté permettant à l'administrateur clinique de gérer les rôles, les permissions et les affectations utilisateurs sans modifier le code.
 
-## Périmètres d'administration
+## Décision d'architecture — comptes plateforme
 
 - `ADMIN_CLINIQUE` est obligatoirement rattaché à un établissement et ne peut administrer que celui-ci.
 - `ADMIN_JOPRELYS` et `SUPER_ADMIN` sont des comptes plateforme et ne sont pas obligatoirement rattachés à un établissement.
-- un administrateur plateforme doit sélectionner explicitement l'établissement dont il souhaite administrer le RBAC ;
+- un administrateur plateforme sélectionne explicitement l'établissement dont il souhaite administrer le RBAC ;
 - le périmètre sélectionné est transmis au backend et validé à chaque lecture ou mutation ;
 - les rôles et permissions plateforme ne sont jamais proposés dans la matrice d'un établissement ;
 - aucun changement cross-tenant n'est autorisé.
