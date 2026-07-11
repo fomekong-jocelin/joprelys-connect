@@ -3,10 +3,12 @@ import { finalize } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { EmergencyApiService } from '../../emergency/emergency-api.service';
 import { EmergencyRecord } from '../../emergency/emergency.models';
+import { PatientEmergencyMedicoLegalSummaryComponent } from './patient-emergency-medico-legal-summary.component';
 
 @Component({
   selector: 'app-patient-emergency-context',
   standalone: true,
+  imports: [PatientEmergencyMedicoLegalSummaryComponent],
   template: `
     <section class="ui-card p-4 sm:p-5">
       <div class="flex items-start justify-between gap-3 border-b border-[var(--divider-subtle)] pb-3">
@@ -49,6 +51,11 @@ import { EmergencyRecord } from '../../emergency/emergency.models';
                         {{ t('patient.urgTemp.emergency.active') }}
                       </span>
                     }
+                    @if (emergency.thirdPartyRecorded) {
+                      <span class="rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] px-2 py-0.5 text-[10px] font-bold text-[var(--text-muted)]">
+                        {{ t('medicoLegal.thirdParty.recorded') }}
+                      </span>
+                    }
                   </div>
                   <p class="mt-2 text-sm font-semibold text-[var(--text-secondary)]">{{ emergency.chiefComplaint }}</p>
                 </div>
@@ -79,41 +86,7 @@ import { EmergencyRecord } from '../../emergency/emergency.models';
                 </div>
               </dl>
 
-              @if (emergency.thirdPartyName) {
-                <section class="mt-3 rounded-sm border-l-2 border-[var(--brand-primary)] bg-[var(--app-surface)] p-3">
-                  <h4 class="text-xs font-black uppercase tracking-wider text-[var(--text-primary)]">
-                    {{ t('patient.urgTemp.emergency.thirdPartyTitle') }}
-                  </h4>
-                  <dl class="mt-2 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
-                    <div>
-                      <dt class="ui-label">{{ t('patient.urgTemp.emergency.name') }}</dt>
-                      <dd class="font-bold text-[var(--text-primary)]">{{ emergency.thirdPartyName }}</dd>
-                    </div>
-                    <div>
-                      <dt class="ui-label">{{ t('patient.urgTemp.emergency.phone') }}</dt>
-                      <dd class="font-bold text-[var(--text-primary)]">{{ valueOrFallback(emergency.thirdPartyPhone) }}</dd>
-                    </div>
-                    <div>
-                      <dt class="ui-label">{{ t('patient.urgTemp.emergency.relationship') }}</dt>
-                      <dd class="font-bold text-[var(--text-primary)]">{{ relationshipLabel(emergency.thirdPartyRelationship) }}</dd>
-                    </div>
-                    <div>
-                      <dt class="ui-label">{{ t('patient.urgTemp.emergency.idDocument') }}</dt>
-                      <dd class="font-bold text-[var(--text-primary)]">{{ valueOrFallback(emergency.thirdPartyIdDocument) }}</dd>
-                    </div>
-                  </dl>
-                  @if (emergency.thirdPartyCircumstances) {
-                    <p class="mt-2 text-xs text-[var(--text-secondary)]">
-                      <strong>{{ t('patient.urgTemp.emergency.circumstances') }} :</strong> {{ emergency.thirdPartyCircumstances }}
-                    </p>
-                  }
-                  <p class="mt-2 text-[10px] font-semibold text-[var(--text-muted)]">
-                    {{ t('patient.urgTemp.emergency.contactAllowed') }} :
-                    {{ emergency.thirdPartyConsentToContact ? t('patient.urgTemp.common.yes') : t('patient.urgTemp.common.no') }}.
-                    {{ t('patient.urgTemp.emergency.notLegalRepresentative') }}
-                  </p>
-                </section>
-              }
+              <app-patient-emergency-medico-legal-summary [emergencyId]="emergency.id" />
 
               @if (emergency.resuscitationLogs?.length) {
                 <section class="mt-3 border-t border-[var(--divider-subtle)] pt-3">
@@ -154,10 +127,10 @@ export class PatientEmergencyContextComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     this.emergencyApi.getPatientEmergencies(this.patientId()).pipe(
-      finalize(() => this.loading.set(false))
+      finalize(() => this.loading.set(false)),
     ).subscribe({
-      next: (records) => this.emergencies.set(
-        [...records].sort((first, second) => second.createdAt.localeCompare(first.createdAt))
+      next: records => this.emergencies.set(
+        [...records].sort((first, second) => second.createdAt.localeCompare(first.createdAt)),
       ),
       error: () => this.error.set(this.t('patient.urgTemp.emergency.loadError')),
     });
@@ -171,16 +144,8 @@ export class PatientEmergencyContextComponent implements OnInit {
     return this.enumLabel('patient.urgTemp.emergency.arrival', value);
   }
 
-  relationshipLabel(value?: string): string {
-    return this.enumLabel('patient.urgTemp.emergency.relationship', value);
-  }
-
   careLabel(value: string): string {
     return this.enumLabel('patient.urgTemp.emergency.care', value);
-  }
-
-  valueOrFallback(value?: string | null): string {
-    return value?.trim() || this.t('patient.urgTemp.common.notProvided');
   }
 
   formatDateTime(value?: string | null): string {
