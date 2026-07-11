@@ -45,8 +45,11 @@ public class EmergencyService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "PATIENT_ALIAS_READ_ONLY");
         }
 
+        var patientContext = canonicalResolver.resolve(patient.getId());
         boolean alreadyInEmergency = emergencyRepository.findByStabilizedAtIsNull().stream()
-                .anyMatch(emergency -> emergency.getPatient().getId().equals(request.patientId()));
+                .map(EmergencyEntity::getPatient)
+                .map(PatientEntity::getId)
+                .anyMatch(patientContext.contributingPatientIds()::contains);
         if (alreadyInEmergency) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "EMERGENCY_ALREADY_ACTIVE");
         }
