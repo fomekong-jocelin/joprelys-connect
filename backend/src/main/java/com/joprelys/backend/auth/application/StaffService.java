@@ -7,9 +7,11 @@ import com.joprelys.backend.auth.api.UpdateStaffRequest;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -22,6 +24,12 @@ import org.springframework.web.server.ResponseStatusException;
 public class StaffService {
 
 	private static final String CLINIC_ADMIN_ROLE = "ADMIN_CLINIQUE";
+	private static final Set<String> CLINICAL_DIRECTORY_ROLES = Set.of(
+			"MEDECIN",
+			"INFIRMIER",
+			"AGENT_ACCUEIL",
+			"PHARMACIEN",
+			"BIOLOGISTE");
 	private static final String PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 	private static final int TEMPORARY_PASSWORD_LENGTH = 6;
 
@@ -38,10 +46,13 @@ public class StaffService {
 	@Transactional(readOnly = true)
 	public List<StaffResponse> listStaff(Authentication authentication) {
 		UserAccountEntity requester = currentClinicUser(authentication);
+		boolean canManageRbac = requester.hasRole(CLINIC_ADMIN_ROLE);
 		return userAccountRepository
 				.findAllByOrganizationIdAndIdNotOrderByDisplayNameAsc(requester.getOrganizationId(), requester.getId())
 				.stream()
-				.filter(account -> ClinicRoleCatalog.hasAnyManageableRole(account.getRole()))
+				.filter(account -> canManageRbac
+						? ClinicRoleCatalog.hasAnyManageableRole(account.getRole())
+						: hasAnyDirectoryRole(account.getRole()))
 				.sorted(Comparator.comparing(UserAccountEntity::getDisplayName))
 				.map(StaffService::toStaffResponse)
 				.toList();
@@ -163,6 +174,15 @@ public class StaffService {
 				.filter(UserAccountEntity::isEnabled)
 				.filter(account -> ClinicRoleCatalog.hasRole(account.getRole(), CLINIC_ADMIN_ROLE))
 				.count();
+	}
+
+	private static boolean hasAnyDirectoryRole(String roles) {
+		if (roles == null || roles.isBlank()) {
+			return false;
+		}
+		return Arrays.stream(roles.split(","))
+				.map(String::trim)
+				.anyMatch(CLINICAL_DIRECTORY_ROLES::contains);
 	}
 
 	private String generateTemporaryPassword() {
