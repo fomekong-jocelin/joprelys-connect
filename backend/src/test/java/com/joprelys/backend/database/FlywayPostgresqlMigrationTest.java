@@ -60,8 +60,8 @@ class FlywayPostgresqlMigrationTest {
         MigrationInfo current = flyway.info().current();
         assertNotNull(current, "Flyway doit exposer la migration courante");
         assertNotNull(current.getVersion(), "La migration courante doit être versionnée");
-        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 57,
-                "Toutes les migrations jusqu'au RBAC administrable doivent être appliquées");
+        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 58,
+                "Toutes les migrations jusqu'au modèle URG-TEMP doivent être appliquées");
 
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword());
@@ -76,11 +76,24 @@ class FlywayPostgresqlMigrationTest {
         assertTrue(permissionCount > 0, "Le catalogue des permissions doit être initialisé sur PostgreSQL");
         assertTrue(systemRoleCount > 0, "Le catalogue des rôles système doit être initialisé sur PostgreSQL");
 
+        Integer declarationTableCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'patient_identity_declarations'",
+                Integer.class);
+        Integer historyTableCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'patient_identity_status_history'",
+                Integer.class);
+        assertEquals(1, declarationTableCount);
+        assertEquals(1, historyTableCount);
+
         try (Connection connection = DriverManager.getConnection(
                 POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword())) {
             for (NumericColumnExpectation expectation : V55_COLUMNS) {
                 assertNumericColumn(connection, expectation);
             }
+            assertColumnNullable(connection, "patients", "full_name");
+            assertColumnNullable(connection, "patients", "gender");
+            assertColumnNullable(connection, "patients", "birth_date");
+            assertColumnNullable(connection, "patients", "city");
         }
     }
 
@@ -93,11 +106,9 @@ class FlywayPostgresqlMigrationTest {
                   AND table_name = ?
                   AND column_name = ?
                 """;
-
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, expectation.tableName());
             statement.setString(2, expectation.columnName());
-
             try (ResultSet resultSet = statement.executeQuery()) {
                 assertTrue(resultSet.next(), () -> "Colonne introuvable : "
                         + expectation.tableName() + "." + expectation.columnName());
@@ -108,11 +119,29 @@ class FlywayPostgresqlMigrationTest {
         }
     }
 
+    private static void assertColumnNullable(Connection connection, String tableName, String columnName)
+            throws SQLException {
+        String sql = """
+                SELECT is_nullable
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = ?
+                  AND column_name = ?
+                """;
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, tableName);
+            statement.setString(2, columnName);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                assertTrue(resultSet.next(), () -> "Colonne introuvable : " + tableName + "." + columnName);
+                assertEquals("YES", resultSet.getString("is_nullable"));
+            }
+        }
+    }
+
     private record NumericColumnExpectation(
             String tableName,
             String columnName,
             int precision,
-            int scale
-    ) {
+            int scale) {
     }
 }
