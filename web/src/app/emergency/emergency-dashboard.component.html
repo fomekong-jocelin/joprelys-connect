@@ -23,52 +23,82 @@
     } @else if (emergencies().length === 0) {
       <app-empty-state [message]="t('emergency.empty')"></app-empty-state>
     } @else {
-      <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         @for (record of emergencies(); track record.id) {
-          <article class="ui-card flex flex-col justify-between p-5">
-            <div class="space-y-4">
-              <div class="flex items-start justify-between gap-2">
-                <div class="min-w-0">
-                  <h3 class="truncate font-display text-base font-black text-[var(--text-primary)]" [title]="record.patientName">{{ record.patientName }}</h3>
-                  <span class="text-[10px] font-black uppercase tracking-wider text-brand-primary">{{ t('emergency.arrival.' + record.arrivalMode.toLowerCase()) }}</span>
+          <article class="ui-card flex min-h-full flex-col p-4 sm:p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  @if (isProvisional(record)) {
+                    <span class="rounded-sm bg-[var(--brand-warning-subtle)] px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-[var(--brand-warning-text)]">
+                      {{ ui('provisional') }}
+                    </span>
+                  }
+                  <span class="text-[10px] font-bold text-[var(--text-muted)]">{{ record.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
                 </div>
-                <span
-                  class="inline-flex items-center rounded-sm px-2 py-0.5 text-xs font-black uppercase tracking-wider"
-                  [class.bg-[var(--brand-danger-subtle)]]="record.triageLevel === 'RED'"
-                  [class.text-[var(--brand-danger-text)]]="record.triageLevel === 'RED'"
-                  [class.bg-[var(--brand-warning-subtle)]]="record.triageLevel === 'ORANGE' || record.triageLevel === 'YELLOW'"
-                  [class.text-[var(--brand-warning-text)]]="record.triageLevel === 'ORANGE' || record.triageLevel === 'YELLOW'"
-                  [class.bg-[var(--brand-success-subtle)]]="record.triageLevel === 'GREEN'"
-                  [class.text-[var(--brand-success-text)]]="record.triageLevel === 'GREEN'"
-                >{{ t('emergency.triage.' + record.triageLevel.toLowerCase()) }}</span>
+                <h3 class="mt-2 truncate font-display text-base font-black text-[var(--text-primary)]" [title]="patientDisplayName(record)">
+                  {{ patientDisplayName(record) }}
+                </h3>
+                <p class="mt-0.5 truncate text-xs font-bold text-brand-primary" [title]="patientPrimaryNumber(record)">
+                  {{ patientPrimaryNumber(record) }}
+                </p>
               </div>
 
-              <div class="ui-card-muted p-3">
-                <p class="line-clamp-2 text-sm font-semibold text-[var(--text-secondary)]">{{ record.chiefComplaint }}</p>
-              </div>
-
-              <dl class="grid grid-cols-2 gap-3 border-t border-[var(--divider-subtle)] pt-3 text-xs">
-                <div>
-                  <dt class="ui-label">{{ t('emergency.vitals.bp') }}</dt>
-                  <dd class="mt-0.5 font-bold text-[var(--text-primary)]">{{ record.initialBpSystolic && record.initialBpDiastolic ? record.initialBpSystolic + '/' + record.initialBpDiastolic : '-' }} mmHg</dd>
-                </div>
-                <div>
-                  <dt class="ui-label">{{ t('emergency.vitals.hr') }}</dt>
-                  <dd class="mt-0.5 font-bold text-[var(--text-primary)]">{{ record.initialHr ? record.initialHr + ' bpm' : '-' }}</dd>
-                </div>
-                <div>
-                  <dt class="ui-label">{{ t('emergency.vitals.temp') }}</dt>
-                  <dd class="mt-0.5 font-bold text-[var(--text-primary)]">{{ record.initialTemp ? record.initialTemp + ' °C' : '-' }}</dd>
-                </div>
-                <div>
-                  <dt class="ui-label">{{ t('emergency.vitals.hemodynamic') }}</dt>
-                  <dd class="mt-0.5 font-bold" [class.text-[var(--brand-danger-text)]]="record.hemodynamicStatus === 'SHOCK' || record.hemodynamicStatus === 'UNSTABLE'">{{ t('emergency.hemo.' + record.hemodynamicStatus.toLowerCase()) }}</dd>
-                </div>
-              </dl>
+              <span
+                class="inline-flex shrink-0 items-center rounded-sm px-2 py-1 text-[10px] font-black uppercase tracking-wider"
+                [class.bg-[var(--brand-danger-subtle)]]="record.triageLevel === 'RED'"
+                [class.text-[var(--brand-danger-text)]]="record.triageLevel === 'RED'"
+                [class.bg-[var(--brand-warning-subtle)]]="record.triageLevel === 'ORANGE' || record.triageLevel === 'YELLOW'"
+                [class.text-[var(--brand-warning-text)]]="record.triageLevel === 'ORANGE' || record.triageLevel === 'YELLOW'"
+                [class.bg-[var(--brand-success-subtle)]]="record.triageLevel === 'GREEN'"
+                [class.text-[var(--brand-success-text)]]="record.triageLevel === 'GREEN'"
+              >{{ triageLabel(record.triageLevel) }}</span>
             </div>
 
+            <div class="mt-4 flex flex-wrap gap-2 text-xs">
+              <span class="rounded-sm border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2 py-1 font-semibold text-[var(--text-secondary)]">
+                {{ arrivalLabel(record.arrivalMode) }}
+              </span>
+              <span
+                class="rounded-sm border border-[var(--app-border)] px-2 py-1 font-semibold"
+                [class.text-[var(--brand-danger-text)]]="record.hemodynamicStatus === 'SHOCK' || record.hemodynamicStatus === 'UNSTABLE'"
+                [class.text-[var(--brand-success-text)]]="record.hemodynamicStatus === 'STABLE'"
+              >{{ hemodynamicLabel(record.hemodynamicStatus) }}</span>
+            </div>
+
+            <div class="mt-4 flex-1 border-l-2 border-[var(--brand-primary)] bg-[var(--app-surface-muted)] px-3 py-2.5">
+              <p class="line-clamp-3 text-sm font-semibold leading-5 text-[var(--text-secondary)]">{{ record.chiefComplaint }}</p>
+            </div>
+
+            @if (record.thirdPartyName) {
+              <div class="mt-3 rounded-sm border border-[var(--app-border)] px-3 py-2 text-xs text-[var(--text-secondary)]">
+                <span class="font-extrabold text-[var(--text-primary)]">{{ ui('broughtBy') }} :</span>
+                {{ record.thirdPartyName }}
+                @if (record.thirdPartyRelationship) { · {{ record.thirdPartyRelationship }} }
+              </div>
+            }
+
+            <dl class="mt-4 grid grid-cols-3 gap-2 border-t border-[var(--divider-subtle)] pt-3 text-xs">
+              <div>
+                <dt class="ui-label">{{ ui('bloodPressure') }}</dt>
+                <dd class="mt-1 font-bold text-[var(--text-primary)]">
+                  {{ record.initialBpSystolic && record.initialBpDiastolic ? record.initialBpSystolic + '/' + record.initialBpDiastolic : '—' }}
+                </dd>
+              </div>
+              <div>
+                <dt class="ui-label">{{ ui('pulse') }}</dt>
+                <dd class="mt-1 font-bold text-[var(--text-primary)]">{{ record.initialHr ? record.initialHr + ' bpm' : '—' }}</dd>
+              </div>
+              <div>
+                <dt class="ui-label">{{ ui('temperature') }}</dt>
+                <dd class="mt-1 font-bold text-[var(--text-primary)]">{{ record.initialTemp ? record.initialTemp + ' °C' : '—' }}</dd>
+              </div>
+            </dl>
+
             <div class="mt-4 border-t border-[var(--divider-subtle)] pt-4">
-              <app-ui-button variant="primary" (pressed)="openDrawer(record)" class="w-full">{{ t('emergency.treatBtn') }}</app-ui-button>
+              <app-ui-button variant="primary" (pressed)="openDrawer(record)" class="w-full">
+                {{ ui('viewRecord') }}
+              </app-ui-button>
             </div>
           </article>
         }
@@ -78,68 +108,189 @@
 </app-shell>
 
 @if (isDrawerOpen() && selectedEmergency(); as record) {
-  <div class="fixed inset-0 z-50 flex justify-end bg-[var(--overlay-bg)] backdrop-blur-xs">
-    <aside class="flex h-full w-full max-w-xl flex-col overflow-y-auto border-l border-[var(--app-border)] bg-[var(--app-surface)] p-5 shadow-2xl sm:p-6" aria-label="Dossier d'urgence actif">
-      <header class="mb-5 flex items-start justify-between gap-4">
-        <div class="min-w-0">
-          <span class="mb-2 inline-flex items-center rounded-sm bg-[var(--brand-danger-subtle)] px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-[var(--brand-danger-text)]">🚨 {{ t('emergency.activeLabel') }}</span>
-          <h3 class="truncate font-display text-xl font-black text-[var(--text-primary)]">{{ record.patientName }}</h3>
-          <p class="mt-1 text-xs text-[var(--text-muted)]">{{ t('emergency.complaint') }} : {{ record.chiefComplaint }}</p>
+  <div class="fixed inset-0 z-50 flex justify-end bg-[var(--overlay-bg)] backdrop-blur-xs" (click)="closeDrawer()">
+    <aside
+      class="flex h-full w-full flex-col border-l border-[var(--app-border)] bg-[var(--app-surface)] shadow-2xl sm:max-w-2xl xl:max-w-3xl"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="ui('activeFile')"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="border-b border-[var(--app-border)] px-4 py-4 sm:px-6">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="rounded-sm bg-[var(--brand-danger-subtle)] px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-[var(--brand-danger-text)]">
+                {{ ui('activeFile') }}
+              </span>
+              @if (isProvisional(record)) {
+                <span class="rounded-sm bg-[var(--brand-warning-subtle)] px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-[var(--brand-warning-text)]">
+                  {{ identityStatusLabel(record.identityStatus) }}
+                </span>
+              }
+            </div>
+            <h2 class="mt-2 truncate font-display text-xl font-black text-[var(--text-primary)] sm:text-2xl">
+              {{ patientDisplayName(record) }}
+            </h2>
+            <p class="mt-1 text-sm font-bold text-brand-primary">{{ patientPrimaryNumber(record) }}</p>
+          </div>
+
+          <div class="flex shrink-0 items-center gap-2">
+            <app-ui-button variant="secondary" (pressed)="openStabilizeModal()" [disabled]="isProcessing()">
+              {{ t('emergency.stabilizeBtn') }}
+            </app-ui-button>
+            <button type="button" (click)="closeDrawer()" class="rounded-sm p-2 text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)]" aria-label="Fermer">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
-        <div class="flex shrink-0 items-center gap-2">
-          <app-ui-button variant="secondary" (pressed)="openStabilizeModal()" [disabled]="isProcessing()">{{ t('emergency.stabilizeBtn') }}</app-ui-button>
-          <button type="button" (click)="closeDrawer()" class="rounded-sm p-2 text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)]" aria-label="Fermer">
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+
+        <nav class="mt-4 grid grid-cols-3 gap-1 rounded-sm bg-[var(--app-surface-muted)] p-1" aria-label="Sections du dossier">
+          <button type="button" class="rounded-sm px-2 py-2 text-xs font-extrabold transition-colors" (click)="setDetailTab('OVERVIEW')" [class.bg-[var(--app-surface)]]="detailTab() === 'OVERVIEW'" [class.text-brand-primary]="detailTab() === 'OVERVIEW'" [class.text-[var(--text-muted)]]="detailTab() !== 'OVERVIEW'">
+            {{ ui('overviewTab') }}
           </button>
-        </div>
+          <button type="button" class="rounded-sm px-2 py-2 text-xs font-extrabold transition-colors" (click)="setDetailTab('IDENTITY')" [class.bg-[var(--app-surface)]]="detailTab() === 'IDENTITY'" [class.text-brand-primary]="detailTab() === 'IDENTITY'" [class.text-[var(--text-muted)]]="detailTab() !== 'IDENTITY'">
+            {{ ui('identityTab') }}
+          </button>
+          <button type="button" class="rounded-sm px-2 py-2 text-xs font-extrabold transition-colors" (click)="setDetailTab('CARE')" [class.bg-[var(--app-surface)]]="detailTab() === 'CARE'" [class.text-brand-primary]="detailTab() === 'CARE'" [class.text-[var(--text-muted)]]="detailTab() !== 'CARE'">
+            {{ ui('careTab') }}
+          </button>
+        </nav>
       </header>
 
-      <div class="min-h-0 flex-1 overflow-y-auto border-y border-[var(--divider-subtle)] py-5 pr-1">
-        <h4 class="ui-label mb-3">{{ t('emergency.timelineTitle') }}</h4>
-        @if (record.resuscitationLogs.length === 0) {
-          <p class="py-6 text-center text-sm italic text-[var(--text-muted)]">{{ t('emergency.timeline.empty') }}</p>
-        } @else {
-          <div class="space-y-3">
-            @for (log of record.resuscitationLogs; track log.id) {
-              <div class="ui-card-muted p-3">
-                <div class="flex items-start justify-between gap-2">
-                  <span class="text-[10px] font-black uppercase tracking-wider text-brand-primary">{{ t('emergency.action.' + log.actionType.toLowerCase()) }}</span>
-                  <span class="text-[10px] font-bold text-[var(--text-muted)]">{{ log.administeredAt | date:'HH:mm:ss' }}</span>
+      <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+        @if (detailError(); as message) {
+          <app-ui-alert tone="error" class="mb-4">{{ message }}</app-ui-alert>
+        }
+        @if (isDetailLoading()) {
+          <div class="flex items-center justify-center py-6 text-sm font-semibold text-[var(--text-muted)]">
+            {{ ui('loadingDetails') }}
+          </div>
+        }
+
+        @if (detailTab() === 'OVERVIEW') {
+          <div class="space-y-4">
+            <section class="ui-card-subtle p-4">
+              <h3 class="font-display text-base font-extrabold text-[var(--text-primary)]">{{ ui('emergencySummary') }}</h3>
+              <dl class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div><dt class="ui-label">{{ ui('arrivalMode') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ arrivalLabel(record.arrivalMode) }}</dd></div>
+                <div><dt class="ui-label">{{ ui('arrivalAt') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ record.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}</dd></div>
+                <div><dt class="ui-label">{{ ui('triage') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ triageLabel(record.triageLevel) }}</dd></div>
+                <div><dt class="ui-label">{{ ui('hemodynamic') }}</dt><dd class="mt-1 text-sm font-bold" [class.text-[var(--brand-danger-text)]]="record.hemodynamicStatus !== 'STABLE'" [class.text-[var(--brand-success-text)]]="record.hemodynamicStatus === 'STABLE'">{{ hemodynamicLabel(record.hemodynamicStatus) }}</dd></div>
+              </dl>
+              <div class="mt-4 border-l-2 border-[var(--brand-primary)] bg-[var(--app-surface-muted)] px-3 py-3">
+                <p class="ui-label">{{ ui('complaint') }}</p>
+                <p class="mt-1 whitespace-pre-wrap text-sm font-semibold leading-6 text-[var(--text-secondary)]">{{ record.chiefComplaint }}</p>
+              </div>
+            </section>
+
+            <section class="ui-card-subtle p-4">
+              <h3 class="font-display text-base font-extrabold text-[var(--text-primary)]">{{ ui('vitals') }}</h3>
+              <dl class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div><dt class="ui-label">{{ ui('bloodPressure') }}</dt><dd class="mt-1 text-sm font-black text-[var(--text-primary)]">{{ record.initialBpSystolic && record.initialBpDiastolic ? record.initialBpSystolic + '/' + record.initialBpDiastolic + ' mmHg' : '—' }}</dd></div>
+                <div><dt class="ui-label">{{ ui('pulse') }}</dt><dd class="mt-1 text-sm font-black text-[var(--text-primary)]">{{ record.initialHr ? record.initialHr + ' bpm' : '—' }}</dd></div>
+                <div><dt class="ui-label">{{ ui('temperature') }}</dt><dd class="mt-1 text-sm font-black text-[var(--text-primary)]">{{ record.initialTemp ? record.initialTemp + ' °C' : '—' }}</dd></div>
+                <div><dt class="ui-label">{{ ui('registeredAt') }}</dt><dd class="mt-1 text-sm font-black text-[var(--text-primary)]">{{ record.createdAt | date:'HH:mm' }}</dd></div>
+              </dl>
+            </section>
+          </div>
+        }
+
+        @if (detailTab() === 'IDENTITY') {
+          <div class="space-y-4">
+            <section class="ui-card-subtle p-4">
+              <h3 class="font-display text-base font-extrabold text-[var(--text-primary)]">{{ ui('patientIdentity') }}</h3>
+              <dl class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                @if (record.temporaryPatientNumber) { <div><dt class="ui-label">{{ ui('temporaryNumber') }}</dt><dd class="mt-1 text-sm font-black text-brand-primary">{{ record.temporaryPatientNumber }}</dd></div> }
+                <div><dt class="ui-label">{{ ui('globalNumber') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ valueOrUnknown(record.globalPatientNumber) }}</dd></div>
+                <div><dt class="ui-label">{{ ui('localNumber') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ valueOrUnknown(record.localPatientNumber) }}</dd></div>
+                <div><dt class="ui-label">{{ ui('identityStatus') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ identityStatusLabel(record.identityStatus) }}</dd></div>
+                <div><dt class="ui-label">{{ ui('confidence') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ confidenceLabel(record.identityConfidenceLevel) }}</dd></div>
+              </dl>
+            </section>
+
+            @if (isProvisional(record)) {
+              <section class="ui-card-subtle p-4">
+                <h3 class="font-display text-base font-extrabold text-[var(--text-primary)]">{{ ui('observableInfo') }}</h3>
+                <dl class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div><dt class="ui-label">{{ ui('apparentGender') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ valueOrUnknown(record.apparentGender) }}</dd></div>
+                  <div><dt class="ui-label">{{ ui('estimatedAge') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ valueOrUnknown(record.estimatedAgeRange) }}</dd></div>
+                  <div><dt class="ui-label">{{ ui('foundLocation') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ valueOrUnknown(record.foundLocation) }}</dd></div>
+                  <div><dt class="ui-label">{{ ui('foundAt') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ record.foundAt ? (record.foundAt | date:'dd/MM/yyyy HH:mm') : ui('unknown') }}</dd></div>
+                  <div class="sm:col-span-2"><dt class="ui-label">{{ ui('physicalDescription') }}</dt><dd class="mt-1 whitespace-pre-wrap text-sm font-semibold leading-6 text-[var(--text-secondary)]">{{ valueOrUnknown(record.physicalDescription) }}</dd></div>
+                </dl>
+              </section>
+            }
+
+            <section class="ui-card-subtle p-4">
+              <h3 class="font-display text-base font-extrabold text-[var(--text-primary)]">{{ ui('thirdParty') }}</h3>
+              @if (hasThirdParty(record)) {
+                <dl class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div><dt class="ui-label">{{ ui('name') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ valueOrUnknown(record.thirdPartyName) }}</dd></div>
+                  <div><dt class="ui-label">{{ ui('phone') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ valueOrUnknown(record.thirdPartyPhone) }}</dd></div>
+                  <div><dt class="ui-label">{{ ui('relationship') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ valueOrUnknown(record.thirdPartyRelationship) }}</dd></div>
+                  <div><dt class="ui-label">{{ ui('idDocument') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ valueOrUnknown(record.thirdPartyIdDocument) }}</dd></div>
+                  <div><dt class="ui-label">{{ ui('contactConsent') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ record.thirdPartyConsentToContact ? ui('yes') : ui('no') }}</dd></div>
+                  <div class="sm:col-span-2"><dt class="ui-label">{{ ui('circumstances') }}</dt><dd class="mt-1 whitespace-pre-wrap text-sm font-semibold leading-6 text-[var(--text-secondary)]">{{ valueOrUnknown(record.thirdPartyCircumstances) }}</dd></div>
+                </dl>
+              } @else {
+                <p class="mt-3 text-sm text-[var(--text-muted)]">{{ ui('noThirdParty') }}</p>
+              }
+            </section>
+          </div>
+        }
+
+        @if (detailTab() === 'CARE') {
+          <div class="space-y-5">
+            <section>
+              <h3 class="font-display text-base font-extrabold text-[var(--text-primary)]">{{ t('emergency.timelineTitle') }}</h3>
+              @if (record.resuscitationLogs.length === 0) {
+                <p class="ui-card-muted mt-3 px-4 py-6 text-center text-sm italic text-[var(--text-muted)]">{{ t('emergency.timeline.empty') }}</p>
+              } @else {
+                <div class="mt-3 space-y-3">
+                  @for (log of record.resuscitationLogs; track log.id) {
+                    <div class="ui-card-muted p-3">
+                      <div class="flex items-start justify-between gap-2">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-brand-primary">{{ t('emergency.action.' + log.actionType.toLowerCase()) }}</span>
+                        <span class="text-[10px] font-bold text-[var(--text-muted)]">{{ log.administeredAt | date:'dd/MM HH:mm:ss' }}</span>
+                      </div>
+                      <p class="mt-1 text-sm font-extrabold text-[var(--text-primary)]">{{ log.description }}</p>
+                      @if (log.quantity) { <p class="mt-1 text-xs font-bold text-brand-primary">{{ log.quantity }} {{ log.unit }}</p> }
+                    </div>
+                  }
                 </div>
-                <p class="mt-1 text-sm font-extrabold text-[var(--text-primary)]">{{ log.description }}</p>
-                @if (log.quantity) {
-                  <p class="mt-1 text-xs font-bold text-brand-primary">{{ log.quantity }} {{ log.unit }}</p>
+              }
+            </section>
+
+            <form [formGroup]="careForm" (ngSubmit)="onSubmitCare()" class="ui-card-subtle space-y-3 p-4">
+              <h3 class="font-display text-base font-extrabold text-[var(--text-primary)]">{{ t('emergency.addCareTitle') }}</h3>
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label class="ui-label mb-1.5">{{ t('emergency.form.careType') }}</label>
+                  <select formControlName="actionType" class="ui-input">
+                    <option value="VASCULAR_ACCESS">{{ t('emergency.form.careType.vvp') }}</option>
+                    <option value="FLUID_BOLUS">{{ t('emergency.form.careType.fluid') }}</option>
+                    <option value="MEDICATION">{{ t('emergency.form.careType.med') }}</option>
+                  </select>
+                </div>
+                @if (careForm.get('actionType')?.value !== 'VASCULAR_ACCESS') {
+                  <div class="grid grid-cols-2 gap-2">
+                    <div><label class="ui-label mb-1.5">{{ t('emergency.form.qty') }}</label><input type="number" formControlName="quantity" class="ui-input" /></div>
+                    <div><label class="ui-label mb-1.5">{{ t('emergency.form.unit') }}</label><input type="text" formControlName="unit" class="ui-input" readonly /></div>
+                  </div>
                 }
               </div>
-            }
+              <div>
+                <label class="ui-label mb-1.5">{{ t('emergency.form.careDesc') }}</label>
+                <textarea formControlName="description" class="ui-input min-h-20 resize-y py-2.5" [placeholder]="t('emergency.form.careDesc.placeholder')"></textarea>
+              </div>
+              <app-ui-button variant="primary" (pressed)="onSubmitCare()" [disabled]="isProcessing()" class="w-full">{{ t('common.save') }}</app-ui-button>
+            </form>
           </div>
         }
       </div>
-
-      <form [formGroup]="careForm" (ngSubmit)="onSubmitCare()" class="space-y-3 pt-5">
-        <h4 class="ui-label">{{ t('emergency.addCareTitle') }}</h4>
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <label class="ui-label mb-1.5">{{ t('emergency.form.careType') }}</label>
-            <select formControlName="actionType" class="ui-input">
-              <option value="VASCULAR_ACCESS">{{ t('emergency.form.careType.vvp') }}</option>
-              <option value="FLUID_BOLUS">{{ t('emergency.form.careType.fluid') }}</option>
-              <option value="MEDICATION">{{ t('emergency.form.careType.med') }}</option>
-            </select>
-          </div>
-          @if (careForm.get('actionType')?.value !== 'VASCULAR_ACCESS') {
-            <div class="grid grid-cols-2 gap-2">
-              <div><label class="ui-label mb-1.5">{{ t('emergency.form.qty') }}</label><input type="number" formControlName="quantity" class="ui-input" /></div>
-              <div><label class="ui-label mb-1.5">{{ t('emergency.form.unit') }}</label><input type="text" formControlName="unit" class="ui-input" readonly /></div>
-            </div>
-          }
-        </div>
-        <div>
-          <label class="ui-label mb-1.5">{{ t('emergency.form.careDesc') }}</label>
-          <textarea formControlName="description" class="ui-input min-h-16 resize-none py-2.5" [placeholder]="t('emergency.form.careDesc.placeholder')"></textarea>
-        </div>
-        <app-ui-button variant="primary" (pressed)="onSubmitCare()" [disabled]="isProcessing()" class="w-full">{{ t('common.save') }}</app-ui-button>
-      </form>
     </aside>
   </div>
 }
