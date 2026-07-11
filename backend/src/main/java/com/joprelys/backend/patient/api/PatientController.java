@@ -64,7 +64,7 @@ public class PatientController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('PATIENT_READ') or " + LEGACY_PATIENT_ROLES)
-    @Operation(summary = "Lister les patients", description = "Retourne la liste des patients avec recherche optionnelle par nom, téléphone ou DPU.", responses = {
+    @Operation(summary = "Lister les patients", description = "Retourne la liste des patients avec recherche optionnelle par nom, téléphone, DPU ou numéro URG-TEMP.", responses = {
             @ApiResponse(responseCode = "200", description = "Liste retournée avec succès")
     })
     public List<PatientResponse> list(
@@ -166,7 +166,10 @@ public class PatientController {
                 entity.getEmail(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt(),
-                emergencyActive);
+                emergencyActive,
+                entity.getIdentityStatus(),
+                entity.getTemporaryPatientNumber(),
+                entity.getDisplayName());
     }
 }
 
