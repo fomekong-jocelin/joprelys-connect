@@ -46,6 +46,8 @@ public class InvoiceController {
             "hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
     private static final String LEGACY_PAYMENT_ROLES =
             "hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER', 'CAISSIER', 'DAF', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
+    private static final String LEGACY_CASHIER_QUEUE_ROLES =
+            "hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'CAISSIER', 'DAF', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
 
     private final InvoiceCrudService invoiceCrudService;
     private final InvoicePrecalculationService precalculationService;
@@ -112,7 +114,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/collection-queue")
-    @PreAuthorize("hasAuthority('CASH_QUEUE_READ') or " + LEGACY_PAYMENT_ROLES)
+    @PreAuthorize("hasAuthority('CASH_QUEUE_READ') or " + LEGACY_CASHIER_QUEUE_ROLES)
     @Operation(
             summary = "File d'encaissement patient",
             description = "Retourne les factures validées dont la part patient reste à encaisser pour le tenant courant.")
