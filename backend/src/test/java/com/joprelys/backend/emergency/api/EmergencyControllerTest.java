@@ -25,43 +25,33 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-public class EmergencyControllerTest {
+class EmergencyControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired MockMvc mockMvc;
+    @Autowired OrganizationRepository organizationRepository;
+    @Autowired UserAccountRepository userAccountRepository;
+    @Autowired PatientRepository patientRepository;
+    @Autowired EmergencyRepository emergencyRepository;
+    @Autowired JdbcTemplate jdbcTemplate;
+    @Autowired JwtService jwtService;
 
-    @Autowired
-    private OrganizationRepository organizationRepository;
-
-    @Autowired
-    private UserAccountRepository userAccountRepository;
-
-    @Autowired
-    private PatientRepository patientRepository;
-
-    @Autowired
-    private EmergencyRepository emergencyRepository;
-
-    @Autowired
-    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
-
-    @Autowired
-    private JwtService jwtService;
-
-    private OrganizationEntity orgA;
-    private UserAccountEntity userMedecinA;
-    private String tokenMedecinA;
-    private PatientEntity patientA;
-    private EmergencyEntity emergencyA;
+    private OrganizationEntity organization;
+    private UserAccountEntity doctor;
+    private String doctorToken;
+    private PatientEntity patient;
+    private EmergencyEntity emergency;
 
     @BeforeEach
     void setUp() {
+        jdbcTemplate.update("DELETE FROM audit_logs");
+        jdbcTemplate.update("DELETE FROM emergency_admission_requests");
         jdbcTemplate.update("DELETE FROM resuscitation_logs");
         jdbcTemplate.update("DELETE FROM emergencies");
         jdbcTemplate.update("DELETE FROM patient_identity_declarations");
@@ -71,22 +61,20 @@ public class EmergencyControllerTest {
         userAccountRepository.deleteAll();
         organizationRepository.deleteAll();
 
-        orgA = new OrganizationEntity("Clinique A", "contacta@joprelys.local", "123", "Street A", "Douala");
-        orgA = organizationRepository.save(orgA);
+        organization = organizationRepository.save(
+                new OrganizationEntity("Clinique A", "contacta@joprelys.local", "123", "Street A", "Douala"));
 
-        userMedecinA = new UserAccountEntity("medecin.a@joprelys.local", "Médecin A", "MEDECIN", "passhash");
-        userMedecinA.setOrganizationId(orgA.getId());
-        userMedecinA = userAccountRepository.save(userMedecinA);
+        doctor = new UserAccountEntity("medecin.a@joprelys.local", "Médecin A", "MEDECIN", "passhash");
+        doctor.setOrganizationId(organization.getId());
+        doctor = userAccountRepository.save(doctor);
+        doctorToken = jwtService.createToken(doctor).value();
 
-        tokenMedecinA = jwtService.createToken(userMedecinA).value();
-
-        TenantContext.setTenantId(orgA.getId());
-
-        patientA = new PatientEntity("DPU-A", "PAT-A", "Patient A", "MASCULIN", LocalDate.of(1990, 1, 1), "+123", "Douala", "", "", "", "", "", "");
-        patientA = patientRepository.save(patientA);
-
-        emergencyA = new EmergencyEntity(
-                patientA,
+        TenantContext.setTenantId(organization.getId());
+        patient = patientRepository.save(new PatientEntity(
+                "DPU-A", "PAT-A", "Patient A", "MASCULIN",
+                LocalDate.of(1990, 1, 1), "+123", "Douala", "", "", "", "", "", ""));
+        emergency = emergencyRepository.save(new EmergencyEntity(
+                patient,
                 null,
                 "AMBULANCE",
                 "RED",
@@ -96,15 +84,12 @@ public class EmergencyControllerTest {
                 80,
                 90,
                 BigDecimal.valueOf(37.5),
-                userMedecinA.getId()
-        );
-        emergencyA = emergencyRepository.save(emergencyA);
-
+                doctor.getId()));
         TenantContext.clear();
     }
 
     @Test
-    void shouldPersistArrivalThirdPartyWhenPatientIsAccompanied() throws Exception {
+    void shouldPersistAccompanyingPersonButMaskSensitiveIdentityInGeneralResponse() throws Exception {
         jdbcTemplate.update("DELETE FROM emergencies");
 
         String body = """
@@ -121,18 +106,19 @@ public class EmergencyControllerTest {
                   "thirdPartyCircumstances": "A trouvé le patient sur la voie publique.",
                   "thirdPartyConsentToContact": true
                 }
-                """.formatted(patientA.getId());
+                """.formatted(patient.getId());
 
         mockMvc.perform(post("/api/emergencies")
-                        .header("Authorization", "Bearer " + tokenMedecinA)
+                        .header("Authorization", bearer(doctorToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.arrivalMode").value("ACCOMPANIED"))
-                .andExpect(jsonPath("$.thirdPartyName").value("Paul Tamo"))
-                .andExpect(jsonPath("$.thirdPartyPhone").value("+237699000111"))
-                .andExpect(jsonPath("$.thirdPartyRelationship").value("WITNESS"))
-                .andExpect(jsonPath("$.thirdPartyConsentToContact").value(true));
+                .andExpect(jsonPath("$.thirdPartyRecorded").value(true))
+                .andExpect(jsonPath("$.thirdPartyName").doesNotExist())
+                .andExpect(jsonPath("$.thirdPartyPhone").doesNotExist())
+                .andExpect(jsonPath("$.thirdPartyIdDocument").doesNotExist())
+                .andExpect(jsonPath("$.thirdPartyCircumstances").doesNotExist());
     }
 
     @Test
@@ -147,19 +133,19 @@ public class EmergencyControllerTest {
                   "hemodynamicStatus": "UNSTABLE",
                   "chiefComplaint": "Traumatisme"
                 }
-                """.formatted(patientA.getId());
+                """.formatted(patient.getId());
 
         mockMvc.perform(post("/api/emergencies")
-                        .header("Authorization", "Bearer " + tokenMedecinA)
+                        .header("Authorization", bearer(doctorToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    void shouldExposeCompleteProvisionalIdentityInEmergencyDetails() throws Exception {
-        TenantContext.setTenantId(orgA.getId());
-        PatientEntity provisionalPatient = PatientEntity.provisionalEmergency(
+    void shouldExposeProvisionalClinicalIdentityWithoutThirdPartyEvidence() throws Exception {
+        TenantContext.setTenantId(organization.getId());
+        PatientEntity provisionalPatient = patientRepository.save(PatientEntity.provisionalEmergency(
                 "DPU-JOP-20260711-999999",
                 "PAT-20260711-999999",
                 "URG-TEMP-20260711-999999",
@@ -168,11 +154,9 @@ public class EmergencyControllerTest {
                 "Cicatrice au front, chemise bleue",
                 Instant.parse("2026-07-11T13:00:00Z"),
                 "Carrefour Akwa",
-                IdentityConfidenceLevel.NONE
-        );
-        provisionalPatient = patientRepository.save(provisionalPatient);
+                IdentityConfidenceLevel.NONE));
 
-        EmergencyEntity provisionalEmergency = new EmergencyEntity(
+        EmergencyEntity provisionalEmergency = emergencyRepository.save(new EmergencyEntity(
                 provisionalPatient,
                 null,
                 "ACCOMPANIED",
@@ -189,55 +173,47 @@ public class EmergencyControllerTest {
                 "CNI 123456789",
                 "Patient trouvé sur la voie publique.",
                 true,
-                userMedecinA.getId()
-        );
-        provisionalEmergency = emergencyRepository.save(provisionalEmergency);
+                doctor.getId()));
         TenantContext.clear();
 
         mockMvc.perform(get("/api/emergencies/" + provisionalEmergency.getId())
-                        .header("Authorization", "Bearer " + tokenMedecinA))
+                        .header("Authorization", bearer(doctorToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.patientName").value("URG-TEMP-20260711-999999"))
                 .andExpect(jsonPath("$.temporaryPatientNumber").value("URG-TEMP-20260711-999999"))
-                .andExpect(jsonPath("$.globalPatientNumber").value("DPU-JOP-20260711-999999"))
                 .andExpect(jsonPath("$.identityStatus").value("PROVISIONAL_URGENCY"))
-                .andExpect(jsonPath("$.apparentGender").value("MASCULIN"))
-                .andExpect(jsonPath("$.estimatedAgeRange").value("35-45"))
                 .andExpect(jsonPath("$.physicalDescription").value("Cicatrice au front, chemise bleue"))
                 .andExpect(jsonPath("$.foundLocation").value("Carrefour Akwa"))
-                .andExpect(jsonPath("$.thirdPartyName").value("Paul Tamo"));
+                .andExpect(jsonPath("$.thirdPartyRecorded").value(true))
+                .andExpect(jsonPath("$.thirdPartyName").doesNotExist());
     }
 
     @Test
-    void testAddResuscitationLog() throws Exception {
-        String body = """
-                {
-                  "actionType": "FLUID_BOLUS",
-                  "quantity": 45,
-                  "unit": "ml",
-                  "description": "Ringer lactate"
-                }
-                """;
-
-        mockMvc.perform(post("/api/emergencies/" + emergencyA.getId() + "/resuscitation")
-                        .header("Authorization", "Bearer " + tokenMedecinA)
+    void shouldAddResuscitationLogAndListPatientEmergency() throws Exception {
+        mockMvc.perform(post("/api/emergencies/" + emergency.getId() + "/resuscitation")
+                        .header("Authorization", bearer(doctorToken))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
+                        .content("""
+                                {
+                                  "actionType": "FLUID_BOLUS",
+                                  "quantity": 45,
+                                  "unit": "ml",
+                                  "description": "Ringer lactate"
+                                }
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.actionType").value("FLUID_BOLUS"))
-                .andExpect(jsonPath("$.quantity").value(45))
-                .andExpect(jsonPath("$.unit").value("ml"))
-                .andExpect(jsonPath("$.description").value("Ringer lactate"));
+                .andExpect(jsonPath("$.quantity").value(45));
+
+        mockMvc.perform(get("/api/emergencies/patient/" + patient.getId())
+                        .header("Authorization", bearer(doctorToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(emergency.getId().toString()))
+                .andExpect(jsonPath("$[0].patientName").value("Patient A"))
+                .andExpect(jsonPath("$[0].chiefComplaint").value("Accident moto"));
     }
 
-    @Test
-    void testGetPatientEmergencies() throws Exception {
-        mockMvc.perform(get("/api/emergencies/patient/" + patientA.getId())
-                        .header("Authorization", "Bearer " + tokenMedecinA))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(emergencyA.getId().toString()))
-                .andExpect(jsonPath("$[0].patientName").value("Patient A"))
-                .andExpect(jsonPath("$[0].globalPatientNumber").value("DPU-A"))
-                .andExpect(jsonPath("$[0].chiefComplaint").value("Accident moto"));
+    private String bearer(String token) {
+        return "Bearer " + token;
     }
 }
