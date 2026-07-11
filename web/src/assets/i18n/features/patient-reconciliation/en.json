@@ -69,8 +69,16 @@
   "patientReconciliation.error.PATIENT_RECONCILIATION_TARGET_NOT_ELIGIBLE": "The selected patient record is not eligible for this link.",
   "patientReconciliation.error.PATIENT_RECONCILIATION_SELF_LINK_FORBIDDEN": "A record cannot be linked to itself.",
   "patientReconciliation.error.PATIENT_RECONCILIATION_ALREADY_LINKED": "This record is already linked to a patient record.",
+  "patientReconciliation.error.PATIENT_RECONCILIATION_CORRECTION_ENDPOINT_REQUIRED": "Use the secured correction action to change an existing link.",
+  "patientReconciliation.error.PATIENT_RECONCILIATION_ACTIVE_LINK_NOT_FOUND": "No active patient link was found for this record.",
+  "patientReconciliation.error.PATIENT_RECONCILIATION_CORRECTED_EVENT_MISMATCH": "The decision selected for correction no longer matches the active link.",
+  "patientReconciliation.error.PATIENT_RECONCILIATION_REPLACEMENT_UNCHANGED": "The replacement patient record is the same as the currently linked record.",
   "patientReconciliation.error.PATIENT_ALIAS_ALREADY_ASSIGNED": "This alias is already assigned to another record.",
+  "patientReconciliation.error.PATIENT_ALIAS_NOT_FOUND": "The patient alias could not be found.",
+  "patientReconciliation.error.PATIENT_ALIAS_REQUIRED": "A patient alias is required.",
   "patientReconciliation.error.PATIENT_ALIAS_READ_ONLY": "This URG-TEMP code is a read-only alias. Use the canonical patient record for new care.",
-  "patientReconciliation.error.IDEMPOTENCY_KEY_REUSED": "This operation key has already been used for another record. Reload the page and try again.",
-  "patientReconciliation.error.PATIENT_RECONCILIATION_WORKFLOW_REQUIRED": "An URG-TEMP record must be handled through the secure reconciliation workspace."
+  "patientReconciliation.error.IDEMPOTENCY_KEY_REQUIRED": "An operation idempotency key is required.",
+  "patientReconciliation.error.IDEMPOTENCY_KEY_TOO_LONG": "The operation idempotency key is too long.",
+  "patientReconciliation.error.IDEMPOTENCY_KEY_REUSED": "This key has already been used with a different decision. Reload the page and try again.",
+  "patientReconciliation.error.PATIENT_RECONCILIATION_WORKFLOW_REQUIRED": "A record participating in reconciliation must be handled through the secure reconciliation workspace."
 }
