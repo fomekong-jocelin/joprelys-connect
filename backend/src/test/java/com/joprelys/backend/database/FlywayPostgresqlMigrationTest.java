@@ -49,6 +49,11 @@ class FlywayPostgresqlMigrationTest {
             "emergency_belongings",
             "emergency_belonging_transfers");
 
+    private static final List<String> PATIENT_RECONCILIATION_TABLES = List.of(
+            "patient_reconciliation_events",
+            "patient_canonical_links",
+            "patient_identity_aliases");
+
     @Container
     private static final PostgreSQLContainer POSTGRESQL = new PostgreSQLContainer("postgres:16-alpine")
             .withDatabaseName("joprelys_migration_test")
@@ -69,8 +74,8 @@ class FlywayPostgresqlMigrationTest {
         MigrationInfo current = flyway.info().current();
         assertNotNull(current, "Flyway doit exposer la migration courante");
         assertNotNull(current.getVersion(), "La migration courante doit être versionnée");
-        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 61,
-                "Toutes les migrations médico-légales doivent être appliquées");
+        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 62,
+                "Toutes les migrations de rapprochement patient doivent être appliquées");
 
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword());
@@ -88,6 +93,7 @@ class FlywayPostgresqlMigrationTest {
         assertTableExists(jdbcTemplate, "patient_identity_declarations");
         assertTableExists(jdbcTemplate, "patient_identity_status_history");
         MEDICO_LEGAL_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
+        PATIENT_RECONCILIATION_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
 
         Integer thirdPartyColumnCount = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*)
