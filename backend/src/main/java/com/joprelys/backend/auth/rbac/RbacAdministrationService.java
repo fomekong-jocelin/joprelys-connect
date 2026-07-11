@@ -2,6 +2,7 @@ package com.joprelys.backend.auth.rbac;
 
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -21,48 +22,44 @@ public class RbacAdministrationService {
     private static final Pattern ROLE_CODE_PATTERN = Pattern.compile("[A-Z][A-Z0-9_]{2,63}");
 
     private final UserAccountRepository userAccountRepository;
+    private final OrganizationRepository organizationRepository;
     private final RbacStore rbacStore;
 
-    public RbacAdministrationService(UserAccountRepository userAccountRepository, RbacStore rbacStore) {
+    public RbacAdministrationService(
+            UserAccountRepository userAccountRepository,
+            OrganizationRepository organizationRepository,
+            RbacStore rbacStore) {
         this.userAccountRepository = userAccountRepository;
+        this.organizationRepository = organizationRepository;
         this.rbacStore = rbacStore;
     }
 
     @Transactional
     public RbacStore.EffectiveAccess myAccess(Authentication authentication) {
-        UserAccountEntity actor = currentUser(authentication, false);
-        rbacStore.synchronizeLegacyAssignments(actor);
+        UserAccountEntity actor = currentUser(authentication);
         return rbacStore.loadEffectiveAccess(actor.getId(), actor.getOrganizationId());
     }
 
     @Transactional(readOnly = true)
-    public List<RbacStore.RoleView> listRoles(Authentication authentication) {
-        UserAccountEntity actor = currentUser(authentication, true);
-        List<RbacStore.RoleView> roles = rbacStore.listVisibleRoles(actor.getOrganizationId());
-        if (isPlatformAdministrator(actor)) {
-            return roles;
-        }
-        return roles.stream()
+    public List<RbacStore.RoleView> listRoles(UUID requestedOrganizationId, Authentication authentication) {
+        OrganizationScope scope = organizationScope(authentication, requestedOrganizationId);
+        return rbacStore.listVisibleRoles(scope.organizationId()).stream()
                 .filter(role -> !RbacCatalog.platformRoleCodes().contains(role.code()))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<RbacStore.PermissionView> listPermissions(Authentication authentication) {
-        UserAccountEntity actor = currentUser(authentication, true);
-        List<RbacStore.PermissionView> permissions = rbacStore.listPermissions();
-        if (isPlatformAdministrator(actor)) {
-            return permissions;
-        }
-        return permissions.stream()
+        currentUser(authentication);
+        return rbacStore.listPermissions().stream()
                 .filter(permission -> !RbacCatalog.platformPermissionCodes().contains(permission.code()))
                 .toList();
     }
 
     @Transactional
-    public List<UserAccessView> listUsers(Authentication authentication) {
-        UserAccountEntity actor = currentUser(authentication, true);
-        return userAccountRepository.findAllByOrganizationId(actor.getOrganizationId()).stream()
+    public List<UserAccessView> listUsers(UUID requestedOrganizationId, Authentication authentication) {
+        OrganizationScope scope = organizationScope(authentication, requestedOrganizationId);
+        return userAccountRepository.findAllByOrganizationId(scope.organizationId()).stream()
                 .sorted(Comparator.comparing(UserAccountEntity::getDisplayName))
                 .map(user -> {
                     rbacStore.synchronizeLegacyAssignments(user);
@@ -72,7 +69,7 @@ public class RbacAdministrationService {
                             user.getEmail(),
                             user.getDisplayName(),
                             user.isEnabled(),
-                            actor.getId().equals(user.getId()),
+                            scope.actor().getId().equals(user.getId()),
                             access.roles(),
                             access.permissions());
                 })
@@ -81,24 +78,26 @@ public class RbacAdministrationService {
 
     @Transactional
     public RbacStore.RoleView createRole(
+            UUID requestedOrganizationId,
             String rawCode,
             String rawName,
             String description,
             boolean assignable,
             Set<String> permissionCodes,
             Authentication authentication) {
-        UserAccountEntity actor = currentUser(authentication, true);
+        OrganizationScope scope = organizationScope(authentication, requestedOrganizationId);
+        UserAccountEntity actor = scope.actor();
         String code = normalizeCode(rawCode);
         String name = requireName(rawName);
-        validatePermissionCodes(permissionCodes, actor);
-        if (rbacStore.customRoleCodeExists(actor.getOrganizationId(), code, null)) {
+        validateClinicPermissionCodes(permissionCodes);
+        if (rbacStore.customRoleCodeExists(scope.organizationId(), code, null)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Un rôle portant ce code existe déjà.");
         }
         RbacStore.RoleView role = rbacStore.createCustomRole(
-                actor.getOrganizationId(), code, name, trimToNull(description), assignable,
+                scope.organizationId(), code, name, trimToNull(description), assignable,
                 new LinkedHashSet<>(permissionCodes));
         rbacStore.audit(
-                actor.getOrganizationId(), actor.getId(), "ROLE_CREATED", "ROLE", role.id().toString(),
+                scope.organizationId(), actor.getId(), "ROLE_CREATED", "ROLE", role.id().toString(),
                 "code=" + role.code() + "; permissions=" + String.join(",", role.permissions()));
         return role;
     }
@@ -106,24 +105,26 @@ public class RbacAdministrationService {
     @Transactional
     public RbacStore.RoleView updateRole(
             UUID roleId,
+            UUID requestedOrganizationId,
             String rawCode,
             String rawName,
             String description,
             boolean assignable,
             boolean enabled,
             Authentication authentication) {
-        UserAccountEntity actor = currentUser(authentication, true);
-        RbacStore.RoleView current = requireCustomRole(roleId, actor.getOrganizationId());
+        OrganizationScope scope = organizationScope(authentication, requestedOrganizationId);
+        UserAccountEntity actor = scope.actor();
+        RbacStore.RoleView current = requireCustomRole(roleId, scope.organizationId());
         assertActorDoesNotDependOnRole(current, actor);
         String code = normalizeCode(rawCode);
-        if (rbacStore.customRoleCodeExists(actor.getOrganizationId(), code, roleId)) {
+        if (rbacStore.customRoleCodeExists(scope.organizationId(), code, roleId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Un rôle portant ce code existe déjà.");
         }
         RbacStore.RoleView updated;
         try {
             updated = rbacStore.updateCustomRole(
                     roleId,
-                    actor.getOrganizationId(),
+                    scope.organizationId(),
                     code,
                     requireName(rawName),
                     trimToNull(description),
@@ -133,7 +134,7 @@ public class RbacAdministrationService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Rôle personnalisé introuvable.", exception);
         }
         rbacStore.audit(
-                actor.getOrganizationId(), actor.getId(), "ROLE_UPDATED", "ROLE", roleId.toString(),
+                scope.organizationId(), actor.getId(), "ROLE_UPDATED", "ROLE", roleId.toString(),
                 "code=" + updated.code() + "; enabled=" + updated.enabled());
         return updated;
     }
@@ -141,21 +142,23 @@ public class RbacAdministrationService {
     @Transactional
     public RbacStore.RoleView replaceRolePermissions(
             UUID roleId,
+            UUID requestedOrganizationId,
             Set<String> permissionCodes,
             Authentication authentication) {
-        UserAccountEntity actor = currentUser(authentication, true);
-        RbacStore.RoleView current = requireCustomRole(roleId, actor.getOrganizationId());
+        OrganizationScope scope = organizationScope(authentication, requestedOrganizationId);
+        UserAccountEntity actor = scope.actor();
+        RbacStore.RoleView current = requireCustomRole(roleId, scope.organizationId());
         assertActorDoesNotDependOnRole(current, actor);
-        validatePermissionCodes(permissionCodes, actor);
+        validateClinicPermissionCodes(permissionCodes);
         RbacStore.RoleView updated;
         try {
             updated = rbacStore.replaceCustomRolePermissions(
-                    roleId, actor.getOrganizationId(), new LinkedHashSet<>(permissionCodes));
+                    roleId, scope.organizationId(), new LinkedHashSet<>(permissionCodes));
         } catch (IllegalStateException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Rôle personnalisé introuvable.", exception);
         }
         rbacStore.audit(
-                actor.getOrganizationId(), actor.getId(), "ROLE_PERMISSIONS_REPLACED", "ROLE", roleId.toString(),
+                scope.organizationId(), actor.getId(), "ROLE_PERMISSIONS_REPLACED", "ROLE", roleId.toString(),
                 "permissions=" + String.join(",", updated.permissions()));
         return updated;
     }
@@ -163,9 +166,11 @@ public class RbacAdministrationService {
     @Transactional
     public UserAccessView replaceUserRoles(
             UUID targetUserId,
+            UUID requestedOrganizationId,
             List<UUID> roleIds,
             Authentication authentication) {
-        UserAccountEntity actor = currentUser(authentication, true);
+        OrganizationScope scope = organizationScope(authentication, requestedOrganizationId);
+        UserAccountEntity actor = scope.actor();
         if (actor.getId().equals(targetUserId)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -175,40 +180,42 @@ public class RbacAdministrationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Au moins un rôle doit être attribué.");
         }
 
-        UserAccountEntity target = userAccountRepository.findByIdAndOrganizationId(targetUserId, actor.getOrganizationId())
+        UserAccountEntity target = userAccountRepository.findByIdAndOrganizationId(targetUserId, scope.organizationId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur introuvable."));
         rbacStore.synchronizeLegacyAssignments(target);
 
         List<RbacStore.RoleView> roles = roleIds.stream()
                 .distinct()
-                .map(roleId -> rbacStore.findVisibleRole(roleId, actor.getOrganizationId())
+                .map(roleId -> rbacStore.findVisibleRole(roleId, scope.organizationId())
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rôle invalide ou inaccessible.")))
                 .toList();
         if (roles.stream().anyMatch(role -> !role.enabled() || !role.assignable())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Un rôle sélectionné est désactivé ou non attribuable.");
         }
-        if (!isPlatformAdministrator(actor)
-                && roles.stream().map(RbacStore.RoleView::code).anyMatch(RbacCatalog.platformRoleCodes()::contains)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Les rôles plateforme ne peuvent pas être attribués par cet administrateur.");
+        if (roles.stream().map(RbacStore.RoleView::code).anyMatch(RbacCatalog.platformRoleCodes()::contains)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Les rôles plateforme ne peuvent pas être attribués depuis l’administration d’un établissement.");
         }
 
         boolean targetWasAdmin = rbacStore.userHasAnyRole(target.getId(), RbacCatalog.adminRoleCodes());
         boolean targetWillRemainAdmin = roles.stream().map(RbacStore.RoleView::code)
                 .anyMatch(RbacCatalog.adminRoleCodes()::contains);
         if (target.isEnabled() && targetWasAdmin && !targetWillRemainAdmin
-                && rbacStore.countActiveAdministrators(actor.getOrganizationId()) <= 1) {
+                && rbacStore.countActiveAdministrators(scope.organizationId()) <= 1) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "Impossible de retirer le dernier administrateur actif de l'établissement.");
         }
 
-        rbacStore.replaceUserRoles(target.getId(), actor.getOrganizationId(), actor.getId(), roles);
-        String compatibilityRoles = roles.stream().map(RbacStore.RoleView::code).sorted().collect(java.util.stream.Collectors.joining(","));
+        rbacStore.replaceUserRoles(target.getId(), scope.organizationId(), actor.getId(), roles);
+        String compatibilityRoles = roles.stream().map(RbacStore.RoleView::code).sorted()
+                .collect(java.util.stream.Collectors.joining(","));
         target.setRole(compatibilityRoles);
         userAccountRepository.save(target);
         RbacStore.EffectiveAccess effective = rbacStore.loadEffectiveAccess(target.getId(), target.getOrganizationId());
         rbacStore.audit(
-                actor.getOrganizationId(), actor.getId(), "USER_ROLES_REPLACED", "USER", target.getId().toString(),
+                scope.organizationId(), actor.getId(), "USER_ROLES_REPLACED", "USER", target.getId().toString(),
                 "roles=" + String.join(",", effective.roles()));
         return new UserAccessView(
                 target.getId(), target.getEmail(), target.getDisplayName(), target.isEnabled(), false,
@@ -216,9 +223,35 @@ public class RbacAdministrationService {
     }
 
     @Transactional(readOnly = true)
-    public List<RbacStore.AuditView> listAudit(Authentication authentication) {
-        UserAccountEntity actor = currentUser(authentication, true);
-        return rbacStore.listAudit(actor.getOrganizationId(), 100);
+    public List<RbacStore.AuditView> listAudit(UUID requestedOrganizationId, Authentication authentication) {
+        OrganizationScope scope = organizationScope(authentication, requestedOrganizationId);
+        return rbacStore.listAudit(scope.organizationId(), 100);
+    }
+
+    private OrganizationScope organizationScope(Authentication authentication, UUID requestedOrganizationId) {
+        UserAccountEntity actor = currentUser(authentication);
+        if (isPlatformAdministrator(actor)) {
+            if (requestedOrganizationId == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Sélectionnez un établissement à administrer.");
+            }
+            if (!organizationRepository.existsById(requestedOrganizationId)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Établissement introuvable.");
+            }
+            return new OrganizationScope(actor, requestedOrganizationId);
+        }
+
+        UUID actorOrganizationId = actor.getOrganizationId();
+        if (actorOrganizationId == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Utilisateur non rattaché à un établissement.");
+        }
+        if (requestedOrganizationId != null && !actorOrganizationId.equals(requestedOrganizationId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Vous ne pouvez pas administrer les droits d’un autre établissement.");
+        }
+        return new OrganizationScope(actor, actorOrganizationId);
     }
 
     private RbacStore.RoleView requireCustomRole(UUID roleId, UUID organizationId) {
@@ -238,23 +271,21 @@ public class RbacAdministrationService {
         }
     }
 
-    private void validatePermissionCodes(Set<String> permissionCodes, UserAccountEntity actor) {
+    private void validateClinicPermissionCodes(Set<String> permissionCodes) {
         Set<String> requested = permissionCodes == null ? Set.of() : permissionCodes;
         Set<String> known = RbacCatalog.permissionCodes();
         List<String> unknown = requested.stream().filter(code -> !known.contains(code)).sorted().toList();
         if (!unknown.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Permissions inconnues : " + String.join(", ", unknown));
         }
-        if (!isPlatformAdministrator(actor)) {
-            List<String> forbidden = requested.stream()
-                    .filter(RbacCatalog.platformPermissionCodes()::contains)
-                    .sorted()
-                    .toList();
-            if (!forbidden.isEmpty()) {
-                throw new ResponseStatusException(
-                        HttpStatus.FORBIDDEN,
-                        "Permissions réservées à la plateforme : " + String.join(", ", forbidden));
-            }
+        List<String> forbidden = requested.stream()
+                .filter(RbacCatalog.platformPermissionCodes()::contains)
+                .sorted()
+                .toList();
+        if (!forbidden.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Permissions réservées à la plateforme : " + String.join(", ", forbidden));
         }
     }
 
@@ -263,16 +294,13 @@ public class RbacAdministrationService {
         return access.roles().stream().anyMatch(RbacCatalog.platformRoleCodes()::contains);
     }
 
-    private UserAccountEntity currentUser(Authentication authentication, boolean requireOrganization) {
+    private UserAccountEntity currentUser(Authentication authentication) {
         if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required");
         }
         UserAccountEntity user = userAccountRepository.findByEmail(authentication.getName().trim().toLowerCase(Locale.ROOT))
                 .filter(UserAccountEntity::isEnabled)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required"));
-        if (requireOrganization && user.getOrganizationId() == null) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Utilisateur non rattaché à un établissement.");
-        }
         rbacStore.synchronizeLegacyAssignments(user);
         return user;
     }
@@ -300,6 +328,9 @@ public class RbacAdministrationService {
             return null;
         }
         return value.trim();
+    }
+
+    private record OrganizationScope(UserAccountEntity actor, UUID organizationId) {
     }
 
     public record UserAccessView(
