@@ -1,4 +1,6 @@
 {
+  "common.refresh": "Actualiser",
+  "common.reset": "Réinitialiser",
   "menu.patientReconciliation": "Régularisation URG-TEMP",
   "patientReconciliation.eyebrow": "Identité patient",
   "patientReconciliation.title": "Régularisation des dossiers URG-TEMP",
@@ -69,5 +71,6 @@
   "patientReconciliation.error.PATIENT_RECONCILIATION_ALREADY_LINKED": "Ce dossier est déjà rattaché à un DPU.",
   "patientReconciliation.error.PATIENT_ALIAS_ALREADY_ASSIGNED": "Cet alias appartient déjà à un autre dossier.",
   "patientReconciliation.error.PATIENT_ALIAS_READ_ONLY": "Ce code URG-TEMP est un alias en lecture seule. Utilisez le DPU canonique pour une nouvelle prise en charge.",
-  "patientReconciliation.error.IDEMPOTENCY_KEY_REUSED": "Cette opération a déjà été utilisée pour un autre dossier. Rechargez la page puis recommencez."
+  "patientReconciliation.error.IDEMPOTENCY_KEY_REUSED": "Cette opération a déjà été utilisée pour un autre dossier. Rechargez la page puis recommencez.",
+  "patientReconciliation.error.PATIENT_RECONCILIATION_WORKFLOW_REQUIRED": "Un dossier URG-TEMP doit être traité depuis l’espace de régularisation sécurisé."
 }
