@@ -1,3 +1,5 @@
+import { CreateProvisionalPatientRequest } from '../patient/provisional-patient.models';
+
 export interface CreateEmergencyRequest {
   patientId: string;
   arrivalMode: string;
@@ -14,6 +16,14 @@ export interface CreateEmergencyRequest {
   thirdPartyIdDocument?: string;
   thirdPartyCircumstances?: string;
   thirdPartyConsentToContact?: boolean;
+}
+
+export type EmergencyTriageRequest = Omit<CreateEmergencyRequest, 'patientId'>;
+
+export interface CreateProvisionalEmergencyAdmissionRequest {
+  requestId: string;
+  patient: CreateProvisionalPatientRequest;
+  emergency: EmergencyTriageRequest;
 }
 
 export interface AddResuscitationLogRequest {
