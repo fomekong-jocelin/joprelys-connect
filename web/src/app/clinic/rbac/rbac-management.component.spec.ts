@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { OrganizationApiService } from '../organizations/organization-api.service';
+import { Organization } from '../organizations/organizations.models';
 import { RbacApiService } from './rbac-api.service';
 import { RbacManagementComponent } from './rbac-management.component';
 import { RbacPermission, RbacRole, RbacUserAccess } from './rbac.models';
@@ -18,6 +20,7 @@ describe('RbacManagementComponent', () => {
     updateRole: ReturnType<typeof vi.fn>;
     replaceRolePermissions: ReturnType<typeof vi.fn>;
   };
+  let organizationApi: { list: ReturnType<typeof vi.fn> };
 
   const permissions: RbacPermission[] = [
     { code: 'CASH_QUEUE_READ', domain: 'CAISSE', name: 'Consulter la file' },
@@ -66,7 +69,21 @@ describe('RbacManagementComponent', () => {
     },
   ];
 
+  const organization: Organization = {
+    id: 'org-clinic-1',
+    name: 'Clinique Saint Jean',
+    email: 'contact@saint-jean.test',
+    city: 'Douala',
+    status: 'ACTIVE',
+    createdAt: '2026-07-11T00:00:00Z',
+    country: 'Cameroun',
+    type: 'CLINIC',
+    responsibleName: 'Direction',
+    apiEnabled: true,
+  };
+
   beforeEach(() => {
+    sessionStorage.clear();
     api = {
       listRoles: vi.fn(() => of(roles)),
       listPermissions: vi.fn(() => of(permissions)),
@@ -78,11 +95,13 @@ describe('RbacManagementComponent', () => {
       updateRole: vi.fn(),
       replaceRolePermissions: vi.fn(),
     };
+    organizationApi = { list: vi.fn(() => of([organization])) };
 
     TestBed.configureTestingModule({
       imports: [RbacManagementComponent],
       providers: [
         { provide: RbacApiService, useValue: api },
+        { provide: OrganizationApiService, useValue: organizationApi },
         { provide: I18nService, useValue: { t: (_key: string, fallback?: string) => fallback ?? _key } },
       ],
     });
@@ -100,6 +119,21 @@ describe('RbacManagementComponent', () => {
     expect(component.selectedUserId()).toBe('user-admin');
     expect(component.selectedRoleId()).toBe('role-admin');
     expect(component.loading()).toBe(false);
+  });
+
+  it('should let a platform administrator select the clinic scope', () => {
+    api.ensureMyAccess.mockReturnValue(of({
+      userId: 'platform-admin',
+      roles: ['ADMIN_JOPRELYS'],
+      permissions: ['RBAC_MANAGE'],
+    }));
+
+    component.ngOnInit();
+
+    expect(component.platformAdministrator()).toBe(true);
+    expect(component.selectedOrganizationId()).toBe(organization.id);
+    expect(api.listRoles).toHaveBeenCalledWith(organization.id);
+    expect(api.listUsers).toHaveBeenCalledWith(organization.id);
   });
 
   it('should prevent changing the roles of the current user in the UI', () => {
@@ -142,7 +176,7 @@ describe('RbacManagementComponent', () => {
       description: 'Contrôle la caisse.',
       assignable: true,
       permissionCodes: ['CASH_QUEUE_READ'],
-    });
+    }, undefined);
     expect(component.roles()).toContainEqual(created);
     expect(component.selectedRoleId()).toBe('role-custom');
     expect(component.saving()).toBe(false);
