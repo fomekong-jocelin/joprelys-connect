@@ -36,7 +36,9 @@ public class RbacAuthorityService {
             return Optional.empty();
         }
 
-        rbacStore.synchronizeLegacyAssignments(user);
+        if (userAccountRepository.existsById(userId)) {
+            rbacStore.synchronizeLegacyAssignments(user);
+        }
         RbacStore.EffectiveAccess access = rbacStore.loadEffectiveAccess(user.getId(), user.getOrganizationId());
         if (access.roles().isEmpty()) {
             Set<String> legacyRoles = legacyRoleCodes(user.getRole());
