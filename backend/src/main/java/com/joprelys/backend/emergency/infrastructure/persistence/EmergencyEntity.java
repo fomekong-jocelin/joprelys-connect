@@ -23,233 +23,347 @@ import java.util.UUID;
 @Table(name = "emergencies")
 public class EmergencyEntity {
 
-	@Id
-	private UUID id;
+    @Id
+    private UUID id;
 
-	@TenantId
-	@Column(name = "organization_id")
-	private UUID organizationId;
+    @TenantId
+    @Column(name = "organization_id")
+    private UUID organizationId;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "patient_id", nullable = false)
-	private PatientEntity patient;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "patient_id", nullable = false)
+    private PatientEntity patient;
 
-	@Column(name = "visit_id")
-	private UUID visitId;
+    @Column(name = "visit_id")
+    private UUID visitId;
 
-	@Column(name = "arrival_mode", nullable = false, length = 50)
-	private String arrivalMode;
+    @Column(name = "arrival_mode", nullable = false, length = 50)
+    private String arrivalMode;
 
-	@Column(name = "triage_level", nullable = false, length = 20)
-	private String triageLevel;
+    @Column(name = "triage_level", nullable = false, length = 20)
+    private String triageLevel;
 
-	@Column(name = "hemodynamic_status", nullable = false, length = 50)
-	private String hemodynamicStatus;
+    @Column(name = "hemodynamic_status", nullable = false, length = 50)
+    private String hemodynamicStatus;
 
-	@Column(name = "chief_complaint", nullable = false, columnDefinition = "TEXT")
-	private String chiefComplaint;
+    @Column(name = "chief_complaint", nullable = false, columnDefinition = "TEXT")
+    private String chiefComplaint;
 
-	@Column(name = "initial_bp_systolic")
-	private Integer initialBpSystolic;
+    @Column(name = "initial_bp_systolic")
+    private Integer initialBpSystolic;
 
-	@Column(name = "initial_bp_diastolic")
-	private Integer initialBpDiastolic;
+    @Column(name = "initial_bp_diastolic")
+    private Integer initialBpDiastolic;
 
-	@Column(name = "initial_hr")
-	private Integer initialHr;
+    @Column(name = "initial_hr")
+    private Integer initialHr;
 
-	@Column(name = "initial_temp", precision = 4, scale = 2)
-	private BigDecimal initialTemp;
+    @Column(name = "initial_temp", precision = 4, scale = 2)
+    private BigDecimal initialTemp;
 
-	@Column(name = "stabilized_at")
-	private Instant stabilizedAt;
+    @Column(name = "third_party_name", length = 160)
+    private String thirdPartyName;
 
-	@Column(name = "orientation", length = 50)
-	private String orientation;
+    @Column(name = "third_party_phone", length = 40)
+    private String thirdPartyPhone;
 
-	@Column(name = "created_by_user_id")
-	private UUID createdByUserId;
+    @Column(name = "third_party_relationship", length = 80)
+    private String thirdPartyRelationship;
 
-	@OneToMany(mappedBy = "emergency", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-	private List<ResuscitationLogEntity> resuscitationLogs = new ArrayList<>();
+    @Column(name = "third_party_id_document", length = 120)
+    private String thirdPartyIdDocument;
 
-	@Column(name = "created_at", nullable = false)
-	private Instant createdAt;
+    @Column(name = "third_party_circumstances", length = 1000)
+    private String thirdPartyCircumstances;
 
-	@Column(name = "updated_at", nullable = false)
-	private Instant updatedAt;
+    @Column(name = "third_party_consent_to_contact", nullable = false)
+    private boolean thirdPartyConsentToContact;
 
-	protected EmergencyEntity() {
-	}
+    @Column(name = "stabilized_at")
+    private Instant stabilizedAt;
 
-	public EmergencyEntity(
-			PatientEntity patient,
-			UUID visitId,
-			String arrivalMode,
-			String triageLevel,
-			String hemodynamicStatus,
-			String chiefComplaint,
-			Integer initialBpSystolic,
-			Integer initialBpDiastolic,
-			Integer initialHr,
-			BigDecimal initialTemp,
-			UUID createdByUserId) {
-		this.id = UUID.randomUUID();
-		this.patient = patient;
-		this.visitId = visitId;
-		this.arrivalMode = arrivalMode;
-		this.triageLevel = triageLevel;
-		this.hemodynamicStatus = hemodynamicStatus;
-		this.chiefComplaint = chiefComplaint;
-		this.initialBpSystolic = initialBpSystolic;
-		this.initialBpDiastolic = initialBpDiastolic;
-		this.initialHr = initialHr;
-		this.initialTemp = initialTemp;
-		this.createdByUserId = createdByUserId;
-	}
+    @Column(name = "orientation", length = 50)
+    private String orientation;
 
-	@PrePersist
-	void prePersist() {
-		Instant now = Instant.now();
-		createdAt = now;
-		updatedAt = now;
-	}
+    @Column(name = "created_by_user_id")
+    private UUID createdByUserId;
 
-	@PreUpdate
-	void preUpdate() {
-		updatedAt = Instant.now();
-	}
+    @OneToMany(mappedBy = "emergency", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<ResuscitationLogEntity> resuscitationLogs = new ArrayList<>();
 
-	public UUID getId() {
-		return id;
-	}
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
 
-	public UUID getOrganizationId() {
-		return organizationId;
-	}
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
 
-	public void setOrganizationId(UUID organizationId) {
-		this.organizationId = organizationId;
-	}
+    protected EmergencyEntity() {
+    }
 
-	public PatientEntity getPatient() {
-		return patient;
-	}
+    public EmergencyEntity(
+            PatientEntity patient,
+            UUID visitId,
+            String arrivalMode,
+            String triageLevel,
+            String hemodynamicStatus,
+            String chiefComplaint,
+            Integer initialBpSystolic,
+            Integer initialBpDiastolic,
+            Integer initialHr,
+            BigDecimal initialTemp,
+            String thirdPartyName,
+            String thirdPartyPhone,
+            String thirdPartyRelationship,
+            String thirdPartyIdDocument,
+            String thirdPartyCircumstances,
+            boolean thirdPartyConsentToContact,
+            UUID createdByUserId) {
+        this.id = UUID.randomUUID();
+        this.patient = patient;
+        this.visitId = visitId;
+        this.arrivalMode = arrivalMode;
+        this.triageLevel = triageLevel;
+        this.hemodynamicStatus = hemodynamicStatus;
+        this.chiefComplaint = chiefComplaint;
+        this.initialBpSystolic = initialBpSystolic;
+        this.initialBpDiastolic = initialBpDiastolic;
+        this.initialHr = initialHr;
+        this.initialTemp = initialTemp;
+        this.thirdPartyName = thirdPartyName;
+        this.thirdPartyPhone = thirdPartyPhone;
+        this.thirdPartyRelationship = thirdPartyRelationship;
+        this.thirdPartyIdDocument = thirdPartyIdDocument;
+        this.thirdPartyCircumstances = thirdPartyCircumstances;
+        this.thirdPartyConsentToContact = thirdPartyConsentToContact;
+        this.createdByUserId = createdByUserId;
+    }
 
-	public void setPatient(PatientEntity patient) {
-		this.patient = patient;
-	}
+    /**
+     * Constructeur de compatibilité pour les usages antérieurs au tiers accompagnant.
+     */
+    public EmergencyEntity(
+            PatientEntity patient,
+            UUID visitId,
+            String arrivalMode,
+            String triageLevel,
+            String hemodynamicStatus,
+            String chiefComplaint,
+            Integer initialBpSystolic,
+            Integer initialBpDiastolic,
+            Integer initialHr,
+            BigDecimal initialTemp,
+            UUID createdByUserId) {
+        this(
+                patient,
+                visitId,
+                arrivalMode,
+                triageLevel,
+                hemodynamicStatus,
+                chiefComplaint,
+                initialBpSystolic,
+                initialBpDiastolic,
+                initialHr,
+                initialTemp,
+                null,
+                null,
+                null,
+                null,
+                null,
+                false,
+                createdByUserId
+        );
+    }
 
-	public UUID getVisitId() {
-		return visitId;
-	}
+    @PrePersist
+    void prePersist() {
+        Instant now = Instant.now();
+        createdAt = now;
+        updatedAt = now;
+    }
 
-	public void setVisitId(UUID visitId) {
-		this.visitId = visitId;
-	}
+    @PreUpdate
+    void preUpdate() {
+        updatedAt = Instant.now();
+    }
 
-	public String getArrivalMode() {
-		return arrivalMode;
-	}
+    public UUID getId() {
+        return id;
+    }
 
-	public void setArrivalMode(String arrivalMode) {
-		this.arrivalMode = arrivalMode;
-	}
+    public UUID getOrganizationId() {
+        return organizationId;
+    }
 
-	public String getTriageLevel() {
-		return triageLevel;
-	}
+    public void setOrganizationId(UUID organizationId) {
+        this.organizationId = organizationId;
+    }
 
-	public void setTriageLevel(String triageLevel) {
-		this.triageLevel = triageLevel;
-	}
+    public PatientEntity getPatient() {
+        return patient;
+    }
 
-	public String getHemodynamicStatus() {
-		return hemodynamicStatus;
-	}
+    public void setPatient(PatientEntity patient) {
+        this.patient = patient;
+    }
 
-	public void setHemodynamicStatus(String hemodynamicStatus) {
-		this.hemodynamicStatus = hemodynamicStatus;
-	}
+    public UUID getVisitId() {
+        return visitId;
+    }
 
-	public String getChiefComplaint() {
-		return chiefComplaint;
-	}
+    public void setVisitId(UUID visitId) {
+        this.visitId = visitId;
+    }
 
-	public void setChiefComplaint(String chiefComplaint) {
-		this.chiefComplaint = chiefComplaint;
-	}
+    public String getArrivalMode() {
+        return arrivalMode;
+    }
 
-	public Integer getInitialBpSystolic() {
-		return initialBpSystolic;
-	}
+    public void setArrivalMode(String arrivalMode) {
+        this.arrivalMode = arrivalMode;
+    }
 
-	public void setInitialBpSystolic(Integer initialBpSystolic) {
-		this.initialBpSystolic = initialBpSystolic;
-	}
+    public String getTriageLevel() {
+        return triageLevel;
+    }
 
-	public Integer getInitialBpDiastolic() {
-		return initialBpDiastolic;
-	}
+    public void setTriageLevel(String triageLevel) {
+        this.triageLevel = triageLevel;
+    }
 
-	public void setInitialBpDiastolic(Integer initialBpDiastolic) {
-		this.initialBpDiastolic = initialBpDiastolic;
-	}
+    public String getHemodynamicStatus() {
+        return hemodynamicStatus;
+    }
 
-	public Integer getInitialHr() {
-		return initialHr;
-	}
+    public void setHemodynamicStatus(String hemodynamicStatus) {
+        this.hemodynamicStatus = hemodynamicStatus;
+    }
 
-	public void setInitialHr(Integer initialHr) {
-		this.initialHr = initialHr;
-	}
+    public String getChiefComplaint() {
+        return chiefComplaint;
+    }
 
-	public BigDecimal getInitialTemp() {
-		return initialTemp;
-	}
+    public void setChiefComplaint(String chiefComplaint) {
+        this.chiefComplaint = chiefComplaint;
+    }
 
-	public void setInitialTemp(BigDecimal initialTemp) {
-		this.initialTemp = initialTemp;
-	}
+    public Integer getInitialBpSystolic() {
+        return initialBpSystolic;
+    }
 
-	public Instant getStabilizedAt() {
-		return stabilizedAt;
-	}
+    public void setInitialBpSystolic(Integer initialBpSystolic) {
+        this.initialBpSystolic = initialBpSystolic;
+    }
 
-	public void setStabilizedAt(Instant stabilizedAt) {
-		this.stabilizedAt = stabilizedAt;
-	}
+    public Integer getInitialBpDiastolic() {
+        return initialBpDiastolic;
+    }
 
-	public String getOrientation() {
-		return orientation;
-	}
+    public void setInitialBpDiastolic(Integer initialBpDiastolic) {
+        this.initialBpDiastolic = initialBpDiastolic;
+    }
 
-	public void setOrientation(String orientation) {
-		this.orientation = orientation;
-	}
+    public Integer getInitialHr() {
+        return initialHr;
+    }
 
-	public UUID getCreatedByUserId() {
-		return createdByUserId;
-	}
+    public void setInitialHr(Integer initialHr) {
+        this.initialHr = initialHr;
+    }
 
-	public void setCreatedByUserId(UUID createdByUserId) {
-		this.createdByUserId = createdByUserId;
-	}
+    public BigDecimal getInitialTemp() {
+        return initialTemp;
+    }
 
-	public List<ResuscitationLogEntity> getResuscitationLogs() {
-		return resuscitationLogs;
-	}
+    public void setInitialTemp(BigDecimal initialTemp) {
+        this.initialTemp = initialTemp;
+    }
 
-	public void addResuscitationLog(ResuscitationLogEntity log) {
-		resuscitationLogs.add(log);
-		log.setEmergency(this);
-	}
+    public String getThirdPartyName() {
+        return thirdPartyName;
+    }
 
-	public Instant getCreatedAt() {
-		return createdAt;
-	}
+    public void setThirdPartyName(String thirdPartyName) {
+        this.thirdPartyName = thirdPartyName;
+    }
 
-	public Instant getUpdatedAt() {
-		return updatedAt;
-	}
+    public String getThirdPartyPhone() {
+        return thirdPartyPhone;
+    }
+
+    public void setThirdPartyPhone(String thirdPartyPhone) {
+        this.thirdPartyPhone = thirdPartyPhone;
+    }
+
+    public String getThirdPartyRelationship() {
+        return thirdPartyRelationship;
+    }
+
+    public void setThirdPartyRelationship(String thirdPartyRelationship) {
+        this.thirdPartyRelationship = thirdPartyRelationship;
+    }
+
+    public String getThirdPartyIdDocument() {
+        return thirdPartyIdDocument;
+    }
+
+    public void setThirdPartyIdDocument(String thirdPartyIdDocument) {
+        this.thirdPartyIdDocument = thirdPartyIdDocument;
+    }
+
+    public String getThirdPartyCircumstances() {
+        return thirdPartyCircumstances;
+    }
+
+    public void setThirdPartyCircumstances(String thirdPartyCircumstances) {
+        this.thirdPartyCircumstances = thirdPartyCircumstances;
+    }
+
+    public boolean isThirdPartyConsentToContact() {
+        return thirdPartyConsentToContact;
+    }
+
+    public void setThirdPartyConsentToContact(boolean thirdPartyConsentToContact) {
+        this.thirdPartyConsentToContact = thirdPartyConsentToContact;
+    }
+
+    public Instant getStabilizedAt() {
+        return stabilizedAt;
+    }
+
+    public void setStabilizedAt(Instant stabilizedAt) {
+        this.stabilizedAt = stabilizedAt;
+    }
+
+    public String getOrientation() {
+        return orientation;
+    }
+
+    public void setOrientation(String orientation) {
+        this.orientation = orientation;
+    }
+
+    public UUID getCreatedByUserId() {
+        return createdByUserId;
+    }
+
+    public void setCreatedByUserId(UUID createdByUserId) {
+        this.createdByUserId = createdByUserId;
+    }
+
+    public List<ResuscitationLogEntity> getResuscitationLogs() {
+        return resuscitationLogs;
+    }
+
+    public void addResuscitationLog(ResuscitationLogEntity log) {
+        resuscitationLogs.add(log);
+        log.setEmergency(this);
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
 }
