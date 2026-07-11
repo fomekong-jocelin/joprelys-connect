@@ -16,6 +16,8 @@ import com.joprelys.backend.patient.reconciliation.infrastructure.persistence.Pa
 import com.joprelys.backend.patient.reconciliation.infrastructure.persistence.PatientReconciliationEventRepository;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -92,15 +94,20 @@ public class PatientReconciliationWorkflowService {
             PatientReconciliationDecisionRequest request,
             String idempotencyKey) {
         String normalizedKey = normalizeIdempotencyKey(idempotencyKey);
-        var replay = eventRepository.findByIdempotencyKey(normalizedKey);
+        Optional<PatientReconciliationEventEntity> replay = findDecisionReplay(
+                sourcePatientId, request, normalizedKey);
         if (replay.isPresent()) {
-            assertSameSource(replay.get(), sourcePatientId);
             return toDecisionResponse(replay.get(), true);
         }
 
         UserAccountEntity actor = requireTenantActor();
         PatientEntity source = lockPatient(sourcePatientId);
         assertSameTenant(actor, source);
+
+        replay = findDecisionReplay(sourcePatientId, request, normalizedKey);
+        if (replay.isPresent()) {
+            return toDecisionResponse(replay.get(), true);
+        }
         assertUrgTempSource(source);
 
         return switch (request.decision()) {
@@ -117,15 +124,20 @@ public class PatientReconciliationWorkflowService {
             PatientReconciliationCorrectionRequest request,
             String idempotencyKey) {
         String normalizedKey = normalizeIdempotencyKey(idempotencyKey);
-        var replay = eventRepository.findByIdempotencyKey(normalizedKey);
+        Optional<PatientReconciliationEventEntity> replay = findCorrectionReplay(
+                sourcePatientId, request, normalizedKey);
         if (replay.isPresent()) {
-            assertSameSource(replay.get(), sourcePatientId);
             return toDecisionResponse(replay.get(), true);
         }
 
         UserAccountEntity actor = requireTenantActor();
         PatientEntity source = lockPatient(sourcePatientId);
         assertSameTenant(actor, source);
+
+        replay = findCorrectionReplay(sourcePatientId, request, normalizedKey);
+        if (replay.isPresent()) {
+            return toDecisionResponse(replay.get(), true);
+        }
 
         PatientCanonicalLinkEntity currentLink = canonicalLinkRepository
                 .findForUpdateBySourcePatient_Id(sourcePatientId)
@@ -308,6 +320,55 @@ public class PatientReconciliationWorkflowService {
         return toDecisionResponse(event, false);
     }
 
+    private Optional<PatientReconciliationEventEntity> findDecisionReplay(
+            UUID sourcePatientId,
+            PatientReconciliationDecisionRequest request,
+            String idempotencyKey) {
+        return eventRepository.findByIdempotencyKey(idempotencyKey)
+                .map(event -> {
+                    assertSameSource(event, sourcePatientId);
+                    UUID storedCandidateId = event.getCandidatePatient() == null
+                            ? null
+                            : event.getCandidatePatient().getId();
+                    boolean sameRequest = event.getDecision() == request.decision()
+                            && Objects.equals(storedCandidateId, request.candidatePatientId())
+                            && event.getEvidenceSourceType() == request.evidenceSourceType()
+                            && Objects.equals(normalizeNullable(event.getEvidenceReference()),
+                                    normalizeNullable(request.evidenceReference()))
+                            && Objects.equals(normalizeNullable(event.getJustification()),
+                                    normalizeNullable(request.justification()));
+                    if (!sameRequest) {
+                        throw conflict("IDEMPOTENCY_KEY_REUSED");
+                    }
+                    return event;
+                });
+    }
+
+    private Optional<PatientReconciliationEventEntity> findCorrectionReplay(
+            UUID sourcePatientId,
+            PatientReconciliationCorrectionRequest request,
+            String idempotencyKey) {
+        return eventRepository.findByIdempotencyKey(idempotencyKey)
+                .map(event -> {
+                    assertSameSource(event, sourcePatientId);
+                    UUID storedCandidateId = event.getCandidatePatient() == null
+                            ? null
+                            : event.getCandidatePatient().getId();
+                    boolean sameRequest = event.getDecision() == PatientReconciliationDecision.CORRECT_LINK
+                            && Objects.equals(storedCandidateId, request.replacementCanonicalPatientId())
+                            && Objects.equals(event.getCorrectedEventId(), request.correctedEventId())
+                            && event.getEvidenceSourceType() == request.evidenceSourceType()
+                            && Objects.equals(normalizeNullable(event.getEvidenceReference()),
+                                    normalizeNullable(request.evidenceReference()))
+                            && Objects.equals(normalizeNullable(event.getJustification()),
+                                    normalizeNullable(request.justification()));
+                    if (!sameRequest) {
+                        throw conflict("IDEMPOTENCY_KEY_REUSED");
+                    }
+                    return event;
+                });
+    }
+
     private PatientReconciliationQueueItemResponse toQueueItem(PatientEntity patient) {
         UUID canonicalPatientId = canonicalLinkRepository.findBySourcePatient_Id(patient.getId())
                 .map(link -> link.getCanonicalPatient().getId())
@@ -401,6 +462,10 @@ public class PatientReconciliationWorkflowService {
             throw badRequest("IDEMPOTENCY_KEY_TOO_LONG");
         }
         return normalized;
+    }
+
+    private static String normalizeNullable(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     private static ResponseStatusException badRequest(String code) {
