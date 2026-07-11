@@ -5,7 +5,6 @@ import com.joprelys.backend.emergency.api.CreateEmergencyRequest;
 import com.joprelys.backend.emergency.infrastructure.persistence.EmergencyEntity;
 import com.joprelys.backend.emergency.infrastructure.persistence.EmergencyRepository;
 import com.joprelys.backend.emergency.infrastructure.persistence.ResuscitationLogEntity;
-import com.joprelys.backend.emergency.infrastructure.persistence.ResuscitationLogRepository;
 import com.joprelys.backend.emergency.medicolegal.application.EmergencyArrivalThirdPartyService;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
@@ -21,17 +20,14 @@ import org.springframework.web.server.ResponseStatusException;
 public class EmergencyService {
 
     private final EmergencyRepository emergencyRepository;
-    private final ResuscitationLogRepository resuscitationLogRepository;
     private final PatientRepository patientRepository;
     private final EmergencyArrivalThirdPartyService arrivalThirdPartyService;
 
     public EmergencyService(
             EmergencyRepository emergencyRepository,
-            ResuscitationLogRepository resuscitationLogRepository,
             PatientRepository patientRepository,
             EmergencyArrivalThirdPartyService arrivalThirdPartyService) {
         this.emergencyRepository = emergencyRepository;
-        this.resuscitationLogRepository = resuscitationLogRepository;
         this.patientRepository = patientRepository;
         this.arrivalThirdPartyService = arrivalThirdPartyService;
     }
@@ -91,7 +87,8 @@ public class EmergencyService {
                 request.administeredAt(),
                 administeredByUserId);
         emergency.addResuscitationLog(log);
-        return resuscitationLogRepository.save(log);
+        emergencyRepository.save(emergency);
+        return log;
     }
 
     @Transactional
