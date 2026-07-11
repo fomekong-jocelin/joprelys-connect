@@ -20,7 +20,7 @@ CREATE TABLE emergency_third_parties (
     CONSTRAINT fk_emergency_third_party_emergency
         FOREIGN KEY (emergency_id) REFERENCES emergencies(id) ON DELETE CASCADE,
     CONSTRAINT fk_emergency_third_party_creator
-        FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+        FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_emergency_third_party_dossier
@@ -51,7 +51,7 @@ CREATE TABLE emergency_identity_statements (
     CONSTRAINT fk_emergency_identity_statement_third_party
         FOREIGN KEY (third_party_id) REFERENCES emergency_third_parties(id) ON DELETE SET NULL,
     CONSTRAINT fk_emergency_identity_statement_creator
-        FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+        FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_emergency_identity_statement_dossier
@@ -70,7 +70,7 @@ CREATE TABLE emergency_capacity_events (
     CONSTRAINT fk_emergency_capacity_event_emergency
         FOREIGN KEY (emergency_id) REFERENCES emergencies(id) ON DELETE CASCADE,
     CONSTRAINT fk_emergency_capacity_event_recorder
-        FOREIGN KEY (recorded_by_user_id) REFERENCES users(id)
+        FOREIGN KEY (recorded_by_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_emergency_capacity_event_dossier
@@ -93,7 +93,7 @@ CREATE TABLE emergency_legal_bases (
     CONSTRAINT fk_emergency_legal_basis_emergency
         FOREIGN KEY (emergency_id) REFERENCES emergencies(id) ON DELETE CASCADE,
     CONSTRAINT fk_emergency_legal_basis_creator
-        FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+        FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_emergency_legal_basis_dossier
@@ -125,7 +125,7 @@ CREATE TABLE emergency_belongings (
     CONSTRAINT fk_emergency_belonging_emergency
         FOREIGN KEY (emergency_id) REFERENCES emergencies(id) ON DELETE CASCADE,
     CONSTRAINT fk_emergency_belonging_receiver
-        FOREIGN KEY (received_by_user_id) REFERENCES users(id),
+        FOREIGN KEY (received_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
     CONSTRAINT chk_emergency_belonging_quantity CHECK (quantity > 0)
 );
 
@@ -147,7 +147,7 @@ CREATE TABLE emergency_belonging_transfers (
     CONSTRAINT fk_emergency_belonging_transfer_item
         FOREIGN KEY (belonging_id) REFERENCES emergency_belongings(id) ON DELETE CASCADE,
     CONSTRAINT fk_emergency_belonging_transfer_actor
-        FOREIGN KEY (performed_by_user_id) REFERENCES users(id)
+        FOREIGN KEY (performed_by_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_emergency_belonging_transfer_history
