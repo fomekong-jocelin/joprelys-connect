@@ -1,7 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { InviteStaffRequest, InviteStaffResponse, StaffMember, UpdateStaffRequest } from './staff.models';
+import {
+  InviteStaffRequest,
+  InviteStaffResponse,
+  StaffMember,
+  StaffRoleDefinition,
+  UpdateStaffRequest,
+} from './staff.models';
 
 @Injectable({
   providedIn: 'root',
@@ -11,6 +17,10 @@ export class StaffApiService {
 
   list(): Observable<StaffMember[]> {
     return this.http.get<StaffMember[]>('/api/staff');
+  }
+
+  listRoles(): Observable<StaffRoleDefinition[]> {
+    return this.http.get<StaffRoleDefinition[]>('/api/staff/roles');
   }
 
   invite(request: InviteStaffRequest): Observable<InviteStaffResponse> {
