@@ -27,7 +27,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/organizations")
-@PreAuthorize("hasRole('ADMIN_JOPRELYS')")
+@PreAuthorize("hasAnyRole('ADMIN_JOPRELYS', 'SUPER_ADMIN')")
 public class OrganizationController {
 
 	private static final String PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
