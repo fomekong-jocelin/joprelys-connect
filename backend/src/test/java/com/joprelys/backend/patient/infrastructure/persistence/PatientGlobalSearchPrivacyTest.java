@@ -3,6 +3,7 @@ package com.joprelys.backend.patient.infrastructure.persistence;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.auth.security.TenantContext;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
@@ -21,6 +22,9 @@ class PatientGlobalSearchPrivacyTest {
 
     @Autowired
     private PatientRepository patientRepository;
+
+    @Autowired
+    private UserAccountRepository userAccountRepository;
 
     @Autowired
     private OrganizationRepository organizationRepository;
@@ -44,6 +48,7 @@ class PatientGlobalSearchPrivacyTest {
         jdbcTemplate.update("DELETE FROM consultations");
         jdbcTemplate.update("DELETE FROM visits");
         jdbcTemplate.update("DELETE FROM patients");
+        userAccountRepository.deleteAll();
         organizationRepository.deleteAll();
         organization = organizationRepository.save(
                 new OrganizationEntity("Clinique A", "contact@joprelys.local", "123", "Street A", "Douala"));
