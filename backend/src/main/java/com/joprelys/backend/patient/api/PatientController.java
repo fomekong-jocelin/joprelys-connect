@@ -150,7 +150,7 @@ public class PatientController {
                 entity.getOrganizationId(),
                 entity.getGlobalPatientNumber(),
                 entity.getLocalPatientNumber(),
-                entity.getFullName(),
+                entity.getDisplayName(),
                 entity.getGender(),
                 entity.getBirthDate(),
                 entity.getPhone(),
@@ -169,7 +169,13 @@ public class PatientController {
                 emergencyActive,
                 entity.getIdentityStatus(),
                 entity.getTemporaryPatientNumber(),
-                entity.getDisplayName());
+                entity.getDisplayName(),
+                entity.getIdentityConfidenceLevel(),
+                entity.getApparentGender(),
+                entity.getEstimatedAgeRange(),
+                entity.getPhysicalDescription(),
+                entity.getFoundAt(),
+                entity.getFoundLocation());
     }
 }
 
