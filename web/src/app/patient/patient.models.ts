@@ -7,7 +7,7 @@ export interface Patient {
   localPatientNumber: string;
   fullName: string;
   gender: string;
-  birthDate: string;
+  birthDate: string; // ISO string date YYYY-MM-DD
   phone?: string;
   city: string;
   district?: string;
@@ -227,11 +227,12 @@ export interface PatientPreRegistrationRequest {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   emergencyContactRelation?: string;
+  captchaId: string;
+  captchaAnswer: string;
 }
 
 export interface PatientPreRegistrationResponse {
   id: string;
-  referenceNumber: string;
   organizationId: string;
   firstName: string;
   lastName: string;
@@ -244,30 +245,277 @@ export interface PatientPreRegistrationResponse {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   emergencyContactRelation?: string;
-  status: string;
-  rejectionReason?: string;
+  status: 'AWAITING_VALIDATION' | 'VALIDATED' | 'REJECTED';
   createdAt: string;
-  processedAt?: string;
+  validatedAt?: string;
+  validatedBy?: string;
+  similarityScore?: number;
+  similarPatientId?: string;
+  similarPatientName?: string;
 }
 
 export interface PreRegistrationValidationRequest {
-  fullName: string;
+  firstName: string;
+  lastName: string;
   gender: string;
   birthDate: string;
+  bloodGroup?: string;
   phone?: string;
-  city: string;
-  district?: string;
+  email?: string;
   address?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
-  bloodGroup?: string;
-  email?: string;
+  emergencyContactRelation?: string;
+  reconcileWithPatientId?: string;
 }
 
 export interface PreRegistrationPage {
   content: PatientPreRegistrationResponse[];
   totalElements: number;
   totalPages: number;
-  number: number;
   size: number;
+  number: number;
+}
+
+export interface Ward {
+  id: string;
+  name: string;
+}
+
+export interface Bed {
+  id: string;
+  roomId: string;
+  bedNumber: string;
+  status: 'FREE' | 'OCCUPIED' | 'CLEANING' | 'MAINTENANCE';
+  version: number;
+}
+
+export interface RoomOccupancy {
+  id: string;
+  roomNumber: string;
+  capacity: number;
+  comfortLevel: string;
+  beds: Bed[];
+}
+
+export interface WardOccupancy {
+  id: string;
+  name: string;
+  rooms: RoomOccupancy[];
+  totalBedsCount: number;
+  occupiedBedsCount: number;
+}
+
+export interface BedAssignment {
+  id: string;
+  hospitalizationId: string;
+  bedId: string;
+  assignedAt: string;
+  releasedAt?: string;
+}
+
+export interface InsuranceConvention {
+  id: string;
+  name: string;
+  coveragePercentage: number;
+}
+
+export interface TariffGrid {
+  id: string;
+  keyLetter: string;
+  unitValue: number;
+}
+
+export interface InvoiceItem {
+  id?: string;
+  label: string;
+  itemType: 'CONSULTATION' | 'K_SURGEON' | 'K_ANESTHESIST' | 'K_BLOC' | 'AMI_CARE' | 'STAY_FEE' | 'MEDICATION';
+  unitPrice: number;
+  quantity: number;
+  coefficient?: number;
+  totalItemAmount?: number;
+}
+
+export interface Invoice {
+  id: string;
+  patientId: string;
+  visitId?: string;
+  invoiceNumber: string;
+  insuranceConvention?: InsuranceConvention;
+  totalAmount: number;
+  patientShare: number;
+  insuranceShare: number;
+  status: 'PENDING' | 'PARTIALLY_PAID' | 'PAID' | 'SETTLED' | 'PROFORMA' | 'VALIDATED' | 'CANCELLED';
+  items: InvoiceItem[];
+  createdAt: string;
+  validatedAt?: string;
+  validatedByUserId?: string;
+  discountAmount?: number;
+  discountReason?: string;
+}
+
+export interface EstimateItem {
+  id?: string;
+  label: string;
+  itemType: string;
+  unitPrice: number;
+  quantity: number;
+  totalAmount?: number;
+}
+
+export interface Estimate {
+  id: string;
+  patientId: string;
+  visitId?: string;
+  estimateNumber: string;
+  totalAmount: number;
+  patientShare: number;
+  insuranceShare: number;
+  status: 'DRAFT' | 'ACCEPTED' | 'REJECTED' | 'INVOICED';
+  items: EstimateItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreditNote {
+  id: string;
+  invoiceId: string;
+  creditNoteNumber: string;
+  amount: number;
+  reason: string;
+  status: 'ACTIVE' | 'CANCELLED';
+  createdAt: string;
+}
+
+export interface Receivable {
+  id: string;
+  invoiceId: string;
+  debtorType: 'PATIENT' | 'INSURANCE';
+  debtorId: string;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  status: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID';
+  dueDate?: string;
+  createdAt: string;
+  agingSlice?: string;
+}
+
+export interface ReceivableReminder {
+  id: string;
+  receivableId: string;
+  actionType: 'PHONE_CALL' | 'EMAIL' | 'LETTER' | 'VISIT';
+  status: 'PENDING' | 'PROMISED_PAYMENT' | 'DISPUTE' | 'UNREACHABLE';
+  notes?: string;
+  actorId: string;
+  createdAt: string;
+}
+
+export interface Payment {
+  id: string;
+  invoiceId: string;
+  amount: number;
+  paymentMethod: 'CASH' | 'CHECK' | 'BANK_TRANSFER';
+  referenceNumber?: string;
+  receivedByUserId: string;
+  createdAt: string;
+}
+
+export interface CashRegister {
+  id: string;
+  code: string;
+  name: string;
+}
+
+export interface CashSession {
+  id: string;
+  cashRegisterId: string;
+  cashRegisterName: string;
+  openedByUserId: string;
+  openedAt: string;
+  openingBalance: number;
+  closedByUserId?: string;
+  closedAt?: string;
+  closingBalance?: number;
+  declaredBalance?: number;
+  discrepancyAmount?: number;
+  discrepancyReason?: string;
+  status: 'OPEN' | 'CLOSED';
+  discrepancyResolved: boolean;
+  resolutionNotes?: string;
+  resolvedByUserId?: string;
+  resolvedAt?: string;
+}
+
+export interface CashMovement {
+  id: string;
+  cashRegisterSessionId: string;
+  movementType: 'IN' | 'OUT' | 'TRANSFER_TO_BANK';
+  amount: number;
+  description: string;
+  paymentMethod: 'CASH' | 'CHECK' | 'BANK_TRANSFER';
+  referenceNumber?: string;
+  createdByUserId: string;
+  createdAt: string;
+}
+
+export interface PaymentReceipt {
+  id: string;
+  paymentId: string;
+  receiptNumber: string;
+  amount: number;
+  paymentMethod: string;
+  createdAt: string;
+}
+
+export type BordereauStatus = 'DRAFT' | 'SENT' | 'PAID' | 'CANCELLED';
+
+export interface Bordereau {
+  id: string;
+  bordereauNumber: string;
+  insuranceConventionId: string;
+  insuranceConventionName: string;
+  startDate: string;
+  endDate: string;
+  totalAmount: number;
+  status: BordereauStatus;
+  createdAt: string;
+}
+
+export interface BordereauInvoiceDto {
+  id: string;
+  invoiceNumber: string;
+  totalAmount: number;
+  insuranceShare: number;
+  patientShare: number;
+  status: string;
+}
+
+export interface BordereauDetails extends Bordereau {
+  invoices: BordereauInvoiceDto[];
+}
+
+export interface SettlementParty {
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  status: 'NOT_DUE' | 'UNPAID' | 'PARTIALLY_PAID' | 'PAID';
+}
+
+export interface InvoiceSettlementSummary {
+  invoiceId: string;
+  collectionStatus: 'NOT_YET_DUE' | 'PATIENT_DUE' | 'PATIENT_PARTIALLY_PAID' | 'INSURANCE_DUE' | 'SETTLED' | 'CANCELLED';
+  patient: SettlementParty;
+  insurance?: SettlementParty;
+}
+
+export interface CashSessionSummary {
+  sessionId: string;
+  openingCash: number;
+  cashReceipts: number;
+  chequeReceipts: number;
+  transferReceipts: number;
+  cashExpenses: number;
+  bankDeposits: number;
+  expectedCash: number;
 }
