@@ -1,6 +1,7 @@
 package com.joprelys.backend.emergency.infrastructure.persistence;
 
 import jakarta.persistence.LockModeType;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,4 +31,9 @@ public interface EmergencyRepository extends JpaRepository<EmergencyEntity, UUID
 
     @Query("SELECT e FROM EmergencyEntity e JOIN FETCH e.patient LEFT JOIN FETCH e.resuscitationLogs WHERE e.patient.id = :patientId ORDER BY e.createdAt DESC")
     List<EmergencyEntity> findByPatientIdWithLogs(@Param("patientId") UUID patientId);
+
+    @Query("SELECT DISTINCT e FROM EmergencyEntity e "
+            + "JOIN FETCH e.patient LEFT JOIN FETCH e.resuscitationLogs "
+            + "WHERE e.patient.id IN :patientIds ORDER BY e.createdAt DESC")
+    List<EmergencyEntity> findByPatientIdsWithLogs(@Param("patientIds") Collection<UUID> patientIds);
 }
