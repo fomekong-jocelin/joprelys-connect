@@ -11,6 +11,16 @@ public record EmergencyResponse(
         UUID organizationId,
         UUID patientId,
         String patientName,
+        String globalPatientNumber,
+        String localPatientNumber,
+        String temporaryPatientNumber,
+        String identityStatus,
+        String identityConfidenceLevel,
+        String apparentGender,
+        String estimatedAgeRange,
+        String physicalDescription,
+        Instant foundAt,
+        String foundLocation,
         UUID visitId,
         String arrivalMode,
         String triageLevel,
@@ -34,6 +44,7 @@ public record EmergencyResponse(
         Instant updatedAt
 ) {
     public static EmergencyResponse fromEntity(EmergencyEntity entity) {
+        var patient = entity.getPatient();
         var logs = entity.getResuscitationLogs() != null
                 ? entity.getResuscitationLogs().stream().map(ResuscitationLogResponse::fromEntity).toList()
                 : List.<ResuscitationLogResponse>of();
@@ -41,8 +52,18 @@ public record EmergencyResponse(
         return new EmergencyResponse(
                 entity.getId(),
                 entity.getOrganizationId(),
-                entity.getPatient().getId(),
-                entity.getPatient().getFullName(),
+                patient.getId(),
+                patient.getDisplayName(),
+                patient.getGlobalPatientNumber(),
+                patient.getLocalPatientNumber(),
+                patient.getTemporaryPatientNumber(),
+                patient.getIdentityStatus() != null ? patient.getIdentityStatus().name() : null,
+                patient.getIdentityConfidenceLevel() != null ? patient.getIdentityConfidenceLevel().name() : null,
+                patient.getApparentGender(),
+                patient.getEstimatedAgeRange(),
+                patient.getPhysicalDescription(),
+                patient.getFoundAt(),
+                patient.getFoundLocation(),
                 entity.getVisitId(),
                 entity.getArrivalMode(),
                 entity.getTriageLevel(),
