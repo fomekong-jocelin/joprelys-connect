@@ -8,6 +8,12 @@ export interface CreateEmergencyRequest {
   initialBpDiastolic?: number;
   initialHr?: number;
   initialTemp?: number;
+  thirdPartyName?: string;
+  thirdPartyPhone?: string;
+  thirdPartyRelationship?: string;
+  thirdPartyIdDocument?: string;
+  thirdPartyCircumstances?: string;
+  thirdPartyConsentToContact?: boolean;
 }
 
 export interface AddResuscitationLogRequest {
@@ -43,6 +49,12 @@ export interface EmergencyRecord {
   initialBpDiastolic?: number;
   initialHr?: number;
   initialTemp?: number;
+  thirdPartyName?: string;
+  thirdPartyPhone?: string;
+  thirdPartyRelationship?: string;
+  thirdPartyIdDocument?: string;
+  thirdPartyCircumstances?: string;
+  thirdPartyConsentToContact?: boolean;
   stabilizedAt?: string;
   orientation?: string;
   createdByUserId?: string;
