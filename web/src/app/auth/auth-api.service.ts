@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { finalize, Observable, tap } from 'rxjs';
 import { AuthTokenStorageService } from './auth-token-storage.service';
-import { LoginRequest, LoginResponse } from './auth.models';
+import { CurrentSessionResponse, LoginRequest, LoginResponse } from './auth.models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthApiService {
@@ -29,6 +29,12 @@ export class AuthApiService {
     );
   }
 
+  refreshCurrentSession(): Observable<CurrentSessionResponse> {
+    return this.http.get<CurrentSessionResponse>(`${this.apiBaseUrl}/me`).pipe(
+      tap((response) => this.tokenStorage.updateIdentity(response)),
+    );
+  }
+
   logout(): Observable<void> {
     return this.http.post<void>(`${this.apiBaseUrl}/logout`, {}).pipe(
       finalize(() => this.tokenStorage.clear()),
@@ -39,7 +45,7 @@ export class AuthApiService {
     return this.http.post<{ otpCode: string }>('/api/public/auth/password-recovery/request', { email });
   }
 
-  resetPassword(request: any): Observable<void> {
+  resetPassword(request: unknown): Observable<void> {
     return this.http.post<void>('/api/public/auth/password-recovery/reset', request);
   }
 }
