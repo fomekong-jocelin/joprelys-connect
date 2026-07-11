@@ -116,6 +116,10 @@ public final class RbacCatalog {
         return Set.of(ROLE_ADMIN_JOPRELYS, ROLE_SUPER_ADMIN);
     }
 
+    public static Set<String> platformPermissionCodes() {
+        return Set.of("ORGANIZATION_MANAGE");
+    }
+
     public static Set<String> permissionCodes() {
         return permissions().stream().map(PermissionDefinition::code)
                 .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
