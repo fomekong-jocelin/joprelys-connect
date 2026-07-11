@@ -15,7 +15,6 @@ import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -100,7 +99,7 @@ public class EmergencyControllerTest {
 
     @Test
     void shouldPersistArrivalThirdPartyWhenPatientIsAccompanied() throws Exception {
-        emergencyRepository.deleteAll();
+        jdbcTemplate.update("DELETE FROM emergencies");
 
         String body = """
                 {
@@ -132,7 +131,7 @@ public class EmergencyControllerTest {
 
     @Test
     void shouldRejectAccompaniedArrivalWithoutRequiredThirdPartyDetails() throws Exception {
-        emergencyRepository.deleteAll();
+        jdbcTemplate.update("DELETE FROM emergencies");
 
         String body = """
                 {
