@@ -4,10 +4,10 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Observable, finalize, map, of, switchMap } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import { EmergencyApiService } from '../emergency/emergency-api.service';
-import { CreateEmergencyRequest } from '../emergency/emergency.models';
+import { CreateEmergencyRequest, EmergencyTriageRequest } from '../emergency/emergency.models';
 import { PatientApiService } from '../patient/patient-api.service';
 import { Patient } from '../patient/patient.models';
-import { ProvisionalPatientApiService } from '../patient/provisional-patient-api.service';
+import { CreateProvisionalPatientRequest } from '../patient/provisional-patient.models';
 import { AlertComponent } from '../shared/ui/alert.component';
 import { ButtonComponent } from '../shared/ui/button.component';
 import { VisitApiService } from '../visit/visit-api.service';
@@ -33,10 +33,10 @@ export interface AdmissionCompleted {
 export class UnifiedAdmissionComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly patientApi = inject(PatientApiService);
-  private readonly provisionalPatientApi = inject(ProvisionalPatientApiService);
   private readonly emergencyApi = inject(EmergencyApiService);
   private readonly visitApi = inject(VisitApiService);
   private readonly i18n = inject(I18nService);
+  private readonly provisionalAdmissionRequestId = globalThis.crypto.randomUUID();
 
   readonly initialCarePath = input<AdmissionCarePath>('NORMAL');
   readonly cancelled = output<void>();
@@ -187,14 +187,17 @@ export class UnifiedAdmissionComponent implements OnInit {
     this.isSubmitting.set(true);
     this.error.set(null);
 
-    this.resolvePatient().pipe(
-      switchMap((patient) => this.createCareRecord(patient, value)),
+    const submission$ = this.carePath === 'EMERGENCY' && this.patientMode === 'PROVISIONAL'
+      ? this.createProvisionalEmergency(value)
+      : this.resolvePatient().pipe(
+          switchMap((patient) => this.createCareRecord(patient, value)),
+        );
+
+    submission$.pipe(
       finalize(() => this.isSubmitting.set(false)),
     ).subscribe({
       next: (result) => this.completed.emit(result),
-      error: (err) => this.error.set(
-        err.error?.detail || err.error?.message || this.text('saveError')
-      ),
+      error: (err) => this.error.set(this.localizedApiError(err, 'saveError')),
     });
   }
 
@@ -219,34 +222,36 @@ export class UnifiedAdmissionComponent implements OnInit {
   private loadPatients(): void {
     this.isLoadingPatients.set(true);
     this.patientApi.list().pipe(
-      finalize(() => this.isLoadingPatients.set(false))
+      finalize(() => this.isLoadingPatients.set(false)),
     ).subscribe({
       next: (patients) => this.patients.set(patients),
       error: () => this.error.set(this.text('loadPatientsError')),
     });
   }
 
+  private createProvisionalEmergency(
+    value: ReturnType<FormGroup['getRawValue']>,
+  ): Observable<AdmissionCompleted> {
+    return this.emergencyApi.createProvisionalAdmission({
+      requestId: this.provisionalAdmissionRequestId,
+      patient: this.provisionalPatientPayload(value),
+      emergency: this.emergencyTriagePayload(value),
+    }).pipe(map((emergency) => ({
+      carePath: 'EMERGENCY',
+      patientId: emergency.patientId,
+      patientDisplayName: emergency.patientName,
+      emergencyId: emergency.id,
+    })));
+  }
+
   private createCareRecord(
     patient: { id: string; displayName: string },
-    value: ReturnType<FormGroup['getRawValue']>
+    value: ReturnType<FormGroup['getRawValue']>,
   ): Observable<AdmissionCompleted> {
     if (this.carePath === 'EMERGENCY') {
       const request: CreateEmergencyRequest = {
         patientId: patient.id,
-        arrivalMode: value.arrivalMode,
-        triageLevel: value.triageLevel,
-        hemodynamicStatus: value.hemodynamicStatus,
-        chiefComplaint: value.chiefComplaint.trim(),
-        initialBpSystolic: value.initialBpSystolic,
-        initialBpDiastolic: value.initialBpDiastolic,
-        initialHr: value.initialHr,
-        initialTemp: value.initialTemp,
-        thirdPartyName: this.isAccompanied ? this.optional(value.thirdPartyName) : undefined,
-        thirdPartyPhone: this.isAccompanied ? this.optional(value.thirdPartyPhone) : undefined,
-        thirdPartyRelationship: this.isAccompanied ? this.optional(value.thirdPartyRelationship) : undefined,
-        thirdPartyIdDocument: this.isAccompanied ? this.optional(value.thirdPartyIdDocument) : undefined,
-        thirdPartyCircumstances: this.isAccompanied ? this.optional(value.thirdPartyCircumstances) : undefined,
-        thirdPartyConsentToContact: this.isAccompanied && Boolean(value.thirdPartyConsentToContact),
+        ...this.emergencyTriagePayload(value),
       };
       return this.emergencyApi.create(request).pipe(map((emergency) => ({
         carePath: this.carePath,
@@ -281,23 +286,25 @@ export class UnifiedAdmissionComponent implements OnInit {
       return of({ id: patient.id, displayName: this.displayPatient(patient) });
     }
 
-    if (this.patientMode === 'NEW') {
-      return this.patientApi.create({
-        fullName: value.fullName.trim(),
-        gender: value.gender,
-        birthDate: value.birthDate,
-        phone: value.phone.trim(),
-        city: value.city.trim(),
-        district: this.optional(value.district),
-        address: this.optional(value.address),
-        email: this.optional(value.email),
-      }).pipe(map((patient) => ({
-        id: patient.id,
-        displayName: this.displayPatient(patient),
-      })));
-    }
+    return this.patientApi.create({
+      fullName: value.fullName.trim(),
+      gender: value.gender,
+      birthDate: value.birthDate,
+      phone: value.phone.trim(),
+      city: value.city.trim(),
+      district: this.optional(value.district),
+      address: this.optional(value.address),
+      email: this.optional(value.email),
+    }).pipe(map((patient) => ({
+      id: patient.id,
+      displayName: this.displayPatient(patient),
+    })));
+  }
 
-    return this.provisionalPatientApi.create({
+  private provisionalPatientPayload(
+    value: ReturnType<FormGroup['getRawValue']>,
+  ): CreateProvisionalPatientRequest {
+    return {
       apparentGender: value.apparentGender === 'UNKNOWN' ? undefined : value.apparentGender,
       estimatedAgeRange: this.optional(value.estimatedAgeRange),
       physicalDescription: this.optional(value.physicalDescription),
@@ -305,10 +312,28 @@ export class UnifiedAdmissionComponent implements OnInit {
       foundAt: new Date().toISOString(),
       confidenceLevel: 'NONE',
       identityDeclarations: [],
-    }).pipe(map((response) => ({
-      id: response.patient.id,
-      displayName: response.patient.displayName,
-    })));
+    };
+  }
+
+  private emergencyTriagePayload(
+    value: ReturnType<FormGroup['getRawValue']>,
+  ): EmergencyTriageRequest {
+    return {
+      arrivalMode: value.arrivalMode,
+      triageLevel: value.triageLevel,
+      hemodynamicStatus: value.hemodynamicStatus,
+      chiefComplaint: value.chiefComplaint.trim(),
+      initialBpSystolic: value.initialBpSystolic,
+      initialBpDiastolic: value.initialBpDiastolic,
+      initialHr: value.initialHr,
+      initialTemp: value.initialTemp,
+      thirdPartyName: this.isAccompanied ? this.optional(value.thirdPartyName) : undefined,
+      thirdPartyPhone: this.isAccompanied ? this.optional(value.thirdPartyPhone) : undefined,
+      thirdPartyRelationship: this.isAccompanied ? this.optional(value.thirdPartyRelationship) : undefined,
+      thirdPartyIdDocument: this.isAccompanied ? this.optional(value.thirdPartyIdDocument) : undefined,
+      thirdPartyCircumstances: this.isAccompanied ? this.optional(value.thirdPartyCircumstances) : undefined,
+      thirdPartyConsentToContact: this.isAccompanied && Boolean(value.thirdPartyConsentToContact),
+    };
   }
 
   private validateStep(step: AdmissionStep): string | null {
@@ -349,6 +374,19 @@ export class UnifiedAdmissionComponent implements OnInit {
     }
 
     return null;
+  }
+
+  private localizedApiError(error: unknown, fallbackKey: string): string {
+    const apiError = error as { error?: { code?: unknown; detail?: unknown; message?: unknown } };
+    const candidate = apiError.error?.code ?? apiError.error?.detail ?? apiError.error?.message;
+    if (typeof candidate === 'string' && /^[A-Z0-9_]+$/.test(candidate)) {
+      const translationKey = `admission.error.${candidate}`;
+      const translated = this.i18n.t(translationKey);
+      if (translated !== translationKey) {
+        return translated;
+      }
+    }
+    return this.text(fallbackKey);
   }
 
   private optional(value: unknown): string | undefined {
