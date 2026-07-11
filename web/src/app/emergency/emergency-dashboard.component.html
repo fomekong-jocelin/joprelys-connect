@@ -1,270 +1,174 @@
 <app-shell>
-  <app-page-header
-    [title]="t('emergency.title')"
-    [subtitle]="t('emergency.subtitle')"
-  >
+  <app-page-header [title]="t('emergency.title')" [subtitle]="t('emergency.subtitle')">
     <app-ui-button variant="danger" (pressed)="openAdmissionModal()" class="shrink-0">
-      <div class="flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+      <span class="flex items-center gap-2">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
-        <span>{{ t('emergency.admissionBtn') }}</span>
-      </div>
+        {{ t('emergency.admissionBtn') }}
+      </span>
     </app-ui-button>
   </app-page-header>
 
   <div class="app-container pb-12">
-    @if (error()) {
-      <app-ui-alert tone="error" class="mb-6" (close)="error.set(null)">{{ error() }}</app-ui-alert>
+    @if (error(); as message) {
+      <app-ui-alert tone="error" class="mb-6" (close)="error.set(null)">{{ message }}</app-ui-alert>
     }
 
     @if (isLoading()) {
-      <div class="flex justify-center items-center py-16">
-        <div class="animate-spin rounded-full h-8 w-8 border-2 border-brand-primary border-t-transparent"></div>
+      <div class="flex items-center justify-center py-16">
+        <div class="h-8 w-8 animate-spin rounded-full border-2 border-brand-primary border-t-transparent"></div>
         <span class="ml-3 text-sm font-semibold text-[var(--text-muted)]">{{ t('common.loading') }}</span>
       </div>
     } @else if (emergencies().length === 0) {
       <app-empty-state [message]="t('emergency.empty')"></app-empty-state>
     } @else {
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         @for (record of emergencies(); track record.id) {
-          <div class="ui-card p-5 flex flex-col justify-between hover:shadow-md transition-shadow">
+          <article class="ui-card flex flex-col justify-between p-5">
             <div class="space-y-4">
-              <div class="flex justify-between items-start gap-2">
+              <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0">
-                  <h3 class="font-display font-black text-base text-[var(--text-primary)] truncate" [title]="record.patientName">
-                    {{ record.patientName }}
-                  </h3>
-                  <span class="text-[10px] font-black text-brand-primary uppercase tracking-wider">
-                    {{ t('emergency.arrival.' + record.arrivalMode.toLowerCase()) }}
-                  </span>
+                  <h3 class="truncate font-display text-base font-black text-[var(--text-primary)]" [title]="record.patientName">{{ record.patientName }}</h3>
+                  <span class="text-[10px] font-black uppercase tracking-wider text-brand-primary">{{ t('emergency.arrival.' + record.arrivalMode.toLowerCase()) }}</span>
                 </div>
                 <span
+                  class="inline-flex items-center rounded-sm px-2 py-0.5 text-xs font-black uppercase tracking-wider"
                   [class.bg-[var(--brand-danger-subtle)]]="record.triageLevel === 'RED'"
                   [class.text-[var(--brand-danger-text)]]="record.triageLevel === 'RED'"
                   [class.bg-[var(--brand-warning-subtle)]]="record.triageLevel === 'ORANGE' || record.triageLevel === 'YELLOW'"
                   [class.text-[var(--brand-warning-text)]]="record.triageLevel === 'ORANGE' || record.triageLevel === 'YELLOW'"
                   [class.bg-[var(--brand-success-subtle)]]="record.triageLevel === 'GREEN'"
                   [class.text-[var(--brand-success-text)]]="record.triageLevel === 'GREEN'"
-                  class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-black uppercase tracking-wider"
-                >
-                  {{ t('emergency.triage.' + record.triageLevel.toLowerCase()) }}
-                </span>
+                >{{ t('emergency.triage.' + record.triageLevel.toLowerCase()) }}</span>
               </div>
 
-              <div class="p-3 bg-[var(--app-surface-muted)] border border-[var(--app-border)]/40 rounded-lg">
-                <p class="text-sm font-semibold text-[var(--text-secondary)] line-clamp-2">
-                  {{ record.chiefComplaint }}
-                </p>
+              <div class="ui-card-muted p-3">
+                <p class="line-clamp-2 text-sm font-semibold text-[var(--text-secondary)]">{{ record.chiefComplaint }}</p>
               </div>
 
-              <div class="grid grid-cols-2 gap-3 text-xs border-t border-[var(--app-border)]/60 pt-3">
+              <dl class="grid grid-cols-2 gap-3 border-t border-[var(--divider-subtle)] pt-3 text-xs">
                 <div>
                   <dt class="ui-label">{{ t('emergency.vitals.bp') }}</dt>
-                  <dd class="mt-0.5 font-bold text-[var(--text-primary)]">
-                    {{ record.initialBpSystolic && record.initialBpDiastolic ? record.initialBpSystolic + '/' + record.initialBpDiastolic : '-' }} mmHg
-                  </dd>
+                  <dd class="mt-0.5 font-bold text-[var(--text-primary)]">{{ record.initialBpSystolic && record.initialBpDiastolic ? record.initialBpSystolic + '/' + record.initialBpDiastolic : '-' }} mmHg</dd>
                 </div>
                 <div>
                   <dt class="ui-label">{{ t('emergency.vitals.hr') }}</dt>
-                  <dd class="mt-0.5 font-bold text-[var(--text-primary)]">
-                    {{ record.initialHr ? record.initialHr + ' bpm' : '-' }}
-                  </dd>
+                  <dd class="mt-0.5 font-bold text-[var(--text-primary)]">{{ record.initialHr ? record.initialHr + ' bpm' : '-' }}</dd>
                 </div>
                 <div>
                   <dt class="ui-label">{{ t('emergency.vitals.temp') }}</dt>
-                  <dd class="mt-0.5 font-bold text-[var(--text-primary)]">
-                    {{ record.initialTemp ? record.initialTemp + ' °C' : '-' }}
-                  </dd>
+                  <dd class="mt-0.5 font-bold text-[var(--text-primary)]">{{ record.initialTemp ? record.initialTemp + ' °C' : '-' }}</dd>
                 </div>
                 <div>
                   <dt class="ui-label">{{ t('emergency.vitals.hemodynamic') }}</dt>
-                  <dd class="mt-0.5 font-bold" [class.text-[var(--brand-danger-text)]]="record.hemodynamicStatus === 'SHOCK' || record.hemodynamicStatus === 'UNSTABLE'">
-                    {{ t('emergency.hemo.' + record.hemodynamicStatus.toLowerCase()) }}
-                  </dd>
+                  <dd class="mt-0.5 font-bold" [class.text-[var(--brand-danger-text)]]="record.hemodynamicStatus === 'SHOCK' || record.hemodynamicStatus === 'UNSTABLE'">{{ t('emergency.hemo.' + record.hemodynamicStatus.toLowerCase()) }}</dd>
                 </div>
-              </div>
+              </dl>
             </div>
 
-            <div class="flex justify-end gap-2 pt-4 border-t border-[var(--app-border)]/60 mt-4">
-              <app-ui-button variant="primary" (pressed)="openDrawer(record)" class="w-full">
-                {{ t('emergency.treatBtn') }}
-              </app-ui-button>
+            <div class="mt-4 border-t border-[var(--divider-subtle)] pt-4">
+              <app-ui-button variant="primary" (pressed)="openDrawer(record)" class="w-full">{{ t('emergency.treatBtn') }}</app-ui-button>
             </div>
-          </div>
+          </article>
         }
       </div>
     }
   </div>
 </app-shell>
 
-@if (isDrawerOpen()) {
-  @if (selectedEmergency(); as record) {
-    <div class="fixed inset-0 z-50 flex justify-end bg-[var(--overlay-bg)] backdrop-blur-xs animate-fade-in">
-      <div class="bg-[var(--app-surface)] border-l border-[var(--app-border)]/80 w-full max-w-xl shadow-2xl p-6 h-full flex flex-col overflow-y-auto animate-slide-in">
-        <div class="flex justify-between items-start gap-4 mb-6">
-          <div class="min-w-0">
-            <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-wider bg-[var(--brand-danger-subtle)] text-[var(--brand-danger-text)] mb-2">
-              🚨 {{ t('emergency.activeLabel') }}
-            </span>
-            <h3 class="font-display font-black text-xl text-[var(--text-primary)] truncate">{{ record.patientName }}</h3>
-            <p class="text-xs text-[var(--text-muted)] mt-1">
-              {{ t('emergency.complaint') }} : {{ record.chiefComplaint }}
-            </p>
-          </div>
-          <div class="flex items-center gap-2 shrink-0">
-            <app-ui-button variant="secondary" (pressed)="openStabilizeModal()" [disabled]="isProcessing()">
-              <div class="flex items-center gap-1 text-xs">
-                <span>💚</span>
-                <span class="whitespace-nowrap">{{ t('emergency.stabilizeBtn') }}</span>
-              </div>
-            </app-ui-button>
-            <button (click)="closeDrawer()" class="p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] cursor-pointer">
-              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+@if (isDrawerOpen() && selectedEmergency(); as record) {
+  <div class="fixed inset-0 z-50 flex justify-end bg-[var(--overlay-bg)] backdrop-blur-xs">
+    <aside class="flex h-full w-full max-w-xl flex-col overflow-y-auto border-l border-[var(--app-border)] bg-[var(--app-surface)] p-5 shadow-2xl sm:p-6" aria-label="Dossier d'urgence actif">
+      <header class="mb-5 flex items-start justify-between gap-4">
+        <div class="min-w-0">
+          <span class="mb-2 inline-flex items-center rounded-sm bg-[var(--brand-danger-subtle)] px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-[var(--brand-danger-text)]">🚨 {{ t('emergency.activeLabel') }}</span>
+          <h3 class="truncate font-display text-xl font-black text-[var(--text-primary)]">{{ record.patientName }}</h3>
+          <p class="mt-1 text-xs text-[var(--text-muted)]">{{ t('emergency.complaint') }} : {{ record.chiefComplaint }}</p>
         </div>
+        <div class="flex shrink-0 items-center gap-2">
+          <app-ui-button variant="secondary" (pressed)="openStabilizeModal()" [disabled]="isProcessing()">{{ t('emergency.stabilizeBtn') }}</app-ui-button>
+          <button type="button" (click)="closeDrawer()" class="rounded-sm p-2 text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)]" aria-label="Fermer">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      </header>
 
-        <hr class="border-[var(--app-border)]/60 mb-6" />
-
-        <div class="flex-1 overflow-y-auto space-y-4 mb-6 pr-2">
-          <h4 class="text-xs font-black text-[var(--text-muted)] uppercase tracking-wider mb-2">
-            ⏱️ {{ t('emergency.timelineTitle') }}
-          </h4>
-
-          @if (record.resuscitationLogs.length === 0) {
-            <p class="text-sm italic text-[var(--text-muted)] py-4 text-center">
-              {{ t('emergency.timeline.empty') }}
-            </p>
-          } @else {
-            <div class="relative border-l border-[var(--app-border)]/80 ml-3 space-y-6">
-              @for (log of record.resuscitationLogs; track log.id) {
-                <div class="relative pl-6">
-                  <div class="absolute -left-1.5 top-1.5 w-3 h-3 rounded-full bg-brand-primary border-2 border-[var(--app-surface)]"></div>
-                  <div class="ui-card-muted p-3">
-                    <div class="flex justify-between items-start gap-2 mb-1">
-                      <span class="text-[10px] font-black text-brand-primary uppercase tracking-wider">
-                        {{ t('emergency.action.' + log.actionType.toLowerCase()) }}
-                      </span>
-                      <span class="text-[10px] font-bold text-[var(--text-muted)]">
-                        {{ log.administeredAt | date:'HH:mm:ss' }}
-                      </span>
-                    </div>
-                    <div class="text-sm font-extrabold text-[var(--text-primary)]">
-                      {{ log.description }}
-                    </div>
-                    @if (log.quantity) {
-                      <div class="text-xs font-bold text-brand-primary mt-1">
-                        {{ log.quantity }} {{ log.unit }}
-                      </div>
-                    }
-                  </div>
+      <div class="min-h-0 flex-1 overflow-y-auto border-y border-[var(--divider-subtle)] py-5 pr-1">
+        <h4 class="ui-label mb-3">{{ t('emergency.timelineTitle') }}</h4>
+        @if (record.resuscitationLogs.length === 0) {
+          <p class="py-6 text-center text-sm italic text-[var(--text-muted)]">{{ t('emergency.timeline.empty') }}</p>
+        } @else {
+          <div class="space-y-3">
+            @for (log of record.resuscitationLogs; track log.id) {
+              <div class="ui-card-muted p-3">
+                <div class="flex items-start justify-between gap-2">
+                  <span class="text-[10px] font-black uppercase tracking-wider text-brand-primary">{{ t('emergency.action.' + log.actionType.toLowerCase()) }}</span>
+                  <span class="text-[10px] font-bold text-[var(--text-muted)]">{{ log.administeredAt | date:'HH:mm:ss' }}</span>
                 </div>
-              }
+                <p class="mt-1 text-sm font-extrabold text-[var(--text-primary)]">{{ log.description }}</p>
+                @if (log.quantity) {
+                  <p class="mt-1 text-xs font-bold text-brand-primary">{{ log.quantity }} {{ log.unit }}</p>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <form [formGroup]="careForm" (ngSubmit)="onSubmitCare()" class="space-y-3 pt-5">
+        <h4 class="ui-label">{{ t('emergency.addCareTitle') }}</h4>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label class="ui-label mb-1.5">{{ t('emergency.form.careType') }}</label>
+            <select formControlName="actionType" class="ui-input">
+              <option value="VASCULAR_ACCESS">{{ t('emergency.form.careType.vvp') }}</option>
+              <option value="FLUID_BOLUS">{{ t('emergency.form.careType.fluid') }}</option>
+              <option value="MEDICATION">{{ t('emergency.form.careType.med') }}</option>
+            </select>
+          </div>
+          @if (careForm.get('actionType')?.value !== 'VASCULAR_ACCESS') {
+            <div class="grid grid-cols-2 gap-2">
+              <div><label class="ui-label mb-1.5">{{ t('emergency.form.qty') }}</label><input type="number" formControlName="quantity" class="ui-input" /></div>
+              <div><label class="ui-label mb-1.5">{{ t('emergency.form.unit') }}</label><input type="text" formControlName="unit" class="ui-input" readonly /></div>
             </div>
           }
         </div>
-
-        <div class="border-t border-[var(--app-border)]/60 pt-4 bg-[var(--app-surface)]">
-          <h4 class="text-xs font-black text-[var(--text-muted)] uppercase tracking-wider mb-4">
-            ➕ {{ t('emergency.addCareTitle') }}
-          </h4>
-          <form [formGroup]="careForm" (ngSubmit)="onSubmitCare()" class="space-y-4">
-            <div
-              class="grid gap-4"
-              [class.grid-cols-2]="careForm.get('actionType')?.value !== 'VASCULAR_ACCESS'"
-              [class.grid-cols-1]="careForm.get('actionType')?.value === 'VASCULAR_ACCESS'"
-            >
-              <div>
-                <label class="ui-label">{{ t('emergency.form.careType') }}</label>
-                <select formControlName="actionType" class="ui-input">
-                  <option value="VASCULAR_ACCESS">{{ t('emergency.form.careType.vvp') }}</option>
-                  <option value="FLUID_BOLUS">{{ t('emergency.form.careType.fluid') }}</option>
-                  <option value="MEDICATION">{{ t('emergency.form.careType.med') }}</option>
-                </select>
-              </div>
-              @if (careForm.get('actionType')?.value !== 'VASCULAR_ACCESS') {
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="ui-label">{{ t('emergency.form.qty') }}</label>
-                    <input type="number" formControlName="quantity" class="ui-input" />
-                  </div>
-                  <div>
-                    <label class="ui-label">{{ t('emergency.form.unit') }}</label>
-                    <input type="text" formControlName="unit" class="ui-input" readonly />
-                  </div>
-                </div>
-              }
-            </div>
-
-            <div>
-              <label class="ui-label">{{ t('emergency.form.careDesc') }}</label>
-              <textarea formControlName="description" class="ui-input h-16 resize-none" [placeholder]="t('emergency.form.careDesc.placeholder')"></textarea>
-              @if (careForm.get('description')?.touched && careForm.get('description')?.errors?.['required']) {
-                <div class="text-[var(--brand-danger)] text-xs font-semibold mt-1">{{ t('reception.form.required') }}</div>
-              }
-            </div>
-
-            <div class="mt-4">
-              <app-ui-button variant="primary" (pressed)="onSubmitCare()" [disabled]="isProcessing()" class="w-full">
-                {{ t('common.save') }}
-              </app-ui-button>
-            </div>
-          </form>
+        <div>
+          <label class="ui-label mb-1.5">{{ t('emergency.form.careDesc') }}</label>
+          <textarea formControlName="description" class="ui-input min-h-16 resize-none py-2.5" [placeholder]="t('emergency.form.careDesc.placeholder')"></textarea>
         </div>
-      </div>
-    </div>
-  }
+        <app-ui-button variant="primary" (pressed)="onSubmitCare()" [disabled]="isProcessing()" class="w-full">{{ t('common.save') }}</app-ui-button>
+      </form>
+    </aside>
+  </div>
 }
 
 @if (isAdmissionModalOpen()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-bg)] backdrop-blur-sm p-4 animate-fade-in">
-    <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-lg max-w-4xl w-full shadow-2xl p-6 relative max-h-[92vh] overflow-y-auto">
-      <button (click)="closeAdmissionModal()" class="absolute top-4 right-4 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] cursor-pointer" aria-label="Fermer">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-      <app-unified-admission
-        initialCarePath="EMERGENCY"
-        (cancelled)="closeAdmissionModal()"
-        (completed)="onAdmissionCompleted($event)"
-      />
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-bg)] p-3 backdrop-blur-sm sm:p-4" role="presentation" (click)="closeAdmissionModal()">
+    <div class="ui-card w-full max-w-2xl overflow-hidden" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <app-unified-admission initialCarePath="EMERGENCY" (cancelled)="closeAdmissionModal()" (completed)="onAdmissionCompleted($event)" />
     </div>
   </div>
 }
 
 @if (isStabilizeModalOpen()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-bg)] backdrop-blur-sm p-4 animate-fade-in">
-    <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-lg max-w-md w-full shadow-2xl p-6 relative flex flex-col">
-      <h3 class="font-display font-black text-lg text-[var(--text-primary)] mb-2">
-        💚 {{ t('emergency.stabilize.modal.title') }}
-      </h3>
-      <p class="text-xs text-[var(--text-muted)] mb-4">
-        {{ t('emergency.stabilize.modal.desc') }}
-      </p>
-
-      <div class="space-y-4">
-        <div>
-          <label class="ui-label">{{ t('emergency.stabilize.form.orientation') }}</label>
-          <select [value]="stabilizeOrientation()" (change)="stabilizeOrientation.set($any($event.target).value)" class="ui-input">
-            <option value="ADMISSION">{{ t('emergency.orientation.admission') }}</option>
-            <option value="OR_DIRECT">{{ t('emergency.orientation.or_direct') }}</option>
-            <option value="DISCHARGE">{{ t('emergency.orientation.discharge') }}</option>
-            <option value="DEATH">{{ t('emergency.orientation.death') }}</option>
-          </select>
-        </div>
-
-        <div class="flex justify-end gap-3 pt-4 border-t border-[var(--app-border)]/80 mt-6">
-          <app-ui-button variant="secondary" (pressed)="closeStabilizeModal()" [disabled]="isProcessing()">
-            {{ t('common.cancel') }}
-          </app-ui-button>
-          <app-ui-button variant="primary" (pressed)="onSubmitStabilize()" [disabled]="isProcessing()">
-            {{ t('common.save') }}
-          </app-ui-button>
-        </div>
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-bg)] p-4 backdrop-blur-sm">
+    <div class="ui-card w-full max-w-md p-5">
+      <h3 class="font-display text-lg font-black text-[var(--text-primary)]">{{ t('emergency.stabilize.modal.title') }}</h3>
+      <p class="mt-1 text-xs text-[var(--text-muted)]">{{ t('emergency.stabilize.modal.desc') }}</p>
+      <div class="mt-4">
+        <label class="ui-label mb-1.5">{{ t('emergency.stabilize.form.orientation') }}</label>
+        <select [value]="stabilizeOrientation()" (change)="stabilizeOrientation.set($any($event.target).value)" class="ui-input">
+          <option value="ADMISSION">{{ t('emergency.orientation.admission') }}</option>
+          <option value="OR_DIRECT">{{ t('emergency.orientation.or_direct') }}</option>
+          <option value="DISCHARGE">{{ t('emergency.orientation.discharge') }}</option>
+          <option value="DEATH">{{ t('emergency.orientation.death') }}</option>
+        </select>
+      </div>
+      <div class="mt-5 flex justify-end gap-3 border-t border-[var(--divider-subtle)] pt-4">
+        <app-ui-button variant="secondary" (pressed)="closeStabilizeModal()" [disabled]="isProcessing()">{{ t('common.cancel') }}</app-ui-button>
+        <app-ui-button variant="primary" (pressed)="onSubmitStabilize()" [disabled]="isProcessing()">{{ t('common.save') }}</app-ui-button>
       </div>
     </div>
   </div>
