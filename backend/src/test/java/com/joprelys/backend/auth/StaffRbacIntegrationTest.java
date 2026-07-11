@@ -34,7 +34,8 @@ class StaffRbacIntegrationTest {
     @Autowired private OrganizationRepository organizationRepository;
     @Autowired private UserAccountRepository userAccountRepository;
     @Autowired private JwtService jwtService;
-    @Autowired private ObjectMapper objectMapper;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private OrganizationEntity organization;
     private UserAccountEntity admin;
