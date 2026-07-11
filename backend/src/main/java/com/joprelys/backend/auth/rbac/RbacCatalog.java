@@ -35,9 +35,15 @@ public final class RbacCatalog {
                 permission("ORGANIZATION_MANAGE", "ADMINISTRATION", "Gérer les établissements", "Créer et administrer les établissements."),
                 permission("PATIENT_READ", "PATIENT", "Consulter les patients", "Consulter les informations administratives des patients."),
                 permission("PATIENT_WRITE", "PATIENT", "Gérer les patients", "Créer et modifier les informations administratives des patients."),
+                permission("PATIENT_MERGE", "PATIENT", "Fusionner les dossiers patients", "Analyser, ignorer et fusionner les doublons patients."),
+                permission("PATIENT_EMERGENCY_ACCESS", "PATIENT", "Déclencher un accès d'urgence", "Ouvrir un accès exceptionnel et traçable au dossier patient."),
                 permission("CLINICAL_READ", "CLINIQUE", "Consulter le dossier clinique", "Consulter les données cliniques autorisées."),
                 permission("CLINICAL_WRITE", "CLINIQUE", "Renseigner le dossier clinique", "Créer et modifier les données cliniques autorisées."),
+                permission("EMERGENCY_READ", "URGENCES", "Consulter les urgences", "Consulter les dossiers d'urgence et leur historique."),
+                permission("EMERGENCY_WRITE", "URGENCES", "Prendre en charge une urgence", "Créer une urgence et consigner les soins de réanimation."),
+                permission("EMERGENCY_STABILIZE", "URGENCES", "Stabiliser une urgence", "Clôturer la prise en charge et orienter le patient."),
                 permission("LAB_ORDER_READ", "LABORATOIRE", "Consulter les analyses", "Consulter les demandes et résultats de laboratoire."),
+                permission("LAB_ORDER_CREATE", "LABORATOIRE", "Prescrire une analyse", "Créer une demande d'analyse pour un patient."),
                 permission("LAB_ORDER_WRITE", "LABORATOIRE", "Traiter les analyses", "Prendre en charge et publier les résultats de laboratoire."),
                 permission("PHARMACY_PRESCRIPTION_READ", "PHARMACIE", "Consulter les prescriptions", "Vérifier les prescriptions destinées à la pharmacie."),
                 permission("PHARMACY_STOCK_MANAGE", "PHARMACIE", "Gérer les stocks pharmacie", "Gérer le stock et les mouvements de médicaments."),
@@ -81,12 +87,16 @@ public final class RbacCatalog {
                 "BILLING_INVOICE_READ", "CASH_QUEUE_READ", "CASH_PAYMENT_COLLECT", "CASH_SESSION_OPEN",
                 "CASH_SESSION_CLOSE", "CASH_MOVEMENT_WRITE", "CASH_HISTORY_READ"));
         mappings.put("AGENT_ACCUEIL", set(
-                "PATIENT_READ", "PATIENT_WRITE", "BILLING_INVOICE_READ", "BILLING_INVOICE_WRITE"));
+                "PATIENT_READ", "PATIENT_WRITE", "EMERGENCY_READ",
+                "BILLING_INVOICE_READ", "BILLING_INVOICE_WRITE"));
         mappings.put("MEDECIN", set(
-                "PATIENT_READ", "CLINICAL_READ", "CLINICAL_WRITE", "LAB_ORDER_READ", "BILLING_INVOICE_READ",
-                "BILLING_INVOICE_WRITE"));
+                "PATIENT_READ", "PATIENT_EMERGENCY_ACCESS", "CLINICAL_READ", "CLINICAL_WRITE",
+                "EMERGENCY_READ", "EMERGENCY_WRITE", "EMERGENCY_STABILIZE",
+                "LAB_ORDER_READ", "LAB_ORDER_CREATE", "HOSPITALIZATION_READ", "HOSPITALIZATION_MANAGE",
+                "BILLING_INVOICE_READ", "BILLING_INVOICE_WRITE"));
         mappings.put("INFIRMIER", set(
-                "PATIENT_READ", "PATIENT_WRITE", "CLINICAL_READ", "CLINICAL_WRITE", "LAB_ORDER_READ",
+                "PATIENT_READ", "PATIENT_WRITE", "PATIENT_EMERGENCY_ACCESS", "CLINICAL_READ", "CLINICAL_WRITE",
+                "EMERGENCY_READ", "EMERGENCY_WRITE", "LAB_ORDER_READ",
                 "HOSPITALIZATION_READ", "HOSPITALIZATION_MANAGE"));
         mappings.put("BIOLOGISTE", set("PATIENT_READ", "LAB_ORDER_READ", "LAB_ORDER_WRITE"));
         mappings.put("PHARMACIEN", set(
