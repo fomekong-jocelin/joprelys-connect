@@ -38,13 +38,25 @@ public class RbacAdministrationService {
     @Transactional(readOnly = true)
     public List<RbacStore.RoleView> listRoles(Authentication authentication) {
         UserAccountEntity actor = currentUser(authentication, true);
-        return rbacStore.listVisibleRoles(actor.getOrganizationId());
+        List<RbacStore.RoleView> roles = rbacStore.listVisibleRoles(actor.getOrganizationId());
+        if (isPlatformAdministrator(actor)) {
+            return roles;
+        }
+        return roles.stream()
+                .filter(role -> !RbacCatalog.platformRoleCodes().contains(role.code()))
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public List<RbacStore.PermissionView> listPermissions(Authentication authentication) {
-        currentUser(authentication, true);
-        return rbacStore.listPermissions();
+        UserAccountEntity actor = currentUser(authentication, true);
+        List<RbacStore.PermissionView> permissions = rbacStore.listPermissions();
+        if (isPlatformAdministrator(actor)) {
+            return permissions;
+        }
+        return permissions.stream()
+                .filter(permission -> !RbacCatalog.platformPermissionCodes().contains(permission.code()))
+                .toList();
     }
 
     @Transactional
@@ -78,7 +90,7 @@ public class RbacAdministrationService {
         UserAccountEntity actor = currentUser(authentication, true);
         String code = normalizeCode(rawCode);
         String name = requireName(rawName);
-        validatePermissionCodes(permissionCodes);
+        validatePermissionCodes(permissionCodes, actor);
         if (rbacStore.customRoleCodeExists(actor.getOrganizationId(), code, null)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Un rôle portant ce code existe déjà.");
         }
@@ -134,7 +146,7 @@ public class RbacAdministrationService {
         UserAccountEntity actor = currentUser(authentication, true);
         RbacStore.RoleView current = requireCustomRole(roleId, actor.getOrganizationId());
         assertActorDoesNotDependOnRole(current, actor);
-        validatePermissionCodes(permissionCodes);
+        validatePermissionCodes(permissionCodes, actor);
         RbacStore.RoleView updated;
         try {
             updated = rbacStore.replaceCustomRolePermissions(
@@ -174,6 +186,10 @@ public class RbacAdministrationService {
                 .toList();
         if (roles.stream().anyMatch(role -> !role.enabled() || !role.assignable())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Un rôle sélectionné est désactivé ou non attribuable.");
+        }
+        if (!isPlatformAdministrator(actor)
+                && roles.stream().map(RbacStore.RoleView::code).anyMatch(RbacCatalog.platformRoleCodes()::contains)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Les rôles plateforme ne peuvent pas être attribués par cet administrateur.");
         }
 
         boolean targetWasAdmin = rbacStore.userHasAnyRole(target.getId(), RbacCatalog.adminRoleCodes());
@@ -222,13 +238,29 @@ public class RbacAdministrationService {
         }
     }
 
-    private void validatePermissionCodes(Set<String> permissionCodes) {
+    private void validatePermissionCodes(Set<String> permissionCodes, UserAccountEntity actor) {
         Set<String> requested = permissionCodes == null ? Set.of() : permissionCodes;
         Set<String> known = RbacCatalog.permissionCodes();
         List<String> unknown = requested.stream().filter(code -> !known.contains(code)).sorted().toList();
         if (!unknown.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Permissions inconnues : " + String.join(", ", unknown));
         }
+        if (!isPlatformAdministrator(actor)) {
+            List<String> forbidden = requested.stream()
+                    .filter(RbacCatalog.platformPermissionCodes()::contains)
+                    .sorted()
+                    .toList();
+            if (!forbidden.isEmpty()) {
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Permissions réservées à la plateforme : " + String.join(", ", forbidden));
+            }
+        }
+    }
+
+    private boolean isPlatformAdministrator(UserAccountEntity actor) {
+        RbacStore.EffectiveAccess access = rbacStore.loadEffectiveAccess(actor.getId(), actor.getOrganizationId());
+        return access.roles().stream().anyMatch(RbacCatalog.platformRoleCodes()::contains);
     }
 
     private UserAccountEntity currentUser(Authentication authentication, boolean requireOrganization) {
