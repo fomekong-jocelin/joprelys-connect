@@ -1,8 +1,9 @@
 # ISSUE-21 — Administration RBAC clinique
 
-- **Statut** : IN_PROGRESS
+- **Statut** : QA
 - **Priorité** : P0
 - **Issue GitHub** : #21
+- **Pull Request** : #22
 - **Branche** : `feature/issue-21-clinic-rbac-management`
 
 ## Constat
@@ -22,7 +23,8 @@ Permettre à l’administrateur clinique d’affecter un ou plusieurs rôles sys
 - changements de rôle et désactivation appliqués aux jetons existants dès la requête suivante ;
 - impossibilité de modifier ses propres rôles ou son propre statut ;
 - impossibilité de retirer/désactiver le dernier administrateur clinique actif ;
-- isolation stricte par établissement.
+- isolation stricte par établissement ;
+- annuaire financier et gouvernance visible uniquement des administrateurs.
 
 ## Hors périmètre
 
@@ -30,13 +32,22 @@ Permettre à l’administrateur clinique d’affecter un ou plusieurs rôles sys
 - modification dynamique des permissions techniques d’un rôle système ;
 - délégation inter-établissements.
 
-## Plan de validation
+## Validation technique
 
-- [ ] compilation backend ;
-- [ ] tests backend du catalogue, du multi-rôle, du tenant et des protections administrateur ;
-- [ ] vérification de l’application immédiate des changements ;
-- [ ] tests Angular de la matrice de rôles ;
-- [ ] tests du guard avec actualisation serveur ;
-- [ ] build Angular production ;
+- [x] compilation backend ;
+- [x] tests backend du catalogue, du multi-rôle, du tenant et des jetons existants ;
+- [x] vérification de l’application immédiate des changements et désactivations ;
+- [x] tests Angular de la matrice de rôles ;
+- [x] tests du guard avec actualisation serveur ;
+- [x] build Angular production ;
+- [x] pipeline permanent restauré et CI finale verte ;
 - [ ] QA responsive et thèmes clair/sombre ;
+- [ ] validation utilisateur des libellés et responsabilités ;
 - [ ] revue et fusion après validation utilisateur.
+
+## Résultat CI
+
+- Maven `clean verify` : succès ;
+- H2 et PostgreSQL 16 via Testcontainers : succès ;
+- tests Angular : succès ;
+- build Angular production : succès.
