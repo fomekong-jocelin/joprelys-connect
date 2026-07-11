@@ -169,13 +169,12 @@ class PatientReconciliationControllerTest {
         TenantContext.setTenantId(organization.getId());
         PatientEntity sourceAfterLink = patientRepository.findById(provisionalPatient.getId()).orElseThrow();
         EmergencyEntity emergencyAfterLink = emergencyRepository.findByIdWithPatientAndLogs(emergency.getId()).orElseThrow();
-        TenantContext.clear();
-
         org.junit.jupiter.api.Assertions.assertEquals(PatientIdentityStatus.MERGED, sourceAfterLink.getIdentityStatus());
         org.junit.jupiter.api.Assertions.assertEquals(provisionalPatient.getId(), emergencyAfterLink.getPatient().getId());
         org.junit.jupiter.api.Assertions.assertTrue(canonicalLinkRepository.findBySourcePatient_Id(provisionalPatient.getId()).isPresent());
         org.junit.jupiter.api.Assertions.assertEquals(3, aliasRepository.findAllByOriginPatient_Id(provisionalPatient.getId()).size());
         org.junit.jupiter.api.Assertions.assertEquals(1, eventRepository.findAllBySourcePatient_IdOrderByCreatedAtDesc(provisionalPatient.getId()).size());
+        TenantContext.clear();
     }
 
     @Test
@@ -189,9 +188,9 @@ class PatientReconciliationControllerTest {
 
         TenantContext.setTenantId(organization.getId());
         PatientEntity unchanged = patientRepository.findById(provisionalPatient.getId()).orElseThrow();
-        TenantContext.clear();
         org.junit.jupiter.api.Assertions.assertEquals(PatientIdentityStatus.VERIFIED, unchanged.getIdentityStatus());
         org.junit.jupiter.api.Assertions.assertTrue(canonicalLinkRepository.findBySourcePatient_Id(provisionalPatient.getId()).isEmpty());
+        TenantContext.clear();
     }
 
     @Test
