@@ -17,7 +17,7 @@ public interface PatientCanonicalLinkRepository extends JpaRepository<PatientCan
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT link FROM PatientCanonicalLinkEntity link WHERE link.sourcePatient.id = :sourcePatientId")
-    Optional<PatientCanonicalLinkEntity> findBySourcePatientIdForUpdate(
+    Optional<PatientCanonicalLinkEntity> findForUpdateBySourcePatient_Id(
             @Param("sourcePatientId") UUID sourcePatientId);
 
     List<PatientCanonicalLinkEntity> findAllByCanonicalPatient_Id(UUID canonicalPatientId);
