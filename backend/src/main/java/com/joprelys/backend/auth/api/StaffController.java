@@ -1,5 +1,6 @@
 package com.joprelys.backend.auth.api;
 
+import com.joprelys.backend.auth.application.ClinicRoleCatalog;
 import com.joprelys.backend.auth.application.StaffService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -30,6 +31,19 @@ public class StaffController {
 	@PreAuthorize("hasAnyRole('ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN')")
 	public List<StaffResponse> list(Authentication authentication) {
 		return staffService.listStaff(authentication);
+	}
+
+	@GetMapping("/roles")
+	@PreAuthorize("hasRole('ADMIN_CLINIQUE')")
+	public List<StaffRoleResponse> roles() {
+		return ClinicRoleCatalog.definitions().stream()
+				.map(role -> new StaffRoleResponse(
+						role.code(),
+						role.labelKey(),
+						role.descriptionKey(),
+						role.category(),
+						role.sensitive()))
+				.toList();
 	}
 
 	@PostMapping
