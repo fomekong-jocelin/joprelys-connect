@@ -20,7 +20,7 @@ ALTER TABLE patients ADD CONSTRAINT chk_patients_verified_identity_required
 
 ALTER TABLE patients ADD CONSTRAINT chk_patients_provisional_number_required
     CHECK (
-        identity_status NOT IN ('PROVISIONAL_URGENCY', 'DECLARED')
+        identity_status IN ('VERIFIED', 'MERGED')
         OR temporary_patient_number IS NOT NULL
     );
 
