@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
@@ -8,7 +8,9 @@ import { AlertComponent } from '../shared/ui/alert.component';
 import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { EmergencyApiService } from './emergency-api.service';
 import { PatientApiService } from '../patient/patient-api.service';
-import { EmergencyRecord, ResuscitationLog } from './emergency.models';
+import { ProvisionalPatientApiService } from '../patient/provisional-patient-api.service';
+import { ProvisionalPatientSummary } from '../patient/provisional-patient.models';
+import { CreateEmergencyRequest, EmergencyRecord } from './emergency.models';
 import { Patient } from '../patient/patient.models';
 import { I18nService } from '../core/i18n/i18n.service';
 
@@ -30,6 +32,7 @@ import { I18nService } from '../core/i18n/i18n.service';
 export class EmergencyDashboardComponent implements OnInit {
   private readonly emergencyApi = inject(EmergencyApiService);
   private readonly patientApi = inject(PatientApiService);
+  private readonly provisionalPatientApi = inject(ProvisionalPatientApiService);
   private readonly fb = inject(FormBuilder);
   readonly i18n = inject(I18nService);
 
@@ -42,6 +45,9 @@ export class EmergencyDashboardComponent implements OnInit {
   // New Admission Modal
   isAdmissionModalOpen = signal(false);
   admissionForm!: FormGroup;
+  createdProvisionalPatient = signal<ProvisionalPatientSummary | null>(null);
+  isCreatingProvisional = signal(false);
+  provisionalError = signal<string | null>(null);
 
   // Drawer for patient details
   selectedEmergency = signal<EmergencyRecord | null>(null);
@@ -62,7 +68,12 @@ export class EmergencyDashboardComponent implements OnInit {
 
   private initForms(): void {
     this.admissionForm = this.fb.group({
+      patientMode: ['IDENTIFIED', [Validators.required]],
       patientId: ['', [Validators.required]],
+      apparentGender: ['UNKNOWN'],
+      estimatedAgeRange: [''],
+      physicalDescription: [''],
+      foundLocation: [''],
       arrivalMode: ['AMBULANCE', [Validators.required]],
       triageLevel: ['RED', [Validators.required]],
       hemodynamicStatus: ['SHOCK', [Validators.required]],
@@ -106,7 +117,6 @@ export class EmergencyDashboardComponent implements OnInit {
       next: (data) => {
         this.emergencies.set(data);
         this.isLoading.set(false);
-        // Refresh selected emergency if drawer is open
         const selected = this.selectedEmergency();
         if (selected) {
           const updated = data.find(x => x.id === selected.id);
@@ -133,25 +143,83 @@ export class EmergencyDashboardComponent implements OnInit {
 
   openAdmissionModal(): void {
     this.initForms();
+    this.createdProvisionalPatient.set(null);
+    this.provisionalError.set(null);
     this.isAdmissionModalOpen.set(true);
   }
 
   closeAdmissionModal(): void {
     this.isAdmissionModalOpen.set(false);
+    this.createdProvisionalPatient.set(null);
+    this.provisionalError.set(null);
+  }
+
+  setPatientMode(mode: 'IDENTIFIED' | 'PROVISIONAL'): void {
+    this.admissionForm.patchValue({ patientMode: mode, patientId: '' });
+    this.createdProvisionalPatient.set(null);
+    this.provisionalError.set(null);
+  }
+
+  createUrgTempPatient(): void {
+    if (this.isCreatingProvisional() || this.createdProvisionalPatient()) {
+      return;
+    }
+
+    const value = this.admissionForm.getRawValue();
+    this.isCreatingProvisional.set(true);
+    this.provisionalError.set(null);
+
+    this.provisionalPatientApi.create({
+      apparentGender: this.optional(value.apparentGender),
+      estimatedAgeRange: this.optional(value.estimatedAgeRange),
+      physicalDescription: this.optional(value.physicalDescription),
+      foundLocation: this.optional(value.foundLocation),
+      confidenceLevel: 'NONE',
+      identityDeclarations: [],
+    }).subscribe({
+      next: (response) => {
+        this.createdProvisionalPatient.set(response.patient);
+        this.admissionForm.patchValue({ patientId: response.patient.id });
+        this.isCreatingProvisional.set(false);
+      },
+      error: (err) => {
+        this.provisionalError.set(
+          err.error?.detail || err.error?.message || this.t('emergency.urgTemp.createError')
+        );
+        this.isCreatingProvisional.set(false);
+      },
+    });
   }
 
   onSubmitAdmission(): void {
+    if (this.admissionForm.get('patientMode')?.value === 'PROVISIONAL' && !this.createdProvisionalPatient()) {
+      this.provisionalError.set(this.t('emergency.urgTemp.createFirst'));
+      return;
+    }
+
     if (this.admissionForm.invalid) {
       this.admissionForm.markAllAsTouched();
       return;
     }
 
     this.isProcessing.set(true);
-    const dto = this.admissionForm.value;
+    const value = this.admissionForm.getRawValue();
+    const dto: CreateEmergencyRequest = {
+      patientId: value.patientId,
+      arrivalMode: value.arrivalMode,
+      triageLevel: value.triageLevel,
+      hemodynamicStatus: value.hemodynamicStatus,
+      chiefComplaint: value.chiefComplaint,
+      initialBpSystolic: value.initialBpSystolic,
+      initialBpDiastolic: value.initialBpDiastolic,
+      initialHr: value.initialHr,
+      initialTemp: value.initialTemp,
+    };
 
     this.emergencyApi.create(dto).subscribe({
       next: () => {
         this.loadEmergencies();
+        this.loadPatients();
         this.closeAdmissionModal();
         this.isProcessing.set(false);
       },
@@ -186,7 +254,7 @@ export class EmergencyDashboardComponent implements OnInit {
 
     this.emergencyApi.addResuscitationLog(record.id, dto).subscribe({
       next: () => {
-        this.loadEmergencies(); // will reload selected log and update drawer
+        this.loadEmergencies();
         this.careForm.get('description')?.reset();
         this.careForm.get('quantity')?.reset();
         this.isProcessing.set(false);
@@ -223,6 +291,12 @@ export class EmergencyDashboardComponent implements OnInit {
         this.isProcessing.set(false);
       },
     });
+  }
+
+  private optional(value: unknown): string | undefined {
+    if (typeof value !== 'string') return undefined;
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : undefined;
   }
 
   t(key: string): string {
