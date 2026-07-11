@@ -60,8 +60,8 @@ class FlywayPostgresqlMigrationTest {
         MigrationInfo current = flyway.info().current();
         assertNotNull(current, "Flyway doit exposer la migration courante");
         assertNotNull(current.getVersion(), "La migration courante doit être versionnée");
-        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 58,
-                "Toutes les migrations jusqu'au modèle URG-TEMP doivent être appliquées");
+        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 59,
+                "Toutes les migrations jusqu'au tiers accompagnant doivent être appliquées");
 
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword());
@@ -84,6 +84,22 @@ class FlywayPostgresqlMigrationTest {
                 Integer.class);
         assertEquals(1, declarationTableCount);
         assertEquals(1, historyTableCount);
+
+        Integer thirdPartyColumnCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'emergencies'
+                  AND column_name IN (
+                    'third_party_name',
+                    'third_party_phone',
+                    'third_party_relationship',
+                    'third_party_id_document',
+                    'third_party_circumstances',
+                    'third_party_consent_to_contact'
+                  )
+                """, Integer.class);
+        assertEquals(6, thirdPartyColumnCount);
 
         try (Connection connection = DriverManager.getConnection(
                 POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword())) {
