@@ -88,6 +88,12 @@ export const routes: Routes = [
     data: { expectedRoles: ['ADMIN_CLINIQUE'] },
   },
   {
+    path: 'clinic/patient-reconciliation',
+    loadComponent: () => import('./patient/reconciliation/patient-reconciliation-page.component').then((module) => module.PatientReconciliationPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['ADMIN_CLINIQUE'], expectedPermissions: ['PATIENT_MERGE'] },
+  },
+  {
     path: 'clinic/reception',
     loadComponent: () => import('./reception/reception-logs.component').then((m) => m.ReceptionLogsComponent),
     canActivate: [roleGuard],
