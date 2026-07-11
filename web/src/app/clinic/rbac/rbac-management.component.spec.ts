@@ -149,6 +149,20 @@ describe('RbacManagementComponent', () => {
     expect(api.replaceUserRoles).not.toHaveBeenCalled();
   });
 
+  it('should prepare an editable custom copy of a system role', () => {
+    component.roles.set(roles);
+    component.selectRole(roles[1]);
+
+    component.duplicateSelectedRole();
+
+    expect(component.selectedRoleId()).toBeNull();
+    expect(component.isEditingSystemRole()).toBe(false);
+    expect(component.roleCode()).toBe('CAISSIER_CUSTOM');
+    expect(component.roleName()).toBe('Caissier personnalisé');
+    expect(component.selectedPermissionCodes()).toEqual(['CASH_QUEUE_READ', 'CASH_PAYMENT_COLLECT']);
+    expect(component.success()).toContain('La copie est prête');
+  });
+
   it('should create a custom role with the selected permissions', () => {
     const created: RbacRole = {
       id: 'role-custom',
