@@ -1,11 +1,12 @@
-import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Injectable, inject, signal } from '@angular/core';
 import { catchError, firstValueFrom, forkJoin, of } from 'rxjs';
 import { APP_BRAND_CONFIG, AppLocale } from '../config/app-brand.config';
 
 type TranslationDictionary = Record<string, string>;
 
 const LOCALE_STORAGE_KEY = 'joprelys.locale';
+const EMPTY_DICTIONARY = {} as TranslationDictionary;
 
 @Injectable({ providedIn: 'root' })
 export class I18nService {
@@ -15,7 +16,6 @@ export class I18nService {
   private readonly dictionary = signal<TranslationDictionary>({});
   private readonly loaded = signal<Record<AppLocale, boolean>>({ fr: false, en: false });
 
-  /** Initial load called via APP_INITIALIZER. */
   async init(): Promise<void> {
     await this.loadLocale(this.locale());
   }
@@ -29,7 +29,7 @@ export class I18nService {
     try {
       localStorage.setItem(LOCALE_STORAGE_KEY, lang);
     } catch {
-      /* SSR safe */
+      // Storage can be unavailable during SSR or in restricted browsers.
     }
     await this.loadLocale(lang);
   }
@@ -42,25 +42,37 @@ export class I18nService {
     try {
       const dictionaries = await firstValueFrom(forkJoin({
         base: this.http.get<TranslationDictionary>(`/assets/i18n/${lang}.json`),
-        extension: this.http.get<TranslationDictionary>(`/assets/i18n/extensions/${lang}.json`).pipe(
-          catchError(() => of({} as TranslationDictionary))
-        ),
+        extension: this.optionalDictionary(`/assets/i18n/extensions/${lang}.json`),
+        admission: this.optionalDictionary(`/assets/i18n/features/admission/${lang}.json`),
+        urgTemp: this.optionalDictionary(`/assets/i18n/features/urg-temp/${lang}.json`),
       }));
 
-      this.dictionary.set({ ...dictionaries.base, ...dictionaries.extension });
+      this.dictionary.set({
+        ...dictionaries.base,
+        ...dictionaries.extension,
+        ...dictionaries.admission,
+        ...dictionaries.urgTemp,
+      });
       this.loaded.update((state) => ({ ...state, [lang]: true }));
     } catch {
-      // Fallback to empty dictionary so keys are displayed instead of crashing.
       this.dictionary.set({});
     }
+  }
+
+  private optionalDictionary(path: string) {
+    return this.http.get<TranslationDictionary>(path).pipe(
+      catchError(() => of(EMPTY_DICTIONARY))
+    );
   }
 
   private loadStoredLocale(): AppLocale {
     try {
       const stored = localStorage.getItem(LOCALE_STORAGE_KEY) as AppLocale | null;
-      if (stored && APP_BRAND_CONFIG.supportedLocales.includes(stored)) return stored;
+      if (stored && APP_BRAND_CONFIG.supportedLocales.includes(stored)) {
+        return stored;
+      }
     } catch {
-      /* SSR safe */
+      // Storage can be unavailable during SSR or in restricted browsers.
     }
     return APP_BRAND_CONFIG.defaultLocale;
   }
