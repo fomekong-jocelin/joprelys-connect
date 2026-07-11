@@ -5,18 +5,29 @@ import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationEntity;
 import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository;
-import com.joprelys.backend.spatial.api.*;
-import com.joprelys.backend.spatial.infrastructure.persistence.*;
+import com.joprelys.backend.spatial.api.BedAssignmentResponse;
+import com.joprelys.backend.spatial.api.BedResponse;
+import com.joprelys.backend.spatial.api.RoomOccupancyResponse;
+import com.joprelys.backend.spatial.api.WardOccupancyResponse;
+import com.joprelys.backend.spatial.api.WardResponse;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedStatus;
+import com.joprelys.backend.spatial.infrastructure.persistence.RoomEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.RoomRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.WardEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.WardRepository;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 @Service
 public class SpatialService {
@@ -29,13 +40,14 @@ public class SpatialService {
     private final UserAccountRepository userAccountRepository;
     private final AuditService auditService;
 
-    public SpatialService(WardRepository wardRepository,
-                          RoomRepository roomRepository,
-                          BedRepository bedRepository,
-                          BedAssignmentRepository bedAssignmentRepository,
-                          HospitalizationRepository hospitalizationRepository,
-                          UserAccountRepository userAccountRepository,
-                          AuditService auditService) {
+    public SpatialService(
+            WardRepository wardRepository,
+            RoomRepository roomRepository,
+            BedRepository bedRepository,
+            BedAssignmentRepository bedAssignmentRepository,
+            HospitalizationRepository hospitalizationRepository,
+            UserAccountRepository userAccountRepository,
+            AuditService auditService) {
         this.wardRepository = wardRepository;
         this.roomRepository = roomRepository;
         this.bedRepository = bedRepository;
@@ -80,8 +92,7 @@ public class SpatialService {
                     room.getRoomNumber(),
                     room.getCapacity(),
                     room.getComfortLevel(),
-                    bedResponses
-            ));
+                    bedResponses));
         }
 
         return new WardOccupancyResponse(
@@ -89,8 +100,7 @@ public class SpatialService {
                 ward.getName(),
                 roomOccupancyResponses,
                 totalBeds,
-                occupiedBeds
-        );
+                occupiedBeds);
     }
 
     @Transactional
@@ -98,7 +108,6 @@ public class SpatialService {
         BedEntity bed = bedRepository.findById(bedId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lit introuvable"));
 
-        // Si le lit passe à FREE, s'assurer de clore d'éventuels assignments actifs
         if (newStatus == BedStatus.FREE) {
             bedAssignmentRepository.findActiveByBedId(bedId).ifPresent(assignment -> {
                 assignment.setReleasedAt(Instant.now());
@@ -118,8 +127,7 @@ public class SpatialService {
                     "SPATIAL",
                     saved.getId(),
                     "UPDATE_BED_STATUS",
-                    "Statut du lit " + saved.getBedNumber() + " changé à " + newStatus
-            );
+                    "Statut du lit " + saved.getBedNumber() + " changé à " + newStatus);
         }
 
         return BedResponse.fromEntity(saved);
@@ -134,34 +142,30 @@ public class SpatialService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "L'hospitalisation n'est pas active.");
         }
 
-        BedEntity newBed = bedRepository.findById(newBedId)
+        BedEntity newBed = bedRepository.findByIdForUpdate(newBedId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nouveau lit introuvable"));
 
         if (newBed.getStatus() != BedStatus.FREE) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Le lit demandé n'est pas libre.");
         }
 
-        // 1. Libérer l'ancien lit et clore l'assignment actif
         bedAssignmentRepository.findActiveByHospitalizationId(hospitalizationId).ifPresent(oldAssignment -> {
             oldAssignment.setReleasedAt(Instant.now());
             bedAssignmentRepository.save(oldAssignment);
 
             BedEntity oldBed = oldAssignment.getBed();
-            oldBed.setStatus(BedStatus.CLEANING); // Passe par défaut en nettoyage
+            oldBed.setStatus(BedStatus.CLEANING);
             bedRepository.save(oldBed);
         });
 
-        // 2. Assigner le nouveau lit
         newBed.setStatus(BedStatus.OCCUPIED);
         BedEntity occupiedBed = bedRepository.save(newBed);
 
-        // 3. Mettre à jour l'hospitalisation avec les coordonnées physiques du nouveau lit
         hospitalization.setServiceName(occupiedBed.getRoom().getWard().getName());
         hospitalization.setRoomNumber(occupiedBed.getRoom().getRoomNumber());
         hospitalization.setBedNumber(occupiedBed.getBedNumber());
         hospitalizationRepository.save(hospitalization);
 
-        // 4. Créer l'assignation
         BedAssignmentEntity assignment = new BedAssignmentEntity(hospitalizationId, occupiedBed);
         BedAssignmentEntity savedAssignment = bedAssignmentRepository.save(assignment);
 
@@ -174,8 +178,9 @@ public class SpatialService {
                     "HOSPITALIZATION",
                     hospitalizationId,
                     "TRANSFER",
-                    "Patient transféré vers Lit : " + occupiedBed.getBedNumber() + " | Chambre : " + occupiedBed.getRoom().getRoomNumber() + " | Service : " + occupiedBed.getRoom().getWard().getName()
-            );
+                    "Patient transféré vers Lit : " + occupiedBed.getBedNumber()
+                            + " | Chambre : " + occupiedBed.getRoom().getRoomNumber()
+                            + " | Service : " + occupiedBed.getRoom().getWard().getName());
         }
 
         return BedAssignmentResponse.fromEntity(savedAssignment);
