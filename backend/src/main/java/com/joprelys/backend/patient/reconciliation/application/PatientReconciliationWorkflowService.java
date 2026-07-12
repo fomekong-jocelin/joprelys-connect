@@ -193,7 +193,7 @@ public class PatientReconciliationWorkflowService {
 
         PatientEntity candidate = lockPatient(request.candidatePatientId());
         assertSameTenant(actor, candidate);
-        assertEligibleTarget(source, candidate);
+        candidateService.assertEligibleTarget(source, candidate);
         var scoredCandidate = candidateService.scoreCandidate(source.getId(), candidate.getId());
 
         PatientIdentityStatus previousStatus = source.getIdentityStatus();
@@ -289,7 +289,7 @@ public class PatientReconciliationWorkflowService {
             UserAccountEntity actor) {
         PatientEntity replacement = lockPatient(request.replacementCanonicalPatientId());
         assertSameTenant(actor, replacement);
-        assertEligibleTarget(source, replacement);
+        candidateService.assertEligibleTarget(source, replacement);
         if (replacement.getId().equals(currentLink.getCanonicalPatient().getId())) {
             throw conflict("PATIENT_RECONCILIATION_REPLACEMENT_UNCHANGED");
         }
@@ -434,16 +434,6 @@ public class PatientReconciliationWorkflowService {
         }
         if (source.getIdentityStatus() == PatientIdentityStatus.MERGED) {
             throw conflict("PATIENT_RECONCILIATION_ALREADY_LINKED");
-        }
-    }
-
-    private static void assertEligibleTarget(PatientEntity source, PatientEntity candidate) {
-        if (source.getId().equals(candidate.getId())) {
-            throw conflict("PATIENT_RECONCILIATION_SELF_LINK_FORBIDDEN");
-        }
-        if (candidate.getIdentityStatus() != PatientIdentityStatus.VERIFIED
-                || !"ACTIVE".equals(candidate.getStatus())) {
-            throw conflict("PATIENT_RECONCILIATION_TARGET_NOT_ELIGIBLE");
         }
     }
 
