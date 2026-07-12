@@ -2,7 +2,6 @@ package com.joprelys.backend.patient.reconciliation.application;
 
 import com.joprelys.backend.patient.domain.PatientIdentityStatus;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
-import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.patient.reconciliation.infrastructure.persistence.PatientCanonicalLinkRepository;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -14,13 +13,13 @@ import org.springframework.web.server.ResponseStatusException;
 @Component
 public class LegacyPatientMergeGuard {
 
-    private final PatientRepository patientRepository;
+    private final PatientPairLockService patientPairLockService;
     private final PatientCanonicalLinkRepository canonicalLinkRepository;
 
     public LegacyPatientMergeGuard(
-            PatientRepository patientRepository,
+            PatientPairLockService patientPairLockService,
             PatientCanonicalLinkRepository canonicalLinkRepository) {
-        this.patientRepository = patientRepository;
+        this.patientPairLockService = patientPairLockService;
         this.canonicalLinkRepository = canonicalLinkRepository;
     }
 
@@ -32,13 +31,9 @@ public class LegacyPatientMergeGuard {
                     "PATIENT_LEGACY_MERGE_SELF_FORBIDDEN");
         }
 
-        UUID firstId = primaryId.compareTo(secondaryId) < 0 ? primaryId : secondaryId;
-        UUID secondId = firstId.equals(primaryId) ? secondaryId : primaryId;
-
-        PatientEntity first = requirePatientForUpdate(firstId);
-        PatientEntity second = requirePatientForUpdate(secondId);
-        PatientEntity primary = primaryId.equals(firstId) ? first : second;
-        PatientEntity secondary = secondaryId.equals(firstId) ? first : second;
+        var lockedPatients = patientPairLockService.lock(primaryId, secondaryId);
+        PatientEntity primary = lockedPatients.left();
+        PatientEntity secondary = lockedPatients.right();
 
         assertEligible(primary);
         assertEligible(secondary);
@@ -46,11 +41,6 @@ public class LegacyPatientMergeGuard {
         assertNotParticipatingInCanonicalLink(primaryId);
         assertNotParticipatingInCanonicalLink(secondaryId);
         return new LegacyMergeParticipants(primary, secondary);
-    }
-
-    private PatientEntity requirePatientForUpdate(UUID patientId) {
-        return patientRepository.findByIdForUpdate(patientId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "PATIENT_NOT_FOUND"));
     }
 
     private void assertNotParticipatingInCanonicalLink(UUID patientId) {
