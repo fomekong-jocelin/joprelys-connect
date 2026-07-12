@@ -3,6 +3,7 @@ package com.joprelys.backend.patient.infrastructure.persistence;
 import com.joprelys.backend.patient.domain.PatientIdentityStatus;
 import jakarta.persistence.LockModeType;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,4 +48,7 @@ public interface PatientRepository extends JpaRepository<PatientEntity, UUID> {
     List<PatientEntity> findByBirthDate(LocalDate birthDate);
 
     List<PatientEntity> findAllByIdentityStatus(PatientIdentityStatus identityStatus);
+
+    List<PatientEntity> findAllByTemporaryPatientNumberIsNotNullAndIdentityStatusInOrderByCreatedAtAsc(
+            Collection<PatientIdentityStatus> identityStatuses);
 }

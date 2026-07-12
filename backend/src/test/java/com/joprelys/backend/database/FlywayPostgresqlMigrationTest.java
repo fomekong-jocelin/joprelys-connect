@@ -1,5 +1,9 @@
 package com.joprelys.backend.database;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.joprelys.backend.auth.rbac.RbacStore;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -15,10 +19,6 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Testcontainers(disabledWithoutDocker = true)
 class FlywayPostgresqlMigrationTest {
@@ -36,8 +36,7 @@ class FlywayPostgresqlMigrationTest {
             new NumericColumnExpectation("receivables", "total_amount", 19, 4),
             new NumericColumnExpectation("receivables", "paid_amount", 19, 4),
             new NumericColumnExpectation("tariff_grid", "unit_value", 19, 4),
-            new NumericColumnExpectation("insurance_conventions", "coverage_percentage", 5, 4)
-    );
+            new NumericColumnExpectation("insurance_conventions", "coverage_percentage", 5, 4));
 
     private static final List<String> MEDICO_LEGAL_TABLES = List.of(
             "emergency_third_parties",
@@ -48,6 +47,19 @@ class FlywayPostgresqlMigrationTest {
             "emergency_legal_basis_acts",
             "emergency_belongings",
             "emergency_belonging_transfers");
+
+    private static final List<String> PATIENT_RECONCILIATION_TABLES = List.of(
+            "patient_reconciliation_events",
+            "patient_canonical_links",
+            "patient_identity_aliases");
+
+    private static final List<String> RECONCILIATION_RESTRICTED_FOREIGN_KEYS = List.of(
+            "fk_patient_reconciliation_corrected_event",
+            "fk_patient_canonical_link_source",
+            "fk_patient_canonical_link_target",
+            "fk_patient_canonical_link_event",
+            "fk_patient_identity_alias_origin",
+            "fk_patient_identity_alias_canonical");
 
     @Container
     private static final PostgreSQLContainer POSTGRESQL = new PostgreSQLContainer("postgres:16-alpine")
@@ -69,8 +81,8 @@ class FlywayPostgresqlMigrationTest {
         MigrationInfo current = flyway.info().current();
         assertNotNull(current, "Flyway doit exposer la migration courante");
         assertNotNull(current.getVersion(), "La migration courante doit être versionnée");
-        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 61,
-                "Toutes les migrations médico-légales doivent être appliquées");
+        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 62,
+                "Toutes les migrations de rapprochement patient doivent être appliquées");
 
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword());
@@ -88,6 +100,10 @@ class FlywayPostgresqlMigrationTest {
         assertTableExists(jdbcTemplate, "patient_identity_declarations");
         assertTableExists(jdbcTemplate, "patient_identity_status_history");
         MEDICO_LEGAL_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
+        PATIENT_RECONCILIATION_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
+
+        RECONCILIATION_RESTRICTED_FOREIGN_KEYS.forEach(
+                constraintName -> assertForeignKeyDeleteRule(jdbcTemplate, constraintName, "NO ACTION"));
 
         Integer thirdPartyColumnCount = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*)
@@ -110,10 +126,20 @@ class FlywayPostgresqlMigrationTest {
             for (NumericColumnExpectation expectation : V55_COLUMNS) {
                 assertNumericColumn(connection, expectation);
             }
-            assertColumnNullable(connection, "patients", "full_name");
-            assertColumnNullable(connection, "patients", "gender");
-            assertColumnNullable(connection, "patients", "birth_date");
-            assertColumnNullable(connection, "patients", "city");
+            assertColumnNullability(connection, "patients", "full_name", "YES");
+            assertColumnNullability(connection, "patients", "gender", "YES");
+            assertColumnNullability(connection, "patients", "birth_date", "YES");
+            assertColumnNullability(connection, "patients", "city", "YES");
+            assertColumnNullability(
+                    connection,
+                    "patient_reconciliation_events",
+                    "evidence_source_type",
+                    "NO");
+            assertColumnNullability(
+                    connection,
+                    "patient_reconciliation_events",
+                    "created_by_user_id",
+                    "NO");
         }
     }
 
@@ -124,6 +150,19 @@ class FlywayPostgresqlMigrationTest {
                 WHERE table_schema = 'public' AND table_name = ?
                 """, Integer.class, tableName);
         assertEquals(1, tableCount, () -> "Table introuvable : " + tableName);
+    }
+
+    private static void assertForeignKeyDeleteRule(
+            JdbcTemplate jdbcTemplate,
+            String constraintName,
+            String expectedDeleteRule) {
+        String deleteRule = jdbcTemplate.queryForObject("""
+                SELECT delete_rule
+                FROM information_schema.referential_constraints
+                WHERE constraint_schema = 'public'
+                  AND constraint_name = ?
+                """, String.class, constraintName);
+        assertEquals(expectedDeleteRule, deleteRule, () -> "Règle de suppression incorrecte : " + constraintName);
     }
 
     private static void assertNumericColumn(Connection connection, NumericColumnExpectation expectation)
@@ -148,8 +187,11 @@ class FlywayPostgresqlMigrationTest {
         }
     }
 
-    private static void assertColumnNullable(Connection connection, String tableName, String columnName)
-            throws SQLException {
+    private static void assertColumnNullability(
+            Connection connection,
+            String tableName,
+            String columnName,
+            String expectedNullability) throws SQLException {
         String sql = """
                 SELECT is_nullable
                 FROM information_schema.columns
@@ -162,7 +204,7 @@ class FlywayPostgresqlMigrationTest {
             statement.setString(2, columnName);
             try (ResultSet resultSet = statement.executeQuery()) {
                 assertTrue(resultSet.next(), () -> "Colonne introuvable : " + tableName + "." + columnName);
-                assertEquals("YES", resultSet.getString("is_nullable"));
+                assertEquals(expectedNullability, resultSet.getString("is_nullable"));
             }
         }
     }

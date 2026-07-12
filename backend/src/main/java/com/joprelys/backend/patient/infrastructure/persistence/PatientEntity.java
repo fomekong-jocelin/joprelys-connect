@@ -205,6 +205,19 @@ public class PatientEntity {
         }
     }
 
+    public void restoreIdentityStatusAfterReconciliationCorrection(PatientIdentityStatus target) {
+        if (identityStatus != PatientIdentityStatus.MERGED) {
+            throw new IllegalStateException("PATIENT_RECONCILIATION_SOURCE_NOT_MERGED");
+        }
+        if (target == null || target == PatientIdentityStatus.MERGED) {
+            throw new IllegalArgumentException("PATIENT_RECONCILIATION_RESTORE_STATUS_INVALID");
+        }
+        identityStatus = target;
+        if (target == PatientIdentityStatus.VERIFIED) {
+            identityConfidenceLevel = IdentityConfidenceLevel.VERIFIED;
+        }
+    }
+
     public UUID getId() {
         return id;
     }
