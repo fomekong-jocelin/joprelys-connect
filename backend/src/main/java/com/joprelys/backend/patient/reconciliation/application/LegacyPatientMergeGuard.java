@@ -7,6 +7,7 @@ import com.joprelys.backend.patient.reconciliation.infrastructure.persistence.Pa
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -23,16 +24,32 @@ public class LegacyPatientMergeGuard {
         this.canonicalLinkRepository = canonicalLinkRepository;
     }
 
-    @Transactional(readOnly = true)
-    public void assertLegacyMergeAllowed(UUID primaryId, UUID secondaryId) {
-        assertEligible(requirePatient(primaryId));
-        assertEligible(requirePatient(secondaryId));
+    @Transactional(propagation = Propagation.MANDATORY)
+    public LegacyMergeParticipants lockAndValidate(UUID primaryId, UUID secondaryId) {
+        if (primaryId.equals(secondaryId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "PATIENT_LEGACY_MERGE_SELF_FORBIDDEN");
+        }
+
+        UUID firstId = primaryId.compareTo(secondaryId) < 0 ? primaryId : secondaryId;
+        UUID secondId = firstId.equals(primaryId) ? secondaryId : primaryId;
+
+        PatientEntity first = requirePatientForUpdate(firstId);
+        PatientEntity second = requirePatientForUpdate(secondId);
+        PatientEntity primary = primaryId.equals(firstId) ? first : second;
+        PatientEntity secondary = secondaryId.equals(firstId) ? first : second;
+
+        assertEligible(primary);
+        assertEligible(secondary);
+        assertSameTenant(primary, secondary);
         assertNotParticipatingInCanonicalLink(primaryId);
         assertNotParticipatingInCanonicalLink(secondaryId);
+        return new LegacyMergeParticipants(primary, secondary);
     }
 
-    private PatientEntity requirePatient(UUID patientId) {
-        return patientRepository.findById(patientId)
+    private PatientEntity requirePatientForUpdate(UUID patientId) {
+        return patientRepository.findByIdForUpdate(patientId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "PATIENT_NOT_FOUND"));
     }
 
@@ -54,9 +71,18 @@ public class LegacyPatientMergeGuard {
         }
     }
 
+    private static void assertSameTenant(PatientEntity primary, PatientEntity secondary) {
+        if (!primary.getOrganizationId().equals(secondary.getOrganizationId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "PATIENT_NOT_FOUND");
+        }
+    }
+
     private static ResponseStatusException reconciliationWorkflowRequired() {
         return new ResponseStatusException(
                 HttpStatus.CONFLICT,
                 "PATIENT_RECONCILIATION_WORKFLOW_REQUIRED");
+    }
+
+    public record LegacyMergeParticipants(PatientEntity primary, PatientEntity secondary) {
     }
 }
