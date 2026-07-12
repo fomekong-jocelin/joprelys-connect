@@ -11,27 +11,40 @@ CREATE TABLE patient_reconciliation_events (
     resulting_identity_status VARCHAR(32) NOT NULL,
     similarity_score DECIMAL(5, 2),
     match_reasons TEXT,
-    evidence_source_type VARCHAR(48),
+    evidence_source_type VARCHAR(48) NOT NULL,
     evidence_reference VARCHAR(255),
     justification VARCHAR(1500) NOT NULL,
     corrected_event_id UUID,
     idempotency_key VARCHAR(120) NOT NULL,
-    created_by_user_id UUID,
+    created_by_user_id UUID NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT uq_patient_reconciliation_event_tenant
         UNIQUE (id, organization_id),
     CONSTRAINT fk_patient_reconciliation_source
         FOREIGN KEY (source_patient_id, organization_id)
-        REFERENCES patients(id, organization_id) ON DELETE CASCADE,
+        REFERENCES patients(id, organization_id),
     CONSTRAINT fk_patient_reconciliation_candidate
         FOREIGN KEY (candidate_patient_id, organization_id)
         REFERENCES patients(id, organization_id),
     CONSTRAINT fk_patient_reconciliation_corrected_event
         FOREIGN KEY (corrected_event_id, organization_id)
-        REFERENCES patient_reconciliation_events(id, organization_id) ON DELETE CASCADE,
+        REFERENCES patient_reconciliation_events(id, organization_id),
     CONSTRAINT fk_patient_reconciliation_actor
         FOREIGN KEY (created_by_user_id)
-        REFERENCES users(id) ON DELETE SET NULL,
+        REFERENCES users(id),
+    CONSTRAINT chk_patient_reconciliation_decision_value
+        CHECK (decision IN ('CREATE_NEW_DPU', 'LINK_EXISTING_DPU', 'DEFER', 'CORRECT_LINK')),
+    CONSTRAINT chk_patient_reconciliation_decision_shape
+        CHECK (
+            (decision = 'LINK_EXISTING_DPU'
+                AND candidate_patient_id IS NOT NULL
+                AND corrected_event_id IS NULL)
+            OR (decision IN ('CREATE_NEW_DPU', 'DEFER')
+                AND candidate_patient_id IS NULL
+                AND corrected_event_id IS NULL)
+            OR (decision = 'CORRECT_LINK'
+                AND corrected_event_id IS NOT NULL)
+        ),
     CONSTRAINT chk_patient_reconciliation_distinct_patients
         CHECK (candidate_patient_id IS NULL OR candidate_patient_id <> source_patient_id),
     CONSTRAINT chk_patient_reconciliation_score
@@ -57,13 +70,13 @@ CREATE TABLE patient_canonical_links (
     version BIGINT NOT NULL DEFAULT 0,
     CONSTRAINT fk_patient_canonical_link_source
         FOREIGN KEY (source_patient_id, organization_id)
-        REFERENCES patients(id, organization_id) ON DELETE CASCADE,
+        REFERENCES patients(id, organization_id),
     CONSTRAINT fk_patient_canonical_link_target
         FOREIGN KEY (canonical_patient_id, organization_id)
-        REFERENCES patients(id, organization_id) ON DELETE CASCADE,
+        REFERENCES patients(id, organization_id),
     CONSTRAINT fk_patient_canonical_link_event
         FOREIGN KEY (decision_event_id, organization_id)
-        REFERENCES patient_reconciliation_events(id, organization_id) ON DELETE CASCADE,
+        REFERENCES patient_reconciliation_events(id, organization_id),
     CONSTRAINT chk_patient_canonical_link_distinct
         CHECK (source_patient_id <> canonical_patient_id),
     CONSTRAINT uq_patient_canonical_link_source
@@ -86,10 +99,10 @@ CREATE TABLE patient_identity_aliases (
     version BIGINT NOT NULL DEFAULT 0,
     CONSTRAINT fk_patient_identity_alias_origin
         FOREIGN KEY (origin_patient_id, organization_id)
-        REFERENCES patients(id, organization_id) ON DELETE CASCADE,
+        REFERENCES patients(id, organization_id),
     CONSTRAINT fk_patient_identity_alias_canonical
         FOREIGN KEY (canonical_patient_id, organization_id)
-        REFERENCES patients(id, organization_id) ON DELETE CASCADE,
+        REFERENCES patients(id, organization_id),
     CONSTRAINT fk_patient_identity_alias_actor
         FOREIGN KEY (created_by_user_id)
         REFERENCES users(id) ON DELETE SET NULL,
