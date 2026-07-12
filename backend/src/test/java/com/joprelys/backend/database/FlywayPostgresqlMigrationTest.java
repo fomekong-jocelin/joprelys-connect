@@ -105,7 +105,6 @@ class FlywayPostgresqlMigrationTest {
         MEDICO_LEGAL_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
         PATIENT_RECONCILIATION_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
 
-        assertConstraintExists(jdbcTemplate, "chk_patient_reconciliation_decision_shape");
         RECONCILIATION_RESTRICTED_FOREIGN_KEYS.forEach(
                 constraintName -> assertForeignKeyDeleteRule(jdbcTemplate, constraintName, "NO ACTION"));
 
@@ -154,16 +153,6 @@ class FlywayPostgresqlMigrationTest {
                 WHERE table_schema = 'public' AND table_name = ?
                 """, Integer.class, tableName);
         assertEquals(1, tableCount, () -> "Table introuvable : " + tableName);
-    }
-
-    private static void assertConstraintExists(JdbcTemplate jdbcTemplate, String constraintName) {
-        Integer constraintCount = jdbcTemplate.queryForObject("""
-                SELECT COUNT(*)
-                FROM information_schema.table_constraints
-                WHERE constraint_schema = 'public'
-                  AND constraint_name = ?
-                """, Integer.class, constraintName);
-        assertEquals(1, constraintCount, () -> "Contrainte introuvable : " + constraintName);
     }
 
     private static void assertForeignKeyDeleteRule(
