@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-10 (correctif P0 historique, workspace et bordereau de clôture fusionné via PR #17 au commit `201548a3`) |
+| Dernière mise à jour | 2026-07-12 (correctif du shell de navigation de la régularisation URG-TEMP) |
 | Responsable mise à jour | Codex |
 | État global | EPIC-0019 en cours ; EPIC-0020 en cours avec STORY-2201 à STORY-2203 et le correctif de clôture caisse terminés |
 | Risques majeurs | Validation métier post-fusion des définitions `PAID` / `SETTLED` ; DTO financiers résiduels en `Double` ; densité résiduelle de `BillingManagementPageComponent` et `BillingCashRegisterComponent` |
@@ -22,6 +22,8 @@
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
 | TASK-20260710-P0-BASELINE-CLOSURE | TECHNICAL_BASELINE | Documentation | Clôture documentaire de la baseline P0 | Documentation / QA | DONE | P0 | 1 | Tech Lead / QA | 0.1j | 0.15j | 0.25j | Codex | Lead Developer | SPRINT-0014 | 0.1j | Aucun | Faible | 2026-07-10 |
+| QA-20260712-PR52 | QUALITY | QA Review | Recette manuelle PR #52 — rapprochement URG-TEMP | QA / sécurité / UI | IN_PROGRESS | P0 | 3 | QA senior + reviewer fonctionnel indépendant | 0.5j | 0.75j | 1.0j | Codex | QA / Product non auteur de la PR | SPRINT-0014 | 0.46j | Rattachement compatible fictif, isolation Clinique B, RBAC négatif UI et CI GitHub Actions (Angular/Maven) confirmés. Scénarios P2 et validations humaines restent à exécuter. | Élevé | 2026-07-12 |
+| BUG-20260712-PATIENT-RECONCILIATION-SHELL | QUALITY | Bug UI | Shell de navigation absent de la régularisation URG-TEMP | Angular / UI | QA | P1 | 1 | Frontend intermédiaire | 0.1j | 0.15j | 0.25j | Codex | Lead Frontend + QA | SPRINT-0014 | 0.07j | Tests Angular (176) et build production réussis ; vérification visuelle authentifiée à faire après déploiement. | Faible | 2026-07-12 |
 | BUG-20260710-CI-BASELINE-EXECUTION | TECHNICAL_BASELINE | Bug CI/CD | Déblocage réel des tests Maven et Angular | CI/CD | DONE | P0 | 1 | DevOps / full-stack intermédiaire | 0.15j | 0.25j | 0.5j | Codex | Lead Developer | SPRINT-0014 | 0.15j | Aucun | Faible | 2026-07-10 |
 | BUG-20260710-V55-H2-COMPATIBILITY | TECHNICAL_BASELINE | Bug DB | Migration V55 compatible H2 et PostgreSQL 16 | Backend / SQL | DONE | P0 | 2 | Backend Java / SQL senior | 0.4j | 0.7j | 1.2j | Codex | Lead Backend + référent données | SPRINT-0014 | 0.4j | Vérifier `flyway_schema_history` avant déploiement partagé | Faible | 2026-07-10 |
 | BUG-20260710-BACKEND-TESTS-BIGDECIMAL | TECHNICAL_BASELINE | Bug Backend | Alignement BigDecimal des tests et quantités | Backend / QA | DONE | P0 | 2 | Backend Java intermédiaire / senior | 0.3j | 0.5j | 0.8j | Codex | Lead Backend + QA finance | SPRINT-0014 | 0.3j | DTO financiers résiduels en `Double` à traiter séparément | Faible | 2026-07-10 |

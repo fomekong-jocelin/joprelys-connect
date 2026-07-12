@@ -15,6 +15,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+- **Régularisation URG-TEMP — navigation applicative (BUG-20260712-PATIENT-RECONCILIATION-SHELL)** : la page de rapprochement des patients utilise désormais le shell clinique partagé ; l’en-tête, le menu latéral, le fil d’Ariane, la navigation mobile et les contrôles de thème/langue restent disponibles.
+
 - **Clôture de caisse — historique et bordereau PDF (BUG-20260710-CASH-CLOSEOUT-HISTORY-REPORT)** : rétablissement des espacements entre cartes, ajout de l’historique personnel tenanté des sessions, rafraîchissement et mise en évidence après clôture, détail différé des mouvements, bordereau PDF numéroté avec rapprochement financier, contrôles propriétaire/DAF/Admin et couverture backend/Angular.
 - **Baseline CI Maven/Angular (BUG-20260710-CI-BASELINE-EXECUTION)** : le pipeline rend le Maven Wrapper exécutable sur Linux et lance la commande Angular standard sans l’option invalide `--run`, afin que les suites backend/frontend et le build de production soient réellement bloquants.
 - **Migration financière V55 (BUG-20260710-V55-H2-COMPATIBILITY)** : remplacement des casts PostgreSQL spécifiques par des conversions atomiques compatibles H2/PostgreSQL, avec validation obligatoire de toutes les migrations sur PostgreSQL 16 via Testcontainers et contrôle des 13 colonnes `NUMERIC`.
