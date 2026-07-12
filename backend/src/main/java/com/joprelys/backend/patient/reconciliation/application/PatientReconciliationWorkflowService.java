@@ -15,9 +15,11 @@ import com.joprelys.backend.patient.reconciliation.infrastructure.persistence.Pa
 import com.joprelys.backend.patient.reconciliation.infrastructure.persistence.PatientReconciliationEventEntity;
 import com.joprelys.backend.patient.reconciliation.infrastructure.persistence.PatientReconciliationEventRepository;
 import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -27,37 +29,35 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class PatientReconciliationWorkflowService {
 
-    private static final EnumSet<PatientIdentityStatus> QUEUE_STATUSES = EnumSet.of(
-            PatientIdentityStatus.PROVISIONAL_URGENCY,
-            PatientIdentityStatus.DECLARED,
-            PatientIdentityStatus.VERIFIED);
+    private static final EnumSet<PatientIdentityStatus> QUEUE_STATUSES =
+            EnumSet.allOf(PatientIdentityStatus.class);
 
     private final PatientRepository patientRepository;
     private final PatientCanonicalLinkRepository canonicalLinkRepository;
     private final PatientReconciliationEventRepository eventRepository;
     private final PatientReconciliationCandidateService candidateService;
-    private final PatientCanonicalResolver canonicalResolver;
     private final PatientReconciliationActorProvider actorProvider;
     private final PatientAliasService aliasService;
     private final PatientReconciliationRecorder recorder;
+    private final PatientPairLockService patientPairLockService;
 
     public PatientReconciliationWorkflowService(
             PatientRepository patientRepository,
             PatientCanonicalLinkRepository canonicalLinkRepository,
             PatientReconciliationEventRepository eventRepository,
             PatientReconciliationCandidateService candidateService,
-            PatientCanonicalResolver canonicalResolver,
             PatientReconciliationActorProvider actorProvider,
             PatientAliasService aliasService,
-            PatientReconciliationRecorder recorder) {
+            PatientReconciliationRecorder recorder,
+            PatientPairLockService patientPairLockService) {
         this.patientRepository = patientRepository;
         this.canonicalLinkRepository = canonicalLinkRepository;
         this.eventRepository = eventRepository;
         this.candidateService = candidateService;
-        this.canonicalResolver = canonicalResolver;
         this.actorProvider = actorProvider;
         this.aliasService = aliasService;
         this.recorder = recorder;
+        this.patientPairLockService = patientPairLockService;
     }
 
     @Transactional(readOnly = true)
@@ -65,8 +65,6 @@ public class PatientReconciliationWorkflowService {
         return patientRepository
                 .findAllByTemporaryPatientNumberIsNotNullAndIdentityStatusInOrderByCreatedAtAsc(QUEUE_STATUSES)
                 .stream()
-                .filter(patient -> !eventRepository.existsBySourcePatient_IdAndDecision(
-                        patient.getId(), PatientReconciliationDecision.CREATE_NEW_DPU))
                 .map(this::toQueueItem)
                 .toList();
     }
@@ -101,19 +99,23 @@ public class PatientReconciliationWorkflowService {
         }
 
         UserAccountEntity actor = requireTenantActor();
+        if (request.decision() == PatientReconciliationDecision.LINK_EXISTING_DPU) {
+            return decideLinkExistingDpu(sourcePatientId, request, normalizedKey, actor);
+        }
+
         PatientEntity source = lockPatient(sourcePatientId);
         assertSameTenant(actor, source);
-
         replay = findDecisionReplay(sourcePatientId, request, normalizedKey);
         if (replay.isPresent()) {
             return toDecisionResponse(replay.get(), true);
         }
-        assertUrgTempSource(source);
 
+        assertUrgTempSource(source);
+        assertNoTerminalDecision(source.getId());
         return switch (request.decision()) {
             case CREATE_NEW_DPU -> confirmNewDpu(source, request, normalizedKey, actor);
-            case LINK_EXISTING_DPU -> linkExistingDpu(source, request, normalizedKey, actor);
             case DEFER -> deferDecision(source, request, normalizedKey, actor);
+            case LINK_EXISTING_DPU -> throw new IllegalStateException("LINK_DECISION_NOT_ROUTED");
             case CORRECT_LINK -> throw conflict("PATIENT_RECONCILIATION_CORRECTION_ENDPOINT_REQUIRED");
         };
     }
@@ -131,7 +133,21 @@ public class PatientReconciliationWorkflowService {
         }
 
         UserAccountEntity actor = requireTenantActor();
-        PatientEntity source = lockPatient(sourcePatientId);
+        PatientEntity source;
+        PatientEntity replacement = null;
+        if (request.replacementCanonicalPatientId() == null) {
+            source = lockPatient(sourcePatientId);
+        } else {
+            if (sourcePatientId.equals(request.replacementCanonicalPatientId())) {
+                throw conflict("PATIENT_RECONCILIATION_SELF_LINK_FORBIDDEN");
+            }
+            var lockedPair = patientPairLockService.lock(
+                    sourcePatientId,
+                    request.replacementCanonicalPatientId());
+            source = lockedPair.left();
+            replacement = lockedPair.right();
+            assertSameTenant(actor, replacement);
+        }
         assertSameTenant(actor, source);
 
         replay = findCorrectionReplay(sourcePatientId, request, normalizedKey);
@@ -146,9 +162,38 @@ public class PatientReconciliationWorkflowService {
             throw conflict("PATIENT_RECONCILIATION_CORRECTED_EVENT_MISMATCH");
         }
 
-        return request.replacementCanonicalPatientId() == null
+        return replacement == null
                 ? removeIncorrectLink(source, currentLink, request, normalizedKey, actor)
-                : replaceIncorrectLink(source, currentLink, request, normalizedKey, actor);
+                : replaceIncorrectLink(source, replacement, currentLink, request, normalizedKey, actor);
+    }
+
+    private PatientReconciliationDecisionResponse decideLinkExistingDpu(
+            UUID sourcePatientId,
+            PatientReconciliationDecisionRequest request,
+            String idempotencyKey,
+            UserAccountEntity actor) {
+        if (request.candidatePatientId() == null) {
+            throw badRequest("PATIENT_RECONCILIATION_CANDIDATE_REQUIRED");
+        }
+        if (sourcePatientId.equals(request.candidatePatientId())) {
+            throw conflict("PATIENT_RECONCILIATION_SELF_LINK_FORBIDDEN");
+        }
+
+        var lockedPair = patientPairLockService.lock(sourcePatientId, request.candidatePatientId());
+        PatientEntity source = lockedPair.left();
+        PatientEntity candidate = lockedPair.right();
+        assertSameTenant(actor, source);
+        assertSameTenant(actor, candidate);
+
+        Optional<PatientReconciliationEventEntity> replay = findDecisionReplay(
+                sourcePatientId, request, idempotencyKey);
+        if (replay.isPresent()) {
+            return toDecisionResponse(replay.get(), true);
+        }
+
+        assertUrgTempSource(source);
+        assertNoTerminalDecision(source.getId());
+        return linkExistingDpu(source, candidate, request, idempotencyKey, actor);
     }
 
     private PatientReconciliationDecisionResponse confirmNewDpu(
@@ -159,7 +204,6 @@ public class PatientReconciliationWorkflowService {
         if (source.getIdentityStatus() != PatientIdentityStatus.VERIFIED) {
             throw conflict("PATIENT_RECONCILIATION_VERIFIED_IDENTITY_REQUIRED");
         }
-        assertNotAlreadyLinked(source.getId());
 
         PatientReconciliationEventEntity event = recorder.record(
                 actor,
@@ -183,16 +227,10 @@ public class PatientReconciliationWorkflowService {
 
     private PatientReconciliationDecisionResponse linkExistingDpu(
             PatientEntity source,
+            PatientEntity candidate,
             PatientReconciliationDecisionRequest request,
             String idempotencyKey,
             UserAccountEntity actor) {
-        if (request.candidatePatientId() == null) {
-            throw badRequest("PATIENT_RECONCILIATION_CANDIDATE_REQUIRED");
-        }
-        assertNotAlreadyLinked(source.getId());
-
-        PatientEntity candidate = lockPatient(request.candidatePatientId());
-        assertSameTenant(actor, candidate);
         candidateService.assertEligibleTarget(source, candidate);
         var scoredCandidate = candidateService.scoreCandidate(source.getId(), candidate.getId());
 
@@ -283,12 +321,11 @@ public class PatientReconciliationWorkflowService {
 
     private PatientReconciliationDecisionResponse replaceIncorrectLink(
             PatientEntity source,
+            PatientEntity replacement,
             PatientCanonicalLinkEntity currentLink,
             PatientReconciliationCorrectionRequest request,
             String idempotencyKey,
             UserAccountEntity actor) {
-        PatientEntity replacement = lockPatient(request.replacementCanonicalPatientId());
-        assertSameTenant(actor, replacement);
         candidateService.assertEligibleTarget(source, replacement);
         if (replacement.getId().equals(currentLink.getCanonicalPatient().getId())) {
             throw conflict("PATIENT_RECONCILIATION_REPLACEMENT_UNCHANGED");
@@ -370,9 +407,28 @@ public class PatientReconciliationWorkflowService {
     }
 
     private PatientReconciliationQueueItemResponse toQueueItem(PatientEntity patient) {
-        UUID canonicalPatientId = canonicalLinkRepository.findBySourcePatient_Id(patient.getId())
-                .map(link -> link.getCanonicalPatient().getId())
-                .orElse(null);
+        Optional<PatientCanonicalLinkEntity> activeLink =
+                canonicalLinkRepository.findBySourcePatient_Id(patient.getId());
+        Optional<PatientReconciliationEventEntity> createNewDpuEvent =
+                eventRepository.findFirstBySourcePatient_IdAndDecisionOrderByCreatedAtDesc(
+                        patient.getId(), PatientReconciliationDecision.CREATE_NEW_DPU);
+        Optional<PatientReconciliationEventEntity> latestEvent =
+                eventRepository.findFirstBySourcePatient_IdOrderByCreatedAtDesc(patient.getId());
+
+        UUID canonicalPatientId = null;
+        PatientReconciliationEventEntity stateEvent = latestEvent.orElse(null);
+        boolean terminal = false;
+
+        if (activeLink.isPresent()) {
+            canonicalPatientId = activeLink.get().getCanonicalPatient().getId();
+            stateEvent = activeLink.get().getDecisionEvent();
+            terminal = true;
+        } else if (createNewDpuEvent.isPresent()) {
+            canonicalPatientId = patient.getId();
+            stateEvent = createNewDpuEvent.get();
+            terminal = true;
+        }
+
         return new PatientReconciliationQueueItemResponse(
                 patient.getId(),
                 patient.getTemporaryPatientNumber(),
@@ -384,21 +440,31 @@ public class PatientReconciliationWorkflowService {
                 patient.getFoundAt(),
                 patient.getFoundLocation(),
                 patient.getCreatedAt(),
-                canonicalPatientId);
+                canonicalPatientId,
+                stateEvent == null ? null : stateEvent.getId(),
+                stateEvent == null ? null : stateEvent.getDecision(),
+                terminal);
     }
 
     private PatientReconciliationDecisionResponse toDecisionResponse(
             PatientReconciliationEventEntity event,
             boolean replayed) {
-        var context = canonicalResolver.resolve(event.getSourcePatient().getId());
+        UUID sourcePatientId = event.getSourcePatient().getId();
+        UUID canonicalPatientId = event.getCandidatePatient() == null
+                ? sourcePatientId
+                : event.getCandidatePatient().getId();
+        Set<UUID> contributingPatientIds = new LinkedHashSet<>();
+        contributingPatientIds.add(sourcePatientId);
+        contributingPatientIds.add(canonicalPatientId);
+
         return new PatientReconciliationDecisionResponse(
                 event.getId(),
                 event.getDecision(),
-                event.getSourcePatient().getId(),
-                event.getSourcePatient().getIdentityStatus(),
-                context.canonicalPatient().getId(),
+                sourcePatientId,
+                event.getResultingIdentityStatus(),
+                canonicalPatientId,
                 event.getSourcePatient().getTemporaryPatientNumber(),
-                context.contributingPatientIds(),
+                contributingPatientIds,
                 event.getCreatedAt(),
                 replayed);
     }
@@ -416,9 +482,13 @@ public class PatientReconciliationWorkflowService {
         return actor;
     }
 
-    private void assertNotAlreadyLinked(UUID sourcePatientId) {
-        if (canonicalLinkRepository.findBySourcePatient_Id(sourcePatientId).isPresent()) {
-            throw conflict("PATIENT_RECONCILIATION_ALREADY_LINKED");
+    private void assertNoTerminalDecision(UUID sourcePatientId) {
+        boolean linked = canonicalLinkRepository.findBySourcePatient_Id(sourcePatientId).isPresent();
+        boolean confirmedAsNewDpu = eventRepository.existsBySourcePatient_IdAndDecision(
+                sourcePatientId,
+                PatientReconciliationDecision.CREATE_NEW_DPU);
+        if (linked || confirmedAsNewDpu) {
+            throw conflict("PATIENT_RECONCILIATION_FINAL_DECISION_ALREADY_RECORDED");
         }
     }
 
