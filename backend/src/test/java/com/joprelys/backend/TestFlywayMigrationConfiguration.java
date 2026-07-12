@@ -1,22 +1,28 @@
 package com.joprelys.backend;
 
-import org.springframework.boot.autoconfigure.flyway.FlywayConfigurationCustomizer;
+import javax.sql.DataSource;
+import org.flywaydb.core.Flyway;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Adds migrations that exist only to isolate the shared H2 integration-test database.
+ * Applies migrations that exist only to isolate the shared H2 integration-test database.
  *
- * <p>The direct PostgreSQL migration test configures Flyway itself and therefore
- * continues to validate only the production migration location.</p>
+ * <p>The cleanup policy uses a separate Flyway history table, so the direct PostgreSQL
+ * migration test continues to validate only the production migration location.</p>
  */
 @Configuration(proxyBeanMethods = false)
 public class TestFlywayMigrationConfiguration {
 
     @Bean
-    FlywayConfigurationCustomizer testFlywayLocations() {
-        return configuration -> configuration.locations(
-                "classpath:db/migration",
-                "classpath:db/test-migration");
+    ApplicationRunner applyTestCleanupMigrations(DataSource dataSource) {
+        return arguments -> Flyway.configure()
+                .dataSource(dataSource)
+                .locations("classpath:db/test-migration")
+                .table("flyway_test_schema_history")
+                .baselineOnMigrate(true)
+                .load()
+                .migrate();
     }
 }
