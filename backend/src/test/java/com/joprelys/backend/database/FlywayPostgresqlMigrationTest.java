@@ -54,10 +54,7 @@ class FlywayPostgresqlMigrationTest {
             "patient_identity_aliases");
 
     private static final List<String> RECONCILIATION_RESTRICTED_FOREIGN_KEYS = List.of(
-            "fk_patient_reconciliation_source",
-            "fk_patient_reconciliation_candidate",
             "fk_patient_reconciliation_corrected_event",
-            "fk_patient_reconciliation_actor",
             "fk_patient_canonical_link_source",
             "fk_patient_canonical_link_target",
             "fk_patient_canonical_link_event",
