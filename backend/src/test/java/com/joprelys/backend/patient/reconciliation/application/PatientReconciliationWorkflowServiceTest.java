@@ -34,6 +34,7 @@ class PatientReconciliationWorkflowServiceTest {
     private PatientAliasService aliasService;
     private PatientReconciliationRecorder recorder;
     private PatientPairLockService pairLockService;
+    private PatientReconciliationQueueService queueService;
     private PatientReconciliationWorkflowService workflowService;
 
     @BeforeEach
@@ -46,6 +47,9 @@ class PatientReconciliationWorkflowServiceTest {
         aliasService = mock(PatientAliasService.class);
         recorder = mock(PatientReconciliationRecorder.class);
         pairLockService = mock(PatientPairLockService.class);
+        queueService = mock(PatientReconciliationQueueService.class);
+        PatientReconciliationReplayService replayService =
+                new PatientReconciliationReplayService(eventRepository);
         workflowService = new PatientReconciliationWorkflowService(
                 patientRepository,
                 canonicalLinkRepository,
@@ -54,7 +58,9 @@ class PatientReconciliationWorkflowServiceTest {
                 actorProvider,
                 aliasService,
                 recorder,
-                pairLockService);
+                pairLockService,
+                queueService,
+                replayService);
     }
 
     @Test
