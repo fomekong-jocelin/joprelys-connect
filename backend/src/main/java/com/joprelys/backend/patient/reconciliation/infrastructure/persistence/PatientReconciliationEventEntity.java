@@ -17,9 +17,11 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.Immutable;
 import org.hibernate.annotations.TenantId;
 
 @Entity
+@Immutable
 @Table(name = "patient_reconciliation_events")
 public class PatientReconciliationEventEntity {
 
@@ -57,7 +59,7 @@ public class PatientReconciliationEventEntity {
     private String matchReasons;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "evidence_source_type", length = 48)
+    @Column(name = "evidence_source_type", nullable = false, length = 48)
     private IdentitySourceType evidenceSourceType;
 
     @Column(name = "evidence_reference", length = 255)
@@ -72,10 +74,10 @@ public class PatientReconciliationEventEntity {
     @Column(name = "idempotency_key", nullable = false, length = 120)
     private String idempotencyKey;
 
-    @Column(name = "created_by_user_id")
+    @Column(name = "created_by_user_id", nullable = false)
     private UUID createdByUserId;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
     protected PatientReconciliationEventEntity() {
@@ -97,20 +99,26 @@ public class PatientReconciliationEventEntity {
             String idempotencyKey,
             UUID createdByUserId) {
         this.id = UUID.randomUUID();
-        this.organizationId = organizationId;
-        this.sourcePatient = sourcePatient;
+        this.organizationId = requireValue(organizationId, "TENANT_CONTEXT_REQUIRED");
+        this.sourcePatient = requireValue(sourcePatient, "PATIENT_RECONCILIATION_SOURCE_REQUIRED");
         this.candidatePatient = candidatePatient;
-        this.decision = decision;
-        this.previousIdentityStatus = previousIdentityStatus;
-        this.resultingIdentityStatus = resultingIdentityStatus;
+        this.decision = requireValue(decision, "PATIENT_RECONCILIATION_DECISION_REQUIRED");
+        this.previousIdentityStatus = requireValue(
+                previousIdentityStatus,
+                "PATIENT_RECONCILIATION_PREVIOUS_STATUS_REQUIRED");
+        this.resultingIdentityStatus = requireValue(
+                resultingIdentityStatus,
+                "PATIENT_RECONCILIATION_RESULTING_STATUS_REQUIRED");
         this.similarityScore = similarityScore;
         this.matchReasons = normalize(matchReasons);
-        this.evidenceSourceType = evidenceSourceType;
+        this.evidenceSourceType = requireValue(
+                evidenceSourceType,
+                "PATIENT_RECONCILIATION_EVIDENCE_SOURCE_REQUIRED");
         this.evidenceReference = normalize(evidenceReference);
         this.justification = requireText(justification, "PATIENT_RECONCILIATION_JUSTIFICATION_REQUIRED");
         this.correctedEventId = correctedEventId;
         this.idempotencyKey = requireText(idempotencyKey, "IDEMPOTENCY_KEY_REQUIRED");
-        this.createdByUserId = createdByUserId;
+        this.createdByUserId = requireValue(createdByUserId, "AUTHENTICATION_REQUIRED");
     }
 
     @PrePersist
@@ -124,6 +132,13 @@ public class PatientReconciliationEventEntity {
             throw new IllegalArgumentException(errorCode);
         }
         return normalized;
+    }
+
+    private static <T> T requireValue(T value, String errorCode) {
+        if (value == null) {
+            throw new IllegalArgumentException(errorCode);
+        }
+        return value;
     }
 
     private static String normalize(String value) {
