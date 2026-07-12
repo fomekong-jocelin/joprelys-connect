@@ -24,6 +24,10 @@ public interface PatientReconciliationEventRepository
     Optional<PatientReconciliationEventEntity> findFirstBySourcePatient_IdOrderByCreatedAtDesc(
             UUID sourcePatientId);
 
+    Optional<PatientReconciliationEventEntity> findFirstBySourcePatient_IdAndDecisionOrderByCreatedAtDesc(
+            UUID sourcePatientId,
+            PatientReconciliationDecision decision);
+
     List<PatientReconciliationEventEntity> findAllBySourcePatient_IdOrderByCreatedAtDesc(UUID sourcePatientId);
 
     boolean existsBySourcePatient_IdAndDecision(
