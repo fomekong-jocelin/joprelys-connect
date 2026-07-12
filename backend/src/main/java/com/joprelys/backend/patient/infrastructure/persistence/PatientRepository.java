@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -51,4 +52,28 @@ public interface PatientRepository extends JpaRepository<PatientEntity, UUID> {
 
     List<PatientEntity> findAllByTemporaryPatientNumberIsNotNullAndIdentityStatusInOrderByCreatedAtAsc(
             Collection<PatientIdentityStatus> identityStatuses);
+
+    @Query("""
+            SELECT p
+            FROM PatientEntity p
+            WHERE p.identityStatus = :identityStatus
+              AND p.status = 'ACTIVE'
+              AND p.id <> :sourceId
+              AND (
+                    (:birthDate IS NULL AND :phone IS NULL AND :city IS NULL AND :gender IS NULL)
+                 OR (:birthDate IS NOT NULL AND p.birthDate = :birthDate)
+                 OR (:phone IS NOT NULL AND p.phone = :phone)
+                 OR (:city IS NOT NULL AND LOWER(COALESCE(p.city, '')) = LOWER(:city))
+                 OR (:gender IS NOT NULL AND LOWER(COALESCE(p.gender, '')) = LOWER(:gender))
+              )
+            ORDER BY p.updatedAt DESC
+            """)
+    List<PatientEntity> findReconciliationCandidates(
+            @Param("sourceId") UUID sourceId,
+            @Param("identityStatus") PatientIdentityStatus identityStatus,
+            @Param("birthDate") LocalDate birthDate,
+            @Param("phone") String phone,
+            @Param("city") String city,
+            @Param("gender") String gender,
+            Pageable pageable);
 }
