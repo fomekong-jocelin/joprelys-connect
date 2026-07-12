@@ -2,7 +2,10 @@ package com.joprelys.backend.patient.reconciliation.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.joprelys.backend.patient.application.PatientSimilarityService;
@@ -12,6 +15,7 @@ import com.joprelys.backend.patient.infrastructure.persistence.PatientDuplicateC
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.patient.reconciliation.domain.PatientReconciliationDecision;
+import com.joprelys.backend.patient.reconciliation.infrastructure.persistence.PatientReconciliationEventEntity;
 import com.joprelys.backend.patient.reconciliation.infrastructure.persistence.PatientReconciliationEventRepository;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -19,6 +23,8 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -48,26 +54,29 @@ class PatientReconciliationCandidateServiceTest {
 
         when(patientRepository.findById(source.getId())).thenReturn(Optional.of(source));
         when(patientRepository.findById(unconfirmedUrgTemp.getId())).thenReturn(Optional.of(unconfirmedUrgTemp));
-        when(patientRepository.findAllByIdentityStatus(PatientIdentityStatus.VERIFIED))
-                .thenReturn(List.of(source, unconfirmedUrgTemp));
+        when(patientRepository.findReconciliationCandidates(
+                eq(source.getId()),
+                eq(PatientIdentityStatus.VERIFIED),
+                any(LocalDate.class),
+                any(String.class),
+                any(String.class),
+                any(String.class),
+                any(Pageable.class)))
+                .thenReturn(List.of(unconfirmedUrgTemp));
     }
 
     @Test
     void shouldExcludeVerifiedUrgTempUntilItIsExplicitlyConfirmedAsNewDpu() {
-        when(eventRepository.existsBySourcePatient_IdAndDecision(
-                unconfirmedUrgTemp.getId(),
-                PatientReconciliationDecision.CREATE_NEW_DPU))
-                .thenReturn(false);
+        when(eventRepository.findFirstBySourcePatient_IdOrderByCreatedAtDesc(unconfirmedUrgTemp.getId()))
+                .thenReturn(Optional.empty());
 
         assertEquals(0, candidateService.findCandidates(source.getId()).size());
     }
 
     @Test
     void shouldRejectDirectLinkToUnconfirmedUrgTemp() {
-        when(eventRepository.existsBySourcePatient_IdAndDecision(
-                unconfirmedUrgTemp.getId(),
-                PatientReconciliationDecision.CREATE_NEW_DPU))
-                .thenReturn(false);
+        when(eventRepository.findFirstBySourcePatient_IdOrderByCreatedAtDesc(unconfirmedUrgTemp.getId()))
+                .thenReturn(Optional.empty());
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
@@ -79,14 +88,33 @@ class PatientReconciliationCandidateServiceTest {
 
     @Test
     void shouldAllowUrgTempExplicitlyConfirmedAsNewDpu() {
-        when(eventRepository.existsBySourcePatient_IdAndDecision(
-                unconfirmedUrgTemp.getId(),
-                PatientReconciliationDecision.CREATE_NEW_DPU))
-                .thenReturn(true);
+        PatientReconciliationEventEntity event = mock(PatientReconciliationEventEntity.class);
+        when(event.getDecision()).thenReturn(PatientReconciliationDecision.CREATE_NEW_DPU);
+        when(eventRepository.findFirstBySourcePatient_IdOrderByCreatedAtDesc(unconfirmedUrgTemp.getId()))
+                .thenReturn(Optional.of(event));
 
         assertEquals(
                 unconfirmedUrgTemp.getId(),
                 candidateService.findCandidates(source.getId()).getFirst().patientId());
+    }
+
+    @Test
+    void shouldBoundDatabasePreselectionBeforeJavaScoring() {
+        when(eventRepository.findFirstBySourcePatient_IdOrderByCreatedAtDesc(unconfirmedUrgTemp.getId()))
+                .thenReturn(Optional.empty());
+
+        candidateService.findCandidates(source.getId());
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(patientRepository).findReconciliationCandidates(
+                eq(source.getId()),
+                eq(PatientIdentityStatus.VERIFIED),
+                any(LocalDate.class),
+                any(String.class),
+                any(String.class),
+                any(String.class),
+                pageableCaptor.capture());
+        assertEquals(250, pageableCaptor.getValue().getPageSize());
     }
 
     private static PatientEntity verifiedUrgTemp(
