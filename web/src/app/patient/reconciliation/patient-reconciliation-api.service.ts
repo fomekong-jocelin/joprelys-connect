@@ -3,8 +3,10 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   PatientReconciliationCandidate,
+  PatientReconciliationCorrectionDto,
   PatientReconciliationDecisionDto,
   PatientReconciliationDecisionResult,
+  PatientReconciliationEvent,
   PatientReconciliationQueueItem,
 } from './patient-reconciliation.models';
 
@@ -21,6 +23,10 @@ export class PatientReconciliationApiService {
     return this.http.get<PatientReconciliationCandidate[]>(`${this.baseUrl}/${patientId}/candidates`);
   }
 
+  getHistory(patientId: string): Observable<PatientReconciliationEvent[]> {
+    return this.http.get<PatientReconciliationEvent[]>(`${this.baseUrl}/${patientId}/history`);
+  }
+
   decide(
     patientId: string,
     dto: PatientReconciliationDecisionDto,
@@ -29,7 +35,23 @@ export class PatientReconciliationApiService {
     return this.http.post<PatientReconciliationDecisionResult>(
       `${this.baseUrl}/${patientId}/decisions`,
       dto,
-      { headers: new HttpHeaders({ 'Idempotency-Key': idempotencyKey }) },
+      this.idempotencyOptions(idempotencyKey),
     );
+  }
+
+  correct(
+    patientId: string,
+    dto: PatientReconciliationCorrectionDto,
+    idempotencyKey: string,
+  ): Observable<PatientReconciliationDecisionResult> {
+    return this.http.post<PatientReconciliationDecisionResult>(
+      `${this.baseUrl}/${patientId}/corrections`,
+      dto,
+      this.idempotencyOptions(idempotencyKey),
+    );
+  }
+
+  private idempotencyOptions(idempotencyKey: string): { headers: HttpHeaders } {
+    return { headers: new HttpHeaders({ 'Idempotency-Key': idempotencyKey }) };
   }
 }

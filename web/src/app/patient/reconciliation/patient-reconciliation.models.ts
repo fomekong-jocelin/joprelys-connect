@@ -1,6 +1,7 @@
 export type PatientIdentityStatus = 'PROVISIONAL_URGENCY' | 'DECLARED' | 'VERIFIED' | 'MERGED';
 export type IdentityConfidenceLevel = 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH' | 'VERIFIED';
 export type PatientReconciliationDecision = 'CREATE_NEW_DPU' | 'LINK_EXISTING_DPU' | 'DEFER';
+export type PatientReconciliationEventDecision = PatientReconciliationDecision | 'CORRECT_LINK';
 export type IdentitySourceType =
   | 'PATIENT'
   | 'ACCOMPANYING_PERSON'
@@ -23,6 +24,9 @@ export interface PatientReconciliationQueueItem {
   foundLocation: string | null;
   createdAt: string;
   canonicalPatientId: string | null;
+  decisionEventId: string | null;
+  decision: PatientReconciliationEventDecision | null;
+  terminal: boolean;
 }
 
 export interface PatientReconciliationCandidate {
@@ -46,9 +50,17 @@ export interface PatientReconciliationDecisionDto {
   justification: string;
 }
 
+export interface PatientReconciliationCorrectionDto {
+  correctedEventId: string;
+  replacementCanonicalPatientId: string | null;
+  evidenceSourceType: IdentitySourceType;
+  evidenceReference: string | null;
+  justification: string;
+}
+
 export interface PatientReconciliationDecisionResult {
   eventId: string;
-  decision: PatientReconciliationDecision | 'CORRECT_LINK';
+  decision: PatientReconciliationEventDecision;
   sourcePatientId: string;
   sourceIdentityStatus: PatientIdentityStatus;
   canonicalPatientId: string;
@@ -56,4 +68,21 @@ export interface PatientReconciliationDecisionResult {
   contributingPatientIds: string[];
   decidedAt: string;
   replayed: boolean;
+}
+
+export interface PatientReconciliationEvent {
+  eventId: string;
+  decision: PatientReconciliationEventDecision;
+  sourcePatientId: string;
+  candidatePatientId: string | null;
+  previousIdentityStatus: PatientIdentityStatus;
+  resultingIdentityStatus: PatientIdentityStatus;
+  similarityScore: number | null;
+  matchReasons: string[];
+  evidenceSourceType: IdentitySourceType;
+  evidenceReference: string | null;
+  justification: string;
+  correctedEventId: string | null;
+  createdByUserId: string;
+  createdAt: string;
 }

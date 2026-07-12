@@ -13,6 +13,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ public class PatientReconciliationCandidateService {
 
     private static final double MINIMUM_PRESENTATION_SCORE = 30.0;
     private static final int MAX_CANDIDATES = 10;
+    private static final int MAX_PRESELECTED_CANDIDATES = 250;
 
     private final PatientRepository patientRepository;
     private final PatientSimilarityService similarityService;
@@ -41,8 +43,15 @@ public class PatientReconciliationCandidateService {
     public List<PatientReconciliationCandidate> findCandidates(UUID sourcePatientId) {
         PatientEntity source = requireReconciliationSource(sourcePatientId);
 
-        return patientRepository.findAllByIdentityStatus(PatientIdentityStatus.VERIFIED).stream()
-                .filter(candidate -> !candidate.getId().equals(source.getId()))
+        return patientRepository.findReconciliationCandidates(
+                        source.getId(),
+                        PatientIdentityStatus.VERIFIED,
+                        source.getBirthDate(),
+                        normalizeText(source.getPhone()),
+                        normalizeText(source.getCity()),
+                        normalizeText(source.getGender()),
+                        PageRequest.of(0, MAX_PRESELECTED_CANDIDATES))
+                .stream()
                 .filter(this::isDefinitiveDpu)
                 .map(candidate -> score(source, candidate))
                 .filter(candidate -> candidate.score().doubleValue() >= MINIMUM_PRESENTATION_SCORE)
@@ -76,9 +85,9 @@ public class PatientReconciliationCandidateService {
         if (candidate.getTemporaryPatientNumber() == null) {
             return true;
         }
-        return eventRepository.existsBySourcePatient_IdAndDecision(
-                candidate.getId(),
-                PatientReconciliationDecision.CREATE_NEW_DPU);
+        return eventRepository.findFirstBySourcePatient_IdOrderByCreatedAtDesc(candidate.getId())
+                .map(event -> event.getDecision() == PatientReconciliationDecision.CREATE_NEW_DPU)
+                .orElse(false);
     }
 
     private PatientEntity requireReconciliationSource(UUID patientId) {
@@ -156,6 +165,10 @@ public class PatientReconciliationCandidateService {
 
     private static String normalizePhone(String value) {
         return value == null ? "" : value.replaceAll("[^0-9+]", "");
+    }
+
+    private static String normalizeText(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     private static boolean hasText(String value) {

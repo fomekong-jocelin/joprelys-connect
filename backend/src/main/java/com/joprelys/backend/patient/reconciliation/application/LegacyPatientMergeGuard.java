@@ -2,38 +2,45 @@ package com.joprelys.backend.patient.reconciliation.application;
 
 import com.joprelys.backend.patient.domain.PatientIdentityStatus;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
-import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.patient.reconciliation.infrastructure.persistence.PatientCanonicalLinkRepository;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Component
 public class LegacyPatientMergeGuard {
 
-    private final PatientRepository patientRepository;
+    private final PatientPairLockService patientPairLockService;
     private final PatientCanonicalLinkRepository canonicalLinkRepository;
 
     public LegacyPatientMergeGuard(
-            PatientRepository patientRepository,
+            PatientPairLockService patientPairLockService,
             PatientCanonicalLinkRepository canonicalLinkRepository) {
-        this.patientRepository = patientRepository;
+        this.patientPairLockService = patientPairLockService;
         this.canonicalLinkRepository = canonicalLinkRepository;
     }
 
-    @Transactional(readOnly = true)
-    public void assertLegacyMergeAllowed(UUID primaryId, UUID secondaryId) {
-        assertEligible(requirePatient(primaryId));
-        assertEligible(requirePatient(secondaryId));
+    @Transactional(propagation = Propagation.MANDATORY)
+    public LegacyMergeParticipants lockAndValidate(UUID primaryId, UUID secondaryId) {
+        if (primaryId.equals(secondaryId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "PATIENT_LEGACY_MERGE_SELF_FORBIDDEN");
+        }
+
+        var lockedPatients = patientPairLockService.lock(primaryId, secondaryId);
+        PatientEntity primary = lockedPatients.left();
+        PatientEntity secondary = lockedPatients.right();
+
+        assertEligible(primary);
+        assertEligible(secondary);
+        assertSameTenant(primary, secondary);
         assertNotParticipatingInCanonicalLink(primaryId);
         assertNotParticipatingInCanonicalLink(secondaryId);
-    }
-
-    private PatientEntity requirePatient(UUID patientId) {
-        return patientRepository.findById(patientId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "PATIENT_NOT_FOUND"));
+        return new LegacyMergeParticipants(primary, secondary);
     }
 
     private void assertNotParticipatingInCanonicalLink(UUID patientId) {
@@ -54,9 +61,18 @@ public class LegacyPatientMergeGuard {
         }
     }
 
+    private static void assertSameTenant(PatientEntity primary, PatientEntity secondary) {
+        if (!primary.getOrganizationId().equals(secondary.getOrganizationId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "PATIENT_NOT_FOUND");
+        }
+    }
+
     private static ResponseStatusException reconciliationWorkflowRequired() {
         return new ResponseStatusException(
                 HttpStatus.CONFLICT,
                 "PATIENT_RECONCILIATION_WORKFLOW_REQUIRED");
+    }
+
+    public record LegacyMergeParticipants(PatientEntity primary, PatientEntity secondary) {
     }
 }

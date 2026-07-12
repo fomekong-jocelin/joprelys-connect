@@ -55,6 +55,9 @@ class FlywayPostgresqlMigrationTest {
 
     private static final List<String> RECONCILIATION_RESTRICTED_FOREIGN_KEYS = List.of(
             "fk_patient_reconciliation_corrected_event",
+            "fk_patient_reconciliation_event_source",
+            "fk_patient_reconciliation_event_candidate",
+            "fk_patient_reconciliation_event_actor",
             "fk_patient_canonical_link_source",
             "fk_patient_canonical_link_target",
             "fk_patient_canonical_link_event",
@@ -81,8 +84,8 @@ class FlywayPostgresqlMigrationTest {
         MigrationInfo current = flyway.info().current();
         assertNotNull(current, "Flyway doit exposer la migration courante");
         assertNotNull(current.getVersion(), "La migration courante doit être versionnée");
-        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 62,
-                "Toutes les migrations de rapprochement patient doivent être appliquées");
+        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 63,
+                "Toutes les migrations de durcissement du rapprochement patient doivent être appliquées");
 
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword());

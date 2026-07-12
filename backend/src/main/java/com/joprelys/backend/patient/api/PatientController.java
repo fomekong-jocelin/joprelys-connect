@@ -5,7 +5,7 @@ import com.joprelys.backend.patient.application.PatientService;
 import com.joprelys.backend.patient.application.PatientSummaryService;
 import com.joprelys.backend.patient.domain.PatientIdentityStatus;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
-import com.joprelys.backend.patient.reconciliation.application.LegacyPatientMergeGuard;
+import com.joprelys.backend.patient.reconciliation.application.LegacyPatientMergeCoordinator;
 import com.joprelys.backend.patient.reconciliation.application.PatientCanonicalResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -44,19 +44,19 @@ public class PatientController {
     private final UserAccountRepository userAccountRepository;
     private final PatientSummaryService patientSummaryService;
     private final PatientCanonicalResolver canonicalResolver;
-    private final LegacyPatientMergeGuard legacyPatientMergeGuard;
+    private final LegacyPatientMergeCoordinator legacyPatientMergeCoordinator;
 
     public PatientController(
             PatientService patientService,
             UserAccountRepository userAccountRepository,
             PatientSummaryService patientSummaryService,
             PatientCanonicalResolver canonicalResolver,
-            LegacyPatientMergeGuard legacyPatientMergeGuard) {
+            LegacyPatientMergeCoordinator legacyPatientMergeCoordinator) {
         this.patientService = patientService;
         this.userAccountRepository = userAccountRepository;
         this.patientSummaryService = patientSummaryService;
         this.canonicalResolver = canonicalResolver;
-        this.legacyPatientMergeGuard = legacyPatientMergeGuard;
+        this.legacyPatientMergeCoordinator = legacyPatientMergeCoordinator;
     }
 
     @PostMapping
@@ -113,11 +113,10 @@ public class PatientController {
     @PreAuthorize("hasAuthority('PATIENT_MERGE') or " + LEGACY_ADMIN_ROLES)
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void merge(@Valid @RequestBody MergePatientsRequest request) {
-        legacyPatientMergeGuard.assertLegacyMergeAllowed(request.primaryId(), request.secondaryId());
         String actorEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         var actor = userAccountRepository.findByEmail(actorEmail.trim().toLowerCase())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED"));
-        patientService.mergePatients(request.primaryId(), request.secondaryId(), actor.getId());
+        legacyPatientMergeCoordinator.merge(request.primaryId(), request.secondaryId(), actor.getId());
     }
 
     @PostMapping("/{id}/emergency-access")

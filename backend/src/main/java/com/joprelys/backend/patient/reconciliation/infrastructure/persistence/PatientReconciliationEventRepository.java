@@ -17,7 +17,16 @@ public interface PatientReconciliationEventRepository
 
     <S extends PatientReconciliationEventEntity> S saveAndFlush(S entity);
 
+    Optional<PatientReconciliationEventEntity> findById(UUID id);
+
     Optional<PatientReconciliationEventEntity> findByIdempotencyKey(String idempotencyKey);
+
+    Optional<PatientReconciliationEventEntity> findFirstBySourcePatient_IdOrderByCreatedAtDesc(
+            UUID sourcePatientId);
+
+    Optional<PatientReconciliationEventEntity> findFirstBySourcePatient_IdAndDecisionOrderByCreatedAtDesc(
+            UUID sourcePatientId,
+            PatientReconciliationDecision decision);
 
     List<PatientReconciliationEventEntity> findAllBySourcePatient_IdOrderByCreatedAtDesc(UUID sourcePatientId);
 
