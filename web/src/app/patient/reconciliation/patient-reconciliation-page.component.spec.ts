@@ -6,7 +6,9 @@ import { PatientReconciliationApiService } from './patient-reconciliation-api.se
 import { PatientReconciliationPageComponent } from './patient-reconciliation-page.component';
 import {
   PatientReconciliationCandidate,
+  PatientReconciliationCorrectionDto,
   PatientReconciliationDecisionDto,
+  PatientReconciliationEvent,
   PatientReconciliationQueueItem,
 } from './patient-reconciliation.models';
 
@@ -16,7 +18,9 @@ describe('PatientReconciliationPageComponent', () => {
   let api: {
     getQueue: ReturnType<typeof vi.fn>;
     getCandidates: ReturnType<typeof vi.fn>;
+    getHistory: ReturnType<typeof vi.fn>;
     decide: ReturnType<typeof vi.fn>;
+    correct: ReturnType<typeof vi.fn>;
   };
 
   const queueItem: PatientReconciliationQueueItem = {
@@ -43,6 +47,15 @@ describe('PatientReconciliationPageComponent', () => {
     displayName: 'Patient B',
   };
 
+  const linkedQueueItem: PatientReconciliationQueueItem = {
+    ...queueItem,
+    identityStatus: 'MERGED',
+    canonicalPatientId: 'canonical-1',
+    decisionEventId: 'event-1',
+    decision: 'LINK_EXISTING_DPU',
+    terminal: true,
+  };
+
   const candidate: PatientReconciliationCandidate = {
     patientId: 'canonical-1',
     globalPatientNumber: 'DPU-001',
@@ -64,12 +77,37 @@ describe('PatientReconciliationPageComponent', () => {
     displayName: 'Patient B',
   };
 
+  const historyEvent: PatientReconciliationEvent = {
+    eventId: 'event-1',
+    decision: 'LINK_EXISTING_DPU',
+    sourcePatientId: queueItem.patientId,
+    candidatePatientId: candidate.patientId,
+    previousIdentityStatus: 'VERIFIED',
+    resultingIdentityStatus: 'MERGED',
+    similarityScore: 100,
+    matchReasons: ['NAME_STRONG_MATCH'],
+    evidenceSourceType: 'DOCUMENT',
+    evidenceReference: 'CNI-001',
+    justification: 'Identity verified with the original document.',
+    correctedEventId: null,
+    createdByUserId: 'user-1',
+    createdAt: '2026-07-11T11:00:00Z',
+  };
+
   const decisionDto: PatientReconciliationDecisionDto = {
     decision: 'LINK_EXISTING_DPU',
     candidatePatientId: candidate.patientId,
     evidenceSourceType: 'DOCUMENT',
     evidenceReference: 'CNI-001',
     justification: 'Identity verified with the original document.',
+  };
+
+  const correctionDto: PatientReconciliationCorrectionDto = {
+    correctedEventId: 'event-1',
+    replacementCanonicalPatientId: null,
+    evidenceSourceType: 'DOCUMENT',
+    evidenceReference: 'REVUE-001',
+    justification: 'The source document belongs to a namesake.',
   };
 
   const decisionResult = {
@@ -84,11 +122,22 @@ describe('PatientReconciliationPageComponent', () => {
     replayed: false,
   };
 
+  const correctionResult = {
+    ...decisionResult,
+    eventId: 'event-2',
+    decision: 'CORRECT_LINK' as const,
+    sourceIdentityStatus: 'VERIFIED' as const,
+    canonicalPatientId: queueItem.patientId,
+    contributingPatientIds: [queueItem.patientId],
+  };
+
   beforeEach(async () => {
     api = {
-      getQueue: vi.fn().mockReturnValue(of([queueItem, secondQueueItem])),
-      getCandidates: vi.fn().mockReturnValue(of([candidate])),
+      getQueue: vi.fn().mockReturnValue(of([queueItem, secondQueueItem, linkedQueueItem])),
+      getCandidates: vi.fn().mockReturnValue(of([candidate, secondCandidate])),
+      getHistory: vi.fn().mockReturnValue(of([historyEvent])),
       decide: vi.fn().mockReturnValue(of(decisionResult)),
+      correct: vi.fn().mockReturnValue(of(correctionResult)),
     };
 
     await TestBed.configureTestingModule({
@@ -116,15 +165,17 @@ describe('PatientReconciliationPageComponent', () => {
 
   it('loads the URG-TEMP reconciliation queue', () => {
     expect(api.getQueue).toHaveBeenCalledOnce();
-    expect(component.queue()).toEqual([queueItem, secondQueueItem]);
+    expect(component.queue()).toEqual([queueItem, secondQueueItem, linkedQueueItem]);
   });
 
-  it('loads candidates only after selecting a provisional record', () => {
+  it('loads candidates and history after selecting a provisional record', () => {
     component.selectPatient(queueItem);
 
     expect(api.getCandidates).toHaveBeenCalledWith(queueItem.patientId);
+    expect(api.getHistory).toHaveBeenCalledWith(queueItem.patientId);
     expect(component.selectedPatient()).toEqual(queueItem);
-    expect(component.candidates()).toEqual([candidate]);
+    expect(component.candidates()).toEqual([candidate, secondCandidate]);
+    expect(component.history()).toEqual([historyEvent]);
   });
 
   it('ignores an obsolete candidate response after another patient is selected', () => {
@@ -183,5 +234,30 @@ describe('PatientReconciliationPageComponent', () => {
     const firstKey = api.decide.mock.calls[0][2];
     const secondKey = api.decide.mock.calls[1][2];
     expect(firstKey).not.toBe(secondKey);
+  });
+
+  it('loads candidates for a terminal link and submits a secured correction', () => {
+    component.selectPatient(linkedQueueItem);
+    component.submitCorrection(correctionDto);
+
+    expect(api.getHistory).toHaveBeenCalledWith(linkedQueueItem.patientId);
+    expect(api.getCandidates).toHaveBeenCalledWith(linkedQueueItem.patientId);
+    expect(api.correct).toHaveBeenCalledWith(
+      linkedQueueItem.patientId,
+      correctionDto,
+      expect.any(String),
+    );
+  });
+
+  it('reuses the correction idempotency key after a network error', () => {
+    api.correct
+      .mockReturnValueOnce(throwError(() => new Error('network')))
+      .mockReturnValueOnce(of(correctionResult));
+
+    component.selectPatient(linkedQueueItem);
+    component.submitCorrection(correctionDto);
+    component.submitCorrection(correctionDto);
+
+    expect(api.correct.mock.calls[0][2]).toBe(api.correct.mock.calls[1][2]);
   });
 });
