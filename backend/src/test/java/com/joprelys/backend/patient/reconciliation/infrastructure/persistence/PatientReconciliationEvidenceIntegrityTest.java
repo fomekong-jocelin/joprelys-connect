@@ -18,11 +18,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Transactional
 class PatientReconciliationEvidenceIntegrityTest {
 
     @Autowired OrganizationRepository organizationRepository;
@@ -31,8 +29,29 @@ class PatientReconciliationEvidenceIntegrityTest {
     @Autowired JdbcTemplate jdbcTemplate;
 
     @AfterEach
-    void clearTenantContext() {
+    void cleanUpFixtures() {
         TenantContext.clear();
+        jdbcTemplate.update("""
+                DELETE FROM patient_reconciliation_events
+                WHERE idempotency_key IN ('cross-tenant-source', 'cross-tenant-actor')
+                """);
+        jdbcTemplate.update("""
+                DELETE FROM patients
+                WHERE global_patient_number IN ('DPU-A-001', 'DPU-B-001')
+                """);
+        jdbcTemplate.update("""
+                DELETE FROM users
+                WHERE email IN ('actor.a@joprelys.local', 'actor.b@joprelys.local')
+                """);
+        jdbcTemplate.update("""
+                DELETE FROM organizations
+                WHERE email IN (
+                    'a@joprelys.local',
+                    'b@joprelys.local',
+                    'c@joprelys.local',
+                    'd@joprelys.local'
+                )
+                """);
     }
 
     @Test
