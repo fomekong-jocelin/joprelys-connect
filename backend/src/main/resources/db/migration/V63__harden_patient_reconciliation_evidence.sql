@@ -19,3 +19,15 @@ ALTER TABLE patient_reconciliation_events
     ADD CONSTRAINT fk_patient_reconciliation_event_actor
         FOREIGN KEY (created_by_user_id, organization_id)
         REFERENCES users(id, organization_id);
+
+-- Candidate preselection stays tenant-scoped through Hibernate and uses bounded exact
+-- filters before Java scoring. These indexes keep the initial selection predictable on
+-- large facilities without introducing database-specific full-text features.
+CREATE INDEX idx_patients_reconciliation_birth_date
+    ON patients (organization_id, identity_status, status, birth_date);
+
+CREATE INDEX idx_patients_reconciliation_phone
+    ON patients (organization_id, identity_status, status, phone);
+
+CREATE INDEX idx_patients_reconciliation_city_gender
+    ON patients (organization_id, identity_status, status, city, gender);
