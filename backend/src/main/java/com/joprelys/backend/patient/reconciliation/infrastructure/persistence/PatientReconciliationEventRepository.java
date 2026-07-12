@@ -4,12 +4,18 @@ import com.joprelys.backend.patient.reconciliation.domain.PatientReconciliationD
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.repository.Repository;
 
-@Repository
+/**
+ * Append-only access to reconciliation evidence.
+ *
+ * <p>Delete and update operations are deliberately not exposed. A wrong decision is
+ * corrected by recording a new event and updating only the active canonical link.</p>
+ */
 public interface PatientReconciliationEventRepository
-        extends JpaRepository<PatientReconciliationEventEntity, UUID> {
+        extends Repository<PatientReconciliationEventEntity, UUID> {
+
+    <S extends PatientReconciliationEventEntity> S saveAndFlush(S entity);
 
     Optional<PatientReconciliationEventEntity> findByIdempotencyKey(String idempotencyKey);
 
