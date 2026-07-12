@@ -23,9 +23,6 @@ CREATE TABLE patient_reconciliation_events (
     CONSTRAINT fk_patient_reconciliation_corrected_event
         FOREIGN KEY (corrected_event_id, organization_id)
         REFERENCES patient_reconciliation_events(id, organization_id),
-    CONSTRAINT fk_patient_reconciliation_actor
-        FOREIGN KEY (created_by_user_id)
-        REFERENCES users(id),
     CONSTRAINT chk_patient_reconciliation_distinct_patients
         CHECK (candidate_patient_id IS NULL OR candidate_patient_id <> source_patient_id),
     CONSTRAINT chk_patient_reconciliation_score
@@ -34,10 +31,10 @@ CREATE TABLE patient_reconciliation_events (
         UNIQUE (organization_id, idempotency_key)
 );
 
--- Les événements constituent une preuve append-only. Les identifiants patient sont donc
--- conservés comme valeurs probatoires, sans clé étrangère vers le cycle de vie opérationnel
--- du patient. Leur existence et leur appartenance au tenant sont contrôlées transactionnellement
--- par le service métier avant l'écriture de l'événement.
+-- Les événements constituent une preuve append-only. Les identifiants patient et acteur sont
+-- conservés comme valeurs probatoires, sans clé étrangère vers leurs cycles de vie opérationnels.
+-- Leur existence et leur appartenance au tenant sont contrôlées transactionnellement par le
+-- service métier avant l'écriture de l'événement.
 CREATE INDEX idx_patient_reconciliation_source
     ON patient_reconciliation_events (organization_id, source_patient_id, created_at);
 
