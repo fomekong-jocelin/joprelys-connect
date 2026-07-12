@@ -109,7 +109,7 @@ Une table append-only `patient_reconciliation_events` enregistre :
 - source et référence de la preuve ;
 - justification obligatoire ;
 - état avant/après ;
-- auteur, date et correlation ID ;
+- auteur, date et clé d’idempotence ;
 - référence de l’événement corrigé lorsque nécessaire.
 
 Aucun événement n’est modifié ou supprimé.
@@ -164,15 +164,17 @@ La timeline canonique agrège les données du DPU canonique et de toutes ses sou
 
 ## 6. Candidats et décision humaine
 
-Le moteur de similarité ne décide jamais. Il fournit un score explicable avec des raisons séparées :
+Le moteur de similarité ne décide jamais. Dans STORY-2304, il fournit un score explicable calculé à partir des données disponibles suivantes :
 
 - nom normalisé ;
 - date de naissance ;
 - sexe ;
 - téléphone ;
-- adresse/quartier ;
-- pièce ou preuve d’identité ;
-- déclarations de tiers vérifiées.
+- ville.
+
+Le quartier, l’adresse, les références de preuve et les déclarations vérifiées de tiers pourront enrichir le score dans une évolution ultérieure. Leur ajout ne modifiera pas la règle fondamentale : le score reste indicatif et aucune sélection n’est automatique.
+
+Un dossier URG-TEMP régularisé mais non encore confirmé comme nouveau DPU ne peut pas servir de cible. Il devient éligible uniquement après une décision explicite `CREATE_NEW_DPU`.
 
 L’API retourne les candidats sans sélection automatique. Le rapprochement exige :
 
@@ -240,6 +242,7 @@ Aucun domaine ne doit implémenter sa propre logique de résolution.
 
 - création d’un nouveau DPU depuis URG-TEMP ;
 - rattachement à un DPU existant ;
+- exclusion d’un URG-TEMP non confirmé de la liste des cibles ;
 - plusieurs candidats sans sélection automatique ;
 - décision reportée ;
 - double soumission idempotente ;
