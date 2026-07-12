@@ -1,13 +1,18 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { ApiErrorI18nService } from '../../core/i18n/api-error-i18n.service';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { PatientReconciliationApiService } from './patient-reconciliation-api.service';
 import { PatientReconciliationPageComponent } from './patient-reconciliation-page.component';
 import {
   PatientReconciliationCandidate,
   PatientReconciliationQueueItem,
 } from './patient-reconciliation.models';
+
+@Component({ selector: 'app-shell', standalone: true, template: '<ng-content />' })
+class AppShellStubComponent {}
 
 describe('PatientReconciliationPageComponent', () => {
   let fixture: ComponentFixture<PatientReconciliationPageComponent>;
@@ -78,7 +83,12 @@ describe('PatientReconciliationPageComponent', () => {
           useValue: { message: vi.fn().mockReturnValue('Erreur') },
         },
       ],
-    }).compileComponents();
+    })
+      .overrideComponent(PatientReconciliationPageComponent, {
+        remove: { imports: [AppShellComponent] },
+        add: { imports: [AppShellStubComponent] },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(PatientReconciliationPageComponent);
     component = fixture.componentInstance;
@@ -88,6 +98,10 @@ describe('PatientReconciliationPageComponent', () => {
   it('loads the URG-TEMP reconciliation queue', () => {
     expect(api.getQueue).toHaveBeenCalledOnce();
     expect(component.queue()).toEqual([queueItem]);
+  });
+
+  it('renders inside the shared application shell', () => {
+    expect(fixture.nativeElement.querySelector('app-shell')).not.toBeNull();
   });
 
   it('loads candidates only after selecting a provisional record', () => {

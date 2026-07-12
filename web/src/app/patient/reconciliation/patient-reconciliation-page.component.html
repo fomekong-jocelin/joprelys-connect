@@ -1,5 +1,6 @@
-<main class="mx-auto w-full max-w-7xl space-y-4 px-3 py-4 sm:px-5 sm:py-6">
-  <header class="ui-card p-4 sm:p-5">
+<app-shell>
+  <main class="mx-auto w-full max-w-7xl space-y-4 px-3 py-4 sm:px-5 sm:py-6">
+    <header class="ui-card p-4 sm:p-5">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <p class="text-xs font-bold uppercase tracking-wide text-brand-primary">
@@ -16,48 +17,49 @@
         {{ loadingQueue() ? t('common.loading') : t('common.refresh') }}
       </button>
     </div>
-  </header>
+    </header>
 
-  @if (error(); as message) {
-    <app-ui-alert tone="error" (close)="error.set(null)">{{ message }}</app-ui-alert>
-  }
-  @if (success(); as message) {
-    <app-ui-alert tone="success" (close)="success.set(null)">{{ message }}</app-ui-alert>
-  }
+    @if (error(); as message) {
+      <app-ui-alert tone="error" (close)="error.set(null)">{{ message }}</app-ui-alert>
+    }
+    @if (success(); as message) {
+      <app-ui-alert tone="success" (close)="success.set(null)">{{ message }}</app-ui-alert>
+    }
 
-  @if (loadingQueue() && queue().length === 0) {
-    <div class="ui-card flex min-h-48 items-center justify-center p-6 text-sm font-semibold text-[var(--text-muted)]">
-      {{ t('patientReconciliation.queue.loading') }}
-    </div>
-  } @else {
-    <div class="grid gap-4 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.6fr)] lg:items-start">
-      <app-patient-reconciliation-queue
-        [items]="queue()"
-        [selectedPatientId]="selectedPatient()?.patientId ?? null"
-        (selected)="selectPatient($event)"
-      />
-
-      @if (selectedPatient(); as patient) {
-        <app-patient-reconciliation-decision
-          [patient]="patient"
-          [candidates]="candidates()"
-          [loadingCandidates]="loadingCandidates()"
-          [disabled]="saving()"
-          (submitted)="submitDecision($event)"
+    @if (loadingQueue() && queue().length === 0) {
+      <div class="ui-card flex min-h-48 items-center justify-center p-6 text-sm font-semibold text-[var(--text-muted)]">
+        {{ t('patientReconciliation.queue.loading') }}
+      </div>
+    } @else {
+      <div class="grid gap-4 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.6fr)] lg:items-start">
+        <app-patient-reconciliation-queue
+          [items]="queue()"
+          [selectedPatientId]="selectedPatient()?.patientId ?? null"
+          (selected)="selectPatient($event)"
         />
-      } @else {
-        <section class="ui-card flex min-h-72 flex-col items-center justify-center p-6 text-center">
-          <div class="flex h-12 w-12 items-center justify-center rounded-sm border border-[var(--app-border)] bg-[var(--app-surface-muted)] text-xl font-black text-brand-primary">
-            DPU
-          </div>
-          <h2 class="mt-4 font-display text-lg font-extrabold text-[var(--text-primary)]">
-            {{ t('patientReconciliation.selection.title') }}
-          </h2>
-          <p class="mt-2 max-w-md text-sm leading-6 text-[var(--text-muted)]">
-            {{ t('patientReconciliation.selection.subtitle') }}
-          </p>
-        </section>
-      }
-    </div>
-  }
-</main>
+
+        @if (selectedPatient(); as patient) {
+          <app-patient-reconciliation-decision
+            [patient]="patient"
+            [candidates]="candidates()"
+            [loadingCandidates]="loadingCandidates()"
+            [disabled]="saving()"
+            (submitted)="submitDecision($event)"
+          />
+        } @else {
+          <section class="ui-card flex min-h-72 flex-col items-center justify-center p-6 text-center">
+            <div class="flex h-12 w-12 items-center justify-center rounded-sm border border-[var(--app-border)] bg-[var(--app-surface-muted)] text-xl font-black text-brand-primary">
+              DPU
+            </div>
+            <h2 class="mt-4 font-display text-lg font-extrabold text-[var(--text-primary)]">
+              {{ t('patientReconciliation.selection.title') }}
+            </h2>
+            <p class="mt-2 max-w-md text-sm leading-6 text-[var(--text-muted)]">
+              {{ t('patientReconciliation.selection.subtitle') }}
+            </p>
+          </section>
+        }
+      </div>
+    }
+  </main>
+</app-shell>

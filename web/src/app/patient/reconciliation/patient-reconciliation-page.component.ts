@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal, viewChild } from '@angular/core';
 import { finalize } from 'rxjs';
 import { ApiErrorI18nService } from '../../core/i18n/api-error-i18n.service';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { AlertComponent } from '../../shared/ui/alert.component';
 import { PatientReconciliationApiService } from './patient-reconciliation-api.service';
 import { PatientReconciliationDecisionComponent } from './patient-reconciliation-decision.component';
@@ -16,6 +17,7 @@ import { PatientReconciliationQueueComponent } from './patient-reconciliation-qu
   selector: 'app-patient-reconciliation-page',
   standalone: true,
   imports: [
+    AppShellComponent,
     AlertComponent,
     PatientReconciliationQueueComponent,
     PatientReconciliationDecisionComponent,
