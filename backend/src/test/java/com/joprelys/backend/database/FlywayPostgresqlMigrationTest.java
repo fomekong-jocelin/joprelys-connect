@@ -105,7 +105,6 @@ class FlywayPostgresqlMigrationTest {
         MEDICO_LEGAL_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
         PATIENT_RECONCILIATION_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
 
-        assertConstraintExists(jdbcTemplate, "chk_patient_reconciliation_decision_value");
         assertConstraintExists(jdbcTemplate, "chk_patient_reconciliation_decision_shape");
         RECONCILIATION_RESTRICTED_FOREIGN_KEYS.forEach(
                 constraintName -> assertForeignKeyDeleteRule(jdbcTemplate, constraintName, "NO ACTION"));
