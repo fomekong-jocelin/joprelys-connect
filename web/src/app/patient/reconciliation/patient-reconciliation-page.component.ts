@@ -2,6 +2,7 @@ import { Component, inject, OnDestroy, OnInit, signal, viewChild } from '@angula
 import { finalize, Subscription } from 'rxjs';
 import { ApiErrorI18nService } from '../../core/i18n/api-error-i18n.service';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { AlertComponent } from '../../shared/ui/alert.component';
 import { PatientReconciliationApiService } from './patient-reconciliation-api.service';
 import { PatientReconciliationCorrectionComponent } from './patient-reconciliation-correction.component';
@@ -28,6 +29,7 @@ interface PendingSubmission {
   selector: 'app-patient-reconciliation-page',
   standalone: true,
   imports: [
+    AppShellComponent,
     AlertComponent,
     PatientReconciliationQueueComponent,
     PatientReconciliationDecisionComponent,
