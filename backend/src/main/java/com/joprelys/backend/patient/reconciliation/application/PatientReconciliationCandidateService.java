@@ -4,6 +4,8 @@ import com.joprelys.backend.patient.application.PatientSimilarityService;
 import com.joprelys.backend.patient.domain.PatientIdentityStatus;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
+import com.joprelys.backend.patient.reconciliation.domain.PatientReconciliationDecision;
+import com.joprelys.backend.patient.reconciliation.infrastructure.persistence.PatientReconciliationEventRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -24,12 +26,15 @@ public class PatientReconciliationCandidateService {
 
     private final PatientRepository patientRepository;
     private final PatientSimilarityService similarityService;
+    private final PatientReconciliationEventRepository eventRepository;
 
     public PatientReconciliationCandidateService(
             PatientRepository patientRepository,
-            PatientSimilarityService similarityService) {
+            PatientSimilarityService similarityService,
+            PatientReconciliationEventRepository eventRepository) {
         this.patientRepository = patientRepository;
         this.similarityService = similarityService;
+        this.eventRepository = eventRepository;
     }
 
     @Transactional(readOnly = true)
@@ -38,7 +43,7 @@ public class PatientReconciliationCandidateService {
 
         return patientRepository.findAllByIdentityStatus(PatientIdentityStatus.VERIFIED).stream()
                 .filter(candidate -> !candidate.getId().equals(source.getId()))
-                .filter(candidate -> "ACTIVE".equals(candidate.getStatus()))
+                .filter(this::isDefinitiveDpu)
                 .map(candidate -> score(source, candidate))
                 .filter(candidate -> candidate.score().doubleValue() >= MINIMUM_PRESENTATION_SCORE)
                 .sorted(Comparator.comparing(PatientReconciliationCandidate::score).reversed())
@@ -50,22 +55,36 @@ public class PatientReconciliationCandidateService {
     public PatientReconciliationCandidate scoreCandidate(UUID sourcePatientId, UUID candidatePatientId) {
         PatientEntity source = requireReconciliationSource(sourcePatientId);
         PatientEntity candidate = requirePatient(candidatePatientId);
+        assertEligibleTarget(source, candidate);
+        return score(source, candidate);
+    }
+
+    public void assertEligibleTarget(PatientEntity source, PatientEntity candidate) {
         if (source.getId().equals(candidate.getId())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "PATIENT_RECONCILIATION_SELF_LINK_FORBIDDEN");
+            throw conflict("PATIENT_RECONCILIATION_SELF_LINK_FORBIDDEN");
         }
+        if (!isDefinitiveDpu(candidate)) {
+            throw conflict("PATIENT_RECONCILIATION_TARGET_NOT_ELIGIBLE");
+        }
+    }
+
+    private boolean isDefinitiveDpu(PatientEntity candidate) {
         if (candidate.getIdentityStatus() != PatientIdentityStatus.VERIFIED
                 || !"ACTIVE".equals(candidate.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "PATIENT_RECONCILIATION_TARGET_NOT_ELIGIBLE");
+            return false;
         }
-        return score(source, candidate);
+        if (candidate.getTemporaryPatientNumber() == null) {
+            return true;
+        }
+        return eventRepository.existsBySourcePatient_IdAndDecision(
+                candidate.getId(),
+                PatientReconciliationDecision.CREATE_NEW_DPU);
     }
 
     private PatientEntity requireReconciliationSource(UUID patientId) {
         PatientEntity patient = requirePatient(patientId);
         if (patient.getTemporaryPatientNumber() == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "PATIENT_RECONCILIATION_SOURCE_NOT_URG_TEMP");
+            throw conflict("PATIENT_RECONCILIATION_SOURCE_NOT_URG_TEMP");
         }
         return patient;
     }
@@ -141,6 +160,10 @@ public class PatientReconciliationCandidateService {
 
     private static boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private static ResponseStatusException conflict(String code) {
+        return new ResponseStatusException(HttpStatus.CONFLICT, code);
     }
 
     public record PatientReconciliationCandidate(
