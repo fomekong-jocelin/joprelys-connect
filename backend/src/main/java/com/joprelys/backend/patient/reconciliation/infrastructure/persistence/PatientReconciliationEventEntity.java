@@ -101,8 +101,11 @@ public class PatientReconciliationEventEntity {
         this.id = UUID.randomUUID();
         this.organizationId = requireValue(organizationId, "TENANT_CONTEXT_REQUIRED");
         this.sourcePatient = requireValue(sourcePatient, "PATIENT_RECONCILIATION_SOURCE_REQUIRED");
-        this.candidatePatient = candidatePatient;
         this.decision = requireValue(decision, "PATIENT_RECONCILIATION_DECISION_REQUIRED");
+        validateDecisionShape(this.decision, candidatePatient, correctedEventId);
+        validateDistinctPatients(sourcePatient, candidatePatient);
+        validateSimilarityScore(similarityScore);
+        this.candidatePatient = candidatePatient;
         this.previousIdentityStatus = requireValue(
                 previousIdentityStatus,
                 "PATIENT_RECONCILIATION_PREVIOUS_STATUS_REQUIRED");
@@ -124,6 +127,35 @@ public class PatientReconciliationEventEntity {
     @PrePersist
     void prePersist() {
         createdAt = Instant.now();
+    }
+
+    private static void validateDecisionShape(
+            PatientReconciliationDecision decision,
+            PatientEntity candidatePatient,
+            UUID correctedEventId) {
+        boolean valid = switch (decision) {
+            case LINK_EXISTING_DPU -> candidatePatient != null && correctedEventId == null;
+            case CREATE_NEW_DPU, DEFER -> candidatePatient == null && correctedEventId == null;
+            case CORRECT_LINK -> correctedEventId != null;
+        };
+        if (!valid) {
+            throw new IllegalArgumentException("PATIENT_RECONCILIATION_DECISION_SHAPE_INVALID");
+        }
+    }
+
+    private static void validateDistinctPatients(
+            PatientEntity sourcePatient,
+            PatientEntity candidatePatient) {
+        if (candidatePatient != null && sourcePatient.getId().equals(candidatePatient.getId())) {
+            throw new IllegalArgumentException("PATIENT_RECONCILIATION_SELF_LINK_FORBIDDEN");
+        }
+    }
+
+    private static void validateSimilarityScore(BigDecimal similarityScore) {
+        if (similarityScore != null
+                && (similarityScore.signum() < 0 || similarityScore.compareTo(BigDecimal.valueOf(100)) > 0)) {
+            throw new IllegalArgumentException("PATIENT_RECONCILIATION_SCORE_INVALID");
+        }
     }
 
     private static String requireText(String value, String errorCode) {
