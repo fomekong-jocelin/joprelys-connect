@@ -32,14 +32,12 @@ CREATE TABLE patient_reconciliation_events (
     CONSTRAINT fk_patient_reconciliation_actor
         FOREIGN KEY (created_by_user_id)
         REFERENCES users(id),
-    CONSTRAINT chk_patient_reconciliation_decision_value
-        CHECK (decision IN ('CREATE_NEW_DPU', 'LINK_EXISTING_DPU', 'DEFER', 'CORRECT_LINK')),
     CONSTRAINT chk_patient_reconciliation_decision_shape
         CHECK (
             (decision = 'LINK_EXISTING_DPU'
                 AND candidate_patient_id IS NOT NULL
                 AND corrected_event_id IS NULL)
-            OR (decision IN ('CREATE_NEW_DPU', 'DEFER')
+            OR ((decision = 'CREATE_NEW_DPU' OR decision = 'DEFER')
                 AND candidate_patient_id IS NULL
                 AND corrected_event_id IS NULL)
             OR (decision = 'CORRECT_LINK'
