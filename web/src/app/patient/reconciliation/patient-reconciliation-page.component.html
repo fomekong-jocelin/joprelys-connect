@@ -38,13 +38,58 @@
       />
 
       @if (selectedPatient(); as patient) {
-        <app-patient-reconciliation-decision
-          [patient]="patient"
-          [candidates]="candidates()"
-          [loadingCandidates]="loadingCandidates()"
-          [disabled]="saving()"
-          (submitted)="submitDecision($event)"
-        />
+        <div class="space-y-4">
+          @if (!patient.terminal) {
+            <app-patient-reconciliation-decision
+              [patient]="patient"
+              [candidates]="candidates()"
+              [loadingCandidates]="loadingCandidates()"
+              [disabled]="saving()"
+              (submitted)="submitDecision($event)"
+            />
+          } @else {
+            <section class="ui-card p-4 sm:p-5">
+              <p class="text-xs font-bold uppercase tracking-wide text-brand-primary">
+                {{ t('patientReconciliation.terminal.eyebrow') }}
+              </p>
+              <h2 class="mt-1 font-display text-lg font-extrabold text-[var(--text-primary)]">
+                {{ t('patientReconciliation.terminal.title') }}
+              </h2>
+              <p class="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+                {{ t('patientReconciliation.terminal.subtitle') }}
+              </p>
+              <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                <div class="rounded-sm border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3">
+                  <dt class="ui-label">{{ t('patientReconciliation.terminal.decision') }}</dt>
+                  <dd class="mt-1 font-bold text-[var(--text-primary)]">
+                    {{ t('patientReconciliation.decision.type.' + (patient.decision || 'defer').toLowerCase()) }}
+                  </dd>
+                </div>
+                <div class="rounded-sm border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3">
+                  <dt class="ui-label">{{ t('patientReconciliation.terminal.canonicalDpu') }}</dt>
+                  <dd class="mt-1 break-all font-bold text-[var(--text-primary)]">
+                    {{ patient.canonicalPatientId || patient.patientId }}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          }
+
+          <app-patient-reconciliation-history
+            [events]="history()"
+            [loading]="loadingHistory()"
+          />
+
+          @if (canCorrect(patient)) {
+            <app-patient-reconciliation-correction
+              [patient]="patient"
+              [candidates]="candidates()"
+              [loadingCandidates]="loadingCandidates()"
+              [disabled]="saving()"
+              (submitted)="submitCorrection($event)"
+            />
+          }
+        </div>
       } @else {
         <section class="ui-card flex min-h-72 flex-col items-center justify-center p-6 text-center">
           <div class="flex h-12 w-12 items-center justify-center rounded-sm border border-[var(--app-border)] bg-[var(--app-surface-muted)] text-xl font-black text-brand-primary">
