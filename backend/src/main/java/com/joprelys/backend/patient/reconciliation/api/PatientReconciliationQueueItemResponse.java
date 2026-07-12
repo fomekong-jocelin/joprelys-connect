@@ -18,7 +18,7 @@ public record PatientReconciliationQueueItemResponse(
         String foundLocation,
         Instant createdAt,
         UUID canonicalPatientId,
-        UUID latestEventId,
-        PatientReconciliationDecision latestDecision,
+        UUID decisionEventId,
+        PatientReconciliationDecision decision,
         boolean terminal) {
 }
