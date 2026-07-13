@@ -20,6 +20,9 @@ import {
   EmergencyTriageAssessment,
 } from './emergency-triage.models';
 
+type TriageLevel = CreateEmergencyTriageAssessmentRequest['triageLevel'];
+type HemodynamicStatus = CreateEmergencyTriageAssessmentRequest['hemodynamicStatus'];
+
 @Component({
   selector: 'app-emergency-triage-panel',
   standalone: true,
@@ -82,13 +85,13 @@ export class EmergencyTriagePanelComponent {
   ];
 
   readonly form = this.fb.group({
-    triageLevel: this.fb.nonNullable.control<'RED' | 'ORANGE' | 'YELLOW' | 'GREEN'>('RED'),
-    hemodynamicStatus: this.fb.nonNullable.control<'SHOCK' | 'UNSTABLE' | 'STABLE'>('SHOCK'),
-    airwayStatus: this.fb.nonNullable.control<EmergencyAirwayStatus>('PATENT'),
-    breathingStatus: this.fb.nonNullable.control<EmergencyBreathingStatus>('ADEQUATE'),
-    circulationStatus: this.fb.nonNullable.control<EmergencyCirculationStatus>('STABLE'),
-    disabilityStatus: this.fb.nonNullable.control<EmergencyDisabilityStatus>('ALERT'),
-    exposureStatus: this.fb.nonNullable.control<EmergencyExposureStatus>('NO_CRITICAL_FINDING'),
+    triageLevel: this.fb.nonNullable.control<TriageLevel | ''>('', Validators.required),
+    hemodynamicStatus: this.fb.nonNullable.control<HemodynamicStatus | ''>('', Validators.required),
+    airwayStatus: this.fb.nonNullable.control<EmergencyAirwayStatus | ''>('', Validators.required),
+    breathingStatus: this.fb.nonNullable.control<EmergencyBreathingStatus | ''>('', Validators.required),
+    circulationStatus: this.fb.nonNullable.control<EmergencyCirculationStatus | ''>('', Validators.required),
+    disabilityStatus: this.fb.nonNullable.control<EmergencyDisabilityStatus | ''>('', Validators.required),
+    exposureStatus: this.fb.nonNullable.control<EmergencyExposureStatus | ''>('', Validators.required),
     bpSystolic: this.fb.control<number | null>(null, [Validators.min(30), Validators.max(300)]),
     bpDiastolic: this.fb.control<number | null>(null, [Validators.min(20), Validators.max(200)]),
     heartRate: this.fb.control<number | null>(null, [Validators.min(20), Validators.max(300)]),
@@ -143,7 +146,25 @@ export class EmergencyTriagePanelComponent {
     ).subscribe({
       next: assessment => {
         this.assessments.update(items => [...items, assessment]);
-        this.form.controls.clinicalNotes.reset('');
+        this.form.reset({
+          triageLevel: '',
+          hemodynamicStatus: '',
+          airwayStatus: '',
+          breathingStatus: '',
+          circulationStatus: '',
+          disabilityStatus: '',
+          exposureStatus: '',
+          bpSystolic: null,
+          bpDiastolic: null,
+          heartRate: null,
+          respiratoryRate: null,
+          oxygenSaturation: null,
+          temperature: null,
+          gcsScore: null,
+          painScore: null,
+          recommendedOrientation: null,
+          clinicalNotes: '',
+        });
         this.success.set(this.text('saved'));
       },
       error: err => this.error.set(this.apiErrors.message(
@@ -193,18 +214,18 @@ export class EmergencyTriagePanelComponent {
   private payload(): CreateEmergencyTriageAssessmentRequest {
     const value = this.form.getRawValue();
     return {
-      triageLevel: value.triageLevel,
-      hemodynamicStatus: value.hemodynamicStatus,
+      triageLevel: this.requiredSelection(value.triageLevel),
+      hemodynamicStatus: this.requiredSelection(value.hemodynamicStatus),
       bpSystolic: this.optionalNumber(value.bpSystolic),
       bpDiastolic: this.optionalNumber(value.bpDiastolic),
       heartRate: this.optionalNumber(value.heartRate),
       temperature: this.optionalNumber(value.temperature),
       abcdeAssessment: {
-        airwayStatus: value.airwayStatus,
-        breathingStatus: value.breathingStatus,
-        circulationStatus: value.circulationStatus,
-        disabilityStatus: value.disabilityStatus,
-        exposureStatus: value.exposureStatus,
+        airwayStatus: this.requiredSelection(value.airwayStatus),
+        breathingStatus: this.requiredSelection(value.breathingStatus),
+        circulationStatus: this.requiredSelection(value.circulationStatus),
+        disabilityStatus: this.requiredSelection(value.disabilityStatus),
+        exposureStatus: this.requiredSelection(value.exposureStatus),
         respiratoryRate: this.optionalNumber(value.respiratoryRate),
         oxygenSaturation: this.optionalNumber(value.oxygenSaturation),
         gcsScore: this.optionalNumber(value.gcsScore),
@@ -213,6 +234,10 @@ export class EmergencyTriagePanelComponent {
         clinicalNotes: value.clinicalNotes.trim() || undefined,
       },
     };
+  }
+
+  private requiredSelection<T extends string>(value: T | ''): T {
+    return value as T;
   }
 
   private optionalNumber(value: number | null): number | undefined {
