@@ -1,5 +1,7 @@
 package com.joprelys.backend.emergency.api;
 
+import com.joprelys.backend.emergency.triage.api.EmergencyAbcdeAssessmentRequest;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -49,8 +51,49 @@ public record CreateEmergencyRequest(
         @Size(max = 1000)
         String thirdPartyCircumstances,
 
-        Boolean thirdPartyConsentToContact
+        Boolean thirdPartyConsentToContact,
+
+        @Valid
+        EmergencyAbcdeAssessmentRequest abcdeAssessment
 ) {
+
+    /**
+     * Constructeur de compatibilité pour les appels antérieurs au triage ABCDE.
+     */
+    public CreateEmergencyRequest(
+            UUID patientId,
+            String arrivalMode,
+            String triageLevel,
+            String hemodynamicStatus,
+            String chiefComplaint,
+            Integer initialBpSystolic,
+            Integer initialBpDiastolic,
+            Integer initialHr,
+            BigDecimal initialTemp,
+            String thirdPartyName,
+            String thirdPartyPhone,
+            String thirdPartyRelationship,
+            String thirdPartyIdDocument,
+            String thirdPartyCircumstances,
+            Boolean thirdPartyConsentToContact) {
+        this(
+                patientId,
+                arrivalMode,
+                triageLevel,
+                hemodynamicStatus,
+                chiefComplaint,
+                initialBpSystolic,
+                initialBpDiastolic,
+                initialHr,
+                initialTemp,
+                thirdPartyName,
+                thirdPartyPhone,
+                thirdPartyRelationship,
+                thirdPartyIdDocument,
+                thirdPartyCircumstances,
+                thirdPartyConsentToContact,
+                null);
+    }
 
     /**
      * Constructeur de compatibilité pour les appels internes et tests antérieurs
@@ -81,8 +124,8 @@ public record CreateEmergencyRequest(
                 null,
                 null,
                 null,
-                Boolean.FALSE
-        );
+                Boolean.FALSE,
+                null);
     }
 
     @AssertTrue(message = "Le nom, le téléphone et le lien avec le patient sont obligatoires lorsqu'un tiers amène le patient.")
