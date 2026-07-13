@@ -2,6 +2,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { Component, effect, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
+import { RbacApiService } from '../../clinic/rbac/rbac-api.service';
 import { ApiErrorI18nService } from '../../core/i18n/api-error-i18n.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { AlertComponent } from '../../shared/ui/alert.component';
@@ -33,7 +34,16 @@ import {
   templateUrl: './emergency-triage-panel.component.html',
 })
 export class EmergencyTriagePanelComponent {
+  private static readonly LEGACY_WRITE_ROLES = new Set([
+    'INFIRMIER',
+    'MEDECIN',
+    'ADMIN_CLINIQUE',
+    'ADMIN_JOPRELYS',
+    'SUPER_ADMIN',
+  ]);
+
   private readonly api = inject(EmergencyApiService);
+  private readonly rbacApi = inject(RbacApiService);
   private readonly fb = inject(FormBuilder);
   private readonly apiErrors = inject(ApiErrorI18nService);
   readonly i18n = inject(I18nService);
@@ -42,6 +52,7 @@ export class EmergencyTriagePanelComponent {
   readonly assessments = signal<EmergencyTriageAssessment[]>([]);
   readonly isLoading = signal(false);
   readonly isSaving = signal(false);
+  readonly canWrite = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
 
@@ -91,6 +102,7 @@ export class EmergencyTriagePanelComponent {
   });
 
   constructor() {
+    this.loadAccess();
     effect(() => {
       const id = this.emergencyId();
       if (id) this.load(id);
@@ -113,6 +125,10 @@ export class EmergencyTriagePanelComponent {
   }
 
   submit(): void {
+    if (!this.canWrite()) {
+      this.error.set(this.text('readOnly'));
+      return;
+    }
     if (this.form.invalid || this.isSaving()) {
       this.form.markAllAsTouched();
       this.error.set(this.text('invalid'));
@@ -160,6 +176,18 @@ export class EmergencyTriagePanelComponent {
 
   hemodynamicLabel(value: string): string {
     return this.i18n.t(`emergency.detail.hemodynamic.${value.toLowerCase()}`, value);
+  }
+
+  private loadAccess(): void {
+    this.rbacApi.ensureMyAccess().subscribe({
+      next: access => {
+        const permissions = this.rbacApi.effectivePermissionSet(access.permissions);
+        const hasLegacyWriteRole = access.roles.some(role =>
+          EmergencyTriagePanelComponent.LEGACY_WRITE_ROLES.has(role));
+        this.canWrite.set(permissions.has('EMERGENCY_WRITE') || hasLegacyWriteRole);
+      },
+      error: () => this.canWrite.set(false),
+    });
   }
 
   private payload(): CreateEmergencyTriageAssessmentRequest {
