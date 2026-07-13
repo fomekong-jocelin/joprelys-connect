@@ -3,7 +3,6 @@ package com.joprelys.backend.patient.reconciliation.application;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -24,7 +23,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -54,15 +55,10 @@ class PatientReconciliationCandidateServiceTest {
 
         when(patientRepository.findById(source.getId())).thenReturn(Optional.of(source));
         when(patientRepository.findById(unconfirmedUrgTemp.getId())).thenReturn(Optional.of(unconfirmedUrgTemp));
-        when(patientRepository.findReconciliationCandidates(
-                eq(source.getId()),
-                eq(PatientIdentityStatus.VERIFIED),
-                any(LocalDate.class),
-                any(String.class),
-                any(String.class),
-                any(String.class),
+        when(patientRepository.findAll(
+                any(Specification.class),
                 any(Pageable.class)))
-                .thenReturn(List.of(unconfirmedUrgTemp));
+                .thenReturn(new PageImpl<>(List.of(unconfirmedUrgTemp)));
     }
 
     @Test
@@ -106,15 +102,11 @@ class PatientReconciliationCandidateServiceTest {
         candidateService.findCandidates(source.getId());
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(patientRepository).findReconciliationCandidates(
-                eq(source.getId()),
-                eq(PatientIdentityStatus.VERIFIED),
-                any(LocalDate.class),
-                any(String.class),
-                any(String.class),
-                any(String.class),
+        verify(patientRepository).findAll(
+                any(Specification.class),
                 pageableCaptor.capture());
         assertEquals(250, pageableCaptor.getValue().getPageSize());
+        assertEquals("updatedAt: DESC", pageableCaptor.getValue().getSort().toString());
     }
 
     private static PatientEntity verifiedUrgTemp(
