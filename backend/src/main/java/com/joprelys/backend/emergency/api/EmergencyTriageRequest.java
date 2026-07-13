@@ -1,5 +1,7 @@
 package com.joprelys.backend.emergency.api;
 
+import com.joprelys.backend.emergency.triage.api.EmergencyAbcdeAssessmentRequest;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -42,7 +44,43 @@ public record EmergencyTriageRequest(
         @Size(max = 1000, message = "EMERGENCY_THIRD_PARTY_CIRCUMSTANCES_TOO_LONG")
         String thirdPartyCircumstances,
 
-        Boolean thirdPartyConsentToContact) {
+        Boolean thirdPartyConsentToContact,
+
+        @Valid
+        EmergencyAbcdeAssessmentRequest abcdeAssessment) {
+
+    public EmergencyTriageRequest(
+            String arrivalMode,
+            String triageLevel,
+            String hemodynamicStatus,
+            String chiefComplaint,
+            Integer initialBpSystolic,
+            Integer initialBpDiastolic,
+            Integer initialHr,
+            BigDecimal initialTemp,
+            String thirdPartyName,
+            String thirdPartyPhone,
+            String thirdPartyRelationship,
+            String thirdPartyIdDocument,
+            String thirdPartyCircumstances,
+            Boolean thirdPartyConsentToContact) {
+        this(
+                arrivalMode,
+                triageLevel,
+                hemodynamicStatus,
+                chiefComplaint,
+                initialBpSystolic,
+                initialBpDiastolic,
+                initialHr,
+                initialTemp,
+                thirdPartyName,
+                thirdPartyPhone,
+                thirdPartyRelationship,
+                thirdPartyIdDocument,
+                thirdPartyCircumstances,
+                thirdPartyConsentToContact,
+                null);
+    }
 
     @AssertTrue(message = "EMERGENCY_THIRD_PARTY_REQUIRED")
     public boolean isAccompanyingPersonComplete() {
@@ -70,7 +108,8 @@ public record EmergencyTriageRequest(
                 thirdPartyRelationship,
                 thirdPartyIdDocument,
                 thirdPartyCircumstances,
-                thirdPartyConsentToContact);
+                thirdPartyConsentToContact,
+                abcdeAssessment);
     }
 
     private static boolean hasText(String value) {
