@@ -1,6 +1,12 @@
 package com.joprelys.backend.emergency.api;
 
 import com.joprelys.backend.emergency.triage.api.EmergencyAbcdeAssessmentRequest;
+import com.joprelys.backend.emergency.triage.application.EmergencyTriageAssessmentCommand;
+import com.joprelys.backend.emergency.triage.domain.EmergencyTriageVocabulary.AirwayStatus;
+import com.joprelys.backend.emergency.triage.domain.EmergencyTriageVocabulary.BreathingStatus;
+import com.joprelys.backend.emergency.triage.domain.EmergencyTriageVocabulary.CirculationStatus;
+import com.joprelys.backend.emergency.triage.domain.EmergencyTriageVocabulary.DisabilityStatus;
+import com.joprelys.backend.emergency.triage.domain.EmergencyTriageVocabulary.ExposureStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
@@ -57,9 +63,6 @@ public record CreateEmergencyRequest(
         EmergencyAbcdeAssessmentRequest abcdeAssessment
 ) {
 
-    /**
-     * Constructeur de compatibilité pour les appels antérieurs au triage ABCDE.
-     */
     public CreateEmergencyRequest(
             UUID patientId,
             String arrivalMode,
@@ -95,10 +98,6 @@ public record CreateEmergencyRequest(
                 null);
     }
 
-    /**
-     * Constructeur de compatibilité pour les appels internes et tests antérieurs
-     * à l'ajout du déclarant/accompagnant.
-     */
     public CreateEmergencyRequest(
             UUID patientId,
             String arrivalMode,
@@ -140,6 +139,29 @@ public record CreateEmergencyRequest(
 
     public boolean contactConsentGranted() {
         return Boolean.TRUE.equals(thirdPartyConsentToContact);
+    }
+
+    public EmergencyTriageAssessmentCommand toInitialTriageCommand() {
+        EmergencyAbcdeAssessmentRequest abcde = abcdeAssessment;
+        return new EmergencyTriageAssessmentCommand(
+                triageLevel,
+                hemodynamicStatus,
+                abcde == null ? AirwayStatus.NOT_ASSESSED : abcde.airwayStatus(),
+                abcde == null ? BreathingStatus.NOT_ASSESSED : abcde.breathingStatus(),
+                abcde == null ? CirculationStatus.NOT_ASSESSED : abcde.circulationStatus(),
+                abcde == null ? DisabilityStatus.NOT_ASSESSED : abcde.disabilityStatus(),
+                abcde == null ? ExposureStatus.NOT_ASSESSED : abcde.exposureStatus(),
+                initialBpSystolic,
+                initialBpDiastolic,
+                initialHr,
+                abcde == null ? null : abcde.respiratoryRate(),
+                abcde == null ? null : abcde.oxygenSaturation(),
+                initialTemp,
+                abcde == null ? null : abcde.gcsScore(),
+                abcde == null ? null : abcde.painScore(),
+                abcde == null ? null : abcde.recommendedOrientation(),
+                abcde == null ? null : abcde.clinicalNotes(),
+                abcde == null ? null : abcde.assessedAt());
     }
 
     private static boolean hasText(String value) {
