@@ -9,6 +9,13 @@
 - **Sécurité et traçabilité** : verrouillage pessimiste des séquences concurrentes, refus après stabilisation, isolation tenant, RBAC et audit des lectures/écritures sans contenu clinique sensible.
 - **Tests** : couverture de la création atomique URG-TEMP, du triage initial, des réévaluations, de la concurrence, du cross-tenant, des permissions, des migrations H2/PostgreSQL 16 et du composant Angular.
 
+## Fixed
+
+- **Recette UI du drawer d’urgence** : les actions à libellé long ne sont plus comprimées et les champs ABCDE restent alignés lorsque les libellés français ou anglais occupent plusieurs lignes.
+- **Recherche des DPU candidats sous PostgreSQL** : remplacement de la requête JPQL à paramètres optionnels `IS NULL` par une `Specification` dynamique, afin d’éviter l’erreur `could not determine data type of parameter` tout en conservant le préfiltrage borné à 250 dossiers.
+- **Reactive Forms Angular** : l’état désactivé des formulaires de décision et de correction est désormais piloté par `FormGroup.disable()` / `enable()` ; les bindings `[disabled]` incompatibles ont été retirés des contrôles réactifs.
+- **Isolation des tests H2** : chaque contexte Spring utilise sa propre base mémoire pour éviter la fermeture d’une base partagée pendant la suite Maven.
+
 ## Compatibility
 
 - Évolution rétrocompatible ; les payloads historiques de création d’urgence restent valides.
