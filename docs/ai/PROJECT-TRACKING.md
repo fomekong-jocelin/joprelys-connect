@@ -6,21 +6,23 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-12 (correctif du shell de navigation de la régularisation URG-TEMP) |
+| Dernière mise à jour | 2026-07-13 (finalisation technique du triage ABCDE et des réévaluations de STORY-2302) |
 | Responsable mise à jour | Codex |
-| État global | EPIC-0019 en cours ; EPIC-0020 en cours avec STORY-2201 à STORY-2203 et le correctif de clôture caisse terminés |
-| Risques majeurs | Validation métier post-fusion des définitions `PAID` / `SETTLED` ; DTO financiers résiduels en `Double` ; densité résiduelle de `BillingManagementPageComponent` et `BillingCashRegisterComponent` |
-| Prochaine priorité | STORY-2204 — Poste assurance et progression des bordereaux |
+| État global | EPIC-0023 URG-TEMP en cours : STORY-2301, STORY-2303 et STORY-2304 terminées ; STORY-2302 en QA dans la PR #53 ; STORY-2305 et STORY-2306 restantes |
+| Risques majeurs | Validation métier du vocabulaire ABCDE par un médecin urgentiste ; QA visuelle mobile/light/dark ; validation métier post-fusion des définitions `PAID` / `SETTLED` ; DTO financiers résiduels en `Double` |
+| Prochaine priorité | Après fusion de #53 : STORY-2305 / #46 — Hospitalisation, documents et finance différée URG-TEMP |
 | Sprint courant | SPRINT-0014 |
 | | |
 | Capacité sprint | À planifier |
-| Charge engagée | 27.10j (Est. Senior) |
+| Charge engagée | 29.10j (Est. Senior) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
+| EPIC-0023 | URG_TEMP_END_TO_END | Epic | Parcours URG-TEMP de l’arrivée à la régularisation | Full-stack santé | IN_PROGRESS | P0 | 48 | Senior full-stack + médecin urgentiste + DPO + DAF + QA | 12.0j | 16.0j | 24.0j | Codex | Tech Lead + métiers santé | SPRINT-0014 | 8.0j | Finaliser #42 puis exécuter #46 et #47 | Élevé | 2026-07-13 |
+| STORY-2302 | URG_TEMP_END_TO_END | User Story | Triage ABCDE et réévaluations horodatées | Backend / Angular / DB / QA | QA | P0 | 5 | Senior full-stack santé | 2.0j | 2.8j | 4.0j | Codex | Tech Lead + médecin urgentiste + QA | SPRINT-0014 | 2.0j | CI finale PR #53, revue humaine et fusion | Moyen | 2026-07-13 |
 | TASK-20260710-P0-BASELINE-CLOSURE | TECHNICAL_BASELINE | Documentation | Clôture documentaire de la baseline P0 | Documentation / QA | DONE | P0 | 1 | Tech Lead / QA | 0.1j | 0.15j | 0.25j | Codex | Lead Developer | SPRINT-0014 | 0.1j | Aucun | Faible | 2026-07-10 |
 | QA-20260712-PR52 | QUALITY | QA Review | Recette manuelle PR #52 — rapprochement URG-TEMP | QA / sécurité / UI | IN_PROGRESS | P0 | 3 | QA senior + reviewer fonctionnel indépendant | 0.5j | 0.75j | 1.0j | Codex | QA / Product non auteur de la PR | SPRINT-0014 | 0.46j | Rattachement compatible fictif, isolation Clinique B, RBAC négatif UI et CI GitHub Actions (Angular/Maven) confirmés. Scénarios P2 et validations humaines restent à exécuter. | Élevé | 2026-07-12 |
 | BUG-20260712-PATIENT-RECONCILIATION-SHELL | QUALITY | Bug UI | Shell de navigation absent de la régularisation URG-TEMP | Angular / UI | QA | P1 | 1 | Frontend intermédiaire | 0.1j | 0.15j | 0.25j | Codex | Lead Frontend + QA | SPRINT-0014 | 0.07j | Tests Angular (176) et build production réussis ; vérification visuelle authentifiée à faire après déploiement. | Faible | 2026-07-12 |
