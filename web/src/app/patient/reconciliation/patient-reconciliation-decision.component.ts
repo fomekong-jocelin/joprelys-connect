@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { I18nService } from '../../core/i18n/i18n.service';
 import {
@@ -56,6 +56,16 @@ export class PatientReconciliationDecisionComponent {
     'OTHER',
   ];
 
+  constructor() {
+    effect(() => {
+      if (this.disabled()) {
+        this.form.disable({ emitEvent: false });
+      } else {
+        this.form.enable({ emitEvent: false });
+      }
+    });
+  }
+
   t(key: string): string {
     return this.i18n.t(key);
   }
@@ -66,6 +76,8 @@ export class PatientReconciliationDecisionComponent {
   }
 
   chooseDecision(decision: PatientReconciliationDecision): void {
+    if (this.form.disabled) return;
+
     this.selectedDecision.set(decision);
     this.form.controls.decision.setValue(decision);
     if (decision !== 'LINK_EXISTING_DPU') {
@@ -74,6 +86,8 @@ export class PatientReconciliationDecisionComponent {
   }
 
   submit(): void {
+    if (this.form.disabled) return;
+
     this.form.markAllAsTouched();
     const value = this.form.getRawValue();
     if (this.form.invalid || (value.decision === 'LINK_EXISTING_DPU' && !value.candidatePatientId)) {
@@ -90,6 +104,8 @@ export class PatientReconciliationDecisionComponent {
   }
 
   reset(): void {
+    if (this.form.disabled) return;
+
     this.selectedDecision.set('DEFER');
     this.form.reset({
       decision: 'DEFER',
