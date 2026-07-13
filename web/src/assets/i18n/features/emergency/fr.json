@@ -38,32 +38,26 @@
   "emergency.detail.thirdPartyProtectedTitle": "Informations du tiers protégées",
   "emergency.detail.thirdPartyProtectedHint": "L'identité, les coordonnées, les déclarations et les preuves du tiers sont accessibles uniquement dans la section médico-légale aux rôles habilités.",
   "emergency.detail.openLegalTab": "Ouvrir la section médico-légale",
-
   "emergency.detail.arrival.ambulance": "Ambulance",
   "emergency.detail.arrival.fire_dept": "Sapeurs-pompiers",
   "emergency.detail.arrival.walk_in": "Arrivée autonome",
   "emergency.detail.arrival.accompanied": "Amené par un tiers",
-
   "emergency.detail.triage.red": "Rouge — détresse vitale",
   "emergency.detail.triage.orange": "Orange — très urgent",
   "emergency.detail.triage.yellow": "Jaune — urgent",
   "emergency.detail.triage.green": "Vert — non urgent",
-
   "emergency.detail.hemodynamic.shock": "Choc",
   "emergency.detail.hemodynamic.unstable": "Instable",
   "emergency.detail.hemodynamic.stable": "Stable",
-
   "emergency.detail.identityStatus.provisional_urgency": "Identité provisoire",
   "emergency.detail.identityStatus.declared": "Identité déclarée",
   "emergency.detail.identityStatus.verified": "Identité vérifiée",
   "emergency.detail.identityStatus.merged": "Dossier rapproché",
-
   "emergency.detail.confidence.none": "Non vérifiée",
   "emergency.detail.confidence.low": "Faible",
   "emergency.detail.confidence.medium": "Moyenne",
   "emergency.detail.confidence.high": "Élevée",
   "emergency.detail.confidence.verified": "Vérifiée",
-
   "emergency.triage.title": "Triage ABCDE",
   "emergency.triage.subtitle": "Chaque évaluation est horodatée, attribuée et conservée sans écraser l'historique.",
   "emergency.triage.count": "Évaluations",
@@ -97,10 +91,9 @@
   "emergency.triage.saving": "Enregistrement…",
   "emergency.triage.saved": "La réévaluation a été ajoutée à l'historique.",
   "emergency.triage.invalid": "Vérifiez les valeurs du triage avant l'enregistrement.",
-
+  "emergency.triage.readOnly": "Vous pouvez consulter l'historique, mais votre rôle ne permet pas d'ajouter une réévaluation.",
   "emergency.triage.type.initial": "Initial",
   "emergency.triage.type.reassessment": "Réévaluation",
-
   "emergency.triage.airway.not_assessed": "Non évalué",
   "emergency.triage.airway.patent": "Libre",
   "emergency.triage.airway.at_risk": "À risque",
@@ -124,7 +117,6 @@
   "emergency.triage.exposure.hypothermia": "Hypothermie",
   "emergency.triage.exposure.hyperthermia": "Hyperthermie",
   "emergency.triage.exposure.other": "Autre anomalie",
-
   "emergency.triage.orientation.none": "Non définie",
   "emergency.triage.orientation.resuscitation": "Réanimation",
   "emergency.triage.orientation.operating_room": "Bloc opératoire",
@@ -133,7 +125,6 @@
   "emergency.triage.orientation.transfer": "Transfert externe",
   "emergency.triage.orientation.discharge": "Sortie",
   "emergency.triage.orientation.death": "Décès",
-
   "emergency.triage.error.load": "Impossible de charger l'historique du triage.",
   "emergency.triage.error.save": "Impossible d'enregistrer la réévaluation.",
   "emergency.triage.error.EMERGENCY_NOT_FOUND": "Le dossier d'urgence est introuvable ou inaccessible.",
