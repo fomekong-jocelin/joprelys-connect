@@ -151,7 +151,7 @@ export class EmergencyTriagePanelComponent {
   }
 
   orientationLabel(value?: string): string {
-    return value ? this.text(`orientation.${value.toLowerCase()}`) : '—';
+    return value ? this.text(`orientation.${value.toLowerCase()}`) : this.text('orientation.none');
   }
 
   triageLabel(value: string): string {
@@ -183,7 +183,6 @@ export class EmergencyTriagePanelComponent {
         painScore: this.optionalNumber(value.painScore),
         recommendedOrientation: value.recommendedOrientation ?? undefined,
         clinicalNotes: value.clinicalNotes.trim() || undefined,
-        assessedAt: new Date().toISOString(),
       },
     };
   }
