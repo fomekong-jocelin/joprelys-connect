@@ -6,7 +6,6 @@ import com.joprelys.backend.emergency.infrastructure.persistence.EmergencyEntity
 import com.joprelys.backend.emergency.infrastructure.persistence.EmergencyRepository;
 import com.joprelys.backend.emergency.infrastructure.persistence.ResuscitationLogEntity;
 import com.joprelys.backend.emergency.medicolegal.application.EmergencyArrivalThirdPartyService;
-import com.joprelys.backend.emergency.triage.api.EmergencyTriageAssessmentApiMapper;
 import com.joprelys.backend.emergency.triage.application.EmergencyTriageAssessmentUseCase;
 import com.joprelys.backend.patient.domain.PatientIdentityStatus;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
@@ -80,7 +79,7 @@ public class EmergencyService {
 
         triageAssessmentUseCase.recordInitial(
                 emergency,
-                EmergencyTriageAssessmentApiMapper.fromInitial(request),
+                request.toInitialTriageCommand(),
                 createdByUserId);
         arrivalThirdPartyService.capture(emergency, createdByUserId);
         return emergency;
