@@ -119,7 +119,9 @@ class EmergencyTriageAssessmentConcurrencyTest {
             assertTrue(second.get(15, TimeUnit.SECONDS));
 
             TenantContext.setTenantId(organization.getId());
-            List<EmergencyTriageAssessmentResult> history = triageUseCase.getHistory(emergency.getId());
+            List<EmergencyTriageAssessmentResult> history = triageUseCase.getHistory(
+                    emergency.getId(),
+                    actor.getId());
             assertEquals(3, history.size());
             assertEquals(List.of(1, 2, 3), history.stream()
                     .map(EmergencyTriageAssessmentResult::sequenceNumber)
