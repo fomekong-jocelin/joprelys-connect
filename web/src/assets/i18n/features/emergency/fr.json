@@ -67,6 +67,7 @@
   "emergency.triage.empty": "Aucune évaluation de triage disponible.",
   "emergency.triage.newAssessment": "Nouvelle réévaluation",
   "emergency.triage.newAssessmentHint": "Saisissez l'état observé maintenant. Le système ne modifie jamais les évaluations précédentes.",
+  "emergency.triage.selectPrompt": "Sélectionner une valeur",
   "emergency.triage.triageLevel": "Niveau de triage",
   "emergency.triage.hemodynamicStatus": "État hémodynamique",
   "emergency.triage.abcde": "Évaluation ABCDE",
@@ -130,5 +131,6 @@
   "emergency.triage.error.EMERGENCY_NOT_FOUND": "Le dossier d'urgence est introuvable ou inaccessible.",
   "emergency.triage.error.EMERGENCY_ALREADY_STABILIZED": "Le dossier est stabilisé et n'accepte plus de réévaluation.",
   "emergency.triage.error.EMERGENCY_TRIAGE_ASSESSMENT_NOT_FOUND": "L'évaluation demandée est introuvable.",
+  "emergency.triage.error.EMERGENCY_TRIAGE_ABCDE_REQUIRED": "Les cinq axes ABCDE doivent être évalués avant l'enregistrement.",
   "emergency.triage.error.EMERGENCY_TRIAGE_ASSESSED_AT_FUTURE": "L'heure clinique ne peut pas être située dans le futur."
 }
