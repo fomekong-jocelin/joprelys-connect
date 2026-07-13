@@ -33,15 +33,15 @@ CREATE TABLE emergency_triage_assessments (
     CONSTRAINT chk_emergency_triage_assessment_sequence
         CHECK (sequence_number > 0),
     CONSTRAINT chk_emergency_triage_assessment_type
-        CHECK (assessment_type IN ('INITIAL', 'REASSESSMENT')),
+        CHECK (CAST(assessment_type AS VARCHAR) IN ('INITIAL', 'REASSESSMENT')),
     CONSTRAINT chk_emergency_triage_airway
-        CHECK (airway_status IN ('NOT_ASSESSED', 'PATENT', 'AT_RISK', 'OBSTRUCTED')),
+        CHECK (CAST(airway_status AS VARCHAR) IN ('NOT_ASSESSED', 'PATENT', 'AT_RISK', 'OBSTRUCTED')),
     CONSTRAINT chk_emergency_triage_breathing
-        CHECK (breathing_status IN ('NOT_ASSESSED', 'ADEQUATE', 'DISTRESS', 'FAILURE')),
+        CHECK (CAST(breathing_status AS VARCHAR) IN ('NOT_ASSESSED', 'ADEQUATE', 'DISTRESS', 'FAILURE')),
     CONSTRAINT chk_emergency_triage_circulation
-        CHECK (circulation_status IN ('NOT_ASSESSED', 'STABLE', 'COMPROMISED', 'SHOCK')),
+        CHECK (CAST(circulation_status AS VARCHAR) IN ('NOT_ASSESSED', 'STABLE', 'COMPROMISED', 'SHOCK')),
     CONSTRAINT chk_emergency_triage_disability
-        CHECK (disability_status IN (
+        CHECK (CAST(disability_status AS VARCHAR) IN (
             'NOT_ASSESSED',
             'ALERT',
             'RESPONDS_TO_VOICE',
@@ -49,7 +49,7 @@ CREATE TABLE emergency_triage_assessments (
             'UNRESPONSIVE'
         )),
     CONSTRAINT chk_emergency_triage_exposure
-        CHECK (exposure_status IN (
+        CHECK (CAST(exposure_status AS VARCHAR) IN (
             'NOT_ASSESSED',
             'NO_CRITICAL_FINDING',
             'TRAUMA',
@@ -58,7 +58,7 @@ CREATE TABLE emergency_triage_assessments (
             'OTHER'
         )),
     CONSTRAINT chk_emergency_triage_orientation
-        CHECK (recommended_orientation IS NULL OR recommended_orientation IN (
+        CHECK (recommended_orientation IS NULL OR CAST(recommended_orientation AS VARCHAR) IN (
             'RESUSCITATION',
             'OPERATING_ROOM',
             'HOSPITALIZATION',
