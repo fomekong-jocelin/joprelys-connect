@@ -16,7 +16,10 @@ public interface EmergencyTriageAssessmentUseCase {
             EmergencyTriageAssessmentCommand command,
             UUID actorId);
 
-    List<EmergencyTriageAssessmentResult> getHistory(UUID emergencyId);
+    List<EmergencyTriageAssessmentResult> getHistory(UUID emergencyId, UUID actorId);
 
-    EmergencyTriageAssessmentResult getAssessment(UUID emergencyId, UUID assessmentId);
+    EmergencyTriageAssessmentResult getAssessment(
+            UUID emergencyId,
+            UUID assessmentId,
+            UUID actorId);
 }
