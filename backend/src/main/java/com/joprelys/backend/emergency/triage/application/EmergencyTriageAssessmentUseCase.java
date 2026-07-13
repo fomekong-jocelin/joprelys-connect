@@ -17,4 +17,6 @@ public interface EmergencyTriageAssessmentUseCase {
             UUID actorId);
 
     List<EmergencyTriageAssessmentResult> getHistory(UUID emergencyId);
+
+    EmergencyTriageAssessmentResult getAssessment(UUID emergencyId, UUID assessmentId);
 }
