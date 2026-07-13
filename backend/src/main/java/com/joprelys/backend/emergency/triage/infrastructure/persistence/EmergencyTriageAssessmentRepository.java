@@ -1,6 +1,7 @@
 package com.joprelys.backend.emergency.triage.infrastructure.persistence;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,6 +13,8 @@ public interface EmergencyTriageAssessmentRepository
         extends JpaRepository<EmergencyTriageAssessmentEntity, UUID> {
 
     List<EmergencyTriageAssessmentEntity> findByEmergency_IdOrderBySequenceNumberAsc(UUID emergencyId);
+
+    Optional<EmergencyTriageAssessmentEntity> findByIdAndEmergency_Id(UUID id, UUID emergencyId);
 
     boolean existsByEmergency_Id(UUID emergencyId);
 
