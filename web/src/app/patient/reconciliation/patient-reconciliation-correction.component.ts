@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output } from '@angular/core';
+import { Component, computed, effect, inject, input, output } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { I18nService } from '../../core/i18n/i18n.service';
 import {
@@ -63,11 +63,23 @@ export class PatientReconciliationCorrectionComponent {
     'OTHER',
   ];
 
+  constructor() {
+    effect(() => {
+      if (this.disabled()) {
+        this.form.disable({ emitEvent: false });
+      } else {
+        this.form.enable({ emitEvent: false });
+      }
+    });
+  }
+
   t(key: string): string {
     return this.i18n.t(key);
   }
 
   submit(): void {
+    if (this.form.disabled) return;
+
     this.form.markAllAsTouched();
     const correctedEventId = this.patient().decisionEventId;
     if (this.form.invalid || !correctedEventId) {
@@ -85,6 +97,8 @@ export class PatientReconciliationCorrectionComponent {
   }
 
   reset(): void {
+    if (this.form.disabled) return;
+
     this.form.reset({
       replacementCanonicalPatientId: '',
       evidenceSourceType: 'DOCUMENT',
