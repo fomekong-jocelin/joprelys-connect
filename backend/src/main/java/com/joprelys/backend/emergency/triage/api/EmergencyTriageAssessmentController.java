@@ -41,8 +41,10 @@ public class EmergencyTriageAssessmentController {
     @GetMapping
     @PreAuthorize(READ_ACCESS)
     @Operation(summary = "Consulter l'historique du triage ABCDE")
-    public List<EmergencyTriageAssessmentResponse> getHistory(@PathVariable UUID emergencyId) {
-        return useCase.getHistory(emergencyId).stream()
+    public List<EmergencyTriageAssessmentResponse> getHistory(
+            @PathVariable UUID emergencyId,
+            Authentication authentication) {
+        return useCase.getHistory(emergencyId, actorId(authentication)).stream()
                 .map(EmergencyTriageAssessmentApiMapper::toResponse)
                 .toList();
     }
@@ -52,9 +54,10 @@ public class EmergencyTriageAssessmentController {
     @Operation(summary = "Consulter une évaluation de triage ABCDE")
     public EmergencyTriageAssessmentResponse getAssessment(
             @PathVariable UUID emergencyId,
-            @PathVariable UUID assessmentId) {
+            @PathVariable UUID assessmentId,
+            Authentication authentication) {
         return EmergencyTriageAssessmentApiMapper.toResponse(
-                useCase.getAssessment(emergencyId, assessmentId));
+                useCase.getAssessment(emergencyId, assessmentId, actorId(authentication)));
     }
 
     @PostMapping
