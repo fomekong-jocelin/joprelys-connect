@@ -119,7 +119,11 @@ SELECT
     e.initial_hr,
     e.initial_temp,
     e.created_at,
-    e.created_by_user_id,
+    CASE
+        WHEN EXISTS (SELECT 1 FROM users u WHERE u.id = e.created_by_user_id)
+            THEN e.created_by_user_id
+        ELSE NULL
+    END,
     e.created_at
 FROM emergencies e
 WHERE NOT EXISTS (
