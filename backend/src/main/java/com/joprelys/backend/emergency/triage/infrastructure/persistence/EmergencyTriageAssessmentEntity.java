@@ -11,8 +11,6 @@ import com.joprelys.backend.emergency.triage.domain.EmergencyTriageVocabulary.Ex
 import com.joprelys.backend.emergency.triage.domain.EmergencyTriageVocabulary.RecommendedOrientation;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -39,9 +37,8 @@ public class EmergencyTriageAssessmentEntity {
     @JoinColumn(name = "emergency_id", nullable = false)
     private EmergencyEntity emergency;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "assessment_type", nullable = false, length = 20)
-    private AssessmentType assessmentType;
+    private String assessmentType;
 
     @Column(name = "sequence_number", nullable = false)
     private int sequenceNumber;
@@ -52,25 +49,20 @@ public class EmergencyTriageAssessmentEntity {
     @Column(name = "hemodynamic_status", nullable = false, length = 50)
     private String hemodynamicStatus;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "airway_status", nullable = false, length = 32)
-    private AirwayStatus airwayStatus;
+    private String airwayStatus;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "breathing_status", nullable = false, length = 32)
-    private BreathingStatus breathingStatus;
+    private String breathingStatus;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "circulation_status", nullable = false, length = 32)
-    private CirculationStatus circulationStatus;
+    private String circulationStatus;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "disability_status", nullable = false, length = 32)
-    private DisabilityStatus disabilityStatus;
+    private String disabilityStatus;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "exposure_status", nullable = false, length = 32)
-    private ExposureStatus exposureStatus;
+    private String exposureStatus;
 
     @Column(name = "bp_systolic")
     private Integer bpSystolic;
@@ -96,9 +88,8 @@ public class EmergencyTriageAssessmentEntity {
     @Column(name = "pain_score")
     private Integer painScore;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "recommended_orientation", length = 32)
-    private RecommendedOrientation recommendedOrientation;
+    private String recommendedOrientation;
 
     @Column(name = "clinical_notes", columnDefinition = "TEXT")
     private String clinicalNotes;
@@ -124,15 +115,15 @@ public class EmergencyTriageAssessmentEntity {
         this.id = UUID.randomUUID();
         this.organizationId = emergency.getOrganizationId();
         this.emergency = emergency;
-        this.assessmentType = assessmentType;
+        this.assessmentType = requiredEnumName(assessmentType);
         this.sequenceNumber = sequenceNumber;
         this.triageLevel = requireText(command.triageLevel());
         this.hemodynamicStatus = requireText(command.hemodynamicStatus());
-        this.airwayStatus = command.airwayStatus();
-        this.breathingStatus = command.breathingStatus();
-        this.circulationStatus = command.circulationStatus();
-        this.disabilityStatus = command.disabilityStatus();
-        this.exposureStatus = command.exposureStatus();
+        this.airwayStatus = requiredEnumName(command.airwayStatus());
+        this.breathingStatus = requiredEnumName(command.breathingStatus());
+        this.circulationStatus = requiredEnumName(command.circulationStatus());
+        this.disabilityStatus = requiredEnumName(command.disabilityStatus());
+        this.exposureStatus = requiredEnumName(command.exposureStatus());
         this.bpSystolic = command.bpSystolic();
         this.bpDiastolic = command.bpDiastolic();
         this.heartRate = command.heartRate();
@@ -141,7 +132,7 @@ public class EmergencyTriageAssessmentEntity {
         this.temperature = command.temperature();
         this.gcsScore = command.gcsScore();
         this.painScore = command.painScore();
-        this.recommendedOrientation = command.recommendedOrientation();
+        this.recommendedOrientation = optionalEnumName(command.recommendedOrientation());
         this.clinicalNotes = normalize(command.clinicalNotes());
         this.assessedAt = command.assessedAt() == null ? Instant.now() : command.assessedAt();
         this.assessedByUserId = actorId;
@@ -189,18 +180,33 @@ public class EmergencyTriageAssessmentEntity {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
+    private static String requiredEnumName(Enum<?> value) {
+        if (value == null) {
+            throw new IllegalArgumentException("EMERGENCY_TRIAGE_VALUE_REQUIRED");
+        }
+        return value.name();
+    }
+
+    private static String optionalEnumName(Enum<?> value) {
+        return value == null ? null : value.name();
+    }
+
+    private static <E extends Enum<E>> E enumValue(Class<E> enumType, String value) {
+        return value == null ? null : Enum.valueOf(enumType, value);
+    }
+
     public UUID getId() { return id; }
     public UUID getOrganizationId() { return organizationId; }
     public EmergencyEntity getEmergency() { return emergency; }
-    public AssessmentType getAssessmentType() { return assessmentType; }
+    public AssessmentType getAssessmentType() { return enumValue(AssessmentType.class, assessmentType); }
     public int getSequenceNumber() { return sequenceNumber; }
     public String getTriageLevel() { return triageLevel; }
     public String getHemodynamicStatus() { return hemodynamicStatus; }
-    public AirwayStatus getAirwayStatus() { return airwayStatus; }
-    public BreathingStatus getBreathingStatus() { return breathingStatus; }
-    public CirculationStatus getCirculationStatus() { return circulationStatus; }
-    public DisabilityStatus getDisabilityStatus() { return disabilityStatus; }
-    public ExposureStatus getExposureStatus() { return exposureStatus; }
+    public AirwayStatus getAirwayStatus() { return enumValue(AirwayStatus.class, airwayStatus); }
+    public BreathingStatus getBreathingStatus() { return enumValue(BreathingStatus.class, breathingStatus); }
+    public CirculationStatus getCirculationStatus() { return enumValue(CirculationStatus.class, circulationStatus); }
+    public DisabilityStatus getDisabilityStatus() { return enumValue(DisabilityStatus.class, disabilityStatus); }
+    public ExposureStatus getExposureStatus() { return enumValue(ExposureStatus.class, exposureStatus); }
     public Integer getBpSystolic() { return bpSystolic; }
     public Integer getBpDiastolic() { return bpDiastolic; }
     public Integer getHeartRate() { return heartRate; }
@@ -209,7 +215,9 @@ public class EmergencyTriageAssessmentEntity {
     public BigDecimal getTemperature() { return temperature; }
     public Integer getGcsScore() { return gcsScore; }
     public Integer getPainScore() { return painScore; }
-    public RecommendedOrientation getRecommendedOrientation() { return recommendedOrientation; }
+    public RecommendedOrientation getRecommendedOrientation() {
+        return enumValue(RecommendedOrientation.class, recommendedOrientation);
+    }
     public String getClinicalNotes() { return clinicalNotes; }
     public Instant getAssessedAt() { return assessedAt; }
     public UUID getAssessedByUserId() { return assessedByUserId; }
