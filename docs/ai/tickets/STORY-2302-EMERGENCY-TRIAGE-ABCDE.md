@@ -2,10 +2,11 @@
 
 - GitHub : #42
 - Parent : #36
-- Statut : IN_PROGRESS
+- Statut : QA
 - Priorité : P0
 - Mode : Engineering + Documentation First
 - Branche : `agent/story-2302-abcde-triage`
+- Pull request : #53
 
 ## Contexte
 
@@ -19,8 +20,9 @@ La PR #48 a déjà livré la création atomique et idempotente du patient URG-TE
 - reprendre les urgences existantes par migration sans inventer de données cliniques ;
 - permettre des réévaluations ABCDE horodatées avant stabilisation ;
 - historiser les constantes, le niveau de triage et l’orientation recommandée ;
-- exposer une API tenantée et protégée ;
+- exposer une API tenantée, auditée et protégée ;
 - ajouter un panneau Angular mobile-first, FR/EN, light/dark et accessible ;
+- aligner l’écriture affichée sur l’accès RBAC effectif ;
 - couvrir H2, PostgreSQL 16, RBAC, cross-tenant, concurrence et non-régression.
 
 ## Hors périmètre
@@ -32,16 +34,17 @@ La PR #48 a déjà livré la création atomique et idempotente du patient URG-TE
 
 ## Critères d’acceptation
 
-- [ ] Toute urgence possède au moins une évaluation initiale historisée.
-- [ ] L’évaluation initiale peut conserver `NOT_ASSESSED` pour les axes ABCDE non renseignés.
-- [ ] Une réévaluation enregistre les cinq axes ABCDE, les constantes disponibles, l’auteur et l’heure clinique.
-- [ ] Deux réévaluations concurrentes obtiennent des séquences distinctes sans écrasement.
-- [ ] Aucune réévaluation n’est acceptée après stabilisation.
-- [ ] Un utilisateur sans `EMERGENCY_WRITE` est refusé.
-- [ ] Un établissement ne peut ni lire ni écrire le triage d’un autre tenant.
-- [ ] L’historique affiche clairement initial vs réévaluation, ordre chronologique et orientation recommandée.
-- [ ] L’UI fonctionne sur mobile, au clavier, en FR/EN et thèmes light/dark.
-- [ ] Maven, migrations H2/PostgreSQL, tests Angular et build production sont verts.
+- [x] Toute urgence possède au moins une évaluation initiale historisée.
+- [x] L’évaluation initiale peut conserver `NOT_ASSESSED` pour les axes ABCDE non renseignés.
+- [x] Une réévaluation enregistre les cinq axes ABCDE, les constantes disponibles, l’auteur et l’heure clinique.
+- [x] Deux réévaluations concurrentes obtiennent des séquences distinctes sans écrasement.
+- [x] Aucune réévaluation n’est acceptée après stabilisation.
+- [x] Un utilisateur sans `EMERGENCY_WRITE` est refusé et voit une interface en lecture seule.
+- [x] Un établissement ne peut ni lire ni écrire le triage d’un autre tenant.
+- [x] Les lectures et écritures produisent un audit sans contenu clinique sensible.
+- [x] L’historique affiche clairement initial vs réévaluation, ordre chronologique et orientation recommandée.
+- [x] L’UI respecte le design system, le mobile-first, le clavier, FR/EN et light/dark.
+- [ ] Maven, migrations H2/PostgreSQL, tests Angular et build production sont verts sur le commit final.
 
 ## Action plan
 
@@ -49,22 +52,22 @@ La PR #48 a déjà livré la création atomique et idempotente du patient URG-TE
 - [x] Auditer #42, la PR #48 et le code d’urgence existant.
 - [x] Définir le périmètre résiduel sans créer de doublon.
 - [x] Créer la documentation fonctionnelle, technique, API, données et tests.
-- [ ] Ajouter la migration V64 et le modèle append-only.
-- [ ] Ajouter le use case et les endpoints de triage.
-- [ ] Enregistrer automatiquement l’évaluation initiale.
-- [ ] Ajouter le panneau Angular de réévaluation et d’historique.
-- [ ] Ajouter les traductions FR/EN.
-- [ ] Ajouter les tests backend et frontend.
-- [ ] Exécuter la CI complète et corriger les écarts.
-- [ ] Mettre à jour `PROJECT-TRACKING.md`, `CHANGELOG.md` et le ticket #42.
-- [ ] Ouvrir une PR prête pour revue après CI verte.
+- [x] Ajouter la migration V64 et le modèle append-only.
+- [x] Ajouter le use case et les endpoints de triage.
+- [x] Enregistrer automatiquement l’évaluation initiale.
+- [x] Ajouter le panneau Angular de réévaluation et d’historique.
+- [x] Ajouter les traductions FR/EN et la visibilité RBAC.
+- [x] Ajouter les tests backend, frontend, sécurité et concurrence.
+- [ ] Exécuter la CI complète sur le commit final et corriger les écarts.
+- [ ] Mettre à jour la preuve CI dans `PROJECT-TRACKING.md`, la PR et le ticket #42.
+- [ ] Passer la PR prête pour revue après CI verte.
 
 ## Architecture et responsabilités
 
 - Controller : validation HTTP, permission et délégation uniquement.
-- Use case : verrouillage, règles de séquence, état stabilisé et transaction.
+- Use case : verrouillage, règles de séquence, état stabilisé, audit et transaction.
 - Infrastructure : persistance JPA tenantée et migration Flyway.
-- Angular : collecte, affichage et orchestration UX ; aucune décision clinique automatique.
+- Angular : collecte, affichage, accès RBAC et orchestration UX ; aucune décision clinique automatique.
 - Données : journal append-only, aucun écrasement d’une évaluation antérieure.
 
 ## Estimation du reliquat
@@ -79,13 +82,11 @@ La PR #48 a déjà livré la création atomique et idempotente du patient URG-TE
 - Motif : nouvel endpoint, nouveau journal clinique et nouveau panneau UI rétrocompatibles.
 - Breaking change : non.
 
-## Risques
+## Risques résiduels
 
-- migration des urgences historiques sans fausse donnée clinique ;
-- concurrence sur le numéro de séquence ;
-- exposition de données cliniques inter-tenant ;
-- surcharge cognitive sur mobile ;
-- incohérence entre orientation recommandée et orientation finale.
+- validation visuelle humaine sur appareils réels ;
+- validation par un médecin urgentiste de la terminologie et de l’ordre de saisie ;
+- cohérence opérationnelle entre orientation recommandée et orientation finale, sans automatisation.
 
 ## Definition of Done
 
