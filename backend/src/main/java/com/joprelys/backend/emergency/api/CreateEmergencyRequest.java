@@ -1,5 +1,13 @@
 package com.joprelys.backend.emergency.api;
 
+import com.joprelys.backend.emergency.triage.api.EmergencyAbcdeAssessmentRequest;
+import com.joprelys.backend.emergency.triage.application.EmergencyTriageAssessmentCommand;
+import com.joprelys.backend.emergency.triage.domain.EmergencyTriageVocabulary.AirwayStatus;
+import com.joprelys.backend.emergency.triage.domain.EmergencyTriageVocabulary.BreathingStatus;
+import com.joprelys.backend.emergency.triage.domain.EmergencyTriageVocabulary.CirculationStatus;
+import com.joprelys.backend.emergency.triage.domain.EmergencyTriageVocabulary.DisabilityStatus;
+import com.joprelys.backend.emergency.triage.domain.EmergencyTriageVocabulary.ExposureStatus;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -49,13 +57,47 @@ public record CreateEmergencyRequest(
         @Size(max = 1000)
         String thirdPartyCircumstances,
 
-        Boolean thirdPartyConsentToContact
+        Boolean thirdPartyConsentToContact,
+
+        @Valid
+        EmergencyAbcdeAssessmentRequest abcdeAssessment
 ) {
 
-    /**
-     * Constructeur de compatibilité pour les appels internes et tests antérieurs
-     * à l'ajout du déclarant/accompagnant.
-     */
+    public CreateEmergencyRequest(
+            UUID patientId,
+            String arrivalMode,
+            String triageLevel,
+            String hemodynamicStatus,
+            String chiefComplaint,
+            Integer initialBpSystolic,
+            Integer initialBpDiastolic,
+            Integer initialHr,
+            BigDecimal initialTemp,
+            String thirdPartyName,
+            String thirdPartyPhone,
+            String thirdPartyRelationship,
+            String thirdPartyIdDocument,
+            String thirdPartyCircumstances,
+            Boolean thirdPartyConsentToContact) {
+        this(
+                patientId,
+                arrivalMode,
+                triageLevel,
+                hemodynamicStatus,
+                chiefComplaint,
+                initialBpSystolic,
+                initialBpDiastolic,
+                initialHr,
+                initialTemp,
+                thirdPartyName,
+                thirdPartyPhone,
+                thirdPartyRelationship,
+                thirdPartyIdDocument,
+                thirdPartyCircumstances,
+                thirdPartyConsentToContact,
+                null);
+    }
+
     public CreateEmergencyRequest(
             UUID patientId,
             String arrivalMode,
@@ -81,8 +123,8 @@ public record CreateEmergencyRequest(
                 null,
                 null,
                 null,
-                Boolean.FALSE
-        );
+                Boolean.FALSE,
+                null);
     }
 
     @AssertTrue(message = "Le nom, le téléphone et le lien avec le patient sont obligatoires lorsqu'un tiers amène le patient.")
@@ -97,6 +139,29 @@ public record CreateEmergencyRequest(
 
     public boolean contactConsentGranted() {
         return Boolean.TRUE.equals(thirdPartyConsentToContact);
+    }
+
+    public EmergencyTriageAssessmentCommand toInitialTriageCommand() {
+        EmergencyAbcdeAssessmentRequest abcde = abcdeAssessment;
+        return new EmergencyTriageAssessmentCommand(
+                triageLevel,
+                hemodynamicStatus,
+                abcde == null ? AirwayStatus.NOT_ASSESSED : abcde.airwayStatus(),
+                abcde == null ? BreathingStatus.NOT_ASSESSED : abcde.breathingStatus(),
+                abcde == null ? CirculationStatus.NOT_ASSESSED : abcde.circulationStatus(),
+                abcde == null ? DisabilityStatus.NOT_ASSESSED : abcde.disabilityStatus(),
+                abcde == null ? ExposureStatus.NOT_ASSESSED : abcde.exposureStatus(),
+                initialBpSystolic,
+                initialBpDiastolic,
+                initialHr,
+                abcde == null ? null : abcde.respiratoryRate(),
+                abcde == null ? null : abcde.oxygenSaturation(),
+                initialTemp,
+                abcde == null ? null : abcde.gcsScore(),
+                abcde == null ? null : abcde.painScore(),
+                abcde == null ? null : abcde.recommendedOrientation(),
+                abcde == null ? null : abcde.clinicalNotes(),
+                abcde == null ? null : abcde.assessedAt());
     }
 
     private static boolean hasText(String value) {

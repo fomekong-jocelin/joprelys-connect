@@ -243,6 +243,8 @@
 
         @if (detailTab() === 'CARE') {
           <div class="space-y-5">
+            <app-emergency-triage-panel [emergencyId]="record.id" />
+
             <section>
               <h3 class="font-display text-base font-extrabold text-[var(--text-primary)]">{{ t('emergency.timelineTitle') }}</h3>
               @if (record.resuscitationLogs.length === 0) {

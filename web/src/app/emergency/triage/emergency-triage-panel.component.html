@@ -1,0 +1,226 @@
+<section class="space-y-5" aria-labelledby="emergency-triage-title">
+  <header class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+    <div class="min-w-0">
+      <h3 id="emergency-triage-title" class="font-display text-base font-extrabold text-[var(--text-primary)]">
+        {{ text('title') }}
+      </h3>
+      <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">{{ text('subtitle') }}</p>
+    </div>
+    <span class="shrink-0 whitespace-nowrap rounded-sm border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2 py-1 text-xs font-bold text-[var(--text-secondary)]">
+      {{ text('count') }} : {{ assessments().length }}
+    </span>
+  </header>
+
+  @if (error(); as message) {
+    <app-ui-alert tone="error" (close)="error.set(null)">{{ message }}</app-ui-alert>
+  }
+  @if (success(); as message) {
+    <app-ui-alert tone="success" (close)="success.set(null)">{{ message }}</app-ui-alert>
+  }
+
+  <section class="ui-card-subtle p-4" aria-labelledby="emergency-triage-history-title">
+    <div class="flex items-center justify-between gap-3">
+      <h4 id="emergency-triage-history-title" class="font-display text-sm font-extrabold text-[var(--text-primary)]">
+        {{ text('history') }}
+      </h4>
+      <button
+        type="button"
+        class="shrink-0 whitespace-nowrap rounded-sm px-2 py-1 text-xs font-extrabold text-brand-primary hover:bg-[var(--brand-primary-subtle)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+        (click)="load()"
+        [disabled]="isLoading()"
+      >
+        {{ text('reload') }}
+      </button>
+    </div>
+
+    @if (isLoading()) {
+      <p class="mt-4 text-sm font-semibold text-[var(--text-muted)]" role="status">{{ text('loading') }}</p>
+    } @else if (assessments().length === 0) {
+      <app-empty-state class="mt-4" [message]="text('empty')"></app-empty-state>
+    } @else {
+      <ol class="mt-4 space-y-3">
+        @for (assessment of assessments(); track assessment.id) {
+          <li class="ui-card-muted p-3 sm:p-4">
+            <div class="flex flex-wrap items-start justify-between gap-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="rounded-sm bg-[var(--brand-primary-subtle)] px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-brand-primary">
+                  {{ assessmentTypeLabel(assessment.assessmentType) }} #{{ assessment.sequenceNumber }}
+                </span>
+                <span class="rounded-sm border border-[var(--app-border)] px-2 py-0.5 text-[10px] font-bold text-[var(--text-secondary)]">
+                  {{ triageLabel(assessment.triageLevel) }}
+                </span>
+                <span class="rounded-sm border border-[var(--app-border)] px-2 py-0.5 text-[10px] font-bold text-[var(--text-secondary)]">
+                  {{ hemodynamicLabel(assessment.hemodynamicStatus) }}
+                </span>
+              </div>
+              <time class="text-[11px] font-bold text-[var(--text-muted)]" [attr.datetime]="assessment.assessedAt">
+                {{ assessment.assessedAt | date:'dd/MM/yyyy HH:mm:ss' }}
+              </time>
+            </div>
+
+            <dl class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-5">
+              <div><dt class="ui-label">A</dt><dd class="mt-1 text-xs font-bold text-[var(--text-primary)]">{{ statusLabel('airway', assessment.airwayStatus) }}</dd></div>
+              <div><dt class="ui-label">B</dt><dd class="mt-1 text-xs font-bold text-[var(--text-primary)]">{{ statusLabel('breathing', assessment.breathingStatus) }}</dd></div>
+              <div><dt class="ui-label">C</dt><dd class="mt-1 text-xs font-bold text-[var(--text-primary)]">{{ statusLabel('circulation', assessment.circulationStatus) }}</dd></div>
+              <div><dt class="ui-label">D</dt><dd class="mt-1 text-xs font-bold text-[var(--text-primary)]">{{ statusLabel('disability', assessment.disabilityStatus) }}</dd></div>
+              <div><dt class="ui-label">E</dt><dd class="mt-1 text-xs font-bold text-[var(--text-primary)]">{{ statusLabel('exposure', assessment.exposureStatus) }}</dd></div>
+            </dl>
+
+            <dl class="mt-3 grid grid-cols-2 gap-2 border-t border-[var(--divider-subtle)] pt-3 text-xs sm:grid-cols-4">
+              <div><dt class="ui-label">{{ text('bp') }}</dt><dd class="mt-1 font-bold text-[var(--text-primary)]">{{ assessment.bpSystolic && assessment.bpDiastolic ? assessment.bpSystolic + '/' + assessment.bpDiastolic : '—' }}</dd></div>
+              <div><dt class="ui-label">{{ text('heartRate') }}</dt><dd class="mt-1 font-bold text-[var(--text-primary)]">{{ assessment.heartRate ?? '—' }}</dd></div>
+              <div><dt class="ui-label">{{ text('respiratoryRate') }}</dt><dd class="mt-1 font-bold text-[var(--text-primary)]">{{ assessment.respiratoryRate ?? '—' }}</dd></div>
+              <div><dt class="ui-label">{{ text('oxygenSaturation') }}</dt><dd class="mt-1 font-bold text-[var(--text-primary)]">{{ assessment.oxygenSaturation !== undefined ? assessment.oxygenSaturation + ' %' : '—' }}</dd></div>
+              <div><dt class="ui-label">{{ text('temperature') }}</dt><dd class="mt-1 font-bold text-[var(--text-primary)]">{{ assessment.temperature !== undefined ? assessment.temperature + ' °C' : '—' }}</dd></div>
+              <div><dt class="ui-label">{{ text('gcs') }}</dt><dd class="mt-1 font-bold text-[var(--text-primary)]">{{ assessment.gcsScore ?? '—' }}</dd></div>
+              <div><dt class="ui-label">{{ text('pain') }}</dt><dd class="mt-1 font-bold text-[var(--text-primary)]">{{ assessment.painScore ?? '—' }}</dd></div>
+              <div><dt class="ui-label">{{ text('recommendedOrientation') }}</dt><dd class="mt-1 font-bold text-[var(--text-primary)]">{{ orientationLabel(assessment.recommendedOrientation) }}</dd></div>
+            </dl>
+
+            @if (assessment.clinicalNotes) {
+              <p class="mt-3 border-l-2 border-brand-primary bg-[var(--app-surface)] px-3 py-2 text-sm leading-5 text-[var(--text-secondary)]">
+                {{ assessment.clinicalNotes }}
+              </p>
+            }
+          </li>
+        }
+      </ol>
+    }
+  </section>
+
+  @if (!canWrite()) {
+    <app-ui-alert tone="info">{{ text('readOnly') }}</app-ui-alert>
+  }
+
+  @if (canWrite()) {
+    <form [formGroup]="form" (ngSubmit)="submit()" class="ui-card-subtle space-y-4 p-4" aria-labelledby="emergency-triage-form-title">
+      <div>
+        <h4 id="emergency-triage-form-title" class="font-display text-sm font-extrabold text-[var(--text-primary)]">
+          {{ text('newAssessment') }}
+        </h4>
+        <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">{{ text('newAssessmentHint') }}</p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div class="grid min-w-0 grid-rows-[minmax(2.5rem,auto)_auto]">
+          <label class="ui-label mb-1.5 flex min-h-10 items-end leading-tight" for="triage-level">{{ text('triageLevel') }}</label>
+          <select id="triage-level" formControlName="triageLevel" class="ui-input">
+            <option value="" disabled>{{ text('selectPrompt') }}</option>
+            <option value="RED">{{ triageLabel('RED') }}</option>
+            <option value="ORANGE">{{ triageLabel('ORANGE') }}</option>
+            <option value="YELLOW">{{ triageLabel('YELLOW') }}</option>
+            <option value="GREEN">{{ triageLabel('GREEN') }}</option>
+          </select>
+        </div>
+        <div class="grid min-w-0 grid-rows-[minmax(2.5rem,auto)_auto]">
+          <label class="ui-label mb-1.5 flex min-h-10 items-end leading-tight" for="triage-hemodynamic">{{ text('hemodynamicStatus') }}</label>
+          <select id="triage-hemodynamic" formControlName="hemodynamicStatus" class="ui-input">
+            <option value="" disabled>{{ text('selectPrompt') }}</option>
+            <option value="SHOCK">{{ hemodynamicLabel('SHOCK') }}</option>
+            <option value="UNSTABLE">{{ hemodynamicLabel('UNSTABLE') }}</option>
+            <option value="STABLE">{{ hemodynamicLabel('STABLE') }}</option>
+          </select>
+        </div>
+      </div>
+
+      <fieldset>
+        <legend class="ui-label mb-2">{{ text('abcde') }}</legend>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div class="grid min-w-0 grid-rows-[minmax(2.5rem,auto)_auto]">
+            <label class="ui-label mb-1.5 flex min-h-10 items-end leading-tight" for="triage-airway">A — {{ text('airwayLabel') }}</label>
+            <select id="triage-airway" formControlName="airwayStatus" class="ui-input">
+              <option value="" disabled>{{ text('selectPrompt') }}</option>
+              @for (option of airwayOptions; track option) { <option [value]="option">{{ statusLabel('airway', option) }}</option> }
+            </select>
+          </div>
+          <div class="grid min-w-0 grid-rows-[minmax(2.5rem,auto)_auto]">
+            <label class="ui-label mb-1.5 flex min-h-10 items-end leading-tight" for="triage-breathing">B — {{ text('breathingLabel') }}</label>
+            <select id="triage-breathing" formControlName="breathingStatus" class="ui-input">
+              <option value="" disabled>{{ text('selectPrompt') }}</option>
+              @for (option of breathingOptions; track option) { <option [value]="option">{{ statusLabel('breathing', option) }}</option> }
+            </select>
+          </div>
+          <div class="grid min-w-0 grid-rows-[minmax(2.5rem,auto)_auto]">
+            <label class="ui-label mb-1.5 flex min-h-10 items-end leading-tight" for="triage-circulation">C — {{ text('circulationLabel') }}</label>
+            <select id="triage-circulation" formControlName="circulationStatus" class="ui-input">
+              <option value="" disabled>{{ text('selectPrompt') }}</option>
+              @for (option of circulationOptions; track option) { <option [value]="option">{{ statusLabel('circulation', option) }}</option> }
+            </select>
+          </div>
+          <div class="grid min-w-0 grid-rows-[minmax(2.5rem,auto)_auto]">
+            <label class="ui-label mb-1.5 flex min-h-10 items-end leading-tight" for="triage-disability">D — {{ text('disabilityLabel') }}</label>
+            <select id="triage-disability" formControlName="disabilityStatus" class="ui-input">
+              <option value="" disabled>{{ text('selectPrompt') }}</option>
+              @for (option of disabilityOptions; track option) { <option [value]="option">{{ statusLabel('disability', option) }}</option> }
+            </select>
+          </div>
+          <div class="grid min-w-0 grid-rows-[minmax(2.5rem,auto)_auto]">
+            <label class="ui-label mb-1.5 flex min-h-10 items-end leading-tight" for="triage-exposure">E — {{ text('exposureLabel') }}</label>
+            <select id="triage-exposure" formControlName="exposureStatus" class="ui-input">
+              <option value="" disabled>{{ text('selectPrompt') }}</option>
+              @for (option of exposureOptions; track option) { <option [value]="option">{{ statusLabel('exposure', option) }}</option> }
+            </select>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend class="ui-label mb-2">{{ text('vitals') }}</legend>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div class="grid min-w-0 grid-rows-[minmax(2.5rem,auto)_auto]">
+            <label class="ui-label mb-1.5 flex min-h-10 items-end leading-tight" for="triage-bp-sys">{{ text('bpSystolic') }}</label>
+            <input id="triage-bp-sys" type="number" inputmode="numeric" formControlName="bpSystolic" class="ui-input" />
+          </div>
+          <div class="grid min-w-0 grid-rows-[minmax(2.5rem,auto)_auto]">
+            <label class="ui-label mb-1.5 flex min-h-10 items-end leading-tight" for="triage-bp-dia">{{ text('bpDiastolic') }}</label>
+            <input id="triage-bp-dia" type="number" inputmode="numeric" formControlName="bpDiastolic" class="ui-input" />
+          </div>
+          <div class="grid min-w-0 grid-rows-[minmax(2.5rem,auto)_auto]">
+            <label class="ui-label mb-1.5 flex min-h-10 items-end leading-tight" for="triage-heart-rate">{{ text('heartRate') }}</label>
+            <input id="triage-heart-rate" type="number" inputmode="numeric" formControlName="heartRate" class="ui-input" />
+          </div>
+          <div class="grid min-w-0 grid-rows-[minmax(2.5rem,auto)_auto]">
+            <label class="ui-label mb-1.5 flex min-h-10 items-end leading-tight" for="triage-respiratory-rate">{{ text('respiratoryRate') }}</label>
+            <input id="triage-respiratory-rate" type="number" inputmode="numeric" formControlName="respiratoryRate" class="ui-input" />
+          </div>
+          <div class="grid min-w-0 grid-rows-[minmax(2.5rem,auto)_auto]">
+            <label class="ui-label mb-1.5 flex min-h-10 items-end leading-tight" for="triage-spo2">{{ text('oxygenSaturation') }}</label>
+            <input id="triage-spo2" type="number" inputmode="numeric" formControlName="oxygenSaturation" class="ui-input" />
+          </div>
+          <div class="grid min-w-0 grid-rows-[minmax(2.5rem,auto)_auto]">
+            <label class="ui-label mb-1.5 flex min-h-10 items-end leading-tight" for="triage-temperature">{{ text('temperature') }}</label>
+            <input id="triage-temperature" type="number" inputmode="decimal" step="0.1" formControlName="temperature" class="ui-input" />
+          </div>
+          <div class="grid min-w-0 grid-rows-[minmax(2.5rem,auto)_auto]">
+            <label class="ui-label mb-1.5 flex min-h-10 items-end leading-tight" for="triage-gcs">{{ text('gcs') }}</label>
+            <input id="triage-gcs" type="number" inputmode="numeric" formControlName="gcsScore" class="ui-input" />
+          </div>
+          <div class="grid min-w-0 grid-rows-[minmax(2.5rem,auto)_auto]">
+            <label class="ui-label mb-1.5 flex min-h-10 items-end leading-tight" for="triage-pain">{{ text('pain') }}</label>
+            <input id="triage-pain" type="number" inputmode="numeric" formControlName="painScore" class="ui-input" />
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div class="grid min-w-0 grid-rows-[minmax(2.5rem,auto)_auto]">
+          <label class="ui-label mb-1.5 flex min-h-10 items-end leading-tight" for="triage-orientation">{{ text('recommendedOrientation') }}</label>
+          <select id="triage-orientation" formControlName="recommendedOrientation" class="ui-input">
+            <option [ngValue]="null">{{ text('orientation.none') }}</option>
+            @for (option of orientationOptions; track option) { <option [ngValue]="option">{{ orientationLabel(option) }}</option> }
+          </select>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="ui-label mb-1.5" for="triage-notes">{{ text('clinicalNotes') }}</label>
+          <textarea id="triage-notes" formControlName="clinicalNotes" class="ui-input min-h-20 resize-y py-2.5"></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end border-t border-[var(--divider-subtle)] pt-4">
+        <app-ui-button class="shrink-0 whitespace-nowrap" variant="primary" (pressed)="submit()" [disabled]="isSaving()">
+          {{ isSaving() ? text('saving') : text('save') }}
+        </app-ui-button>
+      </div>
+    </form>
+  }
+</section>

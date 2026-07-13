@@ -12,6 +12,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { EmergencyApiService } from './emergency-api.service';
 import { EmergencyRecord } from './emergency.models';
 import { EmergencyMedicoLegalPanelComponent } from './medico-legal/emergency-medico-legal-panel.component';
+import { EmergencyTriagePanelComponent } from './triage/emergency-triage-panel.component';
 
 type EmergencyDetailTab = 'OVERVIEW' | 'IDENTITY' | 'CARE' | 'LEGAL';
 
@@ -29,6 +30,7 @@ type EmergencyDetailTab = 'OVERVIEW' | 'IDENTITY' | 'CARE' | 'LEGAL';
     EmptyStateComponent,
     UnifiedAdmissionComponent,
     EmergencyMedicoLegalPanelComponent,
+    EmergencyTriagePanelComponent,
   ],
   templateUrl: './emergency-dashboard.component.html',
 })

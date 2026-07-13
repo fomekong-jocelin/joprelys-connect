@@ -1,5 +1,7 @@
 package com.joprelys.backend.patient.reconciliation.application;
 
+import static com.joprelys.backend.patient.reconciliation.infrastructure.persistence.PatientReconciliationCandidateSpecifications.eligibleForReconciliation;
+
 import com.joprelys.backend.patient.application.PatientSimilarityService;
 import com.joprelys.backend.patient.domain.PatientIdentityStatus;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
@@ -14,6 +16,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,15 +45,21 @@ public class PatientReconciliationCandidateService {
     @Transactional(readOnly = true)
     public List<PatientReconciliationCandidate> findCandidates(UUID sourcePatientId) {
         PatientEntity source = requireReconciliationSource(sourcePatientId);
+        PageRequest preselection = PageRequest.of(
+                0,
+                MAX_PRESELECTED_CANDIDATES,
+                Sort.by(Sort.Direction.DESC, "updatedAt"));
 
-        return patientRepository.findReconciliationCandidates(
-                        source.getId(),
-                        PatientIdentityStatus.VERIFIED,
-                        source.getBirthDate(),
-                        normalizeText(source.getPhone()),
-                        normalizeText(source.getCity()),
-                        normalizeText(source.getGender()),
-                        PageRequest.of(0, MAX_PRESELECTED_CANDIDATES))
+        return patientRepository.findAll(
+                        eligibleForReconciliation(
+                                source.getId(),
+                                PatientIdentityStatus.VERIFIED,
+                                source.getBirthDate(),
+                                normalizeText(source.getPhone()),
+                                normalizeText(source.getCity()),
+                                normalizeText(source.getGender())),
+                        preselection)
+                .getContent()
                 .stream()
                 .filter(this::isDefinitiveDpu)
                 .map(candidate -> score(source, candidate))

@@ -73,7 +73,7 @@ class ProvisionalEmergencyAdmissionControllerTest {
     }
 
     @Test
-    void shouldCreatePatientAndEmergencyAtomicallyAndIdempotently() throws Exception {
+    void shouldCreatePatientEmergencyAndInitialTriageAtomicallyAndIdempotently() throws Exception {
         UUID requestId = UUID.randomUUID();
         String payload = payload(requestId);
 
@@ -100,6 +100,9 @@ class ProvisionalEmergencyAdmissionControllerTest {
                 requestId));
         assertEquals(1, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM emergencies", Integer.class));
         assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM emergency_triage_assessments WHERE assessment_type = 'INITIAL'",
+                Integer.class));
+        assertEquals(1, jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM patients WHERE identity_status = 'PROVISIONAL_URGENCY'",
                 Integer.class));
     }
@@ -117,6 +120,7 @@ class ProvisionalEmergencyAdmissionControllerTest {
 
         assertEquals(0, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM emergency_admission_requests", Integer.class));
         assertEquals(0, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM emergencies", Integer.class));
+        assertEquals(0, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM emergency_triage_assessments", Integer.class));
         assertEquals(0, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM patients", Integer.class));
     }
 

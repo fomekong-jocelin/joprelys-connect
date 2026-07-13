@@ -6,6 +6,7 @@ import com.joprelys.backend.emergency.infrastructure.persistence.EmergencyEntity
 import com.joprelys.backend.emergency.infrastructure.persistence.EmergencyRepository;
 import com.joprelys.backend.emergency.infrastructure.persistence.ResuscitationLogEntity;
 import com.joprelys.backend.emergency.medicolegal.application.EmergencyArrivalThirdPartyService;
+import com.joprelys.backend.emergency.triage.application.EmergencyTriageAssessmentUseCase;
 import com.joprelys.backend.patient.domain.PatientIdentityStatus;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
@@ -25,16 +26,19 @@ public class EmergencyService {
     private final PatientRepository patientRepository;
     private final EmergencyArrivalThirdPartyService arrivalThirdPartyService;
     private final PatientCanonicalResolver canonicalResolver;
+    private final EmergencyTriageAssessmentUseCase triageAssessmentUseCase;
 
     public EmergencyService(
             EmergencyRepository emergencyRepository,
             PatientRepository patientRepository,
             EmergencyArrivalThirdPartyService arrivalThirdPartyService,
-            PatientCanonicalResolver canonicalResolver) {
+            PatientCanonicalResolver canonicalResolver,
+            EmergencyTriageAssessmentUseCase triageAssessmentUseCase) {
         this.emergencyRepository = emergencyRepository;
         this.patientRepository = patientRepository;
         this.arrivalThirdPartyService = arrivalThirdPartyService;
         this.canonicalResolver = canonicalResolver;
+        this.triageAssessmentUseCase = triageAssessmentUseCase;
     }
 
     @Transactional
@@ -73,6 +77,10 @@ public class EmergencyService {
                 request.contactConsentGranted(),
                 createdByUserId));
 
+        triageAssessmentUseCase.recordInitial(
+                emergency,
+                request.toInitialTriageCommand(),
+                createdByUserId);
         arrivalThirdPartyService.capture(emergency, createdByUserId);
         return emergency;
     }

@@ -114,7 +114,7 @@
     <div class="grid gap-4 sm:grid-cols-2">
       <label>
         <span class="ui-label">{{ t('patientReconciliation.decision.evidenceSource') }}</span>
-        <select class="ui-input mt-2" formControlName="evidenceSourceType" [disabled]="disabled()">
+        <select class="ui-input mt-2" formControlName="evidenceSourceType">
           @for (sourceType of sourceTypes; track sourceType) {
             <option [value]="sourceType">
               {{ t('patientReconciliation.source.' + sourceType.toLowerCase()) }}
