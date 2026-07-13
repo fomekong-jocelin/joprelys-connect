@@ -65,12 +65,27 @@ public class DefaultEmergencyTriageAssessmentUseCase implements EmergencyTriageA
     @Override
     @Transactional(readOnly = true)
     public List<EmergencyTriageAssessmentResult> getHistory(UUID emergencyId) {
-        if (!emergencyRepository.existsById(emergencyId)) {
-            throw emergencyNotFound();
-        }
+        requireEmergency(emergencyId);
         return assessmentRepository.findByEmergency_IdOrderBySequenceNumberAsc(emergencyId).stream()
                 .map(DefaultEmergencyTriageAssessmentUseCase::toResult)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public EmergencyTriageAssessmentResult getAssessment(UUID emergencyId, UUID assessmentId) {
+        requireEmergency(emergencyId);
+        return assessmentRepository.findByIdAndEmergency_Id(assessmentId, emergencyId)
+                .map(DefaultEmergencyTriageAssessmentUseCase::toResult)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "EMERGENCY_TRIAGE_ASSESSMENT_NOT_FOUND"));
+    }
+
+    private void requireEmergency(UUID emergencyId) {
+        if (!emergencyRepository.existsById(emergencyId)) {
+            throw emergencyNotFound();
+        }
     }
 
     private static void validateAssessedAt(Instant assessedAt) {
