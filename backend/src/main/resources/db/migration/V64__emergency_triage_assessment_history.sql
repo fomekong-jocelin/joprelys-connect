@@ -34,10 +34,6 @@ CREATE TABLE emergency_triage_assessments (
         CHECK (sequence_number > 0),
     CONSTRAINT chk_emergency_triage_assessment_type
         CHECK (assessment_type IN ('INITIAL', 'REASSESSMENT')),
-    CONSTRAINT chk_emergency_triage_level
-        CHECK (triage_level IN ('RED', 'ORANGE', 'YELLOW', 'GREEN')),
-    CONSTRAINT chk_emergency_triage_hemodynamic
-        CHECK (hemodynamic_status IN ('SHOCK', 'UNSTABLE', 'STABLE')),
     CONSTRAINT chk_emergency_triage_airway
         CHECK (airway_status IN ('NOT_ASSESSED', 'PATENT', 'AT_RISK', 'OBSTRUCTED')),
     CONSTRAINT chk_emergency_triage_breathing
