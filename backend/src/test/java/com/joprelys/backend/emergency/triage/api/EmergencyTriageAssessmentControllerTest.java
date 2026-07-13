@@ -139,6 +139,25 @@ class EmergencyTriageAssessmentControllerTest {
     }
 
     @Test
+    void shouldRejectReassessmentWhenOneAbcdeAxisIsNotAssessed() throws Exception {
+        UUID emergencyId = createEmergency();
+        String incomplete = reassessmentPayload().replace(
+                "\"airwayStatus\": \"PATENT\"",
+                "\"airwayStatus\": \"NOT_ASSESSED\"");
+
+        mockMvc.perform(post(historyUrl(emergencyId))
+                        .header("Authorization", bearer(doctorToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(incomplete))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get(historyUrl(emergencyId))
+                        .header("Authorization", bearer(doctorToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
     void shouldEnforceWritePermissionAndTenantIsolation() throws Exception {
         UUID emergencyId = createEmergency();
 
