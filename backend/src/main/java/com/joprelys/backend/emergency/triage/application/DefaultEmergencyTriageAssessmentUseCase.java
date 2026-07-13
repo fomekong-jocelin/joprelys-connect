@@ -1,5 +1,7 @@
 package com.joprelys.backend.emergency.triage.application;
 
+import com.joprelys.backend.audit.application.AuditService;
+import com.joprelys.backend.auth.security.TenantContext;
 import com.joprelys.backend.emergency.infrastructure.persistence.EmergencyEntity;
 import com.joprelys.backend.emergency.infrastructure.persistence.EmergencyRepository;
 import com.joprelys.backend.emergency.triage.infrastructure.persistence.EmergencyTriageAssessmentEntity;
@@ -16,14 +18,19 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class DefaultEmergencyTriageAssessmentUseCase implements EmergencyTriageAssessmentUseCase {
 
+    private static final String RESOURCE_TYPE = "EMERGENCY_TRIAGE";
+
     private final EmergencyRepository emergencyRepository;
     private final EmergencyTriageAssessmentRepository assessmentRepository;
+    private final AuditService auditService;
 
     public DefaultEmergencyTriageAssessmentUseCase(
             EmergencyRepository emergencyRepository,
-            EmergencyTriageAssessmentRepository assessmentRepository) {
+            EmergencyTriageAssessmentRepository assessmentRepository,
+            AuditService auditService) {
         this.emergencyRepository = emergencyRepository;
         this.assessmentRepository = assessmentRepository;
+        this.auditService = auditService;
     }
 
     @Override
@@ -36,7 +43,9 @@ public class DefaultEmergencyTriageAssessmentUseCase implements EmergencyTriageA
             return;
         }
         validateAssessedAt(command.assessedAt());
-        assessmentRepository.save(EmergencyTriageAssessmentEntity.initial(emergency, command, actorId));
+        EmergencyTriageAssessmentEntity saved = assessmentRepository.save(
+                EmergencyTriageAssessmentEntity.initial(emergency, command, actorId));
+        audit(actorId, emergency, saved.getId(), "CREATE_INITIAL_TRIAGE", "Recorded initial triage assessment");
     }
 
     @Override
@@ -59,33 +68,67 @@ public class DefaultEmergencyTriageAssessmentUseCase implements EmergencyTriageA
                         nextSequence,
                         command,
                         actorId));
+        audit(actorId, emergency, saved.getId(), "CREATE_TRIAGE_REASSESSMENT",
+                "Recorded triage reassessment sequence " + nextSequence);
         return toResult(saved);
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<EmergencyTriageAssessmentResult> getHistory(UUID emergencyId) {
-        requireEmergency(emergencyId);
-        return assessmentRepository.findByEmergency_IdOrderBySequenceNumberAsc(emergencyId).stream()
+    @Transactional
+    public List<EmergencyTriageAssessmentResult> getHistory(UUID emergencyId, UUID actorId) {
+        EmergencyEntity emergency = requireEmergency(emergencyId);
+        List<EmergencyTriageAssessmentResult> history = assessmentRepository
+                .findByEmergency_IdOrderBySequenceNumberAsc(emergencyId).stream()
                 .map(DefaultEmergencyTriageAssessmentUseCase::toResult)
                 .toList();
+        audit(actorId, emergency, emergencyId, "READ_TRIAGE_HISTORY", "Viewed triage assessment history");
+        return history;
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public EmergencyTriageAssessmentResult getAssessment(UUID emergencyId, UUID assessmentId) {
-        requireEmergency(emergencyId);
-        return assessmentRepository.findByIdAndEmergency_Id(assessmentId, emergencyId)
+    @Transactional
+    public EmergencyTriageAssessmentResult getAssessment(
+            UUID emergencyId,
+            UUID assessmentId,
+            UUID actorId) {
+        EmergencyEntity emergency = requireEmergency(emergencyId);
+        EmergencyTriageAssessmentResult result = assessmentRepository
+                .findByIdAndEmergency_Id(assessmentId, emergencyId)
                 .map(DefaultEmergencyTriageAssessmentUseCase::toResult)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "EMERGENCY_TRIAGE_ASSESSMENT_NOT_FOUND"));
+        audit(actorId, emergency, assessmentId, "READ_TRIAGE_ASSESSMENT", "Viewed one triage assessment");
+        return result;
     }
 
-    private void requireEmergency(UUID emergencyId) {
-        if (!emergencyRepository.existsById(emergencyId)) {
-            throw emergencyNotFound();
+    private EmergencyEntity requireEmergency(UUID emergencyId) {
+        return emergencyRepository.findByIdWithPatientAndLogs(emergencyId)
+                .orElseThrow(DefaultEmergencyTriageAssessmentUseCase::emergencyNotFound);
+    }
+
+    private void audit(
+            UUID actorId,
+            EmergencyEntity emergency,
+            UUID resourceId,
+            String action,
+            String reason) {
+        auditService.logSuccess(
+                actorId,
+                requireOrganizationId(),
+                emergency.getPatient().getId(),
+                RESOURCE_TYPE,
+                resourceId,
+                action,
+                reason);
+    }
+
+    private UUID requireOrganizationId() {
+        UUID organizationId = TenantContext.getTenantId();
+        if (organizationId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED");
         }
+        return organizationId;
     }
 
     private static void validateAssessedAt(Instant assessedAt) {
