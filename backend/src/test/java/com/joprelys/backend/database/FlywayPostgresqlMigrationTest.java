@@ -84,8 +84,8 @@ class FlywayPostgresqlMigrationTest {
         MigrationInfo current = flyway.info().current();
         assertNotNull(current, "Flyway doit exposer la migration courante");
         assertNotNull(current.getVersion(), "La migration courante doit être versionnée");
-        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 63,
-                "Toutes les migrations de durcissement du rapprochement patient doivent être appliquées");
+        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 64,
+                "Toutes les migrations du triage ABCDE doivent être appliquées");
 
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword());
@@ -102,11 +102,16 @@ class FlywayPostgresqlMigrationTest {
 
         assertTableExists(jdbcTemplate, "patient_identity_declarations");
         assertTableExists(jdbcTemplate, "patient_identity_status_history");
+        assertTableExists(jdbcTemplate, "emergency_triage_assessments");
         MEDICO_LEGAL_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
         PATIENT_RECONCILIATION_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
 
         RECONCILIATION_RESTRICTED_FOREIGN_KEYS.forEach(
                 constraintName -> assertForeignKeyDeleteRule(jdbcTemplate, constraintName, "NO ACTION"));
+        assertForeignKeyDeleteRule(
+                jdbcTemplate,
+                "fk_emergency_triage_assessment_emergency",
+                "CASCADE");
 
         Integer thirdPartyColumnCount = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*)
@@ -142,6 +147,11 @@ class FlywayPostgresqlMigrationTest {
                     connection,
                     "patient_reconciliation_events",
                     "created_by_user_id",
+                    "NO");
+            assertColumnNullability(
+                    connection,
+                    "emergency_triage_assessments",
+                    "assessment_type",
                     "NO");
         }
     }
