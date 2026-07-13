@@ -47,6 +47,16 @@ public class EmergencyTriageAssessmentController {
                 .toList();
     }
 
+    @GetMapping("/{assessmentId}")
+    @PreAuthorize(READ_ACCESS)
+    @Operation(summary = "Consulter une évaluation de triage ABCDE")
+    public EmergencyTriageAssessmentResponse getAssessment(
+            @PathVariable UUID emergencyId,
+            @PathVariable UUID assessmentId) {
+        return EmergencyTriageAssessmentApiMapper.toResponse(
+                useCase.getAssessment(emergencyId, assessmentId));
+    }
+
     @PostMapping
     @PreAuthorize(WRITE_ACCESS)
     @Operation(summary = "Ajouter une réévaluation ABCDE horodatée")
