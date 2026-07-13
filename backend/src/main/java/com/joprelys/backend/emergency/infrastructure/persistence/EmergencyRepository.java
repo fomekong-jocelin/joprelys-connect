@@ -27,6 +27,10 @@ public interface EmergencyRepository extends JpaRepository<EmergencyEntity, UUID
     @Query("SELECT e FROM EmergencyEntity e JOIN FETCH e.patient WHERE e.id = :id")
     Optional<EmergencyEntity> findByIdForMedicoLegalUpdate(@Param("id") UUID id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT e FROM EmergencyEntity e JOIN FETCH e.patient WHERE e.id = :id")
+    Optional<EmergencyEntity> findByIdForTriageUpdate(@Param("id") UUID id);
+
     Optional<EmergencyEntity> findByVisitId(UUID visitId);
 
     @Query("SELECT e FROM EmergencyEntity e JOIN FETCH e.patient LEFT JOIN FETCH e.resuscitationLogs WHERE e.patient.id = :patientId ORDER BY e.createdAt DESC")
