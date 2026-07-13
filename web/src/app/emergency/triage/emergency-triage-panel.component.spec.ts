@@ -93,6 +93,15 @@ describe('EmergencyTriagePanelComponent', () => {
     expect(component.canWrite()).toBe(true);
   });
 
+  it('requires explicit clinical selections before submission', () => {
+    expect(component.form.invalid).toBe(true);
+
+    component.submit();
+
+    expect(api.addTriageAssessment).not.toHaveBeenCalled();
+    expect(component.error()).not.toBeNull();
+  });
+
   it('submits an ABCDE reassessment and appends the response', () => {
     component.form.patchValue({
       triageLevel: 'ORANGE',
@@ -124,6 +133,7 @@ describe('EmergencyTriagePanelComponent', () => {
     );
     expect(component.assessments()).toEqual([initialAssessment, reassessment]);
     expect(component.success()).not.toBeNull();
+    expect(component.form.invalid).toBe(true);
   });
 
   it('does not submit when write access is unavailable', () => {
