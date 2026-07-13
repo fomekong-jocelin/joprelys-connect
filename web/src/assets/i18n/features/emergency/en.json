@@ -67,6 +67,7 @@
   "emergency.triage.empty": "No triage assessment is available.",
   "emergency.triage.newAssessment": "New reassessment",
   "emergency.triage.newAssessmentHint": "Record the condition observed now. Previous assessments are never changed.",
+  "emergency.triage.selectPrompt": "Select a value",
   "emergency.triage.triageLevel": "Triage level",
   "emergency.triage.hemodynamicStatus": "Hemodynamic status",
   "emergency.triage.abcde": "ABCDE assessment",
@@ -130,5 +131,6 @@
   "emergency.triage.error.EMERGENCY_NOT_FOUND": "The emergency record was not found or is not accessible.",
   "emergency.triage.error.EMERGENCY_ALREADY_STABILIZED": "The record is stabilized and no longer accepts reassessments.",
   "emergency.triage.error.EMERGENCY_TRIAGE_ASSESSMENT_NOT_FOUND": "The requested assessment was not found.",
+  "emergency.triage.error.EMERGENCY_TRIAGE_ABCDE_REQUIRED": "All five ABCDE axes must be assessed before saving.",
   "emergency.triage.error.EMERGENCY_TRIAGE_ASSESSED_AT_FUTURE": "The clinical time cannot be in the future."
 }
