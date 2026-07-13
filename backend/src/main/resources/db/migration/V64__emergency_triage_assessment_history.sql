@@ -32,6 +32,45 @@ CREATE TABLE emergency_triage_assessments (
         UNIQUE (organization_id, emergency_id, sequence_number),
     CONSTRAINT chk_emergency_triage_assessment_sequence
         CHECK (sequence_number > 0),
+    CONSTRAINT chk_emergency_triage_assessment_type
+        CHECK (assessment_type IN ('INITIAL', 'REASSESSMENT')),
+    CONSTRAINT chk_emergency_triage_level
+        CHECK (triage_level IN ('RED', 'ORANGE', 'YELLOW', 'GREEN')),
+    CONSTRAINT chk_emergency_triage_hemodynamic
+        CHECK (hemodynamic_status IN ('SHOCK', 'UNSTABLE', 'STABLE')),
+    CONSTRAINT chk_emergency_triage_airway
+        CHECK (airway_status IN ('NOT_ASSESSED', 'PATENT', 'AT_RISK', 'OBSTRUCTED')),
+    CONSTRAINT chk_emergency_triage_breathing
+        CHECK (breathing_status IN ('NOT_ASSESSED', 'ADEQUATE', 'DISTRESS', 'FAILURE')),
+    CONSTRAINT chk_emergency_triage_circulation
+        CHECK (circulation_status IN ('NOT_ASSESSED', 'STABLE', 'COMPROMISED', 'SHOCK')),
+    CONSTRAINT chk_emergency_triage_disability
+        CHECK (disability_status IN (
+            'NOT_ASSESSED',
+            'ALERT',
+            'RESPONDS_TO_VOICE',
+            'RESPONDS_TO_PAIN',
+            'UNRESPONSIVE'
+        )),
+    CONSTRAINT chk_emergency_triage_exposure
+        CHECK (exposure_status IN (
+            'NOT_ASSESSED',
+            'NO_CRITICAL_FINDING',
+            'TRAUMA',
+            'HYPOTHERMIA',
+            'HYPERTHERMIA',
+            'OTHER'
+        )),
+    CONSTRAINT chk_emergency_triage_orientation
+        CHECK (recommended_orientation IS NULL OR recommended_orientation IN (
+            'RESUSCITATION',
+            'OPERATING_ROOM',
+            'HOSPITALIZATION',
+            'CONSULTATION',
+            'TRANSFER',
+            'DISCHARGE',
+            'DEATH'
+        )),
     CONSTRAINT chk_emergency_triage_respiratory_rate
         CHECK (respiratory_rate IS NULL OR respiratory_rate BETWEEN 0 AND 100),
     CONSTRAINT chk_emergency_triage_oxygen_saturation
