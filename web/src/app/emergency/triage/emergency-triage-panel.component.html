@@ -105,6 +105,7 @@
         <div>
           <label class="ui-label mb-1.5" for="triage-level">{{ text('triageLevel') }}</label>
           <select id="triage-level" formControlName="triageLevel" class="ui-input">
+            <option value="" disabled>{{ text('selectPrompt') }}</option>
             <option value="RED">{{ triageLabel('RED') }}</option>
             <option value="ORANGE">{{ triageLabel('ORANGE') }}</option>
             <option value="YELLOW">{{ triageLabel('YELLOW') }}</option>
@@ -114,6 +115,7 @@
         <div>
           <label class="ui-label mb-1.5" for="triage-hemodynamic">{{ text('hemodynamicStatus') }}</label>
           <select id="triage-hemodynamic" formControlName="hemodynamicStatus" class="ui-input">
+            <option value="" disabled>{{ text('selectPrompt') }}</option>
             <option value="SHOCK">{{ hemodynamicLabel('SHOCK') }}</option>
             <option value="UNSTABLE">{{ hemodynamicLabel('UNSTABLE') }}</option>
             <option value="STABLE">{{ hemodynamicLabel('STABLE') }}</option>
@@ -127,30 +129,35 @@
           <div>
             <label class="ui-label mb-1.5" for="triage-airway">A — {{ text('airwayLabel') }}</label>
             <select id="triage-airway" formControlName="airwayStatus" class="ui-input">
+              <option value="" disabled>{{ text('selectPrompt') }}</option>
               @for (option of airwayOptions; track option) { <option [value]="option">{{ statusLabel('airway', option) }}</option> }
             </select>
           </div>
           <div>
             <label class="ui-label mb-1.5" for="triage-breathing">B — {{ text('breathingLabel') }}</label>
             <select id="triage-breathing" formControlName="breathingStatus" class="ui-input">
+              <option value="" disabled>{{ text('selectPrompt') }}</option>
               @for (option of breathingOptions; track option) { <option [value]="option">{{ statusLabel('breathing', option) }}</option> }
             </select>
           </div>
           <div>
             <label class="ui-label mb-1.5" for="triage-circulation">C — {{ text('circulationLabel') }}</label>
             <select id="triage-circulation" formControlName="circulationStatus" class="ui-input">
+              <option value="" disabled>{{ text('selectPrompt') }}</option>
               @for (option of circulationOptions; track option) { <option [value]="option">{{ statusLabel('circulation', option) }}</option> }
             </select>
           </div>
           <div>
             <label class="ui-label mb-1.5" for="triage-disability">D — {{ text('disabilityLabel') }}</label>
             <select id="triage-disability" formControlName="disabilityStatus" class="ui-input">
+              <option value="" disabled>{{ text('selectPrompt') }}</option>
               @for (option of disabilityOptions; track option) { <option [value]="option">{{ statusLabel('disability', option) }}</option> }
             </select>
           </div>
           <div>
             <label class="ui-label mb-1.5" for="triage-exposure">E — {{ text('exposureLabel') }}</label>
             <select id="triage-exposure" formControlName="exposureStatus" class="ui-input">
+              <option value="" disabled>{{ text('selectPrompt') }}</option>
               @for (option of exposureOptions; track option) { <option [value]="option">{{ statusLabel('exposure', option) }}</option> }
             </select>
           </div>
