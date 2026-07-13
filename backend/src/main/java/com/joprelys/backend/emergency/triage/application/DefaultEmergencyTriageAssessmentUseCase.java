@@ -60,6 +60,7 @@ public class DefaultEmergencyTriageAssessmentUseCase implements EmergencyTriageA
             throw new ResponseStatusException(HttpStatus.CONFLICT, "EMERGENCY_ALREADY_STABILIZED");
         }
 
+        validateReassessment(command);
         validateAssessedAt(command.assessedAt());
         int nextSequence = assessmentRepository.findMaxSequenceNumber(emergencyId) + 1;
         EmergencyTriageAssessmentEntity saved = assessmentRepository.save(
@@ -103,7 +104,7 @@ public class DefaultEmergencyTriageAssessmentUseCase implements EmergencyTriageA
     }
 
     private EmergencyEntity requireEmergency(UUID emergencyId) {
-        return emergencyRepository.findByIdWithPatientAndLogs(emergencyId)
+        return emergencyRepository.findById(emergencyId)
                 .orElseThrow(DefaultEmergencyTriageAssessmentUseCase::emergencyNotFound);
     }
 
@@ -129,6 +130,22 @@ public class DefaultEmergencyTriageAssessmentUseCase implements EmergencyTriageA
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED");
         }
         return organizationId;
+    }
+
+    private static void validateReassessment(EmergencyTriageAssessmentCommand command) {
+        if (isNotAssessed(command.airwayStatus())
+                || isNotAssessed(command.breathingStatus())
+                || isNotAssessed(command.circulationStatus())
+                || isNotAssessed(command.disabilityStatus())
+                || isNotAssessed(command.exposureStatus())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "EMERGENCY_TRIAGE_ABCDE_REQUIRED");
+        }
+    }
+
+    private static boolean isNotAssessed(Enum<?> value) {
+        return value == null || "NOT_ASSESSED".equals(value.name());
     }
 
     private static void validateAssessedAt(Instant assessedAt) {
