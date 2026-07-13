@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
+import { RbacApiService } from '../../clinic/rbac/rbac-api.service';
 import { ApiErrorI18nService } from '../../core/i18n/api-error-i18n.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { EmergencyApiService } from '../emergency-api.service';
@@ -56,6 +57,17 @@ describe('EmergencyTriagePanelComponent', () => {
       providers: [
         { provide: EmergencyApiService, useValue: api },
         {
+          provide: RbacApiService,
+          useValue: {
+            ensureMyAccess: vi.fn().mockReturnValue(of({
+              userId: 'doctor-1',
+              roles: ['MEDECIN'],
+              permissions: ['EMERGENCY_READ', 'EMERGENCY_WRITE'],
+            })),
+            effectivePermissionSet: (permissions: readonly string[]) => new Set(permissions),
+          },
+        },
+        {
           provide: I18nService,
           useValue: {
             locale: vi.fn().mockReturnValue('fr'),
@@ -75,9 +87,10 @@ describe('EmergencyTriagePanelComponent', () => {
     fixture.detectChanges();
   });
 
-  it('loads the immutable triage history', () => {
+  it('loads the immutable triage history and resolves write access', () => {
     expect(api.getTriageAssessments).toHaveBeenCalledWith('emergency-1');
     expect(component.assessments()).toEqual([initialAssessment]);
+    expect(component.canWrite()).toBe(true);
   });
 
   it('submits an ABCDE reassessment and appends the response', () => {
@@ -111,5 +124,14 @@ describe('EmergencyTriagePanelComponent', () => {
     );
     expect(component.assessments()).toEqual([initialAssessment, reassessment]);
     expect(component.success()).not.toBeNull();
+  });
+
+  it('does not submit when write access is unavailable', () => {
+    component.canWrite.set(false);
+
+    component.submit();
+
+    expect(api.addTriageAssessment).not.toHaveBeenCalled();
+    expect(component.error()).not.toBeNull();
   });
 });
