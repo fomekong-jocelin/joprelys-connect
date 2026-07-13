@@ -1,4 +1,5 @@
 import { CreateProvisionalPatientRequest } from '../patient/provisional-patient.models';
+import type { EmergencyAbcdeAssessmentRequest } from './triage/emergency-triage.models';
 
 export interface CreateEmergencyRequest {
   patientId: string;
@@ -16,6 +17,7 @@ export interface CreateEmergencyRequest {
   thirdPartyIdDocument?: string;
   thirdPartyCircumstances?: string;
   thirdPartyConsentToContact?: boolean;
+  abcdeAssessment?: EmergencyAbcdeAssessmentRequest;
 }
 
 export type EmergencyTriageRequest = Omit<CreateEmergencyRequest, 'patientId'>;
