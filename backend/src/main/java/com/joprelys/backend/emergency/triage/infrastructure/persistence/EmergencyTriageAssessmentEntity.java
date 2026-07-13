@@ -22,7 +22,9 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.TenantId;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "emergency_triage_assessments")
@@ -40,6 +42,7 @@ public class EmergencyTriageAssessmentEntity {
     private EmergencyEntity emergency;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "assessment_type", nullable = false, length = 20)
     private AssessmentType assessmentType;
 
@@ -53,22 +56,27 @@ public class EmergencyTriageAssessmentEntity {
     private String hemodynamicStatus;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "airway_status", nullable = false, length = 32)
     private AirwayStatus airwayStatus;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "breathing_status", nullable = false, length = 32)
     private BreathingStatus breathingStatus;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "circulation_status", nullable = false, length = 32)
     private CirculationStatus circulationStatus;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "disability_status", nullable = false, length = 32)
     private DisabilityStatus disabilityStatus;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "exposure_status", nullable = false, length = 32)
     private ExposureStatus exposureStatus;
 
@@ -97,6 +105,7 @@ public class EmergencyTriageAssessmentEntity {
     private Integer painScore;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "recommended_orientation", length = 32)
     private RecommendedOrientation recommendedOrientation;
 
