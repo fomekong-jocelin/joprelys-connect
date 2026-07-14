@@ -1,0 +1,34 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  flyway:
+    validate-on-migrate: true
+    repair-on-migrate: false
+
+joprelys:
+  security:
+    expose-otp-to-frontend: false
+    jwt:
+      secret: ${JOPRELYS_JWT_SECRET}
+      ttl-minutes: 15
+    sessions:
+      absolute-ttl-hours: 168
+      inactivity-ttl-minutes: 30
+      retention-hours: 168
+      refresh-cookie-secure: true
+      refresh-cookie-same-site: Lax
+      refresh-cookie-path: /api/auth
+      cleanup-cron: "0 15 * * * *"
+  seed:
+    admin:
+      enabled: false
+  lab-integration:
+    api-key: ${JOPRELYS_LAB_INTEGRATION_API_KEY}
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
