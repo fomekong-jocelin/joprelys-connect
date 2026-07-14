@@ -84,8 +84,8 @@ class FlywayPostgresqlMigrationTest {
         MigrationInfo current = flyway.info().current();
         assertNotNull(current, "Flyway doit exposer la migration courante");
         assertNotNull(current.getVersion(), "La migration courante doit être versionnée");
-        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 66,
-                "Toutes les migrations des sessions persistantes doivent être appliquées");
+        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 67,
+                "Toutes les migrations de révocation persistante doivent être appliquées");
 
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword());
@@ -95,15 +95,28 @@ class FlywayPostgresqlMigrationTest {
         Integer permissionCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM permissions", Integer.class);
         Integer systemRoleCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM roles WHERE system_role = TRUE", Integer.class);
+        Integer sessionPermissionCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM permissions WHERE code = 'AUTH_SESSION_MANAGE'", Integer.class);
+        Integer clinicAdminSessionPermissionCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM role_permissions rp
+                JOIN roles r ON r.id = rp.role_id
+                WHERE r.code = 'ADMIN_CLINIQUE'
+                  AND rp.permission_code = 'AUTH_SESSION_MANAGE'
+                """, Integer.class);
         assertNotNull(permissionCount);
         assertNotNull(systemRoleCount);
         assertTrue(permissionCount > 0, "Le catalogue des permissions doit être initialisé sur PostgreSQL");
         assertTrue(systemRoleCount > 0, "Le catalogue des rôles système doit être initialisé sur PostgreSQL");
+        assertEquals(1, sessionPermissionCount);
+        assertEquals(1, clinicAdminSessionPermissionCount);
 
         assertTableExists(jdbcTemplate, "patient_identity_declarations");
         assertTableExists(jdbcTemplate, "patient_identity_status_history");
         assertTableExists(jdbcTemplate, "emergency_triage_assessments");
         assertTableExists(jdbcTemplate, "auth_sessions");
+        assertTableExists(jdbcTemplate, "revoked_access_tokens");
+        assertTableExists(jdbcTemplate, "auth_session_audit_events");
         MEDICO_LEGAL_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
         PATIENT_RECONCILIATION_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
 
@@ -116,6 +129,22 @@ class FlywayPostgresqlMigrationTest {
         assertForeignKeyDeleteRule(
                 jdbcTemplate,
                 "fk_auth_sessions_replacement",
+                "SET NULL");
+        assertForeignKeyDeleteRule(
+                jdbcTemplate,
+                "fk_auth_sessions_revoked_by_user",
+                "SET NULL");
+        assertForeignKeyDeleteRule(
+                jdbcTemplate,
+                "fk_revoked_access_tokens_user",
+                "SET NULL");
+        assertForeignKeyDeleteRule(
+                jdbcTemplate,
+                "fk_revoked_access_tokens_organization",
+                "SET NULL");
+        assertForeignKeyDeleteRule(
+                jdbcTemplate,
+                "fk_revoked_access_tokens_actor",
                 "SET NULL");
 
         Integer thirdPartyColumnCount = jdbcTemplate.queryForObject("""
@@ -162,6 +191,26 @@ class FlywayPostgresqlMigrationTest {
                     connection,
                     "auth_sessions",
                     "refresh_token_hash",
+                    "NO");
+            assertColumnNullability(
+                    connection,
+                    "auth_sessions",
+                    "revoked_by_user_id",
+                    "YES");
+            assertColumnNullability(
+                    connection,
+                    "auth_sessions",
+                    "revocation_source",
+                    "YES");
+            assertColumnNullability(
+                    connection,
+                    "revoked_access_tokens",
+                    "token_id",
+                    "NO");
+            assertColumnNullability(
+                    connection,
+                    "auth_session_audit_events",
+                    "target_user_id",
                     "NO");
         }
     }
