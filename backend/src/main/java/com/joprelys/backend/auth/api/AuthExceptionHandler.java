@@ -1,6 +1,8 @@
 package com.joprelys.backend.auth.api;
 
 import com.joprelys.backend.auth.security.InvalidTokenException;
+import com.joprelys.backend.auth.session.application.AuthSessionAccessDeniedException;
+import com.joprelys.backend.auth.session.application.AuthSessionNotFoundException;
 import com.joprelys.backend.auth.session.application.InvalidAuthSessionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -33,6 +35,22 @@ public class AuthExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED);
         problem.setTitle("Invalid authentication session");
         problem.setDetail("AUTH_SESSION_INVALID");
+        return problem;
+    }
+
+    @ExceptionHandler(AuthSessionNotFoundException.class)
+    ProblemDetail sessionNotFound() {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        problem.setTitle("Authentication session not found");
+        problem.setDetail("AUTH_SESSION_NOT_FOUND");
+        return problem;
+    }
+
+    @ExceptionHandler(AuthSessionAccessDeniedException.class)
+    ProblemDetail sessionAccessDenied() {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
+        problem.setTitle("Authentication session access denied");
+        problem.setDetail("ACCESS_DENIED");
         return problem;
     }
 
