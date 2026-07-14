@@ -6,11 +6,11 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-14 (démarrage STORY-2401 — sessions persistantes et rotation) |
+| Dernière mise à jour | 2026-07-14 (STORY-2401 validée techniquement dans la PR #54) |
 | Responsable mise à jour | Codex |
-| État global | EPIC-0022 Sessions en cours via PR #54 ; EPIC-0023 URG-TEMP : #40, #42, #44 et #45 terminées, #46 et #47 restantes |
-| Risques majeurs | Rotation concurrente des refresh tokens ; compatibilité progressive des JWT sans `sid` ; configuration production des cookies/HTTPS ; validation métier ABCDE ; UAT Finance et URG-TEMP |
-| Prochaine priorité | Finaliser #31 puis exécuter #33, #34, #46 et #47 dans cet ordre |
+| État global | EPIC-0022 Sessions en cours : STORY-2401 prête pour revue ; #33 et #34 restent à exécuter. EPIC-0023 URG-TEMP : #40, #42, #44 et #45 terminées, #46 et #47 restantes |
+| Risques majeurs | Revue sécurité humaine de #31 ; révocation/rejeu encore en mémoire jusqu’à #33 ; renouvellement Angular absent jusqu’à #34 ; validation métier ABCDE ; UAT Finance et URG-TEMP |
+| Prochaine priorité | Revue et fusion de #31, puis #33, #34, #46 et #47 dans cet ordre |
 | Sprint courant | SPRINT-0014 |
 | Capacité sprint | À recalibrer avant engagement des stories #33 à #47 |
 | Charge engagée | 32.10j (Est. Senior, incluant STORY-2401) |
@@ -20,8 +20,8 @@
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
-| EPIC-0022 | SESSIONS_AND_REVOCATION | Epic | Sessions persistantes, rotation et révocation distribuée | Backend / Angular / DB / sécurité | IN_PROGRESS | P0 | 18 | Senior sécurité + frontend senior | 6.0j | 8.0j | 12.0j | Codex | Tech Lead + sécurité | SPRINT-0014 | 0.8j | #31 puis #33 et #34 | Élevé | 2026-07-14 |
-| STORY-2401 | SESSIONS_AND_REVOCATION | User Story | Sessions persistantes et rotation des refresh tokens | Backend / DB / sécurité | IN_PROGRESS | P0 | 8 | Senior sécurité backend | 3.0j | 4.5j | 6.0j | Codex | Tech Lead + sécurité | SPRINT-0014 | 0.8j | CI, corrections, PostgreSQL 16, review et fusion PR #54 | Élevé | 2026-07-14 |
+| EPIC-0022 | SESSIONS_AND_REVOCATION | Epic | Sessions persistantes, rotation et révocation distribuée | Backend / Angular / DB / sécurité | IN_PROGRESS | P0 | 18 | Senior sécurité + frontend senior | 6.0j | 8.0j | 12.0j | Codex | Tech Lead + sécurité | SPRINT-0014 | 1.2j | Fusionner #31 puis exécuter #33 et #34 | Élevé | 2026-07-14 |
+| STORY-2401 | SESSIONS_AND_REVOCATION | User Story | Sessions persistantes et rotation des refresh tokens | Backend / DB / sécurité | QA | P0 | 8 | Senior sécurité backend | 3.0j | 4.5j | 6.0j | Codex | Tech Lead + sécurité | SPRINT-0014 | 1.2j | Revue humaine et fusion PR #54 ; CI #625 verte | Moyen | 2026-07-14 |
 | EPIC-0023 | URG_TEMP_END_TO_END | Epic | Parcours URG-TEMP de l’arrivée à la régularisation | Full-stack santé | IN_PROGRESS | P0 | 48 | Senior full-stack + médecin urgentiste + DPO + DAF + QA | 12.0j | 16.0j | 24.0j | Codex | Tech Lead + métiers santé | SPRINT-0014 | 10.0j | Exécuter #46 puis #47 après le socle sessions | Élevé | 2026-07-14 |
 | STORY-2302 | URG_TEMP_END_TO_END | User Story | Triage ABCDE et réévaluations horodatées | Backend / Angular / DB / QA | DONE | P0 | 5 | Senior full-stack santé | 2.0j | 2.8j | 4.0j | Codex | Tech Lead + médecin urgentiste + QA | SPRINT-0014 | 2.0j | Validation métier post-fusion uniquement | Faible | 2026-07-14 |
 | STORY-2305 | URG_TEMP_END_TO_END | User Story | Hospitalisation, documents et finance différée URG-TEMP | Full-stack / DB / documents / finance | READY | P0 | 8 | Senior full-stack + DAF + médecin chef | 3.0j | 4.5j | 6.0j | À assigner | Tech Lead + DAF + urgentiste | À planifier | 0j | Démarrer après #34 | Élevé | 2026-07-14 |
