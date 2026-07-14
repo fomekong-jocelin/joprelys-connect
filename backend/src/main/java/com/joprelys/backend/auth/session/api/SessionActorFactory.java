@@ -22,6 +22,8 @@ public class SessionActorFactory {
                 userId,
                 optionalUuid(claims.organizationId()),
                 optionalUuid(claims.sessionId()),
+                claims.tokenId(),
+                claims.expiresAt(),
                 authorities);
     }
 
