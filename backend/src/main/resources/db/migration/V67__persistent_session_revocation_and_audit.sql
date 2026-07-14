@@ -26,7 +26,12 @@ ALTER TABLE auth_sessions
 
 ALTER TABLE auth_sessions
     ADD CONSTRAINT ck_auth_sessions_revocation_source
-    CHECK (revocation_source IS NULL OR revocation_source IN ('SELF', 'ADMIN', 'SYSTEM'));
+    CHECK (
+        revocation_source IS NULL
+        OR revocation_source = 'SELF'
+        OR revocation_source = 'ADMIN'
+        OR revocation_source = 'SYSTEM'
+    );
 
 CREATE INDEX idx_auth_sessions_revoked_by
     ON auth_sessions (revoked_by_user_id, revoked_at);
@@ -63,14 +68,14 @@ CREATE TABLE auth_session_audit_events (
     reason VARCHAR(64),
     occurred_at TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT ck_auth_session_audit_event_type
-        CHECK (event_type IN (
-            'SESSION_CREATED',
-            'SESSION_ROTATED',
-            'SESSION_REVOKED',
-            'LOGOUT_ALL',
-            'REFRESH_REPLAY_DETECTED',
-            'LEGACY_ACCESS_TOKEN_REVOKED'
-        ))
+        CHECK (
+            event_type = 'SESSION_CREATED'
+            OR event_type = 'SESSION_ROTATED'
+            OR event_type = 'SESSION_REVOKED'
+            OR event_type = 'LOGOUT_ALL'
+            OR event_type = 'REFRESH_REPLAY_DETECTED'
+            OR event_type = 'LEGACY_ACCESS_TOKEN_REVOKED'
+        )
 );
 
 CREATE INDEX idx_auth_session_audit_org_created
