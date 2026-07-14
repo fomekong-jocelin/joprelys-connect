@@ -60,6 +60,7 @@ class PersistentAuthSessionServiceTest {
                 24,
                 30,
                 24,
+                2160,
                 "joprelys_refresh",
                 false,
                 "Lax",
