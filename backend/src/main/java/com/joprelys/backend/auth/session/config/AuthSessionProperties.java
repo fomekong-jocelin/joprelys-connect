@@ -13,9 +13,31 @@ public record AuthSessionProperties(
         @DefaultValue("168") @Min(1) long absoluteTtlHours,
         @DefaultValue("30") @Min(5) long inactivityTtlMinutes,
         @DefaultValue("168") @Min(1) long retentionHours,
+        @DefaultValue("2160") @Min(24) long auditRetentionHours,
         @DefaultValue("joprelys_refresh") @NotBlank String refreshCookieName,
         @DefaultValue("false") boolean refreshCookieSecure,
         @DefaultValue("Lax") @NotBlank @Pattern(regexp = "Strict|Lax|None") String refreshCookieSameSite,
         @DefaultValue("/api/auth") @NotBlank String refreshCookiePath,
         @DefaultValue("0 15 * * * *") @NotBlank String cleanupCron) {
+
+    public AuthSessionProperties(
+            long absoluteTtlHours,
+            long inactivityTtlMinutes,
+            long retentionHours,
+            String refreshCookieName,
+            boolean refreshCookieSecure,
+            String refreshCookieSameSite,
+            String refreshCookiePath,
+            String cleanupCron) {
+        this(
+                absoluteTtlHours,
+                inactivityTtlMinutes,
+                retentionHours,
+                2160,
+                refreshCookieName,
+                refreshCookieSecure,
+                refreshCookieSameSite,
+                refreshCookiePath,
+                cleanupCron);
+    }
 }
