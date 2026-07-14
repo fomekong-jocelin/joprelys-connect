@@ -72,9 +72,9 @@ public class AuthController {
     public LoginResponse refresh(
             HttpServletRequest servletRequest,
             HttpServletResponse servletResponse) {
-        String refreshToken = cookieManager.read(servletRequest)
-                .orElseThrow(InvalidAuthSessionException::new);
         try {
+            String refreshToken = cookieManager.read(servletRequest)
+                    .orElseThrow(InvalidAuthSessionException::new);
             IssuedAuthSession session = refreshAuthSessionUseCase.refresh(
                     refreshToken,
                     metadataFactory.from(servletRequest));
