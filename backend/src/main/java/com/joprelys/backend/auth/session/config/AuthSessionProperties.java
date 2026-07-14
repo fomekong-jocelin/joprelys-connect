@@ -19,25 +19,4 @@ public record AuthSessionProperties(
         @DefaultValue("Lax") @NotBlank @Pattern(regexp = "Strict|Lax|None") String refreshCookieSameSite,
         @DefaultValue("/api/auth") @NotBlank String refreshCookiePath,
         @DefaultValue("0 15 * * * *") @NotBlank String cleanupCron) {
-
-    public AuthSessionProperties(
-            long absoluteTtlHours,
-            long inactivityTtlMinutes,
-            long retentionHours,
-            String refreshCookieName,
-            boolean refreshCookieSecure,
-            String refreshCookieSameSite,
-            String refreshCookiePath,
-            String cleanupCron) {
-        this(
-                absoluteTtlHours,
-                inactivityTtlMinutes,
-                retentionHours,
-                2160,
-                refreshCookieName,
-                refreshCookieSecure,
-                refreshCookieSameSite,
-                refreshCookiePath,
-                cleanupCron);
-    }
 }
