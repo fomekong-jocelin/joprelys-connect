@@ -29,6 +29,7 @@ public class AuthSessionManagementService implements
     private final UserAccountRepository userRepository;
     private final AuthSessionAuditPort auditPort;
     private final JwtRevocationService jwtRevocationService;
+    private final AuthSessionViewMapper viewMapper;
     private final Clock clock;
 
     public AuthSessionManagementService(
@@ -36,11 +37,13 @@ public class AuthSessionManagementService implements
             UserAccountRepository userRepository,
             AuthSessionAuditPort auditPort,
             JwtRevocationService jwtRevocationService,
+            AuthSessionViewMapper viewMapper,
             Clock clock) {
         this.sessionRepository = sessionRepository;
         this.userRepository = userRepository;
         this.auditPort = auditPort;
         this.jwtRevocationService = jwtRevocationService;
+        this.viewMapper = viewMapper;
         this.clock = clock;
     }
 
@@ -148,7 +151,7 @@ public class AuthSessionManagementService implements
     private List<AuthSessionView> views(SessionActor actor, UUID targetUserId) {
         Instant now = clock.instant();
         return sessionRepository.findByUserIdOrderByCreatedAtDesc(targetUserId).stream()
-                .map(session -> toView(session, actor.currentSessionId(), now))
+                .map(session -> viewMapper.toView(session, actor.currentSessionId(), now))
                 .toList();
     }
 
@@ -252,29 +255,6 @@ public class AuthSessionManagementService implements
                 eventType,
                 reason,
                 clock.instant()));
-    }
-
-    private static AuthSessionView toView(
-            AuthSessionEntity session,
-            UUID currentSessionId,
-            Instant now) {
-        String state = session.getRevokedAt() != null
-                ? "REVOKED"
-                : session.isActiveAt(now) ? "ACTIVE" : "EXPIRED";
-        Instant effectiveExpiry = session.getIdleExpiresAt().isBefore(session.getAbsoluteExpiresAt())
-                ? session.getIdleExpiresAt()
-                : session.getAbsoluteExpiresAt();
-        return new AuthSessionView(
-                session.getId(),
-                session.getId().equals(currentSessionId),
-                session.getClientType(),
-                session.getUserAgent(),
-                session.getNetworkPrefix(),
-                session.getCreatedAt(),
-                session.getLastUsedAt(),
-                effectiveExpiry,
-                state,
-                session.getRevocationReason());
     }
 
     private static UUID parseUuid(String value) {
