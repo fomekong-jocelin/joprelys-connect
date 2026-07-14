@@ -11,6 +11,8 @@ import static org.mockito.Mockito.when;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.security.JwtService;
 import com.joprelys.backend.auth.session.config.AuthSessionProperties;
+import com.joprelys.backend.auth.session.domain.AuthSessionAuditEvent;
+import com.joprelys.backend.auth.session.domain.AuthSessionAuditEventType;
 import com.joprelys.backend.auth.session.domain.AuthSessionRevocationReason;
 import com.joprelys.backend.auth.session.infrastructure.persistence.AuthSessionEntity;
 import com.joprelys.backend.auth.session.infrastructure.persistence.AuthSessionRepository;
@@ -19,6 +21,7 @@ import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationReposi
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +46,8 @@ class PersistentAuthSessionServiceTest {
     @Mock
     private RefreshTokenHasher tokenHasher;
     @Mock
+    private AuthSessionAuditPort auditPort;
+    @Mock
     private JwtService jwtService;
     @Mock
     private OrganizationRepository organizationRepository;
@@ -65,13 +70,14 @@ class PersistentAuthSessionServiceTest {
                 tokenGenerator,
                 tokenHasher,
                 new AuthSessionExpiryPolicy(properties),
+                auditPort,
                 jwtService,
                 organizationRepository,
                 CLOCK);
     }
 
     @Test
-    void shouldIssueHashedPersistentSessionAndSessionBoundAccessToken() {
+    void shouldIssueHashedPersistentSessionAndAuditCreation() {
         UserAccountEntity user = user();
         when(tokenGenerator.generate()).thenReturn("raw-refresh-token");
         when(tokenHasher.hash("raw-refresh-token")).thenReturn("a".repeat(64));
@@ -87,10 +93,11 @@ class PersistentAuthSessionServiceTest {
         assertEquals(persisted.getId(), result.sessionId());
         assertEquals("raw-refresh-token", result.refreshToken());
         assertEquals(NOW.plusSeconds(1_800), result.sessionExpiresAt());
+        verify(auditPort).append(any(AuthSessionAuditEvent.class));
     }
 
     @Test
-    void shouldRotateOnceAndPreserveTokenFamilyAndAbsoluteExpiry() {
+    void shouldRotateOncePreserveFamilyAndAuditRotation() {
         UserAccountEntity user = user();
         UUID familyId = UUID.randomUUID();
         AuthSessionEntity current = AuthSessionEntity.create(
@@ -119,27 +126,45 @@ class PersistentAuthSessionServiceTest {
         assertEquals(replacement.getId(), current.getReplacedBySessionId());
         assertEquals(replacement.getId(), result.sessionId());
         assertEquals("new-token", result.refreshToken());
+        verify(auditPort).append(any(AuthSessionAuditEvent.class));
     }
 
     @Test
-    void shouldRejectAlreadyConsumedRefreshToken() {
+    void shouldRevokeActiveFamilyAndAuditWhenRotatedTokenIsReused() {
         UserAccountEntity user = user();
-        AuthSessionEntity current = AuthSessionEntity.create(
+        UUID familyId = UUID.randomUUID();
+        AuthSessionEntity consumed = AuthSessionEntity.create(
                 user,
-                UUID.randomUUID(),
+                familyId,
                 "b".repeat(64),
                 METADATA,
                 NOW.minusSeconds(300),
                 NOW.plusSeconds(3_600),
                 NOW.plusSeconds(600));
-        current.revoke(AuthSessionRevocationReason.ROTATED, NOW.minusSeconds(1));
+        AuthSessionEntity active = AuthSessionEntity.create(
+                user,
+                familyId,
+                "c".repeat(64),
+                METADATA,
+                NOW.minusSeconds(1),
+                NOW.plusSeconds(3_600),
+                NOW.plusSeconds(600));
+        consumed.replaceWith(active, NOW.minusSeconds(1));
         when(tokenHasher.hash("old-token")).thenReturn("b".repeat(64));
         when(sessionRepository.findByRefreshTokenHashForUpdate("b".repeat(64)))
-                .thenReturn(Optional.of(current));
+                .thenReturn(Optional.of(consumed));
+        when(sessionRepository.findByTokenFamilyIdForUpdate(familyId))
+                .thenReturn(List.of(consumed, active));
+        when(auditPort.exists(AuthSessionAuditEventType.REFRESH_REPLAY_DETECTED, familyId))
+                .thenReturn(false);
 
         assertThrows(
                 InvalidAuthSessionException.class,
                 () -> service.refresh("old-token", METADATA));
+
+        assertEquals(AuthSessionRevocationReason.REPLAY_DETECTED.name(), active.getRevocationReason());
+        verify(sessionRepository).saveAll(List.of(consumed, active));
+        verify(auditPort).append(any(AuthSessionAuditEvent.class));
     }
 
     @Test
