@@ -6,6 +6,7 @@
 - Epic parent : #29
 - Dépendance terminée : #31 / V66
 - Branche : `feature/story-2402-session-revocation`
+- PR : #55
 - Mode : Engineering + Security + Architecture + Documentation First
 
 ## Objectif
@@ -40,8 +41,10 @@ Permettre au personnel et aux administrateurs habilités de révoquer réellemen
 4. Une permission dédiée `AUTH_SESSION_MANAGE` autorise l’administration same-tenant ; les utilisateurs gèrent toujours leurs propres sessions.
 5. Un audit `auth_session_audit_events` conserve création, rotation, révocation, logout-all et rejeu.
 6. Le rejeu est détecté uniquement si le token présenté correspond à une génération marquée `ROTATED`.
-7. La révocation de famille et son audit doivent être validés en base même lorsque l’API retourne ensuite `401`.
+7. La révocation de famille et son audit sont validés en base même lorsque l’API retourne ensuite `401`.
 8. Les opérations de révocation sont idempotentes et ne révèlent jamais l’existence d’une session cross-tenant.
+9. Les contraintes de vocabulaire V67 utilisent `CASE ... THEN TRUE` afin de rester strictes et portables sur H2/PostgreSQL 16.
+10. La durée d’audit reste configurable ; la valeur production par défaut de 90 jours doit être validée par le DPO avant mise en production.
 
 ## Action plan
 
@@ -49,29 +52,43 @@ Permettre au personnel et aux administrateurs habilités de révoquer réellemen
 - [x] Analyser V66, la rotation, le filtre JWT, la blacklist mémoire et le RBAC.
 - [x] Définir les frontières personnel/patient.
 - [x] Documenter les décisions de révocation et de rejeu.
-- [ ] Ajouter la migration V67 additive.
-- [ ] Enrichir le domaine de session avec acteur/source de révocation.
-- [ ] Ajouter l’audit de sécurité append-only.
-- [ ] Remplacer la blacklist mémoire par la persistance JTI bornée.
-- [ ] Vérifier en base les access tokens avec `sid`.
-- [ ] Ajouter les use cases liste, révocation, logout et logout-all.
-- [ ] Ajouter les endpoints et la permission `AUTH_SESSION_MANAGE`.
-- [ ] Détecter le rejeu et révoquer toute la famille.
-- [ ] Ajouter les tests unitaires, HTTP, concurrence, tenant et PostgreSQL 16.
-- [ ] Mettre à jour suivi, changelog et PR.
+- [x] Ajouter la migration V67 additive.
+- [x] Enrichir le domaine de session avec acteur/source de révocation.
+- [x] Ajouter l’audit de sécurité append-only.
+- [x] Remplacer la blacklist mémoire par la persistance JTI bornée.
+- [x] Vérifier en base les access tokens avec `sid`.
+- [x] Ajouter les use cases liste, révocation, logout et logout-all.
+- [x] Ajouter les endpoints et la permission `AUTH_SESSION_MANAGE`.
+- [x] Détecter le rejeu et révoquer toute la famille.
+- [x] Ajouter les tests unitaires, HTTP, concurrence, tenant et PostgreSQL 16.
+- [x] Corriger le test après extraction de `AuthSessionViewMapper`.
+- [x] Stabiliser les contraintes V67 sur H2/PostgreSQL 16.
+- [x] Mettre à jour suivi, changelog et PR.
 
 ## Critères d’acceptation
 
-- [ ] Une révocation est effective après redémarrage et sur une autre instance.
-- [ ] Un access token moderne cesse immédiatement d’être accepté après révocation de son `sid`.
-- [ ] `logout-all` invalide toutes les familles actives du compte.
-- [ ] La réutilisation d’un refresh déjà rotaté révoque la famille et crée un audit unique.
-- [ ] Un utilisateur ne voit et ne révoque que ses sessions.
-- [ ] Un détenteur de `AUTH_SESSION_MANAGE` peut agir uniquement dans son établissement.
-- [ ] Une session inexistante et une session cross-tenant produisent le même résultat externe.
-- [ ] Aucun secret ni adresse IP complète n’est exposé.
-- [ ] Les opérations répétées sont idempotentes.
-- [ ] H2 et PostgreSQL 16 sont verts.
+- [x] Une révocation est effective après redémarrage et sur une autre instance via la base partagée.
+- [x] Un access token moderne cesse immédiatement d’être accepté après révocation de son `sid`.
+- [x] `logout-all` invalide toutes les familles actives du compte.
+- [x] La réutilisation d’un refresh déjà rotaté révoque la famille et crée un audit unique.
+- [x] Un utilisateur ne voit et ne révoque que ses sessions.
+- [x] Un détenteur de `AUTH_SESSION_MANAGE` peut agir uniquement dans son établissement.
+- [x] Une session inexistante et une session cross-tenant produisent le même résultat externe.
+- [x] Aucun secret ni adresse IP complète n’est exposé.
+- [x] Les opérations répétées sont idempotentes.
+- [x] H2 et PostgreSQL 16 sont verts.
+
+## Preuves de validation
+
+GitHub Actions #643, commit `41875195` :
+
+- Maven `clean verify` : succès ;
+- migrations H2 : succès ;
+- PostgreSQL 16 / Testcontainers : succès ;
+- tests de gestion des sessions et RBAC : succès ;
+- rejeu et concurrence : succès ;
+- tests Angular : succès ;
+- build Angular production : succès.
 
 ## Estimation
 
@@ -82,10 +99,10 @@ Permettre au personnel et aux administrateurs habilités de révoquer réellemen
 
 ## Definition of Done
 
-- code, documentation, migration et contrat alignés ;
-- chemins autorisés et refusés testés ;
-- tests concurrence/rejeu et tenant verts ;
-- audit et conservation bornée prouvés ;
-- aucun mécanisme mémoire restant ;
-- CI complète verte ;
-- PR revue avant fusion.
+- [x] code, documentation, migration et contrat alignés ;
+- [x] chemins autorisés et refusés testés ;
+- [x] tests concurrence/rejeu et tenant verts ;
+- [x] audit et conservation bornée prouvés ;
+- [x] aucun mécanisme mémoire restant pour la révocation ;
+- [x] CI complète verte ;
+- [ ] revue humaine avant fusion.
