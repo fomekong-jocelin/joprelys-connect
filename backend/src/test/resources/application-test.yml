@@ -16,11 +16,21 @@ spring:
 
 joprelys:
   security:
+    expose-otp-to-frontend: true
     jwt:
       issuer: joprelys-test
       audience: joprelys-test
       secret: test-jwt-secret-at-least-32-chars-long-hs256
-      ttl-minutes: 30
+      ttl-minutes: 15
+    sessions:
+      absolute-ttl-hours: 24
+      inactivity-ttl-minutes: 30
+      retention-hours: 24
+      refresh-cookie-name: joprelys_refresh
+      refresh-cookie-secure: false
+      refresh-cookie-same-site: Lax
+      refresh-cookie-path: /api/auth
+      cleanup-cron: "0 0 0 1 1 *"
   seed:
     admin:
       enabled: false
