@@ -6,9 +6,6 @@ import com.joprelys.backend.auth.infrastructure.persistence.AuthAuditEventEntity
 import com.joprelys.backend.auth.infrastructure.persistence.AuthAuditEventRepository;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
-import com.joprelys.backend.auth.security.JwtClaims;
-import com.joprelys.backend.auth.security.JwtRevocationService;
-import com.joprelys.backend.auth.security.JwtService;
 import com.joprelys.backend.auth.session.application.IssueAuthSessionUseCase;
 import com.joprelys.backend.auth.session.application.IssuedAuthSession;
 import com.joprelys.backend.auth.session.application.SessionClientMetadata;
@@ -45,8 +42,6 @@ public class AuthenticationService {
     private final AuthAuditEventRepository authAuditEventRepository;
     private final PasswordEncoder passwordEncoder;
     private final IssueAuthSessionUseCase issueAuthSessionUseCase;
-    private final JwtService jwtService;
-    private final JwtRevocationService jwtRevocationService;
     private final Clock clock;
     private final OrganizationRepository organizationRepository;
     private final SecureRandom secureRandom;
@@ -57,16 +52,12 @@ public class AuthenticationService {
             AuthAuditEventRepository authAuditEventRepository,
             PasswordEncoder passwordEncoder,
             IssueAuthSessionUseCase issueAuthSessionUseCase,
-            JwtService jwtService,
-            JwtRevocationService jwtRevocationService,
             Clock clock,
             OrganizationRepository organizationRepository) {
         this.userAccountRepository = userAccountRepository;
         this.authAuditEventRepository = authAuditEventRepository;
         this.passwordEncoder = passwordEncoder;
         this.issueAuthSessionUseCase = issueAuthSessionUseCase;
-        this.jwtService = jwtService;
-        this.jwtRevocationService = jwtRevocationService;
         this.clock = clock;
         this.organizationRepository = organizationRepository;
         this.secureRandom = new SecureRandom();
@@ -106,11 +97,6 @@ public class AuthenticationService {
                 .orElseThrow(() -> new BadCredentialsException("Utilisateur introuvable."));
         assertOrganizationActive(user, email, auditIpAddress);
         return completeAuthentication(user, auditIpAddress, metadata);
-    }
-
-    public void logout(String token) {
-        JwtClaims claims = jwtService.parseAndValidate(token);
-        jwtRevocationService.revoke(claims.tokenId(), claims.expiresAt());
     }
 
     private AuthenticationOutcome completeAuthentication(
