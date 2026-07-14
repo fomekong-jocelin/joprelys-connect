@@ -1,19 +1,24 @@
 package com.joprelys.backend.auth.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.joprelys.backend.auth.api.LoginRequest;
-import com.joprelys.backend.auth.api.LoginResponse;
+import com.joprelys.backend.auth.api.VerifyStaffOtpRequest;
 import com.joprelys.backend.auth.infrastructure.persistence.AuthAuditEventEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.AuthAuditEventRepository;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.auth.security.JwtRevocationService;
 import com.joprelys.backend.auth.security.JwtService;
+import com.joprelys.backend.auth.session.application.IssueAuthSessionUseCase;
+import com.joprelys.backend.auth.session.application.IssuedAuthSession;
+import com.joprelys.backend.auth.session.application.SessionClientMetadata;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import java.time.Clock;
@@ -31,168 +36,170 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @ExtendWith(MockitoExtension.class)
 class AuthenticationServiceTest {
 
-	private static final Clock FIXED_CLOCK = Clock.fixed(Instant.parse("2026-07-02T10:00:00Z"), ZoneOffset.UTC);
+    private static final Clock FIXED_CLOCK = Clock.fixed(
+            Instant.parse("2026-07-02T10:00:00Z"), ZoneOffset.UTC);
+    private static final SessionClientMetadata METADATA = new SessionClientMetadata(
+            "WEB", "JUnit", "127.0.0.0/24");
 
-	@Mock
-	private UserAccountRepository userAccountRepository;
+    @Mock
+    private UserAccountRepository userAccountRepository;
+    @Mock
+    private AuthAuditEventRepository authAuditEventRepository;
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    @Mock
+    private IssueAuthSessionUseCase issueAuthSessionUseCase;
+    @Mock
+    private JwtService jwtService;
+    @Mock
+    private JwtRevocationService jwtRevocationService;
+    @Mock
+    private OrganizationRepository organizationRepository;
 
-	@Mock
-	private AuthAuditEventRepository authAuditEventRepository;
+    @Test
+    void shouldReturnSessionAndAuditSuccessWhenCredentialsAreValid() {
+        UserAccountEntity user = user("agent@example.com", "Agent Accueil", "AGENT_ACCUEIL");
+        AuthenticationService service = service();
+        when(userAccountRepository.findByEmail("agent@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
+        when(issueAuthSessionUseCase.issue(eq(user), any())).thenReturn(issued(user));
 
-	@Mock
-	private PasswordEncoder passwordEncoder;
+        AuthenticationOutcome outcome = service.login(
+                new LoginRequest("Agent@Example.com", "Password123!"),
+                "127.0.0.1",
+                METADATA);
 
-	@Mock
-	private JwtService jwtService;
+        assertEquals("jwt-token", outcome.session().accessToken());
+        assertEquals("agent@example.com", outcome.email());
+        assertEquals("Agent Accueil", outcome.displayName());
+        assertEquals("AGENT_ACCUEIL", outcome.role());
+        verify(authAuditEventRepository).save(any(AuthAuditEventEntity.class));
+    }
 
-	@Mock
-	private JwtRevocationService jwtRevocationService;
+    @Test
+    void shouldAuditAndReturnGenericErrorWhenCredentialsAreInvalid() {
+        AuthenticationService service = service();
+        when(userAccountRepository.findByEmail("agent@example.com")).thenReturn(Optional.empty());
 
-	@Mock
-	private OrganizationRepository organizationRepository;
+        BadCredentialsException exception = assertThrows(
+                BadCredentialsException.class,
+                () -> service.login(
+                        new LoginRequest("agent@example.com", "wrong"),
+                        "127.0.0.1",
+                        METADATA));
 
-	@Test
-	void shouldReturnTokenAndAuditSuccessWhenCredentialsAreValid() {
-		UserAccountEntity user = new UserAccountEntity(
-				"agent@example.com",
-				"Agent Accueil",
-				"AGENT_ACCUEIL",
-				"hash");
-		AuthenticationService service = service();
+        assertEquals("Invalid email or password", exception.getMessage());
+        verify(authAuditEventRepository).save(any(AuthAuditEventEntity.class));
+    }
 
-		when(userAccountRepository.findByEmail("agent@example.com")).thenReturn(Optional.of(user));
-		when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
-		when(jwtService.createToken(user)).thenReturn(new JwtService.CreatedToken(
-				"jwt-token",
-				"token-id",
-				Instant.parse("2026-07-02T10:30:00Z")));
+    @Test
+    void shouldThrowExceptionWhenOrganizationIsInactive() {
+        UserAccountEntity user = user("agent@example.com", "Agent Accueil", "AGENT_ACCUEIL");
+        UUID orgId = UUID.randomUUID();
+        user.setOrganizationId(orgId);
+        OrganizationEntity organization = new OrganizationEntity(
+                "Espoir", "espoir@joprelys.local", "123", "street", "Douala");
+        organization.setStatus("INACTIVE");
+        AuthenticationService service = service();
+        when(userAccountRepository.findByEmail("agent@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
+        when(organizationRepository.findById(orgId)).thenReturn(Optional.of(organization));
 
-		LoginResponse response = service.login(new LoginRequest("Agent@Example.com", "Password123!"), "127.0.0.1");
+        BadCredentialsException exception = assertThrows(
+                BadCredentialsException.class,
+                () -> service.login(
+                        new LoginRequest("agent@example.com", "Password123!"),
+                        "127.0.0.1",
+                        METADATA));
 
-		assertEquals("jwt-token", response.accessToken());
-		assertEquals("agent@example.com", response.email());
-		assertEquals("Agent Accueil", response.name());
-		assertEquals("AGENT_ACCUEIL", response.role());
-		verify(authAuditEventRepository).save(any(AuthAuditEventEntity.class));
-	}
+        assertEquals("Votre établissement est désactivé.", exception.getMessage());
+        verify(authAuditEventRepository).save(any(AuthAuditEventEntity.class));
+    }
 
-	@Test
-	void shouldAuditAndReturnGenericErrorWhenCredentialsAreInvalid() {
-		AuthenticationService service = service();
-		when(userAccountRepository.findByEmail("agent@example.com")).thenReturn(Optional.empty());
+    @Test
+    void shouldRequireOtpWithoutCreatingSessionWhenUserIsSensitive() {
+        UserAccountEntity user = user("medecin@example.com", "Medecin Test", "MEDECIN");
+        AuthenticationService service = service();
+        when(userAccountRepository.findByEmail("medecin@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
 
-		BadCredentialsException exception = assertThrows(
-				BadCredentialsException.class,
-				() -> service.login(new LoginRequest("agent@example.com", "wrong"), "127.0.0.1"));
+        AuthenticationOutcome outcome = service.login(
+                new LoginRequest("medecin@example.com", "Password123!"),
+                "127.0.0.1",
+                METADATA);
 
-		assertEquals("Invalid email or password", exception.getMessage());
-		verify(authAuditEventRepository).save(any(AuthAuditEventEntity.class));
-	}
+        assertEquals(true, outcome.requiresOtp());
+        assertNull(outcome.session());
+    }
 
-	@Test
-	void shouldThrowExceptionWhenOrganizationIsInactive() {
-		UserAccountEntity user = new UserAccountEntity(
-				"agent@example.com",
-				"Agent Accueil",
-				"AGENT_ACCUEIL",
-				"hash");
-		UUID orgId = UUID.randomUUID();
-		user.setOrganizationId(orgId);
+    @Test
+    void shouldCreateSessionAfterSuccessfulOtpVerification() {
+        UserAccountEntity user = user("medecin@example.com", "Medecin Test", "MEDECIN");
+        AuthenticationService service = service();
+        when(userAccountRepository.findByEmail("medecin@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
+        when(issueAuthSessionUseCase.issue(eq(user), any())).thenReturn(issued(user));
 
-		OrganizationEntity org = new OrganizationEntity("Espoir", "espoir@joprelys.local", "123", "street", "Douala");
-		org.setStatus("INACTIVE");
+        AuthenticationOutcome initial = service.login(
+                new LoginRequest("medecin@example.com", "Password123!"),
+                "127.0.0.1",
+                METADATA);
+        assertEquals(true, initial.requiresOtp());
+        String otpCode = service.getStaffOtpCodeForTesting("medecin@example.com");
 
-		AuthenticationService service = service();
+        AuthenticationOutcome authenticated = service.verifyStaffOtp(
+                new VerifyStaffOtpRequest("medecin@example.com", otpCode),
+                "127.0.0.1",
+                METADATA);
 
-		when(userAccountRepository.findByEmail("agent@example.com")).thenReturn(Optional.of(user));
-		when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
-		when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
+        assertEquals("jwt-token", authenticated.session().accessToken());
+        assertEquals("medecin@example.com", authenticated.email());
+    }
 
-		BadCredentialsException exception = assertThrows(
-				BadCredentialsException.class,
-				() -> service.login(new LoginRequest("agent@example.com", "Password123!"), "127.0.0.1"));
+    @Test
+    void shouldFailOtpVerificationWhenOtpIsIncorrect() {
+        UserAccountEntity user = user("medecin@example.com", "Medecin Test", "MEDECIN");
+        AuthenticationService service = service();
+        when(userAccountRepository.findByEmail("medecin@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
+        service.login(
+                new LoginRequest("medecin@example.com", "Password123!"),
+                "127.0.0.1",
+                METADATA);
 
-		assertEquals("Votre établissement est désactivé.", exception.getMessage());
-		verify(authAuditEventRepository).save(any(AuthAuditEventEntity.class));
-	}
+        assertThrows(
+                BadCredentialsException.class,
+                () -> service.verifyStaffOtp(
+                        new VerifyStaffOtpRequest("medecin@example.com", "000000"),
+                        "127.0.0.1",
+                        METADATA));
+    }
 
-	@Test
-	void shouldRequireOtpWhenUserIsSensitive() {
-		UserAccountEntity user = new UserAccountEntity(
-				"medecin@example.com",
-				"Medecin Test",
-				"MEDECIN",
-				"hash");
-		AuthenticationService service = service();
+    private AuthenticationService service() {
+        return new AuthenticationService(
+                userAccountRepository,
+                authAuditEventRepository,
+                passwordEncoder,
+                issueAuthSessionUseCase,
+                jwtService,
+                jwtRevocationService,
+                FIXED_CLOCK,
+                organizationRepository);
+    }
 
-		when(userAccountRepository.findByEmail("medecin@example.com")).thenReturn(Optional.of(user));
-		when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
+    private static UserAccountEntity user(String email, String name, String role) {
+        return new UserAccountEntity(email, name, role, "hash");
+    }
 
-		LoginResponse response = service.login(new LoginRequest("medecin@example.com", "Password123!"), "127.0.0.1");
-
-		assertEquals(true, response.requiresOtp());
-		assertEquals(null, response.accessToken());
-	}
-
-	@Test
-	void shouldAllowLoginAfterSuccessfulOtpVerification() {
-		UserAccountEntity user = new UserAccountEntity(
-				"medecin@example.com",
-				"Medecin Test",
-				"MEDECIN",
-				"hash");
-		AuthenticationService service = service();
-
-		when(userAccountRepository.findByEmail("medecin@example.com")).thenReturn(Optional.of(user));
-		when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
-		when(jwtService.createToken(user)).thenReturn(new JwtService.CreatedToken(
-				"jwt-token",
-				"token-id",
-				Instant.parse("2026-07-02T10:30:00Z")));
-
-		// Triggers OTP generation
-		LoginResponse initialResponse = service.login(new LoginRequest("medecin@example.com", "Password123!"), "127.0.0.1");
-		assertEquals(true, initialResponse.requiresOtp());
-
-		String otpCode = service.getStaffOtpCodeForTesting("medecin@example.com");
-		com.joprelys.backend.auth.api.VerifyStaffOtpRequest verifyRequest = new com.joprelys.backend.auth.api.VerifyStaffOtpRequest("medecin@example.com", otpCode);
-
-		LoginResponse finalResponse = service.verifyStaffOtp(verifyRequest, "127.0.0.1");
-
-		assertEquals("jwt-token", finalResponse.accessToken());
-		assertEquals("medecin@example.com", finalResponse.email());
-	}
-
-	@Test
-	void shouldFailOtpVerificationWhenOtpIsIncorrect() {
-		UserAccountEntity user = new UserAccountEntity(
-				"medecin@example.com",
-				"Medecin Test",
-				"MEDECIN",
-				"hash");
-		AuthenticationService service = service();
-
-		when(userAccountRepository.findByEmail("medecin@example.com")).thenReturn(Optional.of(user));
-		when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
-
-		// Triggers OTP generation
-		service.login(new LoginRequest("medecin@example.com", "Password123!"), "127.0.0.1");
-
-		com.joprelys.backend.auth.api.VerifyStaffOtpRequest verifyRequest = new com.joprelys.backend.auth.api.VerifyStaffOtpRequest("medecin@example.com", "000000");
-
-		assertThrows(
-				BadCredentialsException.class,
-				() -> service.verifyStaffOtp(verifyRequest, "127.0.0.1"));
-	}
-
-	private AuthenticationService service() {
-		return new AuthenticationService(
-				userAccountRepository,
-				authAuditEventRepository,
-				passwordEncoder,
-				jwtService,
-				jwtRevocationService,
-				FIXED_CLOCK,
-				organizationRepository);
-	}
+    private static IssuedAuthSession issued(UserAccountEntity user) {
+        return new IssuedAuthSession(
+                "jwt-token",
+                Instant.parse("2026-07-02T10:15:00Z"),
+                UUID.randomUUID(),
+                Instant.parse("2026-07-02T10:30:00Z"),
+                "refresh-token",
+                user.getEmail(),
+                user.getDisplayName(),
+                user.getRole());
+    }
 }
