@@ -8,5 +8,8 @@ public record IssuedAuthSession(
         Instant accessTokenExpiresAt,
         UUID sessionId,
         Instant sessionExpiresAt,
-        String refreshToken) {
+        String refreshToken,
+        String email,
+        String displayName,
+        String role) {
 }
