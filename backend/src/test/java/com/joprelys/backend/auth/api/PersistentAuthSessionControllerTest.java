@@ -3,6 +3,7 @@ package com.joprelys.backend.auth.api;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -12,8 +13,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import com.joprelys.backend.auth.session.domain.AuthSessionAuditEventType;
+import com.joprelys.backend.auth.session.infrastructure.persistence.AuthSessionAuditEventRepository;
 import com.joprelys.backend.auth.session.infrastructure.persistence.AuthSessionEntity;
 import com.joprelys.backend.auth.session.infrastructure.persistence.AuthSessionRepository;
+import com.joprelys.backend.auth.session.infrastructure.persistence.RevokedAccessTokenRepository;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import jakarta.servlet.http.Cookie;
@@ -38,12 +42,16 @@ class PersistentAuthSessionControllerTest {
     @Autowired UserAccountRepository userAccountRepository;
     @Autowired OrganizationRepository organizationRepository;
     @Autowired AuthSessionRepository sessionRepository;
+    @Autowired AuthSessionAuditEventRepository auditRepository;
+    @Autowired RevokedAccessTokenRepository revokedTokenRepository;
     @Autowired PasswordEncoder passwordEncoder;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
+        auditRepository.deleteAll();
+        revokedTokenRepository.deleteAll();
         sessionRepository.deleteAll();
         userAccountRepository.deleteAll();
         organizationRepository.deleteAll();
@@ -64,7 +72,7 @@ class PersistentAuthSessionControllerTest {
     }
 
     @Test
-    void shouldIssueHttpOnlyCookieRotateOnceAndRejectConsumedToken() throws Exception {
+    void shouldRevokeReplacementAccessWhenRotatedRefreshTokenIsReplayed() throws Exception {
         MvcResult login = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("User-Agent", "Joprelys-Test/1.0")
@@ -101,6 +109,7 @@ class PersistentAuthSessionControllerTest {
 
         JsonNode refreshBody = objectMapper.readTree(refresh.getResponse().getContentAsString());
         String secondSessionId = refreshBody.get("sessionId").asText();
+        String secondAccessToken = refreshBody.get("accessToken").asText();
         assertNotEquals(firstSessionId, secondSessionId);
 
         List<AuthSessionEntity> family = sessionRepository.findAll();
@@ -121,5 +130,15 @@ class PersistentAuthSessionControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.detail").value("AUTH_SESSION_INVALID"))
                 .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Max-Age=0")));
+
+        AuthSessionEntity revokedReplacement = sessionRepository.findById(second.getId()).orElseThrow();
+        assertEquals("REPLAY_DETECTED", revokedReplacement.getRevocationReason());
+        assertEquals("SYSTEM", revokedReplacement.getRevocationSource());
+        assertEquals(true, auditRepository.existsByEventTypeAndTokenFamilyId(
+                AuthSessionAuditEventType.REFRESH_REPLAY_DETECTED.name(), first.getTokenFamilyId()));
+
+        mockMvc.perform(get("/api/auth/sessions")
+                        .header("Authorization", "Bearer " + secondAccessToken))
+                .andExpect(status().isUnauthorized());
     }
 }
