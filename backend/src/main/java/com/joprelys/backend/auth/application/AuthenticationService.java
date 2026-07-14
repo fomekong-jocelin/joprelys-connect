@@ -78,7 +78,7 @@ public class AuthenticationService {
             String auditIpAddress,
             SessionClientMetadata metadata) {
         String email = normalizeEmail(request.email());
-        UserAccountEntity user = findValidUser(email, request.password());
+        UserAccountEntity user = findValidUser(email, request.password(), auditIpAddress);
         assertOrganizationActive(user, email, auditIpAddress);
 
         if (hasSensitiveRole(user)) {
@@ -124,7 +124,10 @@ public class AuthenticationService {
         return AuthenticationOutcome.authenticated(session);
     }
 
-    private UserAccountEntity findValidUser(String email, String password) {
+    private UserAccountEntity findValidUser(
+            String email,
+            String password,
+            String auditIpAddress) {
         UserAccountEntity user = userAccountRepository.findByEmail(email)
                 .filter(UserAccountEntity::isEnabled)
                 .filter(account -> passwordEncoder.matches(password, account.getPasswordHash()))
@@ -132,7 +135,7 @@ public class AuthenticationService {
         if (user != null) {
             return user;
         }
-        audit(email, null, false, "BAD_CREDENTIALS");
+        audit(email, auditIpAddress, false, "BAD_CREDENTIALS");
         throw new BadCredentialsException(GENERIC_LOGIN_FAILURE);
     }
 
