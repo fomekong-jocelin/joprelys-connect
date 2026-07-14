@@ -35,11 +35,12 @@ import org.springframework.test.web.servlet.MvcResult;
 class PersistentAuthSessionControllerTest {
 
     @Autowired MockMvc mockMvc;
-    @Autowired ObjectMapper objectMapper;
     @Autowired UserAccountRepository userAccountRepository;
     @Autowired OrganizationRepository organizationRepository;
     @Autowired AuthSessionRepository sessionRepository;
     @Autowired PasswordEncoder passwordEncoder;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
