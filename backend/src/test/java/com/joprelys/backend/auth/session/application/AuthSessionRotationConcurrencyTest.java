@@ -9,6 +9,7 @@ import com.joprelys.backend.auth.session.infrastructure.persistence.AuthSessionR
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -76,10 +77,10 @@ class AuthSessionRotationConcurrencyTest {
         successes += Boolean.TRUE.equals(second.get()) ? 1 : 0;
         assertEquals(1, successes);
 
-        List<AuthSessionEntity> family = sessionRepository.findByTokenFamilyIdOrderByCreatedAtAsc(
-                issued.sessionId().equals(sessionRepository.findAll().getFirst().getId())
-                        ? sessionRepository.findAll().getFirst().getTokenFamilyId()
-                        : sessionRepository.findAll().getLast().getTokenFamilyId());
+        List<AuthSessionEntity> allSessions = sessionRepository.findAll();
+        assertEquals(2, allSessions.size());
+        UUID familyId = allSessions.getFirst().getTokenFamilyId();
+        List<AuthSessionEntity> family = sessionRepository.findByTokenFamilyIdOrderByCreatedAtAsc(familyId);
         assertEquals(2, family.size());
         assertEquals(1, family.stream().filter(session -> session.getRevokedAt() == null).count());
     }
