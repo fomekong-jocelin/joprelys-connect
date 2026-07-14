@@ -23,12 +23,12 @@ public class JwtRevocationService {
 
     @Transactional
     public boolean revoke(String tokenId, Instant expiresAt) {
-        return persist(tokenId, null, null, expiresAt, "LOGOUT", null);
+        return revoke(tokenId, null, null, expiresAt, "LOGOUT", null);
     }
 
     @Transactional
     public boolean revoke(JwtClaims claims, UUID actorUserId, String reason) {
-        return persist(
+        return revoke(
                 claims.tokenId(),
                 parseUuid(claims.subject()),
                 parseUuid(claims.organizationId()),
@@ -37,18 +37,8 @@ public class JwtRevocationService {
                 actorUserId);
     }
 
-    @Transactional(readOnly = true)
-    public boolean isRevoked(String tokenId) {
-        return repository.existsByTokenIdAndExpiresAtAfter(tokenId, clock.instant());
-    }
-
-    @Scheduled(cron = "${joprelys.security.sessions.cleanup-cron:0 15 * * * *}")
     @Transactional
-    public void purgeExpiredTokens() {
-        repository.deleteByExpiresAtBefore(clock.instant());
-    }
-
-    private boolean persist(
+    public boolean revoke(
             String tokenId,
             UUID userId,
             UUID organizationId,
@@ -75,6 +65,17 @@ public class JwtRevocationService {
         } catch (DataIntegrityViolationException duplicate) {
             return false;
         }
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isRevoked(String tokenId) {
+        return repository.existsByTokenIdAndExpiresAtAfter(tokenId, clock.instant());
+    }
+
+    @Scheduled(cron = "${joprelys.security.sessions.cleanup-cron:0 15 * * * *}")
+    @Transactional
+    public void purgeExpiredTokens() {
+        repository.deleteByExpiresAtBefore(clock.instant());
     }
 
     private static UUID parseUuid(String value) {
