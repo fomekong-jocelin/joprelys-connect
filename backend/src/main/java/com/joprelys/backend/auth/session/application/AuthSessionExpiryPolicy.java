@@ -26,4 +26,8 @@ public class AuthSessionExpiryPolicy {
     public Instant retentionCutoffFrom(Instant now) {
         return now.minus(properties.retentionHours(), ChronoUnit.HOURS);
     }
+
+    public Instant auditRetentionCutoffFrom(Instant now) {
+        return now.minus(properties.auditRetentionHours(), ChronoUnit.HOURS);
+    }
 }
