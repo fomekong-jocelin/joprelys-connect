@@ -84,8 +84,8 @@ class FlywayPostgresqlMigrationTest {
         MigrationInfo current = flyway.info().current();
         assertNotNull(current, "Flyway doit exposer la migration courante");
         assertNotNull(current.getVersion(), "La migration courante doit être versionnée");
-        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 64,
-                "Toutes les migrations du triage ABCDE doivent être appliquées");
+        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 66,
+                "Toutes les migrations des sessions persistantes doivent être appliquées");
 
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword());
@@ -103,6 +103,7 @@ class FlywayPostgresqlMigrationTest {
         assertTableExists(jdbcTemplate, "patient_identity_declarations");
         assertTableExists(jdbcTemplate, "patient_identity_status_history");
         assertTableExists(jdbcTemplate, "emergency_triage_assessments");
+        assertTableExists(jdbcTemplate, "auth_sessions");
         MEDICO_LEGAL_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
         PATIENT_RECONCILIATION_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
 
@@ -112,6 +113,10 @@ class FlywayPostgresqlMigrationTest {
                 jdbcTemplate,
                 "fk_emergency_triage_assessment_emergency",
                 "CASCADE");
+        assertForeignKeyDeleteRule(
+                jdbcTemplate,
+                "fk_auth_sessions_replacement",
+                "SET NULL");
 
         Integer thirdPartyColumnCount = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*)
@@ -152,6 +157,11 @@ class FlywayPostgresqlMigrationTest {
                     connection,
                     "emergency_triage_assessments",
                     "assessment_type",
+                    "NO");
+            assertColumnNullability(
+                    connection,
+                    "auth_sessions",
+                    "refresh_token_hash",
                     "NO");
         }
     }
