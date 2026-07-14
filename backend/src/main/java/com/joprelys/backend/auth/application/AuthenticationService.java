@@ -1,7 +1,6 @@
 package com.joprelys.backend.auth.application;
 
 import com.joprelys.backend.auth.api.LoginRequest;
-import com.joprelys.backend.auth.api.LoginResponse;
 import com.joprelys.backend.auth.api.VerifyStaffOtpRequest;
 import com.joprelys.backend.auth.infrastructure.persistence.AuthAuditEventEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.AuthAuditEventRepository;
@@ -10,6 +9,9 @@ import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepositor
 import com.joprelys.backend.auth.security.JwtClaims;
 import com.joprelys.backend.auth.security.JwtRevocationService;
 import com.joprelys.backend.auth.security.JwtService;
+import com.joprelys.backend.auth.session.application.IssueAuthSessionUseCase;
+import com.joprelys.backend.auth.session.application.IssuedAuthSession;
+import com.joprelys.backend.auth.session.application.SessionClientMetadata;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import java.security.SecureRandom;
@@ -28,185 +30,181 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthenticationService {
 
-	@Value("${joprelys.security.expose-otp-to-frontend:true}")
-	private boolean exposeOtpToFrontend;
+    private static final String GENERIC_LOGIN_FAILURE = "Invalid email or password";
+    private static final Set<String> SENSITIVE_ROLES = Set.of(
+            "ADMIN_JOPRELYS",
+            "ADMIN_CLINIQUE",
+            "MEDECIN",
+            "BIOLOGISTE",
+            "PHARMACIEN");
 
-	private static final String GENERIC_LOGIN_FAILURE = "Invalid email or password";
-	private static final Set<String> SENSITIVE_ROLES = Set.of(
-			"ADMIN_JOPRELYS",
-			"ADMIN_CLINIQUE",
-			"MEDECIN",
-			"BIOLOGISTE",
-			"PHARMACIEN"
-	);
+    @Value("${joprelys.security.expose-otp-to-frontend:true}")
+    private boolean exposeOtpToFrontend;
 
-	private final UserAccountRepository userAccountRepository;
-	private final AuthAuditEventRepository authAuditEventRepository;
-	private final PasswordEncoder passwordEncoder;
-	private final JwtService jwtService;
-	private final JwtRevocationService jwtRevocationService;
-	private final Clock clock;
-	private final OrganizationRepository organizationRepository;
-	private final SecureRandom secureRandom;
-	private final Map<String, StaffOtpData> staffOtpMap = new ConcurrentHashMap<>();
+    private final UserAccountRepository userAccountRepository;
+    private final AuthAuditEventRepository authAuditEventRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final IssueAuthSessionUseCase issueAuthSessionUseCase;
+    private final JwtService jwtService;
+    private final JwtRevocationService jwtRevocationService;
+    private final Clock clock;
+    private final OrganizationRepository organizationRepository;
+    private final SecureRandom secureRandom;
+    private final Map<String, StaffOtpData> staffOtpMap = new ConcurrentHashMap<>();
 
-	public AuthenticationService(
-			UserAccountRepository userAccountRepository,
-			AuthAuditEventRepository authAuditEventRepository,
-			PasswordEncoder passwordEncoder,
-			JwtService jwtService,
-			JwtRevocationService jwtRevocationService,
-			Clock clock,
-			OrganizationRepository organizationRepository) {
-		this.userAccountRepository = userAccountRepository;
-		this.authAuditEventRepository = authAuditEventRepository;
-		this.passwordEncoder = passwordEncoder;
-		this.jwtService = jwtService;
-		this.jwtRevocationService = jwtRevocationService;
-		this.clock = clock;
-		this.organizationRepository = organizationRepository;
-		this.secureRandom = new SecureRandom();
-	}
+    public AuthenticationService(
+            UserAccountRepository userAccountRepository,
+            AuthAuditEventRepository authAuditEventRepository,
+            PasswordEncoder passwordEncoder,
+            IssueAuthSessionUseCase issueAuthSessionUseCase,
+            JwtService jwtService,
+            JwtRevocationService jwtRevocationService,
+            Clock clock,
+            OrganizationRepository organizationRepository) {
+        this.userAccountRepository = userAccountRepository;
+        this.authAuditEventRepository = authAuditEventRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.issueAuthSessionUseCase = issueAuthSessionUseCase;
+        this.jwtService = jwtService;
+        this.jwtRevocationService = jwtRevocationService;
+        this.clock = clock;
+        this.organizationRepository = organizationRepository;
+        this.secureRandom = new SecureRandom();
+    }
 
-	@Transactional
-	public LoginResponse login(LoginRequest request, String ipAddress) {
-		String email = normalizeEmail(request.email());
-		UserAccountEntity user = userAccountRepository.findByEmail(email)
-				.filter(UserAccountEntity::isEnabled)
-				.filter(account -> passwordEncoder.matches(request.password(), account.getPasswordHash()))
-				.orElse(null);
+    @Transactional
+    public AuthenticationOutcome login(
+            LoginRequest request,
+            String auditIpAddress,
+            SessionClientMetadata metadata) {
+        String email = normalizeEmail(request.email());
+        UserAccountEntity user = findValidUser(email, request.password());
+        assertOrganizationActive(user, email, auditIpAddress);
 
-		if (user == null) {
-			audit(email, ipAddress, false, "BAD_CREDENTIALS");
-			throw new BadCredentialsException(GENERIC_LOGIN_FAILURE);
-		}
+        if (hasSensitiveRole(user)) {
+            String code = String.format("%06d", secureRandom.nextInt(1_000_000));
+            staffOtpMap.put(email, new StaffOtpData(code, clock.instant(), 0));
+            return AuthenticationOutcome.otpChallenge(
+                    user.getEmail(),
+                    user.getDisplayName(),
+                    user.getRole(),
+                    exposeOtpToFrontend ? code : null);
+        }
 
-		if (user.getOrganizationId() != null) {
-			OrganizationEntity org = organizationRepository.findById(user.getOrganizationId()).orElse(null);
-			if (org != null && !"ACTIVE".equals(org.getStatus())) {
-				audit(email, ipAddress, false, "INACTIVE_ORGANIZATION");
-				throw new BadCredentialsException("Votre établissement est désactivé.");
-			}
-		}
+        return completeAuthentication(user, auditIpAddress, metadata);
+    }
 
-		// FR-USER-005 : les rôles sensibles nécessitent une authentification forte (OTP)
-		// Check if any of the user's roles is sensitive
-		boolean hasSensitiveRole = java.util.Arrays.stream(user.getRole().split(","))
-				.map(String::trim)
-				.anyMatch(SENSITIVE_ROLES::contains);
+    @Transactional
+    public AuthenticationOutcome verifyStaffOtp(
+            VerifyStaffOtpRequest request,
+            String auditIpAddress,
+            SessionClientMetadata metadata) {
+        String email = normalizeEmail(request.email());
+        validateOtp(email, request.otpCode());
+        UserAccountEntity user = userAccountRepository.findByEmail(email)
+                .filter(UserAccountEntity::isEnabled)
+                .orElseThrow(() -> new BadCredentialsException("Utilisateur introuvable."));
+        assertOrganizationActive(user, email, auditIpAddress);
+        return completeAuthentication(user, auditIpAddress, metadata);
+    }
 
-		if (hasSensitiveRole) {
-			String code = String.format("%06d", secureRandom.nextInt(1000000));
-			staffOtpMap.put(email, new StaffOtpData(code, email, clock.instant(), 0));
-			// Simulation : envoi console
-			System.out.println("[OTP STAFF] Code de connexion pour " + email + " : " + code);
-			return new LoginResponse(
-					null,
-					null,
-					null,
-					user.getEmail(),
-					user.getDisplayName(),
-					user.getRole(),
-					true,
-					exposeOtpToFrontend ? code : null
-			);
-		}
+    public void logout(String token) {
+        JwtClaims claims = jwtService.parseAndValidate(token);
+        jwtRevocationService.revoke(claims.tokenId(), claims.expiresAt());
+    }
 
-		// Update last login
-		user.setLastLoginAt(clock.instant());
-		userAccountRepository.save(user);
+    private AuthenticationOutcome completeAuthentication(
+            UserAccountEntity user,
+            String auditIpAddress,
+            SessionClientMetadata metadata) {
+        user.setLastLoginAt(clock.instant());
+        userAccountRepository.save(user);
+        IssuedAuthSession session = issueAuthSessionUseCase.issue(user, metadata);
+        audit(user.getEmail(), auditIpAddress, true, null);
+        return AuthenticationOutcome.authenticated(session);
+    }
 
-		JwtService.CreatedToken token = jwtService.createToken(user);
-		audit(email, ipAddress, true, null);
-		return new LoginResponse(
-				token.value(),
-				"Bearer",
-				token.expiresAt(),
-				user.getEmail(),
-				user.getDisplayName(),
-				user.getRole(),
-				false);
-	}
+    private UserAccountEntity findValidUser(String email, String password) {
+        UserAccountEntity user = userAccountRepository.findByEmail(email)
+                .filter(UserAccountEntity::isEnabled)
+                .filter(account -> passwordEncoder.matches(password, account.getPasswordHash()))
+                .orElse(null);
+        if (user != null) {
+            return user;
+        }
+        audit(email, null, false, "BAD_CREDENTIALS");
+        throw new BadCredentialsException(GENERIC_LOGIN_FAILURE);
+    }
 
-	@Transactional
-	public LoginResponse verifyStaffOtp(VerifyStaffOtpRequest request, String ipAddress) {
-		String email = normalizeEmail(request.email());
-		StaffOtpData otpData = staffOtpMap.get(email);
+    private void assertOrganizationActive(
+            UserAccountEntity user,
+            String email,
+            String auditIpAddress) {
+        if (user.getOrganizationId() == null) {
+            return;
+        }
+        OrganizationEntity organization = organizationRepository.findById(user.getOrganizationId())
+                .orElse(null);
+        if (organization != null && "ACTIVE".equals(organization.getStatus())) {
+            return;
+        }
+        audit(email, auditIpAddress, false, "INACTIVE_ORGANIZATION");
+        throw new BadCredentialsException("Votre établissement est désactivé.");
+    }
 
-		if (otpData == null) {
-			throw new BadCredentialsException("Aucune demande de connexion active pour cet e-mail.");
-		}
+    private void validateOtp(String email, String submittedCode) {
+        StaffOtpData otpData = staffOtpMap.get(email);
+        if (otpData == null) {
+            throw new BadCredentialsException("Aucune demande de connexion active pour cet e-mail.");
+        }
+        if (otpData.isExpired(clock.instant())) {
+            staffOtpMap.remove(email);
+            throw new BadCredentialsException("Le code de sécurité a expiré.");
+        }
+        if (otpData.code().equals(submittedCode)) {
+            staffOtpMap.remove(email);
+            return;
+        }
+        registerFailedOtpAttempt(email, otpData);
+    }
 
-		if (otpData.isExpired(clock.instant())) {
-			staffOtpMap.remove(email);
-			throw new BadCredentialsException("Le code de sécurité a expiré.");
-		}
+    private void registerFailedOtpAttempt(String email, StaffOtpData otpData) {
+        int newAttempts = otpData.attempts() + 1;
+        if (newAttempts >= 3) {
+            staffOtpMap.remove(email);
+            throw new BadCredentialsException("Trop de tentatives infructueuses. Veuillez régénérer un code.");
+        }
+        staffOtpMap.put(email, new StaffOtpData(otpData.code(), otpData.createdAt(), newAttempts));
+        throw new BadCredentialsException("Code de sécurité incorrect.");
+    }
 
-		if (!otpData.code().equals(request.otpCode())) {
-			int newAttempts = otpData.attempts() + 1;
-			if (newAttempts >= 3) {
-				staffOtpMap.remove(email);
-				throw new BadCredentialsException("Trop de tentatives infructueuses. Veuillez régénérer un code.");
-			} else {
-				staffOtpMap.put(email, new StaffOtpData(otpData.code(), email, otpData.createdAt(), newAttempts));
-				throw new BadCredentialsException("Code de sécurité incorrect.");
-			}
-		}
+    private static boolean hasSensitiveRole(UserAccountEntity user) {
+        return java.util.Arrays.stream(user.getRole().split(","))
+                .map(String::trim)
+                .anyMatch(SENSITIVE_ROLES::contains);
+    }
 
-		staffOtpMap.remove(email);
-		UserAccountEntity user = userAccountRepository.findByEmail(email)
-				.filter(UserAccountEntity::isEnabled)
-				.orElseThrow(() -> new BadCredentialsException("Utilisateur introuvable."));
+    private void audit(String email, String ipAddress, boolean success, String failureReason) {
+        authAuditEventRepository.save(new AuthAuditEventEntity(
+                clock.instant(),
+                email,
+                ipAddress,
+                success,
+                failureReason));
+    }
 
-		if (user.getOrganizationId() != null) {
-			OrganizationEntity org = organizationRepository.findById(user.getOrganizationId()).orElse(null);
-			if (org != null && !"ACTIVE".equals(org.getStatus())) {
-				throw new BadCredentialsException("Votre établissement est désactivé.");
-			}
-		}
+    private static String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
 
-		// Update last login
-		user.setLastLoginAt(clock.instant());
-		userAccountRepository.save(user);
+    String getStaffOtpCodeForTesting(String email) {
+        StaffOtpData data = staffOtpMap.get(normalizeEmail(email));
+        return data != null ? data.code() : null;
+    }
 
-		JwtService.CreatedToken token = jwtService.createToken(user);
-		audit(email, ipAddress, true, null);
-		return new LoginResponse(
-				token.value(),
-				"Bearer",
-				token.expiresAt(),
-				user.getEmail(),
-				user.getDisplayName(),
-				user.getRole(),
-				false);
-	}
-
-	public void logout(String token) {
-		JwtClaims claims = jwtService.parseAndValidate(token);
-		jwtRevocationService.revoke(claims.tokenId(), claims.expiresAt());
-	}
-
-	private void audit(String email, String ipAddress, boolean success, String failureReason) {
-		authAuditEventRepository.save(new AuthAuditEventEntity(
-				clock.instant(),
-				email,
-				ipAddress,
-				success,
-				failureReason));
-	}
-
-	private static String normalizeEmail(String email) {
-		return email.trim().toLowerCase(Locale.ROOT);
-	}
-
-	String getStaffOtpCodeForTesting(String email) {
-		StaffOtpData data = staffOtpMap.get(normalizeEmail(email));
-		return data != null ? data.code() : null;
-	}
-
-	private record StaffOtpData(String code, String email, Instant createdAt, int attempts) {
-		public boolean isExpired(Instant now) {
-			return createdAt.plusSeconds(300).isBefore(now); // 5 minutes
-		}
-	}
+    private record StaffOtpData(String code, Instant createdAt, int attempts) {
+        private boolean isExpired(Instant now) {
+            return createdAt.plusSeconds(300).isBefore(now);
+        }
+    }
 }
