@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -166,6 +167,40 @@ class AuthSessionManagementServiceTest {
     }
 
     @Test
+    void shouldRevokeLegacyJtiDuringLogoutAllEvenWithoutPersistentSessions() {
+        UUID organizationId = UUID.randomUUID();
+        UserAccountEntity user = user("legacy-all@example.com", organizationId);
+        String tokenId = UUID.randomUUID().toString();
+        SessionActor actor = new SessionActor(
+                user.getId(),
+                organizationId,
+                null,
+                tokenId,
+                NOW.plusSeconds(900),
+                Set.of());
+        when(sessionRepository.findByUserIdForUpdate(user.getId())).thenReturn(List.of());
+        when(jwtRevocationService.revoke(
+                tokenId,
+                user.getId(),
+                organizationId,
+                NOW.plusSeconds(900),
+                "LOGOUT_ALL",
+                user.getId()))
+                .thenReturn(true);
+
+        service.logoutAll(actor);
+
+        verify(jwtRevocationService).revoke(
+                tokenId,
+                user.getId(),
+                organizationId,
+                NOW.plusSeconds(900),
+                "LOGOUT_ALL",
+                user.getId());
+        verify(auditPort, times(2)).append(any());
+    }
+
+    @Test
     void shouldPersistAndAuditLegacyJtiWhenSidIsMissing() {
         UUID userId = UUID.randomUUID();
         UUID organizationId = UUID.randomUUID();
@@ -207,6 +242,12 @@ class AuthSessionManagementServiceTest {
             UUID organizationId,
             UUID currentSessionId,
             Set<String> authorities) {
-        return new SessionActor(user.getId(), organizationId, currentSessionId, authorities);
+        return new SessionActor(
+                user.getId(),
+                organizationId,
+                currentSessionId,
+                UUID.randomUUID().toString(),
+                NOW.plusSeconds(900),
+                authorities);
     }
 }
