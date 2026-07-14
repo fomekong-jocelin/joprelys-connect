@@ -79,27 +79,18 @@ public class AuthSessionManagementService implements
     public void logoutAll(SessionActor actor) {
         List<AuthSessionEntity> sessions = sessionRepository.findByUserIdForUpdate(actor.userId());
         Instant now = clock.instant();
-        boolean changed = false;
-        for (AuthSessionEntity session : sessions) {
-            changed |= session.revoke(
-                    AuthSessionRevocationReason.LOGOUT_ALL,
-                    AuthSessionRevocationSource.SELF,
-                    actor.userId(),
-                    now);
-        }
-        if (!changed) {
+        boolean sessionsChanged = revokeAllSessions(actor, sessions, now);
+        boolean legacyTokenChanged = revokeLegacyActorToken(actor, "LOGOUT_ALL");
+        if (!sessionsChanged && !legacyTokenChanged) {
             return;
         }
-        sessionRepository.saveAll(sessions);
-        auditPort.append(new AuthSessionAuditEvent(
-                actor.organizationId(),
-                actor.userId(),
-                actor.userId(),
-                actor.currentSessionId(),
-                null,
-                AuthSessionAuditEventType.LOGOUT_ALL,
-                "LOGOUT_ALL",
-                now));
+        if (sessionsChanged) {
+            sessionRepository.saveAll(sessions);
+        }
+        appendLogoutAllAudit(actor, now);
+        if (legacyTokenChanged) {
+            appendLegacyAudit(actor, "LOGOUT_ALL", now);
+        }
     }
 
     @Override
@@ -124,6 +115,34 @@ public class AuthSessionManagementService implements
         }
         sessionRepository.save(session);
         appendAudit(AuthSessionAuditEventType.SESSION_REVOKED, userId, session, "LOGOUT");
+    }
+
+    private boolean revokeAllSessions(
+            SessionActor actor,
+            List<AuthSessionEntity> sessions,
+            Instant now) {
+        boolean changed = false;
+        for (AuthSessionEntity session : sessions) {
+            changed |= session.revoke(
+                    AuthSessionRevocationReason.LOGOUT_ALL,
+                    AuthSessionRevocationSource.SELF,
+                    actor.userId(),
+                    now);
+        }
+        return changed;
+    }
+
+    private boolean revokeLegacyActorToken(SessionActor actor, String reason) {
+        if (!actor.usesLegacyAccessToken()) {
+            return false;
+        }
+        return jwtRevocationService.revoke(
+                actor.accessTokenId(),
+                actor.userId(),
+                actor.organizationId(),
+                actor.accessTokenExpiresAt(),
+                reason,
+                actor.userId());
     }
 
     private List<AuthSessionView> views(SessionActor actor, UUID targetUserId) {
@@ -182,6 +201,30 @@ public class AuthSessionManagementService implements
                 AuthSessionAuditEventType.LEGACY_ACCESS_TOKEN_REVOKED,
                 "LOGOUT",
                 clock.instant()));
+    }
+
+    private void appendLogoutAllAudit(SessionActor actor, Instant occurredAt) {
+        auditPort.append(new AuthSessionAuditEvent(
+                actor.organizationId(),
+                actor.userId(),
+                actor.userId(),
+                actor.currentSessionId(),
+                null,
+                AuthSessionAuditEventType.LOGOUT_ALL,
+                "LOGOUT_ALL",
+                occurredAt));
+    }
+
+    private void appendLegacyAudit(SessionActor actor, String reason, Instant occurredAt) {
+        auditPort.append(new AuthSessionAuditEvent(
+                actor.organizationId(),
+                actor.userId(),
+                actor.userId(),
+                null,
+                null,
+                AuthSessionAuditEventType.LEGACY_ACCESS_TOKEN_REVOKED,
+                reason,
+                occurredAt));
     }
 
     private void assertClaimsMatchSession(
