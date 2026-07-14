@@ -2,11 +2,16 @@ package com.joprelys.backend.auth.session.application;
 
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.security.JwtService;
+import com.joprelys.backend.auth.session.domain.AuthSessionAuditEvent;
+import com.joprelys.backend.auth.session.domain.AuthSessionAuditEventType;
+import com.joprelys.backend.auth.session.domain.AuthSessionRevocationReason;
+import com.joprelys.backend.auth.session.domain.AuthSessionRevocationSource;
 import com.joprelys.backend.auth.session.infrastructure.persistence.AuthSessionEntity;
 import com.joprelys.backend.auth.session.infrastructure.persistence.AuthSessionRepository;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -20,6 +25,7 @@ public class PersistentAuthSessionService
     private final RefreshTokenGenerator tokenGenerator;
     private final RefreshTokenHasher tokenHasher;
     private final AuthSessionExpiryPolicy expiryPolicy;
+    private final AuthSessionAuditPort auditPort;
     private final JwtService jwtService;
     private final OrganizationRepository organizationRepository;
     private final Clock clock;
@@ -29,6 +35,7 @@ public class PersistentAuthSessionService
             RefreshTokenGenerator tokenGenerator,
             RefreshTokenHasher tokenHasher,
             AuthSessionExpiryPolicy expiryPolicy,
+            AuthSessionAuditPort auditPort,
             JwtService jwtService,
             OrganizationRepository organizationRepository,
             Clock clock) {
@@ -36,6 +43,7 @@ public class PersistentAuthSessionService
         this.tokenGenerator = tokenGenerator;
         this.tokenHasher = tokenHasher;
         this.expiryPolicy = expiryPolicy;
+        this.auditPort = auditPort;
         this.jwtService = jwtService;
         this.organizationRepository = organizationRepository;
         this.clock = clock;
@@ -58,16 +66,21 @@ public class PersistentAuthSessionService
                 absoluteExpiry,
                 idleExpiry);
         sessionRepository.save(session);
+        appendAudit(AuthSessionAuditEventType.SESSION_CREATED, session, user.getId(), null, now);
         return issuedSession(session, refreshToken);
     }
 
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = InvalidAuthSessionException.class)
     public IssuedAuthSession refresh(String refreshToken, SessionClientMetadata metadata) {
         String tokenHash = hashRequiredToken(refreshToken);
         AuthSessionEntity current = sessionRepository.findByRefreshTokenHashForUpdate(tokenHash)
                 .orElseThrow(InvalidAuthSessionException::new);
         Instant now = clock.instant();
+        if (isRotated(current)) {
+            handleReplay(current, now);
+            throw new InvalidAuthSessionException();
+        }
         assertSessionCanRotate(current, now);
 
         String replacementToken = tokenGenerator.generate();
@@ -84,7 +97,41 @@ public class PersistentAuthSessionService
         sessionRepository.saveAndFlush(replacement);
         current.replaceWith(replacement, now);
         sessionRepository.save(current);
+        appendAudit(
+                AuthSessionAuditEventType.SESSION_ROTATED,
+                current,
+                current.getUser().getId(),
+                AuthSessionRevocationReason.ROTATED.name(),
+                now);
         return issuedSession(replacement, replacementToken);
+    }
+
+    private void handleReplay(AuthSessionEntity consumedSession, Instant now) {
+        List<AuthSessionEntity> family = sessionRepository.findByTokenFamilyIdForUpdate(
+                consumedSession.getTokenFamilyId());
+        boolean changed = false;
+        for (AuthSessionEntity session : family) {
+            changed |= session.revoke(
+                    AuthSessionRevocationReason.REPLAY_DETECTED,
+                    AuthSessionRevocationSource.SYSTEM,
+                    null,
+                    now);
+        }
+        if (!changed) {
+            return;
+        }
+        sessionRepository.saveAll(family);
+        if (auditPort.exists(
+                AuthSessionAuditEventType.REFRESH_REPLAY_DETECTED,
+                consumedSession.getTokenFamilyId())) {
+            return;
+        }
+        appendAudit(
+                AuthSessionAuditEventType.REFRESH_REPLAY_DETECTED,
+                consumedSession,
+                null,
+                AuthSessionRevocationReason.REPLAY_DETECTED.name(),
+                now);
     }
 
     private IssuedAuthSession issuedSession(AuthSessionEntity session, String refreshToken) {
@@ -133,5 +180,26 @@ public class PersistentAuthSessionService
         if (!activeOrganization) {
             throw new InvalidAuthSessionException();
         }
+    }
+
+    private void appendAudit(
+            AuthSessionAuditEventType eventType,
+            AuthSessionEntity session,
+            UUID actorUserId,
+            String reason,
+            Instant occurredAt) {
+        auditPort.append(new AuthSessionAuditEvent(
+                session.getOrganizationId(),
+                actorUserId,
+                session.getUser().getId(),
+                session.getId(),
+                session.getTokenFamilyId(),
+                eventType,
+                reason,
+                occurredAt));
+    }
+
+    private static boolean isRotated(AuthSessionEntity session) {
+        return AuthSessionRevocationReason.ROTATED.name().equals(session.getRevocationReason());
     }
 }
