@@ -18,6 +18,7 @@ public final class RbacCatalog {
     public static final String PERMISSION_USER_MANAGE = "USER_MANAGE";
     public static final String PERMISSION_RBAC_READ = "RBAC_READ";
     public static final String PERMISSION_RBAC_MANAGE = "RBAC_MANAGE";
+    public static final String PERMISSION_AUTH_SESSION_MANAGE = "AUTH_SESSION_MANAGE";
     public static final String PERMISSION_EMERGENCY_MEDICO_LEGAL_READ = "EMERGENCY_MEDICO_LEGAL_READ";
     public static final String PERMISSION_EMERGENCY_MEDICO_LEGAL_WRITE = "EMERGENCY_MEDICO_LEGAL_WRITE";
     public static final String PERMISSION_EMERGENCY_BELONGINGS_WRITE = "EMERGENCY_BELONGINGS_WRITE";
@@ -35,6 +36,7 @@ public final class RbacCatalog {
                 permission("USER_MANAGE", "ADMINISTRATION", "Gérer les utilisateurs", "Inviter, modifier, activer ou désactiver un utilisateur."),
                 permission("RBAC_READ", "ADMINISTRATION", "Consulter le RBAC", "Consulter les rôles, permissions et affectations."),
                 permission("RBAC_MANAGE", "ADMINISTRATION", "Administrer le RBAC", "Créer des rôles personnalisés et gérer leurs permissions."),
+                permission(PERMISSION_AUTH_SESSION_MANAGE, "ADMINISTRATION", "Gérer les sessions utilisateurs", "Consulter et révoquer les sessions des collaborateurs du même établissement."),
                 permission("ORGANIZATION_MANAGE", "ADMINISTRATION", "Gérer les établissements", "Créer et administrer les établissements."),
                 permission("PATIENT_READ", "PATIENT", "Consulter les patients", "Consulter les informations administratives des patients."),
                 permission("PATIENT_WRITE", "PATIENT", "Gérer les patients", "Créer et modifier les informations administratives des patients."),
