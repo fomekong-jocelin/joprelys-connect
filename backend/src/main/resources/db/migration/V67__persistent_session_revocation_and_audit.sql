@@ -22,7 +22,7 @@ ALTER TABLE auth_sessions
 
 ALTER TABLE auth_sessions
     ADD CONSTRAINT fk_auth_sessions_revoked_by_user
-    FOREIGN KEY (revoked_by_user_id) REFERENCES users(id);
+    FOREIGN KEY (revoked_by_user_id) REFERENCES users(id) ON DELETE SET NULL;
 
 ALTER TABLE auth_sessions
     ADD CONSTRAINT ck_auth_sessions_revocation_source
@@ -40,11 +40,11 @@ CREATE TABLE revoked_access_tokens (
     reason VARCHAR(32) NOT NULL,
     revoked_by_user_id UUID,
     CONSTRAINT fk_revoked_access_tokens_user
-        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
     CONSTRAINT fk_revoked_access_tokens_organization
-        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE SET NULL,
     CONSTRAINT fk_revoked_access_tokens_actor
-        FOREIGN KEY (revoked_by_user_id) REFERENCES users(id),
+        FOREIGN KEY (revoked_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
     CONSTRAINT ck_revoked_access_tokens_expiry
         CHECK (expires_at > revoked_at)
 );
