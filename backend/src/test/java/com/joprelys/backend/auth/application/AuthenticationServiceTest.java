@@ -14,8 +14,6 @@ import com.joprelys.backend.auth.infrastructure.persistence.AuthAuditEventEntity
 import com.joprelys.backend.auth.infrastructure.persistence.AuthAuditEventRepository;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
-import com.joprelys.backend.auth.security.JwtRevocationService;
-import com.joprelys.backend.auth.security.JwtService;
 import com.joprelys.backend.auth.session.application.IssueAuthSessionUseCase;
 import com.joprelys.backend.auth.session.application.IssuedAuthSession;
 import com.joprelys.backend.auth.session.application.SessionClientMetadata;
@@ -49,10 +47,6 @@ class AuthenticationServiceTest {
     private PasswordEncoder passwordEncoder;
     @Mock
     private IssueAuthSessionUseCase issueAuthSessionUseCase;
-    @Mock
-    private JwtService jwtService;
-    @Mock
-    private JwtRevocationService jwtRevocationService;
     @Mock
     private OrganizationRepository organizationRepository;
 
@@ -181,8 +175,6 @@ class AuthenticationServiceTest {
                 authAuditEventRepository,
                 passwordEncoder,
                 issueAuthSessionUseCase,
-                jwtService,
-                jwtRevocationService,
                 FIXED_CLOCK,
                 organizationRepository);
     }
