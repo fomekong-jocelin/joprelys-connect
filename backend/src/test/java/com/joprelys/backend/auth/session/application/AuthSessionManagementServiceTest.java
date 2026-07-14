@@ -51,6 +51,7 @@ class AuthSessionManagementServiceTest {
                 userRepository,
                 auditPort,
                 jwtRevocationService,
+                new AuthSessionViewMapper(),
                 CLOCK);
     }
 
