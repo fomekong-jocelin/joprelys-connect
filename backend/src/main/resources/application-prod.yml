@@ -17,6 +17,7 @@ joprelys:
       absolute-ttl-hours: 168
       inactivity-ttl-minutes: 30
       retention-hours: 168
+      audit-retention-hours: ${JOPRELYS_AUTH_SESSION_AUDIT_RETENTION_HOURS:2160}
       refresh-cookie-secure: true
       refresh-cookie-same-site: Lax
       refresh-cookie-path: /api/auth

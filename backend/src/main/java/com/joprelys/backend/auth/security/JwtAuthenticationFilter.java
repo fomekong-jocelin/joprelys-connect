@@ -1,6 +1,7 @@
 package com.joprelys.backend.auth.security;
 
 import com.joprelys.backend.auth.rbac.RbacAuthorityService;
+import com.joprelys.backend.auth.session.application.AccessTokenSessionValidator;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,17 +23,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final BearerTokenResolver bearerTokenResolver;
     private final JwtService jwtService;
-    private final JwtRevocationService jwtRevocationService;
+    private final AccessTokenSessionValidator accessTokenSessionValidator;
     private final RbacAuthorityService rbacAuthorityService;
 
     public JwtAuthenticationFilter(
             BearerTokenResolver bearerTokenResolver,
             JwtService jwtService,
-            JwtRevocationService jwtRevocationService,
+            AccessTokenSessionValidator accessTokenSessionValidator,
             RbacAuthorityService rbacAuthorityService) {
         this.bearerTokenResolver = bearerTokenResolver;
         this.jwtService = jwtService;
-        this.jwtRevocationService = jwtRevocationService;
+        this.accessTokenSessionValidator = accessTokenSessionValidator;
         this.rbacAuthorityService = rbacAuthorityService;
     }
 
@@ -51,7 +52,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private boolean authenticate(String token, HttpServletResponse response) {
         try {
             JwtClaims claims = jwtService.parseAndValidate(token);
-            if (jwtRevocationService.isRevoked(claims.tokenId())) {
+            if (!accessTokenSessionValidator.isValid(claims)) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return false;
             }

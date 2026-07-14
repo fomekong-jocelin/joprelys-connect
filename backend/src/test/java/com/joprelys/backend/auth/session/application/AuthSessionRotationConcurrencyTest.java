@@ -1,9 +1,13 @@
 package com.joprelys.backend.auth.session.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import com.joprelys.backend.auth.session.domain.AuthSessionAuditEventType;
+import com.joprelys.backend.auth.session.domain.AuthSessionRevocationReason;
+import com.joprelys.backend.auth.session.infrastructure.persistence.AuthSessionAuditEventRepository;
 import com.joprelys.backend.auth.session.infrastructure.persistence.AuthSessionEntity;
 import com.joprelys.backend.auth.session.infrastructure.persistence.AuthSessionRepository;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
@@ -31,6 +35,7 @@ class AuthSessionRotationConcurrencyTest {
     @Autowired IssueAuthSessionUseCase issueAuthSessionUseCase;
     @Autowired RefreshAuthSessionUseCase refreshAuthSessionUseCase;
     @Autowired AuthSessionRepository sessionRepository;
+    @Autowired AuthSessionAuditEventRepository auditRepository;
     @Autowired UserAccountRepository userAccountRepository;
     @Autowired OrganizationRepository organizationRepository;
 
@@ -38,6 +43,7 @@ class AuthSessionRotationConcurrencyTest {
 
     @BeforeEach
     void setUp() {
+        auditRepository.deleteAll();
         sessionRepository.deleteAll();
         userAccountRepository.deleteAll();
         organizationRepository.deleteAll();
@@ -50,7 +56,7 @@ class AuthSessionRotationConcurrencyTest {
     }
 
     @Test
-    void shouldAllowExactlyOneRefreshWhenSameTokenIsSubmittedConcurrently() throws Exception {
+    void shouldAllowOneResponseThenRevokeFamilyWhenSameTokenIsReplayedConcurrently() throws Exception {
         OrganizationEntity organization = organizationRepository.save(new OrganizationEntity(
                 "Clinique Concurrence",
                 "concurrency@joprelys.local",
@@ -81,8 +87,11 @@ class AuthSessionRotationConcurrencyTest {
         assertEquals(2, allSessions.size());
         UUID familyId = allSessions.getFirst().getTokenFamilyId();
         List<AuthSessionEntity> family = sessionRepository.findByTokenFamilyIdOrderByCreatedAtAsc(familyId);
-        assertEquals(2, family.size());
-        assertEquals(1, family.stream().filter(session -> session.getRevokedAt() == null).count());
+        assertEquals(0, family.stream().filter(session -> session.getRevokedAt() == null).count());
+        assertTrue(family.stream().anyMatch(session ->
+                AuthSessionRevocationReason.REPLAY_DETECTED.name().equals(session.getRevocationReason())));
+        assertTrue(auditRepository.existsByEventTypeAndTokenFamilyId(
+                AuthSessionAuditEventType.REFRESH_REPLAY_DETECTED.name(), familyId));
     }
 
     private boolean rotate(String token, CountDownLatch ready, CountDownLatch start) throws InterruptedException {

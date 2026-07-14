@@ -13,6 +13,7 @@ public record AuthSessionProperties(
         @DefaultValue("168") @Min(1) long absoluteTtlHours,
         @DefaultValue("30") @Min(5) long inactivityTtlMinutes,
         @DefaultValue("168") @Min(1) long retentionHours,
+        @DefaultValue("2160") @Min(24) long auditRetentionHours,
         @DefaultValue("joprelys_refresh") @NotBlank String refreshCookieName,
         @DefaultValue("false") boolean refreshCookieSecure,
         @DefaultValue("Lax") @NotBlank @Pattern(regexp = "Strict|Lax|None") String refreshCookieSameSite,

@@ -3,6 +3,7 @@ package com.joprelys.backend.auth.session.infrastructure.persistence;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.session.application.SessionClientMetadata;
 import com.joprelys.backend.auth.session.domain.AuthSessionRevocationReason;
+import com.joprelys.backend.auth.session.domain.AuthSessionRevocationSource;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -61,6 +62,12 @@ public class AuthSessionEntity {
 
     @Column(name = "revocation_reason", length = 32)
     private String revocationReason;
+
+    @Column(name = "revoked_by_user_id")
+    private UUID revokedByUserId;
+
+    @Column(name = "revocation_source", length = 16)
+    private String revocationSource;
 
     @Column(name = "replaced_by_session_id")
     private UUID replacedBySessionId;
@@ -132,15 +139,28 @@ public class AuthSessionEntity {
         lastUsedAt = now;
         revokedAt = now;
         revocationReason = AuthSessionRevocationReason.ROTATED.name();
+        revocationSource = AuthSessionRevocationSource.SYSTEM.name();
+        revokedByUserId = null;
         replacedBySessionId = replacement.id;
     }
 
     public void revoke(AuthSessionRevocationReason reason, Instant now) {
+        revoke(reason, AuthSessionRevocationSource.SYSTEM, null, now);
+    }
+
+    public boolean revoke(
+            AuthSessionRevocationReason reason,
+            AuthSessionRevocationSource source,
+            UUID actorUserId,
+            Instant now) {
         if (revokedAt != null) {
-            return;
+            return false;
         }
         revokedAt = Objects.requireNonNull(now);
         revocationReason = Objects.requireNonNull(reason).name();
+        revocationSource = Objects.requireNonNull(source).name();
+        revokedByUserId = actorUserId;
+        return true;
     }
 
     public UUID getId() {
@@ -197,6 +217,14 @@ public class AuthSessionEntity {
 
     public String getRevocationReason() {
         return revocationReason;
+    }
+
+    public UUID getRevokedByUserId() {
+        return revokedByUserId;
+    }
+
+    public String getRevocationSource() {
+        return revocationSource;
     }
 
     public UUID getReplacedBySessionId() {

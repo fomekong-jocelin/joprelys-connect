@@ -2,14 +2,16 @@ package com.joprelys.backend.auth.api;
 
 import com.joprelys.backend.auth.application.AuthenticationOutcome;
 import com.joprelys.backend.auth.application.AuthenticationService;
-import com.joprelys.backend.auth.security.BearerTokenResolver;
+import com.joprelys.backend.auth.session.api.SessionActorFactory;
 import com.joprelys.backend.auth.session.application.InvalidAuthSessionException;
 import com.joprelys.backend.auth.session.application.IssuedAuthSession;
+import com.joprelys.backend.auth.session.application.LogoutCurrentSessionUseCase;
 import com.joprelys.backend.auth.session.application.RefreshAuthSessionUseCase;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,7 +24,8 @@ public class AuthController {
 
     private final AuthenticationService authenticationService;
     private final RefreshAuthSessionUseCase refreshAuthSessionUseCase;
-    private final BearerTokenResolver bearerTokenResolver;
+    private final LogoutCurrentSessionUseCase logoutCurrentSessionUseCase;
+    private final SessionActorFactory actorFactory;
     private final SessionClientMetadataFactory metadataFactory;
     private final RefreshTokenCookieManager cookieManager;
     private final AuthResponseMapper responseMapper;
@@ -30,13 +33,15 @@ public class AuthController {
     public AuthController(
             AuthenticationService authenticationService,
             RefreshAuthSessionUseCase refreshAuthSessionUseCase,
-            BearerTokenResolver bearerTokenResolver,
+            LogoutCurrentSessionUseCase logoutCurrentSessionUseCase,
+            SessionActorFactory actorFactory,
             SessionClientMetadataFactory metadataFactory,
             RefreshTokenCookieManager cookieManager,
             AuthResponseMapper responseMapper) {
         this.authenticationService = authenticationService;
         this.refreshAuthSessionUseCase = refreshAuthSessionUseCase;
-        this.bearerTokenResolver = bearerTokenResolver;
+        this.logoutCurrentSessionUseCase = logoutCurrentSessionUseCase;
+        this.actorFactory = actorFactory;
         this.metadataFactory = metadataFactory;
         this.cookieManager = cookieManager;
         this.responseMapper = responseMapper;
@@ -88,10 +93,8 @@ public class AuthController {
 
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void logout(HttpServletRequest request, HttpServletResponse response) {
-        String token = bearerTokenResolver.resolve(request)
-                .orElseThrow(() -> new MissingBearerTokenException("Missing bearer token"));
-        authenticationService.logout(token);
+    public void logout(Authentication authentication, HttpServletResponse response) {
+        logoutCurrentSessionUseCase.logout(actorFactory.claims(authentication));
         cookieManager.clear(response);
     }
 
