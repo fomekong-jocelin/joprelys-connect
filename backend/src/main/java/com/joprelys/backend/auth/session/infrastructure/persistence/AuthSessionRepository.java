@@ -23,6 +23,52 @@ public interface AuthSessionRepository extends JpaRepository<AuthSessionEntity, 
     Optional<AuthSessionEntity> findByRefreshTokenHashForUpdate(
             @Param("refreshTokenHash") String refreshTokenHash);
 
+    @Query("""
+            select session
+            from AuthSessionEntity session
+            join fetch session.user
+            where session.id = :sessionId
+            """)
+    Optional<AuthSessionEntity> findByIdWithUser(@Param("sessionId") UUID sessionId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select session
+            from AuthSessionEntity session
+            join fetch session.user
+            where session.id = :sessionId
+            """)
+    Optional<AuthSessionEntity> findByIdForUpdate(@Param("sessionId") UUID sessionId);
+
+    @Query("""
+            select session
+            from AuthSessionEntity session
+            join fetch session.user
+            where session.user.id = :userId
+            order by session.createdAt desc
+            """)
+    List<AuthSessionEntity> findByUserIdOrderByCreatedAtDesc(@Param("userId") UUID userId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select session
+            from AuthSessionEntity session
+            join fetch session.user
+            where session.user.id = :userId
+            order by session.createdAt asc
+            """)
+    List<AuthSessionEntity> findByUserIdForUpdate(@Param("userId") UUID userId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select session
+            from AuthSessionEntity session
+            join fetch session.user
+            where session.tokenFamilyId = :tokenFamilyId
+            order by session.createdAt asc
+            """)
+    List<AuthSessionEntity> findByTokenFamilyIdForUpdate(@Param("tokenFamilyId") UUID tokenFamilyId);
+
     List<AuthSessionEntity> findByTokenFamilyIdOrderByCreatedAtAsc(UUID tokenFamilyId);
 
     @Modifying
