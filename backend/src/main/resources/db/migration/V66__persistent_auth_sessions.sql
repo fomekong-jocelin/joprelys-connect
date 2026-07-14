@@ -35,7 +35,8 @@ CREATE TABLE auth_sessions (
 
 ALTER TABLE auth_sessions
     ADD CONSTRAINT fk_auth_sessions_replacement
-    FOREIGN KEY (replaced_by_session_id) REFERENCES auth_sessions(id);
+    FOREIGN KEY (replaced_by_session_id) REFERENCES auth_sessions(id)
+    ON DELETE SET NULL;
 
 CREATE INDEX idx_auth_sessions_user_active
     ON auth_sessions (user_id, revoked_at, absolute_expires_at);
