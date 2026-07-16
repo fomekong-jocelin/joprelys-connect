@@ -18,6 +18,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Changed
 
+- **E-mails transactionnels premium (TASK-20260717-PREMIUM-ACCOUNT-EMAILS)** : remplacement des messages texte par un modèle HTML responsive partagé avec logo embarqué, code ou mot de passe mis en évidence, consignes de sécurité, texte alternatif et échappement des données dynamiques.
+
 - **Secrets d'authentification par e-mail (STORY-20260716-AUTH-EMAIL-SECRETS)** : les mots de passe temporaires et OTP ne sont plus renvoyés, affichés ou journalisés ; ils sont transmis via un adaptateur SMTP configuré exclusivement par variables d'environnement.
 
 - **Contrat d’état financier patient/assurance (STORY-2201)** : définition unique de `PAID` comme part patient soldée avec assurance encore due et de `SETTLED` comme facture totalement soldée ; centralisation des créances et transitions dans `InvoiceFinancialStateService`, synchronisation des paiements patient et assurance, protection de l’immuabilité après validation, adaptation de l’export Sage 100 et extension des contrats Angular.
