@@ -53,17 +53,6 @@ import { AppLogoComponent } from '../shared/ui/app-logo.component';
               <p class="text-xs" style="color:var(--text-muted)">{{ t('auth.forgotPassword.otpSubtitle') }}</p>
             </div>
 
-            @if (receivedOtpCode(); as code) {
-              <div class="mb-4 p-3 rounded-[var(--radius-brand-md)] border" style="background:var(--brand-warning-subtle); border-color:var(--brand-warning-border)">
-                <p class="text-[10px] font-bold uppercase tracking-wider mb-1" style="color:var(--brand-warning-text)">{{ t('auth.forgotPassword.pilotWarning') }}</p>
-                <p class="text-xs" style="color:var(--brand-warning-text)">{{ t('auth.forgotPassword.pilotDesc') }}</p>
-                <code class="mt-2 inline-flex rounded-sm px-3 py-1.5 font-mono text-lg font-extrabold"
-                  style="background:var(--brand-warning-code-bg); color:var(--brand-warning-text)">
-                  {{ code }}
-                </code>
-              </div>
-            }
-
             <form class="space-y-4" (submit)="$event.preventDefault(); submitReset()">
               <div class="space-y-1.5">
                 <label class="ui-label">{{ t('auth.forgotPassword.code') }}</label>
@@ -125,7 +114,6 @@ export class ForgotPasswordComponent {
   readonly confirmPassword = signal('');
   readonly error = signal<string | null>(null);
   readonly loading = signal(false);
-  readonly receivedOtpCode = signal<string | null>(null);
 
   readonly canSubmitEmail = computed(() =>
     this.isValidEmail(this.email()) && !this.loading()
@@ -151,9 +139,8 @@ export class ForgotPasswordComponent {
     this.loading.set(true);
 
     this.authApi.requestPasswordRecovery(this.email()).subscribe({
-      next: (res) => {
+      next: () => {
         this.loading.set(false);
-        this.receivedOtpCode.set(res.otpCode);
         this.step.set(2);
       },
       error: (err) => {

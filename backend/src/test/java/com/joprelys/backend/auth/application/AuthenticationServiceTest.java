@@ -19,6 +19,7 @@ import com.joprelys.backend.auth.session.application.IssuedAuthSession;
 import com.joprelys.backend.auth.session.application.SessionClientMetadata;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
+import com.joprelys.backend.notification.application.AccountMailService;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -43,6 +44,8 @@ class AuthenticationServiceTest {
     private UserAccountRepository userAccountRepository;
     @Mock
     private AuthAuditEventRepository authAuditEventRepository;
+    @Mock
+    private AccountMailService accountMailService;
     @Mock
     private PasswordEncoder passwordEncoder;
     @Mock
@@ -176,7 +179,8 @@ class AuthenticationServiceTest {
                 passwordEncoder,
                 issueAuthSessionUseCase,
                 FIXED_CLOCK,
-                organizationRepository);
+                organizationRepository,
+                accountMailService);
     }
 
     private static UserAccountEntity user(String email, String name, String role) {

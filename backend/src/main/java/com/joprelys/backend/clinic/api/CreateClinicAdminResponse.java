@@ -9,7 +9,6 @@ public record CreateClinicAdminResponse(
 		String displayName,
 		String role,
 		boolean enabled,
-		String temporaryPassword,
 		UUID organizationId,
 		Instant createdAt
 ) {

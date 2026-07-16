@@ -435,15 +435,6 @@ export class OrganizationListComponent implements OnInit {
     });
   }
 
-  copyAdminPassword(): void {
-    const result = this.adminCreatedResult();
-    if (!result) return;
-    navigator.clipboard.writeText(result.temporaryPassword).then(() => {
-      this.adminPasswordCopied.set(true);
-      setTimeout(() => this.adminPasswordCopied.set(false), 2000);
-    });
-  }
-
   onLogoSelected(file: File, uploader: FileDragDropComponent): void {
     const formData = new FormData();
     formData.append('file', file);

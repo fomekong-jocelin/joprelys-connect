@@ -24,10 +24,22 @@ spring:
     enabled: true
     validate-on-migrate: false
     repair-on-migrate: true
+  mail:
+    host: ${MAIL_HOST:smtp.hostinger.com}
+    port: ${MAIL_PORT:465}
+    username: ${MAIL_USERNAME:noreply@joprelys.com}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: ${MAIL_SSL_ENABLED:true}
+          starttls:
+            enable: ${MAIL_STARTTLS_ENABLED:false}
 
 joprelys:
   security:
-    expose-otp-to-frontend: ${JOPRELYS_EXPOSE_OTP:true}
     jwt:
       issuer: ${JOPRELYS_JWT_ISSUER:joprelys-connect}
       audience: ${JOPRELYS_JWT_AUDIENCE:joprelys-clinic}
@@ -64,4 +76,3 @@ springdoc:
       email: support@joprelys.com
     license:
       name: Proprietary
-

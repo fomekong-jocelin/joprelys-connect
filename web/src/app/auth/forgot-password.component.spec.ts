@@ -16,7 +16,7 @@ describe('ForgotPasswordComponent', () => {
 
   beforeEach(async () => {
     mockAuthApi = {
-      requestPasswordRecovery: vi.fn().mockReturnValue(of({ otpCode: '123456' })),
+      requestPasswordRecovery: vi.fn().mockReturnValue(of(void 0)),
       resetPassword: vi.fn().mockReturnValue(of(null))
     };
 

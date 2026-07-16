@@ -116,7 +116,6 @@ describe('StaffManagementComponent', () => {
       email: 'finance@joprelys.local',
       displayName: 'Responsable Finance',
       role: 'DAF,CAISSIER,SUPERVISEUR_CAISSE',
-      temporaryPassword: 'Jop-ABC123',
     }));
 
     component.submitForm();
@@ -126,7 +125,6 @@ describe('StaffManagementComponent', () => {
       email: 'finance@joprelys.local',
       roles: ['DAF', 'CAISSIER', 'SUPERVISEUR_CAISSE'],
     });
-    expect(component.temporaryPassword()).toBe('Jop-ABC123');
     expect(component.staff().length).toBe(2);
   });
 

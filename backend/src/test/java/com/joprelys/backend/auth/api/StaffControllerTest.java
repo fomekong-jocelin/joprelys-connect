@@ -12,6 +12,7 @@ import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepositor
 import com.joprelys.backend.auth.security.JwtService;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
+import com.joprelys.backend.notification.application.AccountMailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,12 +22,16 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public class StaffControllerTest {
+
+	@MockitoBean
+	private AccountMailService accountMailService;
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -109,7 +114,7 @@ public class StaffControllerTest {
 				.andExpect(jsonPath("$.email").value("nouveau.medecin@joprelys.local"))
 				.andExpect(jsonPath("$.role").value("MEDECIN"))
 				.andExpect(jsonPath("$.enabled").value(true))
-				.andExpect(jsonPath("$.temporaryPassword").value(matchesPattern("Jop-[A-Z2-9]{6}")));
+				.andExpect(jsonPath("$.temporaryPassword").doesNotExist());
 
 		UserAccountEntity created = userAccountRepository.findByEmail("nouveau.medecin@joprelys.local").orElseThrow();
 		org.assertj.core.api.Assertions.assertThat(created.getOrganizationId()).isEqualTo(orgA.getId());

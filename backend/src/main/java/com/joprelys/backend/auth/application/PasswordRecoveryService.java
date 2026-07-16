@@ -4,6 +4,7 @@ import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
+import com.joprelys.backend.notification.application.AccountMailService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -14,7 +15,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Random;
+import java.security.SecureRandom;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -25,17 +26,20 @@ public class PasswordRecoveryService {
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
     private final Map<String, OtpData> otpMap = new ConcurrentHashMap<>();
-    private final Random random = new Random();
+    private final SecureRandom random = new SecureRandom();
+    private final AccountMailService accountMailService;
 
     public PasswordRecoveryService(
             UserAccountRepository userAccountRepository,
             OrganizationRepository organizationRepository,
             PasswordEncoder passwordEncoder,
-            Clock clock) {
+            Clock clock,
+            AccountMailService accountMailService) {
         this.userAccountRepository = userAccountRepository;
         this.organizationRepository = organizationRepository;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
+        this.accountMailService = accountMailService;
     }
 
     public String generateAndSendOtp(String email) {
@@ -50,19 +54,15 @@ public class PasswordRecoveryService {
                 OrganizationEntity org = organizationRepository.findById(user.getOrganizationId()).orElse(null);
                 if (org != null && !"ACTIVE".equals(org.getStatus())) {
                     // Organisation inactive, on ne génère pas d'OTP
-                    System.out.println("[PASSWORD RECOVERY] Tentative pour e-mail avec organisation inactive : " + normalizedEmail);
                     return null;
                 }
             }
 
             String code = String.format("%06d", random.nextInt(1000000));
             otpMap.put(normalizedEmail, new OtpData(code, clock.instant(), 0));
-
-            // Impression en console pour la simulation
-            System.out.println("[PASSWORD RECOVERY] Code de réinitialisation pour " + normalizedEmail + " : " + code);
+            accountMailService.sendPasswordRecoveryCode(user.getEmail(), user.getDisplayName(), code);
             return code;
         } else {
-            System.out.println("[PASSWORD RECOVERY] Tentative pour e-mail inconnu ou inactif : " + normalizedEmail);
             return null;
         }
     }

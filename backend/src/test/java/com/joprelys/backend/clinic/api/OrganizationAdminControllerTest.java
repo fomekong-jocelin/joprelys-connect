@@ -11,6 +11,7 @@ import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepositor
 import com.joprelys.backend.auth.security.JwtService;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
+import com.joprelys.backend.notification.application.AccountMailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
@@ -28,6 +30,9 @@ import java.util.UUID;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public class OrganizationAdminControllerTest {
+
+	@MockitoBean
+	private AccountMailService accountMailService;
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -101,7 +106,7 @@ public class OrganizationAdminControllerTest {
 				.andExpect(jsonPath("$.email", is("admin.clinique@orgadmintest.local")))
 				.andExpect(jsonPath("$.role", is("ADMIN_CLINIQUE")))
 				.andExpect(jsonPath("$.enabled", is(true)))
-				.andExpect(jsonPath("$.temporaryPassword", matchesPattern("Jop-[A-Z0-9]{6}")))
+				.andExpect(jsonPath("$.temporaryPassword").doesNotExist())
 				.andExpect(jsonPath("$.organizationId", is(orgA.getId().toString())));
 	}
 

@@ -18,8 +18,7 @@ public class AuthResponseMapper {
                     outcome.email(),
                     outcome.displayName(),
                     outcome.role(),
-                    true,
-                    outcome.otpCode());
+                    true);
         }
         return toResponse(outcome.session());
     }
@@ -34,7 +33,6 @@ public class AuthResponseMapper {
                 session.email(),
                 session.displayName(),
                 session.role(),
-                false,
-                null);
+                false);
     }
 }

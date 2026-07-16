@@ -10,6 +10,7 @@ import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
+import com.joprelys.backend.notification.application.AccountMailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.lang.reflect.Field;
@@ -28,6 +30,9 @@ import java.util.Map;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public class PasswordRecoveryControllerTest {
+
+    @MockitoBean
+    private AccountMailService accountMailService;
 
     @Autowired
     private MockMvc mockMvc;
@@ -93,7 +98,7 @@ public class PasswordRecoveryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(result -> {
                     String response = result.getResponse().getContentAsString();
-                    assertTrue(response.contains("\"otpCode\""));
+                    assertFalse(response.contains("\"otpCode\""));
                 });
 
         String otp = getOtpFromService("medecin@joprelys.local");
@@ -114,8 +119,7 @@ public class PasswordRecoveryControllerTest {
                 .andExpect(status().isOk()) // Doit renvoyer 200 par sécurité
                 .andExpect(result -> {
                     String response = result.getResponse().getContentAsString();
-                    // En mode pilote, on retourne quand même un objet avec otpCode null
-                    assertTrue(response.contains("\"otpCode\""));
+                    assertFalse(response.contains("\"otpCode\""));
                 });
 
         String otp = getOtpFromService("medecin.inactive@joprelys.local");
@@ -136,7 +140,7 @@ public class PasswordRecoveryControllerTest {
                 .andExpect(status().isOk()) // Doit renvoyer 200 par sécurité
                 .andExpect(result -> {
                     String response = result.getResponse().getContentAsString();
-                    assertTrue(response.contains("\"otpCode\""));
+                    assertFalse(response.contains("\"otpCode\""));
                 });
 
         String otp = getOtpFromService("inconnu@joprelys.local");

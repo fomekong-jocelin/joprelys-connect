@@ -36,6 +36,4 @@ export interface UpdateStaffRequest {
   readonly bio?: string;
 }
 
-export interface InviteStaffResponse extends StaffMember {
-  readonly temporaryPassword: string;
-}
+export type InviteStaffResponse = StaffMember;

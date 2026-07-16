@@ -12,20 +12,7 @@ public record LoginResponse(
         String email,
         String name,
         String role,
-        Boolean requiresOtp,
-        String otpCode) {
-
-    public LoginResponse(
-            String accessToken,
-            String tokenType,
-            Instant expiresAt,
-            String email,
-            String name,
-            String role,
-            Boolean requiresOtp,
-            String otpCode) {
-        this(accessToken, tokenType, expiresAt, null, null, email, name, role, requiresOtp, otpCode);
-    }
+        Boolean requiresOtp) {
 
     public LoginResponse(
             String accessToken,
@@ -35,7 +22,7 @@ public record LoginResponse(
             String name,
             String role,
             Boolean requiresOtp) {
-        this(accessToken, tokenType, expiresAt, null, null, email, name, role, requiresOtp, null);
+        this(accessToken, tokenType, expiresAt, null, null, email, name, role, requiresOtp);
     }
 
     public LoginResponse(
@@ -45,6 +32,6 @@ public record LoginResponse(
             String email,
             String name,
             String role) {
-        this(accessToken, tokenType, expiresAt, null, null, email, name, role, false, null);
+        this(accessToken, tokenType, expiresAt, null, null, email, name, role, false);
     }
 }

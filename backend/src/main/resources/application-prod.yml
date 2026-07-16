@@ -9,7 +9,6 @@ spring:
 
 joprelys:
   security:
-    expose-otp-to-frontend: false
     jwt:
       secret: ${JOPRELYS_JWT_SECRET}
       ttl-minutes: 15

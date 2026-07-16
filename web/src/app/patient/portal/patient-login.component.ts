@@ -174,12 +174,9 @@ export class PatientLoginComponent {
       phone: this.phone.trim(),
       birthDate: this.birthDate
     }).subscribe({
-      next: (res) => {
+      next: () => {
         this.loading.set(false);
         this.step.set(2);
-        if (res && res.otpCode) {
-          this.otpCode = res.otpCode;
-        }
       },
       error: (err) => {
         this.loading.set(false);

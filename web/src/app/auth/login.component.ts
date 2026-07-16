@@ -90,7 +90,6 @@ export class LoginComponent {
         this.loading.set(false);
         if (res.requiresOtp) {
           this.staffStep.set(2);
-          this.staffOtpCode.set(res.otpCode || '');
         } else {
           this.router.navigate([this.getLandingPage(res.role || '')]);
         }
@@ -142,12 +141,9 @@ export class LoginComponent {
       phone: this.patientPhone().trim(),
       birthDate: this.patientBirthDate()
     }).subscribe({
-      next: (res) => {
+      next: () => {
         this.loading.set(false);
         this.patientStep.set(2);
-        if (res && res.otpCode) {
-          this.otpCode.set(res.otpCode);
-        }
       },
       error: (err) => {
         this.loading.set(false);

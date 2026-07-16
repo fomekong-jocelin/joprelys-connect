@@ -7,8 +7,7 @@ public record AuthenticationOutcome(
         String email,
         String displayName,
         String role,
-        boolean requiresOtp,
-        String otpCode) {
+        boolean requiresOtp) {
 
     public static AuthenticationOutcome authenticated(IssuedAuthSession session) {
         return new AuthenticationOutcome(
@@ -16,16 +15,14 @@ public record AuthenticationOutcome(
                 session.email(),
                 session.displayName(),
                 session.role(),
-                false,
-                null);
+                false);
     }
 
     public static AuthenticationOutcome otpChallenge(
             String email,
             String displayName,
-            String role,
-            String otpCode) {
-        return new AuthenticationOutcome(null, email, displayName, role, true, otpCode);
+            String role) {
+        return new AuthenticationOutcome(null, email, displayName, role, true);
     }
 
     public String refreshToken() {

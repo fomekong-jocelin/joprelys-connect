@@ -6,6 +6,7 @@ import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationApiKey
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationApiKeyRepository;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
+import com.joprelys.backend.notification.application.AccountMailService;
 import jakarta.validation.Valid;
 import java.security.SecureRandom;
 import java.util.List;
@@ -38,16 +39,19 @@ public class OrganizationController {
 	private final OrganizationApiKeyRepository apiKeyRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final SecureRandom secureRandom = new SecureRandom();
+	private final AccountMailService accountMailService;
 
 	public OrganizationController(
 			OrganizationRepository organizationRepository,
 			UserAccountRepository userAccountRepository,
 			OrganizationApiKeyRepository apiKeyRepository,
-			PasswordEncoder passwordEncoder) {
+			PasswordEncoder passwordEncoder,
+			AccountMailService accountMailService) {
 		this.organizationRepository = organizationRepository;
 		this.userAccountRepository = userAccountRepository;
 		this.apiKeyRepository = apiKeyRepository;
 		this.passwordEncoder = passwordEncoder;
+		this.accountMailService = accountMailService;
 	}
 
 	@PostMapping
@@ -116,6 +120,7 @@ public class OrganizationController {
 				passwordEncoder.encode(temporaryPassword));
 		admin.setOrganizationId(org.getId());
 		UserAccountEntity saved = userAccountRepository.save(admin);
+		accountMailService.sendTemporaryPassword(saved.getEmail(), saved.getDisplayName(), temporaryPassword);
 
 		return new CreateClinicAdminResponse(
 				saved.getId(),
@@ -123,7 +128,6 @@ public class OrganizationController {
 				saved.getDisplayName(),
 				saved.getRole(),
 				saved.isEnabled(),
-				temporaryPassword,
 				org.getId(),
 				saved.getCreatedAt());
 	}

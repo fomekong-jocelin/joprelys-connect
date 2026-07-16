@@ -7,6 +7,7 @@ import com.joprelys.backend.auth.api.UpdateStaffRequest;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.auth.rbac.RbacStore;
+import com.joprelys.backend.notification.application.AccountMailService;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -39,14 +40,17 @@ public class StaffService {
     private final PasswordEncoder passwordEncoder;
     private final RbacStore rbacStore;
     private final SecureRandom secureRandom;
+    private final AccountMailService accountMailService;
 
     public StaffService(
             UserAccountRepository userAccountRepository,
             PasswordEncoder passwordEncoder,
-            RbacStore rbacStore) {
+            RbacStore rbacStore,
+            AccountMailService accountMailService) {
         this.userAccountRepository = userAccountRepository;
         this.passwordEncoder = passwordEncoder;
         this.rbacStore = rbacStore;
+        this.accountMailService = accountMailService;
         this.secureRandom = new SecureRandom();
     }
 
@@ -102,6 +106,7 @@ public class StaffService {
                 "USER",
                 saved.getId().toString(),
                 "roles=" + legacyRoles);
+        accountMailService.sendTemporaryPassword(saved.getEmail(), saved.getDisplayName(), temporaryPassword);
 
         return new InviteStaffResponse(
                 saved.getId(),
@@ -109,7 +114,6 @@ public class StaffService {
                 saved.getDisplayName(),
                 legacyRoles,
                 saved.isEnabled(),
-                temporaryPassword,
                 saved.getCreatedAt());
     }
 

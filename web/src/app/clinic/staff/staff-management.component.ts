@@ -44,8 +44,6 @@ export class StaffManagementComponent implements OnInit {
   readonly formLoading = signal(false);
   readonly formError = signal<string | null>(null);
   readonly editingStaff = signal<StaffMember | null>(null);
-  readonly temporaryPassword = signal<string | null>(null);
-  readonly passwordCopied = signal(false);
 
   readonly displayName = signal('');
   readonly email = signal('');
@@ -81,7 +79,6 @@ export class StaffManagementComponent implements OnInit {
 
   readonly formTitle = computed(() => this.editingStaff() ? this.t('staff.editTitle') : this.t('staff.inviteTitle'));
   readonly submitLabel = computed(() => this.editingStaff() ? this.t('staff.update') : this.t('staff.create'));
-  readonly copyLabel = computed(() => this.passwordCopied() ? this.t('staff.copied') : this.t('staff.copyPassword'));
   readonly tableLabels = computed<StaffTableLabels>(() => ({
     title: this.t('staff.tableTitle'),
     loading: this.t('common.loading'),
@@ -131,7 +128,6 @@ export class StaffManagementComponent implements OnInit {
   }
 
   toggleInviteForm(): void {
-    this.temporaryPassword.set(null);
     if (this.showForm() && !this.editingStaff()) {
       this.cancelForm();
       return;
@@ -141,7 +137,6 @@ export class StaffManagementComponent implements OnInit {
   }
 
   startEdit(member: StaffMember): void {
-    this.temporaryPassword.set(null);
     this.editingStaff.set(member);
     this.displayName.set(member.displayName);
     this.email.set(member.email);
@@ -215,12 +210,6 @@ export class StaffManagementComponent implements OnInit {
     return this.roles().find((role) => role.code === roleCode)?.name ?? roleCode;
   }
 
-  copyTemporaryPassword(): void {
-    const password = this.temporaryPassword();
-    if (!password || !navigator.clipboard) return;
-    navigator.clipboard.writeText(password).then(() => this.passwordCopied.set(true));
-  }
-
   t(key: string, fallback?: string): string {
     return this.i18n.t(key, fallback);
   }
@@ -268,8 +257,6 @@ export class StaffManagementComponent implements OnInit {
     }).subscribe({
       next: (created) => {
         this.staff.update((items) => [...items, created]);
-        this.temporaryPassword.set(created.temporaryPassword);
-        this.passwordCopied.set(false);
         this.formLoading.set(false);
         this.showForm.set(false);
         this.resetForm();

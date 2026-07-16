@@ -9,7 +9,6 @@ public record InviteStaffResponse(
 		String displayName,
 		String role,
 		boolean enabled,
-		String temporaryPassword,
 		Instant createdAt
 ) {
 }

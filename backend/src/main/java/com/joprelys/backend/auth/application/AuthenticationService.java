@@ -11,6 +11,7 @@ import com.joprelys.backend.auth.session.application.IssuedAuthSession;
 import com.joprelys.backend.auth.session.application.SessionClientMetadata;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
+import com.joprelys.backend.notification.application.AccountMailService;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
@@ -18,7 +19,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -35,9 +35,6 @@ public class AuthenticationService {
             "BIOLOGISTE",
             "PHARMACIEN");
 
-    @Value("${joprelys.security.expose-otp-to-frontend:true}")
-    private boolean exposeOtpToFrontend;
-
     private final UserAccountRepository userAccountRepository;
     private final AuthAuditEventRepository authAuditEventRepository;
     private final PasswordEncoder passwordEncoder;
@@ -46,6 +43,7 @@ public class AuthenticationService {
     private final OrganizationRepository organizationRepository;
     private final SecureRandom secureRandom;
     private final Map<String, StaffOtpData> staffOtpMap = new ConcurrentHashMap<>();
+    private final AccountMailService accountMailService;
 
     public AuthenticationService(
             UserAccountRepository userAccountRepository,
@@ -53,13 +51,15 @@ public class AuthenticationService {
             PasswordEncoder passwordEncoder,
             IssueAuthSessionUseCase issueAuthSessionUseCase,
             Clock clock,
-            OrganizationRepository organizationRepository) {
+            OrganizationRepository organizationRepository,
+            AccountMailService accountMailService) {
         this.userAccountRepository = userAccountRepository;
         this.authAuditEventRepository = authAuditEventRepository;
         this.passwordEncoder = passwordEncoder;
         this.issueAuthSessionUseCase = issueAuthSessionUseCase;
         this.clock = clock;
         this.organizationRepository = organizationRepository;
+        this.accountMailService = accountMailService;
         this.secureRandom = new SecureRandom();
     }
 
@@ -75,11 +75,11 @@ public class AuthenticationService {
         if (hasSensitiveRole(user)) {
             String code = String.format("%06d", secureRandom.nextInt(1_000_000));
             staffOtpMap.put(email, new StaffOtpData(code, clock.instant(), 0));
+            accountMailService.sendLoginCode(user.getEmail(), user.getDisplayName(), code);
             return AuthenticationOutcome.otpChallenge(
                     user.getEmail(),
                     user.getDisplayName(),
-                    user.getRole(),
-                    exposeOtpToFrontend ? code : null);
+                    user.getRole());
         }
 
         return completeAuthentication(user, auditIpAddress, metadata);

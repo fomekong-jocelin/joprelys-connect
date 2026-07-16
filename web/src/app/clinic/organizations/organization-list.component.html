@@ -482,27 +482,8 @@
             <p class="text-xs mb-3 text-[var(--text-secondary)]">
               {{ result.displayName }} — <span class="font-mono text-xs">{{ result.email }}</span>
             </p>
-            <p class="text-[10px] font-bold uppercase tracking-wider mb-1 text-[var(--text-muted)]">
-              {{ i18n.t('organizations.adminTempPassword') }}
-            </p>
-            <div class="flex items-center gap-3">
-              <code
-                class="flex-1 rounded-lg px-3 py-2 font-mono text-lg font-bold tracking-widest bg-slate-100 dark:bg-[var(--app-bg)] text-[var(--text-primary)]"
-                style="letter-spacing: 0.15em;"
-              >
-                {{ result.temporaryPassword }}
-              </code>
-              <button
-                id="copy-admin-password-btn"
-                type="button"
-                class="rounded-lg px-3 py-2 text-xs font-bold text-white bg-brand-cyan hover:bg-[var(--brand-primary-hover)] transition-colors cursor-pointer"
-                (click)="copyAdminPassword()"
-              >
-                {{ adminPasswordCopied() ? i18n.t('staff.copied') : i18n.t('staff.copyPassword') }}
-              </button>
-            </div>
             <p class="mt-3 text-[10px] text-[var(--text-muted)]">
-              {{ i18n.t('staff.temporaryPasswordHelp') }}
+              {{ i18n.t('staff.credentialsSentByEmail', 'Le mot de passe temporaire a été envoyé par e-mail.') }}
             </p>
           </div>
 

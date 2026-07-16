@@ -15,23 +15,6 @@
       <app-ui-alert tone="error">{{ error }}</app-ui-alert>
     }
 
-    @if (temporaryPassword(); as password) {
-      <app-ui-alert>
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p class="font-extrabold">{{ t('staff.temporaryPasswordTitle') }}</p>
-            <p class="mt-1 text-sm">{{ t('staff.temporaryPasswordHelp') }}</p>
-            <code class="mt-2 inline-flex rounded-md bg-white/80 px-3 py-1 font-mono text-base font-extrabold text-cyan-900">
-              {{ password }}
-            </code>
-          </div>
-          <app-ui-button variant="secondary" (pressed)="copyTemporaryPassword()">
-            {{ copyLabel() }}
-          </app-ui-button>
-        </div>
-      </app-ui-alert>
-    }
-
     @if (showForm()) {
       <app-ui-card [title]="formTitle()">
         <form class="space-y-5" (submit)="$event.preventDefault(); submitForm()">

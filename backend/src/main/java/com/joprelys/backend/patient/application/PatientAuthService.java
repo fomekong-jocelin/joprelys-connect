@@ -4,13 +4,14 @@ import com.joprelys.backend.auth.api.LoginResponse;
 import com.joprelys.backend.auth.security.JwtService;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
+import com.joprelys.backend.notification.application.AccountMailService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Map;
-import java.util.Random;
+import java.security.SecureRandom;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -19,11 +20,13 @@ public class PatientAuthService {
     private final PatientRepository patientRepository;
     private final JwtService jwtService;
     private final Map<String, OtpData> otpMap = new ConcurrentHashMap<>();
-    private final Random random = new Random();
+    private final SecureRandom random = new SecureRandom();
+    private final AccountMailService accountMailService;
 
-    public PatientAuthService(PatientRepository patientRepository, JwtService jwtService) {
+    public PatientAuthService(PatientRepository patientRepository, JwtService jwtService, AccountMailService accountMailService) {
         this.patientRepository = patientRepository;
         this.jwtService = jwtService;
+        this.accountMailService = accountMailService;
     }
 
     public String generateAndSendOtp(String globalPatientNumber, String phone, LocalDate birthDate) {
@@ -38,8 +41,11 @@ public class PatientAuthService {
         String code = String.format("%06d", random.nextInt(1000000));
         otpMap.put(normalizedDpu, new OtpData(code, Instant.now(), 0));
 
-        // Impression en console pour la simulation
-        System.out.println("[OTP PATIENT] Code de connexion pour DPU " + normalizedDpu + " : " + code);
+        if (patient.getEmail() == null || patient.getEmail().isBlank()) {
+            otpMap.remove(normalizedDpu);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aucune adresse e-mail n'est associée à ce patient.");
+        }
+        accountMailService.sendPatientLoginCode(patient.getEmail(), patient.getFullName(), code);
         return code;
     }
 
@@ -69,7 +75,8 @@ public class PatientAuthService {
                     token.expiresAt(),
                     patient.getGlobalPatientNumber() + "@joprelys.local",
                     patient.getFullName(),
-                    "PATIENT"
+                    "PATIENT",
+                    false
             );
         } else {
             int newAttempts = otpData.attempts() + 1;
@@ -99,9 +106,6 @@ public class PatientAuthService {
         String key = "CONSENT_" + normalizedDpu + "_" + consentId;
         otpMap.put(key, new OtpData(code, Instant.now(), 0));
 
-        // Simulation : affichage console (en prod → SMS/email)
-        System.out.println("[OTP CONSENT] Code pour DPU=" + normalizedDpu
-                + " consentId=" + consentId + " : " + code);
     }
 
     /**

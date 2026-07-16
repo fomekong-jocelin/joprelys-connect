@@ -3,7 +3,6 @@ package com.joprelys.backend.patient.api;
 import com.joprelys.backend.auth.api.LoginResponse;
 import com.joprelys.backend.patient.application.PatientAuthService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,20 +20,14 @@ public class PatientAuthController {
         this.patientAuthService = patientAuthService;
     }
 
-    @Value("${joprelys.security.expose-otp-to-frontend:true}")
-    private boolean exposeOtpToFrontend;
-
     @PostMapping("/otp")
-    public PatientOtpResponse requestOtp(@Valid @RequestBody RequestOtpRequest request) {
-        String code = patientAuthService.generateAndSendOtp(
+    public void requestOtp(@Valid @RequestBody RequestOtpRequest request) {
+        patientAuthService.generateAndSendOtp(
                 request.globalPatientNumber(),
                 request.phone(),
                 request.birthDate()
         );
-        return new PatientOtpResponse(exposeOtpToFrontend ? code : null);
     }
-
-    public record PatientOtpResponse(String otpCode) {}
 
     @PostMapping("/verify")
     public LoginResponse verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {

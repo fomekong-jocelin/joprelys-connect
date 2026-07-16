@@ -40,7 +40,6 @@ export interface CreateClinicAdminResponse {
   readonly displayName: string;
   readonly role: string;
   readonly enabled: boolean;
-  readonly temporaryPassword: string;
   readonly organizationId: string;
   readonly createdAt: string;
 }
