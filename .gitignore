@@ -110,6 +110,7 @@ coverage/
 # Test / Reports / QA
 reports/
 test-results/
+joprelys_server_diagnostic_*.txt
 playwright-report/
 cypress/screenshots/
 cypress/videos/
@@ -144,6 +145,12 @@ generated/
 .claude/cache/
 .gemini/cache/
 *.scratch.md
+
+# Python diagnostic tooling
+__pycache__/
+*.py[cod]
+# Ancien outil local non sécurisé (secret dans son historique de travail).
+scripts/diagnose_server_paramiko.py
 
 # Trauma Center / Clinic real documents and extracted text
 doc_reel_trauma_center/*.docx

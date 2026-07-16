@@ -22,4 +22,4 @@ UPDATE medical_documents SET verification_url = 'http://localhost:4200/verify/' 
 
 -- Contrainte check pour le statut du document (VALID, REVOQUE, ANNULE, REMPLACE)
 ALTER TABLE medical_documents DROP CONSTRAINT IF EXISTS chk_medical_document_status;
--- ALTER TABLE medical_documents ADD CONSTRAINT chk_medical_document_status CHECK (status IN ('VALID', 'REVOQUE', 'ANNULE', 'REMPLACE'));
+ALTER TABLE medical_documents ADD CONSTRAINT chk_medical_document_status CHECK (status IN ('VALID', 'REVOQUE', 'ANNULE', 'REMPLACE'));

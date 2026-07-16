@@ -6,9 +6,9 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-14 (STORY-2402 validée techniquement dans la PR #55) |
+| Dernière mise à jour | 2026-07-14 (diagnostic Paramiko terminé : mismatch Flyway V35/V37 identifié) |
 | Responsable mise à jour | Codex |
-| État global | EPIC-0022 Sessions en cours : STORY-2401 fusionnée ; STORY-2402 prête pour revue ; #34 reste à exécuter. EPIC-0023 URG-TEMP : #40, #42, #44 et #45 terminées, #46 et #47 restantes |
+| État global | EPIC-0022 Sessions en cours : STORY-2401 fusionnée ; STORY-2402 prête pour revue ; #34 reste à exécuter. EPIC-0023 URG-TEMP : #40, #42, #44 et #45 terminées, #46 et #47 restantes. BUG-20260714-PARAMIKO-SERVER-DIAGNOSTIC terminé : backend en ligne. |
 | Risques majeurs | Revue sécurité humaine de #33 ; renouvellement Angular absent jusqu’à #34 ; durée de conservation des audits à valider par le DPO ; validation métier ABCDE ; UAT Finance et URG-TEMP |
 | Prochaine priorité | Revue et fusion de #33, puis #34, #46 et #47 dans cet ordre |
 | Sprint courant | SPRINT-0014 |
@@ -20,6 +20,7 @@
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
+| BUG-20260714-PARAMIKO-SERVER-DIAGNOSTIC | OPERATIONS | Diagnostic + correctif | Collecte non interactive du démarrage Spring Boot via SSH 22 et déploiement Option B | Python / SSH / systemd / Flyway / Spring Boot | DONE | P0 | 2 | Senior DevOps/backend | 0.75j | 1.0j | 1.5j | Codex | Tech Lead / exploitation | SPRINT-0014 | 0.75j | Renouveler mot de passe SSH ; remplacer la clé lab temporaire ; surveiller stabilité | Moyen | 2026-07-14 |
 | EPIC-0022 | SESSIONS_AND_REVOCATION | Epic | Sessions persistantes, rotation et révocation distribuée | Backend / Angular / DB / sécurité | IN_PROGRESS | P0 | 18 | Senior sécurité + frontend senior | 6.0j | 8.0j | 12.0j | Codex | Tech Lead + sécurité | SPRINT-0014 | 3.2j | Revue/fusion #33 puis exécuter #34 | Moyen | 2026-07-14 |
 | STORY-2401 | SESSIONS_AND_REVOCATION | User Story | Sessions persistantes et rotation des refresh tokens | Backend / DB / sécurité | DONE | P0 | 8 | Senior sécurité backend | 3.0j | 4.5j | 6.0j | Codex | Tech Lead + sécurité | SPRINT-0014 | 1.2j | Suivi post-fusion normal ; PR #54 fusionnée au commit `09544ff0` | Faible | 2026-07-14 |
 | STORY-2402 | SESSIONS_AND_REVOCATION | User Story | Révocation persistante, logout-all et détection du rejeu | Backend / DB / sécurité | QA | P0 | 5 | Senior sécurité backend | 2.5j | 3.8j | 5.0j | Codex | Tech Lead + sécurité | SPRINT-0014 | 2.0j | Revue humaine et fusion PR #55 ; CI #643 verte | Moyen | 2026-07-14 |

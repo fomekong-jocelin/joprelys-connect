@@ -8,6 +8,10 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+### Operations
+
+- **Diagnostic production (BUG-20260714-PARAMIKO-SERVER-DIAGNOSTIC)** : connexion SSH non interactive via Paramiko sur `161.97.181.177:22`, collecte lecture seule du service `joprelys-connect-api.service`, identification d'une boucle de redémarrage due à un mismatch Flyway sur V35/V35 (contraintes CHECK commentées dans le jar déployé alors qu'actives en base) ; rapport dans `logs/dev/server_diagnostic_report.txt`.
+
 ### Changed
 
 - **Secrets d'authentification par e-mail (STORY-20260716-AUTH-EMAIL-SECRETS)** : les mots de passe temporaires et OTP ne sont plus renvoyés, affichés ou journalisés ; ils sont transmis via un adaptateur SMTP configuré exclusivement par variables d'environnement.
@@ -23,6 +27,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **Baseline CI Maven/Angular (BUG-20260710-CI-BASELINE-EXECUTION)** : le pipeline rend le Maven Wrapper exécutable sur Linux et lance la commande Angular standard sans l’option invalide `--run`, afin que les suites backend/frontend et le build de production soient réellement bloquants.
 - **Migration financière V55 (BUG-20260710-V55-H2-COMPATIBILITY)** : remplacement des casts PostgreSQL spécifiques par des conversions atomiques compatibles H2/PostgreSQL, avec validation obligatoire de toutes les migrations sur PostgreSQL 16 via Testcontainers et contrôle des 13 colonnes `NUMERIC`.
 - **Précision financière BigDecimal (BUG-20260710-BACKEND-TESTS-BIGDECIMAL)** : migration des fixtures restées en `double`, assertions monétaires en `BigDecimal` et normalisation à quatre décimales des prix, quantités et coefficients de `InvoiceItemEntity`.
+
+- **Démarrage backend production (BUG-20260714-PARAMIKO-SERVER-DIAGNOSTIC)** : correction du mismatch Flyway sur V35/V37 par restauration des contraintes `CHECK`, ajout de la migration V68 de suppression propre, rebuild et redeploy du jar sur `161.97.181.177`, ajout de la variable `JOPRELYS_LAB_INTEGRATION_API_KEY` manquante dans `.env` ; service `joprelys-connect-api.service` repassé `active (running)` sur le port 8084.
 
 - **Dossier médical patient — icônes et urgences (BUG-20260710-PATIENT-MEDICAL-ICONS-I18N)** : remplacement des emojis Allergies, Antécédents, Vaccinations et Urgences par des icônes SVG du design system, ajout des traductions FR/EN manquantes de l'historique d'urgence et alignement des surfaces sur le rayon maximal de 8 px.
 
