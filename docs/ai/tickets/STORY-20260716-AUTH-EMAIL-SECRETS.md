@@ -24,6 +24,8 @@ Ne plus afficher ni retourner les mots de passe temporaires et OTP dans l'interf
 - [x] Compiler le frontend de production.
 - [x] Déclarer explicitement le `JavaMailSender` requis par les contextes Spring Boot.
 - [x] Mettre à jour la documentation et le suivi.
+- [x] Injecter les six variables SMTP dans le `.env` de production via Paramiko avec sauvegarde préalable.
+- [x] Redémarrer le service et vérifier l'état `active`, l'écoute sur 8084 et l'absence d'erreur récente.
 
 ## Estimation et responsabilités
 
@@ -42,3 +44,11 @@ Ne plus afficher ni retourner les mots de passe temporaires et OTP dans l'interf
 ## Statut
 
 QA — implémentation terminée, validation SMTP réelle et tests backend complets restants.
+
+## Validation production du 2026-07-16
+
+- Sauvegarde créée : `/opt/joprelys-connect/api/.env.bak.smtp-20260716233233`.
+- Variables configurées sans valeur exposée : `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_SSL_ENABLED`, `MAIL_STARTTLS_ENABLED`.
+- `joprelys-connect-api.service` : `active`.
+- Port applicatif `8084` : en écoute.
+- Journaux de niveau erreur après redémarrage : aucune ligne.
