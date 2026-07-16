@@ -25,6 +25,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+- **Internationalisation du shell (BUG-20260716-I18N-SHELL-MISSING-KEYS)** : traduction FR/EN du menu RBAC, des contrôles mobiles et des rôles principaux ; ajout d'un contrôle automatique de complétude des clés du shell.
+
 - **Régularisation URG-TEMP — navigation applicative (BUG-20260712-PATIENT-RECONCILIATION-SHELL)** : la page de rapprochement des patients utilise désormais le shell clinique partagé ; l’en-tête, le menu latéral, le fil d’Ariane, la navigation mobile et les contrôles de thème/langue restent disponibles.
 
 - **Clôture de caisse — historique et bordereau PDF (BUG-20260710-CASH-CLOSEOUT-HISTORY-REPORT)** : rétablissement des espacements entre cartes, ajout de l’historique personnel tenanté des sessions, rafraîchissement et mise en évidence après clôture, détail différé des mouvements, bordereau PDF numéroté avec rapprochement financier, contrôles propriétaire/DAF/Admin et couverture backend/Angular.

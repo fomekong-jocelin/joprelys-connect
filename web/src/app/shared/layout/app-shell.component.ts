@@ -23,7 +23,7 @@ import { AppShellNavComponent } from './app-shell-nav.component';
               type="button"
               (click)="toggleMobileMenu()"
               class="inline-flex md:hidden items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--text-muted)] hover:text-brand-cyan hover:bg-[var(--app-surface-muted)] transition-all duration-150 cursor-pointer"
-              [attr.aria-label]="mobileMenuOpen() ? 'Close menu' : 'Open menu'"
+              [attr.aria-label]="mobileMenuOpen() ? i18n.t('shell.menu.close') : i18n.t('shell.menu.open')"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
@@ -81,7 +81,7 @@ import { AppShellNavComponent } from './app-shell-nav.component';
                     {{ currentSession.name }}
                   </span>
                   <span class="text-[0.68rem] font-extrabold uppercase tracking-wider mt-1" style="color:var(--text-muted)">
-                    {{ currentSession.role }}
+                    {{ roleLabel(currentSession.role) }}
                   </span>
                 </div>
                 <div class="ui-avatar shadow-xs select-none">{{ currentSession.name.charAt(0) }}</div>
@@ -165,7 +165,7 @@ import { AppShellNavComponent } from './app-shell-nav.component';
                   type="button"
                   (click)="closeMobileMenu()"
                   class="inline-flex items-center justify-center w-8 h-8 rounded-sm hover:bg-[var(--app-surface-muted)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-                  aria-label="Close menu"
+                  [attr.aria-label]="i18n.t('shell.menu.close')"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -186,7 +186,7 @@ import { AppShellNavComponent } from './app-shell-nav.component';
                         {{ currentSession.name }}
                       </span>
                       <span class="text-[0.65rem] font-extrabold uppercase tracking-wider mt-1" style="color:var(--text-muted)">
-                        {{ currentSession.role }}
+                        {{ roleLabel(currentSession.role) }}
                       </span>
                     </div>
                   </div>
@@ -207,7 +207,7 @@ import { AppShellNavComponent } from './app-shell-nav.component';
 
               <div class="border-t border-[var(--app-border)] p-4 space-y-4">
                 <div class="flex items-center justify-between">
-                  <span class="text-xs font-bold" style="color:var(--text-muted)">Thème</span>
+                  <span class="text-xs font-bold" style="color:var(--text-muted)">{{ i18n.t('shell.theme.label') }}</span>
                   <button
                     type="button"
                     (click)="toggleTheme()"
@@ -227,7 +227,7 @@ import { AppShellNavComponent } from './app-shell-nav.component';
                 </div>
 
                 <div class="flex items-center justify-between">
-                  <span class="text-xs font-bold" style="color:var(--text-muted)">Langue</span>
+                  <span class="text-xs font-bold" style="color:var(--text-muted)">{{ i18n.t('shell.language.label') }}</span>
                   <div class="flex items-center gap-1.5 text-xs font-bold border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2.5 py-1.5 rounded-sm select-none">
                     <button
                       type="button"
@@ -377,6 +377,15 @@ export class AppShellComponent {
       return '/pharmacy/prescriptions';
     }
     return '/dashboard';
+  }
+
+  roleLabel(value: string): string {
+    return value
+      .split(',')
+      .map((role) => role.trim())
+      .filter(Boolean)
+      .map((role) => this.i18n.t(`role.${role}`, role))
+      .join(', ');
   }
 
   logout(): void {
