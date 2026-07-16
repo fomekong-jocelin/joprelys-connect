@@ -26,6 +26,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 ### Fixed
 
 - **Fiabilité cliniques et e-mails (BUG-20260716-CLINIC-ADMIN-MAIL-AND-LOGO)** : serveur SMTP corrigé vers `mail.joprelys.com:465`, gestion globale des indisponibilités par réponse `503`, suppression des OTP fantômes, création d'admin transactionnelle, persistance du logo dès la création et stockage des téléversements configurable.
+- **Déploiement Angular atomique (BUG-20260716-CLINIC-ADMIN-MAIL-AND-LOGO)** : désactivation du cache du shell HTML, cache immuable des assets hashés et réponse `404` pour les chunks absents afin d'éviter les erreurs MIME après livraison.
+- **Correction production SMTP/cache (BUG-20260716-CLINIC-ADMIN-MAIL-AND-LOGO)** : variables SMTP et stockage persistant appliqués, anciens fichiers repris, backend redémarré sans nouvelle erreur, récupération de mot de passe validée en HTTP `200` et politique de cache Angular activée.
 
 - **Internationalisation du shell (BUG-20260716-I18N-SHELL-MISSING-KEYS)** : traduction FR/EN du menu RBAC, des contrôles mobiles et des rôles principaux ; ajout d'un contrôle automatique de complétude des clés du shell.
 

@@ -4,7 +4,7 @@
 
 **Date** : 2026-07-16
 
-**Statut** : QA — déploiement production restant
+**Statut** : DONE
 
 **Priorité** : P0
 
@@ -32,6 +32,8 @@
 - [x] Le logo envoyé lors de la création est persisté et renvoyé par l'API.
 - [x] Le stockage des fichiers est configurable par variable d'environnement.
 - [x] Les tests backend et frontend couvrent les régressions.
+- [x] Le shell HTML n'est jamais mis en cache et les assets hashés sont immuables.
+- [x] Un asset Angular absent renvoie `404` au lieu du shell HTML.
 
 ## Actions
 
@@ -45,6 +47,16 @@
 
 ## Reste à faire
 
-- Injecter `MAIL_HOST=mail.joprelys.com` et `JOPRELYS_UPLOAD_DIR=/opt/joprelys-connect/storage/uploads` sur le serveur.
-- Déployer le backend et le frontend puis effectuer une QA réelle des quatre parcours e-mail et du logo.
+- Effectuer une QA métier complémentaire des créations d'admin, OTP interne/patient et logos avec des données réelles.
 - Corriger séparément quatre défauts de nettoyage/interférence révélés par la suite Maven complète.
+
+## Validation production — 2026-07-17
+
+- `MAIL_HOST` corrigé vers `mail.joprelys.com` et service redémarré sans erreur récente.
+- Répertoire persistant configuré dans `/opt/joprelys-connect/storage/uploads` avec reprise des fichiers existants.
+- Demande réelle de récupération pour le super-administrateur : HTTP `200`.
+- `index.html` : `Cache-Control: no-store, no-cache, must-revalidate`.
+- Bundle courant : HTTP `200`, type `text/javascript`.
+- Ancien chunk absent : HTTP `404` au lieu de `200 text/html`.
+- Sauvegarde environnement : `/opt/joprelys-connect/api/.env.bak.mailfix-20260717002748`.
+- Sauvegarde Apache : `/var/www/vhosts/joprelys.com/httpdocs/.htaccess.bak.20260717002748`.
