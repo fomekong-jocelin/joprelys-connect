@@ -15,7 +15,7 @@ public class SmtpAccountMailService implements AccountMailService {
 
     public SmtpAccountMailService(
             JavaMailSender mailSender,
-            @Value("${spring.mail.username}") String sender) {
+            @Value("${spring.mail.username:noreply@joprelys.com}") String sender) {
         this.mailSender = mailSender;
         this.sender = sender;
     }

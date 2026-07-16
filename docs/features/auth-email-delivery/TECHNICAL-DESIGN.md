@@ -2,7 +2,7 @@
 
 ## Architecture
 
-`AccountMailService` est le port applicatif. `SmtpAccountMailService` est l'adaptateur Spring Mail. Les services d'authentification et de création de compte appellent le port après génération cryptographiquement sûre du secret.
+`AccountMailService` est le port applicatif. `SmtpAccountMailService` est l'adaptateur Spring Mail. `MailSenderConfig` construit explicitement le `JavaMailSender` depuis les propriétés externalisées lorsque le contexte n'en fournit pas. Les services d'authentification et de création de compte appellent le port après génération cryptographiquement sûre du secret.
 
 ## Configuration
 

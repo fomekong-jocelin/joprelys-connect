@@ -22,6 +22,7 @@ Ne plus afficher ni retourner les mots de passe temporaires et OTP dans l'interf
 - [x] Externaliser la configuration SMTP par variables d'environnement.
 - [x] Retirer les secrets des DTO et écrans.
 - [x] Compiler le frontend de production.
+- [x] Déclarer explicitement le `JavaMailSender` requis par les contextes Spring Boot.
 - [x] Mettre à jour la documentation et le suivi.
 
 ## Estimation et responsabilités
