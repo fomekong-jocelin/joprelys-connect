@@ -25,6 +25,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+- **Fiabilité cliniques et e-mails (BUG-20260716-CLINIC-ADMIN-MAIL-AND-LOGO)** : serveur SMTP corrigé vers `mail.joprelys.com:465`, gestion globale des indisponibilités par réponse `503`, suppression des OTP fantômes, création d'admin transactionnelle, persistance du logo dès la création et stockage des téléversements configurable.
+
 - **Internationalisation du shell (BUG-20260716-I18N-SHELL-MISSING-KEYS)** : traduction FR/EN du menu RBAC, des contrôles mobiles et des rôles principaux ; ajout d'un contrôle automatique de complétude des clés du shell.
 
 - **Régularisation URG-TEMP — navigation applicative (BUG-20260712-PATIENT-RECONCILIATION-SHELL)** : la page de rapprochement des patients utilise désormais le shell clinique partagé ; l’en-tête, le menu latéral, le fil d’Ariane, la navigation mobile et les contrôles de thème/langue restent disponibles.

@@ -39,13 +39,11 @@ public class PatientAuthService {
         }
 
         String code = String.format("%06d", random.nextInt(1000000));
-        otpMap.put(normalizedDpu, new OtpData(code, Instant.now(), 0));
-
         if (patient.getEmail() == null || patient.getEmail().isBlank()) {
-            otpMap.remove(normalizedDpu);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aucune adresse e-mail n'est associée à ce patient.");
         }
         accountMailService.sendPatientLoginCode(patient.getEmail(), patient.getFullName(), code);
+        otpMap.put(normalizedDpu, new OtpData(code, Instant.now(), 0));
         return code;
     }
 

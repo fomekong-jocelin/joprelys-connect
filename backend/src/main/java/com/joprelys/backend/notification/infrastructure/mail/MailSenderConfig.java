@@ -14,7 +14,7 @@ public class MailSenderConfig {
     @Bean
     @ConditionalOnMissingBean(JavaMailSender.class)
     JavaMailSender javaMailSender(
-            @Value("${spring.mail.host:smtp.hostinger.com}") String host,
+            @Value("${spring.mail.host:mail.joprelys.com}") String host,
             @Value("${spring.mail.port:465}") int port,
             @Value("${spring.mail.username:noreply@joprelys.com}") String username,
             @Value("${spring.mail.password:}") String password,

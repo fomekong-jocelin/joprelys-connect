@@ -1,6 +1,7 @@
 package com.joprelys.backend.notification.infrastructure.mail;
 
 import com.joprelys.backend.notification.application.AccountMailService;
+import com.joprelys.backend.notification.application.MailDeliveryUnavailableException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
@@ -54,7 +55,11 @@ public class SmtpAccountMailService implements AccountMailService {
         message.setTo(recipient);
         message.setSubject(subject);
         message.setText(body);
-        mailSender.send(message);
+        try {
+            mailSender.send(message);
+        } catch (MailException exception) {
+            throw new MailDeliveryUnavailableException(exception);
+        }
     }
 
     private static String greeting(String displayName) {

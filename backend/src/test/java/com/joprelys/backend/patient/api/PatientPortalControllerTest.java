@@ -11,6 +11,7 @@ import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
+import com.joprelys.backend.notification.application.AccountMailService;
 import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
@@ -25,12 +26,16 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public class PatientPortalControllerTest {
+
+    @MockitoBean
+    private AccountMailService accountMailService;
 
     @Autowired
     private MockMvc mockMvc;
@@ -134,6 +139,7 @@ public class PatientPortalControllerTest {
                 "Aucune",
                 "Aucun"
         );
+        patientA.setEmail("patient.a@test.local");
         patientA = patientRepository.save(patientA);
 
         patientB = new PatientEntity(

@@ -85,4 +85,17 @@ describe('ForgotPasswordComponent', () => {
     component.goToLogin();
     expect(router.navigate).toHaveBeenCalledWith(['/']);
   });
+
+  it('should display the normalized mail delivery error', () => {
+    mockAuthApi.requestPasswordRecovery.mockReturnValue(throwError(() => ({
+      status: 503,
+      error: { error: { code: 'MAIL_DELIVERY_UNAVAILABLE', message: 'Service e-mail indisponible.' } }
+    })));
+    component.email.set('medecin@joprelys.local');
+
+    component.submitRequest();
+
+    expect(component.error()).toBe('Service e-mail indisponible.');
+    expect(component.step()).toBe(1);
+  });
 });

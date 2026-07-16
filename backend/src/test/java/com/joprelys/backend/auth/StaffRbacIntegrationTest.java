@@ -12,6 +12,7 @@ import com.joprelys.backend.auth.security.JwtService;
 import com.joprelys.backend.auth.security.TenantContext;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
+import com.joprelys.backend.notification.application.AccountMailService;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -23,6 +24,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
@@ -34,6 +36,7 @@ class StaffRbacIntegrationTest {
     @Autowired private OrganizationRepository organizationRepository;
     @Autowired private UserAccountRepository userAccountRepository;
     @Autowired private JwtService jwtService;
+    @MockitoBean private AccountMailService accountMailService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 

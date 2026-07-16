@@ -51,6 +51,7 @@
   "organizations.adminSaveError": "Unable to create the admin account.",
   "organizations.adminCreatedSuccess": "Admin account successfully created.",
   "organizations.adminTempPassword": "Temporary password",
+  "organizations.logoUploadError": "Unable to upload the clinic logo.",
   "shell.copyright": "2026 {publisher}. All rights reserved.",
   "shell.help": "Help center",
   "shell.logout": "Sign out",

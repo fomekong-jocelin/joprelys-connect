@@ -37,7 +37,7 @@ Ne plus afficher ni retourner les mots de passe temporaires et OTP dans l'interf
 
 ## Risques
 
-- Le nom d'hôte SMTP par défaut est `smtp.hostinger.com`; il doit être remplacé via `MAIL_HOST` si le fournisseur de `joprelys.com` diffère.
+- Le serveur SMTP validé pour le domaine est `mail.joprelys.com:465` en SSL implicite ; `smtp.hostinger.com` refuse l'authentification de cette boîte.
 - Un patient sans adresse e-mail ne peut plus demander de code et reçoit une erreur explicite.
 - Le mot de passe communiqué dans la conversation doit être renouvelé après configuration.
 

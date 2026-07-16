@@ -145,7 +145,7 @@ export class ForgotPasswordComponent {
       },
       error: (err) => {
         this.loading.set(false);
-        this.error.set(err.error?.detail || err.error?.title || this.t('forgotPassword.error.generic'));
+        this.error.set(this.apiErrorMessage(err) || this.t('forgotPassword.error.generic'));
       }
     });
   }
@@ -173,9 +173,16 @@ export class ForgotPasswordComponent {
       },
       error: (err) => {
         this.loading.set(false);
-        this.error.set(err.error?.detail || err.error?.title || this.t('forgotPassword.error.invalidCode'));
+        this.error.set(this.apiErrorMessage(err) || this.t('forgotPassword.error.invalidCode'));
       }
     });
+  }
+
+  private apiErrorMessage(err: unknown): string | null {
+    if (!err || typeof err !== 'object') return null;
+    const response = err as { error?: { detail?: unknown; title?: unknown; error?: { message?: unknown } } };
+    const message = response.error?.error?.message ?? response.error?.detail ?? response.error?.title;
+    return typeof message === 'string' && message.trim() ? message : null;
   }
 
   goToLogin(): void {

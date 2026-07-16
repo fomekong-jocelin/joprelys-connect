@@ -9,7 +9,7 @@
 Variables obligatoires/recommandées :
 
 ```text
-MAIL_HOST=smtp.hostinger.com
+MAIL_HOST=mail.joprelys.com
 MAIL_PORT=465
 MAIL_USERNAME=noreply@joprelys.com
 MAIL_PASSWORD=<secret injecté hors Git>

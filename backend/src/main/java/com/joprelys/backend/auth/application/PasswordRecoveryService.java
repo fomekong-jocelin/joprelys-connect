@@ -59,8 +59,8 @@ public class PasswordRecoveryService {
             }
 
             String code = String.format("%06d", random.nextInt(1000000));
-            otpMap.put(normalizedEmail, new OtpData(code, clock.instant(), 0));
             accountMailService.sendPasswordRecoveryCode(user.getEmail(), user.getDisplayName(), code);
+            otpMap.put(normalizedEmail, new OtpData(code, clock.instant(), 0));
             return code;
         } else {
             return null;

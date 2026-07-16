@@ -1,5 +1,6 @@
 package com.joprelys.backend.common.api;
 
+import com.joprelys.backend.notification.application.MailDeliveryUnavailableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -69,6 +70,17 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ApiErrorResponse("NOT_FOUND", ex.getMessage(), traceId));
+    }
+
+    @ExceptionHandler(MailDeliveryUnavailableException.class)
+    ResponseEntity<ApiErrorResponse> handleMailDeliveryUnavailable(MailDeliveryUnavailableException ex) {
+        String traceId = getTraceId();
+        log.error("[trace_id={}] Account credential delivery unavailable", traceId, ex);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ApiErrorResponse(
+                        "MAIL_DELIVERY_UNAVAILABLE",
+                        "Le service e-mail est temporairement indisponible. Veuillez réessayer dans quelques instants.",
+                        traceId));
     }
 
     @ExceptionHandler({

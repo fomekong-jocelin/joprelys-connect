@@ -74,8 +74,8 @@ public class AuthenticationService {
 
         if (hasSensitiveRole(user)) {
             String code = String.format("%06d", secureRandom.nextInt(1_000_000));
-            staffOtpMap.put(email, new StaffOtpData(code, clock.instant(), 0));
             accountMailService.sendLoginCode(user.getEmail(), user.getDisplayName(), code);
+            staffOtpMap.put(email, new StaffOtpData(code, clock.instant(), 0));
             return AuthenticationOutcome.otpChallenge(
                     user.getEmail(),
                     user.getDisplayName(),

@@ -1,7 +1,7 @@
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { OrganizationListComponent } from './organization-list.component';
 import { OrganizationApiService } from './organization-api.service';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { Organization } from './organizations.models';
 import { RouterTestingModule } from '@angular/router/testing';
 
@@ -33,7 +33,8 @@ describe('OrganizationListComponent', () => {
       update: vi.fn(),
       listApiKeys: vi.fn().mockReturnValue(of([])),
       generateApiKey: vi.fn(),
-      revokeApiKey: vi.fn()
+      revokeApiKey: vi.fn(),
+      createClinicAdmin: vi.fn()
     };
 
     await TestBed.configureTestingModule({
@@ -73,7 +74,8 @@ describe('OrganizationListComponent', () => {
       country: 'Cameroun',
       type: 'CLINIC',
       responsibleName: 'Dr. Espoir',
-      apiEnabled: true
+      apiEnabled: true,
+      logoPath: undefined
     }));
 
     component.submit();
@@ -90,5 +92,20 @@ describe('OrganizationListComponent', () => {
       apiEnabled: true
     });
     expect(component.list().length).toBe(2);
+  });
+
+  it('should display the normalized backend message when admin email delivery fails', () => {
+    component.openAdminForm(mockOrgs[0]);
+    component.adminDisplayName.set('Admin Clinique');
+    component.adminEmail.set('admin@clinic.test');
+    mockApi.createClinicAdmin.mockReturnValue(throwError(() => ({
+      status: 503,
+      error: { error: { code: 'MAIL_DELIVERY_UNAVAILABLE', message: 'Service e-mail indisponible.' } }
+    })));
+
+    component.submitAdmin();
+
+    expect(component.adminFormError()).toBe('Service e-mail indisponible.');
+    expect(component.adminFormLoading()).toBe(false);
   });
 });

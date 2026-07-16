@@ -2,6 +2,8 @@ package com.joprelys.backend.clinic.api;
 
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -12,12 +14,14 @@ import com.joprelys.backend.auth.security.JwtService;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import com.joprelys.backend.notification.application.AccountMailService;
+import com.joprelys.backend.notification.application.MailDeliveryUnavailableException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.mail.MailSendException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
@@ -108,6 +112,27 @@ public class OrganizationAdminControllerTest {
 				.andExpect(jsonPath("$.enabled", is(true)))
 				.andExpect(jsonPath("$.temporaryPassword").doesNotExist())
 				.andExpect(jsonPath("$.organizationId", is(orgA.getId().toString())));
+	}
+
+	@Test
+	void createClinicAdmin_shouldRollbackAndReturn503WhenEmailDeliveryFails() throws Exception {
+		doThrow(new MailDeliveryUnavailableException(new MailSendException("SMTP unavailable")))
+				.when(accountMailService).sendTemporaryPassword(anyString(), anyString(), anyString());
+
+		String email = "mail-failure@orgadmintest.local";
+		mockMvc.perform(post("/api/organizations/" + orgA.getId() + "/admin")
+						.header("Authorization", tokenSuperAdmin)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "displayName": "Admin Mail Failure",
+								  "email": "%s"
+								}
+								""".formatted(email)))
+				.andExpect(status().isServiceUnavailable())
+				.andExpect(jsonPath("$.error.code", is("MAIL_DELIVERY_UNAVAILABLE")));
+
+		org.assertj.core.api.Assertions.assertThat(userAccountRepository.existsByEmail(email)).isFalse();
 	}
 
 	// --- Sécurité / RBAC ---

@@ -51,6 +51,7 @@
   "organizations.adminSaveError": "Impossible de creer le compte administrateur.",
   "organizations.adminCreatedSuccess": "Compte administrateur cree avec succes.",
   "organizations.adminTempPassword": "Mot de passe temporaire",
+  "organizations.logoUploadError": "Impossible de téléverser le logo de la clinique.",
   "shell.copyright": "2026 {publisher}. Tous droits reserves.",
   "shell.help": "Centre d'aide",
   "shell.logout": "Se deconnecter",

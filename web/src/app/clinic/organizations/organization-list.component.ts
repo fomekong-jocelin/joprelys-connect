@@ -425,8 +425,8 @@ export class OrganizationListComponent implements OnInit {
           this.adminFormError.set(this.i18n.t('organizations.adminDuplicateEmail'));
         } else if (err && err.status === 404) {
           this.adminFormError.set(this.i18n.t('organizations.adminOrgNotFound'));
-        } else if (err && err.error && err.error.detail) {
-          this.adminFormError.set(err.error.detail);
+        } else if (this.apiErrorMessage(err)) {
+          this.adminFormError.set(this.apiErrorMessage(err));
         } else {
           this.adminFormError.set(this.i18n.t('organizations.adminSaveError'));
         }
@@ -445,8 +445,15 @@ export class OrganizationListComponent implements OnInit {
         uploader.setPreviewUrl(res.viewUrl, file.name);
       },
       error: (err) => {
-        console.error(err);
+        this.formError.set(this.apiErrorMessage(err) || this.i18n.t('organizations.logoUploadError'));
       }
     });
+  }
+
+  private apiErrorMessage(err: unknown): string | null {
+    if (!err || typeof err !== 'object') return null;
+    const response = err as { error?: { detail?: unknown; error?: { message?: unknown } } };
+    const message = response.error?.error?.message ?? response.error?.detail;
+    return typeof message === 'string' && message.trim() ? message : null;
   }
 }

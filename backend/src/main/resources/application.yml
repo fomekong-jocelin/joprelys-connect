@@ -25,7 +25,7 @@ spring:
     validate-on-migrate: false
     repair-on-migrate: true
   mail:
-    host: ${MAIL_HOST:smtp.hostinger.com}
+    host: ${MAIL_HOST:mail.joprelys.com}
     port: ${MAIL_PORT:465}
     username: ${MAIL_USERNAME:noreply@joprelys.com}
     password: ${MAIL_PASSWORD:}
@@ -53,6 +53,8 @@ joprelys:
       password: ${JOPRELYS_ADMIN_PASSWORD:}
   documents:
     storage-dir: ${JOPRELYS_DOCUMENTS_STORAGE_DIR:./storage/documents}
+  storage:
+    upload-dir: ${JOPRELYS_UPLOAD_DIR:./storage/uploads}
     verification-base-url: ${JOPRELYS_VERIFICATION_BASE_URL:https://joprelys.com/verify}
   lab-integration:
     api-key: ${JOPRELYS_LAB_INTEGRATION_API_KEY:lab-partner-secret-token}

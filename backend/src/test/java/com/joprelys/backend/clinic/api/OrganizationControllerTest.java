@@ -61,7 +61,8 @@ public class OrganizationControllerTest {
 					"country": "Cameroun",
 					"type": "CLINIC",
 					"responsibleName": "Jean R",
-					"apiEnabled": true
+					"apiEnabled": true,
+					"logoPath": "uploads/logo/clinic-test.png"
 				}
 				""";
 
@@ -75,6 +76,7 @@ public class OrganizationControllerTest {
 				.andExpect(jsonPath("$.type").value("CLINIC"))
 				.andExpect(jsonPath("$.responsibleName").value("Jean R"))
 				.andExpect(jsonPath("$.apiEnabled").value(true))
+				.andExpect(jsonPath("$.logoPath").value("uploads/logo/clinic-test.png"))
 				.andExpect(jsonPath("$.status").value("ACTIVE"));
 	}
 
