@@ -10,6 +10,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Operations
 
+- **Réinitialisation production (TASK-20260716-PROD-DATA-RESET)** : sauvegarde PostgreSQL complète, purge transactionnelle des données métier, suppression de tous les patients, utilisateurs et cliniques, régénération du catalogue RBAC et création d'un unique compte `SUPER_ADMIN` ; contrôles post-opération conformes et service actif.
+
 - **SMTP production (STORY-20260716-AUTH-EMAIL-SECRETS)** : injection non interactive des variables e-mail dans le `.env` serveur avec sauvegarde, redémarrage du backend et validation de l'écoute sur 8084 sans erreur récente ; aucune valeur secrète n'est documentée.
 
 - **Diagnostic production (BUG-20260714-PARAMIKO-SERVER-DIAGNOSTIC)** : connexion SSH non interactive via Paramiko sur `161.97.181.177:22`, collecte lecture seule du service `joprelys-connect-api.service`, identification d'une boucle de redémarrage due à un mismatch Flyway sur V35/V35 (contraintes CHECK commentées dans le jar déployé alors qu'actives en base) ; rapport dans `logs/dev/server_diagnostic_report.txt`.
