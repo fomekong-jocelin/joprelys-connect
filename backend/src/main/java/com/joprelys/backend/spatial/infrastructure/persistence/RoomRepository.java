@@ -8,4 +8,7 @@ import java.util.UUID;
 public interface RoomRepository extends JpaRepository<RoomEntity, UUID> {
     List<RoomEntity> findByWardId(UUID wardId);
     Optional<RoomEntity> findByRoomNumberIgnoreCase(String roomNumber);
+    boolean existsByWardId(UUID wardId);
+    boolean existsByWardIdAndRoomNumberIgnoreCase(UUID wardId, String roomNumber);
+    boolean existsByWardIdAndRoomNumberIgnoreCaseAndIdNot(UUID wardId, String roomNumber, UUID id);
 }

@@ -11,6 +11,14 @@ import org.springframework.data.repository.query.Param;
 public interface BedRepository extends JpaRepository<BedEntity, UUID> {
     List<BedEntity> findByRoomId(UUID roomId);
 
+    long countByRoomId(UUID roomId);
+
+    boolean existsByRoomId(UUID roomId);
+
+    boolean existsByRoomIdAndBedNumberIgnoreCase(UUID roomId, String bedNumber);
+
+    boolean existsByRoomIdAndBedNumberIgnoreCaseAndIdNot(UUID roomId, String bedNumber, UUID id);
+
     @Query("SELECT b FROM BedEntity b JOIN b.room r WHERE r.ward.id = :wardId")
     List<BedEntity> findByWardId(@Param("wardId") UUID wardId);
 

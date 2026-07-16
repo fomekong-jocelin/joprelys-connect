@@ -124,6 +124,12 @@ export const routes: Routes = [
     data: { expectedRoles: ['AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'] },
   },
   {
+    path: 'clinic/spatial/configuration',
+    loadComponent: () => import('./clinic/spatial/spatial-configuration-page.component').then(m => m.SpatialConfigurationPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN'] },
+  },
+  {
     path: 'clinic/billing',
     loadComponent: () => import('./clinic/billing/billing-management-page.component').then(m => m.BillingManagementPageComponent),
     canActivate: [roleGuard],

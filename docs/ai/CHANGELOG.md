@@ -18,6 +18,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Changed
 
+- **Configuration de la structure hospitalière (TASK-20260717-HOSPITAL-STRUCTURE-CONFIG)** : ajout d'un espace administrateur FR/EN pour créer, modifier et supprimer les services, chambres et lits ; capacités, doublons, dépendances et lits occupés sont contrôlés côté backend, les opérations sont auditées et la base impose des index uniques par clinique.
+
 - **E-mails transactionnels premium (TASK-20260717-PREMIUM-ACCOUNT-EMAILS)** : remplacement des messages texte par un modèle HTML responsive partagé avec logo embarqué, code ou mot de passe mis en évidence, consignes de sécurité, texte alternatif et échappement des données dynamiques.
 
 - **Secrets d'authentification par e-mail (STORY-20260716-AUTH-EMAIL-SECRETS)** : les mots de passe temporaires et OTP ne sont plus renvoyés, affichés ou journalisés ; ils sont transmis via un adaptateur SMTP configuré exclusivement par variables d'environnement.

@@ -137,6 +137,10 @@ Les conteneurs de cartes utilisent la classe `.ui-card` avec `8px` d'arrondi et 
 
 Les actions financières destructives utilisent une modale maison, jamais le `confirm()` du navigateur. La surface conserve un rayon sobre compris entre `4px` et `8px`, l’overlay est centralisé, le focus reste visible, la fermeture par Échap est disponible et l’action destructive est clairement distincte dans les thèmes light et dark.
 
+### Structure hospitalière
+
+La configuration Service → Chambre → Lit utilise une hiérarchie de panneaux à bordure fine, avec un rayon maximal de `6px` et les ombres légères du design system. Les actions de création restent au niveau de leur parent, les opérations destructives passent par la modale de confirmation partagée et les états de lits conservent les couleurs sémantiques communes aux thèmes light/dark.
+
 ## Do's and Don'ts
 
 ### Do

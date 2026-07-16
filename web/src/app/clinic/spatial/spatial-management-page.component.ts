@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { SpatialApiService } from '../../patient/spatial-api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
@@ -12,13 +13,19 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 @Component({
   selector: 'app-spatial-management-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent, AppShellComponent, PageHeaderComponent],
+  imports: [CommonModule, FormsModule, RouterLink, IconComponent, AppShellComponent, PageHeaderComponent],
   template: `
     <app-shell>
       <app-page-header
         [title]="t('spatial.title')"
         [subtitle]="t('spatial.subtitle')"
       >
+        @if (canConfigure()) {
+          <a routerLink="/clinic/spatial/configuration" class="ui-button ui-button-secondary">
+            <app-ui-icon name="building" />
+            {{ t('spatial.config.open') }}
+          </a>
+        }
         <!-- Sélecteur de Service -->
         <div class="flex items-center gap-2">
           <label class="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider whitespace-nowrap">
@@ -261,6 +268,11 @@ export class SpatialManagementPageComponent implements OnInit {
     if (!role) return false;
     const roles = role.split(',').map((r) => r.trim());
     return roles.some((r) => ['INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'].includes(r));
+  }
+
+  canConfigure(): boolean {
+    const roles = this.session()?.role?.split(',').map((role) => role.trim()) ?? [];
+    return roles.some((role) => ['ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN'].includes(role));
   }
 
   getBedStyle(status: string): Record<string, string> {

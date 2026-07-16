@@ -13,4 +13,6 @@ public interface BedAssignmentRepository extends JpaRepository<BedAssignmentEnti
 
     @Query("SELECT a FROM BedAssignmentEntity a WHERE a.bed.id = :bedId AND a.releasedAt IS NULL")
     Optional<BedAssignmentEntity> findActiveByBedId(@Param("bedId") UUID bedId);
+
+    boolean existsByBedId(UUID bedId);
 }

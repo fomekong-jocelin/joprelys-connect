@@ -118,6 +118,9 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
     if (hasRole('ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN') || hasPermission('HOSPITALIZATION_READ', 'HOSPITALIZATION_MANAGE')) {
       addUniqueItem(this.item('/clinic/spatial', 'menu.spatial', 'bed'));
     }
+    if (hasRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')) {
+      addUniqueItem(this.item('/clinic/spatial/configuration', 'menu.spatialConfig', 'building'));
+    }
     if (
       hasRole('ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'DAF', 'SECRETAIRE_COMPTABLE')
       || hasPermission('BILLING_INVOICE_READ', 'BILLING_INVOICE_WRITE', 'INSURANCE_BORDEREAU_READ', 'ACCOUNTING_DASHBOARD_READ')
