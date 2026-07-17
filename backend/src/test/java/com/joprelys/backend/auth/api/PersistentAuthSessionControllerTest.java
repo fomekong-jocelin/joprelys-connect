@@ -28,7 +28,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -46,18 +45,14 @@ class PersistentAuthSessionControllerTest {
     @Autowired AuthSessionAuditEventRepository auditRepository;
     @Autowired RevokedAccessTokenRepository revokedTokenRepository;
     @Autowired PasswordEncoder passwordEncoder;
-    @Autowired JdbcTemplate jdbcTemplate;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.update("DELETE FROM lab_orders");
         auditRepository.deleteAll();
         revokedTokenRepository.deleteAll();
         sessionRepository.deleteAll();
-        userAccountRepository.deleteAll();
-        organizationRepository.deleteAll();
 
         OrganizationEntity organization = organizationRepository.save(new OrganizationEntity(
                 "Clinique Sessions",
