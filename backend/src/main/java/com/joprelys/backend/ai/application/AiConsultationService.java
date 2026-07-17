@@ -32,6 +32,8 @@ public class AiConsultationService {
     private static final Logger log = LoggerFactory.getLogger(AiConsultationService.class);
     private static final int MAX_AUDIO_BYTES = 10 * 1024 * 1024;
     private static final int MAX_TRANSCRIPT_LENGTH = 12000;
+    private static final String INITIAL_ASSISTANT_MESSAGE =
+            "Décrivez les symptômes et l'examen clinique.";
     private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
             "audio/webm", "audio/mp4", "audio/mpeg", "audio/wav");
     private static final Set<String> ALLOWED_FIELDS = Set.of(
@@ -89,7 +91,13 @@ public class AiConsultationService {
         SessionKey key = sessionKey(visitId, userId, organizationId);
         SessionState state = new SessionState(UUID.randomUUID(), expiry());
         mergeAllowedDraft(state.draft, initialDraft);
-        state.assistantMessage = "Décrivez les symptômes et l'examen clinique.";
+        state.assistantMessage = INITIAL_ASSISTANT_MESSAGE;
+        appendVisibleMessage(
+                state,
+                "ASSISTANT",
+                INITIAL_ASSISTANT_MESSAGE,
+                "SYSTEM",
+                false);
         sessions.put(key, state);
         return toSessionView(visitId, state);
     }
@@ -120,7 +128,7 @@ public class AiConsultationService {
             String text) {
         validateTranscript(text);
         SessionState state = requireSession(visitId, userId, organizationId);
-        return processMessage(state, text.trim(), null);
+        return processMessage(state, text.trim(), null, "TEXT");
     }
 
     /**
@@ -174,11 +182,14 @@ public class AiConsultationService {
             String transcript) {
         validateTranscript(transcript);
         SessionState state = requireSession(visitId, userId, organizationId);
+        MessageView response = processMessage(
+                state, transcript.trim(), transcript.trim(), "AUDIO");
         synchronized (state) {
             state.pendingTranscript = null;
             state.transcriptStatus = "ANALYZED";
+            state.expiresAt = expiry();
         }
-        return processMessage(state, transcript.trim(), transcript.trim());
+        return response;
     }
 
     /**
@@ -216,8 +227,10 @@ public class AiConsultationService {
     private MessageView processMessage(
             SessionState state,
             String text,
-            String transcript) {
+            String transcript,
+            String source) {
         synchronized (state) {
+            int previousTechnicalMessageCount = state.messages.size();
             state.messages.add(AiMessage.user(buildUserMessage(text, state.draft)));
             trimConversation(state.messages);
             try {
@@ -237,21 +250,33 @@ public class AiConsultationService {
                         .toList();
                 state.assistantMessage = parsed.assistantMessage();
                 state.needsClarification = parsed.needsClarification();
-                state.transcript = transcript;
+                if (transcript != null) {
+                    state.transcript = transcript;
+                }
                 state.expiresAt = expiry();
                 state.messages.add(AiMessage.assistant(response.content()));
                 trimConversation(state.messages);
+                appendVisibleMessage(state, "USER", text, source, false);
+                appendVisibleMessage(
+                        state,
+                        "ASSISTANT",
+                        state.assistantMessage,
+                        "AI",
+                        state.needsClarification);
                 return new MessageView(
                         state.sessionId,
-                        transcript,
+                        state.transcript,
                         Map.copyOf(state.draft),
                         changedFields,
                         state.assistantMessage,
                         state.needsClarification,
+                        List.copyOf(state.conversation),
                         state.expiresAt);
             } catch (ResponseStatusException exception) {
+                rollbackTechnicalMessages(state.messages, previousTechnicalMessageCount);
                 throw exception;
             } catch (RuntimeException exception) {
+                rollbackTechnicalMessages(state.messages, previousTechnicalMessageCount);
                 log.warn("Échec génération brouillon IA provider={}", properties.provider());
                 throw new ResponseStatusException(
                         HttpStatus.SERVICE_UNAVAILABLE, "AI_UNAVAILABLE");
@@ -373,6 +398,31 @@ public class AiConsultationService {
         }
     }
 
+    private void appendVisibleMessage(
+            SessionState state,
+            String role,
+            String content,
+            String source,
+            boolean needsClarification) {
+        state.conversation.add(new ConversationMessageView(
+                UUID.randomUUID(),
+                role,
+                limit(content == null ? "" : content.trim(), MAX_TRANSCRIPT_LENGTH),
+                source,
+                Instant.now(),
+                needsClarification));
+        int maximum = Math.max(5, properties.maxConversationTurns() * 2 + 1);
+        while (state.conversation.size() > maximum) {
+            state.conversation.removeFirst();
+        }
+    }
+
+    private void rollbackTechnicalMessages(List<AiMessage> messages, int previousSize) {
+        while (messages.size() > previousSize) {
+            messages.removeLast();
+        }
+    }
+
     private SessionView toSessionView(UUID visitId, SessionState state) {
         return new SessionView(
                 state.sessionId,
@@ -383,6 +433,7 @@ public class AiConsultationService {
                 state.transcript,
                 state.pendingTranscript,
                 state.transcriptStatus,
+                List.copyOf(state.conversation),
                 state.assistantMessage,
                 state.needsClarification);
     }
@@ -426,6 +477,7 @@ public class AiConsultationService {
         private final UUID sessionId;
         private final Map<String, String> draft = new LinkedHashMap<>();
         private final List<AiMessage> messages = new ArrayList<>();
+        private final List<ConversationMessageView> conversation = new ArrayList<>();
         private Instant expiresAt;
         private String transcript;
         private String pendingTranscript;
@@ -439,6 +491,15 @@ public class AiConsultationService {
         }
     }
 
+    public record ConversationMessageView(
+            UUID id,
+            String role,
+            String content,
+            String source,
+            Instant createdAt,
+            boolean needsClarification) {
+    }
+
     public record SessionView(
             UUID sessionId,
             UUID visitId,
@@ -448,6 +509,7 @@ public class AiConsultationService {
             String transcript,
             String pendingTranscript,
             String transcriptStatus,
+            List<ConversationMessageView> conversation,
             String assistantMessage,
             boolean needsClarification) {
     }
@@ -466,6 +528,7 @@ public class AiConsultationService {
             List<String> changedFields,
             String assistantMessage,
             boolean needsClarification,
+            List<ConversationMessageView> conversation,
             Instant expiresAt) {
     }
 }
