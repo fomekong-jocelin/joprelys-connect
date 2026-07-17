@@ -102,7 +102,7 @@ public class ConsultationControllerTest {
 
 		TenantContext.setTenantId(orgA.getId());
 		patientA = new PatientEntity("DPU-A", "PAT-A", "Patient Alpha", "MASCULIN",
-				LocalDate.of(1985, 3, 15), "+237690000000", "Douala", "", "", "", "", "", "", "");
+				LocalDate.of(1985, 3, 15), "+237690000000", "Douala", "", "", "", "", "", "");
 		patientA = patientRepository.save(patientA);
 
 		visitA = new VisitEntity(patientA, "VIS-A001", "Fièvre persistante", "Médecine générale");
@@ -111,7 +111,7 @@ public class ConsultationControllerTest {
 
 		TenantContext.setTenantId(orgB.getId());
 		PatientEntity patientB = new PatientEntity("DPU-B", "PAT-B", "Patient Beta", "FEMININ",
-				LocalDate.of(1990, 6, 20), "+237699000000", "Yaoundé", "", "", "", "", "", "", "");
+				LocalDate.of(1990, 6, 20), "+237699000000", "Yaoundé", "", "", "", "", "", "");
 		patientB = patientRepository.save(patientB);
 		visitB = new VisitEntity(patientB, "VIS-B001", "Consultation pré-natale", "Gynécologie");
 		visitB = visitRepository.save(visitB);
