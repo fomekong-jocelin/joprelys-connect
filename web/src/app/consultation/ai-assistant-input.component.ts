@@ -68,6 +68,15 @@ export class AiAssistantInputComponent {
   @Output() readonly sendText = new EventEmitter<string>();
 
   readonly message = signal('');
+  private lastResetToken = 0;
+
+  @Input()
+  set resetToken(value: number) {
+    if (value !== this.lastResetToken) {
+      this.lastResetToken = value;
+      this.message.set('');
+    }
+  }
 
   onInput(event: Event): void {
     this.message.set((event.target as HTMLTextAreaElement).value);
@@ -77,6 +86,5 @@ export class AiAssistantInputComponent {
     const value = this.message().trim();
     if (this.busy || this.blocked || !value) return;
     this.sendText.emit(value);
-    this.message.set('');
   }
 }
