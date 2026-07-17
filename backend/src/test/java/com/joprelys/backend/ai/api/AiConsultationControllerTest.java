@@ -11,6 +11,7 @@ import com.joprelys.backend.ai.application.AiConsultationService;
 import com.joprelys.backend.auth.security.JwtClaims;
 import com.joprelys.backend.auth.security.TenantContext;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -46,6 +47,7 @@ class AiConsultationControllerTest {
                         null,
                         null,
                         "NONE",
+                        List.of(),
                         "Décrivez les symptômes.",
                         false));
 
