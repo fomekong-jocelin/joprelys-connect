@@ -18,10 +18,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Create source archive
-        run: tar --exclude=.git --exclude=joprelys-source.tar.gz -czf joprelys-source.tar.gz .
+        run: tar --exclude=.git -czf /tmp/joprelys-source.tar.gz .
       - name: Upload source archive
         uses: actions/upload-artifact@v4
         with:
           name: temporary-source-export
-          path: joprelys-source.tar.gz
+          path: /tmp/joprelys-source.tar.gz
           retention-days: 1
