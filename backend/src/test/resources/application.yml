@@ -11,6 +11,8 @@ spring:
     enabled: true
 
 joprelys:
+  web:
+    base-url: https://joprelys.com
   security:
     jwt:
       secret: test-jwt-secret-for-joprelys-connect-32

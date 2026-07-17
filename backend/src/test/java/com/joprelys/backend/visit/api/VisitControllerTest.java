@@ -2,9 +2,15 @@ package com.joprelys.backend.visit.api;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.google.zxing.BinaryBitmap;
+import com.google.zxing.MultiFormatReader;
+import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
+import com.google.zxing.common.HybridBinarizer;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.auth.security.JwtService;
@@ -14,8 +20,10 @@ import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
+import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
 import java.util.UUID;
+import javax.imageio.ImageIO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -369,5 +377,66 @@ public class VisitControllerTest {
 		mockMvc.perform(post("/api/visits/" + visit.getId() + "/cancel")
 				.header("Authorization", "Bearer " + tokenAgentA))
 				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void givenActiveVisit_whenDoctorRequestsQrCode_thenReturnsConsultationUrlPng() throws Exception {
+		com.joprelys.backend.auth.security.TenantContext.setTenantId(orgA.getId());
+		VisitEntity visit = visitRepository.save(
+				new VisitEntity(patientA, "VIS-QR", "Motif", "Consultation"));
+		com.joprelys.backend.auth.security.TenantContext.clear();
+
+		byte[] png = mockMvc.perform(get("/api/visits/" + visit.getId() + "/qrcode")
+						.header("Authorization", "Bearer " + tokenMedecinA))
+				.andExpect(status().isOk())
+				.andExpect(content().contentType(MediaType.IMAGE_PNG))
+				.andExpect(header().string("Cache-Control", "no-store"))
+				.andReturn()
+				.getResponse()
+				.getContentAsByteArray();
+
+		var image = ImageIO.read(new ByteArrayInputStream(png));
+		var bitmap = new BinaryBitmap(new HybridBinarizer(new BufferedImageLuminanceSource(image)));
+		String decodedUrl = new MultiFormatReader().decode(bitmap).getText();
+		org.assertj.core.api.Assertions.assertThat(decodedUrl)
+				.isEqualTo("https://joprelys.com/clinic/consultation/" + visit.getId());
+	}
+
+	@Test
+	void givenClosedVisit_whenDoctorRequestsQrCode_thenReturnsConflict() throws Exception {
+		com.joprelys.backend.auth.security.TenantContext.setTenantId(orgA.getId());
+		VisitEntity visit = new VisitEntity(patientA, "VIS-QR-CLOSED", "Motif", "Consultation");
+		visit.setStatus("TERMINEE");
+		visit = visitRepository.save(visit);
+		com.joprelys.backend.auth.security.TenantContext.clear();
+
+		mockMvc.perform(get("/api/visits/" + visit.getId() + "/qrcode")
+						.header("Authorization", "Bearer " + tokenMedecinA))
+				.andExpect(status().isConflict());
+	}
+
+	@Test
+	void givenVisitFromOtherTenant_whenAgentRequestsQrCode_thenReturnsNotFound() throws Exception {
+		com.joprelys.backend.auth.security.TenantContext.setTenantId(orgB.getId());
+		VisitEntity visit = visitRepository.save(
+				new VisitEntity(patientB, "VIS-QR-B", "Motif", "Consultation"));
+		com.joprelys.backend.auth.security.TenantContext.clear();
+
+		mockMvc.perform(get("/api/visits/" + visit.getId() + "/qrcode")
+						.header("Authorization", "Bearer " + tokenAgentA))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void givenUnauthorizedRole_whenRequestingQrCode_thenReturnsForbidden() throws Exception {
+		mockMvc.perform(get("/api/visits/" + UUID.randomUUID() + "/qrcode")
+						.header("Authorization", "Bearer " + tokenAdminJoprelys))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void givenAnonymousUser_whenRequestingQrCode_thenReturnsUnauthorized() throws Exception {
+		mockMvc.perform(get("/api/visits/" + UUID.randomUUID() + "/qrcode"))
+				.andExpect(status().isUnauthorized());
 	}
 }

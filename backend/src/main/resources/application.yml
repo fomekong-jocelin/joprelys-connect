@@ -39,6 +39,8 @@ spring:
             enable: ${MAIL_STARTTLS_ENABLED:false}
 
 joprelys:
+  web:
+    base-url: ${JOPRELYS_WEB_BASE_URL:https://joprelys.com}
   security:
     jwt:
       issuer: ${JOPRELYS_JWT_ISSUER:joprelys-connect}

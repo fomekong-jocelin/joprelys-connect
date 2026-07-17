@@ -1,14 +1,32 @@
 # Changelog
 
-# Changelog
-
 Tous les changements notables du projet doivent être documentés ici.
 
 Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **EPIC-0024 — Cadrage de l’assistant vocal de consultation** : documentation
+  fonctionnelle et technique, contrat API, modèle de données, plan de tests,
+  guide utilisateur, ADR et backlog. L’assistant reste désactivé et non livré
+  tant que le DPO, le fournisseur et l’évaluation clinique ne sont pas validés.
+- **QR code visite (STORY-2505)** : endpoint
+  `GET /api/visits/{id}/qrcode` retournant un PNG vers
+  `/clinic/consultation/{visitId}` ; URL publique configurable, visite active,
+  RBAC, isolation tenant et absence de cache vérifiés.
+
+### In progress
+
+- **Ports IA (STORY-2501)** : les clients amorcés OpenAI, Gemini et Claude sont
+  expérimentaux. La séparation transcription/assistant de brouillon, les tests
+  HTTP et l’approbation d’un unique fournisseur de production restent à faire.
+- **Assistant interactif (STORY-2502/2504)** : sessions backend, extraction
+  structurée, correction vocale et interface Angular ne sont pas encore livrées.
+
 ### Operations
+
 
 - **Réinitialisation production (TASK-20260716-PROD-DATA-RESET)** : sauvegarde PostgreSQL complète, purge transactionnelle des données métier, suppression de tous les patients, utilisateurs et cliniques, régénération du catalogue RBAC et création d'un unique compte `SUPER_ADMIN` ; contrôles post-opération conformes et service actif.
 

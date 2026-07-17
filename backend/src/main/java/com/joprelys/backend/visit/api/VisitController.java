@@ -1,11 +1,15 @@
 package com.joprelys.backend.visit.api;
 
+import com.joprelys.backend.visit.application.GenerateVisitConsultationQrCodeUseCase;
 import com.joprelys.backend.visit.application.VisitService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,9 +27,31 @@ import java.util.UUID;
 public class VisitController {
 
 	private final VisitService visitService;
+	private final GenerateVisitConsultationQrCodeUseCase generateVisitConsultationQrCode;
 
-	public VisitController(VisitService visitService) {
+	public VisitController(VisitService visitService,
+						   GenerateVisitConsultationQrCodeUseCase generateVisitConsultationQrCode) {
 		this.visitService = visitService;
+		this.generateVisitConsultationQrCode = generateVisitConsultationQrCode;
+	}
+
+	@GetMapping(value = "/{id}/qrcode", produces = MediaType.IMAGE_PNG_VALUE)
+	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	@Operation(summary = "Générer le QR code d'une visite",
+			description = "Génère un QR code PNG contenant l'URL de la consultation pour cette visite. "
+					+ "Le médecin peut scanner ce QR depuis son téléphone pour ouvrir directement la consultation.",
+			responses = {
+					@ApiResponse(responseCode = "200", description = "QR code PNG généré"),
+					@ApiResponse(responseCode = "404", description = "Visite introuvable")
+			})
+	public ResponseEntity<byte[]> getVisitQrCode(
+			@Parameter(description = "Identifiant de la visite") @PathVariable UUID id) {
+		byte[] qrCodeImage = generateVisitConsultationQrCode.generate(id);
+		return ResponseEntity.ok()
+				.cacheControl(CacheControl.noStore())
+				.contentType(MediaType.IMAGE_PNG)
+				.contentLength(qrCodeImage.length)
+				.body(qrCodeImage);
 	}
 
 	@PostMapping
