@@ -1,14 +1,14 @@
 # EPIC-0024 — Consultation IA interactive et corrections contrôlées
 
 - **Mode** : Project Manager + Engineering + Architecture + QA Review
-- **Statut** : IN_PROGRESS — documentation initiale créée, développement à démarrer
+- **Statut** : IN_PROGRESS — STORY-2422 implémentée, stories conversationnelles restantes
 - **Priorité** : P1
 - **Branche** : `feat/ai-interactive-consultation`
 - **Reviewer recommandé** : Tech Lead + médecin référent + QA + DPO
 
 ## Problème
 
-Le pilote actuel couvre la dictée audio par bloc et la génération d’un brouillon, mais pas une véritable conversation médecin–assistant. La transcription est analysée immédiatement, la correction texte n’est pas historisée dans un fil visible, les clarifications ne sont pas structurées et le médecin ne peut pas accepter ou rejeter les modifications champ par champ.
+Le pilote actuel couvre la dictée audio par bloc et la génération d’un brouillon, mais pas une véritable conversation médecin–assistant. La transcription était analysée immédiatement, la correction texte n’est pas historisée dans un fil visible, les clarifications ne sont pas structurées et le médecin ne peut pas accepter ou rejeter les modifications champ par champ.
 
 ## Résultat attendu
 
@@ -30,16 +30,21 @@ Fournir une conversation multi-tour visible permettant au médecin de :
 En tant que médecin, je veux voir l’historique de mes messages et des réponses de l’assistant afin de comprendre comment le brouillon évolue.
 
 - Backend : exposer des messages typés et horodatés dans la session.
-- Frontend : extraire une façade API et un composant de fil conversationnel.
+- Frontend : composant de fil conversationnel.
 - Tests : ordre des messages, restauration de session, synchronisation entre appareils.
+- **État** : TODO.
 
 ### STORY-2422 — Transcription éditable avant analyse — 5 SP
 
 En tant que médecin, je veux corriger la transcription avant son analyse afin d’éviter qu’une erreur audio ne modifie le brouillon clinique.
 
-- Séparer transcription et analyse.
-- Ajouter un état `PENDING_REVIEW`.
-- Permettre confirmer, modifier ou abandonner une transcription.
+- [x] Séparer transcription et analyse.
+- [x] Ajouter un état `PENDING_REVIEW`.
+- [x] Permettre confirmer, modifier ou abandonner une transcription.
+- [x] Conserver l’ancien endpoint audio pour compatibilité descendante.
+- [x] Extraire les appels HTTP Angular dans une façade dédiée.
+- [x] Ajouter les tests backend et frontend ciblés.
+- [ ] Valider la CI et la recette visuelle authentifiée.
 
 ### STORY-2423 — Clarifications structurées — 5 SP
 
@@ -48,6 +53,7 @@ En tant que médecin, je veux répondre à une question de clarification liée �
 - DTO `ClarificationView` : id, field, question, status, options éventuelles.
 - Réponse liée à l’identifiant de clarification.
 - Une clarification résolue reste visible dans l’historique.
+- **État** : TODO, validation médecin référent requise.
 
 ### STORY-2424 — Révisions et validation champ par champ — 8 SP
 
@@ -57,29 +63,43 @@ En tant que médecin, je veux comparer, accepter ou rejeter chaque modification 
 - Acceptation/rejet individuel ou global.
 - Aucune modification du brouillon validé avant acceptation.
 - Historique des révisions en session.
+- **État** : TODO.
 
 ### STORY-2425 — Refactor UI, i18n et tests E2E — 5 SP
 
-- Extraire le composant monolithique actuel.
-- Aucun appel `HttpClient` direct dans les composants de présentation.
-- Tailwind CSS v4, light/dark, textes FR/EN.
-- Tests Angular des interactions critiques et parcours E2E du pilote.
+- [x] Extraire la façade API et supprimer les appels `HttpClient` directs du panneau.
+- [ ] Extraire le fil, l’éditeur et les propositions en composants réutilisables.
+- [ ] Compléter les clés i18n FR/EN sans chaînes de secours nouvelles.
+- [ ] Ajouter tests Angular des interactions critiques et parcours E2E du pilote.
+
+## Contrats ajoutés par STORY-2422
+
+- `POST /api/ai/consultations/{visitId}/transcriptions/audio`
+  - transcrit uniquement ;
+  - ne lance jamais le modèle de structuration ;
+  - retourne `PENDING_REVIEW`.
+- `POST /api/ai/consultations/{visitId}/transcriptions/analyze`
+  - reçoit le texte relu/corrigé ;
+  - lance explicitement l’analyse clinique.
+- `DELETE /api/ai/consultations/{visitId}/transcriptions/pending`
+  - abandonne le texte en attente sans appel au modèle de chat.
+- `POST /messages/audio` reste disponible temporairement pour les clients historiques.
 
 ## Critères d’acceptation globaux
 
 - [ ] Le fil affiche tous les messages utilisateur et assistant dans l’ordre.
-- [ ] Une transcription audio n’est jamais analysée avant confirmation explicite.
-- [ ] Le médecin peut modifier le texte transcrit avant analyse.
+- [x] Une transcription audio n’est jamais analysée avant confirmation explicite avec le nouveau parcours.
+- [x] Le médecin peut modifier le texte transcrit avant analyse.
 - [ ] Une clarification possède un identifiant et un champ cible.
 - [ ] Une réponse à une clarification est reliée à la bonne question.
 - [ ] Les changements sont présentés sous forme de propositions avant/après.
 - [ ] Le rejet d’une proposition conserve la valeur précédente.
 - [ ] L’acceptation d’une proposition ne sauvegarde pas automatiquement la consultation.
 - [ ] Le bouton final applique uniquement les valeurs acceptées au formulaire.
-- [ ] La session reste isolée par visite, utilisateur et organisation.
-- [ ] Aucun audio, transcript ou contenu clinique n’est écrit dans les logs.
-- [ ] Les permissions actuelles `MEDECIN|ADMIN_CLINIQUE + CLINICAL_WRITE` sont conservées.
-- [ ] Tests Maven, Angular et CI verts.
+- [x] La session reste isolée par visite, utilisateur et organisation.
+- [x] Aucun audio, transcript ou contenu clinique n’est écrit dans les logs.
+- [x] Les permissions actuelles `MEDECIN|ADMIN_CLINIQUE + CLINICAL_WRITE` sont conservées.
+- [ ] Tests Maven, Angular et CI verts sur la branche.
 
 ## Definition of Ready
 
@@ -96,22 +116,23 @@ En tant que médecin, je veux comparer, accepter ou rejeter chaque modification 
 - [x] Analyser le code, la PR #57 et les tests actuels.
 - [x] Créer la branche dédiée.
 - [x] Créer le cadrage Documentation First.
-- [ ] Refactorer le backend en use cases et modèles de session explicites.
-- [ ] Implémenter transcription en attente de validation.
+- [x] Implémenter transcription en attente de validation.
+- [x] Extraire la façade Angular.
+- [x] Ajouter tests unitaires STORY-2422.
+- [ ] Exécuter et corriger `./mvnw clean verify`, `npm test`, `npm run build` via CI.
 - [ ] Implémenter conversation et clarifications structurées.
 - [ ] Implémenter propositions et décisions champ par champ.
-- [ ] Extraire la façade Angular et les composants réutilisables.
-- [ ] Ajouter i18n FR/EN et états light/dark.
-- [ ] Ajouter tests backend, frontend et E2E.
-- [ ] Exécuter `./mvnw clean verify`, `npm test`, `npm run build`.
-- [ ] Mettre à jour tracking, changelog, checklist et documentation finale.
+- [ ] Extraire les sous-composants Angular et compléter i18n FR/EN.
+- [ ] Ajouter E2E et recette clinique.
+- [ ] Mettre à jour tracking, changelog et checklist après validation CI.
 
 ## Estimation
 
 | Profil | Charge indicative |
 |---|---:|
-| Senior full-stack | 8 à 10 jours |
-| Intermédiaire encadré | 11 à 14 jours |
+| Senior full-stack | 8 à 10 jours pour l’epic complète |
+| STORY-2422 réalisée | environ 2 jours senior, hors recette/CI |
+| Intermédiaire encadré | 11 à 14 jours pour l’epic complète |
 | Junior encadré | à redécouper, non recommandé seul |
 
 ## Risques
@@ -119,10 +140,11 @@ En tant que médecin, je veux comparer, accepter ou rejeter chaque modification 
 - Données de santé envoyées au fournisseur IA.
 - Session en mémoire incompatible avec plusieurs instances backend.
 - Risque de perte de contexte après redémarrage.
+- Le endpoint historique conserve l’analyse immédiate pour compatibilité : les nouveaux clients doivent obligatoirement utiliser le parcours en deux étapes.
 - Complexité UX si trop de propositions sont générées à chaque tour.
-- Confusion entre brouillon IA, brouillon accepté et formulaire sauvegardé.
+- Confusion entre transcription, brouillon IA, brouillon accepté et formulaire sauvegardé.
 
 ## Impact version
 
 - **SemVer prévu** : MINOR, fonctionnalité rétrocompatible ajoutée.
-- Aucun endpoint existant ne sera supprimé silencieusement ; les contrats actuels restent compatibles ou sont versionnés/additifs.
+- Aucun endpoint existant n’est supprimé ; les nouveaux contrats sont additifs.
