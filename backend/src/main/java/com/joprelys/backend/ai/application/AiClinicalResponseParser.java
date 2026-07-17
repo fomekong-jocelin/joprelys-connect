@@ -1,0 +1,207 @@
+package com.joprelys.backend.ai.application;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.databind.ObjectMapper;
+
+@Component
+final class AiClinicalResponseParser {
+
+    static final Set<String> ALLOWED_FIELDS = Set.of(
+            "symptoms", "clinicalExam", "suspectedDiagnosis", "diagnosis",
+            "finalDiagnosis", "conclusion", "advice", "followUp");
+
+    private static final Set<String> ALLOWED_OPERATIONS = Set.of("SET", "CLEAR");
+    private static final Set<String> ALLOWED_UNCERTAINTIES = Set.of("LOW", "MEDIUM", "HIGH");
+    private static final int MAX_CLARIFICATION_OPTIONS = 5;
+
+    private final ObjectMapper objectMapper;
+
+    AiClinicalResponseParser(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
+    @SuppressWarnings("unchecked")
+    ParsedResponse parse(String content) {
+        if (content == null || content.isBlank()) {
+            throw invalidOutput();
+        }
+        String cleaned = content.trim()
+                .replaceFirst("^```(?:json)?\\s*", "")
+                .replaceFirst("\\s*```$", "");
+        try {
+            Map<String, Object> root = objectMapper.readValue(cleaned, Map.class);
+            String assistantMessage = root.get("assistantMessage") instanceof String value
+                    && !value.isBlank()
+                    ? limit(value.trim(), 2000)
+                    : "Des modifications sont proposées. Vérifiez-les avant de décider.";
+            boolean needsClarification = root.get("needsClarification") instanceof Boolean value
+                    && value;
+            ParsedClarification clarification = needsClarification
+                    ? parseClarification(root.get("clarification"))
+                    : null;
+            List<ParsedChange> changes = parseChanges(root, assistantMessage);
+            if (needsClarification && clarification != null) {
+                changes = changes.stream()
+                        .filter(change -> !change.field().equals(clarification.field()))
+                        .toList();
+            }
+            return new ParsedResponse(
+                    changes,
+                    assistantMessage,
+                    needsClarification,
+                    clarification);
+        } catch (ResponseStatusException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw invalidOutput();
+        }
+    }
+
+    private List<ParsedChange> parseChanges(
+            Map<String, Object> root,
+            String assistantMessage) {
+        Object changesValue = root.get("changes");
+        if (changesValue instanceof List<?> changes) {
+            List<ParsedChange> result = new ArrayList<>();
+            for (Object value : changes) {
+                result.add(parseChange(value));
+            }
+            return result;
+        }
+        return parseLegacyDraft(root.get("draft"), assistantMessage);
+    }
+
+    private ParsedChange parseChange(Object value) {
+        if (!(value instanceof Map<?, ?> map)) {
+            throw invalidChange();
+        }
+        String field = stringValue(map.get("field"));
+        String operation = stringValue(map.get("operation")).toUpperCase();
+        String reason = stringValue(map.get("reason"));
+        String uncertainty = stringValue(map.get("uncertainty")).toUpperCase();
+        if (!ALLOWED_FIELDS.contains(field)
+                || !ALLOWED_OPERATIONS.contains(operation)
+                || reason.isBlank()
+                || !ALLOWED_UNCERTAINTIES.contains(uncertainty)) {
+            throw invalidChange();
+        }
+        String proposedValue = null;
+        if ("SET".equals(operation)) {
+            proposedValue = stringValue(map.get("value"));
+            if (proposedValue.isBlank()) {
+                throw invalidChange();
+            }
+            int maximum = field.equals("followUp") ? 1000 : 5000;
+            proposedValue = limit(proposedValue, maximum);
+        }
+        return new ParsedChange(
+                field,
+                operation,
+                proposedValue,
+                limit(reason, 1000),
+                uncertainty);
+    }
+
+    private List<ParsedChange> parseLegacyDraft(
+            Object value,
+            String assistantMessage) {
+        if (!(value instanceof Map<?, ?> draftMap)) {
+            return List.of();
+        }
+        Map<String, ParsedChange> result = new LinkedHashMap<>();
+        draftMap.forEach((key, fieldValue) -> {
+            if (key != null
+                    && fieldValue instanceof String stringValue
+                    && ALLOWED_FIELDS.contains(key.toString())
+                    && !stringValue.isBlank()) {
+                String field = key.toString();
+                int maximum = field.equals("followUp") ? 1000 : 5000;
+                result.put(field, new ParsedChange(
+                        field,
+                        "SET",
+                        limit(stringValue.trim(), maximum),
+                        limit(assistantMessage, 1000),
+                        "UNKNOWN"));
+            }
+        });
+        return List.copyOf(result.values());
+    }
+
+    private ParsedClarification parseClarification(Object value) {
+        if (!(value instanceof Map<?, ?> map)) {
+            throw invalidClarification();
+        }
+        String field = stringValue(map.get("field"));
+        String question = stringValue(map.get("question"));
+        if (!ALLOWED_FIELDS.contains(field) || question.isBlank()) {
+            throw invalidClarification();
+        }
+        List<String> options = new ArrayList<>();
+        Object optionValue = map.get("options");
+        if (optionValue instanceof List<?> optionList) {
+            optionList.stream()
+                    .filter(String.class::isInstance)
+                    .map(String.class::cast)
+                    .map(String::trim)
+                    .filter(option -> !option.isBlank())
+                    .limit(MAX_CLARIFICATION_OPTIONS)
+                    .map(option -> limit(option, 200))
+                    .forEach(options::add);
+        }
+        return new ParsedClarification(
+                field,
+                limit(question, 1000),
+                List.copyOf(options));
+    }
+
+    private String stringValue(Object value) {
+        return value instanceof String stringValue ? stringValue.trim() : "";
+    }
+
+    private String limit(String value, int maximum) {
+        return value.length() <= maximum ? value : value.substring(0, maximum);
+    }
+
+    private ResponseStatusException invalidOutput() {
+        return new ResponseStatusException(
+                HttpStatus.UNPROCESSABLE_ENTITY, "AI_OUTPUT_INVALID");
+    }
+
+    private ResponseStatusException invalidChange() {
+        return new ResponseStatusException(
+                HttpStatus.UNPROCESSABLE_ENTITY, "AI_CHANGE_INVALID");
+    }
+
+    private ResponseStatusException invalidClarification() {
+        return new ResponseStatusException(
+                HttpStatus.UNPROCESSABLE_ENTITY, "AI_CLARIFICATION_INVALID");
+    }
+
+    record ParsedChange(
+            String field,
+            String operation,
+            String proposedValue,
+            String reason,
+            String uncertainty) {
+    }
+
+    record ParsedClarification(
+            String field,
+            String question,
+            List<String> options) {
+    }
+
+    record ParsedResponse(
+            List<ParsedChange> changes,
+            String assistantMessage,
+            boolean needsClarification,
+            ParsedClarification clarification) {
+    }
+}
