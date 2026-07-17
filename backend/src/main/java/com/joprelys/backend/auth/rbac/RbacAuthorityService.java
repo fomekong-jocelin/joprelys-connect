@@ -24,22 +24,32 @@ public class RbacAuthorityService {
 
     @Transactional
     public Optional<ResolvedAuthorities> resolve(UUID userId, UUID tokenOrganizationId) {
-        Optional<UserAccountEntity> userOptional = userAccountRepository.findById(userId)
-                .filter(UserAccountEntity::isEnabled);
-        if (userOptional.isEmpty()) {
+        return userAccountRepository.findById(userId)
+                .filter(UserAccountEntity::isEnabled)
+                .flatMap(user -> resolveUser(user, tokenOrganizationId));
+    }
+
+    @Transactional
+    public Optional<ResolvedAuthorities> resolveByEmail(String email, UUID tokenOrganizationId) {
+        if (email == null || email.isBlank()) {
             return Optional.empty();
         }
+        return userAccountRepository.findByEmailIgnoreCase(email.trim())
+                .filter(UserAccountEntity::isEnabled)
+                .flatMap(user -> resolveUser(user, tokenOrganizationId));
+    }
 
-        UserAccountEntity user = userOptional.get();
+    private Optional<ResolvedAuthorities> resolveUser(
+            UserAccountEntity user,
+            UUID tokenOrganizationId) {
         if (tokenOrganizationId != null && user.getOrganizationId() != null
                 && !tokenOrganizationId.equals(user.getOrganizationId())) {
             return Optional.empty();
         }
 
-        if (userAccountRepository.existsById(userId)) {
-            rbacStore.synchronizeLegacyAssignments(user);
-        }
-        RbacStore.EffectiveAccess access = rbacStore.loadEffectiveAccess(user.getId(), user.getOrganizationId());
+        rbacStore.synchronizeLegacyAssignments(user);
+        RbacStore.EffectiveAccess access = rbacStore.loadEffectiveAccess(
+                user.getId(), user.getOrganizationId());
         if (access.roles().isEmpty()) {
             Set<String> legacyRoles = legacyRoleCodes(user.getRole());
             access = new RbacStore.EffectiveAccess(

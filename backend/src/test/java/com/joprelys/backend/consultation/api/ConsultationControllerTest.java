@@ -257,10 +257,11 @@ public class ConsultationControllerTest {
 	}
 
 	@Test
-	void givenNoConsultation_whenGetConsultation_thenNoContent() throws Exception {
+	void givenNoConsultation_whenGetConsultation_thenNotFound() throws Exception {
 		mockMvc.perform(get("/api/visits/" + visitA.getId() + "/consultation")
 				.header("Authorization", "Bearer " + tokenMedecinA))
-				.andExpect(status().isNoContent());
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.detail").value("Aucune consultation trouvée pour cette visite."));
 	}
 
 	@Test

@@ -8,6 +8,8 @@ public interface UserAccountRepository extends JpaRepository<UserAccountEntity, 
 
 	Optional<UserAccountEntity> findByEmail(String email);
 
+	Optional<UserAccountEntity> findByEmailIgnoreCase(String email);
+
 	boolean existsByEmail(String email);
 
 	java.util.List<UserAccountEntity> findAllByOrganizationId(UUID organizationId);

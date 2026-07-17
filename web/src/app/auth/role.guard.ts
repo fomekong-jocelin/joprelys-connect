@@ -4,14 +4,14 @@ import { catchError, map, of } from 'rxjs';
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { AuthTokenStorageService } from './auth-token-storage.service';
 
-export const roleGuard: CanActivateFn = (route) => {
+export const roleGuard: CanActivateFn = (route, state) => {
   const tokenStorage = inject(AuthTokenStorageService);
   const rbacApi = inject(RbacApiService);
   const router = inject(Router);
   const session = tokenStorage.session();
 
   if (!session) {
-    return router.parseUrl('/');
+    return router.createUrlTree(['/'], { queryParams: { returnUrl: state.url } });
   }
 
   const expectedRoles = (route.data['expectedRoles'] as string[] | undefined) ?? [];

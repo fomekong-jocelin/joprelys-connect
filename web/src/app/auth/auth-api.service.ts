@@ -1,6 +1,6 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { finalize, Observable, tap } from 'rxjs';
+import { catchError, finalize, map, Observable, of, tap, throwError } from 'rxjs';
 import { AuthTokenStorageService } from './auth-token-storage.service';
 import { LoginRequest, LoginResponse } from './auth.models';
 
@@ -26,6 +26,20 @@ export class AuthApiService {
   verifyStaffOtp(email: string, otpCode: string): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiBaseUrl}/verify-otp`, { email, otpCode }).pipe(
       tap((response) => this.tokenStorage.save(response)),
+    );
+  }
+
+  restoreSession(): Observable<void> {
+    if (this.tokenStorage.session()) {
+      return of(undefined);
+    }
+
+    return this.http.post<LoginResponse>(`${this.apiBaseUrl}/refresh`, {}).pipe(
+      tap((response) => this.tokenStorage.save(response)),
+      map(() => undefined),
+      catchError((error: HttpErrorResponse) => error.status === 401
+        ? of(undefined)
+        : throwError(() => error)),
     );
   }
 
