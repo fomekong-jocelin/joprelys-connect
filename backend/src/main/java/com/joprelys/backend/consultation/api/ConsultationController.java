@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -81,11 +82,12 @@ public class ConsultationController {
 
     @GetMapping("/{id}/consultation")
     @PreAuthorize("hasAuthority('CLINICAL_READ') or " + LEGACY_CLINICAL_READ_ROLES)
-    @Operation(summary = "Récupérer une consultation", description = "Retourne la consultation médicale associée à une visite.", responses = {
+    @Operation(summary = "Récupérer une consultation", description = "Retourne la consultation médicale associée à une visite lorsqu'elle existe.", responses = {
             @ApiResponse(responseCode = "200", description = "Consultation trouvée"),
-            @ApiResponse(responseCode = "404", description = "Introuvable")
+            @ApiResponse(responseCode = "204", description = "Aucune consultation encore saisie"),
+            @ApiResponse(responseCode = "404", description = "Visite introuvable")
     })
-    public ConsultationResponse getConsultation(
+    public ResponseEntity<ConsultationResponse> getConsultation(
             @Parameter(description = "Identifiant de la visite") @PathVariable UUID id) {
         UUID patientId = PatientService.convertToUuid(
                 visitRepository.findPatientIdByVisitId(id)
@@ -95,7 +97,9 @@ public class ConsultationController {
         UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
         try {
             com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-            return consultationService.getDetailedConsultationByVisitId(id);
+            return consultationService.findDetailedConsultationByVisitId(id)
+                    .map(ResponseEntity::ok)
+                    .orElseGet(() -> ResponseEntity.noContent().build());
         } finally {
             com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
         }
