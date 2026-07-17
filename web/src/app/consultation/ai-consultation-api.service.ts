@@ -15,7 +15,12 @@ export type AiField =
 export type AiConsultationDraft = Partial<Record<AiField, string>>;
 export type AiTranscriptStatus = 'NONE' | 'PENDING_REVIEW' | 'ANALYZED';
 export type AiConversationRole = 'USER' | 'ASSISTANT';
-export type AiConversationSource = 'TEXT' | 'AUDIO' | 'AI' | 'SYSTEM';
+export type AiConversationSource =
+  | 'TEXT'
+  | 'AUDIO'
+  | 'CLARIFICATION'
+  | 'AI'
+  | 'SYSTEM';
 
 export interface AiConversationMessage {
   id: string;
@@ -24,6 +29,17 @@ export interface AiConversationMessage {
   source: AiConversationSource;
   createdAt: string;
   needsClarification: boolean;
+}
+
+export interface AiClarification {
+  id: string;
+  field: AiField;
+  question: string;
+  status: 'PENDING' | 'RESOLVED';
+  options: string[];
+  createdAt: string;
+  answer: string | null;
+  resolvedAt: string | null;
 }
 
 export interface AiSessionResponse {
@@ -36,6 +52,7 @@ export interface AiSessionResponse {
   pendingTranscript: string | null;
   transcriptStatus: AiTranscriptStatus;
   conversation: AiConversationMessage[];
+  clarifications: AiClarification[];
   assistantMessage: string | null;
   needsClarification: boolean;
 }
@@ -48,6 +65,7 @@ export interface AiMessageResponse {
   assistantMessage: string;
   needsClarification: boolean;
   conversation: AiConversationMessage[];
+  clarifications: AiClarification[];
   expiresAt: string;
 }
 
@@ -79,6 +97,17 @@ export class AiConsultationApiService {
     return this.http.post<AiMessageResponse>(
       `/api/ai/consultations/${visitId}/messages/text`,
       { text },
+    );
+  }
+
+  answerClarification(
+    visitId: string,
+    clarificationId: string,
+    answer: string,
+  ): Observable<AiMessageResponse> {
+    return this.http.post<AiMessageResponse>(
+      `/api/ai/consultations/${visitId}/clarifications/${clarificationId}/answer`,
+      { answer },
     );
   }
 
