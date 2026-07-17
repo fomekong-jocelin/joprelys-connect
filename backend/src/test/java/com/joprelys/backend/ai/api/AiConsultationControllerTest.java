@@ -2,42 +2,42 @@ package com.joprelys.backend.ai.api;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.joprelys.backend.ai.application.AiConsultationService;
 import com.joprelys.backend.auth.security.JwtClaims;
+import com.joprelys.backend.auth.security.TenantContext;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.server.ResponseStatusException;
 
 class AiConsultationControllerTest {
 
+    @AfterEach
+    void clearTenantContext() {
+        TenantContext.clear();
+    }
+
     @Test
-    void shouldAcceptLegacyEmailSubjectWithoutReturningServerError() {
+    void shouldUseNormalizedAuthenticatedIdentity() {
         AiConsultationService service = mock(AiConsultationService.class);
         AiConsultationController controller = new AiConsultationController(service);
         Authentication authentication = mock(Authentication.class);
         UUID visitId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         UUID organizationId = UUID.randomUUID();
-        JwtClaims claims = new JwtClaims(
-                "doctor@joprelys.local",
-                "doctor@joprelys.local",
-                "Doctor",
-                "MEDECIN",
-                organizationId.toString(),
-                UUID.randomUUID().toString(),
-                UUID.randomUUID().toString(),
-                Instant.now().plusSeconds(3600));
-        when(authentication.getDetails()).thenReturn(claims);
-        when(service.startSession(eq(visitId), any(UUID.class), eq(organizationId), eq(Map.of())))
-                .thenAnswer(invocation -> new AiConsultationService.SessionView(
+        when(authentication.getDetails()).thenReturn(claims(userId.toString(), organizationId.toString()));
+        TenantContext.setTenantId(organizationId);
+        when(service.startSession(visitId, userId, organizationId, Map.of()))
+                .thenReturn(new AiConsultationService.SessionView(
                         UUID.randomUUID(),
                         visitId,
                         "ACTIVE",
@@ -54,36 +54,49 @@ class AiConsultationControllerTest {
 
         assertNotNull(response);
         assertEquals(visitId, response.visitId());
-        ArgumentCaptor<UUID> actorId = ArgumentCaptor.forClass(UUID.class);
-        verify(service).startSession(eq(visitId), actorId.capture(), eq(organizationId), eq(Map.of()));
-        assertNotNull(actorId.getValue());
+        verify(service).startSession(visitId, userId, organizationId, Map.of());
     }
 
     @Test
-    void shouldUseSameSyntheticActorForSameLegacyEmail() {
+    void shouldRejectUnresolvedLegacyIdentityAtControllerBoundary() {
         AiConsultationService service = mock(AiConsultationService.class);
         AiConsultationController controller = new AiConsultationController(service);
         Authentication authentication = mock(Authentication.class);
-        UUID visitId = UUID.randomUUID();
-        JwtClaims claims = new JwtClaims(
-                "legacy-subject",
-                "Doctor@Joprelys.Local",
+        when(authentication.getDetails()).thenReturn(
+                claims("doctor@joprelys.local", UUID.randomUUID().toString()));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> controller.getSession(UUID.randomUUID(), authentication));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatusCode());
+        assertEquals("AUTH_IDENTITY_UNRESOLVED", exception.getReason());
+    }
+
+    @Test
+    void shouldRejectMissingTenantAtControllerBoundary() {
+        AiConsultationService service = mock(AiConsultationService.class);
+        AiConsultationController controller = new AiConsultationController(service);
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getDetails()).thenReturn(claims(UUID.randomUUID().toString(), ""));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> controller.getSession(UUID.randomUUID(), authentication));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatusCode());
+        assertEquals("AUTH_TENANT_UNRESOLVED", exception.getReason());
+    }
+
+    private static JwtClaims claims(String subject, String organizationId) {
+        return new JwtClaims(
+                subject,
+                "doctor@joprelys.local",
                 "Doctor",
                 "MEDECIN",
-                "",
+                organizationId,
                 UUID.randomUUID().toString(),
                 UUID.randomUUID().toString(),
                 Instant.now().plusSeconds(3600));
-        when(authentication.getDetails()).thenReturn(claims);
-        when(service.getSession(eq(visitId), any(UUID.class), eq(null)))
-                .thenReturn(java.util.Optional.empty());
-
-        controller.getSession(visitId, authentication);
-        controller.getSession(visitId, authentication);
-
-        ArgumentCaptor<UUID> actorIds = ArgumentCaptor.forClass(UUID.class);
-        verify(service, org.mockito.Mockito.times(2))
-                .getSession(eq(visitId), actorIds.capture(), eq(null));
-        assertEquals(actorIds.getAllValues().get(0), actorIds.getAllValues().get(1));
     }
 }
