@@ -21,6 +21,7 @@ export type AiConversationSource =
   | 'CLARIFICATION'
   | 'AI'
   | 'SYSTEM';
+export type AiDecision = 'ACCEPT' | 'REJECT';
 
 export interface AiConversationMessage {
   id: string;
@@ -42,6 +43,27 @@ export interface AiClarification {
   resolvedAt: string | null;
 }
 
+export interface AiFieldProposal {
+  id: string;
+  field: AiField;
+  operation: 'SET' | 'CLEAR';
+  previousValue: string | null;
+  proposedValue: string | null;
+  reason: string;
+  uncertainty: 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  createdAt: string;
+  decidedAt: string | null;
+}
+
+export interface AiRevision {
+  id: string;
+  sequence: number;
+  status: 'PENDING' | 'DECIDED';
+  createdAt: string;
+  proposals: AiFieldProposal[];
+}
+
 export interface AiSessionResponse {
   sessionId: string;
   visitId: string;
@@ -53,6 +75,7 @@ export interface AiSessionResponse {
   transcriptStatus: AiTranscriptStatus;
   conversation: AiConversationMessage[];
   clarifications: AiClarification[];
+  revisions: AiRevision[];
   assistantMessage: string | null;
   needsClarification: boolean;
 }
@@ -66,6 +89,7 @@ export interface AiMessageResponse {
   needsClarification: boolean;
   conversation: AiConversationMessage[];
   clarifications: AiClarification[];
+  revisions: AiRevision[];
   expiresAt: string;
 }
 
@@ -108,6 +132,29 @@ export class AiConsultationApiService {
     return this.http.post<AiMessageResponse>(
       `/api/ai/consultations/${visitId}/clarifications/${clarificationId}/answer`,
       { answer },
+    );
+  }
+
+  decideProposal(
+    visitId: string,
+    revisionId: string,
+    proposalId: string,
+    decision: AiDecision,
+  ): Observable<AiSessionResponse> {
+    return this.http.post<AiSessionResponse>(
+      `/api/ai/consultations/${visitId}/revisions/${revisionId}/proposals/${proposalId}/decision`,
+      { decision },
+    );
+  }
+
+  decideRevision(
+    visitId: string,
+    revisionId: string,
+    decision: AiDecision,
+  ): Observable<AiSessionResponse> {
+    return this.http.post<AiSessionResponse>(
+      `/api/ai/consultations/${visitId}/revisions/${revisionId}/decision`,
+      { decision },
     );
   }
 
