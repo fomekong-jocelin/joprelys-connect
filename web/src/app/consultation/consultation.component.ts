@@ -123,7 +123,7 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   applyAiDraft(draft: AiConsultationDraft): void {
-    const allowedDraft: AiConsultationDraft = {};
+    const acceptedDraft: Record<string, string> = {};
     const fields: Array<keyof AiConsultationDraft> = [
       'symptoms',
       'clinicalExam',
@@ -136,11 +136,9 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
     ];
     fields.forEach(field => {
       const value = draft[field];
-      if (typeof value === 'string' && value.trim()) {
-        allowedDraft[field] = value.trim();
-      }
+      acceptedDraft[field] = typeof value === 'string' ? value.trim() : '';
     });
-    this.form.patchValue(allowedDraft);
+    this.form.patchValue(acceptedDraft);
     this.form.markAsDirty();
     this.syncVoiceDraft();
     this.successMessage.set(
