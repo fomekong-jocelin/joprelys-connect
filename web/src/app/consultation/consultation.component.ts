@@ -60,6 +60,8 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
   private patientId = '';
   private voiceAssistantRef: ComponentRef<VoiceAssistantPanelComponent> | null = null;
   private voiceDraftSubscription: Subscription | null = null;
+  private voiceMountTimer: ReturnType<typeof setTimeout> | null = null;
+  private voiceMountAttempts = 0;
   shouldCloseAfterSave = false;
 
   readonly commonExams = [
@@ -104,11 +106,15 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    setTimeout(() => this.mountVoiceAssistant());
+    this.scheduleVoiceAssistantMount();
   }
 
   ngOnDestroy(): void {
     this.voiceDraftSubscription?.unsubscribe();
+    if (this.voiceMountTimer) {
+      clearTimeout(this.voiceMountTimer);
+      this.voiceMountTimer = null;
+    }
     if (this.voiceAssistantRef) {
       this.applicationRef.detachView(this.voiceAssistantRef.hostView);
       this.voiceAssistantRef.destroy();
@@ -146,11 +152,24 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
     this.errorMessage.set('');
   }
 
-  private mountVoiceAssistant(): void {
-    if (!this.visitId || this.voiceAssistantRef) return;
+  private scheduleVoiceAssistantMount(): void {
+    if (this.voiceAssistantRef || this.voiceMountAttempts >= 40) return;
+    this.voiceMountAttempts += 1;
+    this.voiceMountTimer = setTimeout(() => {
+      this.voiceMountTimer = null;
+      if (!this.mountVoiceAssistant()) {
+        this.scheduleVoiceAssistantMount();
+      }
+    }, this.voiceMountAttempts === 1 ? 0 : 250);
+  }
+
+  private mountVoiceAssistant(): boolean {
+    if (!this.visitId || this.voiceAssistantRef || typeof document === 'undefined') {
+      return !!this.voiceAssistantRef;
+    }
     const formElement = document.querySelector('app-consultation form');
     const target = formElement?.parentElement;
-    if (!target) return;
+    if (!formElement || !target) return false;
 
     const componentRef = createComponent(VoiceAssistantPanelComponent, {
       environmentInjector: this.environmentInjector,
@@ -161,6 +180,7 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
     this.applicationRef.attachView(componentRef.hostView);
     target.insertBefore(componentRef.location.nativeElement, formElement);
     this.voiceAssistantRef = componentRef;
+    return true;
   }
 
   private syncVoiceDraft(): void {
@@ -175,9 +195,11 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
       next: (data) => {
         this.vitals.set(data);
         this.isLoading.set(false);
+        this.scheduleVoiceAssistantMount();
       },
       error: () => {
         this.isLoading.set(false);
+        this.scheduleVoiceAssistantMount();
       }
     });
 
