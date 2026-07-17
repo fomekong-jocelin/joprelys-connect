@@ -44,6 +44,8 @@ class AiConsultationControllerTest {
                         Instant.now().plusSeconds(1800),
                         Map.of(),
                         null,
+                        null,
+                        "NONE",
                         "Décrivez les symptômes.",
                         false));
 
