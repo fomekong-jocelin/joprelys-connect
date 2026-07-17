@@ -70,6 +70,46 @@ public class AiConsultationController {
     }
 
     @PostMapping(
+            value = "/{visitId}/transcriptions/audio",
+            consumes = {"audio/webm", "audio/mp4", "audio/mpeg", "audio/wav"})
+    public AiConsultationService.TranscriptionView transcribeAudio(
+            @PathVariable UUID visitId,
+            @RequestBody byte[] audio,
+            @RequestHeader(value = HttpHeaders.CONTENT_TYPE, required = false) String contentType,
+            Authentication authentication) {
+        requireContentType(contentType);
+        Identity identity = identity(authentication);
+        return service.transcribeAudio(
+                visitId, identity.userId(), identity.organizationId(), audio, contentType);
+    }
+
+    @PostMapping("/{visitId}/transcriptions/analyze")
+    public AiConsultationService.MessageView analyzeTranscript(
+            @PathVariable UUID visitId,
+            @Valid @RequestBody AnalyzeTranscriptRequest request,
+            Authentication authentication) {
+        Identity identity = identity(authentication);
+        return service.analyzeTranscript(
+                visitId,
+                identity.userId(),
+                identity.organizationId(),
+                request.transcript());
+    }
+
+    @DeleteMapping("/{visitId}/transcriptions/pending")
+    public ResponseEntity<Void> discardPendingTranscript(
+            @PathVariable UUID visitId,
+            Authentication authentication) {
+        Identity identity = identity(authentication);
+        service.discardPendingTranscript(
+                visitId, identity.userId(), identity.organizationId());
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Endpoint historique conservé pour les clients antérieurs.
+     */
+    @PostMapping(
             value = "/{visitId}/messages/audio",
             consumes = {"audio/webm", "audio/mp4", "audio/mpeg", "audio/wav"})
     public AiConsultationService.MessageView sendAudio(
@@ -77,10 +117,7 @@ public class AiConsultationController {
             @RequestBody byte[] audio,
             @RequestHeader(value = HttpHeaders.CONTENT_TYPE, required = false) String contentType,
             Authentication authentication) {
-        if (contentType == null || contentType.isBlank()) {
-            throw new ResponseStatusException(
-                    HttpStatus.UNSUPPORTED_MEDIA_TYPE, "AI_AUDIO_TYPE_UNSUPPORTED");
-        }
+        requireContentType(contentType);
         Identity identity = identity(authentication);
         return service.processAudio(
                 visitId, identity.userId(), identity.organizationId(), audio, contentType);
@@ -93,6 +130,13 @@ public class AiConsultationController {
         Identity identity = identity(authentication);
         service.deleteSession(visitId, identity.userId(), identity.organizationId());
         return ResponseEntity.noContent().build();
+    }
+
+    private void requireContentType(String contentType) {
+        if (contentType == null || contentType.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNSUPPORTED_MEDIA_TYPE, "AI_AUDIO_TYPE_UNSUPPORTED");
+        }
     }
 
     private Identity identity(Authentication authentication) {
@@ -126,6 +170,10 @@ public class AiConsultationController {
 
     public record TextMessageRequest(
             @NotBlank @Size(max = 12000) String text) {
+    }
+
+    public record AnalyzeTranscriptRequest(
+            @NotBlank @Size(max = 12000) String transcript) {
     }
 
     private record Identity(UUID userId, UUID organizationId) {
