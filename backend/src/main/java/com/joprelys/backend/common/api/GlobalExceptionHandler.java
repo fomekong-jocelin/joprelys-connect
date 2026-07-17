@@ -121,6 +121,24 @@ public class GlobalExceptionHandler {
                 .body(new ApiErrorResponse("CONFLICT", "Cette ressource a été modifiée par un autre utilisateur.", traceId));
     }
 
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    ResponseEntity<ApiErrorResponse> handleNoResourceFound(
+            org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        String traceId = getTraceId();
+        log.warn("[trace_id={}] Resource not found: {}", traceId, ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiErrorResponse("NOT_FOUND", "La ressource demandée n'existe pas.", traceId));
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    ResponseEntity<ApiErrorResponse> handleMethodNotAllowed(
+            org.springframework.web.HttpRequestMethodNotSupportedException ex) {
+        String traceId = getTraceId();
+        log.warn("[trace_id={}] Method not allowed: {}", traceId, ex.getMessage());
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(new ApiErrorResponse("METHOD_NOT_ALLOWED", "Méthode HTTP non supportée pour cette ressource.", traceId));
+    }
+
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiErrorResponse> handleGeneric(Exception ex) {
         String traceId = getTraceId();

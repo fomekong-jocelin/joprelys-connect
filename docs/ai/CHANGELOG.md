@@ -27,6 +27,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Operations
 
+- **Production** : Activation du module IA (`JOPRELYS_AI_ENABLED=true`) et redémarrage du service `joprelys-connect-api.service`
 
 - **Réinitialisation production (TASK-20260716-PROD-DATA-RESET)** : sauvegarde PostgreSQL complète, purge transactionnelle des données métier, suppression de tous les patients, utilisateurs et cliniques, régénération du catalogue RBAC et création d'un unique compte `SUPER_ADMIN` ; contrôles post-opération conformes et service actif.
 
@@ -46,6 +47,10 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **Workspace Factures orienté tâche (STORY-2202)** : refonte de l’historique patient en cartes scannables alimentées par `InvoiceSettlementSummary`, distinction des états chargement/erreur/vide, action financière unique selon le recouvrement, sélection visible, panneau de détail accessible avec Échap et restauration du focus, responsive light/dark et traductions FR/EN.
 
 ### Fixed
+
+- **EPIC-0024** : Correction de l'assistant IA indisponible en production — `JOPRELYS_AI_ENABLED=false` dans le `.env` serveur corrigé à `true` et service redémarré
+- **GlobalExceptionHandler** : Ajout du handler `NoResourceFoundException` → retourne HTTP 404 au lieu de 500 pour les routes inexistantes
+- **GlobalExceptionHandler** : Ajout du handler `HttpRequestMethodNotSupportedException` → retourne HTTP 405 au lieu de 500
 
 - **Fiabilité cliniques et e-mails (BUG-20260716-CLINIC-ADMIN-MAIL-AND-LOGO)** : serveur SMTP corrigé vers `mail.joprelys.com:465`, gestion globale des indisponibilités par réponse `503`, suppression des OTP fantômes, création d'admin transactionnelle, persistance du logo dès la création et stockage des téléversements configurable.
 - **Déploiement Angular atomique (BUG-20260716-CLINIC-ADMIN-MAIL-AND-LOGO)** : désactivation du cache du shell HTML, cache immuable des assets hashés et réponse `404` pour les chunks absents afin d'éviter les erreurs MIME après livraison.
