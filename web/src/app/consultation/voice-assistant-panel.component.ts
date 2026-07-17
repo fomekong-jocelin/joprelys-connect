@@ -19,6 +19,8 @@ import {
   AiSessionResponse,
 } from './ai-consultation-api.service';
 
+export type { AiConsultationDraft } from './ai-consultation-api.service';
+
 @Component({
   selector: 'app-voice-assistant-panel',
   standalone: true,
@@ -471,9 +473,9 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
       status: 'ACTIVE',
       expiresAt: response.expiresAt,
       draft: response.draft,
-      transcript: response.transcript ?? previous?.transcript,
+      transcript: response.transcript ?? previous?.transcript ?? null,
       pendingTranscript: null,
-      transcriptStatus: response.transcript ? 'ANALYZED' : previous?.transcriptStatus,
+      transcriptStatus: response.transcript ? 'ANALYZED' : previous?.transcriptStatus ?? 'NONE',
       assistantMessage: response.assistantMessage,
       needsClarification: response.needsClarification,
     });
