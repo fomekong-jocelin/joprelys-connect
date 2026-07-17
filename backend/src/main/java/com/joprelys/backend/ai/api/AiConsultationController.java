@@ -69,6 +69,21 @@ public class AiConsultationController {
                 visitId, identity.userId(), identity.organizationId(), request.text());
     }
 
+    @PostMapping("/{visitId}/clarifications/{clarificationId}/answer")
+    public AiConsultationService.MessageView answerClarification(
+            @PathVariable UUID visitId,
+            @PathVariable UUID clarificationId,
+            @Valid @RequestBody ClarificationAnswerRequest request,
+            Authentication authentication) {
+        Identity identity = identity(authentication);
+        return service.answerClarification(
+                visitId,
+                identity.userId(),
+                identity.organizationId(),
+                clarificationId,
+                request.answer());
+    }
+
     @PostMapping(
             value = "/{visitId}/transcriptions/audio",
             consumes = {"audio/webm", "audio/mp4", "audio/mpeg", "audio/wav"})
@@ -170,6 +185,10 @@ public class AiConsultationController {
 
     public record TextMessageRequest(
             @NotBlank @Size(max = 12000) String text) {
+    }
+
+    public record ClarificationAnswerRequest(
+            @NotBlank @Size(max = 12000) String answer) {
     }
 
     public record AnalyzeTranscriptRequest(
