@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, filter } from 'rxjs';
 import { Consultation, SaveConsultationRequest, Prescription, SavePrescriptionRequest } from './consultation.models';
 
 @Injectable({ providedIn: 'root' })
@@ -12,7 +12,9 @@ export class ConsultationApiService {
   }
 
   getConsultation(visitId: string): Observable<Consultation> {
-    return this.http.get<Consultation>(`/api/visits/${visitId}/consultation`);
+    return this.http.get<Consultation | null>(`/api/visits/${visitId}/consultation`).pipe(
+      filter((consultation): consultation is Consultation => consultation !== null),
+    );
   }
 
   savePrescription(consultationId: string, dto: SavePrescriptionRequest): Observable<Prescription> {
@@ -38,7 +40,6 @@ export class ConsultationApiService {
   verifyDocumentByNumber(documentNumber: string): Observable<any> {
     return this.http.get<any>(`/api/public/documents/search`, { params: { number: documentNumber } });
   }
-
 
   revokeDocument(documentId: string, reason: string): Observable<any> {
     return this.http.patch<any>(`/api/documents/${documentId}/revoke`, { reason });

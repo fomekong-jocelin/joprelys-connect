@@ -79,13 +79,11 @@ public class ConsultationControllerTest {
 		userAccountRepository.deleteAll();
 		organizationRepository.deleteAll();
 
-		// Create Organizations
 		orgA = new OrganizationEntity("Clinique A", "contacta@joprelys.local", "123", "Street A", "Douala");
 		orgB = new OrganizationEntity("Clinique B", "contactb@joprelys.local", "456", "Street B", "Yaoundé");
 		orgA = organizationRepository.save(orgA);
 		orgB = organizationRepository.save(orgB);
 
-		// Create Users
 		userMedecinA = new UserAccountEntity("medecin.a@joprelys.local", "Dr. Alpha", "MEDECIN", "passhash");
 		userMedecinA.setOrganizationId(orgA.getId());
 		userMedecinA = userAccountRepository.save(userMedecinA);
@@ -98,23 +96,19 @@ public class ConsultationControllerTest {
 		userAgentA.setOrganizationId(orgA.getId());
 		userAgentA = userAccountRepository.save(userAgentA);
 
-		// Generate Tokens
 		tokenMedecinA = jwtService.createToken(userMedecinA).value();
 		tokenMedecinB = jwtService.createToken(userMedecinB).value();
 		tokenAgentA = jwtService.createToken(userAgentA).value();
 
-		// Create Patient in Tenant A
 		TenantContext.setTenantId(orgA.getId());
 		patientA = new PatientEntity("DPU-A", "PAT-A", "Patient Alpha", "MASCULIN",
 				LocalDate.of(1985, 3, 15), "+237690000000", "Douala", "", "", "", "", "", "");
 		patientA = patientRepository.save(patientA);
 
-		// Create Visit A (active) in Tenant A
 		visitA = new VisitEntity(patientA, "VIS-A001", "Fièvre persistante", "Médecine générale");
 		visitA = visitRepository.save(visitA);
 		TenantContext.clear();
 
-		// Create Visit B (active) in Tenant B
 		TenantContext.setTenantId(orgB.getId());
 		PatientEntity patientB = new PatientEntity("DPU-B", "PAT-B", "Patient Beta", "FEMININ",
 				LocalDate.of(1990, 6, 20), "+237699000000", "Yaoundé", "", "", "", "", "", "");
@@ -123,8 +117,6 @@ public class ConsultationControllerTest {
 		visitB = visitRepository.save(visitB);
 		TenantContext.clear();
 	}
-
-	// ─── Cas nominaux ────────────────────────────────────────────────────────
 
 	@Test
 	void givenMedecinA_whenSaveConsultation_thenSuccess() throws Exception {
@@ -153,7 +145,6 @@ public class ConsultationControllerTest {
 
 	@Test
 	void givenExistingConsultation_whenSaveAgain_thenUpsertSuccess() throws Exception {
-		// Première saisie
 		String json1 = """
 				{
 					"symptoms": "Douleur thoracique",
@@ -166,7 +157,6 @@ public class ConsultationControllerTest {
 				.content(json1))
 				.andExpect(status().isOk());
 
-		// Mise à jour (upsert)
 		String json2 = """
 				{
 					"symptoms": "Douleur thoracique irradiant dans le bras gauche",
@@ -187,7 +177,6 @@ public class ConsultationControllerTest {
 
 	@Test
 	void givenMedecinA_whenGetConsultation_thenSuccess() throws Exception {
-		// Créer d'abord une consultation
 		TenantContext.setTenantId(orgA.getId());
 		ConsultationEntity entity = new ConsultationEntity(
 				visitA, userMedecinA, "DOC-CONS-20260702-000001",
@@ -203,8 +192,6 @@ public class ConsultationControllerTest {
 				.andExpect(jsonPath("$.doctorName").value("Dr. Alpha"))
 				.andExpect(jsonPath("$.visitNumber").value("VIS-A001"));
 	}
-
-	// ─── Cas d'erreur ────────────────────────────────────────────────────────
 
 	@Test
 	void givenAgentAccueil_whenSaveConsultation_thenForbidden() throws Exception {
@@ -270,11 +257,10 @@ public class ConsultationControllerTest {
 	}
 
 	@Test
-	void givenNoConsultation_whenGetConsultation_thenNotFound() throws Exception {
+	void givenNoConsultation_whenGetConsultation_thenNoContent() throws Exception {
 		mockMvc.perform(get("/api/visits/" + visitA.getId() + "/consultation")
 				.header("Authorization", "Bearer " + tokenMedecinA))
-				.andExpect(status().isNotFound())
-				.andExpect(jsonPath("$.detail").value("Aucune consultation trouvée pour cette visite."));
+				.andExpect(status().isNoContent());
 	}
 
 	@Test
@@ -292,11 +278,8 @@ public class ConsultationControllerTest {
 				.andExpect(status().isUnauthorized());
 	}
 
-	// ─── Isolation multi-tenant ───────────────────────────────────────────────
-
 	@Test
 	void givenMedecinB_whenSaveConsultationOnVisitA_thenNotFound() throws Exception {
-		// Médecin B ne doit pas voir la visite du Tenant A
 		String json = """
 				{
 					"symptoms": "Tentative cross-tenant",
@@ -313,7 +296,6 @@ public class ConsultationControllerTest {
 
 	@Test
 	void givenClosedVisit_whenSaveConsultation_thenBadRequest() throws Exception {
-		// Fermer la visite manuellement en base
 		TenantContext.setTenantId(orgA.getId());
 		visitA.setStatus("TERMINEE");
 		visitRepository.save(visitA);

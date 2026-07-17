@@ -2,10 +2,14 @@ package com.joprelys.backend.ai.api;
 
 import com.joprelys.backend.ai.application.AiConsultationService;
 import com.joprelys.backend.auth.security.JwtClaims;
+import com.joprelys.backend.auth.security.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
@@ -28,6 +32,8 @@ import org.springframework.web.server.ResponseStatusException;
 @ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
 @PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE') and hasAuthority('CLINICAL_WRITE')")
 public class AiConsultationController {
+
+    private static final String LEGACY_ACTOR_NAMESPACE = "joprelys-authenticated-user:";
 
     private final AiConsultationService service;
 
@@ -97,10 +103,33 @@ public class AiConsultationController {
         if (authentication == null || !(authentication.getDetails() instanceof JwtClaims claims)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED");
         }
-        UUID userId = UUID.fromString(claims.subject());
-        UUID organizationId = claims.organizationId() == null || claims.organizationId().isBlank()
-                ? null : UUID.fromString(claims.organizationId());
+
+        UUID userId = parseUuid(claims.subject())
+                .orElseGet(() -> legacyActorId(claims.email()));
+        UUID organizationId = Optional.ofNullable(TenantContext.getTenantId())
+                .or(() -> parseUuid(claims.organizationId()))
+                .orElse(null);
         return new Identity(userId, organizationId);
+    }
+
+    private UUID legacyActorId(String email) {
+        if (email == null || email.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED");
+        }
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+        return UUID.nameUUIDFromBytes(
+                (LEGACY_ACTOR_NAMESPACE + normalizedEmail).getBytes(StandardCharsets.UTF_8));
+    }
+
+    private Optional<UUID> parseUuid(String value) {
+        if (value == null || value.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(UUID.fromString(value));
+        } catch (IllegalArgumentException exception) {
+            return Optional.empty();
+        }
     }
 
     public record StartSessionRequest(Map<String, String> draft) {

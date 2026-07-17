@@ -191,8 +191,7 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
     if (!currentSession) return;
 
     const roles = this.parseRoles(currentSession.role);
-    const canReadAdmissions = this.rbacApi.hasPermission('PATIENT_READ')
-      || this.rbacApi.hasPermission('PATIENT_WRITE');
+    const canReadAdmissions = this.rbacApi.hasPermission('PATIENT_WRITE');
     if (!canReadAdmissions && !roles.includes('AGENT_ACCUEIL') && !roles.includes('ADMIN_CLINIQUE')) return;
 
     this.patientApiService.getPendingPreRegistrations(0, 1).subscribe({
