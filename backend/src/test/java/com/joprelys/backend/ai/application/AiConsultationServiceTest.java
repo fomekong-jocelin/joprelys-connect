@@ -102,6 +102,52 @@ class AiConsultationServiceTest {
         assertFalse(response.draft().containsKey("unknownField"));
         assertTrue(response.changedFields().contains("symptoms"));
         assertTrue(response.needsClarification());
+        assertEquals(3, response.conversation().size());
+    }
+
+    @Test
+    void shouldExposeVisibleMultiTurnConversationWithoutTechnicalPrompt() {
+        service.startSession(visitId, userId, organizationId, Map.of());
+        when(aiProvider.chat(anyList(), anyString())).thenReturn(
+                new AiChatResponse(
+                        """
+                        {
+                          "draft": {"symptoms": "Douleur abdominale"},
+                          "assistantMessage": "Depuis combien de temps ?",
+                          "needsClarification": true
+                        }
+                        """,
+                        60,
+                        "gpt-4.1"),
+                new AiChatResponse(
+                        """
+                        {
+                          "draft": {"symptoms": "Douleur abdominale depuis deux jours"},
+                          "assistantMessage": "Durée ajoutée au brouillon.",
+                          "needsClarification": false
+                        }
+                        """,
+                        60,
+                        "gpt-4.1"));
+
+        service.processText(
+                visitId, userId, organizationId, "Le patient a une douleur abdominale.");
+        service.processText(
+                visitId, userId, organizationId, "Depuis deux jours.");
+
+        AiConsultationService.SessionView session = service.getSession(
+                visitId, userId, organizationId).orElseThrow();
+
+        assertEquals(5, session.conversation().size());
+        assertEquals("ASSISTANT", session.conversation().get(0).role());
+        assertEquals("USER", session.conversation().get(1).role());
+        assertEquals("TEXT", session.conversation().get(1).source());
+        assertEquals("Depuis combien de temps ?", session.conversation().get(2).content());
+        assertTrue(session.conversation().get(2).needsClarification());
+        assertEquals("Depuis deux jours.", session.conversation().get(3).content());
+        assertFalse(session.conversation().stream().anyMatch(message ->
+                message.content().contains("Brouillon actuel")
+                        || message.content().contains("Nouvelle dictée")));
     }
 
     @Test
@@ -126,6 +172,7 @@ class AiConsultationServiceTest {
         assertEquals("Douleur à gauche", session.pendingTranscript());
         assertEquals("PENDING_REVIEW", session.transcriptStatus());
         assertTrue(session.draft().isEmpty());
+        assertEquals(1, session.conversation().size());
     }
 
     @Test
@@ -158,6 +205,7 @@ class AiConsultationServiceTest {
 
         assertEquals("Douleur à droite et non à gauche", response.transcript());
         assertEquals("Douleur à droite et non à gauche", response.draft().get("symptoms"));
+        assertEquals("AUDIO", response.conversation().get(1).source());
         AiConsultationService.SessionView session = service.getSession(
                 visitId, userId, organizationId).orElseThrow();
         assertNull(session.pendingTranscript());
