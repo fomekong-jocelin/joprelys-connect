@@ -31,9 +31,11 @@ Validation médecin
   -> ConsultationService
 ```
 
-Le port initial `AiProvider` combinant STT et chat doit être remplacé. Cette
-séparation applique ISP et permet un moteur STT distinct du moteur d’extraction
-sans présenter cela comme un fournisseur unique.
+La cible reste la séparation de `AudioTranscriptionPort` et
+`ConsultationDraftAssistantPort`. L’incrément de configuration utilise
+provisoirement `RoutingAiProvider` pour sélectionner indépendamment le provider
+de transcription et celui du brouillon, sans supprimer OpenAI, Gemini ou Claude.
+Le remplacement définitif du port combiné `AiProvider` relève de STORY-2501.
 
 ## 4. Responsabilités SOLID
 
@@ -80,18 +82,32 @@ silencieusement.
 
 ```yaml
 joprelys:
-  web:
-    base-url: ${JOPRELYS_WEB_BASE_URL:https://joprelys.com}
   ai:
     enabled: ${JOPRELYS_AI_ENABLED:false}
-    provider: ${JOPRELYS_AI_PROVIDER:disabled}
-    session-ttl: ${JOPRELYS_AI_SESSION_TTL:PT30M}
-    max-conversation-turns: ${JOPRELYS_AI_MAX_TURNS:20}
-    max-audio-bytes: ${JOPRELYS_AI_MAX_AUDIO_BYTES:10485760}
+    provider: ${AI_PROVIDER:openai}
+    speech-provider: ${SPEECH_PROVIDER:openai}
+    session-ttl-minutes: ${AI_SESSION_TTL_MINUTES:30}
+    max-conversation-turns: ${AI_MAX_CONVERSATION_TURNS:20}
+    locale: ${AI_LOCALE:fr}
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      model: ${OPENAI_MODEL:gpt-4.1}
+      transcribe-model: ${OPENAI_TRANSCRIBE_MODEL:gpt-4o-mini-transcribe}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+    gemini:
+      api-key: ${GEMINI_API_KEY:}
+      model: ${GEMINI_MODEL:gemini-2.0-flash}
+      base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
+    claude:
+      api-key: ${ANTHROPIC_API_KEY:}
+      model: ${CLAUDE_MODEL:claude-haiku-4-5-20251001}
+      base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com/v1}
 ```
 
-Les clés restent exclusivement dans l’environnement/vault. L’activation sans
-configuration valide doit échouer au démarrage.
+OpenAI est le choix par défaut pour la transcription et le brouillon clinique.
+`AI_PROVIDER` et `SPEECH_PROVIDER` permettent de basculer indépendamment vers
+Gemini ou Claude. Les clés restent exclusivement dans l’environnement ou le
+vault. L’activation avec une configuration incomplète doit échouer au démarrage.
 
 ## 8. Sécurité et confidentialité
 
@@ -154,3 +170,4 @@ le cadrage seul. Aucune migration DB prévue pour la v1.
 | Date | Auteur | Changement |
 |---|---|---|
 | 2026-07-17 | Codex | Conception initiale sécurisée et séparation STT/extraction |
+| 2026-07-17 | ChatGPT | OpenAI par défaut, providers parole/brouillon indépendants, Gemini et Claude conservés |
