@@ -11,6 +11,10 @@ import {
 } from '@angular/core';
 import { Subscription, interval } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
+import {
+  AiClarificationAnswer,
+  AiClarificationPanelComponent,
+} from './ai-clarification-panel.component';
 import { AiConversationThreadComponent } from './ai-conversation-thread.component';
 import {
   AiConsultationApiService,
@@ -25,7 +29,11 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
 @Component({
   selector: 'app-voice-assistant-panel',
   standalone: true,
-  imports: [CommonModule, AiConversationThreadComponent],
+  imports: [
+    CommonModule,
+    AiConversationThreadComponent,
+    AiClarificationPanelComponent,
+  ],
   template: `
     <section class="overflow-hidden rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] shadow-sm">
       <header class="flex flex-col gap-3 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -100,7 +108,7 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
               <button
                 type="button"
                 (click)="toggleRecording()"
-                [disabled]="busy() || !mediaRecorderSupported || !!pendingTranscript()"
+                [disabled]="busy() || !mediaRecorderSupported || !!pendingTranscript() || hasPendingClarification()"
                 class="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[6px] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
                 [ngClass]="recording() ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]'"
               >
@@ -122,6 +130,12 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
             </div>
 
             <app-ai-conversation-thread [messages]="session()?.conversation ?? []" />
+
+            <app-ai-clarification-panel
+              [clarifications]="session()?.clarifications ?? []"
+              [disabled]="busy()"
+              (answered)="answerClarification($event)"
+            />
 
             @if (pendingTranscript()) {
               <div class="space-y-3 rounded-[6px] border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/20">
@@ -158,7 +172,7 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
                   </button>
                 </div>
               </div>
-            } @else {
+            } @else if (!hasPendingClarification()) {
               <div class="space-y-2 rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] p-3">
                 <label class="ui-label text-xs font-semibold">
                   {{ i18n.t('consultation.ai.textFallback', 'Votre message ou correction') }}
@@ -254,6 +268,12 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     return this.session()?.pendingTranscript?.trim() ?? '';
   }
 
+  hasPendingClarification(): boolean {
+    return this.session()?.clarifications.some(
+      clarification => clarification.status === 'PENDING',
+    ) ?? false;
+  }
+
   startSession(): void {
     if (!this.visitId || this.busy()) return;
     this.startBusy();
@@ -273,7 +293,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
 
   sendText(): void {
     const text = this.textMessage().trim();
-    if (!text || this.busy()) return;
+    if (!text || this.busy() || this.hasPendingClarification()) return;
     this.startBusy();
     this.api.sendText(this.visitId, text).subscribe({
       next: response => {
@@ -282,6 +302,22 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
         this.busy.set(false);
       },
       error: error => this.handleError(error, 'Le message n’a pas pu être analysé.'),
+    });
+  }
+
+  answerClarification(request: AiClarificationAnswer): void {
+    if (this.busy()) return;
+    this.startBusy();
+    this.api.answerClarification(
+      this.visitId,
+      request.clarificationId,
+      request.answer,
+    ).subscribe({
+      next: response => {
+        this.updateSessionFromMessage(response);
+        this.busy.set(false);
+      },
+      error: error => this.handleError(error, 'La réponse à la clarification n’a pas pu être analysée.'),
     });
   }
 
@@ -365,7 +401,12 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   private async startRecording(): Promise<void> {
-    if (!this.mediaRecorderSupported || this.busy() || this.pendingTranscript()) return;
+    if (
+      !this.mediaRecorderSupported
+      || this.busy()
+      || this.pendingTranscript()
+      || this.hasPendingClarification()
+    ) return;
     if (!this.session()) {
       this.startSession();
       this.errorMessage.set('Activez la session puis relancez la dictée.');
@@ -462,6 +503,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
       pendingTranscript: null,
       transcriptStatus: response.transcript ? 'ANALYZED' : previous?.transcriptStatus ?? 'NONE',
       conversation: response.conversation,
+      clarifications: response.clarifications,
       assistantMessage: response.assistantMessage,
       needsClarification: response.needsClarification,
     });
