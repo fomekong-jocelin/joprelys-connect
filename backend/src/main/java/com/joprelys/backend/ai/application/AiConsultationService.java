@@ -2,7 +2,6 @@ package com.joprelys.backend.ai.application;
 
 import static com.joprelys.backend.ai.application.AiConsultationPrompt.SYSTEM_PROMPT;
 
-import com.joprelys.backend.ai.application.AiClinicalResponseParser.ParsedClarification;
 import com.joprelys.backend.ai.application.AiClinicalResponseParser.ParsedResponse;
 import com.joprelys.backend.ai.application.AiConsultationContract.ClarificationView;
 import com.joprelys.backend.ai.application.AiConsultationContract.ConversationMessageView;
@@ -50,6 +49,7 @@ public class AiConsultationService {
     private final ObjectMapper objectMapper;
     private final AiClinicalResponseParser responseParser;
     private final AiRevisionManager revisionManager;
+    private final AiClarificationManager clarificationManager;
     private final ConcurrentMap<SessionKey, AiConsultationSessionState> sessions =
             new ConcurrentHashMap<>();
 
@@ -59,13 +59,15 @@ public class AiConsultationService {
             VisitService visitService,
             ObjectMapper objectMapper,
             AiClinicalResponseParser responseParser,
-            AiRevisionManager revisionManager) {
+            AiRevisionManager revisionManager,
+            AiClarificationManager clarificationManager) {
         this.aiProvider = aiProvider;
         this.properties = properties;
         this.visitService = visitService;
         this.objectMapper = objectMapper;
         this.responseParser = responseParser;
         this.revisionManager = revisionManager;
+        this.clarificationManager = clarificationManager;
     }
 
     public SessionView startSession(
@@ -140,7 +142,7 @@ public class AiConsultationService {
                 visitId, userId, organizationId);
         synchronized (state) {
             revisionManager.ensureNoPendingRevision(state);
-            ClarificationView clarification = findPendingClarification(
+            ClarificationView clarification = clarificationManager.findPending(
                     state, clarificationId);
             String modelText = "Réponse du médecin à une clarification structurée. Champ: "
                     + clarification.field()
@@ -211,7 +213,7 @@ public class AiConsultationService {
             if (state.pendingTranscript == null) {
                 throw conflict("AI_TRANSCRIPT_REVIEW_REQUIRED");
             }
-            ensureNoPendingClarification(state);
+            clarificationManager.ensureNoPending(state);
             revisionManager.ensureNoPendingRevision(state);
             MessageView response = processMessageLocked(
                     state,
@@ -309,11 +311,11 @@ public class AiConsultationService {
             }
             ParsedResponse parsed = responseParser.parse(response.content());
             if (resolvedClarificationId != null) {
-                resolveClarification(
+                clarificationManager.resolve(
                         state, resolvedClarificationId, clarificationAnswer);
             }
             if (parsed.needsClarification()) {
-                appendClarification(state, parsed.clarification());
+                clarificationManager.append(state, parsed.clarification());
             }
             RevisionView revision = parsed.needsClarification()
                     ? null
@@ -389,78 +391,8 @@ public class AiConsultationService {
         if (state.pendingTranscript != null) {
             throw conflict("AI_TRANSCRIPT_REVIEW_REQUIRED");
         }
-        ensureNoPendingClarification(state);
+        clarificationManager.ensureNoPending(state);
         revisionManager.ensureNoPendingRevision(state);
-    }
-
-    private void ensureNoPendingClarification(AiConsultationSessionState state) {
-        boolean pending = state.clarifications.stream()
-                .anyMatch(clarification -> "PENDING".equals(clarification.status()));
-        if (pending) {
-            throw conflict("AI_CLARIFICATION_ANSWER_REQUIRED");
-        }
-    }
-
-    private ClarificationView findPendingClarification(
-            AiConsultationSessionState state,
-            UUID clarificationId) {
-        return state.clarifications.stream()
-                .filter(clarification -> clarification.id().equals(clarificationId))
-                .filter(clarification -> "PENDING".equals(clarification.status()))
-                .findFirst()
-                .orElseThrow(() -> conflict("AI_CLARIFICATION_NOT_PENDING"));
-    }
-
-    private void resolveClarification(
-            AiConsultationSessionState state,
-            UUID clarificationId,
-            String answer) {
-        for (int index = 0; index < state.clarifications.size(); index++) {
-            ClarificationView clarification = state.clarifications.get(index);
-            if (clarification.id().equals(clarificationId)
-                    && "PENDING".equals(clarification.status())) {
-                state.clarifications.set(index, new ClarificationView(
-                        clarification.id(),
-                        clarification.field(),
-                        clarification.question(),
-                        "RESOLVED",
-                        clarification.options(),
-                        clarification.createdAt(),
-                        answer,
-                        Instant.now()));
-                return;
-            }
-        }
-        throw conflict("AI_CLARIFICATION_NOT_PENDING");
-    }
-
-    private void appendClarification(
-            AiConsultationSessionState state,
-            ParsedClarification clarification) {
-        state.clarifications.add(new ClarificationView(
-                UUID.randomUUID(),
-                clarification.field(),
-                clarification.question(),
-                "PENDING",
-                clarification.options(),
-                Instant.now(),
-                null,
-                null));
-        while (state.clarifications.size() > Math.max(
-                5, properties.maxConversationTurns())) {
-            int resolvedIndex = firstResolvedClarificationIndex(state.clarifications);
-            state.clarifications.remove(resolvedIndex >= 0 ? resolvedIndex : 0);
-        }
-    }
-
-    private int firstResolvedClarificationIndex(
-            List<ClarificationView> clarifications) {
-        for (int index = 0; index < clarifications.size(); index++) {
-            if ("RESOLVED".equals(clarifications.get(index).status())) {
-                return index;
-            }
-        }
-        return -1;
     }
 
     private void validateAudio(byte[] audio, String contentType) {
