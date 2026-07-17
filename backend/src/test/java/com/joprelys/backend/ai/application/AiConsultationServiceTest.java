@@ -2,6 +2,7 @@ package com.joprelys.backend.ai.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -104,7 +105,88 @@ class AiConsultationServiceTest {
     }
 
     @Test
-    void shouldTranscribeAudioBeforeUpdatingDraft() {
+    void shouldTranscribeWithoutCallingChatBeforeMedicalReview() {
+        service.startSession(visitId, userId, organizationId, Map.of());
+        when(aiProvider.transcribeAudio(any(byte[].class), eq("audio/webm"), eq("fr")))
+                .thenReturn(new AiTranscription("Douleur à gauche", "fr", null));
+
+        AiConsultationService.TranscriptionView response = service.transcribeAudio(
+                visitId,
+                userId,
+                organizationId,
+                new byte[] {1, 2, 3},
+                "audio/webm;codecs=opus");
+
+        assertEquals("Douleur à gauche", response.transcript());
+        assertEquals("PENDING_REVIEW", response.status());
+        verify(aiProvider, never()).chat(anyList(), anyString());
+
+        AiConsultationService.SessionView session = service.getSession(
+                visitId, userId, organizationId).orElseThrow();
+        assertEquals("Douleur à gauche", session.pendingTranscript());
+        assertEquals("PENDING_REVIEW", session.transcriptStatus());
+        assertTrue(session.draft().isEmpty());
+    }
+
+    @Test
+    void shouldAnalyzeCorrectedTranscriptOnlyAfterExplicitConfirmation() {
+        service.startSession(visitId, userId, organizationId, Map.of());
+        when(aiProvider.transcribeAudio(any(byte[].class), eq("audio/webm"), eq("fr")))
+                .thenReturn(new AiTranscription("Douleur à gauche", "fr", null));
+        service.transcribeAudio(
+                visitId,
+                userId,
+                organizationId,
+                new byte[] {1, 2, 3},
+                "audio/webm");
+        when(aiProvider.chat(anyList(), anyString())).thenReturn(new AiChatResponse(
+                """
+                {
+                  "draft": {"symptoms": "Douleur à droite et non à gauche"},
+                  "assistantMessage": "Correction prise en compte.",
+                  "needsClarification": false
+                }
+                """,
+                80,
+                "gpt-4.1"));
+
+        AiConsultationService.MessageView response = service.analyzeTranscript(
+                visitId,
+                userId,
+                organizationId,
+                "Douleur à droite et non à gauche");
+
+        assertEquals("Douleur à droite et non à gauche", response.transcript());
+        assertEquals("Douleur à droite et non à gauche", response.draft().get("symptoms"));
+        AiConsultationService.SessionView session = service.getSession(
+                visitId, userId, organizationId).orElseThrow();
+        assertNull(session.pendingTranscript());
+        assertEquals("ANALYZED", session.transcriptStatus());
+    }
+
+    @Test
+    void shouldDiscardPendingTranscriptWithoutCallingChat() {
+        service.startSession(visitId, userId, organizationId, Map.of());
+        when(aiProvider.transcribeAudio(any(byte[].class), eq("audio/webm"), eq("fr")))
+                .thenReturn(new AiTranscription("Texte à abandonner", "fr", null));
+        service.transcribeAudio(
+                visitId,
+                userId,
+                organizationId,
+                new byte[] {1},
+                "audio/webm");
+
+        service.discardPendingTranscript(visitId, userId, organizationId);
+
+        AiConsultationService.SessionView session = service.getSession(
+                visitId, userId, organizationId).orElseThrow();
+        assertNull(session.pendingTranscript());
+        assertEquals("NONE", session.transcriptStatus());
+        verify(aiProvider, never()).chat(anyList(), anyString());
+    }
+
+    @Test
+    void shouldPreserveLegacyAudioEndpointBehavior() {
         service.startSession(visitId, userId, organizationId, Map.of());
         when(aiProvider.transcribeAudio(any(byte[].class), eq("audio/webm"), eq("fr")))
                 .thenReturn(new AiTranscription("Toux sèche depuis trois jours", "fr", null));
@@ -136,7 +218,7 @@ class AiConsultationServiceTest {
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.processAudio(
+                () -> service.transcribeAudio(
                         visitId,
                         userId,
                         organizationId,
