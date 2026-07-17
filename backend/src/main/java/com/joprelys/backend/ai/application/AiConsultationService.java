@@ -32,6 +32,7 @@ public class AiConsultationService {
     private static final Logger log = LoggerFactory.getLogger(AiConsultationService.class);
     private static final int MAX_AUDIO_BYTES = 10 * 1024 * 1024;
     private static final int MAX_TRANSCRIPT_LENGTH = 12000;
+    private static final int MAX_CLARIFICATION_OPTIONS = 5;
     private static final String INITIAL_ASSISTANT_MESSAGE =
             "Décrivez les symptômes et l'examen clinique.";
     private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
@@ -46,7 +47,7 @@ public class AiConsultationService {
             Tu ne prescris rien. Pour tout médicament mentionné, tu ne modifies jamais
             silencieusement le nom, le dosage, l'unité, la fréquence, la durée ou la voie
             d'administration. Si un élément est ambigu ou incertain (par exemple 15 mg ou
-            50 mg), tu conserves la forme entendue et tu la marques [À CONFIRMER] au lieu
+            50 mg), tu conserves la forme entendue et tu demandes une clarification au lieu
             de choisir arbitrairement. Retourne uniquement un objet JSON sans bloc Markdown :
             {
               "draft": {
@@ -60,7 +61,14 @@ public class AiConsultationService {
                 "followUp": "..."
               },
               "assistantMessage": "message court destiné au médecin",
-              "needsClarification": false
+              "needsClarification": false,
+              "clarification": null
+            }
+            Quand needsClarification vaut true, clarification est obligatoire et respecte :
+            {
+              "field": "un champ exact du brouillon",
+              "question": "question précise destinée au médecin",
+              "options": ["option facultative 1", "option facultative 2"]
             }
             Omets les champs non concernés. Le brouillon fourni est la base à corriger ou enrichir.
             """;
@@ -128,7 +136,39 @@ public class AiConsultationService {
             String text) {
         validateTranscript(text);
         SessionState state = requireSession(visitId, userId, organizationId);
-        return processMessage(state, text.trim(), null, "TEXT");
+        return processMessage(
+                state,
+                text.trim(),
+                text.trim(),
+                null,
+                "TEXT",
+                null,
+                null);
+    }
+
+    public MessageView answerClarification(
+            UUID visitId,
+            UUID userId,
+            UUID organizationId,
+            UUID clarificationId,
+            String answer) {
+        validateTranscript(answer);
+        SessionState state = requireSession(visitId, userId, organizationId);
+        synchronized (state) {
+            ClarificationView clarification = findPendingClarification(state, clarificationId);
+            String modelText = "Réponse du médecin à une clarification structurée. Champ: "
+                    + clarification.field()
+                    + ". Question: " + clarification.question()
+                    + ". Réponse: " + answer.trim();
+            return processMessage(
+                    state,
+                    modelText,
+                    answer.trim(),
+                    null,
+                    "CLARIFICATION",
+                    clarificationId,
+                    answer.trim());
+        }
     }
 
     /**
@@ -183,7 +223,13 @@ public class AiConsultationService {
         validateTranscript(transcript);
         SessionState state = requireSession(visitId, userId, organizationId);
         MessageView response = processMessage(
-                state, transcript.trim(), transcript.trim(), "AUDIO");
+                state,
+                transcript.trim(),
+                transcript.trim(),
+                transcript.trim(),
+                "AUDIO",
+                null,
+                null);
         synchronized (state) {
             state.pendingTranscript = null;
             state.transcriptStatus = "ANALYZED";
@@ -226,16 +272,19 @@ public class AiConsultationService {
 
     private MessageView processMessage(
             SessionState state,
-            String text,
+            String modelText,
+            String visibleText,
             String transcript,
-            String source) {
+            String source,
+            UUID resolvedClarificationId,
+            String clarificationAnswer) {
         synchronized (state) {
-            int previousTechnicalMessageCount = state.messages.size();
-            state.messages.add(AiMessage.user(buildUserMessage(text, state.draft)));
-            trimConversation(state.messages);
+            List<AiMessage> providerMessages = new ArrayList<>(state.messages);
+            providerMessages.add(AiMessage.user(buildUserMessage(modelText, state.draft)));
+            trimConversation(providerMessages);
             try {
                 AiChatResponse response = aiProvider.chat(
-                        List.copyOf(state.messages), SYSTEM_PROMPT);
+                        List.copyOf(providerMessages), SYSTEM_PROMPT);
                 if (response == null || response.content() == null) {
                     throw new ResponseStatusException(
                             HttpStatus.UNPROCESSABLE_ENTITY, "AI_OUTPUT_INVALID");
@@ -248,40 +297,54 @@ public class AiConsultationService {
                                 previousDraft.get(field), state.draft.get(field)))
                         .sorted()
                         .toList();
+                if (resolvedClarificationId != null) {
+                    resolveClarification(
+                            state, resolvedClarificationId, clarificationAnswer);
+                }
+                if (parsed.needsClarification()) {
+                    appendClarification(state, parsed.clarification());
+                }
                 state.assistantMessage = parsed.assistantMessage();
                 state.needsClarification = parsed.needsClarification();
                 if (transcript != null) {
                     state.transcript = transcript;
                 }
                 state.expiresAt = expiry();
+                state.messages.clear();
+                state.messages.addAll(providerMessages);
                 state.messages.add(AiMessage.assistant(response.content()));
                 trimConversation(state.messages);
-                appendVisibleMessage(state, "USER", text, source, false);
+                appendVisibleMessage(state, "USER", visibleText, source, false);
                 appendVisibleMessage(
                         state,
                         "ASSISTANT",
                         state.assistantMessage,
                         "AI",
                         state.needsClarification);
-                return new MessageView(
-                        state.sessionId,
-                        state.transcript,
-                        Map.copyOf(state.draft),
-                        changedFields,
-                        state.assistantMessage,
-                        state.needsClarification,
-                        List.copyOf(state.conversation),
-                        state.expiresAt);
+                return toMessageView(state, changedFields);
             } catch (ResponseStatusException exception) {
-                rollbackTechnicalMessages(state.messages, previousTechnicalMessageCount);
                 throw exception;
             } catch (RuntimeException exception) {
-                rollbackTechnicalMessages(state.messages, previousTechnicalMessageCount);
                 log.warn("Échec génération brouillon IA provider={}", properties.provider());
                 throw new ResponseStatusException(
                         HttpStatus.SERVICE_UNAVAILABLE, "AI_UNAVAILABLE");
             }
         }
+    }
+
+    private MessageView toMessageView(
+            SessionState state,
+            List<String> changedFields) {
+        return new MessageView(
+                state.sessionId,
+                state.transcript,
+                Map.copyOf(state.draft),
+                changedFields,
+                state.assistantMessage,
+                state.needsClarification,
+                List.copyOf(state.conversation),
+                List.copyOf(state.clarifications),
+                state.expiresAt);
     }
 
     private SessionState requireSession(
@@ -301,6 +364,70 @@ public class AiConsultationService {
             }
         }
         return state;
+    }
+
+    private ClarificationView findPendingClarification(
+            SessionState state,
+            UUID clarificationId) {
+        return state.clarifications.stream()
+                .filter(clarification -> clarification.id().equals(clarificationId))
+                .filter(clarification -> "PENDING".equals(clarification.status()))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.CONFLICT, "AI_CLARIFICATION_NOT_PENDING"));
+    }
+
+    private void resolveClarification(
+            SessionState state,
+            UUID clarificationId,
+            String answer) {
+        for (int index = 0; index < state.clarifications.size(); index++) {
+            ClarificationView clarification = state.clarifications.get(index);
+            if (clarification.id().equals(clarificationId)
+                    && "PENDING".equals(clarification.status())) {
+                state.clarifications.set(index, new ClarificationView(
+                        clarification.id(),
+                        clarification.field(),
+                        clarification.question(),
+                        "RESOLVED",
+                        clarification.options(),
+                        clarification.createdAt(),
+                        answer,
+                        Instant.now()));
+                return;
+            }
+        }
+        throw new ResponseStatusException(
+                HttpStatus.CONFLICT, "AI_CLARIFICATION_NOT_PENDING");
+    }
+
+    private void appendClarification(
+            SessionState state,
+            ParsedClarification clarification) {
+        state.clarifications.add(new ClarificationView(
+                UUID.randomUUID(),
+                clarification.field(),
+                clarification.question(),
+                "PENDING",
+                List.copyOf(clarification.options()),
+                Instant.now(),
+                null,
+                null));
+        int maximum = Math.max(5, properties.maxConversationTurns());
+        while (state.clarifications.size() > maximum) {
+            int removableIndex = firstResolvedClarificationIndex(state.clarifications);
+            state.clarifications.remove(removableIndex >= 0 ? removableIndex : 0);
+        }
+    }
+
+    private int firstResolvedClarificationIndex(
+            List<ClarificationView> clarifications) {
+        for (int index = 0; index < clarifications.size(); index++) {
+            if ("RESOLVED".equals(clarifications.get(index).status())) {
+                return index;
+            }
+        }
+        return -1;
     }
 
     private void validateAudio(byte[] audio, String contentType) {
@@ -337,7 +464,7 @@ public class AiConsultationService {
     private String buildUserMessage(String text, Map<String, String> draft) {
         try {
             return "Brouillon actuel: " + objectMapper.writeValueAsString(draft)
-                    + "\nNouvelle dictée ou correction du médecin: " + text;
+                    + "\nNouvelle dictée, correction ou réponse du médecin: " + text;
         } catch (Exception exception) {
             throw new ResponseStatusException(
                     HttpStatus.UNPROCESSABLE_ENTITY, "AI_OUTPUT_INVALID");
@@ -366,15 +493,56 @@ public class AiConsultationService {
                 });
             }
             String assistantMessage = root.get("assistantMessage") instanceof String value
-                    ? value
+                    && !value.isBlank()
+                    ? limit(value.trim(), 2000)
                     : "Brouillon mis à jour. Vérifiez les champs avant de les appliquer.";
             boolean needsClarification = root.get("needsClarification") instanceof Boolean value
                     && value;
-            return new ParsedResponse(draft, assistantMessage, needsClarification);
+            ParsedClarification clarification = needsClarification
+                    ? parseClarification(root.get("clarification"))
+                    : null;
+            return new ParsedResponse(
+                    draft,
+                    assistantMessage,
+                    needsClarification,
+                    clarification);
+        } catch (ResponseStatusException exception) {
+            throw exception;
         } catch (Exception exception) {
             throw new ResponseStatusException(
                     HttpStatus.UNPROCESSABLE_ENTITY, "AI_OUTPUT_INVALID");
         }
+    }
+
+    private ParsedClarification parseClarification(Object value) {
+        if (!(value instanceof Map<?, ?> map)) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY, "AI_CLARIFICATION_INVALID");
+        }
+        String field = map.get("field") instanceof String stringValue
+                ? stringValue.trim() : "";
+        String question = map.get("question") instanceof String stringValue
+                ? stringValue.trim() : "";
+        if (!ALLOWED_FIELDS.contains(field) || question.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY, "AI_CLARIFICATION_INVALID");
+        }
+        List<String> options = new ArrayList<>();
+        Object optionValue = map.get("options");
+        if (optionValue instanceof List<?> optionList) {
+            optionList.stream()
+                    .filter(String.class::isInstance)
+                    .map(String.class::cast)
+                    .map(String::trim)
+                    .filter(option -> !option.isBlank())
+                    .limit(MAX_CLARIFICATION_OPTIONS)
+                    .map(option -> limit(option, 200))
+                    .forEach(options::add);
+        }
+        return new ParsedClarification(
+                field,
+                limit(question, 1000),
+                options);
     }
 
     private void mergeAllowedDraft(
@@ -417,12 +585,6 @@ public class AiConsultationService {
         }
     }
 
-    private void rollbackTechnicalMessages(List<AiMessage> messages, int previousSize) {
-        while (messages.size() > previousSize) {
-            messages.removeLast();
-        }
-    }
-
     private SessionView toSessionView(UUID visitId, SessionState state) {
         return new SessionView(
                 state.sessionId,
@@ -434,6 +596,7 @@ public class AiConsultationService {
                 state.pendingTranscript,
                 state.transcriptStatus,
                 List.copyOf(state.conversation),
+                List.copyOf(state.clarifications),
                 state.assistantMessage,
                 state.needsClarification);
     }
@@ -467,10 +630,17 @@ public class AiConsultationService {
     private record SessionKey(UUID visitId, UUID userId, String organizationId) {
     }
 
+    private record ParsedClarification(
+            String field,
+            String question,
+            List<String> options) {
+    }
+
     private record ParsedResponse(
             Map<String, String> draft,
             String assistantMessage,
-            boolean needsClarification) {
+            boolean needsClarification,
+            ParsedClarification clarification) {
     }
 
     private static final class SessionState {
@@ -478,6 +648,7 @@ public class AiConsultationService {
         private final Map<String, String> draft = new LinkedHashMap<>();
         private final List<AiMessage> messages = new ArrayList<>();
         private final List<ConversationMessageView> conversation = new ArrayList<>();
+        private final List<ClarificationView> clarifications = new ArrayList<>();
         private Instant expiresAt;
         private String transcript;
         private String pendingTranscript;
@@ -500,6 +671,17 @@ public class AiConsultationService {
             boolean needsClarification) {
     }
 
+    public record ClarificationView(
+            UUID id,
+            String field,
+            String question,
+            String status,
+            List<String> options,
+            Instant createdAt,
+            String answer,
+            Instant resolvedAt) {
+    }
+
     public record SessionView(
             UUID sessionId,
             UUID visitId,
@@ -510,6 +692,7 @@ public class AiConsultationService {
             String pendingTranscript,
             String transcriptStatus,
             List<ConversationMessageView> conversation,
+            List<ClarificationView> clarifications,
             String assistantMessage,
             boolean needsClarification) {
     }
@@ -529,6 +712,7 @@ public class AiConsultationService {
             String assistantMessage,
             boolean needsClarification,
             List<ConversationMessageView> conversation,
+            List<ClarificationView> clarifications,
             Instant expiresAt) {
     }
 }
