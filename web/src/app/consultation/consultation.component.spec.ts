@@ -27,7 +27,7 @@ describe('ConsultationComponent AI draft application', () => {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: { get: () => 'visit-1' } } },
         },
-        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate') } },
+        { provide: Router, useValue: { navigate: () => Promise.resolve(true) } },
         { provide: ApplicationRef, useValue: { attachView: () => {}, detachView: () => {} } },
         { provide: EnvironmentInjector, useValue: {} },
         { provide: ConsultationApiService, useValue: {} },
@@ -54,7 +54,7 @@ describe('ConsultationComponent AI draft application', () => {
     expect(component.form.get('symptoms')?.value).toBe('Fièvre avec céphalées');
     expect(component.form.get('advice')?.value).toBe('Hydratation');
     expect(component.form.get('diagnosis')?.value).toBe('');
-    expect(component.form.dirty).toBeTrue();
-    expect(component.form.invalid).toBeTrue();
+    expect(component.form.dirty).toBe(true);
+    expect(component.form.invalid).toBe(true);
   });
 });
