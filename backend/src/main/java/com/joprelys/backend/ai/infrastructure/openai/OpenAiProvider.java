@@ -50,7 +50,7 @@ public class OpenAiProvider implements AiProvider {
         formData.add("file", audioResource);
         formData.add("model", config.transcribeModel());
         formData.add("language", locale);
-        formData.add("response_format", "verbose_json");
+        formData.add("response_format", "json");
 
         @SuppressWarnings("unchecked")
         Map<String, Object> response = restClient.post()
