@@ -15,21 +15,25 @@ export class AuthSessionRecoveryService {
   private expiredSessionToken: string | null = null;
 
   refreshAccessToken(): Observable<string> {
-    if (!this.refreshInFlight$) {
-      this.refreshInFlight$ = this.rawHttp.post<LoginResponse>('/api/auth/refresh', {}).pipe(
-        tap((response) => {
-          this.tokenStorage.save(response);
-          this.expiredSessionToken = null;
-        }),
-        map((response) => response.accessToken),
-        finalize(() => {
-          this.refreshInFlight$ = null;
-        }),
-        shareReplay({ bufferSize: 1, refCount: false }),
-      );
+    const currentRefresh = this.refreshInFlight$;
+    if (currentRefresh) {
+      return currentRefresh;
     }
 
-    return this.refreshInFlight$;
+    const refreshRequest = this.rawHttp.post<LoginResponse>('/api/auth/refresh', {}).pipe(
+      tap((response) => {
+        this.tokenStorage.save(response);
+        this.expiredSessionToken = null;
+      }),
+      map((response) => response.accessToken),
+      finalize(() => {
+        this.refreshInFlight$ = null;
+      }),
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+
+    this.refreshInFlight$ = refreshRequest;
+    return refreshRequest;
   }
 
   expireSession(): void {
