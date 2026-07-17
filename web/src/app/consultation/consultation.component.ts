@@ -1,8 +1,20 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  ApplicationRef,
+  ComponentRef,
+  Component,
+  EnvironmentInjector,
+  OnDestroy,
+  OnInit,
+  createComponent,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
+import { Subscription } from 'rxjs';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
 import { ConsultationApiService } from './consultation-api.service';
 import { VisitApiService } from '../visit/visit-api.service';
@@ -19,14 +31,16 @@ import {
 @Component({
   selector: 'app-consultation',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, AppShellComponent, VoiceAssistantPanelComponent],
+  imports: [CommonModule, ReactiveFormsModule, AppShellComponent],
   templateUrl: './consultation.component.html'
 })
-export class ConsultationComponent implements OnInit {
+export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly http = inject(HttpClient);
+  private readonly applicationRef = inject(ApplicationRef);
+  private readonly environmentInjector = inject(EnvironmentInjector);
   private readonly consultationApi = inject(ConsultationApiService);
   private readonly visitApi = inject(VisitApiService);
   private readonly labOrderApi = inject(LabOrderApiService);
@@ -44,6 +58,8 @@ export class ConsultationComponent implements OnInit {
 
   visitId = '';
   private patientId = '';
+  private voiceAssistantRef: ComponentRef<VoiceAssistantPanelComponent> | null = null;
+  private voiceDraftSubscription: Subscription | null = null;
   shouldCloseAfterSave = false;
 
   readonly commonExams = [
@@ -83,7 +99,21 @@ export class ConsultationComponent implements OnInit {
 
   ngOnInit(): void {
     this.visitId = this.route.snapshot.paramMap.get('visitId') ?? '';
+    this.voiceDraftSubscription = this.form.valueChanges.subscribe(() => this.syncVoiceDraft());
     this.loadData();
+  }
+
+  ngAfterViewInit(): void {
+    setTimeout(() => this.mountVoiceAssistant());
+  }
+
+  ngOnDestroy(): void {
+    this.voiceDraftSubscription?.unsubscribe();
+    if (this.voiceAssistantRef) {
+      this.applicationRef.detachView(this.voiceAssistantRef.hostView);
+      this.voiceAssistantRef.destroy();
+      this.voiceAssistantRef = null;
+    }
   }
 
   applyAiDraft(draft: AiConsultationDraft): void {
@@ -106,6 +136,7 @@ export class ConsultationComponent implements OnInit {
     });
     this.form.patchValue(allowedDraft);
     this.form.markAsDirty();
+    this.syncVoiceDraft();
     this.successMessage.set(
       this.i18n.t(
         'consultation.ai.applied',
@@ -113,6 +144,27 @@ export class ConsultationComponent implements OnInit {
       ),
     );
     this.errorMessage.set('');
+  }
+
+  private mountVoiceAssistant(): void {
+    if (!this.visitId || this.voiceAssistantRef) return;
+    const formElement = document.querySelector('app-consultation form');
+    const target = formElement?.parentElement;
+    if (!target) return;
+
+    const componentRef = createComponent(VoiceAssistantPanelComponent, {
+      environmentInjector: this.environmentInjector,
+    });
+    componentRef.setInput('visitId', this.visitId);
+    componentRef.setInput('currentDraft', this.form.getRawValue());
+    componentRef.instance.applyDraft.subscribe(draft => this.applyAiDraft(draft));
+    this.applicationRef.attachView(componentRef.hostView);
+    target.insertBefore(componentRef.location.nativeElement, formElement);
+    this.voiceAssistantRef = componentRef;
+  }
+
+  private syncVoiceDraft(): void {
+    this.voiceAssistantRef?.setInput('currentDraft', this.form.getRawValue());
   }
 
   private loadData(): void {
@@ -167,6 +219,7 @@ export class ConsultationComponent implements OnInit {
           advice: existing.advice ?? '',
           followUp: existing.followUp ?? '',
         });
+        this.syncVoiceDraft();
         this.loadPrescription(existing.id);
       },
       error: () => {}
