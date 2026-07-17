@@ -1,4 +1,4 @@
-import { ApplicationRef, EnvironmentInjector } from '@angular/core';
+import { ApplicationRef } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
 import { provideHttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -29,7 +29,6 @@ describe('ConsultationComponent AI draft application', () => {
         },
         { provide: Router, useValue: { navigate: () => Promise.resolve(true) } },
         { provide: ApplicationRef, useValue: { attachView: () => {}, detachView: () => {} } },
-        { provide: EnvironmentInjector, useValue: {} },
         { provide: ConsultationApiService, useValue: {} },
         { provide: VisitApiService, useValue: {} },
         { provide: LabOrderApiService, useValue: {} },
