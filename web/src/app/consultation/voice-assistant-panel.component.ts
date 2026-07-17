@@ -9,42 +9,15 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Subscription, interval } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
-
-type AiField =
-  | 'symptoms'
-  | 'clinicalExam'
-  | 'suspectedDiagnosis'
-  | 'diagnosis'
-  | 'finalDiagnosis'
-  | 'conclusion'
-  | 'advice'
-  | 'followUp';
-
-export type AiConsultationDraft = Partial<Record<AiField, string>>;
-
-interface AiSessionResponse {
-  sessionId: string;
-  visitId: string;
-  status: string;
-  expiresAt: string;
-  draft: AiConsultationDraft;
-  transcript?: string | null;
-  assistantMessage?: string | null;
-  needsClarification: boolean;
-}
-
-interface AiMessageResponse {
-  sessionId: string;
-  transcript?: string | null;
-  draft: AiConsultationDraft;
-  changedFields: AiField[];
-  assistantMessage: string;
-  needsClarification: boolean;
-  expiresAt: string;
-}
+import {
+  AiConsultationApiService,
+  AiConsultationDraft,
+  AiField,
+  AiMessageResponse,
+  AiSessionResponse,
+} from './ai-consultation-api.service';
 
 @Component({
   selector: 'app-voice-assistant-panel',
@@ -64,7 +37,7 @@ interface AiMessageResponse {
               {{ i18n.t('consultation.ai.title', 'Assistant vocal IA') }}
             </h2>
             <p class="text-xs text-[var(--text-muted)]">
-              {{ i18n.t('consultation.ai.subtitle', 'Dictez, relisez puis appliquez le brouillon. Aucune sauvegarde automatique.') }}
+              {{ i18n.t('consultation.ai.subtitleReview', 'Dictez, corrigez la transcription, puis lancez l’analyse clinique.') }}
             </p>
           </div>
         </div>
@@ -80,27 +53,20 @@ interface AiMessageResponse {
       </header>
 
       <div class="grid grid-cols-1 gap-5 p-5 md:grid-cols-[180px_1fr]">
-        <div class="hidden md:block">
-          <div class="rounded-[6px] border border-[var(--app-border)] bg-white p-3 text-center shadow-xs">
+        <aside class="hidden md:block">
+          <div class="rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] p-3 text-center shadow-xs">
             @if (qrCodeUrl()) {
-              <img
-                [src]="qrCodeUrl()"
-                alt="QR code de la consultation"
-                class="mx-auto h-36 w-36"
-              />
+              <img [src]="qrCodeUrl()" alt="QR code de la consultation" class="mx-auto h-36 w-36" />
             } @else {
-              <div class="mx-auto flex h-36 w-36 items-center justify-center bg-slate-50 text-xs text-slate-500">
+              <div class="mx-auto flex h-36 w-36 items-center justify-center bg-[var(--app-surface-muted)] text-xs text-[var(--text-muted)]">
                 {{ i18n.t('consultation.ai.qrLoading', 'Chargement du QR…') }}
               </div>
             }
-            <p class="mt-2 text-[11px] font-semibold text-slate-700">
+            <p class="mt-2 text-[11px] font-semibold text-[var(--text-primary)]">
               {{ i18n.t('consultation.ai.scan', 'Scannez avec votre téléphone') }}
             </p>
-            <p class="mt-1 text-[10px] leading-4 text-slate-500">
-              {{ i18n.t('consultation.ai.scanHelp', 'Le téléphone ouvre cette consultation et partage le même brouillon IA.') }}
-            </p>
           </div>
-        </div>
+        </aside>
 
         <div class="min-w-0 space-y-4">
           @if (errorMessage()) {
@@ -115,13 +81,13 @@ interface AiMessageResponse {
                 {{ i18n.t('consultation.ai.startTitle', 'Démarrer une session de dictée') }}
               </p>
               <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                {{ i18n.t('consultation.ai.startHelp', 'La session reste éphémère et expire automatiquement. Le contenu ne rejoint le dossier qu’après votre validation du formulaire.') }}
+                {{ i18n.t('consultation.ai.startReviewHelp', 'La transcription doit être relue avant toute analyse. Aucune donnée n’est appliquée automatiquement.') }}
               </p>
               <button
                 type="button"
                 (click)="startSession()"
                 [disabled]="busy() || !visitId"
-                class="mt-3 inline-flex items-center justify-center rounded-[4px] bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+                class="mt-3 inline-flex items-center justify-center rounded-[4px] bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
               >
                 {{ busy() ? i18n.t('consultation.ai.starting', 'Démarrage…') : i18n.t('consultation.ai.start', 'Activer l’assistant vocal') }}
               </button>
@@ -131,17 +97,14 @@ interface AiMessageResponse {
               <button
                 type="button"
                 (click)="toggleRecording()"
-                [disabled]="busy() || !mediaRecorderSupported"
-                class="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[6px] px-4 py-3 text-sm font-bold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                [disabled]="busy() || !mediaRecorderSupported || !!pendingTranscript()"
+                class="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[6px] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
                 [ngClass]="recording() ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]'"
               >
                 @if (recording()) {
                   <span class="h-3 w-3 animate-pulse rounded-[2px] bg-white"></span>
-                  {{ i18n.t('consultation.ai.stopRecording', 'Arrêter et transcrire') }}
+                  {{ i18n.t('consultation.ai.stopRecordingTranscribe', 'Arrêter et préparer la transcription') }}
                 } @else {
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
-                  </svg>
                   {{ i18n.t('consultation.ai.record', 'Démarrer la dictée') }}
                 }
               </button>
@@ -155,37 +118,68 @@ interface AiMessageResponse {
               </button>
             </div>
 
-            @if (!mediaRecorderSupported) {
-              <p class="text-xs font-semibold text-amber-700 dark:text-amber-300">
-                {{ i18n.t('consultation.ai.unsupported', 'Ce navigateur ne prend pas en charge l’enregistrement audio. Utilisez la saisie texte ci-dessous.') }}
-              </p>
+            @if (pendingTranscript()) {
+              <div class="space-y-3 rounded-[6px] border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/20">
+                <div>
+                  <p class="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                    {{ i18n.t('consultation.ai.pendingTranscript', 'Transcription à relire') }}
+                  </p>
+                  <p class="mt-1 text-xs leading-5 text-amber-700 dark:text-amber-400">
+                    {{ i18n.t('consultation.ai.pendingTranscriptHelp', 'Corrigez les noms, nombres, doses, négations et côtés avant de lancer l’analyse.') }}
+                  </p>
+                </div>
+                <textarea
+                  rows="6"
+                  [value]="editableTranscript()"
+                  (input)="onTranscriptInput($event)"
+                  class="ui-textarea w-full resize-y rounded-[4px] border-amber-300 bg-[var(--app-surface)] p-3 text-sm text-[var(--text-primary)] focus:border-[var(--brand-primary)] focus:outline-none"
+                ></textarea>
+                <div class="flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    (click)="analyzeTranscript()"
+                    [disabled]="busy() || !editableTranscript().trim()"
+                    class="inline-flex items-center justify-center rounded-[4px] bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
+                  >
+                    {{ busy() ? i18n.t('consultation.ai.processing', 'Traitement…') : i18n.t('consultation.ai.confirmAnalyze', 'Confirmer et analyser') }}
+                  </button>
+                  <button
+                    type="button"
+                    (click)="discardPendingTranscript()"
+                    [disabled]="busy()"
+                    class="inline-flex items-center justify-center rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-2.5 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] disabled:opacity-50"
+                  >
+                    {{ i18n.t('consultation.ai.discardTranscript', 'Abandonner cette transcription') }}
+                  </button>
+                </div>
+              </div>
+            } @else {
+              <div class="space-y-2">
+                <label class="ui-label text-xs font-semibold">
+                  {{ i18n.t('consultation.ai.textFallback', 'Message ou correction à transmettre à l’IA') }}
+                </label>
+                <textarea
+                  rows="2"
+                  [value]="textMessage()"
+                  (input)="onTextInput($event)"
+                  [placeholder]="i18n.t('consultation.ai.textPlaceholder', 'Ex : Corrige, la douleur est à droite et non à gauche…')"
+                  class="ui-textarea w-full resize-none rounded-[4px] border-[var(--app-border)] bg-transparent p-2.5 text-sm text-[var(--text-primary)]"
+                ></textarea>
+                <button
+                  type="button"
+                  (click)="sendText()"
+                  [disabled]="busy() || !textMessage().trim()"
+                  class="inline-flex items-center justify-center rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-slate-800"
+                >
+                  {{ busy() ? i18n.t('consultation.ai.processing', 'Traitement…') : i18n.t('consultation.ai.sendText', 'Envoyer à l’assistant') }}
+                </button>
+              </div>
             }
 
-            <div class="space-y-2">
-              <label class="ui-label text-xs font-semibold">
-                {{ i18n.t('consultation.ai.textFallback', 'Texte ou correction à transmettre à l’IA') }}
-              </label>
-              <textarea
-                rows="2"
-                [value]="textMessage()"
-                (input)="onTextInput($event)"
-                [placeholder]="i18n.t('consultation.ai.textPlaceholder', 'Ex : Corrige, la douleur est à droite et non à gauche…')"
-                class="ui-textarea w-full resize-none rounded-[4px] border-[var(--app-border)] bg-transparent p-2.5 text-sm dark:text-white"
-              ></textarea>
-              <button
-                type="button"
-                (click)="sendText()"
-                [disabled]="busy() || !textMessage().trim()"
-                class="inline-flex items-center justify-center rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-slate-800"
-              >
-                {{ busy() ? i18n.t('consultation.ai.processing', 'Traitement…') : i18n.t('consultation.ai.sendText', 'Analyser ce texte') }}
-              </button>
-            </div>
-
-            @if (session()?.transcript) {
+            @if (session()?.transcript && !pendingTranscript()) {
               <div class="rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface-muted)]/40 p-3">
                 <p class="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                  {{ i18n.t('consultation.ai.transcript', 'Dernière transcription') }}
+                  {{ i18n.t('consultation.ai.validatedTranscript', 'Dernière transcription validée') }}
                 </p>
                 <p class="mt-1 whitespace-pre-wrap text-xs leading-5 text-[var(--text-primary)]">{{ session()?.transcript }}</p>
               </div>
@@ -204,14 +198,9 @@ interface AiMessageResponse {
 
             @if (draftEntries().length > 0) {
               <div class="space-y-2">
-                <div class="flex items-center justify-between gap-3">
-                  <p class="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                    {{ i18n.t('consultation.ai.proposal', 'Brouillon proposé') }}
-                  </p>
-                  <span class="text-[10px] font-semibold text-[var(--text-muted)]">
-                    {{ draftEntries().length }} champ(s)
-                  </span>
-                </div>
+                <p class="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                  {{ i18n.t('consultation.ai.proposal', 'Brouillon proposé') }}
+                </p>
                 <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   @for (entry of draftEntries(); track entry.key) {
                     <div class="rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface-muted)]/30 p-3">
@@ -223,11 +212,8 @@ interface AiMessageResponse {
                 <button
                   type="button"
                   (click)="applyCurrentDraft()"
-                  class="inline-flex w-full items-center justify-center gap-2 rounded-[6px] bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 sm:w-auto"
+                  class="inline-flex w-full items-center justify-center rounded-[6px] bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 sm:w-auto"
                 >
-                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
                   {{ i18n.t('consultation.ai.apply', 'Appliquer au formulaire') }}
                 </button>
               </div>
@@ -239,7 +225,7 @@ interface AiMessageResponse {
   `,
 })
 export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
-  private readonly http = inject(HttpClient);
+  private readonly api = inject(AiConsultationApiService);
   readonly i18n = inject(I18nService);
 
   @Input({ required: true }) visitId = '';
@@ -251,6 +237,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   readonly busy = signal(false);
   readonly recording = signal(false);
   readonly textMessage = signal('');
+  readonly editableTranscript = signal('');
   readonly errorMessage = signal('');
 
   readonly mediaRecorderSupported =
@@ -277,18 +264,15 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     if (this.qrCodeUrl()) URL.revokeObjectURL(this.qrCodeUrl()!);
   }
 
+  pendingTranscript(): string {
+    return this.session()?.pendingTranscript?.trim() ?? '';
+  }
+
   startSession(): void {
     if (!this.visitId || this.busy()) return;
-    this.busy.set(true);
-    this.errorMessage.set('');
-    this.http.post<AiSessionResponse>(
-      `/api/ai/consultations/${this.visitId}/sessions`,
-      { draft: this.sanitizedCurrentDraft() },
-    ).subscribe({
-      next: response => {
-        this.session.set(response);
-        this.busy.set(false);
-      },
+    this.startBusy();
+    this.api.startSession(this.visitId, this.sanitizedCurrentDraft()).subscribe({
+      next: response => this.completeSessionUpdate(response),
       error: error => this.handleError(error, 'Impossible de démarrer la session IA.'),
     });
   }
@@ -304,27 +288,55 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   sendText(): void {
     const text = this.textMessage().trim();
     if (!text || this.busy()) return;
-    this.busy.set(true);
-    this.errorMessage.set('');
-    this.http.post<AiMessageResponse>(
-      `/api/ai/consultations/${this.visitId}/messages/text`,
-      { text },
-    ).subscribe({
+    this.startBusy();
+    this.api.sendText(this.visitId, text).subscribe({
       next: response => {
         this.updateSessionFromMessage(response);
         this.textMessage.set('');
         this.busy.set(false);
       },
-      error: error => this.handleError(error, 'Le texte n’a pas pu être analysé.'),
+      error: error => this.handleError(error, 'Le message n’a pas pu être analysé.'),
+    });
+  }
+
+  analyzeTranscript(): void {
+    const transcript = this.editableTranscript().trim();
+    if (!transcript || this.busy()) return;
+    this.startBusy();
+    this.api.analyzeTranscript(this.visitId, transcript).subscribe({
+      next: response => {
+        this.updateSessionFromMessage(response);
+        this.editableTranscript.set('');
+        this.busy.set(false);
+      },
+      error: error => this.handleError(error, 'La transcription n’a pas pu être analysée.'),
+    });
+  }
+
+  discardPendingTranscript(): void {
+    if (!this.pendingTranscript() || this.busy()) return;
+    this.startBusy();
+    this.api.discardPendingTranscript(this.visitId).subscribe({
+      next: () => {
+        this.session.update(current => current ? {
+          ...current,
+          pendingTranscript: null,
+          transcriptStatus: 'NONE',
+        } : current);
+        this.editableTranscript.set('');
+        this.busy.set(false);
+      },
+      error: error => this.handleError(error, 'La transcription n’a pas pu être abandonnée.'),
     });
   }
 
   deleteSession(): void {
     if (!this.session() || this.busy()) return;
-    this.busy.set(true);
-    this.http.delete<void>(`/api/ai/consultations/${this.visitId}/session`).subscribe({
+    this.startBusy();
+    this.api.deleteSession(this.visitId).subscribe({
       next: () => {
         this.session.set(null);
+        this.editableTranscript.set('');
         this.busy.set(false);
       },
       error: error => this.handleError(error, 'Impossible de terminer la session IA.'),
@@ -338,6 +350,10 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
 
   onTextInput(event: Event): void {
     this.textMessage.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  onTranscriptInput(event: Event): void {
+    this.editableTranscript.set((event.target as HTMLTextAreaElement).value);
   }
 
   draftEntries(): Array<{ key: AiField; value: string }> {
@@ -362,7 +378,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   private async startRecording(): Promise<void> {
-    if (!this.mediaRecorderSupported || this.busy()) return;
+    if (!this.mediaRecorderSupported || this.busy() || this.pendingTranscript()) return;
     if (!this.session()) {
       this.startSession();
       this.errorMessage.set('Activez la session puis relancez la dictée.');
@@ -380,9 +396,9 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
       });
       const mimeType = this.preferredMimeType();
       this.audioChunks = [];
-      const recorderOptions: MediaRecorderOptions = { audioBitsPerSecond: 128000 };
-      if (mimeType) recorderOptions.mimeType = mimeType;
-      this.mediaRecorder = new MediaRecorder(this.mediaStream, recorderOptions);
+      const options: MediaRecorderOptions = { audioBitsPerSecond: 128000 };
+      if (mimeType) options.mimeType = mimeType;
+      this.mediaRecorder = new MediaRecorder(this.mediaStream, options);
       this.mediaRecorder.ondataavailable = event => {
         if (event.data.size > 0) this.audioChunks.push(event.data);
       };
@@ -399,22 +415,22 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   private sendRecordedAudio(): void {
     this.recording.set(false);
     if (this.recordingTimeout) clearTimeout(this.recordingTimeout);
-    const type = this.mediaRecorder?.mimeType || 'audio/webm';
-    const audio = new Blob(this.audioChunks, { type });
+    const audio = new Blob(this.audioChunks, { type: this.mediaRecorder?.mimeType || 'audio/webm' });
     this.stopMediaStream();
     if (audio.size === 0) {
       this.errorMessage.set('Aucun son n’a été enregistré.');
       return;
     }
-    this.busy.set(true);
-    const headers = new HttpHeaders({ 'Content-Type': type });
-    this.http.post<AiMessageResponse>(
-      `/api/ai/consultations/${this.visitId}/messages/audio`,
-      audio,
-      { headers },
-    ).subscribe({
+    this.startBusy();
+    this.api.transcribeAudio(this.visitId, audio).subscribe({
       next: response => {
-        this.updateSessionFromMessage(response);
+        this.session.update(current => current ? {
+          ...current,
+          pendingTranscript: response.transcript,
+          transcriptStatus: response.status,
+          expiresAt: response.expiresAt,
+        } : current);
+        this.editableTranscript.set(response.transcript);
         this.busy.set(false);
       },
       error: error => this.handleError(error, 'La dictée n’a pas pu être transcrite.'),
@@ -422,11 +438,13 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   private refreshSession(silent = false): void {
-    this.http.get<AiSessionResponse | null>(
-      `/api/ai/consultations/${this.visitId}/session`,
-    ).subscribe({
+    this.api.getSession(this.visitId).subscribe({
       next: response => {
-        if (response) this.session.set(response);
+        if (!response) return;
+        this.session.set(response);
+        if (response.pendingTranscript && !this.editableTranscript()) {
+          this.editableTranscript.set(response.pendingTranscript);
+        }
       },
       error: error => {
         if (!silent && error.status !== 404) this.handleError(error, 'Assistant IA indisponible.');
@@ -435,7 +453,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   private loadQrCode(): void {
-    this.http.get(`/api/visits/${this.visitId}/qrcode`, { responseType: 'blob' }).subscribe({
+    this.api.loadQrCode(this.visitId).subscribe({
       next: blob => {
         const previous = this.qrCodeUrl();
         if (previous) URL.revokeObjectURL(previous);
@@ -454,18 +472,26 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
       expiresAt: response.expiresAt,
       draft: response.draft,
       transcript: response.transcript ?? previous?.transcript,
+      pendingTranscript: null,
+      transcriptStatus: response.transcript ? 'ANALYZED' : previous?.transcriptStatus,
       assistantMessage: response.assistantMessage,
       needsClarification: response.needsClarification,
     });
   }
 
+  private completeSessionUpdate(response: AiSessionResponse): void {
+    this.session.set(response);
+    this.editableTranscript.set(response.pendingTranscript ?? '');
+    this.busy.set(false);
+  }
+
   private sanitizedCurrentDraft(): AiConsultationDraft {
-    const allowed: AiField[] = [
+    const fields: AiField[] = [
       'symptoms', 'clinicalExam', 'suspectedDiagnosis', 'diagnosis',
       'finalDiagnosis', 'conclusion', 'advice', 'followUp',
     ];
     const result: AiConsultationDraft = {};
-    for (const field of allowed) {
+    for (const field of fields) {
       const value = this.currentDraft?.[field];
       if (typeof value === 'string' && value.trim()) result[field] = value.trim();
     }
@@ -475,6 +501,11 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   private preferredMimeType(): string | undefined {
     const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/wav'];
     return candidates.find(type => MediaRecorder.isTypeSupported(type));
+  }
+
+  private startBusy(): void {
+    this.busy.set(true);
+    this.errorMessage.set('');
   }
 
   private stopMediaStream(): void {
