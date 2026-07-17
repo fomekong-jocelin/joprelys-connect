@@ -370,12 +370,19 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     }
     try {
       this.errorMessage.set('');
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
       const mimeType = this.preferredMimeType();
       this.audioChunks = [];
-      this.mediaRecorder = mimeType
-        ? new MediaRecorder(this.mediaStream, { mimeType })
-        : new MediaRecorder(this.mediaStream);
+      const recorderOptions: MediaRecorderOptions = { audioBitsPerSecond: 128000 };
+      if (mimeType) recorderOptions.mimeType = mimeType;
+      this.mediaRecorder = new MediaRecorder(this.mediaStream, recorderOptions);
       this.mediaRecorder.ondataavailable = event => {
         if (event.data.size > 0) this.audioChunks.push(event.data);
       };

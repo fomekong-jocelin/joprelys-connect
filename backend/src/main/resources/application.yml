@@ -52,6 +52,7 @@ joprelys:
       api-key: ${OPENAI_API_KEY:}
       model: ${OPENAI_MODEL:gpt-4.1}
       transcribe-model: ${OPENAI_TRANSCRIBE_MODEL:gpt-4o-mini-transcribe}
+      transcribe-prompt: ${OPENAI_TRANSCRIBE_PROMPT:Consultation médicale en français entre un médecin et un patient, avec vocabulaire clinique, symptômes, examen, diagnostic, ordonnance, médicaments et posologies.}
       base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
     gemini:
       api-key: ${GEMINI_API_KEY:}

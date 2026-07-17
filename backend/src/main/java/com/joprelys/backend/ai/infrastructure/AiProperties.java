@@ -36,15 +36,18 @@ public record AiProperties(
     /**
      * Configuration spécifique à OpenAI.
      *
-     * @param apiKey          clé API OpenAI
-     * @param model           modèle de génération du brouillon clinique
-     * @param transcribeModel modèle de transcription audio
-     * @param baseUrl         URL de base de l'API OpenAI
+     * @param apiKey           clé API OpenAI
+     * @param model            modèle de génération du brouillon clinique
+     * @param transcribeModel  modèle de transcription audio
+     * @param transcribePrompt prompt de contexte transmis à la transcription
+     *                         (améliore le vocabulaire médical français)
+     * @param baseUrl          URL de base de l'API OpenAI
      */
     public record OpenAiProperties(
             String apiKey,
             String model,
             String transcribeModel,
+            String transcribePrompt,
             String baseUrl
     ) {
     }

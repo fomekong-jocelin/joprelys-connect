@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-17 (BUG AI assistant prod corrigé ; EPIC-0024 .env + GlobalExceptionHandler) |
+| Dernière mise à jour | 2026-07-17 (Qualité transcription IA : prompt médical + capture micro renforcée ; EPIC-0024 .env + GlobalExceptionHandler) |
 | Responsable mise à jour | Codex |
 | État global | EPIC-0022 Sessions en cours : STORY-2401 fusionnée ; STORY-2402 prête pour revue ; #34 reste à exécuter. EPIC-0023 URG-TEMP : #40, #42, #44 et #45 terminées, #46 et #47 restantes. EPIC-0024 : cadrage/fondations en cours, QR backend terminé, assistant IA prod corrigé (.env + GlobalExceptionHandler), assistant vocal non livré et bloqué avant validation DPO/fournisseur. |
 | Risques majeurs | Revue sécurité humaine de #33 ; renouvellement Angular absent jusqu’à #34 ; durée de conservation des audits à valider par le DPO ; validation métier ABCDE ; données de santé chez un fournisseur IA ; dette des écrans Angular monolithiques |
@@ -22,6 +22,7 @@
 |---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
 | TASK-20260717-PREMIUM-ACCOUNT-EMAILS | AUTHENTICATION / UI_UX | Amélioration email | E-mails de compte et OTP premium | Spring Boot / SMTP / Email HTML | READY | P1 | 2 | Senior backend + Email Design | 0.5j | 0.8j | 1.2j | Codex | Lead Backend + Product Design + QA | SPRINT-0014 | 0.5j | Déploiement et QA webmail | Faible | 2026-07-17 |
 | BUG-20260717-AI-ASSISTANT-UNAVAILABLE-PROD | AI_VOICE_CONSULTATION | Diagnostic + correctif | Assistant IA indisponible en production — 500 en cascade | Spring Boot / Angular / Production | DONE | P0 | 2 | Senior full-stack | 0.25j | 0.4j | 0.7j | Codex | Lead Backend + QA | SPRINT-0014 | 0.25j | Vérifier la validité des clés API OpenAI après activation | Faible | 2026-07-17 |
+| BUG-20260717-AI-TRANSCRIPTION-QUALITY | AI_VOICE_CONSULTATION | Diagnostic + correctif | Transcription consultation de très mauvaise qualité | Spring Boot / Angular / OpenAI | DONE | P1 | 2 | Senior full-stack | 0.25j | 0.4j | 0.7j | Kimi | Lead Backend + QA | SPRINT-0014 | 0.4j | Redéployer backend (prompt, règles ordonnance, garde temperature) et frontend (capture micro) ; option gpt-5.6-terra après redéploiement | Faible | 2026-07-17 |
 | BUG-20260716-CLINIC-ADMIN-MAIL-AND-LOGO | OPERATIONS / UI_UX | Incident full-stack | Création admin en erreur, SMTP global, cache Angular et logo perdu | Spring Boot / Angular / SMTP / fichiers | DONE | P0 | 3 | Senior full-stack | 0.75j | 1.2j | 2.0j | Codex | Lead Backend + Lead Frontend + QA | SPRINT-0014 | 1.0j | QA métier complémentaire | Faible | 2026-07-17 |
 | BUG-20260716-I18N-SHELL-MISSING-KEYS | UI_UX | Bug i18n | Clés brutes dans le shell et la navigation | Angular / i18n | DONE | P1 | 1 | Frontend Angular | 0.25j | 0.4j | 0.7j | Codex | Lead Frontend + QA | SPRINT-0014 | 0.25j | Déploiement et QA visuelle production | Faible | 2026-07-16 |
 | TASK-20260716-PROD-DATA-RESET | OPERATIONS | Purge contrôlée | Réinitialiser les données de production et conserver un super-admin | PostgreSQL / Paramiko / Spring Boot | DONE | P0 | 3 | Senior backend / DBA | 0.5j | 0.8j | 1.5j | Codex | Lead Backend + DBA + sécurité | SPRINT-0014 | 0.5j | Tester périodiquement la restauration des dumps | Élevé | 2026-07-16 |

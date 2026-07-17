@@ -51,6 +51,9 @@ public class OpenAiProvider implements AiProvider {
         formData.add("model", config.transcribeModel());
         formData.add("language", locale);
         formData.add("response_format", "json");
+        if (config.transcribePrompt() != null && !config.transcribePrompt().isBlank()) {
+            formData.add("prompt", config.transcribePrompt());
+        }
 
         @SuppressWarnings("unchecked")
         Map<String, Object> response = restClient.post()
@@ -74,11 +77,13 @@ public class OpenAiProvider implements AiProvider {
         log.debug("Chat via OpenAI (modèle={}, messages={})", config.model(), messages.size());
 
         List<Map<String, String>> apiMessages = buildApiMessages(messages, systemPrompt);
-        Map<String, Object> requestBody = Map.of(
+        Map<String, Object> requestBody = new java.util.HashMap<>(Map.of(
                 "model", config.model(),
-                "messages", apiMessages,
-                "temperature", 0.3
-        );
+                "messages", apiMessages
+        ));
+        if (supportsCustomTemperature(config.model())) {
+            requestBody.put("temperature", 0.3);
+        }
 
         @SuppressWarnings("unchecked")
         Map<String, Object> response = restClient.post()
@@ -89,6 +94,20 @@ public class OpenAiProvider implements AiProvider {
                 .body(Map.class);
 
         return parseCompletionResponse(response);
+    }
+
+    /**
+     * Les modèles à raisonnement de la famille GPT-5.x (gpt-5, gpt-5.6-*, o-series)
+     * refusent une {@code temperature} personnalisée : seule la valeur par défaut
+     * est acceptée par l'API.
+     */
+    private boolean supportsCustomTemperature(String model) {
+        if (model == null) {
+            return true;
+        }
+        String normalized = model.toLowerCase();
+        return !normalized.startsWith("gpt-5") && !normalized.startsWith("o1")
+                && !normalized.startsWith("o3") && !normalized.startsWith("o4");
     }
 
     private List<Map<String, String>> buildApiMessages(

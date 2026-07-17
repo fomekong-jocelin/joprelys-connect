@@ -40,7 +40,11 @@ public class AiConsultationService {
             Tu es un assistant de saisie clinique. Tu transformes uniquement les faits dictés
             par le médecin en brouillon structuré. Tu n'inventes aucun symptôme, diagnostic,
             traitement ou conseil. Tu conserves les négations, l'incertitude et les nuances.
-            Tu ne prescris rien. Retourne uniquement un objet JSON sans bloc Markdown :
+            Tu ne prescris rien. Pour tout médicament mentionné, tu ne modifies jamais
+            silencieusement le nom, le dosage, l'unité, la fréquence, la durée ou la voie
+            d'administration. Si un élément est ambigu ou incertain (par exemple 15 mg ou
+            50 mg), tu conserves la forme entendue et tu la marques [À CONFIRMER] au lieu
+            de choisir arbitrairement. Retourne uniquement un objet JSON sans bloc Markdown :
             {
               "draft": {
                 "symptoms": "...",
