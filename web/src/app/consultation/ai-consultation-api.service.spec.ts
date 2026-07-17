@@ -43,12 +43,14 @@ describe('AiConsultationApiService', () => {
     });
   });
 
-  it('envoie la transcription corrigée pour analyse explicite', () => {
+  it('envoie la transcription corrigée et reçoit une proposition non appliquée', () => {
     service.analyzeTranscript(
       'visit-1',
       'Douleur à droite et non à gauche',
     ).subscribe(response => {
-      expect(response.draft.symptoms).toBe('Douleur à droite et non à gauche');
+      expect(response.draft.symptoms).toBeUndefined();
+      expect(response.revisions[0].proposals[0].proposedValue)
+        .toBe('Douleur à droite et non à gauche');
     });
 
     const request = http.expectOne('/api/ai/consultations/visit-1/transcriptions/analyze');
@@ -59,12 +61,13 @@ describe('AiConsultationApiService', () => {
     request.flush({
       sessionId: 'session-1',
       transcript: 'Douleur à droite et non à gauche',
-      draft: { symptoms: 'Douleur à droite et non à gauche' },
+      draft: {},
       changedFields: ['symptoms'],
-      assistantMessage: 'Correction prise en compte.',
+      assistantMessage: 'Correction proposée.',
       needsClarification: false,
       conversation: [],
       clarifications: [],
+      revisions: [pendingRevision()],
       expiresAt: '2026-07-18T10:00:00Z',
     });
   });
@@ -87,9 +90,9 @@ describe('AiConsultationApiService', () => {
     request.flush({
       sessionId: 'session-1',
       transcript: null,
-      draft: { symptoms: 'Douleur abdominale depuis deux jours' },
+      draft: {},
       changedFields: ['symptoms'],
-      assistantMessage: 'Durée ajoutée au brouillon.',
+      assistantMessage: 'Durée proposée dans le brouillon.',
       needsClarification: false,
       conversation: [],
       clarifications: [
@@ -104,8 +107,47 @@ describe('AiConsultationApiService', () => {
           resolvedAt: '2026-07-18T10:00:00Z',
         },
       ],
+      revisions: [pendingRevision()],
       expiresAt: '2026-07-18T10:30:00Z',
     });
+  });
+
+  it('accepte une proposition avec son identifiant', () => {
+    service.decideProposal(
+      'visit-1',
+      'revision-1',
+      'proposal-1',
+      'ACCEPT',
+    ).subscribe(response => {
+      expect(response.draft.symptoms).toBe('Douleur à droite et non à gauche');
+    });
+
+    const request = http.expectOne(
+      '/api/ai/consultations/visit-1/revisions/revision-1/proposals/proposal-1/decision',
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ decision: 'ACCEPT' });
+    request.flush(sessionResponse());
+  });
+
+  it('décide toutes les propositions d une révision', () => {
+    service.decideRevision(
+      'visit-1',
+      'revision-1',
+      'REJECT',
+    ).subscribe(response => {
+      expect(response.revisions[0].status).toBe('DECIDED');
+    });
+
+    const request = http.expectOne(
+      '/api/ai/consultations/visit-1/revisions/revision-1/decision',
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ decision: 'REJECT' });
+    const response = sessionResponse();
+    response.revisions[0].status = 'DECIDED';
+    response.revisions[0].proposals[0].status = 'REJECTED';
+    request.flush(response);
   });
 
   it('permet d abandonner une transcription en attente', () => {
@@ -115,4 +157,49 @@ describe('AiConsultationApiService', () => {
     expect(request.request.method).toBe('DELETE');
     request.flush(null);
   });
+
+  function pendingRevision() {
+    return {
+      id: 'revision-1',
+      sequence: 1,
+      status: 'PENDING' as const,
+      createdAt: '2026-07-18T10:00:00Z',
+      proposals: [
+        {
+          id: 'proposal-1',
+          field: 'symptoms' as const,
+          operation: 'SET' as const,
+          previousValue: null,
+          proposedValue: 'Douleur à droite et non à gauche',
+          reason: 'Latéralité corrigée par le médecin.',
+          uncertainty: 'LOW' as const,
+          status: 'PENDING' as const,
+          createdAt: '2026-07-18T10:00:00Z',
+          decidedAt: null,
+        },
+      ],
+    };
+  }
+
+  function sessionResponse() {
+    const revision = pendingRevision();
+    revision.status = 'DECIDED';
+    revision.proposals[0].status = 'ACCEPTED';
+    revision.proposals[0].decidedAt = '2026-07-18T10:01:00Z';
+    return {
+      sessionId: 'session-1',
+      visitId: 'visit-1',
+      status: 'ACTIVE',
+      expiresAt: '2026-07-18T10:30:00Z',
+      draft: { symptoms: 'Douleur à droite et non à gauche' },
+      transcript: null,
+      pendingTranscript: null,
+      transcriptStatus: 'NONE',
+      conversation: [],
+      clarifications: [],
+      revisions: [revision],
+      assistantMessage: 'Correction proposée.',
+      needsClarification: false,
+    };
+  }
 });
