@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - agent/voice-assistant-qr-ui
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
