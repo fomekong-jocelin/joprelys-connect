@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -45,16 +46,13 @@ class PersistentAuthSessionControllerTest {
     @Autowired AuthSessionAuditEventRepository auditRepository;
     @Autowired RevokedAccessTokenRepository revokedTokenRepository;
     @Autowired PasswordEncoder passwordEncoder;
+    @Autowired JdbcTemplate jdbcTemplate;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
-        auditRepository.deleteAll();
-        revokedTokenRepository.deleteAll();
-        sessionRepository.deleteAll();
-        userAccountRepository.deleteAll();
-        organizationRepository.deleteAll();
+        truncateBusinessTables();
 
         OrganizationEntity organization = organizationRepository.save(new OrganizationEntity(
                 "Clinique Sessions",
@@ -69,6 +67,25 @@ class PersistentAuthSessionControllerTest {
                 passwordEncoder.encode("Password123!"));
         user.setOrganizationId(organization.getId());
         userAccountRepository.save(user);
+    }
+
+    private void truncateBusinessTables() {
+        jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY FALSE");
+        try {
+            List<String> tables = jdbcTemplate.queryForList("""
+                    SELECT TABLE_NAME
+                    FROM INFORMATION_SCHEMA.TABLES
+                    WHERE UPPER(TABLE_SCHEMA) = 'PUBLIC'
+                      AND TABLE_TYPE = 'BASE TABLE'
+                      AND LOWER(TABLE_NAME) <> 'flyway_schema_history'
+                    """, String.class);
+            for (String table : tables) {
+                String safeTableName = table.replace("\"", "\"\"");
+                jdbcTemplate.execute("TRUNCATE TABLE \"" + safeTableName + "\"");
+            }
+        } finally {
+            jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY TRUE");
+        }
     }
 
     @Test
@@ -129,13 +146,17 @@ class PersistentAuthSessionControllerTest {
         mockMvc.perform(post("/api/auth/refresh").cookie(firstCookie))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.detail").value("AUTH_SESSION_INVALID"))
-                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Max-Age=0")));
+                .andExpect(header().string(
+                        "Set-Cookie",
+                        org.hamcrest.Matchers.containsString("Max-Age=0")));
 
-        AuthSessionEntity revokedReplacement = sessionRepository.findById(second.getId()).orElseThrow();
+        AuthSessionEntity revokedReplacement = sessionRepository.findById(second.getId())
+                .orElseThrow();
         assertEquals("REPLAY_DETECTED", revokedReplacement.getRevocationReason());
         assertEquals("SYSTEM", revokedReplacement.getRevocationSource());
         assertEquals(true, auditRepository.existsByEventTypeAndTokenFamilyId(
-                AuthSessionAuditEventType.REFRESH_REPLAY_DETECTED.name(), first.getTokenFamilyId()));
+                AuthSessionAuditEventType.REFRESH_REPLAY_DETECTED.name(),
+                first.getTokenFamilyId()));
 
         mockMvc.perform(get("/api/auth/sessions")
                         .header("Authorization", "Bearer " + secondAccessToken))
