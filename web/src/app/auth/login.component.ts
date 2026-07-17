@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal, effect } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthApiService } from './auth-api.service';
 import { AuthTokenStorageService } from './auth-token-storage.service';
 import { PatientPortalService } from '../patient/portal/services/patient-portal.service';
@@ -20,7 +20,10 @@ export class LoginComponent {
   private readonly tokenStorage = inject(AuthTokenStorageService);
   private readonly portalService = inject(PatientPortalService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute, { optional: true });
   private readonly i18n = inject(I18nService);
+
+  private readonly requestedReturnUrl = this.resolveReturnUrl();
 
   readonly locale = this.i18n.locale;
 
@@ -47,11 +50,10 @@ export class LoginComponent {
   readonly otpCode = signal('');
 
   constructor() {
-    // Rediriger si session active vers la page d'accueil correspondante au rôle
     effect(() => {
       const s = this.session();
       if (s) {
-        this.router.navigate([this.getLandingPage(s.role)]);
+        this.router.navigateByUrl(this.destinationAfterLogin(s.role));
       }
     });
   }
@@ -65,7 +67,6 @@ export class LoginComponent {
     this.error.set(null);
     this.staffStep.set(1);
     this.staffOtpCode.set('');
-    // Reset états patient lors du changement de mode
     if (m === 'patient') {
       this.patientStep.set(1);
       this.patientNumber.set('');
@@ -74,8 +75,6 @@ export class LoginComponent {
       this.otpCode.set('');
     }
   }
-
-  // ---- Staff ----
 
   submit(): void {
     this.error.set(null);
@@ -91,7 +90,7 @@ export class LoginComponent {
         if (res.requiresOtp) {
           this.staffStep.set(2);
         } else {
-          this.router.navigate([this.getLandingPage(res.role || '')]);
+          this.router.navigateByUrl(this.destinationAfterLogin(res.role || ''));
         }
       },
       error: () => {
@@ -108,7 +107,7 @@ export class LoginComponent {
       next: () => {
         this.loading.set(false);
         const s = this.session();
-        this.router.navigate([this.getLandingPage(s?.role || '')]);
+        this.router.navigateByUrl(this.destinationAfterLogin(s?.role || ''));
       },
       error: (err) => {
         this.loading.set(false);
@@ -130,8 +129,6 @@ export class LoginComponent {
       },
     });
   }
-
-  // ---- Patient OTP ----
 
   requestOtp(): void {
     this.loading.set(true);
@@ -170,8 +167,6 @@ export class LoginComponent {
     });
   }
 
-  // ---- Input helpers ----
-
   updateEmail(event: Event): void { this.email.set(this.inputValue(event)); }
   updatePassword(event: Event): void { this.password.set(this.inputValue(event)); }
   updatePatientNumber(event: Event): void { this.patientNumber.set(this.inputValue(event)); }
@@ -200,6 +195,18 @@ export class LoginComponent {
       return '/pharmacy/prescriptions';
     }
     return '/dashboard';
+  }
+
+  private destinationAfterLogin(role: string): string {
+    return this.requestedReturnUrl ?? this.getLandingPage(role);
+  }
+
+  private resolveReturnUrl(): string | null {
+    const returnUrl = this.route?.snapshot.queryParamMap.get('returnUrl')?.trim();
+    if (!returnUrl || !returnUrl.startsWith('/') || returnUrl.startsWith('//')) {
+      return null;
+    }
+    return returnUrl;
   }
 
   private isValidEmail(value: string): boolean {
