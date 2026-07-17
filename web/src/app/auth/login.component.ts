@@ -33,7 +33,7 @@ export class LoginComponent {
   // --- Staff login state ---
   readonly email = signal('');
   readonly password = signal('');
-  readonly error = signal<string | null>(null);
+  readonly error = signal<string | null>(this.resolveInitialError());
   readonly loading = signal(false);
   readonly session = this.tokenStorage.session;
   readonly staffStep = signal<1 | 2>(1);
@@ -207,6 +207,12 @@ export class LoginComponent {
       return null;
     }
     return returnUrl;
+  }
+
+  private resolveInitialError(): string | null {
+    return this.route?.snapshot.queryParamMap.get('sessionExpired') === 'true'
+      ? this.t('common.error.unauthorized')
+      : null;
   }
 
   private isValidEmail(value: string): boolean {

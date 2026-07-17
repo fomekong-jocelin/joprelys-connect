@@ -2,6 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { AuthSession, LoginResponse } from './auth.models';
 
 const SESSION_KEY = 'joprelys.auth.session';
+const DEFAULT_EXPIRATION_LEEWAY_SECONDS = 30;
 
 @Injectable({ providedIn: 'root' })
 export class AuthTokenStorageService {
@@ -21,6 +22,20 @@ export class AuthTokenStorageService {
     };
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     this.session.set(session);
+  }
+
+  isExpired(leewaySeconds = DEFAULT_EXPIRATION_LEEWAY_SECONDS): boolean {
+    const session = this.session();
+    if (!session) {
+      return true;
+    }
+
+    const expiresAt = Date.parse(session.expiresAt);
+    if (Number.isNaN(expiresAt)) {
+      return true;
+    }
+
+    return expiresAt <= Date.now() + leewaySeconds * 1_000;
   }
 
   clear(): void {

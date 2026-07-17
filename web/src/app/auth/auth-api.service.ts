@@ -30,16 +30,25 @@ export class AuthApiService {
   }
 
   restoreSession(): Observable<void> {
-    if (this.tokenStorage.session()) {
+    const currentSession = this.tokenStorage.session();
+    if (currentSession && !this.tokenStorage.isExpired()) {
       return of(undefined);
+    }
+
+    if (currentSession) {
+      this.tokenStorage.clear();
     }
 
     return this.http.post<LoginResponse>(`${this.apiBaseUrl}/refresh`, {}).pipe(
       tap((response) => this.tokenStorage.save(response)),
       map(() => undefined),
-      catchError((error: HttpErrorResponse) => error.status === 401
-        ? of(undefined)
-        : throwError(() => error)),
+      catchError((error: HttpErrorResponse) => {
+        if (error.status === 401) {
+          this.tokenStorage.clear();
+          return of(undefined);
+        }
+        return throwError(() => error);
+      }),
     );
   }
 

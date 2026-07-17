@@ -8,12 +8,16 @@ import { ActivatedRoute, Router } from '@angular/router';
 describe('LoginComponent', () => {
   let mockRouter: any;
   let mockRoute: any;
+  let queryParams: Record<string, string | null>;
 
   beforeEach(async () => {
     sessionStorage.clear();
+    queryParams = {};
     mockRoute = {
       snapshot: {
-        queryParamMap: { get: vi.fn(() => null) },
+        queryParamMap: {
+          get: vi.fn((key: string) => queryParams[key] ?? null),
+        },
       },
     };
     mockRouter = {
@@ -37,6 +41,15 @@ describe('LoginComponent', () => {
     sessionStorage.clear();
   });
 
+  it('should explain that the session expired', () => {
+    queryParams['sessionExpired'] = 'true';
+
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+
+    expect(component.error()).toBe('common.error.unauthorized');
+  });
+
   it('should store the auth session after successful login', () => {
     const fixture = TestBed.createComponent(LoginComponent);
     const component = fixture.componentInstance;
@@ -57,7 +70,7 @@ describe('LoginComponent', () => {
     request.flush({
       accessToken: 'jwt-token',
       tokenType: 'Bearer',
-      expiresAt: '2026-07-02T12:30:00Z',
+      expiresAt: '2999-07-02T12:30:00Z',
       email: 'agent@example.com',
       name: 'Agent Accueil',
       role: 'AGENT_ACCUEIL',
@@ -70,9 +83,7 @@ describe('LoginComponent', () => {
   });
 
   it('should return to the scanned consultation route after successful login', () => {
-    mockRoute.snapshot.queryParamMap.get.mockReturnValue(
-      '/clinic/consultation/8dfc8352-505c-41a6-b936-a2db49901ee4',
-    );
+    queryParams['returnUrl'] = '/clinic/consultation/8dfc8352-505c-41a6-b936-a2db49901ee4';
     const fixture = TestBed.createComponent(LoginComponent);
     const component = fixture.componentInstance;
     const httpTesting = TestBed.inject(HttpTestingController);
@@ -84,7 +95,7 @@ describe('LoginComponent', () => {
     httpTesting.expectOne('/api/auth/login').flush({
       accessToken: 'jwt-token',
       tokenType: 'Bearer',
-      expiresAt: '2026-07-17T20:00:00Z',
+      expiresAt: '2999-07-17T20:00:00Z',
       email: 'doctor@example.com',
       name: 'Doctor',
       role: 'MEDECIN',
