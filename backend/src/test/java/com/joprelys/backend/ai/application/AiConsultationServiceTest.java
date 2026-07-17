@@ -71,7 +71,8 @@ class AiConsultationServiceTest {
                 visitService,
                 objectMapper,
                 new AiClinicalResponseParser(objectMapper),
-                new AiRevisionManager());
+                new AiRevisionManager(),
+                new AiClarificationManager(properties));
     }
 
     @Test
