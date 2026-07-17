@@ -31,6 +31,7 @@ public class AiConsultationService {
 
     private static final Logger log = LoggerFactory.getLogger(AiConsultationService.class);
     private static final int MAX_AUDIO_BYTES = 10 * 1024 * 1024;
+    private static final int MAX_TRANSCRIPT_LENGTH = 12000;
     private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
             "audio/webm", "audio/mp4", "audio/mpeg", "audio/wav");
     private static final Set<String> ALLOWED_FIELDS = Set.of(
@@ -117,14 +118,16 @@ public class AiConsultationService {
             UUID userId,
             UUID organizationId,
             String text) {
-        if (text == null || text.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_MESSAGE_INVALID");
-        }
+        validateTranscript(text);
         SessionState state = requireSession(visitId, userId, organizationId);
         return processMessage(state, text.trim(), null);
     }
 
-    public MessageView processAudio(
+    /**
+     * Transcrit l'audio sans lancer l'analyse clinique. Le texte reste en attente
+     * afin que le médecin puisse le relire et le corriger avant tout appel au modèle de chat.
+     */
+    public TranscriptionView transcribeAudio(
             UUID visitId,
             UUID userId,
             UUID organizationId,
@@ -141,14 +144,68 @@ public class AiConsultationService {
                 throw new ResponseStatusException(
                         HttpStatus.UNPROCESSABLE_ENTITY, "AI_OUTPUT_INVALID");
             }
-            String transcript = transcription.text().trim();
-            return processMessage(state, transcript, transcript);
+            String transcript = limit(transcription.text().trim(), MAX_TRANSCRIPT_LENGTH);
+            synchronized (state) {
+                state.pendingTranscript = transcript;
+                state.transcriptStatus = "PENDING_REVIEW";
+                state.expiresAt = expiry();
+                return new TranscriptionView(
+                        state.sessionId,
+                        transcript,
+                        state.transcriptStatus,
+                        state.expiresAt);
+            }
         } catch (ResponseStatusException exception) {
             throw exception;
         } catch (RuntimeException exception) {
             log.warn("Échec transcription IA provider={}, octets={}",
                     properties.speechProvider(), audio.length);
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI_UNAVAILABLE");
+        }
+    }
+
+    /**
+     * Analyse une transcription explicitement confirmée ou corrigée par le médecin.
+     */
+    public MessageView analyzeTranscript(
+            UUID visitId,
+            UUID userId,
+            UUID organizationId,
+            String transcript) {
+        validateTranscript(transcript);
+        SessionState state = requireSession(visitId, userId, organizationId);
+        synchronized (state) {
+            state.pendingTranscript = null;
+            state.transcriptStatus = "ANALYZED";
+        }
+        return processMessage(state, transcript.trim(), transcript.trim());
+    }
+
+    /**
+     * Contrat historique conservé pour compatibilité : transcription puis analyse immédiate.
+     * Les nouveaux clients doivent utiliser transcribeAudio puis analyzeTranscript.
+     */
+    public MessageView processAudio(
+            UUID visitId,
+            UUID userId,
+            UUID organizationId,
+            byte[] audio,
+            String contentType) {
+        TranscriptionView transcription = transcribeAudio(
+                visitId, userId, organizationId, audio, contentType);
+        return analyzeTranscript(
+                visitId, userId, organizationId, transcription.transcript());
+    }
+
+    public void discardPendingTranscript(
+            UUID visitId,
+            UUID userId,
+            UUID organizationId) {
+        SessionState state = requireSession(visitId, userId, organizationId);
+        synchronized (state) {
+            state.pendingTranscript = null;
+            state.transcriptStatus = "NONE";
+            state.expiresAt = expiry();
         }
     }
 
@@ -235,6 +292,16 @@ public class AiConsultationService {
         }
     }
 
+    private void validateTranscript(String transcript) {
+        if (transcript == null || transcript.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_MESSAGE_INVALID");
+        }
+        if (transcript.length() > MAX_TRANSCRIPT_LENGTH) {
+            throw new ResponseStatusException(
+                    HttpStatus.PAYLOAD_TOO_LARGE, "AI_TRANSCRIPT_TOO_LARGE");
+        }
+    }
+
     private void ensureActiveVisit(UUID visitId) {
         var visit = visitService.getVisit(visitId);
         if (!"EN_COURS".equals(visit.getStatus())) {
@@ -245,7 +312,7 @@ public class AiConsultationService {
     private String buildUserMessage(String text, Map<String, String> draft) {
         try {
             return "Brouillon actuel: " + objectMapper.writeValueAsString(draft)
-                    + "\nNouvelle dictée du médecin: " + text;
+                    + "\nNouvelle dictée ou correction du médecin: " + text;
         } catch (Exception exception) {
             throw new ResponseStatusException(
                     HttpStatus.UNPROCESSABLE_ENTITY, "AI_OUTPUT_INVALID");
@@ -314,6 +381,8 @@ public class AiConsultationService {
                 state.expiresAt,
                 Map.copyOf(state.draft),
                 state.transcript,
+                state.pendingTranscript,
+                state.transcriptStatus,
                 state.assistantMessage,
                 state.needsClarification);
     }
@@ -359,6 +428,8 @@ public class AiConsultationService {
         private final List<AiMessage> messages = new ArrayList<>();
         private Instant expiresAt;
         private String transcript;
+        private String pendingTranscript;
+        private String transcriptStatus = "NONE";
         private String assistantMessage;
         private boolean needsClarification;
 
@@ -375,8 +446,17 @@ public class AiConsultationService {
             Instant expiresAt,
             Map<String, String> draft,
             String transcript,
+            String pendingTranscript,
+            String transcriptStatus,
             String assistantMessage,
             boolean needsClarification) {
+    }
+
+    public record TranscriptionView(
+            UUID sessionId,
+            String transcript,
+            String status,
+            Instant expiresAt) {
     }
 
     public record MessageView(
