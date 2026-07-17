@@ -14,6 +14,17 @@ export type AiField =
 
 export type AiConsultationDraft = Partial<Record<AiField, string>>;
 export type AiTranscriptStatus = 'NONE' | 'PENDING_REVIEW' | 'ANALYZED';
+export type AiConversationRole = 'USER' | 'ASSISTANT';
+export type AiConversationSource = 'TEXT' | 'AUDIO' | 'AI' | 'SYSTEM';
+
+export interface AiConversationMessage {
+  id: string;
+  role: AiConversationRole;
+  content: string;
+  source: AiConversationSource;
+  createdAt: string;
+  needsClarification: boolean;
+}
 
 export interface AiSessionResponse {
   sessionId: string;
@@ -24,6 +35,7 @@ export interface AiSessionResponse {
   transcript: string | null;
   pendingTranscript: string | null;
   transcriptStatus: AiTranscriptStatus;
+  conversation: AiConversationMessage[];
   assistantMessage: string | null;
   needsClarification: boolean;
 }
@@ -35,6 +47,7 @@ export interface AiMessageResponse {
   changedFields: AiField[];
   assistantMessage: string;
   needsClarification: boolean;
+  conversation: AiConversationMessage[];
   expiresAt: string;
 }
 
