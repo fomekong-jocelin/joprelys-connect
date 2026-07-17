@@ -1,8 +1,7 @@
-import { ApplicationRef } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
 import { provideHttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { I18nService } from '../core/i18n/i18n.service';
 import { LabOrderApiService } from '../clinic/lab/lab-api.service';
 import { VisitApiService } from '../visit/visit-api.service';
@@ -16,10 +15,12 @@ class I18nStub {
 }
 
 describe('ConsultationComponent AI draft application', () => {
+  let fixture: ComponentFixture<ConsultationComponent>;
   let component: ConsultationComponent;
 
-  beforeEach(() => {
-    TestBed.configureTestingModule({
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [ConsultationComponent],
       providers: [
         FormBuilder,
         provideHttpClient(),
@@ -28,15 +29,15 @@ describe('ConsultationComponent AI draft application', () => {
           useValue: { snapshot: { paramMap: { get: () => 'visit-1' } } },
         },
         { provide: Router, useValue: { navigate: () => Promise.resolve(true) } },
-        { provide: ApplicationRef, useValue: { attachView: () => {}, detachView: () => {} } },
         { provide: ConsultationApiService, useValue: {} },
         { provide: VisitApiService, useValue: {} },
         { provide: LabOrderApiService, useValue: {} },
         { provide: I18nService, useClass: I18nStub },
       ],
-    });
+    }).compileComponents();
 
-    component = TestBed.runInInjectionContext(() => new ConsultationComponent());
+    fixture = TestBed.createComponent(ConsultationComponent);
+    component = fixture.componentInstance;
     component.form.patchValue({
       symptoms: 'Fièvre',
       diagnosis: 'Diagnostic provisoire',
