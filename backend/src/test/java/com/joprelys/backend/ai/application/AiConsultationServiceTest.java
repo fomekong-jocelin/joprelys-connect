@@ -4,8 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -104,7 +106,7 @@ class AiConsultationServiceTest {
     @Test
     void shouldTranscribeAudioBeforeUpdatingDraft() {
         service.startSession(visitId, userId, organizationId, Map.of());
-        when(aiProvider.transcribeAudio(new byte[] {1, 2, 3}, "audio/webm", "fr"))
+        when(aiProvider.transcribeAudio(any(byte[].class), eq("audio/webm"), eq("fr")))
                 .thenReturn(new AiTranscription("Toux sèche depuis trois jours", "fr", null));
         when(aiProvider.chat(anyList(), anyString())).thenReturn(new AiChatResponse(
                 """
@@ -143,7 +145,7 @@ class AiConsultationServiceTest {
 
         assertEquals(HttpStatus.UNSUPPORTED_MEDIA_TYPE, exception.getStatusCode());
         verify(aiProvider, never()).transcribeAudio(
-                org.mockito.ArgumentMatchers.any(),
+                any(byte[].class),
                 anyString(),
                 anyString());
     }
