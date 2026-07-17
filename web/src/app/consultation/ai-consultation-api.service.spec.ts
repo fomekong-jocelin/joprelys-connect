@@ -4,7 +4,11 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
-import { AiConsultationApiService } from './ai-consultation-api.service';
+import {
+  AiConsultationApiService,
+  AiRevision,
+  AiSessionResponse,
+} from './ai-consultation-api.service';
 
 describe('AiConsultationApiService', () => {
   let service: AiConsultationApiService;
@@ -158,22 +162,22 @@ describe('AiConsultationApiService', () => {
     request.flush(null);
   });
 
-  function pendingRevision() {
+  function pendingRevision(): AiRevision {
     return {
       id: 'revision-1',
       sequence: 1,
-      status: 'PENDING' as const,
+      status: 'PENDING',
       createdAt: '2026-07-18T10:00:00Z',
       proposals: [
         {
           id: 'proposal-1',
-          field: 'symptoms' as const,
-          operation: 'SET' as const,
+          field: 'symptoms',
+          operation: 'SET',
           previousValue: null,
           proposedValue: 'Douleur à droite et non à gauche',
           reason: 'Latéralité corrigée par le médecin.',
-          uncertainty: 'LOW' as const,
-          status: 'PENDING' as const,
+          uncertainty: 'LOW',
+          status: 'PENDING',
           createdAt: '2026-07-18T10:00:00Z',
           decidedAt: null,
         },
@@ -181,7 +185,7 @@ describe('AiConsultationApiService', () => {
     };
   }
 
-  function sessionResponse() {
+  function sessionResponse(): AiSessionResponse {
     const revision = pendingRevision();
     revision.status = 'DECIDED';
     revision.proposals[0].status = 'ACCEPTED';
