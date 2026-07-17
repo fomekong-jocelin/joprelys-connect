@@ -1,7 +1,7 @@
 # EPIC-0024 — Consultation IA interactive et corrections contrôlées
 
 - **Mode** : Project Manager + Engineering + Architecture + QA Review
-- **Statut** : IN_PROGRESS — STORY-2421 et STORY-2422 implémentées et validées par la CI
+- **Statut** : IN_PROGRESS — STORY-2421 à STORY-2423 implémentées et validées par la CI
 - **Priorité** : P1
 - **Branche** : `feat/ai-interactive-consultation`
 - **Reviewer recommandé** : Tech Lead + médecin référent + QA + DPO
@@ -55,10 +55,17 @@ En tant que médecin, je veux corriger la transcription avant son analyse afin d
 
 En tant que médecin, je veux répondre à une question de clarification liée à un champ précis afin que l’assistant corrige uniquement l’information concernée.
 
-- DTO `ClarificationView` : id, field, question, status, options éventuelles.
-- Réponse liée à l’identifiant de clarification.
-- Une clarification résolue reste visible dans l’historique.
-- **État** : TODO, validation médecin référent requise.
+- [x] Ajouter `ClarificationView` : id, field, question, status, options, dates et réponse.
+- [x] Exiger une clarification structurée lorsque le fournisseur déclare une ambiguïté.
+- [x] Rejeter les clarifications sans champ clinique autorisé ou sans question.
+- [x] Lier la réponse à l’identifiant de clarification.
+- [x] Refuser une clarification inconnue ou déjà résolue.
+- [x] Conserver une clarification résolue dans l’historique de session.
+- [x] Bloquer la dictée et les messages libres dans l’interface tant qu’une précision est attendue.
+- [x] Ajouter les tests backend, contrôleur, façade Angular et composant.
+- [x] Valider la CI #742.
+- [ ] Validation clinique par le médecin référent.
+- **État** : DONE techniquement, validation clinique restante.
 
 ### STORY-2424 — Révisions et validation champ par champ — 8 SP
 
@@ -68,27 +75,28 @@ En tant que médecin, je veux comparer, accepter ou rejeter chaque modification 
 - Acceptation/rejet individuel ou global.
 - Aucune modification du brouillon validé avant acceptation.
 - Historique des révisions en session.
-- **État** : TODO.
+- **État** : IN_PROGRESS.
 
 ### STORY-2425 — Refactor UI, i18n et tests E2E — 5 SP
 
 - [x] Extraire la façade API et supprimer les appels `HttpClient` directs du panneau.
 - [x] Extraire le fil conversationnel dans un composant réutilisable.
+- [x] Extraire le panneau de clarification dans un composant réutilisable.
 - [ ] Extraire l’éditeur de transcription et les propositions dans des composants réutilisables.
 - [x] Compléter les clés i18n FR/EN du parcours livré.
-- [x] Ajouter un test Angular du fil conversationnel.
+- [x] Ajouter les tests Angular du fil et des clarifications.
 - [ ] Ajouter les tests E2E du pilote.
 
 ## Contrats ajoutés
 
 ### STORY-2421
 
-Les réponses de session et de message exposent désormais `conversation` :
+Les réponses de session et de message exposent `conversation` :
 
 - `id` ;
 - `role` : `USER` ou `ASSISTANT` ;
 - `content` ;
-- `source` : `TEXT`, `AUDIO`, `AI` ou `SYSTEM` ;
+- `source` : `TEXT`, `AUDIO`, `CLARIFICATION`, `AI` ou `SYSTEM` ;
 - `createdAt` ;
 - `needsClarification`.
 
@@ -107,6 +115,14 @@ Le contenu technique utilisé pour le contexte du modèle reste interne et n’e
   - abandonne le texte en attente sans appel au modèle de chat.
 - `POST /messages/audio` reste disponible temporairement pour les clients historiques.
 
+### STORY-2423
+
+- `POST /api/ai/consultations/{visitId}/clarifications/{clarificationId}/answer`
+  - reçoit une réponse liée à une question précise ;
+  - refuse les identifiants absents, inconnus ou déjà résolus ;
+  - conserve la question et la réponse dans l’historique de la session.
+- Les réponses de session et de message exposent `clarifications`.
+
 ## Optimisation CI
 
 - [x] Cache Maven ciblé par `backend/pom.xml` et le Maven Wrapper.
@@ -123,8 +139,8 @@ Le contenu technique utilisé pour le contexte du modèle reste interne et n’e
 - [x] Le fil visible ne contient aucun prompt technique, brouillon sérialisé ou JSON brut du fournisseur.
 - [x] Une transcription audio n’est jamais analysée avant confirmation explicite avec le nouveau parcours.
 - [x] Le médecin peut modifier le texte transcrit avant analyse.
-- [ ] Une clarification possède un identifiant et un champ cible.
-- [ ] Une réponse à une clarification est reliée à la bonne question.
+- [x] Une clarification possède un identifiant et un champ cible.
+- [x] Une réponse à une clarification est reliée à la bonne question.
 - [ ] Les changements sont présentés sous forme de propositions avant/après.
 - [ ] Le rejet d’une proposition conserve la valeur précédente.
 - [ ] L’acceptation d’une proposition ne sauvegarde pas automatiquement la consultation.
@@ -152,10 +168,10 @@ Le contenu technique utilisé pour le contexte du modèle reste interne et n’e
 - [x] Implémenter transcription en attente de validation.
 - [x] Extraire la façade Angular.
 - [x] Implémenter le fil conversationnel visible.
-- [x] Ajouter les tests unitaires STORY-2421 et STORY-2422.
+- [x] Implémenter les clarifications structurées.
+- [x] Ajouter les tests unitaires STORY-2421 à STORY-2423.
 - [x] Valider `./mvnw clean verify`, `npm test`, `npm run build` via CI.
 - [x] Optimiser les caches et la consommation de runners CI.
-- [ ] Implémenter les clarifications structurées.
 - [ ] Implémenter les propositions et décisions champ par champ.
 - [ ] Extraire les derniers sous-composants Angular.
 - [ ] Ajouter E2E et recette clinique.
@@ -166,7 +182,7 @@ Le contenu technique utilisé pour le contexte du modèle reste interne et n’e
 | Profil | Charge indicative |
 |---|---:|
 | Senior full-stack | 8 à 10 jours pour l’epic complète |
-| STORY-2421 + STORY-2422 | implémentées, recette clinique restante |
+| STORY-2421 à STORY-2423 | implémentées, recette clinique restante |
 | Intermédiaire encadré | 11 à 14 jours pour l’epic complète |
 | Junior encadré | à redécouper, non recommandé seul |
 
