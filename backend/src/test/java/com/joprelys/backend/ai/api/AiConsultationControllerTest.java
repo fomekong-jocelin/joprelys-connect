@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.joprelys.backend.ai.application.AiConsultationContract.SessionView;
 import com.joprelys.backend.ai.application.AiConsultationService;
 import com.joprelys.backend.auth.security.JwtClaims;
 import com.joprelys.backend.auth.security.TenantContext;
@@ -38,7 +39,7 @@ class AiConsultationControllerTest {
         when(authentication.getDetails()).thenReturn(claims(userId.toString(), organizationId.toString()));
         TenantContext.setTenantId(organizationId);
         when(service.startSession(visitId, userId, organizationId, Map.of()))
-                .thenReturn(new AiConsultationService.SessionView(
+                .thenReturn(new SessionView(
                         UUID.randomUUID(),
                         visitId,
                         "ACTIVE",
@@ -49,10 +50,11 @@ class AiConsultationControllerTest {
                         "NONE",
                         List.of(),
                         List.of(),
+                        List.of(),
                         "Décrivez les symptômes.",
                         false));
 
-        AiConsultationService.SessionView response = controller.startSession(
+        SessionView response = controller.startSession(
                 visitId,
                 null,
                 authentication);
@@ -86,6 +88,35 @@ class AiConsultationControllerTest {
                 organizationId,
                 clarificationId,
                 "Depuis deux jours");
+    }
+
+    @Test
+    void shouldRouteProposalDecisionWithAuthenticatedIdentity() {
+        AiConsultationService service = mock(AiConsultationService.class);
+        AiConsultationController controller = new AiConsultationController(service);
+        Authentication authentication = mock(Authentication.class);
+        UUID visitId = UUID.randomUUID();
+        UUID revisionId = UUID.randomUUID();
+        UUID proposalId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+        when(authentication.getDetails()).thenReturn(claims(userId.toString(), organizationId.toString()));
+        TenantContext.setTenantId(organizationId);
+
+        controller.decideProposal(
+                visitId,
+                revisionId,
+                proposalId,
+                new AiConsultationController.DecisionRequest("ACCEPT"),
+                authentication);
+
+        verify(service).decideProposal(
+                visitId,
+                userId,
+                organizationId,
+                revisionId,
+                proposalId,
+                "ACCEPT");
     }
 
     @Test
