@@ -83,7 +83,12 @@ class AiConsultationServiceTest {
                     "unknownField": "doit être ignoré"
                   },
                   "assistantMessage": "Précisez l'intensité des céphalées.",
-                  "needsClarification": true
+                  "needsClarification": true,
+                  "clarification": {
+                    "field": "symptoms",
+                    "question": "Précisez l'intensité des céphalées.",
+                    "options": ["Faible", "Modérée", "Forte"]
+                  }
                 }
                 """,
                 120,
@@ -103,10 +108,13 @@ class AiConsultationServiceTest {
         assertTrue(response.changedFields().contains("symptoms"));
         assertTrue(response.needsClarification());
         assertEquals(3, response.conversation().size());
+        assertEquals(1, response.clarifications().size());
+        assertEquals("symptoms", response.clarifications().getFirst().field());
+        assertEquals("PENDING", response.clarifications().getFirst().status());
     }
 
     @Test
-    void shouldExposeVisibleMultiTurnConversationWithoutTechnicalPrompt() {
+    void shouldResolveClarificationByIdentifierAndKeepItInHistory() {
         service.startSession(visitId, userId, organizationId, Map.of());
         when(aiProvider.chat(anyList(), anyString())).thenReturn(
                 new AiChatResponse(
@@ -114,7 +122,12 @@ class AiConsultationServiceTest {
                         {
                           "draft": {"symptoms": "Douleur abdominale"},
                           "assistantMessage": "Depuis combien de temps ?",
-                          "needsClarification": true
+                          "needsClarification": true,
+                          "clarification": {
+                            "field": "symptoms",
+                            "question": "Depuis combien de temps ?",
+                            "options": []
+                          }
                         }
                         """,
                         60,
@@ -124,30 +137,74 @@ class AiConsultationServiceTest {
                         {
                           "draft": {"symptoms": "Douleur abdominale depuis deux jours"},
                           "assistantMessage": "Durée ajoutée au brouillon.",
-                          "needsClarification": false
+                          "needsClarification": false,
+                          "clarification": null
                         }
                         """,
                         60,
                         "gpt-4.1"));
 
-        service.processText(
+        AiConsultationService.MessageView firstResponse = service.processText(
                 visitId, userId, organizationId, "Le patient a une douleur abdominale.");
-        service.processText(
-                visitId, userId, organizationId, "Depuis deux jours.");
+        UUID clarificationId = firstResponse.clarifications().getFirst().id();
 
-        AiConsultationService.SessionView session = service.getSession(
-                visitId, userId, organizationId).orElseThrow();
+        AiConsultationService.MessageView resolved = service.answerClarification(
+                visitId,
+                userId,
+                organizationId,
+                clarificationId,
+                "Depuis deux jours.");
 
-        assertEquals(5, session.conversation().size());
-        assertEquals("ASSISTANT", session.conversation().get(0).role());
-        assertEquals("USER", session.conversation().get(1).role());
-        assertEquals("TEXT", session.conversation().get(1).source());
-        assertEquals("Depuis combien de temps ?", session.conversation().get(2).content());
-        assertTrue(session.conversation().get(2).needsClarification());
-        assertEquals("Depuis deux jours.", session.conversation().get(3).content());
-        assertFalse(session.conversation().stream().anyMatch(message ->
+        assertEquals(1, resolved.clarifications().size());
+        assertEquals("RESOLVED", resolved.clarifications().getFirst().status());
+        assertEquals("Depuis deux jours.", resolved.clarifications().getFirst().answer());
+        assertEquals("CLARIFICATION", resolved.conversation().get(3).source());
+        assertEquals("Douleur abdominale depuis deux jours", resolved.draft().get("symptoms"));
+        assertFalse(resolved.conversation().stream().anyMatch(message ->
                 message.content().contains("Brouillon actuel")
-                        || message.content().contains("Nouvelle dictée")));
+                        || message.content().contains("Réponse du médecin à une clarification structurée")));
+    }
+
+    @Test
+    void shouldRejectUnknownOrAlreadyResolvedClarification() {
+        service.startSession(visitId, userId, organizationId, Map.of());
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.answerClarification(
+                        visitId,
+                        userId,
+                        organizationId,
+                        UUID.randomUUID(),
+                        "Réponse"));
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+        assertEquals("AI_CLARIFICATION_NOT_PENDING", exception.getReason());
+        verify(aiProvider, never()).chat(anyList(), anyString());
+    }
+
+    @Test
+    void shouldRejectUnstructuredClarificationFromProvider() {
+        service.startSession(visitId, userId, organizationId, Map.of());
+        when(aiProvider.chat(anyList(), anyString())).thenReturn(new AiChatResponse(
+                """
+                {
+                  "draft": {},
+                  "assistantMessage": "Précisez la douleur.",
+                  "needsClarification": true,
+                  "clarification": null
+                }
+                """,
+                40,
+                "gpt-4.1"));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.processText(
+                        visitId, userId, organizationId, "Douleur."));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, exception.getStatusCode());
+        assertEquals("AI_CLARIFICATION_INVALID", exception.getReason());
     }
 
     @Test
@@ -191,7 +248,8 @@ class AiConsultationServiceTest {
                 {
                   "draft": {"symptoms": "Douleur à droite et non à gauche"},
                   "assistantMessage": "Correction prise en compte.",
-                  "needsClarification": false
+                  "needsClarification": false,
+                  "clarification": null
                 }
                 """,
                 80,
@@ -243,7 +301,8 @@ class AiConsultationServiceTest {
                 {
                   "draft": {"symptoms": "Toux sèche depuis trois jours"},
                   "assistantMessage": "Brouillon mis à jour.",
-                  "needsClarification": false
+                  "needsClarification": false,
+                  "clarification": null
                 }
                 """,
                 80,
