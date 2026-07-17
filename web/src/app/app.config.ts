@@ -2,6 +2,7 @@ import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalE
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 
+import { AuthApiService } from './auth/auth-api.service';
 import { authTokenInterceptor } from './auth/auth-token.interceptor';
 import { I18nService } from './core/i18n/i18n.service';
 import { routes } from './app.routes';
@@ -14,6 +15,10 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       const i18n = inject(I18nService);
       return i18n.init();
+    }),
+    provideAppInitializer(() => {
+      const authApi = inject(AuthApiService);
+      return authApi.restoreSession();
     }),
   ]
 };
