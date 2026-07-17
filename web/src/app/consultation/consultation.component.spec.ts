@@ -1,6 +1,6 @@
 import { FormBuilder } from '@angular/forms';
 import { provideHttpClient } from '@angular/common/http';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { I18nService } from '../core/i18n/i18n.service';
 import { LabOrderApiService } from '../clinic/lab/lab-api.service';
@@ -24,11 +24,11 @@ describe('ConsultationComponent AI draft application', () => {
       providers: [
         FormBuilder,
         provideHttpClient(),
+        provideRouter([]),
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: { get: () => 'visit-1' } } },
         },
-        { provide: Router, useValue: { navigate: () => Promise.resolve(true) } },
         { provide: ConsultationApiService, useValue: {} },
         { provide: VisitApiService, useValue: {} },
         { provide: LabOrderApiService, useValue: {} },
