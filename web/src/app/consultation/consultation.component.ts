@@ -11,11 +11,15 @@ import { Vitals } from '../visit/visit.models';
 import { LabOrderApiService } from '../clinic/lab/lab-api.service';
 import { ExamType } from '../clinic/lab/lab.models';
 import { I18nService } from '../core/i18n/i18n.service';
+import {
+  AiConsultationDraft,
+  VoiceAssistantPanelComponent,
+} from './voice-assistant-panel.component';
 
 @Component({
   selector: 'app-consultation',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, AppShellComponent],
+  imports: [CommonModule, ReactiveFormsModule, AppShellComponent, VoiceAssistantPanelComponent],
   templateUrl: './consultation.component.html'
 })
 export class ConsultationComponent implements OnInit {
@@ -38,7 +42,7 @@ export class ConsultationComponent implements OnInit {
   readonly prescription = signal<Prescription | null>(null);
   readonly visitNumber = signal('');
 
-  private visitId = '';
+  visitId = '';
   private patientId = '';
   shouldCloseAfterSave = false;
 
@@ -82,11 +86,39 @@ export class ConsultationComponent implements OnInit {
     this.loadData();
   }
 
+  applyAiDraft(draft: AiConsultationDraft): void {
+    const allowedDraft: AiConsultationDraft = {};
+    const fields: Array<keyof AiConsultationDraft> = [
+      'symptoms',
+      'clinicalExam',
+      'suspectedDiagnosis',
+      'diagnosis',
+      'finalDiagnosis',
+      'conclusion',
+      'advice',
+      'followUp',
+    ];
+    fields.forEach(field => {
+      const value = draft[field];
+      if (typeof value === 'string' && value.trim()) {
+        allowedDraft[field] = value.trim();
+      }
+    });
+    this.form.patchValue(allowedDraft);
+    this.form.markAsDirty();
+    this.successMessage.set(
+      this.i18n.t(
+        'consultation.ai.applied',
+        'Le brouillon IA a été copié dans le formulaire. Relisez-le avant de sauvegarder.',
+      ),
+    );
+    this.errorMessage.set('');
+  }
+
   private loadData(): void {
     if (!this.visitId) return;
     this.isLoading.set(true);
 
-    // Load vitals
     this.http.get<{ visitNumber?: string } & Vitals>(`/api/visits/${this.visitId}/vitals`).subscribe({
       next: (data) => {
         this.vitals.set(data);
@@ -97,7 +129,6 @@ export class ConsultationComponent implements OnInit {
       }
     });
 
-    // Load visit info for visit number and patient details
     this.http.get<any>(`/api/visits/${this.visitId}`).subscribe({
       next: (visit) => {
         if (visit?.visitNumber) {
@@ -105,7 +136,6 @@ export class ConsultationComponent implements OnInit {
         }
         if (visit?.patientId) {
           this.patientId = visit.patientId;
-          // Load existing lab orders for this patient to find one linked to this visit
           this.labOrderApi.getPatientLabOrders(this.patientId).subscribe({
             next: (orders) => {
               const currentVisitOrder = orders.find(o => o.visitId === this.visitId);
@@ -124,7 +154,6 @@ export class ConsultationComponent implements OnInit {
       error: () => {}
     });
 
-    // Load existing consultation (ignore 404 silently)
     this.consultationApi.getConsultation(this.visitId).subscribe({
       next: (existing) => {
         this.consultation.set(existing);
@@ -138,8 +167,6 @@ export class ConsultationComponent implements OnInit {
           advice: existing.advice ?? '',
           followUp: existing.followUp ?? '',
         });
-
-        // Load prescription using consultation ID
         this.loadPrescription(existing.id);
       },
       error: () => {}
@@ -173,7 +200,6 @@ export class ConsultationComponent implements OnInit {
   }
 
   addPrescriptionLine(): void {
-    // Si l'ordonnance existe déjà et n'est pas DRAFT, ne pas ajouter de ligne
     const presc = this.prescription();
     if (presc && presc.status !== 'DRAFT') return;
 
@@ -195,7 +221,6 @@ export class ConsultationComponent implements OnInit {
   removePrescriptionLine(index: number): void {
     const presc = this.prescription();
     if (presc && presc.status !== 'DRAFT') return;
-
     this.prescriptionItems.removeAt(index);
   }
 
@@ -298,7 +323,7 @@ export class ConsultationComponent implements OnInit {
       next: (savedConsultation) => {
         this.consultation.set(savedConsultation);
 
-        const prescriptionLines = this.prescriptionItems.getRawValue(); // use getRawValue to get disabled form fields as well
+        const prescriptionLines = this.prescriptionItems.getRawValue();
         const examsLines = this.labExams.value;
 
         let successMsg = this.i18n.t('consultation.success.saved');
@@ -379,7 +404,6 @@ export class ConsultationComponent implements OnInit {
     } else {
       this.isSaving.set(false);
       this.successMessage.set(successMsg);
-      // Reload prescription list to refresh status/disabled state
       const consultationObj = this.consultation();
       if (consultationObj) {
         this.loadPrescription(consultationObj.id);
