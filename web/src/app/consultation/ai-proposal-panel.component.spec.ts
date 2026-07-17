@@ -1,0 +1,99 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { I18nService } from '../core/i18n/i18n.service';
+import {
+  AiProposalDecisionRequest,
+  AiProposalPanelComponent,
+} from './ai-proposal-panel.component';
+
+class I18nStub {
+  t(_key: string, defaultValue?: string): string {
+    return defaultValue ?? _key;
+  }
+}
+
+describe('AiProposalPanelComponent', () => {
+  let fixture: ComponentFixture<AiProposalPanelComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [AiProposalPanelComponent],
+      providers: [{ provide: I18nService, useClass: I18nStub }],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(AiProposalPanelComponent);
+    fixture.componentRef.setInput('revisions', [
+      {
+        id: 'revision-1',
+        sequence: 1,
+        status: 'PENDING',
+        createdAt: '2026-07-17T20:00:00Z',
+        proposals: [
+          {
+            id: 'proposal-1',
+            field: 'symptoms',
+            operation: 'SET',
+            previousValue: 'Fièvre',
+            proposedValue: 'Fièvre avec céphalées',
+            reason: 'Symptôme ajouté par le médecin.',
+            uncertainty: 'LOW',
+            status: 'PENDING',
+            createdAt: '2026-07-17T20:00:00Z',
+            decidedAt: null,
+          },
+          {
+            id: 'proposal-2',
+            field: 'diagnosis',
+            operation: 'CLEAR',
+            previousValue: 'Diagnostic provisoire',
+            proposedValue: null,
+            reason: 'Suppression demandée.',
+            uncertainty: 'LOW',
+            status: 'PENDING',
+            createdAt: '2026-07-17T20:00:00Z',
+            decidedAt: null,
+          },
+        ],
+      },
+    ]);
+    fixture.detectChanges();
+  });
+
+  it('affiche les valeurs avant et après sans modifier le brouillon', () => {
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Fièvre');
+    expect(text).toContain('Fièvre avec céphalées');
+    expect(text).toContain('Supprimer cette valeur');
+    expect(text).toContain('Symptômes');
+  });
+
+  it('émet une décision liée à la révision et à la proposition', () => {
+    let emitted: AiProposalDecisionRequest | undefined;
+    fixture.componentInstance.decided.subscribe(value => emitted = value);
+
+    fixture.componentInstance.decideProposal(
+      'revision-1',
+      'proposal-1',
+      'ACCEPT',
+    );
+
+    expect(emitted).toEqual({
+      scope: 'PROPOSAL',
+      revisionId: 'revision-1',
+      proposalId: 'proposal-1',
+      decision: 'ACCEPT',
+    });
+  });
+
+  it('émet une décision globale pour les propositions en attente', () => {
+    let emitted: AiProposalDecisionRequest | undefined;
+    fixture.componentInstance.decided.subscribe(value => emitted = value);
+
+    fixture.componentInstance.decideRevision('revision-1', 'REJECT');
+
+    expect(emitted).toEqual({
+      scope: 'REVISION',
+      revisionId: 'revision-1',
+      decision: 'REJECT',
+    });
+  });
+});
