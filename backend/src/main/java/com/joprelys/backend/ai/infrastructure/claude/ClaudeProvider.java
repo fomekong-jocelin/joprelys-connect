@@ -156,7 +156,7 @@ public class ClaudeProvider implements AiProvider {
         formData.add("file", audioResource);
         formData.add("model", transcribeModel);
         formData.add("language", locale);
-        formData.add("response_format", "verbose_json");
+        formData.add("response_format", "json");
 
         Map<String, Object> response = speechFallbackClient.post()
                 .uri("/audio/transcriptions")
