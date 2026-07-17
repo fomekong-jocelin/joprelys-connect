@@ -6,8 +6,6 @@ import com.joprelys.backend.auth.security.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import java.nio.charset.StandardCharsets;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,8 +30,6 @@ import org.springframework.web.server.ResponseStatusException;
 @ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
 @PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE') and hasAuthority('CLINICAL_WRITE')")
 public class AiConsultationController {
-
-    private static final String LEGACY_ACTOR_NAMESPACE = "joprelys-authenticated-user:";
 
     private final AiConsultationService service;
 
@@ -105,20 +101,13 @@ public class AiConsultationController {
         }
 
         UUID userId = parseUuid(claims.subject())
-                .orElseGet(() -> legacyActorId(claims.email()));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "AUTH_IDENTITY_UNRESOLVED"));
         UUID organizationId = Optional.ofNullable(TenantContext.getTenantId())
                 .or(() -> parseUuid(claims.organizationId()))
-                .orElse(null);
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "AUTH_TENANT_UNRESOLVED"));
         return new Identity(userId, organizationId);
-    }
-
-    private UUID legacyActorId(String email) {
-        if (email == null || email.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED");
-        }
-        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
-        return UUID.nameUUIDFromBytes(
-                (LEGACY_ACTOR_NAMESPACE + normalizedEmail).getBytes(StandardCharsets.UTF_8));
     }
 
     private Optional<UUID> parseUuid(String value) {
