@@ -53,8 +53,6 @@ class PersistentAuthSessionControllerTest {
         auditRepository.deleteAll();
         revokedTokenRepository.deleteAll();
         sessionRepository.deleteAll();
-        userAccountRepository.deleteAll();
-        organizationRepository.deleteAll();
 
         OrganizationEntity organization = organizationRepository.save(new OrganizationEntity(
                 "Clinique Sessions",

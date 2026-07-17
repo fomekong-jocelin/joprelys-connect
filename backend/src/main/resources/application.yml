@@ -41,6 +41,26 @@ spring:
 joprelys:
   web:
     base-url: ${JOPRELYS_WEB_BASE_URL:https://joprelys.com}
+  ai:
+    enabled: ${JOPRELYS_AI_ENABLED:false}
+    provider: ${AI_PROVIDER:openai}
+    speech-provider: ${SPEECH_PROVIDER:openai}
+    session-ttl-minutes: ${AI_SESSION_TTL_MINUTES:30}
+    max-conversation-turns: ${AI_MAX_CONVERSATION_TURNS:20}
+    locale: ${AI_LOCALE:fr}
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      model: ${OPENAI_MODEL:gpt-4.1}
+      transcribe-model: ${OPENAI_TRANSCRIBE_MODEL:gpt-4o-mini-transcribe}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+    gemini:
+      api-key: ${GEMINI_API_KEY:}
+      model: ${GEMINI_MODEL:gemini-2.0-flash}
+      base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
+    claude:
+      api-key: ${ANTHROPIC_API_KEY:}
+      model: ${CLAUDE_MODEL:claude-haiku-4-5-20251001}
+      base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com/v1}
   security:
     jwt:
       issuer: ${JOPRELYS_JWT_ISSUER:joprelys-connect}

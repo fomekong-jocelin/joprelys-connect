@@ -1,0 +1,75 @@
+package com.joprelys.backend.ai.infrastructure;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.joprelys.backend.ai.domain.AiChatResponse;
+import com.joprelys.backend.ai.domain.AiMessage;
+import com.joprelys.backend.ai.domain.AiProvider;
+import com.joprelys.backend.ai.domain.AiTranscription;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+
+class RoutingAiProviderTest {
+
+    @Test
+    void givenDifferentProviders_whenTranscribing_thenUsesSpeechProviderOnly() {
+        TrackingProvider speech = new TrackingProvider("transcription", "speech-model");
+        TrackingProvider draft = new TrackingProvider("draft", "draft-model");
+        RoutingAiProvider routing = new RoutingAiProvider(speech, draft);
+
+        AiTranscription result = routing.transcribeAudio(
+                new byte[]{1, 2, 3},
+                "audio/webm",
+                "fr");
+
+        assertThat(result.text()).isEqualTo("transcription");
+        assertThat(speech.transcriptionCalls).isEqualTo(1);
+        assertThat(draft.transcriptionCalls).isZero();
+        assertThat(speech.chatCalls).isZero();
+    }
+
+    @Test
+    void givenDifferentProviders_whenGeneratingDraft_thenUsesDraftProviderOnly() {
+        TrackingProvider speech = new TrackingProvider("transcription", "speech-model");
+        TrackingProvider draft = new TrackingProvider("draft", "draft-model");
+        RoutingAiProvider routing = new RoutingAiProvider(speech, draft);
+
+        AiChatResponse result = routing.chat(
+                List.of(AiMessage.user("Le patient présente une toux sèche.")),
+                "Produis uniquement un brouillon clinique.");
+
+        assertThat(result.content()).isEqualTo("draft");
+        assertThat(result.model()).isEqualTo("draft-model");
+        assertThat(draft.chatCalls).isEqualTo(1);
+        assertThat(speech.chatCalls).isZero();
+        assertThat(draft.transcriptionCalls).isZero();
+    }
+
+    private static final class TrackingProvider implements AiProvider {
+
+        private final String content;
+        private final String model;
+        private int transcriptionCalls;
+        private int chatCalls;
+
+        private TrackingProvider(String content, String model) {
+            this.content = content;
+            this.model = model;
+        }
+
+        @Override
+        public AiTranscription transcribeAudio(
+                byte[] audioData,
+                String mimeType,
+                String locale) {
+            transcriptionCalls++;
+            return new AiTranscription(content, locale, null);
+        }
+
+        @Override
+        public AiChatResponse chat(List<AiMessage> messages, String systemPrompt) {
+            chatCalls++;
+            return new AiChatResponse(content, null, model);
+        }
+    }
+}
