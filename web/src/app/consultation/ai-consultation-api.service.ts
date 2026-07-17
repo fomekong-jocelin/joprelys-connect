@@ -13,6 +13,7 @@ export type AiField =
   | 'followUp';
 
 export type AiConsultationDraft = Partial<Record<AiField, string>>;
+export type AiTranscriptStatus = 'NONE' | 'PENDING_REVIEW' | 'ANALYZED';
 
 export interface AiSessionResponse {
   sessionId: string;
@@ -20,16 +21,16 @@ export interface AiSessionResponse {
   status: string;
   expiresAt: string;
   draft: AiConsultationDraft;
-  transcript?: string | null;
-  pendingTranscript?: string | null;
-  transcriptStatus?: 'NONE' | 'PENDING_REVIEW' | 'ANALYZED';
-  assistantMessage?: string | null;
+  transcript: string | null;
+  pendingTranscript: string | null;
+  transcriptStatus: AiTranscriptStatus;
+  assistantMessage: string | null;
   needsClarification: boolean;
 }
 
 export interface AiMessageResponse {
   sessionId: string;
-  transcript?: string | null;
+  transcript: string | null;
   draft: AiConsultationDraft;
   changedFields: AiField[];
   assistantMessage: string;
