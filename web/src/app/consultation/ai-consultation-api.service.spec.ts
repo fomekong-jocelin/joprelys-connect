@@ -63,7 +63,48 @@ describe('AiConsultationApiService', () => {
       changedFields: ['symptoms'],
       assistantMessage: 'Correction prise en compte.',
       needsClarification: false,
+      conversation: [],
+      clarifications: [],
       expiresAt: '2026-07-18T10:00:00Z',
+    });
+  });
+
+  it('répond à une clarification avec son identifiant', () => {
+    service.answerClarification(
+      'visit-1',
+      'clarification-1',
+      'Depuis deux jours',
+    ).subscribe(response => {
+      expect(response.clarifications[0].status).toBe('RESOLVED');
+      expect(response.clarifications[0].answer).toBe('Depuis deux jours');
+    });
+
+    const request = http.expectOne(
+      '/api/ai/consultations/visit-1/clarifications/clarification-1/answer',
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ answer: 'Depuis deux jours' });
+    request.flush({
+      sessionId: 'session-1',
+      transcript: null,
+      draft: { symptoms: 'Douleur abdominale depuis deux jours' },
+      changedFields: ['symptoms'],
+      assistantMessage: 'Durée ajoutée au brouillon.',
+      needsClarification: false,
+      conversation: [],
+      clarifications: [
+        {
+          id: 'clarification-1',
+          field: 'symptoms',
+          question: 'Depuis combien de temps ?',
+          status: 'RESOLVED',
+          options: [],
+          createdAt: '2026-07-18T09:59:00Z',
+          answer: 'Depuis deux jours',
+          resolvedAt: '2026-07-18T10:00:00Z',
+        },
+      ],
+      expiresAt: '2026-07-18T10:30:00Z',
     });
   });
 
