@@ -11,11 +11,18 @@ import {
 } from '@angular/core';
 import { Subscription, interval } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
+import { AiAssistantInputComponent } from './ai-assistant-input.component';
 import {
   AiClarificationAnswer,
   AiClarificationPanelComponent,
 } from './ai-clarification-panel.component';
 import { AiConversationThreadComponent } from './ai-conversation-thread.component';
+import { AiDraftPreviewComponent } from './ai-draft-preview.component';
+import {
+  AiProposalDecisionRequest,
+  AiProposalPanelComponent,
+} from './ai-proposal-panel.component';
+import { AiTranscriptReviewComponent } from './ai-transcript-review.component';
 import {
   AiConsultationApiService,
   AiConsultationDraft,
@@ -31,8 +38,12 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
   standalone: true,
   imports: [
     CommonModule,
+    AiAssistantInputComponent,
     AiConversationThreadComponent,
     AiClarificationPanelComponent,
+    AiProposalPanelComponent,
+    AiTranscriptReviewComponent,
+    AiDraftPreviewComponent,
   ],
   template: `
     <section class="overflow-hidden rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] shadow-sm">
@@ -48,7 +59,7 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
               {{ i18n.t('consultation.ai.title', 'Assistant vocal IA') }}
             </h2>
             <p class="text-xs text-[var(--text-muted)]">
-              {{ i18n.t('consultation.ai.subtitleConversation', 'Échangez, corrigez la transcription, puis contrôlez le brouillon proposé.') }}
+              {{ i18n.t('consultation.ai.subtitleControlled', 'Échangez, relisez, puis acceptez ou rejetez chaque modification proposée.') }}
             </p>
           </div>
         </div>
@@ -92,7 +103,7 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
                 {{ i18n.t('consultation.ai.startTitle', 'Démarrer une conversation clinique') }}
               </p>
               <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                {{ i18n.t('consultation.ai.startConversationHelp', 'Les échanges restent éphémères. Aucune donnée n’est appliquée ou sauvegardée automatiquement.') }}
+                {{ i18n.t('consultation.ai.startControlledHelp', 'Aucune proposition n’est acceptée ou sauvegardée automatiquement.') }}
               </p>
               <button
                 type="button"
@@ -104,30 +115,16 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
               </button>
             </div>
           } @else {
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <button
-                type="button"
-                (click)="toggleRecording()"
-                [disabled]="busy() || !mediaRecorderSupported || !!pendingTranscript() || hasPendingClarification()"
-                class="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[6px] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                [ngClass]="recording() ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]'"
-              >
-                @if (recording()) {
-                  <span class="h-3 w-3 animate-pulse rounded-[2px] bg-white"></span>
-                  {{ i18n.t('consultation.ai.stopRecordingTranscribe', 'Arrêter et préparer la transcription') }}
-                } @else {
-                  {{ i18n.t('consultation.ai.record', 'Démarrer la dictée') }}
-                }
-              </button>
-              <button
-                type="button"
-                (click)="deleteSession()"
-                [disabled]="busy() || recording()"
-                class="inline-flex min-h-12 items-center justify-center rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-3 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] disabled:opacity-50"
-              >
-                {{ i18n.t('consultation.ai.reset', 'Terminer la session') }}
-              </button>
-            </div>
+            <app-ai-assistant-input
+              [busy]="busy()"
+              [recording]="recording()"
+              [mediaRecorderSupported]="mediaRecorderSupported"
+              [blocked]="interactionBlocked()"
+              [resetToken]="composerResetToken()"
+              (toggleRecording)="toggleRecording()"
+              (endSession)="deleteSession()"
+              (sendText)="sendText($event)"
+            />
 
             <app-ai-conversation-thread [messages]="session()?.conversation ?? []" />
 
@@ -137,86 +134,24 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
               (answered)="answerClarification($event)"
             />
 
-            @if (pendingTranscript()) {
-              <div class="space-y-3 rounded-[6px] border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/20">
-                <div>
-                  <p class="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
-                    {{ i18n.t('consultation.ai.pendingTranscript', 'Transcription à relire') }}
-                  </p>
-                  <p class="mt-1 text-xs leading-5 text-amber-700 dark:text-amber-400">
-                    {{ i18n.t('consultation.ai.pendingTranscriptHelp', 'Corrigez les noms, nombres, doses, négations et côtés avant de lancer l’analyse.') }}
-                  </p>
-                </div>
-                <textarea
-                  rows="6"
-                  [value]="editableTranscript()"
-                  (input)="onTranscriptInput($event)"
-                  class="ui-textarea w-full resize-y rounded-[4px] border-amber-300 bg-[var(--app-surface)] p-3 text-sm text-[var(--text-primary)] focus:border-[var(--brand-primary)] focus:outline-none"
-                ></textarea>
-                <div class="flex flex-col gap-2 sm:flex-row">
-                  <button
-                    type="button"
-                    (click)="analyzeTranscript()"
-                    [disabled]="busy() || !editableTranscript().trim()"
-                    class="inline-flex items-center justify-center rounded-[4px] bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
-                  >
-                    {{ busy() ? i18n.t('consultation.ai.processing', 'Traitement…') : i18n.t('consultation.ai.confirmAnalyze', 'Confirmer et analyser') }}
-                  </button>
-                  <button
-                    type="button"
-                    (click)="discardPendingTranscript()"
-                    [disabled]="busy()"
-                    class="inline-flex items-center justify-center rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-2.5 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] disabled:opacity-50"
-                  >
-                    {{ i18n.t('consultation.ai.discardTranscript', 'Abandonner cette transcription') }}
-                  </button>
-                </div>
-              </div>
-            } @else if (!hasPendingClarification()) {
-              <div class="space-y-2 rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] p-3">
-                <label class="ui-label text-xs font-semibold">
-                  {{ i18n.t('consultation.ai.textFallback', 'Votre message ou correction') }}
-                </label>
-                <textarea
-                  rows="3"
-                  [value]="textMessage()"
-                  (input)="onTextInput($event)"
-                  [placeholder]="i18n.t('consultation.ai.textPlaceholder', 'Ex : Corrige, la douleur est à droite et non à gauche…')"
-                  class="ui-textarea w-full resize-y rounded-[4px] border-[var(--app-border)] bg-transparent p-2.5 text-sm text-[var(--text-primary)]"
-                ></textarea>
-                <button
-                  type="button"
-                  (click)="sendText()"
-                  [disabled]="busy() || !textMessage().trim()"
-                  class="inline-flex items-center justify-center rounded-[4px] bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
-                >
-                  {{ busy() ? i18n.t('consultation.ai.processing', 'Traitement…') : i18n.t('consultation.ai.sendText', 'Envoyer à l’assistant') }}
-                </button>
-              </div>
-            }
+            <app-ai-proposal-panel
+              [revisions]="session()?.revisions ?? []"
+              [disabled]="busy()"
+              (decided)="decideProposal($event)"
+            />
 
-            @if (draftEntries().length > 0) {
-              <div class="space-y-2">
-                <p class="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                  {{ i18n.t('consultation.ai.proposal', 'Brouillon proposé') }}
-                </p>
-                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  @for (entry of draftEntries(); track entry.key) {
-                    <div class="rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface-muted)]/30 p-3">
-                      <p class="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">{{ fieldLabel(entry.key) }}</p>
-                      <p class="mt-1 line-clamp-4 whitespace-pre-wrap text-xs leading-5 text-[var(--text-primary)]">{{ entry.value }}</p>
-                    </div>
-                  }
-                </div>
-                <button
-                  type="button"
-                  (click)="applyCurrentDraft()"
-                  class="inline-flex w-full items-center justify-center rounded-[6px] bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 sm:w-auto"
-                >
-                  {{ i18n.t('consultation.ai.apply', 'Appliquer au formulaire') }}
-                </button>
-              </div>
-            }
+            <app-ai-transcript-review
+              [transcript]="session()?.pendingTranscript"
+              [busy]="busy()"
+              (analyze)="analyzeTranscript($event)"
+              (discard)="discardPendingTranscript()"
+            />
+
+            <app-ai-draft-preview
+              [draft]="session()?.draft ?? {}"
+              [canApply]="!hasPendingRevision()"
+              (apply)="applyCurrentDraft()"
+            />
           }
         </div>
       </div>
@@ -235,12 +170,13 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   readonly qrCodeUrl = signal<string | null>(null);
   readonly busy = signal(false);
   readonly recording = signal(false);
-  readonly textMessage = signal('');
-  readonly editableTranscript = signal('');
   readonly errorMessage = signal('');
+  readonly composerResetToken = signal(0);
 
   readonly mediaRecorderSupported =
-    typeof window !== 'undefined' && 'MediaRecorder' in window && !!navigator.mediaDevices?.getUserMedia;
+    typeof window !== 'undefined'
+    && 'MediaRecorder' in window
+    && !!navigator.mediaDevices?.getUserMedia;
 
   private mediaRecorder: MediaRecorder | null = null;
   private mediaStream: MediaStream | null = null;
@@ -264,13 +200,21 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     if (qrCodeUrl) URL.revokeObjectURL(qrCodeUrl);
   }
 
-  pendingTranscript(): string {
-    return this.session()?.pendingTranscript?.trim() ?? '';
+  interactionBlocked(): boolean {
+    return !!this.session()?.pendingTranscript
+      || this.hasPendingClarification()
+      || this.hasPendingRevision();
   }
 
   hasPendingClarification(): boolean {
     return this.session()?.clarifications.some(
       clarification => clarification.status === 'PENDING',
+    ) ?? false;
+  }
+
+  hasPendingRevision(): boolean {
+    return this.session()?.revisions.some(
+      revision => revision.status === 'PENDING',
     ) ?? false;
   }
 
@@ -291,14 +235,13 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     void this.startRecording();
   }
 
-  sendText(): void {
-    const text = this.textMessage().trim();
-    if (!text || this.busy() || this.hasPendingClarification()) return;
+  sendText(text: string): void {
+    if (!text.trim() || this.busy() || this.interactionBlocked()) return;
     this.startBusy();
-    this.api.sendText(this.visitId, text).subscribe({
+    this.api.sendText(this.visitId, text.trim()).subscribe({
       next: response => {
         this.updateSessionFromMessage(response);
-        this.textMessage.set('');
+        this.composerResetToken.update(value => value + 1);
         this.busy.set(false);
       },
       error: error => this.handleError(error, 'Le message n’a pas pu être analysé.'),
@@ -317,18 +260,40 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
         this.updateSessionFromMessage(response);
         this.busy.set(false);
       },
-      error: error => this.handleError(error, 'La réponse à la clarification n’a pas pu être analysée.'),
+      error: error => this.handleError(
+        error,
+        'La réponse à la clarification n’a pas pu être analysée.',
+      ),
     });
   }
 
-  analyzeTranscript(): void {
-    const transcript = this.editableTranscript().trim();
-    if (!transcript || this.busy()) return;
+  decideProposal(request: AiProposalDecisionRequest): void {
+    if (this.busy()) return;
     this.startBusy();
-    this.api.analyzeTranscript(this.visitId, transcript).subscribe({
+    const operation = request.scope === 'PROPOSAL' && request.proposalId
+      ? this.api.decideProposal(
+          this.visitId,
+          request.revisionId,
+          request.proposalId,
+          request.decision,
+        )
+      : this.api.decideRevision(
+          this.visitId,
+          request.revisionId,
+          request.decision,
+        );
+    operation.subscribe({
+      next: response => this.completeSessionUpdate(response),
+      error: error => this.handleError(error, 'La décision n’a pas pu être enregistrée.'),
+    });
+  }
+
+  analyzeTranscript(transcript: string): void {
+    if (!transcript.trim() || this.busy()) return;
+    this.startBusy();
+    this.api.analyzeTranscript(this.visitId, transcript.trim()).subscribe({
       next: response => {
         this.updateSessionFromMessage(response);
-        this.editableTranscript.set('');
         this.busy.set(false);
       },
       error: error => this.handleError(error, 'La transcription n’a pas pu être analysée.'),
@@ -336,7 +301,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   discardPendingTranscript(): void {
-    if (!this.pendingTranscript() || this.busy()) return;
+    if (!this.session()?.pendingTranscript || this.busy()) return;
     this.startBusy();
     this.api.discardPendingTranscript(this.visitId).subscribe({
       next: () => {
@@ -345,7 +310,6 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
           pendingTranscript: null,
           transcriptStatus: 'NONE',
         } : current);
-        this.editableTranscript.set('');
         this.busy.set(false);
       },
       error: error => this.handleError(error, 'La transcription n’a pas pu être abandonnée.'),
@@ -358,8 +322,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     this.api.deleteSession(this.visitId).subscribe({
       next: () => {
         this.session.set(null);
-        this.editableTranscript.set('');
-        this.textMessage.set('');
+        this.composerResetToken.update(value => value + 1);
         this.busy.set(false);
       },
       error: error => this.handleError(error, 'Impossible de terminer la session IA.'),
@@ -368,45 +331,13 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
 
   applyCurrentDraft(): void {
     const draft = this.session()?.draft;
-    if (draft) this.applyDraft.emit({ ...draft });
-  }
-
-  onTextInput(event: Event): void {
-    this.textMessage.set((event.target as HTMLTextAreaElement).value);
-  }
-
-  onTranscriptInput(event: Event): void {
-    this.editableTranscript.set((event.target as HTMLTextAreaElement).value);
-  }
-
-  draftEntries(): Array<{ key: AiField; value: string }> {
-    const draft = this.session()?.draft ?? {};
-    return (Object.entries(draft) as Array<[AiField, string]>)
-      .filter(([, value]) => !!value?.trim())
-      .map(([key, value]) => ({ key, value }));
-  }
-
-  fieldLabel(field: AiField): string {
-    const labels: Record<AiField, string> = {
-      symptoms: this.i18n.t('consultation.symptoms.label', 'Symptômes'),
-      clinicalExam: this.i18n.t('consultation.clinicalExam.label', 'Examen clinique'),
-      suspectedDiagnosis: this.i18n.t('consultation.suspectedDiagnosis.label', 'Hypothèse diagnostique'),
-      diagnosis: this.i18n.t('consultation.diagnosis.label', 'Diagnostic'),
-      finalDiagnosis: this.i18n.t('consultation.finalDiagnosis.label', 'Diagnostic final'),
-      conclusion: this.i18n.t('consultation.conclusion.label', 'Conclusion'),
-      advice: this.i18n.t('consultation.advice.label', 'Conseils au patient'),
-      followUp: this.i18n.t('consultation.followUp.label', 'Suivi recommandé'),
-    };
-    return labels[field];
+    if (draft && !this.hasPendingRevision()) {
+      this.applyDraft.emit({ ...draft });
+    }
   }
 
   private async startRecording(): Promise<void> {
-    if (
-      !this.mediaRecorderSupported
-      || this.busy()
-      || this.pendingTranscript()
-      || this.hasPendingClarification()
-    ) return;
+    if (!this.mediaRecorderSupported || this.busy() || this.interactionBlocked()) return;
     if (!this.session()) {
       this.startSession();
       this.errorMessage.set('Activez la session puis relancez la dictée.');
@@ -443,7 +374,9 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   private sendRecordedAudio(): void {
     this.recording.set(false);
     if (this.recordingTimeout) clearTimeout(this.recordingTimeout);
-    const audio = new Blob(this.audioChunks, { type: this.mediaRecorder?.mimeType || 'audio/webm' });
+    const audio = new Blob(this.audioChunks, {
+      type: this.mediaRecorder?.mimeType || 'audio/webm',
+    });
     this.stopMediaStream();
     if (audio.size === 0) {
       this.errorMessage.set('Aucun son n’a été enregistré.');
@@ -458,7 +391,6 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
           transcriptStatus: response.status,
           expiresAt: response.expiresAt,
         } : current);
-        this.editableTranscript.set(response.transcript);
         this.busy.set(false);
       },
       error: error => this.handleError(error, 'La dictée n’a pas pu être transcrite.'),
@@ -468,14 +400,12 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   private refreshSession(silent = false): void {
     this.api.getSession(this.visitId).subscribe({
       next: response => {
-        if (!response) return;
-        this.session.set(response);
-        if (response.pendingTranscript && !this.editableTranscript()) {
-          this.editableTranscript.set(response.pendingTranscript);
-        }
+        if (response) this.session.set(response);
       },
       error: error => {
-        if (!silent && error.status !== 404) this.handleError(error, 'Assistant IA indisponible.');
+        if (!silent && error.status !== 404) {
+          this.handleError(error, 'Assistant IA indisponible.');
+        }
       },
     });
   }
@@ -501,9 +431,12 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
       draft: response.draft,
       transcript: response.transcript ?? previous?.transcript ?? null,
       pendingTranscript: null,
-      transcriptStatus: response.transcript ? 'ANALYZED' : previous?.transcriptStatus ?? 'NONE',
+      transcriptStatus: response.transcript
+        ? 'ANALYZED'
+        : previous?.transcriptStatus ?? 'NONE',
       conversation: response.conversation,
       clarifications: response.clarifications,
+      revisions: response.revisions,
       assistantMessage: response.assistantMessage,
       needsClarification: response.needsClarification,
     });
@@ -511,7 +444,6 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
 
   private completeSessionUpdate(response: AiSessionResponse): void {
     this.session.set(response);
-    this.editableTranscript.set(response.pendingTranscript ?? '');
     this.busy.set(false);
   }
 
