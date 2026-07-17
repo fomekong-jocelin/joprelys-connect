@@ -48,6 +48,7 @@ class AiConsultationControllerTest {
                         null,
                         "NONE",
                         List.of(),
+                        List.of(),
                         "Décrivez les symptômes.",
                         false));
 
@@ -59,6 +60,32 @@ class AiConsultationControllerTest {
         assertNotNull(response);
         assertEquals(visitId, response.visitId());
         verify(service).startSession(visitId, userId, organizationId, Map.of());
+    }
+
+    @Test
+    void shouldRouteClarificationAnswerWithAuthenticatedIdentity() {
+        AiConsultationService service = mock(AiConsultationService.class);
+        AiConsultationController controller = new AiConsultationController(service);
+        Authentication authentication = mock(Authentication.class);
+        UUID visitId = UUID.randomUUID();
+        UUID clarificationId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+        when(authentication.getDetails()).thenReturn(claims(userId.toString(), organizationId.toString()));
+        TenantContext.setTenantId(organizationId);
+
+        controller.answerClarification(
+                visitId,
+                clarificationId,
+                new AiConsultationController.ClarificationAnswerRequest("Depuis deux jours"),
+                authentication);
+
+        verify(service).answerClarification(
+                visitId,
+                userId,
+                organizationId,
+                clarificationId,
+                "Depuis deux jours");
     }
 
     @Test
