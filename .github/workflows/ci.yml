@@ -3,8 +3,18 @@ name: Joprelys Connect — CI Pipeline
 on:
   push:
     branches: [main, develop]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   pull_request:
     branches: [main, develop]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend-build:
@@ -22,10 +32,13 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: 'maven'
+          cache-dependency-path: |
+            backend/pom.xml
+            backend/.mvn/wrapper/maven-wrapper.properties
       - name: Ensure Maven wrapper is executable
         run: chmod +x mvnw
       - name: Build and verify (Maven strict)
-        run: ./mvnw clean verify -B -Dspring.profiles.active=test
+        run: ./mvnw clean verify -B --no-transfer-progress -Dspring.profiles.active=test
         env:
           SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
           JOPRELYS_JWT_SECRET: ci-test-jwt-secret-at-least-32-chars-2026
@@ -53,8 +66,16 @@ jobs:
           node-version: '22'
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
+      - name: Restore Angular compiler cache
+        uses: actions/cache@v4
+        with:
+          path: web/.angular/cache
+          key: angular-${{ runner.os }}-node22-${{ hashFiles('web/package-lock.json', 'web/angular.json', 'web/tsconfig*.json') }}-${{ github.sha }}
+          restore-keys: |
+            angular-${{ runner.os }}-node22-${{ hashFiles('web/package-lock.json', 'web/angular.json', 'web/tsconfig*.json') }}-
+            angular-${{ runner.os }}-node22-
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --fund=false
       - name: Run tests
         shell: bash
         run: |
