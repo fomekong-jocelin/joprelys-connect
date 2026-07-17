@@ -33,7 +33,7 @@ class OpenAiProviderTest {
         var transcription = provider.transcribeAudio("audio".getBytes(StandardCharsets.UTF_8), "audio/webm", "fr");
 
         assertThat(transcription.text()).isEqualTo("Patient stable");
-        assertThat(transcription.language()).isEqualTo("fr");
+        assertThat(transcription.locale()).isEqualTo("fr");
         server.verify();
     }
 
@@ -48,9 +48,10 @@ class OpenAiProviderTest {
                 .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("temperature"))))
                 .andRespond(withSuccess(chatResponse(), MediaType.APPLICATION_JSON));
 
-        AiChatResponse response = provider.chat(List.of(new AiMessage(AiMessage.Role.USER, "Bonjour")), "Système");
+        AiChatResponse response = provider.chat(List.of(AiMessage.user("Bonjour")), "Système");
 
         assertThat(response.content()).isEqualTo("Réponse");
+        assertThat(response.tokensUsed()).isEqualTo(12);
         server.verify();
     }
 
@@ -65,7 +66,7 @@ class OpenAiProviderTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("\"temperature\":0.3")))
                 .andRespond(withSuccess(chatResponse(), MediaType.APPLICATION_JSON));
 
-        provider.chat(List.of(new AiMessage(AiMessage.Role.USER, "Bonjour")), "Système");
+        provider.chat(List.of(AiMessage.user("Bonjour")), "Système");
 
         server.verify();
     }
