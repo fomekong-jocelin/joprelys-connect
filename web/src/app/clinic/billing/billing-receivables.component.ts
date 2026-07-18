@@ -6,6 +6,7 @@ import { Receivable } from '../../patient/patient.models';
 import { IconComponent } from '../../shared/ui/icon.component';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { BillingReminderModalComponent } from './billing-reminder-modal.component';
+import { RbacApiService } from '../rbac/rbac-api.service';
 
 @Component({
   selector: 'app-billing-receivables',
@@ -79,7 +80,9 @@ import { BillingReminderModalComponent } from './billing-reminder-modal.componen
                   <th class="p-2 text-right" scope="col">Solde Restant</th>
                   <th class="p-2" scope="col">Statut</th>
                   <th class="p-2" scope="col">Tranche (Aging)</th>
-                  <th class="p-2" scope="col">Action</th>
+                  @if (canWriteReminders()) {
+                    <th class="p-2" scope="col">Action</th>
+                  }
                 </tr>
               </thead>
               <tbody class="divide-y divide-[var(--app-border)]/40">
@@ -124,12 +127,14 @@ import { BillingReminderModalComponent } from './billing-reminder-modal.componen
                         {{ r.agingSlice === '0_30' ? '0-30j (Sain)' : r.agingSlice === '31_60' ? '31-60j' : r.agingSlice === '61_90' ? '61-90j' : '>90j (Juridique)' }}
                       </span>
                     </td>
-                    <td class="p-2">
-                      <button (click)="openReminderModal(r)" class="text-xs text-[var(--brand-cyan)] hover:underline flex items-center gap-1">
-                        <app-ui-icon name="information-circle" />
-                        Relancer
-                      </button>
-                    </td>
+                    @if (canWriteReminders()) {
+                      <td class="p-2">
+                        <button (click)="openReminderModal(r)" class="text-xs text-[var(--brand-cyan)] hover:underline flex items-center gap-1">
+                          <app-ui-icon name="information-circle" />
+                          Relancer
+                        </button>
+                      </td>
+                    }
                   </tr>
                 }
               </tbody>
@@ -150,19 +155,23 @@ import { BillingReminderModalComponent } from './billing-reminder-modal.componen
       }
 
       <!-- Reminder Modal -->
-      <app-billing-reminder-modal
-        [visible]="reminderModalVisible()"
-        [receivable]="selectedReceivable()"
-        [saving]="savingReminder()"
-        (close)="reminderModalVisible.set(false)"
-        (submitReminder)="onReminderSubmitted($event)"
-      />
+      @if (canWriteReminders()) {
+        <app-billing-reminder-modal
+          [visible]="reminderModalVisible()"
+          [receivable]="selectedReceivable()"
+          [saving]="savingReminder()"
+          (close)="reminderModalVisible.set(false)"
+          (submitReminder)="onReminderSubmitted($event)"
+        />
+      }
     </div>
   `
 })
 export class BillingReceivablesComponent implements OnInit {
   private readonly billingApi = inject(BillingApiService);
   private readonly i18n = inject(I18nService);
+  private readonly rbacApi = inject(RbacApiService);
+  readonly canWriteReminders = computed(() => this.rbacApi.hasPermission('RECEIVABLE_REMINDER_WRITE'));
 
   t(key: string, defaultValue: string): string {
     return this.i18n.t(key, defaultValue);
@@ -229,13 +238,14 @@ export class BillingReceivablesComponent implements OnInit {
   }
 
   openReminderModal(r: Receivable) {
+    if (!this.canWriteReminders()) return;
     this.selectedReceivable.set(r);
     this.reminderModalVisible.set(true);
   }
 
   onReminderSubmitted(form: any) {
     const receivable = this.selectedReceivable();
-    if (!receivable) return;
+    if (!this.canWriteReminders() || !receivable) return;
 
     this.savingReminder.set(true);
     this.billingApi.recordReminder(receivable.id, form).subscribe({

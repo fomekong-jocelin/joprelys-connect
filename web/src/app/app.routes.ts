@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { roleGuard } from './auth/role.guard';
+import { PROFESSIONAL_ACCESS_POLICIES } from './auth/professional-access-policies';
 
 export const routes: Routes = [
   {
@@ -127,7 +128,7 @@ export const routes: Routes = [
     path: 'clinic/spatial',
     loadComponent: () => import('./clinic/spatial/spatial-management-page.component').then(m => m.SpatialManagementPageComponent),
     canActivate: [roleGuard],
-    data: { expectedPermissions: ['HOSPITALIZATION_READ'] },
+    data: { expectedPermissions: [...PROFESSIONAL_ACCESS_POLICIES.spatial] },
   },
   {
     path: 'clinic/spatial/configuration',
@@ -139,13 +140,13 @@ export const routes: Routes = [
     path: 'clinic/billing',
     loadComponent: () => import('./clinic/billing/billing-management-page.component').then(m => m.BillingManagementPageComponent),
     canActivate: [roleGuard],
-    data: { expectedPermissions: ['BILLING_INVOICE_READ', 'INSURANCE_BORDEREAU_READ', 'ACCOUNTING_DASHBOARD_READ'] },
+    data: { expectedPermissions: [...PROFESSIONAL_ACCESS_POLICIES.billingWorkspace] },
   },
   {
     path: 'clinic/cashier',
     loadComponent: () => import('./clinic/billing/billing-cashier-page.component').then(m => m.BillingCashierPageComponent),
     canActivate: [roleGuard],
-    data: { expectedPermissions: ['CASH_QUEUE_READ', 'CASH_PAYMENT_COLLECT'] },
+    data: { expectedPermissions: [...PROFESSIONAL_ACCESS_POLICIES.cashier] },
   },
   {
     path: 'clinic/billing/invoice/:invoiceId',
@@ -163,7 +164,7 @@ export const routes: Routes = [
     path: 'clinic/lab-orders',
     loadComponent: () => import('./clinic/lab/lab-orders-page.component').then(m => m.LabOrdersPageComponent),
     canActivate: [roleGuard],
-    data: { expectedPermissions: ['LAB_ORDER_READ'] },
+    data: { expectedPermissions: [...PROFESSIONAL_ACCESS_POLICIES.labQueue] },
   },
   {
     path: 'unauthorized',

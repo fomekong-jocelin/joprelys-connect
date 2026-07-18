@@ -70,7 +70,7 @@
           </div>
         }
 
-        @if (hasPermission(['LAB_ORDER_READ', 'LAB_QUEUE_READ'])) {
+        @if (hasPermission('LAB_QUEUE_READ')) {
           <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-4">
               <div class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan dark:text-cyan-400">

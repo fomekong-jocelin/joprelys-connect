@@ -15,6 +15,10 @@ Un utilisateur ne doit voir, ouvrir ou exécuter que les actions correspondant �
 - RF-07 : les rôles personnalisés sont supportés uniquement par leurs permissions.
 - RF-08 : une déconnexion efface toutes les données du stockage navigateur, les cookies de l'origine et les états mémoire sensibles ; les préférences thème/langue sont volontairement réinitialisées.
 - RF-09 : une connexion avec une autre identité purge l'état précédent avant d'enregistrer la nouvelle session.
+- RF-10 : le frontend ne déduit jamais une permission à partir d'une autre permission ; seules les permissions retournées par `/api/rbac/me` sont effectives.
+- RF-11 : une entrée de menu, une route, un onglet et ses appels API partagent la même politique d'accès.
+- RF-12 : `LAB_ORDER_READ` couvre le laboratoire d'un patient autorisé ; la file laboratoire globale exige `LAB_QUEUE_READ`.
+- RF-13 : le rôle système `MEDECIN` ne possède aucune permission de facturation ou de caisse par défaut ; un rôle personnalisé peut les lui apporter explicitement.
 
 ## Parcours de recette
 

@@ -68,16 +68,11 @@ export class RbacApiService {
   }
 
   hasPermission(permission: string): boolean {
-    const permissions = this.effectivePermissionSet(this.access()?.permissions ?? []);
-    return permissions.has(permission);
+    return new Set(this.access()?.permissions ?? []).has(permission);
   }
 
-  effectivePermissionSet(permissionCodes: readonly string[]): Set<string> {
-    const permissions = new Set(permissionCodes);
-    if (permissions.has('LAB_QUEUE_READ')) {
-      permissions.add('LAB_ORDER_READ');
-    }
-    return permissions;
+  effectivePermissionSet(permissions: readonly string[]): Set<string> {
+    return new Set(permissions);
   }
 
   clearAccess(): void {

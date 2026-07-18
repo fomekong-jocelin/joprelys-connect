@@ -49,7 +49,7 @@ public class CashRegisterController {
     }
 
     @GetMapping("/sessions/active")
-    @PreAuthorize("hasAnyAuthority('CASH_SESSION_OPEN', 'CASH_SESSION_CLOSE', 'CASH_MOVEMENT_WRITE', 'CASH_HISTORY_READ')")
+    @PreAuthorize("hasAnyAuthority('CASH_PAYMENT_COLLECT', 'CASH_SESSION_OPEN', 'CASH_SESSION_CLOSE', 'CASH_MOVEMENT_WRITE', 'CASH_HISTORY_READ')")
     @Operation(summary = "Session de caisse active", description = "Retourne la session de caisse active du caissier connecté")
     public ResponseEntity<CashSessionResponse> getActiveSession() {
         CashSessionResponse active = cashRegisterService.getActiveSession();

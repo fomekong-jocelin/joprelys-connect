@@ -37,6 +37,10 @@ import { BillingInvoiceHistoryComponent } from './billing-invoice-history.compon
 import { BillingPaymentForm, BillingPaymentModalComponent } from './billing-payment-modal.component';
 import { BillingReceivablesComponent } from './billing-receivables.component';
 import { RbacApiService } from '../rbac/rbac-api.service';
+import {
+  CASH_WORKSPACE_PERMISSIONS,
+  hasAnyPermission,
+} from '../../auth/professional-access-policies';
 
 @Component({
   selector: 'app-billing-management-page',
@@ -79,13 +83,20 @@ export class BillingManagementPageComponent implements OnInit {
 
   activeTab = signal<'facturation' | 'caisse' | 'creances' | 'bordereaux' | 'conventions' | 'tariffs' | 'daf'>('facturation');
 
+  readonly canViewFacturation = computed(() =>
+    this.rbacApi.hasPermission('BILLING_INVOICE_READ')
+    && this.rbacApi.hasPermission('PATIENT_READ')
+  );
   readonly canViewDaf = computed(() => this.rbacApi.hasPermission('ACCOUNTING_DASHBOARD_READ'));
   readonly canConfigureBilling = computed(() => this.rbacApi.hasPermission('BILLING_INVOICE_WRITE'));
   readonly canViewReceivables = computed(() => this.rbacApi.hasPermission('BILLING_INVOICE_READ'));
   readonly canViewBordereaux = computed(() => this.rbacApi.hasPermission('INSURANCE_BORDEREAU_READ'));
+  readonly canCollectPayments = computed(() => this.rbacApi.hasPermission('CASH_PAYMENT_COLLECT'));
   readonly canAccessCaisse = computed(() =>
-    ['CASH_QUEUE_READ', 'CASH_PAYMENT_COLLECT', 'CASH_SESSION_OPEN']
-      .some((permission) => this.rbacApi.hasPermission(permission))
+    hasAnyPermission(
+      new Set(this.rbacApi.access()?.permissions ?? []),
+      CASH_WORKSPACE_PERMISSIONS,
+    )
   );
 
   // Search & Patient
@@ -151,9 +162,27 @@ export class BillingManagementPageComponent implements OnInit {
   readonly translate = (key: string, defaultValue: string): string => this.t(key, defaultValue);
 
   ngOnInit(): void {
-    this.loadGlobalConfigs();
-    this.loadCashSessionState();
-    this.handleDeepLink();
+    this.selectInitialTab();
+    if (this.rbacApi.hasPermission('BILLING_INVOICE_READ')) {
+      this.loadGlobalConfigs();
+      this.handleDeepLink();
+    }
+    if (this.canCollectPayments()) {
+      this.loadCashSessionState();
+    }
+  }
+
+  private selectInitialTab(): void {
+    if (this.canViewFacturation()) return;
+    if (this.canViewDaf()) {
+      this.activeTab.set('daf');
+    } else if (this.canViewBordereaux()) {
+      this.activeTab.set('bordereaux');
+    } else if (this.canAccessCaisse()) {
+      this.activeTab.set('caisse');
+    } else if (this.canViewReceivables()) {
+      this.activeTab.set('creances');
+    }
   }
 
   /**
@@ -162,20 +191,22 @@ export class BillingManagementPageComponent implements OnInit {
    */
   private handleDeepLink(): void {
     const invoiceId = this.route.snapshot.paramMap.get('invoiceId');
-    if (!invoiceId) return;
+    if (!invoiceId || !this.rbacApi.hasPermission('BILLING_INVOICE_READ')) return;
 
     this.deepLinkLoading.set(true);
     this.activeTab.set('facturation');
 
     this.billingApi.getInvoice(invoiceId).subscribe({
       next: (invoice) => {
-        this.patientApi.getById(invoice.patientId).subscribe({
-          next: (patient) => {
-            this.selectedPatient.set(patient);
-            this.loadPatientHistory(patient.id);
-          },
-          error: () => { /* patient non critique pour afficher le panneau */ }
-        });
+        if (this.rbacApi.hasPermission('PATIENT_READ')) {
+          this.patientApi.getById(invoice.patientId).subscribe({
+            next: (patient) => {
+              this.selectedPatient.set(patient);
+              this.loadPatientHistory(patient.id);
+            },
+            error: () => { /* patient non critique pour afficher le panneau */ }
+          });
+        }
         this.openInvoiceDetails(invoice);
         this.deepLinkLoading.set(false);
       },
@@ -210,7 +241,7 @@ export class BillingManagementPageComponent implements OnInit {
   }
 
   searchPatients(): void {
-    if (!this.searchQuery.trim()) return;
+    if (!this.canViewFacturation() || !this.searchQuery.trim()) return;
     this.patientApi.list(this.searchQuery).subscribe({
       next: (res) => { this.patients.set(res); this.searched.set(true); },
       error: () => this.showError('billing.error.load')
@@ -218,6 +249,7 @@ export class BillingManagementPageComponent implements OnInit {
   }
 
   selectPatient(patient: Patient): void {
+    if (!this.canViewFacturation()) return;
     this.selectedPatient.set(patient);
     this.selectedVisitId.set('');
     this.invoiceItems.set([]);
@@ -239,6 +271,7 @@ export class BillingManagementPageComponent implements OnInit {
   }
 
   loadPatientHistory(patientId: string): void {
+    if (!this.rbacApi.hasPermission('BILLING_INVOICE_READ')) return;
     this.invoiceHistoryLoading.set(true);
     this.invoiceHistoryError.set(false);
 
@@ -276,7 +309,7 @@ export class BillingManagementPageComponent implements OnInit {
 
   precalculateFromVisit(): void {
     const patient = this.selectedPatient();
-    if (!patient) return;
+    if (!this.canConfigureBilling() || !patient) return;
     this.billingApi.precalculateInvoice(patient.id, this.selectedVisitId() || undefined, this.selectedConventionId() || undefined).subscribe({
       next: (res) => {
         this.invoiceItems.set(res.items);
@@ -287,6 +320,7 @@ export class BillingManagementPageComponent implements OnInit {
   }
 
   addCustomItem(): void {
+    if (!this.canConfigureBilling()) return;
     this.invoiceItems.set([...this.invoiceItems(), {
       label: 'Prestation libre',
       itemType: 'CONSULTATION',
@@ -297,6 +331,7 @@ export class BillingManagementPageComponent implements OnInit {
   }
 
   removeItem(index: number): void {
+    if (!this.canConfigureBilling()) return;
     const items = [...this.invoiceItems()];
     items.splice(index, 1);
     this.invoiceItems.set(items);
@@ -308,7 +343,7 @@ export class BillingManagementPageComponent implements OnInit {
 
   saveInvoice(): void {
     const patient = this.selectedPatient();
-    if (!patient || this.existingInvoiceForSelectedVisit() || this.hasInvalidItems()) return;
+    if (!this.canConfigureBilling() || !patient || this.existingInvoiceForSelectedVisit() || this.hasInvalidItems()) return;
     this.savingInvoice.set(true);
     this.billingApi.createInvoice({
       patientId: patient.id,
@@ -344,8 +379,14 @@ export class BillingManagementPageComponent implements OnInit {
     }
   }
 
-  openInsuranceFollowUp(): void { this.activeTab.set('bordereaux'); }
-  openCashRegisterFromPayment(): void { this.closePaymentModal(); this.activeTab.set('caisse'); }
+  openInsuranceFollowUp(): void {
+    if (this.canViewBordereaux()) this.activeTab.set('bordereaux');
+  }
+  openCashRegisterFromPayment(): void {
+    if (!this.canAccessCaisse()) return;
+    this.closePaymentModal();
+    this.activeTab.set('caisse');
+  }
 
   printInvoicePdf(invoiceId: string): void {
     this.billingApi.downloadInvoicePdf(invoiceId).subscribe({
@@ -355,6 +396,7 @@ export class BillingManagementPageComponent implements OnInit {
   }
 
   openPaymentModal(invoice: Invoice): void {
+    if (!this.canCollectPayments()) return;
     this.paymentInvoice.set(invoice);
     this.showPaymentModal.set(true);
   }
@@ -366,7 +408,7 @@ export class BillingManagementPageComponent implements OnInit {
 
   submitPayment(payment: BillingPaymentForm): void {
     const invoice = this.paymentInvoice();
-    if (!invoice) return;
+    if (!this.canCollectPayments() || !invoice) return;
     this.savingPayment.set(true);
     this.billingApi.addPayment(invoice.id, payment.amount, payment.method, payment.reference).subscribe({
       next: () => {
@@ -382,6 +424,7 @@ export class BillingManagementPageComponent implements OnInit {
   }
 
   saveConvention(convention: { name: string; rate: number }): void {
+    if (!this.canConfigureBilling()) return;
     this.billingApi.createConvention(convention.name, convention.rate).subscribe({
       next: () => { this.showSuccess('billing.success.save'); this.loadGlobalConfigs(); },
       error: () => this.showError('billing.error.save')
@@ -389,6 +432,7 @@ export class BillingManagementPageComponent implements OnInit {
   }
 
   saveTariff(tariff: { keyLetter: string; unitValue: number }): void {
+    if (!this.canConfigureBilling()) return;
     this.billingApi.createOrUpdateTariff(tariff.keyLetter, tariff.unitValue).subscribe({
       next: () => { this.showSuccess('billing.success.save'); this.loadGlobalConfigs(); },
       error: () => this.showError('billing.error.save')

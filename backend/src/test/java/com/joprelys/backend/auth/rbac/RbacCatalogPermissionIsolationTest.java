@@ -40,7 +40,16 @@ class RbacCatalogPermissionIsolationTest {
 
         assertThat(roles.get("MEDECIN").permissions())
                 .contains("CLINICAL_WRITE", "VISIT_MANAGE", "AVAILABILITY_MANAGE")
-                .doesNotContain("AVAILABILITY_MANAGE_ALL");
+                .doesNotContain(
+                        "AVAILABILITY_MANAGE_ALL",
+                        "BILLING_INVOICE_READ",
+                        "BILLING_INVOICE_WRITE",
+                        "CASH_QUEUE_READ",
+                        "CASH_PAYMENT_COLLECT",
+                        "CASH_SESSION_OPEN",
+                        "CASH_SESSION_CLOSE",
+                        "CASH_MOVEMENT_WRITE",
+                        "CASH_HISTORY_READ");
         assertThat(roles.get("CAISSIER").permissions()).contains("CASH_PAYMENT_COLLECT");
         assertThat(roles.get("AUDITEUR").permissions()).contains("AUDIT_CROSS_TENANT_READ");
         assertThat(roles.get("ADMIN_CLINIQUE").permissions()).contains("AVAILABILITY_MANAGE_ALL");

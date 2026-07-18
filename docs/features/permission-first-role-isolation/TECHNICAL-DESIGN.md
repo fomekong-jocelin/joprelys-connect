@@ -19,6 +19,9 @@
 - `AuthTokenStorageService.clear()` purge `sessionStorage`, `localStorage`, les cookies accessibles et déclenche les cleanups mémoire enregistrés.
 - Le backend expire le refresh cookie HttpOnly et renvoie `Clear-Site-Data: "cache", "cookies", "storage"` ; le login patient applique aussi cette purge pour neutraliser un ancien cookie professionnel.
 - `clearAccessToken()` reste réservé à la rotation transparente du jeton du même compte et ne déclenche pas une fausse frontière de session.
+- `RbacApiService` expose strictement les permissions reçues ; aucune relation d'implication n'est appliquée côté navigateur.
+- Les politiques des destinations composites sont partagées entre navigation et routes afin d'empêcher leur dérive.
+- Un écran composite choisit le premier onglet réellement autorisé et ne lance que les appels correspondant aux permissions présentes.
 
 ## Migration
 
@@ -39,6 +42,13 @@ les affectations des rôles système ; les rôles personnalisés restent inchang
 
 - DB : aucun pour le P0 ; migrations possibles uniquement si de nouvelles permissions sont cataloguées.
 - API : aucun payload modifié ; politique d'autorisation renforcée.
+- API : `GET /api/invoices/conventions` accepte aussi `INSURANCE_BORDEREAU_READ`, car
+  les conventions sont une donnée de référence nécessaire au workspace assurance ;
+  `GET /api/cash-registers/sessions/active` accepte `CASH_PAYMENT_COLLECT` pour vérifier
+  la précondition d'encaissement sans élargir les mutations de caisse.
 - UI : aucun nouveau composant, texte, thème ou token.
 - Configuration : aucune variable ajoutée ; la variable existante `JOPRELYS_LAB_INTEGRATION_API_KEY` n'a plus de valeur de secours et une configuration vide ferme l'intégration.
 - Performance : rechargement RBAC après rotation de jeton, acceptable et sécurisé.
+- Dette préexistante : `LabOrdersPageComponent` reste au-dessus de 500 lignes ; le
+  correctif P0 ajoute uniquement les contrôles d'autorisation. Son extraction de template
+  et de formulaires doit précéder toute nouvelle évolution fonctionnelle.

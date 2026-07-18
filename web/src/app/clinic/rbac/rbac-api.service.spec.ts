@@ -75,6 +75,14 @@ describe('RbacApiService session isolation', () => {
     await expect(staleAccess).rejects.toThrow('active session');
     expect(service.access()).toBeNull();
   });
+
+  it('should never infer one dynamic permission from another', () => {
+    const permissions = service.effectivePermissionSet(['LAB_QUEUE_READ']);
+
+    expect(permissions.has('LAB_QUEUE_READ')).toBe(true);
+    expect(permissions.has('LAB_ORDER_READ')).toBe(false);
+    expect(permissions.has('LAB_ORDER_WRITE')).toBe(false);
+  });
 });
 
 function session(accessToken: string, email: string, role: string): LoginResponse {

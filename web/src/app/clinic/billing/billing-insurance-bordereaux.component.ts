@@ -224,6 +224,7 @@ export class BillingInsuranceBordereauxComponent implements OnInit {
   }
 
   markAsSent(id: string): void {
+    if (!this.canProgress()) return;
     this.executeSimpleAction(
       this.billingApi.sendInsuranceBordereau(id),
       this.t('billing.insurance.sent', 'Bordereau marqué comme envoyé.'),
@@ -232,6 +233,8 @@ export class BillingInsuranceBordereauxComponent implements OnInit {
   }
 
   openAction(item: InsuranceBordereau, mode: InsuranceActionMode): void {
+    const authorized = mode === 'receive' ? this.canProgress() : this.canDecide();
+    if (!authorized) return;
     this.actionBordereau.set(item);
     this.actionMode.set(mode);
     this.insurerReference.set(item.insurerReference ?? '');
@@ -251,6 +254,8 @@ export class BillingInsuranceBordereauxComponent implements OnInit {
     const item = this.actionBordereau();
     const mode = this.actionMode();
     if (!item || !mode || !this.actionValid()) return;
+    if (mode === 'receive' && !this.canProgress()) return;
+    if (mode !== 'receive' && !this.canDecide()) return;
 
     let request: Observable<InsuranceBordereau>;
     switch (mode) {

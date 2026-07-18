@@ -20,6 +20,8 @@ export class BillingInvoiceHistoryComponent {
   @Input() loading = false;
   @Input() error = false;
   @Input() selectedInvoiceId: string | null = null;
+  @Input() canCollectPayments = false;
+  @Input() canFollowInsurance = false;
   @Input({ required: true }) translate!: (key: string, defaultValue: string) => string;
 
   @Output() printPdf = new EventEmitter<string>();

@@ -6,6 +6,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
+import { RbacApiService } from '../rbac/rbac-api.service';
 import { LabOrderApiService } from './lab-api.service';
 import { LabOrder, LabResult, LabOrderStatus } from './lab.models';
 
@@ -142,7 +143,8 @@ import { LabOrder, LabResult, LabOrderStatus } from './lab.models';
                     </div>
                   </div>
 
-                  <div class="ui-card-muted p-4">
+                  @if (canWriteLab()) {
+                    <div class="ui-card-muted p-4">
                     <p class="ui-label">{{ t('lab.statusChange') }}</p>
                     <div class="mt-3 flex flex-col gap-3 md:flex-row md:items-end">
                       <label class="block md:w-72">
@@ -163,7 +165,8 @@ import { LabOrder, LabResult, LabOrderStatus } from './lab.models';
                     @if (statusSuccess()) {
                       <p class="mt-3 text-sm font-semibold" style="color: var(--brand-success)">{{ statusSuccess() }}</p>
                     }
-                  </div>
+                    </div>
+                  }
 
                   <div class="ui-card-muted p-4">
                     <p class="ui-label">{{ t('lab.exams') }}</p>
@@ -180,7 +183,8 @@ import { LabOrder, LabResult, LabOrderStatus } from './lab.models';
                     }
                   </div>
 
-                  <form class="ui-card-muted space-y-4 p-4" [formGroup]="resultForm" (ngSubmit)="submitResults(order)">
+                  @if (canWriteLab()) {
+                    <form class="ui-card-muted space-y-4 p-4" [formGroup]="resultForm" (ngSubmit)="submitResults(order)">
                     <div>
                       <p class="ui-label">{{ t('lab.resultEntry') }}</p>
                       <h3 class="font-display text-base font-extrabold" style="color: var(--text-primary)">
@@ -259,9 +263,11 @@ import { LabOrder, LabResult, LabOrderStatus } from './lab.models';
                         {{ isSubmitting() ? t('common.saving') : t('lab.validateButton') }}
                       </app-ui-button>
                     </div>
-                  </form>
+                    </form>
+                  }
 
-                  <div class="ui-card-muted p-4">
+                  @if (canReadLabResults()) {
+                    <div class="ui-card-muted p-4">
                     <div class="mb-3">
                       <p class="ui-label">{{ t('lab.history') }}</p>
                       <h3 class="font-display text-base font-extrabold" style="color: var(--text-primary)">
@@ -300,7 +306,8 @@ import { LabOrder, LabResult, LabOrderStatus } from './lab.models';
                         </table>
                       </div>
                     }
-                  </div>
+                    </div>
+                  }
                 </div>
               } @else {
                 <div class="flex min-h-[440px] items-center justify-center text-center">
@@ -320,7 +327,10 @@ import { LabOrder, LabResult, LabOrderStatus } from './lab.models';
 export class LabOrdersPageComponent {
   private readonly fb = inject(FormBuilder);
   private readonly labApi = inject(LabOrderApiService);
+  private readonly rbacApi = inject(RbacApiService);
   readonly i18n = inject(I18nService);
+  readonly canReadLabResults = computed(() => this.rbacApi.hasPermission('LAB_ORDER_READ'));
+  readonly canWriteLab = computed(() => this.rbacApi.hasPermission('LAB_ORDER_WRITE'));
 
   readonly searchQuery = signal('');
   readonly filterPriority = signal('');
@@ -413,7 +423,7 @@ export class LabOrdersPageComponent {
         this.selectedOrder.set(selected);
         if (selected) {
           this.statusDraft.set(selected.status);
-          this.loadResults(selected.patientId);
+          if (this.canReadLabResults()) this.loadResults(selected.patientId);
         }
         this.isLoading.set(false);
       },
@@ -431,7 +441,11 @@ export class LabOrdersPageComponent {
     this.submitSuccess.set('');
     this.statusError.set('');
     this.statusSuccess.set('');
-    this.loadResults(order.patientId);
+    if (this.canReadLabResults()) {
+      this.loadResults(order.patientId);
+    } else {
+      this.patientResults.set([]);
+    }
   }
 
   addResultLine(): void {
@@ -443,6 +457,7 @@ export class LabOrdersPageComponent {
   }
 
   submitResults(order: LabOrder): void {
+    if (!this.canWriteLab()) return;
     if (this.resultForm.invalid || this.isSubmitting()) {
       this.resultForm.markAllAsTouched();
       return;
@@ -475,7 +490,7 @@ export class LabOrdersPageComponent {
         this.submitSuccess.set(this.t('lab.submitSuccess'));
         this.isSubmitting.set(false);
         this.loadOrders();
-        this.loadResults(order.patientId);
+        if (this.canReadLabResults()) this.loadResults(order.patientId);
       },
       error: (error) => {
         this.submitError.set(error.error?.detail || error.error?.title || this.t('lab.submitError'));
@@ -485,6 +500,7 @@ export class LabOrdersPageComponent {
   }
 
   updateStatus(order: LabOrder): void {
+    if (!this.canWriteLab()) return;
     this.isUpdatingStatus.set(true);
     this.statusError.set('');
     this.statusSuccess.set('');
@@ -545,6 +561,7 @@ export class LabOrdersPageComponent {
   }
 
   private loadResults(patientId: string): void {
+    if (!this.canReadLabResults()) return;
     this.isLoadingResults.set(true);
     this.resultsError.set('');
     this.labApi.getPatientResults(patientId).subscribe({

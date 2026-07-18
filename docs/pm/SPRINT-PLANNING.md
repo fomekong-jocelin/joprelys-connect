@@ -91,6 +91,12 @@ EPIC-0020 est prête au refinement mais ne doit pas être engagée en développe
 ### Ajustement SPRINT-0014 — Incident P0 RBAC inter-session
 
 - `BUG-20260718-PATIENT-PROFESSIONAL-RBAC-CONTEXT-LEAK` consomme `0,75 j` senior / `3 SP`.
-- Le code P0, les 254 tests Angular, le build, l'i18n et les 453 tests Maven sont verts.
+- Le code P0, les 267 tests Angular, le build, l'i18n et les 453 tests Maven sont verts.
 - L'implémentation technique d'EPIC-0026 (21 SP / 9,5 j senior estimés) est terminée de façon accélérée ; la capacité restante porte sur la recette RSSI/métiers et la préparation de release.
 - Aucun ticket n'est déclaré DONE avant la signature de la matrice et de la recette croisée des rôles.
+
+### Ajustement SPRINT-0014 — Alignement permissions dynamiques finance/laboratoire
+
+- `BUG-20260718-DYNAMIC-PERMISSION-UI-API-MISMATCH` consomme `1,5 j` senior / `5 SP`.
+- Le rôle système médecin ne porte plus les permissions de facturation ; menus, routes, actions et appels API finance/laboratoire utilisent désormais les permissions effectives exactes, y compris pour les rôles personnalisés.
+- La QA technique est verte avec 267 tests Angular et 453 tests Maven ; la recette humaine multi-rôles, le redémarrage backend et le déploiement du build Angular restent à exécuter.

@@ -18,7 +18,9 @@
   }
 
   @if (activeSession(); as session) {
-    <app-billing-cashier-queue></app-billing-cashier-queue>
+    @if (canReadQueue()) {
+      <app-billing-cashier-queue></app-billing-cashier-queue>
+    }
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <div class="ui-card-subtle space-y-4 p-4 lg:col-span-1">
@@ -62,15 +64,18 @@
           <p class="pt-1 text-[var(--text-muted)]">Ces montants sont tracés, mais ne sont pas inclus dans le comptage physique.</p>
         </div>
 
-        <div class="pt-2">
-          <button type="button" (click)="openCloseModal()" class="ui-button ui-button-primary w-full justify-center">
-            <app-ui-icon name="check" />
-            Clôturer la Caisse
-          </button>
-        </div>
+        @if (canCloseSession()) {
+          <div class="pt-2">
+            <button type="button" (click)="openCloseModal()" class="ui-button ui-button-primary w-full justify-center">
+              <app-ui-icon name="check" />
+              Clôturer la Caisse
+            </button>
+          </div>
+        }
       </div>
 
-      <div class="ui-card-subtle space-y-3 p-4 lg:col-span-2">
+      @if (canWriteMovements()) {
+        <div class="ui-card-subtle space-y-3 p-4 lg:col-span-2">
         <h3 class="border-b border-[var(--app-border)]/40 pb-2 text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
           <app-ui-icon name="plus" />
           Consigner une Dépense / Mouvement de Caisse
@@ -133,10 +138,12 @@
             </button>
           </div>
         </form>
-      </div>
+        </div>
+      }
     </div>
 
-    <div class="ui-card-subtle space-y-3 p-4">
+    @if (canReadHistory()) {
+      <div class="ui-card-subtle space-y-3 p-4">
       <h3 class="border-b border-[var(--app-border)]/40 pb-2 text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
         Mouvements de la session
       </h3>
@@ -187,8 +194,9 @@
       } @else {
         <p class="py-4 text-center text-[10px] italic text-[var(--text-muted)]">Aucun mouvement enregistré pour cette session.</p>
       }
-    </div>
-  } @else {
+      </div>
+    }
+  } @else if (canOpenSession()) {
     <section data-testid="cash-open-panel" class="ui-card-subtle overflow-hidden">
       <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
         <div class="flex flex-col justify-between gap-6 border-b border-[var(--app-border)] p-5 lg:border-b-0 lg:border-r lg:p-6">
@@ -257,10 +265,12 @@
     </section>
   }
 
-  <app-billing-cash-session-history></app-billing-cash-session-history>
+  @if (canReadHistory()) {
+    <app-billing-cash-session-history></app-billing-cash-session-history>
+  }
 </div>
 
-@if (showCloseModal()) {
+@if (canCloseSession() && showCloseModal()) {
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
     <div class="w-full max-w-md space-y-4 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface)] p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="cash-close-title">
       <div class="flex items-center justify-between border-b border-[var(--app-border)]/40 pb-2">

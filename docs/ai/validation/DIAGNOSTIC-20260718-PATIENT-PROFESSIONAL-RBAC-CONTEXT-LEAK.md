@@ -69,4 +69,4 @@ La route `/clinic/availability` possédait un guard et le contrôleur Spring une
 
 ## Résolution du 2026-07-18
 
-Le correctif P0 et la généralisation EPIC-0026 sont implémentés. Aucun contrôleur ne contient désormais une annotation `@PreAuthorize` fondée sur `hasRole`/`hasAnyRole`; les routes professionnelles Angular utilisent les permissions effectives. Les suites complètes sont vertes : 453 tests Maven et 254 tests Angular. La validation RSSI/métiers demeure une étape de gouvernance avant livraison.
+Le correctif P0 et la généralisation EPIC-0026 sont implémentés. Aucun contrôleur ne contient désormais une annotation `@PreAuthorize` fondée sur `hasRole`/`hasAnyRole`; les routes professionnelles Angular utilisent les permissions effectives. Les suites complètes sont vertes : 453 tests Maven et 267 tests Angular. La validation RSSI/métiers demeure une étape de gouvernance avant livraison.

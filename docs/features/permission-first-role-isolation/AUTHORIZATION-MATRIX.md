@@ -42,7 +42,9 @@ obligatoires après le contrôle fonctionnel.
 | Prescriptions — lecture pharmacie | `PHARMACY_PRESCRIPTION_READ` |
 | Prescriptions — écriture | `CLINICAL_WRITE` |
 | Urgences | permissions `EMERGENCY_*` existantes |
-| Laboratoire | permissions `LAB_*` existantes |
+| Laboratoire — dossier d'un patient autorisé | `LAB_ORDER_READ` |
+| Laboratoire — file globale | `LAB_QUEUE_READ` |
+| Laboratoire — traitement / publication | `LAB_ORDER_WRITE` |
 | FHIR Patient | `PATIENT_READ` |
 | FHIR Encounter / Observation | `CLINICAL_READ` |
 | FHIR DiagnosticReport | `LAB_ORDER_READ` |
@@ -52,9 +54,11 @@ obligatoires après le contrôle fonctionnel.
 | Accueil — écriture | `RECEPTION_WRITE` |
 | Accès externe clinique | `PATIENT_EMERGENCY_ACCESS` |
 | Facturation | permissions `BILLING_*` existantes |
+| Conventions d'assurance — lecture workspace assurance | `BILLING_INVOICE_READ` ou `INSURANCE_BORDEREAU_READ` |
 | Relances créances — lecture | `RECEIVABLE_REMINDER_READ` |
 | Relances créances — écriture | `RECEIVABLE_REMINDER_WRITE` |
 | Caisse | permissions `CASH_*` existantes |
+| Session active — précondition d'encaissement | `CASH_PAYMENT_COLLECT` ou permission de gestion/historique de session |
 | Assurance | permissions `INSURANCE_*` existantes |
 | Comptabilité | permissions `ACCOUNTING_*` existantes |
 | Audit tenant | `AUDIT_READ` |
@@ -83,6 +87,8 @@ obligatoires après le contrôle fonctionnel.
 ## Refus intentionnels issus de la suppression des fallbacks
 
 - un médecin sans `AUDIT_READ` ne lit plus les journaux d'audit ;
+- un médecin ne reçoit aucune permission `BILLING_*` ou `CASH_*` par défaut ;
+- `LAB_ORDER_READ` n'ouvre ni le menu ni la route de la file laboratoire globale ;
 - un infirmier sans permission de facturation ne lit plus les factures ou devis ;
 - un rôle clinique sans `USER_READ` ne liste plus les collaborateurs ; le médecin conserve cette lecture pour les sélecteurs de praticiens ;
 - un administrateur plateforme ne lit plus automatiquement les données cliniques d'un tenant ;

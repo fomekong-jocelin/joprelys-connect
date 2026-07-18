@@ -58,9 +58,11 @@ public class HospitalizationControllerTest {
 
     private OrganizationEntity org;
     private UserAccountEntity doctor;
+    private UserAccountEntity billingAgent;
     private PatientEntity patientA;
     private PatientEntity patientB;
     private String tokenDoctor;
+    private String tokenBillingAgent;
 
     @BeforeEach
     void setUp() {
@@ -101,6 +103,15 @@ public class HospitalizationControllerTest {
         doctor = userAccountRepository.save(doctor);
 
         tokenDoctor = jwtService.createToken(doctor).value();
+
+        billingAgent = new UserAccountEntity(
+                "billing.hosp@joprelys.local",
+                "Agent facturation",
+                "AGENT_ACCUEIL",
+                "passhash");
+        billingAgent.setOrganizationId(org.getId());
+        billingAgent = userAccountRepository.save(billingAgent);
+        tokenBillingAgent = jwtService.createToken(billingAgent).value();
 
         // Create Patients
         patientA = new PatientEntity("DPU-H-00001", "PAT-H-001", "Alice Hospitalisée", "FEMININ", LocalDate.of(1990, 5, 10), "+237699999991", "Douala", "Akwa", "Street A", "Bob", "+237699445566", "Aucune", "Aucun");
@@ -506,7 +517,7 @@ public class HospitalizationControllerTest {
         mockMvc.perform(post("/api/invoices/precalculate")
                 .param("patientId", patientA.getId().toString())
                 .param("visitId", visit.getId().toString())
-                .header("Authorization", "Bearer " + tokenDoctor))
+                .header("Authorization", "Bearer " + tokenBillingAgent))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[?(@.itemType == 'AMI_CARE')].label").value("Soin : PANSEMENT (Pansement abdominal refait)"))
                 .andExpect(jsonPath("$.items[?(@.itemType == 'AMI_CARE')].unitPrice").value(4500.0))
@@ -596,7 +607,7 @@ public class HospitalizationControllerTest {
         mockMvc.perform(post("/api/invoices/precalculate")
                 .param("patientId", patientA.getId().toString())
                 .param("visitId", visit.getId().toString())
-                .header("Authorization", "Bearer " + tokenDoctor))
+                .header("Authorization", "Bearer " + tokenBillingAgent))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[?(@.itemType == 'K_SURGEON')]").isEmpty())
                 .andExpect(jsonPath("$.items[?(@.label == 'Implant : Fil de suture résorbable (Lot: LOT12345)')]").isEmpty());
@@ -612,7 +623,7 @@ public class HospitalizationControllerTest {
         mockMvc.perform(post("/api/invoices/precalculate")
                 .param("patientId", patientA.getId().toString())
                 .param("visitId", visit.getId().toString())
-                .header("Authorization", "Bearer " + tokenDoctor))
+                .header("Authorization", "Bearer " + tokenBillingAgent))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[?(@.itemType == 'K_SURGEON')].label").value("CRO : Honoraires Chirurgien (K 50.0 - Appendicectomie)"))
                 .andExpect(jsonPath("$.items[?(@.itemType == 'K_SURGEON')].unitPrice").value(50000.0)) // 50 * 1000

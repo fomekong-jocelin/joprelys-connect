@@ -6,14 +6,14 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-18 (P0 RBAC et généralisation permission-first EPIC-0026 implémentés ; suites backend/frontend vertes ; QA humaine à signer) |
-| Responsable mise à jour | Codex |
-| État global | BUG-20260718 et EPIC-0026 en QA : 453 tests Maven et 254 tests Angular verts, build et i18n verts ; aucun contrôle de rôle professionnel dans les annotations contrôleur ou les routes Angular. |
-| Risques majeurs | Validation métier/RSSI de la matrice permission-first ; revue sécurité humaine de #33 ; renouvellement Angular absent jusqu’à #34 ; données de santé chez un fournisseur IA |
+| Dernière mise à jour | 2026-07-18 (Audit technique complet RBAC vert ; tests Maven/Angular 100% passés ; ticket d'audit créé) |
+| Responsable mise à jour | Antigravity |
+| État global | BUG-20260718, EPIC-0026 et AUDIT-20260718 en QA : 453 tests Maven et 267 tests Angular verts, build et i18n verts ; audit technique de cohérence et d'alignement RBAC dynamique réalisé et 100% vert. |
+| Risques majeurs | Validation métier/RSSI de la matrice permission-first ; recette E2E multi-rôles sur staging |
 | Prochaine priorité | Recette croisée des rôles et validation RSSI/métiers, puis préparation d'une release MINOR dédiée |
 | Sprint courant | SPRINT-0014 |
-| Capacité sprint | P0 RBAC : 0,75 j senior ; EPIC-0026 : 21 SP / 9,5 j senior implémentés, QA externe restante |
-| Charge engagée | 47.85j (Est. Senior, incluant le P0 RBAC et l'implémentation EPIC-0026) |
+| Capacité sprint | P0 RBAC : 2,25 j senior cumulés ; EPIC-0026 : 21 SP / 9,5 j senior implémentés, QA externe restante |
+| Charge engagée | 49.35j (Est. Senior, incluant les P0 RBAC et l'implémentation EPIC-0026) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
@@ -21,6 +21,7 @@
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---|---:|---|---:|---:|---|---|---|---:|---|---|---|
 | BUG-20260718-PATIENT-PROFESSIONAL-RBAC-CONTEXT-LEAK | EPIC-0025 / EPIC-0026 | Bug sécurité | Contamination de permissions entre sessions et accès disponibilités | Angular / Spring Security / RBAC | QA TECHNIQUE VERTE | P0 | 3 | Senior full-stack sécurité | 0.75j | 1.2j | 2.0j | Codex | Tech Lead + RSSI + QA | SPRINT-0014 | 0.75j | Revue humaine et recette multi-rôles | Moyen | 2026-07-18 |
+| BUG-20260718-DYNAMIC-PERMISSION-UI-API-MISMATCH | EPIC-0026 | Bug sécurité | Alignement permissions dynamiques menus, routes et API finance/laboratoire | Angular / Spring Security / RBAC | QA TECHNIQUE VERTE | P0 | 5 | Senior full-stack sécurité | 1.5j | 2.2j | 3.5j | Codex | Tech Lead + RSSI + QA | SPRINT-0014 | 1.5j | Recette humaine multi-rôles et déploiement | Moyen | 2026-07-18 |
 | EPIC-0026 | PERMISSION_FIRST_ROLE_ISOLATION | Epic | Cloisonnement permission-first de tous les rôles | Spring Boot / Angular / RBAC / QA | QA | P0/P1 | 21 | Architecte sécurité + Seniors full-stack + QA | 9.5j | 13.0j | 19.0j | Codex | RSSI + Tech Lead + métiers | SPRINT-0014/0015 | 9.5j | Valider la matrice et signer la recette E2E multi-rôles | Moyen | 2026-07-18 |
 | EPIC-0025 | DOCTOR_AVAILABILITY_APPOINTMENTS | Epic | Disponibilités médecins et prise de rendez-vous patient | Spring Boot / Angular / DB / RBAC | IN_PROGRESS | P1 | 29 | Senior full-stack + Lead Frontend + QA | 12.0j | 16.0j | 24.0j | GPT-5.6 Thinking | Tech Lead + QA | SPRINT-0015 (proposé) | 8.0j | Revue/fusion STORY-2603 PR #67 puis engagement STORY-2604 et STORY-2605 | Moyen | 2026-07-18 |
 | STORY-2601 | DOCTOR_AVAILABILITY_APPOINTMENTS | User Story | Fondations données, RBAC et contrats du module rendez-vous | Spring Boot / DB / RBAC | DONE | P1 | 3 | Senior backend | 1.5j | 2.3j | 3.4j | Codex | Tech Lead + référent données | SPRINT-0015 (proposé) | 1.5j | Suivi post-fusion normal ; PR #62 fusionnée au commit `13bdb063` | Faible | 2026-07-18 |

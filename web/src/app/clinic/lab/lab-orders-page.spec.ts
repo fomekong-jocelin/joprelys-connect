@@ -6,6 +6,7 @@ import { of, throwError } from 'rxjs';
 import { LabOrderApiService } from './lab-api.service';
 import { LabOrdersPageComponent } from './lab-orders-page.component';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { RbacApiService } from '../rbac/rbac-api.service';
 
 import { ExamType, LabOrderStatus, LabOrder } from './lab.models';
 
@@ -87,6 +88,7 @@ describe('LabOrdersPageComponent', () => {
     updateStatus: ReturnType<typeof vi.fn>;
     uploadResults: ReturnType<typeof vi.fn>;
   };
+  let permissions: Set<string>;
 
   beforeEach(async () => {
     labApi = {
@@ -95,6 +97,7 @@ describe('LabOrdersPageComponent', () => {
       updateStatus: vi.fn().mockReturnValue(of({ ...labOrder, status: 'IN_PROGRESS' })),
       uploadResults: vi.fn().mockReturnValue(of(null)),
     };
+    permissions = new Set(['LAB_QUEUE_READ', 'LAB_ORDER_READ', 'LAB_ORDER_WRITE']);
 
     await TestBed.configureTestingModule({
       imports: [LabOrdersPageComponent],
@@ -102,6 +105,12 @@ describe('LabOrdersPageComponent', () => {
         provideRouter([]),
         I18nService,
         { provide: LabOrderApiService, useValue: labApi },
+        {
+          provide: RbacApiService,
+          useValue: {
+            hasPermission: (permission: string) => permissions.has(permission),
+          },
+        },
       ],
     }).compileComponents();
 
@@ -188,5 +197,25 @@ describe('LabOrdersPageComponent', () => {
     component.filterPriority.set('URGENTE');
     expect(component.filteredOrders().length).toBe(1);
     expect(component.filteredOrders()[0].priority).toBe('URGENTE');
+  });
+
+  it('should not load or expose result actions with queue-only permission', () => {
+    permissions = new Set(['LAB_QUEUE_READ']);
+    labApi.getPatientResults.mockClear();
+    labApi.updateStatus.mockClear();
+    labApi.uploadResults.mockClear();
+
+    const restrictedFixture = TestBed.createComponent(LabOrdersPageComponent);
+    restrictedFixture.detectChanges();
+    const component = restrictedFixture.componentInstance;
+    component.selectOrder(labOrder);
+    component.updateStatus(labOrder);
+    component.submitResults(labOrder);
+    restrictedFixture.detectChanges();
+
+    expect(labApi.getPatientResults).not.toHaveBeenCalled();
+    expect(labApi.updateStatus).not.toHaveBeenCalled();
+    expect(labApi.uploadResults).not.toHaveBeenCalled();
+    expect((restrictedFixture.nativeElement as HTMLElement).textContent).not.toContain('Clé API');
   });
 });

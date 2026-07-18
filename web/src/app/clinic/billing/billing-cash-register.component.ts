@@ -5,6 +5,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
 import { BillingApiService } from '../../patient/billing-api.service';
 import { CashMovement, CashRegister, CashSession, CashSessionSummary } from '../../patient/patient.models';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { RbacApiService } from '../rbac/rbac-api.service';
 import { BillingCashSessionHistoryComponent } from './billing-cash-session-history.component';
 import { BillingCashierQueueComponent } from './billing-cashier-queue.component';
 
@@ -23,6 +24,23 @@ import { BillingCashierQueueComponent } from './billing-cashier-queue.component'
 export class BillingCashRegisterComponent implements OnInit {
   private readonly billingApi = inject(BillingApiService);
   private readonly i18n = inject(I18nService);
+  private readonly rbacApi = inject(RbacApiService);
+
+  readonly canOpenSession = computed(() => this.rbacApi.hasPermission('CASH_SESSION_OPEN'));
+  readonly canCloseSession = computed(() => this.rbacApi.hasPermission('CASH_SESSION_CLOSE'));
+  readonly canWriteMovements = computed(() => this.rbacApi.hasPermission('CASH_MOVEMENT_WRITE'));
+  readonly canReadHistory = computed(() => this.rbacApi.hasPermission('CASH_HISTORY_READ'));
+  readonly canReadQueue = computed(() => this.rbacApi.hasPermission('CASH_QUEUE_READ'));
+  readonly canReadActiveSession = computed(() =>
+    this.canOpenSession()
+    || this.canCloseSession()
+    || this.canWriteMovements()
+    || this.canReadHistory()
+    || this.rbacApi.hasPermission('CASH_PAYMENT_COLLECT')
+  );
+  readonly canReadSummary = computed(() =>
+    this.canCloseSession() || this.canWriteMovements() || this.canReadHistory()
+  );
 
   t(key: string, defaultValue: string): string {
     return this.i18n.t(key, defaultValue);
@@ -77,8 +95,8 @@ export class BillingCashRegisterComponent implements OnInit {
   discrepancy = computed(() => this.declaredBalance() - this.soldeTheorique());
 
   ngOnInit(): void {
-    this.loadActiveSession();
-    this.loadRegisters();
+    if (this.canReadActiveSession()) this.loadActiveSession();
+    if (this.canOpenSession()) this.loadRegisters();
   }
 
   loadActiveSession(): void {
@@ -86,8 +104,8 @@ export class BillingCashRegisterComponent implements OnInit {
       next: (session) => {
         if (session) {
           this.activeSession.set(session);
-          this.loadSessionMovements(session.id);
-          this.loadSessionSummary();
+          if (this.canReadHistory()) this.loadSessionMovements(session.id);
+          if (this.canReadSummary()) this.loadSessionSummary();
         } else {
           this.activeSession.set(null);
           this.movements.set([]);
@@ -103,18 +121,21 @@ export class BillingCashRegisterComponent implements OnInit {
   }
 
   loadRegisters(): void {
+    if (!this.canOpenSession()) return;
     this.billingApi.listCashRegisters().subscribe({
       next: (registers) => this.registers.set(registers),
     });
   }
 
   loadSessionMovements(sessionId: string): void {
+    if (!this.canReadHistory()) return;
     this.billingApi.getSessionMovements(sessionId).subscribe({
       next: (movements) => this.movements.set(movements),
     });
   }
 
   loadSessionSummary(): void {
+    if (!this.canReadSummary()) return;
     this.billingApi.getActiveCashSessionSummary().subscribe({
       next: (summary) => this.summary.set(summary),
       error: () => this.summary.set(null),
@@ -122,7 +143,7 @@ export class BillingCashRegisterComponent implements OnInit {
   }
 
   submitOpen(): void {
-    if (this.openBalance() < 0) return;
+    if (!this.canOpenSession() || this.openBalance() < 0) return;
     this.savingOpen.set(true);
     const registerId = this.selectedRegisterId() || null;
     this.billingApi.openCashSession(registerId, this.openBalance()).subscribe({
@@ -130,8 +151,8 @@ export class BillingCashRegisterComponent implements OnInit {
         this.savingOpen.set(false);
         this.activeSession.set(session);
         this.successMessage.set('Session de caisse ouverte avec succès.');
-        this.loadSessionMovements(session.id);
-        this.loadSessionSummary();
+        if (this.canReadHistory()) this.loadSessionMovements(session.id);
+        if (this.canReadSummary()) this.loadSessionSummary();
         this.errorMessage.set(null);
       },
       error: (error) => {
@@ -142,7 +163,7 @@ export class BillingCashRegisterComponent implements OnInit {
   }
 
   submitMovement(): void {
-    if (this.movAmount() <= 0 || !this.movDescription()) return;
+    if (!this.canWriteMovements() || this.movAmount() <= 0 || !this.movDescription()) return;
 
     if (this.movType() === 'OUT' && this.movAmount() > 100000 && !this.movDoubleVisaApproved()) {
       this.errorMessage.set('Double visa obligatoire pour les dépenses supérieures à 100 000 FCFA.');
@@ -165,7 +186,7 @@ export class BillingCashRegisterComponent implements OnInit {
       next: (movement) => {
         this.savingMovement.set(false);
         this.movements.update((list) => [...list, movement]);
-        this.loadSessionSummary();
+        if (this.canReadSummary()) this.loadSessionSummary();
         this.successMessage.set('Mouvement de caisse consigné avec succès.');
         this.errorMessage.set(null);
         this.movAmount.set(0);
@@ -187,12 +208,14 @@ export class BillingCashRegisterComponent implements OnInit {
   }
 
   openCloseModal(): void {
+    if (!this.canCloseSession()) return;
     this.declaredBalance.set(this.soldeTheorique());
     this.discrepancyReason.set('');
     this.showCloseModal.update((value) => !value);
   }
 
   submitClose(): void {
+    if (!this.canCloseSession()) return;
     if (this.discrepancy() !== 0 && !this.discrepancyReason().trim()) {
       this.errorMessage.set("Vous devez justifier l'écart de caisse.");
       return;

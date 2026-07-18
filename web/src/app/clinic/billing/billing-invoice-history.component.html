@@ -87,7 +87,7 @@
             </div>
 
             <div class="invoice-actions" [attr.aria-label]="translate('billing.invoiceActions', 'Actions de la facture')">
-              @if (canCollectPatient(invoice)) {
+              @if (canCollectPayments && canCollectPatient(invoice)) {
                 <button
                   type="button"
                   class="ui-button ui-button-primary invoice-primary-action"
@@ -97,7 +97,7 @@
                   <app-ui-icon name="banknotes" />
                   {{ translate('billing.collect', 'Encaisser') }}
                 </button>
-              } @else if (isInsuranceDue(invoice)) {
+              } @else if (canFollowInsurance && isInsuranceDue(invoice)) {
                 <button
                   type="button"
                   class="ui-button ui-button-primary invoice-primary-action"

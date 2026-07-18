@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, OnInit, inject, signal } from '@angular/core';
+import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BillingApiService } from '../../patient/billing-api.service';
 import { CashSession } from '../../patient/patient.models';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { RbacApiService } from '../rbac/rbac-api.service';
 
 @Component({
   selector: 'app-billing-daf-dashboard',
@@ -12,7 +13,8 @@ import { IconComponent } from '../../shared/ui/icon.component';
   template: `
     <div class="space-y-6">
       <!-- Top Actions & Export Box -->
-      <div class="ui-card-subtle p-4 space-y-4">
+      @if (canExport()) {
+        <div class="ui-card-subtle p-4 space-y-4">
         <h3 class="font-bold text-xs text-[var(--text-primary)] uppercase tracking-wider border-b border-[var(--app-border)]/40 pb-2 flex items-center gap-1.5">
           <app-ui-icon name="document-text" />
           Exportation Comptable OHADA (Format Sage 100)
@@ -38,10 +40,12 @@ import { IconComponent } from '../../shared/ui/icon.component';
             }
           </button>
         </div>
-      </div>
+        </div>
+      }
 
       <!-- Cash Sessions Audit List -->
-      <div class="ui-card-subtle p-4 space-y-3">
+      @if (canReadCashHistory()) {
+        <div class="ui-card-subtle p-4 space-y-3">
         <h3 class="font-bold text-xs text-[var(--text-primary)] uppercase tracking-wider border-b border-[var(--app-border)]/40 pb-2">
           Contrôle et supervision des Sessions de Caisses
         </h3>
@@ -107,7 +111,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
                       }
                     </td>
                     <td class="p-2">
-                      @if (s.discrepancyAmount && s.discrepancyAmount !== 0 && !s.discrepancyResolved) {
+                      @if (canResolveDiscrepancies() && s.discrepancyAmount && s.discrepancyAmount !== 0 && !s.discrepancyResolved) {
                         <button (click)="openResolveModal(s)" class="text-xs text-[var(--brand-cyan)] hover:underline flex items-center gap-1 font-bold">
                           <app-ui-icon name="check" />
                           Traiter
@@ -127,10 +131,11 @@ import { IconComponent } from '../../shared/ui/icon.component';
             </table>
           </div>
         }
-      </div>
+        </div>
+      }
 
       <!-- Resolution Modal -->
-      @if (resolveModalVisible()) {
+      @if (canResolveDiscrepancies() && resolveModalVisible()) {
         <div class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div class="ui-card max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div class="flex justify-between items-center border-b border-[var(--app-border)]/40 pb-2">
@@ -205,6 +210,10 @@ import { IconComponent } from '../../shared/ui/icon.component';
 })
 export class BillingDafDashboardComponent implements OnInit {
   private readonly billingApi = inject(BillingApiService);
+  private readonly rbacApi = inject(RbacApiService);
+  readonly canExport = computed(() => this.rbacApi.hasPermission('ACCOUNTING_EXPORT'));
+  readonly canReadCashHistory = computed(() => this.rbacApi.hasPermission('CASH_HISTORY_READ'));
+  readonly canResolveDiscrepancies = computed(() => this.rbacApi.hasPermission('CASH_DISCREPANCY_RESOLVE'));
 
   @Input({ required: true }) translate!: (key: string, defaultValue: string) => string;
 
@@ -224,7 +233,7 @@ export class BillingDafDashboardComponent implements OnInit {
   savingResolution = signal<boolean>(false);
 
   ngOnInit(): void {
-    this.loadSessions();
+    if (this.canReadCashHistory()) this.loadSessions();
     // Par défaut, plages de dates d'export sur les 30 derniers jours
     const today = new Date();
     const past = new Date();
@@ -235,6 +244,7 @@ export class BillingDafDashboardComponent implements OnInit {
   }
 
   loadSessions(): void {
+    if (!this.canReadCashHistory()) return;
     this.loadingSessions.set(true);
     this.billingApi.listAllSessions().subscribe({
       next: (data) => {
@@ -248,6 +258,7 @@ export class BillingDafDashboardComponent implements OnInit {
   }
 
   exportSage100(): void {
+    if (!this.canExport()) return;
     this.exporting.set(true);
     this.billingApi.exportAccounting(this.startDate, this.endDate).subscribe({
       next: (blob) => {
@@ -268,6 +279,7 @@ export class BillingDafDashboardComponent implements OnInit {
   }
 
   openResolveModal(session: CashSession): void {
+    if (!this.canResolveDiscrepancies()) return;
     this.selectedSession.set(session);
     this.resolutionNotes = '';
     this.resolveModalVisible.set(true);
@@ -280,7 +292,7 @@ export class BillingDafDashboardComponent implements OnInit {
 
   submitResolution(): void {
     const session = this.selectedSession();
-    if (!session || !this.resolutionNotes.trim()) {
+    if (!this.canResolveDiscrepancies() || !session || !this.resolutionNotes.trim()) {
       return;
     }
 

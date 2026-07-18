@@ -1,6 +1,7 @@
 import { Route } from '@angular/router';
 import { routes } from './app.routes';
 import { roleGuard } from './auth/role.guard';
+import { PROFESSIONAL_ACCESS_POLICIES } from './auth/professional-access-policies';
 
 describe('application route role boundaries', () => {
   const guardedRoutes = flatten(routes).filter((route) => route.canActivate?.includes(roleGuard));
@@ -24,6 +25,18 @@ describe('application route role boundaries', () => {
         || route.path === 'dashboard';
       expect((permissions?.length ?? 0) > 0 || internalEntry).toBe(true);
     }
+  });
+
+  it('should keep global laboratory and billing routes aligned with their shared menu policies', () => {
+    const labRoute = guardedRoutes.find((route) => route.path === 'clinic/lab-orders');
+    const billingRoute = guardedRoutes.find((route) => route.path === 'clinic/billing');
+
+    expect(labRoute?.data?.['expectedPermissions']).toEqual([
+      ...PROFESSIONAL_ACCESS_POLICIES.labQueue,
+    ]);
+    expect(billingRoute?.data?.['expectedPermissions']).toEqual([
+      ...PROFESSIONAL_ACCESS_POLICIES.billingWorkspace,
+    ]);
   });
 });
 

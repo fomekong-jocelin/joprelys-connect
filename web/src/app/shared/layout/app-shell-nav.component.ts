@@ -4,6 +4,10 @@ import { RbacApiService } from '../../clinic/rbac/rbac-api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { ActivePatientService } from '../../patient/active-patient.service';
 import { PatientApiService } from '../../patient/patient-api.service';
+import {
+  hasAnyPermission,
+  PROFESSIONAL_ACCESS_POLICIES,
+} from '../../auth/professional-access-policies';
 import { IconComponent, UiIconName } from '../ui/icon.component';
 
 export interface NavItem {
@@ -120,16 +124,16 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
     if (hasPermission('AVAILABILITY_MANAGE')) {
       addUniqueItem(this.item('/clinic/availability', 'menu.availability', 'calendar'));
     }
-    if (hasPermission('HOSPITALIZATION_READ', 'HOSPITALIZATION_MANAGE')) {
+    if (hasAnyPermission(permissions, PROFESSIONAL_ACCESS_POLICIES.spatial)) {
       addUniqueItem(this.item('/clinic/spatial', 'menu.spatial', 'bed'));
     }
     if (hasPermission('SPATIAL_CONFIGURATION_MANAGE')) {
       addUniqueItem(this.item('/clinic/spatial/configuration', 'menu.spatialConfig', 'building'));
     }
-    if (hasPermission('BILLING_INVOICE_READ', 'BILLING_INVOICE_WRITE', 'INSURANCE_BORDEREAU_READ', 'ACCOUNTING_DASHBOARD_READ')) {
+    if (hasAnyPermission(permissions, PROFESSIONAL_ACCESS_POLICIES.billingWorkspace)) {
       addUniqueItem(this.item('/clinic/billing', 'menu.billing', 'receipt-percent'));
     }
-    if (hasPermission('CASH_QUEUE_READ', 'CASH_PAYMENT_COLLECT', 'CASH_SESSION_OPEN')) {
+    if (hasAnyPermission(permissions, PROFESSIONAL_ACCESS_POLICIES.cashier)) {
       addUniqueItem(this.item('/clinic/cashier', 'menu.cashier', 'banknotes'));
     }
     if (hasPermission('RECEPTION_READ')) {
@@ -148,7 +152,7 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
       addUniqueItem(this.item('/clinic/patient-reconciliation', 'menu.patientReconciliation', 'clipboard-document-list'));
       addUniqueItem(this.item('/clinic/duplicates', 'menu.duplicates', 'users'));
     }
-    if (hasPermission('LAB_ORDER_READ', 'LAB_QUEUE_READ', 'LAB_ORDER_WRITE')) {
+    if (hasAnyPermission(permissions, PROFESSIONAL_ACCESS_POLICIES.labQueue)) {
       addUniqueItem(this.item('/clinic/lab-orders', 'menu.labOrders', 'clipboard-document-list'));
     }
     if (hasPermission('PHARMACY_PRESCRIPTION_READ')) {
@@ -217,14 +221,29 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
       this.item(`/patients/${patient.id}/profile`, 'menu.patientDetail.profile', 'users', true),
     ];
 
-    const hasClinicalAccess = ['CLINICAL_READ', 'LAB_ORDER_READ', 'HOSPITALIZATION_READ']
-      .some((code) => permissions.has(code));
-    if (hasClinicalAccess) {
-      subItems.push(
-        this.item(`/patients/${patient.id}/consultations`, 'menu.patientDetail.consultations', 'document-text', true),
-        this.item(`/patients/${patient.id}/lab-orders`, 'menu.patientDetail.labOrders', 'clipboard-document-list', true),
-        this.item(`/patients/${patient.id}/hospitalizations`, 'menu.patientDetail.hospitalization', 'bed', true),
-      );
+    if (permissions.has('CLINICAL_READ')) {
+      subItems.push(this.item(
+        `/patients/${patient.id}/consultations`,
+        'menu.patientDetail.consultations',
+        'document-text',
+        true,
+      ));
+    }
+    if (permissions.has('LAB_ORDER_READ')) {
+      subItems.push(this.item(
+        `/patients/${patient.id}/lab-orders`,
+        'menu.patientDetail.labOrders',
+        'clipboard-document-list',
+        true,
+      ));
+    }
+    if (permissions.has('HOSPITALIZATION_READ')) {
+      subItems.push(this.item(
+        `/patients/${patient.id}/hospitalizations`,
+        'menu.patientDetail.hospitalization',
+        'bed',
+        true,
+      ));
     }
 
     const hasAuditAccess = permissions.has('AUDIT_READ');

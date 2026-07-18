@@ -77,6 +77,7 @@ describe('BillingInvoiceHistoryComponent', () => {
   });
 
   it('renders backend remaining amounts and the patient collection action', () => {
+    component.canCollectPayments = true;
     component.settlements = { [invoice.id]: summary('PATIENT_PARTIALLY_PAID', 5000, 80000) };
     fixture.detectChanges();
 
@@ -90,12 +91,23 @@ describe('BillingInvoiceHistoryComponent', () => {
   });
 
   it('offers insurance follow-up as the only financial action when the patient share is paid', () => {
+    component.canFollowInsurance = true;
     component.settlements = { [invoice.id]: summary('INSURANCE_DUE', 0, 80000) };
     fixture.detectChanges();
 
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Suivre l’assurance');
     expect(text).not.toContain('Encaisser');
+  });
+
+  it('hides financial actions when their dynamic permissions are absent', () => {
+    component.settlements = { [invoice.id]: summary('PATIENT_DUE', 20000, 80000) };
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).not.toContain('Encaisser');
+    expect(text).not.toContain('Suivre l’assurance');
+    expect(text).toContain('Détail');
   });
 
   it('does not expose a financial action for a settled invoice', () => {

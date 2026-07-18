@@ -92,4 +92,40 @@ describe('AppShellNavComponent patient isolation', () => {
     expect(paths).not.toContain('/clinic/availability');
     expect(paths).not.toContain('/clinic/emergencies');
   });
+
+  it('should not expose billing or the global lab queue to a doctor without their exact permissions', () => {
+    effectiveAccess.set({
+      userId: 'doctor-1',
+      roles: ['MEDECIN'],
+      permissions: ['PATIENT_READ', 'CLINICAL_READ', 'LAB_ORDER_READ'],
+    });
+    fixture.componentRef.setInput('session', {
+      role: 'MEDECIN',
+      name: 'Médecin Test',
+    });
+    fixture.detectChanges();
+
+    const paths = fixture.componentInstance.menuItems().map((item) => item.path);
+
+    expect(paths).not.toContain('/clinic/billing');
+    expect(paths).not.toContain('/clinic/lab-orders');
+  });
+
+  it('should expose workspaces from dynamically granted exact permissions', () => {
+    effectiveAccess.set({
+      userId: 'custom-1',
+      roles: ['ROLE_PERSONNALISE'],
+      permissions: ['BILLING_INVOICE_READ', 'LAB_QUEUE_READ'],
+    });
+    fixture.componentRef.setInput('session', {
+      role: 'ROLE_PERSONNALISE',
+      name: 'Profil dynamique',
+    });
+    fixture.detectChanges();
+
+    const paths = fixture.componentInstance.menuItems().map((item) => item.path);
+
+    expect(paths).toContain('/clinic/billing');
+    expect(paths).toContain('/clinic/lab-orders');
+  });
 });

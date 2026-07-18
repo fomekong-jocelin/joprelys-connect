@@ -24,6 +24,10 @@ Contrôles statiques obligatoires :
 - aucun identifiant de rôle professionnel dans `expectedRoles` côté Angular ;
 - chaque route professionnelle sensible déclare `expectedPermissions` ;
 - les seules authorities patient sont injectées par la branche JWT patient exclusive.
+- aucune permission effective n'est ajoutée ou déduite côté Angular ;
+- chaque entrée de navigation professionnelle est compatible avec la politique de sa route ;
+- `LAB_ORDER_READ` seul n'affiche pas la file laboratoire globale ;
+- un écran composite ne déclenche aucun appel caisse, facturation ou laboratoire sans la permission exacte.
 
 ## Critères de sortie
 
@@ -35,8 +39,11 @@ Contrôles statiques obligatoires :
 ## Résultats du 2026-07-18
 
 - Maven : **453 tests**, 0 échec, 0 erreur, 1 ignoré.
-- Angular : **254 tests**, 0 échec.
+- Angular : **267 tests**, 0 échec.
 - Build production Angular : vert.
-- Contrôle i18n : 50 clés du shell présentes en français et en anglais.
+- Contrôle i18n : 47 clés du shell présentes en français et en anglais.
+- Cas ajoutés : médecin sans finance, rôle personnalisé à permission minimale, file
+  laboratoire seule, historique caisse seul, lecture de créances sans relance, dashboard
+  comptable sans export/historique et actions financières masquées sans authority.
 - Contrôles statiques permission-first : verts.
 - À signer hors automatisation : recette E2E multi-rôles et revue RSSI/métiers.

@@ -117,6 +117,7 @@ export class DashboardComponent implements OnInit {
   }
 
   openCloseConfirmModal(visitId: string): void {
+    if (!this.canCloseVisit()) return;
     this.visitIdToClose.set(visitId);
     this.closeVisitError.set(null);
     this.showCloseConfirmModal.set(true);
@@ -131,7 +132,7 @@ export class DashboardComponent implements OnInit {
 
   confirmCloseVisit(): void {
     const visitId = this.visitIdToClose();
-    if (!visitId || this.isClosingVisit()) return;
+    if (!this.canCloseVisit() || !visitId || this.isClosingVisit()) return;
 
     this.isClosingVisit.set(true);
     this.closeVisitError.set(null);
@@ -159,7 +160,9 @@ export class DashboardComponent implements OnInit {
   }
 
   startConsultation(visitId: string): void {
-    this.router.navigate(['/clinic/consultation', visitId]);
+    if (this.canStartConsultation()) {
+      this.router.navigate(['/clinic/consultation', visitId]);
+    }
   }
 
   get computedBmi(): number | null {
@@ -216,6 +219,7 @@ export class DashboardComponent implements OnInit {
   }
 
   openVitalsModal(visit: Visit): void {
+    if (!this.hasPermission('VISIT_VITALS_WRITE')) return;
     this.selectedVisitForVitals.set(visit);
     this.vitalsError.set('');
     this.isSavingVitals.set(false);
@@ -256,7 +260,7 @@ export class DashboardComponent implements OnInit {
 
   submitVitals(): void {
     const selectedVisit = this.selectedVisitForVitals();
-    if (!selectedVisit || this.isSavingVitals()) return;
+    if (!this.hasPermission('VISIT_VITALS_WRITE') || !selectedVisit || this.isSavingVitals()) return;
 
     this.isSavingVitals.set(true);
     this.vitalsError.set('');

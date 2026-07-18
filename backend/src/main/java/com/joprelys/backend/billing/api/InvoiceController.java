@@ -183,7 +183,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/conventions")
-    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ')")
+    @PreAuthorize("hasAnyAuthority('BILLING_INVOICE_READ', 'INSURANCE_BORDEREAU_READ')")
     @Operation(summary = "Lister les conventions d'assurances", description = "Récupère les conventions paramétrées.")
     public ResponseEntity<List<InsuranceConventionDto>> listConventions() {
         return ResponseEntity.ok(conventionTariffService.listConventions());

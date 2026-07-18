@@ -9,17 +9,18 @@
       aria-label="Navigation de la facturation et de la caisse"
     >
       <div class="flex w-max min-w-full gap-4">
-        <!-- Facturation patients : AGENT_ACCUEIL + ADMIN_CLINIQUE -->
-        <button
-          type="button"
-          (click)="activeTab.set('facturation')"
-          [attr.aria-selected]="activeTab() === 'facturation'"
-          role="tab"
-          [class]="activeTab() === 'facturation' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
-        >
-          <app-ui-icon name="document-text" />
-          {{ t('billing.tabBilling', 'Facturation de patients') }}
-        </button>
+        @if (canViewFacturation()) {
+          <button
+            type="button"
+            (click)="activeTab.set('facturation')"
+            [attr.aria-selected]="activeTab() === 'facturation'"
+            role="tab"
+            [class]="activeTab() === 'facturation' ? 'min-h-11 shrink-0 whitespace-nowrap border-b-2 border-brand-cyan px-1 pb-2 text-xs font-bold text-brand-cyan flex items-center gap-1.5' : 'min-h-11 shrink-0 whitespace-nowrap px-1 pb-2 text-xs text-[var(--text-muted)] flex items-center gap-1.5'"
+          >
+            <app-ui-icon name="document-text" />
+            {{ t('billing.tabBilling', 'Facturation de patients') }}
+          </button>
+        }
         <!-- Caisse & Sessions : AGENT_ACCUEIL + ADMIN_CLINIQUE -->
         @if (canAccessCaisse()) {
           <button
@@ -121,7 +122,7 @@
       </div>
     }
 
-    @if (activeTab() === 'facturation') {
+    @if (activeTab() === 'facturation' && canViewFacturation()) {
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="space-y-6">
           <div class="ui-card-subtle p-4">
@@ -212,7 +213,7 @@
                     {{ t('billing.newInvoice', 'Émettre une Facture') }}
                   }
                 </h3>
-                @if (!existingInvoiceForSelectedVisit()) {
+                @if (!existingInvoiceForSelectedVisit() && canConfigureBilling()) {
                   <div class="flex gap-2">
                     <button
                       (click)="precalculateFromVisit()"
@@ -255,7 +256,7 @@
                       <app-ui-icon name="document-text" />
                       {{ t('billing.openInvoiceDetails', 'Ouvrir le détail') }}
                     </button>
-                    @if (invoiceSettlements()[existingInvoice.id]?.collectionStatus === 'INSURANCE_DUE') {
+                    @if (canViewBordereaux() && invoiceSettlements()[existingInvoice.id]?.collectionStatus === 'INSURANCE_DUE') {
                       <button type="button" (click)="openInsuranceFollowUp()" class="ui-button ui-button-secondary">
                         <app-ui-icon name="document-text" />
                         {{ t('billing.followInsurance', 'Suivre l\'assurance') }}
@@ -263,7 +264,7 @@
                     }
                   </div>
                 </div>
-              } @else {
+              } @else if (canConfigureBilling()) {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label class="text-[10px] font-bold text-[var(--text-secondary)] block mb-1">
@@ -414,6 +415,8 @@
               [loading]="invoiceHistoryLoading()"
               [error]="invoiceHistoryError()"
               [selectedInvoiceId]="selectedInvoiceForEstimates()?.id ?? null"
+              [canCollectPayments]="canCollectPayments()"
+              [canFollowInsurance]="canViewBordereaux()"
               [translate]="translate"
               (retry)="retryInvoiceHistory()"
               (printPdf)="printInvoicePdf($event)"
@@ -426,28 +429,30 @@
       </div>
     }
 
-    @if (activeTab() === 'caisse') {
+    @if (activeTab() === 'caisse' && canAccessCaisse()) {
       <app-billing-cash-register></app-billing-cash-register>
     }
 
-    @if (activeTab() === 'creances') {
+    @if (activeTab() === 'creances' && canViewReceivables()) {
       <app-billing-receivables></app-billing-receivables>
     }
 
-    @if (activeTab() === 'bordereaux') {
+    @if (activeTab() === 'bordereaux' && canViewBordereaux()) {
       <app-billing-insurance-bordereaux></app-billing-insurance-bordereaux>
     }
 
-    @if (activeTab() === 'conventions' || activeTab() === 'tariffs') {
+    @if (canConfigureBilling() && (activeTab() === 'conventions' || activeTab() === 'tariffs')) {
       <app-billing-admin-tabs [activeTab]="$any(activeTab())" [conventions]="conventions()" [tariffs]="tariffs()" [translate]="translate" (createConvention)="saveConvention($event)" (saveTariff)="saveTariff($event)"></app-billing-admin-tabs>
     }
 
-    @if (activeTab() === 'daf') {
+    @if (activeTab() === 'daf' && canViewDaf()) {
       <app-billing-daf-dashboard [translate]="translate"></app-billing-daf-dashboard>
     }
   </div>
 
-  <app-billing-payment-modal [visible]="showPaymentModal()" [invoice]="paymentInvoice()" [saving]="savingPayment()" [cashSessionOpen]="cashSessionOpen()" [translate]="translate" (close)="closePaymentModal()" (openCashRegister)="openCashRegisterFromPayment()" (submitPayment)="submitPayment($event)"></app-billing-payment-modal>
+  @if (canCollectPayments()) {
+    <app-billing-payment-modal [visible]="showPaymentModal()" [invoice]="paymentInvoice()" [saving]="savingPayment()" [cashSessionOpen]="cashSessionOpen()" [translate]="translate" (close)="closePaymentModal()" (openCashRegister)="openCashRegisterFromPayment()" (submitPayment)="submitPayment($event)"></app-billing-payment-modal>
+  }
 
   @if (selectedInvoiceForEstimates(); as selectedInvoice) {
     <div class="fixed inset-0 z-40 bg-black/40" aria-hidden="true" (click)="closeInvoiceDetails()"></div>

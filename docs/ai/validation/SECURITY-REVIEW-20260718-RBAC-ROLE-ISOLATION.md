@@ -60,6 +60,30 @@ Périmètre : cache RBAC Angular, navigation, guards, filtre JWT, endpoints disp
 - Traitement : valeur par défaut supprimée ; configuration vide refusée ; comparaison de clé en temps constant.
 - Statut : corrigé et couvert par la suite backend.
 
+## SEC-RBAC-008 — Permissions financières attribuées au rôle médecin
+
+- Sévérité : High.
+- Localisation : `backend/src/main/java/com/joprelys/backend/auth/rbac/RbacCatalog.java`.
+- Risque : le rôle système `MEDECIN` recevait `BILLING_INVOICE_READ` et `BILLING_INVOICE_WRITE`, ce qui rendait légitime côté frontend l'affichage de « Facturation & Caisse ».
+- Traitement : retrait de ces deux permissions du catalogue médecin ; les rôles financiers et les rôles personnalisés explicitement habilités restent autorisés.
+- Statut : corrigé et couvert par les tests du catalogue RBAC.
+
+## SEC-RBAC-009 — Désalignement portail laboratoire et inférence de permission
+
+- Sévérité : High.
+- Localisation : politiques de navigation Angular, `RbacApiService` et endpoint `GET /api/lab-orders`.
+- Risque : `LAB_ORDER_READ` rendait visible la file laboratoire alors que l'API exigeait `LAB_QUEUE_READ`; une inférence côté client transformait aussi implicitement une permission en une autre.
+- Traitement : suppression de toute inférence ; le portail global exige exactement `LAB_QUEUE_READ`, les résultats patient exactement `LAB_ORDER_READ`, et les écritures exactement `LAB_ORDER_WRITE`.
+- Statut : corrigé et couvert par les tests de routes, navigation, RBAC et page laboratoire.
+
+## SEC-RBAC-010 — Chargements API composites sans permission exacte
+
+- Sévérité : Medium.
+- Localisation : workspace facturation/caisse et sous-composants Angular.
+- Risque : l'accès à un seul sous-espace déclenchait des appels vers des API voisines non autorisées, générant des `403` et exposant une surface fonctionnelle incohérente.
+- Traitement : politiques centralisées, sélection du premier onglet autorisé, chargements conditionnels et gardes au niveau des méthodes et actions.
+- Statut : corrigé ; profils minimaux finance, caisse, assurance, recouvrement, DAF et laboratoire testés.
+
 ## Contrôles complémentaires
 
 - `SecurityConfig` applique `anyRequest().authenticated()` hors endpoints explicitement publics.
@@ -69,8 +93,8 @@ Périmètre : cache RBAC Angular, navigation, guards, filtre JWT, endpoints disp
 ## Preuves finales
 
 - Maven : 453 tests, 0 échec, 0 erreur, 1 ignoré.
-- Angular : 254 tests, 0 échec.
+- Angular : 267 tests, 0 échec.
 - Build Angular production : vert.
-- i18n shell : 50 clés FR/EN présentes.
+- i18n shell : 47 clés FR/EN présentes.
 - Scan statique : aucun `hasRole`/`hasAnyRole` dans une annotation `@PreAuthorize` de contrôleur.
 - Routes Angular : `expectedRoles` subsiste uniquement sur les 13 routes du portail patient.

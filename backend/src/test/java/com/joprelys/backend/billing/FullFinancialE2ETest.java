@@ -142,7 +142,7 @@ public class FullFinancialE2ETest {
 
         TenantContext.clear();
         mockMvc.perform(post("/api/invoices/" + invoice.getId() + "/validate")
-                        .header("Authorization", "Bearer " + tokenMedecin))
+                        .header("Authorization", "Bearer " + tokenReceptioniste))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("VALIDATED"));
         setTenant();
