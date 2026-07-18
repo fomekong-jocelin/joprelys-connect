@@ -6,27 +6,28 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-18 (Audit technique complet RBAC vert ; tests Maven/Angular 100% passés ; ticket d'audit créé) |
-| Responsable mise à jour | Antigravity |
-| État global | BUG-20260718, EPIC-0026 et AUDIT-20260718 en QA : 453 tests Maven et 267 tests Angular verts, build et i18n verts ; audit technique de cohérence et d'alignement RBAC dynamique réalisé et 100% vert. |
-| Risques majeurs | Validation métier/RSSI de la matrice permission-first ; recette E2E multi-rôles sur staging |
-| Prochaine priorité | Recette croisée des rôles et validation RSSI/métiers, puis préparation d'une release MINOR dédiée |
+| Dernière mise à jour | 2026-07-18 (Agenda personnel médecin implémenté sur PR #68 ; CI en cours ; séparation RBAC `APPOINTMENT_READ_OWN`) |
+| Responsable mise à jour | GPT-5.6 Thinking |
+| État global | BUG-20260718, EPIC-0026 et AUDIT-20260718 en QA ; agenda médecin en revue technique sur PR #68 avec backend, frontend, RBAC, migration V72 et tests dédiés. |
+| Risques majeurs | Validation métier/RSSI de la matrice permission-first ; recette E2E multi-rôles et parcours patient → médecin sur staging |
+| Prochaine priorité | Obtenir la CI verte de PR #68, réaliser la recette croisée patient/médecin puis poursuivre STORY-2604 |
 | Sprint courant | SPRINT-0014 |
-| Capacité sprint | P0 RBAC : 2,25 j senior cumulés ; EPIC-0026 : 21 SP / 9,5 j senior implémentés, QA externe restante |
-| Charge engagée | 49.35j (Est. Senior, incluant les P0 RBAC et l'implémentation EPIC-0026) |
+| Capacité sprint | P0 RBAC : 2,25 j senior cumulés ; EPIC-0026 : 21 SP / 9,5 j senior implémentés ; agenda médecin : 3 SP / 1,5 j senior |
+| Charge engagée | 50.85j (Est. Senior, incluant P0 RBAC, EPIC-0026 et agenda médecin) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
-|---|---|---|---|---|---|---|---|---:|---|---:|---:|---|---|---|---:|---|---|---|
+|---|---|---|---|---|---|---|---:|---|---:|---:|---:|---|---|---|---:|---|---|---|
 | BUG-20260718-PATIENT-PROFESSIONAL-RBAC-CONTEXT-LEAK | EPIC-0025 / EPIC-0026 | Bug sécurité | Contamination de permissions entre sessions et accès disponibilités | Angular / Spring Security / RBAC | QA TECHNIQUE VERTE | P0 | 3 | Senior full-stack sécurité | 0.75j | 1.2j | 2.0j | Codex | Tech Lead + RSSI + QA | SPRINT-0014 | 0.75j | Revue humaine et recette multi-rôles | Moyen | 2026-07-18 |
 | BUG-20260718-DYNAMIC-PERMISSION-UI-API-MISMATCH | EPIC-0026 | Bug sécurité | Alignement permissions dynamiques menus, routes et API finance/laboratoire | Angular / Spring Security / RBAC | QA TECHNIQUE VERTE | P0 | 5 | Senior full-stack sécurité | 1.5j | 2.2j | 3.5j | Codex | Tech Lead + RSSI + QA | SPRINT-0014 | 1.5j | Recette humaine multi-rôles et déploiement | Moyen | 2026-07-18 |
 | EPIC-0026 | PERMISSION_FIRST_ROLE_ISOLATION | Epic | Cloisonnement permission-first de tous les rôles | Spring Boot / Angular / RBAC / QA | QA | P0/P1 | 21 | Architecte sécurité + Seniors full-stack + QA | 9.5j | 13.0j | 19.0j | Codex | RSSI + Tech Lead + métiers | SPRINT-0014/0015 | 9.5j | Valider la matrice et signer la recette E2E multi-rôles | Moyen | 2026-07-18 |
-| EPIC-0025 | DOCTOR_AVAILABILITY_APPOINTMENTS | Epic | Disponibilités médecins et prise de rendez-vous patient | Spring Boot / Angular / DB / RBAC | IN_PROGRESS | P1 | 29 | Senior full-stack + Lead Frontend + QA | 12.0j | 16.0j | 24.0j | GPT-5.6 Thinking | Tech Lead + QA | SPRINT-0015 (proposé) | 8.0j | Revue/fusion STORY-2603 PR #67 puis engagement STORY-2604 et STORY-2605 | Moyen | 2026-07-18 |
+| EPIC-0025 | DOCTOR_AVAILABILITY_APPOINTMENTS | Epic | Disponibilités médecins et prise de rendez-vous patient | Spring Boot / Angular / DB / RBAC | IN_PROGRESS | P1 | 32 | Senior full-stack + Lead Frontend + QA | 13.5j | 18.5j | 28.0j | GPT-5.6 Thinking | Tech Lead + QA | SPRINT-0015 (proposé) | 9.5j | Valider PR #68 puis engager STORY-2604 et STORY-2605 | Moyen | 2026-07-18 |
 | STORY-2601 | DOCTOR_AVAILABILITY_APPOINTMENTS | User Story | Fondations données, RBAC et contrats du module rendez-vous | Spring Boot / DB / RBAC | DONE | P1 | 3 | Senior backend | 1.5j | 2.3j | 3.4j | Codex | Tech Lead + référent données | SPRINT-0015 (proposé) | 1.5j | Suivi post-fusion normal ; PR #62 fusionnée au commit `13bdb063` | Faible | 2026-07-18 |
 | STORY-2602 | DOCTOR_AVAILABILITY_APPOINTMENTS | User Story | Gestion des disponibilités médecin | Spring Boot / Angular / RBAC | DONE | P1 | 8 | Senior full-stack | 3.0j | 4.0j | 6.0j | Kimi | Lead Backend + Lead Frontend | SPRINT-0015 (proposé) | 3.0j | Suivi post-fusion normal ; PR #63 fusionnée au commit `654d1be1` | Faible | 2026-07-18 |
-| STORY-2603 | DOCTOR_AVAILABILITY_APPOINTMENTS | User Story | Prise de rendez-vous patient | Spring Boot / Angular / sécurité / concurrence | IN REVIEW | P1 | 8 | Senior full-stack | 3.5j | 4.8j | 7.0j | GPT-5.6 Thinking | Tech Lead + QA | SPRINT-0015 (proposé) | 3.5j | Revue humaine puis fusion PR #67 ; CI #807 verte | Moyen | 2026-07-18 |
+| STORY-2603 | DOCTOR_AVAILABILITY_APPOINTMENTS | User Story | Prise de rendez-vous patient | Spring Boot / Angular / sécurité / concurrence | DONE | P1 | 8 | Senior full-stack | 3.5j | 4.8j | 7.0j | GPT-5.6 Thinking | Tech Lead + QA | SPRINT-0015 (proposé) | 3.5j | Suivi post-fusion normal ; PR #67 fusionnée au commit `c740421a` | Faible | 2026-07-18 |
+| BUG-20260718-DOCTOR-APPOINTMENT-AGENDA-MISSING | EPIC-0025 | Bug fonctionnel + intégration | Rendez-vous patient absent de l’agenda du médecin | Spring Boot / Angular / RBAC / DB / QA | IN_REVIEW | P1 | 3 | Senior full-stack | 1.5j | 2.5j | 4.0j | GPT-5.6 Thinking | Tech Lead + QA + référent médical | SPRINT-0015 (proposé) | 1.5j | CI PR #68 puis recette authentifiée patient → médecin | Moyen | 2026-07-18 |
 | TASK-20260717-PREMIUM-ACCOUNT-EMAILS | AUTHENTICATION / UI_UX | Amélioration email | E-mails de compte et OTP premium | Spring Boot / SMTP / Email HTML | READY | P1 | 2 | Senior backend + Email Design | 0.5j | 0.8j | 1.2j | Codex | Lead Backend + Product Design + QA | SPRINT-0014 | 0.5j | Déploiement et QA webmail | Faible | 2026-07-17 |
 | BUG-20260717-AI-ASSISTANT-UNAVAILABLE-PROD | AI_VOICE_CONSULTATION | Diagnostic + correctif | Assistant IA indisponible en production — 500 en cascade | Spring Boot / Angular / Production | DONE | P0 | 2 | Senior full-stack | 0.25j | 0.4j | 0.7j | Codex | Lead Backend + QA | SPRINT-0014 | 0.25j | Vérifier la validité des clés API OpenAI après activation | Faible | 2026-07-17 |
 | BUG-20260717-AI-TRANSCRIPTION-QUALITY | AI_VOICE_CONSULTATION | Diagnostic + correctif | Transcription consultation de très mauvaise qualité | Spring Boot / Angular / OpenAI | DONE | P1 | 2 | Senior full-stack | 0.25j | 0.4j | 0.7j | Kimi | Lead Backend + QA | SPRINT-0014 | 0.4j | Redéployer backend (prompt, règles ordonnance, garde temperature) et frontend (capture micro) ; option gpt-5.6-terra après redéploiement | Faible | 2026-07-17 |
@@ -57,7 +58,7 @@
 | STORY-2204 | FINANCE_UX | User Story | Poste assurance et progression des bordereaux | Frontend | IN_PROGRESS | P1 | 5 | Senior + intermédiaire | 1.5j | 2.0j | 3.0j | Codex | DAF + Lead Developer | SPRINT-0014 | 0.1j | Validation métier du parcours assurance | Moyen | 2026-07-10 |
 | BUG-20260710-BORDEREAUX-HEADER | FINANCE_UX | Bug | En-tête de liste des bordereaux d'assurance comprimé | Frontend | QA | P2 | 1 | Frontend intermédiaire | 0.1j | 0.15j | 0.25j | Codex | Lead Frontend + DAF | SPRINT-0014 | 0.1j | QA visuelle light/dark et responsive | Faible | 2026-07-10 |
 | BUG-20260710-PATIENT-MEDICAL-ICONS-I18N | UI_UX | Bug | Icônes et libellé Urgences incohérents dans le dossier médical patient | Frontend + diagnostic backend | QA | P1 | 2 | Frontend intermédiaire + reviewer backend | 0.3j | 0.5j | 0.8j | Codex | Lead Frontend + Lead Backend | SPRINT-0014 | 0.3j | QA visuelle ; refactor composant >500 lignes | Moyen | 2026-07-10 |
-| STORY-2205 | FINANCE_UX | User Story | Détail facture, documents et actions exceptionnelles | Frontend | IN_PROGRESS | P1 | 5 | Senior | 1.5j | 2.0j | 3.0j | Codex | Lead Developer + DAF | SPRINT-0014 | 0.8j | QA visuelle navigateur restante | Moyen | 2026-07-10 |
+| STORY-2205 | FINANCE_UX | User Story | Détail facture, documents et actions exceptionnelles | Frontend | IN_PROGRESS | P1 | 5 | Senior | 1.5j | 2.0j | 3.0j | Codex | Lead Developer + Product/DAF | SPRINT-0014 | 0.8j | QA visuelle navigateur restante | Moyen | 2026-07-10 |
 | TASK-2207 | FINANCE_UX | Correctif UI/UX + tests | Modale annulation, visite devis, feedback et deep-link | Frontend | QA | P2 | 3 | Senior Frontend | 0.8j | 1.2j | 2.0j | Codex | Lead Developer + DAF | SPRINT-0014 | 0.8j | QA light/dark, clavier et mobile | Moyen | 2026-07-10 |
 | STORY-2206 | FINANCE_UX | User Story | QA UX, accessibilité et régression financière | QA / Full-stack | READY | P0 | 5 | Senior QA/full-stack | 1.5j | 2.0j | 3.0j | À assigner | Lead Developer + DAF | À planifier | 0j | Dépend de STORY-2204 et STORY-2205 | Élevé | 2026-07-10 |
 | STORY-2112 | FINANCE_OPERATIONS | Feature | Synthèse de règlement patient / assurance | Full-stack | DONE | P0 | 5 | Senior full-stack | 1.2j | 1.6j | 2.4j | Codex | Lead Developer + DAF | SPRINT-0012 | 1.2j | Validation DAF des libellés métier | Faible | 2026-07-09 |
