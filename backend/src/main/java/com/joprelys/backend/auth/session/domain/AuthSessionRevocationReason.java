@@ -8,5 +8,6 @@ public enum AuthSessionRevocationReason {
     REPLAY_DETECTED,
     USER_DISABLED,
     ORGANIZATION_INACTIVE,
-    ADMIN_REVOKED
+    ADMIN_REVOKED,
+    MFA_POLICY_CHANGE
 }
