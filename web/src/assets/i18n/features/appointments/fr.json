@@ -1,6 +1,8 @@
 {
   "menu.patientAppointments": "Rendez-vous",
+  "menu.doctorAppointments": "Mon agenda",
   "title.patient.appointments": "Mes rendez-vous",
+  "title.doctor.appointments": "Mon agenda",
   "appointments.eyebrow": "Portail patient",
   "appointments.title": "Prendre un rendez-vous",
   "appointments.description": "Choisissez un médecin, consultez ses créneaux réellement disponibles et gérez vos rendez-vous en toute sécurité.",
@@ -51,5 +53,23 @@
   "appointments.errors.codes.APPOINTMENT_NOT_FOUND": "Ce rendez-vous est introuvable.",
   "appointments.errors.codes.DOCTOR_NOT_FOUND": "Ce médecin n’est plus disponible dans votre établissement.",
   "appointments.errors.codes.INVALID_STATUS_TRANSITION": "Ce rendez-vous ne peut plus être annulé.",
-  "appointments.errors.codes.VALIDATION_ERROR": "Les informations envoyées sont invalides."
+  "appointments.errors.codes.VALIDATION_ERROR": "Les informations envoyées sont invalides.",
+  "doctorAppointments.title": "Mon agenda",
+  "doctorAppointments.subtitle": "Consultez vos rendez-vous de la semaine. Les nouvelles réservations apparaissent automatiquement.",
+  "doctorAppointments.week": "Semaine affichée",
+  "doctorAppointments.actions.previous": "Précédente",
+  "doctorAppointments.actions.today": "Aujourd’hui",
+  "doctorAppointments.actions.next": "Suivante",
+  "doctorAppointments.actions.refresh": "Actualiser",
+  "doctorAppointments.actions.refreshing": "Actualisation…",
+  "doctorAppointments.lastUpdated": "Dernière mise à jour à",
+  "doctorAppointments.count.one": "1 rendez-vous",
+  "doctorAppointments.count.many": "{count} rendez-vous",
+  "doctorAppointments.patientNumber": "N° patient :",
+  "doctorAppointments.reason": "Motif",
+  "doctorAppointments.reasonUnknown": "Aucun motif renseigné.",
+  "doctorAppointments.loading": "Chargement de votre agenda…",
+  "doctorAppointments.empty": "Aucun rendez-vous n’est planifié sur cette semaine.",
+  "doctorAppointments.emptyDay": "Aucun rendez-vous.",
+  "doctorAppointments.errors.load": "Impossible de charger votre agenda. Réessayez dans quelques instants."
 }
