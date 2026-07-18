@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-17 (Qualité transcription IA : prompt médical + capture micro renforcée ; EPIC-0024 .env + GlobalExceptionHandler) |
+| Dernière mise à jour | 2026-07-18 (EPIC-0025 : cadrage disponibilités médecins et prise de rendez-vous patient — découpage + doc initiale, aucun code) |
 | Responsable mise à jour | Codex |
 | État global | EPIC-0022 Sessions en cours : STORY-2401 fusionnée ; STORY-2402 prête pour revue ; #34 reste à exécuter. EPIC-0023 URG-TEMP : #40, #42, #44 et #45 terminées, #46 et #47 restantes. EPIC-0024 : cadrage/fondations en cours, QR backend terminé, assistant IA prod corrigé (.env + GlobalExceptionHandler), assistant vocal non livré et bloqué avant validation DPO/fournisseur. |
 | Risques majeurs | Revue sécurité humaine de #33 ; renouvellement Angular absent jusqu’à #34 ; durée de conservation des audits à valider par le DPO ; validation métier ABCDE ; données de santé chez un fournisseur IA ; dette des écrans Angular monolithiques |
@@ -20,6 +20,7 @@
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---:|---|---:|---|---:|---|---|---|---:|---|---|---|
+| EPIC-0025 | DOCTOR_AVAILABILITY_APPOINTMENTS | Epic | Disponibilités médecins et prise de rendez-vous patient | Spring Boot / Angular / DB / RBAC | READY | P1 | 29 | Senior full-stack + Lead Frontend + QA | 12.0j | 16.0j | 24.0j | À assigner | Tech Lead + QA | SPRINT-0015 (proposé) | 0j | Validation PO du cadrage puis engagement STORY-2601 | Moyen | 2026-07-18 |
 | TASK-20260717-PREMIUM-ACCOUNT-EMAILS | AUTHENTICATION / UI_UX | Amélioration email | E-mails de compte et OTP premium | Spring Boot / SMTP / Email HTML | READY | P1 | 2 | Senior backend + Email Design | 0.5j | 0.8j | 1.2j | Codex | Lead Backend + Product Design + QA | SPRINT-0014 | 0.5j | Déploiement et QA webmail | Faible | 2026-07-17 |
 | BUG-20260717-AI-ASSISTANT-UNAVAILABLE-PROD | AI_VOICE_CONSULTATION | Diagnostic + correctif | Assistant IA indisponible en production — 500 en cascade | Spring Boot / Angular / Production | DONE | P0 | 2 | Senior full-stack | 0.25j | 0.4j | 0.7j | Codex | Lead Backend + QA | SPRINT-0014 | 0.25j | Vérifier la validité des clés API OpenAI après activation | Faible | 2026-07-17 |
 | BUG-20260717-AI-TRANSCRIPTION-QUALITY | AI_VOICE_CONSULTATION | Diagnostic + correctif | Transcription consultation de très mauvaise qualité | Spring Boot / Angular / OpenAI | DONE | P1 | 2 | Senior full-stack | 0.25j | 0.4j | 0.7j | Kimi | Lead Backend + QA | SPRINT-0014 | 0.4j | Redéployer backend (prompt, règles ordonnance, garde temperature) et frontend (capture micro) ; option gpt-5.6-terra après redéploiement | Faible | 2026-07-17 |

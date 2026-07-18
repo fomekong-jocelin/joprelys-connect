@@ -8,6 +8,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- **EPIC-0025 — Cadrage du module « Disponibilités médecins et prise de rendez-vous patient »** : documentation fonctionnelle et technique initiales (`docs/features/doctor-availability-appointments/`), découpage en 5 stories (STORY-2601 à 2605, 29 SP, ~12 j senior) dans `docs/ai/tickets/EPIC-0025-doctor-availability-appointments.md`. Aucun code livré ; l'implémentation démarre par STORY-2601 (migrations V70/V71, RBAC, contrats API).
 - **EPIC-0024 — Cadrage de l’assistant vocal de consultation** : documentation
   fonctionnelle et technique, contrat API, modèle de données, plan de tests,
   guide utilisateur, ADR et backlog. L’assistant reste désactivé et non livré
