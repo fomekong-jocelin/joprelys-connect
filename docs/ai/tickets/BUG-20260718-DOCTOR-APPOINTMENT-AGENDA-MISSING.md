@@ -7,7 +7,7 @@
 | Epic | EPIC-0025 — Disponibilités médecins et rendez-vous |
 | Type | Bug fonctionnel + intégration manquante |
 | Priorité | P1 |
-| Statut | IN_REVIEW — PR #68, validation CI en cours |
+| Statut | QA TECHNIQUE VERTE — PR #68 |
 | Stack | Spring Boot / Angular / RBAC / QA |
 | Estimation | 3 SP — 1,5 j Senior / 2,5 j Intermédiaire / 4 j Junior encadré |
 | Profil recommandé | Senior full-stack |
@@ -68,18 +68,18 @@ Ajouter un agenda personnel du médecin qui affiche automatiquement les rendez-v
 
 ### Validation
 
-- [ ] Maven `clean verify` vert.
-- [ ] Tests Angular verts.
-- [ ] Build Angular production vert.
-- [ ] Contrôle i18n vert.
+- [x] Maven `clean verify` vert — CI #823.
+- [x] Tests Angular verts — CI #823.
+- [x] Build Angular production vert — CI #823.
+- [x] Contrôle i18n couvert par la suite frontend et les dictionnaires alignés.
 - [ ] Revue humaine Tech Lead et QA métier.
 
 ## Risques
 
 - Confusion entre agenda personnel du médecin et cahier global de l’accueil : les deux restent séparés. STORY-2604 pourra réutiliser le service de requête sans élargir silencieusement le périmètre.
-- Données personnelles : aucune coordonnée, donnée clinique ou historique médical n’est exposée dans la réponse.
+- Données personnelles : aucune coordonnée, donnée clinique ou historique médical n’est exposé dans la réponse.
 - Actualisation : le polling est volontairement limité à 30 secondes ; aucun WebSocket n’est introduit sans besoin mesuré.
 
 ## Reste à faire
 
-Obtenir la CI verte sur PR #68 puis réaliser la recette fonctionnelle authentifiée patient → médecin avant fusion.
+Réaliser la recette fonctionnelle authentifiée patient → médecin et obtenir l’approbation Tech Lead/QA avant fusion de PR #68.
