@@ -2,7 +2,7 @@
 
 ## Statut
 
-`QA_TECHNIQUE_EN_COURS`
+`QA_TECHNIQUE_VERTE`
 
 ## Constat production
 
@@ -63,6 +63,16 @@ Le frontend ignorait par ailleurs le contrat normalisé `{ error: { code, messag
 - interface Angular affiche le message propre au code métier ;
 - aucun collaborateur ajouté localement après un échec.
 
+## Validation automatique
+
+GitHub Actions **#827**, commit `3a0d0c6ce2229ee7ae7ac4a8de865bcf405a1735` :
+
+- [x] tests Angular ;
+- [x] build Angular de production ;
+- [x] Maven strict `clean verify` ;
+- [x] tests backend, rollback et rejeu ;
+- [x] aucune suite contournée.
+
 ## Critères d'acceptation
 
 - [x] adresse rejetée distinguée d'une panne SMTP ;
@@ -70,5 +80,5 @@ Le frontend ignorait par ailleurs le contrat normalisé `{ error: { code, messag
 - [x] rollback du compte couvert par tests ;
 - [x] nouvel essai couvert par test ;
 - [x] logs sans adresse destinataire ni secret ;
-- [ ] CI backend et frontend verte ;
+- [x] CI backend et frontend verte — GitHub Actions #827 ;
 - [ ] recette authentifiée sur l'environnement déployé.
