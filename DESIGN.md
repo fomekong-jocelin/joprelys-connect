@@ -141,6 +141,10 @@ Les actions financières destructives utilisent une modale maison, jamais le `co
 
 La configuration Service → Chambre → Lit utilise une hiérarchie de panneaux à bordure fine, avec un rayon maximal de `6px` et les ombres légères du design system. Les actions de création restent au niveau de leur parent, les opérations destructives passent par la modale de confirmation partagée et les états de lits conservent les couleurs sémantiques communes aux thèmes light/dark.
 
+### Disponibilités médecin (STORY-2602)
+
+La page « Mes disponibilités » (`clinic/availability`) introduit la grille hebdomadaire `shared/ui/weekly-availability-grid` (7 colonnes Lun → Dim, défilement horizontal sur mobile) et l'aperçu des créneaux. Les plages horaires sont des cartes compactes à rayon sobre (≤ `8px`, tokens `--radius-brand-*`) avec ombre légère `var(--shadow-panel)` ; le jour sélectionné est souligné par `var(--brand-primary)` et les plages désactivées sont atténuées (`opacity-50`). Toutes les couleurs passent par les tokens centralisés (`--app-surface`, `--app-border`, `--brand-primary`, `--text-*`) — aucune couleur en dur, thèmes light/dark automatiques. La désactivation d'une plage et la suppression d'une indisponibilité passent par la modale de confirmation partagée.
+
 ## Do's and Don'ts
 
 ### Do

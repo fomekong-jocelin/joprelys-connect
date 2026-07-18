@@ -70,6 +70,12 @@ export const routes: Routes = [
     data: { expectedRoles: ['ADMIN_CLINIQUE'], expectedPermissions: ['USER_READ'] },
   },
   {
+    path: 'clinic/availability',
+    loadComponent: () => import('./clinic/availability/availability-page.component').then((module) => module.AvailabilityPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['MEDECIN', 'ADMIN_CLINIQUE'], expectedPermissions: ['AVAILABILITY_MANAGE'] },
+  },
+  {
     path: 'clinic/rbac',
     loadComponent: () => import('./clinic/rbac/rbac-management.component').then((module) => module.RbacManagementComponent),
     canActivate: [roleGuard],
