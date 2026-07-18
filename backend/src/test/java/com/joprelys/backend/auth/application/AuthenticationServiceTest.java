@@ -3,8 +3,11 @@ package com.joprelys.backend.auth.application;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -14,15 +17,18 @@ import com.joprelys.backend.auth.infrastructure.persistence.AuthAuditEventEntity
 import com.joprelys.backend.auth.infrastructure.persistence.AuthAuditEventRepository;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import com.joprelys.backend.auth.rbac.RbacCatalog;
 import com.joprelys.backend.auth.session.application.IssueAuthSessionUseCase;
 import com.joprelys.backend.auth.session.application.IssuedAuthSession;
 import com.joprelys.backend.auth.session.application.SessionClientMetadata;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import com.joprelys.backend.notification.application.AccountMailService;
+import com.joprelys.backend.notification.application.MailDeliveryUnavailableException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -54,23 +60,43 @@ class AuthenticationServiceTest {
     private OrganizationRepository organizationRepository;
 
     @Test
-    void shouldReturnSessionAndAuditSuccessWhenCredentialsAreValid() {
-        UserAccountEntity user = user("agent@example.com", "Agent Accueil", "AGENT_ACCUEIL");
+    void shouldRequireOtpForEverySystemProfessionalRole() {
         AuthenticationService service = service();
-        when(userAccountRepository.findByEmail("agent@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(eq("Password123!"), anyString())).thenReturn(true);
+
+        RbacCatalog.systemRoles().stream()
+                .filter(role -> !"PATIENT".equals(role.code()))
+                .forEach(role -> {
+                    String email = role.code().toLowerCase(Locale.ROOT) + "@example.com";
+                    UserAccountEntity user = user(email, role.name(), role.code());
+                    when(userAccountRepository.findByEmail(email)).thenReturn(Optional.of(user));
+
+                    AuthenticationOutcome outcome = service.login(
+                            new LoginRequest(email, "Password123!"),
+                            "127.0.0.1",
+                            METADATA);
+
+                    assertTrue(outcome.requiresOtp(), role.code());
+                    assertNull(outcome.session(), role.code());
+                    assertEquals(role.code(), outcome.role());
+                });
+    }
+
+    @Test
+    void shouldRequireOtpForCustomProfessionalRole() {
+        UserAccountEntity user = user("custom@example.com", "Profil personnalisé", "SUPERVISEUR_CAISSE");
+        AuthenticationService service = service();
+        when(userAccountRepository.findByEmail("custom@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
-        when(issueAuthSessionUseCase.issue(eq(user), any())).thenReturn(issued(user));
 
         AuthenticationOutcome outcome = service.login(
-                new LoginRequest("Agent@Example.com", "Password123!"),
+                new LoginRequest("custom@example.com", "Password123!"),
                 "127.0.0.1",
                 METADATA);
 
-        assertEquals("jwt-token", outcome.session().accessToken());
-        assertEquals("agent@example.com", outcome.email());
-        assertEquals("Agent Accueil", outcome.displayName());
-        assertEquals("AGENT_ACCUEIL", outcome.role());
-        verify(authAuditEventRepository).save(any(AuthAuditEventEntity.class));
+        assertTrue(outcome.requiresOtp());
+        assertNull(outcome.session());
+        assertEquals("SUPERVISEUR_CAISSE", outcome.role());
     }
 
     @Test
@@ -114,62 +140,94 @@ class AuthenticationServiceTest {
     }
 
     @Test
-    void shouldRequireOtpWithoutCreatingSessionWhenUserIsSensitive() {
-        UserAccountEntity user = user("medecin@example.com", "Medecin Test", "MEDECIN");
+    void shouldRejectPatientAndMixedPatientAccountsFromStaffLogin() {
         AuthenticationService service = service();
-        when(userAccountRepository.findByEmail("medecin@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
 
-        AuthenticationOutcome outcome = service.login(
-                new LoginRequest("medecin@example.com", "Password123!"),
-                "127.0.0.1",
-                METADATA);
+        for (String role : new String[]{"PATIENT", "PATIENT,MEDECIN"}) {
+            String email = role.replace(',', '-').toLowerCase(Locale.ROOT) + "@example.com";
+            UserAccountEntity user = user(email, "Patient Test", role);
+            when(userAccountRepository.findByEmail(email)).thenReturn(Optional.of(user));
 
-        assertEquals(true, outcome.requiresOtp());
-        assertNull(outcome.session());
+            BadCredentialsException exception = assertThrows(
+                    BadCredentialsException.class,
+                    () -> service.login(
+                            new LoginRequest(email, "Password123!"),
+                            "127.0.0.1",
+                            METADATA));
+
+            assertEquals("Invalid email or password", exception.getMessage());
+            assertNull(service.getStaffOtpCodeForTesting(email));
+        }
     }
 
     @Test
-    void shouldCreateSessionAfterSuccessfulOtpVerification() {
-        UserAccountEntity user = user("medecin@example.com", "Medecin Test", "MEDECIN");
+    void shouldCreateSessionAfterSuccessfulOtpVerificationForCashier() {
+        UserAccountEntity user = user("cashier@example.com", "Caissier Test", "CAISSIER");
         AuthenticationService service = service();
-        when(userAccountRepository.findByEmail("medecin@example.com")).thenReturn(Optional.of(user));
+        when(userAccountRepository.findByEmail("cashier@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
         when(issueAuthSessionUseCase.issue(eq(user), any())).thenReturn(issued(user));
 
         AuthenticationOutcome initial = service.login(
-                new LoginRequest("medecin@example.com", "Password123!"),
+                new LoginRequest("cashier@example.com", "Password123!"),
                 "127.0.0.1",
                 METADATA);
-        assertEquals(true, initial.requiresOtp());
-        String otpCode = service.getStaffOtpCodeForTesting("medecin@example.com");
+        assertTrue(initial.requiresOtp());
+        String otpCode = service.getStaffOtpCodeForTesting("cashier@example.com");
 
         AuthenticationOutcome authenticated = service.verifyStaffOtp(
-                new VerifyStaffOtpRequest("medecin@example.com", otpCode),
+                new VerifyStaffOtpRequest("cashier@example.com", otpCode),
                 "127.0.0.1",
                 METADATA);
 
         assertEquals("jwt-token", authenticated.session().accessToken());
-        assertEquals("medecin@example.com", authenticated.email());
+        assertEquals("cashier@example.com", authenticated.email());
     }
 
     @Test
     void shouldFailOtpVerificationWhenOtpIsIncorrect() {
-        UserAccountEntity user = user("medecin@example.com", "Medecin Test", "MEDECIN");
+        UserAccountEntity user = user("cashier@example.com", "Caissier Test", "CAISSIER");
         AuthenticationService service = service();
-        when(userAccountRepository.findByEmail("medecin@example.com")).thenReturn(Optional.of(user));
+        when(userAccountRepository.findByEmail("cashier@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
         service.login(
-                new LoginRequest("medecin@example.com", "Password123!"),
+                new LoginRequest("cashier@example.com", "Password123!"),
                 "127.0.0.1",
                 METADATA);
 
         assertThrows(
                 BadCredentialsException.class,
                 () -> service.verifyStaffOtp(
-                        new VerifyStaffOtpRequest("medecin@example.com", "000000"),
+                        new VerifyStaffOtpRequest("cashier@example.com", "000000"),
                         "127.0.0.1",
                         METADATA));
+    }
+
+    @Test
+    void shouldInvalidatePreviousOtpWhenAReplacementCodeCannotBeDelivered() {
+        UserAccountEntity user = user("cashier@example.com", "Caissier Test", "CAISSIER");
+        AuthenticationService service = service();
+        when(userAccountRepository.findByEmail("cashier@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
+
+        service.login(
+                new LoginRequest("cashier@example.com", "Password123!"),
+                "127.0.0.1",
+                METADATA);
+        assertTrue(service.getStaffOtpCodeForTesting("cashier@example.com") != null);
+
+        doThrow(new MailDeliveryUnavailableException(new RuntimeException("smtp unavailable")))
+                .when(accountMailService)
+                .sendLoginCode(anyString(), anyString(), anyString());
+
+        assertThrows(
+                MailDeliveryUnavailableException.class,
+                () -> service.login(
+                        new LoginRequest("cashier@example.com", "Password123!"),
+                        "127.0.0.1",
+                        METADATA));
+        assertNull(service.getStaffOtpCodeForTesting("cashier@example.com"));
     }
 
     private AuthenticationService service() {
