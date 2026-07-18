@@ -1,0 +1,54 @@
+name: Apply STORY-2603 D7 guard
+
+on:
+  push:
+    branches:
+      - feature/story-2603-patient-appointments
+
+permissions:
+  contents: write
+
+jobs:
+  edit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/story-2603-patient-appointments
+      - name: Add D7 conflict guard and remove temporary workflow
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('backend/src/main/java/com/joprelys/backend/appointment/application/DefaultAvailabilityService.java')
+          text = path.read_text()
+          old = '''\t\tif (!request.endAt().isAfter(request.startAt())) {
+          \t\t\tthrow validation("La fin de l'indisponibilité doit être postérieure à son début.");
+          \t\t}
+          \t\tDoctorAvailabilityExceptionEntity entity = new DoctorAvailabilityExceptionEntity(
+          '''
+          new = '''\t\tif (!request.endAt().isAfter(request.startAt())) {
+          \t\t\tthrow validation("La fin de l'indisponibilité doit être postérieure à son début.");
+          \t\t}
+          \t\tInstant now = Instant.now();
+          \t\tboolean conflict = appointmentRepository
+          \t\t\t\t.findByDoctorIdAndStartAtGreaterThanEqualAndStatusIn(doctorId, now, ACTIVE_STATUSES)
+          \t\t\t\t.stream()
+          \t\t\t\t.anyMatch(appointment -> appointment.getStartAt().isBefore(request.endAt())
+          \t\t\t\t\t\t&& appointment.getEndAt().isAfter(request.startAt()));
+          \t\tif (conflict) {
+          \t\t\tthrow new AvailabilityApiException(HttpStatus.CONFLICT, "AVAILABILITY_CONFLICT",
+          \t\t\t\t\t"Des rendez-vous actifs existent sur cette période. Veuillez les traiter avant de créer l'indisponibilité.");
+          \t\t}
+          \t\tDoctorAvailabilityExceptionEntity entity = new DoctorAvailabilityExceptionEntity(
+          '''
+          if old not in text:
+              raise SystemExit('Target createException block not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+          rm .github/workflows/story-2603-d7-edit.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat(availability): refuser une indisponibilité couvrant un rendez-vous actif"
+          git push origin HEAD:feature/story-2603-patient-appointments
