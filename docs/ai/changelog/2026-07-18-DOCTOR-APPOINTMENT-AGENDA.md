@@ -33,5 +33,7 @@
 
 ## Validation
 
-- CI GitHub Actions : en cours sur PR #68 au moment de la création de ce fragment ;
+- CI GitHub Actions #823 verte sur PR #68 ;
+- Maven strict et suite backend globale réussis ;
+- tests Angular et build production réussis ;
 - recette métier croisée patient/médecin requise avant fusion.
