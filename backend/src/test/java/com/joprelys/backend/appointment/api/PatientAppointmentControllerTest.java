@@ -1,7 +1,6 @@
 package com.joprelys.backend.appointment.api;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -11,7 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.joprelys.backend.appointment.infrastructure.persistence.AppointmentEntity;
 import com.joprelys.backend.appointment.infrastructure.persistence.AppointmentRepository;
-import com.joprelys.backend.appointment.infrastructure.persistence.AppointmentStatus;
 import com.joprelys.backend.appointment.infrastructure.persistence.DoctorAvailabilityEntity;
 import com.joprelys.backend.appointment.infrastructure.persistence.DoctorAvailabilityRepository;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
@@ -122,6 +120,7 @@ class PatientAppointmentControllerTest {
 	@AfterEach
 	void tearDown() {
 		TenantContext.clear();
+		cleanDatabase();
 	}
 
 	@Test
