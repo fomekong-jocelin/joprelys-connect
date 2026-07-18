@@ -1,6 +1,11 @@
 {
+  "menu.billing": "Billing & financial management",
   "menu.cashier": "Cashier workspace",
   "breadcrumb.clinic.cashier": "Cashier workspace",
+  "billing.title": "Billing & financial management",
+  "billing.subtitle": "Issue invoices and monitor receivables, insurance, tariffs and financial indicators.",
+  "login.error.otpRecipientRejected": "The security code could not be sent to the email address linked to this account. Contact an administrator to verify the address.",
+  "login.error.otpDeliveryUnavailable": "The security-code delivery service is temporarily unavailable. Try again in a few moments.",
   "common.close": "Close",
   "common.refresh": "Refresh",
   "common.retry": "Retry",
