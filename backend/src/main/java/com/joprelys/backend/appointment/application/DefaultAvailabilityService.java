@@ -183,6 +183,16 @@ public class DefaultAvailabilityService implements AvailabilityService {
 		if (!request.endAt().isAfter(request.startAt())) {
 			throw validation("La fin de l'indisponibilité doit être postérieure à son début.");
 		}
+		Instant now = Instant.now();
+		boolean conflict = appointmentRepository
+				.findByDoctorIdAndStartAtGreaterThanEqualAndStatusIn(doctorId, now, ACTIVE_STATUSES)
+				.stream()
+				.anyMatch(appointment -> appointment.getStartAt().isBefore(request.endAt())
+						&& appointment.getEndAt().isAfter(request.startAt()));
+		if (conflict) {
+			throw new AvailabilityApiException(HttpStatus.CONFLICT, "AVAILABILITY_CONFLICT",
+					"Des rendez-vous actifs existent sur cette période. Veuillez les traiter avant de créer l'indisponibilité.");
+		}
 		DoctorAvailabilityExceptionEntity entity = new DoctorAvailabilityExceptionEntity(
 				doctor, request.startAt(), request.endAt(), request.reason());
 		return AvailabilityExceptionResponse.fromEntity(exceptionRepository.save(entity));

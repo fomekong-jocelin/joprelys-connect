@@ -1,0 +1,369 @@
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { AppShellComponent } from '../../../shared/layout/app-shell.component';
+import {
+  AppointmentSlotPickerComponent,
+  AppointmentSlotPickerLabels,
+} from '../../../shared/ui/appointment-slot-picker/appointment-slot-picker.component';
+import { ConfirmationDialogComponent } from '../../../shared/ui/confirmation-dialog.component';
+import { I18nService } from '../../../core/i18n/i18n.service';
+import { PatientAppointmentsApiService } from './patient-appointments-api.service';
+import {
+  ApiErrorEnvelope,
+  AppointmentSlot,
+  DoctorDirectoryEntry,
+  PatientAppointment,
+} from './patient-appointments.models';
+
+@Component({
+  selector: 'app-patient-appointments-page',
+  standalone: true,
+  imports: [
+    AppShellComponent,
+    FormsModule,
+    AppointmentSlotPickerComponent,
+    ConfirmationDialogComponent,
+  ],
+  template: `
+    <app-shell>
+      <main class="app-container py-6 space-y-6">
+        <header class="border border-[var(--app-border)] bg-[var(--app-surface)] p-5 shadow-[var(--shadow-panel)] rounded-[var(--radius-brand-md)]">
+          <p class="text-xs font-black uppercase tracking-wider text-[var(--brand-primary)]">
+            {{ i18n.t('appointments.eyebrow') }}
+          </p>
+          <h1 class="mt-2 font-display text-2xl font-extrabold text-[var(--text-primary)]">
+            {{ i18n.t('appointments.title') }}
+          </h1>
+          <p class="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
+            {{ i18n.t('appointments.description') }}
+          </p>
+        </header>
+
+        @if (notice()) {
+          <div class="border border-emerald-300 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300 rounded-[var(--radius-brand-sm)]" role="status">
+            {{ notice() }}
+          </div>
+        }
+        @if (error()) {
+          <div class="border border-rose-300 bg-rose-50 p-3 text-sm font-semibold text-rose-800 dark:border-rose-800 dark:bg-rose-950/20 dark:text-rose-300 rounded-[var(--radius-brand-sm)]" role="alert">
+            {{ error() }}
+          </div>
+        }
+
+        <section class="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
+          <div class="space-y-4">
+            <div class="border border-[var(--app-border)] bg-[var(--app-surface)] p-4 rounded-[var(--radius-brand-md)]">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <h2 class="font-display text-lg font-extrabold text-[var(--text-primary)]">
+                    {{ i18n.t('appointments.doctors.title') }}
+                  </h2>
+                  <p class="mt-1 text-xs text-[var(--text-secondary)]">
+                    {{ i18n.t('appointments.doctors.description') }}
+                  </p>
+                </div>
+                <button type="button" class="ui-button ui-button-secondary" [disabled]="loadingDoctors()" (click)="loadDoctors()">
+                  {{ i18n.t('appointments.actions.refresh') }}
+                </button>
+              </div>
+
+              <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                <label class="text-xs font-bold text-[var(--text-secondary)]">
+                  {{ i18n.t('appointments.filters.specialty') }}
+                  <input class="ui-input mt-1 w-full" [(ngModel)]="specialtyFilter" (keyup.enter)="loadDoctors()" />
+                </label>
+                <label class="text-xs font-bold text-[var(--text-secondary)]">
+                  {{ i18n.t('appointments.filters.department') }}
+                  <input class="ui-input mt-1 w-full" [(ngModel)]="departmentFilter" (keyup.enter)="loadDoctors()" />
+                </label>
+              </div>
+              <button type="button" class="ui-button ui-button-primary mt-3 w-full justify-center" [disabled]="loadingDoctors()" (click)="loadDoctors()">
+                {{ i18n.t('appointments.actions.search') }}
+              </button>
+
+              @if (loadingDoctors()) {
+                <p class="py-8 text-center text-sm text-[var(--text-secondary)]">{{ i18n.t('appointments.loading.doctors') }}</p>
+              } @else if (doctors().length === 0) {
+                <p class="py-8 text-center text-sm text-[var(--text-secondary)]">{{ i18n.t('appointments.empty.doctors') }}</p>
+              } @else {
+                <div class="mt-4 space-y-2">
+                  @for (doctor of doctors(); track doctor.doctorId) {
+                    <button
+                      type="button"
+                      class="w-full border p-3 text-left transition rounded-[var(--radius-brand-sm)]"
+                      [style.border-color]="selectedDoctor()?.doctorId === doctor.doctorId ? 'var(--brand-primary)' : 'var(--app-border)'"
+                      [style.background]="selectedDoctor()?.doctorId === doctor.doctorId ? 'var(--brand-primary-subtle)' : 'var(--app-surface-muted)'"
+                      [attr.aria-pressed]="selectedDoctor()?.doctorId === doctor.doctorId"
+                      (click)="selectDoctor(doctor)"
+                    >
+                      <span class="block text-sm font-extrabold text-[var(--text-primary)]">{{ doctor.displayName }}</span>
+                      <span class="mt-1 block text-xs text-[var(--text-secondary)]">
+                        {{ doctor.specialty || i18n.t('appointments.doctors.specialtyUnknown') }}
+                        · {{ doctor.department || i18n.t('appointments.doctors.departmentUnknown') }}
+                      </span>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <section class="border border-[var(--app-border)] bg-[var(--app-surface)] p-4 rounded-[var(--radius-brand-md)]">
+              <h2 class="font-display text-lg font-extrabold text-[var(--text-primary)]">
+                {{ i18n.t('appointments.slots.title') }}
+              </h2>
+              @if (!selectedDoctor()) {
+                <p class="py-10 text-center text-sm text-[var(--text-secondary)]">{{ i18n.t('appointments.slots.selectDoctor') }}</p>
+              } @else if (loadingSlots()) {
+                <p class="py-10 text-center text-sm text-[var(--text-secondary)]">{{ i18n.t('appointments.loading.slots') }}</p>
+              } @else {
+                <app-appointment-slot-picker
+                  [slots]="slots()"
+                  [selectedStartAt]="selectedSlot()?.startAt ?? null"
+                  [locale]="i18n.locale()"
+                  [labels]="slotLabels()"
+                  (slotSelected)="selectedSlot.set($event)"
+                />
+              }
+
+              @if (selectedSlot()) {
+                <div class="mt-5 border-t border-[var(--app-border)] pt-4">
+                  <p class="text-sm font-bold text-[var(--text-primary)]">
+                    {{ selectedDoctor()!.displayName }} — {{ formatDateTime(selectedSlot()!.startAt) }}
+                  </p>
+                  <label class="mt-3 block text-xs font-bold text-[var(--text-secondary)]">
+                    {{ i18n.t('appointments.booking.reason') }}
+                    <textarea class="ui-input mt-1 min-h-20 w-full" maxlength="2000" [(ngModel)]="reason"></textarea>
+                  </label>
+                  <button type="button" class="ui-button ui-button-primary mt-3 w-full justify-center" [disabled]="booking()" (click)="bookSelectedSlot()">
+                    {{ booking() ? i18n.t('appointments.loading.booking') : i18n.t('appointments.actions.book') }}
+                  </button>
+                </div>
+              }
+            </section>
+          </div>
+        </section>
+
+        <section class="border border-[var(--app-border)] bg-[var(--app-surface)] p-4 rounded-[var(--radius-brand-md)]">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <h2 class="font-display text-lg font-extrabold text-[var(--text-primary)]">{{ i18n.t('appointments.mine.title') }}</h2>
+              <p class="mt-1 text-xs text-[var(--text-secondary)]">{{ i18n.t('appointments.mine.description') }}</p>
+            </div>
+            <button type="button" class="ui-button ui-button-secondary" [disabled]="loadingAppointments()" (click)="loadAppointments()">
+              {{ i18n.t('appointments.actions.refresh') }}
+            </button>
+          </div>
+
+          @if (loadingAppointments()) {
+            <p class="py-8 text-center text-sm text-[var(--text-secondary)]">{{ i18n.t('appointments.loading.mine') }}</p>
+          } @else if (appointments().length === 0) {
+            <p class="py-8 text-center text-sm text-[var(--text-secondary)]">{{ i18n.t('appointments.empty.mine') }}</p>
+          } @else {
+            <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              @for (appointment of appointments(); track appointment.id) {
+                <article class="border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-4 rounded-[var(--radius-brand-sm)]">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 class="text-sm font-extrabold text-[var(--text-primary)]">{{ appointment.doctorDisplayName }}</h3>
+                      <p class="mt-1 text-xs text-[var(--text-secondary)]">{{ formatDateTime(appointment.startAt) }}</p>
+                    </div>
+                    <span class="border border-[var(--app-border)] px-2 py-1 text-[10px] font-black uppercase text-[var(--text-secondary)] rounded-[var(--radius-brand-sm)]">
+                      {{ statusLabel(appointment.status) }}
+                    </span>
+                  </div>
+                  @if (appointment.reason) {
+                    <p class="mt-3 text-xs leading-5 text-[var(--text-secondary)]">{{ appointment.reason }}</p>
+                  }
+                  @if (appointment.status === 'CONFIRMED') {
+                    <button type="button" class="ui-button ui-button-danger mt-4 w-full justify-center" (click)="requestCancellation(appointment)">
+                      {{ i18n.t('appointments.actions.cancel') }}
+                    </button>
+                  }
+                </article>
+              }
+            </div>
+          }
+        </section>
+      </main>
+
+      <app-confirmation-dialog
+        [visible]="cancelTarget() !== null"
+        [title]="i18n.t('appointments.cancel.title')"
+        [message]="i18n.t('appointments.cancel.message')"
+        [confirmLabel]="i18n.t('appointments.actions.confirmCancel')"
+        [cancelLabel]="i18n.t('appointments.actions.keep')"
+        [busy]="cancelling()"
+        (confirmed)="confirmCancellation()"
+        (cancelled)="cancelTarget.set(null)"
+      />
+    </app-shell>
+  `,
+})
+export class PatientAppointmentsPageComponent implements OnInit {
+  private readonly api = inject(PatientAppointmentsApiService);
+  readonly i18n = inject(I18nService);
+
+  readonly doctors = signal<DoctorDirectoryEntry[]>([]);
+  readonly slots = signal<AppointmentSlot[]>([]);
+  readonly appointments = signal<PatientAppointment[]>([]);
+  readonly selectedDoctor = signal<DoctorDirectoryEntry | null>(null);
+  readonly selectedSlot = signal<AppointmentSlot | null>(null);
+  readonly cancelTarget = signal<PatientAppointment | null>(null);
+  readonly loadingDoctors = signal(false);
+  readonly loadingSlots = signal(false);
+  readonly loadingAppointments = signal(false);
+  readonly booking = signal(false);
+  readonly cancelling = signal(false);
+  readonly error = signal('');
+  readonly notice = signal('');
+
+  specialtyFilter = '';
+  departmentFilter = '';
+  reason = '';
+
+  readonly slotLabels = computed<AppointmentSlotPickerLabels>(() => ({
+    empty: this.i18n.t('appointments.empty.slots'),
+    select: this.i18n.t('appointments.slots.select'),
+  }));
+
+  ngOnInit(): void {
+    this.loadDoctors();
+    this.loadAppointments();
+  }
+
+  loadDoctors(): void {
+    this.loadingDoctors.set(true);
+    this.clearMessages();
+    this.api.listDoctors(this.specialtyFilter, this.departmentFilter).subscribe({
+      next: (doctors) => {
+        this.doctors.set(doctors);
+        this.loadingDoctors.set(false);
+        const selectedId = this.selectedDoctor()?.doctorId;
+        if (selectedId && !doctors.some((doctor) => doctor.doctorId === selectedId)) {
+          this.selectedDoctor.set(null);
+          this.selectedSlot.set(null);
+          this.slots.set([]);
+        }
+      },
+      error: (error) => this.handleError(error, 'appointments.errors.loadDoctors', this.loadingDoctors),
+    });
+  }
+
+  selectDoctor(doctor: DoctorDirectoryEntry): void {
+    this.selectedDoctor.set(doctor);
+    this.selectedSlot.set(null);
+    this.loadSlots();
+  }
+
+  loadSlots(): void {
+    const doctor = this.selectedDoctor();
+    if (!doctor) return;
+    this.loadingSlots.set(true);
+    this.clearMessages();
+    const from = new Date();
+    const to = new Date(from.getTime() + 14 * 24 * 60 * 60 * 1000);
+    this.api.listSlots(doctor.doctorId, from.toISOString(), to.toISOString()).subscribe({
+      next: (slots) => {
+        this.slots.set(slots);
+        this.loadingSlots.set(false);
+        if (this.selectedSlot() && !slots.some((slot) => slot.startAt === this.selectedSlot()!.startAt)) {
+          this.selectedSlot.set(null);
+        }
+      },
+      error: (error) => this.handleError(error, 'appointments.errors.loadSlots', this.loadingSlots),
+    });
+  }
+
+  bookSelectedSlot(): void {
+    const doctor = this.selectedDoctor();
+    const slot = this.selectedSlot();
+    if (!doctor || !slot || this.booking()) return;
+    this.booking.set(true);
+    this.clearMessages();
+    this.api.book({ doctorId: doctor.doctorId, startAt: slot.startAt, reason: this.reason.trim() || undefined }).subscribe({
+      next: () => {
+        this.booking.set(false);
+        this.reason = '';
+        this.selectedSlot.set(null);
+        this.loadAppointments(false);
+        this.loadSlots();
+        this.notice.set(this.i18n.t('appointments.success.booked'));
+      },
+      error: (error: HttpErrorResponse) => {
+        this.booking.set(false);
+        if (this.errorCode(error) === 'SLOT_UNAVAILABLE') this.loadSlots();
+        this.error.set(this.errorMessage(error, 'appointments.errors.booking'));
+      },
+    });
+  }
+
+  loadAppointments(clearMessages = true): void {
+    this.loadingAppointments.set(true);
+    if (clearMessages) this.clearMessages();
+    this.api.listOwn().subscribe({
+      next: (appointments) => {
+        this.appointments.set(appointments);
+        this.loadingAppointments.set(false);
+      },
+      error: (error) => this.handleError(error, 'appointments.errors.loadMine', this.loadingAppointments),
+    });
+  }
+
+  requestCancellation(appointment: PatientAppointment): void {
+    this.cancelTarget.set(appointment);
+    this.clearMessages();
+  }
+
+  confirmCancellation(): void {
+    const appointment = this.cancelTarget();
+    if (!appointment || this.cancelling()) return;
+    this.cancelling.set(true);
+    this.api.cancel(appointment.id).subscribe({
+      next: () => {
+        this.cancelling.set(false);
+        this.cancelTarget.set(null);
+        this.loadAppointments(false);
+        if (this.selectedDoctor()?.doctorId === appointment.doctorId) this.loadSlots();
+        this.notice.set(this.i18n.t('appointments.success.cancelled'));
+      },
+      error: (error: HttpErrorResponse) => {
+        this.cancelling.set(false);
+        this.cancelTarget.set(null);
+        this.error.set(this.errorMessage(error, 'appointments.errors.cancel'));
+      },
+    });
+  }
+
+  statusLabel(status: string): string {
+    return this.i18n.t(`appointments.status.${status}`);
+  }
+
+  formatDateTime(value: string): string {
+    return new Intl.DateTimeFormat(this.i18n.locale() === 'fr' ? 'fr-FR' : 'en-GB', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(value));
+  }
+
+  private clearMessages(): void {
+    this.error.set('');
+    this.notice.set('');
+  }
+
+  private handleError(error: HttpErrorResponse, fallbackKey: string, loadingSignal: { set(value: boolean): void }): void {
+    loadingSignal.set(false);
+    this.error.set(this.errorMessage(error, fallbackKey));
+  }
+
+  private errorMessage(error: HttpErrorResponse, fallbackKey: string): string {
+    const code = this.errorCode(error);
+    return code ? this.i18n.t(`appointments.errors.codes.${code}`, this.i18n.t(fallbackKey)) : this.i18n.t(fallbackKey);
+  }
+
+  private errorCode(error: HttpErrorResponse): string | undefined {
+    return (error.error as ApiErrorEnvelope | undefined)?.error?.code;
+  }
+}
