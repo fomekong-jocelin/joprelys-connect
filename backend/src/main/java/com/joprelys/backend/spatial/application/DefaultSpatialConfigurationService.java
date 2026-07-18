@@ -332,9 +332,9 @@ public class DefaultSpatialConfigurationService implements SpatialConfigurationU
     }
 
     private boolean isPlatformAdministrator(UserAccountEntity actor) {
-        return List.of(actor.getRole().split(",")).stream()
-                .map(String::trim)
-                .anyMatch(role -> role.equals("ADMIN_JOPRELYS") || role.equals("SUPER_ADMIN"));
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ORGANIZATION_MANAGE".equals(authority.getAuthority()));
     }
 
     private UserAccountEntity currentActor() {

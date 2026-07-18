@@ -34,7 +34,7 @@
           </button>
         }
         <!-- Créances : ADMIN_CLINIQUE uniquement -->
-        @if (isAdminOnly()) {
+        @if (canViewReceivables()) {
           <button
             type="button"
             (click)="activeTab.set('creances')"
@@ -47,7 +47,7 @@
           </button>
         }
         <!-- Bordereaux Assurances : ADMIN_CLINIQUE uniquement -->
-        @if (isAdminOnly()) {
+        @if (canViewBordereaux()) {
           <button
             type="button"
             (click)="activeTab.set('bordereaux')"
@@ -60,7 +60,7 @@
           </button>
         }
         <!-- Conventions d'Assurance : ADMIN_CLINIQUE uniquement -->
-        @if (isAdminOnly()) {
+        @if (canConfigureBilling()) {
           <button
             type="button"
             (click)="activeTab.set('conventions')"
@@ -73,7 +73,7 @@
           </button>
         }
         <!-- Grille Tarifaire : ADMIN_CLINIQUE uniquement -->
-        @if (isAdminOnly()) {
+        @if (canConfigureBilling()) {
           <button
             type="button"
             (click)="activeTab.set('tariffs')"
@@ -86,7 +86,7 @@
           </button>
         }
         <!-- Pilotage DAF : DAF + ADMIN_CLINIQUE -->
-        @if (isDafOrAdmin()) {
+        @if (canViewDaf()) {
           <button
             type="button"
             (click)="activeTab.set('daf')"

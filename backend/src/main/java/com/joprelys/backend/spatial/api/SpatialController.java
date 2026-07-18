@@ -19,11 +19,6 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/spatial")
 public class SpatialController {
 
-    private static final String LEGACY_READ_ROLES =
-            "hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-    private static final String LEGACY_MANAGE_ROLES =
-            "hasAnyRole('INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-
     private final SpatialService spatialService;
 
     public SpatialController(SpatialService spatialService) {
@@ -31,19 +26,19 @@ public class SpatialController {
     }
 
     @GetMapping("/wards")
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ') or " + LEGACY_READ_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
     public List<WardResponse> listWards() {
         return spatialService.listWards();
     }
 
     @GetMapping("/wards/{id}/occupancy")
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ') or " + LEGACY_READ_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
     public WardOccupancyResponse getWardOccupancy(@PathVariable UUID id) {
         return spatialService.getWardOccupancy(id);
     }
 
     @PostMapping("/beds/{id}/status")
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE') or " + LEGACY_MANAGE_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
     public BedResponse updateBedStatus(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateBedStatusRequest request) {
@@ -56,7 +51,7 @@ public class SpatialController {
     }
 
     @PostMapping("/transfers")
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE') or " + LEGACY_MANAGE_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
     public BedAssignmentResponse transferPatient(@Valid @RequestBody TransferRequest request) {
         return spatialService.transferPatient(request.hospitalizationId(), request.newBedId());
     }

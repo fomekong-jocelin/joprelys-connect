@@ -10,19 +10,19 @@ import org.springframework.web.bind.annotation.RestController;
 public class ClinicController {
 
 	@GetMapping("/admin")
-	@PreAuthorize("hasRole('ADMIN_JOPRELYS')")
+	@PreAuthorize("hasAuthority('ORGANIZATION_MANAGE')")
 	public String getAdminData() {
 		return "Données administratives confidentielles";
 	}
 
 	@GetMapping("/medecin")
-	@PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_JOPRELYS')")
+	@PreAuthorize("hasAuthority('CLINICAL_READ')")
 	public String getMedecinData() {
 		return "Dossiers cliniques des patients";
 	}
 
 	@GetMapping("/pharmacien")
-	@PreAuthorize("hasAnyRole('PHARMACIEN', 'ADMIN_JOPRELYS')")
+	@PreAuthorize("hasAuthority('PHARMACY_PRESCRIPTION_READ')")
 	public String getPharmacienData() {
 		return "Ordonnances et délivrances en attente";
 	}

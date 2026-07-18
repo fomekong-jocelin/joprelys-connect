@@ -20,7 +20,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/notifications")
-@PreAuthorize("hasRole('PATIENT')")
+@PreAuthorize("hasAuthority('PATIENT_NOTIFICATION_MANAGE')")
 public class NotificationController {
 
     private final NotificationService notificationService;

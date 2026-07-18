@@ -301,7 +301,7 @@ export class RbacManagementComponent implements OnInit {
     this.error.set(null);
     this.api.ensureMyAccess(true).subscribe({
       next: (access) => {
-        const platform = access.roles.some((role) => role === 'ADMIN_JOPRELYS' || role === 'SUPER_ADMIN');
+        const platform = access.permissions.includes('ORGANIZATION_MANAGE');
         this.platformAdministrator.set(platform);
         if (platform) {
           this.loadOrganizations();

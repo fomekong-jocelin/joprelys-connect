@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -44,7 +43,6 @@ class AuthSessionManagementControllerTest {
     @Autowired UserAccountRepository userRepository;
     @Autowired OrganizationRepository organizationRepository;
     @Autowired RbacStore rbacStore;
-    @Autowired JdbcTemplate jdbcTemplate;
 
     private OrganizationEntity organizationA;
     private OrganizationEntity organizationB;
@@ -58,19 +56,17 @@ class AuthSessionManagementControllerTest {
         auditRepository.deleteAll();
         revokedTokenRepository.deleteAll();
         sessionRepository.deleteAll();
-        jdbcTemplate.update("DELETE FROM user_roles");
-        userRepository.deleteAll();
-        organizationRepository.deleteAll();
         rbacStore.seedCatalog();
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
 
         organizationA = organizationRepository.save(new OrganizationEntity(
-                "Clinique A", "sessions-a@joprelys.local", "123", "Rue A", "Douala"));
+                "Clinique A " + suffix, "sessions-a-" + suffix + "@joprelys.local", "123", "Rue A", "Douala"));
         organizationB = organizationRepository.save(new OrganizationEntity(
-                "Clinique B", "sessions-b@joprelys.local", "456", "Rue B", "Douala"));
-        owner = saveUser("owner@joprelys.local", "AGENT_ACCUEIL", organizationA.getId());
-        target = saveUser("target@joprelys.local", "AGENT_ACCUEIL", organizationA.getId());
-        admin = saveUser("admin@joprelys.local", "ADMIN_CLINIQUE", organizationA.getId());
-        otherTenant = saveUser("other@joprelys.local", "AGENT_ACCUEIL", organizationB.getId());
+                "Clinique B " + suffix, "sessions-b-" + suffix + "@joprelys.local", "456", "Rue B", "Douala"));
+        owner = saveUser("owner-" + suffix + "@joprelys.local", "AGENT_ACCUEIL", organizationA.getId());
+        target = saveUser("target-" + suffix + "@joprelys.local", "AGENT_ACCUEIL", organizationA.getId());
+        admin = saveUser("admin-" + suffix + "@joprelys.local", "ADMIN_CLINIQUE", organizationA.getId());
+        otherTenant = saveUser("other-" + suffix + "@joprelys.local", "AGENT_ACCUEIL", organizationB.getId());
     }
 
     @Test
@@ -138,7 +134,10 @@ class AuthSessionManagementControllerTest {
         mockMvc.perform(post("/api/auth/logout-all")
                         .header("Authorization", bearer(ownerFirst)))
                 .andExpect(status().isNoContent())
-                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Max-Age=0")));
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Max-Age=0")))
+                .andExpect(header().string(
+                        "Clear-Site-Data",
+                        "\"cache\", \"cookies\", \"storage\""));
 
         mockMvc.perform(get("/api/auth/sessions").header("Authorization", bearer(ownerSecond)))
                 .andExpect(status().isUnauthorized());

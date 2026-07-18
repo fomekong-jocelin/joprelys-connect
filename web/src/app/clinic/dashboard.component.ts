@@ -9,6 +9,7 @@ import { DatePipe } from '@angular/common';
 import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { ButtonComponent } from '../shared/ui/button.component';
 import { FormsModule } from '@angular/forms';
+import { RbacApiService } from './rbac/rbac-api.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -20,6 +21,7 @@ export class DashboardComponent implements OnInit {
   private readonly i18n = inject(I18nService);
   private readonly visitApi = inject(VisitApiService);
   private readonly router = inject(Router);
+  private readonly rbacApi = inject(RbacApiService);
 
   readonly session = this.tokenStorage.session;
   readonly welcomeLabel = computed(() => this.i18n.t('dashboard.welcome'));
@@ -60,23 +62,15 @@ export class DashboardComponent implements OnInit {
   vitalsResp?: number;
   vitalsPain?: number;
 
-  hasRole(allowedRoles: string[] | string): boolean {
-    const role = this.session()?.role;
-    if (!role) return false;
-    const roles = role.split(',').map((r) => r.trim());
-    if (Array.isArray(allowedRoles)) {
-      return roles.some((r) => allowedRoles.includes(r));
-    }
-    return roles.includes(allowedRoles);
+  hasPermission(permissions: string[] | string): boolean {
+    const expected = Array.isArray(permissions) ? permissions : [permissions];
+    return expected.some((permission) => this.rbacApi.hasPermission(permission));
   }
 
-  readonly isClinicalRole = computed(() => {
-    return this.hasRole(['MEDECIN', 'AGENT_ACCUEIL', 'INFIRMIER', 'ADMIN_CLINIQUE']);
-  });
+  readonly isClinicalRole = computed(() => this.hasPermission('VISIT_READ'));
 
-  readonly canCloseVisit = computed(() => {
-    return this.hasRole(['MEDECIN', 'ADMIN_CLINIQUE']);
-  });
+  readonly canStartConsultation = computed(() => this.hasPermission('CLINICAL_WRITE'));
+  readonly canCloseVisit = computed(() => this.hasPermission('VISIT_MANAGE'));
 
   ngOnInit(): void {
     if (this.isClinicalRole()) {

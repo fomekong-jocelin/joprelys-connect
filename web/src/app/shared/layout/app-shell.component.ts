@@ -87,7 +87,7 @@ import { AppShellNavComponent } from './app-shell-nav.component';
                 <div class="ui-avatar shadow-xs select-none">{{ currentSession.name.charAt(0) }}</div>
               </div>
 
-              @if (currentSession.role !== 'PATIENT') {
+              @if (!isPatientSession(currentSession.role)) {
                 <a
                   routerLink="/profile"
                   [title]="profileLabel()"
@@ -317,7 +317,7 @@ export class AppShellComponent {
 
   constructor() {
     const currentSession = this.session();
-    if (currentSession?.role === 'PATIENT') {
+    if (currentSession && this.isPatientSession(currentSession.role)) {
       this.loadUnreadNotificationCount();
     }
   }
@@ -370,12 +370,6 @@ export class AppShellComponent {
     if (roles.includes('PATIENT')) {
       return '/patient/dashboard';
     }
-    if (roles.includes('BIOLOGISTE')) {
-      return '/clinic/lab-orders';
-    }
-    if (roles.includes('PHARMACIEN')) {
-      return '/pharmacy/prescriptions';
-    }
     return '/dashboard';
   }
 
@@ -386,6 +380,10 @@ export class AppShellComponent {
       .filter(Boolean)
       .map((role) => this.i18n.t(`role.${role}`, role))
       .join(', ');
+  }
+
+  isPatientSession(value: string): boolean {
+    return value.split(',').map((role) => role.trim()).includes('PATIENT');
   }
 
   logout(): void {

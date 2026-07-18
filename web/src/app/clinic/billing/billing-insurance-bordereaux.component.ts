@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize, Observable } from 'rxjs';
-import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { BillingApiService } from '../../patient/billing-api.service';
 import {
@@ -13,6 +12,7 @@ import {
 import { InsuranceConvention } from '../../patient/patient.models';
 import { IconComponent } from '../../shared/ui/icon.component';
 import { extractApiErrorMessage } from '../../shared/utils/api-error.utils';
+import { RbacApiService } from '../rbac/rbac-api.service';
 
 type InsuranceActionMode = 'receive' | 'accept' | 'reject' | 'pay';
 type PeriodFilter = '30' | '90' | '365' | 'ALL';
@@ -26,7 +26,7 @@ type PeriodFilter = '30' | '90' | '365' | 'ALL';
 })
 export class BillingInsuranceBordereauxComponent implements OnInit {
   private readonly billingApi = inject(BillingApiService);
-  private readonly tokenStorage = inject(AuthTokenStorageService);
+  private readonly rbacApi = inject(RbacApiService);
   private readonly i18n = inject(I18nService);
 
   readonly statuses: BordereauStatus[] = [
@@ -71,12 +71,13 @@ export class BillingInsuranceBordereauxComponent implements OnInit {
   readonly successFeedback = signal<string | null>(null);
   readonly errorFeedback = signal<string | null>(null);
 
-  readonly canDecide = computed(() => this.hasRole(['DAF', 'ADMIN_CLINIQUE']));
+  readonly canDecide = computed(() => this.rbacApi.hasPermission('INSURANCE_BORDEREAU_SETTLE'));
+  readonly canProgress = computed(() => this.rbacApi.hasPermission('INSURANCE_BORDEREAU_PROGRESS'));
 
   readonly canGenerate = computed(() => {
     const start = this.startDate();
     const end = this.endDate();
-    return Boolean(this.selectedConventionId() && start && end && start <= end);
+    return this.canProgress() && Boolean(this.selectedConventionId() && start && end && start <= end);
   });
 
   readonly activeCount = computed(() => this.bordereaux().filter((item) => {
@@ -307,12 +308,6 @@ export class BillingInsuranceBordereauxComponent implements OnInit {
         || this.t('billing.insurance.actionError', 'Impossible d’enregistrer cette action.'),
       ),
     });
-  }
-
-  private hasRole(allowedRoles: string[]): boolean {
-    const sessionRole = this.tokenStorage.session()?.role;
-    if (!sessionRole) return false;
-    return sessionRole.split(',').map((role) => role.trim()).some((role) => allowedRoles.includes(role));
   }
 
   private showSuccess(message: string): void {

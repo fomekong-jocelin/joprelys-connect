@@ -6,7 +6,7 @@
 ## 1. Principes communs
 
 - Base `/api`, authentification JWT Bearer, autorisation *deny-by-default* (`SecurityConfig`).
-- Autorisation par rôle via `@PreAuthorize`, pattern existant `hasAnyRole(...)` (ex. `VisitController`).
+- Autorisation permission-first quand une permission catalogue existe ; les rôles déterminent les permissions effectives côté serveur.
 - Format d'erreur normalisé `ApiErrorResponse` (`common/api`) :
 
 ```json
@@ -24,7 +24,7 @@
 - Traçabilité : `X-Trace-Id` propagé (`TraceIdFilter`) ; aucune PII dans les logs.
 - Dates/heures : ISO-8601 (`Instant` UTC pour `startAt`/`endAt`, `HH:mm` pour les plages horaires, `yyyy-MM-dd` pour les dates).
 
-> **Point de vigilance (revue)** : le mapping permissions → `GrantedAuthority` du filtre JWT n'a pas été inspecté dans le cadre de STORY-2601. Le choix `@PreAuthorize("hasAnyRole(...)")` suit strictement l'existant (`VisitController`, `DocumentController`…). Si le filtre mappe aussi les permissions en authorities, une évolution vers `hasAuthority('APPOINTMENT_READ')` reste possible sans rupture de contrat.
+> **Décision de sécurité du 2026-07-18** : le filtre JWT injecte les permissions effectives comme authorities. Les disponibilités utilisent donc `hasAuthority('AVAILABILITY_MANAGE')`; aucun fallback de rôle n'est admis pour ce périmètre.
 
 ## 2. `/api/availabilities/**` — STORY-2602
 
@@ -32,13 +32,13 @@ Rôles : `MEDECIN` (ses propres règles), `ADMIN_CLINIQUE` (tous les médecins d
 
 | Méthode | Path | `@PreAuthorize` | Objet |
 |---|---|---|---|
-| GET | `/api/availabilities?doctorId=` | `hasAnyRole('MEDECIN','ADMIN_CLINIQUE')` | liste des règles récurrentes (du médecin connecté si `doctorId` omis) |
-| POST | `/api/availabilities` | `hasAnyRole('MEDECIN','ADMIN_CLINIQUE')` | création d'une règle |
-| PUT | `/api/availabilities/{id}` | `hasAnyRole('MEDECIN','ADMIN_CLINIQUE')` | modification d'une règle |
-| DELETE | `/api/availabilities/{id}` | `hasAnyRole('MEDECIN','ADMIN_CLINIQUE')` | désactivation logique (`active=false`, jamais de suppression silencieuse — RM-07) |
-| GET | `/api/availabilities/exceptions?doctorId=&from=&to=` | `hasAnyRole('MEDECIN','ADMIN_CLINIQUE')` | liste des indisponibilités |
-| POST | `/api/availabilities/exceptions` | `hasAnyRole('MEDECIN','ADMIN_CLINIQUE')` | création d'une indisponibilité |
-| DELETE | `/api/availabilities/exceptions/{id}` | `hasAnyRole('MEDECIN','ADMIN_CLINIQUE')` | suppression d'une indisponibilité |
+| GET | `/api/availabilities?doctorId=` | `hasAuthority('AVAILABILITY_MANAGE')` | liste des règles récurrentes (du médecin connecté si `doctorId` omis) |
+| POST | `/api/availabilities` | `hasAuthority('AVAILABILITY_MANAGE')` | création d'une règle |
+| PUT | `/api/availabilities/{id}` | `hasAuthority('AVAILABILITY_MANAGE')` | modification d'une règle |
+| DELETE | `/api/availabilities/{id}` | `hasAuthority('AVAILABILITY_MANAGE')` | désactivation logique (`active=false`, jamais de suppression silencieuse — RM-07) |
+| GET | `/api/availabilities/exceptions?doctorId=&from=&to=` | `hasAuthority('AVAILABILITY_MANAGE')` | liste des indisponibilités |
+| POST | `/api/availabilities/exceptions` | `hasAuthority('AVAILABILITY_MANAGE')` | création d'une indisponibilité |
+| DELETE | `/api/availabilities/exceptions/{id}` | `hasAuthority('AVAILABILITY_MANAGE')` | suppression d'une indisponibilité |
 
 `UpsertAvailabilityRuleRequest` : `{ "doctorId": uuid?, "weekday": 1..7, "startTime": "HH:mm", "endTime": "HH:mm", "validFrom": "yyyy-MM-dd", "validTo": "yyyy-MM-dd"? }` — `doctorId` omis = médecin connecté ; un `MEDECIN` ne peut viser que lui-même (`403` sinon).
 

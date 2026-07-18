@@ -22,15 +22,9 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Urgences — traçabilité médico-légale")
 public class EmergencyMedicoLegalController {
 
-    private static final String READ_ACCESS =
-            "hasAuthority('EMERGENCY_MEDICO_LEGAL_READ') or "
-                    + "hasAnyRole('INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-    private static final String CLINICAL_WRITE_ACCESS =
-            "hasAuthority('EMERGENCY_MEDICO_LEGAL_WRITE') or "
-                    + "hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-    private static final String CUSTODY_WRITE_ACCESS =
-            "hasAuthority('EMERGENCY_BELONGINGS_WRITE') or "
-                    + "hasAnyRole('INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
+    private static final String READ_ACCESS = "hasAuthority('EMERGENCY_MEDICO_LEGAL_READ')";
+    private static final String CLINICAL_WRITE_ACCESS = "hasAuthority('EMERGENCY_MEDICO_LEGAL_WRITE')";
+    private static final String CUSTODY_WRITE_ACCESS = "hasAuthority('EMERGENCY_BELONGINGS_WRITE')";
 
     private final EmergencyMedicoLegalService service;
 

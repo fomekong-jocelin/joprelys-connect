@@ -37,14 +37,6 @@ type HemodynamicStatus = CreateEmergencyTriageAssessmentRequest['hemodynamicStat
   templateUrl: './emergency-triage-panel.component.html',
 })
 export class EmergencyTriagePanelComponent {
-  private static readonly LEGACY_WRITE_ROLES = new Set([
-    'INFIRMIER',
-    'MEDECIN',
-    'ADMIN_CLINIQUE',
-    'ADMIN_JOPRELYS',
-    'SUPER_ADMIN',
-  ]);
-
   private readonly api = inject(EmergencyApiService);
   private readonly rbacApi = inject(RbacApiService);
   private readonly fb = inject(FormBuilder);
@@ -203,9 +195,7 @@ export class EmergencyTriagePanelComponent {
     this.rbacApi.ensureMyAccess().subscribe({
       next: access => {
         const permissions = this.rbacApi.effectivePermissionSet(access.permissions);
-        const hasLegacyWriteRole = access.roles.some(role =>
-          EmergencyTriagePanelComponent.LEGACY_WRITE_ROLES.has(role));
-        this.canWrite.set(permissions.has('EMERGENCY_WRITE') || hasLegacyWriteRole);
+        this.canWrite.set(permissions.has('EMERGENCY_WRITE'));
       },
       error: () => this.canWrite.set(false),
     });

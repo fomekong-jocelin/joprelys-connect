@@ -12,7 +12,6 @@ import {
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { catchError, finalize, forkJoin, of, take } from 'rxjs';
-import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { BillingApiService } from '../../patient/billing-api.service';
 import { PatientApiService } from '../../patient/patient-api.service';
@@ -37,6 +36,7 @@ import { BillingInsuranceBordereauxComponent } from './billing-insurance-bordere
 import { BillingInvoiceHistoryComponent } from './billing-invoice-history.component';
 import { BillingPaymentForm, BillingPaymentModalComponent } from './billing-payment-modal.component';
 import { BillingReceivablesComponent } from './billing-receivables.component';
+import { RbacApiService } from '../rbac/rbac-api.service';
 
 @Component({
   selector: 'app-billing-management-page',
@@ -67,7 +67,7 @@ export class BillingManagementPageComponent implements OnInit {
   private readonly patientApi = inject(PatientApiService);
   private readonly visitApi = inject(VisitApiService);
   private readonly i18n = inject(I18nService);
-  private readonly tokenStorage = inject(AuthTokenStorageService);
+  private readonly rbacApi = inject(RbacApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly zone = inject(NgZone);
 
@@ -79,18 +79,14 @@ export class BillingManagementPageComponent implements OnInit {
 
   activeTab = signal<'facturation' | 'caisse' | 'creances' | 'bordereaux' | 'conventions' | 'tariffs' | 'daf'>('facturation');
 
-  hasRole(allowedRoles: string[] | string): boolean {
-    const role = this.tokenStorage.session()?.role;
-    if (!role) return false;
-    const roles = role.split(',').map((r) => r.trim());
-    return Array.isArray(allowedRoles)
-      ? roles.some((r) => allowedRoles.includes(r))
-      : roles.includes(allowedRoles);
-  }
-
-  readonly isDafOrAdmin = computed(() => this.hasRole(['DAF', 'ADMIN_CLINIQUE']));
-  readonly isAdminOnly = computed(() => this.hasRole(['ADMIN_CLINIQUE']));
-  readonly canAccessCaisse = computed(() => this.hasRole(['AGENT_ACCUEIL', 'ADMIN_CLINIQUE']));
+  readonly canViewDaf = computed(() => this.rbacApi.hasPermission('ACCOUNTING_DASHBOARD_READ'));
+  readonly canConfigureBilling = computed(() => this.rbacApi.hasPermission('BILLING_INVOICE_WRITE'));
+  readonly canViewReceivables = computed(() => this.rbacApi.hasPermission('BILLING_INVOICE_READ'));
+  readonly canViewBordereaux = computed(() => this.rbacApi.hasPermission('INSURANCE_BORDEREAU_READ'));
+  readonly canAccessCaisse = computed(() =>
+    ['CASH_QUEUE_READ', 'CASH_PAYMENT_COLLECT', 'CASH_SESSION_OPEN']
+      .some((permission) => this.rbacApi.hasPermission(permission))
+  );
 
   // Search & Patient
   searchQuery = '';

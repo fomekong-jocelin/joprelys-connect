@@ -13,7 +13,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/fhir")
-@PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'BIOLOGISTE')")
 @Tag(name = "HL7 FHIR R4", description = "Endpoints d'interopérabilité conformes aux standards HL7 FHIR R4")
 public class FhirController {
 
@@ -24,6 +23,7 @@ public class FhirController {
 	}
 
 	@GetMapping("/Patient/{id}")
+	@PreAuthorize("hasAuthority('PATIENT_READ')")
 	@Operation(
 			summary = "Récupérer un Patient au format FHIR",
 			description = "Retourne la ressource Patient correspondante si l'utilisateur est authentifié et possède le consentement d'accès.",
@@ -40,6 +40,7 @@ public class FhirController {
 	}
 
 	@GetMapping("/Encounter/{id}")
+	@PreAuthorize("hasAuthority('CLINICAL_READ')")
 	@Operation(
 			summary = "Récupérer une Rencontre (visite) au format FHIR",
 			description = "Retourne la ressource Encounter correspondante après vérification des consentements d'accès du patient associé.",
@@ -56,6 +57,7 @@ public class FhirController {
 	}
 
 	@GetMapping("/Observation")
+	@PreAuthorize("hasAuthority('CLINICAL_READ')")
 	@Operation(
 			summary = "Récupérer les Constantes d'un Patient (Observations FHIR)",
 			description = "Retourne un Bundle FHIR contenant l'ensemble des observations (constantes vitales) d'un patient.",
@@ -72,6 +74,7 @@ public class FhirController {
 	}
 
 	@GetMapping("/DiagnosticReport")
+	@PreAuthorize("hasAuthority('LAB_ORDER_READ')")
 	@Operation(
 			summary = "Récupérer les Comptes-rendus d'examens d'un Patient (DiagnosticReport FHIR)",
 			description = "Retourne un Bundle FHIR contenant l'ensemble des comptes-rendus de laboratoire d'un patient.",

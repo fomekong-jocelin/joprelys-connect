@@ -48,6 +48,10 @@ Pour le client web :
 - absence de valeur `Domain` afin de rester host-only ;
 - expiration du cookie limitée par la plus proche des expirations absolue et d’inactivité ;
 - suppression du cookie lors d’un refresh refusé ou d’un logout.
+- toute suppression du refresh cookie ajoute `Clear-Site-Data: "cache", "cookies", "storage"` afin de matérialiser une frontière navigateur complète ;
+- Angular purge en parallèle `sessionStorage`, `localStorage`, les cookies accessibles et les états mémoire enregistrés à la déconnexion ou au changement d'identité ;
+- la rotation transparente du même compte conserve les préférences et remplace uniquement l'access token ;
+- le passage vers une session patient efface explicitement un éventuel refresh cookie professionnel.
 
 L’access token reste retourné dans le JSON et envoyé en Bearer. Sa durée est courte et indépendante de celle de la session.
 
@@ -76,6 +80,8 @@ L’access token reste retourné dans le JSON et envoyé en Bearer. Sa durée es
 - HTTPS obligatoire en production ;
 - les tests locaux HTTP utilisent un cookie non `Secure` via le profil de test/local ;
 - le client natif Flutter ne peut pas réutiliser directement ce mécanisme et nécessitera une stratégie de stockage sécurisé dédiée lorsqu’il sera intégré.
+- la purge complète réinitialise volontairement le thème, la langue et la préférence de sidebar au prochain chargement ;
+- si le serveur est inaccessible au moment précis du logout, JavaScript ne peut pas supprimer un cookie HttpOnly : l'état local est tout de même purgé et l'expiration serveur reste requise dès que la connectivité revient.
 
 ## Alternatives futures
 

@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/external-access")
-@PreAuthorize("hasAnyRole('INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+@PreAuthorize("hasAuthority('PATIENT_EMERGENCY_ACCESS')")
 public class ExternalAccessController {
 
     private final ExternalAccessService externalAccessService;

@@ -16,6 +16,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class RefreshTokenCookieManager {
 
+    private static final String CLEAR_SITE_DATA = "\"cache\", \"cookies\", \"storage\"";
+
     private final AuthSessionProperties properties;
     private final Clock clock;
 
@@ -54,6 +56,7 @@ public class RefreshTokenCookieManager {
                 .maxAge(Duration.ZERO)
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        response.addHeader("Clear-Site-Data", CLEAR_SITE_DATA);
     }
 
     private ResponseCookie.ResponseCookieBuilder baseCookie(String value) {

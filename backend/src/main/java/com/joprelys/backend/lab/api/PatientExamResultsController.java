@@ -27,7 +27,7 @@ public class PatientExamResultsController {
 	}
 
 	@GetMapping("/api/patients/{id}/exam-results/export")
-	@PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE', 'PATIENT', 'BIOLOGISTE')")
+	@PreAuthorize("hasAnyAuthority('LAB_ORDER_READ', 'PATIENT_PORTAL_ACCESS')")
 	public ResponseEntity<?> exportResults(
 			@PathVariable("id") UUID patientId,
 			@RequestParam(value = "format", defaultValue = "json") String format) {

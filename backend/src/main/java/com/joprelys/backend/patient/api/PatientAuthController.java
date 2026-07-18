@@ -1,9 +1,10 @@
 package com.joprelys.backend.patient.api;
 
 import com.joprelys.backend.auth.api.LoginResponse;
+import com.joprelys.backend.auth.api.RefreshTokenCookieManager;
 import com.joprelys.backend.patient.application.PatientAuthService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,9 +16,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class PatientAuthController {
 
     private final PatientAuthService patientAuthService;
+    private final RefreshTokenCookieManager cookieManager;
 
-    public PatientAuthController(PatientAuthService patientAuthService) {
+    public PatientAuthController(
+            PatientAuthService patientAuthService,
+            RefreshTokenCookieManager cookieManager) {
         this.patientAuthService = patientAuthService;
+        this.cookieManager = cookieManager;
     }
 
     @PostMapping("/otp")
@@ -30,11 +35,15 @@ public class PatientAuthController {
     }
 
     @PostMapping("/verify")
-    public LoginResponse verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
-        return patientAuthService.verifyOtp(
+    public LoginResponse verifyOtp(
+            @Valid @RequestBody VerifyOtpRequest request,
+            HttpServletResponse response) {
+        LoginResponse loginResponse = patientAuthService.verifyOtp(
                 request.globalPatientNumber(),
                 request.otpCode()
         );
+        cookieManager.clear(response);
+        return loginResponse;
     }
 
     /**

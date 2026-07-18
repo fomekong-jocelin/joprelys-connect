@@ -25,7 +25,7 @@ public class ReceivableReminderController {
     }
 
     @PostMapping("/api/receivables/{receivableId}/reminders")
-    @PreAuthorize("hasAnyRole('DAF', 'SECRETAIRE_COMPTABLE', 'ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('RECEIVABLE_REMINDER_WRITE')")
     @Operation(summary = "Consigner une relance", description = "Ajoute une action de relance dans l'historique d'une créance.")
     public ResponseEntity<ReceivableReminderResponse> recordReminder(
             @PathVariable("receivableId") UUID receivableId,
@@ -41,7 +41,7 @@ public class ReceivableReminderController {
     }
 
     @GetMapping("/api/receivables/{receivableId}/reminders")
-    @PreAuthorize("hasAnyRole('DAF', 'SECRETAIRE_COMPTABLE', 'ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('RECEIVABLE_REMINDER_READ')")
     @Operation(summary = "Lister les relances d'une créance", description = "Récupère l'historique des relances chronologiques d'une créance.")
     public ResponseEntity<List<ReceivableReminderResponse>> getReminders(
             @PathVariable("receivableId") UUID receivableId) {

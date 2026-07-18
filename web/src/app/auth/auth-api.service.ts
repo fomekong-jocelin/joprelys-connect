@@ -36,7 +36,7 @@ export class AuthApiService {
     }
 
     if (currentSession) {
-      this.tokenStorage.clear();
+      this.tokenStorage.clearAccessToken();
     }
 
     return this.http.post<LoginResponse>(`${this.apiBaseUrl}/refresh`, {}).pipe(

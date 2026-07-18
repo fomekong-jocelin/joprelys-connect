@@ -32,6 +32,9 @@
 - logout courant ;
 - logout-all ;
 - cookie effacé ;
+- `Clear-Site-Data` présent sur logout, logout-all, révocation courante et refresh invalide ;
+- `sessionStorage`, `localStorage`, cookies accessibles et états mémoire Angular purgés ;
+- changement de compte : anciennes données supprimées avant sauvegarde de la nouvelle session ;
 - erreurs structurées et sans fuite.
 
 ## Persistance

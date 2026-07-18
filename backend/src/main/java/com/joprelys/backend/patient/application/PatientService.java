@@ -198,15 +198,12 @@ public class PatientService {
 
 		var actor = getCurrentUser();
 		if (actor != null) {
-			boolean isClinicalRole = actor.hasRole("MEDECIN") || actor.hasRole("INFIRMIER") || actor.hasRole("AGENT_ACCUEIL") || actor.hasRole("ADMIN_CLINIQUE");
-			if (isClinicalRole) {
-				UUID organizationId = actor.getOrganizationId();
-				boolean hasConsent = checkConsent(patient.getId(), organizationId);
-				if (!hasConsent) {
-					boolean hasEmergencyAccess = checkEmergencyAccess(patient.getId(), organizationId);
-					if (!hasEmergencyAccess) {
-						throw new ResponseStatusException(HttpStatus.FORBIDDEN, "CONSENT_REQUIRED");
-					}
+			UUID organizationId = actor.getOrganizationId();
+			boolean hasConsent = checkConsent(patient.getId(), organizationId);
+			if (!hasConsent) {
+				boolean hasEmergencyAccess = checkEmergencyAccess(patient.getId(), organizationId);
+				if (!hasEmergencyAccess) {
+					throw new ResponseStatusException(HttpStatus.FORBIDDEN, "CONSENT_REQUIRED");
 				}
 			}
 
@@ -242,51 +239,47 @@ public class PatientService {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié.");
 		}
 
-		boolean isStaffRole = actor.hasRole("MEDECIN") || actor.hasRole("INFIRMIER") || actor.hasRole("AGENT_ACCUEIL") || actor.hasRole("ADMIN_CLINIQUE") || actor.hasRole("PHARMACIEN") || actor.hasRole("BIOLOGISTE");
+		UUID organizationId = actor.getOrganizationId();
 
-		if (isStaffRole) {
-			UUID organizationId = actor.getOrganizationId();
+		var patient = patientRepository.findByIdGlobally(patientId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé"));
+		if (patient.getOrganizationId() != null && patient.getOrganizationId().equals(organizationId)) {
+			return; // Full access for own clinic
+		}
 
-			var patient = patientRepository.findByIdGlobally(patientId)
-					.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé"));
-			if (patient.getOrganizationId() != null && patient.getOrganizationId().equals(organizationId)) {
-				return; // Full access for own clinic
-			}
+		if (checkEmergencyAccess(patientId, organizationId)) {
+			return; // Full access during active emergency
+		}
 
-			if (checkEmergencyAccess(patientId, organizationId)) {
-				return; // Full access during active emergency
-			}
-
-			var consentOpt = patientConsentRepository.findByPatientIdAndOrganizationId(patientId, organizationId);
-			if (consentOpt.isPresent()) {
-				var consent = consentOpt.get();
-				boolean isActive = "ACTIVE".equals(consent.getStatus()) || "APPROVED".equals(consent.getStatus());
-				// FR-CONSENT-003 : vérifier l'expiration
-				boolean notExpired = consent.getExpiresAt() == null || consent.getExpiresAt().isAfter(java.time.Instant.now());
-				if (isActive && notExpired) {
-					if (hasScope(consent.getScopes(), requiredScope)) {
-						return;
-					}
-					throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Scope manquant: " + requiredScope);
-				}
-			}
-
-			var activeRequest = externalAccessRequestRepository.findByPatientId(patientId).stream()
-					.filter(r -> organizationId.equals(r.getRequesterOrganizationId()) &&
-							"APPROUVEE".equals(r.getStatus()) &&
-							r.getExpiresAt() != null &&
-							r.getExpiresAt().isAfter(java.time.Instant.now()))
-					.findFirst();
-			if (activeRequest.isPresent()) {
-				var request = activeRequest.get();
-				if (hasScope(request.getScopes(), requiredScope)) {
+		var consentOpt = patientConsentRepository.findByPatientIdAndOrganizationId(patientId, organizationId);
+		if (consentOpt.isPresent()) {
+			var consent = consentOpt.get();
+			boolean isActive = "ACTIVE".equals(consent.getStatus()) || "APPROVED".equals(consent.getStatus());
+			// FR-CONSENT-003 : vérifier l'expiration
+			boolean notExpired = consent.getExpiresAt() == null || consent.getExpiresAt().isAfter(java.time.Instant.now());
+			if (isActive && notExpired) {
+				if (hasScope(consent.getScopes(), requiredScope)) {
 					return;
 				}
 				throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Scope manquant: " + requiredScope);
 			}
-
-			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "CONSENT_REQUIRED");
 		}
+
+		var activeRequest = externalAccessRequestRepository.findByPatientId(patientId).stream()
+				.filter(r -> organizationId.equals(r.getRequesterOrganizationId()) &&
+						"APPROUVEE".equals(r.getStatus()) &&
+						r.getExpiresAt() != null &&
+						r.getExpiresAt().isAfter(java.time.Instant.now()))
+				.findFirst();
+		if (activeRequest.isPresent()) {
+			var request = activeRequest.get();
+			if (hasScope(request.getScopes(), requiredScope)) {
+				return;
+			}
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Scope manquant: " + requiredScope);
+		}
+
+		throw new ResponseStatusException(HttpStatus.FORBIDDEN, "CONSENT_REQUIRED");
 	}
 
 	// WT1 (SCOPES): Validation d'accès pour les sous-ressources avec masquage d'existence (404 au lieu de 403)

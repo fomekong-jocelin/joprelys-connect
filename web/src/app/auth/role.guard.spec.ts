@@ -48,21 +48,28 @@ describe('roleGuard', () => {
     });
   });
 
-  it('should redirect to unauthorized if a legacy-only route does not match the role', () => {
+  it('should reject a professional route configured with roles only', () => {
     sessionSignal.set(session('MEDECIN'));
+    mockRbacApi.ensureMyAccess.mockReturnValue(of({
+      userId: 'user-legacy-1', roles: ['MEDECIN'], permissions: [],
+    }));
     const result = TestBed.runInInjectionContext(() =>
       roleGuard({ data: { expectedRoles: ['ADMIN_JOPRELYS'] } } as any, {} as any),
     );
     expect(result).toBe('/unauthorized');
     expect(mockRouter.parseUrl).toHaveBeenCalledWith('/unauthorized');
+    expect(mockRbacApi.ensureMyAccess).not.toHaveBeenCalled();
   });
 
-  it('should allow a legacy-only route when the role matches', () => {
+  it('should not let an effective system role bypass missing permission metadata', () => {
     sessionSignal.set(session('ADMIN_JOPRELYS'));
+    mockRbacApi.ensureMyAccess.mockReturnValue(of({
+      userId: 'user-legacy-2', roles: ['ADMIN_JOPRELYS'], permissions: [],
+    }));
     const result = TestBed.runInInjectionContext(() =>
       roleGuard({ data: { expectedRoles: ['ADMIN_JOPRELYS'] } } as any, {} as any),
     );
-    expect(result).toBe(true);
+    expect(result).toBe('/unauthorized');
     expect(mockRbacApi.ensureMyAccess).not.toHaveBeenCalled();
   });
 
@@ -89,7 +96,7 @@ describe('roleGuard', () => {
     expect(await firstValueFrom(result$)).toBe(true);
   });
 
-  it('should allow a route when the effective role matches even without the expected permission', async () => {
+  it('should deny a permission route when only the effective role matches', async () => {
     sessionSignal.set(session('OLD_ROLE'));
     mockRbacApi.ensureMyAccess.mockReturnValue(of({
       userId: 'user-3', roles: ['ADMIN_CLINIQUE'], permissions: [],
@@ -97,7 +104,7 @@ describe('roleGuard', () => {
     const result$ = TestBed.runInInjectionContext(() => roleGuard({
       data: { expectedRoles: ['ADMIN_CLINIQUE'], expectedPermissions: ['RBAC_READ'] },
     } as any, {} as any)) as Observable<boolean | string>;
-    expect(await firstValueFrom(result$)).toBe(true);
+    expect(await firstValueFrom(result$)).toBe('/unauthorized');
   });
 
   it('should allow a custom internal role to enter the dashboard', async () => {
@@ -113,16 +120,49 @@ describe('roleGuard', () => {
     expect(mockRbacApi.ensureMyAccess).toHaveBeenCalledWith(true);
   });
 
-  it('should not treat a patient role as an internal dashboard role', async () => {
+  it('should not treat a patient role as an internal dashboard role', () => {
     sessionSignal.set(session('PATIENT'));
     mockRbacApi.ensureMyAccess.mockReturnValue(of({
       userId: 'patient-1', roles: ['PATIENT'], permissions: [],
     }));
-    const result$ = TestBed.runInInjectionContext(() => roleGuard({
+    const result = TestBed.runInInjectionContext(() => roleGuard({
       routeConfig: { path: 'dashboard' },
       data: { expectedRoles: ['ADMIN_CLINIQUE', 'CAISSIER'] },
-    } as any, {} as any)) as Observable<boolean | string>;
-    expect(await firstValueFrom(result$)).toBe('/unauthorized');
+    } as any, {} as any));
+    expect(result).toBe('/unauthorized');
+    expect(mockRbacApi.ensureMyAccess).not.toHaveBeenCalled();
+  });
+
+  it('should deny a patient session on a professional route before consulting stale RBAC access', () => {
+    sessionSignal.set(session('PATIENT'));
+    mockRbacApi.ensureMyAccess.mockReturnValue(of({
+      userId: 'doctor-1', roles: ['MEDECIN'], permissions: ['AVAILABILITY_MANAGE'],
+    }));
+
+    const result = TestBed.runInInjectionContext(() => roleGuard({
+      routeConfig: { path: 'clinic/availability' },
+      data: { expectedRoles: ['MEDECIN'], expectedPermissions: ['AVAILABILITY_MANAGE'] },
+    } as any, {} as any));
+
+    expect(result).toBe('/unauthorized');
+    expect(mockRbacApi.ensureMyAccess).not.toHaveBeenCalled();
+  });
+
+  it('should treat a mixed patient role as patient-only and allow patient routes', () => {
+    sessionSignal.set(session('PATIENT,MEDECIN'));
+
+    const patientResult = TestBed.runInInjectionContext(() => roleGuard({
+      routeConfig: { path: 'patient/appointments' },
+      data: { expectedRoles: ['PATIENT'] },
+    } as any, {} as any));
+    const professionalResult = TestBed.runInInjectionContext(() => roleGuard({
+      routeConfig: { path: 'clinic/availability' },
+      data: { expectedRoles: ['MEDECIN'], expectedPermissions: ['AVAILABILITY_MANAGE'] },
+    } as any, {} as any));
+
+    expect(patientResult).toBe(true);
+    expect(professionalResult).toBe('/unauthorized');
+    expect(mockRbacApi.ensureMyAccess).not.toHaveBeenCalled();
   });
 
   function session(role: string): AuthSession {

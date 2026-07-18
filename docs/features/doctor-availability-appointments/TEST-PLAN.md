@@ -103,3 +103,27 @@ Pré-requis : compte `MEDECIN` (ou `ADMIN_CLINIQUE`) avec permission `AVAILABILI
 - `npm run build` (compilation AOT des templates)
 - `npm run i18n:check` (clé `menu.availability` présente FR/EN, dictionnaire feature fusionné)
 - `cd backend && ./mvnw test` (B-01…B-19)
+
+## Correctif P0 — Cloisonnement patient / professionnel (2026-07-18)
+
+### Frontend
+
+- cache RBAC médecin puis remplacement du jeton par un patient : l'accès effectif devient nul et aucune réponse obsolète n'est publiée ;
+- menu patient avec permission résiduelle `AVAILABILITY_MANAGE` : aucune route `/clinic/**`, route `/patient/appointments` présente ;
+- `roleGuard` : patient refusé immédiatement sur `/clinic/availability`, même si le mock RBAC annonce un rôle médecin ; route patient autorisée ;
+- contrôle statique des routes : toutes les routes `patient/**` déclarent `PATIENT`, aucune route professionnelle ne le déclare.
+
+### Backend
+
+- vrai jeton patient sur `GET`, `POST`, `PUT` et `DELETE /api/availabilities/**` : `403` ;
+- jeton médecin sur `/api/patient/appointments/**` : `403` (test existant conservé) ;
+- claim JWT mixte contenant `PATIENT` et un rôle professionnel : seule l'authority `ROLE_PATIENT` est produite ;
+- suites ciblées puis `./mvnw clean verify`, `npm run test`, `npm run build` et `npm run i18n:check`.
+
+### Résultats du 2026-07-18
+
+- Angular ciblé : **17/17** tests verts.
+- Angular complet : **254/254** tests verts dans 53 fichiers.
+- Build production : vert ; avertissements préexistants sur `DatePipe` inutilisé et budgets CSS.
+- i18n shell : **50 clés FR/EN** présentes.
+- Maven : non exécuté, parent `spring-boot-starter-parent:4.1.0` absent du cache et accès réseau interdit ; validation obligatoire avant DONE.

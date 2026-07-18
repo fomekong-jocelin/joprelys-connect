@@ -33,13 +33,6 @@ import org.springframework.web.server.ResponseStatusException;
 @Tag(name = "Patients", description = "Gestion du dossier patient unique (DPU)")
 public class PatientController {
 
-    private static final String LEGACY_PATIENT_ROLES =
-            "hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')";
-    private static final String LEGACY_CLINICAL_ROLES =
-            "hasAnyRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE')";
-    private static final String LEGACY_ADMIN_ROLES =
-            "hasRole('ADMIN_CLINIQUE')";
-
     private final PatientService patientService;
     private final UserAccountRepository userAccountRepository;
     private final PatientSummaryService patientSummaryService;
@@ -61,7 +54,7 @@ public class PatientController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('PATIENT_WRITE') or " + LEGACY_PATIENT_ROLES)
+    @PreAuthorize("hasAuthority('PATIENT_WRITE')")
     @Operation(summary = "Créer un patient", description = "Enregistre un nouveau patient et génère son numéro DPU.", responses = {
             @ApiResponse(responseCode = "201", description = "Patient créé avec succès"),
             @ApiResponse(responseCode = "400", description = "Données invalides"),
@@ -72,7 +65,7 @@ public class PatientController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('PATIENT_READ') or " + LEGACY_PATIENT_ROLES)
+    @PreAuthorize("hasAuthority('PATIENT_READ')")
     @Operation(summary = "Lister les patients", description = "Retourne la liste des patients avec recherche optionnelle par nom, téléphone, DPU ou numéro URG-TEMP.", responses = {
             @ApiResponse(responseCode = "200", description = "Liste retournée avec succès")
     })
@@ -89,7 +82,7 @@ public class PatientController {
     }
 
     @GetMapping("/duplicates")
-    @PreAuthorize("hasAuthority('PATIENT_MERGE') or " + LEGACY_ADMIN_ROLES)
+    @PreAuthorize("hasAuthority('PATIENT_MERGE')")
     public List<PatientDuplicateCandidateResponse> getDuplicates() {
         return patientService.getDuplicateCandidates().stream()
                 .map(candidate -> new PatientDuplicateCandidateResponse(
@@ -103,14 +96,14 @@ public class PatientController {
     }
 
     @PostMapping("/duplicates/{id}/ignore")
-    @PreAuthorize("hasAuthority('PATIENT_MERGE') or " + LEGACY_ADMIN_ROLES)
+    @PreAuthorize("hasAuthority('PATIENT_MERGE')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void ignoreDuplicate(@PathVariable UUID id) {
         patientService.ignoreDuplicateCandidate(id);
     }
 
     @PostMapping("/merge")
-    @PreAuthorize("hasAuthority('PATIENT_MERGE') or " + LEGACY_ADMIN_ROLES)
+    @PreAuthorize("hasAuthority('PATIENT_MERGE')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void merge(@Valid @RequestBody MergePatientsRequest request) {
         String actorEmail = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -120,7 +113,7 @@ public class PatientController {
     }
 
     @PostMapping("/{id}/emergency-access")
-    @PreAuthorize("hasAuthority('PATIENT_EMERGENCY_ACCESS') or " + LEGACY_CLINICAL_ROLES)
+    @PreAuthorize("hasAuthority('PATIENT_EMERGENCY_ACCESS')")
     @ResponseStatus(HttpStatus.CREATED)
     public void triggerEmergencyAccess(
             @PathVariable UUID id,
@@ -129,13 +122,13 @@ public class PatientController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('PATIENT_READ') or " + LEGACY_PATIENT_ROLES)
+    @PreAuthorize("hasAuthority('PATIENT_READ')")
     public PatientResponse getById(@PathVariable UUID id) {
         return mapToResponse(resolveCanonicalIfMerged(patientService.getPatientById(id)));
     }
 
     @GetMapping("/{id}/summary-pdf")
-    @PreAuthorize("hasAuthority('CLINICAL_READ') or " + LEGACY_CLINICAL_ROLES)
+    @PreAuthorize("hasAuthority('CLINICAL_READ')")
     public org.springframework.http.ResponseEntity<byte[]> downloadSummaryPdf(@PathVariable UUID id) {
         byte[] pdfBytes = patientSummaryService.generatePatientSummaryPdf(id);
         return org.springframework.http.ResponseEntity.ok()
@@ -145,7 +138,7 @@ public class PatientController {
     }
 
     @GetMapping("/{id}/medical-summary")
-    @PreAuthorize("hasAuthority('CLINICAL_READ') or " + LEGACY_CLINICAL_ROLES)
+    @PreAuthorize("hasAuthority('CLINICAL_READ')")
     @Operation(summary = "Obtenir la synthèse médicale d'un patient", description = "Retourne la synthèse médicale structurée d'un patient.")
     public MedicalSummaryResponse getMedicalSummary(@PathVariable UUID id) {
         return patientSummaryService.getMedicalSummary(id);

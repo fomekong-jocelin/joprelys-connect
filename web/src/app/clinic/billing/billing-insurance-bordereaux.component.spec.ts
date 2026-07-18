@@ -5,6 +5,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
 import { BillingApiService } from '../../patient/billing-api.service';
 import { InsuranceBordereau } from '../../patient/insurance-bordereau.models';
 import { BillingInsuranceBordereauxComponent } from './billing-insurance-bordereaux.component';
+import { RbacApiService } from '../rbac/rbac-api.service';
 
 const bordereaux: InsuranceBordereau[] = [
   {
@@ -62,6 +63,13 @@ describe('BillingInsuranceBordereauxComponent', () => {
         {
           provide: AuthTokenStorageService,
           useValue: { session: vi.fn().mockReturnValue({ role: 'DAF' }) },
+        },
+        {
+          provide: RbacApiService,
+          useValue: {
+            hasPermission: vi.fn((permission: string) =>
+              ['INSURANCE_BORDEREAU_PROGRESS', 'INSURANCE_BORDEREAU_SETTLE'].includes(permission)),
+          },
         },
         {
           provide: I18nService,

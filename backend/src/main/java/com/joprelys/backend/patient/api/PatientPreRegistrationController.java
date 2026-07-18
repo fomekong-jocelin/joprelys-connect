@@ -59,19 +59,19 @@ public class PatientPreRegistrationController {
     // --- Endpoints Privés/Professionnels ---
 
     @GetMapping("/api/pre-registrations")
-    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('PATIENT_READ')")
     public PageResponse<PatientPreRegistrationResponse> getPendingPreRegistrations(Pageable pageable) {
         return PageResponse.fromPage(preRegistrationService.getPendingPreRegistrations(pageable));
     }
 
     @GetMapping("/api/pre-registrations/{id}")
-    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('PATIENT_READ')")
     public PatientPreRegistrationResponse getPreRegistrationById(@PathVariable UUID id) {
         return preRegistrationService.getPreRegistrationById(id);
     }
 
     @PostMapping("/api/pre-registrations/{id}/validate")
-    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('PATIENT_WRITE')")
     public ValidationResponse validatePreRegistration(
             @PathVariable UUID id,
             @Valid @RequestBody PreRegistrationValidationRequest request) {
@@ -81,7 +81,7 @@ public class PatientPreRegistrationController {
     }
 
     @PostMapping("/api/pre-registrations/{id}/reject")
-    @PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('PATIENT_WRITE')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void rejectPreRegistration(@PathVariable UUID id) {
         UUID actorId = getCurrentUserActorId();

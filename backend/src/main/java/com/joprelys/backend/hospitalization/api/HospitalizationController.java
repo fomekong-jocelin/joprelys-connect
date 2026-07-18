@@ -24,13 +24,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/hospitalizations")
 public class HospitalizationController {
 
-    private static final String LEGACY_READ_ROLES =
-            "hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-    private static final String LEGACY_MANAGE_ROLES =
-            "hasAnyRole('INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-    private static final String LEGACY_DOCTOR_ROLES =
-            "hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-
     private final HospitalizationService hospitalizationService;
     private final HospitalizationCareService hospitalizationCareService;
     private final OperatingReportService operatingReportService;
@@ -46,26 +39,26 @@ public class HospitalizationController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE') or " + LEGACY_MANAGE_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
     public HospitalizationResponse admitPatient(@Valid @RequestBody CreateHospitalizationRequest request) {
         return hospitalizationService.admitPatient(request);
     }
 
     @GetMapping("/patient/{patientId}")
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ') or " + LEGACY_READ_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
     public List<HospitalizationResponse> listHospitalizations(@PathVariable UUID patientId) {
         return hospitalizationService.listHospitalizations(patientId);
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ') or " + LEGACY_READ_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
     public HospitalizationResponse getDetails(@PathVariable UUID id) {
         return hospitalizationService.getHospitalizationDetails(id);
     }
 
     @PostMapping("/{id}/notes")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE') or " + LEGACY_MANAGE_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
     public HospitalizationNoteResponse addNote(
             @PathVariable UUID id,
             @Valid @RequestBody CreateHospitalizationNoteRequest request) {
@@ -73,13 +66,13 @@ public class HospitalizationController {
     }
 
     @GetMapping("/{id}/notes")
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ') or " + LEGACY_READ_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
     public List<HospitalizationNoteResponse> getNotes(@PathVariable UUID id) {
         return hospitalizationService.getNotes(id);
     }
 
     @PostMapping("/{id}/discharge")
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE') or " + LEGACY_MANAGE_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
     public HospitalizationResponse dischargePatient(
             @PathVariable UUID id,
             @Valid @RequestBody DischargeHospitalizationRequest request) {
@@ -87,14 +80,14 @@ public class HospitalizationController {
     }
 
     @GetMapping("/{id}/entry-pdf")
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ') or " + LEGACY_READ_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
     public ResponseEntity<byte[]> downloadEntryPdf(@PathVariable UUID id) {
         return pdfResponse(hospitalizationService.loadEntryPdf(id), "billet-entree-" + id + ".pdf");
     }
 
     @PostMapping(value = "/{id}/consents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE') or " + LEGACY_MANAGE_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
     public SurgicalConsentResponse addConsent(
             @PathVariable UUID id,
             @RequestParam("consentType") String consentType,
@@ -105,20 +98,20 @@ public class HospitalizationController {
     }
 
     @GetMapping("/{id}/consents")
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ') or " + LEGACY_READ_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
     public List<SurgicalConsentResponse> getConsents(@PathVariable UUID id) {
         return hospitalizationService.getConsents(id);
     }
 
     @GetMapping("/{id}/pdf")
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ') or " + LEGACY_READ_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
     public ResponseEntity<byte[]> downloadPdf(@PathVariable UUID id) {
         return pdfResponse(hospitalizationService.loadDischargePdf(id), "fiche-sortie-" + id + ".pdf");
     }
 
     @PostMapping("/{id}/daily-cares")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE') or " + LEGACY_MANAGE_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
     public DailyCareResponse addDailyCare(
             @PathVariable UUID id,
             @Valid @RequestBody CreateDailyCareRequest request) {
@@ -126,14 +119,14 @@ public class HospitalizationController {
     }
 
     @GetMapping("/{id}/daily-cares")
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ') or " + LEGACY_READ_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
     public List<DailyCareResponse> getDailyCares(@PathVariable UUID id) {
         return hospitalizationCareService.getDailyCares(id);
     }
 
     @PostMapping("/{id}/medication-administrations")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE') or " + LEGACY_MANAGE_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
     public MedicationAdministrationResponse addMedicationAdministration(
             @PathVariable UUID id,
             @Valid @RequestBody CreateMedicationAdministrationRequest request) {
@@ -141,14 +134,14 @@ public class HospitalizationController {
     }
 
     @GetMapping("/{id}/medication-administrations")
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ') or " + LEGACY_READ_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
     public List<MedicationAdministrationResponse> getMedicationAdministrations(@PathVariable UUID id) {
         return hospitalizationCareService.getMedicationAdministrations(id);
     }
 
     @PostMapping("/{id}/patient-consumptions")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE') or " + LEGACY_MANAGE_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
     public PatientConsumptionResponse addPatientConsumption(
             @PathVariable UUID id,
             @Valid @RequestBody CreatePatientConsumptionRequest request) {
@@ -156,14 +149,14 @@ public class HospitalizationController {
     }
 
     @GetMapping("/{id}/patient-consumptions")
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ') or " + LEGACY_READ_ROLES)
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
     public List<PatientConsumptionResponse> getPatientConsumptions(@PathVariable UUID id) {
         return hospitalizationCareService.getPatientConsumptions(id);
     }
 
     @PostMapping("/{id}/operating-reports")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('CLINICAL_WRITE') or " + LEGACY_DOCTOR_ROLES)
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
     public OperatingReportResponse createOperatingReport(
             @PathVariable UUID id,
             @Valid @RequestBody CreateOperatingReportRequest request) {
@@ -171,13 +164,13 @@ public class HospitalizationController {
     }
 
     @GetMapping("/{id}/operating-reports")
-    @PreAuthorize("hasAnyAuthority('CLINICAL_READ', 'HOSPITALIZATION_READ') or " + LEGACY_READ_ROLES)
+    @PreAuthorize("hasAnyAuthority('CLINICAL_READ', 'HOSPITALIZATION_READ')")
     public List<OperatingReportResponse> getOperatingReports(@PathVariable UUID id) {
         return operatingReportService.getOperatingReports(id);
     }
 
     @PostMapping("/operating-reports/{reportId}/validate")
-    @PreAuthorize("hasAuthority('CLINICAL_WRITE') or " + LEGACY_DOCTOR_ROLES)
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
     public OperatingReportResponse validateOperatingReport(@PathVariable UUID reportId) {
         return operatingReportService.validateOperatingReport(reportId);
     }

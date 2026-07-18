@@ -15,7 +15,7 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
         <!-- Role-Specific: ADMIN_JOPRELYS -->
-        @if (hasRole('ADMIN_JOPRELYS')) {
+        @if (hasPermission('ORGANIZATION_MANAGE')) {
           <div class="col-span-1 md:col-span-3 bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-6">
               <div class="w-10 h-10 rounded-xl bg-brand-night/10 dark:bg-[var(--bg-input)] flex items-center justify-center text-brand-night dark:text-[var(--text-secondary)]">
@@ -48,7 +48,7 @@
         }
 
         <!-- Role-Specific: Clinical Roles (Dossiers Cliniques) -->
-        @if (hasRole(['MEDECIN', 'AGENT_ACCUEIL', 'INFIRMIER', 'ADMIN_CLINIQUE'])) {
+        @if (hasPermission('PATIENT_READ')) {
           <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-4">
               <div class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan dark:text-cyan-400">
@@ -62,7 +62,7 @@
             <a routerLink="/patients" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
               {{ t('dashboard.clinical.records.manageLink') }}
             </a>
-            @if (hasRole(['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'])) {
+            @if (hasPermission('PATIENT_EMERGENCY_ACCESS')) {
               <a routerLink="/clinic/access-request" class="mt-2 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
                 {{ t('dashboard.clinical.records.requestExternalLink') }}
               </a>
@@ -70,7 +70,7 @@
           </div>
         }
 
-        @if (hasRole(['BIOLOGISTE', 'ADMIN_JOPRELYS'])) {
+        @if (hasPermission(['LAB_ORDER_READ', 'LAB_QUEUE_READ'])) {
           <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-4">
               <div class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan dark:text-cyan-400">
@@ -87,7 +87,7 @@
           </div>
         }
 
-        @if (hasRole('ADMIN_CLINIQUE')) {
+        @if (hasPermission('USER_MANAGE')) {
           <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-4">
               <div class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan dark:text-cyan-400">
@@ -105,7 +105,7 @@
         }
 
         <!-- Role-Specific: PHARMACIEN -->
-        @if (hasRole(['PHARMACIEN', 'ADMIN_JOPRELYS'])) {
+        @if (hasPermission('PHARMACY_PRESCRIPTION_READ')) {
           <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-4">
               <div class="w-9 h-9 rounded-lg bg-brand-green/10 dark:bg-brand-green/20 flex items-center justify-center text-brand-green">
@@ -123,7 +123,7 @@
         }
 
         <!-- Role-Specific: PHARMACIEN / ADMIN_CLINIQUE (Stocks) -->
-        @if (hasRole(['PHARMACIEN', 'ADMIN_CLINIQUE'])) {
+        @if (hasPermission(['STOCK_READ', 'STOCK_MANAGE'])) {
           <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-4">
               <div class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan">
@@ -721,7 +721,7 @@
         <div class="space-y-3">
           <div class="flex items-center justify-between">
             <h5 class="ui-label text-[10px]">{{ t('dashboard.drawer.triageVitals') }}</h5>
-            @if (hasRole(['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'])) {
+            @if (hasPermission('VISIT_VITALS_WRITE')) {
               <button (click)="openVitalsModal(selectedVisit)" class="text-xs font-extrabold text-brand-cyan hover:underline inline-flex items-center gap-1 cursor-pointer">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -837,7 +837,7 @@
               <p class="text-xs text-[var(--text-muted)] leading-relaxed font-semibold">
                 {{ t('dashboard.drawer.noVitals') }}
               </p>
-              @if (hasRole(['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'])) {
+              @if (hasPermission('VISIT_VITALS_WRITE')) {
                 <app-ui-button variant="secondary" (pressed)="openVitalsModal(selectedVisit)">
                   {{ t('dashboard.vitals.title') }}
                 </app-ui-button>
@@ -849,7 +849,7 @@
 
       <!-- Drawer Footer -->
       <div class="p-6 border-t border-[var(--app-border)]/80 bg-[var(--app-surface-muted)] dark:bg-[var(--brand-danger-subtle)] flex gap-3 flex-wrap">
-        @if (canCloseVisit()) {
+        @if (canStartConsultation()) {
           <app-ui-button variant="primary" class="flex-1" (pressed)="startConsultation(selectedVisit.id)">
             <span class="flex items-center gap-1.5">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -858,11 +858,13 @@
               {{ t('patient.detail.startConsultation') }}
             </span>
           </app-ui-button>
+        }
+        @if (canCloseVisit()) {
           <app-ui-button variant="secondary" class="flex-1" (pressed)="openCloseConfirmModal(selectedVisit.id)">
             {{ t('dashboard.close.title') }}
           </app-ui-button>
         }
-        <app-ui-button variant="secondary" [class]="canCloseVisit() ? 'w-24' : 'flex-1'" (pressed)="closeVisitDrawer()">
+        <app-ui-button variant="secondary" [class]="canCloseVisit() || canStartConsultation() ? 'w-24' : 'flex-1'" (pressed)="closeVisitDrawer()">
           {{ t('dashboard.drawer.closeButton') }}
         </app-ui-button>
       </div>

@@ -49,7 +49,7 @@ public class OrganizationControllerTest {
 	}
 
 	@Test
-	@WithMockUser(roles = "ADMIN_JOPRELYS")
+	@WithMockUser(authorities = "ORGANIZATION_MANAGE")
 	void givenAdmin_whenCreateOrganization_thenSuccess() throws Exception {
 		String jsonRequest = """
 				{
@@ -98,7 +98,7 @@ public class OrganizationControllerTest {
 	}
 
 	@Test
-	@WithMockUser(roles = "ADMIN_JOPRELYS")
+	@WithMockUser(authorities = "ORGANIZATION_MANAGE")
 	void givenAdmin_whenListOrganizations_thenSuccess() throws Exception {
 		OrganizationEntity org1 = new OrganizationEntity("Espoir", "espoir@joprelys.local", "123", "street1", "Douala");
 		OrganizationEntity org2 = new OrganizationEntity("Paix", "paix@joprelys.local", "456", "street2", "Yaoundé");
@@ -111,7 +111,7 @@ public class OrganizationControllerTest {
 	}
 
 	@Test
-	@WithMockUser(roles = "ADMIN_JOPRELYS")
+	@WithMockUser(authorities = "ORGANIZATION_MANAGE")
 	void givenAdmin_whenUpdateStatus_thenSuccess() throws Exception {
 		OrganizationEntity org = new OrganizationEntity("Espoir", "espoir@joprelys.local", "123", "street1", "Douala");
 		var saved = organizationRepository.save(org);
@@ -124,7 +124,7 @@ public class OrganizationControllerTest {
 	}
 
 	@Test
-	@WithMockUser(roles = "ADMIN_JOPRELYS")
+	@WithMockUser(authorities = "ORGANIZATION_MANAGE")
 	void givenAdmin_whenUpdateOrganization_thenSuccess() throws Exception {
 		OrganizationEntity org = new OrganizationEntity("Espoir", "espoir@joprelys.local", "123", "street1", "Douala");
 		var saved = organizationRepository.save(org);
@@ -179,7 +179,7 @@ public class OrganizationControllerTest {
 	}
 
 	@Test
-	@WithMockUser(roles = "ADMIN_JOPRELYS")
+	@WithMockUser(authorities = "ORGANIZATION_MANAGE")
 	void givenAdmin_whenManageApiKeys_thenSuccess() throws Exception {
 		OrganizationEntity org = new OrganizationEntity("Clinique Clés", "contact@cles.local", "1234", "Rue", "Yaoundé");
 		var saved = organizationRepository.save(org);
@@ -213,7 +213,7 @@ public class OrganizationControllerTest {
 	}
 
 	@Test
-	@WithMockUser(roles = "ADMIN_JOPRELYS")
+	@WithMockUser(authorities = "ORGANIZATION_MANAGE")
 	void givenApiKey_whenAuthenticate_thenFilterAppliesCorrectly() throws Exception {
 		OrganizationEntity org = new OrganizationEntity("Clinique Sécurité", "contact@sec.local", "12345", "Rue", "Yaoundé");
 		var saved = organizationRepository.save(org);

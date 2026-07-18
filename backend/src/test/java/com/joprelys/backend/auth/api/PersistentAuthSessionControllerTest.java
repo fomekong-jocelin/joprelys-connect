@@ -22,6 +22,7 @@ import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import jakarta.servlet.http.Cookie;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,21 +48,24 @@ class PersistentAuthSessionControllerTest {
     @Autowired PasswordEncoder passwordEncoder;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private String loginEmail;
 
     @BeforeEach
     void setUp() {
         auditRepository.deleteAll();
         revokedTokenRepository.deleteAll();
         sessionRepository.deleteAll();
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        loginEmail = "agent.sessions-" + suffix + "@joprelys.local";
 
         OrganizationEntity organization = organizationRepository.save(new OrganizationEntity(
-                "Clinique Sessions",
-                "sessions@joprelys.local",
+                "Clinique Sessions " + suffix,
+                "sessions-" + suffix + "@joprelys.local",
                 "+237600000001",
                 "Rue des médecins",
                 "Douala"));
         UserAccountEntity user = new UserAccountEntity(
-                "agent.sessions@joprelys.local",
+                loginEmail,
                 "Agent Sessions",
                 "AGENT_ACCUEIL",
                 passwordEncoder.encode("Password123!"));
@@ -76,10 +80,10 @@ class PersistentAuthSessionControllerTest {
                         .header("User-Agent", "Joprelys-Test/1.0")
                         .content("""
                                 {
-                                  "email": "agent.sessions@joprelys.local",
-                                  "password": "Password123!"
-                                }
-                                """))
+                                  "email": "%s",
+	                                  "password": "Password123!"
+	                                }
+	                                """.formatted(loginEmail)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.sessionId").isNotEmpty())
@@ -138,5 +142,34 @@ class PersistentAuthSessionControllerTest {
         mockMvc.perform(get("/api/auth/sessions")
                         .header("Authorization", "Bearer " + secondAccessToken))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldClearCookieAndBrowserSiteDataOnLogout() throws Exception {
+        MvcResult login = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "%s",
+	                                  "password": "Password123!"
+	                                }
+	                                """.formatted(loginEmail)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode loginBody = objectMapper.readTree(login.getResponse().getContentAsString());
+        Cookie refreshCookie = login.getResponse().getCookie("joprelys_refresh");
+        assertNotNull(refreshCookie);
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .header("Authorization", "Bearer " + loginBody.get("accessToken").asText())
+                        .cookie(refreshCookie))
+                .andExpect(status().isNoContent())
+                .andExpect(header().string(
+                        "Set-Cookie",
+                        org.hamcrest.Matchers.containsString("Max-Age=0")))
+                .andExpect(header().string(
+                        "Clear-Site-Data",
+                        "\"cache\", \"cookies\", \"storage\""));
     }
 }

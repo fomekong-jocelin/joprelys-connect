@@ -160,7 +160,7 @@ export class PatientLoginComponent {
   constructor() {
     effect(() => {
       const session = this.tokenStorage.session();
-      if (session && session.role === 'PATIENT') {
+      if (session && session.role.split(',').map((role) => role.trim()).includes('PATIENT')) {
         this.router.navigate(['/patient/dashboard']);
       }
     });

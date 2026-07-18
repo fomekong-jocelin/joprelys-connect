@@ -47,7 +47,7 @@ public class PrescriptionController {
 
 	@PostMapping("/consultations/{id}/prescription")
 	@ResponseStatus(HttpStatus.OK)
-	@PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('CLINICAL_WRITE')")
 	@Operation(summary = "Enregistrer une prescription", description = "Crée ou met à jour l'ordonnance associée à une consultation.", responses = {
 			@ApiResponse(responseCode = "200", description = "Prescription enregistrée avec succès"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
@@ -71,7 +71,7 @@ public class PrescriptionController {
 	}
 
 	@GetMapping("/consultations/{id}/prescription")
-	@PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'PHARMACIEN')")
+	@PreAuthorize("hasAnyAuthority('CLINICAL_READ', 'PHARMACY_PRESCRIPTION_READ')")
 	@Operation(summary = "Récupérer une prescription", description = "Retourne l'ordonnance associée à une consultation.", responses = {
 			@ApiResponse(responseCode = "200", description = "Prescription trouvée"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
@@ -97,7 +97,7 @@ public class PrescriptionController {
 
 	@PostMapping("/prescriptions/{id}/transmit")
 	@ResponseStatus(HttpStatus.OK)
-	@PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('CLINICAL_WRITE')")
 	@Operation(summary = "Transmettre une prescription", description = "Transmet une ordonnance au service concerné.", responses = {
 			@ApiResponse(responseCode = "200", description = "Prescription transmise avec succès"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
@@ -123,7 +123,7 @@ public class PrescriptionController {
 
 	@PostMapping("/prescriptions/{id}/finalize")
 	@ResponseStatus(HttpStatus.OK)
-	@PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('CLINICAL_WRITE')")
 	@Operation(summary = "Finaliser une prescription", description = "Valide et active une prescription au statut DRAFT, générant le PDF.", responses = {
 			@ApiResponse(responseCode = "200", description = "Prescription finalisée avec succès"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
@@ -149,7 +149,7 @@ public class PrescriptionController {
 
 	@PatchMapping("/prescriptions/{id}/cancel")
 	@ResponseStatus(HttpStatus.OK)
-	@PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('CLINICAL_WRITE')")
 	@Operation(summary = "Annuler une prescription", description = "Annule une ordonnance existante.", responses = {
 			@ApiResponse(responseCode = "200", description = "Prescription annulée avec succès"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")

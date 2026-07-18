@@ -29,7 +29,7 @@ public class ReceptionLogController {
 	}
 
 	@PostMapping
-	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('RECEPTION_WRITE')")
 	@Operation(summary = "Créer une entrée d'accueil", description = "Enregistre une nouvelle arrivée (visiteur, audience, patient) à l'accueil.", responses = {
 			@ApiResponse(responseCode = "200", description = "Entrée enregistrée avec succès")
 	})
@@ -43,7 +43,7 @@ public class ReceptionLogController {
 	}
 
 	@GetMapping
-	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('RECEPTION_READ')")
 	@Operation(summary = "Lister le registre d'accueil", description = "Retourne tous les enregistrements du registre d'accueil pour la clinique.", responses = {
 			@ApiResponse(responseCode = "200", description = "Registre récupéré avec succès")
 	})
@@ -54,7 +54,7 @@ public class ReceptionLogController {
 	}
 
 	@GetMapping("/{id}")
-	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('RECEPTION_READ')")
 	@Operation(summary = "Récupérer un enregistrement", description = "Retourne un enregistrement par son identifiant.", responses = {
 			@ApiResponse(responseCode = "200", description = "Enregistrement trouvé"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
@@ -65,7 +65,7 @@ public class ReceptionLogController {
 	}
 
 	@PostMapping("/{id}/departure")
-	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('RECEPTION_WRITE')")
 	@Operation(summary = "Enregistrer un départ", description = "Marque l'heure de départ pour un visiteur ou une audience.", responses = {
 			@ApiResponse(responseCode = "200", description = "Départ enregistré avec succès"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")

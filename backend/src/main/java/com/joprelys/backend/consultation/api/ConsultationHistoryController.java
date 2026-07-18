@@ -26,7 +26,7 @@ public class ConsultationHistoryController {
 	}
 
 	@GetMapping("/{patientId}/consultations")
-	@PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE', 'INFIRMIER')")
+	@PreAuthorize("hasAuthority('CLINICAL_READ')")
 	public List<ConsultationResponse> getPatientConsultations(@PathVariable UUID patientId) {
 		patientService.validateAccess(patientId, "medical_records");
 		var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();

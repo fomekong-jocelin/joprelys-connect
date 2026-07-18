@@ -2,6 +2,8 @@ package com.joprelys.backend.lab.api;
 
 import com.joprelys.backend.lab.application.FhirDiagnosticReportParser;
 import com.joprelys.backend.lab.application.LabResultService;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +21,7 @@ public class LabResultUploadController {
 	private final LabResultService labResultService;
 	private final FhirDiagnosticReportParser fhirParser;
 
-	@Value("${joprelys.lab-integration.api-key:lab-partner-secret-token}")
+	@Value("${joprelys.lab-integration.api-key:}")
 	private String configuredApiKey;
 
 	public LabResultUploadController(LabResultService labResultService,
@@ -34,7 +36,7 @@ public class LabResultUploadController {
 			@RequestBody LabResultUploadRequest request) {
 
 		// 1. Valider la clé d'API
-		if (apiKey == null || !apiKey.equals(configuredApiKey)) {
+		if (!validApiKey(apiKey)) {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Clé d'API invalide ou manquante.");
 		}
 
@@ -54,7 +56,7 @@ public class LabResultUploadController {
 			@RequestBody FhirDiagnosticReportUploadRequest request) {
 
 		// 1. Valider la clé d'API
-		if (apiKey == null || !apiKey.equals(configuredApiKey)) {
+		if (!validApiKey(apiKey)) {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Clé d'API invalide ou manquante.");
 		}
 
@@ -65,5 +67,14 @@ public class LabResultUploadController {
 		labResultService.uploadResults(parsedRequest);
 
 		return ResponseEntity.status(HttpStatus.CREATED).build();
+	}
+
+	private boolean validApiKey(String apiKey) {
+		if (apiKey == null || apiKey.isBlank() || configuredApiKey == null || configuredApiKey.isBlank()) {
+			return false;
+		}
+		return MessageDigest.isEqual(
+				apiKey.getBytes(StandardCharsets.UTF_8),
+				configuredApiKey.getBytes(StandardCharsets.UTF_8));
 	}
 }

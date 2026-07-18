@@ -18,9 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Patients", description = "Gestion du dossier patient unique (DPU)")
 public class ProvisionalPatientIdentityController {
 
-    private static final String LEGACY_PATIENT_ROLES =
-            "hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')";
-
     private final ProvisionalPatientRegularizationService regularizationService;
 
     public ProvisionalPatientIdentityController(
@@ -29,7 +26,7 @@ public class ProvisionalPatientIdentityController {
     }
 
     @PutMapping("/{id}/identity")
-    @PreAuthorize("hasAuthority('PATIENT_WRITE') or " + LEGACY_PATIENT_ROLES)
+    @PreAuthorize("hasAuthority('PATIENT_WRITE')")
     @Operation(
             summary = "Identifier un patient URG-TEMP",
             description = "Régularise l'identité administrative d'un dossier provisoire sans perdre son historique d'urgence.")

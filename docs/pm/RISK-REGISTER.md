@@ -9,6 +9,7 @@
 | RISK-005 | Workspace facturation/caisse trop chargé et états financiers ambigus | Fort | Fort | Critique | Lead Developer + DAF + Product Design | Livrer EPIC-0020 par étapes : contrat d'état, workspace factures, caisse, assurance, puis QA E2E | Ouvert | 2026-07-10 |
 | RISK-006 | Données de santé transmises à un fournisseur IA sans validation de sous-traitance, résidence et rétention | Moyen | Fort | Critique | DPO + RSSI + Tech Lead | Maintenir la feature désactivée ; valider fournisseur/contrat/rétention/résidence ; ne conserver ni audio ni contenu clinique dans les logs | Ouvert | 2026-07-17 |
 | RISK-007 | Assistant vocal ajouté à des écrans Angular déjà monolithiques | Fort | Moyen | Élevé | Lead Frontend | Découper consultation et dashboard avant le panneau IA ; respecter la limite 500 lignes et couvrir light/dark, FR/EN et accessibilité | Ouvert | 2026-07-17 |
+| RISK-008 | Autorisations incohérentes entre rôles, permissions, menus, routes et APIs | Faible | Fort | Élevé | RSSI + Tech Lead | Migration permission-first implémentée, 707 tests automatisés verts et garde statique ; signer la matrice et la recette E2E multi-rôles | En surveillance | 2026-07-18 |
 
 ## Niveaux
 

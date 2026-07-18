@@ -125,7 +125,7 @@ describe('RbacManagementComponent', () => {
     api.ensureMyAccess.mockReturnValue(of({
       userId: 'platform-admin',
       roles: ['ADMIN_JOPRELYS'],
-      permissions: ['RBAC_MANAGE'],
+      permissions: ['RBAC_MANAGE', 'ORGANIZATION_MANAGE'],
     }));
 
     component.ngOnInit();

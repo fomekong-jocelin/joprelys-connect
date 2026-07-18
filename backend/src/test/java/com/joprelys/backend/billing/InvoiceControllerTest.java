@@ -134,8 +134,12 @@ public class InvoiceControllerTest {
 
         TenantContext.setTenantId(org.getId());
 
-        // Receptionist (AGENT_ACCUEIL)
-        receptionist = new UserAccountEntity("reception@joprelys.local", "Julie Reception", "AGENT_ACCUEIL", "passhash");
+        // Accueil et caisse : les permissions sont l'union explicite des deux rôles.
+        receptionist = new UserAccountEntity(
+                "reception@joprelys.local",
+                "Julie Reception",
+                "AGENT_ACCUEIL,CAISSIER",
+                "passhash");
         receptionist.setOrganizationId(org.getId());
         receptionist = userAccountRepository.save(receptionist);
         tokenReceptionist = jwtService.createToken(receptionist).value();

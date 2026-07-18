@@ -15,7 +15,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/pharmacy/stocks")
-@PreAuthorize("hasAnyRole('PHARMACIEN', 'ADMIN_CLINIQUE')")
+@PreAuthorize("hasAuthority('PHARMACY_STOCK_MANAGE')")
 public class DrugStockController {
 
     private final DrugStockService drugStockService;

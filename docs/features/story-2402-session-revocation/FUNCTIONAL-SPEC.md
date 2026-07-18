@@ -28,13 +28,15 @@ Aucun refresh token, hash, JTI ou adresse IP complète n’est exposé.
 
 ### Logout courant
 
-Le logout révoque la session liée au claim `sid`, efface le cookie de refresh et invalide immédiatement les access tokens de cette session.
+Le logout révoque la session liée au claim `sid`, efface le cookie de refresh, demande au navigateur de purger cache/cookies/stockages et invalide immédiatement les access tokens de cette session. Le frontend purge également ses stockages et états mémoire même si la requête de logout échoue.
 
 Pour un JWT historique sans `sid`, le JTI est persisté jusqu’à son expiration.
 
 ### Logout-all
 
 Toutes les sessions actives du compte courant sont révoquées, y compris la session appelante. L’opération est idempotente.
+
+Le passage d'un compte professionnel vers un compte patient efface aussi l'ancien cookie de refresh professionnel avant d'établir la session patient.
 
 ### Détection du rejeu
 

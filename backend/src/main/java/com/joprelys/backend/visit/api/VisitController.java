@@ -36,7 +36,7 @@ public class VisitController {
 	}
 
 	@GetMapping(value = "/{id}/qrcode", produces = MediaType.IMAGE_PNG_VALUE)
-	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('VISIT_READ')")
 	@Operation(summary = "Générer le QR code d'une visite",
 			description = "Génère un QR code PNG contenant l'URL de la consultation pour cette visite. "
 					+ "Le médecin peut scanner ce QR depuis son téléphone pour ouvrir directement la consultation.",
@@ -55,7 +55,7 @@ public class VisitController {
 	}
 
 	@PostMapping
-	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('VISIT_CREATE')")
 	@Operation(summary = "Créer une visite", description = "Crée une nouvelle visite pour un patient avec motif, orientation, service, praticien et date d'arrivée.", responses = {
 			@ApiResponse(responseCode = "200", description = "Visite créée avec succès"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
@@ -66,7 +66,7 @@ public class VisitController {
 	}
 
 	@PostMapping("/{id}/correct")
-	@PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('VISIT_MANAGE')")
 	@Operation(summary = "Corriger une visite clôturée", description = "Corrige une visite terminée ou annulée avec traçabilité de la correction.", responses = {
 			@ApiResponse(responseCode = "200", description = "Visite corrigée avec succès"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
@@ -85,7 +85,7 @@ public class VisitController {
 	}
 
 	@GetMapping("/active")
-	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('VISIT_READ')")
 	@Operation(summary = "Lister les visites actives", description = "Retourne la liste des visites actuellement actives.", responses = {
 			@ApiResponse(responseCode = "200", description = "Liste des visites actives retournée"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
@@ -97,7 +97,7 @@ public class VisitController {
 	}
 
 	@GetMapping("/{id}")
-	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('VISIT_READ')")
 	@Operation(summary = "Récupérer une visite", description = "Retourne les détails d'une visite par son identifiant.", responses = {
 			@ApiResponse(responseCode = "200", description = "Visite trouvée"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
@@ -107,7 +107,7 @@ public class VisitController {
 	}
 
 	@PostMapping("/{id}/close")
-	@PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('VISIT_MANAGE')")
 	@Operation(summary = "Clôturer une visite", description = "Clôture une visite en cours.", responses = {
 			@ApiResponse(responseCode = "200", description = "Visite clôturée avec succès"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
@@ -118,7 +118,7 @@ public class VisitController {
 	}
 
 	@PostMapping("/{id}/cancel")
-	@PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('VISIT_MANAGE')")
 	@Operation(summary = "Annuler une visite", description = "Annule une visite existante.", responses = {
 			@ApiResponse(responseCode = "200", description = "Visite annulée avec succès"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
@@ -129,7 +129,7 @@ public class VisitController {
 	}
 
 	@PostMapping("/{id}/vitals")
-	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('VISIT_VITALS_WRITE')")
 	@Operation(summary = "Enregistrer les constantes vitales", description = "Sauvegarde les constantes vitales associées à une visite.", responses = {
 			@ApiResponse(responseCode = "200", description = "Constantes vitales enregistrées"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
@@ -140,7 +140,7 @@ public class VisitController {
 	}
 
 	@GetMapping("/{id}/vitals")
-	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('VISIT_READ')")
 	@Operation(summary = "Récupérer les constantes vitales", description = "Retourne les constantes vitales d'une visite.", responses = {
 			@ApiResponse(responseCode = "200", description = "Constantes vitales retournées"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
@@ -152,7 +152,7 @@ public class VisitController {
 	}
 
 	@GetMapping("/patient/{patientId}")
-	@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('VISIT_READ')")
 	@Operation(summary = "Lister les visites d'un patient", description = "Retourne la liste complète des visites d'un patient.", responses = {
 			@ApiResponse(responseCode = "200", description = "Liste des visites retournée")
 	})

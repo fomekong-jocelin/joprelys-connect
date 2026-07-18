@@ -29,13 +29,12 @@ public class AuditController {
 	}
 
 	@GetMapping("/patients/{patientId}")
-	@PreAuthorize("hasAnyRole('AUDITEUR', 'ADMIN_CLINIQUE', 'MEDECIN')")
+	@PreAuthorize("hasAuthority('AUDIT_READ')")
 	public List<AuditLogResponse> getPatientLogs(@PathVariable UUID patientId, Authentication authentication) {
 		var user = userAccountRepository.findByEmail(authentication.getName())
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur non trouvé."));
 
-		// Enforce tenant isolation unless user is AUDITEUR
-		if (!user.hasRole("AUDITEUR")) {
+		if (!hasAuthority(authentication, "AUDIT_CROSS_TENANT_READ")) {
 			var patient = patientRepository.findById(patientId)
 					.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé."));
 
@@ -68,13 +67,12 @@ public class AuditController {
 	}
 
 	@GetMapping("/organizations/{organizationId}")
-	@PreAuthorize("hasAnyRole('AUDITEUR', 'ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('AUDIT_READ')")
 	public List<AuditLogResponse> getOrganizationLogs(@PathVariable UUID organizationId, Authentication authentication) {
 		var user = userAccountRepository.findByEmail(authentication.getName())
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur non trouvé."));
 
-		// Enforce tenant isolation unless user is AUDITEUR
-		if (!user.hasRole("AUDITEUR")) {
+		if (!hasAuthority(authentication, "AUDIT_CROSS_TENANT_READ")) {
 			if (user.getOrganizationId() == null || !user.getOrganizationId().equals(organizationId)) {
 				throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Accès refusé : vous ne pouvez consulter que les logs de votre propre clinique.");
 			}
@@ -90,5 +88,10 @@ public class AuditController {
 					return AuditLogResponse.fromEntity(entity, actorName);
 				})
 				.toList();
+	}
+
+	private static boolean hasAuthority(Authentication authentication, String authority) {
+		return authentication.getAuthorities().stream()
+				.anyMatch(granted -> authority.equals(granted.getAuthority()));
 	}
 }

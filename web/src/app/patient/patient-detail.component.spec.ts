@@ -17,6 +17,7 @@ import { signal } from '@angular/core';
 import { Patient, LabOrder, LabResult } from './patient.models';
 import { Consultation } from '../consultation/consultation.models';
 import { AuditLog } from '../audit/audit.models';
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 
 describe('PatientDetail System Tests', () => {
   const mockPatient: Patient = {
@@ -114,6 +115,8 @@ describe('PatientDetail System Tests', () => {
   let mockI18n: any;
   let mockParentDetail: any;
   let mockStaffApi: any;
+  let mockRbacApi: any;
+  let effectivePermissions: ReturnType<typeof signal<Set<string>>>;
 
   beforeEach(() => {
     mockAuthToken = {
@@ -122,7 +125,8 @@ describe('PatientDetail System Tests', () => {
         email: 'medecin@joprelys.local',
         role: 'MEDECIN',
         org: 'org-1'
-      })
+      }),
+      registerSessionBoundaryCleanup: vi.fn()
     };
 
     mockVisitApi = {
@@ -165,6 +169,28 @@ describe('PatientDetail System Tests', () => {
     mockStaffApi = {
       list: vi.fn().mockReturnValue(of([]))
     };
+
+    effectivePermissions = signal(new Set([
+      'VISIT_READ',
+      'VISIT_CREATE',
+      'CLINICAL_READ',
+      'CLINICAL_WRITE',
+      'DOCUMENT_MANAGE',
+      'AUDIT_READ',
+    ]));
+    mockRbacApi = {
+      access: signal({
+        userId: 'doctor-1',
+        roles: ['MEDECIN'],
+        permissions: [...effectivePermissions()],
+      }),
+      ensureMyAccess: vi.fn(() => of({
+        userId: 'doctor-1',
+        roles: ['MEDECIN'],
+        permissions: [...effectivePermissions()],
+      })),
+      hasPermission: vi.fn((permission: string) => effectivePermissions().has(permission)),
+    };
   });
 
   describe('PatientDetailComponent', () => {
@@ -184,6 +210,7 @@ describe('PatientDetail System Tests', () => {
           { provide: AuditApiService, useValue: mockAuditApi },
           { provide: PatientApiService, useValue: mockPatientApi },
           { provide: StaffApiService, useValue: mockStaffApi },
+          { provide: RbacApiService, useValue: mockRbacApi },
           { provide: I18nService, useValue: mockI18n }
         ]
       }).compileComponents();
@@ -194,33 +221,10 @@ describe('PatientDetail System Tests', () => {
       fixture.detectChanges();
     });
 
-    it('should evaluate canViewAudit correctly based on roles', () => {
-      expect(component.canViewAudit()).toBe(true); // MEDECIN
-
-      mockAuthToken.session.set({
-        name: 'Dr. Alpha',
-        email: 'medecin@joprelys.local',
-        role: 'ADMIN_CLINIQUE',
-        org: 'org-1'
-      });
-      fixture.detectChanges();
+    it('should evaluate audit visibility from the effective permission', () => {
       expect(component.canViewAudit()).toBe(true);
 
-      mockAuthToken.session.set({
-        name: 'Dr. Alpha',
-        email: 'medecin@joprelys.local',
-        role: 'AUDITEUR',
-        org: 'org-1'
-      });
-      fixture.detectChanges();
-      expect(component.canViewAudit()).toBe(true);
-
-      mockAuthToken.session.set({
-        name: 'Dr. Alpha',
-        email: 'medecin@joprelys.local',
-        role: 'AGENT_ACCUEIL',
-        org: 'org-1'
-      });
+      effectivePermissions.set(new Set(['PATIENT_READ']));
       fixture.detectChanges();
       expect(component.canViewAudit()).toBe(false);
     });
@@ -261,6 +265,7 @@ describe('PatientDetail System Tests', () => {
           { provide: PatientDetailComponent, useValue: mockParentDetail },
           { provide: AuthTokenStorageService, useValue: mockAuthToken },
           { provide: ConsultationApiService, useValue: mockConsultationApi },
+          { provide: RbacApiService, useValue: mockRbacApi },
           { provide: I18nService, useValue: mockI18n }
         ]
       }).compileComponents();
@@ -335,6 +340,7 @@ describe('PatientDetail System Tests', () => {
           { provide: PatientDetailComponent, useValue: mockParentDetail },
           { provide: AuthTokenStorageService, useValue: mockAuthToken },
           { provide: AuditApiService, useValue: mockAuditApi },
+          { provide: RbacApiService, useValue: mockRbacApi },
           { provide: I18nService, useValue: mockI18n }
         ]
       }).compileComponents();

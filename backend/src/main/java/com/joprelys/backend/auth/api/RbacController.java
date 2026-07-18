@@ -26,10 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/rbac")
 public class RbacController {
 
-    private static final String CAN_READ =
-            "hasAnyAuthority('RBAC_READ', 'RBAC_MANAGE') or hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-    private static final String CAN_MANAGE =
-            "hasAuthority('RBAC_MANAGE') or hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
+    private static final String CAN_READ = "hasAnyAuthority('RBAC_READ', 'RBAC_MANAGE')";
+    private static final String CAN_MANAGE = "hasAuthority('RBAC_MANAGE')";
 
     private final RbacAdministrationService rbacAdministrationService;
 

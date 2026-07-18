@@ -74,6 +74,10 @@ Aucun cache local ne décide de la validité. Toutes les décisions de révocati
 
 Le backend retourne des codes stables. Aucun texte visible supplémentaire n’est ajouté au frontend dans #33. Les traductions FR/EN et les états UI appartiennent à #34.
 
+## Purge navigateur
+
+`RefreshTokenCookieManager.clear()` combine l'expiration explicite du cookie HttpOnly avec `Clear-Site-Data: "cache", "cookies", "storage"`. Angular purge en défense en profondeur les deux stockages, les cookies accessibles et les cleanups mémoire (`RbacApiService`, `ActivePatientService`). Une rotation transparente du jeton du même compte retire uniquement l'ancien access token.
+
 ## Impact SemVer
 
 MINOR : endpoints additifs, permission additive et migration non destructive V67.

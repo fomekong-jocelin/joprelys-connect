@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** Endpoints du parcours de rendez-vous du patient authentifié. */
 @RestController
 @RequestMapping("/api/patient/appointments")
-@PreAuthorize("hasRole('PATIENT')")
+@PreAuthorize("hasAuthority('PATIENT_APPOINTMENT_MANAGE')")
 public class PatientAppointmentController {
 
 	private final PatientAppointmentService patientAppointmentService;

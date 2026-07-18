@@ -28,11 +28,6 @@ import org.springframework.web.server.ResponseStatusException;
 @Tag(name = "Consultations", description = "Saisie et gestion des consultations médicales")
 public class ConsultationController {
 
-    private static final String LEGACY_CLINICAL_READ_ROLES =
-            "hasAnyRole('MEDECIN', 'INFIRMIER', 'AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-    private static final String LEGACY_CLINICAL_WRITE_ROLES =
-            "hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-
     private final ConsultationService consultationService;
     private final MedicalDocumentRepository medicalDocumentRepository;
     private final PatientService patientService;
@@ -54,7 +49,7 @@ public class ConsultationController {
 
     @PostMapping("/{id}/consultation")
     @ResponseStatus(HttpStatus.OK)
-    @PreAuthorize("hasAuthority('CLINICAL_WRITE') or " + LEGACY_CLINICAL_WRITE_ROLES)
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
     @Operation(summary = "Enregistrer une consultation", description = "Sauvegarde ou met à jour la consultation médicale d'une visite.", responses = {
             @ApiResponse(responseCode = "200", description = "Consultation enregistrée avec succès"),
             @ApiResponse(responseCode = "404", description = "Introuvable")
@@ -80,7 +75,7 @@ public class ConsultationController {
     }
 
     @GetMapping("/{id}/consultation")
-    @PreAuthorize("hasAuthority('CLINICAL_READ') or " + LEGACY_CLINICAL_READ_ROLES)
+    @PreAuthorize("hasAuthority('CLINICAL_READ')")
     @Operation(summary = "Récupérer une consultation", description = "Retourne la consultation médicale associée à une visite.", responses = {
             @ApiResponse(responseCode = "200", description = "Consultation trouvée"),
             @ApiResponse(responseCode = "404", description = "Visite ou consultation introuvable")

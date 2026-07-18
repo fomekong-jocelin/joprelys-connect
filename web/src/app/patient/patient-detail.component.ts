@@ -15,6 +15,7 @@ import { ButtonComponent } from '../shared/ui/button.component';
 import { CardComponent } from '../shared/ui/card.component';
 import { StaffApiService } from '../clinic/staff/staff-api.service';
 import { StaffMember } from '../clinic/staff/staff.models';
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 
 @Component({
   selector: 'app-patient-detail',
@@ -379,6 +380,7 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
   private readonly patientApi = inject(PatientApiService);
   private readonly activePatientService = inject(ActivePatientService);
   private readonly staffApi = inject(StaffApiService);
+  private readonly rbacApi = inject(RbacApiService);
   readonly i18n = inject(I18nService);
 
   readonly loadedPatient = signal<Patient | null>(null);
@@ -421,42 +423,18 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
   readonly submitLabel = computed(() => this.isSubmitting() ? this.i18n.t('common.saving') : this.i18n.t('patient.visit.submitLabel'));
 
   readonly canAdmit = computed(() => {
-    const role = this.session()?.role;
-    if (!role) return false;
-    const roles = role.split(',').map((r) => r.trim());
-    const allowedRoles = ['AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'];
-    return roles.some((r) => allowedRoles.includes(r)) && this.activeVisit() === null;
+    return this.rbacApi.hasPermission('VISIT_CREATE') && this.activeVisit() === null;
   });
 
   readonly canStartConsultation = computed(() => {
-    const role = this.session()?.role;
-    if (!role) return false;
-    const roles = role.split(',').map((r) => r.trim());
-    return roles.some((r) => r === 'MEDECIN' || r === 'ADMIN_CLINIQUE') && this.activeVisit() !== null;
+    return this.rbacApi.hasPermission('CLINICAL_WRITE') && this.activeVisit() !== null;
   });
 
-  readonly canViewClinicalData = computed(() => {
-    const role = this.session()?.role;
-    if (!role) return false;
-    const roles = role.split(',').map((r) => r.trim());
-    const allowedRoles = ['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'];
-    return roles.some((r) => allowedRoles.includes(r));
-  });
+  readonly canViewClinicalData = computed(() => this.rbacApi.hasPermission('CLINICAL_READ'));
 
-  readonly canViewAudit = computed(() => {
-    const role = this.session()?.role;
-    if (!role) return false;
-    const roles = role.split(',').map((r) => r.trim());
-    return roles.some((r) => r === 'MEDECIN' || r === 'ADMIN_CLINIQUE' || r === 'AUDITEUR');
-  });
+  readonly canViewAudit = computed(() => this.rbacApi.hasPermission('AUDIT_READ'));
 
-  readonly canDownloadSummary = computed(() => {
-    const role = this.session()?.role;
-    if (!role) return false;
-    const roles = role.split(',').map((r) => r.trim());
-    const allowedRoles = ['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'];
-    return roles.some((r) => allowedRoles.includes(r));
-  });
+  readonly canDownloadSummary = computed(() => this.rbacApi.hasPermission('CLINICAL_READ'));
 
   downloadSummaryPdf(): void {
     const currentPatient = this.patient();
@@ -576,9 +554,7 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
 
     this.activePatientService.patient.set(patientObj);
 
-    const role = this.session()?.role;
-    const canSeeActiveVisit = ['MEDECIN', 'ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'INFIRMIER'].includes(role || '');
-    if (canSeeActiveVisit) {
+    if (this.rbacApi.hasPermission('VISIT_READ')) {
       this.visitApi.getActiveVisits().subscribe({
         next: (visits) => {
           const found = visits.find(v => v.patientId === patientObj.id) ?? null;

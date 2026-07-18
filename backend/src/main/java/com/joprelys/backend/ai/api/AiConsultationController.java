@@ -32,7 +32,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/api/ai/consultations")
 @ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
-@PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE') and hasAuthority('CLINICAL_WRITE')")
+@PreAuthorize("hasAuthority('CLINICAL_WRITE')")
 public class AiConsultationController {
 
     private final AiConsultationService service;

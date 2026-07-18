@@ -1,6 +1,7 @@
 package com.joprelys.backend.appointment.api;
 
 import com.joprelys.backend.appointment.application.AvailabilityService;
+import com.joprelys.backend.auth.rbac.RbacCatalog;
 import com.joprelys.backend.auth.security.JwtClaims;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -40,7 +41,7 @@ public class AvailabilityController {
 	}
 
 	@GetMapping
-	@PreAuthorize("hasAnyRole('MEDECIN','ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('AVAILABILITY_MANAGE')")
 	@Operation(summary = "Lister les règles de disponibilité",
 			description = "Retourne les règles récurrentes du médecin connecté, ou du médecin indiqué pour un administrateur de clinique.",
 			responses = {
@@ -52,11 +53,11 @@ public class AvailabilityController {
 			@Parameter(description = "Identifiant du médecin visé (médecin connecté si omis)")
 			@RequestParam(required = false) UUID doctorId,
 			Authentication authentication) {
-		return availabilityService.listRules(doctorId, callerId(authentication), isClinicAdmin(authentication));
+		return availabilityService.listRules(doctorId, callerId(authentication), canManageAll(authentication));
 	}
 
 	@PostMapping
-	@PreAuthorize("hasAnyRole('MEDECIN','ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('AVAILABILITY_MANAGE')")
 	@Operation(summary = "Créer une règle de disponibilité",
 			description = "Crée une plage hebdomadaire récurrente. Un médecin ne peut créer que ses propres règles.",
 			responses = {
@@ -70,11 +71,11 @@ public class AvailabilityController {
 			@Valid @RequestBody UpsertAvailabilityRuleRequest request,
 			Authentication authentication) {
 		return availabilityService.createRule(
-				request, callerId(authentication), organizationId(authentication), isClinicAdmin(authentication));
+				request, callerId(authentication), organizationId(authentication), canManageAll(authentication));
 	}
 
 	@PutMapping("/{id}")
-	@PreAuthorize("hasAnyRole('MEDECIN','ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('AVAILABILITY_MANAGE')")
 	@Operation(summary = "Modifier une règle de disponibilité",
 			description = "Modifie une règle existante. Échoue si des rendez-vous actifs occupent les créneaux retirés (RM-07).",
 			responses = {
@@ -90,11 +91,11 @@ public class AvailabilityController {
 			@Valid @RequestBody UpsertAvailabilityRuleRequest request,
 			Authentication authentication) {
 		return availabilityService.updateRule(
-				id, request, callerId(authentication), organizationId(authentication), isClinicAdmin(authentication));
+				id, request, callerId(authentication), organizationId(authentication), canManageAll(authentication));
 	}
 
 	@DeleteMapping("/{id}")
-	@PreAuthorize("hasAnyRole('MEDECIN','ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('AVAILABILITY_MANAGE')")
 	@Operation(summary = "Désactiver une règle de disponibilité",
 			description = "Désactivation logique (active = false), jamais de suppression silencieuse : échoue si des rendez-vous actifs occupent les créneaux de la règle (RM-07).",
 			responses = {
@@ -107,11 +108,11 @@ public class AvailabilityController {
 	public AvailabilityRuleResponse deactivateRule(
 			@Parameter(description = "Identifiant de la règle") @PathVariable UUID id,
 			Authentication authentication) {
-		return availabilityService.deactivateRule(id, callerId(authentication), isClinicAdmin(authentication));
+		return availabilityService.deactivateRule(id, callerId(authentication), canManageAll(authentication));
 	}
 
 	@GetMapping("/exceptions")
-	@PreAuthorize("hasAnyRole('MEDECIN','ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('AVAILABILITY_MANAGE')")
 	@Operation(summary = "Lister les indisponibilités",
 			description = "Retourne les indisponibilités du médecin connecté, ou du médecin indiqué pour un administrateur de clinique, éventuellement bornées par une période.",
 			responses = {
@@ -128,11 +129,11 @@ public class AvailabilityController {
 			@Parameter(description = "Fin de période (Instant UTC, optionnel)")
 			@RequestParam(required = false) Instant to,
 			Authentication authentication) {
-		return availabilityService.listExceptions(doctorId, from, to, callerId(authentication), isClinicAdmin(authentication));
+		return availabilityService.listExceptions(doctorId, from, to, callerId(authentication), canManageAll(authentication));
 	}
 
 	@PostMapping("/exceptions")
-	@PreAuthorize("hasAnyRole('MEDECIN','ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('AVAILABILITY_MANAGE')")
 	@Operation(summary = "Créer une indisponibilité",
 			description = "Déclare une indisponibilité ponctuelle (congé, absence) qui masque les créneaux correspondants.",
 			responses = {
@@ -145,11 +146,11 @@ public class AvailabilityController {
 			@Valid @RequestBody CreateAvailabilityExceptionRequest request,
 			Authentication authentication) {
 		return availabilityService.createException(
-				request, callerId(authentication), organizationId(authentication), isClinicAdmin(authentication));
+				request, callerId(authentication), organizationId(authentication), canManageAll(authentication));
 	}
 
 	@DeleteMapping("/exceptions/{id}")
-	@PreAuthorize("hasAnyRole('MEDECIN','ADMIN_CLINIQUE')")
+	@PreAuthorize("hasAuthority('AVAILABILITY_MANAGE')")
 	@Operation(summary = "Supprimer une indisponibilité",
 			description = "Suppression physique d'une indisponibilité. Échoue si des rendez-vous actifs recouvrent sa plage (RM-07).",
 			responses = {
@@ -162,7 +163,7 @@ public class AvailabilityController {
 	public void deleteException(
 			@Parameter(description = "Identifiant de l'indisponibilité") @PathVariable UUID id,
 			Authentication authentication) {
-		availabilityService.deleteException(id, callerId(authentication), isClinicAdmin(authentication));
+		availabilityService.deleteException(id, callerId(authentication), canManageAll(authentication));
 	}
 
 	private static UUID callerId(Authentication authentication) {
@@ -177,9 +178,9 @@ public class AvailabilityController {
 				: null;
 	}
 
-	private static boolean isClinicAdmin(Authentication authentication) {
+	private static boolean canManageAll(Authentication authentication) {
 		return authentication.getAuthorities().stream()
 				.map(GrantedAuthority::getAuthority)
-				.anyMatch("ROLE_ADMIN_CLINIQUE"::equals);
+				.anyMatch(RbacCatalog.PERMISSION_AVAILABILITY_MANAGE_ALL::equals);
 	}
 }

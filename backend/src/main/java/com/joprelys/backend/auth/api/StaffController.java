@@ -27,20 +27,20 @@ public class StaffController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('USER_READ', 'USER_MANAGE') or hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN', 'AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN')")
+    @PreAuthorize("hasAnyAuthority('USER_READ', 'USER_MANAGE')")
     public List<StaffResponse> list(Authentication authentication) {
         return staffService.listStaff(authentication);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('USER_MANAGE') or hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public InviteStaffResponse invite(@Valid @RequestBody InviteStaffRequest request, Authentication authentication) {
         return staffService.inviteStaff(request, authentication);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('USER_MANAGE') or hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public StaffResponse update(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateStaffRequest request,
@@ -49,7 +49,7 @@ public class StaffController {
     }
 
     @PostMapping("/{id}/toggle")
-    @PreAuthorize("hasAuthority('USER_MANAGE') or hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public StaffResponse toggle(@PathVariable UUID id, Authentication authentication) {
         return staffService.toggleStatus(id, authentication);
     }

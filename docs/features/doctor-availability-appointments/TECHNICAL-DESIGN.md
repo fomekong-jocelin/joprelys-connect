@@ -124,3 +124,14 @@ YAML uniquement (jamais `application.properties`) ; valeurs surchargeables par v
 - Liste des dictionnaires i18n hardcodée dans `i18n.service.ts` → penser à y enregistrer le nouveau dictionnaire (sinon clés brutes affichées, cf. BUG-20260716-I18N-SHELL-MISSING-KEYS).
 - Ne pas créer d'écran monolithique (dette identifiée en suivi global).
 - `Visit.mainPractitionerId` est un UUID brut : le lien RDV → médecin passe par une vraie FK `appointments.doctor_id → users(id)`.
+
+## 13. Cloisonnement de contexte d'authentification
+
+Correctif P0 `BUG-20260718-PATIENT-PROFESSIONAL-RBAC-CONTEXT-LEAK` :
+
+- le cache `RbacApiService` est associé au jeton d'accès ayant déclenché `/api/rbac/me` ;
+- une réponse asynchrone appartenant à un ancien jeton ne peut pas devenir le contexte effectif courant ;
+- `AppShellNavComponent` traite `PATIENT` comme un mode exclusif et ne mélange jamais les permissions professionnelles ;
+- `roleGuard` refuse une route ne déclarant pas `PATIENT` avant toute résolution RBAC ;
+- `JwtAuthenticationFilter` ne crée que `ROLE_PATIENT` lorsqu'un token est classé patient, même en présence d'un claim de rôles mixte ;
+- les contrôleurs restent la source de vérité ; `/api/availabilities/**` exige `hasAuthority('AVAILABILITY_MANAGE')` et des tests de refus patient explicites.

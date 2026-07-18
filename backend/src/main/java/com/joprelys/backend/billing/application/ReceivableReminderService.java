@@ -43,12 +43,6 @@ public class ReceivableReminderService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur non connecté");
         }
 
-        // Seuls DAF, SECRETAIRE_COMPTABLE et ADMIN_CLINIQUE peuvent faire des relances
-        String role = actor.getRole();
-        if (!"DAF".equals(role) && !"SECRETAIRE_COMPTABLE".equals(role) && !"ADMIN_CLINIQUE".equals(role)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Vous n'êtes pas autorisé à consigner des actions de relance");
-        }
-
         ReceivableEntity receivable = receivableRepository.findById(receivableId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Créance introuvable"));
 

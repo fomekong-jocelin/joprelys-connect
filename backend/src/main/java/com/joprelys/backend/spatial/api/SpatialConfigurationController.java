@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/spatial/configuration")
-@PreAuthorize("hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')")
+@PreAuthorize("hasAuthority('SPATIAL_CONFIGURATION_MANAGE')")
 public class SpatialConfigurationController {
 
     private final SpatialConfigurationUseCase configurationUseCase;

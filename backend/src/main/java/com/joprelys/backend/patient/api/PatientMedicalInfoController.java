@@ -12,7 +12,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/patients/{patientId}")
-@PreAuthorize("hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE')")
+@PreAuthorize("hasAuthority('CLINICAL_READ')")
 public class PatientMedicalInfoController {
 
     private final PatientMedicalInfoService patientMedicalInfoService;
@@ -43,7 +43,7 @@ public class PatientMedicalInfoController {
 
     @PostMapping("/allergies")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
     public PatientAllergyResponse addAllergy(
             @PathVariable UUID patientId,
             @Valid @RequestBody CreatePatientAllergyRequest request) {
@@ -59,7 +59,7 @@ public class PatientMedicalInfoController {
     }
 
     @PutMapping("/allergies/{allergyId}")
-    @PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
     public PatientAllergyResponse updateAllergy(
             @PathVariable UUID patientId,
             @PathVariable UUID allergyId,
@@ -90,7 +90,7 @@ public class PatientMedicalInfoController {
 
     @PostMapping("/medical-history")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
     public PatientMedicalHistoryResponse addMedicalHistory(
             @PathVariable UUID patientId,
             @Valid @RequestBody CreatePatientMedicalHistoryRequest request) {
@@ -106,7 +106,7 @@ public class PatientMedicalInfoController {
     }
 
     @PutMapping("/medical-history/{historyId}")
-    @PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
     public PatientMedicalHistoryResponse updateMedicalHistory(
             @PathVariable UUID patientId,
             @PathVariable UUID historyId,
@@ -137,7 +137,7 @@ public class PatientMedicalInfoController {
 
     @PostMapping("/vaccinations")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
     public PatientVaccinationResponse addVaccination(
             @PathVariable UUID patientId,
             @Valid @RequestBody CreatePatientVaccinationRequest request) {
@@ -153,7 +153,7 @@ public class PatientMedicalInfoController {
     }
 
     @PutMapping("/vaccinations/{vaccinationId}")
-    @PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
     public PatientVaccinationResponse updateVaccination(
             @PathVariable UUID patientId,
             @PathVariable UUID vaccinationId,
@@ -170,7 +170,7 @@ public class PatientMedicalInfoController {
     }
 
     @DeleteMapping("/allergies/{allergyId}")
-    @PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteAllergy(
             @PathVariable UUID patientId,
@@ -187,7 +187,7 @@ public class PatientMedicalInfoController {
     }
 
     @DeleteMapping("/medical-history/{historyId}")
-    @PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteMedicalHistory(
             @PathVariable UUID patientId,

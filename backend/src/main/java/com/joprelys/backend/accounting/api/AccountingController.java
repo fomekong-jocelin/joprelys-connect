@@ -28,7 +28,7 @@ public class AccountingController {
     }
 
     @GetMapping("/export")
-    @PreAuthorize("hasAuthority('ACCOUNTING_EXPORT') or hasAnyRole('ADMIN_CLINIQUE', 'DAF', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('ACCOUNTING_EXPORT')")
     @Operation(summary = "Exporter les écritures comptables OHADA", description = "Génère un export CSV d'import pour Sage 100")
     public ResponseEntity<byte[]> exportSage100(
             @RequestParam(required = false) String startDate,

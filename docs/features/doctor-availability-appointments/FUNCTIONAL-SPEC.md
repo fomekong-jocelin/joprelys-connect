@@ -80,3 +80,10 @@ Offrir un parcours complet : le médecin publie ses disponibilités → le patie
 - Les données RDV sont couvertes par le cadre de protection des données déjà en place (pas de flux nouveau vers un tiers) — à confirmer par le DPO si rappel e-mail contient des détails cliniques (recommandation : contenu minimal, sans motif détaillé).
 - Le motif de RDV est un texte court libre ou une liste configurable — à trancher en STORY-2601 avec le référent clinique.
 - Pas de paiement ni d'acompte à la réservation en V1.
+
+## 10. Cloisonnement patient / professionnel — correctif P0 du 2026-07-18
+
+- Le mode `PATIENT` est exclusif : aucun menu, route ou rôle professionnel ne doit être combiné à la session patient.
+- Une permission RBAC chargée pendant une ancienne session professionnelle ne doit jamais influencer le portail patient.
+- Un patient utilise uniquement `/patient/**` et `/api/patient/**` pour les rendez-vous ; `/clinic/availability` et `/api/availabilities/**` exigent strictement `AVAILABILITY_MANAGE`.
+- Critère de non-régression : après le parcours médecin → déconnexion → patient, le menu ne contient que les entrées patient et une URL clinique directe est refusée.

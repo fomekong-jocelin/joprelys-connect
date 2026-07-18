@@ -2,9 +2,9 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PatientDetailComponent } from '../patient-detail.component';
 import { AuditApiService } from '../../audit/audit-api.service';
-import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { AuditLog } from '../../audit/audit.models';
+import { RbacApiService } from '../../clinic/rbac/rbac-api.service';
 
 @Component({
   selector: 'app-patient-audit-trail-tab',
@@ -84,10 +84,9 @@ import { AuditLog } from '../../audit/audit.models';
 export class PatientAuditTrailTabComponent implements OnInit {
   readonly parent = inject(PatientDetailComponent);
   private readonly auditApi = inject(AuditApiService);
-  private readonly tokenStorage = inject(AuthTokenStorageService);
+  private readonly rbacApi = inject(RbacApiService);
   readonly i18n = inject(I18nService);
 
-  readonly session = this.tokenStorage.session;
 
   readonly auditLogs = signal<AuditLog[]>([]);
   readonly isLoadingAudit = signal(false);
@@ -116,9 +115,6 @@ export class PatientAuditTrailTabComponent implements OnInit {
   }
 
   canViewAudit(): boolean {
-    const role = this.session()?.role;
-    if (!role) return false;
-    const roles = role.split(',').map((r) => r.trim());
-    return roles.some((r) => r === 'MEDECIN' || r === 'ADMIN_CLINIQUE' || r === 'AUDITEUR');
+    return this.rbacApi.hasPermission('AUDIT_READ');
   }
 }

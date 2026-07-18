@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { finalize, Observable, of, shareReplay, tap } from 'rxjs';
+import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
 import {
   CreateRbacRoleRequest,
   EffectiveAccess,
@@ -14,23 +15,56 @@ import {
 @Injectable({ providedIn: 'root' })
 export class RbacApiService {
   private readonly http = inject(HttpClient);
+  private readonly tokenStorage = inject(AuthTokenStorageService);
+  private readonly cachedAccess = signal<EffectiveAccess | null>(null);
+  private readonly accessOwnerToken = signal<string | null>(null);
   private accessRequest$: Observable<EffectiveAccess> | null = null;
+  private accessRequestOwnerToken: string | null = null;
+  private accessRequestGeneration = 0;
 
-  readonly access = signal<EffectiveAccess | null>(null);
+  readonly access = computed<EffectiveAccess | null>(() => {
+    const currentToken = this.currentToken();
+    return currentToken !== null && this.accessOwnerToken() === currentToken
+      ? this.cachedAccess()
+      : null;
+  });
+
+  constructor() {
+    this.tokenStorage.registerSessionBoundaryCleanup(() => this.clearAccess());
+  }
 
   ensureMyAccess(force = false): Observable<EffectiveAccess> {
-    if (!force && this.access()) {
-      return of(this.access()!);
+    const ownerToken = this.currentToken();
+    const currentAccess = this.access();
+    if (!force && currentAccess) {
+      return of(currentAccess);
     }
-    if (!force && this.accessRequest$) {
+    if (!force && this.accessRequest$ && this.accessRequestOwnerToken === ownerToken) {
       return this.accessRequest$;
     }
-    this.accessRequest$ = this.http.get<EffectiveAccess>('/api/rbac/me').pipe(
-      tap((access) => this.access.set(access)),
-      finalize(() => this.accessRequest$ = null),
+
+    const requestGeneration = ++this.accessRequestGeneration;
+    const request$ = this.http.get<EffectiveAccess>('/api/rbac/me').pipe(
+      tap((access) => {
+        if (ownerToken === null || this.currentToken() !== ownerToken) {
+          throw new Error('RBAC response no longer belongs to the active session.');
+        }
+        if (this.accessRequestGeneration === requestGeneration) {
+          this.cachedAccess.set(access);
+          this.accessOwnerToken.set(ownerToken);
+        }
+      }),
+      finalize(() => {
+        if (this.accessRequestGeneration === requestGeneration) {
+          this.accessRequest$ = null;
+          this.accessRequestOwnerToken = null;
+        }
+      }),
       shareReplay({ bufferSize: 1, refCount: false }),
     );
-    return this.accessRequest$;
+    this.accessRequest$ = request$;
+    this.accessRequestOwnerToken = ownerToken;
+    return request$;
   }
 
   hasPermission(permission: string): boolean {
@@ -47,8 +81,11 @@ export class RbacApiService {
   }
 
   clearAccess(): void {
-    this.access.set(null);
+    this.cachedAccess.set(null);
+    this.accessOwnerToken.set(null);
     this.accessRequest$ = null;
+    this.accessRequestOwnerToken = null;
+    this.accessRequestGeneration++;
   }
 
   listRoles(organizationId?: string): Observable<RbacRole[]> {
@@ -91,5 +128,9 @@ export class RbacApiService {
 
   private scopeParams(organizationId?: string): HttpParams {
     return organizationId ? new HttpParams().set('organizationId', organizationId) : new HttpParams();
+  }
+
+  private currentToken(): string | null {
+    return this.tokenStorage.accessToken;
   }
 }

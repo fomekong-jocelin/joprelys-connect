@@ -43,11 +43,15 @@ Révoque la session courante quand `sid` existe. Pour un JWT historique sans `si
 
 Réponse : `204 No Content`.
 
+En-têtes : `Set-Cookie` avec `Max-Age=0` et `Clear-Site-Data: "cache", "cookies", "storage"`.
+
 ## POST /api/auth/logout-all
 
 Révoque toutes les sessions actives du compte courant et le JTI courant si le token n’a pas de `sid`. Efface le cookie.
 
 Réponse : `204 No Content`.
+
+En-têtes de purge identiques au logout courant.
 
 ## POST /api/auth/refresh
 

@@ -6,6 +6,7 @@ import { I18nService } from '../core/i18n/i18n.service';
 import { of } from 'rxjs';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
+import { RbacApiService } from './rbac/rbac-api.service';
 
 describe('DashboardComponent', () => {
   let component: DashboardComponent;
@@ -13,6 +14,7 @@ describe('DashboardComponent', () => {
   let mockAuthToken: any;
   let mockVisitApi: any;
   let mockI18n: any;
+  let mockRbacApi: any;
 
   beforeEach(async () => {
     mockAuthToken = {
@@ -21,7 +23,8 @@ describe('DashboardComponent', () => {
         email: 'medecin@joprelys.local',
         role: 'MEDECIN',
         org: 'org-1'
-      })
+      }),
+      registerSessionBoundaryCleanup: vi.fn()
     };
 
     mockVisitApi = {
@@ -34,6 +37,21 @@ describe('DashboardComponent', () => {
       t: vi.fn().mockImplementation((key) => key),
       locale: signal('fr')
     };
+    mockRbacApi = {
+      access: signal({
+        userId: 'doctor-1',
+        roles: ['MEDECIN'],
+        permissions: ['VISIT_READ', 'VISIT_VITALS_WRITE', 'VISIT_MANAGE', 'CLINICAL_WRITE'],
+      }),
+      ensureMyAccess: vi.fn().mockReturnValue(of({
+        userId: 'doctor-1',
+        roles: ['MEDECIN'],
+        permissions: ['VISIT_READ', 'VISIT_VITALS_WRITE', 'VISIT_MANAGE', 'CLINICAL_WRITE'],
+      })),
+      hasPermission: vi.fn().mockImplementation((permission: string) =>
+        ['VISIT_READ', 'VISIT_VITALS_WRITE', 'VISIT_MANAGE', 'CLINICAL_WRITE'].includes(permission)
+      )
+    };
 
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
@@ -41,7 +59,8 @@ describe('DashboardComponent', () => {
         provideRouter([]),
         { provide: AuthTokenStorageService, useValue: mockAuthToken },
         { provide: VisitApiService, useValue: mockVisitApi },
-        { provide: I18nService, useValue: mockI18n }
+        { provide: I18nService, useValue: mockI18n },
+        { provide: RbacApiService, useValue: mockRbacApi }
       ]
     }).compileComponents();
 
@@ -151,4 +170,3 @@ describe('DashboardComponent', () => {
     expect(component.showAuditSecurityModal()).toBe(false);
   });
 });
-

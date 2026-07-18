@@ -31,24 +31,22 @@ public class ClinicControllerTest {
 	}
 
 	@Test
-	@WithMockUser(roles = "ADMIN_JOPRELYS")
-	public void givenAdminUser_whenAccessClinic_thenAllAllowed() throws Exception {
+	@WithMockUser(authorities = "ORGANIZATION_MANAGE")
+	public void givenOrganizationManager_whenAccessClinic_thenOnlyAdministrativeDataAllowed() throws Exception {
 		mockMvc.perform(get("/api/clinic/admin"))
 				.andExpect(status().isOk())
 				.andExpect(content().string("Données administratives confidentielles"));
 
 		mockMvc.perform(get("/api/clinic/medecin"))
-				.andExpect(status().isOk())
-				.andExpect(content().string("Dossiers cliniques des patients"));
+				.andExpect(status().isForbidden());
 
 		mockMvc.perform(get("/api/clinic/pharmacien"))
-				.andExpect(status().isOk())
-				.andExpect(content().string("Ordonnances et délivrances en attente"));
+				.andExpect(status().isForbidden());
 	}
 
 	@Test
-	@WithMockUser(roles = "MEDECIN")
-	public void givenMedecinUser_whenAccessClinic_thenOnlyMedecinAllowed() throws Exception {
+	@WithMockUser(authorities = "CLINICAL_READ")
+	public void givenClinicalReader_whenAccessClinic_thenOnlyClinicalDataAllowed() throws Exception {
 		mockMvc.perform(get("/api/clinic/admin"))
 				.andExpect(status().isForbidden());
 
@@ -61,8 +59,8 @@ public class ClinicControllerTest {
 	}
 
 	@Test
-	@WithMockUser(roles = "PHARMACIEN")
-	public void givenPharmacienUser_whenAccessClinic_thenOnlyPharmacienAllowed() throws Exception {
+	@WithMockUser(authorities = "PHARMACY_PRESCRIPTION_READ")
+	public void givenPharmacyReader_whenAccessClinic_thenOnlyPharmacyDataAllowed() throws Exception {
 		mockMvc.perform(get("/api/clinic/admin"))
 				.andExpect(status().isForbidden());
 

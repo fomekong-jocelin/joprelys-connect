@@ -42,13 +42,6 @@ import org.springframework.web.server.ResponseStatusException;
 @Tag(name = "Billing", description = "Gestion de la facturation médicale et des règlements de caisse")
 public class InvoiceController {
 
-    private static final String LEGACY_BILLING_ROLES =
-            "hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-    private static final String LEGACY_PAYMENT_ROLES =
-            "hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'MEDECIN', 'INFIRMIER', 'CAISSIER', 'DAF', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-    private static final String LEGACY_CASHIER_QUEUE_ROLES =
-            "hasAnyRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'CAISSIER', 'DAF', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-
     private final InvoiceCrudService invoiceCrudService;
     private final InvoicePrecalculationService precalculationService;
     private final ConventionTariffService conventionTariffService;
@@ -90,7 +83,7 @@ public class InvoiceController {
     }
 
     @PostMapping("/precalculate")
-    @PreAuthorize("hasAuthority('BILLING_INVOICE_WRITE') or " + LEGACY_BILLING_ROLES)
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_WRITE')")
     @Operation(summary = "Précalculer une facture", description = "Simule le calcul de la facture sans persistance.")
     public ResponseEntity<InvoiceResponse> precalculate(
             @RequestParam UUID patientId,
@@ -100,21 +93,21 @@ public class InvoiceController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('BILLING_INVOICE_WRITE') or " + LEGACY_BILLING_ROLES)
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_WRITE')")
     @Operation(summary = "Créer une facture", description = "Crée et enregistre une facture pour un patient.")
     public ResponseEntity<InvoiceResponse> createInvoice(@Valid @RequestBody CreateInvoiceRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(invoiceCrudService.createInvoice(request));
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ') or " + LEGACY_BILLING_ROLES)
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ')")
     @Operation(summary = "Lister les factures d'un patient", description = "Récupère l'historique des factures d'un patient.")
     public ResponseEntity<List<InvoiceResponse>> listInvoices(@RequestParam UUID patientId) {
         return ResponseEntity.ok(invoiceCrudService.listInvoices(patientId));
     }
 
     @GetMapping("/collection-queue")
-    @PreAuthorize("hasAuthority('CASH_QUEUE_READ') or " + LEGACY_CASHIER_QUEUE_ROLES)
+    @PreAuthorize("hasAuthority('CASH_QUEUE_READ')")
     @Operation(
             summary = "File d'encaissement patient",
             description = "Retourne les factures validées dont la part patient reste à encaisser pour le tenant courant.")
@@ -123,21 +116,21 @@ public class InvoiceController {
     }
 
     @GetMapping("/settlement-summaries")
-    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ') or " + LEGACY_PAYMENT_ROLES)
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ')")
     @Operation(summary = "Synthèse de règlement des factures", description = "Retourne les montants dus et réglés par patient et assurance pour un patient.")
     public ResponseEntity<List<InvoiceSettlementSummaryResponse>> listSettlementSummaries(@RequestParam UUID patientId) {
         return ResponseEntity.ok(invoiceSettlementQueryService.listByPatient(patientId));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ') or " + LEGACY_BILLING_ROLES)
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ')")
     @Operation(summary = "Détails d'une facture", description = "Récupère les détails d'une facture par son identifiant.")
     public ResponseEntity<InvoiceResponse> getInvoice(@PathVariable UUID id) {
         return ResponseEntity.ok(invoiceCrudService.getInvoice(id));
     }
 
     @PostMapping("/{id}/payments")
-    @PreAuthorize("hasAuthority('CASH_PAYMENT_COLLECT') or " + LEGACY_PAYMENT_ROLES)
+    @PreAuthorize("hasAuthority('CASH_PAYMENT_COLLECT')")
     @Operation(summary = "Enregistrer un règlement", description = "Enregistre un paiement sur une facture.")
     public ResponseEntity<PaymentResponse> addPayment(
             @PathVariable UUID id,
@@ -146,14 +139,14 @@ public class InvoiceController {
     }
 
     @GetMapping("/{id}/payments")
-    @PreAuthorize("hasAnyAuthority('BILLING_INVOICE_READ', 'CASH_PAYMENT_COLLECT', 'CASH_HISTORY_READ') or " + LEGACY_PAYMENT_ROLES)
+    @PreAuthorize("hasAnyAuthority('BILLING_INVOICE_READ', 'CASH_PAYMENT_COLLECT', 'CASH_HISTORY_READ')")
     @Operation(summary = "Lister les règlements d'une facture", description = "Récupère tous les paiements enregistrés pour une facture.")
     public ResponseEntity<List<PaymentResponse>> listPayments(@PathVariable UUID id) {
         return ResponseEntity.ok(billingPaymentService.listPayments(id));
     }
 
     @GetMapping(value = "/{id}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ') or " + LEGACY_BILLING_ROLES)
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ')")
     @Operation(summary = "Générer la facture PDF certifiée", description = "Génère et télécharge le fichier PDF d'une facture.")
     public ResponseEntity<byte[]> getPdf(@PathVariable UUID id, Authentication authentication) {
         InvoiceEntity invoice = invoiceRepository.findByIdWithDetails(id)
@@ -190,14 +183,14 @@ public class InvoiceController {
     }
 
     @GetMapping("/conventions")
-    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ') or " + LEGACY_BILLING_ROLES)
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ')")
     @Operation(summary = "Lister les conventions d'assurances", description = "Récupère les conventions paramétrées.")
     public ResponseEntity<List<InsuranceConventionDto>> listConventions() {
         return ResponseEntity.ok(conventionTariffService.listConventions());
     }
 
     @PostMapping("/conventions")
-    @PreAuthorize("hasAuthority('BILLING_INVOICE_WRITE') or hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_WRITE')")
     @Operation(summary = "Créer une convention d'assurance", description = "Paramètre une nouvelle convention d'assurance.")
     public ResponseEntity<InsuranceConventionDto> createConvention(
             @RequestParam String name,
@@ -207,14 +200,14 @@ public class InvoiceController {
     }
 
     @GetMapping("/tariffs")
-    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ') or " + LEGACY_BILLING_ROLES)
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_READ')")
     @Operation(summary = "Lister la grille des tarifs", description = "Récupère la grille tarifaire (K, AMI, etc.).")
     public ResponseEntity<List<TariffGridEntity>> listTariffs() {
         return ResponseEntity.ok(conventionTariffService.listTariffs());
     }
 
     @PostMapping("/tariffs")
-    @PreAuthorize("hasAuthority('BILLING_INVOICE_WRITE') or hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_WRITE')")
     @Operation(summary = "Créer ou mettre à jour un tarif", description = "Ajoute ou modifie un tarif clé de la grille.")
     public ResponseEntity<TariffGridEntity> createOrUpdateTariff(
             @RequestParam String keyLetter,

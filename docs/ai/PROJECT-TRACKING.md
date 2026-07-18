@@ -6,20 +6,22 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-18 (EPIC-0025 : STORY-2601 fusionnée via PR #62, STORY-2602 fusionnée via PR #63, STORY-2603 implémentée sur PR #67 avec CI #807 entièrement verte — annuaire médecins, créneaux, réservation transactionnelle, annulation, portail Angular FR/EN et tests de concurrence) |
-| Responsable mise à jour | GPT-5.6 Thinking |
-| État global | EPIC-0022 Sessions en cours : STORY-2401 fusionnée ; STORY-2402 prête pour revue ; #34 reste à exécuter. EPIC-0023 URG-TEMP : #40, #42, #44 et #45 terminées, #46 et #47 restantes. EPIC-0024 : cadrage/fondations en cours, QR backend terminé, assistant IA prod corrigé. EPIC-0025 : STORY-2601 et STORY-2602 terminées ; STORY-2603 en revue sur PR #67 avec CI verte ; STORY-2604 et STORY-2605 restent à engager. |
-| Risques majeurs | Revue sécurité humaine de #33 ; renouvellement Angular absent jusqu’à #34 ; durée de conservation des audits à valider par le DPO ; validation métier ABCDE ; données de santé chez un fournisseur IA ; revue Tech Lead + QA de STORY-2603 avant fusion |
-| Prochaine priorité | Revue humaine et fusion de STORY-2603 (PR #67), puis engagement STORY-2604 et STORY-2605 ; poursuivre #34, #46 et #47 selon capacité |
+| Dernière mise à jour | 2026-07-18 (P0 RBAC et généralisation permission-first EPIC-0026 implémentés ; suites backend/frontend vertes ; QA humaine à signer) |
+| Responsable mise à jour | Codex |
+| État global | BUG-20260718 et EPIC-0026 en QA : 453 tests Maven et 254 tests Angular verts, build et i18n verts ; aucun contrôle de rôle professionnel dans les annotations contrôleur ou les routes Angular. |
+| Risques majeurs | Validation métier/RSSI de la matrice permission-first ; revue sécurité humaine de #33 ; renouvellement Angular absent jusqu’à #34 ; données de santé chez un fournisseur IA |
+| Prochaine priorité | Recette croisée des rôles et validation RSSI/métiers, puis préparation d'une release MINOR dédiée |
 | Sprint courant | SPRINT-0014 |
-| Capacité sprint | À recalibrer avant engagement des stories #34 à #47 et STORY-2604/2605 |
-| Charge engagée | 38.10j (Est. Senior, incluant STORY-2601 à STORY-2603) |
+| Capacité sprint | P0 RBAC : 0,75 j senior ; EPIC-0026 : 21 SP / 9,5 j senior implémentés, QA externe restante |
+| Charge engagée | 47.85j (Est. Senior, incluant le P0 RBAC et l'implémentation EPIC-0026) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---|---:|---|---:|---:|---|---|---|---:|---|---|---|
+| BUG-20260718-PATIENT-PROFESSIONAL-RBAC-CONTEXT-LEAK | EPIC-0025 / EPIC-0026 | Bug sécurité | Contamination de permissions entre sessions et accès disponibilités | Angular / Spring Security / RBAC | QA TECHNIQUE VERTE | P0 | 3 | Senior full-stack sécurité | 0.75j | 1.2j | 2.0j | Codex | Tech Lead + RSSI + QA | SPRINT-0014 | 0.75j | Revue humaine et recette multi-rôles | Moyen | 2026-07-18 |
+| EPIC-0026 | PERMISSION_FIRST_ROLE_ISOLATION | Epic | Cloisonnement permission-first de tous les rôles | Spring Boot / Angular / RBAC / QA | QA | P0/P1 | 21 | Architecte sécurité + Seniors full-stack + QA | 9.5j | 13.0j | 19.0j | Codex | RSSI + Tech Lead + métiers | SPRINT-0014/0015 | 9.5j | Valider la matrice et signer la recette E2E multi-rôles | Moyen | 2026-07-18 |
 | EPIC-0025 | DOCTOR_AVAILABILITY_APPOINTMENTS | Epic | Disponibilités médecins et prise de rendez-vous patient | Spring Boot / Angular / DB / RBAC | IN_PROGRESS | P1 | 29 | Senior full-stack + Lead Frontend + QA | 12.0j | 16.0j | 24.0j | GPT-5.6 Thinking | Tech Lead + QA | SPRINT-0015 (proposé) | 8.0j | Revue/fusion STORY-2603 PR #67 puis engagement STORY-2604 et STORY-2605 | Moyen | 2026-07-18 |
 | STORY-2601 | DOCTOR_AVAILABILITY_APPOINTMENTS | User Story | Fondations données, RBAC et contrats du module rendez-vous | Spring Boot / DB / RBAC | DONE | P1 | 3 | Senior backend | 1.5j | 2.3j | 3.4j | Codex | Tech Lead + référent données | SPRINT-0015 (proposé) | 1.5j | Suivi post-fusion normal ; PR #62 fusionnée au commit `13bdb063` | Faible | 2026-07-18 |
 | STORY-2602 | DOCTOR_AVAILABILITY_APPOINTMENTS | User Story | Gestion des disponibilités médecin | Spring Boot / Angular / RBAC | DONE | P1 | 8 | Senior full-stack | 3.0j | 4.0j | 6.0j | Kimi | Lead Backend + Lead Frontend | SPRINT-0015 (proposé) | 3.0j | Suivi post-fusion normal ; PR #63 fusionnée au commit `654d1be1` | Faible | 2026-07-18 |

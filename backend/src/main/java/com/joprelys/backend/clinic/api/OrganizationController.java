@@ -26,7 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/organizations")
-@PreAuthorize("hasAnyRole('ADMIN_JOPRELYS', 'SUPER_ADMIN')")
+@PreAuthorize("hasAuthority('ORGANIZATION_MANAGE')")
 public class OrganizationController {
 
 	private final OrganizationRepository organizationRepository;

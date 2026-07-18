@@ -1,10 +1,9 @@
-import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { SpatialApiService } from '../../patient/spatial-api.service';
 import { OrganizationApiService } from '../organizations/organization-api.service';
+import { RbacApiService } from '../rbac/rbac-api.service';
 import { SpatialConfigurationPageComponent } from './spatial-configuration-page.component';
 
 describe('SpatialConfigurationPageComponent', () => {
@@ -32,7 +31,7 @@ describe('SpatialConfigurationPageComponent', () => {
       providers: [
         { provide: SpatialApiService, useValue: api },
         { provide: I18nService, useValue: { t: (key: string) => key } },
-        { provide: AuthTokenStorageService, useValue: { session: signal({ role: 'ADMIN_CLINIQUE' }) } },
+        { provide: RbacApiService, useValue: { hasPermission: vi.fn(() => false) } },
         { provide: OrganizationApiService, useValue: { list: vi.fn(() => of([])) } },
       ],
     });

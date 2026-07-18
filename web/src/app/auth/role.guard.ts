@@ -21,29 +21,34 @@ export const roleGuard: CanActivateFn = (route, state) => {
     || (routePath === 'profile' && !expectedRoles.includes('PATIENT'));
   const allowAnyInternalRole = route.data['allowAnyInternalRole'] === true || isInternalEntryRoute;
   const legacyRoles = session.role.split(',').map((role) => role.trim()).filter(Boolean);
+  const isPatientSession = legacyRoles.includes('PATIENT');
+
+  if (isPatientSession) {
+    return expectedRoles.includes('PATIENT')
+      ? true
+      : router.parseUrl('/unauthorized');
+  }
 
   if (expectedPermissions.length > 0 || allowAnyInternalRole) {
     return rbacApi.ensureMyAccess(true).pipe(
       map((access) => {
+        if (expectedPermissions.length > 0) {
+          const hasPermission = access.permissions.some((permission) => expectedPermissions.includes(permission));
+          return hasPermission ? true : router.parseUrl('/unauthorized');
+        }
         if (allowAnyInternalRole) {
           const hasInternalRole = access.roles.some((role) => role !== 'PATIENT');
           if (hasInternalRole) {
             return true;
           }
         }
-        const hasPermission = access.permissions.some((permission) => expectedPermissions.includes(permission));
-        const hasEffectiveRole = access.roles.some((role) => expectedRoles.includes(role));
-        return hasPermission || hasEffectiveRole ? true : router.parseUrl('/unauthorized');
+        return router.parseUrl('/unauthorized');
       }),
       catchError(() => of(router.parseUrl('/unauthorized'))),
     );
   }
 
-  if (expectedRoles.length > 0) {
-    return legacyRoles.some((role) => expectedRoles.includes(role))
-      ? true
-      : router.parseUrl('/unauthorized');
-  }
-
-  return true;
+  return expectedRoles.length > 0
+    ? router.parseUrl('/unauthorized')
+    : true;
 };

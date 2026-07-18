@@ -296,12 +296,20 @@ public class CashRegisterService {
     }
 
     private void assertSessionAccess(UserAccountEntity actor, CashRegisterSessionEntity session) {
-        boolean supervisor = actor.hasRole("ADMIN_CLINIQUE") || actor.hasRole("DAF");
+        boolean supervisor = hasCurrentAuthority("CASH_DISCREPANCY_RESOLVE");
         boolean owner = session.getOpenedByUserId().equals(actor.getId());
         if (!supervisor && !owner) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Vous ne pouvez consulter que vos propres sessions de caisse.");
         }
+    }
+
+    private boolean hasCurrentAuthority(String expectedAuthority) {
+        var authentication = org.springframework.security.core.context.SecurityContextHolder
+                .getContext()
+                .getAuthentication();
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> expectedAuthority.equals(authority.getAuthority()));
     }
 
     private CashSessionSummaryResponse reconcile(CashRegisterSessionEntity session) {

@@ -62,7 +62,8 @@ describe('PreRegistrationsListComponent', () => {
 
     const mockTokenStorage = {
       accessToken: 'header.eyJzdWIiOiJhZG1pbkBjbGluaXF1ZS5sb2NhbCIsImVtYWlsIjoiYWRtaW5AY2xpbmlxdWUubG9jYWwiLCJkaXNwbGF5TmFtZSI6IkRyIFNvcGhpZSBNYXJ0aW4iLCJyb2xlIjoiQURNSU5fQ0xJTklRVUUiLCJvcmciOiIzZmZjMzAzOS04MjEzLTQ2MTMtOTc1YS0zOTUwM2RjMGNlNWQifQ.signature',
-      session: signal({ role: 'AGENT_ACCUEIL', name: 'Dr Sophie Martin' })
+      session: signal({ role: 'AGENT_ACCUEIL', name: 'Dr Sophie Martin' }),
+      registerSessionBoundaryCleanup: vi.fn()
     };
 
     await TestBed.configureTestingModule({

@@ -28,13 +28,6 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Examens", description = "Demandes et résultats d'examens médicaux")
 public class LabOrderController {
 
-    private static final String LEGACY_LAB_READ_ROLES =
-            "hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE', 'PATIENT', 'BIOLOGISTE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-    private static final String LEGACY_LAB_CREATE_ROLES =
-            "hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-    private static final String LEGACY_LAB_PROCESS_ROLES =
-            "hasAnyRole('BIOLOGISTE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-
     private final LabOrderService labOrderService;
     private final LabResultService labResultService;
     private final PatientService patientService;
@@ -53,7 +46,7 @@ public class LabOrderController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('LAB_ORDER_CREATE') or " + LEGACY_LAB_CREATE_ROLES)
+    @PreAuthorize("hasAuthority('LAB_ORDER_CREATE')")
     @Operation(summary = "Créer une demande d'examen", description = "Crée une nouvelle demande d'examen médical pour un patient.", responses = {
             @ApiResponse(responseCode = "200", description = "Demande d'examen créée avec succès"),
             @ApiResponse(responseCode = "404", description = "Introuvable")
@@ -73,7 +66,7 @@ public class LabOrderController {
     }
 
     @GetMapping("/patient/{patientId}")
-    @PreAuthorize("hasAuthority('LAB_ORDER_READ') or " + LEGACY_LAB_READ_ROLES)
+    @PreAuthorize("hasAuthority('LAB_ORDER_READ')")
     @Operation(summary = "Lister les examens d'un patient", description = "Retourne la liste des demandes d'examen pour un patient donné.", responses = {
             @ApiResponse(responseCode = "200", description = "Liste des examens retournée"),
             @ApiResponse(responseCode = "404", description = "Introuvable")
@@ -92,7 +85,7 @@ public class LabOrderController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('LAB_QUEUE_READ') or " + LEGACY_LAB_PROCESS_ROLES)
+    @PreAuthorize("hasAuthority('LAB_QUEUE_READ')")
     @Operation(summary = "Lister toutes les demandes d'examen", description = "Retourne la liste de toutes les demandes d'examen.", responses = {
             @ApiResponse(responseCode = "200", description = "Liste des demandes d'examen retournée"),
             @ApiResponse(responseCode = "404", description = "Introuvable")
@@ -102,7 +95,7 @@ public class LabOrderController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('LAB_QUEUE_READ') or " + LEGACY_LAB_PROCESS_ROLES)
+    @PreAuthorize("hasAuthority('LAB_QUEUE_READ')")
     @Operation(summary = "Récupérer une demande d'examen", description = "Retourne les détails d'une demande d'examen par son identifiant.", responses = {
             @ApiResponse(responseCode = "200", description = "Demande d'examen trouvée"),
             @ApiResponse(responseCode = "404", description = "Introuvable")
@@ -113,7 +106,7 @@ public class LabOrderController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAuthority('LAB_ORDER_WRITE') or " + LEGACY_LAB_PROCESS_ROLES)
+    @PreAuthorize("hasAuthority('LAB_ORDER_WRITE')")
     @Operation(summary = "Mettre à jour le statut d'un examen", description = "Modifie le statut d'une demande d'examen médical.", responses = {
             @ApiResponse(responseCode = "200", description = "Statut mis à jour avec succès"),
             @ApiResponse(responseCode = "404", description = "Introuvable")
@@ -126,7 +119,7 @@ public class LabOrderController {
     }
 
     @GetMapping("/patient/{patientId}/results")
-    @PreAuthorize("hasAuthority('LAB_ORDER_READ') or " + LEGACY_LAB_READ_ROLES)
+    @PreAuthorize("hasAuthority('LAB_ORDER_READ')")
     @Operation(summary = "Récupérer les résultats d'examens d'un patient", description = "Retourne les résultats d'examens médicaux pour un patient donné.", responses = {
             @ApiResponse(responseCode = "200", description = "Résultats d'examens retournés"),
             @ApiResponse(responseCode = "404", description = "Introuvable")
@@ -145,7 +138,7 @@ public class LabOrderController {
     }
 
     @GetMapping("/results/{resultId}/pdf")
-    @PreAuthorize("hasAuthority('LAB_ORDER_READ') or " + LEGACY_LAB_READ_ROLES)
+    @PreAuthorize("hasAuthority('LAB_ORDER_READ')")
     @Operation(summary = "Télécharger le PDF d'un résultat d'examen", description = "Retourne le fichier PDF correspondant au résultat d'examen donné.")
     public org.springframework.http.ResponseEntity<byte[]> downloadResultPdf(@PathVariable UUID resultId) {
         var result = labResultService.getResultById(resultId);

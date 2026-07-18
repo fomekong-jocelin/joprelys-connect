@@ -230,7 +230,7 @@ public class RbacAdministrationService {
 
     private OrganizationScope organizationScope(Authentication authentication, UUID requestedOrganizationId) {
         UserAccountEntity actor = currentUser(authentication);
-        if (isPlatformAdministrator(actor)) {
+        if (canManageOrganizations(authentication)) {
             if (requestedOrganizationId == null) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
@@ -289,9 +289,9 @@ public class RbacAdministrationService {
         }
     }
 
-    private boolean isPlatformAdministrator(UserAccountEntity actor) {
-        RbacStore.EffectiveAccess access = rbacStore.loadEffectiveAccess(actor.getId(), actor.getOrganizationId());
-        return access.roles().stream().anyMatch(RbacCatalog.platformRoleCodes()::contains);
+    private boolean canManageOrganizations(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> RbacCatalog.PERMISSION_ORGANIZATION_MANAGE.equals(authority.getAuthority()));
     }
 
     private UserAccountEntity currentUser(Authentication authentication) {

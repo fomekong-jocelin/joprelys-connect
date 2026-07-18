@@ -1,11 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
-import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
 import { OrganizationApiService } from '../organizations/organization-api.service';
+import { RbacApiService } from '../rbac/rbac-api.service';
 import { Organization } from '../organizations/organizations.models';
 import { SpatialApiService } from '../../patient/spatial-api.service';
 import { Bed } from '../../patient/patient.models';
@@ -49,7 +49,7 @@ interface DeleteTarget {
 export class SpatialConfigurationPageComponent implements OnInit {
   private readonly spatialApi = inject(SpatialApiService);
   private readonly i18n = inject(I18nService);
-  private readonly tokenStorage = inject(AuthTokenStorageService);
+  private readonly rbacApi = inject(RbacApiService);
   private readonly organizationApi = inject(OrganizationApiService);
 
   readonly configuration = signal<SpatialConfiguration>({ wards: [] });
@@ -59,14 +59,12 @@ export class SpatialConfigurationPageComponent implements OnInit {
   readonly successMessage = signal('');
   readonly editor = signal<EditorState | null>(null);
   readonly deleteTarget = signal<DeleteTarget | null>(null);
-  readonly platformAdministrator = signal(false);
+  readonly platformAdministrator = computed(() => this.rbacApi.hasPermission('ORGANIZATION_MANAGE'));
   readonly organizations = signal<Organization[]>([]);
   readonly selectedOrganizationId = signal('');
   readonly t = (key: string) => this.i18n.t(key);
 
   ngOnInit(): void {
-    const roles = this.tokenStorage.session()?.role?.split(',').map((role) => role.trim()) ?? [];
-    this.platformAdministrator.set(roles.some((role) => ['ADMIN_JOPRELYS', 'SUPER_ADMIN'].includes(role)));
     if (this.platformAdministrator()) {
       this.loadOrganizations();
     } else {

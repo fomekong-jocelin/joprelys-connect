@@ -19,7 +19,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/webhooks")
-@PreAuthorize("hasAnyRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS')")
+@PreAuthorize("hasAuthority('WEBHOOK_MANAGE')")
 public class WebhookController {
 
     private final WebhookService webhookService;

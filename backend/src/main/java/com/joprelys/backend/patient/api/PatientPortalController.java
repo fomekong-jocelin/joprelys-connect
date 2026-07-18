@@ -25,7 +25,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/patient")
-@PreAuthorize("hasRole('PATIENT')")
+@PreAuthorize("hasAuthority('PATIENT_PORTAL_ACCESS')")
 public class PatientPortalController {
 
     private final PatientRepository patientRepository;

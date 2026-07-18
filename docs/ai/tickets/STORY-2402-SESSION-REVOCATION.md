@@ -64,6 +64,7 @@ Permettre au personnel et aux administrateurs habilités de révoquer réellemen
 - [x] Corriger le test après extraction de `AuthSessionViewMapper`.
 - [x] Stabiliser les contraintes V67 sur H2/PostgreSQL 16.
 - [x] Mettre à jour suivi, changelog et PR.
+- [x] Follow-up sécurité 2026-07-18 : ajouter la purge navigateur complète, `Clear-Site-Data` et la neutralisation du cookie professionnel lors d'un login patient.
 
 ## Critères d’acceptation
 

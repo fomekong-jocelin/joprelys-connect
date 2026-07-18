@@ -1,4 +1,5 @@
-import { Injectable, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { inject, Injectable, signal } from '@angular/core';
 import { AuthSession, LoginResponse } from './auth.models';
 
 const SESSION_KEY = 'joprelys.auth.session';
@@ -6,13 +7,20 @@ const DEFAULT_EXPIRATION_LEEWAY_SECONDS = 30;
 
 @Injectable({ providedIn: 'root' })
 export class AuthTokenStorageService {
+  private readonly document = inject(DOCUMENT);
   readonly session = signal<AuthSession | null>(this.readSession());
+  private readonly sessionBoundaryCleanups = new Set<() => void>();
 
   get accessToken(): string | null {
     return this.session()?.accessToken ?? null;
   }
 
   save(response: LoginResponse): void {
+    const previousSession = this.session();
+    if (previousSession && this.isDifferentIdentity(previousSession, response)) {
+      this.purgeBrowserState();
+    }
+
     const session: AuthSession = {
       accessToken: response.accessToken,
       expiresAt: response.expiresAt,
@@ -20,7 +28,7 @@ export class AuthTokenStorageService {
       name: response.name,
       role: response.role,
     };
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    this.writeSession(session);
     this.session.set(session);
   }
 
@@ -38,13 +46,32 @@ export class AuthTokenStorageService {
     return expiresAt <= Date.now() + leewaySeconds * 1_000;
   }
 
-  clear(): void {
-    sessionStorage.removeItem(SESSION_KEY);
+  clearAccessToken(): void {
+    try {
+      this.storage('sessionStorage')?.removeItem(SESSION_KEY);
+    } catch {
+      // The in-memory session must still be cleared when storage is unavailable.
+    }
     this.session.set(null);
   }
 
+  clear(): void {
+    this.purgeBrowserState();
+  }
+
+  registerSessionBoundaryCleanup(cleanup: () => void): () => void {
+    this.sessionBoundaryCleanups.add(cleanup);
+    return () => this.sessionBoundaryCleanups.delete(cleanup);
+  }
+
   private readSession(): AuthSession | null {
-    const rawSession = sessionStorage.getItem(SESSION_KEY);
+    const sessionStorage = this.storage('sessionStorage');
+    let rawSession: string | null = null;
+    try {
+      rawSession = sessionStorage?.getItem(SESSION_KEY) ?? null;
+    } catch {
+      return null;
+    }
     if (!rawSession) {
       return null;
     }
@@ -52,8 +79,71 @@ export class AuthTokenStorageService {
     try {
       return JSON.parse(rawSession) as AuthSession;
     } catch {
-      sessionStorage.removeItem(SESSION_KEY);
+      try {
+        sessionStorage?.removeItem(SESSION_KEY);
+      } catch {
+        // Invalid storage remains unusable, but no session is restored in memory.
+      }
       return null;
+    }
+  }
+
+  private purgeBrowserState(): void {
+    this.clearStorage(this.storage('sessionStorage'));
+    this.clearStorage(this.storage('localStorage'));
+    this.clearAccessibleCookies();
+    this.session.set(null);
+    for (const cleanup of this.sessionBoundaryCleanups) {
+      try {
+        cleanup();
+      } catch {
+        // One feature cleanup must not prevent the remaining session state from being purged.
+      }
+    }
+  }
+
+  private clearStorage(storage: Storage | null): void {
+    if (!storage) return;
+    try {
+      storage.clear();
+    } catch {
+      // Storage can be unavailable in hardened/private browser contexts.
+    }
+  }
+
+  private clearAccessibleCookies(): void {
+    try {
+      if (!this.document.cookie) {
+        return;
+      }
+      for (const cookie of this.document.cookie.split(';')) {
+        const name = cookie.split('=', 1)[0]?.trim();
+        if (!name) continue;
+        this.document.cookie = `${name}=; Max-Age=0; Path=/; SameSite=Lax`;
+        this.document.cookie = `${name}=; Max-Age=0; Path=/api/auth; SameSite=Lax`;
+      }
+    } catch {
+      // HttpOnly and restricted cookies are cleared by the backend Clear-Site-Data response.
+    }
+  }
+
+  private isDifferentIdentity(previous: AuthSession, next: LoginResponse): boolean {
+    return previous.email !== next.email || previous.role !== next.role;
+  }
+
+  private storage(kind: 'localStorage' | 'sessionStorage'): Storage | null {
+    try {
+      return this.document.defaultView?.[kind] ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  private writeSession(session: AuthSession): void {
+    try {
+      this.storage('sessionStorage')?.setItem(SESSION_KEY, JSON.stringify(session));
+    } catch {
+      // Memory-only authentication remains possible in restricted browser contexts.
     }
   }
 }

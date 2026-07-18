@@ -5,10 +5,12 @@
       <h2 id="insurance-workspace-title">{{ t('billing.insurance.title', 'Suivi des bordereaux') }}</h2>
       <p>{{ t('billing.insurance.subtitle', 'Pilotez l’envoi, la réception, l’acceptation et les règlements des assureurs.') }}</p>
     </div>
-    <button type="button" class="ui-button ui-button-primary" (click)="generationOpen.set(!generationOpen())">
-      <app-ui-icon name="plus" />
-      {{ generationOpen() ? t('common.close', 'Fermer') : t('billing.insurance.new', 'Nouveau bordereau') }}
-    </button>
+    @if (canProgress()) {
+      <button type="button" class="ui-button ui-button-primary" (click)="generationOpen.set(!generationOpen())">
+        <app-ui-icon name="plus" />
+        {{ generationOpen() ? t('common.close', 'Fermer') : t('billing.insurance.new', 'Nouveau bordereau') }}
+      </button>
+    }
   </header>
 
   @if (successFeedback()) {
@@ -79,8 +81,8 @@
           <div class="card-meta"><span>{{ bordereau.startDate | date:'dd/MM/yyyy' }} – {{ bordereau.endDate | date:'dd/MM/yyyy' }}</span>@if (bordereau.insurerReference) {<span>{{ bordereau.insurerReference }}</span>}</div>
           <div class="card-actions">
             <button type="button" class="ui-button ui-button-secondary" (click)="viewDetails(bordereau.id)">{{ t('common.details', 'Détails') }}</button>
-            @if (bordereau.status === 'DRAFT') {<button type="button" class="ui-button ui-button-primary" (click)="markAsSent(bordereau.id)">{{ t('billing.insurance.action.send', 'Envoyer') }}</button>}
-            @if (bordereau.status === 'SENT') {<button type="button" class="ui-button ui-button-primary" (click)="openAction(bordereau, 'receive')">{{ t('billing.insurance.action.receive', 'Réceptionner') }}</button>}
+            @if (bordereau.status === 'DRAFT' && canProgress()) {<button type="button" class="ui-button ui-button-primary" (click)="markAsSent(bordereau.id)">{{ t('billing.insurance.action.send', 'Envoyer') }}</button>}
+            @if (bordereau.status === 'SENT' && canProgress()) {<button type="button" class="ui-button ui-button-primary" (click)="openAction(bordereau, 'receive')">{{ t('billing.insurance.action.receive', 'Réceptionner') }}</button>}
             @if (bordereau.status === 'RECEIVED' && canDecide()) {<button type="button" class="ui-button ui-button-primary" (click)="openAction(bordereau, 'accept')">{{ t('billing.insurance.action.accept', 'Accepter') }}</button><button type="button" class="ui-button ui-button-danger" (click)="openAction(bordereau, 'reject')">{{ t('billing.insurance.action.reject', 'Rejeter') }}</button>}
             @if ((bordereau.status === 'ACCEPTED' || bordereau.status === 'PARTIALLY_PAID') && canDecide()) {<button type="button" class="ui-button ui-button-success" (click)="openAction(bordereau, 'pay')"><app-ui-icon name="credit-card" />{{ t('billing.insurance.action.pay', 'Enregistrer un règlement') }}</button>}
           </div>

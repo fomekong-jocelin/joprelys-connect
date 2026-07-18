@@ -3,10 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PatientDetailComponent } from '../patient-detail.component';
 import { ConsultationApiService } from '../../consultation/consultation-api.service';
-import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { Consultation } from '../../consultation/consultation.models';
 import { ButtonComponent } from '../../shared/ui/button.component';
+import { RbacApiService } from '../../clinic/rbac/rbac-api.service';
 
 @Component({
   selector: 'app-patient-consultations-tab',
@@ -285,7 +285,7 @@ import { ButtonComponent } from '../../shared/ui/button.component';
                             </span>
                           }
 
-                          @if (consult.prescriptionTransmissionStatus !== 'TRANSMITTED') {
+                          @if (canTransmitPrescription() && consult.prescriptionTransmissionStatus !== 'TRANSMITTED') {
                             <button
                               type="button"
                               (click)="transmitPrescription(consult); $event.stopPropagation()"
@@ -383,10 +383,9 @@ import { ButtonComponent } from '../../shared/ui/button.component';
 export class PatientConsultationsTabComponent implements OnInit {
   readonly parent = inject(PatientDetailComponent);
   private readonly consultationApi = inject(ConsultationApiService);
-  private readonly tokenStorage = inject(AuthTokenStorageService);
+  private readonly rbacApi = inject(RbacApiService);
   readonly i18n = inject(I18nService);
 
-  readonly session = this.tokenStorage.session;
 
   readonly consultationHistory = signal<Consultation[]>([]);
   readonly isLoadingHistory = signal(false);
@@ -406,8 +405,7 @@ export class PatientConsultationsTabComponent implements OnInit {
   }
 
   loadHistory(): void {
-    const role = this.session()?.role;
-    if (role !== 'MEDECIN' && role !== 'ADMIN_CLINIQUE' && role !== 'INFIRMIER') {
+    if (!this.rbacApi.hasPermission('CLINICAL_READ')) {
       return;
     }
     const patient = this.parent.patient();
@@ -483,10 +481,11 @@ export class PatientConsultationsTabComponent implements OnInit {
   }
 
   canRevoke(): boolean {
-    const role = this.session()?.role;
-    if (!role) return false;
-    const roles = role.split(',').map((r) => r.trim());
-    return roles.some((r) => r === 'MEDECIN' || r === 'ADMIN_CLINIQUE');
+    return this.rbacApi.hasPermission('DOCUMENT_MANAGE');
+  }
+
+  canTransmitPrescription(): boolean {
+    return this.rbacApi.hasPermission('CLINICAL_WRITE');
   }
 
   openRevokeModal(consultation: Consultation): void {

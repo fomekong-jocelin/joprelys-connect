@@ -45,8 +45,6 @@ class AuthSessionRotationConcurrencyTest {
     void setUp() {
         auditRepository.deleteAll();
         sessionRepository.deleteAll();
-        userAccountRepository.deleteAll();
-        organizationRepository.deleteAll();
         executor = Executors.newFixedThreadPool(2);
     }
 
@@ -57,14 +55,15 @@ class AuthSessionRotationConcurrencyTest {
 
     @Test
     void shouldAllowOneResponseThenRevokeFamilyWhenSameTokenIsReplayedConcurrently() throws Exception {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
         OrganizationEntity organization = organizationRepository.save(new OrganizationEntity(
-                "Clinique Concurrence",
-                "concurrency@joprelys.local",
+                "Clinique Concurrence " + suffix,
+                "concurrency-" + suffix + "@joprelys.local",
                 "+237600000002",
                 "Rue A",
                 "Douala"));
         UserAccountEntity user = new UserAccountEntity(
-                "concurrency.user@joprelys.local",
+                "concurrency.user-" + suffix + "@joprelys.local",
                 "Concurrency User",
                 "AGENT_ACCUEIL",
                 "hash");

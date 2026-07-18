@@ -89,10 +89,14 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
     const currentSession = this.session();
     if (!currentSession) return [];
 
-    const roles = this.parseRoles(currentSession.role);
-    const permissions = new Set(this.rbacApi.access()?.permissions ?? []);
+    const declaredRoles = this.parseRoles(currentSession.role);
+    if (declaredRoles.includes('PATIENT')) {
+      return this.patientMenuItems();
+    }
+
+    const effectiveAccess = this.rbacApi.access();
+    const permissions = new Set(effectiveAccess?.permissions ?? []);
     const items: NavItem[] = [];
-    const hasRole = (...codes: string[]) => codes.some((code) => roles.includes(code));
     const hasPermission = (...codes: string[]) => codes.some((code) => permissions.has(code));
     const addUniqueItem = (item: NavItem) => {
       if (!items.some((existing) => existing.path === item.path)) {
@@ -100,83 +104,61 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
       }
     };
 
-    if (!hasRole('PATIENT')) {
-      addUniqueItem(this.item('/dashboard', 'menu.dashboard', 'chart-bar'));
-    }
-    if (hasRole('ADMIN_JOPRELYS', 'SUPER_ADMIN') || hasPermission('ORGANIZATION_MANAGE')) {
+    addUniqueItem(this.item('/dashboard', 'menu.dashboard', 'chart-bar'));
+    if (hasPermission('ORGANIZATION_MANAGE')) {
       addUniqueItem(this.item('/organizations', 'menu.clinics', 'building'));
     }
-    if (hasRole('ADMIN_CLINIQUE') || hasPermission('USER_READ', 'USER_MANAGE')) {
+    if (hasPermission('USER_MANAGE')) {
       addUniqueItem(this.item('/clinic/staff', 'menu.staff', 'users'));
     }
-    if (hasRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN') || hasPermission('RBAC_READ', 'RBAC_MANAGE')) {
+    if (hasPermission('RBAC_MANAGE')) {
       addUniqueItem(this.item('/clinic/rbac', 'menu.rbac', 'shield-check'));
     }
-    if (hasRole('ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN') || hasPermission('PATIENT_READ')) {
+    if (hasPermission('PATIENT_READ')) {
       addUniqueItem(this.item('/patients', 'menu.patients', 'users'));
     }
-    if (hasRole('MEDECIN', 'ADMIN_CLINIQUE') || hasPermission('AVAILABILITY_MANAGE')) {
+    if (hasPermission('AVAILABILITY_MANAGE')) {
       addUniqueItem(this.item('/clinic/availability', 'menu.availability', 'calendar'));
     }
-    if (hasRole('ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN') || hasPermission('HOSPITALIZATION_READ', 'HOSPITALIZATION_MANAGE')) {
+    if (hasPermission('HOSPITALIZATION_READ', 'HOSPITALIZATION_MANAGE')) {
       addUniqueItem(this.item('/clinic/spatial', 'menu.spatial', 'bed'));
     }
-    if (hasRole('ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')) {
+    if (hasPermission('SPATIAL_CONFIGURATION_MANAGE')) {
       addUniqueItem(this.item('/clinic/spatial/configuration', 'menu.spatialConfig', 'building'));
     }
-    if (
-      hasRole('ADMIN_CLINIQUE', 'AGENT_ACCUEIL', 'DAF', 'SECRETAIRE_COMPTABLE')
-      || hasPermission('BILLING_INVOICE_READ', 'BILLING_INVOICE_WRITE', 'INSURANCE_BORDEREAU_READ', 'ACCOUNTING_DASHBOARD_READ')
-    ) {
+    if (hasPermission('BILLING_INVOICE_READ', 'BILLING_INVOICE_WRITE', 'INSURANCE_BORDEREAU_READ', 'ACCOUNTING_DASHBOARD_READ')) {
       addUniqueItem(this.item('/clinic/billing', 'menu.billing', 'receipt-percent'));
     }
-    if (hasRole('CAISSIER') || hasPermission('CASH_QUEUE_READ', 'CASH_PAYMENT_COLLECT', 'CASH_SESSION_OPEN')) {
+    if (hasPermission('CASH_QUEUE_READ', 'CASH_PAYMENT_COLLECT', 'CASH_SESSION_OPEN')) {
       addUniqueItem(this.item('/clinic/cashier', 'menu.cashier', 'banknotes'));
     }
-    if (hasRole('AGENT_ACCUEIL', 'ADMIN_CLINIQUE') || hasPermission('PATIENT_WRITE')) {
+    if (hasPermission('RECEPTION_READ')) {
       addUniqueItem(this.item('/clinic/reception', 'menu.reception', 'users'));
+    }
+    if (hasPermission('PATIENT_WRITE')) {
       addUniqueItem({
         ...this.item('/clinic/admissions/pre-registrations', 'menu.preRegistrations', 'clipboard-document-list'),
         badgeValue: this.pendingPreRegistrationsCount(),
       });
     }
-    if (hasRole('INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE') || hasPermission('CLINICAL_READ', 'CLINICAL_WRITE')) {
+    if (hasPermission('EMERGENCY_READ')) {
       addUniqueItem(this.item('/clinic/emergencies', 'menu.emergencies', 'bolt'));
     }
-    if (hasRole('ADMIN_CLINIQUE') || hasPermission('PATIENT_MERGE')) {
+    if (hasPermission('PATIENT_MERGE')) {
       addUniqueItem(this.item('/clinic/patient-reconciliation', 'menu.patientReconciliation', 'clipboard-document-list'));
       addUniqueItem(this.item('/clinic/duplicates', 'menu.duplicates', 'users'));
     }
-    if (hasRole('BIOLOGISTE', 'ADMIN_JOPRELYS') || hasPermission('LAB_ORDER_READ', 'LAB_ORDER_WRITE')) {
+    if (hasPermission('LAB_ORDER_READ', 'LAB_QUEUE_READ', 'LAB_ORDER_WRITE')) {
       addUniqueItem(this.item('/clinic/lab-orders', 'menu.labOrders', 'clipboard-document-list'));
     }
-    if (hasRole('PHARMACIEN', 'ADMIN_JOPRELYS') || hasPermission('PHARMACY_PRESCRIPTION_READ')) {
+    if (hasPermission('PHARMACY_PRESCRIPTION_READ')) {
       addUniqueItem(this.item('/pharmacy/prescriptions', 'menu.prescriptions', 'document-text'));
     }
-    if (hasRole('PHARMACIEN', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'GESTIONNAIRE_STOCK') || hasPermission('STOCK_READ', 'STOCK_MANAGE')) {
+    if (hasPermission('STOCK_READ', 'STOCK_MANAGE')) {
       addUniqueItem(this.item('/pharmacy/stocks', 'menu.stocks', 'folder-open'));
     }
 
-    if (hasRole('PATIENT')) {
-      addUniqueItem(this.item('/patient/dashboard', 'menu.patientDashboard', 'chart-bar'));
-      addUniqueItem(this.item('/patient/appointments', 'menu.patientAppointments', 'calendar'));
-      addUniqueItem(this.item('/patient/profile', 'menu.patientProfile', 'users'));
-      addUniqueItem(this.item('/patient/summary', 'menu.patientSummary', 'document-text'));
-      addUniqueItem(this.item('/patient/prescriptions', 'menu.patientPrescriptions', 'document-text'));
-      addUniqueItem(this.item('/patient/results', 'menu.patientResults', 'clipboard-document-list'));
-      addUniqueItem(this.item('/patient/documents', 'menu.patientDocuments', 'folder-open'));
-      addUniqueItem(this.item('/patient/qr-code', 'menu.patientQrCode', 'information-circle'));
-      addUniqueItem(this.item('/patient/consents', 'menu.patientConsents', 'shield-check'));
-      addUniqueItem(this.item('/patient/privacy', 'menu.patientPrivacy', 'shield-check'));
-      addUniqueItem(this.item('/patient/audit', 'menu.patientAudit', 'clipboard-document-list'));
-      addUniqueItem(this.item('/patient/requests', 'menu.patientRequests', 'document-text'));
-      addUniqueItem({
-        ...this.item('/patient/notifications', 'menu.patientNotifications', 'information-circle'),
-        badgeValue: this.unreadCount(),
-      });
-    }
-
-    this.appendActivePatientItems(items, roles, permissions);
+    this.appendActivePatientItems(items, permissions);
     return items;
   });
 
@@ -187,16 +169,21 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
   private loadEffectiveAccess(): void {
     const currentSession = this.session();
     if (!currentSession || this.parseRoles(currentSession.role).includes('PATIENT')) return;
-    this.rbacApi.ensureMyAccess().subscribe({ error: () => undefined });
+    this.rbacApi.ensureMyAccess().subscribe({
+      next: () => this.refreshPendingCount(),
+      error: () => undefined,
+    });
   }
 
   private refreshPendingCount(): void {
     const currentSession = this.session();
     if (!currentSession) return;
 
-    const roles = this.parseRoles(currentSession.role);
+    const declaredRoles = this.parseRoles(currentSession.role);
+    if (declaredRoles.includes('PATIENT')) return;
+
     const canReadAdmissions = this.rbacApi.hasPermission('PATIENT_WRITE');
-    if (!canReadAdmissions && !roles.includes('AGENT_ACCUEIL') && !roles.includes('ADMIN_CLINIQUE')) return;
+    if (!canReadAdmissions) return;
 
     this.patientApiService.getPendingPreRegistrations(0, 1).subscribe({
       next: (response) => this.pendingPreRegistrationsCount.set(response.totalElements),
@@ -206,11 +193,10 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
 
   private appendActivePatientItems(
     items: NavItem[],
-    roles: string[],
     permissions: Set<string>
   ): void {
     const patient = this.activePatient();
-    if (!patient || roles.includes('PATIENT')) return;
+    if (!patient) return;
 
     const patientsIndex = items.findIndex((item) => item.path === '/patients');
     if (patientsIndex === -1) return;
@@ -231,8 +217,8 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
       this.item(`/patients/${patient.id}/profile`, 'menu.patientDetail.profile', 'users', true),
     ];
 
-    const hasClinicalAccess = roles.some((role) => ['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE'].includes(role))
-      || ['CLINICAL_READ', 'LAB_ORDER_READ', 'HOSPITALIZATION_READ'].some((code) => permissions.has(code));
+    const hasClinicalAccess = ['CLINICAL_READ', 'LAB_ORDER_READ', 'HOSPITALIZATION_READ']
+      .some((code) => permissions.has(code));
     if (hasClinicalAccess) {
       subItems.push(
         this.item(`/patients/${patient.id}/consultations`, 'menu.patientDetail.consultations', 'document-text', true),
@@ -241,8 +227,7 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
       );
     }
 
-    const hasAuditAccess = roles.some((role) => ['MEDECIN', 'ADMIN_CLINIQUE', 'AUDITEUR'].includes(role))
-      || permissions.has('AUDIT_READ');
+    const hasAuditAccess = permissions.has('AUDIT_READ');
     if (hasAuditAccess) {
       subItems.push(this.item(`/patients/${patient.id}/audit-trail`, 'menu.patientDetail.audit', 'clipboard-document-list', true));
     }
@@ -257,6 +242,27 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
       iconName,
       indent,
     };
+  }
+
+  private patientMenuItems(): NavItem[] {
+    return [
+      this.item('/patient/dashboard', 'menu.patientDashboard', 'chart-bar'),
+      this.item('/patient/appointments', 'menu.patientAppointments', 'calendar'),
+      this.item('/patient/profile', 'menu.patientProfile', 'users'),
+      this.item('/patient/summary', 'menu.patientSummary', 'document-text'),
+      this.item('/patient/prescriptions', 'menu.patientPrescriptions', 'document-text'),
+      this.item('/patient/results', 'menu.patientResults', 'clipboard-document-list'),
+      this.item('/patient/documents', 'menu.patientDocuments', 'folder-open'),
+      this.item('/patient/qr-code', 'menu.patientQrCode', 'information-circle'),
+      this.item('/patient/consents', 'menu.patientConsents', 'shield-check'),
+      this.item('/patient/privacy', 'menu.patientPrivacy', 'shield-check'),
+      this.item('/patient/audit', 'menu.patientAudit', 'clipboard-document-list'),
+      this.item('/patient/requests', 'menu.patientRequests', 'document-text'),
+      {
+        ...this.item('/patient/notifications', 'menu.patientNotifications', 'information-circle'),
+        badgeValue: this.unreadCount(),
+      },
+    ];
   }
 
   private parseRoles(value: string): string[] {

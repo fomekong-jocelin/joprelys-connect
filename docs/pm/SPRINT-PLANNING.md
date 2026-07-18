@@ -87,3 +87,10 @@ EPIC-0020 est prête au refinement mais ne doit pas être engagée en développe
 - `BUG-20260710-PATIENT-MEDICAL-ICONS-I18N` consomme `0,3 j` senior / `2 SP` pour harmoniser les icônes et compléter l'i18n Urgences.
 - Le ticket reste en `QA` jusqu'au contrôle visuel light/dark.
 - Deux dettes sont exclues du correctif et doivent être planifiées séparément : découpage du composant médical de plus de 500 lignes et compatibilité H2 de la migration V55.
+
+### Ajustement SPRINT-0014 — Incident P0 RBAC inter-session
+
+- `BUG-20260718-PATIENT-PROFESSIONAL-RBAC-CONTEXT-LEAK` consomme `0,75 j` senior / `3 SP`.
+- Le code P0, les 254 tests Angular, le build, l'i18n et les 453 tests Maven sont verts.
+- L'implémentation technique d'EPIC-0026 (21 SP / 9,5 j senior estimés) est terminée de façon accélérée ; la capacité restante porte sur la recette RSSI/métiers et la préparation de release.
+- Aucun ticket n'est déclaré DONE avant la signature de la matrice et de la recette croisée des rôles.

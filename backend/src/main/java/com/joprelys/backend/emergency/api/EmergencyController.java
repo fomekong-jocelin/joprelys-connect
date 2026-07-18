@@ -27,13 +27,6 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Urgences & Réanimation", description = "Gestion de l'admission et des soins d'urgences critiques")
 public class EmergencyController {
 
-    private static final String LEGACY_READ_ROLES =
-            "hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-    private static final String LEGACY_WRITE_ROLES =
-            "hasAnyRole('INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-    private static final String LEGACY_STABILIZE_ROLES =
-            "hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-
     private final EmergencyService emergencyService;
     private final ProvisionalEmergencyAdmissionService provisionalAdmissionService;
 
@@ -45,7 +38,7 @@ public class EmergencyController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('EMERGENCY_WRITE') or " + LEGACY_WRITE_ROLES)
+    @PreAuthorize("hasAuthority('EMERGENCY_WRITE')")
     @Operation(summary = "Enregistrer une urgence", description = "Ouvre un dossier d'urgence critique pour un patient.", responses = {
             @ApiResponse(responseCode = "200", description = "Dossier d'urgence ouvert avec succès")
     })
@@ -58,7 +51,7 @@ public class EmergencyController {
 
     @PostMapping("/provisional")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('EMERGENCY_WRITE') or " + LEGACY_WRITE_ROLES)
+    @PreAuthorize("hasAuthority('EMERGENCY_WRITE')")
     @Operation(
             summary = "Créer une admission d'urgence URG-TEMP",
             description = "Crée de manière atomique et idempotente le patient provisoire, le dossier d'urgence et le triage initial.")
@@ -70,7 +63,7 @@ public class EmergencyController {
     }
 
     @GetMapping("/active")
-    @PreAuthorize("hasAuthority('EMERGENCY_READ') or " + LEGACY_READ_ROLES)
+    @PreAuthorize("hasAuthority('EMERGENCY_READ')")
     @Operation(summary = "Lister les urgences actives", description = "Retourne la liste des dossiers d'urgences en cours (non stabilisés).", responses = {
             @ApiResponse(responseCode = "200", description = "Liste récupérée avec succès")
     })
@@ -81,14 +74,14 @@ public class EmergencyController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('EMERGENCY_READ') or " + LEGACY_READ_ROLES)
+    @PreAuthorize("hasAuthority('EMERGENCY_READ')")
     public EmergencyResponse getById(
             @Parameter(description = "Identifiant du dossier d'urgence") @PathVariable UUID id) {
         return EmergencyResponse.fromEntity(emergencyService.getEmergency(id));
     }
 
     @PostMapping("/{id}/resuscitation")
-    @PreAuthorize("hasAuthority('EMERGENCY_WRITE') or " + LEGACY_WRITE_ROLES)
+    @PreAuthorize("hasAuthority('EMERGENCY_WRITE')")
     public ResuscitationLogResponse addResuscitationLog(
             @PathVariable UUID id,
             @Valid @RequestBody AddResuscitationLogRequest request,
@@ -98,7 +91,7 @@ public class EmergencyController {
     }
 
     @PostMapping("/{id}/stabilize")
-    @PreAuthorize("hasAuthority('EMERGENCY_STABILIZE') or " + LEGACY_STABILIZE_ROLES)
+    @PreAuthorize("hasAuthority('EMERGENCY_STABILIZE')")
     public EmergencyResponse stabilize(
             @PathVariable UUID id,
             @RequestParam String orientation) {
@@ -106,7 +99,7 @@ public class EmergencyController {
     }
 
     @GetMapping("/patient/{patientId}")
-    @PreAuthorize("hasAuthority('EMERGENCY_READ') or " + LEGACY_READ_ROLES)
+    @PreAuthorize("hasAuthority('EMERGENCY_READ')")
     public List<EmergencyResponse> getPatientEmergencies(@PathVariable UUID patientId) {
         return emergencyService.getPatientEmergencies(patientId).stream()
                 .map(EmergencyResponse::fromEntity)

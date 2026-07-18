@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { PatientApiService } from './patient-api.service';
 import { SpatialApiService } from './spatial-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
-import { AuthTokenStorageService } from '../auth/auth-token-storage.service';
 import { Hospitalization, Ward } from './patient.models';
 import { StaffApiService } from '../clinic/staff/staff-api.service';
 import { HospitalizationStayHeaderComponent } from './hospitalization-stay-header.component';
@@ -12,6 +11,7 @@ import { HospitalizationNotesPanelComponent } from './hospitalization-notes-pane
 import { HospitalizationDailyCarePanelComponent } from './hospitalization-daily-care-panel.component';
 import { HospitalizationMedicationPanelComponent } from './hospitalization-medication-panel.component';
 import { HospitalizationConsumptionPanelComponent } from './hospitalization-consumption-panel.component';
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 
 @Component({
   selector: 'app-patient-hospitalization',
@@ -24,7 +24,7 @@ export class PatientHospitalizationComponent implements OnInit {
 
   private readonly patientApi = inject(PatientApiService);
   private readonly spatialApi = inject(SpatialApiService);
-  private readonly tokenStorage = inject(AuthTokenStorageService);
+  private readonly rbacApi = inject(RbacApiService);
   private readonly i18n = inject(I18nService);
   private readonly staffApi = inject(StaffApiService);
 
@@ -93,7 +93,6 @@ export class PatientHospitalizationComponent implements OnInit {
   dischargeInstructions = '';
   againstMedicalAdvice = false;
 
-  readonly session = this.tokenStorage.session;
 
   readonly activeHospitalization = computed(() => 
     this.list().find(h => h.status === 'EN_COURS') ?? null
@@ -161,8 +160,7 @@ export class PatientHospitalizationComponent implements OnInit {
   }
 
   canModify(): boolean {
-    const role = this.session()?.role;
-    return this.hasRole(role, ['MEDECIN', 'INFIRMIER', 'ADMIN_CLINIQUE']);
+    return this.rbacApi.hasPermission('HOSPITALIZATION_MANAGE');
   }
 
   loadWardsForAdmission(): void {

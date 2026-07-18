@@ -80,7 +80,7 @@ joprelys:
     upload-dir: ${JOPRELYS_UPLOAD_DIR:./storage/uploads}
     verification-base-url: ${JOPRELYS_VERIFICATION_BASE_URL:https://joprelys.com/verify}
   lab-integration:
-    api-key: ${JOPRELYS_LAB_INTEGRATION_API_KEY:lab-partner-secret-token}
+    api-key: ${JOPRELYS_LAB_INTEGRATION_API_KEY:}
   appointments:
     default-slot-duration-minutes: ${JOPRELYS_APPOINTMENTS_DEFAULT_SLOT_DURATION_MINUTES:30}
     booking-horizon-days: ${JOPRELYS_APPOINTMENTS_BOOKING_HORIZON_DAYS:30}

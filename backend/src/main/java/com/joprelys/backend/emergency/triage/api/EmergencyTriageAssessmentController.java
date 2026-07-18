@@ -23,14 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Urgences — triage ABCDE")
 public class EmergencyTriageAssessmentController {
 
-    private static final String READ_ACCESS =
-            "hasAuthority('EMERGENCY_READ') or "
-                    + "hasAnyRole('AGENT_ACCUEIL', 'INFIRMIER', 'MEDECIN', "
-                    + "'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-    private static final String WRITE_ACCESS =
-            "hasAuthority('EMERGENCY_WRITE') or "
-                    + "hasAnyRole('INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE', "
-                    + "'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
+    private static final String READ_ACCESS = "hasAuthority('EMERGENCY_READ')";
+    private static final String WRITE_ACCESS = "hasAuthority('EMERGENCY_WRITE')";
 
     private final EmergencyTriageAssessmentUseCase useCase;
 

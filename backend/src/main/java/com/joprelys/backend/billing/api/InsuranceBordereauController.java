@@ -26,12 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Billing - Bordereaux d'assurance", description = "Gestion des bordereaux de tiers-payant d'assurance")
 public class InsuranceBordereauController {
 
-    private static final String CAN_READ =
-            "hasAuthority('INSURANCE_BORDEREAU_READ') or hasAnyRole('SECRETAIRE_COMPTABLE', 'DAF', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-    private static final String CAN_PROGRESS =
-            "hasAuthority('INSURANCE_BORDEREAU_PROGRESS') or hasAnyRole('SECRETAIRE_COMPTABLE', 'DAF', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
-    private static final String CAN_SETTLE =
-            "hasAuthority('INSURANCE_BORDEREAU_SETTLE') or hasAnyRole('DAF', 'ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN')";
+    private static final String CAN_READ = "hasAuthority('INSURANCE_BORDEREAU_READ')";
+    private static final String CAN_PROGRESS = "hasAuthority('INSURANCE_BORDEREAU_PROGRESS')";
+    private static final String CAN_SETTLE = "hasAuthority('INSURANCE_BORDEREAU_SETTLE')";
 
     private final InsuranceBordereauService bordereauService;
 

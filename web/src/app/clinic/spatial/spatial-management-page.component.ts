@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { SpatialApiService } from '../../patient/spatial-api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
-import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
+import { RbacApiService } from '../rbac/rbac-api.service';
 import { Ward, WardOccupancy, Bed } from '../../patient/patient.models';
 import { IconComponent } from '../../shared/ui/icon.component';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
@@ -195,7 +195,7 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 export class SpatialManagementPageComponent implements OnInit {
   private readonly spatialApi = inject(SpatialApiService);
   private readonly i18n = inject(I18nService);
-  private readonly tokenStorage = inject(AuthTokenStorageService);
+  private readonly rbacApi = inject(RbacApiService);
 
   readonly t = (key: string) => this.i18n.t(key);
 
@@ -203,8 +203,6 @@ export class SpatialManagementPageComponent implements OnInit {
   readonly selectedWardId = signal<string>('');
   readonly occupancy = signal<WardOccupancy | null>(null);
   readonly loading = signal<boolean>(false);
-
-  readonly session = this.tokenStorage.session;
 
   readonly occupancyRate = computed(() => {
     const occ = this.occupancy();
@@ -264,15 +262,11 @@ export class SpatialManagementPageComponent implements OnInit {
   }
 
   canModify(): boolean {
-    const role = this.session()?.role;
-    if (!role) return false;
-    const roles = role.split(',').map((r) => r.trim());
-    return roles.some((r) => ['INFIRMIER', 'MEDECIN', 'ADMIN_CLINIQUE'].includes(r));
+    return this.rbacApi.hasPermission('HOSPITALIZATION_MANAGE');
   }
 
   canConfigure(): boolean {
-    const roles = this.session()?.role?.split(',').map((role) => role.trim()) ?? [];
-    return roles.some((role) => ['ADMIN_CLINIQUE', 'ADMIN_JOPRELYS', 'SUPER_ADMIN'].includes(role));
+    return this.rbacApi.hasPermission('SPATIAL_CONFIGURATION_MANAGE');
   }
 
   getBedStyle(status: string): Record<string, string> {

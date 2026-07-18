@@ -42,7 +42,7 @@ public class DocumentController {
     }
 
     @GetMapping("/api/visits/{visitId}/document")
-    @PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'PHARMACIEN')")
+    @PreAuthorize("hasAuthority('DOCUMENT_READ')")
     @Operation(summary = "Télécharger un document", description = "Télécharge le document médical PDF associé à une visite.", responses = {
             @ApiResponse(responseCode = "200", description = "Document PDF retourné"),
             @ApiResponse(responseCode = "404", description = "Introuvable")
@@ -60,7 +60,7 @@ public class DocumentController {
     }
 
     @GetMapping("/api/documents/{id}/download")
-    @PreAuthorize("hasAnyRole('MEDECIN', 'INFIRMIER', 'AGENT_ACCUEIL', 'ADMIN_CLINIQUE', 'PHARMACIEN')")
+    @PreAuthorize("hasAuthority('DOCUMENT_READ')")
     @Operation(summary = "Télécharger un document par son ID", description = "Télécharge le document médical PDF (synthèse, ordonnance, etc.) via son ID unique.")
     public ResponseEntity<byte[]> downloadDocumentById(@PathVariable UUID id) {
         MedicalDocumentEntity doc = medicalDocumentRepository.findByIdWithVisitAndPatient(id)
@@ -118,7 +118,7 @@ public class DocumentController {
      * Rôles autorisés : MEDECIN, ADMIN_CLINIQUE
      */
     @PatchMapping("/api/documents/{id}/revoke")
-    @PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('DOCUMENT_MANAGE')")
     @Operation(summary = "Révoquer un document", description = "Révoque un document médical valide. Le QR code affichera ensuite DOCUMENT RÉVOQUÉ.", responses = {
             @ApiResponse(responseCode = "200", description = "Document révoqué avec succès"),
             @ApiResponse(responseCode = "404", description = "Introuvable")
@@ -138,7 +138,7 @@ public class DocumentController {
      * Rôles autorisés : MEDECIN, ADMIN_CLINIQUE
      */
     @PatchMapping("/api/documents/{id}/cancel")
-    @PreAuthorize("hasAnyRole('MEDECIN', 'ADMIN_CLINIQUE')")
+    @PreAuthorize("hasAuthority('DOCUMENT_MANAGE')")
     @Operation(summary = "Annuler un document", description = "Annule un document médical (VALID ou REVOQUE). Cas d'usage : document généré par erreur système ou doublon.", responses = {
             @ApiResponse(responseCode = "200", description = "Document annulé avec succès"),
             @ApiResponse(responseCode = "404", description = "Introuvable")

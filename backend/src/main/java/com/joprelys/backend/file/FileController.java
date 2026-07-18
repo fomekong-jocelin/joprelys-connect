@@ -3,6 +3,7 @@ package com.joprelys.backend.file;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,6 +21,7 @@ public class FileController {
 	}
 
 	@PostMapping("/api/files/upload")
+	@PreAuthorize("hasAuthority('FILE_UPLOAD')")
 	public ResponseEntity<UploadResponse> uploadFile(
 			@RequestParam("file") MultipartFile file,
 			@RequestParam(value = "type", defaultValue = "photo") String type) {

@@ -1,6 +1,7 @@
 package com.joprelys.backend.auth.security;
 
 import com.joprelys.backend.auth.rbac.RbacAuthorityService;
+import com.joprelys.backend.auth.rbac.RbacCatalog;
 import com.joprelys.backend.auth.session.application.AccessTokenSessionValidator;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -63,10 +64,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             JwtClaims effectiveClaims = claims;
 
             if (isPatient(claims)) {
-                Arrays.stream(claims.role().split(","))
-                        .map(String::trim)
-                        .filter(role -> !role.isBlank())
-                        .forEach(role -> authorities.add(new SimpleGrantedAuthority("ROLE_" + role)));
+                authorities.add(new SimpleGrantedAuthority("ROLE_PATIENT"));
+                RbacCatalog.permissionsForLegacyRoles(Set.of("PATIENT")).forEach(permission ->
+                        authorities.add(new SimpleGrantedAuthority(permission)));
             } else {
                 Optional<RbacAuthorityService.ResolvedAuthorities> resolved = parseUuid(claims.subject())
                         .flatMap(userId -> rbacAuthorityService.resolve(userId, claimedOrganizationId));

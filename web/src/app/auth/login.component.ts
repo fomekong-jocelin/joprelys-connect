@@ -188,12 +188,6 @@ export class LoginComponent {
     if (roles.includes('PATIENT')) {
       return '/patient/dashboard';
     }
-    if (roles.includes('BIOLOGISTE')) {
-      return '/clinic/lab-orders';
-    }
-    if (roles.includes('PHARMACIEN')) {
-      return '/pharmacy/prescriptions';
-    }
     return '/dashboard';
   }
 
