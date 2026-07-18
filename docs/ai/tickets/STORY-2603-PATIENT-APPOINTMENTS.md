@@ -3,7 +3,7 @@
 > GitHub : #66  
 > Pull request : #67  
 > Epic : EPIC-0025  
-> Statut : QA  
+> Statut : IN REVIEW  
 > Estimation : 8 SP / 3,5 j Senior  
 > Profil : Senior full-stack  
 > Reviewer : Tech Lead + QA
@@ -25,7 +25,7 @@ En tant que patient authentifié, je veux consulter les médecins de mon établi
 - [x] Créer la documentation fonctionnelle initiale.
 - [x] Créer la conception technique initiale.
 - [x] Créer le plan de tests initial.
-- [ ] Mettre à jour le suivi global et le changelog avec l’état final.
+- [x] Mettre à jour le suivi global et le changelog avec l’état final.
 
 ### T-2603.2 — Backend
 - [x] Exposer l’annuaire des médecins actifs same-tenant.
@@ -48,10 +48,10 @@ En tant que patient authentifié, je veux consulter les médecins de mon établi
 - [x] Ajouter les tests Angular.
 
 ### T-2603.4 — Validation
-- [ ] `./mvnw clean verify` vert.
-- [ ] Tests Angular verts.
-- [ ] Build Angular production vert.
-- [ ] Aucun test désactivé ou contourné.
+- [x] `./mvnw clean verify` vert — CI #807.
+- [x] Tests Angular verts — 241 tests sur CI #807.
+- [x] Build Angular production vert — CI #807.
+- [x] Aucun test désactivé ou contourné.
 - [ ] Revue Tech Lead + QA.
 
 ## Règles métier
@@ -70,7 +70,8 @@ En tant que patient authentifié, je veux consulter les médecins de mon établi
 - tests MockMvc : AuthN/AuthZ, annuaire, créneaux, réservation, listing, annulation, anti-IDOR, médecins cross-tenant/désactivés et D7 ;
 - tests de concurrence réels : deux patients/même créneau et même patient/même médecin/jour ;
 - tests purs de la limite exacte d’annulation ;
-- tests Angular de la page et du slot-picker.
+- tests Angular de la page et du slot-picker ;
+- non-régression globale Maven, y compris suites prescription/pharmacie après correction de l’isolation des fixtures.
 
 ## Definition of Ready
 
@@ -82,11 +83,22 @@ En tant que patient authentifié, je veux consulter les médecins de mon établi
 
 ## Definition of Done
 
-- [ ] Critères d’acceptation validés par CI et revue.
+- [ ] Critères d’acceptation validés par CI et revue humaine.
 - [x] Backend et Angular implémentés.
-- [ ] Tests de concurrence, sécurité et frontières verts en CI.
-- [ ] Documentation, suivi et changelog finalisés.
-- [ ] Aucun risque critique ouvert.
+- [x] Tests de concurrence, sécurité et frontières verts en CI.
+- [x] Documentation, suivi et changelog finalisés.
+- [x] Aucun risque critique technique ouvert.
+
+## Validation technique
+
+GitHub Actions **#807**, tête `e2c8cdd7` :
+
+- backend Maven strict : ✅ ;
+- tests H2/PostgreSQL et migrations existantes : ✅ ;
+- scénarios de concurrence : ✅ ;
+- tests Angular : ✅ ;
+- build Angular production : ✅ ;
+- aucun artefact de workflow temporaire dans le diff final : ✅.
 
 ## Impact SemVer
 
