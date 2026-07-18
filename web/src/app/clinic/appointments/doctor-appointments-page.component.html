@@ -1,0 +1,127 @@
+<app-shell>
+  <app-page-header
+    [title]="t('doctorAppointments.title')"
+    [subtitle]="t('doctorAppointments.subtitle')"
+    backLink="/dashboard"
+    [backLabel]="t('common.back')"
+  >
+    <app-ui-button
+      variant="secondary"
+      [disabled]="loading() || refreshing()"
+      (pressed)="load(false)"
+    >
+      {{ refreshing() ? t('doctorAppointments.actions.refreshing') : t('doctorAppointments.actions.refresh') }}
+    </app-ui-button>
+  </app-page-header>
+
+  <div class="app-container space-y-6 pb-10">
+    @if (error(); as message) {
+      <app-ui-alert tone="error">{{ message }}</app-ui-alert>
+    }
+
+    <app-ui-card>
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p class="ui-label">{{ t('doctorAppointments.week') }}</p>
+          <h2 class="ui-title mt-1 text-xl">{{ weekLabel() }}</h2>
+          @if (lastUpdatedAt()) {
+            <p class="mt-1 text-xs font-medium text-[var(--text-muted)]" aria-live="polite">
+              {{ lastUpdatedLabel() }}
+            </p>
+          }
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
+          <app-ui-button variant="secondary" (pressed)="previousWeek()">
+            {{ t('doctorAppointments.actions.previous') }}
+          </app-ui-button>
+          <app-ui-button
+            variant="secondary"
+            [disabled]="isCurrentWeek()"
+            (pressed)="currentWeek()"
+          >
+            {{ t('doctorAppointments.actions.today') }}
+          </app-ui-button>
+          <app-ui-button variant="secondary" (pressed)="nextWeek()">
+            {{ t('doctorAppointments.actions.next') }}
+          </app-ui-button>
+        </div>
+      </div>
+    </app-ui-card>
+
+    @if (loading()) {
+      <app-ui-card>
+        <div class="py-12 text-center text-sm font-semibold text-[var(--text-secondary)]">
+          {{ t('doctorAppointments.loading') }}
+        </div>
+      </app-ui-card>
+    } @else if (!hasAppointments()) {
+      <app-empty-state [message]="t('doctorAppointments.empty')" />
+    } @else {
+      <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        @for (day of days(); track day.key) {
+          <app-ui-card class="h-full">
+            <div class="flex items-start justify-between gap-4 border-b border-[var(--app-border)] pb-3">
+              <div>
+                <h3 class="ui-title text-base capitalize">{{ dayLabel(day.date) }}</h3>
+                <p class="mt-1 text-xs font-medium text-[var(--text-muted)]">
+                  {{ appointmentCountLabel(day.appointments.length) }}
+                </p>
+              </div>
+              <time
+                class="rounded-sm border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2 py-1 text-xs font-bold text-[var(--text-secondary)]"
+                [attr.datetime]="day.key"
+              >
+                {{ day.key }}
+              </time>
+            </div>
+
+            @if (day.appointments.length === 0) {
+              <p class="py-8 text-center text-sm font-medium text-[var(--text-muted)]">
+                {{ t('doctorAppointments.emptyDay') }}
+              </p>
+            } @else {
+              <div class="mt-4 space-y-3">
+                @for (appointment of day.appointments; track appointment.id) {
+                  <article class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface)] p-4 shadow-xs">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                          <time
+                            class="text-base font-extrabold text-[var(--text-primary)]"
+                            [attr.datetime]="appointment.startAt"
+                          >
+                            {{ timeLabel(appointment.startAt) }}–{{ timeLabel(appointment.endAt) }}
+                          </time>
+                          <span
+                            [class]="'rounded-sm border px-2 py-0.5 text-[0.68rem] font-extrabold uppercase tracking-wide ' + statusClass(appointment.status)"
+                          >
+                            {{ statusLabel(appointment.status) }}
+                          </span>
+                        </div>
+
+                        <p class="mt-2 truncate text-sm font-extrabold text-[var(--text-primary)]">
+                          {{ appointment.patientDisplayName }}
+                        </p>
+                        <p class="mt-0.5 text-xs font-semibold text-[var(--text-muted)]">
+                          {{ t('doctorAppointments.patientNumber') }} {{ appointment.patientLocalNumber }}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="mt-3 border-t border-[var(--app-border)] pt-3">
+                      <p class="ui-label">{{ t('doctorAppointments.reason') }}</p>
+                      <p class="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
+                        {{ appointment.reason || t('doctorAppointments.reasonUnknown') }}
+                      </p>
+                    </div>
+                  </article>
+                }
+              </div>
+            }
+          </app-ui-card>
+        }
+      </div>
+    }
+  </div>
+</app-shell>

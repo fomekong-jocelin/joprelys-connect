@@ -11,6 +11,9 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
 
 	List<AppointmentEntity> findByDoctorIdAndStartAtBetweenOrderByStartAtAsc(UUID doctorId, Instant from, Instant to);
 
+	List<AppointmentEntity> findByDoctorIdAndStartAtGreaterThanEqualAndStartAtLessThanOrderByStartAtAsc(
+			UUID doctorId, Instant from, Instant to);
+
 	List<AppointmentEntity> findByStartAtBetweenOrderByStartAtAsc(Instant from, Instant to);
 
 	List<AppointmentEntity> findByPatientIdOrderByStartAtDesc(UUID patientId);

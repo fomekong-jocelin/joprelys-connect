@@ -60,7 +60,7 @@ export const routes: Routes = [
         path: 'audit-trail',
         loadComponent: () => import('./patient/detail/patient-audit-trail-tab.component').then(m => m.PatientAuditTrailTabComponent),
         canActivate: [roleGuard],
-        data: { expectedPermissions: ['AUDIT_READ'], breadcrumb: 'breadcrumb.patients.audit-trail' }
+        data: { expectedPermissions: ['AUDIT_READ'], breadcrumb: 'breadcrumb.patients.audit' }
       }
     ]
   },
@@ -75,6 +75,12 @@ export const routes: Routes = [
     loadComponent: () => import('./clinic/availability/availability-page.component').then((module) => module.AvailabilityPageComponent),
     canActivate: [roleGuard],
     data: { expectedPermissions: ['AVAILABILITY_MANAGE'] },
+  },
+  {
+    path: 'clinic/appointments',
+    loadComponent: () => import('./clinic/appointments/doctor-appointments-page.component').then((module) => module.DoctorAppointmentsPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedPermissions: ['APPOINTMENT_READ_OWN'], title: 'title.doctor.appointments' },
   },
   {
     path: 'clinic/rbac',

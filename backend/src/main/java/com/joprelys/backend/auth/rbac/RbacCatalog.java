@@ -24,6 +24,7 @@ public final class RbacCatalog {
     public static final String PERMISSION_EMERGENCY_MEDICO_LEGAL_WRITE = "EMERGENCY_MEDICO_LEGAL_WRITE";
     public static final String PERMISSION_EMERGENCY_BELONGINGS_WRITE = "EMERGENCY_BELONGINGS_WRITE";
     public static final String PERMISSION_APPOINTMENT_READ = "APPOINTMENT_READ";
+    public static final String PERMISSION_APPOINTMENT_READ_OWN = "APPOINTMENT_READ_OWN";
     public static final String PERMISSION_APPOINTMENT_WRITE = "APPOINTMENT_WRITE";
     public static final String PERMISSION_AVAILABILITY_MANAGE = "AVAILABILITY_MANAGE";
     public static final String PERMISSION_AVAILABILITY_MANAGE_ALL = "AVAILABILITY_MANAGE_ALL";
@@ -100,6 +101,7 @@ public final class RbacCatalog {
                 permission("AUDIT_READ", "AUDIT", "Consulter les journaux", "Consulter les journaux d'audit autorisés."),
                 permission("AUDIT_CROSS_TENANT_READ", "AUDIT", "Auditer plusieurs établissements", "Consulter les journaux d'audit au-delà de son établissement."),
                 permission(PERMISSION_APPOINTMENT_READ, "RENDEZ_VOUS", "Consulter les rendez-vous", "Consulter l'agenda et les rendez-vous de l'établissement."),
+                permission(PERMISSION_APPOINTMENT_READ_OWN, "RENDEZ_VOUS", "Consulter son agenda médecin", "Consulter uniquement les rendez-vous affectés au médecin connecté."),
                 permission(PERMISSION_APPOINTMENT_WRITE, "RENDEZ_VOUS", "Gérer les rendez-vous", "Réserver pour un patient, enregistrer les arrivées et gérer le cycle de vie des rendez-vous."),
                 permission(PERMISSION_AVAILABILITY_MANAGE, "RENDEZ_VOUS", "Gérer les disponibilités médecins", "Définir les plages de disponibilité récurrentes et les indisponibilités des médecins."),
                 permission(PERMISSION_AVAILABILITY_MANAGE_ALL, "RENDEZ_VOUS", "Gérer les disponibilités de tous les médecins", "Administrer les disponibilités de tous les médecins de l'établissement."),
@@ -122,6 +124,7 @@ public final class RbacCatalog {
                 all,
                 PERMISSION_ORGANIZATION_MANAGE,
                 "AUDIT_CROSS_TENANT_READ",
+                PERMISSION_APPOINTMENT_READ_OWN,
                 PERMISSION_PATIENT_PORTAL_ACCESS,
                 PERMISSION_PATIENT_APPOINTMENT_MANAGE,
                 PERMISSION_PATIENT_NOTIFICATION_MANAGE));
@@ -152,7 +155,7 @@ public final class RbacCatalog {
                 "LAB_ORDER_READ", "LAB_ORDER_CREATE", "HOSPITALIZATION_READ", "HOSPITALIZATION_MANAGE",
                 "VISIT_READ", "VISIT_CREATE", "VISIT_VITALS_WRITE", "VISIT_MANAGE",
                 "DOCUMENT_READ", "DOCUMENT_MANAGE", "RECEPTION_READ",
-                PERMISSION_APPOINTMENT_READ, PERMISSION_AVAILABILITY_MANAGE));
+                PERMISSION_APPOINTMENT_READ, PERMISSION_APPOINTMENT_READ_OWN, PERMISSION_AVAILABILITY_MANAGE));
         mappings.put("INFIRMIER", set(
                 "PATIENT_READ", "PATIENT_WRITE", "PATIENT_EMERGENCY_ACCESS", "CLINICAL_READ", "CLINICAL_WRITE",
                 "EMERGENCY_READ", "EMERGENCY_WRITE",

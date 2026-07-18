@@ -1,6 +1,8 @@
 {
   "menu.patientAppointments": "Appointments",
+  "menu.doctorAppointments": "My calendar",
   "title.patient.appointments": "My appointments",
+  "title.doctor.appointments": "My calendar",
   "appointments.eyebrow": "Patient portal",
   "appointments.title": "Book an appointment",
   "appointments.description": "Choose a doctor, view genuinely available time slots and manage your appointments securely.",
@@ -51,5 +53,23 @@
   "appointments.errors.codes.APPOINTMENT_NOT_FOUND": "This appointment could not be found.",
   "appointments.errors.codes.DOCTOR_NOT_FOUND": "This doctor is no longer available at your facility.",
   "appointments.errors.codes.INVALID_STATUS_TRANSITION": "This appointment can no longer be cancelled.",
-  "appointments.errors.codes.VALIDATION_ERROR": "The submitted information is invalid."
+  "appointments.errors.codes.VALIDATION_ERROR": "The submitted information is invalid.",
+  "doctorAppointments.title": "My calendar",
+  "doctorAppointments.subtitle": "View your appointments for the week. New bookings appear automatically.",
+  "doctorAppointments.week": "Displayed week",
+  "doctorAppointments.actions.previous": "Previous",
+  "doctorAppointments.actions.today": "Today",
+  "doctorAppointments.actions.next": "Next",
+  "doctorAppointments.actions.refresh": "Refresh",
+  "doctorAppointments.actions.refreshing": "Refreshing…",
+  "doctorAppointments.lastUpdated": "Last updated at",
+  "doctorAppointments.count.one": "1 appointment",
+  "doctorAppointments.count.many": "{count} appointments",
+  "doctorAppointments.patientNumber": "Patient no.:",
+  "doctorAppointments.reason": "Reason",
+  "doctorAppointments.reasonUnknown": "No reason provided.",
+  "doctorAppointments.loading": "Loading your calendar…",
+  "doctorAppointments.empty": "No appointment is scheduled for this week.",
+  "doctorAppointments.emptyDay": "No appointment.",
+  "doctorAppointments.errors.load": "Your calendar could not be loaded. Please try again shortly."
 }

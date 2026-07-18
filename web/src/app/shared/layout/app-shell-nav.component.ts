@@ -124,6 +124,9 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
     if (hasPermission('AVAILABILITY_MANAGE')) {
       addUniqueItem(this.item('/clinic/availability', 'menu.availability', 'calendar'));
     }
+    if (hasPermission('APPOINTMENT_READ_OWN')) {
+      addUniqueItem(this.item('/clinic/appointments', 'menu.doctorAppointments', 'calendar'));
+    }
     if (hasAnyPermission(permissions, PROFESSIONAL_ACCESS_POLICIES.spatial)) {
       addUniqueItem(this.item('/clinic/spatial', 'menu.spatial', 'bed'));
     }
