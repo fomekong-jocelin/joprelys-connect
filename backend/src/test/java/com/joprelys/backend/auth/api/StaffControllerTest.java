@@ -1,6 +1,10 @@
 package com.joprelys.backend.auth.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.matchesPattern;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.reset;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -13,6 +17,8 @@ import com.joprelys.backend.auth.security.JwtService;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import com.joprelys.backend.notification.application.AccountMailService;
+import com.joprelys.backend.notification.application.MailDeliveryUnavailableException;
+import com.joprelys.backend.notification.application.MailRecipientRejectedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,6 +68,7 @@ public class StaffControllerTest {
 
 	@BeforeEach
 	void setUp() {
+		reset(accountMailService);
 		jdbcTemplate.update("DELETE FROM medical_documents");
 		jdbcTemplate.update("DELETE FROM prescription_items");
 		jdbcTemplate.update("DELETE FROM prescriptions");
@@ -98,13 +105,7 @@ public class StaffControllerTest {
 
 	@Test
 	void givenAdmin_whenInviteNewStaff_thenReturnsTemporaryPasswordAndStoresHash() throws Exception {
-		String request = """
-				{
-					"email": "Nouveau.Medecin@JOPRELYS.local",
-					"displayName": "Dr Nouveau",
-					"role": "medecin"
-				}
-				""";
+		String request = inviteRequest("Nouveau.Medecin@JOPRELYS.local", "Dr Nouveau", "medecin");
 
 		mockMvc.perform(post("/api/staff")
 						.header("Authorization", "Bearer " + tokenAdminA)
@@ -117,19 +118,69 @@ public class StaffControllerTest {
 				.andExpect(jsonPath("$.temporaryPassword").doesNotExist());
 
 		UserAccountEntity created = userAccountRepository.findByEmail("nouveau.medecin@joprelys.local").orElseThrow();
-		org.assertj.core.api.Assertions.assertThat(created.getOrganizationId()).isEqualTo(orgA.getId());
-		org.assertj.core.api.Assertions.assertThat(created.getPasswordHash()).doesNotStartWith("Jop-");
+		assertThat(created.getOrganizationId()).isEqualTo(orgA.getId());
+		assertThat(created.getPasswordHash()).doesNotStartWith("Jop-");
+	}
+
+	@Test
+	void givenRejectedRecipient_whenInviteStaff_thenReturns422AndRollsBackAccount() throws Exception {
+		doThrow(new MailRecipientRejectedException(new RuntimeException("550 rejected")))
+				.when(accountMailService)
+				.sendTemporaryPassword(anyString(), anyString(), anyString());
+
+		mockMvc.perform(post("/api/staff")
+						.header("Authorization", "Bearer " + tokenAdminA)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(inviteRequest("missing@joprelys.invalid", "Compte Injoignable", "CAISSIER")))
+				.andExpect(status().isUnprocessableEntity())
+				.andExpect(jsonPath("$.error.code").value("MAIL_RECIPIENT_REJECTED"))
+				.andExpect(jsonPath("$.error.trace_id", matchesPattern("trc_.*")));
+
+		assertThat(userAccountRepository.findByEmail("missing@joprelys.invalid")).isEmpty();
+	}
+
+	@Test
+	void givenTemporaryMailOutage_whenInviteStaff_thenReturns503AndRollsBackAccount() throws Exception {
+		doThrow(new MailDeliveryUnavailableException(new RuntimeException("smtp unavailable")))
+				.when(accountMailService)
+				.sendTemporaryPassword(anyString(), anyString(), anyString());
+
+		mockMvc.perform(post("/api/staff")
+						.header("Authorization", "Bearer " + tokenAdminA)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(inviteRequest("retry@joprelys.com", "Compte à réessayer", "CAISSIER")))
+				.andExpect(status().isServiceUnavailable())
+				.andExpect(jsonPath("$.error.code").value("MAIL_DELIVERY_UNAVAILABLE"));
+
+		assertThat(userAccountRepository.findByEmail("retry@joprelys.com")).isEmpty();
+	}
+
+	@Test
+	void givenRejectedRecipient_whenMailBecomesAvailable_thenSameInvitationCanBeRetried() throws Exception {
+		doThrow(new MailRecipientRejectedException(new RuntimeException("550 rejected")))
+				.when(accountMailService)
+				.sendTemporaryPassword(anyString(), anyString(), anyString());
+		String request = inviteRequest("corrected@joprelys.com", "Compte Corrigé", "CAISSIER");
+
+		mockMvc.perform(post("/api/staff")
+						.header("Authorization", "Bearer " + tokenAdminA)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(request))
+				.andExpect(status().isUnprocessableEntity());
+		assertThat(userAccountRepository.findByEmail("corrected@joprelys.com")).isEmpty();
+
+		reset(accountMailService);
+		mockMvc.perform(post("/api/staff")
+						.header("Authorization", "Bearer " + tokenAdminA)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(request))
+				.andExpect(status().isCreated());
+		assertThat(userAccountRepository.findByEmail("corrected@joprelys.com")).isPresent();
 	}
 
 	@Test
 	void givenAdmin_whenInviteExistingEmail_thenReturnsBadRequest() throws Exception {
-		String request = """
-				{
-					"email": "medecin.a@joprelys.local",
-					"displayName": "Duplicate",
-					"role": "MEDECIN"
-				}
-				""";
+		String request = inviteRequest("medecin.a@joprelys.local", "Duplicate", "MEDECIN");
 
 		mockMvc.perform(post("/api/staff")
 						.header("Authorization", "Bearer " + tokenAdminA)
@@ -198,6 +249,16 @@ public class StaffControllerTest {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(loginRequest))
 				.andExpect(status().isUnauthorized());
+	}
+
+	private String inviteRequest(String email, String displayName, String role) {
+		return """
+				{
+					"email": "%s",
+					"displayName": "%s",
+					"role": "%s"
+				}
+				""".formatted(email, displayName, role);
 	}
 
 	private UserAccountEntity saveUser(
