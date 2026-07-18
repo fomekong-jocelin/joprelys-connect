@@ -64,6 +64,11 @@ class FlywayPostgresqlMigrationTest {
             "fk_patient_identity_alias_origin",
             "fk_patient_identity_alias_canonical");
 
+    private static final List<String> APPOINTMENT_TABLES = List.of(
+            "doctor_availabilities",
+            "doctor_availability_exceptions",
+            "appointments");
+
     @Container
     private static final PostgreSQLContainer POSTGRESQL = new PostgreSQLContainer("postgres:16-alpine")
             .withDatabaseName("joprelys_migration_test")
@@ -84,8 +89,8 @@ class FlywayPostgresqlMigrationTest {
         MigrationInfo current = flyway.info().current();
         assertNotNull(current, "Flyway doit exposer la migration courante");
         assertNotNull(current.getVersion(), "La migration courante doit être versionnée");
-        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 67,
-                "Toutes les migrations de révocation persistante doivent être appliquées");
+        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 70,
+                "Toutes les migrations, y compris les fondations rendez-vous, doivent être appliquées");
 
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword());
@@ -111,6 +116,50 @@ class FlywayPostgresqlMigrationTest {
         assertEquals(1, sessionPermissionCount);
         assertEquals(1, clinicAdminSessionPermissionCount);
 
+        Integer appointmentPermissionCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM permissions
+                WHERE code IN ('APPOINTMENT_READ', 'APPOINTMENT_WRITE', 'AVAILABILITY_MANAGE')
+                """, Integer.class);
+        Integer clinicAdminAppointmentPermissionCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM role_permissions rp
+                JOIN roles r ON r.id = rp.role_id
+                WHERE r.code = 'ADMIN_CLINIQUE'
+                  AND rp.permission_code IN ('APPOINTMENT_READ', 'APPOINTMENT_WRITE', 'AVAILABILITY_MANAGE')
+                """, Integer.class);
+        Integer medecinAppointmentPermissionCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM role_permissions rp
+                JOIN roles r ON r.id = rp.role_id
+                WHERE r.code = 'MEDECIN'
+                  AND rp.permission_code IN ('APPOINTMENT_READ', 'AVAILABILITY_MANAGE')
+                """, Integer.class);
+        Integer agentAccueilAppointmentPermissionCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM role_permissions rp
+                JOIN roles r ON r.id = rp.role_id
+                WHERE r.code = 'AGENT_ACCUEIL'
+                  AND rp.permission_code IN ('APPOINTMENT_READ', 'APPOINTMENT_WRITE')
+                """, Integer.class);
+        Integer patientAppointmentPermissionCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM role_permissions rp
+                JOIN roles r ON r.id = rp.role_id
+                WHERE r.code = 'PATIENT'
+                  AND rp.permission_code IN ('APPOINTMENT_READ', 'APPOINTMENT_WRITE', 'AVAILABILITY_MANAGE')
+                """, Integer.class);
+        assertEquals(3, appointmentPermissionCount,
+                "Les trois permissions rendez-vous doivent être cataloguées");
+        assertEquals(3, clinicAdminAppointmentPermissionCount,
+                "ADMIN_CLINIQUE doit hériter des trois permissions rendez-vous");
+        assertEquals(2, medecinAppointmentPermissionCount,
+                "MEDECIN doit recevoir APPOINTMENT_READ et AVAILABILITY_MANAGE");
+        assertEquals(2, agentAccueilAppointmentPermissionCount,
+                "AGENT_ACCUEIL doit recevoir APPOINTMENT_READ et APPOINTMENT_WRITE");
+        assertEquals(0, patientAppointmentPermissionCount,
+                "PATIENT ne doit recevoir aucune permission rendez-vous");
+
         assertTableExists(jdbcTemplate, "patient_identity_declarations");
         assertTableExists(jdbcTemplate, "patient_identity_status_history");
         assertTableExists(jdbcTemplate, "emergency_triage_assessments");
@@ -119,6 +168,16 @@ class FlywayPostgresqlMigrationTest {
         assertTableExists(jdbcTemplate, "auth_session_audit_events");
         MEDICO_LEGAL_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
         PATIENT_RECONCILIATION_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
+        APPOINTMENT_TABLES.forEach(tableName -> assertTableExists(jdbcTemplate, tableName));
+
+        Integer activeSlotIndexCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM pg_indexes
+                WHERE schemaname = 'public'
+                  AND indexname = 'uq_appointments_doctor_active_slot'
+                """, Integer.class);
+        assertEquals(1, activeSlotIndexCount,
+                "L'index unique anti double réservation uq_appointments_doctor_active_slot doit exister");
 
         RECONCILIATION_RESTRICTED_FOREIGN_KEYS.forEach(
                 constraintName -> assertForeignKeyDeleteRule(jdbcTemplate, constraintName, "NO ACTION"));
@@ -145,6 +204,10 @@ class FlywayPostgresqlMigrationTest {
         assertForeignKeyDeleteRule(
                 jdbcTemplate,
                 "fk_revoked_access_tokens_actor",
+                "SET NULL");
+        assertForeignKeyDeleteRule(
+                jdbcTemplate,
+                "fk_appointments_visit",
                 "SET NULL");
 
         Integer thirdPartyColumnCount = jdbcTemplate.queryForObject("""
@@ -212,6 +275,31 @@ class FlywayPostgresqlMigrationTest {
                     "auth_session_audit_events",
                     "target_user_id",
                     "NO");
+            assertColumnNullability(
+                    connection,
+                    "appointments",
+                    "status",
+                    "NO");
+            assertColumnNullability(
+                    connection,
+                    "appointments",
+                    "active_start_at",
+                    "YES");
+            assertColumnNullability(
+                    connection,
+                    "appointments",
+                    "visit_id",
+                    "YES");
+            assertColumnNullability(
+                    connection,
+                    "doctor_availabilities",
+                    "weekday",
+                    "NO");
+            assertColumnNullability(
+                    connection,
+                    "doctor_availability_exceptions",
+                    "reason",
+                    "YES");
         }
     }
 

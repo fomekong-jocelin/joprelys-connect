@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Type | Epic (demande macro → découpage PM obligatoire, AGENTS.md §4) |
-| Statut | READY (cadré, non engagé en sprint) |
+| Statut | IN_PROGRESS (STORY-2601 livrée sur branche dédiée, en revue Tech Lead + CI) |
 | Priorité | P1 (à confirmer par le Product Owner) |
 | Sprint proposé | SPRINT-0015 (SPRINT-0014 déjà chargé à 34,60 j engagés) |
 | Story points | 29 SP |
@@ -44,23 +44,26 @@ Exclu (V2+) : téléconsultation, SMS, paiement en ligne, liste d'attente, récu
 
 ### STORY-2601 — Fondations données, RBAC et contrats (3 SP — 1,5 j Senior)
 
+**Statut : IN REVIEW** (2026-07-18) — livraison complète poussée sur `feature/story-2601-appointment-foundations` (5 commits) ; reste l'exécution CI verte et la revue Tech Lead + référent données avant fusion.
+
 **Objectif** : poser le socle persistant et sécuritaire du module.
 
 - Critères d'acceptation :
-  - Migrations V70 (tables `doctor_availabilities`, `doctor_availability_exceptions`, `appointments`, index tenant + unicité créneau) et V71 (seed permissions RBAC) validées sur PostgreSQL 16 via Testcontainers et sur H2 test.
-  - Entités JPA + repositories créés dans `com.joprelys.backend.appointment` (structure `api/application/domain/infrastructure`, `@TenantId`, pattern existant).
-  - Permissions `APPOINTMENT_READ`, `APPOINTMENT_WRITE`, `AVAILABILITY_MANAGE` cataloguées et affectées aux rôles `MEDECIN`, `AGENT_ACCUEIL`, `ADMIN_CLINIQUE` (rôle `PATIENT` : accès portail uniquement).
-  - `FUNCTIONAL-SPEC.md`, `TECHNICAL-DESIGN.md`, `DATA-MODEL.md`, `API-CONTRACT.md` finalisés.
+  - [x] Migrations V70 (tables `doctor_availabilities`, `doctor_availability_exceptions`, `appointments`, index tenant + unicité créneau `uq_appointments_doctor_active_slot`) et V71 (seed permissions RBAC, idempotent pattern V64) — validées sur PostgreSQL 16 via `FlywayPostgresqlMigrationTest` (Testcontainers) et compatibles H2 test (aucun index partiel, aucune spécificité PG non portable).
+  - [x] Entités JPA + repositories créés dans `com.joprelys.backend.appointment` (structure `api/application/infrastructure` — voir **D1** en §10, `@TenantId`, pattern `VisitEntity`).
+  - [x] Permissions `APPOINTMENT_READ`, `APPOINTMENT_WRITE`, `AVAILABILITY_MANAGE` cataloguées (domaine `RENDEZ_VOUS`) et affectées : `MEDECIN` (READ + AVAILABILITY_MANAGE), `AGENT_ACCUEIL` (READ + WRITE), `ADMIN_CLINIQUE` (héritage automatique des 3) ; rôle `PATIENT` inchangé (accès portail uniquement).
+  - [x] `FUNCTIONAL-SPEC.md`, `TECHNICAL-DESIGN.md` (initiaux) + `DATA-MODEL.md`, `API-CONTRACT.md` finalisés.
 - Tasks : T-2601.1 finalisation doc (0,5 j) ; T-2601.2 migrations V70/V71 (0,5 j) ; T-2601.3 entités + repositories + tests migration (0,5 j).
+- Livrables effectifs : T-2601.1 ✅ (commit `8752a9a`) ; T-2601.2 ✅ (commit `cd54446`) ; T-2601.3 ✅ (commits `dcfb808`, `e107210`) ; suivi ✅ (ce fichier, tracking, changelog).
 - Profil : Senior backend. Reviewer : Tech Lead + référent données.
-- Tests : Testcontainers Flyway, validation `ddl-auto: validate`, tests repository.
+- Tests : Testcontainers Flyway (tables, index unique, FK `SET NULL`, permissions rôles), tests repository H2 (`AppointmentRepositoryTest` : persistance, cycle annulation, unicité créneau, isolation tenant).
 - Dépendances : aucune. **Cette story débloque toutes les autres.**
 
 ### STORY-2602 — Gestion des disponibilités médecin (8 SP — 3,0 j Senior)
 
 **Objectif** : le médecin (ou l'admin) définit ses plages récurrentes et ses indisponibilités ; le backend génère les créneaux.
 
-- Backend : endpoints `/api/availabilities` (CRUD règles + exceptions), service de génération de créneaux (règles − exceptions − créneaux réservés), logique métier côté service (SOLID, controller sans logique).
+- Backend : endpoints `/api/availabilities` (CRUD règles + exceptions — contrat figé dans `API-CONTRACT.md` §2), service de génération de créneaux (règles − exceptions − créneaux réservés), logique métier côté service (SOLID, controller sans logique).
 - Frontend : page `clinic/availability` « Mes disponibilités » (médecin), composants partagés `shared/ui` (grille hebdo, plages horaires), i18n FR/EN, light/dark, radius ≤ 8 px selon `DESIGN.md`.
 - Critères d'acceptation : un médecin crée/modifie/supprime ses plages ; les indisponibilités ponctuelles masquent les créneaux ; les RDV existants ne sont jamais supprimés silencieusement (conflit → action explicite clinique) ; aucun texte en dur ; aucun composant > 500 lignes.
 - Tests : unitaires service de génération (cas limites : chevauchements, exception, minuit), intégration MockMvc AuthN/AuthZ, Vitest composants.
@@ -71,7 +74,7 @@ Exclu (V2+) : téléconsultation, SMS, paiement en ligne, liste d'attente, récu
 
 **Objectif** : depuis le portail patient, consulter l'annuaire des médecins, voir les créneaux libres, réserver et annuler.
 
-- Backend : `/api/patient/appointments/**` (annuaire médecins, créneaux disponibles, réservation transactionnelle avec contrainte d'unicité anti double réservation, annulation selon délai configurable, liste « mes rendez-vous »), résolution patient via `PatientAccessGuardService`.
+- Backend : `/api/patient/appointments/**` (annuaire médecins, créneaux disponibles, réservation transactionnelle avec contrainte d'unicité anti double réservation, annulation selon délai configurable, liste « mes rendez-vous » — contrat figé dans `API-CONTRACT.md` §4), résolution patient via `PatientAccessGuardService`.
 - Frontend : pages portail `patient/appointments` (annuaire, calendrier/créneaux, confirmation, mes RDV, annulation), composant `shared/ui` calendrier/slot-picker **maison** (aucune lib tierce), dictionnaire i18n `features/appointments` enregistré dans `I18nService.loadLocale()`.
 - Critères d'acceptation : double réservation impossible (test de concurrence) ; réservation limitée à l'horizon configurable (défaut 30 j) ; annulation patient possible jusqu'à 24 h avant (configurable) ; un seul RDV actif par patient/médecin/jour ; états chargement/erreur/vide ; accessibilité clavier.
 - Tests : concurrence double booking, règles d'annulation, AuthZ (patient ne voit que ses RDV), Vitest parcours.
@@ -82,7 +85,7 @@ Exclu (V2+) : téléconsultation, SMS, paiement en ligne, liste d'attente, récu
 
 **Objectif** : l'agent d'accueil consulte l'agenda, réserve pour un patient et transforme le RDV en visite à l'arrivée (lien avec la file d'attente existante).
 
-- Backend : `/api/appointments` (liste par date/médecin/statut, réservation pour un patient, check-in → création `VisitEntity` liée `visit_id`, marquage no-show), statuts `CONFIRMED / CANCELLED_BY_PATIENT / CANCELLED_BY_CLINIC / COMPLETED / NO_SHOW`.
+- Backend : `/api/appointments` (liste par date/médecin/statut, réservation pour un patient, check-in → création `VisitEntity` liée `visit_id`, marquage no-show — contrat figé dans `API-CONTRACT.md` §3), statuts `CONFIRMED / CANCELLED_BY_PATIENT / CANCELLED_BY_CLINIC / COMPLETED / NO_SHOW` (enum `AppointmentStatus` livré en STORY-2601).
 - Frontend : page `clinic/appointments` (agenda jour/semaine, réservation assistée, check-in).
 - Critères d'acceptation : le check-in crée une visite cohérente avec la file d'attente existante ; un RDV honoré passe `COMPLETED` ; les absences sont marquables `NO_SHOW`.
 - Tests : intégration conversion RDV → visite, non-régression module `visit`, Vitest.
@@ -105,14 +108,14 @@ Exclu (V2+) : téléconsultation, SMS, paiement en ligne, liste d'attente, récu
 - **Frontend** : nouvelles routes `clinic/availability`, `clinic/appointments`, `patient/appointments` (sous `roleGuard`) ; nouveaux composants `shared/ui` (calendrier, slot-picker) ; enregistrement d'un dictionnaire i18n (liste hardcodée dans `I18nService.loadLocale()` — point d'attention).
 - **DB** : 3 tables tenantées + index ; migration additive uniquement (rollback = tables inutilisées, aucune destruction).
 - **Sécurité** : `@PreAuthorize` par rôle ; isolation tenant `@TenantId` ; patient résolu serveur-side ; rate limiting existant ; données RDV = données de santé indirectes → pas de PII dans logs, audit des actions.
-- **Config** : `joprelys.appointments.*` dans `application.yml` (durée créneau défaut 30 min, horizon 30 j, délai annulation 24 h, rappel J-1) — YAML uniquement.
+- **Config** : `joprelys.appointments.*` dans `application.yml` (durée créneau défaut 30 min, horizon 30 j, délai annulation 24 h, rappel J-1) — YAML uniquement. **Livré en STORY-2601** (record `AppointmentProperties`).
 - **DESIGN.md** : à mettre à jour avec les composants calendrier/slot-picker (arrondis ≤ 8 px, ombres légères, light/dark).
 
 ## 6. Risques
 
 | Risque | Mitigation |
 |---|---|
-| Double réservation en concurrence | Contrainte unique partielle `(doctor_id, start_at)` hors statuts annulés + transaction service + test de concurrence |
+| Double réservation en concurrence | **Implémenté (STORY-2601)** : colonne `active_start_at` + index unique `(doctor_id, active_start_at)` + futur service transactionnel + tests d'unicité ; test de concurrence restant en STORY-2603 |
 | Fuseau horaire | `timestamptz`, fuseau de la clinique côté serveur, formatage local côté front |
 | Écrans monolithiques (dette connue) | Découpage en composants < 500 lignes dès le départ |
 | Filtrage médecins sur rôle CSV multi-rôles | Réutiliser le pattern `StaffService` existant |
@@ -122,7 +125,7 @@ Exclu (V2+) : téléconsultation, SMS, paiement en ligne, liste d'attente, récu
 
 ## 7. Impact version / SemVer
 
-Bump prévu : **MINOR** (nouvelle fonctionnalité rétrocompatible, aucun breaking change API/DB/auth). Aucune livraison à ce stade : cadrage uniquement.
+Bump prévu : **MINOR** (nouvelle fonctionnalité rétrocompatible, aucun breaking change API/DB/auth). STORY-2601 : migrations additives + module nouveau, aucune modification de comportement existant.
 
 ## 8. Action plan
 
@@ -134,9 +137,11 @@ Bump prévu : **MINOR** (nouvelle fonctionnalité rétrocompatible, aucun breaki
 - [x] Mettre à jour `docs/ai/PROJECT-TRACKING.md`
 - [x] Mettre à jour `docs/ai/CHANGELOG.md`
 - [ ] Validation du cadrage par le Product Owner (priorité, périmètre MVP, sprint)
-- [ ] Engager STORY-2601 en SPRINT-0015 après recalibrage capacité
-- [ ] Compléter `DATA-MODEL.md` et `API-CONTRACT.md` dans STORY-2601
-- [ ] Évaluer en STORY-2601 si un ADR est requis (modélisation créneaux/conversion visite)
+- [x] Engager STORY-2601 en SPRINT-0015 après recalibrage capacité — **livrée sur branche dédiée, en revue**
+- [x] Compléter `DATA-MODEL.md` et `API-CONTRACT.md` dans STORY-2601
+- [x] Évaluer en STORY-2601 si un ADR est requis (modélisation créneaux/conversion visite) — **non requis** : décisions couvrantes documentées en §10 (D1–D5), aucune rupture d'architecture
+- [ ] Revue Tech Lead + CI verte de STORY-2601, puis fusion
+- [ ] Engager STORY-2602 (disponibilités médecin)
 
 ## 9. Références
 
@@ -144,3 +149,15 @@ Bump prévu : **MINOR** (nouvelle fonctionnalité rétrocompatible, aucun breaki
 - `docs/features/visite/FUNCTIONAL-SPEC.md` (file d'attente existante)
 - `docs/features/patient-portal/FUNCTIONAL-SPEC.md`
 - Standards détaillés à appliquer à l'implémentation : `docs/standards/CONFIGURATION-STANDARDS.md`, `FRONTEND-MOBILE-STANDARDS.md`, `DESIGN-SYSTEM-STANDARDS.md`, `ARCHITECTURE-SOLID-RESPONSIBILITY-STANDARDS.md`, `UI-RADIUS-AND-SHADOW-STANDARDS.md`
+
+## 10. Décisions d'implémentation (STORY-2601)
+
+Décisions actées lors de la livraison des fondations, à faire valider en revue (détail complet dans `DATA-MODEL.md` §7) :
+
+- **D1 — Structure du module sans `domain/`** : le module `appointment` suit la structure `api/ application/ infrastructure/persistence/` (pattern des modules récents, ex. `visit`). Le `domain/` annoncé dans `TECHNICAL-DESIGN.md` §2 n'est pas créé : aucun usage avéré à ce stade ; la doc est corrigée (`DATA-MODEL.md` §7).
+- **D2 — Anti double réservation portable** : la contrainte partielle PostgreSQL `UNIQUE (doctor_id, start_at) WHERE status NOT IN (...)` est remplacée par la colonne technique nullable `active_start_at` (maintenue par l'entité en `@PrePersist/@PreUpdate` : `start_at` si statut actif `CONFIRMED/COMPLETED/NO_SHOW`, `NULL` si annulé) + index unique simple `(doctor_id, active_start_at)`. Justification : aucune migration V1→V69 n'utilise d'index partiel (vérifié par lecture) et la suite H2 doit rester exécutable ; PostgreSQL et H2 autorisent les NULL multiples dans un index unique → les créneaux annulés redeviennent réservables.
+- **D3 — V71 = `permissions` seulement** : pas de seed SQL des `role_permissions` ; les liens rôle → permission sont possédés par `RbacCatalog.systemRoles()` et réappliqués à chaque démarrage par `RbacStore.seedCatalog()` (DELETE + réinsertion des rôles système), un seed SQL serait écrasé.
+- **D4 — `AppointmentStatus` enum String** : petit enum persisté via `@Enumerated(EnumType.STRING)`, copie exacte du pattern `DocumentStatus` ; aucun CHECK de statut en base (convention V68).
+- **D5 — Statut par défaut `CONFIRMED`** : posé dans le constructeur Java (pattern `status = "EN_COURS"` de `VisitEntity`), doublé du `DEFAULT 'CONFIRMED'` SQL pour les insertions hors JPA.
+
+Point de vigilance revue : le mapping permissions → `GrantedAuthority` du filtre JWT n'a pas été inspecté ; le choix `@PreAuthorize("hasAnyRole(...)")` documenté dans `API-CONTRACT.md` suit strictement l'existant (`VisitController`, `DocumentController`).
