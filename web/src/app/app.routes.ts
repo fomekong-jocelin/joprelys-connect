@@ -54,13 +54,13 @@ export const routes: Routes = [
         path: 'lab-orders',
         loadComponent: () => import('./patient/detail/patient-lab-orders-tab.component').then(m => m.PatientLabOrdersTabComponent),
         canActivate: [roleGuard],
-        data: { expectedPermissions: ['LAB_ORDER_READ'], breadcrumb: 'breadcrumb.patients.lab-orders' }
+        data: { expectedPermissions: ['LAB_ORDER_READ'], breadcrumb: 'breadcrumb.patients.labOrders' }
       },
       {
         path: 'audit-trail',
         loadComponent: () => import('./patient/detail/patient-audit-trail-tab.component').then(m => m.PatientAuditTrailTabComponent),
         canActivate: [roleGuard],
-        data: { expectedPermissions: ['AUDIT_READ'], breadcrumb: 'breadcrumb.patients.audit-trail' }
+        data: { expectedPermissions: ['AUDIT_READ'], breadcrumb: 'breadcrumb.patients.auditTrail' }
       }
     ]
   },
@@ -75,6 +75,12 @@ export const routes: Routes = [
     loadComponent: () => import('./clinic/availability/availability-page.component').then((module) => module.AvailabilityPageComponent),
     canActivate: [roleGuard],
     data: { expectedPermissions: ['AVAILABILITY_MANAGE'] },
+  },
+  {
+    path: 'clinic/appointments',
+    loadComponent: () => import('./clinic/appointments/doctor-appointments-page.component').then((module) => module.DoctorAppointmentsPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedPermissions: ['APPOINTMENT_READ_OWN'], title: 'title.doctor.appointments' },
   },
   {
     path: 'clinic/rbac',
