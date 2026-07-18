@@ -7,10 +7,10 @@ Retourne les rendez-vous du médecin authentifié pour une période donnée.
 ### Autorisation
 
 ```text
-APPOINTMENT_READ + ROLE_MEDECIN
+APPOINTMENT_READ_OWN
 ```
 
-L’API n’accepte jamais de `doctorId`. L’identité est extraite du JWT.
+Cette permission est attribuée uniquement au rôle système `MEDECIN`. L’API n’accepte jamais de `doctorId` : l’identité est extraite du JWT.
 
 ### Paramètres
 
@@ -61,15 +61,16 @@ Cas :
 
 #### `401`
 
-Utilisateur non authentifié.
+- utilisateur non authentifié ;
+- token invalide ou session révoquée ;
+- compte utilisateur désactivé ou identité RBAC non résolue.
 
 #### `403`
 
-- permission absente ;
-- rôle médecin absent ;
-- compte désactivé ou identité hors établissement.
+- permission `APPOINTMENT_READ_OWN` absente ;
+- permission accordée par erreur à une identité résolue qui n’est pas un médecin.
 
-Pour une identité résolue mais invalide, le code métier est `DOCTOR_APPOINTMENT_ACCESS_DENIED`.
+Dans ce dernier cas, le code métier est `DOCTOR_APPOINTMENT_ACCESS_DENIED`.
 
 ### Confidentialité
 
