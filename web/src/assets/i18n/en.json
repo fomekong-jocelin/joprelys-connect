@@ -79,6 +79,7 @@
   "menu.patients": "Patients",
   "menu.preRegistrations": "Pre-Registrations",
   "menu.staff": "Clinical Team",
+  "menu.availability": "Availability",
   "menu.spatial": "Bed Occupancy",
   "menu.spatialConfig": "Hospital Structure",
   "menu.billing": "Billing & Cashier",

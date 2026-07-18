@@ -9,4 +9,6 @@ public interface DoctorAvailabilityExceptionRepository extends JpaRepository<Doc
 
 	List<DoctorAvailabilityExceptionEntity> findByDoctorIdAndStartAtLessThanAndEndAtGreaterThan(
 			UUID doctorId, Instant periodEnd, Instant periodStart);
+
+	List<DoctorAvailabilityExceptionEntity> findByDoctorIdOrderByStartAtAsc(UUID doctorId);
 }

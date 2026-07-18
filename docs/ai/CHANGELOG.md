@@ -8,6 +8,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Added
 
+- **EPIC-0025 / STORY-2602 — Gestion des disponibilités médecin** : endpoints `/api/availabilities` (CRUD plages hebdomadaires récurrentes + exceptions d'indisponibilité, suppression d'une plage = désactivation logique, création restreinte aux porteurs du rôle `MEDECIN`), service `AvailabilityService` avec périmètre médecin (un `MEDECIN` ne gère que ses propres plages, `ADMIN_CLINIQUE` tous les médecins), codes d'erreur dédiés (`AVAILABILITY_OVERLAP`, `AVAILABILITY_CONFLICT` — RM-07 : jamais de suppression silencieuse d'un RDV existant), générateur de créneaux pur (règles actives − exceptions − créneaux réservés) avec fuseau horaire clinique configurable (`joprelys.appointments.timezone`, défaut `Africa/Douala`, décision D6) ; page Angular `clinic/availability` « Mes disponibilités » (grille hebdomadaire partagée `weekly-availability-grid`, aperçu client des créneaux sur 7 jours, confirmation modale pour les actions destructives, route + menu sous `roleGuard` / permission `AVAILABILITY_MANAGE`, dictionnaire i18n `features/availability` FR/EN enregistré) ; 20 tests backend (générateur pur + MockMvc AuthN/AuthZ) et 17 specs Vitest ; `TEST-PLAN.md` et `DESIGN.md` mis à jour.
+- **EPIC-0025 / STORY-2601 — Fondations du module rendez-vous** : migrations V70 (tables `doctor_availabilities`, `doctor_availability_exceptions`, `appointments` + index tenant + unicité de créneau via la colonne technique `active_start_at`, compatible H2/PostgreSQL) et V71 (permissions `RENDEZ_VOUS`) ; entités JPA + repositories dans `com.joprelys.backend.appointment` (`@TenantId`, pattern `VisitEntity`) ; permissions `APPOINTMENT_READ`, `APPOINTMENT_WRITE`, `AVAILABILITY_MANAGE` cataloguées et affectées à `MEDECIN`, `AGENT_ACCUEIL` et `ADMIN_CLINIQUE` (rôle `PATIENT` inchangé) ; configuration `joprelys.appointments.*` (durée créneau 30 min, horizon 30 j, délai annulation 24 h, rappel 24 h) ; documentation `DATA-MODEL.md` et `API-CONTRACT.md` finalisées.
 - **EPIC-0025 — Cadrage du module « Disponibilités médecins et prise de rendez-vous patient »** : documentation fonctionnelle et technique initiales (`docs/features/doctor-availability-appointments/`), découpage en 5 stories (STORY-2601 à 2605, 29 SP, ~12 j senior) dans `docs/ai/tickets/EPIC-0025-doctor-availability-appointments.md`. Aucun code livré ; l'implémentation démarre par STORY-2601 (migrations V70/V71, RBAC, contrats API).
 - **EPIC-0024 — Cadrage de l’assistant vocal de consultation** : documentation
   fonctionnelle et technique, contrat API, modèle de données, plan de tests,
@@ -106,21 +108,18 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - Ajout de 3 tests RBAC vérifiant le cloisonnement des rôles `AGENT_ACCUEIL`, `CAISSIER` et `DAF` sur les opérations critiques (encaissement, mouvements de caisse, export comptable).
   - Audit accessibilité des composants Angular financiers :
     - Ajout d'attributs `aria-label` sur les boutons iconographiques seuls (fermeture de modales, fermeture d'alertes, suppression de ligne de facture).
-    - Ajout de `scope="col"` sur tous les en-têmes des tableaux de facturation, caisse, créances, bordereaux et pilotage DAF.
+    - Ajout de `scope="col"` sur tous les en-têtes des tableaux de facturation, caisse, créances, bordereaux et pilotage DAF.
     - Ajout d'une règle CSS `:focus-visible` globale de fallback dans `styles.css` pour garantir un anneau de focus visible sur tous les éléments interactifs.
   - Internationalisation des libellés d'onglets précédemment codés en dur, avec ajout des clés `billing.tabCashRegister`, `billing.tabReceivables`, `billing.tabInsuranceBordereaux`, `billing.tabConventions`, `billing.tabTariffs` et `billing.tabDaf` dans `fr.json` / `en.json`.
   - Extension de `I18nService.t()` pour accepter une valeur par défaut, facilitant l'utilisation des traductions dans les composants sans propagation explicite de la fonction `translate`.
   - Validation globale : suite de tests JUnit backend, tests Vitest Angular (101 tests) et build de production Angular réussis.
 
-- **Pilotage DAF et Export Sage 100 (STORY-2115)** : implémentation complète de la console de supervision DAF et de l'exportation comptable au format Sage 100 (OHADA) :
-  - Création du script de migration Flyway `V54__add_cash_session_resolution_fields.sql` pour persister les résolutions d'écarts de caisse par la DAF.
-  - Enrichissement de `CashRegisterSessionEntity` (JPA) et du record `CashSessionResponse` (DTO) avec les nouveaux attributs de traitement : `discrepancyResolved`, `resolutionNotes`, `resolvedByUserId`, `resolvedAt`.
-  - Implémentation du service `AccountingExportService` générant l'exportation comptable au format d'import standard de **Sage 100 Comptabilité** (Colonnes: `Journal`, `Date` en `ddMMyy`, `CompteGeneral`, `CompteTiers`, `RefPiece`, `Libelle` sur 30 caractères maximum, `Debit`, `Credit`), incluant :
-    - Journal des Ventes (`VT`) : Écritures de Ventes (`70610000`) et Clients Patients (`41110000`) / Assurances (`41120000`).
-    - Journal de Caisse (`CA`) : Écritures de règlements Caisse (`57110000`) et Clients Patients (`41110000`).
-    - Écarts de Clôture (`CA`) : Pertes sur écarts (`65600000`) ou Gains exceptionnels (`75600000`).
-    - Journal de Banque (`BQ`) : Règlements d'assurances par bordereaux (`52110000` / `41120000`).
-    - Virements Internes (`CA` et `BQ`) : Écritures de virements internes (`58500000`).
+- **Pilotage DAF et Export Sage 100 (STORY-2115)** : implémentation complète de la console de supervision DAF et de l'exportation comptable au format de l'import standard de **Sage 100 Comptabilité** (Colonnes: `Journal`, `Date` en `ddMMyy`, `CompteGeneral`, `CompteTiers`, `RefPiece`, `Libellé` sur 30 caractères maximum, `Debit`, `Credit`), incluant :
+  - Journal des Ventes (`VT`) : Écritures de Ventes (`70610000`) et Clients Patients (`41110000`) / Assurances (`41120000`).
+  - Journal de Caisse (`CA`) : Écritures de règlements Caisse (`57110000`) et Clients Patients (`41110000`).
+  - Écarts de Clôture (`CA`) : Pertes sur écarts (`65600000`) ou Gains exceptionnels (`75600000`).
+  - Journal de Banque (`BQ`) : Règlements d'assurances par bordereaux (`52110000` / `41120000`).
+  - Virements Internes (`CA` et `BQ`) : Écritures de virements internes (`58500000`).
   - Création du contrôleur `AccountingController` et exposition de l'endpoint sécurisé `GET /api/accounting/export` générant le CSV Sage 100 pour une période donnée.
   - Ajout des méthodes d'API Angular dans `BillingApiService` pour interroger les endpoints DAF et télécharger l'export CSV.
   - Création du composant Angular autonome `BillingDafDashboardComponent` affichant la supervision globale des sessions de caisse, le formulaire de traitement des écarts et le module d'exportation comptable Sage 100.
@@ -140,10 +139,9 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - Paiement en espèces de la part patient par le caissier.
   - Résolution d'un bug logique dans `InsuranceBordereauService` : inclusion des factures de statut `PAID` ayant une part assurance éligible dans la génération de bordereaux.
   - Génération, envoi et règlement complet du bordereau d'assurance par l'admin (statut de facture `SETTLED`).
-  - Versement en banque de la caisse espèces avec référence de bordereau de dépôt.
-  - Clôture de session de caisse avec le bon solde physique et 0 écart.
+  - Versement en banque de la caisse espèces avec le bon solde physique et 0 écart.
 
-- **Cadrage et validation DAF (STORY-2112 à 2115)** : Formalisation et rédaction du document de validation [DAF-VALIDATION.md](file:///C:/MES-APPLICATIONS/joprelys-connect/docs/features/financial-operations-integrity/DAF-VALIDATION.md) détaillant le cycle de vie des factures avec tiers-payant, les règles de session de caisse, les tranches d'ancienneté du recouvrement et le plan de compte OHADA cible pour les imputations comptables. Préparation et découpage de la STORY-2113 en tâches Scrum prêtes pour le développement (READY).
+- **Cadrage et validation DAF (STORY-2112 à 2115)** : Formalisation et rédaction du document de validation DAF-VALIDATION.md détaillant le cycle de vie des factures avec tiers-payant, les règles de session de caisse, les tranches d'ancienneté du recouvrement et le plan de compte OHADA cible pour les imputations comptables. Préparation et découpage de la STORY-2113 en tâches Scrum prêtes pour le développement (READY).
 
 - **Synthèse de règlement tiers-payant (STORY-2112)** : ajout d'un read model backend et d'un endpoint par patient, distinguant les montants et états patient/assurance. L'historique facture utilise cet état pour afficher notamment « Assurance à recouvrer » au lieu du statut technique ambigu de facture.
 
@@ -154,7 +152,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **Caisse recettes/dépenses, reçus et clôture journalière (STORY-2106)** :
   - Création du script de migration Flyway `V51__create_cash_register_tables.sql` définissant les tables `cash_registers`, `cash_register_sessions`, `cash_movements` et `payment_receipts`.
   - Implémentation des entités JPA `CashRegisterEntity`, `CashRegisterSessionEntity`, `CashMovementEntity` et `PaymentReceiptEntity` avec validation `@Version` de verrouillage optimiste et isolation tenant.
-  - Implémentation du service `CashRegisterService` gérant la création de caisse par défaut, l'ouverture et la clôture de session (calcul des soldes de clôture et validation de la justification obligatoire de l'écart), l'enregistrement de mouvements (avec limitation des dépenses > 100 000 FCFA soumise à double visa), et la numérotation automatique des reçus (`REC-yyyyMMdd-XXXXXX`).
+  - Implémentation du service `CashRegisterService` gérant la création de caisse par défaut, l'ouverture et la clôture de session (calcul des soldes de clôture et validation de la justification obligatoire de l'écart), l'enregistrement de mouvements (avec limitation des dépenses > 100 000 FCFA soumises à double visa), et la numérotation automatique des reçus (`REC-yyyyMMdd-XXXXXX`).
   - Validation strict `BR-HFC-005` intégrée dans `BillingService.addPayment` : tout règlement échoue si l'utilisateur n'a pas de session de caisse active. Les paiements validés créent automatiquement un reçu et un mouvement d'entrée (`IN`).
   - Création de `CashRegisterController` exposant les endpoints REST d'ouverture, clôture, mouvements, historiques et reçus.
   - **Refonte UX à plat (Premium)** : Élimination de l'UX "tab dans tab" au profit d'une navigation plate à un seul niveau pour le caissier ("Facturation", "Caisse & Sessions", "Créances", "Conventions", "Tarifs").
@@ -214,8 +212,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - Implémentation de l'entité JPA `SurgicalConsentEntity` avec isolation multi-tenant (`@TenantId`) et gestion de version (`@Version`), et de son repository JPA associé.
   - Implémentation de la génération du Billet d'entrée PDF (`generateHospitalizationEntryPdf`) dans `PdfGeneratorService` incluant les logos, cachets, signatures, et détails d'admission du patient.
   - Mise à jour de la génération du PDF de sortie pour adapter le titre ("Fiche de Sortie contre Avis Médical") et insérer une mention claire et avertissement de décharge si le séjour s'est terminé par une sortie contre avis médical.
-  - Enrichissement de `HospitalizationService` et de `HospitalizationController` pour supporter le téléchargement du Billet d'entrée, la clôture de séjour avec l'indicateur optionnel `againstMedicalAdvice` (statut `SORTI_CONTRE_AVIS`), la création/récupération de consentements opératoires (Anesthésie ou Chirurgie) rattachés à l'hospitalisation active, avec ou sans fichier physique (GED).
-  - Ajout d'une suite de tests d'intégration dans `HospitalizationControllerTest.java` validant le billet d'entrée, la sortie contre avis, et les consentements.
+  - Enrichissement de `HospitalizationService` et `HospitalizationController` pour supporter le téléchargement du Billet d'entrée, la clôture de séjour avec l'indicateur optionnel `againstMedicalAdvice` (statut `SORTI_CONTRE_AVIS`), la création/récupération de consentements opératoires (Anesthésie ou Chirurgie) rattachés à l'hospitalisation active, avec ou sans fichier physique (GED).
+  - Ajout d'une suite de tests d'intégration dans `HospitalizationControllerTest.java` validant le billet d'entrée, la sortie contre avis médical, et les consentements.
   - Intégration dans l'interface Angular (`patient-api.service.ts`, `patient-hospitalization.component.ts`, `patient-hospitalization.component.html`) pour permettre de télécharger le billet d'entrée, de cocher "Sortie contre avis médical" lors de la décharge, et d'ajouter/consulter les consentements opératoires avec upload de fichier.
 
 - **Facturation Médicale (Actes K & Conventions) (STORY-1913)** :
@@ -328,8 +326,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - Mise à jour de la section 9 "Modèle de données" avec l'intégration des tables manquantes pour la Comptabilité OHADA, les Caisses/Trésorerie, la Traçabilité des implants, et les Rendez-vous.
 
 - **CDC V2 — Cahier des charges enrichi depuis les documents réels et les spécifications logicielles TC2CDK (TICKET-CDC-V2-ENRICHISSEMENT & TICKET-CDC-V2-COMPARISON-ENRICHMENT)** :
-  - Analyse de 4 documents réels (Manuel de procédures, dossiers cliniques et facturation) et comparaison avec le document [SPECIFICATION_LOGICIEL_GESTION_CLINIQUE_TC2CDK.md](file:///C:/MES-APPLICATIONS/joprelys-connect/doc_reel_trauma_center/SPECIFICATION_LOGICIEL_GESTION_CLINIQUE_TC2CDK.md).
-  - Création et écrasement du fichier de spécifications consolidées [Cahier_des_charges_Joprelys_Connect_V2.md](file:///C:/MES-APPLICATIONS/joprelys-connect/Cahier_des_charges_Joprelys_Connect_V2.md) (version 2.0, 2026-07-08).
+  - Analyse de 4 documents réels (Manuel de procédures, dossiers cliniques et facturation) et comparaison avec le document SPECIFICATION_LOGICIEL_GESTION_CLINIQUE_TC2CDK.md.
+  - Création et écrasement du fichier de spécifications consolidées Cahier_des_charges_Joprelys_Connect_V2.md (version 2.0, 2026-07-08).
   - Ajout et structuration de 17 nouveaux modules cliniques, financiers et logistiques :
     - **Module 4-bis** — Urgences & Réanimation (fiche d'urgence, constantes critiques, protocole de réanimation, stabilisation).
     - **Module 5-bis** — Circuit patient complet (accueil, reçu de consultation, orientation, sortie contre avis médical, registre des visiteurs d'hospitalisés).
@@ -361,22 +359,22 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - Intégration du test d'intégration `EmergencyControllerTest.java` et isolation des données de test de la base partagée.
 
 - **Amélioration de la disposition du panneau de dispensation en pharmacie (TICKET-UI-PHARMACY-DISPENSATION-LAYOUT)** :
-  - Restructuration du layout de `app-pharmacy-dispensation-panel` en remplaçant la grille `xl:grid-cols-[...]` par un layout flexible vertical (`flex-col`) pour placer le formulaire de dispensation active et l'historique de délivrances l'un sous l'autre.
+  - Restructuration du layout de `app-pharmacy-dispensation-panel` en remplaçant la grille `xl:grid-cols-[...]` par un layout flexible vertical (`flex-col`) pour placer le formulaire de dispensation active et l'historique des délivrances l'un sous l'autre.
   - Suppression de la barre de défilement horizontale inconfortable en offrant 100% de la largeur du conteneur au tableau des médicaments.
   - Abaissement de la largeur minimale du tableau de `780px` à `650px` pour une meilleure adaptabilité et réactivité sur les écrans de taille moyenne.
 
 - **Correction des permissions, visibilité des menus et onglets, z-index des modales, et boutons radio de rôles (TICKET-UI-ACCESS-CONTROL-AND-MODALS)** :
   - Déplacement de `@PreAuthorize("hasRole('ADMIN_CLINIQUE')")` au niveau des méthodes dans `StaffController.java` pour autoriser `AGENT_ACCUEIL`, `INFIRMIER` et `MEDECIN` à appeler `GET /api/staff` lors de la sélection du praticien responsable d'une admission patient.
-  - Protection par `roleGuard` des sous-routes de patient (`/patients/:id/consultations`, `/patients/:id/lab-orders`, `/patients/:id/hospitalizations`, `/patients/:id/audit-trail`) dans [app.routes.ts](file:///C:/MES-APPLICATIONS/joprelys-connect/web/src/app/app.routes.ts).
-  - Masquage des onglets cliniques et d'audit pour `AGENT_ACCUEIL` sur mobile (dans [patient-detail.component.ts](file:///C:/MES-APPLICATIONS/joprelys-connect/web/src/app/patient/patient-detail.component.ts)) et desktop (dans [app-shell-nav.component.ts](file:///C:/MES-APPLICATIONS/joprelys-connect/web/src/app/shared/layout/app-shell-nav.component.ts)).
-  - Restriction de la saisie des constantes vitales aux rôles `MEDECIN`, `INFIRMIER` et `ADMIN_CLINIQUE` dans [dashboard.component.html](file:///C:/MES-APPLICATIONS/joprelys-connect/web/src/app/clinic/dashboard.component.html) (masquage des boutons de saisie pour `AGENT_ACCUEIL`).
+  - Protection par `roleGuard` des sous-routes de patient (`/patients/:id/consultations`, `/patients/:id/lab-orders`, `/patients/:id/hospitalizations`, `/patients/:id/audit-trail`) dans app.routes.ts.
+  - Masquage des onglets cliniques et d'audit pour `AGENT_ACCUEIL` sur mobile (dans patient-detail.component.ts) et desktop (dans app-shell-nav.component.ts).
+  - Restriction de la saisie des constantes vitales aux rôles `MEDECIN`, `INFIRMIER` et `ADMIN_CLINIQUE` dans dashboard.component.html (masquage des boutons de saisie pour `AGENT_ACCUEIL`).
   - Augmentation du z-index à `z-[60]` et correction du border-radius à `rounded-lg` de toutes les modales du dashboard (saisie constantes, clôture visite, explication audit) et de l'admission patient afin qu'elles s'affichent correctement devant le tiroir de visite (drawer `z-50`) et respectent la charte graphique (8px max).
-  - Remplacement des cases à cocher de sélection de rôles par des boutons radio (`ui-radio`) exclusifs lors de la création/modification de collaborateur dans [staff-management.component.ts](file:///C:/MES-APPLICATIONS/joprelys-connect/web/src/app/clinic/staff/staff-management.component.ts) pour empêcher l'accumulation accidentelle de rôles.
+  - Remplacement des cases à cocher de sélection de rôles par des boutons radio (`ui-radio`) exclusifs lors de la création/modification de collaborateur dans staff-management.component.ts pour empêcher l'accumulation accidentelle de rôles.
   - Redirection dynamique après connexion (landing page) vers leurs espaces dédiés respectifs pour les rôles `BIOLOGISTE` (vers `/clinic/lab-orders`) et `PHARMACIEN` (vers `/pharmacy/prescriptions`) au lieu de la route `/dashboard` générique (pour laquelle `BIOLOGISTE` n'a pas les droits), résolvant les redirections en boucle vers `/unauthorized` et les erreurs d'accès lors de leur connexion.
   - Liaison dynamique du logo de l'en-tête de l'application (`app-shell.component.ts`) pour rediriger l'utilisateur vers son espace de travail (landing page) selon son rôle.
 
 - **Nettoyage du tableau de bord (TKT-DASHBOARD-CLEANUP)** :
-  - Suppression complète du widget inutile "Statut Services Interop" du template [dashboard.component.html](file:///C:/MES-APPLICATIONS/joprelys-connect/web/src/app/clinic/dashboard.component.html) pour désencombrer l'interface utilisateur des professionnels de santé.
+  - Suppression complète du widget inutile "Statut Services Interop" du template dashboard.component.html pour désencombrer l'interface utilisateur des professionnels de santé.
 - **Résolution de l'erreur 500 sur la création des demandes d'examens de laboratoire (TKT-LAB-ORDERS-500-ERROR-FIX)** :
   - Remplacement de `labOrderRepository.countByExamRequestNumberStartingWith(prefix)` par `countByExamRequestNumberStartingWithGlobally(prefix)` (utilisant une requête SQL native sans filtrage Hibernate de tenant) lors de la génération de `exam_request_number` dans `LabOrderService.java`. Cela élimine les collisions d'unicité sur les numéros d'examens créés en parallèle dans différentes cliniques.
 - **Correction et robustesse de la dispensation en pharmacie (TKT-PHARMACY-DISPENSATION-ERROR-DIAGNOSTIC)** :
@@ -394,7 +392,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **Résolution de la disparition des images WebP après sauvegarde (TKT-WEBP-SUPPORT-FIX-2)** :
   - Lecture des octets du fichier en mémoire dès le début de l'upload pour éviter les blocages de flux Tomcat sous Windows.
   - Conversion automatique en PNG et forçage de l'extension en `.png` lorsqu'une image WebP doit être redimensionnée (cohérence absolue de type MIME).
-  - Écriture directe des octets bruts sous l'extension `.webp` si aucun redimensionnement n'est requis ou si le format WebP n'est pas lisible par le JDK.
+  - Écriture directe des octets bruts sous l'extension `.webp` si aucun redimensionnement n'est requis ou si le format n'est pas lisible par le JDK.
   - Création de tests unitaires dédiés `FileStorageServiceTest.java`.
 - **Support du format WEBP pour l'upload d'images (TKT-WEBP-SUPPORT-FIX)** :
   - Support de la validation d'en-tête (Magic Numbers) pour les fichiers images WebP au backend (vérification de `"RIFF"` et `"WEBP"`).
@@ -438,7 +436,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - Rédaction des spécifications fonctionnelles (`FUNCTIONAL-SPEC.md`) et techniques (`TECHNICAL-DESIGN.md`) détaillant l'entité temporaire `PatientPreRegistrationEntity`, l'API REST publique, l'intégration du service de doublons (`PatientSimilarityService`), l'algorithme de réconciliation et de déduplication, ainsi que le job d'auto-nettoyage à 24h.
   - Découpage Scrum et création de trois User Stories d'implémentation : **STORY-0303** (Backend & Validation API), **STORY-0304** (Formulaire mobile public avec captcha) et **STORY-0305** (Tableau de bord back-office & réconciliation d'accueil).
 - **Navigation patient mobile, validation d'ordonnances et indicateurs de téléchargement (TICKET-UI-PATIENT-DETAIL-AND-PRESCRIPTION-FIXES)** :
-  - Ajout d'une barre d'onglets horizontale scrollable sur mobile (`block md:hidden`) dans `PatientDetailComponent` avec un style de défilement personnalisé (scroll-bar ultra-fine et élégante, couleur de marque pour l'onglet actif s'adaptant aux thèmes clair et sombre, et défilement automatique `scrollIntoView` de l'onglet actif lors du changement de route) afin de permettre aux praticiens sur smartphone d'accéder aux sous-sections (Profil, Consultations, Analyses, Hospitalisations, Sécurité/Audit) de la fiche du patient actif.
+  - Ajout d'une barre d'onglets horizontale scrollable sur mobile (`block md:hidden`) dans `PatientDetailComponent` avec un style de défilement personnalisé (scroll-bar ultra-fine et élégant, couleur de marque pour l'onglet actif s'adaptant aux thèmes clair et sombre, et défilement automatique `scrollIntoView` de l'onglet actif lors du changement de route) afin de permettre aux praticiens sur smartphone d'accéder aux sous-sections (Profil, Consultations, Analyses, Hospitalisations, Sécurité/Audit) de la fiche du patient actif.
   - Finalisation automatique des ordonnances à l'état `DRAFT` lors de la clôture d'une visite dans `VisitService.closeVisit(...)`, passant leur statut à `ACTIVE` et générant automatiquement le PDF associé pour éliminer les blocages de délivrance côté pharmacie.
   - Intégration d'un indicateur de téléchargement et d'une désactivation de boutons lors du téléchargement des comptes-rendus ou des ordonnances dans le portail patient (`PatientPrescriptionsPageComponent` et `PatientVisitsListComponent`), offrant une meilleure réactivité visuelle à l'utilisateur.
 - **Guide de démo — Parcours utilisateur complet (TICKET-DEMO-PARCOURS-COMPLET)** :
@@ -473,7 +471,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - Intégration d'une bannière d'identité premium avec un dégradé de marque subtil et un grand avatar circulaire basé sur l'initiale du nom du patient, avec le groupe sanguin en badge superposé.
   - Ajout d'icônes vectorielles SVG personnalisées et colorées pour chaque section d'informations (Coordonnées, Contact d'urgence, Allergies, Antécédents).
   - Modernisation des champs de données via des conteneurs `.ui-card-muted` pour une apparence de fiche technique.
-  - Ajout de la clé de traduction `patient.profile.activeStatus` en français et anglais pour labelliser le statut du dossier.
+  - Ajout de la clé de traduction `patient.profile.activeStatus` en français et en anglais pour labelliser le statut du dossier.
 
 - **Pré-remplissage automatique des codes OTP sur le front-end (TICKET-UI-OTP-AUTOFILL)** :
   - Ajout de la propriété de configuration `joprelys.security.expose-otp-to-frontend` (défaut `true` pour simplifier la recette/déploiement) dans `application.yml`.
@@ -490,7 +488,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **Configuration et initialisation de préproduction (TICKET-PREPROD-ADMIN-CLEANUP)** :
   - Suppression des identifiants d'initialisation en dur (email, name, password) de `application.yml`.
   - Désactivation de l'initialisation par défaut d'une clinique, d'un médecin et d'un pharmacien de test par `AdminUserSeeder` afin de démarrer sur une base de données de préproduction vide de données de test cliniques.
-  - Création automatique par défaut d'un unique compte administrateur système avec l'email `admin@joprelys.local` et un mot de passe robuste `Re12#He10@2021!` s'il n'existe pas déjà, pour assurer le démarrage de la plateforme.
+  - Création automatique par défaut d'un unique compte administrateur système avec l'email `admin@joprelys.local` et un mot de passe robuste s'il n'existe pas déjà, pour le démarrage de la plateforme.
 
 - **Résolution dynamique de l'URL de vérification (TICKET-DYNAMIC-VERIFICATION-URL)** :
   - Création du service `VerificationUrlProvider` pour résoudre dynamiquement l'URL de base à partir des headers HTTP de la requête courante (gestion robuste de `X-Forwarded-Host`, `X-Forwarded-Proto` et du proxy inverse de production).
@@ -522,12 +520,12 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 - **Optimisation de la responsivité du portail pharmacie (TICKET-UI-PHARMACY-VERIFY-RESPONSIVENESS)** :
   - Ajout de la classe `min-w-0` sur le conteneur Grid principal et sur les deux sections principales (`ui-card-subtle`) de l'écran de vérification des ordonnances, permettant aux éléments de grille de rétrécir correctement sur mobile.
-  - Ajout du style d'hôte `:host { display: block; min-width: 0; }` dans `pharmacy-dispensation-panel.component.ts` pour permettre à ce composant personnalisé de s'adapter et de ne pas forcer sa largeur.
+  - Ajout du style d'hôte `:host { display: block; min-width: 0; }` dans `pharmacy-dispensation-panel.component.ts` pour permettre au composant personnalisé de s'adapter et de ne pas forcer sa largeur.
   - Application de la classe `min-w-0` au conteneur Grid interne et aux cartes internes du panneau de dispensation afin de contraindre la largeur du tableau de délivrance et de permettre le défilement horizontal local sans débordement de l'écran principal.
 
 - **Amélioration de la responsivité des en-têtes du dossier médical et de la gestion de stocks (TICKET-UI-PATIENT-MEDICAL-INFO-RESPONSIVENESS)** :
   - Modification des en-têtes d'information médicale ("Allergies", "Antécédents", "Vaccinations") pour s'empiler verticalement sur mobile (`flex-col sm:flex-row`) et ainsi éviter le retour à la ligne forcé des titres longs sur les écrans étroits.
-  - Ajout de la classe `w-fit` sur les boutons d'action correspondants pour conserver une largeur proportionnelle au contenu sans étirement sur mobile.
+  - Ajout de la classe `w-fit` sur les boutons d'action correspondants pour conserver une largeur proportionnelle sans étirement sur mobile.
   - Correction de l'en-tête de la page de gestion des stocks de pharmacie (`pharmacy-stocks.component.ts`) avec la même approche adaptative.
 
 - **Correction de l'erreur 500 au démarrage de la consultation et séparation de l'ordonnance (TICKET-PRESCRIPTION-SEPARATION-AND-CONSULTATION-FIX)** :
@@ -547,7 +545,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **Correction du chargement des assets de traduction Angular (TICKET-I18N-ASSETS-PATH-FIX)** :
   - Modification de `web/angular.json` pour ajouter `"output": "assets"` à l'entrée `"input": "src/assets"`, garantissant que les fichiers i18n globaux (54KB) sont bien copiés vers `/assets/i18n/*.json` dans le build et non à la racine `/i18n/*.json`.
   - Suppression des fichiers doublons obsolètes et incomplets (contenant seulement 3 clés) situés sous `web/public/assets/i18n/` qui interceptaient à tort les appels `/assets/i18n/` et bloquaient toutes les autres clés de traduction de l'application.
-  - Validation du build de production (`npm run build`) et passage des 79 tests unitaires au vert.
+  - Validation du build de production (`npm run build`) et passage des 79 tests unitaires (`npm run test`) au vert.
 
 - **Résolution des échecs de tests d'intégration H2 (Corrections de contraintes d'unicité et isolation de la base de test)** :
   - **Migration V39 (`V39__fix_medical_documents_h2_unique_constraint.java`)** : Écriture d'une migration Java Flyway dynamique pour supprimer la contrainte d'unicité sur `medical_documents(visit_id)` (introduite par erreur dans la création de table initiale) sous H2 de manière robuste : suppression de la clé étrangère dépendante, reformatage de la colonne via `ALTER COLUMN` pour purger l'attribut d'unicité de H2, suppression de l'index unique et recréation de la clé étrangère.
@@ -624,7 +622,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 - **Alignement Module 9 — Résultats d'examens conformes CDC (STORY-1906)** :
   - Migration DB `V35__lab_results_cdc_alignment.sql` : ajout de la séquence `lab_result_number_seq` et des colonnes `status` (DRAFT, VALIDATED, CANCELLED), `validator_user_id`, `conclusion`, `document_id`, `version` et `parent_result_id`.
-  - `LabResultEntity` : mappage des attributs status (enum `LabResultStatus`), validatorUserId, conclusion, documentId, version et parentResultId.
+  - `LabResultEntity` : mappage des attributs status (enum `LabResultStatus`), validatorUserId, conclusion, documentId, version, parentResultId.
   - `LabResultService` : implémentation de l'immutabilité et du versioning (un résultat VALIDATED génère une nouvelle version en préservant le même numéro de résultat). Ajout de la recherche de validateur par nom pour intégration API et filtrage automatique des anciennes versions dans `getPatientResults`.
   - `PatientPortalController` : ajout de l'endpoint `GET /api/patient/results` (récupération des analyses biologiques de l'utilisateur connecté sans paramètre d'URL pour prévenir toute vulnérabilité IDOR) et `GET /api/patient/results/{resultId}/pdf` pour télécharger le compte-rendu biologique en PDF.
   - `LabOrderController` : ajout de l'endpoint `GET /api/lab-orders/results/{resultId}/pdf` pour les professionnels de santé.
@@ -657,7 +655,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
     - `GET /api/patients/{id}/medical-summary` (pour les praticiens, sécurisé par tenant/consentement/scopes via `validateAccess`).
     - `GET /api/patient/medical-summary` (pour le portail patient, récupérant le patient connecté sans paramètre d'URL pour éviter tout IDOR).
     - `GET /api/patient/summary-pdf` (pour le téléchargement sécurisé du PDF par le patient lui-même).
-  - Modification de `PatientController./{id}/summary-pdf` pour déléguer à `PatientSummaryService` et éviter ainsi une dépendance cyclique avec `PatientService`.
+  - Modification de `PatientController./{id}/summary-pdf` pour déléguer à `PatientSummaryService` et éviter une dépendance cyclique avec `PatientService`.
   - Modification de `PatientService.validateAccess()` pour autoriser le rôle `PATIENT` à accéder à ses propres données (vérification d'ID) tout en bloquant l'accès à d'autres dossiers.
   - Modification de `PatientService.createPatient()` pour persister initialement les champs textes libres d'allergies/antécédents dans les tables structurées correspondantes.
   - Implémentation des méthodes de synchronisation dans `PatientMedicalInfoService` : toute modification structurelle d'une allergie ou d'un antécédent met à jour de façon synchrone le texte consolidé (`PatientEntity.allergies` et `PatientEntity.medicalHistory`) pour la rétro-compatibilité.
@@ -721,12 +719,12 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - Frontend Angular `dashboard.component.html` : section **Douleur (Échelle 0-10)** dans le formulaire des constantes vitales, avec badge code couleur contextuel (vert/jaune/orange/rouge) et légende textuelle.
   - Frontend Angular `consultation.component.ts` : affichage de la carte **Douleur** dans la grille des constantes vitales en lecture seule, avec code couleur contextuel selon l'intensité.
   - Rénovation de la page de saisie de consultation (`ConsultationComponent`) :
-    - Extraction du template HTML vers [consultation.component.html](file:///C:/MES-APPLICATIONS/joprelys-connect/web/src/app/consultation/consultation.component.html) pour séparer la vue du contrôleur et réduire la taille de la classe TypeScript sous la barre des 300 lignes, conformément aux standards de design et de code SOLID.
+    - Extraction du template HTML vers consultation.component.html pour séparer la vue du contrôleur et réduire la taille de la classe TypeScript sous la barre des 300 lignes, conformément aux standards de design et de code SOLID.
     - Élargissement de la mise en page pour utiliser l'intégralité de la largeur d'écran (`app-container py-6 space-y-6` au lieu de `max-w-5xl mx-auto`).
     - Suppression des aplats et dégradés de couleurs trop contrastés au profit de cartes blanches/slate-900 sobres à bordures discrètes pour s'aligner sur la charte graphique et supporter proprement les thèmes clair/sombre.
     - Application de la politique stricte d'arrondis sobres (radius max 8px via `rounded-[6px]` et `rounded-[4px]`).
     - Remplacement de toutes les chaînes de caractères brutes en français par l'injection de `I18nService` avec des clés spécifiques sous l'espace de nom `consultation.*`.
-    - Ajout des traductions françaises et anglaises complètes dans [i18n.service.ts](file:///C:/MES-APPLICATIONS/joprelys-connect/web/src/app/core/i18n/i18n.service.ts).
+    - Ajout des traductions françaises et anglaises complètes dans i18n.service.ts.
 
 
   - Audit complet du backend et frontend par rapport aux exigences des modules 4 à 12 du Cahier des charges.
@@ -768,13 +766,12 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
     - Réduction du padding horizontal des conteneurs `.app-container` et `.app-container-wide` sur mobile de `1.5rem` à `1rem`.
     - Réduction du padding interne des cartes `.ui-card` sur mobile de `p-6` à `p-4` pour éviter le vide latéral.
     - Passage des boutons d'actions principales du Dossier Patient en disposition verticale étirée (`flex-col items-stretch`) sur mobile pour supprimer la compression horizontale.
-    - Réduction de la marge interne des panneaux médicaux de la fiche patient (`p-5` à `p-4 md:p-5`).
   - **Phase 3 : Résolution du wrap DPU et du bouton Actualiser sur mobile** :
     - Remplacement de l'affichage standard du DPU sur mobile par un format `text-xs font-mono whitespace-nowrap` pour empêcher les retours à la ligne indésirables.
     - Réorganisation de l'en-tête de la file d'attente sur le tableau de bord pour placer le bouton "Actualiser" sur la même ligne que le titre sur mobile, déchargeant ainsi la description en dessous.
   - **Phase 4 : Remplacement du bouton Actualiser par une icône et réduction des polices sur mobile** :
-    - Remplacement du bouton texte "Actualiser" par un bouton icône d'actualisation (`svg` de rafraîchissement) sur mobile sur le tableau de bord, masqué sur grand écran.
-    - Réduction de la taille de la police du message d'accueil de `text-3xl` à `text-xl md:text-3xl` sur mobile pour éviter les débordements de texte sur petit écran.
+    - Remplacement du bouton texte "Actualiser" par un bouton icône d'actualisation (`svg` de rafraîchissement) sur mobile sur le tableau de bord, masquage sur grand écran.
+    - Réduction de la taille de la police du message d'accueil de `text-3xl` à `text-xl md:text-3xl` sur mobile pour éviter les débordements sur petit écran.
     - Réduction de la taille du titre de la file d'attente active de `text-xl` à `text-base sm:text-xl` sur mobile.
 
 - **Module API Joprelys Connect — Sous-tâches 3, 4 & 5 (TICKET-0016)** :
@@ -798,7 +795,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - Méthodes `getUnreadCount`, `getNotificationsPaginated`, `deleteNotification` ajoutées à `NotificationService`.
   - Badge de notifications non lues dans la sidebar du portail patient (Angular) — consommation de `/api/notifications/unread-count` avec affichage numérique rouge sur l'icône.
   - Déclencheurs de notifications manquants : approbation/rejet de demande d'accès externe → notification SECURITY au patient ; téléversement de résultats labo → notification INFO/EMERGENCY au patient selon criticité.
-  - Tests unitaires `NotificationServiceTest` (8 cas : send, getUnreadCount, paginated, markAsRead, markAsRead forbidden, markAllAsRead, delete, delete forbidden).
+  - Tests unitaires `NotificationServiceTest` (8 cas : send, getUnreadCount, paginated, markAsRead, markAllAsRead, delete, delete forbidden).
   - i18n FR/EN complet pour le badge et les messages de notification.
 
 - **Vaccinations (Module 4 / DPU compliance)** : Conception, migration de base de données (V26), entité `PatientVaccinationEntity`, repository, services backend et endpoints API sous `/api/patients/{patientId}/vaccinations`. Ajout de l'interface d'enregistrement et de visualisation des vaccinations dans le dossier médical frontend.
@@ -817,12 +814,12 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - **Utilitaire convertToUuid (TICKET-1306/1307)** : Méthode statique `PatientService.convertToUuid()` pour convertir des objets en UUID (utilisée dans les contrôleurs pour résoudre le `patient_id` depuis un `visit_id`).
 
 - **Refonte UI/UX Premium (EPIC-0012)** :
-  - **Sélecteur de Thème (STORY-1801)** : Ajout d'un bouton d'action premium dans le header (`AppShellComponent`) relié à `ThemeService` pour permuter dynamiquement entre thèmes Clair (Light) et Sombre (Dark), avec mémorisation dans le `localStorage`.
+  - **Sélecteur de Thème (STORY-1801)** : Ajout d'un bouton d'action premium dans le header (`AppShellComponent`) relié à `ThemeService` pour permuter dynamiquement entre thème Clair (Light) et Sombre (Dark), avec mémorisation dans le `localStorage`.
   - **Barre Latérale Rétractable (STORY-1802)** : Remplacement du layout classique par un modèle back-office à sidebar rétractable filtrant les menus (Tableau de bord, Cliniques, Patients, Équipe, Ordonnances, Labo) selon le rôle de l'utilisateur actif.
   - **Fil d'Ariane Dynamique (STORY-1803)** : Ajout du composant `BreadcrumbComponent` autonome retraçant en temps réel le chemin actif et gérant la traduction (i18n).
   - **Modularisation du Dossier Patient (STORY-1804)** : Découpage de l'IHM monolithique de détails patient (`PatientDetailComponent`) en sous-routes enfants (/profile, /consultations, /hospitalizations, /lab-orders, /audit-trail) avec chargement fluide par onglet-route, ramenant la taille du composant principal sous la limite de 500 lignes.
   - **Navigation Contextuelle, Portail Dédié et Layout Fluide (TICKET-UX-GOOGLE-DESIGN)** : Intégration d'un service d'état réactif `ActivePatientService` pour ajouter dynamiquement la sub-navigation du patient sélectionné dans la Sidebar back-office. Retrait des onglets internes imbriqués pour un design épuré sans double-header. Éclatement du portail Patient en 5 pages routées indépendantes avec menus dédiés dans la Sidebar. Alignement du gabarit général sur un mode fluide (100% de largeur) en libérant les marges de `.app-container` et `.app-container-wide` pour que le logo se place à l'extrémité gauche et les menus de la Topbar à l'extrémité droite.
-- **Interopérabilité HL7 FHIR - Mapping (STORY-1701)** : DTOs FHIR minimaux (`FhirPatientDto`, `FhirEncounterDto`, `FhirObservationDto` et leurs sous-structures) et mappers associés (`FhirPatientMapper`, `FhirEncounterMapper`, `FhirObservationMapper`) permettant de projeter à la volée les entités JPA existantes (`PatientEntity`, `VisitEntity`, `VitalsEntity`) au format de ressources standardisé HL7 FHIR R4. Ajout de tests unitaires couvrant l'ensemble de la logique de conversion et de validation des formats.
+- **Interopérabilité HL7 FHIR - Mapping (STORY-1701)** : DTOs FHIR minimaux (`FhirPatientDto`, `FhirEncounterDto`, `FhirObservationDto` et leurs sous-structures) et mappers associés (`FhirPatientMapper`, `FhirEncounterMapper`, `FhirObservationMapper`) permettant de projeter à la volée les entités JPA existantes (`PatientEntity`, `VisitEntity`, `VitalsEntity`) au format de ressources standardisés HL7 FHIR R4. Ajout de tests unitaires couvrant l'ensemble de la logique de conversion et de validation des formats.
 - **Interopérabilité HL7 FHIR - Endpoints REST (STORY-1702)** : Contrôleur `FhirController` et service `FhirService` exposant les endpoints REST sécurisés `GET /fhir/Patient/{id}`, `GET /fhir/Encounter/{id}` et `GET /fhir/Observation?patient={patientId}`. Application de l'isolation multi-tenant stricte, de la sécurisation par rôles Spring Security (MEDECIN, INFIRMIER, BIOLOGISTE), de l'audit log d'accès `READ_FHIR_RESOURCE` et d'une suite de tests d'intégration MockMvc complète.
 
 ### Changed
@@ -899,7 +896,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - Rendu de la barre de navigation supérieure (`.app-topbar`) sticky (`position: sticky`) au défilement sur l'ensemble de l'application web, avec une gestion du `z-index: 50` pour garantir la superposition.
 
 - **Redesign des vues Consentement et Sécurité du portail patient (TICKET-UI-PATIENT-PORTAL-CONSENT-SECURITY-REDESIGN)** :
-  - Restructuration visuelle de la gestion des consentements (`PatientConsentsListComponent`) et du journal d'accès (`PatientAuditListComponent`) avec le conteneur `ui-card-subtle` et des styles épurés et professionnels conformes à `DESIGN.md`.
+  - Restructuration visuelle de la gestion des consentements (`PatientConsentsListComponent`) et du journal d'accès (`PatientAuditListComponent`) avec le conteneur `ui-card-subtle` et des styles épurés et professionnels conformes à DESIGN.md.
   - Remplacement de l'interrupteur capsule (en forme de pilule `rounded-full` non conforme) par des boutons de statut explicites, esthétiques et accessibles avec des rayons de courbure standardisés de 4px (`rounded-[var(--radius-brand-sm)]`).
   - Simplification visuelle du journal de sécurité avec un tableau responsive et des cartes mobiles plus denses.
   - Extraction de tous les textes visibles des composants Consentement et Sécurité dans l'injectable `I18nService` avec traduction complète FR/EN pour respecter les standards du projet.
@@ -916,7 +913,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **Double header et alignement du header pharmacie et laboratoire (TICKET-UI-PHARMACY-LAB-HEADER-FIX)** :
   - Résolution du problème de double header dans le portail laboratoire et pharmacie en remplaçant les en-têtes personnalisés avec logo dupliqué par le composant réutilisable standard `<app-page-header>`.
   - Intégration de `<app-shell>` sur la page de vérification des ordonnances de la pharmacie pour assurer une cohérence visuelle complète (topbar avec session utilisateur, langue et logout, et footer).
-  - Sécurisation de la route `pharmacy/prescriptions` avec `roleGuard` réservé aux rôles `PHARMACIEN` et `ADMIN_JOPRELYS`.
+  - Sécurisation de la route `pharmacy/prescriptions` avec `roleGuard` réservée aux rôles `PHARMACIEN` et `ADMIN_JOPRELYS`.
   - Nettoyage des imports inutilisés (comme `RouterLink`) pour éviter les avertissements du compilateur Angular.
 
 - **Lisibilité du tableau patients DPU (TICKET-UI-DPU-PATIENT-TABLE-READABILITY)** :
@@ -1009,11 +1006,11 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **LazyInitializationException sur les lignes d'ordonnances** : Résolution du plantage Hibernate lors du dépliage ou de la génération de document en modifiant `PrescriptionRepository.findByConsultationId` pour charger immédiatement la collection `items` avec un `LEFT JOIN FETCH p.items`.
 - Résolution de l'erreur 500 `LazyInitializationException` lors du téléchargement d'ordonnances (modules clinique et patient) par l'utilisation de requêtes JPQL avec `JOIN FETCH` (visite + patient) et la suppression de la transaction `readOnly` bloquant l'enregistrement des audits.
 
-- Implémentation complète de la User Story [STORY-0801](file:///C:/MES-APPLICATIONS/joprelys-connect/docs/ai/tickets/STORY-0801-espace-patient.md) (Espace patient sécurisé et historique personnel) :
+- Implémentation complète de la User Story STORY-0801 (Espace patient sécurisé et historique personnel) :
   - **Backend** : Création des endpoints d'authentification OTP patients (`/api/public/patient/auth/otp` et `verify`), du contrôleur sécurisé patient (`/api/patient/me`), de la méthode de génération de jeton JWT patient et gestion du multi-tenant avec Hibernate en mode natif.
-  - **Frontend** : Création de `PatientLoginComponent` (formulaire double étape), `PatientDashboardComponent` (orchestration de l'espace patient), et des sous-composants réutilisables `PatientProfileCardComponent` et `PatientVisitsListComponent` dans un grid responsive respectant [DESIGN.md](file:///C:/MES-APPLICATIONS/joprelys-connect/DESIGN.md).
-- Création du fichier de Design System centralisé [DESIGN.md](file:///C:/MES-APPLICATIONS/joprelys-connect/DESIGN.md) à la racine pour standardiser les tokens (couleurs, typographie, espacements, radius) et les règles UI (Tailwind CSS v4 CSS-first).
-- Cadrage et raffinement de la première User Story [STORY-0801](file:///C:/MES-APPLICATIONS/joprelys-connect/docs/ai/tickets/STORY-0801-espace-patient.md) (Espace patient sécurisé et historique personnel) avec rédaction de sa spécification fonctionnelle et de son architecture technique.
+  - **Frontend** : Création de `PatientLoginComponent` (formulaire double étape), `PatientDashboardComponent` (orchestration de l'espace patient), et des sous-composants réutilisables `PatientProfileCardComponent` et `PatientVisitsListComponent` dans un grid responsive respectant DESIGN.md.
+- Création du fichier de Design System centralisé DESIGN.md à la racine pour standardiser les tokens (couleurs, typographie, espacements, radius) et les règles UI (Tailwind CSS v4 CSS-first).
+- Cadrage et raffinement de la première User Story STORY-0801 (Espace patient sécurisé et historique personnel) avec rédaction de sa spécification fonctionnelle et de son architecture technique.
 - Mise à jour de `VerificationComponent` (page publique de vérification d'authenticité) pour prendre en compte et afficher correctement les statuts révoqués (`REVOQUE` / `REVOKED`) et annulés (`ANNULE` / `CANCELLED`) du document médical avec des styles et des libellés adaptés (STORY-0602 / STORY-0603).
 - Cadrage initial de l'`EPIC-0008` (Portail Patient & Consentement) avec documentation de l'objectif, du périmètre et rédaction des 4 user stories associées (STORY-0603).
 - Refactoring majeur de l'écran de détail du patient `PatientDetailComponent` avec un design à 3 onglets (Fiche Patient, Dossier Médical, Journal d'Audit) conforme à Material Design 3 pour éliminer la surcharge cognitive.

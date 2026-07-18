@@ -15,4 +15,10 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
 	List<AppointmentEntity> findByPatientIdOrderByStartAtDesc(UUID patientId);
 
 	boolean existsByDoctorIdAndStartAtAndStatusIn(UUID doctorId, Instant startAt, Collection<AppointmentStatus> statuses);
+
+	List<AppointmentEntity> findByDoctorIdAndStartAtBetweenAndStatusIn(
+			UUID doctorId, Instant from, Instant to, Collection<AppointmentStatus> statuses);
+
+	List<AppointmentEntity> findByDoctorIdAndStartAtGreaterThanEqualAndStatusIn(
+			UUID doctorId, Instant from, Collection<AppointmentStatus> statuses);
 }
