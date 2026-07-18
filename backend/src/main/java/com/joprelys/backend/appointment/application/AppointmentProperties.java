@@ -12,9 +12,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @ConfigurationProperties(prefix = "joprelys.appointments")
 public record AppointmentProperties(
-        int defaultSlotDurationMinutes,
-        int bookingHorizonDays,
-        int patientCancelDeadlineHours,
-        int reminderHoursBefore
+		int defaultSlotDurationMinutes,
+		int bookingHorizonDays,
+		int patientCancelDeadlineHours,
+		int reminderHoursBefore
 ) {
 }
