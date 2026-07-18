@@ -16,6 +16,21 @@ import { StaffTableComponent, StaffTableLabels } from './staff-table.component';
 
 const NON_STAFF_ROLE_CODES = new Set(['SUPER_ADMIN', 'ADMIN_JOPRELYS', 'ADMIN_CLINIQUE', 'PATIENT']);
 
+interface ApiErrorPayload {
+  detail?: string;
+  message?: string;
+  error?: {
+    code?: string;
+    message?: string;
+    trace_id?: string;
+  };
+}
+
+interface HttpErrorLike {
+  status?: number;
+  error?: ApiErrorPayload;
+}
+
 @Component({
   selector: 'app-staff-management',
   standalone: true,
@@ -329,10 +344,19 @@ export class StaffManagementComponent implements OnInit {
       : this.defaultSelectedRoles();
   }
 
-  private errorMessage(error: { status?: number; error?: { detail?: string } }, fallback: string): string {
+  private errorMessage(error: HttpErrorLike, fallback: string): string {
+    const code = error.error?.error?.code;
+    if (code === 'MAIL_RECIPIENT_REJECTED') {
+      return this.t('staff.errors.mailRecipientRejected');
+    }
+    if (code === 'MAIL_DELIVERY_UNAVAILABLE') {
+      return this.t('staff.errors.mailDeliveryUnavailable');
+    }
     if (error.status === 401) return this.t('common.error.unauthorized');
     if (error.status === 403) return this.t('common.error.forbidden');
+
+    const apiMessage = error.error?.error?.message ?? error.error?.detail ?? error.error?.message;
     if (error.status && error.status >= 500) return this.t('common.error.server');
-    return error.error?.detail ?? fallback;
+    return apiMessage ?? fallback;
   }
 }
