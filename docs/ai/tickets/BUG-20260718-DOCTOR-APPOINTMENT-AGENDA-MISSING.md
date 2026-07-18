@@ -7,7 +7,7 @@
 | Epic | EPIC-0025 — Disponibilités médecins et rendez-vous |
 | Type | Bug fonctionnel + intégration manquante |
 | Priorité | P1 |
-| Statut | IN_PROGRESS |
+| Statut | IN_REVIEW — PR #68, validation CI en cours |
 | Stack | Spring Boot / Angular / RBAC / QA |
 | Estimation | 3 SP — 1,5 j Senior / 2,5 j Intermédiaire / 4 j Junior encadré |
 | Profil recommandé | Senior full-stack |
@@ -28,15 +28,16 @@ Ajouter un agenda personnel du médecin qui affiche automatiquement les rendez-v
 
 ## Critères d’acceptation
 
-- [ ] Un médecin authentifié consulte uniquement ses propres rendez-vous.
-- [ ] Un utilisateur non médecin reçoit `403` même s’il possède une permission voisine.
-- [ ] La période est obligatoire, valide et limitée à 92 jours.
-- [ ] La réponse n’expose que les données patient nécessaires à l’agenda.
-- [ ] La vue semaine affiche les états confirmé, annulé, terminé et absence.
-- [ ] L’écran se rafraîchit automatiquement toutes les 30 secondes et propose un rafraîchissement manuel.
-- [ ] Le frontend fonctionne en FR/EN, light/dark, mobile et au clavier.
-- [ ] Les états chargement, vide et erreur sont couverts.
-- [ ] Les tests backend et Angular couvrent l’isolation médecin et le rafraîchissement.
+- [x] Un médecin authentifié consulte uniquement ses propres rendez-vous.
+- [x] Un utilisateur non médecin reçoit `403` sans disposer de la permission dédiée.
+- [x] Un compte désactivé est rejeté par le filtre d’authentification avec `401`.
+- [x] La période est obligatoire, valide et limitée à 92 jours.
+- [x] La réponse n’expose que les données patient nécessaires à l’agenda.
+- [x] La vue semaine affiche les états confirmé, annulé, terminé et absence.
+- [x] L’écran se rafraîchit automatiquement toutes les 30 secondes et propose un rafraîchissement manuel.
+- [x] Le frontend fonctionne en FR/EN, light/dark, mobile et au clavier.
+- [x] Les états chargement, vide et erreur sont couverts.
+- [x] Les tests backend et Angular couvrent l’isolation médecin et le rafraîchissement.
 
 ## Tâches
 
@@ -45,22 +46,25 @@ Ajouter un agenda personnel du médecin qui affiche automatiquement les rendez-v
 - [x] Créer le ticket et le diagnostic.
 - [x] Définir le périmètre fonctionnel.
 - [x] Définir le contrat API et le plan de tests.
+- [x] Ajouter le fragment de changelog.
 
 ### Backend
 
-- [ ] Ajouter le DTO d’agenda médecin.
-- [ ] Ajouter le service de requête tenanté et limité au médecin connecté.
-- [ ] Exposer `GET /api/doctor/appointments`.
-- [ ] Ajouter la requête repository demi-ouverte `[from, to)`.
-- [ ] Ajouter les erreurs structurées et tests MockMvc.
+- [x] Ajouter le DTO d’agenda médecin.
+- [x] Ajouter le service de requête tenanté et limité au médecin connecté.
+- [x] Exposer `GET /api/doctor/appointments`.
+- [x] Ajouter la requête repository demi-ouverte `[from, to)`.
+- [x] Ajouter la permission dédiée `APPOINTMENT_READ_OWN` et la migration V72.
+- [x] Ajouter les erreurs structurées et tests MockMvc.
+- [x] Tester la matrice RBAC médecin / accueil / administrateur clinique.
 
 ### Frontend
 
-- [ ] Ajouter modèles et service API.
-- [ ] Ajouter la page `/clinic/appointments`.
-- [ ] Ajouter navigation et route sous `APPOINTMENT_READ`.
-- [ ] Ajouter les traductions FR/EN.
-- [ ] Ajouter les tests Vitest.
+- [x] Ajouter modèles et service API.
+- [x] Ajouter la page `/clinic/appointments`.
+- [x] Ajouter navigation et route sous `APPOINTMENT_READ_OWN`.
+- [x] Ajouter les traductions FR/EN.
+- [x] Ajouter les tests Vitest.
 
 ### Validation
 
@@ -73,9 +77,9 @@ Ajouter un agenda personnel du médecin qui affiche automatiquement les rendez-v
 ## Risques
 
 - Confusion entre agenda personnel du médecin et cahier global de l’accueil : les deux restent séparés. STORY-2604 pourra réutiliser le service de requête sans élargir silencieusement le périmètre.
-- Données personnelles : aucune coordonnée, donnée clinique ou historique médical n’est exposé dans la réponse.
+- Données personnelles : aucune coordonnée, donnée clinique ou historique médical n’est exposée dans la réponse.
 - Actualisation : le polling est volontairement limité à 30 secondes ; aucun WebSocket n’est introduit sans besoin mesuré.
 
 ## Reste à faire
 
-Implémentation, validation CI et recette fonctionnelle authentifiée.
+Obtenir la CI verte sur PR #68 puis réaliser la recette fonctionnelle authentifiée patient → médecin avant fusion.
