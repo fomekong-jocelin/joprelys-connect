@@ -286,16 +286,16 @@ export class PatientAppointmentsPageComponent implements OnInit {
     this.api.book({ doctorId: doctor.doctorId, startAt: slot.startAt, reason: this.reason.trim() || undefined }).subscribe({
       next: () => {
         this.booking.set(false);
-        this.notice.set(this.i18n.t('appointments.success.booked'));
         this.reason = '';
         this.selectedSlot.set(null);
         this.loadAppointments(false);
         this.loadSlots();
+        this.notice.set(this.i18n.t('appointments.success.booked'));
       },
       error: (error: HttpErrorResponse) => {
         this.booking.set(false);
-        this.error.set(this.errorMessage(error, 'appointments.errors.booking'));
         if (this.errorCode(error) === 'SLOT_UNAVAILABLE') this.loadSlots();
+        this.error.set(this.errorMessage(error, 'appointments.errors.booking'));
       },
     });
   }
@@ -325,9 +325,9 @@ export class PatientAppointmentsPageComponent implements OnInit {
       next: () => {
         this.cancelling.set(false);
         this.cancelTarget.set(null);
-        this.notice.set(this.i18n.t('appointments.success.cancelled'));
         this.loadAppointments(false);
         if (this.selectedDoctor()?.doctorId === appointment.doctorId) this.loadSlots();
+        this.notice.set(this.i18n.t('appointments.success.cancelled'));
       },
       error: (error: HttpErrorResponse) => {
         this.cancelling.set(false);
