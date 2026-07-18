@@ -100,6 +100,7 @@ class PatientAppointmentConcurrencyTest {
 	@AfterEach
 	void tearDown() {
 		TenantContext.clear();
+		cleanDatabase();
 	}
 
 	@Test
