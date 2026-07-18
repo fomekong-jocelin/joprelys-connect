@@ -94,8 +94,7 @@
                             {{ timeLabel(appointment.startAt) }}–{{ timeLabel(appointment.endAt) }}
                           </time>
                           <span
-                            class="rounded-sm border px-2 py-0.5 text-[0.68rem] font-extrabold uppercase tracking-wide"
-                            [class]="statusClass(appointment.status)"
+                            [class]="'rounded-sm border px-2 py-0.5 text-[0.68rem] font-extrabold uppercase tracking-wide ' + statusClass(appointment.status)"
                           >
                             {{ statusLabel(appointment.status) }}
                           </span>
