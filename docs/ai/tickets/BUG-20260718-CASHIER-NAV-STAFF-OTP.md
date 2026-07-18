@@ -2,7 +2,7 @@
 
 ## Statut
 
-`QA_TECHNIQUE_EN_COURS`
+`QA_TECHNIQUE_VERTE`
 
 ## Constats
 
@@ -82,6 +82,7 @@ Les anciens jetons d'accès à courte durée de vie expirent normalement, mais a
 - un code incorrect est refusé ;
 - les comptes patient et mixtes sont refusés sur le canal du personnel ;
 - une panne lors du remplacement du code invalide l'ancien OTP ;
+- les tests de rotation et de déconnexion passent par le parcours OTP réel ;
 - Flyway applique la révocation des sessions professionnelles existantes.
 
 ### Frontend
@@ -94,6 +95,17 @@ Les anciens jetons d'accès à courte durée de vie expirent normalement, mais a
 - le retour vers une consultation scannée est conservé après validation OTP ;
 - les erreurs d'envoi OTP sont distinguées et traduites en français et en anglais.
 
+## Validation automatique
+
+GitHub Actions **#831**, commit applicatif `73d2c2b060ca2f923966be31e5e4193b3fad4ca5` :
+
+- [x] tests Angular ;
+- [x] build Angular de production ;
+- [x] Maven strict `clean verify` ;
+- [x] migrations Flyway, dont V73 ;
+- [x] tests backend d'authentification, rotation et déconnexion ;
+- [x] aucune suite de sécurité contournée.
+
 ## Critères d'acceptation
 
 - [x] doublon supprimé pour le caissier pur ;
@@ -103,5 +115,5 @@ Les anciens jetons d'accès à courte durée de vie expirent normalement, mais a
 - [x] canal patient isolé ;
 - [x] anciennes sessions professionnelles révoquées au déploiement ;
 - [x] erreurs OTP actionnables en FR/EN ;
-- [ ] CI backend et frontend verte ;
+- [x] CI backend et frontend verte — GitHub Actions #831 ;
 - [ ] recette authentifiée sur l'environnement déployé.
