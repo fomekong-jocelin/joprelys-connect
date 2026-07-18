@@ -157,9 +157,10 @@ public class DefaultPatientAppointmentService implements PatientAppointmentServi
 		if (appointment.getStatus() != AppointmentStatus.CONFIRMED) {
 			throw invalidStatusTransition();
 		}
-		Instant deadline = appointment.getStartAt()
-				.minus(Duration.ofHours(properties.patientCancelDeadlineHours()));
-		if (Instant.now().isAfter(deadline)) {
+		if (!AppointmentTimePolicy.canPatientCancel(
+				appointment.getStartAt(),
+				Instant.now(),
+				properties.patientCancelDeadlineHours())) {
 			throw cancelDeadlinePassed();
 		}
 		String reason = request == null ? null : normalizeCancellationReason(request.cancellationReason());
