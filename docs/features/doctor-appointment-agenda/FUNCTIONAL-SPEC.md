@@ -19,8 +19,7 @@ Permettre au médecin de :
 3. revenir à la semaine courante ;
 4. distinguer les statuts du rendez-vous ;
 5. identifier le patient avec un minimum de données ;
-6. ouvrir le dossier patient lorsqu’il possède déjà l’autorisation correspondante ;
-7. voir apparaître une nouvelle réservation sans recharger toute l’application.
+6. voir apparaître une nouvelle réservation sans recharger toute l’application.
 
 ## 4. Périmètre inclus
 
@@ -28,7 +27,7 @@ Permettre au médecin de :
 - période demi-ouverte `[from, to)` ;
 - vue semaine responsive ;
 - actualisation initiale, manuelle et automatique toutes les 30 secondes ;
-- affichage du nom patient, numéro patient local, motif, heures, statut et lien éventuel vers la visite ;
+- affichage du nom patient, numéro patient local, motif, heures et statut ;
 - états chargement, vide et erreur ;
 - i18n FR/EN, light/dark, navigation clavier.
 
@@ -37,6 +36,7 @@ Permettre au médecin de :
 - réservation ou replanification par le médecin ;
 - annulation par la clinique ;
 - check-in, no-show et conversion en visite ;
+- ouverture directe du dossier patient depuis l’agenda ;
 - agenda global de l’accueil ;
 - notifications e-mail/SMS ;
 - synchronisation Google Calendar, Outlook ou iCal ;
@@ -46,12 +46,13 @@ Permettre au médecin de :
 
 - Le backend déduit toujours l’identité du médecin du JWT ; aucun `doctorId` n’est accepté.
 - Le compte doit être actif et porter le rôle `MEDECIN`.
+- La permission `APPOINTMENT_READ_OWN` est réservée au rôle système `MEDECIN` ; elle est distincte de `APPOINTMENT_READ`, utilisée par le futur cahier global.
 - La période est obligatoire et sa fin doit être strictement postérieure au début.
 - Une requête ne peut couvrir plus de 92 jours.
 - Tous les statuts sont retournés afin que l’annulation ou l’absence reste traçable.
 - L’isolation établissement est appliquée par le tenant Hibernate et par la résolution same-tenant du compte.
 - Les données exposées sont limitées au besoin d’agenda : aucune adresse, téléphone, donnée clinique, allergie ou historique médical.
-- Le frontend n’infère aucune autorisation ; il s’appuie sur `APPOINTMENT_READ` pour la route et le menu, tandis que l’API impose en plus le rôle médecin.
+- Le frontend n’infère aucune autorisation ; la route et le menu s’appuient sur `APPOINTMENT_READ_OWN`, comme l’API.
 
 ## 7. Parcours
 
@@ -64,11 +65,11 @@ Permettre au médecin de :
 
 ## 8. Critères d’acceptation
 
-- [ ] La réservation patient apparaît dans l’agenda du médecin associé.
-- [ ] Elle n’apparaît jamais chez un autre médecin.
-- [ ] Un rôle non médecin reçoit `403`.
-- [ ] Un médecin désactivé ne peut pas lire l’agenda.
-- [ ] Les périodes invalides ou supérieures à 92 jours reçoivent `400 VALIDATION_ERROR`.
-- [ ] Les données patient sensibles ne sont pas exposées.
-- [ ] La page respecte les standards UI du dépôt et ne dépasse pas 300 lignes cible.
-- [ ] Les tests backend et frontend couvrent le nominal, la sécurité, le vide et l’erreur.
+- [x] La réservation patient apparaît dans l’agenda du médecin associé.
+- [x] Elle n’apparaît jamais chez un autre médecin.
+- [x] Un rôle sans `APPOINTMENT_READ_OWN` reçoit `403`.
+- [x] Un médecin désactivé ne peut pas être authentifié et reçoit `401`.
+- [x] Les périodes invalides ou supérieures à 92 jours reçoivent `400 VALIDATION_ERROR`.
+- [x] Les données patient sensibles ne sont pas exposées.
+- [x] La page respecte les standards UI du dépôt et ne dépasse pas 300 lignes cible.
+- [x] Les tests backend et frontend couvrent le nominal, la sécurité et le rafraîchissement.
