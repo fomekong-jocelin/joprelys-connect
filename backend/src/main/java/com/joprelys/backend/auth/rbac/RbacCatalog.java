@@ -22,6 +22,9 @@ public final class RbacCatalog {
     public static final String PERMISSION_EMERGENCY_MEDICO_LEGAL_READ = "EMERGENCY_MEDICO_LEGAL_READ";
     public static final String PERMISSION_EMERGENCY_MEDICO_LEGAL_WRITE = "EMERGENCY_MEDICO_LEGAL_WRITE";
     public static final String PERMISSION_EMERGENCY_BELONGINGS_WRITE = "EMERGENCY_BELONGINGS_WRITE";
+    public static final String PERMISSION_APPOINTMENT_READ = "APPOINTMENT_READ";
+    public static final String PERMISSION_APPOINTMENT_WRITE = "APPOINTMENT_WRITE";
+    public static final String PERMISSION_AVAILABILITY_MANAGE = "AVAILABILITY_MANAGE";
 
     private RbacCatalog() {
     }
@@ -75,7 +78,10 @@ public final class RbacCatalog {
                 permission("INSURANCE_BORDEREAU_SETTLE", "ASSURANCE", "Accepter et régler un bordereau", "Accepter, rejeter et enregistrer les règlements assurance."),
                 permission("ACCOUNTING_DASHBOARD_READ", "COMPTABILITE", "Consulter le pilotage financier", "Consulter les indicateurs financiers et les écarts."),
                 permission("ACCOUNTING_EXPORT", "COMPTABILITE", "Exporter la comptabilité", "Générer les exports comptables."),
-                permission("AUDIT_READ", "AUDIT", "Consulter les journaux", "Consulter les journaux d'audit autorisés."));
+                permission("AUDIT_READ", "AUDIT", "Consulter les journaux", "Consulter les journaux d'audit autorisés."),
+                permission(PERMISSION_APPOINTMENT_READ, "RENDEZ_VOUS", "Consulter les rendez-vous", "Consulter l'agenda et les rendez-vous de l'établissement."),
+                permission(PERMISSION_APPOINTMENT_WRITE, "RENDEZ_VOUS", "Gérer les rendez-vous", "Réserver pour un patient, enregistrer les arrivées et gérer le cycle de vie des rendez-vous."),
+                permission(PERMISSION_AVAILABILITY_MANAGE, "RENDEZ_VOUS", "Gérer les disponibilités médecins", "Définir les plages de disponibilité récurrentes et les indisponibilités des médecins."));
     }
 
     public static List<RoleDefinition> systemRoles() {
@@ -97,7 +103,8 @@ public final class RbacCatalog {
                 "CASH_SESSION_CLOSE", "CASH_MOVEMENT_WRITE", "CASH_HISTORY_READ"));
         mappings.put("AGENT_ACCUEIL", set(
                 "PATIENT_READ", "PATIENT_WRITE", "EMERGENCY_READ",
-                "BILLING_INVOICE_READ", "BILLING_INVOICE_WRITE"));
+                "BILLING_INVOICE_READ", "BILLING_INVOICE_WRITE",
+                PERMISSION_APPOINTMENT_READ, PERMISSION_APPOINTMENT_WRITE));
         mappings.put("MEDECIN", set(
                 "PATIENT_READ", "PATIENT_EMERGENCY_ACCESS", "CLINICAL_READ", "CLINICAL_WRITE",
                 "EMERGENCY_READ", "EMERGENCY_WRITE", "EMERGENCY_STABILIZE",
@@ -105,7 +112,8 @@ public final class RbacCatalog {
                 PERMISSION_EMERGENCY_MEDICO_LEGAL_WRITE,
                 PERMISSION_EMERGENCY_BELONGINGS_WRITE,
                 "LAB_ORDER_READ", "LAB_ORDER_CREATE", "HOSPITALIZATION_READ", "HOSPITALIZATION_MANAGE",
-                "BILLING_INVOICE_READ", "BILLING_INVOICE_WRITE"));
+                "BILLING_INVOICE_READ", "BILLING_INVOICE_WRITE",
+                PERMISSION_APPOINTMENT_READ, PERMISSION_AVAILABILITY_MANAGE));
         mappings.put("INFIRMIER", set(
                 "PATIENT_READ", "PATIENT_WRITE", "PATIENT_EMERGENCY_ACCESS", "CLINICAL_READ", "CLINICAL_WRITE",
                 "EMERGENCY_READ", "EMERGENCY_WRITE",

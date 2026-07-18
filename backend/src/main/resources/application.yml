@@ -81,6 +81,11 @@ joprelys:
     verification-base-url: ${JOPRELYS_VERIFICATION_BASE_URL:https://joprelys.com/verify}
   lab-integration:
     api-key: ${JOPRELYS_LAB_INTEGRATION_API_KEY:lab-partner-secret-token}
+  appointments:
+    default-slot-duration-minutes: ${JOPRELYS_APPOINTMENTS_DEFAULT_SLOT_DURATION_MINUTES:30}
+    booking-horizon-days: ${JOPRELYS_APPOINTMENTS_BOOKING_HORIZON_DAYS:30}
+    patient-cancel-deadline-hours: ${JOPRELYS_APPOINTMENTS_PATIENT_CANCEL_DEADLINE_HOURS:24}
+    reminder-hours-before: ${JOPRELYS_APPOINTMENTS_REMINDER_HOURS_BEFORE:24}
 
 springdoc:
   api-docs:
