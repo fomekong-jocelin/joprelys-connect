@@ -58,26 +58,26 @@ describe('WeeklyAvailabilityGridComponent', () => {
   });
 
   it('émet ruleSelected au clic sur une plage', () => {
-    let emitted: WeeklyAvailabilityRuleView | null = null;
-    component.ruleSelected.subscribe((rule) => (emitted = rule));
+    const emitted: WeeklyAvailabilityRuleView[] = [];
+    component.ruleSelected.subscribe((rule) => emitted.push(rule));
 
     const chipButtons = (fixture.nativeElement as HTMLElement)
       .querySelectorAll('article > button') as NodeListOf<HTMLButtonElement>;
     chipButtons[0].click();
 
-    expect(emitted?.id).toBe('rule-1');
+    expect(emitted[0]?.id).toBe('rule-1');
   });
 
   it('émet ruleDeactivateRequested uniquement pour une plage active', () => {
-    let emitted: WeeklyAvailabilityRuleView | null = null;
-    component.ruleDeactivateRequested.subscribe((rule) => (emitted = rule));
+    const emitted: WeeklyAvailabilityRuleView[] = [];
+    component.ruleDeactivateRequested.subscribe((rule) => emitted.push(rule));
 
     const deactivateButtons = (fixture.nativeElement as HTMLElement)
       .querySelectorAll('article div button') as NodeListOf<HTMLButtonElement>;
     expect(deactivateButtons.length).toBe(2); // rule-1 et rule-3 actives, rule-2 inactive
 
     deactivateButtons[0].click();
-    expect(emitted?.id).toBe('rule-1');
+    expect(emitted[0]?.id).toBe('rule-1');
   });
 
   it('surligne le jour sélectionné', () => {
