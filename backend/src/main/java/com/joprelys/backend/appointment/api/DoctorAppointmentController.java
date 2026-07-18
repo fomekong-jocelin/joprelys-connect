@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** Endpoint de lecture de l'agenda personnel du médecin connecté. */
 @RestController
 @RequestMapping("/api/doctor/appointments")
-@PreAuthorize("hasAuthority('APPOINTMENT_READ')")
+@PreAuthorize("hasAuthority('APPOINTMENT_READ_OWN')")
 public class DoctorAppointmentController {
 
 	private final DoctorAppointmentService doctorAppointmentService;
