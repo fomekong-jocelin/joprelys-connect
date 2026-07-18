@@ -7,8 +7,10 @@
 - requête sans token → `401` ;
 - patient authentifié → `403` ;
 - infirmier authentifié → `403` ;
-- médecin actif avec `APPOINTMENT_READ` → `200` ;
-- médecin désactivé → `403 DOCTOR_APPOINTMENT_ACCESS_DENIED`.
+- médecin actif avec `APPOINTMENT_READ_OWN` → `200` ;
+- agent d’accueil avec `APPOINTMENT_READ` mais sans `APPOINTMENT_READ_OWN` → `403` ;
+- médecin désactivé → `401`, rejeté pendant l’authentification ;
+- matrice catalogue : médecin autorisé, accueil et administrateur clinique exclus.
 
 ### Isolation
 
@@ -43,8 +45,7 @@
 - actualise automatiquement toutes les 30 secondes ;
 - détruit le polling à la destruction du composant ;
 - traduit les statuts et libellés FR/EN ;
-- route et menu visibles uniquement avec `APPOINTMENT_READ` ;
-- lien dossier patient rendu sans contourner le guard `PATIENT_READ`.
+- route et menu visibles uniquement avec `APPOINTMENT_READ_OWN`.
 
 ## 3. Commandes attendues
 
@@ -67,6 +68,7 @@ npm run i18n:check
 5. Vérifier le nom patient, l’heure, le motif et le statut.
 6. Se connecter comme un autre médecin et confirmer l’absence du rendez-vous.
 7. Annuler côté patient et vérifier le statut annulé après actualisation.
+8. Se connecter comme agent d’accueil et confirmer que « Mon agenda » n’est ni affiché ni accessible.
 
 ## 5. Critère de sortie
 
