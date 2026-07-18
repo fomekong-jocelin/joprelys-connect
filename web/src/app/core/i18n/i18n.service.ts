@@ -50,6 +50,7 @@ export class I18nService {
         patientReconciliation: this.optionalDictionary(`/assets/i18n/features/patient-reconciliation/${lang}.json`),
         aiConsultation: this.optionalDictionary(`/assets/i18n/features/ai-consultation/${lang}.json`),
         availability: this.optionalDictionary(`/assets/i18n/features/availability/${lang}.json`),
+        appointments: this.optionalDictionary(`/assets/i18n/features/appointments/${lang}.json`),
       }));
 
       this.dictionary.set({
@@ -62,6 +63,7 @@ export class I18nService {
         ...dictionaries.patientReconciliation,
         ...dictionaries.aiConsultation,
         ...dictionaries.availability,
+        ...dictionaries.appointments,
       });
       this.loaded.update(state => ({ ...state, [lang]: true }));
     } catch {

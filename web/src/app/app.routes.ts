@@ -218,6 +218,12 @@ export const routes: Routes = [
     data: { expectedRoles: ['PATIENT'] },
   },
   {
+    path: 'patient/appointments',
+    loadComponent: () => import('./patient/portal/appointments/patient-appointments-page.component').then(m => m.PatientAppointmentsPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['PATIENT'], title: 'title.patient.appointments' },
+  },
+  {
     path: 'patient/profile',
     loadComponent: () => import('./patient/portal/pages/patient-profile-page.component').then(m => m.PatientProfilePageComponent),
     canActivate: [roleGuard],

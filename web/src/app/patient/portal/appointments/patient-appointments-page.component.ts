@@ -92,10 +92,8 @@ import {
                     <button
                       type="button"
                       class="w-full border p-3 text-left transition rounded-[var(--radius-brand-sm)]"
-                      [class.border-[var(--brand-primary)]]="selectedDoctor()?.doctorId === doctor.doctorId"
-                      [class.bg-[var(--brand-primary-subtle)]]="selectedDoctor()?.doctorId === doctor.doctorId"
-                      [class.border-[var(--app-border)]]="selectedDoctor()?.doctorId !== doctor.doctorId"
-                      [class.bg-[var(--app-surface-muted)]]="selectedDoctor()?.doctorId !== doctor.doctorId"
+                      [style.border-color]="selectedDoctor()?.doctorId === doctor.doctorId ? 'var(--brand-primary)' : 'var(--app-border)'"
+                      [style.background]="selectedDoctor()?.doctorId === doctor.doctorId ? 'var(--brand-primary-subtle)' : 'var(--app-surface-muted)'"
                       [attr.aria-pressed]="selectedDoctor()?.doctorId === doctor.doctorId"
                       (click)="selectDoctor(doctor)"
                     >

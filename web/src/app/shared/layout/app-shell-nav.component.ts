@@ -159,6 +159,7 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
 
     if (hasRole('PATIENT')) {
       addUniqueItem(this.item('/patient/dashboard', 'menu.patientDashboard', 'chart-bar'));
+      addUniqueItem(this.item('/patient/appointments', 'menu.patientAppointments', 'calendar'));
       addUniqueItem(this.item('/patient/profile', 'menu.patientProfile', 'users'));
       addUniqueItem(this.item('/patient/summary', 'menu.patientSummary', 'document-text'));
       addUniqueItem(this.item('/patient/prescriptions', 'menu.patientPrescriptions', 'document-text'));
