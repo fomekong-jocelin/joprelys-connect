@@ -149,7 +149,7 @@ describe('AppShellNavComponent patient isolation', () => {
     effectiveAccess.set({
       userId: 'custom-1',
       roles: ['ROLE_PERSONNALISE'],
-      permissions: ['BILLING_INVOICE_READ', 'LAB_QUEUE_READ'],
+      permissions: ['BILLING_INVOICE_READ', 'PATIENT_READ', 'LAB_QUEUE_READ'],
     });
     fixture.componentRef.setInput('session', {
       role: 'ROLE_PERSONNALISE',
@@ -161,5 +161,54 @@ describe('AppShellNavComponent patient isolation', () => {
 
     expect(paths).toContain('/clinic/billing');
     expect(paths).toContain('/clinic/lab-orders');
+  });
+
+  it('should show only the cashier workspace to a cashier-only profile', () => {
+    effectiveAccess.set({
+      userId: 'cashier-1',
+      roles: ['CAISSIER'],
+      permissions: [
+        'BILLING_INVOICE_READ',
+        'CASH_QUEUE_READ',
+        'CASH_PAYMENT_COLLECT',
+        'CASH_SESSION_OPEN',
+        'CASH_SESSION_CLOSE',
+        'CASH_MOVEMENT_WRITE',
+        'CASH_HISTORY_READ',
+      ],
+    });
+    fixture.componentRef.setInput('session', {
+      role: 'CAISSIER',
+      name: 'Caissier Test',
+    });
+    fixture.detectChanges();
+
+    const paths = fixture.componentInstance.menuItems().map((item) => item.path);
+
+    expect(paths).toContain('/clinic/cashier');
+    expect(paths).not.toContain('/clinic/billing');
+  });
+
+  it('should show both workspaces when cashier and billing management permissions are combined', () => {
+    effectiveAccess.set({
+      userId: 'cashier-manager-1',
+      roles: ['CAISSIER', 'SECRETAIRE_COMPTABLE'],
+      permissions: [
+        'CASH_QUEUE_READ',
+        'CASH_PAYMENT_COLLECT',
+        'BILLING_INVOICE_READ',
+        'BILLING_INVOICE_WRITE',
+      ],
+    });
+    fixture.componentRef.setInput('session', {
+      role: 'CAISSIER,SECRETAIRE_COMPTABLE',
+      name: 'Caissier gestionnaire',
+    });
+    fixture.detectChanges();
+
+    const paths = fixture.componentInstance.menuItems().map((item) => item.path);
+
+    expect(paths).toContain('/clinic/cashier');
+    expect(paths).toContain('/clinic/billing');
   });
 });
