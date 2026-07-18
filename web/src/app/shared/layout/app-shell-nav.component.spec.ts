@@ -111,6 +111,40 @@ describe('AppShellNavComponent patient isolation', () => {
     expect(paths).not.toContain('/clinic/lab-orders');
   });
 
+  it('should expose the personal appointment calendar only with its exact permission', () => {
+    effectiveAccess.set({
+      userId: 'doctor-1',
+      roles: ['MEDECIN'],
+      permissions: ['APPOINTMENT_READ_OWN'],
+    });
+    fixture.componentRef.setInput('session', {
+      role: 'MEDECIN',
+      name: 'Médecin Test',
+    });
+    fixture.detectChanges();
+
+    const paths = fixture.componentInstance.menuItems().map((item) => item.path);
+
+    expect(paths).toContain('/clinic/appointments');
+  });
+
+  it('should hide the personal appointment calendar from reception without the exact permission', () => {
+    effectiveAccess.set({
+      userId: 'reception-1',
+      roles: ['AGENT_ACCUEIL'],
+      permissions: ['APPOINTMENT_READ', 'APPOINTMENT_WRITE'],
+    });
+    fixture.componentRef.setInput('session', {
+      role: 'AGENT_ACCUEIL',
+      name: 'Accueil Test',
+    });
+    fixture.detectChanges();
+
+    const paths = fixture.componentInstance.menuItems().map((item) => item.path);
+
+    expect(paths).not.toContain('/clinic/appointments');
+  });
+
   it('should expose workspaces from dynamically granted exact permissions', () => {
     effectiveAccess.set({
       userId: 'custom-1',
