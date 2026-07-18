@@ -1,8 +1,9 @@
 # STORY-2603 — Prise de rendez-vous patient
 
 > GitHub : #66  
+> Pull request : #67  
 > Epic : EPIC-0025  
-> Statut : IN PROGRESS  
+> Statut : QA  
 > Estimation : 8 SP / 3,5 j Senior  
 > Profil : Senior full-stack  
 > Reviewer : Tech Lead + QA
@@ -27,24 +28,24 @@ En tant que patient authentifié, je veux consulter les médecins de mon établi
 - [ ] Mettre à jour le suivi global et le changelog avec l’état final.
 
 ### T-2603.2 — Backend
-- [ ] Exposer l’annuaire des médecins actifs same-tenant.
-- [ ] Exposer les créneaux futurs consommant `AvailabilityService.generateSlots()`.
-- [ ] Réserver dans une transaction après recalcul du créneau.
-- [ ] Garantir RM-04 sous concurrence par verrou pessimiste du médecin.
-- [ ] Mapper l’unicité DB du créneau vers `409 SLOT_UNAVAILABLE`.
-- [ ] Lister uniquement les rendez-vous du patient authentifié.
-- [ ] Annuler via `AppointmentEntity.cancel()` + `saveAndFlush()`.
-- [ ] Ajouter D7 : exception d’indisponibilité recouvrant un RDV actif futur → 409.
-- [ ] Ajouter les tests backend, sécurité et concurrence.
+- [x] Exposer l’annuaire des médecins actifs same-tenant.
+- [x] Exposer les créneaux futurs consommant `AvailabilityService.generateSlots()`.
+- [x] Réserver dans une transaction après recalcul du créneau.
+- [x] Garantir RM-04 sous concurrence par verrou pessimiste du médecin.
+- [x] Mapper l’unicité DB du créneau vers `409 SLOT_UNAVAILABLE`.
+- [x] Lister uniquement les rendez-vous du patient authentifié.
+- [x] Annuler via `AppointmentEntity.cancel()` + `saveAndFlush()`.
+- [x] Ajouter D7 : exception d’indisponibilité recouvrant un RDV actif futur → 409.
+- [x] Ajouter les tests backend, sécurité et concurrence.
 
 ### T-2603.3 — Portail Angular
-- [ ] Ajouter la route `/patient/appointments`.
-- [ ] Ajouter le service API et les modèles typés.
-- [ ] Ajouter l’annuaire, les filtres et le slot-picker partagé.
-- [ ] Ajouter la confirmation de réservation et le rafraîchissement sur conflit.
-- [ ] Ajouter la liste « Mes rendez-vous » et l’annulation.
-- [ ] Ajouter i18n FR/EN, mobile-first, light/dark et clavier.
-- [ ] Ajouter les tests Angular.
+- [x] Ajouter la route `/patient/appointments`.
+- [x] Ajouter le service API et les modèles typés.
+- [x] Ajouter l’annuaire, les filtres et le slot-picker partagé.
+- [x] Ajouter la confirmation de réservation et le rafraîchissement sur conflit.
+- [x] Ajouter la liste « Mes rendez-vous » et l’annulation.
+- [x] Ajouter i18n FR/EN, mobile-first, light/dark et clavier.
+- [x] Ajouter les tests Angular.
 
 ### T-2603.4 — Validation
 - [ ] `./mvnw clean verify` vert.
@@ -64,6 +65,13 @@ En tant que patient authentifié, je veux consulter les médecins de mon établi
 - Les rendez-vous d’un autre patient ou tenant sont indistinguables d’une ressource absente.
 - Toute mutation d’un rendez-vous passe par l’entité JPA et `save()`/`saveAndFlush()`; aucun bulk update.
 
+## Couverture ajoutée
+
+- tests MockMvc : AuthN/AuthZ, annuaire, créneaux, réservation, listing, annulation, anti-IDOR, médecins cross-tenant/désactivés et D7 ;
+- tests de concurrence réels : deux patients/même créneau et même patient/même médecin/jour ;
+- tests purs de la limite exacte d’annulation ;
+- tests Angular de la page et du slot-picker.
+
 ## Definition of Ready
 
 - [x] Objectif, périmètre et valeur métier documentés.
@@ -74,10 +82,10 @@ En tant que patient authentifié, je veux consulter les médecins de mon établi
 
 ## Definition of Done
 
-- [ ] Critères d’acceptation validés.
-- [ ] Backend et Angular livrés.
-- [ ] Tests de concurrence, sécurité et frontières verts.
-- [ ] Documentation, suivi et changelog à jour.
+- [ ] Critères d’acceptation validés par CI et revue.
+- [x] Backend et Angular implémentés.
+- [ ] Tests de concurrence, sécurité et frontières verts en CI.
+- [ ] Documentation, suivi et changelog finalisés.
 - [ ] Aucun risque critique ouvert.
 
 ## Impact SemVer
