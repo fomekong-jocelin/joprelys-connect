@@ -15,9 +15,9 @@ import com.joprelys.backend.notification.application.AccountMailService;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,12 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthenticationService {
 
     private static final String GENERIC_LOGIN_FAILURE = "Invalid email or password";
-    private static final Set<String> SENSITIVE_ROLES = Set.of(
-            "ADMIN_JOPRELYS",
-            "ADMIN_CLINIQUE",
-            "MEDECIN",
-            "BIOLOGISTE",
-            "PHARMACIEN");
+    private static final String PATIENT_ROLE = "PATIENT";
 
     private final UserAccountRepository userAccountRepository;
     private final AuthAuditEventRepository authAuditEventRepository;
@@ -71,18 +66,16 @@ public class AuthenticationService {
         String email = normalizeEmail(request.email());
         UserAccountEntity user = findValidUser(email, request.password(), auditIpAddress);
         assertOrganizationActive(user, email, auditIpAddress);
+        assertProfessionalAccount(user, email, auditIpAddress);
 
-        if (hasSensitiveRole(user)) {
-            String code = String.format("%06d", secureRandom.nextInt(1_000_000));
-            accountMailService.sendLoginCode(user.getEmail(), user.getDisplayName(), code);
-            staffOtpMap.put(email, new StaffOtpData(code, clock.instant(), 0));
-            return AuthenticationOutcome.otpChallenge(
-                    user.getEmail(),
-                    user.getDisplayName(),
-                    user.getRole());
-        }
-
-        return completeAuthentication(user, auditIpAddress, metadata);
+        staffOtpMap.remove(email);
+        String code = String.format("%06d", secureRandom.nextInt(1_000_000));
+        accountMailService.sendLoginCode(user.getEmail(), user.getDisplayName(), code);
+        staffOtpMap.put(email, new StaffOtpData(code, clock.instant(), 0));
+        return AuthenticationOutcome.otpChallenge(
+                user.getEmail(),
+                user.getDisplayName(),
+                user.getRole());
     }
 
     @Transactional
@@ -96,6 +89,7 @@ public class AuthenticationService {
                 .filter(UserAccountEntity::isEnabled)
                 .orElseThrow(() -> new BadCredentialsException("Utilisateur introuvable."));
         assertOrganizationActive(user, email, auditIpAddress);
+        assertProfessionalAccount(user, email, auditIpAddress);
         return completeAuthentication(user, auditIpAddress, metadata);
     }
 
@@ -141,6 +135,18 @@ public class AuthenticationService {
         throw new BadCredentialsException("Votre établissement est désactivé.");
     }
 
+    private void assertProfessionalAccount(
+            UserAccountEntity user,
+            String email,
+            String auditIpAddress) {
+        if (!hasRole(user, PATIENT_ROLE)) {
+            return;
+        }
+        staffOtpMap.remove(email);
+        audit(email, auditIpAddress, false, "PATIENT_LOGIN_CHANNEL_REQUIRED");
+        throw new BadCredentialsException(GENERIC_LOGIN_FAILURE);
+    }
+
     private void validateOtp(String email, String submittedCode) {
         StaffOtpData otpData = staffOtpMap.get(email);
         if (otpData == null) {
@@ -167,10 +173,10 @@ public class AuthenticationService {
         throw new BadCredentialsException("Code de sécurité incorrect.");
     }
 
-    private static boolean hasSensitiveRole(UserAccountEntity user) {
-        return java.util.Arrays.stream(user.getRole().split(","))
+    private static boolean hasRole(UserAccountEntity user, String roleCode) {
+        return Arrays.stream(user.getRole().split(","))
                 .map(String::trim)
-                .anyMatch(SENSITIVE_ROLES::contains);
+                .anyMatch(roleCode::equals);
     }
 
     private void audit(String email, String ipAddress, boolean success, String failureReason) {

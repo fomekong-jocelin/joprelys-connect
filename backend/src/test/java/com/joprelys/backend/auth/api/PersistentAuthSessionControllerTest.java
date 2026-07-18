@@ -3,6 +3,9 @@ package com.joprelys.backend.auth.api;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -20,19 +23,23 @@ import com.joprelys.backend.auth.session.infrastructure.persistence.AuthSessionR
 import com.joprelys.backend.auth.session.infrastructure.persistence.RevokedAccessTokenRepository;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
+import com.joprelys.backend.notification.application.AccountMailService;
 import jakarta.servlet.http.Cookie;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -47,11 +54,15 @@ class PersistentAuthSessionControllerTest {
     @Autowired RevokedAccessTokenRepository revokedTokenRepository;
     @Autowired PasswordEncoder passwordEncoder;
 
+    @MockitoBean
+    AccountMailService accountMailService;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
     private String loginEmail;
 
     @BeforeEach
     void setUp() {
+        reset(accountMailService);
         auditRepository.deleteAll();
         revokedTokenRepository.deleteAll();
         sessionRepository.deleteAll();
@@ -75,26 +86,7 @@ class PersistentAuthSessionControllerTest {
 
     @Test
     void shouldRevokeReplacementAccessWhenRotatedRefreshTokenIsReplayed() throws Exception {
-        MvcResult login = mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("User-Agent", "Joprelys-Test/1.0")
-                        .content("""
-                                {
-                                  "email": "%s",
-	                                  "password": "Password123!"
-	                                }
-	                                """.formatted(loginEmail)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").isNotEmpty())
-                .andExpect(jsonPath("$.sessionId").isNotEmpty())
-                .andExpect(jsonPath("$.sessionExpiresAt").isNotEmpty())
-                .andExpect(jsonPath("$.refreshToken").doesNotExist())
-                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.allOf(
-                        org.hamcrest.Matchers.containsString("joprelys_refresh="),
-                        org.hamcrest.Matchers.containsString("HttpOnly"),
-                        org.hamcrest.Matchers.containsString("SameSite=Lax"),
-                        org.hamcrest.Matchers.containsString("Path=/api/auth"))))
-                .andReturn();
+        MvcResult login = loginWithOtp("Joprelys-Test/1.0");
 
         JsonNode loginBody = objectMapper.readTree(login.getResponse().getContentAsString());
         String firstSessionId = loginBody.get("sessionId").asText();
@@ -146,16 +138,7 @@ class PersistentAuthSessionControllerTest {
 
     @Test
     void shouldClearCookieAndBrowserSiteDataOnLogout() throws Exception {
-        MvcResult login = mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "email": "%s",
-	                                  "password": "Password123!"
-	                                }
-	                                """.formatted(loginEmail)))
-                .andExpect(status().isOk())
-                .andReturn();
+        MvcResult login = loginWithOtp(null);
 
         JsonNode loginBody = objectMapper.readTree(login.getResponse().getContentAsString());
         Cookie refreshCookie = login.getResponse().getCookie("joprelys_refresh");
@@ -171,5 +154,53 @@ class PersistentAuthSessionControllerTest {
                 .andExpect(header().string(
                         "Clear-Site-Data",
                         "\"cache\", \"cookies\", \"storage\""));
+    }
+
+    private MvcResult loginWithOtp(String userAgent) throws Exception {
+        MockHttpServletRequestBuilder loginRequest = post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "email": "%s",
+                          "password": "Password123!"
+                        }
+                        """.formatted(loginEmail));
+        if (userAgent != null) {
+            loginRequest.header("User-Agent", userAgent);
+        }
+
+        mockMvc.perform(loginRequest)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.requiresOtp").value(true))
+                .andExpect(jsonPath("$.accessToken").doesNotExist())
+                .andExpect(header().doesNotExist("Set-Cookie"));
+
+        ArgumentCaptor<String> otpCode = ArgumentCaptor.forClass(String.class);
+        verify(accountMailService).sendLoginCode(eq(loginEmail), eq("Agent Sessions"), otpCode.capture());
+
+        MockHttpServletRequestBuilder verifyRequest = post("/api/auth/verify-otp")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "email": "%s",
+                          "otpCode": "%s"
+                        }
+                        """.formatted(loginEmail, otpCode.getValue()));
+        if (userAgent != null) {
+            verifyRequest.header("User-Agent", userAgent);
+        }
+
+        return mockMvc.perform(verifyRequest)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.sessionId").isNotEmpty())
+                .andExpect(jsonPath("$.sessionExpiresAt").isNotEmpty())
+                .andExpect(jsonPath("$.refreshToken").doesNotExist())
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("joprelys_refresh="),
+                        org.hamcrest.Matchers.containsString("HttpOnly"),
+                        org.hamcrest.Matchers.containsString("SameSite=Lax"),
+                        org.hamcrest.Matchers.containsString("Path=/api/auth"))))
+                .andReturn();
     }
 }

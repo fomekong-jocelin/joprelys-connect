@@ -9,6 +9,21 @@ import { AppLogoComponent } from '../shared/ui/app-logo.component';
 
 type LoginMode = 'staff' | 'patient';
 
+interface ApiErrorPayload {
+  detail?: string;
+  message?: string;
+  error?: {
+    code?: string;
+    message?: string;
+    trace_id?: string;
+  };
+}
+
+interface HttpErrorLike {
+  status?: number;
+  error?: ApiErrorPayload;
+}
+
 @Component({
   selector: 'app-login',
   imports: [RouterLink, AppLogoComponent],
@@ -93,8 +108,8 @@ export class LoginComponent {
           this.router.navigateByUrl(this.destinationAfterLogin(res.role || ''));
         }
       },
-      error: () => {
-        this.error.set(this.t('login.error.invalidCredentials'));
+      error: (err: HttpErrorLike) => {
+        this.error.set(this.staffLoginError(err));
         this.loading.set(false);
       },
     });
@@ -109,9 +124,14 @@ export class LoginComponent {
         const s = this.session();
         this.router.navigateByUrl(this.destinationAfterLogin(s?.role || ''));
       },
-      error: (err) => {
+      error: (err: HttpErrorLike) => {
         this.loading.set(false);
-        this.error.set(err.error?.detail || this.t('login.error.invalidOtp'));
+        this.error.set(
+          err.error?.error?.message
+          ?? err.error?.detail
+          ?? err.error?.message
+          ?? this.t('login.error.invalidOtp')
+        );
       }
     });
   }
@@ -207,6 +227,17 @@ export class LoginComponent {
     return this.route?.snapshot.queryParamMap.get('sessionExpired') === 'true'
       ? this.t('common.error.unauthorized')
       : null;
+  }
+
+  private staffLoginError(error: HttpErrorLike): string {
+    const code = error.error?.error?.code;
+    if (code === 'MAIL_RECIPIENT_REJECTED') {
+      return this.t('login.error.otpRecipientRejected');
+    }
+    if (code === 'MAIL_DELIVERY_UNAVAILABLE') {
+      return this.t('login.error.otpDeliveryUnavailable');
+    }
+    return this.t('login.error.invalidCredentials');
   }
 
   private isValidEmail(value: string): boolean {

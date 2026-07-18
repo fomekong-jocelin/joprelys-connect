@@ -3,6 +3,7 @@ import { CanActivateFn, Router } from '@angular/router';
 import { catchError, map, of } from 'rxjs';
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { AuthTokenStorageService } from './auth-token-storage.service';
+import { canAccessBillingManagement } from './professional-access-policies';
 
 export const roleGuard: CanActivateFn = (route, state) => {
   const tokenStorage = inject(AuthTokenStorageService);
@@ -17,6 +18,8 @@ export const roleGuard: CanActivateFn = (route, state) => {
   const expectedRoles = (route.data['expectedRoles'] as string[] | undefined) ?? [];
   const expectedPermissions = (route.data['expectedPermissions'] as string[] | undefined) ?? [];
   const routePath = route.routeConfig?.path ?? '';
+  const isBillingManagementRoute = routePath === 'clinic/billing'
+    || routePath === 'clinic/billing/invoice/:invoiceId';
   const isInternalEntryRoute = routePath === 'dashboard'
     || (routePath === 'profile' && !expectedRoles.includes('PATIENT'));
   const allowAnyInternalRole = route.data['allowAnyInternalRole'] === true || isInternalEntryRoute;
@@ -29,9 +32,13 @@ export const roleGuard: CanActivateFn = (route, state) => {
       : router.parseUrl('/unauthorized');
   }
 
-  if (expectedPermissions.length > 0 || allowAnyInternalRole) {
+  if (expectedPermissions.length > 0 || allowAnyInternalRole || isBillingManagementRoute) {
     return rbacApi.ensureMyAccess(true).pipe(
       map((access) => {
+        const permissions = new Set(access.permissions);
+        if (isBillingManagementRoute && !canAccessBillingManagement(permissions)) {
+          return router.parseUrl('/unauthorized');
+        }
         if (expectedPermissions.length > 0) {
           const hasPermission = access.permissions.some((permission) => expectedPermissions.includes(permission));
           return hasPermission ? true : router.parseUrl('/unauthorized');
@@ -42,7 +49,7 @@ export const roleGuard: CanActivateFn = (route, state) => {
             return true;
           }
         }
-        return router.parseUrl('/unauthorized');
+        return isBillingManagementRoute ? true : router.parseUrl('/unauthorized');
       }),
       catchError(() => of(router.parseUrl('/unauthorized'))),
     );

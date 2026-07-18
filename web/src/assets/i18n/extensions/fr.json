@@ -1,6 +1,11 @@
 {
+  "menu.billing": "Facturation & gestion financière",
   "menu.cashier": "Poste caissier",
   "breadcrumb.clinic.cashier": "Poste caissier",
+  "billing.title": "Facturation & gestion financière",
+  "billing.subtitle": "Émettez les factures, suivez les créances, les assurances, les tarifs et les indicateurs financiers de l’établissement.",
+  "login.error.otpRecipientRejected": "Le code de sécurité n’a pas pu être envoyé à l’adresse associée à ce compte. Contactez un administrateur pour vérifier l’adresse e-mail.",
+  "login.error.otpDeliveryUnavailable": "Le service d’envoi des codes de sécurité est momentanément indisponible. Réessayez dans quelques instants.",
   "common.close": "Fermer",
   "common.refresh": "Actualiser",
   "common.retry": "Réessayer",

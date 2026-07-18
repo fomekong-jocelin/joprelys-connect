@@ -1,9 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthTokenStorageService } from './auth-token-storage.service';
 import { LoginComponent } from './login.component';
-import { ActivatedRoute, Router } from '@angular/router';
 
 describe('LoginComponent', () => {
   let mockRouter: any;
@@ -50,39 +50,59 @@ describe('LoginComponent', () => {
     expect(component.error()).toBe('common.error.unauthorized');
   });
 
-  it('should store the auth session after successful login', () => {
+  it('should store the professional session only after staff OTP verification', () => {
     const fixture = TestBed.createComponent(LoginComponent);
     const component = fixture.componentInstance;
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
 
-    component.email.set('agent@example.com');
+    component.email.set('cashier@example.com');
     component.password.set('Password123!');
     component.submit();
 
-    const request = httpTesting.expectOne('/api/auth/login');
-    expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({
-      email: 'agent@example.com',
+    const loginRequest = httpTesting.expectOne('/api/auth/login');
+    expect(loginRequest.request.method).toBe('POST');
+    expect(loginRequest.request.body).toEqual({
+      email: 'cashier@example.com',
       password: 'Password123!',
     });
+    loginRequest.flush({
+      requiresOtp: true,
+      email: 'cashier@example.com',
+      name: 'Caissier Test',
+      role: 'CAISSIER',
+    });
 
-    request.flush({
+    expect(component.staffStep()).toBe(2);
+    expect(component.password()).toBe('');
+    expect(tokenStorage.accessToken).toBeNull();
+    expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+
+    component.staffOtpCode.set('123456');
+    component.verifyStaffOtp();
+
+    const otpRequest = httpTesting.expectOne('/api/auth/verify-otp');
+    expect(otpRequest.request.method).toBe('POST');
+    expect(otpRequest.request.body).toEqual({
+      email: 'cashier@example.com',
+      otpCode: '123456',
+    });
+    otpRequest.flush({
       accessToken: 'jwt-token',
       tokenType: 'Bearer',
       expiresAt: '2999-07-02T12:30:00Z',
-      email: 'agent@example.com',
-      name: 'Agent Accueil',
-      role: 'AGENT_ACCUEIL',
+      email: 'cashier@example.com',
+      name: 'Caissier Test',
+      role: 'CAISSIER',
+      requiresOtp: false,
     });
 
     expect(tokenStorage.accessToken).toBe('jwt-token');
-    expect(component.password()).toBe('');
     expect(component.error()).toBeNull();
     expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/dashboard');
   });
 
-  it('should return to the scanned consultation route after successful login', () => {
+  it('should return to the scanned consultation route after OTP verification', () => {
     queryParams['returnUrl'] = '/clinic/consultation/8dfc8352-505c-41a6-b936-a2db49901ee4';
     const fixture = TestBed.createComponent(LoginComponent);
     const component = fixture.componentInstance;
@@ -93,12 +113,23 @@ describe('LoginComponent', () => {
     component.submit();
 
     httpTesting.expectOne('/api/auth/login').flush({
+      requiresOtp: true,
+      email: 'doctor@example.com',
+      name: 'Doctor',
+      role: 'MEDECIN',
+    });
+    expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+
+    component.staffOtpCode.set('654321');
+    component.verifyStaffOtp();
+    httpTesting.expectOne('/api/auth/verify-otp').flush({
       accessToken: 'jwt-token',
       tokenType: 'Bearer',
       expiresAt: '2999-07-17T20:00:00Z',
       email: 'doctor@example.com',
       name: 'Doctor',
       role: 'MEDECIN',
+      requiresOtp: false,
     });
 
     expect(mockRouter.navigateByUrl).toHaveBeenCalledWith(
@@ -106,7 +137,7 @@ describe('LoginComponent', () => {
     );
   });
 
-  it('should keep the error generic when login fails', () => {
+  it('should keep the error generic when credentials are invalid', () => {
     const fixture = TestBed.createComponent(LoginComponent);
     const component = fixture.componentInstance;
     const httpTesting = TestBed.inject(HttpTestingController);
@@ -118,5 +149,67 @@ describe('LoginComponent', () => {
     httpTesting.expectOne('/api/auth/login').flush({}, { status: 401, statusText: 'Unauthorized' });
 
     expect(component.error()).toBe('login.error.invalidCredentials');
+  });
+
+  it('should explain when the OTP recipient address is rejected', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    component.email.set('cashier@example.com');
+    component.password.set('Password123!');
+    component.submit();
+
+    httpTesting.expectOne('/api/auth/login').flush({
+      error: {
+        code: 'MAIL_RECIPIENT_REJECTED',
+        message: 'Recipient rejected',
+        trace_id: 'trc_test',
+      },
+    }, { status: 422, statusText: 'Unprocessable Entity' });
+
+    expect(component.error()).toBe('login.error.otpRecipientRejected');
+    expect(component.staffStep()).toBe(1);
+  });
+
+  it('should distinguish a temporary OTP delivery outage', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    component.email.set('cashier@example.com');
+    component.password.set('Password123!');
+    component.submit();
+
+    httpTesting.expectOne('/api/auth/login').flush({
+      error: {
+        code: 'MAIL_DELIVERY_UNAVAILABLE',
+        message: 'Mail unavailable',
+        trace_id: 'trc_test',
+      },
+    }, { status: 503, statusText: 'Service Unavailable' });
+
+    expect(component.error()).toBe('login.error.otpDeliveryUnavailable');
+    expect(component.staffStep()).toBe(1);
+  });
+
+  it('should display the normalized API message when staff OTP verification fails', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    component.email.set('cashier@example.com');
+    component.staffOtpCode.set('000000');
+    component.verifyStaffOtp();
+
+    httpTesting.expectOne('/api/auth/verify-otp').flush({
+      error: {
+        code: 'UNAUTHORIZED',
+        message: 'Code de sécurité incorrect.',
+        trace_id: 'trc_test',
+      },
+    }, { status: 401, statusText: 'Unauthorized' });
+
+    expect(component.error()).toBe('Code de sécurité incorrect.');
   });
 });
