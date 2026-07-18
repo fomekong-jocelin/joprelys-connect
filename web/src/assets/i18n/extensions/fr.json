@@ -163,5 +163,9 @@
   "consultation.ai.doctorRole": "Médecin",
   "consultation.ai.assistantRole": "Assistant",
   "consultation.ai.clarificationNeeded": "Précision attendue",
-  "consultation.ai.noConversation": "Aucun échange pour le moment."
+  "consultation.ai.noConversation": "Aucun échange pour le moment.",
+  "staff.roles.selectionHelp": "Sélectionnez un ou plusieurs rôles. Les permissions effectives seront la combinaison des rôles choisis.",
+  "staff.roles.selected": "sélectionné(s)",
+  "staff.errors.mailRecipientRejected": "L’adresse e-mail a été rejetée. Vérifiez qu’elle est correctement saisie et qu’elle peut recevoir des messages. Le compte n’a pas été créé.",
+  "staff.errors.mailDeliveryUnavailable": "Le service e-mail est momentanément indisponible. Le compte n’a pas été créé ; réessayez dans quelques instants."
 }

@@ -163,5 +163,9 @@
   "consultation.ai.doctorRole": "Doctor",
   "consultation.ai.assistantRole": "Assistant",
   "consultation.ai.clarificationNeeded": "Clarification required",
-  "consultation.ai.noConversation": "No messages yet."
+  "consultation.ai.noConversation": "No messages yet.",
+  "staff.roles.selectionHelp": "Select one or more roles. Effective permissions are the union of the selected roles.",
+  "staff.roles.selected": "selected",
+  "staff.errors.mailRecipientRejected": "The email address was rejected. Check that it is correct and able to receive messages. The account was not created.",
+  "staff.errors.mailDeliveryUnavailable": "The email service is temporarily unavailable. The account was not created; try again in a few moments."
 }

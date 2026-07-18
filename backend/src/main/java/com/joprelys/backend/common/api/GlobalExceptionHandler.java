@@ -1,6 +1,7 @@
 package com.joprelys.backend.common.api;
 
 import com.joprelys.backend.notification.application.MailDeliveryUnavailableException;
+import com.joprelys.backend.notification.application.MailRecipientRejectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -72,10 +73,21 @@ public class GlobalExceptionHandler {
                 .body(new ApiErrorResponse("NOT_FOUND", ex.getMessage(), traceId));
     }
 
+    @ExceptionHandler(MailRecipientRejectedException.class)
+    ResponseEntity<ApiErrorResponse> handleMailRecipientRejected(MailRecipientRejectedException ex) {
+        String traceId = getTraceId();
+        log.warn("[trace_id={}] Mail recipient rejected ({})", traceId, failureType(ex));
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(new ApiErrorResponse(
+                        "MAIL_RECIPIENT_REJECTED",
+                        "L'adresse e-mail a été rejetée par le service de messagerie. Vérifiez l'adresse saisie ou contactez le destinataire.",
+                        traceId));
+    }
+
     @ExceptionHandler(MailDeliveryUnavailableException.class)
     ResponseEntity<ApiErrorResponse> handleMailDeliveryUnavailable(MailDeliveryUnavailableException ex) {
         String traceId = getTraceId();
-        log.error("[trace_id={}] Account credential delivery unavailable", traceId, ex);
+        log.error("[trace_id={}] Account credential delivery unavailable ({})", traceId, failureType(ex));
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new ApiErrorResponse(
                         "MAIL_DELIVERY_UNAVAILABLE",
@@ -165,5 +177,10 @@ public class GlobalExceptionHandler {
             case INTERNAL_SERVER_ERROR -> "INTERNAL_ERROR";
             default -> "ERROR";
         };
+    }
+
+    private String failureType(Throwable failure) {
+        Throwable cause = failure.getCause();
+        return cause != null ? cause.getClass().getSimpleName() : failure.getClass().getSimpleName();
     }
 }

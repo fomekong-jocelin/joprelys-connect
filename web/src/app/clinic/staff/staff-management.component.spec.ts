@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { RbacApiService } from '../rbac/rbac-api.service';
 import { RbacRole } from '../rbac/rbac.models';
 import { StaffApiService } from './staff-api.service';
@@ -126,6 +126,50 @@ describe('StaffManagementComponent', () => {
       roles: ['DAF', 'CAISSIER', 'SUPERVISEUR_CAISSE'],
     });
     expect(component.staff().length).toBe(2);
+  });
+
+  it('should explain when the recipient address is rejected', () => {
+    component.displayName.set('Compte Injoignable');
+    component.email.set('missing@example.invalid');
+    component.selectedRoles.set(['CAISSIER']);
+    mockApi.invite.mockReturnValue(throwError(() => ({
+      status: 422,
+      error: {
+        error: {
+          code: 'MAIL_RECIPIENT_REJECTED',
+          message: 'Recipient rejected',
+          trace_id: 'trc_test',
+        },
+      },
+    })));
+
+    component.submitForm();
+
+    expect(component.formError()).toBe(component.t('staff.errors.mailRecipientRejected'));
+    expect(component.formLoading()).toBe(false);
+    expect(component.staff()).toEqual(staff);
+  });
+
+  it('should distinguish a temporary mail outage from an invalid recipient', () => {
+    component.displayName.set('Compte à réessayer');
+    component.email.set('retry@joprelys.com');
+    component.selectedRoles.set(['CAISSIER']);
+    mockApi.invite.mockReturnValue(throwError(() => ({
+      status: 503,
+      error: {
+        error: {
+          code: 'MAIL_DELIVERY_UNAVAILABLE',
+          message: 'Mail service unavailable',
+          trace_id: 'trc_test',
+        },
+      },
+    })));
+
+    component.submitForm();
+
+    expect(component.formError()).toBe(component.t('staff.errors.mailDeliveryUnavailable'));
+    expect(component.formLoading()).toBe(false);
+    expect(component.staff()).toEqual(staff);
   });
 
   it('should update the effective roles of a selected staff member', () => {
