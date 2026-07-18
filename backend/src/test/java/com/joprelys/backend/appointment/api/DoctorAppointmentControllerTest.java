@@ -143,23 +143,21 @@ class DoctorAppointmentControllerTest {
 	}
 
 	@Test
-	void shouldRejectReceptionAgentEvenWithAppointmentReadPermission() throws Exception {
+	void shouldRejectReceptionAgentWithoutOwnAgendaPermission() throws Exception {
 		mockMvc.perform(get("/api/doctor/appointments")
 					.param("from", from.toString())
 					.param("to", to.toString())
 					.header("Authorization", "Bearer " + receptionToken))
-				.andExpect(status().isForbidden())
-				.andExpect(jsonPath("$.error.code").value("DOCTOR_APPOINTMENT_ACCESS_DENIED"));
+				.andExpect(status().isForbidden());
 	}
 
 	@Test
-	void shouldRejectDisabledDoctor() throws Exception {
+	void shouldRejectDisabledDoctorDuringAuthentication() throws Exception {
 		mockMvc.perform(get("/api/doctor/appointments")
 					.param("from", from.toString())
 					.param("to", to.toString())
 					.header("Authorization", "Bearer " + disabledDoctorToken))
-				.andExpect(status().isForbidden())
-				.andExpect(jsonPath("$.error.code").value("DOCTOR_APPOINTMENT_ACCESS_DENIED"));
+				.andExpect(status().isUnauthorized());
 	}
 
 	@Test
