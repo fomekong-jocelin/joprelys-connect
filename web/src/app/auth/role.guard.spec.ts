@@ -70,6 +70,7 @@ describe('roleGuard', () => {
       roleGuard({ data: { expectedRoles: ['ADMIN_JOPRELYS'] } } as any, {} as any),
     );
     expect(result).toBe('/unauthorized');
+    expect(mockRouter.parseUrl).toHaveBeenCalledWith('/unauthorized');
     expect(mockRbacApi.ensureMyAccess).not.toHaveBeenCalled();
   });
 
@@ -163,6 +164,46 @@ describe('roleGuard', () => {
     expect(patientResult).toBe(true);
     expect(professionalResult).toBe('/unauthorized');
     expect(mockRbacApi.ensureMyAccess).not.toHaveBeenCalled();
+  });
+
+  it('should deny billing management to a cashier-only profile', async () => {
+    sessionSignal.set(session('CAISSIER'));
+    mockRbacApi.ensureMyAccess.mockReturnValue(of({
+      userId: 'cashier-1',
+      roles: ['CAISSIER'],
+      permissions: [
+        'BILLING_INVOICE_READ',
+        'CASH_QUEUE_READ',
+        'CASH_PAYMENT_COLLECT',
+        'CASH_SESSION_OPEN',
+        'CASH_SESSION_CLOSE',
+        'CASH_MOVEMENT_WRITE',
+        'CASH_HISTORY_READ',
+      ],
+    }));
+
+    const result$ = TestBed.runInInjectionContext(() => roleGuard({
+      routeConfig: { path: 'clinic/billing' },
+      data: { expectedPermissions: ['BILLING_INVOICE_READ'] },
+    } as any, {} as any)) as Observable<boolean | string>;
+
+    expect(await firstValueFrom(result$)).toBe('/unauthorized');
+  });
+
+  it('should allow billing management when invoice and patient access are both granted', async () => {
+    sessionSignal.set(session('ROLE_FACTURATION'));
+    mockRbacApi.ensureMyAccess.mockReturnValue(of({
+      userId: 'billing-1',
+      roles: ['ROLE_FACTURATION'],
+      permissions: ['BILLING_INVOICE_READ', 'PATIENT_READ'],
+    }));
+
+    const result$ = TestBed.runInInjectionContext(() => roleGuard({
+      routeConfig: { path: 'clinic/billing' },
+      data: { expectedPermissions: ['BILLING_INVOICE_READ'] },
+    } as any, {} as any)) as Observable<boolean | string>;
+
+    expect(await firstValueFrom(result$)).toBe(true);
   });
 
   function session(role: string): AuthSession {
