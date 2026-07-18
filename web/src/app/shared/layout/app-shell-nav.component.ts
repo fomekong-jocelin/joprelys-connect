@@ -5,6 +5,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
 import { ActivePatientService } from '../../patient/active-patient.service';
 import { PatientApiService } from '../../patient/patient-api.service';
 import {
+  canAccessBillingManagement,
   hasAnyPermission,
   PROFESSIONAL_ACCESS_POLICIES,
 } from '../../auth/professional-access-policies';
@@ -133,7 +134,7 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
     if (hasPermission('SPATIAL_CONFIGURATION_MANAGE')) {
       addUniqueItem(this.item('/clinic/spatial/configuration', 'menu.spatialConfig', 'building'));
     }
-    if (hasAnyPermission(permissions, PROFESSIONAL_ACCESS_POLICIES.billingWorkspace)) {
+    if (canAccessBillingManagement(permissions)) {
       addUniqueItem(this.item('/clinic/billing', 'menu.billing', 'receipt-percent'));
     }
     if (hasAnyPermission(permissions, PROFESSIONAL_ACCESS_POLICIES.cashier)) {
