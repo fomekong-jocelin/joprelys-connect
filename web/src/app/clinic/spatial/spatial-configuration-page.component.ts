@@ -13,7 +13,13 @@ import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { ConfirmationDialogComponent } from '../../shared/ui/confirmation-dialog.component';
 import { IconComponent } from '../../shared/ui/icon.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
-import { RoomConfiguration, SpatialConfiguration, WardConfiguration } from './spatial-configuration.models';
+import {
+  HOSPITAL_SERVICE_TYPES,
+  HospitalServiceType,
+  RoomConfiguration,
+  SpatialConfiguration,
+  WardConfiguration,
+} from './spatial-configuration.models';
 
 type EditorKind = 'ward' | 'room' | 'bed';
 type DeleteKind = EditorKind;
@@ -23,14 +29,15 @@ interface EditorState {
   id: string | null;
   parentId: string | null;
   name: string;
+  serviceType: HospitalServiceType | '';
   capacity: number;
   comfortLevel: string;
 }
 
 interface DeleteTarget {
-  kind: DeleteKind;
-  id: string;
-  label: string;
+  readonly kind: DeleteKind;
+  readonly id: string;
+  readonly label: string;
 }
 
 @Component({
@@ -52,6 +59,7 @@ export class SpatialConfigurationPageComponent implements OnInit {
   private readonly rbacApi = inject(RbacApiService);
   private readonly organizationApi = inject(OrganizationApiService);
 
+  readonly serviceTypes = HOSPITAL_SERVICE_TYPES;
   readonly configuration = signal<SpatialConfiguration>({ wards: [] });
   readonly loading = signal(true);
   readonly busy = signal(false);
@@ -67,9 +75,9 @@ export class SpatialConfigurationPageComponent implements OnInit {
   ngOnInit(): void {
     if (this.platformAdministrator()) {
       this.loadOrganizations();
-    } else {
-      this.loadConfiguration();
+      return;
     }
+    this.loadConfiguration();
   }
 
   loadConfiguration(): void {
@@ -102,34 +110,68 @@ export class SpatialConfigurationPageComponent implements OnInit {
 
   openWardEditor(ward?: WardConfiguration): void {
     this.openEditor({
-      kind: 'ward', id: ward?.id ?? null, parentId: null,
-      name: ward?.name ?? '', capacity: 1, comfortLevel: 'STANDARD',
+      kind: 'ward',
+      id: ward?.id ?? null,
+      parentId: null,
+      name: ward?.name ?? '',
+      serviceType: ward?.serviceType ?? '',
+      capacity: 1,
+      comfortLevel: 'STANDARD',
     });
   }
 
-  openRoomEditor(wardId: string, room?: RoomConfiguration): void {
+  openRoomEditor(ward: WardConfiguration, room?: RoomConfiguration): void {
+    if (!ward.allowsRooms) {
+      this.errorMessage.set(this.t('spatial.services.roomsForbidden'));
+      return;
+    }
     this.openEditor({
-      kind: 'room', id: room?.id ?? null, parentId: wardId,
-      name: room?.roomNumber ?? '', capacity: room?.capacity ?? 1,
+      kind: 'room',
+      id: room?.id ?? null,
+      parentId: ward.id,
+      name: room?.roomNumber ?? '',
+      serviceType: '',
+      capacity: room?.capacity ?? 1,
       comfortLevel: room?.comfortLevel ?? 'STANDARD',
     });
   }
 
   openBedEditor(roomId: string, bed?: Bed): void {
     this.openEditor({
-      kind: 'bed', id: bed?.id ?? null, parentId: roomId,
-      name: bed?.bedNumber ?? '', capacity: 1, comfortLevel: 'STANDARD',
+      kind: 'bed',
+      id: bed?.id ?? null,
+      parentId: roomId,
+      name: bed?.bedNumber ?? '',
+      serviceType: '',
+      capacity: 1,
+      comfortLevel: 'STANDARD',
     });
   }
 
   closeEditor(): void {
-    if (!this.busy()) this.editor.set(null);
+    if (!this.busy()) {
+      this.editor.set(null);
+    }
+  }
+
+  canSubmitEditor(state: EditorState): boolean {
+    if (!state.name.trim() || (!state.parentId && state.kind !== 'ward')) {
+      return false;
+    }
+    if (state.kind === 'ward') {
+      return state.serviceType !== '';
+    }
+    if (state.kind === 'room') {
+      return state.capacity >= 1;
+    }
+    return true;
   }
 
   submitEditor(): void {
     const state = this.editor();
-    if (!state || !state.name.trim() || (!state.parentId && state.kind !== 'ward')) return;
-    if (state.kind === 'room' && state.capacity < 1) return;
+    if (!state || !this.canSubmitEditor(state)) {
+      return;
+    }
 
     this.busy.set(true);
     this.clearMessages();
@@ -144,12 +186,16 @@ export class SpatialConfigurationPageComponent implements OnInit {
   }
 
   cancelDelete(): void {
-    if (!this.busy()) this.deleteTarget.set(null);
+    if (!this.busy()) {
+      this.deleteTarget.set(null);
+    }
   }
 
   confirmDelete(): void {
     const target = this.deleteTarget();
-    if (!target) return;
+    if (!target) {
+      return;
+    }
     this.busy.set(true);
     this.clearMessages();
     this.deleteRequest(target).subscribe({
@@ -168,6 +214,14 @@ export class SpatialConfigurationPageComponent implements OnInit {
     return this.t(`spatial.config.${action}.${state.kind}`);
   }
 
+  serviceTypeLabel(serviceType: HospitalServiceType): string {
+    return this.t(`spatial.services.type.${serviceType}.label`);
+  }
+
+  serviceTypeDescription(serviceType: HospitalServiceType): string {
+    return this.t(`spatial.services.type.${serviceType}.description`);
+  }
+
   deleteMessage(): string {
     const target = this.deleteTarget();
     return target ? `${this.t('spatial.config.deleteMessage')} « ${target.label} » ?` : '';
@@ -180,15 +234,23 @@ export class SpatialConfigurationPageComponent implements OnInit {
 
   private saveRequest(state: EditorState): Observable<unknown> {
     if (state.kind === 'ward') {
-      const payload = { name: state.name.trim() };
+      if (state.serviceType === '') {
+        throw new Error('A hospital service type is required before submitting the form.');
+      }
+      const payload = {
+        name: state.name.trim(),
+        serviceType: state.serviceType,
+      };
       return state.id
         ? this.spatialApi.updateWard(state.id, payload, this.scopeOrganizationId())
         : this.spatialApi.createWard(payload, this.scopeOrganizationId());
     }
     if (state.kind === 'room') {
       const payload = {
-        wardId: state.parentId!, roomNumber: state.name.trim(),
-        capacity: state.capacity, comfortLevel: state.comfortLevel,
+        wardId: state.parentId!,
+        roomNumber: state.name.trim(),
+        capacity: state.capacity,
+        comfortLevel: state.comfortLevel,
       };
       return state.id
         ? this.spatialApi.updateRoom(state.id, payload, this.scopeOrganizationId())
@@ -201,8 +263,12 @@ export class SpatialConfigurationPageComponent implements OnInit {
   }
 
   private deleteRequest(target: DeleteTarget): Observable<void> {
-    if (target.kind === 'ward') return this.spatialApi.deleteWard(target.id, this.scopeOrganizationId());
-    if (target.kind === 'room') return this.spatialApi.deleteRoom(target.id, this.scopeOrganizationId());
+    if (target.kind === 'ward') {
+      return this.spatialApi.deleteWard(target.id, this.scopeOrganizationId());
+    }
+    if (target.kind === 'room') {
+      return this.spatialApi.deleteRoom(target.id, this.scopeOrganizationId());
+    }
     return this.spatialApi.deleteBed(target.id, this.scopeOrganizationId());
   }
 
@@ -235,8 +301,11 @@ export class SpatialConfigurationPageComponent implements OnInit {
         this.organizations.set(organizations);
         const preferred = organizations.find((organization) => organization.status === 'ACTIVE') ?? organizations[0];
         this.selectedOrganizationId.set(preferred?.id ?? '');
-        if (preferred) this.loadConfiguration();
-        else this.loading.set(false);
+        if (preferred) {
+          this.loadConfiguration();
+        } else {
+          this.loading.set(false);
+        }
       },
       error: (error: HttpErrorResponse) => {
         this.errorMessage.set(this.extractError(error));
