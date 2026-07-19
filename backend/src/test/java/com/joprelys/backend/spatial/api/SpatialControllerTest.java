@@ -47,6 +47,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.databind.json.JsonMapper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -91,6 +92,9 @@ public class SpatialControllerTest {
 
     @Autowired
     private SpatialService spatialService;
+
+    @Autowired
+    private JsonMapper jsonMapper;
 
     private OrganizationEntity org;
     private UserAccountEntity doctor;
@@ -293,8 +297,7 @@ public class SpatialControllerTest {
                 .andExpect(jsonPath("$.serviceType").value("HOSPITALIZATION"))
                 .andExpect(jsonPath("$.allowsRooms").value(true))
                 .andReturn().getResponse().getContentAsString();
-        String wardId = new com.fasterxml.jackson.databind.ObjectMapper()
-                .readTree(wardJson).get("id").asText();
+        String wardId = jsonMapper.readTree(wardJson).get("id").asString();
 
         String roomBody = """
                 {"wardId":"%s","roomNumber":"201","capacity":1,"comfortLevel":"STANDARD"}
@@ -305,8 +308,7 @@ public class SpatialControllerTest {
                         .content(roomBody))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
-        String roomId = new com.fasterxml.jackson.databind.ObjectMapper()
-                .readTree(roomJson).get("id").asText();
+        String roomId = jsonMapper.readTree(roomJson).get("id").asString();
 
         String firstBed = "{\"roomId\":\"%s\",\"bedNumber\":\"201-A\"}".formatted(roomId);
         mockMvc.perform(post("/api/spatial/configuration/beds")
@@ -339,8 +341,7 @@ public class SpatialControllerTest {
                 .andExpect(jsonPath("$.serviceType").value("ADMINISTRATIVE"))
                 .andExpect(jsonPath("$.allowsRooms").value(false))
                 .andReturn().getResponse().getContentAsString();
-        String cashDeskId = new com.fasterxml.jackson.databind.ObjectMapper()
-                .readTree(wardJson).get("id").asText();
+        String cashDeskId = jsonMapper.readTree(wardJson).get("id").asString();
 
         String roomBody = """
                 {"wardId":"%s","roomNumber":"CAISSE-01","capacity":1,"comfortLevel":"STANDARD"}
