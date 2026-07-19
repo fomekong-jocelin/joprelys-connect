@@ -17,13 +17,16 @@ WHERE EXISTS (
 ALTER TABLE wards
     ALTER COLUMN service_type SET NOT NULL;
 
+-- LIKE sans joker conserve une égalité stricte tout en évitant le cache IN de H2,
+-- qui devient invalide lorsque plusieurs contextes de test ferment et rouvrent la base embarquée.
+-- PostgreSQL applique la même contrainte exacte en production.
 ALTER TABLE wards
     ADD CONSTRAINT chk_wards_service_type
-    CHECK (service_type IN (
-        'HOSPITALIZATION',
-        'EMERGENCY',
-        'OUTPATIENT',
-        'MEDICO_TECHNICAL',
-        'PHARMACY',
-        'ADMINISTRATIVE'
-    ));
+    CHECK (
+        service_type LIKE 'HOSPITALIZATION'
+        OR service_type LIKE 'EMERGENCY'
+        OR service_type LIKE 'OUTPATIENT'
+        OR service_type LIKE 'MEDICO_TECHNICAL'
+        OR service_type LIKE 'PHARMACY'
+        OR service_type LIKE 'ADMINISTRATIVE'
+    );
