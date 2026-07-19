@@ -251,6 +251,10 @@ import { IconComponent } from '../shared/ui/icon.component';
                 <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.medicalInfo.history.comment') }}</label>
                 <textarea [(ngModel)]="historyComment" name="comment" rows="2" class="ui-textarea"></textarea>
               </div>
+              <footer class="pt-4 border-t border-[var(--app-border)]/80 flex justify-end gap-2">
+                <button type="button" (click)="showHistoryModal.set(false)" class="px-4 py-2 border border-[var(--app-border)] rounded-[var(--radius-brand-sm)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800/40 cursor-pointer">{{ t('common.cancel') }}</button>
+                <button type="submit" class="px-5 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[var(--brand-primary-hover)] cursor-pointer">{{ t('common.save') }}</button>
+              </footer>
             </form>
           </div>
         </div>
