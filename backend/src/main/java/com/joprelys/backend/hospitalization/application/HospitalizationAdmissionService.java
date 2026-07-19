@@ -8,6 +8,7 @@ import com.joprelys.backend.hospitalization.api.HospitalizationResponse;
 import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationEntity;
 import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository;
 import com.joprelys.backend.patient.application.PatientService;
+import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentRepository;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedEntity;
@@ -51,11 +52,11 @@ public class HospitalizationAdmissionService {
 
     @Transactional
     public HospitalizationResponse admitPatient(CreateHospitalizationRequest request) {
-        patientService.getPatientById(request.patientId());
+        PatientEntity patient = patientService.getPatientById(request.patientId());
         rejectActiveHospitalization(request);
         rejectActiveBedAssignment(request);
 
-        BedEntity bed = requireConfiguredBed(request);
+        BedEntity bed = requireConfiguredBed(patient, request);
         bed.getRoom().getWard().requireRoomsAllowed();
         if (bed.getStatus() != BedStatus.FREE) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Le lit demandé n'est pas libre.");
@@ -90,8 +91,9 @@ public class HospitalizationAdmissionService {
                 });
     }
 
-    private BedEntity requireConfiguredBed(CreateHospitalizationRequest request) {
-        return bedRepository.findByWardRoomAndBedNumber(
+    private BedEntity requireConfiguredBed(PatientEntity patient, CreateHospitalizationRequest request) {
+        return bedRepository.findConfiguredBed(
+                        patient.getOrganizationId(),
                         request.serviceName(),
                         request.roomNumber(),
                         request.bedNumber())
