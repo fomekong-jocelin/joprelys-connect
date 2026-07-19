@@ -30,6 +30,7 @@ interface EditorState {
   parentId: string | null;
   name: string;
   serviceType: HospitalServiceType | '';
+  hasRooms: boolean;
   capacity: number;
   comfortLevel: string;
 }
@@ -115,6 +116,7 @@ export class SpatialConfigurationPageComponent implements OnInit {
       parentId: null,
       name: ward?.name ?? '',
       serviceType: ward?.serviceType ?? '',
+      hasRooms: (ward?.rooms.length ?? 0) > 0,
       capacity: 1,
       comfortLevel: 'STANDARD',
     });
@@ -131,6 +133,7 @@ export class SpatialConfigurationPageComponent implements OnInit {
       parentId: ward.id,
       name: room?.roomNumber ?? '',
       serviceType: '',
+      hasRooms: false,
       capacity: room?.capacity ?? 1,
       comfortLevel: room?.comfortLevel ?? 'STANDARD',
     });
@@ -143,6 +146,7 @@ export class SpatialConfigurationPageComponent implements OnInit {
       parentId: roomId,
       name: bed?.bedNumber ?? '',
       serviceType: '',
+      hasRooms: false,
       capacity: 1,
       comfortLevel: 'STANDARD',
     });
@@ -165,6 +169,10 @@ export class SpatialConfigurationPageComponent implements OnInit {
       return state.capacity >= 1;
     }
     return true;
+  }
+
+  serviceTypeAllowsRooms(serviceType: HospitalServiceType): boolean {
+    return serviceType === 'HOSPITALIZATION' || serviceType === 'EMERGENCY';
   }
 
   submitEditor(): void {
