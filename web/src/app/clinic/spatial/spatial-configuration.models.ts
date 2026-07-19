@@ -1,36 +1,50 @@
 import { Bed } from '../../patient/patient.models';
 
+export const HOSPITAL_SERVICE_TYPES = [
+  'HOSPITALIZATION',
+  'EMERGENCY',
+  'OUTPATIENT',
+  'MEDICO_TECHNICAL',
+  'PHARMACY',
+  'ADMINISTRATIVE',
+] as const;
+
+export type HospitalServiceType = (typeof HOSPITAL_SERVICE_TYPES)[number];
+
 export interface RoomConfiguration {
-  id: string;
-  wardId: string;
-  roomNumber: string;
-  capacity: number;
-  comfortLevel: string;
-  beds: Bed[];
+  readonly id: string;
+  readonly wardId: string;
+  readonly roomNumber: string;
+  readonly capacity: number;
+  readonly comfortLevel: string;
+  readonly beds: readonly Bed[];
 }
 
 export interface WardConfiguration {
-  id: string;
-  name: string;
-  rooms: RoomConfiguration[];
+  readonly id: string;
+  readonly name: string;
+  readonly serviceType: HospitalServiceType;
+  readonly allowsRooms: boolean;
+  readonly rooms: readonly RoomConfiguration[];
 }
 
 export interface SpatialConfiguration {
-  wards: WardConfiguration[];
+  readonly wards: readonly WardConfiguration[];
 }
 
 export interface SaveWardPayload {
-  name: string;
+  readonly name: string;
+  readonly serviceType: HospitalServiceType;
 }
 
 export interface SaveRoomPayload {
-  wardId: string;
-  roomNumber: string;
-  capacity: number;
-  comfortLevel: string;
+  readonly wardId: string;
+  readonly roomNumber: string;
+  readonly capacity: number;
+  readonly comfortLevel: string;
 }
 
 export interface SaveBedPayload {
-  roomId: string;
-  bedNumber: string;
+  readonly roomId: string;
+  readonly bedNumber: string;
 }
