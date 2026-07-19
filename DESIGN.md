@@ -125,12 +125,17 @@ Conformément à la règle des arrondis sobres :
 ## Components
 
 ### Buttons
+
 Les boutons sont définis dans `shared/ui/button.component.ts`. Ils héritent de la charte de couleurs dynamiques et ont un arrondi de `4px` à `6px`.
 
+Le contenu d'un bouton standard forme une unité indivisible : icône et libellé restent sur une seule ligne. La règle globale est portée par `src/styles/button-layout.css` avec `white-space: nowrap`, `flex-shrink: 0` et une hauteur de ligne explicite. Quand l'espace manque, le conteneur d'actions fait revenir les boutons entiers à la ligne ou les empile ; il ne compresse pas le texte interne du bouton.
+
 ### Inputs
+
 Les champs texte utilisent un fond gris clair `var(--bg-input)` avec bordure fine, basculant vers un fond sombre en mode dark, et un arrondi de `4px`.
 
 ### Cards
+
 Les conteneurs de cartes utilisent la classe `.ui-card` avec `8px` d'arrondi et l'ombre légère centralisée.
 
 ### Confirmation dialogs
@@ -151,8 +156,10 @@ La page « Mes disponibilités » (`clinic/availability`) introduit la grille he
 - Toujours utiliser les variables CSS centrales de `styles.css`.
 - Respecter les contrastes légaux en mode light et dark.
 - Maintenir l'internationalisation FR/EN de chaque libellé.
+- Laisser le conteneur responsive disposer les boutons sans couper leur libellé.
 
 ### Don't
 - **Interdiction d'importer `@angular/material`** ou d'utiliser ses directives.
 - Interdiction de Tailwind v3 ou d'utiliser un fichier de configuration externe `tailwind.config.js`.
 - Ne pas utiliser d'arrondis supérieurs à `8px` sur les cartes et boutons.
+- Ne pas réautoriser le retour à la ligne interne d'un bouton pour masquer un défaut de layout.
