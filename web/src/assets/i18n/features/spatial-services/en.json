@@ -1,0 +1,20 @@
+{
+  "spatial.services.typeLabel": "Service type",
+  "spatial.services.selectType": "Select the service's actual operational function",
+  "spatial.services.roomsForbidden": "This service type cannot manage rooms or beds.",
+  "spatial.services.noAccommodationTitle": "Non-accommodation service",
+  "spatial.services.noAccommodationDescription": "This service performs a clinical, medico-technical or administrative function. It therefore contains no patient rooms or beds.",
+  "spatial.services.typeLockedByRooms": "This service contains rooms. Only Hospitalization and Emergency remain available until those rooms are moved or deleted.",
+  "spatial.services.type.HOSPITALIZATION.label": "Hospitalization",
+  "spatial.services.type.HOSPITALIZATION.description": "Inpatient accommodation unit organized into rooms and beds.",
+  "spatial.services.type.EMERGENCY.label": "Emergency",
+  "spatial.services.type.EMERGENCY.description": "Emergency care unit that may contain bays, treatment rooms and observation beds.",
+  "spatial.services.type.OUTPATIENT.label": "Outpatient care",
+  "spatial.services.type.OUTPATIENT.description": "Ambulatory activity without patient accommodation or bed management.",
+  "spatial.services.type.MEDICO_TECHNICAL.label": "Medico-technical",
+  "spatial.services.type.MEDICO_TECHNICAL.description": "Laboratory, imaging, technical theatre or another medico-technical platform without inpatient rooms.",
+  "spatial.services.type.PHARMACY.label": "Pharmacy",
+  "spatial.services.type.PHARMACY.description": "Medication management, preparation and dispensing service without patient accommodation.",
+  "spatial.services.type.ADMINISTRATIVE.label": "Administrative",
+  "spatial.services.type.ADMINISTRATIVE.description": "Cash desk, administrative reception, management or another support function without rooms or beds."
+}
