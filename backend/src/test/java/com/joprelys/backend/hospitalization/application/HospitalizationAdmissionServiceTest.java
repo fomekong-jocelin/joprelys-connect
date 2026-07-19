@@ -1,5 +1,13 @@
 package com.joprelys.backend.hospitalization.application;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.joprelys.backend.audit.application.AuditService;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.hospitalization.api.CreateHospitalizationRequest;
@@ -22,14 +30,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class HospitalizationAdmissionServiceTest {
@@ -56,14 +56,21 @@ class HospitalizationAdmissionServiceTest {
     private HospitalizationAdmissionService service;
 
     @Test
-    void shouldRejectAdmissionWhenBedIsNotConfigured() {
+    void shouldRejectAdmissionWhenBedIsNotConfiguredForPatientOrganization() {
         CreateHospitalizationRequest request = request();
-        when(patientService.getPatientById(request.patientId())).thenReturn(org.mockito.Mockito.mock(PatientEntity.class));
+        UUID organizationId = UUID.randomUUID();
+        PatientEntity patient = org.mockito.Mockito.mock(PatientEntity.class);
+
+        when(patientService.getPatientById(request.patientId())).thenReturn(patient);
+        when(patient.getOrganizationId()).thenReturn(organizationId);
         when(hospitalizationRepository.findActiveByPatientId(request.patientId())).thenReturn(Optional.empty());
         when(hospitalizationRepository.findActiveByBed(request.roomNumber(), request.bedNumber()))
                 .thenReturn(Optional.empty());
-        when(bedRepository.findByWardRoomAndBedNumber(
-                request.serviceName(), request.roomNumber(), request.bedNumber()))
+        when(bedRepository.findConfiguredBed(
+                organizationId,
+                request.serviceName(),
+                request.roomNumber(),
+                request.bedNumber()))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException exception = assertThrows(
@@ -77,18 +84,24 @@ class HospitalizationAdmissionServiceTest {
     }
 
     @Test
-    void shouldOccupyAnExistingFreeBedWithoutCreatingSpatialData() {
+    void shouldOccupyConfiguredFreeBedWithoutCreatingSpatialData() {
         CreateHospitalizationRequest request = request();
+        UUID organizationId = UUID.randomUUID();
+        PatientEntity patient = org.mockito.Mockito.mock(PatientEntity.class);
         BedEntity bed = org.mockito.Mockito.mock(BedEntity.class);
         RoomEntity room = org.mockito.Mockito.mock(RoomEntity.class);
         WardEntity ward = org.mockito.Mockito.mock(WardEntity.class);
 
-        when(patientService.getPatientById(request.patientId())).thenReturn(org.mockito.Mockito.mock(PatientEntity.class));
+        when(patientService.getPatientById(request.patientId())).thenReturn(patient);
+        when(patient.getOrganizationId()).thenReturn(organizationId);
         when(hospitalizationRepository.findActiveByPatientId(request.patientId())).thenReturn(Optional.empty());
         when(hospitalizationRepository.findActiveByBed(request.roomNumber(), request.bedNumber()))
                 .thenReturn(Optional.empty());
-        when(bedRepository.findByWardRoomAndBedNumber(
-                request.serviceName(), request.roomNumber(), request.bedNumber()))
+        when(bedRepository.findConfiguredBed(
+                organizationId,
+                request.serviceName(),
+                request.roomNumber(),
+                request.bedNumber()))
                 .thenReturn(Optional.of(bed));
         when(bed.getRoom()).thenReturn(room);
         when(room.getWard()).thenReturn(ward);
