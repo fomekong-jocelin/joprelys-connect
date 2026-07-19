@@ -13,9 +13,20 @@ describe('SpatialConfigurationPageComponent', () => {
   beforeEach(() => {
     api = {
       getConfiguration: vi.fn(() => of({
-        wards: [{ id: 'ward-1', name: 'Cardiologie', rooms: [] }],
+        wards: [{
+          id: 'ward-1',
+          name: 'Cardiologie',
+          serviceType: 'HOSPITALIZATION',
+          allowsRooms: true,
+          rooms: [],
+        }],
       })),
-      createWard: vi.fn(() => of({ id: 'ward-2', name: 'Pédiatrie' })),
+      createWard: vi.fn(() => of({
+        id: 'ward-2',
+        name: 'Pédiatrie',
+        serviceType: 'HOSPITALIZATION',
+        allowsRooms: true,
+      })),
       updateWard: vi.fn(() => of({})),
       deleteWard: vi.fn(() => of(undefined)),
       createRoom: vi.fn(() => of({})),
@@ -39,21 +50,50 @@ describe('SpatialConfigurationPageComponent', () => {
     component = TestBed.createComponent(SpatialConfigurationPageComponent).componentInstance;
   });
 
-  it('loads the hospital structure on initialization', () => {
+  it('loads the typed hospital structure on initialization', () => {
     component.ngOnInit();
 
     expect(component.configuration().wards[0].name).toBe('Cardiologie');
+    expect(component.configuration().wards[0].serviceType).toBe('HOSPITALIZATION');
+    expect(component.configuration().wards[0].allowsRooms).toBe(true);
     expect(component.loading()).toBe(false);
   });
 
-  it('creates a new department and refreshes the structure', () => {
+  it('requires an explicit service type before creating a department', () => {
     component.openWardEditor();
     component.editor()!.name = 'Pédiatrie';
 
     component.submitEditor();
 
-    expect(api['createWard']).toHaveBeenCalledWith({ name: 'Pédiatrie' }, undefined);
+    expect(api['createWard']).not.toHaveBeenCalled();
+    expect(component.editor()).not.toBeNull();
+  });
+
+  it('creates a typed hospital department and refreshes the structure', () => {
+    component.openWardEditor();
+    component.editor()!.name = 'Pédiatrie';
+    component.editor()!.serviceType = 'HOSPITALIZATION';
+
+    component.submitEditor();
+
+    expect(api['createWard']).toHaveBeenCalledWith({
+      name: 'Pédiatrie',
+      serviceType: 'HOSPITALIZATION',
+    }, undefined);
     expect(api['getConfiguration']).toHaveBeenCalled();
     expect(component.successMessage()).toBe('spatial.config.saveSuccess');
+  });
+
+  it('does not open a room editor for an administrative service', () => {
+    component.openRoomEditor({
+      id: 'cash-desk',
+      name: 'Caisse',
+      serviceType: 'ADMINISTRATIVE',
+      allowsRooms: false,
+      rooms: [],
+    });
+
+    expect(component.editor()).toBeNull();
+    expect(component.errorMessage()).toBe('spatial.services.roomsForbidden');
   });
 });

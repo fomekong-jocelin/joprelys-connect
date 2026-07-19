@@ -1,9 +1,9 @@
 package com.joprelys.backend.spatial.api;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -18,7 +18,16 @@ import com.joprelys.backend.hospitalization.infrastructure.persistence.Hospitali
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.spatial.application.SpatialService;
-import com.joprelys.backend.spatial.infrastructure.persistence.*;
+import com.joprelys.backend.spatial.domain.HospitalServiceType;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedStatus;
+import com.joprelys.backend.spatial.infrastructure.persistence.RoomEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.RoomRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.WardEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.WardRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import java.time.Instant;
@@ -38,6 +47,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.databind.json.JsonMapper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -83,6 +93,9 @@ public class SpatialControllerTest {
     @Autowired
     private SpatialService spatialService;
 
+    @Autowired
+    private JsonMapper jsonMapper;
+
     private OrganizationEntity org;
     private UserAccountEntity doctor;
     private PatientEntity patientA;
@@ -113,7 +126,12 @@ public class SpatialControllerTest {
         userAccountRepository.deleteAll();
         organizationRepository.deleteAll();
 
-        org = new OrganizationEntity("Clinique Spatiale", "spatial@joprelys.local", "123456", "Street Spatial", "Douala");
+        org = new OrganizationEntity(
+                "Clinique Spatiale",
+                "spatial@joprelys.local",
+                "123456",
+                "Street Spatial",
+                "Douala");
         org = organizationRepository.save(org);
 
         TenantContext.setTenantId(org.getId());
@@ -135,17 +153,57 @@ public class SpatialControllerTest {
         platformAdmin = userAccountRepository.save(platformAdmin);
         tokenPlatformAdmin = jwtService.createToken(platformAdmin).value();
 
-        patientA = new PatientEntity("DPU-S-00001", "PAT-S-001", "Alice Spatial", "FEMININ", LocalDate.of(1990, 5, 10), "+237699999991", "Douala", "Akwa", "Street A", "Bob", "+237699445566", "Aucune", "Aucun");
-        patientB = new PatientEntity("DPU-S-00002", "PAT-S-002", "Bob Spatial", "MASCULIN", LocalDate.of(1985, 7, 20), "+237699999992", "Douala", "Akwa", "Street B", "Alice", "+237699445577", "Aucune", "Aucun");
+        patientA = new PatientEntity(
+                "DPU-S-00001",
+                "PAT-S-001",
+                "Alice Spatial",
+                "FEMININ",
+                LocalDate.of(1990, 5, 10),
+                "+237699999991",
+                "Douala",
+                "Akwa",
+                "Street A",
+                "Bob",
+                "+237699445566",
+                "Aucune",
+                "Aucun");
+        patientB = new PatientEntity(
+                "DPU-S-00002",
+                "PAT-S-002",
+                "Bob Spatial",
+                "MASCULIN",
+                LocalDate.of(1985, 7, 20),
+                "+237699999992",
+                "Douala",
+                "Akwa",
+                "Street B",
+                "Alice",
+                "+237699445577",
+                "Aucune",
+                "Aucun");
         patientA = patientRepository.save(patientA);
         patientB = patientRepository.save(patientB);
 
-        visitA = new VisitEntity(patientA, "VIS-S-001", "Motif A", "Général", "MÉDECINE GÉNÉRALE", doctor.getId(), Instant.now());
-        visitB = new VisitEntity(patientB, "VIS-S-002", "Motif B", "Général", "MÉDECINE GÉNÉRALE", doctor.getId(), Instant.now());
+        visitA = new VisitEntity(
+                patientA,
+                "VIS-S-001",
+                "Motif A",
+                "Général",
+                "MÉDECINE GÉNÉRALE",
+                doctor.getId(),
+                Instant.now());
+        visitB = new VisitEntity(
+                patientB,
+                "VIS-S-002",
+                "Motif B",
+                "Général",
+                "MÉDECINE GÉNÉRALE",
+                doctor.getId(),
+                Instant.now());
         visitA = visitRepository.save(visitA);
         visitB = visitRepository.save(visitB);
 
-        ward = new WardEntity("Médecine Hommes");
+        ward = new WardEntity("Médecine Hommes", HospitalServiceType.HOSPITALIZATION);
         ward.setOrganizationId(org.getId());
         ward = wardRepository.save(ward);
 
@@ -170,8 +228,7 @@ public class SpatialControllerTest {
                 "Observation générale",
                 "HOSP-S-001",
                 visitA.getId(),
-                doctor.getId()
-        );
+                doctor.getId());
         hospA = hospitalizationRepository.save(hospA);
 
         BedAssignmentEntity assignmentA = new BedAssignmentEntity(hospA.getId(), bedOccupied);
@@ -186,8 +243,7 @@ public class SpatialControllerTest {
                 "Fièvre",
                 "HOSP-S-002",
                 visitB.getId(),
-                doctor.getId()
-        );
+                doctor.getId());
         hospB = hospitalizationRepository.save(hospB);
 
         TenantContext.clear();
@@ -196,13 +252,13 @@ public class SpatialControllerTest {
     @Test
     void testListWardsAndOccupancy() throws Exception {
         mockMvc.perform(get("/api/spatial/wards")
-                .header("Authorization", "Bearer " + tokenDoctor))
+                        .header("Authorization", "Bearer " + tokenDoctor))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].name").value("Médecine Hommes"));
 
         mockMvc.perform(get("/api/spatial/wards/" + ward.getId() + "/occupancy")
-                .header("Authorization", "Bearer " + tokenDoctor))
+                        .header("Authorization", "Bearer " + tokenDoctor))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Médecine Hommes"))
                 .andExpect(jsonPath("$.totalBedsCount").value(2))
@@ -220,25 +276,28 @@ public class SpatialControllerTest {
                 """;
 
         mockMvc.perform(post("/api/spatial/beds/" + bedFree.getId() + "/status")
-                .header("Authorization", "Bearer " + tokenDoctor)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(statusRequest))
+                        .header("Authorization", "Bearer " + tokenDoctor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(statusRequest))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("MAINTENANCE"));
     }
 
     @Test
     void adminShouldCreateHospitalStructureAndRespectRoomCapacity() throws Exception {
-        String wardBody = "{\"name\":\"Cardiologie\"}";
+        String wardBody = """
+                {"name":"Cardiologie","serviceType":"HOSPITALIZATION"}
+                """;
         String wardJson = mockMvc.perform(post("/api/spatial/configuration/wards")
                         .header("Authorization", "Bearer " + tokenAdmin)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(wardBody))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Cardiologie"))
+                .andExpect(jsonPath("$.serviceType").value("HOSPITALIZATION"))
+                .andExpect(jsonPath("$.allowsRooms").value(true))
                 .andReturn().getResponse().getContentAsString();
-        String wardId = new com.fasterxml.jackson.databind.ObjectMapper()
-                .readTree(wardJson).get("id").asText();
+        String wardId = jsonMapper.readTree(wardJson).get("id").asString();
 
         String roomBody = """
                 {"wardId":"%s","roomNumber":"201","capacity":1,"comfortLevel":"STANDARD"}
@@ -249,8 +308,7 @@ public class SpatialControllerTest {
                         .content(roomBody))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
-        String roomId = new com.fasterxml.jackson.databind.ObjectMapper()
-                .readTree(roomJson).get("id").asText();
+        String roomId = jsonMapper.readTree(roomJson).get("id").asString();
 
         String firstBed = "{\"roomId\":\"%s\",\"bedNumber\":\"201-A\"}".formatted(roomId);
         mockMvc.perform(post("/api/spatial/configuration/beds")
@@ -274,6 +332,29 @@ public class SpatialControllerTest {
     }
 
     @Test
+    void administrativeServiceShouldRejectRoomCreation() throws Exception {
+        String wardJson = mockMvc.perform(post("/api/spatial/configuration/wards")
+                        .header("Authorization", "Bearer " + tokenAdmin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Caisse\",\"serviceType\":\"ADMINISTRATIVE\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.serviceType").value("ADMINISTRATIVE"))
+                .andExpect(jsonPath("$.allowsRooms").value(false))
+                .andReturn().getResponse().getContentAsString();
+        String cashDeskId = jsonMapper.readTree(wardJson).get("id").asString();
+
+        String roomBody = """
+                {"wardId":"%s","roomNumber":"CAISSE-01","capacity":1,"comfortLevel":"STANDARD"}
+                """.formatted(cashDeskId);
+
+        mockMvc.perform(post("/api/spatial/configuration/rooms")
+                        .header("Authorization", "Bearer " + tokenAdmin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(roomBody))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     void configurationShouldBeForbiddenToDoctorAndProtectOccupiedBed() throws Exception {
         mockMvc.perform(get("/api/spatial/configuration")
                         .header("Authorization", "Bearer " + tokenDoctor))
@@ -294,7 +375,9 @@ public class SpatialControllerTest {
                         .queryParam("organizationId", org.getId().toString())
                         .header("Authorization", "Bearer " + tokenPlatformAdmin))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.wards[0].name").value("Médecine Hommes"));
+                .andExpect(jsonPath("$.wards[0].name").value("Médecine Hommes"))
+                .andExpect(jsonPath("$.wards[0].serviceType").value("HOSPITALIZATION"))
+                .andExpect(jsonPath("$.wards[0].allowsRooms").value(true));
     }
 
     @Test
@@ -307,9 +390,9 @@ public class SpatialControllerTest {
                 """, hospA.getId(), bedFree.getId());
 
         mockMvc.perform(post("/api/spatial/transfers")
-                .header("Authorization", "Bearer " + tokenDoctor)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(transferRequest))
+                        .header("Authorization", "Bearer " + tokenDoctor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transferRequest))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bedId").value(bedFree.getId().toString()));
 
@@ -335,9 +418,9 @@ public class SpatialControllerTest {
                 """, hospB.getId(), bedOccupied.getId());
 
         mockMvc.perform(post("/api/spatial/transfers")
-                .header("Authorization", "Bearer " + tokenDoctor)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(transferRequest))
+                        .header("Authorization", "Bearer " + tokenDoctor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transferRequest))
                 .andExpect(status().isConflict());
     }
 

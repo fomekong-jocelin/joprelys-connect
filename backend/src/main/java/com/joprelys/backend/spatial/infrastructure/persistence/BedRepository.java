@@ -22,8 +22,20 @@ public interface BedRepository extends JpaRepository<BedEntity, UUID> {
     @Query("SELECT b FROM BedEntity b JOIN b.room r WHERE r.ward.id = :wardId")
     List<BedEntity> findByWardId(@Param("wardId") UUID wardId);
 
-    @Query("SELECT b FROM BedEntity b JOIN b.room r JOIN r.ward w WHERE w.name = :wardName AND r.roomNumber = :roomNumber AND b.bedNumber = :bedNumber")
-    Optional<BedEntity> findByWardRoomAndBedNumber(
+    @Query("""
+            SELECT b
+            FROM BedEntity b
+            JOIN b.room r
+            JOIN r.ward w
+            WHERE b.organizationId = :organizationId
+              AND r.organizationId = :organizationId
+              AND w.organizationId = :organizationId
+              AND LOWER(w.name) = LOWER(:wardName)
+              AND LOWER(r.roomNumber) = LOWER(:roomNumber)
+              AND LOWER(b.bedNumber) = LOWER(:bedNumber)
+            """)
+    Optional<BedEntity> findConfiguredBed(
+            @Param("organizationId") UUID organizationId,
             @Param("wardName") String wardName,
             @Param("roomNumber") String roomNumber,
             @Param("bedNumber") String bedNumber);

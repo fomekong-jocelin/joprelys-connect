@@ -22,6 +22,7 @@ import com.joprelys.backend.spatial.infrastructure.persistence.WardRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -68,6 +69,7 @@ public class SpatialService {
     public WardOccupancyResponse getWardOccupancy(UUID wardId) {
         WardEntity ward = wardRepository.findById(wardId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service introuvable"));
+        ward.requireRoomsAllowed();
 
         List<RoomEntity> rooms = roomRepository.findByWardId(wardId);
         List<RoomOccupancyResponse> roomOccupancyResponses = new ArrayList<>();
@@ -107,6 +109,7 @@ public class SpatialService {
     public BedResponse updateBedStatus(UUID bedId, BedStatus newStatus) {
         BedEntity bed = bedRepository.findById(bedId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lit introuvable"));
+        bed.getRoom().getWard().requireRoomsAllowed();
 
         if (newStatus == BedStatus.FREE) {
             bedAssignmentRepository.findActiveByBedId(bedId).ifPresent(assignment -> {
@@ -141,7 +144,11 @@ public class SpatialService {
         if (!"EN_COURS".equals(hospitalization.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "L'hospitalisation n'est pas active.");
         }
-        if (!bedRepository.existsById(newBedId)) {
+
+        BedEntity targetBed = bedRepository.findById(newBedId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nouveau lit introuvable"));
+        targetBed.getRoom().getWard().requireRoomsAllowed();
+        if (!Objects.equals(hospitalization.getOrganizationId(), targetBed.getOrganizationId())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Nouveau lit introuvable");
         }
 
@@ -150,7 +157,8 @@ public class SpatialService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Le lit demandé n'est pas libre.");
         }
         BedEntity occupiedBed = bedRepository.findById(newBedId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nouveau lit introuvable"));
+                .orElseThrow(() -> new IllegalStateException(
+                        "Le lit réservé a disparu pendant la transaction de transfert."));
 
         bedAssignmentRepository.findActiveByHospitalizationId(hospitalizationId).ifPresent(oldAssignment -> {
             oldAssignment.setReleasedAt(Instant.now());
@@ -167,6 +175,7 @@ public class SpatialService {
         hospitalizationRepository.save(hospitalization);
 
         BedAssignmentEntity assignment = new BedAssignmentEntity(hospitalizationId, occupiedBed);
+        assignment.setOrganizationId(hospitalization.getOrganizationId());
         BedAssignmentEntity savedAssignment = bedAssignmentRepository.save(assignment);
 
         UserAccountEntity actor = getCurrentUser();

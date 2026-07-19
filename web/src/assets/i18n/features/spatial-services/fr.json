@@ -1,0 +1,20 @@
+{
+  "spatial.services.typeLabel": "Type de service",
+  "spatial.services.selectType": "Sélectionnez la fonction réelle du service",
+  "spatial.services.roomsForbidden": "Ce type de service ne peut pas gérer de chambres ni de lits.",
+  "spatial.services.noAccommodationTitle": "Service sans hébergement",
+  "spatial.services.noAccommodationDescription": "Ce service assure une fonction clinique, médico-technique ou administrative. Il ne contient donc ni chambre ni lit.",
+  "spatial.services.typeLockedByRooms": "Ce service contient des chambres. Seuls les types Hospitalisation et Urgences restent autorisés tant que ces chambres existent.",
+  "spatial.services.type.HOSPITALIZATION.label": "Hospitalisation",
+  "spatial.services.type.HOSPITALIZATION.description": "Unité d'hébergement des patients admis, organisée en chambres et en lits.",
+  "spatial.services.type.EMERGENCY.label": "Urgences",
+  "spatial.services.type.EMERGENCY.description": "Unité de prise en charge urgente pouvant disposer de box, salles et lits d'observation.",
+  "spatial.services.type.OUTPATIENT.label": "Consultations externes",
+  "spatial.services.type.OUTPATIENT.description": "Activité ambulatoire sans hébergement ni gestion de lits.",
+  "spatial.services.type.MEDICO_TECHNICAL.label": "Médico-technique",
+  "spatial.services.type.MEDICO_TECHNICAL.description": "Laboratoire, imagerie, bloc technique ou autre plateau médico-technique sans chambres d'hospitalisation.",
+  "spatial.services.type.PHARMACY.label": "Pharmacie",
+  "spatial.services.type.PHARMACY.description": "Service de gestion, préparation et délivrance des médicaments, sans hébergement.",
+  "spatial.services.type.ADMINISTRATIVE.label": "Administratif",
+  "spatial.services.type.ADMINISTRATIVE.description": "Caisse, accueil administratif, direction ou autre fonction support, sans chambre ni lit."
+}

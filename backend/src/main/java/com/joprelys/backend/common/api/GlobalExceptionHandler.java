@@ -2,6 +2,8 @@ package com.joprelys.backend.common.api;
 
 import com.joprelys.backend.notification.application.MailDeliveryUnavailableException;
 import com.joprelys.backend.notification.application.MailRecipientRejectedException;
+import com.joprelys.backend.spatial.domain.SpatialConfigurationRuleException;
+import java.util.NoSuchElementException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -11,8 +13,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.util.NoSuchElementException;
 
 /**
  * Gestionnaire global des exceptions API.
@@ -38,6 +38,14 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(status)
                 .body(new ApiErrorResponse(code, message, traceId));
+    }
+
+    @ExceptionHandler(SpatialConfigurationRuleException.class)
+    ResponseEntity<ApiErrorResponse> handleSpatialConfigurationRule(SpatialConfigurationRuleException ex) {
+        String traceId = getTraceId();
+        log.warn("[trace_id={}] Spatial configuration conflict: {}", traceId, ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiErrorResponse("SPATIAL_CONFIGURATION_CONFLICT", ex.getMessage(), traceId));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -108,29 +116,38 @@ public class GlobalExceptionHandler {
             cause = cause.getCause();
         }
 
-        if (cause instanceof org.hibernate.StaleObjectStateException ||
-            cause instanceof org.hibernate.StaleStateException ||
-            cause instanceof org.springframework.orm.ObjectOptimisticLockingFailureException ||
-            cause instanceof org.springframework.dao.OptimisticLockingFailureException) {
+        if (cause instanceof org.hibernate.StaleObjectStateException
+                || cause instanceof org.hibernate.StaleStateException
+                || cause instanceof org.springframework.orm.ObjectOptimisticLockingFailureException
+                || cause instanceof org.springframework.dao.OptimisticLockingFailureException) {
 
             String traceId = getTraceId();
             log.warn("[trace_id={}] Optimistic locking failure: {}", traceId, cause.getMessage());
 
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(new ApiErrorResponse("CONFLICT", "Cette ressource a été modifiée par un autre utilisateur. Veuillez rafraîchir et réessayer.", traceId));
+                    .body(new ApiErrorResponse(
+                            "CONFLICT",
+                            "Cette ressource a été modifiée par un autre utilisateur. Veuillez rafraîchir et réessayer.",
+                            traceId));
         }
 
         if (ex instanceof org.springframework.transaction.TransactionSystemException) {
             String traceId = getTraceId();
             log.error("[trace_id={}] Transaction system failure: {}", traceId, ex.getMessage(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiErrorResponse("INTERNAL_ERROR", "Une erreur interne de transaction est survenue.", traceId));
+                    .body(new ApiErrorResponse(
+                            "INTERNAL_ERROR",
+                            "Une erreur interne de transaction est survenue.",
+                            traceId));
         }
 
         String traceId = getTraceId();
         log.warn("[trace_id={}] Locking failure fallback: {}", traceId, ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ApiErrorResponse("CONFLICT", "Cette ressource a été modifiée par un autre utilisateur.", traceId));
+                .body(new ApiErrorResponse(
+                        "CONFLICT",
+                        "Cette ressource a été modifiée par un autre utilisateur.",
+                        traceId));
     }
 
     @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
@@ -148,7 +165,10 @@ public class GlobalExceptionHandler {
         String traceId = getTraceId();
         log.warn("[trace_id={}] Method not allowed: {}", traceId, ex.getMessage());
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
-                .body(new ApiErrorResponse("METHOD_NOT_ALLOWED", "Méthode HTTP non supportée pour cette ressource.", traceId));
+                .body(new ApiErrorResponse(
+                        "METHOD_NOT_ALLOWED",
+                        "Méthode HTTP non supportée pour cette ressource.",
+                        traceId));
     }
 
     @ExceptionHandler(Exception.class)
@@ -157,7 +177,10 @@ public class GlobalExceptionHandler {
         log.error("[trace_id={}] Unexpected error: {}", traceId, ex.getMessage(), ex);
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ApiErrorResponse("INTERNAL_ERROR", "Une erreur interne est survenue. Veuillez réessayer plus tard.", traceId));
+                .body(new ApiErrorResponse(
+                        "INTERNAL_ERROR",
+                        "Une erreur interne est survenue. Veuillez réessayer plus tard.",
+                        traceId));
     }
 
     private String getTraceId() {

@@ -28,9 +28,9 @@ import java.util.Locale;
 import java.util.UUID;
 import java.util.function.Function;
 import org.springframework.http.HttpStatus;
-import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -86,10 +86,10 @@ public class DefaultSpatialConfigurationService implements SpatialConfigurationU
         String name = normalize(request.name());
         reject(wardRepository.existsByNameIgnoreCase(name), "Un service portant ce nom existe déjà.");
 
-        WardEntity ward = new WardEntity(name);
+        WardEntity ward = new WardEntity(name, request.serviceType());
         ward.setOrganizationId(scope.organizationId());
         WardEntity saved = wardRepository.saveAndFlush(ward);
-        audit(scope, "WARD", saved.getId(), "CREATE", "Création du service " + saved.getName());
+        audit(scope, "WARD", saved.getId(), "CREATE", serviceAuditReason("Création", saved));
         return WardResponse.fromEntity(saved);
     }
 
@@ -103,9 +103,10 @@ public class DefaultSpatialConfigurationService implements SpatialConfigurationU
         String name = normalize(request.name());
         reject(wardRepository.existsByNameIgnoreCaseAndIdNot(name, id), "Un service portant ce nom existe déjà.");
 
+        ward.changeServiceType(request.serviceType(), roomRepository.existsByWardId(id));
         ward.setName(name);
         WardEntity saved = wardRepository.saveAndFlush(ward);
-        audit(scope, "WARD", saved.getId(), "UPDATE", "Modification du service " + saved.getName());
+        audit(scope, "WARD", saved.getId(), "UPDATE", serviceAuditReason("Modification", saved));
         return WardResponse.fromEntity(saved);
     }
 
@@ -132,6 +133,7 @@ public class DefaultSpatialConfigurationService implements SpatialConfigurationU
 
     private RoomResponse createRoomInScope(OrganizationScope scope, SaveRoomRequest request) {
         WardEntity ward = findWard(request.wardId());
+        ward.requireRoomsAllowed();
         String number = normalize(request.roomNumber());
         rejectRoomDuplicate(ward.getId(), number, null);
 
@@ -150,6 +152,7 @@ public class DefaultSpatialConfigurationService implements SpatialConfigurationU
     private RoomResponse updateRoomInScope(OrganizationScope scope, UUID id, SaveRoomRequest request) {
         RoomEntity room = findRoom(id);
         WardEntity ward = findWard(request.wardId());
+        ward.requireRoomsAllowed();
         String number = normalize(request.roomNumber());
         rejectRoomDuplicate(ward.getId(), number, id);
         reject(request.capacity() < bedRepository.countByRoomId(id),
@@ -187,6 +190,7 @@ public class DefaultSpatialConfigurationService implements SpatialConfigurationU
 
     private BedResponse createBedInScope(OrganizationScope scope, SaveBedRequest request) {
         RoomEntity room = findRoom(request.roomId());
+        room.getWard().requireRoomsAllowed();
         String number = normalize(request.bedNumber());
         rejectBedDuplicate(room.getId(), number, null);
         rejectCapacityExceeded(room, null);
@@ -206,6 +210,7 @@ public class DefaultSpatialConfigurationService implements SpatialConfigurationU
     private BedResponse updateBedInScope(OrganizationScope scope, UUID id, SaveBedRequest request) {
         BedEntity bed = findBed(id);
         RoomEntity targetRoom = findRoom(request.roomId());
+        targetRoom.getWard().requireRoomsAllowed();
         String number = normalize(request.bedNumber());
         rejectBedMoveWhenUsed(bed, targetRoom);
         rejectBedDuplicate(targetRoom.getId(), number, id);
@@ -240,7 +245,8 @@ public class DefaultSpatialConfigurationService implements SpatialConfigurationU
                 .sorted(Comparator.comparing(RoomEntity::getRoomNumber, String.CASE_INSENSITIVE_ORDER))
                 .map(this::toConfiguration)
                 .toList();
-        return new WardConfigurationResponse(ward.getId(), ward.getName(), rooms);
+        return new WardConfigurationResponse(
+                ward.getId(), ward.getName(), ward.getServiceType(), ward.allowsRooms(), rooms);
     }
 
     private RoomConfigurationResponse toConfiguration(RoomEntity room) {
@@ -350,6 +356,10 @@ public class DefaultSpatialConfigurationService implements SpatialConfigurationU
     private void audit(OrganizationScope scope, String type, UUID resourceId, String action, String reason) {
         auditService.logSuccess(
                 scope.actor().getId(), scope.organizationId(), null, type, resourceId, action, reason);
+    }
+
+    private String serviceAuditReason(String action, WardEntity ward) {
+        return action + " du service " + ward.getName() + " [" + ward.getServiceType() + "]";
     }
 
     private void reject(boolean condition, String message) {

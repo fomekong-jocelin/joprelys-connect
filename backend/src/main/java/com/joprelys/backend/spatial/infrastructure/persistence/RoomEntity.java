@@ -1,9 +1,17 @@
 package com.joprelys.backend.spatial.infrastructure.persistence;
 
-import jakarta.persistence.*;
-import org.hibernate.annotations.TenantId;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.TenantId;
 
 @Entity
 @Table(name = "rooms")
@@ -39,6 +47,7 @@ public class RoomEntity {
     }
 
     public RoomEntity(WardEntity ward, String roomNumber, Integer capacity, String comfortLevel) {
+        ward.requireRoomsAllowed();
         this.id = UUID.randomUUID();
         this.ward = ward;
         this.roomNumber = roomNumber;
@@ -48,6 +57,7 @@ public class RoomEntity {
 
     @PrePersist
     void prePersist() {
+        ward.requireRoomsAllowed();
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
@@ -55,6 +65,7 @@ public class RoomEntity {
 
     @PreUpdate
     void preUpdate() {
+        ward.requireRoomsAllowed();
         this.updatedAt = Instant.now();
     }
 
@@ -67,6 +78,7 @@ public class RoomEntity {
     }
 
     public void setWard(WardEntity ward) {
+        ward.requireRoomsAllowed();
         this.ward = ward;
     }
 
