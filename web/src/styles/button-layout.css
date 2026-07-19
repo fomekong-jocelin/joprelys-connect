@@ -1,0 +1,12 @@
+/*
+ * Button layout invariants
+ *
+ * The button owns the integrity of its content. Action containers own wrapping
+ * and responsive positioning. Keep this rule global so raw buttons and the
+ * shared Angular button component behave identically.
+ */
+.ui-button {
+  flex-shrink: 0;
+  line-height: 1.25rem;
+  white-space: nowrap;
+}
