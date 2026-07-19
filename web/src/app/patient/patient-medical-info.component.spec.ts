@@ -98,6 +98,26 @@ describe('PatientMedicalInfoComponent', () => {
     expect(mockApi.deleteAllergy).toHaveBeenCalledWith('patient-123', 'all-1');
   });
 
+  it('shows cancel and save actions in the medical history modal', () => {
+    component.openHistoryModal();
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const historyForm = Array.from(root.querySelectorAll('form')).find((form) =>
+      form.textContent?.includes('patients.medicalInfo.history.category'));
+
+    expect(historyForm).toBeDefined();
+
+    const cancelButton = historyForm?.querySelector<HTMLButtonElement>('button[type="button"]');
+    const saveButton = historyForm?.querySelector<HTMLButtonElement>('button[type="submit"]');
+
+    expect(cancelButton?.textContent).toContain('common.cancel');
+    expect(saveButton?.textContent).toContain('common.save');
+
+    cancelButton?.click();
+    expect(component.showHistoryModal()).toBe(false);
+  });
+
   it('should add medical history with important flag', () => {
     component.openHistoryModal();
     component.historyCategory = 'MEDICAL';
