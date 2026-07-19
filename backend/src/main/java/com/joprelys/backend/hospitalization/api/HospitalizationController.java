@@ -1,5 +1,6 @@
 package com.joprelys.backend.hospitalization.api;
 
+import com.joprelys.backend.hospitalization.application.HospitalizationAdmissionService;
 import com.joprelys.backend.hospitalization.application.HospitalizationCareService;
 import com.joprelys.backend.hospitalization.application.HospitalizationService;
 import com.joprelys.backend.hospitalization.application.OperatingReportService;
@@ -24,14 +25,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/hospitalizations")
 public class HospitalizationController {
 
+    private final HospitalizationAdmissionService hospitalizationAdmissionService;
     private final HospitalizationService hospitalizationService;
     private final HospitalizationCareService hospitalizationCareService;
     private final OperatingReportService operatingReportService;
 
     public HospitalizationController(
+            HospitalizationAdmissionService hospitalizationAdmissionService,
             HospitalizationService hospitalizationService,
             HospitalizationCareService hospitalizationCareService,
             OperatingReportService operatingReportService) {
+        this.hospitalizationAdmissionService = hospitalizationAdmissionService;
         this.hospitalizationService = hospitalizationService;
         this.hospitalizationCareService = hospitalizationCareService;
         this.operatingReportService = operatingReportService;
@@ -41,7 +45,7 @@ public class HospitalizationController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
     public HospitalizationResponse admitPatient(@Valid @RequestBody CreateHospitalizationRequest request) {
-        return hospitalizationService.admitPatient(request);
+        return hospitalizationAdmissionService.admitPatient(request);
     }
 
     @GetMapping("/patient/{patientId}")
