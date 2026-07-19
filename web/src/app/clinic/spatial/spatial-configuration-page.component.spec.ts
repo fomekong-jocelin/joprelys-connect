@@ -50,14 +50,26 @@ describe('SpatialConfigurationPageComponent', () => {
     component = TestBed.createComponent(SpatialConfigurationPageComponent).componentInstance;
   });
 
-  it('loads the hospital structure on initialization', () => {
+  it('loads the typed hospital structure on initialization', () => {
     component.ngOnInit();
 
     expect(component.configuration().wards[0].name).toBe('Cardiologie');
+    expect(component.configuration().wards[0].serviceType).toBe('HOSPITALIZATION');
+    expect(component.configuration().wards[0].allowsRooms).toBe(true);
     expect(component.loading()).toBe(false);
   });
 
-  it('creates a typed department and refreshes the structure', () => {
+  it('requires an explicit service type before creating a department', () => {
+    component.openWardEditor();
+    component.editor()!.name = 'Pédiatrie';
+
+    component.submitEditor();
+
+    expect(api['createWard']).not.toHaveBeenCalled();
+    expect(component.editor()).not.toBeNull();
+  });
+
+  it('creates a typed hospital department and refreshes the structure', () => {
     component.openWardEditor();
     component.editor()!.name = 'Pédiatrie';
     component.editor()!.serviceType = 'HOSPITALIZATION';
@@ -70,5 +82,18 @@ describe('SpatialConfigurationPageComponent', () => {
     }, undefined);
     expect(api['getConfiguration']).toHaveBeenCalled();
     expect(component.successMessage()).toBe('spatial.config.saveSuccess');
+  });
+
+  it('does not open a room editor for an administrative service', () => {
+    component.openRoomEditor({
+      id: 'cash-desk',
+      name: 'Caisse',
+      serviceType: 'ADMINISTRATIVE',
+      allowsRooms: false,
+      rooms: [],
+    });
+
+    expect(component.editor()).toBeNull();
+    expect(component.errorMessage()).toBe('spatial.services.roomsForbidden');
   });
 });
