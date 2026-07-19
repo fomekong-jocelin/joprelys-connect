@@ -56,17 +56,12 @@ public class HospitalizationAdmissionService {
         rejectActiveHospitalization(request);
         rejectActiveBedAssignment(request);
 
-        BedEntity bed = requireConfiguredBed(patient, request);
-        bed.getRoom().getWard().requireRoomsAllowed();
-        if (bed.getStatus() != BedStatus.FREE) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Le lit demandé n'est pas libre.");
-        }
-
-        bed.setStatus(BedStatus.OCCUPIED);
-        bedRepository.saveAndFlush(bed);
+        BedEntity configuredBed = requireConfiguredBed(patient, request);
+        configuredBed.getRoom().getWard().requireRoomsAllowed();
+        BedEntity occupiedBed = claimConfiguredBed(configuredBed);
 
         HospitalizationEntity saved = hospitalizationRepository.save(createHospitalization(request));
-        BedAssignmentEntity assignment = new BedAssignmentEntity(saved.getId(), bed);
+        BedAssignmentEntity assignment = new BedAssignmentEntity(saved.getId(), occupiedBed);
         assignment.setOrganizationId(saved.getOrganizationId());
         bedAssignmentRepository.save(assignment);
 
@@ -100,6 +95,16 @@ public class HospitalizationAdmissionService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Le lit sélectionné n'existe pas dans la structure configurée."));
+    }
+
+    private BedEntity claimConfiguredBed(BedEntity configuredBed) {
+        int claimed = bedRepository.claimIfFree(configuredBed.getId(), BedStatus.FREE, BedStatus.OCCUPIED);
+        if (claimed != 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Le lit demandé n'est pas libre.");
+        }
+        return bedRepository.findById(configuredBed.getId())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Le lit réservé a disparu pendant la transaction d'admission."));
     }
 
     private HospitalizationEntity createHospitalization(CreateHospitalizationRequest request) {
