@@ -78,15 +78,16 @@ class HospitalizationAdmissionServiceTest {
                 () -> service.admitPatient(request));
 
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
-        verify(bedRepository, never()).saveAndFlush(any());
+        verify(bedRepository, never()).claimIfFree(any(), any(), any());
         verify(hospitalizationRepository, never()).save(any());
         verify(bedAssignmentRepository, never()).save(any());
     }
 
     @Test
-    void shouldOccupyConfiguredFreeBedWithoutCreatingSpatialData() {
+    void shouldAtomicallyClaimConfiguredBedWithoutCreatingSpatialData() {
         CreateHospitalizationRequest request = request();
         UUID organizationId = UUID.randomUUID();
+        UUID bedId = UUID.randomUUID();
         PatientEntity patient = org.mockito.Mockito.mock(PatientEntity.class);
         BedEntity bed = org.mockito.Mockito.mock(BedEntity.class);
         RoomEntity room = org.mockito.Mockito.mock(RoomEntity.class);
@@ -105,7 +106,9 @@ class HospitalizationAdmissionServiceTest {
                 .thenReturn(Optional.of(bed));
         when(bed.getRoom()).thenReturn(room);
         when(room.getWard()).thenReturn(ward);
-        when(bed.getStatus()).thenReturn(BedStatus.FREE);
+        when(bed.getId()).thenReturn(bedId);
+        when(bedRepository.claimIfFree(bedId, BedStatus.FREE, BedStatus.OCCUPIED)).thenReturn(1);
+        when(bedRepository.findById(bedId)).thenReturn(Optional.of(bed));
         when(hospitalizationRepository.getNextHospitalizationNumberSequenceValue()).thenReturn(42L);
         when(hospitalizationRepository.save(any(HospitalizationEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -114,10 +117,44 @@ class HospitalizationAdmissionServiceTest {
 
         assertNotNull(response);
         verify(ward).requireRoomsAllowed();
-        verify(bed).setStatus(BedStatus.OCCUPIED);
-        verify(bedRepository).saveAndFlush(bed);
+        verify(bedRepository).claimIfFree(bedId, BedStatus.FREE, BedStatus.OCCUPIED);
         verify(hospitalizationRepository).save(any(HospitalizationEntity.class));
         verify(bedAssignmentRepository).save(any());
+    }
+
+    @Test
+    void shouldRejectAdmissionWhenAtomicBedClaimLosesTheRace() {
+        CreateHospitalizationRequest request = request();
+        UUID organizationId = UUID.randomUUID();
+        UUID bedId = UUID.randomUUID();
+        PatientEntity patient = org.mockito.Mockito.mock(PatientEntity.class);
+        BedEntity bed = org.mockito.Mockito.mock(BedEntity.class);
+        RoomEntity room = org.mockito.Mockito.mock(RoomEntity.class);
+        WardEntity ward = org.mockito.Mockito.mock(WardEntity.class);
+
+        when(patientService.getPatientById(request.patientId())).thenReturn(patient);
+        when(patient.getOrganizationId()).thenReturn(organizationId);
+        when(hospitalizationRepository.findActiveByPatientId(request.patientId())).thenReturn(Optional.empty());
+        when(hospitalizationRepository.findActiveByBed(request.roomNumber(), request.bedNumber()))
+                .thenReturn(Optional.empty());
+        when(bedRepository.findConfiguredBed(
+                organizationId,
+                request.serviceName(),
+                request.roomNumber(),
+                request.bedNumber()))
+                .thenReturn(Optional.of(bed));
+        when(bed.getRoom()).thenReturn(room);
+        when(room.getWard()).thenReturn(ward);
+        when(bed.getId()).thenReturn(bedId);
+        when(bedRepository.claimIfFree(bedId, BedStatus.FREE, BedStatus.OCCUPIED)).thenReturn(0);
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.admitPatient(request));
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+        verify(hospitalizationRepository, never()).save(any());
+        verify(bedAssignmentRepository, never()).save(any());
     }
 
     private CreateHospitalizationRequest request() {
