@@ -13,9 +13,20 @@ describe('SpatialConfigurationPageComponent', () => {
   beforeEach(() => {
     api = {
       getConfiguration: vi.fn(() => of({
-        wards: [{ id: 'ward-1', name: 'Cardiologie', rooms: [] }],
+        wards: [{
+          id: 'ward-1',
+          name: 'Cardiologie',
+          serviceType: 'HOSPITALIZATION',
+          allowsRooms: true,
+          rooms: [],
+        }],
       })),
-      createWard: vi.fn(() => of({ id: 'ward-2', name: 'Pédiatrie' })),
+      createWard: vi.fn(() => of({
+        id: 'ward-2',
+        name: 'Pédiatrie',
+        serviceType: 'HOSPITALIZATION',
+        allowsRooms: true,
+      })),
       updateWard: vi.fn(() => of({})),
       deleteWard: vi.fn(() => of(undefined)),
       createRoom: vi.fn(() => of({})),
@@ -46,13 +57,17 @@ describe('SpatialConfigurationPageComponent', () => {
     expect(component.loading()).toBe(false);
   });
 
-  it('creates a new department and refreshes the structure', () => {
+  it('creates a typed department and refreshes the structure', () => {
     component.openWardEditor();
     component.editor()!.name = 'Pédiatrie';
+    component.editor()!.serviceType = 'HOSPITALIZATION';
 
     component.submitEditor();
 
-    expect(api['createWard']).toHaveBeenCalledWith({ name: 'Pédiatrie' }, undefined);
+    expect(api['createWard']).toHaveBeenCalledWith({
+      name: 'Pédiatrie',
+      serviceType: 'HOSPITALIZATION',
+    }, undefined);
     expect(api['getConfiguration']).toHaveBeenCalled();
     expect(component.successMessage()).toBe('spatial.config.saveSuccess');
   });
