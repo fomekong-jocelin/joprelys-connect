@@ -1,12 +1,12 @@
 package com.joprelys.backend.hospitalization.api;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.auth.security.JwtService;
@@ -37,6 +37,7 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.json.JsonMapper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -84,7 +85,7 @@ class HospitalizationControllerTest {
     private JwtService jwtService;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper jsonMapper;
 
     private OrganizationEntity organization;
     private UserAccountEntity doctor;
@@ -142,14 +143,22 @@ class HospitalizationControllerTest {
         VisitEntity visitB = createVisit(patientB, "VIS-H-002", "Motif de visite B", "MÉDECINE GÉNÉRALE");
 
         String hospitalizationId = admit(
-                patientA, visitA, PEDIATRICS_SERVICE, PEDIATRICS_ROOM, PEDIATRICS_BED,
+                patientA,
+                visitA,
+                PEDIATRICS_SERVICE,
+                PEDIATRICS_ROOM,
+                PEDIATRICS_BED,
                 "Surveillance post-opératoire");
 
         mockMvc.perform(post("/api/hospitalizations")
                         .header("Authorization", bearer(doctorToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(admissionPayload(
-                                patientB, visitB, PEDIATRICS_SERVICE, PEDIATRICS_ROOM, PEDIATRICS_BED,
+                                patientB,
+                                visitB,
+                                PEDIATRICS_SERVICE,
+                                PEDIATRICS_ROOM,
+                                PEDIATRICS_BED,
                                 "Fièvre élevée")))
                 .andExpect(status().isConflict());
 
@@ -183,32 +192,36 @@ class HospitalizationControllerTest {
         mockMvc.perform(get("/api/hospitalizations/{id}/pdf", hospitalizationId)
                         .header("Authorization", bearer(doctorToken)))
                 .andExpect(status().isOk())
-                .andExpect(result -> {
-                    String contentType = result.getResponse().getContentType();
-                    assert contentType != null && contentType.startsWith(MediaType.APPLICATION_PDF_VALUE);
-                });
+                .andExpect(result -> assertPdf(result.getResponse().getContentType()));
     }
 
     @Test
     void givenDoctor_whenDownloadEntryPdf_thenSuccess() throws Exception {
         VisitEntity visit = createVisit(patientA, "VIS-ENT-01", "Admission", "MÉDECINE GÉNÉRALE");
         String hospitalizationId = admit(
-                patientA, visit, PEDIATRICS_SERVICE, PEDIATRICS_ROOM, PEDIATRICS_BED, "Surveillance");
+                patientA,
+                visit,
+                PEDIATRICS_SERVICE,
+                PEDIATRICS_ROOM,
+                PEDIATRICS_BED,
+                "Surveillance");
 
         mockMvc.perform(get("/api/hospitalizations/{id}/entry-pdf", hospitalizationId)
                         .header("Authorization", bearer(doctorToken)))
                 .andExpect(status().isOk())
-                .andExpect(result -> {
-                    String contentType = result.getResponse().getContentType();
-                    assert contentType != null && contentType.startsWith(MediaType.APPLICATION_PDF_VALUE);
-                });
+                .andExpect(result -> assertPdf(result.getResponse().getContentType()));
     }
 
     @Test
     void givenDoctor_whenDischargeAgainstMedicalAdvice_thenStatusIsSortiContreAvis() throws Exception {
         VisitEntity visit = createVisit(patientA, "VIS-CAD-02", "Admission", "MÉDECINE GÉNÉRALE");
         String hospitalizationId = admit(
-                patientA, visit, PEDIATRICS_SERVICE, PEDIATRICS_ROOM, PEDIATRICS_BED, "Surveillance");
+                patientA,
+                visit,
+                PEDIATRICS_SERVICE,
+                PEDIATRICS_ROOM,
+                PEDIATRICS_BED,
+                "Surveillance");
 
         mockMvc.perform(post("/api/hospitalizations/{id}/discharge", hospitalizationId)
                         .header("Authorization", bearer(doctorToken))
@@ -232,7 +245,12 @@ class HospitalizationControllerTest {
     void givenDoctor_whenAddAndGetSurgicalConsents_thenSuccess() throws Exception {
         VisitEntity visit = createVisit(patientA, "VIS-CS-03", "Admission", "MÉDECINE GÉNÉRALE");
         String hospitalizationId = admit(
-                patientA, visit, PEDIATRICS_SERVICE, PEDIATRICS_ROOM, PEDIATRICS_BED, "Surveillance");
+                patientA,
+                visit,
+                PEDIATRICS_SERVICE,
+                PEDIATRICS_ROOM,
+                PEDIATRICS_BED,
+                "Surveillance");
 
         mockMvc.perform(multipart("/api/hospitalizations/{id}/consents", hospitalizationId)
                         .param("consentType", "ANESTHESIA")
@@ -244,8 +262,11 @@ class HospitalizationControllerTest {
                 .andExpect(jsonPath("$.patientSignaturePresent").value(true));
 
         MockMultipartFile file = new MockMultipartFile(
-                "file", "consent.pdf", MediaType.APPLICATION_PDF_VALUE,
+                "file",
+                "consent.pdf",
+                MediaType.APPLICATION_PDF_VALUE,
                 "fake-pdf".getBytes(StandardCharsets.UTF_8));
+
         mockMvc.perform(multipart("/api/hospitalizations/{id}/consents", hospitalizationId)
                         .file(file)
                         .param("consentType", "SURGERY")
@@ -265,7 +286,11 @@ class HospitalizationControllerTest {
     void givenDoctor_whenAddAndGetDailyCareMedsAndConsumptions_thenSuccess() throws Exception {
         VisitEntity visit = createVisit(patientA, "VIS-CARE-01", "Soins", "MÉDECINE GÉNÉRALE");
         String hospitalizationId = admit(
-                patientA, visit, PEDIATRICS_SERVICE, PEDIATRICS_ROOM, PEDIATRICS_BED,
+                patientA,
+                visit,
+                PEDIATRICS_SERVICE,
+                PEDIATRICS_ROOM,
+                PEDIATRICS_BED,
                 "Surveillance soins");
 
         mockMvc.perform(post("/api/hospitalizations/{id}/daily-cares", hospitalizationId)
@@ -328,10 +353,16 @@ class HospitalizationControllerTest {
     void givenDoctor_whenCreateAndValidateOperatingReport_thenSuccessAndInvoiceCalculated() throws Exception {
         VisitEntity visit = createVisit(patientA, "VIS-OR-01", "Soins", "CHIRURGIE");
         String hospitalizationId = admit(
-                patientA, visit, SURGERY_SERVICE, SURGERY_ROOM, SURGERY_BED,
+                patientA,
+                visit,
+                SURGERY_SERVICE,
+                SURGERY_ROOM,
+                SURGERY_BED,
                 "Chirurgie programmée");
 
-        String reportResponse = mockMvc.perform(post("/api/hospitalizations/{id}/operating-reports", hospitalizationId)
+        String reportResponse = mockMvc.perform(post(
+                                "/api/hospitalizations/{id}/operating-reports",
+                                hospitalizationId)
                         .header("Authorization", bearer(doctorToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -356,8 +387,10 @@ class HospitalizationControllerTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.validated").value(false))
-                .andReturn().getResponse().getContentAsString();
-        String reportId = objectMapper.readTree(reportResponse).get("id").asText();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String reportId = jsonMapper.readTree(reportResponse).get("id").asString();
 
         mockMvc.perform(post("/api/invoices/precalculate")
                         .param("patientId", patientA.getId().toString())
@@ -379,7 +412,9 @@ class HospitalizationControllerTest {
                 .andExpect(jsonPath("$.items[?(@.itemType == 'K_SURGEON')].unitPrice").value(50000.0))
                 .andExpect(jsonPath("$.items[?(@.itemType == 'K_ANESTHESIST')].unitPrice").value(20000.0))
                 .andExpect(jsonPath("$.items[?(@.itemType == 'K_BLOC')].unitPrice").value(30000.0))
-                .andExpect(jsonPath("$.items[?(@.label == 'Implant : Fil de suture résorbable (Lot: LOT12345)')].quantity").value(2.0));
+                .andExpect(jsonPath(
+                                "$.items[?(@.label == 'Implant : Fil de suture résorbable (Lot: LOT12345)')].quantity")
+                        .value(2.0));
     }
 
     private String admit(
@@ -398,8 +433,10 @@ class HospitalizationControllerTest {
                 .andExpect(jsonPath("$.serviceName").value(serviceName))
                 .andExpect(jsonPath("$.roomNumber").value(roomNumber))
                 .andExpect(jsonPath("$.bedNumber").value(bedNumber))
-                .andReturn().getResponse().getContentAsString();
-        return objectMapper.readTree(response).get("id").asText();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return jsonMapper.readTree(response).get("id").asString();
     }
 
     private String admissionPayload(
@@ -420,7 +457,13 @@ class HospitalizationControllerTest {
                   "responsiblePractitionerId":"%s"
                 }
                 """.formatted(
-                patient.getId(), serviceName, roomNumber, bedNumber, reason, visit.getId(), doctor.getId());
+                patient.getId(),
+                serviceName,
+                roomNumber,
+                bedNumber,
+                reason,
+                visit.getId(),
+                doctor.getId());
     }
 
     private VisitEntity createVisit(PatientEntity patient, String number, String reason, String specialty) {
@@ -451,6 +494,13 @@ class HospitalizationControllerTest {
         BedEntity bed = new BedEntity(room, bedNumber);
         bed.setOrganizationId(organization.getId());
         bedRepository.save(bed);
+    }
+
+    private void assertPdf(String contentType) {
+        assertNotNull(contentType);
+        if (!contentType.startsWith(MediaType.APPLICATION_PDF_VALUE)) {
+            throw new AssertionError("Type MIME PDF attendu, reçu : " + contentType);
+        }
     }
 
     private String bearer(String token) {
