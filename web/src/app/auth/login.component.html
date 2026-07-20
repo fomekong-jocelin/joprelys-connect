@@ -1,350 +1,469 @@
-<main class="min-h-screen flex flex-col items-center justify-center p-6 transition-colors duration-300 relative"
-  style="background:var(--app-bg); color:var(--text-primary)">
+<main class="login-page">
+  <div class="login-ambient login-ambient-one" aria-hidden="true"></div>
+  <div class="login-ambient login-ambient-two" aria-hidden="true"></div>
 
-  <!-- Sélecteur de langue statique et élégant -->
-  <div class="fixed top-4 right-4 z-50">
-    <div class="flex items-center gap-1.5 text-xs font-bold border border-[var(--app-border)] bg-[var(--app-surface)] px-2.5 py-1.5 rounded-sm shadow-sm select-none">
+  <div class="login-top-controls" role="group" [attr.aria-label]="t('shell.language.label')">
+    <button
+      type="button"
+      id="login-theme-toggle"
+      class="login-control-button login-theme-button"
+      (click)="toggleTheme()"
+      [title]="themeTooltip()"
+      [attr.aria-label]="themeTooltip()"
+    >
+      @if (theme() === 'dark') {
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2.25m0 13.5V21M4.978 4.978l1.59 1.59m10.862 10.862l1.59 1.59M3 12h2.25m13.5 0H21M4.978 19.022l1.59-1.59m10.862-10.862l1.59-1.59M12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" />
+        </svg>
+      } @else {
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+        </svg>
+      }
+    </button>
+
+    <div class="login-language-switch">
       <button
         type="button"
+        id="login-language-fr"
+        class="login-language-button"
         (click)="setLang('fr')"
-        [class]="locale() === 'fr' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'"
+        [class.login-language-active]="locale() === 'fr'"
+        [attr.aria-pressed]="locale() === 'fr'"
+        [attr.aria-label]="t('shell.language.label') + ' FR'"
       >
-        FR
+        <span aria-hidden="true" class="login-flag">🇫🇷</span>
+        <span>FR</span>
       </button>
-      <span style="color:var(--divider)">|</span>
       <button
         type="button"
+        id="login-language-en"
+        class="login-language-button"
         (click)="setLang('en')"
-        [class]="locale() === 'en' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'"
+        [class.login-language-active]="locale() === 'en'"
+        [attr.aria-pressed]="locale() === 'en'"
+        [attr.aria-label]="t('shell.language.label') + ' EN'"
       >
-        EN
+        <span aria-hidden="true" class="login-flag">🇬🇧</span>
+        <span>EN</span>
       </button>
     </div>
   </div>
 
-  <div class="w-full max-w-[420px] flex flex-col items-center py-8">
+  <div class="login-layout">
+    <section class="login-brand-panel" aria-hidden="true">
+      <div class="login-brand-panel-content">
+        <app-logo size="lg"></app-logo>
 
-    <!-- Logo -->
-    <div class="mb-8">
-      <app-logo size="lg"></app-logo>
-    </div>
-
-    <!-- Toggle Personnel / Patient -->
-    <div class="w-full flex p-1 rounded-[var(--radius-brand-md)] border border-[var(--app-border)] mb-7"
-      style="background:var(--app-surface-muted)">
-      <button
-        type="button"
-        id="toggle-staff"
-        (click)="setMode('staff')"
-        [class]="mode() === 'staff'
-          ? 'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[var(--radius-brand-sm)] text-sm font-bold bg-[var(--app-surface)] text-brand-cyan shadow-sm border border-[var(--app-border)] transition-all duration-200 cursor-pointer'
-          : 'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[var(--radius-brand-sm)] text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all duration-200 cursor-pointer'"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 shrink-0">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-        </svg>
-        {{ t('login.toggle.staff') }}
-      </button>
-      <button
-        type="button"
-        id="toggle-patient"
-        (click)="setMode('patient')"
-        [class]="mode() === 'patient'
-          ? 'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[var(--radius-brand-sm)] text-sm font-bold bg-[var(--app-surface)] text-brand-cyan shadow-sm border border-[var(--app-border)] transition-all duration-200 cursor-pointer'
-          : 'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[var(--radius-brand-sm)] text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all duration-200 cursor-pointer'"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 shrink-0">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-        </svg>
-        {{ t('login.toggle.patient') }}
-      </button>
-    </div>
-
-    <!-- ============================================================ -->
-    <!-- MODE PERSONNEL DE SANTÉ                                      -->
-    <!-- ============================================================ -->
-    @if (mode() === 'staff') {
-      @if (session(); as currentSession) {
-        <div class="w-full text-center mb-5">
-          <h2 id="login-title" class="font-display font-bold text-2xl tracking-tight mb-1" style="color:var(--text-primary)">{{ t('login.session.activeTitle') }}</h2>
-          <p class="text-sm" style="color:var(--text-muted)">{{ t('login.session.activeSubtitle') }}</p>
+        <div class="login-brand-copy">
+          @if (mode() === 'staff') {
+            <h1>{{ t('login.staff.title') }}</h1>
+            <p>
+              @if (staffStep() === 1) { {{ t('login.staff.subtitleStep1') }} }
+              @else { {{ t('login.staff.subtitleStep2') }} }
+            </p>
+          } @else {
+            <h1>{{ t('login.patient.title') }}</h1>
+            <p>
+              @if (patientStep() === 1) { {{ t('login.patient.subtitleStep1') }} }
+              @else { {{ t('login.patient.subtitleStep2') }} }
+            </p>
+          }
         </div>
-        <div class="w-full mb-5 p-4 border border-[var(--app-border)] rounded-[var(--radius-brand-md)] flex items-center justify-between"
-          style="background:var(--bg-input)">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full flex items-center justify-center font-display font-bold text-sm select-none"
-              style="background:var(--brand-primary-subtle); color:var(--brand-primary)">
-              {{ currentSession.name.charAt(0) }}
-            </div>
-            <div>
-              <p class="font-display font-bold text-sm leading-tight" style="color:var(--text-primary)">{{ currentSession.name }}</p>
-              <p class="text-xs" style="color:var(--text-muted)">{{ currentSession.email }}</p>
-            </div>
+
+        <div class="login-brand-visual">
+          <div class="login-orbit login-orbit-one"></div>
+          <div class="login-orbit login-orbit-two"></div>
+          <div class="login-orbit login-orbit-three"></div>
+          <div class="login-brand-shield">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M12 3 5.25 5.8v5.4c0 4.45 2.72 8.17 6.75 9.8 4.03-1.63 6.75-5.35 6.75-9.8V5.8L12 3Z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="m9.2 12.1 1.85 1.85 3.85-4.1" />
+            </svg>
           </div>
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
-            style="background:var(--brand-success-subtle); color:var(--brand-success-text)">
-            {{ currentSession.role }}
-          </span>
-        </div>
-        <button
-          class="ui-button ui-button-primary w-full"
-          type="button"
-          (click)="logout()"
-          [disabled]="loading()"
-        >
-          @if (loading()) { {{ t('login.session.loggingOut') }} } @else { {{ t('login.session.logoutButton') }} }
-        </button>
-      } @else {
-        <div class="w-full text-center mb-6">
-          <h2 id="login-title" class="font-display font-bold text-2xl tracking-tight mb-1" style="color:var(--text-primary)">{{ t('login.staff.title') }}</h2>
-          <p class="text-sm" style="color:var(--text-muted)">
-            @if (staffStep() === 1) { {{ t('login.staff.subtitleStep1') }} }
-            @else { {{ t('login.staff.subtitleStep2') }} }
-          </p>
+          <span class="login-brand-cross login-brand-cross-one">+</span>
+          <span class="login-brand-cross login-brand-cross-two">+</span>
+          <span class="login-brand-cross login-brand-cross-three">+</span>
         </div>
 
-        @if (staffStep() === 1) {
-          <form class="w-full space-y-5" (submit)="$event.preventDefault(); submit()">
-            <div class="space-y-1.5">
-              <label class="ui-label">{{ t('login.staff.emailLabel') }}</label>
-              <input
-                type="email"
-                autocomplete="username"
-                inputmode="email"
-                required
-                aria-required="true"
-                [value]="email()"
-                (input)="updateEmail($event)"
-                class="ui-input"
-                [placeholder]="t('login.staff.emailPlaceholder')"
-              />
-            </div>
+        <div class="login-brand-footer">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </section>
 
-            <div class="space-y-1.5">
-              <div class="flex justify-between items-center">
-                <label class="ui-label">{{ t('login.staff.passwordLabel') }}</label>
-                <a routerLink="/forgot-password" class="ui-link text-xs font-semibold">{{ t('auth.forgotPassword.link') }}</a>
-              </div>
-              <input
-                type="password"
-                autocomplete="current-password"
-                required
-                aria-required="true"
-                [value]="password()"
-                (input)="updatePassword($event)"
-                class="ui-input"
-                placeholder="••••••••"
-              />
-            </div>
-
-            @if (error()) {
-              <div class="ui-alert-danger" role="alert" aria-live="assertive">
-                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span class="font-medium">{{ error() }}</span>
-              </div>
-            }
-
-            <button
-              class="ui-button ui-button-primary w-full"
-              type="submit"
-              [disabled]="!canSubmit()"
-            >
-              @if (loading()) { {{ t('login.staff.loggingIn') }} } @else { {{ t('login.staff.loginButton') }} }
-            </button>
-          </form>
-        } @else {
-          <form class="w-full space-y-4" (submit)="$event.preventDefault(); verifyStaffOtp()">
-            <div class="space-y-1.5">
-              <label class="ui-label">{{ t('login.staff.otpLabel') }}</label>
-              <input
-                type="text"
-                required
-                aria-required="true"
-                [value]="staffOtpCode()"
-                (input)="updateStaffOtpCode($event)"
-                maxlength="6"
-                inputmode="numeric"
-                autocomplete="one-time-code"
-                class="ui-input text-center text-2xl font-bold tracking-[0.5em]"
-                style="min-height:54px"
-                placeholder="······"
-              />
-            </div>
-
-            @if (error()) {
-              <div class="ui-alert-danger" role="alert" aria-live="assertive">
-                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                </svg>
-                <span class="font-medium">{{ error() }}</span>
-              </div>
-            }
-
-            <button
-              class="ui-button ui-button-primary w-full"
-              type="submit"
-              [disabled]="loading() || staffOtpCode().length !== 6"
-            >
-              @if (loading()) { {{ t('login.staff.verifying') }} } @else { {{ t('login.staff.loginButton') }} }
-            </button>
-
-            <button
-              type="button"
-              (click)="staffStep.set(1); error.set(null)"
-              class="w-full text-center text-xs font-medium transition-colors cursor-pointer"
-              style="color:var(--text-muted)"
-              onmouseenter="this.style.color='var(--brand-primary)'"
-              onmouseleave="this.style.color='var(--text-muted)'"
-            >
-              {{ t('login.backToPreviousStep') }}
-            </button>
-          </form>
-        }
-      }
-    }
-
-    <!-- ============================================================ -->
-    <!-- MODE PATIENT (OTP 2 étapes)                                  -->
-    <!-- ============================================================ -->
-    @if (mode() === 'patient') {
-      <div class="w-full text-center mb-5">
-        <h2 class="font-display font-bold text-2xl tracking-tight mb-1" style="color:var(--text-primary)">{{ t('login.patient.title') }}</h2>
-        <p class="text-sm" style="color:var(--text-muted)">
-          @if (patientStep() === 1) { {{ t('login.patient.subtitleStep1') }} }
-          @else { {{ t('login.patient.subtitleStep2') }} }
-        </p>
+    <section class="login-form-panel">
+      <div class="login-mobile-brand">
+        <app-logo size="lg"></app-logo>
+        <div class="login-mobile-copy">
+          @if (mode() === 'staff') {
+            <h1>{{ t('login.staff.title') }}</h1>
+            <p>
+              @if (staffStep() === 1) { {{ t('login.staff.subtitleStep1') }} }
+              @else { {{ t('login.staff.subtitleStep2') }} }
+            </p>
+          } @else {
+            <h1>{{ t('login.patient.title') }}</h1>
+            <p>
+              @if (patientStep() === 1) { {{ t('login.patient.subtitleStep1') }} }
+              @else { {{ t('login.patient.subtitleStep2') }} }
+            </p>
+          }
+        </div>
       </div>
 
-      <!-- Barre de progression -->
-      <div class="w-full flex gap-2 mb-6" role="progressbar" [attr.aria-valuenow]="patientStep()" aria-valuemin="1" aria-valuemax="2">
-        <div class="flex-1 h-1 rounded-full transition-colors duration-300"
-          [style.background]="patientStep() >= 1 ? 'var(--brand-primary)' : 'var(--app-border)'"></div>
-        <div class="flex-1 h-1 rounded-full transition-colors duration-300"
-          [style.background]="patientStep() >= 2 ? 'var(--brand-primary)' : 'var(--app-border)'"></div>
-      </div>
-
-      <!-- Étape 1 : Identifiants -->
-      @if (patientStep() === 1) {
-        <form class="w-full space-y-4" (submit)="$event.preventDefault(); requestOtp()">
-          <div class="space-y-1.5">
-            <label class="ui-label">{{ t('login.patient.dpuLabel') }}</label>
-            <input
-              type="text"
-              required
-              aria-required="true"
-              [value]="patientNumber()"
-              (input)="updatePatientNumber($event)"
-              class="ui-input"
-              [placeholder]="t('login.patient.dpuPlaceholder')"
-            />
-          </div>
-          <div class="space-y-1.5">
-            <label class="ui-label">{{ t('login.patient.phoneLabel') }}</label>
-            <input
-              type="tel"
-              required
-              aria-required="true"
-              [value]="patientPhone()"
-              (input)="updatePatientPhone($event)"
-              class="ui-input"
-              [placeholder]="t('login.patient.phonePlaceholder')"
-            />
-          </div>
-          <div class="space-y-1.5">
-            <label class="ui-label">{{ t('login.patient.birthDateLabel') }}</label>
-            <input
-              type="date"
-              required
-              aria-required="true"
-              [value]="patientBirthDate()"
-              (input)="updatePatientBirthDate($event)"
-              class="ui-input"
-            />
-          </div>
-
-          @if (error()) {
-            <div class="ui-alert-danger" role="alert" aria-live="assertive">
-              <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-              </svg>
-              <span class="font-medium">{{ error() }}</span>
-            </div>
-          }
-
+      <div class="login-card">
+        <div class="login-mode-switch" role="group">
           <button
-            class="ui-button ui-button-primary w-full"
-            type="submit"
-            [disabled]="loading() || !patientNumber() || !patientPhone() || !patientBirthDate()"
+            type="button"
+            id="toggle-staff"
+            class="login-mode-button"
+            (click)="setMode('staff')"
+            [class.login-mode-active]="mode() === 'staff'"
+            [attr.aria-pressed]="mode() === 'staff'"
           >
-            @if (loading()) { {{ t('login.patient.sending') }} } @else { {{ t('login.patient.requestOtpButton') }} }
-          </button>
-        </form>
-      }
-
-      <!-- Étape 2 : Code OTP -->
-      @if (patientStep() === 2) {
-        <form class="w-full space-y-4" (submit)="$event.preventDefault(); verifyOtp()">
-          <div class="space-y-1.5">
-            <label class="ui-label">{{ t('login.patient.otpLabel') }}</label>
-            <input
-              type="text"
-              required
-              aria-required="true"
-              [value]="otpCode()"
-              (input)="updateOtpCode($event)"
-              maxlength="6"
-              inputmode="numeric"
-              autocomplete="one-time-code"
-              class="ui-input text-center text-2xl font-bold tracking-[0.5em]"
-              style="min-height:54px"
-              placeholder="······"
-            />
-          </div>
-
-          @if (error()) {
-            <div class="ui-alert-danger" role="alert" aria-live="assertive">
-              <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-              </svg>
-              <span class="font-medium">{{ error() }}</span>
-            </div>
-          }
-
-          <button
-            class="ui-button ui-button-primary w-full"
-            type="submit"
-            [disabled]="loading() || otpCode().length !== 6"
-          >
-            @if (loading()) { {{ t('login.patient.verifying') }} } @else { {{ t('login.patient.accessButton') }} }
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0ZM4.5 20.1a7.5 7.5 0 0115 0A17.9 17.9 0 0112 21.75a17.9 17.9 0 01-7.5-1.65Z" />
+            </svg>
+            <span>{{ t('login.toggle.staff') }}</span>
           </button>
 
           <button
             type="button"
-            (click)="patientStep.set(1); error.set(null)"
-            class="w-full text-center text-xs font-medium transition-colors cursor-pointer"
-            style="color:var(--text-muted)"
-            onmouseenter="this.style.color='var(--brand-primary)'"
-            onmouseleave="this.style.color='var(--text-muted)'"
+            id="toggle-patient"
+            class="login-mode-button"
+            (click)="setMode('patient')"
+            [class.login-mode-active]="mode() === 'patient'"
+            [attr.aria-pressed]="mode() === 'patient'"
           >
-            {{ t('login.backToPreviousStep') }}
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 8.25c0-2.485-2.1-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+            </svg>
+            <span>{{ t('login.toggle.patient') }}</span>
           </button>
-        </form>
-      }
-    }
+        </div>
 
-    <!-- Footer -->
-    <footer class="mt-10 text-center w-full text-[11px] font-medium" style="color:var(--text-muted)">
-      <p class="mb-2">{{ t('common.footer.copyright') }}</p>
-      <div class="flex justify-center gap-3">
-        <a href="#" class="ui-link text-[11px]">{{ t('common.footer.terms') }}</a>
-        <span aria-hidden="true">·</span>
-        <a href="#" class="ui-link text-[11px]">{{ t('common.footer.privacy') }}</a>
-        <span aria-hidden="true">·</span>
-        <a href="#" class="ui-link text-[11px]">{{ t('common.footer.help') }}</a>
+        @if (mode() === 'staff') {
+          @if (session(); as currentSession) {
+            <div class="login-section-heading">
+              <h2 id="login-title">{{ t('login.session.activeTitle') }}</h2>
+              <p>{{ t('login.session.activeSubtitle') }}</p>
+            </div>
+
+            <div class="login-session-card">
+              <div class="login-session-identity">
+                <div class="login-session-avatar">{{ currentSession.name.charAt(0) }}</div>
+                <div>
+                  <p class="login-session-name">{{ currentSession.name }}</p>
+                  <p class="login-session-email">{{ currentSession.email }}</p>
+                </div>
+              </div>
+              <span class="login-session-role">{{ currentSession.role }}</span>
+            </div>
+
+            <button
+              class="ui-button ui-button-primary login-submit-button"
+              type="button"
+              (click)="logout()"
+              [disabled]="loading()"
+            >
+              @if (loading()) { {{ t('login.session.loggingOut') }} } @else { {{ t('login.session.logoutButton') }} }
+            </button>
+          } @else {
+            <div class="login-section-heading login-desktop-form-heading">
+              <h2 id="login-title">{{ t('login.staff.title') }}</h2>
+              <p>
+                @if (staffStep() === 1) { {{ t('login.staff.subtitleStep1') }} }
+                @else { {{ t('login.staff.subtitleStep2') }} }
+              </p>
+            </div>
+
+            @if (staffStep() === 1) {
+              <form class="login-form" (submit)="$event.preventDefault(); submit()">
+                <div class="login-form-group">
+                  <label class="ui-label" for="staff-email">{{ t('login.staff.emailLabel') }}</label>
+                  <div class="login-field">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 6.75A2.25 2.25 0 015.25 4.5h13.5A2.25 2.25 0 0121 6.75v10.5a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 17.25V6.75Z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m3.75 6 7.16 5.22a1.875 1.875 0 002.18 0L20.25 6" />
+                    </svg>
+                    <input
+                      id="staff-email"
+                      type="email"
+                      autocomplete="username"
+                      inputmode="email"
+                      required
+                      aria-required="true"
+                      [value]="email()"
+                      (input)="updateEmail($event)"
+                      class="ui-input login-input"
+                      [placeholder]="t('login.staff.emailPlaceholder')"
+                    />
+                  </div>
+                </div>
+
+                <div class="login-form-group">
+                  <div class="login-label-row">
+                    <label class="ui-label" for="staff-password">{{ t('login.staff.passwordLabel') }}</label>
+                    <a routerLink="/forgot-password" class="ui-link login-forgot-link">{{ t('auth.forgotPassword.link') }}</a>
+                  </div>
+                  <div class="login-field">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16.5 10.5V6.75a4.5 4.5 0 00-9 0v3.75m-.75 0h10.5A2.25 2.25 0 0119.5 12.75v6A2.25 2.25 0 0117.25 21H6.75a2.25 2.25 0 01-2.25-2.25v-6a2.25 2.25 0 012.25-2.25Z" />
+                    </svg>
+                    <input
+                      id="staff-password"
+                      type="password"
+                      autocomplete="current-password"
+                      required
+                      aria-required="true"
+                      [value]="password()"
+                      (input)="updatePassword($event)"
+                      class="ui-input login-input"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+
+                @if (error()) {
+                  <div class="ui-alert-danger" role="alert" aria-live="assertive">
+                    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span class="font-medium">{{ error() }}</span>
+                  </div>
+                }
+
+                <button
+                  class="ui-button ui-button-primary login-submit-button"
+                  type="submit"
+                  [disabled]="!canSubmit()"
+                >
+                  <span>@if (loading()) { {{ t('login.staff.loggingIn') }} } @else { {{ t('login.staff.loginButton') }} }</span>
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                  </svg>
+                </button>
+              </form>
+            } @else {
+              <form class="login-form" (submit)="$event.preventDefault(); verifyStaffOtp()">
+                <div class="login-form-group">
+                  <label class="ui-label" for="staff-otp">{{ t('login.staff.otpLabel') }}</label>
+                  <input
+                    id="staff-otp"
+                    type="text"
+                    required
+                    aria-required="true"
+                    [value]="staffOtpCode()"
+                    (input)="updateStaffOtpCode($event)"
+                    maxlength="6"
+                    inputmode="numeric"
+                    autocomplete="one-time-code"
+                    class="ui-input login-otp-input"
+                    placeholder="······"
+                  />
+                </div>
+
+                @if (error()) {
+                  <div class="ui-alert-danger" role="alert" aria-live="assertive">
+                    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span class="font-medium">{{ error() }}</span>
+                  </div>
+                }
+
+                <button
+                  class="ui-button ui-button-primary login-submit-button"
+                  type="submit"
+                  [disabled]="loading() || staffOtpCode().length !== 6"
+                >
+                  <span>@if (loading()) { {{ t('login.staff.verifying') }} } @else { {{ t('login.staff.loginButton') }} }</span>
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                  </svg>
+                </button>
+
+                <button
+                  type="button"
+                  (click)="staffStep.set(1); error.set(null)"
+                  class="login-back-button"
+                >
+                  {{ t('login.backToPreviousStep') }}
+                </button>
+              </form>
+            }
+          }
+        }
+
+        @if (mode() === 'patient') {
+          <div class="login-section-heading login-desktop-form-heading">
+            <h2>{{ t('login.patient.title') }}</h2>
+            <p>
+              @if (patientStep() === 1) { {{ t('login.patient.subtitleStep1') }} }
+              @else { {{ t('login.patient.subtitleStep2') }} }
+            </p>
+          </div>
+
+          <div class="login-progress" role="progressbar" [attr.aria-valuenow]="patientStep()" aria-valuemin="1" aria-valuemax="2">
+            <span [class.login-progress-active]="patientStep() >= 1"></span>
+            <span [class.login-progress-active]="patientStep() >= 2"></span>
+          </div>
+
+          @if (patientStep() === 1) {
+            <form class="login-form" (submit)="$event.preventDefault(); requestOtp()">
+              <div class="login-form-group">
+                <label class="ui-label" for="patient-number">{{ t('login.patient.dpuLabel') }}</label>
+                <div class="login-field">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6.75 4.5h10.5A2.25 2.25 0 0119.5 6.75v10.5a2.25 2.25 0 01-2.25 2.25H6.75a2.25 2.25 0 01-2.25-2.25V6.75A2.25 2.25 0 016.75 4.5Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.25 9h7.5M8.25 12h4.5M8.25 15h3" />
+                  </svg>
+                  <input
+                    id="patient-number"
+                    type="text"
+                    required
+                    aria-required="true"
+                    [value]="patientNumber()"
+                    (input)="updatePatientNumber($event)"
+                    class="ui-input login-input"
+                    [placeholder]="t('login.patient.dpuPlaceholder')"
+                  />
+                </div>
+              </div>
+
+              <div class="login-form-group">
+                <label class="ui-label" for="patient-phone">{{ t('login.patient.phoneLabel') }}</label>
+                <div class="login-field">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25A2.25 2.25 0 0021.75 19.5v-1.37c0-.516-.351-.966-.852-1.091l-4.423-1.106a1.125 1.125 0 00-1.173.417l-.97 1.293a1.125 1.125 0 01-1.21.38 12.035 12.035 0 01-7.143-7.143 1.125 1.125 0 01.38-1.21l1.293-.97c.37-.278.534-.756.417-1.173L6.963 3.102A1.125 1.125 0 005.872 2.25H4.5A2.25 2.25 0 002.25 4.5v2.25Z" />
+                  </svg>
+                  <input
+                    id="patient-phone"
+                    type="tel"
+                    required
+                    aria-required="true"
+                    [value]="patientPhone()"
+                    (input)="updatePatientPhone($event)"
+                    class="ui-input login-input"
+                    [placeholder]="t('login.patient.phonePlaceholder')"
+                  />
+                </div>
+              </div>
+
+              <div class="login-form-group">
+                <label class="ui-label" for="patient-birth-date">{{ t('login.patient.birthDateLabel') }}</label>
+                <div class="login-field">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6.75 3v2.25M17.25 3v2.25M3.75 9h16.5M5.25 4.5h13.5A1.5 1.5 0 0120.25 6v12.75a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5V6a1.5 1.5 0 011.5-1.5Z" />
+                  </svg>
+                  <input
+                    id="patient-birth-date"
+                    type="date"
+                    required
+                    aria-required="true"
+                    [value]="patientBirthDate()"
+                    (input)="updatePatientBirthDate($event)"
+                    class="ui-input login-input"
+                  />
+                </div>
+              </div>
+
+              @if (error()) {
+                <div class="ui-alert-danger" role="alert" aria-live="assertive">
+                  <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span class="font-medium">{{ error() }}</span>
+                </div>
+              }
+
+              <button
+                class="ui-button ui-button-primary login-submit-button"
+                type="submit"
+                [disabled]="loading() || !patientNumber() || !patientPhone() || !patientBirthDate()"
+              >
+                <span>@if (loading()) { {{ t('login.patient.sending') }} } @else { {{ t('login.patient.requestOtpButton') }} }</span>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                </svg>
+              </button>
+            </form>
+          }
+
+          @if (patientStep() === 2) {
+            <form class="login-form" (submit)="$event.preventDefault(); verifyOtp()">
+              <div class="login-form-group">
+                <label class="ui-label" for="patient-otp">{{ t('login.patient.otpLabel') }}</label>
+                <input
+                  id="patient-otp"
+                  type="text"
+                  required
+                  aria-required="true"
+                  [value]="otpCode()"
+                  (input)="updateOtpCode($event)"
+                  maxlength="6"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  class="ui-input login-otp-input"
+                  placeholder="······"
+                />
+              </div>
+
+              @if (error()) {
+                <div class="ui-alert-danger" role="alert" aria-live="assertive">
+                  <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span class="font-medium">{{ error() }}</span>
+                </div>
+              }
+
+              <button
+                class="ui-button ui-button-primary login-submit-button"
+                type="submit"
+                [disabled]="loading() || otpCode().length !== 6"
+              >
+                <span>@if (loading()) { {{ t('login.patient.verifying') }} } @else { {{ t('login.patient.accessButton') }} }</span>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                </svg>
+              </button>
+
+              <button
+                type="button"
+                (click)="patientStep.set(1); error.set(null)"
+                class="login-back-button"
+              >
+                {{ t('login.backToPreviousStep') }}
+              </button>
+            </form>
+          }
+        }
       </div>
-    </footer>
 
+      <div class="login-trust-row" aria-hidden="true">
+        <span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3 5.25 5.8v5.4c0 4.45 2.72 8.17 6.75 9.8 4.03-1.63 6.75-5.35 6.75-9.8V5.8L12 3Z" />
+          </svg>
+        </span>
+        <span></span>
+        <span></span>
+      </div>
+
+      <footer class="login-footer">
+        <p>{{ t('common.footer.copyright') }}</p>
+        <div>
+          <a href="#" class="ui-link">{{ t('common.footer.terms') }}</a>
+          <span aria-hidden="true">·</span>
+          <a href="#" class="ui-link">{{ t('common.footer.privacy') }}</a>
+          <span aria-hidden="true">·</span>
+          <a href="#" class="ui-link">{{ t('common.footer.help') }}</a>
+        </div>
+      </footer>
+    </section>
   </div>
 </main>
