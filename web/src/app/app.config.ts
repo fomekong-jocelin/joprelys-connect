@@ -5,12 +5,13 @@ import { provideRouter } from '@angular/router';
 import { AuthApiService } from './auth/auth-api.service';
 import { authTokenInterceptor } from './auth/auth-token.interceptor';
 import { I18nService } from './core/i18n/i18n.service';
+import { legalRoutes } from './legal/legal.routes';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+    provideRouter([...legalRoutes, ...routes]),
     provideHttpClient(withFetch(), withInterceptors([authTokenInterceptor])),
     provideAppInitializer(() => {
       const i18n = inject(I18nService);
