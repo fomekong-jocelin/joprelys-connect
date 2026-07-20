@@ -33,7 +33,8 @@
             "styles": [
               "src/styles.css",
               "src/styles/button-layout.css",
-              "src/app/auth/login.component.css"
+              "src/app/auth/login.component.css",
+              "src/app/legal/legal-page.component.css"
             ]
           },
           "configurations": {
