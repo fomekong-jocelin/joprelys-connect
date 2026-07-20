@@ -29,7 +29,7 @@ interface HttpErrorLike {
   selector: 'app-login',
   imports: [RouterLink, AppLogoComponent],
   templateUrl: './login.component.html',
-  styleUrl: './login.component.css',
+  styleUrl: './login.host.css',
 })
 export class LoginComponent {
   private readonly authApi = inject(AuthApiService);
