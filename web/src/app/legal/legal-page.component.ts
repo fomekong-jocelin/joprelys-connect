@@ -16,7 +16,7 @@ import {
   selector: 'app-legal-page',
   imports: [RouterLink, AppLogoComponent],
   templateUrl: './legal-page.component.html',
-  styleUrl: './legal-page.component.css',
+  styleUrl: './legal-page.host.css',
 })
 export class LegalPageComponent {
   private readonly route = inject(ActivatedRoute);
