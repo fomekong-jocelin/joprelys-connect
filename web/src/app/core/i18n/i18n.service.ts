@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { catchError, firstValueFrom, forkJoin, of } from 'rxjs';
 import { APP_BRAND_CONFIG, AppLocale } from '../config/app-brand.config';
+import { ConsentManagementService } from '../privacy/consent-management.service';
 
 type TranslationDictionary = Record<string, string>;
 
@@ -11,6 +12,7 @@ const EMPTY_DICTIONARY = {} as TranslationDictionary;
 @Injectable({ providedIn: 'root' })
 export class I18nService {
   private readonly http = inject(HttpClient);
+  private readonly consent = inject(ConsentManagementService);
 
   readonly locale = signal<AppLocale>(this.loadStoredLocale());
   private readonly dictionary = signal<TranslationDictionary>({});
@@ -27,7 +29,11 @@ export class I18nService {
   async setLocale(lang: AppLocale): Promise<void> {
     this.locale.set(lang);
     try {
-      localStorage.setItem(LOCALE_STORAGE_KEY, lang);
+      if (this.consent.preferencesAllowed()) {
+        localStorage.setItem(LOCALE_STORAGE_KEY, lang);
+      } else {
+        localStorage.removeItem(LOCALE_STORAGE_KEY);
+      }
     } catch {
       // Storage can be unavailable during SSR or in restricted browsers.
     }
@@ -53,6 +59,7 @@ export class I18nService {
         appointments: this.optionalDictionary(`/assets/i18n/features/appointments/${lang}.json`),
         spatialServices: this.optionalDictionary(`/assets/i18n/features/spatial-services/${lang}.json`),
         legal: this.optionalDictionary(`/assets/i18n/features/legal/${lang}.json`),
+        consent: this.optionalDictionary(`/assets/i18n/features/consent/${lang}.json`),
       }));
 
       this.dictionary.set({
@@ -68,6 +75,7 @@ export class I18nService {
         ...dictionaries.appointments,
         ...dictionaries.spatialServices,
         ...dictionaries.legal,
+        ...dictionaries.consent,
       });
       this.loaded.update(state => ({ ...state, [lang]: true }));
     } catch {
@@ -82,6 +90,10 @@ export class I18nService {
   }
 
   private loadStoredLocale(): AppLocale {
+    if (!this.consent.preferencesAllowed()) {
+      return APP_BRAND_CONFIG.defaultLocale;
+    }
+
     try {
       const stored = localStorage.getItem(LOCALE_STORAGE_KEY) as AppLocale | null;
       if (stored && APP_BRAND_CONFIG.supportedLocales.includes(stored)) {
