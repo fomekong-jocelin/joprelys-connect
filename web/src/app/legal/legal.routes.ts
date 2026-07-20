@@ -8,6 +8,10 @@ const legalRoute = (path: string, legalDocument: LegalDocumentId): Routes[number
 });
 
 export const legalRoutes: Routes = [
+  {
+    path: 'legal/privacy-preferences',
+    loadComponent: () => import('./consent-preferences.component').then(module => module.ConsentPreferencesComponent),
+  },
   legalRoute('legal/privacy', 'privacy'),
   legalRoute('legal/terms', 'terms'),
   legalRoute('legal/legal-notice', 'legal-notice'),

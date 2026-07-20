@@ -4,6 +4,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { I18nService } from '../core/i18n/i18n.service';
+import { ConsentManagementService } from '../core/privacy/consent-management.service';
 import { ThemeService } from '../core/theme/theme.service';
 import { AuthTokenStorageService } from './auth-token-storage.service';
 import { LoginComponent } from './login.component';
@@ -85,7 +86,9 @@ describe('LoginComponent', () => {
     expect(component.locale()).toBe('fr');
   });
 
-  it('should switch and persist the theme before authentication', () => {
+  it('should switch and persist the theme before authentication when preferences are allowed', () => {
+    const consent = TestBed.inject(ConsentManagementService);
+    consent.acceptAvailableOptions();
     const themeService = TestBed.inject(ThemeService);
     themeService.setTheme('light');
 

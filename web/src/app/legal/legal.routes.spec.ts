@@ -1,8 +1,9 @@
 import { legalRoutes } from './legal.routes';
 
 describe('legalRoutes', () => {
-  it('should expose all legal documents without an authentication guard', () => {
+  it('should expose all public legal and privacy routes without an authentication guard', () => {
     expect(legalRoutes.map(route => route.path)).toEqual([
+      'legal/privacy-preferences',
       'legal/privacy',
       'legal/terms',
       'legal/legal-notice',
