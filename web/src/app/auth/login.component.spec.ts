@@ -1,7 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
+import { I18nService } from '../core/i18n/i18n.service';
 import { ThemeService } from '../core/theme/theme.service';
 import { AuthTokenStorageService } from './auth-token-storage.service';
 import { LoginComponent } from './login.component';
@@ -9,6 +11,7 @@ import { LoginComponent } from './login.component';
 describe('LoginComponent', () => {
   let mockRouter: any;
   let mockRoute: any;
+  let mockI18n: any;
   let queryParams: Record<string, string | null>;
 
   beforeEach(async () => {
@@ -27,6 +30,11 @@ describe('LoginComponent', () => {
       navigateByUrl: vi.fn(),
       parseUrl: vi.fn(),
     };
+    mockI18n = {
+      locale: signal<'fr' | 'en'>('fr'),
+      setLocale: vi.fn((lang: 'fr' | 'en') => mockI18n.locale.set(lang)),
+      t: vi.fn((key: string) => key),
+    };
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
       providers: [
@@ -34,6 +42,7 @@ describe('LoginComponent', () => {
         provideHttpClientTesting(),
         { provide: Router, useValue: mockRouter },
         { provide: ActivatedRoute, useValue: mockRoute },
+        { provide: I18nService, useValue: mockI18n },
       ],
     }).compileComponents();
   });
