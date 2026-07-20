@@ -5,6 +5,7 @@ import { AuthTokenStorageService } from './auth-token-storage.service';
 import { PatientPortalService } from '../patient/portal/services/patient-portal.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AppLocale } from '../core/config/app-brand.config';
+import { ThemeService } from '../core/theme/theme.service';
 import { AppLogoComponent } from '../shared/ui/app-logo.component';
 
 type LoginMode = 'staff' | 'patient';
@@ -37,10 +38,12 @@ export class LoginComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute, { optional: true });
   private readonly i18n = inject(I18nService);
+  private readonly themeService = inject(ThemeService);
 
   private readonly requestedReturnUrl = this.resolveReturnUrl();
 
   readonly locale = this.i18n.locale;
+  readonly theme = this.themeService.theme;
 
   // --- Mode toggle ---
   readonly mode = signal<LoginMode>('staff');
@@ -75,6 +78,16 @@ export class LoginComponent {
 
   setLang(lang: AppLocale): void {
     this.i18n.setLocale(lang);
+  }
+
+  toggleTheme(): void {
+    this.themeService.setTheme(this.theme() === 'light' ? 'dark' : 'light');
+  }
+
+  themeTooltip(): string {
+    return this.theme() === 'dark'
+      ? this.t('shell.theme.light')
+      : this.t('shell.theme.dark');
   }
 
   setMode(m: LoginMode): void {
