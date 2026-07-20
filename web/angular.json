@@ -32,7 +32,8 @@
             ],
             "styles": [
               "src/styles.css",
-              "src/styles/button-layout.css"
+              "src/styles/button-layout.css",
+              "src/app/auth/login.component.css"
             ]
           },
           "configurations": {

@@ -1,17 +1,22 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
+import { I18nService } from '../core/i18n/i18n.service';
+import { ThemeService } from '../core/theme/theme.service';
 import { AuthTokenStorageService } from './auth-token-storage.service';
 import { LoginComponent } from './login.component';
 
 describe('LoginComponent', () => {
   let mockRouter: any;
   let mockRoute: any;
+  let mockI18n: any;
   let queryParams: Record<string, string | null>;
 
   beforeEach(async () => {
     sessionStorage.clear();
+    localStorage.clear();
     queryParams = {};
     mockRoute = {
       snapshot: {
@@ -25,6 +30,11 @@ describe('LoginComponent', () => {
       navigateByUrl: vi.fn(),
       parseUrl: vi.fn(),
     };
+    mockI18n = {
+      locale: signal<'fr' | 'en'>('fr'),
+      setLocale: vi.fn((lang: 'fr' | 'en') => mockI18n.locale.set(lang)),
+      t: vi.fn((key: string) => key),
+    };
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
       providers: [
@@ -32,6 +42,7 @@ describe('LoginComponent', () => {
         provideHttpClientTesting(),
         { provide: Router, useValue: mockRouter },
         { provide: ActivatedRoute, useValue: mockRoute },
+        { provide: I18nService, useValue: mockI18n },
       ],
     }).compileComponents();
   });
@@ -39,6 +50,76 @@ describe('LoginComponent', () => {
   afterEach(() => {
     TestBed.inject(HttpTestingController).verify();
     sessionStorage.clear();
+    localStorage.clear();
+  });
+
+  it('should render the premium mobile-first controls with the shared logo', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const frenchButton = root.querySelector<HTMLButtonElement>('#login-language-fr');
+    const englishButton = root.querySelector<HTMLButtonElement>('#login-language-en');
+
+    expect(root.querySelector('app-logo')).not.toBeNull();
+    expect(root.querySelector('#login-theme-toggle')).not.toBeNull();
+    expect(frenchButton?.textContent).toContain('🇫🇷');
+    expect(englishButton?.textContent).toContain('🇬🇧');
+    expect(root.textContent).not.toContain('Flux clinique synchronisé');
+    expect(root.querySelector('#toggle-staff')?.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('should switch language from the flag controls', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    root.querySelector<HTMLButtonElement>('#login-language-en')?.click();
+    fixture.detectChanges();
+
+    expect(component.locale()).toBe('en');
+    expect(root.querySelector('#login-language-en')?.getAttribute('aria-pressed')).toBe('true');
+
+    root.querySelector<HTMLButtonElement>('#login-language-fr')?.click();
+    expect(component.locale()).toBe('fr');
+  });
+
+  it('should switch and persist the theme before authentication', () => {
+    const themeService = TestBed.inject(ThemeService);
+    themeService.setTheme('light');
+
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    root.querySelector<HTMLButtonElement>('#login-theme-toggle')?.click();
+    fixture.detectChanges();
+
+    expect(component.theme()).toBe('dark');
+    expect(localStorage.getItem('joprelys.theme')).toBe('dark');
+    expect(document.documentElement.dataset['theme']).toBe('dark');
+  });
+
+  it('should switch between staff and patient forms', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    root.querySelector<HTMLButtonElement>('#toggle-patient')?.click();
+    fixture.detectChanges();
+
+    expect(component.mode()).toBe('patient');
+    expect(root.querySelector('#toggle-patient')?.getAttribute('aria-pressed')).toBe('true');
+    expect(root.querySelector('#patient-number')).not.toBeNull();
+
+    root.querySelector<HTMLButtonElement>('#toggle-staff')?.click();
+    fixture.detectChanges();
+
+    expect(component.mode()).toBe('staff');
+    expect(root.querySelector('#staff-email')).not.toBeNull();
   });
 
   it('should explain that the session expired', () => {
