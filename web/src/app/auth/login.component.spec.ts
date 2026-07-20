@@ -220,4 +220,80 @@ describe('LoginComponent', () => {
       '/clinic/consultation/8dfc8352-505c-41a6-b936-a2db49901ee4',
     );
   });
+
+  it('should keep the error generic when credentials are invalid', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    component.email.set('agent@example.com');
+    component.password.set('wrong-password');
+    component.submit();
+
+    httpTesting.expectOne('/api/auth/login').flush({}, { status: 401, statusText: 'Unauthorized' });
+
+    expect(component.error()).toBe('login.error.invalidCredentials');
+  });
+
+  it('should explain when the OTP recipient address is rejected', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    component.email.set('cashier@example.com');
+    component.password.set('Password123!');
+    component.submit();
+
+    httpTesting.expectOne('/api/auth/login').flush({
+      error: {
+        code: 'MAIL_RECIPIENT_REJECTED',
+        message: 'Recipient rejected',
+        trace_id: 'trc_test',
+      },
+    }, { status: 422, statusText: 'Unprocessable Entity' });
+
+    expect(component.error()).toBe('login.error.otpRecipientRejected');
+    expect(component.staffStep()).toBe(1);
+  });
+
+  it('should distinguish a temporary OTP delivery outage', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    component.email.set('cashier@example.com');
+    component.password.set('Password123!');
+    component.submit();
+
+    httpTesting.expectOne('/api/auth/login').flush({
+      error: {
+        code: 'MAIL_DELIVERY_UNAVAILABLE',
+        message: 'Mail unavailable',
+        trace_id: 'trc_test',
+      },
+    }, { status: 503, statusText: 'Service Unavailable' });
+
+    expect(component.error()).toBe('login.error.otpDeliveryUnavailable');
+    expect(component.staffStep()).toBe(1);
+  });
+
+  it('should display the normalized API message when staff OTP verification fails', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    component.email.set('cashier@example.com');
+    component.staffOtpCode.set('000000');
+    component.verifyStaffOtp();
+
+    httpTesting.expectOne('/api/auth/verify-otp').flush({
+      error: {
+        code: 'UNAUTHORIZED',
+        message: 'Code de sécurité incorrect.',
+        trace_id: 'trc_test',
+      },
+    }, { status: 401, statusText: 'Unauthorized' });
+
+    expect(component.error()).toBe('Code de sécurité incorrect.');
+  });
 });
