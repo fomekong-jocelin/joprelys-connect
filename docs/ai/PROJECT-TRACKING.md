@@ -6,20 +6,21 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-19 (correctif transversal des libellés de boutons sur une ligne préparé pour l'issue #72) |
+| Dernière mise à jour | 2026-07-20 (page de connexion premium mobile-first préparée sur la PR #79) |
 | Responsable mise à jour | GPT-5.6 Thinking |
-| État global | BUG-20260719-BUTTON-LABEL-WRAPPING en revue ; BUG-20260718, EPIC-0026 et AUDIT-20260718 en QA ; agenda médecin en revue technique sur PR #68. |
-| Risques majeurs | Validation métier/RSSI de la matrice permission-first ; recette E2E multi-rôles ; recette visuelle responsive des groupes d'actions après application de la règle globale des boutons. |
-| Prochaine priorité | Obtenir la CI verte du correctif #72, réaliser la recette responsive light/dark FR/EN, puis poursuivre les travaux métier planifiés. |
+| État global | STORY-20260720-PREMIUM-MOBILE-FIRST-LOGIN en QA technique verte ; BUG-20260718, EPIC-0026 et AUDIT-20260718 en QA ; agenda médecin en revue technique sur PR #68. |
+| Risques majeurs | Recette visuelle du login premium sur les viewports cibles ; validation métier/RSSI de la matrice permission-first ; recette E2E multi-rôles. |
+| Prochaine priorité | Valider visuellement la PR #79 en light/dark et FR/EN sur mobile, tablette et desktop, puis décider de sa fusion. |
 | Sprint courant | SPRINT-0014 |
-| Capacité sprint | P0 RBAC : 2,25 j senior cumulés ; EPIC-0026 : 21 SP / 9,5 j senior implémentés ; agenda médecin : 3 SP / 1,5 j senior ; correctif boutons : 1 SP / 0,4 j senior. |
-| Charge engagée | 51.25j (Est. Senior, incluant P0 RBAC, EPIC-0026, agenda médecin et correctif boutons) |
+| Capacité sprint | P0 RBAC : 2,25 j senior cumulés ; EPIC-0026 : 21 SP / 9,5 j senior implémentés ; agenda médecin : 3 SP / 1,5 j senior ; login premium : 3 SP / 1,5 j senior. |
+| Charge engagée | 52.75j (Est. Senior, incluant P0 RBAC, EPIC-0026, agenda médecin et login premium) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---:|---|---:|---:|---:|---|---|---|---:|---|---|---|
+| STORY-20260720-PREMIUM-MOBILE-FIRST-LOGIN | AUTHENTICATION / UI_UX | Feature UI | Page de connexion premium mobile-first | Angular / CSS / i18n / thème | QA TECHNIQUE VERTE | P1 | 3 | Senior frontend | 1.5j | 2.2j | 3.5j | GPT-5.6 Thinking | Lead Frontend + QA | SPRINT-0014 | 1.5j | Recette visuelle responsive light/dark FR/EN puis fusion PR #79 | Faible | 2026-07-20 |
 | BUG-20260719-BUTTON-LABEL-WRAPPING | UI_UX | Bug transversal | Empêcher les libellés de boutons de passer sur deux lignes | Angular / CSS / Design System | IN_REVIEW | P1 | 1 | Senior frontend | 0.4j | 0.6j | 1.0j | GPT-5.6 Thinking | Lead Frontend + QA | SPRINT-0014 | 0.4j | CI Angular et recette responsive light/dark FR/EN | Faible | 2026-07-19 |
 | BUG-20260718-PATIENT-PROFESSIONAL-RBAC-CONTEXT-LEAK | EPIC-0025 / EPIC-0026 | Bug sécurité | Contamination de permissions entre sessions et accès disponibilités | Angular / Spring Security / RBAC | QA TECHNIQUE VERTE | P0 | 3 | Senior full-stack sécurité | 0.75j | 1.2j | 2.0j | Codex | Tech Lead + RSSI + QA | SPRINT-0014 | 0.75j | Revue humaine et recette multi-rôles | Moyen | 2026-07-18 |
 | BUG-20260718-DYNAMIC-PERMISSION-UI-API-MISMATCH | EPIC-0026 | Bug sécurité | Alignement permissions dynamiques menus, routes et API finance/laboratoire | Angular / Spring Security / RBAC | QA TECHNIQUE VERTE | P0 | 5 | Senior full-stack sécurité | 1.5j | 2.2j | 3.5j | Codex | Tech Lead + RSSI + QA | SPRINT-0014 | 1.5j | Recette humaine multi-rôles et déploiement | Moyen | 2026-07-18 |
