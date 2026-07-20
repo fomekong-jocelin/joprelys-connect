@@ -40,7 +40,8 @@ describe('LegalFooterLinkDirective', () => {
     const fixture = TestBed.createComponent(TestHostComponent);
     fixture.detectChanges();
 
-    const links = fixture.nativeElement.querySelectorAll<HTMLAnchorElement>('a');
+    const root = fixture.nativeElement as HTMLElement;
+    const links = root.querySelectorAll<HTMLAnchorElement>('a');
     links[0].click();
     links[1].click();
 
