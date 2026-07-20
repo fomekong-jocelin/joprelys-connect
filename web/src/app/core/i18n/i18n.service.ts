@@ -52,6 +52,7 @@ export class I18nService {
         availability: this.optionalDictionary(`/assets/i18n/features/availability/${lang}.json`),
         appointments: this.optionalDictionary(`/assets/i18n/features/appointments/${lang}.json`),
         spatialServices: this.optionalDictionary(`/assets/i18n/features/spatial-services/${lang}.json`),
+        legal: this.optionalDictionary(`/assets/i18n/features/legal/${lang}.json`),
       }));
 
       this.dictionary.set({
@@ -66,6 +67,7 @@ export class I18nService {
         ...dictionaries.availability,
         ...dictionaries.appointments,
         ...dictionaries.spatialServices,
+        ...dictionaries.legal,
       });
       this.loaded.update(state => ({ ...state, [lang]: true }));
     } catch {
