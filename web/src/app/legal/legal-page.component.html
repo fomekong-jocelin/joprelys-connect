@@ -100,6 +100,14 @@
         </div>
       </div>
 
+      @if (documentId === 'cookies') {
+        <div class="legal-callout">
+          <a routerLink="/legal/privacy-preferences" class="ui-link font-extrabold">
+            {{ t('consent.cookies.manageCta') }}
+          </a>
+        </div>
+      }
+
       @for (section of document.sections; track section.id) {
         <section [id]="section.id" class="legal-section">
           <h2>{{ t(section.titleKey) }}</h2>
@@ -154,6 +162,7 @@
         @for (item of navigation; track item.id) {
           <a [routerLink]="item.path">{{ t(item.navKey) }}</a>
         }
+        <a routerLink="/legal/privacy-preferences">{{ t('consent.manage.link') }}</a>
       </nav>
       <p class="legal-footer-copyright">{{ t('common.footer.copyright') }}</p>
     </div>
