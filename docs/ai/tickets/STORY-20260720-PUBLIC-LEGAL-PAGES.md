@@ -2,11 +2,12 @@
 
 ## Statut
 
-IN_PROGRESS
+QA TECHNIQUE VERTE — VALIDATION JURIDIQUE REQUISE
 
 ## Références
 
 - Issue GitHub : #80
+- Pull request : #81
 - Branche : `feat/80-public-legal-pages`
 - Type : conformité / frontend / contenu juridique
 - Priorité : P0 avant publication commerciale
@@ -51,9 +52,19 @@ IN_PROGRESS
 - [x] Aucune autorisation réglementaire non vérifiée n’est présentée comme acquise.
 - [x] Informations légales manquantes clairement signalées.
 - [x] Tests de rendu, langues, thème, routes et liens ajoutés.
-- [ ] CI Angular et Maven verte.
+- [x] CI Angular et Maven verte.
 - [ ] Relecture juridique camerounaise signée.
 - [ ] Informations société et hébergeur complétées.
+
+## Validation technique
+
+Pipeline GitHub Actions **#867** :
+
+- tests Angular : succès ;
+- build Angular production : succès ;
+- build et tests Maven stricts : succès.
+
+Le premier pipeline a détecté une taille de logo non supportée dans le pied de page. Le template a été corrigé pour utiliser la taille partagée `md`, puis l’ensemble de la CI est passé au vert.
 
 ## Informations à compléter avant publication définitive
 
@@ -65,9 +76,9 @@ IN_PROGRESS
 
 ## Validation restante
 
-1. Exécuter la CI complète.
-2. Vérifier FR/EN, light/dark et responsive.
-3. Vérifier tous les liens et adresses e-mail.
-4. Comparer les traitements réellement activés avec les politiques.
-5. Obtenir la validation juridique écrite.
+1. Vérifier visuellement FR/EN, light/dark et responsive.
+2. Vérifier tous les liens et adresses e-mail.
+3. Comparer les traitements réellement activés avec les politiques.
+4. Obtenir la validation juridique écrite.
+5. Compléter les informations société et hébergeur.
 6. Retirer le bandeau « document préparatoire » après validation et complétion.
