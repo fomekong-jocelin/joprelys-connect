@@ -84,7 +84,8 @@ describe('LoginComponent', () => {
     const component = fixture.componentInstance;
     fixture.detectChanges();
 
-    fixture.nativeElement.querySelector<HTMLButtonElement>('#login-theme-toggle')?.click();
+    const root = fixture.nativeElement as HTMLElement;
+    root.querySelector<HTMLButtonElement>('#login-theme-toggle')?.click();
     fixture.detectChanges();
 
     expect(component.theme()).toBe('dark');
