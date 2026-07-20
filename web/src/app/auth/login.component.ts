@@ -6,6 +6,7 @@ import { PatientPortalService } from '../patient/portal/services/patient-portal.
 import { I18nService } from '../core/i18n/i18n.service';
 import { AppLocale } from '../core/config/app-brand.config';
 import { ThemeService } from '../core/theme/theme.service';
+import { LegalFooterLinkDirective } from '../legal/legal-footer-link.directive';
 import { AppLogoComponent } from '../shared/ui/app-logo.component';
 
 type LoginMode = 'staff' | 'patient';
@@ -27,7 +28,7 @@ interface HttpErrorLike {
 
 @Component({
   selector: 'app-login',
-  imports: [RouterLink, AppLogoComponent],
+  imports: [RouterLink, AppLogoComponent, LegalFooterLinkDirective],
   templateUrl: './login.component.html',
   styleUrl: './login.host.css',
 })
