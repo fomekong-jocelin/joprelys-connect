@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { signal, WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { I18nService } from '../core/i18n/i18n.service';
@@ -7,7 +7,7 @@ import { LegalPageComponent } from './legal-page.component';
 
 describe('LegalPageComponent', () => {
   let mockI18n: {
-    locale: ReturnType<typeof signal<'fr' | 'en'>>;
+    locale: WritableSignal<'fr' | 'en'>;
     t: ReturnType<typeof vi.fn>;
     setLocale: ReturnType<typeof vi.fn>;
   };
@@ -56,7 +56,8 @@ describe('LegalPageComponent', () => {
     const component = fixture.componentInstance;
     fixture.detectChanges();
 
-    const buttons = fixture.nativeElement.querySelectorAll<HTMLButtonElement>('.legal-language-switch button');
+    const root = fixture.nativeElement as HTMLElement;
+    const buttons = root.querySelectorAll<HTMLButtonElement>('.legal-language-switch button');
     buttons[1].click();
 
     expect(mockI18n.setLocale).toHaveBeenCalledWith('en');
@@ -70,7 +71,8 @@ describe('LegalPageComponent', () => {
     const fixture = TestBed.createComponent(LegalPageComponent);
     fixture.detectChanges();
 
-    fixture.nativeElement.querySelector<HTMLButtonElement>('.legal-icon-button')?.click();
+    const root = fixture.nativeElement as HTMLElement;
+    root.querySelector<HTMLButtonElement>('.legal-icon-button')?.click();
 
     expect(themeService.theme()).toBe('dark');
     expect(localStorage.getItem('joprelys.theme')).toBe('dark');
