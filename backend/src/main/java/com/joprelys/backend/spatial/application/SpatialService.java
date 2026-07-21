@@ -37,6 +37,7 @@ public class SpatialService {
     private final BedRepository bedRepository;
     private final BedAssignmentRepository bedAssignmentRepository;
     private final ActiveBedAssignmentService activeBedAssignmentService;
+    private final BedStatusTransitionPolicy bedStatusTransitionPolicy;
     private final HospitalizationRepository hospitalizationRepository;
     private final UserAccountRepository userAccountRepository;
     private final AuditService auditService;
@@ -47,6 +48,7 @@ public class SpatialService {
             BedRepository bedRepository,
             BedAssignmentRepository bedAssignmentRepository,
             ActiveBedAssignmentService activeBedAssignmentService,
+            BedStatusTransitionPolicy bedStatusTransitionPolicy,
             HospitalizationRepository hospitalizationRepository,
             UserAccountRepository userAccountRepository,
             AuditService auditService) {
@@ -55,6 +57,7 @@ public class SpatialService {
         this.bedRepository = bedRepository;
         this.bedAssignmentRepository = bedAssignmentRepository;
         this.activeBedAssignmentService = activeBedAssignmentService;
+        this.bedStatusTransitionPolicy = bedStatusTransitionPolicy;
         this.hospitalizationRepository = hospitalizationRepository;
         this.userAccountRepository = userAccountRepository;
         this.auditService = auditService;
@@ -118,11 +121,14 @@ public class SpatialService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lit introuvable"));
         bed.getRoom().getWard().requireRoomsAllowed();
 
-        if (newStatus == BedStatus.FREE) {
-            bedAssignmentRepository.findActiveByBedId(bedId).ifPresent(assignment -> {
-                assignment.releaseAt(Instant.now());
-                bedAssignmentRepository.save(assignment);
-            });
+        boolean hasActiveAssignment = bedAssignmentRepository.findActiveByBedId(bedId).isPresent();
+        bedStatusTransitionPolicy.validateManualTransition(
+                bed.getStatus(),
+                newStatus,
+                hasActiveAssignment);
+
+        if (bed.getStatus() == newStatus) {
+            return BedResponse.fromEntity(bed);
         }
 
         bed.setStatus(newStatus);
