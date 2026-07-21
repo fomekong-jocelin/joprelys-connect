@@ -10,6 +10,7 @@ import com.lowagie.text.FontFactory;
 import com.lowagie.text.Image;
 import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
+import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
@@ -49,14 +50,14 @@ public class EmergencyDocumentPdfService {
             header.setWidths(new float[]{75, 25});
 
             PdfPCell clinic = new PdfPCell();
-            clinic.setBorder(PdfPCell.NO_BORDER);
+            clinic.setBorder(Rectangle.NO_BORDER);
             clinic.addElement(new Paragraph(value(organization.getName()), headingFont));
             clinic.addElement(new Paragraph(value(organization.getAddress()), mutedFont));
             clinic.addElement(new Paragraph("Tél : " + value(organization.getPhone()), mutedFont));
             header.addCell(clinic);
 
             PdfPCell qrCell = new PdfPCell();
-            qrCell.setBorder(PdfPCell.NO_BORDER);
+            qrCell.setBorder(Rectangle.NO_BORDER);
             qrCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
             if (qrCode != null) {
                 Image image = Image.getInstance(qrCode);
