@@ -64,6 +64,7 @@ export class PatientReconciliationPageComponent implements OnInit, OnDestroy {
   private candidateRequestVersion = 0;
   private historyRequest: Subscription | null = null;
   private historyRequestVersion = 0;
+  private requestedPatientSelectionAttempted = false;
 
   readonly queue = signal<PatientReconciliationQueueItem[]>([]);
   readonly selectedPatient = signal<PatientReconciliationQueueItem | null>(null);
@@ -195,7 +196,8 @@ export class PatientReconciliationPageComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (items) => {
         this.queue.set(items);
-        if (this.requestedPatientId && !this.selectedPatient()) {
+        if (!this.requestedPatientSelectionAttempted && this.requestedPatientId) {
+          this.requestedPatientSelectionAttempted = true;
           const requested = items.find((item) => item.patientId === this.requestedPatientId);
           if (requested) this.selectPatient(requested);
         }
