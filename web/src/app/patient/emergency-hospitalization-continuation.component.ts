@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, forkJoin, switchMap } from 'rxjs';
+import { catchError, finalize, forkJoin, of, switchMap } from 'rxjs';
 import { StaffApiService } from '../clinic/staff/staff-api.service';
 import { StaffMember } from '../clinic/staff/staff.models';
 import { WardConfiguration } from '../clinic/spatial/spatial-configuration.models';
@@ -60,6 +60,9 @@ interface FreeBedOption {
       @if (error(); as message) {
         <app-ui-alert tone="error">{{ message }}</app-ui-alert>
       }
+      @if (documentWarning(); as message) {
+        <app-ui-alert tone="warning">{{ message }}</app-ui-alert>
+      }
       @if (success(); as message) {
         <app-ui-alert tone="success">{{ message }}</app-ui-alert>
       }
@@ -78,8 +81,8 @@ interface FreeBedOption {
               id="emergency-hospitalization-service"
               name="service"
               class="ui-select"
-              [(ngModel)]="selectedWardId"
-              (ngModelChange)="onWardChange()"
+              [ngModel]="selectedWardId()"
+              (ngModelChange)="selectWard($event)"
               required
             >
               <option value="">{{ t('spatial.selectWardPlaceholder', 'Sélectionner un service') }}</option>
@@ -97,8 +100,9 @@ interface FreeBedOption {
               id="emergency-hospitalization-bed"
               name="bed"
               class="ui-select"
-              [(ngModel)]="selectedBedId"
-              [disabled]="!selectedWardId"
+              [ngModel]="selectedBedId()"
+              (ngModelChange)="selectedBedId.set($event)"
+              [disabled]="!selectedWardId()"
               required
             >
               <option value="">{{ t('patients.hospitalization.selectBed', 'Sélectionner un lit') }}</option>
@@ -106,7 +110,7 @@ interface FreeBedOption {
                 <option [value]="bed.id">{{ bed.roomNumber }} — {{ bed.bedNumber }}</option>
               }
             </select>
-            @if (selectedWardId && freeBeds().length === 0) {
+            @if (selectedWardId() && freeBeds().length === 0) {
               <p class="text-xs font-semibold text-amber-700 dark:text-amber-300">
                 {{ t('patients.hospitalization.noFreeBed', 'Aucun lit libre dans ce service.') }}
               </p>
@@ -175,22 +179,24 @@ export class EmergencyHospitalizationContinuationComponent {
 
   readonly wards = signal<WardConfiguration[]>([]);
   readonly staff = signal<StaffMember[]>([]);
+  readonly selectedWardId = signal('');
+  readonly selectedBedId = signal('');
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
+  readonly documentWarning = signal<string | null>(null);
   readonly success = signal<string | null>(null);
 
-  selectedWardId = '';
-  selectedBedId = '';
   responsiblePractitionerId = '';
   admissionReason = '';
 
   readonly eligibleWards = computed(() => this.wards().filter((ward) => ward.allowsRooms));
-  readonly eligiblePractitioners = computed(() => this.staff().filter((member) =>
-    member.role === 'MEDECIN' || member.role === 'ADMIN_CLINIQUE',
-  ));
+  readonly eligiblePractitioners = computed(() => this.staff().filter((member) => {
+    const roles = member.role.split(',').map((role) => role.trim());
+    return roles.includes('MEDECIN') || roles.includes('ADMIN_CLINIQUE');
+  }));
   readonly freeBeds = computed<FreeBedOption[]>(() => {
-    const ward = this.eligibleWards().find((item) => item.id === this.selectedWardId);
+    const ward = this.eligibleWards().find((item) => item.id === this.selectedWardId());
     if (!ward) return [];
     return ward.rooms.flatMap((room) => room.beds
       .filter((bed) => bed.status === 'FREE')
@@ -210,7 +216,7 @@ export class EmergencyHospitalizationContinuationComponent {
         this.wards.set([...spatial.wards]);
         this.staff.set(staff);
         const firstWard = spatial.wards.find((ward) => ward.allowsRooms);
-        if (firstWard) this.selectedWardId = firstWard.id;
+        if (firstWard) this.selectedWardId.set(firstWard.id);
       },
       error: () => this.error.set(this.t(
         'patients.hospitalization.emergencyContinuation.loadError',
@@ -223,14 +229,15 @@ export class EmergencyHospitalizationContinuationComponent {
     return this.i18n.t(key, fallback);
   }
 
-  onWardChange(): void {
-    this.selectedBedId = '';
+  selectWard(wardId: string): void {
+    this.selectedWardId.set(wardId);
+    this.selectedBedId.set('');
   }
 
   canSubmit(): boolean {
     return Boolean(
-      this.selectedWardId
-      && this.selectedBedId
+      this.selectedWardId()
+      && this.selectedBedId()
       && this.responsiblePractitionerId
       && this.admissionReason.trim(),
     );
@@ -240,13 +247,16 @@ export class EmergencyHospitalizationContinuationComponent {
     event.preventDefault();
     if (!this.canSubmit() || this.saving()) return;
 
-    const ward = this.eligibleWards().find((item) => item.id === this.selectedWardId);
-    const bed = this.freeBeds().find((item) => item.id === this.selectedBedId);
+    const ward = this.eligibleWards().find((item) => item.id === this.selectedWardId());
+    const bed = this.freeBeds().find((item) => item.id === this.selectedBedId());
     if (!ward || !bed) return;
 
     this.saving.set(true);
     this.error.set(null);
+    this.documentWarning.set(null);
     this.success.set(null);
+    let documentsSecured = true;
+
     this.patientApi.admitPatient({
       patientId: this.patientId(),
       serviceName: ward.name,
@@ -256,13 +266,24 @@ export class EmergencyHospitalizationContinuationComponent {
       emergencyId: this.emergencyId(),
       responsiblePractitionerId: this.responsiblePractitionerId,
     }).pipe(
-      switchMap(() => this.documentApi.generateBundle(this.emergencyId())),
+      switchMap(() => this.documentApi.generateBundle(this.emergencyId()).pipe(
+        catchError(() => {
+          documentsSecured = false;
+          return of([]);
+        }),
+      )),
       finalize(() => this.saving.set(false)),
     ).subscribe({
       next: () => {
+        if (!documentsSecured) {
+          this.documentWarning.set(this.t(
+            'patients.hospitalization.emergencyContinuation.documentWarning',
+            'L’hospitalisation est créée, mais le lot documentaire doit être régénéré depuis le dossier d’urgence.',
+          ));
+        }
         this.success.set(this.t(
           'patients.hospitalization.emergencyContinuation.success',
-          'Hospitalisation créée et documents d’urgence sécurisés.',
+          'Hospitalisation créée avec continuité clinique sécurisée.',
         ));
         this.admitted.emit();
       },
