@@ -1,9 +1,15 @@
 package com.joprelys.backend.hospitalization.infrastructure.persistence;
 
-import jakarta.persistence.*;
-import org.hibernate.annotations.TenantId;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.TenantId;
 
 @Entity
 @Table(name = "hospitalizations")
@@ -41,6 +47,9 @@ public class HospitalizationEntity {
     @Column(name = "visit_id")
     private UUID visitId;
 
+    @Column(name = "emergency_id")
+    private UUID emergencyId;
+
     @Column(name = "responsible_practitioner_id")
     private UUID responsiblePractitionerId;
 
@@ -48,7 +57,7 @@ public class HospitalizationEntity {
     private UUID documentId;
 
     @Column(name = "status", nullable = false, length = 20)
-    private String status; // EN_COURS, SORTI
+    private String status;
 
     @Column(name = "admitted_at", nullable = false)
     private Instant admittedAt;
@@ -74,7 +83,12 @@ public class HospitalizationEntity {
     protected HospitalizationEntity() {
     }
 
-    public HospitalizationEntity(UUID patientId, String serviceName, String roomNumber, String bedNumber, String admissionReason) {
+    public HospitalizationEntity(
+            UUID patientId,
+            String serviceName,
+            String roomNumber,
+            String bedNumber,
+            String admissionReason) {
         this.id = UUID.randomUUID();
         this.patientId = patientId;
         this.serviceName = serviceName;
@@ -86,7 +100,37 @@ public class HospitalizationEntity {
         this.hospitalizationNumber = "HOSP-TEMP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
-    public HospitalizationEntity(UUID patientId, String serviceName, String roomNumber, String bedNumber, String admissionReason, String hospitalizationNumber, UUID visitId, UUID responsiblePractitionerId) {
+    public HospitalizationEntity(
+            UUID patientId,
+            String serviceName,
+            String roomNumber,
+            String bedNumber,
+            String admissionReason,
+            String hospitalizationNumber,
+            UUID visitId,
+            UUID responsiblePractitionerId) {
+        this(
+                patientId,
+                serviceName,
+                roomNumber,
+                bedNumber,
+                admissionReason,
+                hospitalizationNumber,
+                visitId,
+                null,
+                responsiblePractitionerId);
+    }
+
+    public HospitalizationEntity(
+            UUID patientId,
+            String serviceName,
+            String roomNumber,
+            String bedNumber,
+            String admissionReason,
+            String hospitalizationNumber,
+            UUID visitId,
+            UUID emergencyId,
+            UUID responsiblePractitionerId) {
         this.id = UUID.randomUUID();
         this.patientId = patientId;
         this.serviceName = serviceName;
@@ -95,6 +139,7 @@ public class HospitalizationEntity {
         this.admissionReason = admissionReason;
         this.hospitalizationNumber = hospitalizationNumber;
         this.visitId = visitId;
+        this.emergencyId = emergencyId;
         this.responsiblePractitionerId = responsiblePractitionerId;
         this.status = "EN_COURS";
         this.admittedAt = Instant.now();
@@ -134,6 +179,7 @@ public class HospitalizationEntity {
     public String getAdmissionReason() { return admissionReason; }
     public String getHospitalizationNumber() { return hospitalizationNumber; }
     public UUID getVisitId() { return visitId; }
+    public UUID getEmergencyId() { return emergencyId; }
     public UUID getResponsiblePractitionerId() { return responsiblePractitionerId; }
     public UUID getDocumentId() { return documentId; }
     public String getStatus() { return status; }
@@ -145,13 +191,15 @@ public class HospitalizationEntity {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 
+    public void setOrganizationId(UUID organizationId) { this.organizationId = organizationId; }
     public void setServiceName(String serviceName) { this.serviceName = serviceName; }
     public void setRoomNumber(String roomNumber) { this.roomNumber = roomNumber; }
     public void setBedNumber(String bedNumber) { this.bedNumber = bedNumber; }
     public void setAdmissionReason(String reason) { this.admissionReason = reason; }
-    public void setPatientId(java.util.UUID patientId) { this.patientId = patientId; }
+    public void setPatientId(UUID patientId) { this.patientId = patientId; }
     public void setHospitalizationNumber(String hospitalizationNumber) { this.hospitalizationNumber = hospitalizationNumber; }
     public void setVisitId(UUID visitId) { this.visitId = visitId; }
+    public void setEmergencyId(UUID emergencyId) { this.emergencyId = emergencyId; }
     public void setResponsiblePractitionerId(UUID responsiblePractitionerId) { this.responsiblePractitionerId = responsiblePractitionerId; }
     public void setDocumentId(UUID documentId) { this.documentId = documentId; }
 }

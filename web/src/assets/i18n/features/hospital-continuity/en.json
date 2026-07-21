@@ -1,0 +1,12 @@
+{
+  "patients.hospitalization.emergencyContinuation.eyebrow": "Emergency continuity",
+  "patients.hospitalization.emergencyContinuation.title": "Continue to hospitalization",
+  "patients.hospitalization.emergencyContinuation.description": "The emergency record will be linked to the stay, clinical visit, verifiable documents and the canonical patient timeline.",
+  "patients.hospitalization.emergencyContinuation.provisionalWarning": "Provisional identity: care is not blocked. Documents and financial items remain pending regularization until the identity is verified.",
+  "patients.hospitalization.emergencyContinuation.loadError": "Available beds and practitioners could not be loaded.",
+  "patients.hospitalization.emergencyContinuation.submit": "Admit and secure continuity",
+  "patients.hospitalization.emergencyContinuation.success": "Hospitalization created with secured clinical continuity.",
+  "patients.hospitalization.emergencyContinuation.documentWarning": "The hospitalization was created, but the emergency document bundle must be regenerated from the emergency record.",
+  "patients.hospitalization.emergencyContinuation.error": "The transition to hospitalization could not be completed.",
+  "patients.hospitalization.noFreeBed": "No free bed is available in this service."
+}

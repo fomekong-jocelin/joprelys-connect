@@ -1,5 +1,6 @@
 package com.joprelys.backend.hospitalization.api;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
@@ -15,8 +16,33 @@ public record CreateHospitalizationRequest(
         String bedNumber,
         @NotBlank(message = "Le motif d'admission est obligatoire.")
         String admissionReason,
-        @NotNull(message = "La visite associée est obligatoire.")
         UUID visitId,
+        UUID emergencyId,
         @NotNull(message = "Le médecin responsable est obligatoire.")
         UUID responsiblePractitionerId
-) {}
+) {
+    /** Backward-compatible constructor for the existing visit-based admission flow. */
+    public CreateHospitalizationRequest(
+            UUID patientId,
+            String serviceName,
+            String roomNumber,
+            String bedNumber,
+            String admissionReason,
+            UUID visitId,
+            UUID responsiblePractitionerId) {
+        this(
+                patientId,
+                serviceName,
+                roomNumber,
+                bedNumber,
+                admissionReason,
+                visitId,
+                null,
+                responsiblePractitionerId);
+    }
+
+    @AssertTrue(message = "Une visite ou une urgence associée est obligatoire.")
+    public boolean hasCareContext() {
+        return visitId != null || emergencyId != null;
+    }
+}
