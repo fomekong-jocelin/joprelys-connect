@@ -19,7 +19,7 @@ La recette de la page de connexion après la PR #85 montre encore quatre défaut
 
 1. Utiliser la ressource officielle `logo_white_blue_bg.png` sur le panneau institutionnel bleu.
 2. Supprimer la carte, la bordure et l’ombre entourant le logo.
-3. Présenter la marque avec le slogan et un court texte institutionnel FR/EN.
+3. Présenter la marque avec le slogan officiel « Parce qu’elle est précieuse, nous innovons pour la protéger. » et sa déclinaison anglaise, ainsi qu’un court texte institutionnel FR/EN.
 4. Simplifier l’illustration sécurité en supprimant cartes, orbites, repères et traits inutiles.
 5. Centraliser les drapeaux France/Royaume-Uni sous forme de SVG CSS.
 6. Appliquer ces drapeaux aux sélecteurs de langue de :
@@ -39,6 +39,7 @@ La recette de la page de connexion après la PR #85 montre encore quatre défaut
 
 - [x] logo blanc officiel directement sur le fond bleu ;
 - [x] aucun encadrement du logo ;
+- [x] slogan officiel affiché en français et décliné en anglais ;
 - [x] proposition de valeur Joprelys affichée en français et en anglais ;
 - [x] suppression visuelle des traits et repères décoratifs signalés ;
 - [x] drapeaux vectoriels indépendants de la police système ;
@@ -53,7 +54,7 @@ La recette de la page de connexion après la PR #85 montre encore quatre défaut
 
 1. Ouvrir `/` en 1366, 1440 et 1920 px.
 2. Vérifier le logo blanc sans carte sur le panneau bleu.
-3. Vérifier le slogan FR puis EN.
+3. Vérifier le slogan officiel FR puis sa version EN.
 4. Vérifier l’absence des traits sous le formulaire et en bas du panneau gauche.
 5. Ouvrir `/legal/terms` et `/legal/privacy-preferences`.
 6. Vérifier les drapeaux réels France/Royaume-Uni.
