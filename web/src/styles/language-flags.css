@@ -47,7 +47,8 @@ app-consent-preferences header button[aria-pressed] {
 
 app-consent-preferences header button[aria-pressed]::before,
 app-forgot-password main > div:first-of-type button::before,
-app-shell .select-none > button::before {
+app-shell .app-topbar .select-none > button::before,
+app-shell .fixed.inset-0 .select-none > button::before {
   content: '';
   display: inline-block;
   width: 1.15rem;
@@ -68,7 +69,8 @@ app-consent-preferences header button[aria-pressed]::after {
 
 app-consent-preferences header button[aria-pressed]:first-of-type::before,
 app-forgot-password main > div:first-of-type button:first-of-type::before,
-app-shell .select-none > button:first-of-type::before {
+app-shell .app-topbar .select-none > button:first-of-type::before,
+app-shell .fixed.inset-0 .select-none > button:first-of-type::before {
   background-image: var(--app-flag-fr);
 }
 
@@ -78,7 +80,8 @@ app-consent-preferences header button[aria-pressed]:first-of-type::after {
 
 app-consent-preferences header button[aria-pressed]:last-of-type::before,
 app-forgot-password main > div:first-of-type button:last-of-type::before,
-app-shell .select-none > button:last-of-type::before {
+app-shell .app-topbar .select-none > button:last-of-type::before,
+app-shell .fixed.inset-0 .select-none > button:last-of-type::before {
   background-image: var(--app-flag-en);
 }
 
@@ -99,9 +102,10 @@ app-consent-preferences header button[aria-pressed].text-brand-cyan::after {
   color: var(--brand-primary);
 }
 
-/* Mot de passe oublié et shell applicatif : drapeau + code langue. */
+/* Mot de passe oublié et sélecteurs de langue du shell : drapeau + code langue. */
 app-forgot-password main > div:first-of-type button,
-app-shell .select-none > button {
+app-shell .app-topbar .select-none > button,
+app-shell .fixed.inset-0 .select-none > button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
