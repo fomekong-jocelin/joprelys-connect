@@ -1,7 +1,9 @@
 import { Component, inject, OnDestroy, OnInit, signal, viewChild } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
 import { ApiErrorI18nService } from '../../core/i18n/api-error-i18n.service';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { EmergencyApiService } from '../../emergency/emergency-api.service';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { AlertComponent } from '../../shared/ui/alert.component';
 import { PatientReconciliationApiService } from './patient-reconciliation-api.service';
@@ -25,6 +27,12 @@ interface PendingSubmission {
   idempotencyKey: string;
 }
 
+interface CompletedJourney {
+  result: PatientReconciliationDecisionResult;
+  emergencyId: string | null;
+  loadingEmergency: boolean;
+}
+
 @Component({
   selector: 'app-patient-reconciliation-page',
   standalone: true,
@@ -40,12 +48,17 @@ interface PendingSubmission {
 })
 export class PatientReconciliationPageComponent implements OnInit, OnDestroy {
   private readonly api = inject(PatientReconciliationApiService);
+  private readonly emergencyApi = inject(EmergencyApiService);
   private readonly apiErrors = inject(ApiErrorI18nService);
   private readonly i18n = inject(I18nService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   private readonly decisionForm = viewChild(PatientReconciliationDecisionComponent);
   private readonly correctionForm = viewChild(PatientReconciliationCorrectionComponent);
   private readonly pendingSubmissions = new Map<SubmissionKind, PendingSubmission>();
+  private readonly requestedPatientId = this.route.snapshot.queryParamMap.get('patientId');
+  private readonly requestedEmergencyId = this.route.snapshot.queryParamMap.get('emergencyId');
 
   private candidateRequest: Subscription | null = null;
   private candidateRequestVersion = 0;
@@ -56,6 +69,7 @@ export class PatientReconciliationPageComponent implements OnInit, OnDestroy {
   readonly selectedPatient = signal<PatientReconciliationQueueItem | null>(null);
   readonly candidates = signal<PatientReconciliationCandidate[]>([]);
   readonly history = signal<PatientReconciliationEvent[]>([]);
+  readonly completedJourney = signal<CompletedJourney | null>(null);
   readonly loadingQueue = signal(false);
   readonly loadingCandidates = signal(false);
   readonly loadingHistory = signal(false);
@@ -71,14 +85,15 @@ export class PatientReconciliationPageComponent implements OnInit, OnDestroy {
     this.cancelSelectionRequests();
   }
 
-  t(key: string): string {
-    return this.i18n.t(key);
+  t(key: string, fallback?: string): string {
+    return this.i18n.t(key, fallback);
   }
 
   selectPatient(patient: PatientReconciliationQueueItem): void {
     if (this.saving()) return;
 
     this.cancelSelectionRequests();
+    this.completedJourney.set(null);
     this.selectedPatient.set(patient);
     this.candidates.set([]);
     this.history.set([]);
@@ -152,13 +167,39 @@ export class PatientReconciliationPageComponent implements OnInit, OnDestroy {
       && patient.canonicalPatientId !== patient.patientId;
   }
 
+  continueToHospitalization(): void {
+    const journey = this.completedJourney();
+    if (!journey || journey.loadingEmergency || !journey.emergencyId) return;
+    void this.router.navigate(
+      ['/patients', journey.result.canonicalPatientId, 'hospitalizations'],
+      { queryParams: { emergencyId: journey.emergencyId } },
+    );
+  }
+
+  openCanonicalDpu(): void {
+    const journey = this.completedJourney();
+    if (!journey) return;
+    void this.router.navigate(['/patients', journey.result.canonicalPatientId]);
+  }
+
+  dismissCompletedJourney(): void {
+    this.completedJourney.set(null);
+    this.success.set(null);
+  }
+
   private loadQueue(): void {
     this.loadingQueue.set(true);
     this.error.set(null);
     this.api.getQueue().pipe(
       finalize(() => this.loadingQueue.set(false)),
     ).subscribe({
-      next: (items) => this.queue.set(items),
+      next: (items) => {
+        this.queue.set(items);
+        if (this.requestedPatientId && !this.selectedPatient()) {
+          const requested = items.find((item) => item.patientId === this.requestedPatientId);
+          if (requested) this.selectPatient(requested);
+        }
+      },
       error: (error) => this.error.set(this.apiErrors.message(
         error,
         'patientReconciliation.error',
@@ -262,12 +303,43 @@ export class PatientReconciliationPageComponent implements OnInit, OnDestroy {
   }
 
   private completeSuccessfulOperation(result: PatientReconciliationDecisionResult): void {
-    this.success.set(this.t(`patientReconciliation.success.${result.decision.toLowerCase()}`));
+    this.success.set(this.t(
+      `patientReconciliation.success.${result.decision.toLowerCase()}`,
+      'Décision de rapprochement enregistrée.',
+    ));
     this.cancelSelectionRequests();
     this.selectedPatient.set(null);
     this.candidates.set([]);
     this.history.set([]);
+    this.completedJourney.set({
+      result,
+      emergencyId: this.requestedEmergencyId,
+      loadingEmergency: !this.requestedEmergencyId,
+    });
     this.loadQueue();
+
+    if (!this.requestedEmergencyId) {
+      this.resolveEmergencyForJourney(result);
+    }
+  }
+
+  private resolveEmergencyForJourney(result: PatientReconciliationDecisionResult): void {
+    this.emergencyApi.getPatientEmergencies(result.sourcePatientId).subscribe({
+      next: (emergencies) => {
+        const emergency = [...emergencies]
+          .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
+        this.completedJourney.set({
+          result,
+          emergencyId: emergency?.id ?? null,
+          loadingEmergency: false,
+        });
+      },
+      error: () => this.completedJourney.set({
+        result,
+        emergencyId: null,
+        loadingEmergency: false,
+      }),
+    });
   }
 
   private resolveIdempotencyKey(kind: SubmissionKind, fingerprint: string): string {
