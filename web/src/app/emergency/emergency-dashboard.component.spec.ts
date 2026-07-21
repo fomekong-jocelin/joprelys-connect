@@ -79,6 +79,16 @@ describe('EmergencyDashboardComponent', () => {
     fixture.detectChanges();
   });
 
+  it('renders the five-section URG-TEMP workspace', () => {
+    component.openDrawer(record);
+    fixture.detectChanges();
+
+    const workspaceNavigation = fixture.nativeElement.querySelector('aside nav');
+    const buttons = workspaceNavigation?.querySelectorAll('button') ?? [];
+    expect(buttons.length).toBe(5);
+    expect(workspaceNavigation?.textContent).toContain('Documents');
+  });
+
   it('opens the canonical continuation route with the source emergency', () => {
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
