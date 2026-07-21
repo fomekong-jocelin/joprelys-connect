@@ -1,8 +1,10 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
 import { ApiErrorI18nService } from '../../core/i18n/api-error-i18n.service';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { EmergencyApiService } from '../../emergency/emergency-api.service';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { PatientReconciliationApiService } from './patient-reconciliation-api.service';
 import { PatientReconciliationPageComponent } from './patient-reconciliation-page.component';
@@ -20,12 +22,16 @@ class AppShellStubComponent {}
 describe('PatientReconciliationPageComponent', () => {
   let fixture: ComponentFixture<PatientReconciliationPageComponent>;
   let component: PatientReconciliationPageComponent;
+  let router: Router;
   let api: {
     getQueue: ReturnType<typeof vi.fn>;
     getCandidates: ReturnType<typeof vi.fn>;
     getHistory: ReturnType<typeof vi.fn>;
     decide: ReturnType<typeof vi.fn>;
     correct: ReturnType<typeof vi.fn>;
+  };
+  let emergencyApi: {
+    getPatientEmergencies: ReturnType<typeof vi.fn>;
   };
 
   const queueItem: PatientReconciliationQueueItem = {
@@ -144,11 +150,20 @@ describe('PatientReconciliationPageComponent', () => {
       decide: vi.fn().mockReturnValue(of(decisionResult)),
       correct: vi.fn().mockReturnValue(of(correctionResult)),
     };
+    emergencyApi = {
+      getPatientEmergencies: vi.fn().mockReturnValue(of([{
+        id: 'emergency-1',
+        patientId: queueItem.patientId,
+        createdAt: '2026-07-11T10:00:00Z',
+      }])),
+    };
 
     await TestBed.configureTestingModule({
       imports: [PatientReconciliationPageComponent],
       providers: [
+        provideRouter([]),
         { provide: PatientReconciliationApiService, useValue: api },
+        { provide: EmergencyApiService, useValue: emergencyApi },
         {
           provide: I18nService,
           useValue: {
@@ -170,6 +185,7 @@ describe('PatientReconciliationPageComponent', () => {
 
     fixture = TestBed.createComponent(PatientReconciliationPageComponent);
     component = fixture.componentInstance;
+    router = TestBed.inject(Router);
     fixture.detectChanges();
   });
 
@@ -208,7 +224,7 @@ describe('PatientReconciliationPageComponent', () => {
     expect(component.candidates()).toEqual([secondCandidate]);
   });
 
-  it('records an explicit decision and refreshes the queue', () => {
+  it('records an explicit decision, preserves the journey and refreshes the queue', () => {
     component.selectPatient(queueItem);
     component.submitDecision(decisionDto);
 
@@ -218,7 +234,26 @@ describe('PatientReconciliationPageComponent', () => {
       expect.any(String),
     );
     expect(api.getQueue).toHaveBeenCalledTimes(2);
+    expect(emergencyApi.getPatientEmergencies).toHaveBeenCalledWith(queueItem.patientId);
+    expect(component.completedJourney()).toEqual(expect.objectContaining({
+      result: decisionResult,
+      emergencyId: 'emergency-1',
+      loadingEmergency: false,
+    }));
     expect(component.selectedPatient()).toBeNull();
+  });
+
+  it('continues to hospitalization on the canonical DPU with the source emergency', () => {
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    component.selectPatient(queueItem);
+    component.submitDecision(decisionDto);
+
+    component.continueToHospitalization();
+
+    expect(navigate).toHaveBeenCalledWith(
+      ['/patients', candidate.patientId, 'hospitalizations'],
+      { queryParams: { emergencyId: 'emergency-1' } },
+    );
   });
 
   it('reuses the idempotency key when the same decision is retried after a network error', () => {
