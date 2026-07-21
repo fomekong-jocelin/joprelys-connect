@@ -40,7 +40,7 @@ public class V80__enforce_historical_bed_assignment_non_overlap extends BaseJava
 
     private static final String CREATE_CONSTRAINT_SQL = """
             ALTER TABLE bed_assignments
-                ADD CONSTRAINT ex_bed_assignments_valid_period_no_overlap
+                ADD CONSTRAINT %s
                 EXCLUDE USING gist (
                     organization_id WITH =,
                     bed_id WITH =,
@@ -50,7 +50,7 @@ public class V80__enforce_historical_bed_assignment_non_overlap extends BaseJava
                         '[)') WITH &&
                 )
                 WHERE (integrity_status = 'VALID')
-            """;
+            """.formatted(CONSTRAINT_NAME);
 
     @Override
     public void migrate(Context context) throws Exception {
