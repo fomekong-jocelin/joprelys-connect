@@ -36,7 +36,7 @@
   }
 
   .login-page .login-brand-panel app-logo img {
-    content: url('assets/branding/logo_white_blue_bg.png');
+    content: url('/assets/branding/logo_white_blue_bg.png');
     height: clamp(3.2rem, 4.2vw, 4.5rem);
     width: auto;
     max-width: min(100%, 19rem);
