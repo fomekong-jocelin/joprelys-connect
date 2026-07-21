@@ -11,12 +11,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Transactional
 class BedRepositoryAvailabilityTest {
 
     @Autowired
@@ -27,10 +26,21 @@ class BedRepositoryAvailabilityTest {
     private RoomRepository roomRepository;
     @Autowired
     private BedRepository bedRepository;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    private UUID organizationId;
 
     @AfterEach
-    void clearTenant() {
+    void cleanTestData() {
         TenantContext.clear();
+        if (organizationId == null) {
+            return;
+        }
+        jdbcTemplate.update("DELETE FROM beds WHERE organization_id = ?", organizationId);
+        jdbcTemplate.update("DELETE FROM rooms WHERE organization_id = ?", organizationId);
+        jdbcTemplate.update("DELETE FROM wards WHERE organization_id = ?", organizationId);
+        jdbcTemplate.update("DELETE FROM organizations WHERE id = ?", organizationId);
     }
 
     @Test
@@ -41,21 +51,22 @@ class BedRepositoryAvailabilityTest {
                 "000",
                 "Adresse",
                 "Douala"));
-        TenantContext.setTenantId(organization.getId());
+        organizationId = organization.getId();
+        TenantContext.setTenantId(organizationId);
 
         WardEntity ward = new WardEntity("Hospitalisation", HospitalServiceType.HOSPITALIZATION);
-        ward.setOrganizationId(organization.getId());
+        ward.setOrganizationId(organizationId);
         ward = wardRepository.save(ward);
 
         RoomEntity room = new RoomEntity(ward, "401", 3, "STANDARD");
-        room.setOrganizationId(organization.getId());
+        room.setOrganizationId(organizationId);
         room = roomRepository.save(room);
 
-        BedEntity available = saveBed(room, organization.getId(), "401-A");
-        BedEntity closed = saveBed(room, organization.getId(), "401-B");
+        BedEntity available = saveBed(room, "401-A");
+        BedEntity closed = saveBed(room, "401-B");
         closed.setCapacityStatus(BedCapacityStatus.CLOSED);
         bedRepository.saveAndFlush(closed);
-        BedEntity maintenance = saveBed(room, organization.getId(), "401-C");
+        BedEntity maintenance = saveBed(room, "401-C");
         maintenance.setStatus(BedStatus.MAINTENANCE);
         bedRepository.saveAndFlush(maintenance);
 
@@ -64,7 +75,7 @@ class BedRepositoryAvailabilityTest {
         assertEquals(0, claim(maintenance.getId()));
     }
 
-    private BedEntity saveBed(RoomEntity room, UUID organizationId, String number) {
+    private BedEntity saveBed(RoomEntity room, String number) {
         BedEntity bed = new BedEntity(room, number);
         bed.setOrganizationId(organizationId);
         return bedRepository.saveAndFlush(bed);
