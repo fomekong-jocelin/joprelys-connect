@@ -178,7 +178,7 @@ import {
                                 [style.color]="'var(--text-secondary)'"
                                 [style.border-color]="'var(--app-border)'"
                               >
-                                <app-ui-icon [name]="bed.capacityStatus === 'OPEN' ? 'lock' : 'check'" />
+                                <app-ui-icon [name]="bed.capacityStatus === 'OPEN' ? 'x-mark' : 'check'" />
                                 {{ t(bed.capacityStatus === 'OPEN' ? 'spatial.action.closeCapacity' : 'spatial.action.openCapacity') }}
                               </button>
 
