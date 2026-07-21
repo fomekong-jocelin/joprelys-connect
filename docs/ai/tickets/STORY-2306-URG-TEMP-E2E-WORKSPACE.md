@@ -1,8 +1,9 @@
 # STORY-2306 — Workspace URG-TEMP et parcours E2E
 
 - GitHub : #47
+- PR : #97
 - Branche : `feat/47-urg-temp-e2e-workspace`
-- Statut : IN REVIEW
+- Statut : QA AUTOMATISÉE EN COURS
 - Priorité : P0
 - Dépendance : #46 / PR #96
 
@@ -36,7 +37,7 @@
 
 ## Validation requise
 
-- [ ] synchronisation avec le dernier commit vert de #46 ;
+- [ ] synchronisation finale avec le commit fusionné de #46 ;
 - [ ] tests Angular verts ;
 - [ ] build Angular production vert ;
 - [ ] Maven strict vert ;
@@ -44,6 +45,14 @@
 - [ ] recette manuelle du parcours principal ;
 - [ ] contrôle mobile, light/dark et FR/EN ;
 - [ ] revue métier avant fusion.
+
+## Ordre d’intégration
+
+1. fusionner #95 pour la correction visuelle isolée ;
+2. fusionner #96 après validation ;
+3. retargeter #97 vers `main` ;
+4. relancer et valider la CI finale de #97 ;
+5. fusionner #97 puis clôturer #47.
 
 ## Conditions de clôture
 
