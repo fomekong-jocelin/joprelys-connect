@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const stylesheet = readFileSync(
-  new URL('./language-flags.css', import.meta.url),
+  resolve(process.cwd(), 'src/styles/language-flags.css'),
   'utf8',
 );
 
