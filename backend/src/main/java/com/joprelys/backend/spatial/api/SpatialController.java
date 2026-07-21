@@ -1,6 +1,7 @@
 package com.joprelys.backend.spatial.api;
 
 import com.joprelys.backend.spatial.application.SpatialService;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedCapacityStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedStatus;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -47,6 +48,21 @@ public class SpatialController {
             return spatialService.updateBedStatus(id, status);
         } catch (IllegalArgumentException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Statut de lit invalide: " + request.status());
+        }
+    }
+
+    @PostMapping("/beds/{id}/capacity-status")
+    @PreAuthorize("hasAuthority('BED_OPERATIONAL_STATUS_MANAGE')")
+    public BedResponse updateBedCapacityStatus(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateBedCapacityStatusRequest request) {
+        try {
+            BedCapacityStatus status = BedCapacityStatus.valueOf(request.status().toUpperCase());
+            return spatialService.updateBedCapacityStatus(id, status);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "État de capacité du lit invalide: " + request.status());
         }
     }
 
