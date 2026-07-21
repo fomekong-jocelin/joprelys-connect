@@ -137,7 +137,7 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
                             {{ t('spatial.status.' + bed.status.toLowerCase()) }}
                           </span>
 
-                          <!-- Actions rapides sur lit pour les soignants -->
+                          <!-- Actions rapides sur lit pour les profils habilités -->
                           @if (canModify() && bed.status !== 'OCCUPIED') {
                             <div class="flex gap-1 mt-1 border-t border-[var(--app-border)]/40 pt-2 justify-end">
                               @if (bed.status === 'CLEANING') {
@@ -165,7 +165,7 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
                                   {{ t('spatial.action.maintenance') }}
                                 </button>
                               } @else if (bed.status === 'MAINTENANCE') {
-                                  <button
+                                <button
                                   (click)="changeBedStatus(bed.id, 'FREE')"
                                   class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black rounded-sm border cursor-pointer"
                                   [style.background]="'var(--brand-success-subtle)'"
@@ -264,7 +264,7 @@ export class SpatialManagementPageComponent implements OnInit {
   }
 
   canModify(): boolean {
-    return this.rbacApi.hasPermission('HOSPITALIZATION_MANAGE');
+    return this.rbacApi.hasPermission('BED_OPERATIONAL_STATUS_MANAGE');
   }
 
   canConfigure(): boolean {
