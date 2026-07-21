@@ -7,8 +7,11 @@ import { SpatialManagementPageComponent } from './spatial-management-page.compon
 
 describe('SpatialManagementPageComponent', () => {
   let component: SpatialManagementPageComponent;
+  let hasPermission: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    hasPermission = vi.fn(() => false);
+
     TestBed.configureTestingModule({
       imports: [SpatialManagementPageComponent],
       providers: [
@@ -27,7 +30,7 @@ describe('SpatialManagementPageComponent', () => {
           },
         },
         { provide: I18nService, useValue: { t: (key: string) => key } },
-        { provide: RbacApiService, useValue: { hasPermission: vi.fn(() => false) } },
+        { provide: RbacApiService, useValue: { hasPermission } },
       ],
     });
     TestBed.overrideComponent(SpatialManagementPageComponent, { set: { template: '' } });
@@ -39,5 +42,12 @@ describe('SpatialManagementPageComponent', () => {
 
     expect(component.availableBedsCount()).toBe(1);
     expect(component.occupancy()!.totalBedsCount - component.occupancy()!.occupiedBedsCount).toBe(3);
+  });
+
+  it('uses the dedicated operational bed status permission', () => {
+    hasPermission.mockReturnValue(true);
+
+    expect(component.canModify()).toBe(true);
+    expect(hasPermission).toHaveBeenCalledWith('BED_OPERATIONAL_STATUS_MANAGE');
   });
 });
