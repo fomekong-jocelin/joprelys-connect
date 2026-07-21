@@ -98,7 +98,8 @@ class HospitalizationAdmissionServiceTest {
 
     @Test
     void shouldAtomicallyClaimConfiguredBedWithoutCreatingSpatialData() {
-        prepareVisitBasedAdmission();
+        VisitEntity visit = prepareVisitBasedAdmission();
+        when(visit.getId()).thenReturn(request.visitId());
         UUID bedId = UUID.randomUUID();
         BedEntity bed = configuredBed(bedId);
 
@@ -202,16 +203,16 @@ class HospitalizationAdmissionServiceTest {
         assertEquals(emergencyId, captor.getValue().getEmergencyId());
     }
 
-    private void prepareVisitBasedAdmission() {
+    private VisitEntity prepareVisitBasedAdmission() {
         prepareCanonicalPatient();
         VisitEntity visit = org.mockito.Mockito.mock(VisitEntity.class);
-        when(visit.getId()).thenReturn(request.visitId());
         when(visit.getPatient()).thenReturn(patient);
         when(visitRepository.findById(request.visitId())).thenReturn(Optional.of(visit));
         when(hospitalizationRepository.findActiveByPatientIds(Set.of(request.patientId())))
                 .thenReturn(Optional.empty());
         when(hospitalizationRepository.findActiveByBed(request.roomNumber(), request.bedNumber()))
                 .thenReturn(Optional.empty());
+        return visit;
     }
 
     private void prepareCanonicalPatient() {
