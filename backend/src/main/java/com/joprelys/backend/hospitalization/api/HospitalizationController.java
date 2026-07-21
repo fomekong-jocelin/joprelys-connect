@@ -1,5 +1,6 @@
 package com.joprelys.backend.hospitalization.api;
 
+import com.joprelys.backend.hospitalization.application.CanonicalHospitalizationQueryService;
 import com.joprelys.backend.hospitalization.application.HospitalizationAdmissionService;
 import com.joprelys.backend.hospitalization.application.HospitalizationCareService;
 import com.joprelys.backend.hospitalization.application.HospitalizationService;
@@ -27,16 +28,19 @@ public class HospitalizationController {
 
     private final HospitalizationAdmissionService hospitalizationAdmissionService;
     private final HospitalizationService hospitalizationService;
+    private final CanonicalHospitalizationQueryService canonicalHospitalizationQueryService;
     private final HospitalizationCareService hospitalizationCareService;
     private final OperatingReportService operatingReportService;
 
     public HospitalizationController(
             HospitalizationAdmissionService hospitalizationAdmissionService,
             HospitalizationService hospitalizationService,
+            CanonicalHospitalizationQueryService canonicalHospitalizationQueryService,
             HospitalizationCareService hospitalizationCareService,
             OperatingReportService operatingReportService) {
         this.hospitalizationAdmissionService = hospitalizationAdmissionService;
         this.hospitalizationService = hospitalizationService;
+        this.canonicalHospitalizationQueryService = canonicalHospitalizationQueryService;
         this.hospitalizationCareService = hospitalizationCareService;
         this.operatingReportService = operatingReportService;
     }
@@ -51,7 +55,7 @@ public class HospitalizationController {
     @GetMapping("/patient/{patientId}")
     @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
     public List<HospitalizationResponse> listHospitalizations(@PathVariable UUID patientId) {
-        return hospitalizationService.listHospitalizations(patientId);
+        return canonicalHospitalizationQueryService.list(patientId);
     }
 
     @GetMapping("/{id}")
