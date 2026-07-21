@@ -1,5 +1,6 @@
 package com.joprelys.backend.billing.infrastructure.persistence;
 
+import com.joprelys.backend.billing.domain.InvoiceRegularizationStatus;
 import jakarta.persistence.*;
 import org.hibernate.annotations.TenantId;
 import java.math.BigDecimal;
@@ -41,6 +42,10 @@ public class InvoiceEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 50)
     private InvoiceStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "regularization_status", nullable = false, length = 40)
+    private InvoiceRegularizationStatus regularizationStatus;
 
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InvoiceItemEntity> items = new ArrayList<>();
@@ -86,6 +91,7 @@ public class InvoiceEntity {
         this.patientShare = BigDecimal.ZERO;
         this.insuranceShare = BigDecimal.ZERO;
         this.status = InvoiceStatus.PENDING;
+        this.regularizationStatus = InvoiceRegularizationStatus.RESOLVED;
     }
 
     @PrePersist
@@ -93,6 +99,9 @@ public class InvoiceEntity {
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
+        if (regularizationStatus == null) {
+            regularizationStatus = InvoiceRegularizationStatus.RESOLVED;
+        }
     }
 
     @PreUpdate
@@ -147,6 +156,10 @@ public class InvoiceEntity {
     public BigDecimal getInsuranceShare() { return insuranceShare; }
     public InvoiceStatus getStatus() { return status; }
     public void setStatus(InvoiceStatus status) { this.status = status; }
+    public InvoiceRegularizationStatus getRegularizationStatus() { return regularizationStatus; }
+    public void setRegularizationStatus(InvoiceRegularizationStatus regularizationStatus) {
+        this.regularizationStatus = regularizationStatus;
+    }
     public List<InvoiceItemEntity> getItems() { return items; }
     public UUID getOrganizationId() { return organizationId; }
     public void setOrganizationId(UUID organizationId) {
