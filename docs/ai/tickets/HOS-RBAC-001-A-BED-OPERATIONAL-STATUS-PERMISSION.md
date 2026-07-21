@@ -8,7 +8,7 @@
 - **Écarts réduits** : GAP-006 et GAP-016
 - **Priorité** : Critique / phase 0
 - **Estimation** : 2 SP / 1 à 2 jours
-- **Statut** : IMPLEMENTED / QA EN COURS
+- **Statut** : QA TECHNIQUE VERTE / VALIDATION RSSI ET MÉTIER REQUISE
 
 ## Contexte
 
@@ -60,21 +60,21 @@ Cette matrice n'est pas la cible finale. Les futurs incréments distingueront hy
 - `SpatialControllerAuthorizationTest` ;
 - `spatial-management-page.component.spec.ts`.
 
-Régressions attendues :
+## Validation automatisée
 
-```bash
-cd backend
-./mvnw -Dtest=RbacCatalogBedOperationalStatusPermissionTest,SpatialControllerAuthorizationTest,SpatialControllerTest test
-./mvnw clean verify -Dspring.profiles.active=test
+CI `Joprelys Connect — CI Pipeline`, run **918** :
 
-cd ../web
-npm test -- --run
-npm run build
-```
+- backend Maven `clean verify` strict : succès ;
+- tests catalogue et annotations RBAC : succès ;
+- migrations H2 et PostgreSQL 16 : succès ;
+- tests Angular : succès ;
+- build Angular production : succès.
 
 ## Déploiement
 
 `RbacBootstrap` exécute `RbacStore.seedCatalog()` au démarrage. La permission est donc créée ou mise à jour, puis les permissions des rôles système sont resynchronisées. Les rôles personnalisés ne sont pas modifiés automatiquement.
+
+Les utilisateurs concernés doivent renouveler leur contexte d'accès après déploiement afin que l'interface reflète immédiatement le nouveau catalogue.
 
 ## Risques résiduels
 
@@ -83,7 +83,7 @@ npm run build
 - aucune portée par service ou unité n'est encore évaluée ;
 - hygiène et maintenance ne sont pas encore séparées ;
 - aucune délégation temporelle n'existe ;
-- les sessions déjà émises peuvent nécessiter un rafraîchissement selon le mode de chargement des autorités.
+- une validation de la matrice par le RSSI/DPO et le cadre reste obligatoire.
 
 ## Hors périmètre
 
@@ -100,6 +100,6 @@ npm run build
 - [x] backend protégé ;
 - [x] interface alignée ;
 - [x] tests ciblés ajoutés ;
-- [ ] CI complète verte ;
+- [x] CI complète verte ;
 - [ ] validation RSSI/DPO et cadre/bed manager ;
-- [ ] matrice d'audit mise à jour après QA verte.
+- [ ] matrice d'audit finalisée après validation externe.
