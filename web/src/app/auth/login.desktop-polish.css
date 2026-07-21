@@ -72,7 +72,7 @@
     top: -12rem;
     right: -10rem;
     bottom: auto;
-    border: 1px solid color-mix(in srgb, var(--text-inverse) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-brand-gray) 16%, transparent);
     background: transparent;
   }
 
@@ -100,9 +100,9 @@
     display: inline-flex;
     width: fit-content;
     padding: 0.8rem 1rem;
-    border: 1px solid color-mix(in srgb, var(--text-inverse) 24%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-brand-gray) 34%, transparent);
     border-radius: var(--radius-brand-lg);
-    background: color-mix(in srgb, var(--app-surface) 96%, transparent);
+    background: color-mix(in srgb, var(--color-brand-gray) 97%, transparent);
     box-shadow: 0 12px 32px color-mix(in srgb, var(--color-brand-night) 32%, transparent);
   }
 
@@ -129,7 +129,7 @@
   .login-page .login-brand-visual::before {
     width: 92%;
     height: 64%;
-    border: 1px solid color-mix(in srgb, var(--text-inverse) 17%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-brand-gray) 18%, transparent);
     border-radius: 50%;
     transform: rotate(-18deg);
   }
@@ -156,7 +156,7 @@
     height: 7rem;
     border: 1px solid color-mix(in srgb, var(--color-brand-cyan) 28%, var(--app-border));
     border-radius: var(--radius-brand-lg);
-    background: color-mix(in srgb, var(--app-surface) 97%, transparent);
+    background: color-mix(in srgb, var(--color-brand-gray) 97%, transparent);
     color: var(--color-brand-cyan);
     box-shadow: 0 24px 55px color-mix(in srgb, var(--color-brand-night) 42%, transparent);
     transform: none;
@@ -174,7 +174,7 @@
 
   .login-page .login-brand-footer span {
     width: 2.4rem;
-    background: color-mix(in srgb, var(--text-inverse) 25%, transparent);
+    background: color-mix(in srgb, var(--color-brand-gray) 28%, transparent);
   }
 
   .login-page .login-brand-footer span:first-child {
