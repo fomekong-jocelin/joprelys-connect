@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface BedRepository extends JpaRepository<BedEntity, UUID> {
     List<BedEntity> findByRoomId(UUID roomId);
@@ -40,6 +41,7 @@ public interface BedRepository extends JpaRepository<BedEntity, UUID> {
             @Param("roomNumber") String roomNumber,
             @Param("bedNumber") String bedNumber);
 
+    @Transactional
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
             UPDATE BedEntity b
