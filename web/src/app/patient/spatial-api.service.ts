@@ -1,7 +1,12 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Ward, WardOccupancy, Bed, BedAssignment } from './patient.models';
+import { Ward, Bed, BedAssignment } from './patient.models';
+import {
+  BedCapacityStatus,
+  BedCapacityView,
+  WardCapacityView,
+} from '../clinic/spatial/bed-capacity.models';
 import {
   SaveBedPayload,
   SaveRoomPayload,
@@ -19,12 +24,19 @@ export class SpatialApiService {
     return this.http.get<Ward[]>('/api/spatial/wards');
   }
 
-  getWardOccupancy(wardId: string): Observable<WardOccupancy> {
-    return this.http.get<WardOccupancy>(`/api/spatial/wards/${wardId}/occupancy`);
+  getWardOccupancy(wardId: string): Observable<WardCapacityView> {
+    return this.http.get<WardCapacityView>(`/api/spatial/wards/${wardId}/occupancy`);
   }
 
-  updateBedStatus(bedId: string, status: 'FREE' | 'OCCUPIED' | 'CLEANING' | 'MAINTENANCE'): Observable<Bed> {
-    return this.http.post<Bed>(`/api/spatial/beds/${bedId}/status`, { status });
+  updateBedStatus(
+    bedId: string,
+    status: 'FREE' | 'OCCUPIED' | 'CLEANING' | 'MAINTENANCE',
+  ): Observable<BedCapacityView> {
+    return this.http.post<BedCapacityView>(`/api/spatial/beds/${bedId}/status`, { status });
+  }
+
+  updateBedCapacityStatus(bedId: string, status: BedCapacityStatus): Observable<BedCapacityView> {
+    return this.http.post<BedCapacityView>(`/api/spatial/beds/${bedId}/capacity-status`, { status });
   }
 
   transferPatient(hospitalizationId: string, newBedId: string): Observable<BedAssignment> {
