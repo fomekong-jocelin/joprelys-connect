@@ -10,11 +10,12 @@ import { ButtonComponent } from '../shared/ui/button.component';
 import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { EmergencyApiService } from './emergency-api.service';
+import { EmergencyDocumentsPanelComponent } from './document/emergency-documents-panel.component';
 import { EmergencyRecord } from './emergency.models';
 import { EmergencyMedicoLegalPanelComponent } from './medico-legal/emergency-medico-legal-panel.component';
 import { EmergencyTriagePanelComponent } from './triage/emergency-triage-panel.component';
 
-type EmergencyDetailTab = 'OVERVIEW' | 'IDENTITY' | 'CARE' | 'LEGAL';
+type EmergencyDetailTab = 'OVERVIEW' | 'IDENTITY' | 'CARE' | 'LEGAL' | 'DOCUMENTS';
 
 @Component({
   selector: 'app-emergency-dashboard',
@@ -29,6 +30,7 @@ type EmergencyDetailTab = 'OVERVIEW' | 'IDENTITY' | 'CARE' | 'LEGAL';
     AlertComponent,
     EmptyStateComponent,
     UnifiedAdmissionComponent,
+    EmergencyDocumentsPanelComponent,
     EmergencyMedicoLegalPanelComponent,
     EmergencyTriagePanelComponent,
   ],
@@ -177,19 +179,40 @@ export class EmergencyDashboardComponent implements OnInit {
     const record = this.selectedEmergency();
     if (!record) return;
 
+    const orientation = this.stabilizeOrientation();
     this.isProcessing.set(true);
-    this.emergencyApi.stabilize(record.id, this.stabilizeOrientation()).subscribe({
+    this.emergencyApi.stabilize(record.id, orientation).subscribe({
       next: () => {
-        this.loadEmergencies();
+        this.isProcessing.set(false);
         this.closeStabilizeModal();
         this.closeDrawer();
-        this.isProcessing.set(false);
+        if (orientation === 'ADMISSION' || orientation === 'OR_DIRECT') {
+          this.continueToHospitalization(record);
+          return;
+        }
+        this.loadEmergencies();
       },
       error: () => {
         this.error.set(this.t('emergency.error.stabilize'));
         this.isProcessing.set(false);
       },
     });
+  }
+
+  continueToHospitalization(record: EmergencyRecord): void {
+    this.closeDrawer();
+    void this.router.navigate(
+      ['/patients', record.patientId, 'hospitalizations'],
+      { queryParams: { emergencyId: record.id } },
+    );
+  }
+
+  openReconciliation(record: EmergencyRecord): void {
+    this.closeDrawer();
+    void this.router.navigate(
+      ['/clinic/patient-reconciliation'],
+      { queryParams: { patientId: record.patientId, emergencyId: record.id } },
+    );
   }
 
   patientDisplayName(record: EmergencyRecord): string {
