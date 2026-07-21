@@ -45,28 +45,20 @@ class HospitalizationAdmissionServiceTest {
 
     @Mock
     private HospitalizationRepository hospitalizationRepository;
-
     @Mock
     private UserAccountRepository userAccountRepository;
-
     @Mock
     private AuditService auditService;
-
     @Mock
     private BedRepository bedRepository;
-
     @Mock
     private BedAssignmentRepository bedAssignmentRepository;
-
     @Mock
     private EmergencyRepository emergencyRepository;
-
     @Mock
     private PatientCanonicalResolver canonicalResolver;
-
     @Mock
     private VisitRepository visitRepository;
-
     @Mock
     private VisitNumberGenerator visitNumberGenerator;
 
@@ -75,7 +67,6 @@ class HospitalizationAdmissionServiceTest {
 
     private CreateHospitalizationRequest request;
     private PatientEntity patient;
-    private VisitEntity visit;
     private UUID organizationId;
 
     @BeforeEach
@@ -83,22 +74,11 @@ class HospitalizationAdmissionServiceTest {
         request = request();
         organizationId = UUID.randomUUID();
         patient = org.mockito.Mockito.mock(PatientEntity.class);
-        visit = org.mockito.Mockito.mock(VisitEntity.class);
-
-        when(patient.getId()).thenReturn(request.patientId());
-        when(patient.getOrganizationId()).thenReturn(organizationId);
-        when(visit.getId()).thenReturn(request.visitId());
-        when(visit.getPatient()).thenReturn(patient);
-        when(canonicalResolver.resolve(request.patientId())).thenReturn(context(patient));
-        when(visitRepository.findById(request.visitId())).thenReturn(Optional.of(visit));
-        when(hospitalizationRepository.findActiveByPatientIds(Set.of(request.patientId())))
-                .thenReturn(Optional.empty());
-        when(hospitalizationRepository.findActiveByBed(request.roomNumber(), request.bedNumber()))
-                .thenReturn(Optional.empty());
     }
 
     @Test
     void shouldRejectAdmissionWhenBedIsNotConfiguredForPatientOrganization() {
+        prepareVisitBasedAdmission();
         when(bedRepository.findConfiguredBed(
                 organizationId,
                 request.serviceName(),
@@ -118,6 +98,7 @@ class HospitalizationAdmissionServiceTest {
 
     @Test
     void shouldAtomicallyClaimConfiguredBedWithoutCreatingSpatialData() {
+        prepareVisitBasedAdmission();
         UUID bedId = UUID.randomUUID();
         BedEntity bed = configuredBed(bedId);
 
@@ -143,6 +124,7 @@ class HospitalizationAdmissionServiceTest {
 
     @Test
     void shouldRejectAdmissionWhenAtomicBedClaimLosesTheRace() {
+        prepareVisitBasedAdmission();
         UUID bedId = UUID.randomUUID();
         BedEntity bed = configuredBed(bedId);
 
@@ -165,6 +147,7 @@ class HospitalizationAdmissionServiceTest {
 
     @Test
     void shouldCreateAVisitAndRetainEmergencyLinkWhenNoVisitWasProvided() {
+        prepareCanonicalPatient();
         UUID emergencyId = UUID.randomUUID();
         CreateHospitalizationRequest emergencyRequest = new CreateHospitalizationRequest(
                 request.patientId(),
@@ -193,6 +176,10 @@ class HospitalizationAdmissionServiceTest {
         when(visitNumberGenerator.generateNextVisitNumber()).thenReturn("VIS-20260721-000001");
         when(visitRepository.save(any(VisitEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(hospitalizationRepository.findByEmergencyId(emergencyId)).thenReturn(Optional.empty());
+        when(hospitalizationRepository.findActiveByPatientIds(Set.of(request.patientId())))
+                .thenReturn(Optional.empty());
+        when(hospitalizationRepository.findActiveByBed(request.roomNumber(), request.bedNumber()))
+                .thenReturn(Optional.empty());
         when(bedRepository.findConfiguredBed(
                 organizationId,
                 request.serviceName(),
@@ -213,6 +200,24 @@ class HospitalizationAdmissionServiceTest {
         ArgumentCaptor<HospitalizationEntity> captor = ArgumentCaptor.forClass(HospitalizationEntity.class);
         verify(hospitalizationRepository).save(captor.capture());
         assertEquals(emergencyId, captor.getValue().getEmergencyId());
+    }
+
+    private void prepareVisitBasedAdmission() {
+        prepareCanonicalPatient();
+        VisitEntity visit = org.mockito.Mockito.mock(VisitEntity.class);
+        when(visit.getId()).thenReturn(request.visitId());
+        when(visit.getPatient()).thenReturn(patient);
+        when(visitRepository.findById(request.visitId())).thenReturn(Optional.of(visit));
+        when(hospitalizationRepository.findActiveByPatientIds(Set.of(request.patientId())))
+                .thenReturn(Optional.empty());
+        when(hospitalizationRepository.findActiveByBed(request.roomNumber(), request.bedNumber()))
+                .thenReturn(Optional.empty());
+    }
+
+    private void prepareCanonicalPatient() {
+        when(patient.getId()).thenReturn(request.patientId());
+        when(patient.getOrganizationId()).thenReturn(organizationId);
+        when(canonicalResolver.resolve(request.patientId())).thenReturn(context(patient));
     }
 
     private BedEntity configuredBed(UUID bedId) {
