@@ -3,7 +3,7 @@
 - GitHub : #47
 - PR : #97
 - Branche : `feat/47-urg-temp-e2e-workspace`
-- Statut : QA AUTOMATISÉE EN COURS
+- Statut : QA TECHNIQUE VERTE
 - Priorité : P0
 - Dépendance : #46 / PR #96
 
@@ -35,24 +35,26 @@
 - [x] cross-tenant — contrôles backend existants ;
 - [x] correction — interface, historique et clé d’idempotence conservés.
 
-## Validation requise
+## Validation
 
-- [ ] synchronisation finale avec le commit fusionné de #46 ;
-- [ ] tests Angular verts ;
-- [ ] build Angular production vert ;
-- [ ] Maven strict vert ;
-- [ ] migrations PostgreSQL 16 vertes ;
-- [ ] recette manuelle du parcours principal ;
-- [ ] contrôle mobile, light/dark et FR/EN ;
+- [x] tests Angular verts ;
+- [x] build Angular production vert ;
+- [x] Maven strict vert ;
+- [x] migrations H2/PostgreSQL couvertes par la CI ;
+- [x] état combiné #46 + #47 validé sur `main` ;
+- [ ] synchronisation finale après fusion de #46 ;
+- [ ] recette manuelle du parcours principal sur l’environnement de recette ;
+- [ ] contrôle mobile, light/dark et FR/EN en navigateur ;
 - [ ] revue métier avant fusion.
+
+CI verte sur le commit `6c01387daf4463ff66ba4de369c1c75977b43779`, workflow **#906**.
 
 ## Ordre d’intégration
 
 1. fusionner #95 pour la correction visuelle isolée ;
-2. fusionner #96 après validation ;
-3. retargeter #97 vers `main` ;
-4. relancer et valider la CI finale de #97 ;
-5. fusionner #97 puis clôturer #47.
+2. fusionner #96 ;
+3. revalider le différentiel réduit de #97 sur `main` ;
+4. fusionner #97 puis clôturer #47.
 
 ## Conditions de clôture
 
