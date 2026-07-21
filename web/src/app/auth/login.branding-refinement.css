@@ -29,29 +29,38 @@
     justify-content: center;
   }
 
-  /* Logo blanc officiel, sans carte ni bordure. */
+  /*
+   * Logo blanc officiel : il doit être le premier repère visuel du panneau,
+   * sans carte, sans bordure et avec une présence suffisante sur grand écran.
+   */
   .login-page .login-brand-panel app-logo {
     display: inline-flex;
     width: fit-content;
     padding: 0;
-    margin-bottom: clamp(2.25rem, 6vh, 4rem);
+    margin-bottom: clamp(2rem, 4.5vh, 3rem);
     border: 0;
     border-radius: 0;
     background: transparent;
     box-shadow: none;
   }
 
+  .login-page .login-brand-panel app-logo > div {
+    gap: clamp(0.9rem, 1.4vw, 1.25rem) !important;
+  }
+
   .login-page .login-brand-panel app-logo img {
     content: url('/assets/branding/logo_white_blue_bg.png');
     width: auto;
-    height: clamp(2.65rem, 3.35vw, 3.5rem);
-    max-width: min(100%, 15.5rem);
+    height: clamp(4.25rem, 5vw, 5.25rem);
+    max-width: min(100%, 17rem);
     object-fit: contain;
   }
 
   .login-page .login-brand-panel app-logo span {
-    color: #ffffff !important;
-    font-size: clamp(1.35rem, 1.75vw, 1.7rem);
+    color: var(--text-inverse) !important;
+    font-size: clamp(1.8rem, 2.25vw, 2.25rem);
+    line-height: 1;
+    text-shadow: 0 8px 24px color-mix(in srgb, var(--color-brand-night) 35%, transparent);
   }
 
   /*
@@ -62,7 +71,7 @@
     display: block;
     max-width: 29rem;
     margin: 0;
-    color: #ffffff;
+    color: var(--text-inverse);
   }
 
   .login-page .login-brand-copy h1,
@@ -76,7 +85,7 @@
   .login-page .login-brand-copy h1::before,
   .login-page .login-brand-copy p::before {
     display: block;
-    color: #ffffff;
+    color: var(--text-inverse);
   }
 
   .login-page .login-brand-copy h1::before {
@@ -93,7 +102,7 @@
     content: 'Joprelys Connect réunit le dossier patient, les consultations, les admissions, la facturation et la coordination clinique dans un espace sécurisé.';
     max-width: 28rem;
     margin-top: 1rem;
-    color: rgba(255, 255, 255, 0.76);
+    color: color-mix(in srgb, var(--text-inverse) 76%, transparent);
     font-family: var(--font-sans);
     font-size: 0.94rem;
     font-weight: 400;
@@ -110,31 +119,61 @@
 
   /* Trois bénéfices concrets, sans chiffre ni promesse invérifiable. */
   .login-page .login-brand-visual {
-    position: relative;
+    position: static;
     display: block;
     width: 100%;
     min-height: 0;
     aspect-ratio: auto;
-    margin: 1.6rem 0 0;
+    margin: 1.45rem 0 0;
   }
 
+  /*
+   * Réinitialisation complète des anciennes propriétés d'ellipse définies dans
+   * login.desktop-polish.css. Sans ce reset, la liste hérite d'une position
+   * absolue, d'une bordure ovale et d'une rotation.
+   */
   .login-page .login-brand-visual::before {
     content: '✓  Une information patient centralisée\A✓  Des équipes mieux coordonnées\A✓  Des accès sécurisés et traçables';
+    position: static;
+    inset: auto;
     display: block;
+    box-sizing: border-box;
     width: 100%;
-    white-space: pre-line;
-    color: rgba(255, 255, 255, 0.9);
+    height: auto;
+    min-height: 0;
+    padding: 0.85rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--text-inverse) 14%, transparent);
+    border-radius: var(--radius-brand-md);
+    background: color-mix(in srgb, var(--text-inverse) 6%, transparent);
+    box-shadow: none;
+    color: color-mix(in srgb, var(--text-inverse) 91%, transparent);
     font-family: var(--font-sans);
     font-size: 0.84rem;
     font-weight: 650;
-    line-height: 2.25;
+    line-height: 2.05;
+    white-space: pre-line;
+    pointer-events: none;
+    transform: none;
   }
 
   .login-page:has(#login-language-en.login-language-active) .login-brand-visual::before {
     content: '✓  One source of patient information\A✓  Better-coordinated care teams\A✓  Secure and traceable access';
   }
 
-  .login-page .login-brand-visual::after,
+  .login-page .login-brand-visual::after {
+    content: none;
+    position: static;
+    inset: auto;
+    display: none;
+    width: auto;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+  }
+
   .login-page .login-orbit,
   .login-page .login-brand-cross,
   .login-page .login-brand-shield {
@@ -143,12 +182,13 @@
 
   /* Le slogan officiel signe la marque : il ne porte plus la hiérarchie du hero. */
   .login-page .login-brand-footer {
+    position: static;
     display: block;
     width: 100%;
     max-width: 27rem;
     padding-top: 1rem;
-    margin-top: 1.6rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    margin-top: 1.25rem;
+    border-top: 1px solid color-mix(in srgb, var(--text-inverse) 14%, transparent);
   }
 
   .login-page .login-brand-footer span {
@@ -157,12 +197,14 @@
 
   .login-page .login-brand-footer::before {
     content: 'Parce qu’elle est précieuse, nous innovons pour la protéger.';
+    position: static;
     display: block;
-    color: rgba(255, 255, 255, 0.62);
+    color: color-mix(in srgb, var(--text-inverse) 66%, transparent);
     font-family: var(--font-sans);
     font-size: 0.76rem;
     font-weight: 600;
     line-height: 1.55;
+    transform: none;
   }
 
   .login-page:has(#login-language-en.login-language-active) .login-brand-footer::before {
@@ -258,16 +300,30 @@
   }
 
   .login-page .login-brand-panel app-logo {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .login-page .login-brand-panel app-logo img {
+    height: 3.75rem;
+  }
+
+  .login-page .login-brand-panel app-logo span {
+    font-size: 1.7rem;
   }
 
   .login-page .login-brand-visual {
-    margin-top: 1rem;
+    margin-top: 0.9rem;
+  }
+
+  .login-page .login-brand-visual::before {
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+    line-height: 1.8;
   }
 
   .login-page .login-brand-footer {
-    padding-top: 0.75rem;
-    margin-top: 1rem;
+    padding-top: 0.7rem;
+    margin-top: 0.9rem;
   }
 }
 
