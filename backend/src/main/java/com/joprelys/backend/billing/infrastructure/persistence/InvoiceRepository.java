@@ -4,12 +4,18 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface InvoiceRepository extends JpaRepository<InvoiceEntity, UUID> {
     List<InvoiceEntity> findByPatientIdOrderByCreatedAtDesc(UUID patientId);
+
+    @Query("SELECT DISTINCT i FROM InvoiceEntity i "
+            + "LEFT JOIN FETCH i.insuranceConvention LEFT JOIN FETCH i.items "
+            + "WHERE i.patientId IN :patientIds ORDER BY i.createdAt DESC")
+    List<InvoiceEntity> findByPatientIdsWithDetails(@Param("patientIds") Collection<UUID> patientIds);
 
     List<InvoiceEntity> findByStatusInOrderByValidatedAtAscCreatedAtAsc(List<InvoiceStatus> statuses);
 
