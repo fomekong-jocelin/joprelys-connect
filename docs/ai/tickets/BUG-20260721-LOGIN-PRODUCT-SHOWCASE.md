@@ -1,9 +1,10 @@
 # BUG-20260721-LOGIN-PRODUCT-SHOWCASE
 
 - GitHub : #88
+- Pull request : #89
 - Type : bug UI/UX et conversion produit
 - Priorité : P1
-- Statut : IN REVIEW
+- Statut : QA TECHNIQUE VERTE
 - Stack : Angular / CSS / responsive / branding / i18n
 
 ## Constat
@@ -49,6 +50,14 @@ Conformément à `DESIGN.md` :
 - `DESIGN.md`
 - `docs/ai/tickets/BUG-20260721-LOGIN-PRODUCT-SHOWCASE.md`
 
+## Validation automatisée
+
+Pipeline GitHub Actions #879 :
+
+- tests Angular : succès ;
+- build Angular production : succès ;
+- build et tests Maven stricts : succès.
+
 ## Critères d’acceptation
 
 - [x] slogan réduit à une signature secondaire ;
@@ -59,9 +68,9 @@ Conformément à `DESIGN.md` :
 - [x] composition fixe en `100dvh` à partir de 760 px de hauteur ;
 - [x] scroll de sécurité conservé sous 760 px ;
 - [x] version anglaise prévue ;
-- [ ] tests Angular verts ;
-- [ ] build Angular production vert ;
-- [ ] Maven strict vert ;
+- [x] tests Angular verts ;
+- [x] build Angular production vert ;
+- [x] Maven strict vert ;
 - [ ] recette visuelle à 1366×768, 1440×900 et 1920×1080.
 
 ## Recette manuelle
