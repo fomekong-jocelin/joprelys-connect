@@ -24,6 +24,7 @@ describe('EmergencyDashboardComponent', () => {
 
   const record: EmergencyRecord = {
     id: 'emergency-1',
+    organizationId: 'organization-1',
     patientId: 'source-1',
     patientName: 'Patient provisoire',
     globalPatientNumber: 'DPU-TEMP-1',
@@ -47,6 +48,7 @@ describe('EmergencyDashboardComponent', () => {
     thirdPartyRecorded: false,
     resuscitationLogs: [],
     createdAt: '2026-07-21T10:00:00Z',
+    updatedAt: '2026-07-21T10:00:00Z',
   };
 
   beforeEach(async () => {
