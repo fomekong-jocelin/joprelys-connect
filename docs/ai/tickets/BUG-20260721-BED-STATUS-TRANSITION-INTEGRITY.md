@@ -8,6 +8,7 @@
 - **Audit** : AUDIT-20260721
 - **Écarts couverts** : GAP-006 ; réduction partielle de GAP-008 et GAP-016
 - **Priorité** : Critique
+- **Statut** : QA CI VERTE / REVUE MÉTIER REQUISE
 - **Estimation** : 2 SP / 1 à 2 jours
 - **SemVer indicatif** : PATCH dans le modèle legacy, inclus dans la cible MINOR globale de l’epic
 
@@ -51,10 +52,11 @@ Transformer l’endpoint legacy en commande opérationnelle limitée aux lits no
 - Faire valider toute commande manuelle par cette politique dans `SpatialService.updateBedStatus`.
 - Supprimer la clôture automatique d’affectation lors du passage manuel à `FREE`.
 - Conserver les commandes transactionnelles d’admission et de transfert comme seules sources actuelles de `OCCUPIED`.
+- Corriger le binding JDBC des `Instant` dans les assertions PostgreSQL V76–V78 afin que leur validation s’exécute réellement en CI.
 
 ## Tests
 
-Tests ciblés attendus :
+Tests ciblés couverts :
 
 - refus de `FREE → OCCUPIED` ;
 - refus de toute transition avec affectation active ;
@@ -62,13 +64,13 @@ Tests ciblés attendus :
 - refus d’un lit `OCCUPIED` orphelin ;
 - succès d’une transition opérationnelle sur lit non affecté.
 
-Régressions à exécuter avant fusion :
+Validation CI :
 
-```bash
-cd backend
-mvn -Dtest=SpatialServiceBedStatusTest,SpatialControllerTest test
-mvn clean verify
-```
+- workflow `Joprelys Connect — CI Pipeline`, run 914 ;
+- backend `Maven Build & Tests` : succès avec `verify` strict ;
+- assertions PostgreSQL V76–V78 : exécutées avec succès ;
+- tests Angular : succès ;
+- build Angular production : succès.
 
 ## Hors périmètre
 
@@ -91,7 +93,9 @@ mvn clean verify
 - [x] politique de transition isolée ;
 - [x] aucune clôture d’affectation depuis l’endpoint générique ;
 - [x] tests unitaires ciblés ajoutés ;
-- [ ] tests Maven exécutés dans un environnement local/CI ;
+- [x] backend Maven `verify` strict exécuté en CI ;
+- [x] validation PostgreSQL V76–V78 exécutée en CI ;
+- [x] tests et build Angular verts ;
 - [ ] recette API avec profils autorisés et non autorisés ;
 - [ ] validation cadre/bed manager ;
-- [ ] suivi EPIC, audit, changelog et project tracking mis à jour après QA verte.
+- [ ] suivi EPIC, changelog et project tracking finalisé après fusion.
