@@ -13,7 +13,9 @@ import com.joprelys.backend.patient.domain.PatientIdentityStatus;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.reconciliation.application.PatientCanonicalResolver;
 import com.joprelys.backend.spatial.application.ActiveBedAssignmentService;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedCapacityStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedReadinessStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedRepository;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedStatus;
 import com.joprelys.backend.visit.application.VisitNumberGenerator;
@@ -223,9 +225,16 @@ public class HospitalizationAdmissionService {
     }
 
     private BedEntity claimConfiguredBed(BedEntity configuredBed) {
-        int claimed = bedRepository.claimIfFree(configuredBed.getId(), BedStatus.FREE, BedStatus.OCCUPIED);
+        int claimed = bedRepository.claimIfAvailable(
+                configuredBed.getId(),
+                BedStatus.FREE,
+                BedStatus.OCCUPIED,
+                BedCapacityStatus.OPEN,
+                BedReadinessStatus.READY);
         if (claimed != 1) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Le lit demandé n'est pas libre.");
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Le lit demandé n'est pas ouvert, prêt et disponible.");
         }
         return bedRepository.findById(configuredBed.getId())
                 .orElseThrow(() -> new IllegalStateException(
