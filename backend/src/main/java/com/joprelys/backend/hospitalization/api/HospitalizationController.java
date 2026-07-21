@@ -3,6 +3,7 @@ package com.joprelys.backend.hospitalization.api;
 import com.joprelys.backend.hospitalization.application.CanonicalHospitalizationQueryService;
 import com.joprelys.backend.hospitalization.application.HospitalizationAdmissionService;
 import com.joprelys.backend.hospitalization.application.HospitalizationCareService;
+import com.joprelys.backend.hospitalization.application.HospitalizationEntryDocumentService;
 import com.joprelys.backend.hospitalization.application.HospitalizationService;
 import com.joprelys.backend.hospitalization.application.OperatingReportService;
 import jakarta.validation.Valid;
@@ -28,6 +29,7 @@ public class HospitalizationController {
 
     private final HospitalizationAdmissionService hospitalizationAdmissionService;
     private final HospitalizationService hospitalizationService;
+    private final HospitalizationEntryDocumentService hospitalizationEntryDocumentService;
     private final CanonicalHospitalizationQueryService canonicalHospitalizationQueryService;
     private final HospitalizationCareService hospitalizationCareService;
     private final OperatingReportService operatingReportService;
@@ -35,11 +37,13 @@ public class HospitalizationController {
     public HospitalizationController(
             HospitalizationAdmissionService hospitalizationAdmissionService,
             HospitalizationService hospitalizationService,
+            HospitalizationEntryDocumentService hospitalizationEntryDocumentService,
             CanonicalHospitalizationQueryService canonicalHospitalizationQueryService,
             HospitalizationCareService hospitalizationCareService,
             OperatingReportService operatingReportService) {
         this.hospitalizationAdmissionService = hospitalizationAdmissionService;
         this.hospitalizationService = hospitalizationService;
+        this.hospitalizationEntryDocumentService = hospitalizationEntryDocumentService;
         this.canonicalHospitalizationQueryService = canonicalHospitalizationQueryService;
         this.hospitalizationCareService = hospitalizationCareService;
         this.operatingReportService = operatingReportService;
@@ -90,7 +94,7 @@ public class HospitalizationController {
     @GetMapping("/{id}/entry-pdf")
     @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
     public ResponseEntity<byte[]> downloadEntryPdf(@PathVariable UUID id) {
-        return pdfResponse(hospitalizationService.loadEntryPdf(id), "billet-entree-" + id + ".pdf");
+        return pdfResponse(hospitalizationEntryDocumentService.loadOrCreate(id), "billet-entree-" + id + ".pdf");
     }
 
     @PostMapping(value = "/{id}/consents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
