@@ -151,6 +151,7 @@ La configuration Service → Chambre → Lit utilise une hiérarchie de panneaux
 La page publique de connexion suit les règles suivantes :
 
 - le composant partagé `app-logo` est l'unique source du logo et du nom Connect ;
+- sur desktop, le bloc de marque doit être identifiable au premier regard : logo blanc sans carte, image comprise entre `68px` et `84px` de hauteur et nom Connect clairement aligné ;
 - mobile d'abord : contrôles thème/langue, identité, choix Personnel/Patient puis formulaire ;
 - à partir du breakpoint desktop, un panneau institutionnel complète le formulaire sans afficher de donnée clinique fictive ;
 - le panneau desktop est une vitrine produit : une promesse claire, un résumé fonctionnel et trois bénéfices réels ;
@@ -158,6 +159,7 @@ La page publique de connexion suit les règles suivantes :
 - le slogan officiel « Parce qu’elle est précieuse, nous innovons pour la protéger. » reste une signature secondaire et ne doit jamais devenir un hero title surdimensionné ;
 - à partir de `760px` de hauteur desktop, la composition tient dans `100dvh` sans scroll ; sous ce seuil, le défilement reste autorisé pour préserver l'accès aux actions ;
 - les illustrations isolées, barres de pagination décoratives, orbites et grands vides sans fonction sont interdits sur cet écran ;
+- un pseudo-élément décoratif réutilisé pour du contenu doit réinitialiser explicitement `position`, `inset`, dimensions, bordure, rayon et `transform` afin d'éviter toute fuite de style héritée ;
 - le sélecteur FR/EN utilise les drapeaux 🇫🇷 et 🇬🇧 avec un état actif accessible ;
 - le changement light/dark reste disponible avant authentification via `ThemeService` ;
 - le décor emploie seulement les tokens centraux avec `color-mix`, les ombres partagées et des rayons de 4 à 8 px ;
