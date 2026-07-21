@@ -45,9 +45,9 @@ La recette de la page de connexion après la PR #85 montre encore quatre défaut
 - [x] drapeaux vectoriels indépendants de la police système ;
 - [x] drapeaux appliqués aux sélecteurs publics et authentifiés ;
 - [x] aucun changement des parcours Personnel/Patient, OTP ou session ;
-- [ ] tests Angular verts ;
-- [ ] build Angular production vert ;
-- [ ] Maven strict vert ;
+- [ ] tests Angular verts sur le dernier commit ;
+- [ ] build Angular production vert sur le dernier commit ;
+- [ ] Maven strict vert sur le dernier commit ;
 - [ ] recette visuelle light/dark, FR/EN, mobile et desktop.
 
 ## Recette manuelle
