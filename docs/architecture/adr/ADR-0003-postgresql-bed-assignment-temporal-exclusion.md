@@ -22,7 +22,7 @@ Une vérification uniquement applicative ne protège pas les imports, scripts DB
    - elle compte les chevauchements `VALID` sous PostgreSQL ;
    - elle échoue avant activation si un conflit subsiste ;
    - elle installe `btree_gist` ;
-   - elle crée une contrainte d'exclusion GiST partielle sur les lignes `VALID`.
+   - elle crée une contrainte d'exclusion GiST partielle, immédiatement vérifiée, sur les lignes `VALID`.
 7. La quarantaine est une décision manuelle, signée par le DBA et le bed manager. Elle conserve la ligne dans `bed_assignments` et n'efface aucun historique.
 
 ## Forme de la contrainte
@@ -37,8 +37,9 @@ EXCLUDE USING gist (
         '[)') WITH &&
 )
 WHERE (integrity_status = 'VALID')
-DEFERRABLE INITIALLY IMMEDIATE
 ```
+
+La contrainte reste `NOT DEFERRABLE`, valeur PostgreSQL par défaut. Chaque insertion ou correction est donc contrôlée à la fin de l'instruction SQL. Les workflows applicatifs existants clôturent et flushent l'ancienne affectation avant d'en créer une nouvelle.
 
 Le schéma historique utilise actuellement `TIMESTAMP WITHOUT TIME ZONE`; la plage est donc `tsrange`. Le passage futur à `TIMESTAMPTZ`/`Instant` relève de GAP-038 et exigera une migration dédiée vers `tstzrange`.
 
