@@ -50,7 +50,6 @@ public class V80__enforce_historical_bed_assignment_non_overlap extends BaseJava
                         '[)') WITH &&
                 )
                 WHERE (integrity_status = 'VALID')
-                DEFERRABLE INITIALLY IMMEDIATE
             """;
 
     @Override
