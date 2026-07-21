@@ -57,6 +57,12 @@ describe('EmergencyDocumentsPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('abc123');
   });
 
+  it('keeps the source patient provenance in the document evidence', () => {
+    fixture.componentInstance.generate();
+
+    expect(fixture.componentInstance.documents()[0].originPatientId).toBe('source-1');
+  });
+
   it('emits the hospitalization continuation action', () => {
     const continuation = vi.fn();
     fixture.componentInstance.hospitalizationRequested.subscribe(continuation);
