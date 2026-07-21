@@ -143,13 +143,13 @@
               [attr.aria-label]="ui('close')"
             >
               <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
         </div>
 
-        <nav class="mt-4 grid grid-cols-2 gap-1 rounded-sm bg-[var(--app-surface-muted)] p-1 sm:grid-cols-4" [attr.aria-label]="ui('sections')">
+        <nav class="mt-4 grid grid-cols-2 gap-1 rounded-sm bg-[var(--app-surface-muted)] p-1 sm:grid-cols-5" [attr.aria-label]="ui('sections')">
           <button type="button" class="rounded-sm px-2 py-2 text-xs font-extrabold transition-colors" (click)="setDetailTab('OVERVIEW')" [class.bg-[var(--app-surface)]]="detailTab() === 'OVERVIEW'" [class.text-brand-primary]="detailTab() === 'OVERVIEW'" [class.text-[var(--text-muted)]]="detailTab() !== 'OVERVIEW'">
             {{ ui('overviewTab') }}
           </button>
@@ -161,6 +161,9 @@
           </button>
           <button type="button" class="rounded-sm px-2 py-2 text-xs font-extrabold transition-colors" (click)="setDetailTab('LEGAL')" [class.bg-[var(--app-surface)]]="detailTab() === 'LEGAL'" [class.text-brand-primary]="detailTab() === 'LEGAL'" [class.text-[var(--text-muted)]]="detailTab() !== 'LEGAL'">
             {{ ui('legalTab') }}
+          </button>
+          <button type="button" class="rounded-sm px-2 py-2 text-xs font-extrabold transition-colors" (click)="setDetailTab('DOCUMENTS')" [class.bg-[var(--app-surface)]]="detailTab() === 'DOCUMENTS'" [class.text-brand-primary]="detailTab() === 'DOCUMENTS'" [class.text-[var(--text-muted)]]="detailTab() !== 'DOCUMENTS'">
+            {{ t('emergency.documents.tab', 'Documents') }}
           </button>
         </nav>
       </header>
@@ -200,6 +203,25 @@
                 <div><dt class="ui-label">{{ ui('registeredAt') }}</dt><dd class="mt-1 text-sm font-black text-[var(--text-primary)]">{{ record.createdAt | date:'HH:mm' }}</dd></div>
               </dl>
             </section>
+
+            <section class="rounded-lg border border-[var(--brand-info-border)] bg-[var(--brand-info-subtle)] p-4">
+              <h3 class="font-display text-base font-extrabold text-[var(--text-primary)]">
+                {{ t('emergency.journey.title', 'Prochaine étape du parcours') }}
+              </h3>
+              <p class="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
+                {{ t('emergency.journey.description', 'Régularisez l’identité lorsque cela est nécessaire ou poursuivez directement vers une hospitalisation sécurisée.') }}
+              </p>
+              <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+                @if (isProvisional(record)) {
+                  <app-ui-button variant="secondary" (pressed)="openReconciliation(record)">
+                    {{ t('emergency.journey.reconcile', 'Rapprocher l’identité') }}
+                  </app-ui-button>
+                }
+                <app-ui-button variant="primary" (pressed)="continueToHospitalization(record)">
+                  {{ t('emergency.journey.hospitalize', 'Poursuivre vers l’hospitalisation') }}
+                </app-ui-button>
+              </div>
+            </section>
           </div>
         }
 
@@ -226,6 +248,11 @@
                   <div><dt class="ui-label">{{ ui('foundAt') }}</dt><dd class="mt-1 text-sm font-bold text-[var(--text-primary)]">{{ record.foundAt ? (record.foundAt | date:'dd/MM/yyyy HH:mm') : ui('unknown') }}</dd></div>
                   <div class="sm:col-span-2"><dt class="ui-label">{{ ui('physicalDescription') }}</dt><dd class="mt-1 whitespace-pre-wrap text-sm font-semibold leading-6 text-[var(--text-secondary)]">{{ valueOrUnknown(record.physicalDescription) }}</dd></div>
                 </dl>
+                <div class="mt-4 border-t border-[var(--divider-subtle)] pt-4">
+                  <app-ui-button variant="primary" (pressed)="openReconciliation(record)">
+                    {{ t('emergency.journey.reconcile', 'Rapprocher l’identité') }}
+                  </app-ui-button>
+                </div>
               </section>
             }
 
@@ -294,6 +321,13 @@
 
         @if (detailTab() === 'LEGAL') {
           <app-emergency-medico-legal-panel [emergencyId]="record.id" />
+        }
+
+        @if (detailTab() === 'DOCUMENTS') {
+          <app-emergency-documents-panel
+            [emergencyId]="record.id"
+            (hospitalizationRequested)="continueToHospitalization(record)"
+          />
         }
       </div>
     </aside>
