@@ -8,7 +8,7 @@
 - **Écarts réduits** : GAP-006, GAP-007, GAP-010 et GAP-039
 - **Priorité** : Critique / phase 0
 - **Estimation** : 5 SP / 4 à 6 jours
-- **Statut** : IMPLEMENTED / QA EN COURS
+- **Statut** : QA TECHNIQUE VERTE / VALIDATION MÉTIER ET PRÉFLIGHT REQUIS
 
 ## Problème
 
@@ -30,15 +30,18 @@ Cette confusion rend les KPI ambigus et permettait à un lit fermé ou non prêt
 5. renforcer le claim atomique d'admission/transfert ;
 6. exposer les axes et compteurs dans l'API ;
 7. ajouter une commande ouvrir/fermer ;
-8. adapter l'écran spatial et les traductions FR/EN.
+8. adapter l'écran spatial et les traductions FR/EN ;
+9. installer les colonnes et le backfill par V81, puis les contraintes fortes PostgreSQL par V82.
 
 ## Critères d'acceptation
 
 - [x] V81 ajoute et backfille les axes sans supprimer le statut legacy.
+- [x] V82 installe les contraintes fortes sur PostgreSQL 16.
 - [x] Tous les lits existants restent ouverts après migration.
 - [x] Un ancien client ne voit jamais un lit fermé comme `FREE`.
 - [x] Un lit nouvellement créé est ouvert, prêt et libre.
 - [x] Admission et transfert réclament uniquement un lit ouvert, prêt et libre.
+- [x] Le claim repository ouvre lui-même une transaction atomique.
 - [x] Un lit affecté ne peut pas être fermé ou modifier sa préparation manuellement.
 - [x] Un lit fermé ne peut pas être déclaré libre avant réouverture.
 - [x] L'occupation est dérivée des affectations actives en lecture groupée.
@@ -52,26 +55,29 @@ Cette confusion rend les KPI ambigus et permettait à un lit fermé ou non prêt
 ## Livrables
 
 - V81 `separate_bed_capacity_and_readiness` ;
+- V82 `enforce_bed_capacity_and_readiness_integrity` ;
 - `BedCapacityStatus` et `BedReadinessStatus` ;
 - projection enrichie `BedResponse` et `WardOccupancyResponse` ;
-- claim `claimIfAvailable()` ;
+- claim transactionnel `claimIfAvailable()` ;
 - endpoint `/capacity-status` ;
 - écran spatial à six compteurs ;
 - badges capacité/préparation/usage ;
 - tests migration PostgreSQL, repository, service, sécurité et Angular ;
 - documentation fonctionnelle et technique.
 
-## Validation automatisée attendue
+## Validation automatisée
 
-```bash
-cd backend
-./mvnw -Dtest=SpatialServiceBedStatusTest,SpatialServiceBedCapacityProjectionTest,HospitalizationAdmissionServiceTest,SpatialControllerAuthorizationTest,BedRepositoryAvailabilityTest test
-./mvnw clean verify -Dspring.profiles.active=test
+CI `Joprelys Connect — CI Pipeline`, run **926** :
 
-cd ../web
-npm test -- --run
-npm run build
-```
+- backend Maven `clean verify` strict : succès ;
+- migrations Flyway H2 : succès ;
+- migrations V81/V82 et contraintes PostgreSQL 16 : succès ;
+- Testcontainers PostgreSQL 16 : succès ;
+- claim atomique ouvert/prêt/libre : succès ;
+- refus des lits fermés, nettoyage, maintenance ou affectés : succès ;
+- projections et compteurs séparés : succès ;
+- tests Angular : succès ;
+- build Angular production : succès.
 
 ## Risques et validations externes
 
@@ -104,7 +110,7 @@ npm run build
 - [x] contrats legacy conservés ;
 - [x] tests ciblés ajoutés ;
 - [x] documentation créée ;
-- [ ] CI complète verte ;
+- [x] CI complète verte ;
 - [ ] validation bed manager / direction hospitalière ;
 - [ ] préflight sur copie représentative ;
-- [ ] matrice d'audit actualisée après QA.
+- [ ] matrice d'audit finalisée après validation externe.
