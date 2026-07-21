@@ -1,5 +1,6 @@
 -- HOS-BED-002-C : séparer la capacité ouverte de l'état de préparation du lit.
 -- Le champ legacy beds.status est conservé pour compatibilité API et anciens clients.
+-- Les égalités explicites évitent le cache de comparaison de CHECK ... IN (...) sous H2 2.4.
 
 ALTER TABLE beds
     ADD COLUMN capacity_status VARCHAR(20) NOT NULL DEFAULT 'OPEN';
@@ -16,11 +17,18 @@ END;
 
 ALTER TABLE beds
     ADD CONSTRAINT ck_beds_capacity_status
-        CHECK (capacity_status IN ('OPEN', 'CLOSED'));
+        CHECK (
+            capacity_status = 'OPEN'
+            OR capacity_status = 'CLOSED'
+        );
 
 ALTER TABLE beds
     ADD CONSTRAINT ck_beds_readiness_status
-        CHECK (readiness_status IN ('READY', 'CLEANING', 'MAINTENANCE'));
+        CHECK (
+            readiness_status = 'READY'
+            OR readiness_status = 'CLEANING'
+            OR readiness_status = 'MAINTENANCE'
+        );
 
 ALTER TABLE beds
     ADD CONSTRAINT ck_beds_legacy_status_projection
