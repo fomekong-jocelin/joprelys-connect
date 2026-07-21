@@ -21,6 +21,7 @@ public record HospitalizationResponse(
         String pdfFilePath,
         String hospitalizationNumber,
         UUID visitId,
+        UUID emergencyId,
         UUID responsiblePractitionerId,
         UUID documentId
 ) {
@@ -42,6 +43,7 @@ public record HospitalizationResponse(
                 entity.getPdfFilePath(),
                 entity.getHospitalizationNumber(),
                 entity.getVisitId(),
+                entity.getEmergencyId(),
                 entity.getResponsiblePractitionerId(),
                 entity.getDocumentId()
         );
