@@ -14,7 +14,9 @@ import com.joprelys.backend.hospitalization.infrastructure.persistence.Hospitali
 import com.joprelys.backend.spatial.domain.HospitalServiceType;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedCapacityStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedReadinessStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedRepository;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.RoomEntity;
@@ -151,6 +153,55 @@ class SpatialServiceBedStatusTest {
         spatialService.updateBedStatus(bedId, BedStatus.MAINTENANCE);
 
         assertEquals(BedStatus.MAINTENANCE, bed.getStatus());
+        assertEquals(BedReadinessStatus.MAINTENANCE, bed.getReadinessStatus());
         verify(bedRepository).save(bed);
+    }
+
+    @Test
+    void shouldCloseAndReopenAnUnassignedReadyBedWithoutLosingReadiness() {
+        when(bedAssignmentRepository.findActiveByBedId(bedId)).thenReturn(Optional.empty());
+        when(bedRepository.save(bed)).thenReturn(bed);
+
+        spatialService.updateBedCapacityStatus(bedId, BedCapacityStatus.CLOSED);
+
+        assertEquals(BedCapacityStatus.CLOSED, bed.getCapacityStatus());
+        assertEquals(BedReadinessStatus.READY, bed.getReadinessStatus());
+        assertEquals(BedStatus.MAINTENANCE, bed.getStatus());
+
+        spatialService.updateBedCapacityStatus(bedId, BedCapacityStatus.OPEN);
+
+        assertEquals(BedCapacityStatus.OPEN, bed.getCapacityStatus());
+        assertEquals(BedReadinessStatus.READY, bed.getReadinessStatus());
+        assertEquals(BedStatus.FREE, bed.getStatus());
+    }
+
+    @Test
+    void shouldRejectDeclaringAClosedBedFree() {
+        when(bedAssignmentRepository.findActiveByBedId(bedId)).thenReturn(Optional.empty());
+        when(bedRepository.save(bed)).thenReturn(bed);
+        spatialService.updateBedCapacityStatus(bedId, BedCapacityStatus.CLOSED);
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> spatialService.updateBedStatus(bedId, BedStatus.FREE));
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+        assertEquals(BedCapacityStatus.CLOSED, bed.getCapacityStatus());
+        assertEquals(BedStatus.MAINTENANCE, bed.getStatus());
+    }
+
+    @Test
+    void shouldRejectClosingAnAssignedBed() {
+        bed.setStatus(BedStatus.OCCUPIED);
+        BedAssignmentEntity assignment = new BedAssignmentEntity(UUID.randomUUID(), bed);
+        when(bedAssignmentRepository.findActiveByBedId(bedId)).thenReturn(Optional.of(assignment));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> spatialService.updateBedCapacityStatus(bedId, BedCapacityStatus.CLOSED));
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+        assertEquals(BedCapacityStatus.OPEN, bed.getCapacityStatus());
+        verify(bedRepository, never()).save(any(BedEntity.class));
     }
 }
