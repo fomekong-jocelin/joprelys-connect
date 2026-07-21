@@ -38,7 +38,7 @@ public class SpatialController {
     }
 
     @PostMapping("/beds/{id}/status")
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
+    @PreAuthorize("hasAuthority('BED_OPERATIONAL_STATUS_MANAGE')")
     public BedResponse updateBedStatus(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateBedStatusRequest request) {
