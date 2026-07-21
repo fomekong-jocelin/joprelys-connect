@@ -1,0 +1,12 @@
+{
+  "patients.hospitalization.emergencyContinuation.eyebrow": "Continuité urgence",
+  "patients.hospitalization.emergencyContinuation.title": "Poursuivre vers l’hospitalisation",
+  "patients.hospitalization.emergencyContinuation.description": "L’urgence sera reliée au séjour, à la visite clinique, aux documents vérifiables et à la chronologie du DPU.",
+  "patients.hospitalization.emergencyContinuation.provisionalWarning": "Identité provisoire : les soins ne sont pas bloqués. Les documents et les éléments financiers restent marqués à régulariser jusqu’à la validation de l’identité.",
+  "patients.hospitalization.emergencyContinuation.loadError": "Impossible de charger les lits et les praticiens disponibles.",
+  "patients.hospitalization.emergencyContinuation.submit": "Admettre et sécuriser la continuité",
+  "patients.hospitalization.emergencyContinuation.success": "Hospitalisation créée avec continuité clinique sécurisée.",
+  "patients.hospitalization.emergencyContinuation.documentWarning": "L’hospitalisation est créée, mais le lot documentaire doit être régénéré depuis le dossier d’urgence.",
+  "patients.hospitalization.emergencyContinuation.error": "La continuité vers l’hospitalisation n’a pas pu être finalisée.",
+  "patients.hospitalization.noFreeBed": "Aucun lit libre dans ce service."
+}
