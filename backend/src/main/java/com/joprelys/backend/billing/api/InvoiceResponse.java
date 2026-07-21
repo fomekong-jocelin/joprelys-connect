@@ -1,5 +1,6 @@
 package com.joprelys.backend.billing.api;
 
+import com.joprelys.backend.billing.domain.InvoiceRegularizationStatus;
 import com.joprelys.backend.billing.infrastructure.persistence.InvoiceEntity;
 import com.joprelys.backend.billing.infrastructure.persistence.InvoiceStatus;
 import java.math.BigDecimal;
@@ -17,6 +18,7 @@ public record InvoiceResponse(
         BigDecimal patientShare,
         BigDecimal insuranceShare,
         InvoiceStatus status,
+        InvoiceRegularizationStatus regularizationStatus,
         List<InvoiceItemResponse> items,
         Instant createdAt,
         Instant validatedAt,
@@ -35,6 +37,7 @@ public record InvoiceResponse(
                 entity.getPatientShare(),
                 entity.getInsuranceShare(),
                 entity.getStatus(),
+                entity.getRegularizationStatus(),
                 entity.getItems().stream().map(InvoiceItemResponse::fromEntity).toList(),
                 entity.getCreatedAt(),
                 entity.getValidatedAt(),
