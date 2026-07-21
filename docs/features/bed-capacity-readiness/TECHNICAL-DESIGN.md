@@ -21,9 +21,9 @@ POST /api/spatial/beds/{id}/capacity-status
   → ouvre ou ferme la capacité du lit
 ```
 
-## Migration V81
+## Migrations V81 et V82
 
-V81 ajoute :
+V81 est portable H2/PostgreSQL et ajoute :
 
 ```sql
 capacity_status  VARCHAR(20) NOT NULL DEFAULT 'OPEN'
@@ -37,7 +37,15 @@ Le backfill est déterministe :
 - `MAINTENANCE` devient `MAINTENANCE` ;
 - tous les lits existants restent `OPEN` afin de ne pas réduire silencieusement la capacité.
 
-Trois contraintes contrôlent les valeurs et la cohérence de la projection legacy. Un index `(organization_id, capacity_status, readiness_status)` prépare les lectures de capacité.
+V81 crée aussi l'index `(organization_id, capacity_status, readiness_status)`.
+
+V82 est une migration Java Flyway active uniquement sous PostgreSQL. Elle installe :
+
+- `ck_beds_capacity_status` ;
+- `ck_beds_readiness_status` ;
+- `ck_beds_legacy_status_projection`.
+
+H2 conserve les colonnes, le backfill et les tests applicatifs, mais n'installe pas ces trois contraintes. Cette séparation évite un défaut de cycle de vie des expressions `CHECK` sous H2 2.4 lorsque plusieurs contextes Spring partagent la même base mémoire. PostgreSQL 16 reste la preuve cible de l'intégrité en base.
 
 ## Entité
 
@@ -71,7 +79,7 @@ WHERE id = :bedId
   AND readinessStatus = READY
 ```
 
-L'admission et le transfert utilisent cette même méthode. Une fermeture ou une maintenance concurrente fait donc perdre le claim sans créer d'affectation.
+La méthode repository porte sa propre transaction afin de rester sûre même lorsqu'elle est appelée hors d'un service transactionnel. L'admission et le transfert utilisent la même opération. Une fermeture ou une maintenance concurrente fait donc perdre le claim sans créer d'affectation.
 
 ## Projection d'occupation
 
@@ -136,14 +144,14 @@ Les traductions sont stockées dans `features/spatial-services/fr.json` et `en.j
 
 `BedCapacityPostgresqlMigrationTest` vérifie :
 
-- présence des colonnes et contraintes ;
+- présence des colonnes et contraintes PostgreSQL ;
 - valeurs par défaut ;
 - fermeture cohérente ;
 - rejet d'une projection `FREE` sur un lit fermé.
 
 ### Repository
 
-`BedRepositoryAvailabilityTest` vérifie que seul un lit ouvert, prêt et libre peut être claimé.
+`BedRepositoryAvailabilityTest` vérifie que seul un lit ouvert, prêt et libre peut être claimé, y compris lorsque la méthode est appelée directement.
 
 ### Service
 
@@ -162,12 +170,13 @@ Les traductions sont stockées dans `features/spatial-services/fr.json` et `en.j
 
 ## Déploiement
 
-1. sauvegarder et appliquer V81 ;
+1. sauvegarder et appliquer V81 puis V82 ;
 2. vérifier que tous les lits existants sont `OPEN` ;
-3. comparer les compteurs installés/ouverts/prêts/disponibles ;
-4. déployer le backend avant le frontend ;
-5. renouveler le contexte RBAC des utilisateurs ;
-6. fermer manuellement uniquement les lits validés par le responsable hospitalisation.
+3. vérifier la présence des trois contraintes sous PostgreSQL ;
+4. comparer les compteurs installés/ouverts/prêts/disponibles ;
+5. déployer le backend avant le frontend ;
+6. renouveler le contexte RBAC des utilisateurs ;
+7. fermer manuellement uniquement les lits validés par le responsable hospitalisation.
 
 ## Rollback
 
