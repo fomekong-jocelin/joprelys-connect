@@ -1,0 +1,109 @@
+/*
+ * Drapeaux applicatifs stables.
+ * Les emoji de drapeaux ne sont pas fiables sous Windows : certains navigateurs
+ * affichent les codes régionaux FR/GB au lieu des pictogrammes.
+ */
+
+:root {
+  --app-flag-fr: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 2'%3E%3Cpath fill='%230055a4' d='M0 0h1v2H0z'/%3E%3Cpath fill='%23fff' d='M1 0h1v2H1z'/%3E%3Cpath fill='%23ef4135' d='M2 0h1v2H2z'/%3E%3C/svg%3E");
+  --app-flag-en: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 36'%3E%3Cpath fill='%23012169' d='M0 0h60v36H0z'/%3E%3Cpath stroke='%23fff' stroke-width='7.2' d='m0 0 60 36m0-36L0 36'/%3E%3Cpath stroke='%23c8102e' stroke-width='4.2' d='m0 0 60 36m0-36L0 36'/%3E%3Cpath stroke='%23fff' stroke-width='12' d='M30 0v36M0 18h60'/%3E%3Cpath stroke='%23c8102e' stroke-width='7.2' d='M30 0v36M0 18h60'/%3E%3C/svg%3E");
+}
+
+/* Pages juridiques : remplace les emoji existants sans modifier le DOM. */
+.legal-language-switch button > span:first-child {
+  display: inline-block;
+  width: 1.15rem;
+  height: 0.76rem;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--app-border) 78%, transparent);
+  border-radius: 2px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-brand-night) 14%, transparent);
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+}
+
+.legal-language-switch button:first-child > span:first-child {
+  background-image: var(--app-flag-fr);
+}
+
+.legal-language-switch button:last-child > span:first-child {
+  background-image: var(--app-flag-en);
+}
+
+/* Centre de préférences de confidentialité. */
+app-consent-preferences header button[aria-pressed] {
+  display: inline-flex;
+  min-height: 2.1rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38rem;
+  font-size: 0;
+}
+
+app-consent-preferences header button[aria-pressed]::before,
+app-forgot-password main > div:first-of-type button::before,
+app-shell .select-none > button::before {
+  content: '';
+  display: inline-block;
+  width: 1.15rem;
+  height: 0.76rem;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--app-border) 78%, transparent);
+  border-radius: 2px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-brand-night) 14%, transparent);
+}
+
+app-consent-preferences header button[aria-pressed]::after {
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+app-consent-preferences header button[aria-pressed]:first-of-type::before,
+app-forgot-password main > div:first-of-type button:first-of-type::before,
+app-shell .select-none > button:first-of-type::before {
+  background-image: var(--app-flag-fr);
+}
+
+app-consent-preferences header button[aria-pressed]:first-of-type::after {
+  content: 'FR';
+}
+
+app-consent-preferences header button[aria-pressed]:last-of-type::before,
+app-forgot-password main > div:first-of-type button:last-of-type::before,
+app-shell .select-none > button:last-of-type::before {
+  background-image: var(--app-flag-en);
+}
+
+app-consent-preferences header button[aria-pressed]:last-of-type::after {
+  content: 'EN';
+}
+
+/* Les textes emoji actuels du centre de préférences sont masqués proprement. */
+app-consent-preferences header button[aria-pressed] {
+  color: transparent;
+}
+
+app-consent-preferences header button[aria-pressed]::after {
+  color: var(--text-muted);
+}
+
+app-consent-preferences header button[aria-pressed].text-brand-cyan::after {
+  color: var(--brand-primary);
+}
+
+/* Mot de passe oublié et shell applicatif : drapeau + code langue. */
+app-forgot-password main > div:first-of-type button,
+app-shell .select-none > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}

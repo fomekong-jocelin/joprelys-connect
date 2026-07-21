@@ -1,0 +1,164 @@
+/*
+ * Raffinement du panneau institutionnel de connexion.
+ * Ce fichier est chargé après login.desktop-polish.css.
+ */
+
+@media (min-width: 1024px) {
+  .login-page .login-brand-panel {
+    background:
+      radial-gradient(circle at 92% 90%, rgba(0, 151, 48, 0.16) 0%, transparent 30%),
+      radial-gradient(circle at 8% 8%, rgba(11, 145, 178, 0.18) 0%, transparent 32%),
+      var(--color-brand-night);
+  }
+
+  .login-page .login-brand-panel::before,
+  .login-page .login-brand-panel::after {
+    display: none;
+  }
+
+  .login-page .login-brand-panel-content {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    align-content: stretch;
+    gap: clamp(2rem, 5vh, 4rem);
+    max-width: 31rem;
+  }
+
+  /* Déclinaison blanche officielle, directement sur le fond bleu. */
+  .login-page .login-brand-panel app-logo {
+    display: inline-flex;
+    width: fit-content;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .login-page .login-brand-panel app-logo img {
+    content: url('/assets/branding/logo_white_blue_bg.png');
+    height: clamp(3.2rem, 4.2vw, 4.5rem);
+    width: auto;
+    max-width: min(100%, 19rem);
+    object-fit: contain;
+  }
+
+  .login-page .login-brand-panel app-logo span {
+    color: #ffffff !important;
+    font-size: clamp(1.45rem, 2vw, 2rem);
+  }
+
+  /* Le panneau présente maintenant la marque, pas le formulaire en double. */
+  .login-page .login-brand-copy {
+    display: block;
+    max-width: 29rem;
+    margin: 0;
+    color: #ffffff;
+  }
+
+  .login-page .login-brand-copy > * {
+    display: none;
+  }
+
+  .login-page .login-brand-copy::before,
+  .login-page .login-brand-copy::after {
+    display: block;
+  }
+
+  .login-page .login-brand-copy::before {
+    content: 'Parce qu’elle est précieuse, nous innovons pour la protéger.';
+    max-width: 28rem;
+    color: #ffffff;
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 3.1vw, 3.35rem);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.045em;
+  }
+
+  .login-page .login-brand-copy::after {
+    content: 'Joprelys Connect sécurise le parcours patient et relie les professionnels de santé dans un espace clinique unique.';
+    max-width: 28rem;
+    margin-top: 1.2rem;
+    color: rgba(255, 255, 255, 0.76);
+    font-size: 0.98rem;
+    line-height: 1.75;
+  }
+
+  .login-page:has(#login-language-en.login-language-active) .login-brand-copy::before {
+    content: 'Because it is precious, we innovate to protect it.';
+  }
+
+  .login-page:has(#login-language-en.login-language-active) .login-brand-copy::after {
+    content: 'Joprelys Connect secures the patient journey and connects healthcare professionals in one clinical workspace.';
+  }
+
+  /* Icône sécurité simple, sans carte, sans orbites ni traits décoratifs. */
+  .login-page .login-brand-visual {
+    display: flex;
+    width: 100%;
+    min-height: 12rem;
+    align-items: center;
+    justify-content: flex-start;
+    margin: 0;
+  }
+
+  .login-page .login-brand-visual::before,
+  .login-page .login-brand-visual::after,
+  .login-page .login-orbit,
+  .login-page .login-brand-cross,
+  .login-page .login-brand-footer,
+  .login-page .login-trust-row {
+    display: none;
+  }
+
+  .login-page .login-brand-shield {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: clamp(6.5rem, 8vw, 8.5rem);
+    height: clamp(6.5rem, 8vw, 8.5rem);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #ffffff;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .login-page .login-brand-shield svg {
+    width: 100%;
+    height: 100%;
+    stroke-width: 1.15;
+    filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.18));
+  }
+
+  .login-page .login-card {
+    box-shadow: 0 14px 36px rgba(0, 29, 74, 0.08);
+  }
+}
+
+@media (max-height: 720px) and (min-width: 1024px) {
+  .login-page .login-brand-panel-content {
+    gap: 1.35rem;
+  }
+
+  .login-page .login-brand-copy::before {
+    font-size: 2rem;
+  }
+
+  .login-page .login-brand-copy::after {
+    margin-top: 0.7rem;
+    font-size: 0.85rem;
+    line-height: 1.55;
+  }
+
+  .login-page .login-brand-visual {
+    min-height: 7rem;
+  }
+
+  .login-page .login-brand-shield {
+    width: 5.5rem;
+    height: 5.5rem;
+  }
+}
