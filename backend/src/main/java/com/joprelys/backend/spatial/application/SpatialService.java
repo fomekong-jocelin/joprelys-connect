@@ -10,7 +10,6 @@ import com.joprelys.backend.spatial.api.BedResponse;
 import com.joprelys.backend.spatial.api.RoomOccupancyResponse;
 import com.joprelys.backend.spatial.api.WardOccupancyResponse;
 import com.joprelys.backend.spatial.api.WardResponse;
-import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentRepository;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedRepository;
@@ -37,6 +36,7 @@ public class SpatialService {
     private final RoomRepository roomRepository;
     private final BedRepository bedRepository;
     private final BedAssignmentRepository bedAssignmentRepository;
+    private final ActiveBedAssignmentService activeBedAssignmentService;
     private final HospitalizationRepository hospitalizationRepository;
     private final UserAccountRepository userAccountRepository;
     private final AuditService auditService;
@@ -46,6 +46,7 @@ public class SpatialService {
             RoomRepository roomRepository,
             BedRepository bedRepository,
             BedAssignmentRepository bedAssignmentRepository,
+            ActiveBedAssignmentService activeBedAssignmentService,
             HospitalizationRepository hospitalizationRepository,
             UserAccountRepository userAccountRepository,
             AuditService auditService) {
@@ -53,6 +54,7 @@ public class SpatialService {
         this.roomRepository = roomRepository;
         this.bedRepository = bedRepository;
         this.bedAssignmentRepository = bedAssignmentRepository;
+        this.activeBedAssignmentService = activeBedAssignmentService;
         this.hospitalizationRepository = hospitalizationRepository;
         this.userAccountRepository = userAccountRepository;
         this.auditService = auditService;
@@ -75,6 +77,7 @@ public class SpatialService {
         List<RoomOccupancyResponse> roomOccupancyResponses = new ArrayList<>();
         int totalBeds = 0;
         int occupiedBeds = 0;
+        int availableBeds = 0;
 
         for (RoomEntity room : rooms) {
             List<BedEntity> beds = bedRepository.findByRoomId(room.getId());
@@ -86,6 +89,9 @@ public class SpatialService {
                 totalBeds++;
                 if (bed.getStatus() == BedStatus.OCCUPIED) {
                     occupiedBeds++;
+                }
+                if (bed.getStatus() == BedStatus.FREE) {
+                    availableBeds++;
                 }
             }
 
@@ -102,7 +108,8 @@ public class SpatialService {
                 ward.getName(),
                 roomOccupancyResponses,
                 totalBeds,
-                occupiedBeds);
+                occupiedBeds,
+                availableBeds);
     }
 
     @Transactional
@@ -113,7 +120,7 @@ public class SpatialService {
 
         if (newStatus == BedStatus.FREE) {
             bedAssignmentRepository.findActiveByBedId(bedId).ifPresent(assignment -> {
-                assignment.setReleasedAt(Instant.now());
+                assignment.releaseAt(Instant.now());
                 bedAssignmentRepository.save(assignment);
             });
         }
@@ -161,8 +168,9 @@ public class SpatialService {
                         "Le lit réservé a disparu pendant la transaction de transfert."));
 
         bedAssignmentRepository.findActiveByHospitalizationId(hospitalizationId).ifPresent(oldAssignment -> {
-            oldAssignment.setReleasedAt(Instant.now());
-            bedAssignmentRepository.save(oldAssignment);
+            oldAssignment.releaseAt(Instant.now());
+            // Rendre la clôture visible à la contrainte d'unicité avant l'insertion de remplacement.
+            bedAssignmentRepository.saveAndFlush(oldAssignment);
 
             BedEntity oldBed = oldAssignment.getBed();
             oldBed.setStatus(BedStatus.CLEANING);
@@ -174,9 +182,10 @@ public class SpatialService {
         hospitalization.setBedNumber(occupiedBed.getBedNumber());
         hospitalizationRepository.save(hospitalization);
 
-        BedAssignmentEntity assignment = new BedAssignmentEntity(hospitalizationId, occupiedBed);
-        assignment.setOrganizationId(hospitalization.getOrganizationId());
-        BedAssignmentEntity savedAssignment = bedAssignmentRepository.save(assignment);
+        var savedAssignment = activeBedAssignmentService.assign(
+                hospitalizationId,
+                occupiedBed,
+                hospitalization.getOrganizationId());
 
         UserAccountEntity actor = getCurrentUser();
         if (actor != null) {

@@ -3,6 +3,7 @@ package com.joprelys.backend.spatial.infrastructure.persistence;
 import jakarta.persistence.*;
 import org.hibernate.annotations.TenantId;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -25,6 +26,12 @@ public class BedAssignmentEntity {
     @Column(name = "released_at")
     private Instant releasedAt;
 
+    @Column(name = "active_bed_id")
+    private UUID activeBedId;
+
+    @Column(name = "active_hospitalization_id")
+    private UUID activeHospitalizationId;
+
     @TenantId
     @Column(name = "organization_id")
     private UUID organizationId;
@@ -37,6 +44,31 @@ public class BedAssignmentEntity {
         this.hospitalizationId = hospitalizationId;
         this.bed = bed;
         this.assignedAt = Instant.now();
+        this.activeBedId = bed.getId();
+        this.activeHospitalizationId = hospitalizationId;
+    }
+
+    @PrePersist
+    @PreUpdate
+    void validateAndSynchronizeActiveMarkers() {
+        validatePeriod();
+        synchronizeActiveMarkers();
+    }
+
+    private void synchronizeActiveMarkers() {
+        boolean active = releasedAt == null;
+        this.activeBedId = active && bed != null ? bed.getId() : null;
+        this.activeHospitalizationId = active ? hospitalizationId : null;
+    }
+
+    private void validatePeriod() {
+        if (assignedAt == null) {
+            throw new IllegalStateException("La date de début de l'affectation est obligatoire.");
+        }
+        if (releasedAt != null && releasedAt.isBefore(assignedAt)) {
+            throw new IllegalArgumentException(
+                    "La date de fin de l'affectation ne peut pas précéder sa date de début.");
+        }
     }
 
     public UUID getId() {
@@ -49,6 +81,7 @@ public class BedAssignmentEntity {
 
     public void setHospitalizationId(UUID hospitalizationId) {
         this.hospitalizationId = hospitalizationId;
+        synchronizeActiveMarkers();
     }
 
     public BedEntity getBed() {
@@ -57,6 +90,7 @@ public class BedAssignmentEntity {
 
     public void setBed(BedEntity bed) {
         this.bed = bed;
+        synchronizeActiveMarkers();
     }
 
     public Instant getAssignedAt() {
@@ -64,15 +98,30 @@ public class BedAssignmentEntity {
     }
 
     public void setAssignedAt(Instant assignedAt) {
-        this.assignedAt = assignedAt;
+        this.assignedAt = Objects.requireNonNull(
+                assignedAt,
+                "La date de début de l'affectation est obligatoire.");
+        validatePeriod();
     }
 
     public Instant getReleasedAt() {
         return releasedAt;
     }
 
-    public void setReleasedAt(Instant releasedAt) {
-        this.releasedAt = releasedAt;
+    public void releaseAt(Instant releasedAt) {
+        this.releasedAt = Objects.requireNonNull(
+                releasedAt,
+                "La date de fin de l'affectation est obligatoire.");
+        validatePeriod();
+        synchronizeActiveMarkers();
+    }
+
+    public UUID getActiveBedId() {
+        return activeBedId;
+    }
+
+    public UUID getActiveHospitalizationId() {
+        return activeHospitalizationId;
     }
 
     public UUID getOrganizationId() {

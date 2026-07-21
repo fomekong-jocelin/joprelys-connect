@@ -17,7 +17,7 @@ import com.joprelys.backend.hospitalization.infrastructure.persistence.Hospitali
 import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.reconciliation.application.PatientCanonicalResolver;
-import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentRepository;
+import com.joprelys.backend.spatial.application.ActiveBedAssignmentService;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedRepository;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedStatus;
@@ -52,7 +52,7 @@ class HospitalizationAdmissionServiceTest {
     @Mock
     private BedRepository bedRepository;
     @Mock
-    private BedAssignmentRepository bedAssignmentRepository;
+    private ActiveBedAssignmentService activeBedAssignmentService;
     @Mock
     private EmergencyRepository emergencyRepository;
     @Mock
@@ -93,7 +93,7 @@ class HospitalizationAdmissionServiceTest {
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
         verify(bedRepository, never()).claimIfFree(any(), any(), any());
         verify(hospitalizationRepository, never()).save(any());
-        verify(bedAssignmentRepository, never()).save(any());
+        verify(activeBedAssignmentService, never()).assign(any(), any(), any());
     }
 
     @Test
@@ -120,7 +120,7 @@ class HospitalizationAdmissionServiceTest {
         assertNotNull(response);
         verify(bedRepository).claimIfFree(bedId, BedStatus.FREE, BedStatus.OCCUPIED);
         verify(hospitalizationRepository).save(any(HospitalizationEntity.class));
-        verify(bedAssignmentRepository).save(any());
+        verify(activeBedAssignmentService).assign(any(), any(), any());
     }
 
     @Test
@@ -143,7 +143,7 @@ class HospitalizationAdmissionServiceTest {
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         verify(hospitalizationRepository, never()).save(any());
-        verify(bedAssignmentRepository, never()).save(any());
+        verify(activeBedAssignmentService, never()).assign(any(), any(), any());
     }
 
     @Test

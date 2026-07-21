@@ -372,7 +372,7 @@ public class HospitalizationService {
 
     private void releaseBedAssignment(UUID hospitalizationId) {
         bedAssignmentRepository.findActiveByHospitalizationId(hospitalizationId).ifPresent(assignment -> {
-            assignment.setReleasedAt(Instant.now());
+            assignment.releaseAt(Instant.now());
             bedAssignmentRepository.save(assignment);
 
             BedEntity bed = assignment.getBed();

@@ -28,6 +28,7 @@ import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -135,6 +136,12 @@ class HospitalizationControllerTest {
         } finally {
             TenantContext.clear();
         }
+    }
+
+    @AfterEach
+    void tearDown() {
+        TenantContext.clear();
+        clearData();
     }
 
     @Test

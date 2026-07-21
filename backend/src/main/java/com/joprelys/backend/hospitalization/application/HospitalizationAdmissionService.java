@@ -12,8 +12,7 @@ import com.joprelys.backend.hospitalization.infrastructure.persistence.Hospitali
 import com.joprelys.backend.patient.domain.PatientIdentityStatus;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.reconciliation.application.PatientCanonicalResolver;
-import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentEntity;
-import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentRepository;
+import com.joprelys.backend.spatial.application.ActiveBedAssignmentService;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedRepository;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedStatus;
@@ -40,7 +39,7 @@ public class HospitalizationAdmissionService {
     private final UserAccountRepository userAccountRepository;
     private final AuditService auditService;
     private final BedRepository bedRepository;
-    private final BedAssignmentRepository bedAssignmentRepository;
+    private final ActiveBedAssignmentService activeBedAssignmentService;
     private final EmergencyRepository emergencyRepository;
     private final PatientCanonicalResolver canonicalResolver;
     private final VisitRepository visitRepository;
@@ -51,7 +50,7 @@ public class HospitalizationAdmissionService {
             UserAccountRepository userAccountRepository,
             AuditService auditService,
             BedRepository bedRepository,
-            BedAssignmentRepository bedAssignmentRepository,
+            ActiveBedAssignmentService activeBedAssignmentService,
             EmergencyRepository emergencyRepository,
             PatientCanonicalResolver canonicalResolver,
             VisitRepository visitRepository,
@@ -60,7 +59,7 @@ public class HospitalizationAdmissionService {
         this.userAccountRepository = userAccountRepository;
         this.auditService = auditService;
         this.bedRepository = bedRepository;
-        this.bedAssignmentRepository = bedAssignmentRepository;
+        this.activeBedAssignmentService = activeBedAssignmentService;
         this.emergencyRepository = emergencyRepository;
         this.canonicalResolver = canonicalResolver;
         this.visitRepository = visitRepository;
@@ -86,9 +85,7 @@ public class HospitalizationAdmissionService {
                 request,
                 visit,
                 emergency));
-        BedAssignmentEntity assignment = new BedAssignmentEntity(saved.getId(), occupiedBed);
-        assignment.setOrganizationId(saved.getOrganizationId());
-        bedAssignmentRepository.save(assignment);
+        activeBedAssignmentService.assign(saved.getId(), occupiedBed, saved.getOrganizationId());
 
         auditAdmission(saved, emergency);
         return HospitalizationResponse.fromEntity(saved);
@@ -244,7 +241,7 @@ public class HospitalizationAdmissionService {
                 "HOSP-%s-%06d",
                 LocalDate.now().format(HOSPITALIZATION_DATE),
                 sequence);
-        return new HospitalizationEntity(
+        HospitalizationEntity hospitalization = new HospitalizationEntity(
                 visit.getPatient().getId(),
                 request.serviceName(),
                 request.roomNumber(),
@@ -254,6 +251,8 @@ public class HospitalizationAdmissionService {
                 visit.getId(),
                 emergency == null ? null : emergency.getId(),
                 request.responsiblePractitionerId());
+        hospitalization.setOrganizationId(visit.getPatient().getOrganizationId());
+        return hospitalization;
     }
 
     private void auditAdmission(HospitalizationEntity hospitalization, EmergencyEntity emergency) {

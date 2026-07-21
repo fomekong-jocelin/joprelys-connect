@@ -1,6 +1,7 @@
 package com.joprelys.backend.spatial.api;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -38,6 +39,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -115,16 +117,7 @@ public class SpatialControllerTest {
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.update("DELETE FROM audit_logs");
-        jdbcTemplate.update("DELETE FROM bed_assignments");
-        jdbcTemplate.update("DELETE FROM hospitalizations");
-        jdbcTemplate.update("DELETE FROM beds");
-        jdbcTemplate.update("DELETE FROM rooms");
-        jdbcTemplate.update("DELETE FROM wards");
-        jdbcTemplate.update("DELETE FROM visits");
-        jdbcTemplate.update("DELETE FROM patients");
-        userAccountRepository.deleteAll();
-        organizationRepository.deleteAll();
+        clearTestData();
 
         org = new OrganizationEntity(
                 "Clinique Spatiale",
@@ -249,6 +242,25 @@ public class SpatialControllerTest {
         TenantContext.clear();
     }
 
+    @AfterEach
+    void tearDown() {
+        clearTestData();
+    }
+
+    private void clearTestData() {
+        TenantContext.clear();
+        jdbcTemplate.update("DELETE FROM audit_logs");
+        jdbcTemplate.update("DELETE FROM bed_assignments");
+        jdbcTemplate.update("DELETE FROM hospitalizations");
+        jdbcTemplate.update("DELETE FROM beds");
+        jdbcTemplate.update("DELETE FROM rooms");
+        jdbcTemplate.update("DELETE FROM wards");
+        jdbcTemplate.update("DELETE FROM visits");
+        jdbcTemplate.update("DELETE FROM patients");
+        userAccountRepository.deleteAll();
+        organizationRepository.deleteAll();
+    }
+
     @Test
     void testListWardsAndOccupancy() throws Exception {
         mockMvc.perform(get("/api/spatial/wards")
@@ -263,8 +275,38 @@ public class SpatialControllerTest {
                 .andExpect(jsonPath("$.name").value("Médecine Hommes"))
                 .andExpect(jsonPath("$.totalBedsCount").value(2))
                 .andExpect(jsonPath("$.occupiedBedsCount").value(1))
+                .andExpect(jsonPath("$.availableBedsCount").value(1))
                 .andExpect(jsonPath("$.rooms[0].roomNumber").value("Chambre 10"))
                 .andExpect(jsonPath("$.rooms[0].beds.length()").value(2));
+    }
+
+    @Test
+    void occupancyShouldOnlyCountFreeBedsAsAvailable() throws Exception {
+        TenantContext.setTenantId(org.getId());
+        try {
+            RoomEntity unavailableRoom = new RoomEntity(ward, "Chambre 11", 2, "STANDARD");
+            unavailableRoom.setOrganizationId(org.getId());
+            unavailableRoom = roomRepository.save(unavailableRoom);
+
+            BedEntity cleaningBed = new BedEntity(unavailableRoom, "Lit 11-A");
+            cleaningBed.setOrganizationId(org.getId());
+            cleaningBed.setStatus(BedStatus.CLEANING);
+            bedRepository.save(cleaningBed);
+
+            BedEntity maintenanceBed = new BedEntity(unavailableRoom, "Lit 11-B");
+            maintenanceBed.setOrganizationId(org.getId());
+            maintenanceBed.setStatus(BedStatus.MAINTENANCE);
+            bedRepository.save(maintenanceBed);
+        } finally {
+            TenantContext.clear();
+        }
+
+        mockMvc.perform(get("/api/spatial/wards/" + ward.getId() + "/occupancy")
+                        .header("Authorization", "Bearer " + tokenDoctor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalBedsCount").value(4))
+                .andExpect(jsonPath("$.occupiedBedsCount").value(1))
+                .andExpect(jsonPath("$.availableBedsCount").value(1));
     }
 
     @Test
@@ -422,6 +464,40 @@ public class SpatialControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(transferRequest))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void transferShouldRollbackWhenTargetBedHasHiddenActiveAssignment() throws Exception {
+        TenantContext.setTenantId(org.getId());
+        try {
+            BedAssignmentEntity hiddenAssignment = new BedAssignmentEntity(hospB.getId(), bedFree);
+            hiddenAssignment.setOrganizationId(org.getId());
+            bedAssignmentRepository.saveAndFlush(hiddenAssignment);
+        } finally {
+            TenantContext.clear();
+        }
+
+        String transferRequest = String.format("""
+                {
+                    "hospitalizationId": "%s",
+                    "newBedId": "%s"
+                }
+                """, hospA.getId(), bedFree.getId());
+
+        mockMvc.perform(post("/api/spatial/transfers")
+                        .header("Authorization", "Bearer " + tokenDoctor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transferRequest))
+                .andExpect(status().isConflict());
+
+        TenantContext.setTenantId(org.getId());
+        try {
+            assertEquals(BedStatus.FREE, bedRepository.findById(bedFree.getId()).orElseThrow().getStatus());
+            assertEquals(BedStatus.OCCUPIED, bedRepository.findById(bedOccupied.getId()).orElseThrow().getStatus());
+            assertTrue(bedAssignmentRepository.findActiveByHospitalizationId(hospA.getId()).isPresent());
+        } finally {
+            TenantContext.clear();
+        }
     }
 
     @Test

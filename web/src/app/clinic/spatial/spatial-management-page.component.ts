@@ -86,7 +86,7 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
                   {{ t('spatial.freeBeds') }}
                 </div>
                 <div class="text-lg font-black" [style.color]="'var(--brand-success)'">
-                  {{ (occupancy()?.totalBedsCount ?? 0) - (occupancy()?.occupiedBedsCount ?? 0) }}
+                  {{ availableBedsCount() }}
                 </div>
               </div>
               <div class="ui-card-muted p-4">
@@ -203,6 +203,8 @@ export class SpatialManagementPageComponent implements OnInit {
   readonly selectedWardId = signal<string>('');
   readonly occupancy = signal<WardOccupancy | null>(null);
   readonly loading = signal<boolean>(false);
+
+  readonly availableBedsCount = computed(() => this.occupancy()?.availableBedsCount ?? 0);
 
   readonly occupancyRate = computed(() => {
     const occ = this.occupancy();

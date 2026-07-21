@@ -304,6 +304,7 @@ export interface WardOccupancy {
   rooms: RoomOccupancy[];
   totalBedsCount: number;
   occupiedBedsCount: number;
+  availableBedsCount: number;
 }
 
 export interface BedAssignment {

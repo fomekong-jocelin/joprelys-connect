@@ -100,3 +100,44 @@ EPIC-0020 est prête au refinement mais ne doit pas être engagée en développe
 - `BUG-20260718-DYNAMIC-PERMISSION-UI-API-MISMATCH` consomme `1,5 j` senior / `5 SP`.
 - Le rôle système médecin ne porte plus les permissions de facturation ; menus, routes, actions et appels API finance/laboratoire utilisent désormais les permissions effectives exactes, y compris pour les rôles personnalisés.
 - La QA technique est verte avec 267 tests Angular et 453 tests Maven ; la recette humaine multi-rôles, le redémarrage backend et le déploiement du build Angular restent à exécuter.
+
+## Cadrage EPIC-0027 — Organisation hospitalière et capacité
+
+EPIC-0027 est proposé à la suite de l'audit AUDIT-20260721. Il représente 143–145 SP après réestimation de HOS-BED-001 et 103–143 jours-personnes, documentation et QA incluses.
+
+- L'epic complet n'est pas engagé dans SPRINT-0014. Quatre incréments P0 bornés, HOS-BED-001-A/B/C et HOS-BED-002-A, soit 11 SP / 7 jours senior, ont été réalisés jusqu'à la QA H2/technique.
+- Le solde de la phase 0 de 12–16 jours-personnes traite les invariants critiques des lits, la disponibilité, la sortie et les permissions ; il doit faire l'objet d'un arbitrage séparé.
+- L'ADR-0002, les workflows médecin/cadre/admissions et la stratégie de migration PostgreSQL sont des préconditions.
+- À 16–20 jours-personnes planifiables par sprint, l'ordre de grandeur global est 6–9 sprints ; aucune date n'est engagée sans capacité nominative.
+
+### Incrément autorisé — HOS-BED-002-A
+
+- Valeur : empêcher l'affichage de lits en nettoyage ou maintenance comme disponibles.
+- Charge : 2 SP / 1 jour senior ajouté à SPRINT-0014.
+- État : QA technique verte — 480 tests Maven, 315 tests Angular et build de production réussis ; 1 test PostgreSQL ignoré faute de Docker.
+- Reste : revue lead, validation cadre infirmier/bed manager et déploiement backend avant frontend.
+- Limite : cet incrément ne vaut ni acceptation d'ADR-0002 ni engagement du reste d'EPIC-0027.
+
+### Incrément autorisé — HOS-BED-001-A
+
+- Valeur : empêcher structurellement deux affectations actives sur un même lit, même si le statut est désynchronisé ou qu'une écriture contourne le claim nominal.
+- Charge : 3 SP / 2 jours senior ajoutés à SPRINT-0014 ; total des incréments lits engagés : 5 SP / 3 jours senior.
+- État : QA H2 verte — 486 tests Maven réussis, migration V76 appliquée ; test PostgreSQL 16 préparé mais ignoré faute de Docker.
+- Reste : préflight des doublons actifs, Testcontainers PostgreSQL 16, revue DBA et validation bed manager.
+- Limite : l'incrément ne couvre ni chevauchements clôturés, ni sortie physique et n'engage pas le reste de HOS-BED-001 ; la FK séjour est traitée séparément par HOS-BED-001-B.
+
+### Incrément autorisé — HOS-BED-001-B
+
+- Valeur : garantir qu'une affectation référence un séjour existant, qu'un séjour ne possède qu'une affectation active et que la fin ne précède jamais le début.
+- Charge : 3 SP / 2 jours senior ajoutés à SPRINT-0014 ; total des incréments lits engagés : 8 SP / 5 jours senior.
+- État : QA H2 verte — 490 tests Maven réussis, migration V77 appliquée ; test PostgreSQL 16 préparé mais ignoré faute de Docker.
+- Reste : exécuter `PRE-MIGRATION-CHECKS.sql`, Testcontainers PostgreSQL 16, puis obtenir les validations DBA, bed manager et DPO sur la conservation restrictive.
+- Limite : l'incrément ne couvre ni chevauchements entre périodes clôturées, ni sortie physique ; la cohérence tenant est traitée séparément par HOS-BED-001-C.
+
+### Incrément autorisé — HOS-BED-001-C
+
+- Valeur : empêcher qu'une affectation relie un séjour, un lit et un établissement appartenant à des tenants différents.
+- Charge : 3 SP / 2 jours senior ajoutés à SPRINT-0014 ; total des incréments lits engagés : 11 SP / 7 jours senior.
+- État : QA H2 verte — 493 tests Maven réussis, migration V78 appliquée ; test PostgreSQL 16 préparé mais ignoré faute de Docker.
+- Reste : exécuter `PRE-MIGRATION-CHECKS.sql`, Testcontainers PostgreSQL 16, puis obtenir les validations DBA, RSSI/DPO et bed manager.
+- Limite : l'incrément ne couvre ni chevauchements entre périodes clôturées, ni cohérence tenant du référentiel spatial complet, ni sortie physique.

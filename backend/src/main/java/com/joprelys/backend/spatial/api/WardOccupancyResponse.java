@@ -8,6 +8,7 @@ public record WardOccupancyResponse(
         String name,
         List<RoomOccupancyResponse> rooms,
         Integer totalBedsCount,
-        Integer occupiedBedsCount
+        Integer occupiedBedsCount,
+        Integer availableBedsCount
 ) {
 }

@@ -89,8 +89,8 @@ class FlywayPostgresqlMigrationTest {
         MigrationInfo current = flyway.info().current();
         assertNotNull(current, "Flyway doit exposer la migration courante");
         assertNotNull(current.getVersion(), "La migration courante doit être versionnée");
-        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 70,
-                "Toutes les migrations, y compris les fondations rendez-vous, doivent être appliquées");
+        assertTrue(Integer.parseInt(current.getVersion().getVersion()) >= 78,
+                "Toutes les migrations, y compris la cohérence tenant des affectations, doivent être appliquées");
 
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword());
@@ -178,6 +178,8 @@ class FlywayPostgresqlMigrationTest {
                 """, Integer.class);
         assertEquals(1, activeSlotIndexCount,
                 "L'index unique anti double réservation uq_appointments_doctor_active_slot doit exister");
+
+        BedAssignmentPostgresqlMigrationAssertions.assertSchemaAndIntegrity(jdbcTemplate);
 
         RECONCILIATION_RESTRICTED_FOREIGN_KEYS.forEach(
                 constraintName -> assertForeignKeyDeleteRule(jdbcTemplate, constraintName, "NO ACTION"));
