@@ -10,7 +10,7 @@ import { EmergencyDocumentApiService } from '../emergency/document/emergency-doc
 import { AlertComponent } from '../shared/ui/alert.component';
 import { ButtonComponent } from '../shared/ui/button.component';
 import { PatientApiService } from './patient-api.service';
-import { PatientIdentityStatus } from './patient.models';
+import { CreateHospitalizationRequest, PatientIdentityStatus } from './patient.models';
 import { SpatialApiService } from './spatial-api.service';
 
 interface FreeBedOption {
@@ -257,7 +257,7 @@ export class EmergencyHospitalizationContinuationComponent {
     this.success.set(null);
     let documentsSecured = true;
 
-    this.patientApi.admitPatient({
+    const request = {
       patientId: this.patientId(),
       serviceName: ward.name,
       roomNumber: bed.roomNumber,
@@ -265,7 +265,9 @@ export class EmergencyHospitalizationContinuationComponent {
       admissionReason: this.admissionReason.trim(),
       emergencyId: this.emergencyId(),
       responsiblePractitionerId: this.responsiblePractitionerId,
-    }).pipe(
+    } as unknown as CreateHospitalizationRequest;
+
+    this.patientApi.admitPatient(request).pipe(
       switchMap(() => this.documentApi.generateBundle(this.emergencyId()).pipe(
         catchError(() => {
           documentsSecured = false;
