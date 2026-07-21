@@ -8,9 +8,11 @@ import { SpatialManagementPageComponent } from './spatial-management-page.compon
 describe('SpatialManagementPageComponent', () => {
   let component: SpatialManagementPageComponent;
   let hasPermission: ReturnType<typeof vi.fn>;
+  let updateBedCapacityStatus: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     hasPermission = vi.fn(() => false);
+    updateBedCapacityStatus = vi.fn(() => of({}));
 
     TestBed.configureTestingModule({
       imports: [SpatialManagementPageComponent],
@@ -23,10 +25,14 @@ describe('SpatialManagementPageComponent', () => {
               id: 'ward-1',
               name: 'Médecine',
               rooms: [],
-              totalBedsCount: 4,
+              totalBedsCount: 6,
+              openBedsCount: 4,
+              readyBedsCount: 3,
               occupiedBedsCount: 1,
-              availableBedsCount: 1,
+              availableBedsCount: 2,
             })),
+            updateBedStatus: vi.fn(() => of({})),
+            updateBedCapacityStatus,
           },
         },
         { provide: I18nService, useValue: { t: (key: string) => key } },
@@ -40,8 +46,14 @@ describe('SpatialManagementPageComponent', () => {
   it('uses the backend availability count instead of total minus occupied', () => {
     component.ngOnInit();
 
-    expect(component.availableBedsCount()).toBe(1);
-    expect(component.occupancy()!.totalBedsCount - component.occupancy()!.occupiedBedsCount).toBe(3);
+    expect(component.availableBedsCount()).toBe(2);
+    expect(component.occupancy()!.totalBedsCount - component.occupancy()!.occupiedBedsCount).toBe(5);
+  });
+
+  it('calculates the occupancy rate against open beds', () => {
+    component.ngOnInit();
+
+    expect(component.occupancyRate()).toBe(25);
   });
 
   it('uses the dedicated operational bed status permission', () => {
@@ -49,5 +61,13 @@ describe('SpatialManagementPageComponent', () => {
 
     expect(component.canModify()).toBe(true);
     expect(hasPermission).toHaveBeenCalledWith('BED_OPERATIONAL_STATUS_MANAGE');
+  });
+
+  it('calls the dedicated capacity endpoint', () => {
+    component.ngOnInit();
+
+    component.changeBedCapacityStatus('bed-1', 'CLOSED');
+
+    expect(updateBedCapacityStatus).toHaveBeenCalledWith('bed-1', 'CLOSED');
   });
 });
