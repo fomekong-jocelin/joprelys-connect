@@ -1,6 +1,7 @@
 package com.joprelys.backend.spatial.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -124,7 +125,7 @@ class SpatialServiceBedStatusTest {
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         assertEquals(BedStatus.CLEANING, bed.getStatus());
-        assertEquals(null, assignment.getReleasedAt());
+        assertNull(assignment.getReleasedAt());
         verify(bedAssignmentRepository, never()).save(any(BedAssignmentEntity.class));
     }
 
