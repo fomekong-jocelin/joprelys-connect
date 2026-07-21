@@ -6,9 +6,9 @@ Architecture + Engineering, rattachée à `EPIC-0027 / HOS-BED-001-D`.
 
 ## Statut
 
-IMPLEMENTED / QA TECHNIQUE EN COURS — PR empilée #99.
+QA TECHNIQUE VERTE / VALIDATIONS DBA ET MÉTIER REQUISES — PR empilée #99.
 
-La PR cible temporairement la branche de #98 afin de réutiliser son correctif de validation PostgreSQL sans duplication. Elle devra être retargetée vers `main` après fusion ou reprise du prérequis.
+La PR est empilée sur la branche de #98 afin de réutiliser son correctif de validation PostgreSQL sans duplication. Elle devra être retargetée vers `main` après fusion ou reprise du prérequis.
 
 ## Objectif
 
@@ -59,6 +59,20 @@ Le schéma actuel utilise `TIMESTAMP WITHOUT TIME ZONE`; `tsrange` est donc coh�
 - `PRE-MIGRATION-CHECKS.sql` ;
 - `QUARANTINE-APPROVED-ASSIGNMENTS.sql`.
 
+## Validation automatisée
+
+CI `Joprelys Connect — CI Pipeline`, run **916** :
+
+- backend Maven `clean verify` strict : succès ;
+- migrations Flyway H2 : succès ;
+- Testcontainers PostgreSQL 16 : succès ;
+- échec contrôlé de V80 en présence d'un overlap : succès ;
+- quarantaine puis relance de V80 : succès ;
+- extension `btree_gist` et contrainte GiST : succès ;
+- adjacence, autre lit et correction rétroactive : succès ;
+- tests Angular : succès ;
+- build Angular production : succès.
+
 ## Definition of Ready
 
 - [x] Docker/Testcontainers PostgreSQL 16 disponible dans la CI.
@@ -71,13 +85,13 @@ Le schéma actuel utilise `TIMESTAMP WITHOUT TIME ZONE`; `tsrange` est donc coh�
 
 - [x] documentation fonctionnelle et technique créée ;
 - [x] ADR ajouté pour la stratégie PostgreSQL non portable ;
-- [ ] migration et suites complètes vertes sous PostgreSQL 16 ;
+- [x] migration et suites complètes vertes sous PostgreSQL 16 ;
 - [x] adjacence, overlap, lits différents et corrections rétroactives couverts ;
 - [x] aucun historique supprimé automatiquement ;
 - [x] plan de déploiement, quarantaine et rollback documenté ;
 - [ ] revue DBA et bed manager ;
 - [ ] préflight sur copie représentative ;
-- [ ] changelog, tracking global et matrice d'audit finalisés après QA verte.
+- [ ] changelog, tracking global et matrice d'audit finalisés après validation externe.
 
 ## Sécurité / régression
 
@@ -89,9 +103,8 @@ Le prototype n'expose aucun nom, contact, diagnostic ou donnée clinique. Les sc
 
 ## Reste à faire
 
-1. obtenir la CI verte de #99 ;
-2. faire valider l'ADR et l'extension par le DBA ;
-3. faire signer la sémantique des bornes par le bed manager ;
-4. exécuter le préflight sur une copie anonymisée représentative ;
-5. retargeter #99 vers `main` après traitement de #98 ;
-6. mettre à jour le suivi global après validation.
+1. faire valider l'ADR et l'extension par le DBA ;
+2. faire signer la sémantique des bornes par le bed manager ;
+3. exécuter le préflight sur une copie anonymisée représentative ;
+4. retargeter #99 vers `main` après traitement de #98 ;
+5. mettre à jour le suivi global après validation externe.
