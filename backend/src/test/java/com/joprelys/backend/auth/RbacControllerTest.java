@@ -205,6 +205,29 @@ class RbacControllerTest {
     }
 
     @Test
+    void shouldKeepBadRequestForClinicRoleThatIsNotAssignable() throws Exception {
+        String createResponse = mockMvc.perform(post("/api/rbac/roles")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "code", "ROLE_NON_ATTRIBUABLE_TEST",
+                                "name", "Rôle non attribuable test",
+                                "assignable", false,
+                                "permissionCodes", List.of("USER_READ")))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.assignable").value(false))
+                .andReturn().getResponse().getContentAsString();
+
+        UUID nonAssignableRoleId = UUID.fromString(objectMapper.readTree(createResponse).get("id").asText());
+        mockMvc.perform(put("/api/rbac/users/" + staff.getId() + "/roles")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "roleIds", List.of(nonAssignableRoleId)))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void shouldRejectPlatformPermissionInCustomRole() throws Exception {
         mockMvc.perform(post("/api/rbac/roles")
                         .header("Authorization", "Bearer " + adminToken)
