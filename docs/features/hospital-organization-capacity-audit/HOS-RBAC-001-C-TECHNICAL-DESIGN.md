@@ -9,9 +9,10 @@ Supprimer l’usage opérationnel de `HOSPITALIZATION_MANAGE` et appliquer une p
 1. **Une permission par intention métier** : l’autorisation suit la commande, pas l’écran.
 2. **Pas de fallback legacy** : le super-droit historique ne doit pas continuer à ouvrir toutes les actions.
 3. **Nommage fidèle** : une administration médicamenteuse n’est pas une prescription.
-4. **Deny by default** : toute nouvelle zone de l’interface retourne `false` si elle n’est pas explicitement mappée.
-5. **Backend source de vérité** : la visibilité Angular ne remplace jamais `@PreAuthorize`.
-6. **Migration explicite des rôles personnalisés** : aucune expansion silencieuse du super-droit.
+4. **Compatibilité explicite** : préserver les actes déjà réalisables par le médecin avec des droits distincts et révocables, jamais avec le super-droit.
+5. **Deny by default** : toute nouvelle zone de l’interface retourne `false` si elle n’est pas explicitement mappée.
+6. **Backend source de vérité** : la visibilité Angular ne remplace jamais `@PreAuthorize`.
+7. **Migration explicite des rôles personnalisés** : aucune expansion silencieuse du super-droit.
 
 ## 3. Catalogue
 
@@ -35,6 +36,9 @@ MEDECIN
   + ADMIT
   + NOTE_WRITE
   + CONSENT_RECORD
+  + CARE_RECORD
+  + MEDICATION_ADMINISTER
+  + CONSUMABLE_RECORD
   + TRANSFER
   + DISCHARGE_DECIDE
 
@@ -53,6 +57,8 @@ RESPONSABLE_HOSPITALISATION
   + BED_CLEANING_MANAGE
   + BED_MAINTENANCE_MANAGE
 ```
+
+Le médecin et l’infirmier peuvent tracer un soin, une administration ou un consommable qu’ils ont effectivement réalisé. Chaque permission reste indépendante et peut être retirée dans un rôle personnalisé. `MEDICATION_ADMINISTER` n’autorise aucune prescription.
 
 `ADMIN_CLINIQUE` reçoit les permissions dédiées via le catalogue complet de l’établissement. Les rôles hygiène et maintenance ne reçoivent aucune écriture clinique.
 
@@ -107,6 +113,7 @@ Le bootstrap remappe les rôles système, mais ne doit pas prendre de décision 
 - chaque permission est enregistrée ;
 - droits positifs attendus par rôle ;
 - droits négatifs sensibles par rôle ;
+- compatibilité du parcours médecin démontrée avec les nouveaux droits ;
 - aucune écriture clinique pour hygiène/maintenance ;
 - aucun `HOSPITALIZATION_MANAGE` pour les trois rôles opérationnels historiques.
 
