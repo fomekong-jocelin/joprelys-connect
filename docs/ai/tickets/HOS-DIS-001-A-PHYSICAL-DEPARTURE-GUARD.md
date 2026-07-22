@@ -7,7 +7,7 @@
 - **Audit** : AUDIT-20260721
 - **Écarts réduits** : GAP-008, GAP-006 et GAP-016
 - **Priorité** : Critique / phase 0
-- **Statut** : IMPLEMENTED / QA EN COURS
+- **Statut** : IMPLEMENTED / QA AUTOMATISÉE VALIDÉE
 - **PR** : #103
 
 ## Problème
@@ -105,6 +105,23 @@ Les sorties historiques sont considérées comme décidées et physiquement réa
 - [x] Le contre avis médical n'est final qu'après le départ réel.
 - [x] Les sorties historiques sont migrées sans perte.
 
+## Validation automatisée
+
+CI **Joprelys Connect — CI Pipeline**, run **934** :
+
+- backend Maven `clean verify` strict : succès ;
+- migration V83 dans la chaîne H2 et PostgreSQL 16/Testcontainers : succès ;
+- décision médicale sans clôture du séjour ni de l'affectation : succès ;
+- refus du départ sans décision préalable : succès ;
+- refus du départ au médecin et contrôle de la permission dédiée : succès ;
+- confirmation par le responsable hospitalisation : succès ;
+- libération de l'affectation, passage du lit en nettoyage et PDF uniquement au départ réel : succès ;
+- blocage du transfert après la décision : succès ;
+- tests Angular : succès ;
+- build Angular de production : succès.
+
+Le premier passage frontend a détecté une erreur de typage limitée au test du dialogue. Le tableau de boutons est désormais explicitement typé `HTMLButtonElement[]` ; aucune règle métier ni permission n'a été assouplie.
+
 ## Risques résiduels
 
 - La clearance administrative et financière n'est pas encore séparée.
@@ -113,7 +130,7 @@ Les sorties historiques sont considérées comme décidées et physiquement réa
 - Le nettoyage est encore un état, pas une tâche de turnover assignée et horodatée.
 - Le rôle autorisé à confirmer le départ doit être validé par les établissements et le RSSI.
 
-## Validation automatisée attendue
+## Commandes de validation
 
 ```bash
 cd backend
@@ -135,7 +152,8 @@ npm run build
 - [x] transfert post-décision interdit ;
 - [x] interface et dialogue ajoutés ;
 - [x] tests unitaires, intégration et sécurité ajoutés ;
-- [ ] CI complète verte ;
+- [x] CI complète verte ;
+- [x] contrat API actualisé ;
+- [x] matrice d'audit actualisée après QA automatisée ;
 - [ ] recette métier avec médecin et responsable hospitalisation ;
-- [ ] validation RSSI et direction hospitalière ;
-- [ ] matrice d'audit actualisée après QA.
+- [ ] validation RSSI et direction hospitalière.
