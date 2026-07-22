@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { I18nService } from '../core/i18n/i18n.service';
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { Hospitalization } from './patient.models';
@@ -58,7 +58,13 @@ export class HospitalizationStayHeaderComponent {
   private readonly i18n = inject(I18nService);
   private readonly rbacApi = inject(RbacApiService);
 
-  readonly canTransfer = computed(() => this.rbacApi.hasPermission('HOSPITALIZATION_TRANSFER'));
-  readonly canDischarge = computed(() => this.rbacApi.hasPermission('HOSPITALIZATION_DISCHARGE_DECIDE'));
   readonly t = (key: string, defaultValue: string) => this.i18n.t(key, defaultValue);
+
+  canTransfer(): boolean {
+    return this.rbacApi.hasPermission('HOSPITALIZATION_TRANSFER');
+  }
+
+  canDischarge(): boolean {
+    return this.rbacApi.hasPermission('HOSPITALIZATION_DISCHARGE_DECIDE');
+  }
 }
