@@ -3,6 +3,7 @@ package com.joprelys.backend.database;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -134,40 +135,41 @@ final class BedAssignmentPostgresqlMigrationAssertions {
                     responsible_name, api_enabled, created_at, updated_at
                 ) VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', 'CLINIC', 'Cameroun', 'Responsable', TRUE, ?, ?)
                 """, organizationId, "Clinique intégrité lit", "bed-integrity@joprelys.local",
-                "000", "Adresse test", "Douala", now, now);
+                "000", "Adresse test", "Douala", timestamp(now), timestamp(now));
         jdbcTemplate.update("""
                 INSERT INTO organizations (
                     id, name, email, phone, address, city, status, type, country,
                     responsible_name, api_enabled, created_at, updated_at
                 ) VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', 'CLINIC', 'Cameroun', 'Responsable', TRUE, ?, ?)
                 """, otherOrganizationId, "Autre clinique intégrité lit",
-                "other-bed-integrity@joprelys.local", "000", "Autre adresse test", "Yaoundé", now, now);
+                "other-bed-integrity@joprelys.local", "000", "Autre adresse test", "Yaoundé",
+                timestamp(now), timestamp(now));
         jdbcTemplate.update("""
                 INSERT INTO patients (
                     id, organization_id, global_patient_number, local_patient_number,
                     full_name, gender, birth_date, phone, city, status, created_at, updated_at
                 ) VALUES (?, ?, 'DPU-BED-PG', 'PAT-BED-PG', 'Patient intégrité',
                     'MASCULIN', ?, '+237600000000', 'Douala', 'ACTIVE', ?, ?)
-                """, patientId, organizationId, LocalDate.of(1990, 1, 1), now, now);
+                """, patientId, organizationId, LocalDate.of(1990, 1, 1), timestamp(now), timestamp(now));
         jdbcTemplate.update("""
                 INSERT INTO wards (id, name, organization_id, created_at, updated_at, service_type)
                 VALUES (?, 'Hospitalisation', ?, ?, ?, 'HOSPITALIZATION')
-                """, wardId, organizationId, now, now);
+                """, wardId, organizationId, timestamp(now), timestamp(now));
         jdbcTemplate.update("""
                 INSERT INTO rooms (
                     id, ward_id, room_number, capacity, comfort_level, organization_id, created_at, updated_at
                 ) VALUES (?, ?, '101', 2, 'STANDARD', ?, ?, ?)
-                """, roomId, wardId, organizationId, now, now);
+                """, roomId, wardId, organizationId, timestamp(now), timestamp(now));
         jdbcTemplate.update("""
                 INSERT INTO beds (
                     id, room_id, bed_number, status, organization_id, version, created_at, updated_at
                 ) VALUES (?, ?, '101-A', 'OCCUPIED', ?, 0, ?, ?)
-                """, firstBedId, roomId, organizationId, now, now);
+                """, firstBedId, roomId, organizationId, timestamp(now), timestamp(now));
         jdbcTemplate.update("""
                 INSERT INTO beds (
                     id, room_id, bed_number, status, organization_id, version, created_at, updated_at
                 ) VALUES (?, ?, '101-B', 'FREE', ?, 0, ?, ?)
-                """, secondBedId, roomId, organizationId, now, now);
+                """, secondBedId, roomId, organizationId, timestamp(now), timestamp(now));
         insertHospitalization(
                 jdbcTemplate,
                 firstHospitalizationId,
@@ -268,7 +270,7 @@ final class BedAssignmentPostgresqlMigrationAssertions {
                     id, hospitalization_id, bed_id, assigned_at, released_at,
                     active_bed_id, active_hospitalization_id, organization_id
                 ) VALUES (?, ?, ?, ?, NULL, ?, ?, ?)
-                """, UUID.randomUUID(), hospitalizationId, bedId, assignedAt,
+                """, UUID.randomUUID(), hospitalizationId, bedId, timestamp(assignedAt),
                 bedId, hospitalizationId, organizationId);
     }
 
@@ -284,7 +286,8 @@ final class BedAssignmentPostgresqlMigrationAssertions {
                     id, hospitalization_id, bed_id, assigned_at, released_at,
                     active_bed_id, active_hospitalization_id, organization_id
                 ) VALUES (?, ?, ?, ?, ?, NULL, NULL, ?)
-                """, UUID.randomUUID(), hospitalizationId, bedId, assignedAt, releasedAt, organizationId);
+                """, UUID.randomUUID(), hospitalizationId, bedId,
+                timestamp(assignedAt), timestamp(releasedAt), organizationId);
     }
 
     private static void insertHospitalization(
@@ -295,6 +298,7 @@ final class BedAssignmentPostgresqlMigrationAssertions {
             String hospitalizationNumber,
             String bedNumber,
             Instant admittedAt) {
+        Timestamp admittedTimestamp = timestamp(admittedAt);
         jdbcTemplate.update("""
                 INSERT INTO hospitalizations (
                     id, patient_id, organization_id, version, service_name, room_number,
@@ -303,6 +307,10 @@ final class BedAssignmentPostgresqlMigrationAssertions {
                 ) VALUES (?, ?, ?, 0, 'Hospitalisation', '101', ?, 'Test intégrité', ?,
                     'EN_COURS', ?, ?, ?)
                 """, hospitalizationId, patientId, organizationId, bedNumber,
-                hospitalizationNumber, admittedAt, admittedAt, admittedAt);
+                hospitalizationNumber, admittedTimestamp, admittedTimestamp, admittedTimestamp);
+    }
+
+    private static Timestamp timestamp(Instant instant) {
+        return Timestamp.from(instant);
     }
 }
