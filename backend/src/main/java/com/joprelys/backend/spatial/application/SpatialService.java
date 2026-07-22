@@ -149,7 +149,7 @@ public class SpatialService {
                 bed.getCapacityStatus(),
                 hasActiveAssignment);
 
-        return persistReadinessChange(
+        return persistLegacyStatusChange(
                 bed,
                 newStatus,
                 hasActiveAssignment,
@@ -168,9 +168,9 @@ public class SpatialService {
                 bed.getCapacityStatus(),
                 hasActiveAssignment);
 
-        return persistReadinessChange(
+        return persistReadinessAxisChange(
                 bed,
-                legacyStatus(newReadinessStatus),
+                newReadinessStatus,
                 hasActiveAssignment,
                 "UPDATE_BED_CLEANING",
                 "Circuit de nettoyage");
@@ -187,9 +187,9 @@ public class SpatialService {
                 bed.getCapacityStatus(),
                 hasActiveAssignment);
 
-        return persistReadinessChange(
+        return persistReadinessAxisChange(
                 bed,
-                legacyStatus(newReadinessStatus),
+                newReadinessStatus,
                 hasActiveAssignment,
                 "UPDATE_BED_MAINTENANCE",
                 "Circuit de maintenance");
@@ -286,7 +286,7 @@ public class SpatialService {
         return BedAssignmentResponse.fromEntity(savedAssignment);
     }
 
-    private BedResponse persistReadinessChange(
+    private BedResponse persistLegacyStatusChange(
             BedEntity bed,
             BedStatus newStatus,
             boolean hasActiveAssignment,
@@ -307,12 +307,25 @@ public class SpatialService {
         return BedResponse.fromEntity(saved, false);
     }
 
-    private BedStatus legacyStatus(BedReadinessStatus readinessStatus) {
-        return switch (readinessStatus) {
-            case READY -> BedStatus.FREE;
-            case CLEANING -> BedStatus.CLEANING;
-            case MAINTENANCE -> BedStatus.MAINTENANCE;
-        };
+    private BedResponse persistReadinessAxisChange(
+            BedEntity bed,
+            BedReadinessStatus newReadinessStatus,
+            boolean hasActiveAssignment,
+            String auditAction,
+            String auditLabel) {
+        if (bed.getReadinessStatus() == newReadinessStatus) {
+            return BedResponse.fromEntity(bed, hasActiveAssignment);
+        }
+
+        BedReadinessStatus previousStatus = bed.getReadinessStatus();
+        bed.setReadinessStatus(newReadinessStatus);
+        BedEntity saved = bedRepository.save(bed);
+        auditBedChange(
+                saved,
+                auditAction,
+                auditLabel + " du lit " + saved.getBedNumber()
+                        + " : " + previousStatus + " → " + newReadinessStatus);
+        return BedResponse.fromEntity(saved, false);
     }
 
     private BedEntity requireBed(UUID bedId) {
