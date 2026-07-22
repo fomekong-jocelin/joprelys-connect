@@ -56,7 +56,7 @@ class BedStateHistoryPostgresqlMigrationTest {
                 bedId, roomId, "101-A", "FREE", organizationId, 0, Timestamp.from(now), Timestamp.from(now));
 
         jdbc.update(
-                "INSERT INTO bed_state_changes(id, organization_id, bed_id, axis, previous_value, new_value, reason_code, actor_display_name, source, occurred_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO bed_state_changes(id, organization_id, bed_id, state_axis, previous_value, new_value, reason_code, actor_display_name, source, occurred_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 UUID.randomUUID(), organizationId, bedId, "CAPACITY", "OPEN", "CLOSED",
                 "CAPACITY_SAFETY", "Responsable hospitalisation", "MANUAL", Timestamp.from(now));
 
@@ -67,12 +67,12 @@ class BedStateHistoryPostgresqlMigrationTest {
         assertEquals(1, historyCount);
 
         assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(
-                "INSERT INTO bed_state_changes(id, organization_id, bed_id, axis, previous_value, new_value, reason_code, actor_display_name, source, occurred_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO bed_state_changes(id, organization_id, bed_id, state_axis, previous_value, new_value, reason_code, actor_display_name, source, occurred_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 UUID.randomUUID(), organizationId, bedId, "UNKNOWN", "OPEN", "CLOSED",
                 "CAPACITY_SAFETY", "Responsable hospitalisation", "MANUAL", Timestamp.from(now)));
 
         assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(
-                "INSERT INTO bed_state_changes(id, organization_id, bed_id, axis, previous_value, new_value, reason_code, actor_display_name, source, occurred_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO bed_state_changes(id, organization_id, bed_id, state_axis, previous_value, new_value, reason_code, actor_display_name, source, occurred_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 UUID.randomUUID(), otherOrganizationId, bedId, "CAPACITY", "OPEN", "CLOSED",
                 "CAPACITY_SAFETY", "Responsable hospitalisation", "MANUAL", Timestamp.from(now)));
 
