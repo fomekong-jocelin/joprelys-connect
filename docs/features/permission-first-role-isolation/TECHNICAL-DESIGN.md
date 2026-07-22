@@ -22,6 +22,8 @@
 - `RbacApiService` expose strictement les permissions reçues ; aucune relation d'implication n'est appliquée côté navigateur.
 - Les politiques des destinations composites sont partagées entre navigation et routes afin d'empêcher leur dérive.
 - Un écran composite choisit le premier onglet réellement autorisé et ne lance que les appels correspondant aux permissions présentes.
+- `RbacCatalog` est la source canonique du caractère attribuable des rôles système. `ADMIN_JOPRELYS` et `SUPER_ADMIN` restent `assignable=false` dans le contexte clinique ; aucun initializer secondaire ne doit inverser cette règle en base.
+- Dans `RbacAdministrationService.replaceUserRoles`, l'interdiction explicite d'un rôle plateforme est évaluée avant le contrôle générique `enabled/assignable`, afin de produire un `403` stable pour une tentative d'escalade et de conserver le `400` pour un rôle clinique désactivé/non attribuable.
 
 ## Migration
 
@@ -29,6 +31,7 @@
 - Lots EPIC-0026 : matrice canonique, routes/menus, tous les contrôleurs contenant encore
   `hasRole`/`hasAnyRole`, suppression des fallbacks des contrôleurs déjà permission-aware,
   capacités patient dédiées et tests matriciels.
+- Correctif Go-Live : supprimer toute politique de démarrage qui force les rôles plateforme à `assignable=true` et renforcer les tests du contrat `403` plateforme / `400` rôle clinique non attribuable.
 - Chaque lot conserve les contrats métier et ajoute des tests 200/403 par rôle.
 
 ## Catalogue ajouté
