@@ -12,7 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
-@ConditionalOnProperty(prefix = "joprelys.seed", name = "admin.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "joprelys.seed.admin", name = "enabled", havingValue = "true", matchIfMissing = false)
 public class AdminUserSeeder implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(AdminUserSeeder.class);
@@ -34,13 +34,13 @@ public class AdminUserSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) {
         if (!properties.isComplete()) {
-            log.info("Propriétés d'initialisation de l'administrateur désactivées. Initialisation ignorée.");
-            return;
+            throw new IllegalStateException(
+                    "Configuration du bootstrap administrateur incomplète : email, nom et mot de passe sont obligatoires.");
         }
 
-        String email = valueOrDefault(properties.email(), "admin@joprelys.local").toLowerCase(Locale.ROOT);
-        String name = valueOrDefault(properties.name(), "Administrateur Joprelys");
-        String password = passwordOrDefault(properties.password());
+        String email = properties.email().trim().toLowerCase(Locale.ROOT);
+        String name = properties.name().trim();
+        String password = properties.password();
 
         if (userAccountRepository.existsByEmail(email)) {
             log.info("L'administrateur avec l'email '{}' existe déjà en base de données.", email);
@@ -54,13 +54,5 @@ public class AdminUserSeeder implements CommandLineRunner {
                 ADMIN_ROLE,
                 passwordEncoder.encode(password)));
         log.info("Administrateur créé avec succès en base de données.");
-    }
-
-    private String valueOrDefault(String value, String defaultValue) {
-        return value != null && !value.isBlank() ? value.trim() : defaultValue;
-    }
-
-    private String passwordOrDefault(String value) {
-        return value != null && !value.isBlank() ? value : "Re12#He10@2021!";
     }
 }
