@@ -35,6 +35,20 @@ export class SpatialApiService {
     return this.http.post<BedCapacityView>(`/api/spatial/beds/${bedId}/status`, { status });
   }
 
+  updateBedCleaningStatus(
+    bedId: string,
+    status: 'CLEANING' | 'READY',
+  ): Observable<BedCapacityView> {
+    return this.http.post<BedCapacityView>(`/api/spatial/beds/${bedId}/cleaning-status`, { status });
+  }
+
+  updateBedMaintenanceStatus(
+    bedId: string,
+    status: 'MAINTENANCE' | 'READY',
+  ): Observable<BedCapacityView> {
+    return this.http.post<BedCapacityView>(`/api/spatial/beds/${bedId}/maintenance-status`, { status });
+  }
+
   updateBedCapacityStatus(bedId: string, status: BedCapacityStatus): Observable<BedCapacityView> {
     return this.http.post<BedCapacityView>(`/api/spatial/beds/${bedId}/capacity-status`, { status });
   }
