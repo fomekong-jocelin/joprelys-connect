@@ -34,15 +34,17 @@ export class PatientHospitalizationComponent implements OnInit {
   readonly staffList = signal<any[]>([]);
   readonly patientVisits = signal<any[]>([]);
 
-  // Modales
   readonly showAdmitModal = signal<boolean>(false);
   readonly showDischargeModal = signal<boolean>(false);
+  readonly showPhysicalDepartureModal = signal<boolean>(false);
   readonly showTransferModal = signal<boolean>(false);
   readonly admitError = signal<string | null>(null);
   readonly transferError = signal<string | null>(null);
   readonly transferSuccessMsg = signal<string | null>(null);
+  readonly dischargeError = signal<string | null>(null);
+  readonly physicalDepartureError = signal<string | null>(null);
+  readonly physicalDepartureSubmitting = signal(false);
 
-  // Consentements
   readonly consents = signal<any[]>([]);
   readonly showAddConsent = signal<boolean>(false);
   consentType = 'ANESTHESIA';
@@ -52,7 +54,6 @@ export class PatientHospitalizationComponent implements OnInit {
 
   activeTab = 'notes';
 
-  // Bloc opératoire & CRO
   readonly operatingReports = signal<any[]>([]);
   readonly showAddReport = signal<boolean>(false);
   procedureName = '';
@@ -74,13 +75,11 @@ export class PatientHospitalizationComponent implements OnInit {
   newImplantPrice = 0.0;
   newImplantManufacturer = '';
 
-  // Spatiale & Admission/Transfert
   readonly wards = signal<Ward[]>([]);
   readonly freeBeds = signal<{ id: string; roomNumber: string; bedNumber: string }[]>([]);
   readonly selectedWardId = signal<string>('');
   readonly selectedBedId = signal<string>('');
 
-  // Formulaire d'admission
   serviceName = 'MÉDECINE GÉNÉRALE';
   roomNumber = '';
   bedNumber = '';
@@ -88,17 +87,16 @@ export class PatientHospitalizationComponent implements OnInit {
   visitId = '';
   responsiblePractitionerId = '';
 
-  // Formulaire de sortie
   dischargeDiagnosis = '';
   dischargeInstructions = '';
   againstMedicalAdvice = false;
+  physicalDepartureNote = '';
 
-
-  readonly activeHospitalization = computed(() => 
+  readonly activeHospitalization = computed(() =>
     this.list().find(h => h.status === 'EN_COURS') ?? null
   );
 
-  readonly pastHospitalizations = computed(() => 
+  readonly pastHospitalizations = computed(() =>
     this.list().filter(h => h.status !== 'EN_COURS')
   );
 
@@ -149,7 +147,6 @@ export class PatientHospitalizationComponent implements OnInit {
     });
   }
 
-
   hasRole(roleStr: string | undefined, allowedRoles: string[] | string): boolean {
     if (!roleStr) return false;
     const roles = roleStr.split(',').map((r) => r.trim());
@@ -168,7 +165,6 @@ export class PatientHospitalizationComponent implements OnInit {
       next: (data) => {
         this.wards.set(data);
         if (data.length > 0) {
-          // Preselect ward matching current serviceName or first ward
           const currentWard = data.find(w => w.name.toLowerCase() === this.serviceName.toLowerCase()) || data[0];
           this.selectedWardId.set(currentWard.id);
           this.serviceName = currentWard.name;
@@ -264,6 +260,9 @@ export class PatientHospitalizationComponent implements OnInit {
   }
 
   openTransferModal(): void {
+    const active = this.activeHospitalization();
+    if (!active || active.dischargeDecidedAt) return;
+
     this.transferError.set(null);
     this.transferSuccessMsg.set(null);
     this.selectedWardId.set('');
@@ -273,8 +272,7 @@ export class PatientHospitalizationComponent implements OnInit {
     this.spatialApi.listWards().subscribe({
       next: (data) => {
         this.wards.set(data);
-        const active = this.activeHospitalization();
-        if (active && data.length > 0) {
+        if (data.length > 0) {
           const currentWard = data.find(w => w.name.toLowerCase() === active.serviceName.toLowerCase()) || data[0];
           this.selectedWardId.set(currentWard.id);
           this.loadFreeBedsForWard(currentWard.id);
@@ -288,7 +286,7 @@ export class PatientHospitalizationComponent implements OnInit {
     event.preventDefault();
     const active = this.activeHospitalization();
     const bedId = this.selectedBedId();
-    if (!active || !bedId) return;
+    if (!active || active.dischargeDecidedAt || !bedId) return;
 
     this.transferError.set(null);
     this.transferSuccessMsg.set(null);
@@ -307,19 +305,23 @@ export class PatientHospitalizationComponent implements OnInit {
     });
   }
 
-
   openDischargeModal(): void {
+    const active = this.activeHospitalization();
+    if (!active || active.dischargeDecidedAt) return;
+
     this.dischargeDiagnosis = '';
     this.dischargeInstructions = '';
     this.againstMedicalAdvice = false;
+    this.dischargeError.set(null);
     this.showDischargeModal.set(true);
   }
 
   saveDischarge(event: Event): void {
     event.preventDefault();
     const active = this.activeHospitalization();
-    if (!active || !this.dischargeDiagnosis.trim() || !this.dischargeInstructions.trim()) return;
+    if (!active || active.dischargeDecidedAt || !this.dischargeDiagnosis.trim() || !this.dischargeInstructions.trim()) return;
 
+    this.dischargeError.set(null);
     this.patientApi.dischargePatient(active.id, {
       dischargeDiagnosis: this.dischargeDiagnosis.trim(),
       dischargeInstructions: this.dischargeInstructions.trim(),
@@ -328,6 +330,41 @@ export class PatientHospitalizationComponent implements OnInit {
       next: () => {
         this.showDischargeModal.set(false);
         this.loadHospitalizations();
+      },
+      error: (err) => {
+        this.dischargeError.set(err.error?.detail || err.error?.title || this.t('patients.hospitalization.dischargeError', 'Impossible d’enregistrer la décision médicale de sortie.'));
+      }
+    });
+  }
+
+  openPhysicalDepartureModal(): void {
+    const active = this.activeHospitalization();
+    if (!active?.dischargeDecidedAt || active.physicalDepartureAt) return;
+
+    this.physicalDepartureNote = '';
+    this.physicalDepartureError.set(null);
+    this.showPhysicalDepartureModal.set(true);
+  }
+
+  savePhysicalDeparture(event: Event): void {
+    event.preventDefault();
+    const active = this.activeHospitalization();
+    if (!active?.dischargeDecidedAt || active.physicalDepartureAt || this.physicalDepartureSubmitting()) return;
+
+    this.physicalDepartureError.set(null);
+    this.physicalDepartureSubmitting.set(true);
+    this.patientApi.confirmPhysicalDeparture(active.id, {
+      confirmed: true,
+      note: this.physicalDepartureNote.trim() || undefined,
+    }).subscribe({
+      next: () => {
+        this.physicalDepartureSubmitting.set(false);
+        this.showPhysicalDepartureModal.set(false);
+        this.loadHospitalizations();
+      },
+      error: (err) => {
+        this.physicalDepartureSubmitting.set(false);
+        this.physicalDepartureError.set(err.error?.detail || err.error?.title || this.t('patients.hospitalization.physicalDepartureError', 'Impossible de confirmer le départ physique.'));
       }
     });
   }
@@ -481,7 +518,7 @@ export class PatientHospitalizationComponent implements OnInit {
 
   validateReport(reportId: string): void {
     if (!confirm('Êtes-vous sûr de vouloir valider ce compte-rendu opératoire ? Cette action le rendra immuable et générera les actes de facturation.')) return;
-    
+
     this.patientApi.validateOperatingReport(reportId).subscribe({
       next: () => {
         const active = this.activeHospitalization();
