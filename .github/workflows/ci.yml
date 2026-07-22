@@ -31,22 +31,101 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
     steps:
-      - name: Checkout code for push comparison
-        if: github.event_name == 'push'
+      - name: Checkout code for change detection
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
+
       - name: Detect backend and frontend changes
         id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            backend:
-              - 'backend/**'
-              - '.github/workflows/ci.yml'
-            frontend:
-              - 'web/**'
-              - '.github/workflows/ci.yml'
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          EVENT_AFTER: ${{ github.event.after }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          is_valid_sha() {
+            local sha="${1:-}"
+            [[ -n "$sha" && "$sha" != "0000000000000000000000000000000000000000" ]]
+          }
+
+          ensure_commit() {
+            local sha="$1"
+            git cat-file -e "${sha}^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$sha" >/dev/null 2>&1 || true
+            git cat-file -e "${sha}^{commit}" 2>/dev/null
+          }
+
+          use_global_pr_diff() {
+            FROM_SHA="$PR_BASE_SHA"
+            TO_SHA="$PR_HEAD_SHA"
+            MODE="pr-global"
+          }
+
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            FROM_SHA="$EVENT_BEFORE"
+            TO_SHA="$EVENT_AFTER"
+            MODE="push-delta"
+          elif [[ "$EVENT_ACTION" == "synchronize" ]] && is_valid_sha "$EVENT_BEFORE" && is_valid_sha "$EVENT_AFTER"; then
+            FROM_SHA="$EVENT_BEFORE"
+            TO_SHA="$EVENT_AFTER"
+            MODE="pr-synchronize-delta"
+          else
+            use_global_pr_diff
+          fi
+
+          if ! is_valid_sha "$FROM_SHA" || ! is_valid_sha "$TO_SHA" || [[ "$FROM_SHA" == "$TO_SHA" ]]; then
+            if [[ "$EVENT_NAME" == "pull_request" ]]; then
+              use_global_pr_diff
+            else
+              echo "Invalid push comparison range; forcing both stacks for safety."
+              echo "backend=true" >> "$GITHUB_OUTPUT"
+              echo "frontend=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
+          if ! ensure_commit "$FROM_SHA" || ! ensure_commit "$TO_SHA"; then
+            if [[ "$EVENT_NAME" == "pull_request" && "$MODE" != "pr-global" ]]; then
+              echo "Incremental PR range unavailable; falling back to global PR diff."
+              use_global_pr_diff
+            fi
+          fi
+
+          if ! ensure_commit "$FROM_SHA" || ! ensure_commit "$TO_SHA"; then
+            echo "Comparison range unavailable; forcing both stacks for safety."
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Detection mode: $MODE"
+          echo "Comparing $FROM_SHA -> $TO_SHA"
+
+          CHANGED_FILES="$(git diff --name-only "$FROM_SHA" "$TO_SHA")"
+          printf '%s\n' "$CHANGED_FILES"
+
+          BACKEND=false
+          FRONTEND=false
+
+          if grep -Eq '^\.github/workflows/ci\.yml$' <<< "$CHANGED_FILES"; then
+            BACKEND=true
+            FRONTEND=true
+          else
+            if grep -Eq '^backend/' <<< "$CHANGED_FILES"; then
+              BACKEND=true
+            fi
+            if grep -Eq '^web/' <<< "$CHANGED_FILES"; then
+              FRONTEND=true
+            fi
+          fi
+
+          echo "backend=$BACKEND" >> "$GITHUB_OUTPUT"
+          echo "frontend=$FRONTEND" >> "$GITHUB_OUTPUT"
 
   backend-build:
     name: Backend — Maven Build & Tests
