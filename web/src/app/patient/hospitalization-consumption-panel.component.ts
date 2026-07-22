@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { I18nService } from '../core/i18n/i18n.service';
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { PatientApiService } from './patient-api.service';
 
 interface PatientConsumption { id: string; itemName: string; quantity: number; unitPrice: number; consumedBy: string; consumedAt: string; }
@@ -27,7 +28,7 @@ interface PatientConsumption { id: string; itemName: string; quantity: number; u
 })
 export class HospitalizationConsumptionPanelComponent {
   readonly hospitalizationId = input.required<string>();
-  readonly canModify = input(false);
+  readonly parentCanModify = input(false, { alias: 'canModify' });
   readonly consumptions = signal<PatientConsumption[]>([]);
   readonly loading = signal(false);
   readonly saving = signal(false);
@@ -38,6 +39,7 @@ export class HospitalizationConsumptionPanelComponent {
   readonly unitPrice = signal(0);
 
   private readonly patientApi = inject(PatientApiService);
+  private readonly rbacApi = inject(RbacApiService);
   private readonly i18n = inject(I18nService);
   readonly t = (key: string, fallback: string) => this.i18n.t(key, fallback);
 
@@ -45,8 +47,13 @@ export class HospitalizationConsumptionPanelComponent {
     effect(() => this.load(this.hospitalizationId()));
   }
 
+  canModify(): boolean {
+    return this.rbacApi.hasPermission('HOSPITALIZATION_CONSUMABLE_MANAGE');
+  }
+
   save(event: Event): void {
     event.preventDefault();
+    if (!this.canModify()) return;
     const itemName = this.itemName().trim();
     if (!itemName || this.quantity() < 1) return;
 
