@@ -2,8 +2,6 @@ package com.joprelys.backend.spatial.infrastructure.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
@@ -25,9 +23,8 @@ public class BedStateChangeEntity {
     @Column(name = "bed_id", nullable = false)
     private UUID bedId;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "axis", nullable = false, length = 20)
-    private BedStateAxis axis;
+    private String axis;
 
     @Column(name = "previous_value", nullable = false, length = 50)
     private String previousValue;
@@ -35,9 +32,8 @@ public class BedStateChangeEntity {
     @Column(name = "new_value", nullable = false, length = 50)
     private String newValue;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "reason_code", nullable = false, length = 64)
-    private BedStateReasonCode reasonCode;
+    private String reasonCode;
 
     @Column(name = "reason_note", length = 500)
     private String reasonNote;
@@ -48,9 +44,8 @@ public class BedStateChangeEntity {
     @Column(name = "actor_display_name", nullable = false, length = 160)
     private String actorDisplayName;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "source", nullable = false, length = 40)
-    private BedStateChangeSource source;
+    private String source;
 
     @Column(name = "occurred_at", nullable = false)
     private Instant occurredAt;
@@ -72,17 +67,17 @@ public class BedStateChangeEntity {
         this.id = UUID.randomUUID();
         this.organizationId = Objects.requireNonNull(bed.getOrganizationId(), "L'établissement du lit est obligatoire.");
         this.bedId = Objects.requireNonNull(bed.getId(), "L'identifiant du lit est obligatoire.");
-        this.axis = Objects.requireNonNull(axis, "L'axe du changement est obligatoire.");
+        this.axis = Objects.requireNonNull(axis, "L'axe du changement est obligatoire.").name();
         this.previousValue = requiredValue(previousValue, "L'ancienne valeur est obligatoire.");
         this.newValue = requiredValue(newValue, "La nouvelle valeur est obligatoire.");
         if (this.previousValue.equals(this.newValue)) {
             throw new IllegalArgumentException("Un changement de lit doit modifier la valeur de l'axe concerné.");
         }
-        this.reasonCode = Objects.requireNonNull(reasonCode, "Le motif du changement est obligatoire.");
+        this.reasonCode = Objects.requireNonNull(reasonCode, "Le motif du changement est obligatoire.").name();
         this.reasonNote = normalize(reasonNote);
         this.actorId = actorId;
         this.actorDisplayName = requiredValue(actorDisplayName, "Le nom de l'acteur est obligatoire.");
-        this.source = Objects.requireNonNull(source, "La source du changement est obligatoire.");
+        this.source = Objects.requireNonNull(source, "La source du changement est obligatoire.").name();
         this.occurredAt = Objects.requireNonNull(occurredAt, "La date du changement est obligatoire.");
     }
 
@@ -114,7 +109,7 @@ public class BedStateChangeEntity {
     }
 
     public BedStateAxis getAxis() {
-        return axis;
+        return BedStateAxis.valueOf(axis);
     }
 
     public String getPreviousValue() {
@@ -126,7 +121,7 @@ public class BedStateChangeEntity {
     }
 
     public BedStateReasonCode getReasonCode() {
-        return reasonCode;
+        return BedStateReasonCode.valueOf(reasonCode);
     }
 
     public String getReasonNote() {
@@ -142,7 +137,7 @@ public class BedStateChangeEntity {
     }
 
     public BedStateChangeSource getSource() {
-        return source;
+        return BedStateChangeSource.valueOf(source);
     }
 
     public Instant getOccurredAt() {
