@@ -293,11 +293,16 @@ public class SpatialService {
                         "Le lit réservé a disparu pendant la transaction de transfert."));
 
         bedAssignmentRepository.findActiveByHospitalizationId(hospitalizationId).ifPresent(oldAssignment -> {
-            oldAssignment.releaseAt(Instant.now());
-            bedAssignmentRepository.saveAndFlush(oldAssignment);
-
             BedEntity oldBed = oldAssignment.getBed();
             BedReadinessStatus previousReadiness = oldBed.getReadinessStatus();
+            if (previousReadiness != BedReadinessStatus.READY) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Le lit source présente un état de préparation incohérent pour un transfert.");
+            }
+
+            oldAssignment.releaseAt(Instant.now());
+            bedAssignmentRepository.saveAndFlush(oldAssignment);
             bedStateChangeService.recordSystem(
                     oldBed,
                     BedStateAxis.READINESS,
