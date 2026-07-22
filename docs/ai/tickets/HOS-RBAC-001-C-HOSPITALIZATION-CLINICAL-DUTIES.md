@@ -2,7 +2,7 @@
 
 ## Statut
 
-**QA AUTOMATISÉE EN COURS — validations externes en attente**
+**IMPLÉMENTATION TERMINÉE — QA FINALE BLOQUÉE PAR LE DÉMARRAGE GITHUB ACTIONS — validations externes en attente**
 
 ## Contexte
 
@@ -79,10 +79,23 @@ Les rôles personnalisés peuvent recevoir les permissions nécessaires indépen
 - [x] les six endpoints d’écriture utilisent leur permission dédiée ;
 - [x] tests de réflexion sur toutes les annotations ;
 - [x] tests positifs et négatifs de la matrice système ;
+- [x] test d’intégration séparant explicitement soin médecin et administration/consommables infirmier ;
 - [x] visibilité frontend alignée sur chaque permission ;
-- [x] continuité urgence → hospitalisation alignée sur `HOSPITALIZATION_ADMIT` et testée en refus ;
+- [x] test Angular du mapping onglet → permission sans fallback `HOSPITALIZATION_MANAGE` ;
+- [x] continuité urgence → hospitalisation alignée sur `HOSPITALIZATION_ADMIT`, testée en refus et sans chargement des données d’admission si non autorisée ;
 - [ ] CI backend et frontend verte sur le head final ;
 - [x] documentation d’audit, conception technique et contrat API mis à jour.
+
+## État QA automatisée
+
+- un run antérieur de #107 a exécuté correctement le frontend : tests Angular et build production verts ;
+- ce même run a détecté un ancien test d’intégration qui supposait qu’un médecin pouvait administrer un médicament et enregistrer un consommable ;
+- le test a été corrigé sans restaurer les permissions : médecin `403`, infirmier `201`, puis vérification des lectures et de la facturation ;
+- les runs récents de #107 échouent avant checkout et avant toute étape backend/frontend ; aucun rapport de test n’est produit ;
+- le même comportement de non-démarrage est observé sur une autre PR du dépôt au même moment ;
+- la variante concurrente #106 a obtenu un run complet vert (#982) avant ce blocage, mais ce run ne vaut pas validation du head final #107.
+
+Par conséquent la PR #107 reste **Draft** et ne doit pas être fusionnée tant qu’un run complet n’a pas réellement exécuté le head final.
 
 ## Compatibilité et déploiement
 
