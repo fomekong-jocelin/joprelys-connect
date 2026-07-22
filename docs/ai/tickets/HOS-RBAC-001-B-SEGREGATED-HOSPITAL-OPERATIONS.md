@@ -8,7 +8,8 @@
 - **Écart réduit** : GAP-016
 - **Priorité** : Critique / phase 0
 - **Estimation** : 5 SP / 4 à 6 jours
-- **Statut** : IMPLEMENTED / QA EN COURS
+- **Statut** : IMPLEMENTED / QA AUTOMATISÉE VALIDÉE
+- **PR** : #102
 
 ## Problème
 
@@ -67,6 +68,21 @@ Les rôles personnalisés restent configurables depuis le RBAC.
 - [x] Les traductions françaises et anglaises sont disponibles.
 - [x] Les endpoints historiques non concernés ne sont pas renommés.
 
+## Validation automatisée
+
+CI **Joprelys Connect — CI Pipeline**, run **932** :
+
+- backend Maven `clean verify` strict : succès ;
+- catalogue RBAC et rôles système : succès ;
+- annotations d'autorisation transfert/sortie/nettoyage/maintenance : succès ;
+- transitions spécialisées et refus inter-circuits : succès ;
+- refus des mutations sur lit affecté : succès ;
+- migrations H2 et PostgreSQL 16/Testcontainers de la pile : succès ;
+- tests Angular : succès ;
+- build Angular production : succès.
+
+Le seul échec observé lors du premier passage concernait un test historique qui appelait le endpoint de supervision avec un jeton médecin. Le test utilise désormais `ADMIN_CLINIQUE`; la permission médecin n'a pas été réélargie.
+
 ## Risques et décisions
 
 - `HOSPITALIZATION_MANAGE` reste encore trop large pour les notes, consentements, soins, médicaments et consommables. Ce découpage relève de HOS-RBAC-001-C.
@@ -75,7 +91,7 @@ Les rôles personnalisés restent configurables depuis le RBAC.
 - Les nouveaux rôles système doivent être validés par les établissements avant affectation aux utilisateurs.
 - Les utilisateurs doivent renouveler leur JWT après resynchronisation du catalogue RBAC.
 
-## Validation automatisée attendue
+## Commandes de validation
 
 ```bash
 cd backend
@@ -95,7 +111,7 @@ npm run build
 - [x] interface conditionnée par permission ;
 - [x] tests unitaires et contrats ajoutés ;
 - [x] documentation API mise à jour ;
-- [ ] CI complète verte ;
+- [x] CI complète verte ;
+- [x] matrice d'audit actualisée après QA automatisée ;
 - [ ] validation RSSI et responsables métier ;
-- [ ] recette avec comptes hygiène, maintenance, infirmier, médecin et responsable hospitalisation ;
-- [ ] matrice d'audit actualisée après QA.
+- [ ] recette avec comptes hygiène, maintenance, infirmier, médecin et responsable hospitalisation.
