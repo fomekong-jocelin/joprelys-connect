@@ -4,23 +4,23 @@
 >
 > **Réouverture Go-Live — 2026-07-22** : le comportement historique de préproduction ci-dessous reste tracé, mais il n'est plus acceptable pour une production greenfield. Pour le Go-Live, ce ticket est prolongé avec les critères P0 de la section 10 : seed désactivé par défaut, activation explicite, email/nom/password obligatoires, aucun credential de repli versionné et fail-fast si la configuration est incomplète.
 
-## 1. Objectif
+## 1. Objectif historique
 
 Préparer l'application pour l'environnement de préproduction :
-1. Supprimer les identifiants sensibles et configurés en dur (comme le mot de passe par défaut faible `Admin@12345`) dans le fichier `application.yml`.
-2. Vider la base de données de départ de toute donnée de test en désactivant la création automatique par le seeder de la clinique de test, du médecin de test et du pharmacien de test (seuls les paramètres structuraux et de configuration de base sont conservés).
-3. Créer un unique utilisateur administrateur par défaut (`admin@joprelys.local`) doté d'un mot de passe fort et sécurisé (`Re12#He10@2021!`) s'il n'existe pas déjà, chargé de créer par la suite les cliniques pilotes et les comptes administratifs / métiers.
+1. supprimer les identifiants sensibles faibles présents dans la configuration ;
+2. désactiver la création automatique de données cliniques de démonstration ;
+3. amorcer un unique administrateur plateforme pour permettre la création manuelle des établissements et comptes métiers.
 
-## 2. Critères d'acceptation
+> Le credential de bootstrap historique a été volontairement retiré de cette documentation. Il ne doit jamais être réutilisé.
 
-- [x] Les identifiants par défaut en dur d'administrateur sont purgés de `application.yml`.
-- [x] `SeedAdminProperties` permet de lancer l'initialisation si `enabled` est à vrai (sans bloquer si les variables d'environnement d'admin sont absentes au démarrage).
-- [x] `AdminUserSeeder` n'initialise plus l'établissement "Clinique Joprelys", le médecin de test et le pharmacien de test (ceux-ci sont créés manuellement par l'admin désormais).
-- [x] L'administrateur par défaut est initialisé avec l'email `admin@joprelys.local` et le mot de passe fort `Re12#He10@2021!` s'il n'existe pas déjà et si aucune surcharge par variable d'environnement n'est configurée.
-- [x] Les tests unitaires de `AdminUserSeederTest` sont alignés sur le comportement exclusif de création d'admin.
-- [ ] La compilation de production du backend et les tests unitaires / d'intégration passent avec succès.
+## 2. Critères historiques
 
-## 3. Pilotage projet
+- [x] Les valeurs d'initialisation ont été retirées de `application.yml` au profit de variables d'environnement.
+- [x] `AdminUserSeeder` n'initialise plus l'établissement de démonstration, le médecin de test et le pharmacien de test.
+- [x] Les tests unitaires historiques ont été alignés sur la création exclusive d'un administrateur.
+- [x] Validation historique : `./mvnw test` avec 240 tests verts au 2026-07-06.
+
+## 3. Pilotage historique
 
 | Champ | Valeur |
 |---|---|
@@ -31,74 +31,50 @@ Préparer l'application pour l'environnement de préproduction :
 | Complexité | S |
 | Story points | 1 |
 | Profil recommandé | Backend Engineer |
-| Effort estimé senior | 0.05j |
 | Responsable | Antigravity |
 | Reviewer obligatoire | Lead Developer |
-| Risque fonctionnel | Faible |
-| Risque technique | Très faible |
-| Dépendances | Aucun |
-| Bloquants connus | Aucun |
 
 ## 4. Contexte analysé
 
 - [x] `AGENTS.md` lu
 - [x] `SKILL.md` lu
-- [x] Configuration existante `application.yml` analysée
-- [x] Code existant de `AdminUserSeeder.java` et `AdminUserSeederTest.java` analysé
+- [x] Configuration `application.yml` analysée
+- [x] `AdminUserSeeder.java` et ses tests analysés
 
-## 5. Action plan
+## 5. Implémentation historique
 
-- [x] Vider les valeurs par défaut en dur de `joprelys.seed.admin` dans `application.yml`.
-- [x] Modifier `SeedAdminProperties.java` pour retourner `enabled` dans `isComplete()`.
-- [x] Modifier `AdminUserSeeder.java` pour ne créer que le compte administrateur avec des replis par défaut solides et sécurisés.
-- [x] Adapter `AdminUserSeederTest.java`.
-- [x] Exécuter `./mvnw test` pour s'assurer du passage au vert.
-- [x] Mettre à jour `CHANGELOG.md` et `PROJECT-TRACKING.md`.
+- données cliniques de démonstration retirées du seeder ;
+- bootstrap limité au compte administrateur ;
+- ancien comportement de repli conservé à l'époque pour faciliter la préproduction.
 
-## 6. Implémentation réalisée
+Ce dernier point est précisément celui qui est remplacé par le durcissement Go-Live ci-dessous.
 
-- Suppression des identifiants sensibles et configurés en dur (email, name, password) de `application.yml`.
-- Simplification de `SeedAdminProperties.java` pour que `isComplete()` ne valide que l'état d'activation (`enabled`), évitant de bloquer l'initialisation de l'administrateur système si ces variables d'environnement d'admin ne sont pas déclarées.
-- Restructuration d' `AdminUserSeeder.java` pour qu'il n'initialise plus l'établissement "Clinique Joprelys", le médecin de test et le pharmacien de test (ceux-ci devant être créés dynamiquement).
-- Ajout de valeurs par défaut solides et adaptées pour l'environnement de préproduction directement dans le code du seeder : email `admin@joprelys.local` et mot de passe fort `Re12#He10@2021!`.
-- Alignement du test unitaire `AdminUserSeederTest.java` sur la création exclusive de l'administrateur.
-- Validation par tests de non-régression (`./mvnw test` : 240/240 OK).
+## 6. Suivi d'exécution
 
-## 7. Suivi d'exécution
+| Date | Développeur | Avancement | Reste à faire | Commentaire |
+|---|---|---:|---|---|
+| 2026-07-06 | Antigravity | 100% historique | Aucun | Préproduction validée avec la politique de l'époque. |
+| 2026-07-22 | GPT-5.6 Thinking | En cours | Durcissement Go-Live + tests complets | Réouverture documentaire avant code ; aucune action serveur. |
 
-| Date | Développeur | Temps passé | Avancement | Reste à faire | Blocage | Commentaire |
-|---|---|---:|---:|---:|---|---|
-| 2026-07-06 | Antigravity | 0.05j | 100% | Aucun | Aucun | Modifications de code validées par build et tests OK. |
-| 2026-07-22 | GPT-5.6 Thinking | 0j | 0% | Durcissement Go-Live + tests complets | Aucun | Réouverture documentaire avant code ; aucune action serveur. |
-
-## 8. Tests et vérifications
-
-```bash
-./mvnw test
-```
-
-## 9. Impact version / SemVer
+## 7. Impact version historique
 
 | Champ | Valeur |
 |---|---|
 | Changement livrable | Oui |
 | Type de bump | PATCH |
-| Justification | Nettoyage des identifiants d'initialisation en dur pour la préproduction. |
-| Breaking change | Non |
 | Migration DB | Non |
 | Changement API | Non |
 | Impact Angular | Non |
 | Impact Flutter | Non |
-| Changelog requis | Oui |
 
-## 10. Extension P0 — Go-Live production greenfield
+## 8. Extension P0 — Go-Live production greenfield
 
 ### Constat sur `main@078c3dc5f913f615910fad9f061085bc7acdcfec`
 
-- `application.yml` active encore le seed admin par défaut via `JOPRELYS_SEED_ADMIN_ENABLED:true` ;
-- `AdminUserSeeder` utilise `matchIfMissing = true` ;
-- `SeedAdminProperties.isComplete()` ne vérifie que `enabled` ;
-- `AdminUserSeeder` contient des fallbacks d'email, de nom et de mot de passe versionnés.
+- le seed admin est actif par défaut dans `application.yml` ;
+- le composant seeder est activable lorsque la propriété est absente ;
+- `SeedAdminProperties.isComplete()` ne valide pas encore tous les champs obligatoires ;
+- `AdminUserSeeder` contient encore des valeurs de repli versionnées.
 
 ### Critères d'acceptation Go-Live
 
