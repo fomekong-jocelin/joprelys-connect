@@ -2,68 +2,109 @@
 
 ## Mode d'intervention
 
-Architecture + Engineering discovery, rattachée à `EPIC-0027 / HOS-BED-001-D`.
+Architecture + Engineering, rattachée à `EPIC-0027 / HOS-BED-001-D`.
 
 ## Statut
 
-PROPOSED / NON READY — aucun développement engagé.
+QA TECHNIQUE VERTE / VALIDATIONS DBA ET MÉTIER REQUISES — PR empilée #99.
+
+La PR est empilée sur la branche de #98 afin de réutiliser son correctif de validation PostgreSQL sans duplication. Elle devra être retargetée vers `main` après fusion ou reprise du prérequis.
 
 ## Objectif
 
 Interdire que deux périodes d'affectation du même lit se chevauchent, y compris lorsque les deux lignes sont clôturées.
 
-## Problème actuel
+## Problème traité
 
-V76 protège l'affectation active, V77 valide la chronologie et V78 protège le tenant. Une importation ou une correction rétroactive peut encore créer deux périodes historiques incompatibles sans ligne active.
+V76 protège l'affectation active, V77 valide la chronologie et V78 protège le tenant. Une importation ou une correction rétroactive pouvait encore créer deux périodes historiques incompatibles sans ligne active.
 
-## Options à prototyper
+## Décision retenue
 
-1. Contrainte d'exclusion PostgreSQL sur une plage `tstzrange` avec GiST.
-2. Verrou applicatif et contrôle transactionnel, avec garde SQL complémentaire.
-3. Trigger portable uniquement si la stratégie PostgreSQL ne peut pas être retenue.
+1. Contrainte d'exclusion PostgreSQL GiST sur une plage `tsrange` semi-ouverte `[assigned_at, released_at)`.
+2. Extension `btree_gist` pour l'égalité GiST des UUID.
+3. Statut d'intégrité `VALID | QUARANTINED` ajouté par V79, portable H2/PostgreSQL.
+4. Migration Java V80 active uniquement sous PostgreSQL.
+5. V80 échoue si des chevauchements `VALID` sont détectés.
+6. Quarantaine exclusivement manuelle, motivée, attribuée et limitée aux affectations clôturées.
+7. Aucun historique supprimé ou corrigé automatiquement.
 
-La décision doit privilégier une garantie base de données, mesurer les impacts H2/tests et documenter l'extension PostgreSQL requise.
+Le schéma actuel utilise `TIMESTAMP WITHOUT TIME ZONE`; `tsrange` est donc cohérent. Le passage futur à `TIMESTAMPTZ`/`tstzrange` relève de GAP-038.
 
 ## Critères d'acceptation
 
-- Étant donné deux périodes strictement chevauchantes du même lit, lorsque la seconde est insérée, alors la base la refuse.
-- Étant donné deux périodes adjacentes où `fin A = début B`, lorsque la seconde est insérée, alors elle est acceptée.
-- Étant donné deux lits différents sur la même période, lorsque les affectations sont insérées, alors elles sont acceptées.
-- Étant donné des données historiques incohérentes, lorsque le préflight est exécuté, alors elles sont listées sans suppression automatique.
-- Étant donné une correction rétroactive autorisée, lorsque la période change, alors la contrainte est réévaluée dans la même transaction.
+- [x] Deux périodes strictement chevauchantes du même lit sont refusées par PostgreSQL.
+- [x] Deux périodes adjacentes où `fin A = début B` sont acceptées.
+- [x] Deux lits différents sur la même période sont acceptés.
+- [x] Le préflight liste les données historiques incompatibles sans suppression automatique.
+- [x] Une correction rétroactive qui recrée un overlap est refusée dans la même instruction.
+- [x] Une migration avec conflits non arbitrés échoue avant création de la contrainte.
+- [x] Une ligne clôturée approuvée peut être conservée comme `QUARANTINED`.
+- [x] Une affectation active ne peut pas être mise en quarantaine.
 
 ## Estimation et responsabilité
 
-- Estimation : 3–5 SP, 3–5 jours senior après levée des préconditions.
-- Profil recommandé : backend senior + DBA PostgreSQL.
-- Reviewer : DBA + lead backend + cadre infirmier/bed manager.
-- Tests attendus : migration PostgreSQL 16, bornes adjacentes, concurrence, import et rollback.
+- Estimation initiale : 3–5 SP, 3–5 jours senior.
+- Profil : backend senior + DBA PostgreSQL.
+- Reviewers : DBA + lead backend + cadre infirmier/bed manager.
+- Tests : migration PostgreSQL 16, bornes adjacentes, correction rétroactive, quarantaine, import et rollback.
+
+## Livrables
+
+- `V79__prepare_bed_assignment_overlap_quarantine.sql` ;
+- `V80__enforce_historical_bed_assignment_non_overlap.java` ;
+- `BedAssignmentOverlapPostgresqlMigrationTest` ;
+- `ADR-0003-postgresql-bed-assignment-temporal-exclusion.md` ;
+- `FUNCTIONAL-SPEC.md` ;
+- `TECHNICAL-DESIGN.md` ;
+- `PRE-MIGRATION-CHECKS.sql` ;
+- `QUARANTINE-APPROVED-ASSIGNMENTS.sql`.
+
+## Validation automatisée
+
+CI `Joprelys Connect — CI Pipeline`, run **916** :
+
+- backend Maven `clean verify` strict : succès ;
+- migrations Flyway H2 : succès ;
+- Testcontainers PostgreSQL 16 : succès ;
+- échec contrôlé de V80 en présence d'un overlap : succès ;
+- quarantaine puis relance de V80 : succès ;
+- extension `btree_gist` et contrainte GiST : succès ;
+- adjacence, autre lit et correction rétroactive : succès ;
+- tests Angular : succès ;
+- build Angular production : succès.
 
 ## Definition of Ready
 
-- [ ] Docker/Testcontainers ou PostgreSQL 16 dédié disponible.
-- [ ] Préflight exécuté sur une copie représentative.
-- [ ] Sémantique des bornes temporelles validée par le bed manager.
+- [x] Docker/Testcontainers PostgreSQL 16 disponible dans la CI.
+- [ ] Préflight exécuté sur une copie représentative anonymisée.
+- [ ] Sémantique `[début, fin)` validée par le bed manager.
 - [ ] Stratégie GiST/extension validée par le DBA.
-- [ ] Plan de réconciliation et rollback documenté.
+- [x] Plan de réconciliation et rollback documenté.
 
 ## Definition of Done
 
-- [ ] documentation fonctionnelle et technique créée ;
-- [ ] ADR ajouté si une extension ou une stratégie non portable est retenue ;
-- [ ] migration testée sur PostgreSQL 16 ;
-- [ ] concurrence et corrections rétroactives couvertes ;
-- [ ] aucun historique supprimé automatiquement ;
-- [ ] changelog, tracking et plan de déploiement mis à jour.
+- [x] documentation fonctionnelle et technique créée ;
+- [x] ADR ajouté pour la stratégie PostgreSQL non portable ;
+- [x] migration et suites complètes vertes sous PostgreSQL 16 ;
+- [x] adjacence, overlap, lits différents et corrections rétroactives couverts ;
+- [x] aucun historique supprimé automatiquement ;
+- [x] plan de déploiement, quarantaine et rollback documenté ;
+- [ ] revue DBA et bed manager ;
+- [ ] préflight sur copie représentative ;
+- [ ] changelog, tracking global et matrice d'audit finalisés après validation externe.
 
 ## Sécurité / régression
 
-Le prototype ne doit exposer aucune donnée patient. Toute réparation historique nécessite validation métier/DBA et audit de l'acteur, du motif, de l'ancienne période et de la nouvelle période.
+Le prototype n'expose aucun nom, contact, diagnostic ou donnée clinique. Les scripts restreignent les sorties aux identifiants techniques et périodes nécessaires. Toute quarantaine réelle exige validation métier/DBA, motif, acteur et conservation du rapport de préflight.
 
 ## Impact version / SemVer
 
-Probable `MINOR` si la contrainte est additive ; `MAJOR` uniquement si un contrat public ou une sémantique publiée doit être retiré. Aucun bump préparé.
+`MINOR` recommandé : ajout de colonnes, d'une extension PostgreSQL et d'une nouvelle garantie de données. Aucun contrat HTTP public n'est retiré.
 
 ## Reste à faire
 
-Lever les cinq critères de Ready avant toute migration ou modification applicative.
+1. faire valider l'ADR et l'extension par le DBA ;
+2. faire signer la sémantique des bornes par le bed manager ;
+3. exécuter le préflight sur une copie anonymisée représentative ;
+4. retargeter #99 vers `main` après traitement de #98 ;
+5. mettre à jour le suivi global après validation externe.
