@@ -33,7 +33,7 @@ Les preuves techniques sont réparties sur une pile de PR encore en brouillon :
 2. **#99** — HOS-BED-001-D, exclusion des chevauchements historiques et quarantaine ;
 3. **#100** — HOS-RBAC-001-A, permission dédiée au statut opérationnel du lit ;
 4. **#101** — HOS-BED-002-C, capacité ouverte, préparation, usage dérivé et KPI associés ;
-5. **#102** — HOS-RBAC-001-B, transfert, sortie, nettoyage et maintenance séparés.
+5. **#102** — HOS-RBAC-001-B, transfert, sortie, nettoyage et maintenance séparés, CI #932 verte.
 
 Aucune de ces améliorations n’est comptée `COVERED` avant fusion, recette métier et validations externes. Le score reste inchangé avec #102 : l’incrément approfondit GAP-016 sans fermer le découpage des soins ni ajouter le contexte d’unité.
 
@@ -56,7 +56,7 @@ Aucune de ces améliorations n’est comptée `COVERED` avant fusion, recette m�
 | GAP-013 | Chambre | OPEN | `comfortLevel` mélange confort, soins et isolement | dimensions et référentiels séparés | HOS-LOC-001 |
 | GAP-014 | Compatibilité patient | OPEN | aucun contrôle sexe/âge/isolement/accompagnant | moteur de compatibilité backend | HOS-ADM-001 |
 | GAP-015 | Personnel | OPEN | spécialité et département texte ; rôles hygiène/maintenance présents sans affectation d’unité | référentiels, emplois et affectations datées | HOS-STAFF-001 |
-| GAP-016 | Séparation des tâches | PARTIAL | #100 sépare la supervision du lit ; #102 ajoute transfert, décision médicale de sortie, nettoyage et maintenance, rôles hygiène/maintenance et UI contextuelle | admission, notes, consentements, soins, médicaments, consommables, clearance et départ physique restent regroupés ; contexte unité/soin absent | HOS-RBAC-001-C + HOS-DIS-001 + HOS-STAFF-001 |
+| GAP-016 | Séparation des tâches | PARTIAL | #100 sépare la supervision du lit ; #102 ajoute transfert, décision médicale de sortie, nettoyage et maintenance, rôles hygiène/maintenance et UI contextuelle ; CI #932 verte | admission, notes, consentements, soins, médicaments, consommables, clearance et départ physique restent regroupés ; contexte unité/soin absent | HOS-RBAC-001-C + HOS-DIS-001 + HOS-STAFF-001 |
 | GAP-017 | Confidentialité | OPEN | accès au séjour tenant-wide | ABAC unité, affectation et relation de soin | HOS-RBAC-001 + HOS-STAFF-001 |
 | GAP-018 | Parcours patient | OPEN | modules et états juxtaposés | épisode, présence, responsabilité, prochaine action | HOS-PATH-001 |
 | GAP-019 | Handoff urgences | OPEN | navigation urgence vers hospitalisation non atomique | demande d’aval et confirmation transactionnelle | HOS-ADM-001 + HOS-MOV-001 |
