@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { I18nService } from '../core/i18n/i18n.service';
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { Hospitalization } from './patient.models';
 
 @Component({
@@ -29,13 +30,15 @@ import { Hospitalization } from './patient.models';
             </div>
           </dl>
         </div>
-        @if (canModify()) {
-          <div class="grid w-full gap-2 sm:grid-cols-2 xl:max-w-[34rem]" [attr.aria-label]="t('patients.hospitalization.actions', 'Actions du séjour')">
-            <button type="button" class="ui-button ui-button-secondary min-w-0 whitespace-normal px-3 text-center sm:col-span-2" (click)="entryPdf.emit()">{{ t('patients.hospitalization.downloadPdf', 'Télécharger le document') }}</button>
+        <div class="grid w-full gap-2 sm:grid-cols-2 xl:max-w-[34rem]" [attr.aria-label]="t('patients.hospitalization.actions', 'Actions du séjour')">
+          <button type="button" class="ui-button ui-button-secondary min-w-0 whitespace-normal px-3 text-center sm:col-span-2" (click)="entryPdf.emit()">{{ t('patients.hospitalization.downloadPdf', 'Télécharger le document') }}</button>
+          @if (canTransfer()) {
             <button type="button" class="ui-button ui-button-secondary min-w-0 whitespace-normal px-3 text-center" (click)="transfer.emit()">{{ t('patients.hospitalization.transfer', 'Transférer de lit') }}</button>
+          }
+          @if (canDischarge()) {
             <button type="button" class="ui-button ui-button-danger min-w-0 whitespace-normal px-3 text-center" (click)="discharge.emit()">{{ t('patients.hospitalization.discharge', 'Déclarer la sortie') }}</button>
-          </div>
-        }
+          }
+        </div>
       </div>
       <div class="mt-5 border-l-2 border-[var(--brand-primary)] bg-[var(--app-surface-muted)] px-4 py-3 text-sm text-[var(--text-secondary)]">
         <p class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">{{ t('patients.hospitalization.reason', 'Motif d’hospitalisation') }}</p>
@@ -53,5 +56,9 @@ export class HospitalizationStayHeaderComponent {
   readonly discharge = output<void>();
 
   private readonly i18n = inject(I18nService);
+  private readonly rbacApi = inject(RbacApiService);
+
+  readonly canTransfer = computed(() => this.rbacApi.hasPermission('HOSPITALIZATION_TRANSFER'));
+  readonly canDischarge = computed(() => this.rbacApi.hasPermission('HOSPITALIZATION_DISCHARGE_DECIDE'));
   readonly t = (key: string, defaultValue: string) => this.i18n.t(key, defaultValue);
 }
