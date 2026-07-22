@@ -9,12 +9,13 @@
 |---|---|---|---|
 | Organisations | `/api/organizations` CRUD/statut/admin/API keys | `ORGANIZATION_MANAGE` au contrôleur | tenant plat |
 | Structure | `/api/spatial/configuration`, `/wards`, `/rooms`, `/beds` | `SPATIAL_CONFIGURATION_MANAGE` | hard delete conditionnel, pas de niveaux géographiques |
-| Occupation | `/api/spatial/wards`, `/wards/{id}/occupancy` | `HOSPITALIZATION_READ` | projection par service, sans historique temporel |
-| Capacité du lit | `/api/spatial/beds/{id}/capacity-status` | `BED_OPERATIONAL_STATUS_MANAGE` | ouverture/fermeture sans motif ni date d'effet |
-| État lit legacy | `/api/spatial/beds/{id}/status` | `BED_OPERATIONAL_STATUS_MANAGE` | endpoint de supervision conservé temporairement pour compatibilité |
-| Nettoyage du lit | `/api/spatial/beds/{id}/cleaning-status` | `BED_CLEANING_MANAGE` | `CLEANING ↔ READY`, sans tâche ni preuve structurée |
-| Maintenance du lit | `/api/spatial/beds/{id}/maintenance-status` | `BED_MAINTENANCE_MANAGE` | `MAINTENANCE ↔ READY`, sans ordre de travail |
-| Transfert | `/api/spatial/transfers` | `HOSPITALIZATION_TRANSFER` | séjour + nouveau lit uniquement, sans ordre de mouvement ; interdit après décision médicale de sortie |
+| Occupation | `/api/spatial/wards`, `/wards/{id}/occupancy` | `HOSPITALIZATION_READ` | projection par service, sans snapshots temporels |
+| Capacité du lit | `/api/spatial/beds/{id}/capacity-status` | `BED_OPERATIONAL_STATUS_MANAGE` | motif codifié et journal disponibles ; périodes d'effet et sélecteur UI absents |
+| État lit legacy | `/api/spatial/beds/{id}/status` | `BED_OPERATIONAL_STATUS_MANAGE` | endpoint de supervision conservé temporairement, journalisé `LEGACY_SUPERVISION` |
+| Nettoyage du lit | `/api/spatial/beds/{id}/cleaning-status` | `BED_CLEANING_MANAGE` | motifs et journal disponibles ; pas de tâche assignée ni preuve structurée |
+| Maintenance du lit | `/api/spatial/beds/{id}/maintenance-status` | `BED_MAINTENANCE_MANAGE` | motifs et journal disponibles ; pas d'ordre de travail |
+| Historique du lit | `/api/spatial/beds/{id}/state-history` | `HOSPITALIZATION_READ` | chronologie tenant-aware non paginée ; conservation liée à la ligne physique du lit |
+| Transfert | `/api/spatial/transfers` | `HOSPITALIZATION_TRANSFER` | séjour + nouveau lit uniquement ; interdit après décision médicale ; nettoyage source historisé |
 | Hospitalisation | `/api/hospitalizations` et sous-ressources | `HOSPITALIZATION_READ/MANAGE`, décision `HOSPITALIZATION_DISCHARGE_DECIDE`, départ `HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM`, CRO `CLINICAL_*` | clearance administrative, correction de décision et turnover structuré absents |
 | Urgence | `/api/emergencies` + triage/médico-légal/documents | `EMERGENCY_*` granulaires | pas de box/présence/handoff atomique |
 | Visite | `/api/visits` | `VISIT_*` | service/orientation texte |
@@ -45,9 +46,25 @@ POST /api/hospitalizations/{stayId}/physical-departure
 
 La première commande enregistre le diagnostic, les consignes, le caractère contre avis médical, l'auteur et l'heure de décision. Le séjour reste `EN_COURS`, l'affectation demeure active, le lit reste occupé et le document final n'est pas disponible.
 
-La deuxième commande exige une confirmation explicite et la permission `HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM`. Elle renseigne la présence réelle, clôt le séjour et l'affectation, fixe `dischargedAt` à l'heure du départ physique, génère le PDF et place le lit en nettoyage.
+La deuxième commande exige une confirmation explicite et la permission `HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM`. Elle renseigne la présence réelle, clôt le séjour et l'affectation, fixe `dischargedAt` à l'heure du départ physique, génère le PDF, place le lit en nettoyage et crée un événement `CLEANING_AFTER_DEPARTURE`.
 
 Les sorties historiques sont rétrocompatibles : la migration V83 déduit décision et départ physique de leur ancien `discharged_at`. L'annulation/correction formelle d'une décision et la clearance administrative restent hors de cet incrément.
+
+### 1.3 Historique des états de lit implémenté par HOS-BED-002-D
+
+Les commandes spécialisées exigent désormais un `reasonCode` compatible avec la transition et acceptent une note de 500 caractères maximum :
+
+```json
+{
+  "status": "MAINTENANCE",
+  "reasonCode": "MAINTENANCE_CORRECTIVE",
+  "note": "Frein du lit défectueux"
+}
+```
+
+Chaque mutation effective crée un événement contenant `axis`, `previousValue`, `newValue`, `reasonCode`, `reasonNote`, `actorId`, `actorDisplayName`, `source` et `occurredAt`.
+
+Les motifs `CLEANING_AFTER_TRANSFER` et `CLEANING_AFTER_DEPARTURE` sont réservés aux workflows automatiques. `CAPACITY_OTHER` et `CLEANING_INCIDENT` exigent une note. La lecture de l'historique ne retourne aucune identité patient.
 
 ## 2. Principes API cibles
 
@@ -139,6 +156,8 @@ POST /api/v2/turnaround-tasks/{id}/validate
 |---|---:|---|
 | `BED_NOT_OPERATIONAL` | 409 | lit fermé, bloqué ou maintenance |
 | `BED_NOT_READY` | 409 | nettoyage/désinfection non validé |
+| `BED_STATE_REASON_INVALID` | 400 | motif incompatible avec la transition demandée |
+| `BED_STATE_REASON_NOTE_REQUIRED` | 400 | note obligatoire pour un motif ouvert ou incident |
 | `BED_PERIOD_CONFLICT` | 409 | réservation/occupation chevauchante |
 | `PATIENT_SPACE_INCOMPATIBLE` | 422 | âge, sexe, isolement, niveau ou équipement |
 | `RESERVATION_EXPIRED` | 409 | arrivée après expiration |
@@ -155,7 +174,7 @@ POST /api/v2/turnaround-tasks/{id}/validate
 
 Pendant la migration, l'adaptateur legacy résout les noms actuels vers les nouveaux IDs et maintient les snapshots de documents. Toute ambiguïté retourne une erreur de migration, jamais un choix silencieux. Les endpoints v1 sont marqués deprecated avec date de retrait ; leur suppression exige une version MAJOR et une release note.
 
-L'endpoint `/api/spatial/beds/{id}/status` est conservé comme commande de supervision pour les intégrations existantes, mais l'interface Joprelys utilise exclusivement les circuits `/cleaning-status`, `/maintenance-status` et `/capacity-status`. Son retrait sera préparé après inventaire des consommateurs et publication d'une date de fin de support.
+L'endpoint `/api/spatial/beds/{id}/status` est conservé comme commande de supervision pour les intégrations existantes. Ses changements sont historisés sous `LEGACY_SUPERVISION`. Son retrait sera préparé après inventaire des consommateurs et publication d'une date de fin de support.
 
 Le chemin `/api/hospitalizations/{id}/discharge` est conservé pour compatibilité de nom, mais son effet est désormais limité à la décision médicale. Tout consommateur qui supposait une libération immédiate doit appeler explicitement `/physical-departure` avec le droit correspondant.
 
@@ -171,6 +190,9 @@ Le chemin `/api/hospitalizations/{id}/discharge` est conservé pour compatibilit
 - clôture de l'affectation et passage en nettoyage uniquement au départ réel ;
 - impossibilité pour le nettoyage de terminer une maintenance et inversement ;
 - refus des opérations techniques sur un lit affecté ;
+- refus des motifs incompatibles et des motifs ouverts sans note ;
+- motifs automatiques impossibles à soumettre manuellement ;
+- intégrité tenant et domaines du journal sous PostgreSQL ;
 - idempotence, optimistic locking et courses concurrentes ;
 - validation des transitions et Problem Details ;
 - compatibilité des filtres/pagination ;
