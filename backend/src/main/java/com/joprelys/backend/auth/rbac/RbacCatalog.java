@@ -13,6 +13,8 @@ public final class RbacCatalog {
     public static final String ROLE_ADMIN_JOPRELYS = "ADMIN_JOPRELYS";
     public static final String ROLE_SUPER_ADMIN = "SUPER_ADMIN";
     public static final String ROLE_ADMIN_CLINIQUE = "ADMIN_CLINIQUE";
+    public static final String ROLE_AGENT_HYGIENE = "AGENT_HYGIENE";
+    public static final String ROLE_TECHNICIEN_MAINTENANCE = "TECHNICIEN_MAINTENANCE";
 
     public static final String PERMISSION_USER_READ = "USER_READ";
     public static final String PERMISSION_USER_MANAGE = "USER_MANAGE";
@@ -32,6 +34,10 @@ public final class RbacCatalog {
     public static final String PERMISSION_PATIENT_APPOINTMENT_MANAGE = "PATIENT_APPOINTMENT_MANAGE";
     public static final String PERMISSION_PATIENT_NOTIFICATION_MANAGE = "PATIENT_NOTIFICATION_MANAGE";
     public static final String PERMISSION_BED_OPERATIONAL_STATUS_MANAGE = "BED_OPERATIONAL_STATUS_MANAGE";
+    public static final String PERMISSION_HOSPITALIZATION_TRANSFER = "HOSPITALIZATION_TRANSFER";
+    public static final String PERMISSION_HOSPITALIZATION_DISCHARGE_DECIDE = "HOSPITALIZATION_DISCHARGE_DECIDE";
+    public static final String PERMISSION_BED_CLEANING_MANAGE = "BED_CLEANING_MANAGE";
+    public static final String PERMISSION_BED_MAINTENANCE_MANAGE = "BED_MAINTENANCE_MANAGE";
 
     private RbacCatalog() {
     }
@@ -78,8 +84,12 @@ public final class RbacCatalog {
                 permission("STOCK_READ", "STOCK", "Consulter les stocks", "Consulter les articles et niveaux de stock."),
                 permission("STOCK_MANAGE", "STOCK", "Gérer les stocks", "Créer et traiter les mouvements de stock."),
                 permission("HOSPITALIZATION_READ", "HOSPITALISATION", "Consulter les hospitalisations", "Consulter les séjours, chambres et lits."),
-                permission("HOSPITALIZATION_MANAGE", "HOSPITALISATION", "Gérer les hospitalisations", "Affecter les lits et piloter les séjours."),
-                permission(PERMISSION_BED_OPERATIONAL_STATUS_MANAGE, "HOSPITALISATION", "Gérer l'état opérationnel des lits", "Placer un lit non affecté en nettoyage, maintenance ou disponibilité selon les garde-fous métier."),
+                permission("HOSPITALIZATION_MANAGE", "HOSPITALISATION", "Gérer les hospitalisations", "Créer les séjours et renseigner les actes courants encore couverts par le contrat historique."),
+                permission(PERMISSION_HOSPITALIZATION_TRANSFER, "HOSPITALISATION", "Transférer un patient hospitalisé", "Changer le lit, la chambre ou le service d'un séjour actif."),
+                permission(PERMISSION_HOSPITALIZATION_DISCHARGE_DECIDE, "HOSPITALISATION", "Décider la sortie médicale", "Valider le diagnostic, les consignes et la décision médicale de sortie d'un séjour."),
+                permission(PERMISSION_BED_OPERATIONAL_STATUS_MANAGE, "HOSPITALISATION", "Superviser la capacité des lits", "Ouvrir ou fermer la capacité d'un lit et superviser exceptionnellement son état opérationnel."),
+                permission(PERMISSION_BED_CLEANING_MANAGE, "HOSPITALISATION", "Gérer le nettoyage des lits", "Placer un lit non affecté en nettoyage et confirmer sa remise à disposition après nettoyage."),
+                permission(PERMISSION_BED_MAINTENANCE_MANAGE, "HOSPITALISATION", "Gérer la maintenance des lits", "Placer un lit non affecté en maintenance et confirmer sa remise en service technique."),
                 permission("SPATIAL_CONFIGURATION_MANAGE", "HOSPITALISATION", "Configurer les espaces de soins", "Configurer bâtiments, services, chambres et lits."),
                 permission("RECEPTION_READ", "ACCUEIL", "Consulter le registre d'accueil", "Consulter les entrées et départs du registre d'accueil."),
                 permission("RECEPTION_WRITE", "ACCUEIL", "Gérer le registre d'accueil", "Créer une entrée et enregistrer un départ."),
@@ -155,7 +165,8 @@ public final class RbacCatalog {
                 PERMISSION_EMERGENCY_MEDICO_LEGAL_WRITE,
                 PERMISSION_EMERGENCY_BELONGINGS_WRITE,
                 "LAB_ORDER_READ", "LAB_ORDER_CREATE", "HOSPITALIZATION_READ", "HOSPITALIZATION_MANAGE",
-                PERMISSION_BED_OPERATIONAL_STATUS_MANAGE,
+                PERMISSION_HOSPITALIZATION_TRANSFER,
+                PERMISSION_HOSPITALIZATION_DISCHARGE_DECIDE,
                 "VISIT_READ", "VISIT_CREATE", "VISIT_VITALS_WRITE", "VISIT_MANAGE",
                 "DOCUMENT_READ", "DOCUMENT_MANAGE", "RECEPTION_READ",
                 PERMISSION_APPOINTMENT_READ, PERMISSION_APPOINTMENT_READ_OWN, PERMISSION_AVAILABILITY_MANAGE));
@@ -165,6 +176,7 @@ public final class RbacCatalog {
                 PERMISSION_EMERGENCY_MEDICO_LEGAL_READ,
                 PERMISSION_EMERGENCY_BELONGINGS_WRITE,
                 "LAB_ORDER_READ", "HOSPITALIZATION_READ", "HOSPITALIZATION_MANAGE",
+                PERMISSION_HOSPITALIZATION_TRANSFER,
                 "VISIT_READ", "VISIT_CREATE", "VISIT_VITALS_WRITE", "DOCUMENT_READ", "RECEPTION_READ"));
         mappings.put("BIOLOGISTE", set("PATIENT_READ", "LAB_ORDER_READ", "LAB_QUEUE_READ", "LAB_ORDER_WRITE"));
         mappings.put("PHARMACIEN", set(
@@ -173,7 +185,14 @@ public final class RbacCatalog {
         mappings.put("GESTIONNAIRE_STOCK", set("STOCK_READ", "STOCK_MANAGE"));
         mappings.put("RESPONSABLE_HOSPITALISATION", set(
                 "PATIENT_READ", "HOSPITALIZATION_READ", "HOSPITALIZATION_MANAGE",
-                PERMISSION_BED_OPERATIONAL_STATUS_MANAGE));
+                PERMISSION_HOSPITALIZATION_TRANSFER,
+                PERMISSION_BED_OPERATIONAL_STATUS_MANAGE,
+                PERMISSION_BED_CLEANING_MANAGE,
+                PERMISSION_BED_MAINTENANCE_MANAGE));
+        mappings.put(ROLE_AGENT_HYGIENE, set(
+                "HOSPITALIZATION_READ", PERMISSION_BED_CLEANING_MANAGE));
+        mappings.put(ROLE_TECHNICIEN_MAINTENANCE, set(
+                "HOSPITALIZATION_READ", PERMISSION_BED_MAINTENANCE_MANAGE));
         mappings.put("AUDITEUR", set(
                 "AUDIT_READ", "BILLING_INVOICE_READ", "CASH_HISTORY_READ", "ACCOUNTING_DASHBOARD_READ",
                 "AUDIT_CROSS_TENANT_READ", PERMISSION_EMERGENCY_MEDICO_LEGAL_READ));
@@ -258,6 +277,8 @@ public final class RbacCatalog {
             case "PHARMACIEN" -> "Pharmacien";
             case "GESTIONNAIRE_STOCK" -> "Gestionnaire de stock";
             case "RESPONSABLE_HOSPITALISATION" -> "Responsable hospitalisation";
+            case ROLE_AGENT_HYGIENE -> "Agent d'hygiène";
+            case ROLE_TECHNICIEN_MAINTENANCE -> "Technicien de maintenance";
             case "AUDITEUR" -> "Auditeur";
             case "PATIENT" -> "Patient";
             default -> code;
