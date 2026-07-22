@@ -9,6 +9,8 @@ public record WardOccupancyResponse(
         List<RoomOccupancyResponse> rooms,
         Integer totalBedsCount,
         Integer occupiedBedsCount,
-        Integer availableBedsCount
+        Integer availableBedsCount,
+        Integer openBedsCount,
+        Integer readyBedsCount
 ) {
 }

@@ -1,14 +1,19 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { SpatialApiService } from '../../patient/spatial-api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
-import { RbacApiService } from '../rbac/rbac-api.service';
-import { Ward, WardOccupancy, Bed } from '../../patient/patient.models';
-import { IconComponent } from '../../shared/ui/icon.component';
+import { Ward } from '../../patient/patient.models';
+import { SpatialApiService } from '../../patient/spatial-api.service';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
+import { IconComponent } from '../../shared/ui/icon.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
+import { RbacApiService } from '../rbac/rbac-api.service';
+import {
+  BedCapacityStatus,
+  BedCapacityView,
+  WardCapacityView,
+} from './bed-capacity.models';
 
 @Component({
   selector: 'app-spatial-management-page',
@@ -26,7 +31,6 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
             {{ t('spatial.config.open') }}
           </a>
         }
-        <!-- Sélecteur de Service -->
         <div class="flex items-center gap-2">
           <label class="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider whitespace-nowrap">
             {{ t('spatial.selectWard') }}&nbsp;:
@@ -37,15 +41,14 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
             class="ui-select text-xs min-w-[200px]"
           >
             <option value="">-- {{ t('spatial.selectWardPlaceholder') }} --</option>
-            @for (w of wards(); track w.id) {
-              <option [value]="w.id">{{ w.name }}</option>
+            @for (ward of wards(); track ward.id) {
+              <option [value]="ward.id">{{ ward.name }}</option>
             }
           </select>
         </div>
       </app-page-header>
 
       <div class="app-container pb-12">
-        <!-- États de chargement / vide -->
         @if (loading()) {
           <div class="flex justify-center items-center py-12">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-cyan"></div>
@@ -61,16 +64,30 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
             </p>
           </div>
         } @else if (occupancy()) {
-          <!-- Vue du service sélectionné -->
           <div class="space-y-6">
-            <!-- Compteurs du service -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
               <div class="ui-card-muted p-4">
                 <div class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">
-                  {{ t('spatial.totalBeds') }}
+                  {{ t('spatial.capacity.installed') }}
                 </div>
                 <div class="text-lg font-black text-[var(--text-primary)]">
                   {{ occupancy()?.totalBedsCount }}
+                </div>
+              </div>
+              <div class="ui-card-muted p-4">
+                <div class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">
+                  {{ t('spatial.capacity.open') }}
+                </div>
+                <div class="text-lg font-black text-[var(--text-primary)]">
+                  {{ occupancy()?.openBedsCount }}
+                </div>
+              </div>
+              <div class="ui-card-muted p-4">
+                <div class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">
+                  {{ t('spatial.capacity.ready') }}
+                </div>
+                <div class="text-lg font-black" [style.color]="'var(--brand-info)'">
+                  {{ occupancy()?.readyBedsCount }}
                 </div>
               </div>
               <div class="ui-card-muted p-4">
@@ -83,7 +100,7 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
               </div>
               <div class="ui-card-muted p-4">
                 <div class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">
-                  {{ t('spatial.freeBeds') }}
+                  {{ t('spatial.capacity.available') }}
                 </div>
                 <div class="text-lg font-black" [style.color]="'var(--brand-success)'">
                   {{ availableBedsCount() }}
@@ -99,7 +116,6 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
               </div>
             </div>
 
-            <!-- Grille des chambres -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               @for (room of occupancy()?.rooms; track room.id) {
                 <div class="ui-card p-5 flex flex-col justify-between">
@@ -119,62 +135,74 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
                       </div>
                     </div>
 
-                    <!-- Grille des lits -->
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       @for (bed of room.beds; track bed.id) {
                         <div
-                          class="p-3 border rounded-md transition-all flex flex-col justify-between gap-2"
-                          [ngStyle]="getBedStyle(bed.status)"
+                          class="p-3 border rounded-md transition-all flex flex-col gap-2"
+                          [ngStyle]="getBedStyle(bed)"
                         >
-                          <div class="flex justify-between items-start gap-1">
+                          <div class="flex justify-between items-start gap-2">
                             <span class="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1">
                               <app-ui-icon name="bed" class="text-[var(--text-muted)]" />
                               {{ bed.bedNumber }}
                             </span>
+                            <span
+                              class="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-sm border"
+                              [ngStyle]="getCapacityBadgeStyle(bed.capacityStatus)"
+                            >
+                              {{ t('spatial.capacity.status.' + bed.capacityStatus) }}
+                            </span>
                           </div>
-                          
-                          <span class="text-[9px] font-black uppercase tracking-wider self-start px-1.5 py-0.5 rounded-sm" [ngStyle]="getBadgeStyle(bed.status)">
-                            {{ t('spatial.status.' + bed.status.toLowerCase()) }}
-                          </span>
 
-                          <!-- Actions rapides sur lit pour les profils habilités -->
-                          @if (canModify() && bed.status !== 'OCCUPIED') {
-                            <div class="flex gap-1 mt-1 border-t border-[var(--app-border)]/40 pt-2 justify-end">
-                              @if (bed.status === 'CLEANING') {
+                          <div class="flex flex-wrap gap-1">
+                            <span
+                              class="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-sm"
+                              [ngStyle]="getReadinessBadgeStyle(bed.readinessStatus)"
+                            >
+                              {{ t('spatial.readiness.status.' + bed.readinessStatus) }}
+                            </span>
+                            <span
+                              class="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-sm"
+                              [ngStyle]="getUsageBadgeStyle(bed.usageStatus)"
+                            >
+                              {{ t('spatial.usage.status.' + bed.usageStatus) }}
+                            </span>
+                          </div>
+
+                          @if (canModify() && bed.usageStatus !== 'OCCUPIED') {
+                            <div class="flex flex-wrap gap-1 mt-1 border-t border-[var(--app-border)]/40 pt-2 justify-end">
+                              <button
+                                (click)="changeBedCapacityStatus(bed.id, bed.capacityStatus === 'OPEN' ? 'CLOSED' : 'OPEN')"
+                                class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black rounded-sm border cursor-pointer"
+                                [style.background]="'var(--app-surface-muted)'"
+                                [style.color]="'var(--text-secondary)'"
+                                [style.border-color]="'var(--app-border)'"
+                              >
+                                <app-ui-icon [name]="bed.capacityStatus === 'OPEN' ? 'x-mark' : 'check'" />
+                                {{ t(bed.capacityStatus === 'OPEN' ? 'spatial.action.closeCapacity' : 'spatial.action.openCapacity') }}
+                              </button>
+
+                              @if (bed.capacityStatus === 'OPEN' && bed.readinessStatus !== 'READY') {
                                 <button
                                   (click)="changeBedStatus(bed.id, 'FREE')"
                                   class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black rounded-sm border cursor-pointer"
                                   [style.background]="'var(--brand-success-subtle)'"
                                   [style.color]="'var(--brand-success-text)'"
                                   [style.border-color]="'color-mix(in srgb, var(--brand-success-muted) 80%, transparent)'"
-                                  title="Mettre libre"
                                 >
                                   <app-ui-icon name="check" />
                                   {{ t('spatial.action.makeFree') }}
                                 </button>
-                              } @else if (bed.status === 'FREE') {
+                              } @else if (bed.capacityStatus === 'OPEN' && bed.readinessStatus === 'READY') {
                                 <button
                                   (click)="changeBedStatus(bed.id, 'MAINTENANCE')"
                                   class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black rounded-sm border cursor-pointer"
                                   [style.background]="'var(--app-surface-muted)'"
                                   [style.color]="'var(--text-secondary)'"
                                   [style.border-color]="'var(--app-border)'"
-                                  title="Mettre en maintenance"
                                 >
                                   <app-ui-icon name="wrench" />
                                   {{ t('spatial.action.maintenance') }}
-                                </button>
-                              } @else if (bed.status === 'MAINTENANCE') {
-                                <button
-                                  (click)="changeBedStatus(bed.id, 'FREE')"
-                                  class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black rounded-sm border cursor-pointer"
-                                  [style.background]="'var(--brand-success-subtle)'"
-                                  [style.color]="'var(--brand-success-text)'"
-                                  [style.border-color]="'color-mix(in srgb, var(--brand-success-muted) 80%, transparent)'"
-                                  title="Mettre libre"
-                                >
-                                  <app-ui-icon name="check" />
-                                  {{ t('spatial.action.makeFree') }}
                                 </button>
                               }
                             </div>
@@ -190,7 +218,7 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
         }
       </div>
     </app-shell>
-  `
+  `,
 })
 export class SpatialManagementPageComponent implements OnInit {
   private readonly spatialApi = inject(SpatialApiService);
@@ -201,15 +229,17 @@ export class SpatialManagementPageComponent implements OnInit {
 
   readonly wards = signal<Ward[]>([]);
   readonly selectedWardId = signal<string>('');
-  readonly occupancy = signal<WardOccupancy | null>(null);
-  readonly loading = signal<boolean>(false);
+  readonly occupancy = signal<WardCapacityView | null>(null);
+  readonly loading = signal(false);
 
   readonly availableBedsCount = computed(() => this.occupancy()?.availableBedsCount ?? 0);
 
   readonly occupancyRate = computed(() => {
-    const occ = this.occupancy();
-    if (!occ || occ.totalBedsCount === 0) return 0;
-    return Math.round((occ.occupiedBedsCount / occ.totalBedsCount) * 100);
+    const current = this.occupancy();
+    if (!current || current.openBedsCount === 0) {
+      return 0;
+    }
+    return Math.round((current.occupiedBedsCount / current.openBedsCount) * 100);
   });
 
   ngOnInit(): void {
@@ -228,7 +258,7 @@ export class SpatialManagementPageComponent implements OnInit {
           this.loading.set(false);
         }
       },
-      error: () => this.loading.set(false)
+      error: () => this.loading.set(false),
     });
   }
 
@@ -239,7 +269,7 @@ export class SpatialManagementPageComponent implements OnInit {
         this.occupancy.set(data);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false)
+      error: () => this.loading.set(false),
     });
   }
 
@@ -252,14 +282,18 @@ export class SpatialManagementPageComponent implements OnInit {
     }
   }
 
-  changeBedStatus(bedId: string, newStatus: 'FREE' | 'OCCUPIED' | 'CLEANING' | 'MAINTENANCE'): void {
+  changeBedStatus(
+    bedId: string,
+    newStatus: 'FREE' | 'OCCUPIED' | 'CLEANING' | 'MAINTENANCE',
+  ): void {
     this.spatialApi.updateBedStatus(bedId, newStatus).subscribe({
-      next: () => {
-        const wardId = this.selectedWardId();
-        if (wardId) {
-          this.loadOccupancy(wardId);
-        }
-      }
+      next: () => this.reloadSelectedWard(),
+    });
+  }
+
+  changeBedCapacityStatus(bedId: string, newStatus: BedCapacityStatus): void {
+    this.spatialApi.updateBedCapacityStatus(bedId, newStatus).subscribe({
+      next: () => this.reloadSelectedWard(),
     });
   }
 
@@ -271,57 +305,72 @@ export class SpatialManagementPageComponent implements OnInit {
     return this.rbacApi.hasPermission('SPATIAL_CONFIGURATION_MANAGE');
   }
 
-  getBedStyle(status: string): Record<string, string> {
-    switch (status) {
-      case 'FREE':
-        return {
-          background: 'var(--brand-success-subtle)',
-          'border-color': 'color-mix(in srgb, var(--brand-success-muted) 80%, transparent)',
-        };
-      case 'OCCUPIED':
-        return {
-          background: 'var(--brand-danger-subtle)',
-          'border-color': 'var(--brand-danger-border)',
-        };
-      case 'CLEANING':
-        return {
-          background: 'var(--brand-warning-subtle)',
-          'border-color': 'var(--brand-warning-border)',
-        };
-      case 'MAINTENANCE':
-        return {
-          background: 'var(--app-surface-muted)',
-          'border-color': 'var(--app-border)',
-        };
-      default:
-        return {};
+  getBedStyle(bed: BedCapacityView): Record<string, string> {
+    if (bed.capacityStatus === 'CLOSED') {
+      return {
+        background: 'var(--app-surface-muted)',
+        'border-color': 'var(--app-border)',
+        opacity: '0.78',
+      };
     }
+    if (bed.usageStatus === 'OCCUPIED') {
+      return {
+        background: 'var(--brand-danger-subtle)',
+        'border-color': 'var(--brand-danger-border)',
+      };
+    }
+    if (bed.readinessStatus === 'CLEANING') {
+      return {
+        background: 'var(--brand-warning-subtle)',
+        'border-color': 'var(--brand-warning-border)',
+      };
+    }
+    if (bed.readinessStatus === 'MAINTENANCE') {
+      return {
+        background: 'var(--app-surface-muted)',
+        'border-color': 'var(--app-border)',
+      };
+    }
+    return {
+      background: 'var(--brand-success-subtle)',
+      'border-color': 'color-mix(in srgb, var(--brand-success-muted) 80%, transparent)',
+    };
   }
 
-  getBadgeStyle(status: string): Record<string, string> {
-    switch (status) {
-      case 'FREE':
-        return {
-          background: 'var(--brand-success-muted)',
+  getCapacityBadgeStyle(status: BedCapacityStatus): Record<string, string> {
+    return status === 'OPEN'
+      ? {
+          background: 'var(--brand-success-subtle)',
           color: 'var(--brand-success-text)',
-        };
-      case 'OCCUPIED':
-        return {
-          background: 'var(--brand-danger-muted)',
-          color: 'var(--brand-danger-text)',
-        };
-      case 'CLEANING':
-        return {
-          background: 'var(--brand-warning-muted)',
-          color: 'var(--brand-warning-text)',
-        };
-      case 'MAINTENANCE':
-        return {
-          background: 'var(--app-border)',
+          'border-color': 'color-mix(in srgb, var(--brand-success-muted) 80%, transparent)',
+        }
+      : {
+          background: 'var(--app-surface-muted)',
           color: 'var(--text-secondary)',
+          'border-color': 'var(--app-border)',
         };
-      default:
-        return {};
+  }
+
+  getReadinessBadgeStyle(status: BedCapacityView['readinessStatus']): Record<string, string> {
+    if (status === 'READY') {
+      return { background: 'var(--brand-success-muted)', color: 'var(--brand-success-text)' };
+    }
+    if (status === 'CLEANING') {
+      return { background: 'var(--brand-warning-muted)', color: 'var(--brand-warning-text)' };
+    }
+    return { background: 'var(--app-border)', color: 'var(--text-secondary)' };
+  }
+
+  getUsageBadgeStyle(status: BedCapacityView['usageStatus']): Record<string, string> {
+    return status === 'OCCUPIED'
+      ? { background: 'var(--brand-danger-muted)', color: 'var(--brand-danger-text)' }
+      : { background: 'var(--app-surface-muted)', color: 'var(--text-secondary)' };
+  }
+
+  private reloadSelectedWard(): void {
+    const wardId = this.selectedWardId();
+    if (wardId) {
+      this.loadOccupancy(wardId);
     }
   }
 }

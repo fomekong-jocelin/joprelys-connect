@@ -16,5 +16,18 @@
   "spatial.services.type.PHARMACY.label": "Pharmacy",
   "spatial.services.type.PHARMACY.description": "Medication management, preparation and dispensing service without patient accommodation.",
   "spatial.services.type.ADMINISTRATIVE.label": "Administrative",
-  "spatial.services.type.ADMINISTRATIVE.description": "Cash desk, administrative reception, management or another support function without rooms or beds."
+  "spatial.services.type.ADMINISTRATIVE.description": "Cash desk, administrative reception, management or another support function without rooms or beds.",
+  "spatial.capacity.installed": "Installed beds",
+  "spatial.capacity.open": "Open beds",
+  "spatial.capacity.ready": "Ready beds",
+  "spatial.capacity.available": "Available beds",
+  "spatial.capacity.status.OPEN": "Open",
+  "spatial.capacity.status.CLOSED": "Closed",
+  "spatial.readiness.status.READY": "Ready",
+  "spatial.readiness.status.CLEANING": "Cleaning",
+  "spatial.readiness.status.MAINTENANCE": "Maintenance",
+  "spatial.usage.status.OCCUPIED": "Occupied",
+  "spatial.usage.status.UNASSIGNED": "Unassigned",
+  "spatial.action.openCapacity": "Open",
+  "spatial.action.closeCapacity": "Close"
 }

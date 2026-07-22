@@ -12,30 +12,36 @@ class SpatialControllerAuthorizationTest {
 
     @Test
     void bedStatusEndpointShouldRequireDedicatedOperationalPermission() throws NoSuchMethodException {
-        Method method = SpatialController.class.getMethod(
-                "updateBedStatus",
-                UUID.class,
-                UpdateBedStatusRequest.class);
+        assertPermission(
+                SpatialController.class.getMethod(
+                        "updateBedStatus",
+                        UUID.class,
+                        UpdateBedStatusRequest.class),
+                "hasAuthority('BED_OPERATIONAL_STATUS_MANAGE')");
+    }
 
-        PreAuthorize authorization = method.getAnnotation(PreAuthorize.class);
-
-        assertNotNull(authorization);
-        assertEquals(
-                "hasAuthority('BED_OPERATIONAL_STATUS_MANAGE')",
-                authorization.value());
+    @Test
+    void bedCapacityEndpointShouldRequireDedicatedOperationalPermission() throws NoSuchMethodException {
+        assertPermission(
+                SpatialController.class.getMethod(
+                        "updateBedCapacityStatus",
+                        UUID.class,
+                        UpdateBedCapacityStatusRequest.class),
+                "hasAuthority('BED_OPERATIONAL_STATUS_MANAGE')");
     }
 
     @Test
     void transferEndpointShouldKeepHospitalizationPermissionInThisIncrement() throws NoSuchMethodException {
-        Method method = SpatialController.class.getMethod(
-                "transferPatient",
-                TransferRequest.class);
+        assertPermission(
+                SpatialController.class.getMethod(
+                        "transferPatient",
+                        TransferRequest.class),
+                "hasAuthority('HOSPITALIZATION_MANAGE')");
+    }
 
+    private void assertPermission(Method method, String expectedExpression) {
         PreAuthorize authorization = method.getAnnotation(PreAuthorize.class);
-
         assertNotNull(authorization);
-        assertEquals(
-                "hasAuthority('HOSPITALIZATION_MANAGE')",
-                authorization.value());
+        assertEquals(expectedExpression, authorization.value());
     }
 }

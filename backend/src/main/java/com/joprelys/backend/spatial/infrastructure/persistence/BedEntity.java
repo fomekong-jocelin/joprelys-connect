@@ -1,9 +1,21 @@
 package com.joprelys.backend.spatial.infrastructure.persistence;
 
-import jakarta.persistence.*;
-import org.hibernate.annotations.TenantId;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.TenantId;
 
 @Entity
 @Table(name = "beds")
@@ -22,6 +34,14 @@ public class BedEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 50)
     private BedStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "capacity_status", nullable = false, length = 20)
+    private BedCapacityStatus capacityStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "readiness_status", nullable = false, length = 20)
+    private BedReadinessStatus readinessStatus;
 
     @TenantId
     @Column(name = "organization_id")
@@ -44,6 +64,8 @@ public class BedEntity {
         this.id = UUID.randomUUID();
         this.room = room;
         this.bedNumber = bedNumber;
+        this.capacityStatus = BedCapacityStatus.OPEN;
+        this.readinessStatus = BedReadinessStatus.READY;
         this.status = BedStatus.FREE;
     }
 
@@ -52,6 +74,13 @@ public class BedEntity {
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
+        if (capacityStatus == null) {
+            capacityStatus = BedCapacityStatus.OPEN;
+        }
+        if (readinessStatus == null) {
+            readinessStatus = readinessFromLegacyStatus(status);
+        }
+        synchronizeLegacyStatus();
     }
 
     @PreUpdate
@@ -84,7 +113,47 @@ public class BedEntity {
     }
 
     public void setStatus(BedStatus status) {
-        this.status = status;
+        this.status = Objects.requireNonNull(status, "Le statut legacy du lit est obligatoire.");
+        switch (status) {
+            case FREE -> {
+                this.capacityStatus = BedCapacityStatus.OPEN;
+                this.readinessStatus = BedReadinessStatus.READY;
+            }
+            case OCCUPIED -> {
+                this.capacityStatus = BedCapacityStatus.OPEN;
+                this.readinessStatus = BedReadinessStatus.READY;
+            }
+            case CLEANING -> this.readinessStatus = BedReadinessStatus.CLEANING;
+            case MAINTENANCE -> this.readinessStatus = BedReadinessStatus.MAINTENANCE;
+        }
+    }
+
+    public BedCapacityStatus getCapacityStatus() {
+        return capacityStatus;
+    }
+
+    public void setCapacityStatus(BedCapacityStatus capacityStatus) {
+        this.capacityStatus = Objects.requireNonNull(capacityStatus, "L'état de capacité du lit est obligatoire.");
+        synchronizeLegacyStatus();
+    }
+
+    public BedReadinessStatus getReadinessStatus() {
+        return readinessStatus;
+    }
+
+    public boolean isOpen() {
+        return capacityStatus == BedCapacityStatus.OPEN;
+    }
+
+    public boolean isReady() {
+        return readinessStatus == BedReadinessStatus.READY;
+    }
+
+    public boolean isOperationallyAvailable(boolean hasActiveAssignment) {
+        return isOpen()
+                && isReady()
+                && !hasActiveAssignment
+                && status == BedStatus.FREE;
     }
 
     public UUID getOrganizationId() {
@@ -105,5 +174,31 @@ public class BedEntity {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    private void synchronizeLegacyStatus() {
+        if (status == BedStatus.OCCUPIED) {
+            return;
+        }
+        if (capacityStatus == BedCapacityStatus.CLOSED && readinessStatus == BedReadinessStatus.READY) {
+            status = BedStatus.MAINTENANCE;
+            return;
+        }
+        status = switch (readinessStatus) {
+            case READY -> BedStatus.FREE;
+            case CLEANING -> BedStatus.CLEANING;
+            case MAINTENANCE -> BedStatus.MAINTENANCE;
+        };
+    }
+
+    private BedReadinessStatus readinessFromLegacyStatus(BedStatus legacyStatus) {
+        if (legacyStatus == null) {
+            return BedReadinessStatus.READY;
+        }
+        return switch (legacyStatus) {
+            case CLEANING -> BedReadinessStatus.CLEANING;
+            case MAINTENANCE -> BedReadinessStatus.MAINTENANCE;
+            case FREE, OCCUPIED -> BedReadinessStatus.READY;
+        };
     }
 }

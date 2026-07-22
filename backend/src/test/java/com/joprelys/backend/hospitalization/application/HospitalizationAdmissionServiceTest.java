@@ -18,7 +18,9 @@ import com.joprelys.backend.hospitalization.infrastructure.persistence.Hospitali
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.reconciliation.application.PatientCanonicalResolver;
 import com.joprelys.backend.spatial.application.ActiveBedAssignmentService;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedCapacityStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedReadinessStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedRepository;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.RoomEntity;
@@ -91,7 +93,7 @@ class HospitalizationAdmissionServiceTest {
                 () -> service.admitPatient(request));
 
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
-        verify(bedRepository, never()).claimIfFree(any(), any(), any());
+        verify(bedRepository, never()).claimIfAvailable(any(), any(), any(), any(), any());
         verify(hospitalizationRepository, never()).save(any());
         verify(activeBedAssignmentService, never()).assign(any(), any(), any());
     }
@@ -109,7 +111,12 @@ class HospitalizationAdmissionServiceTest {
                 request.roomNumber(),
                 request.bedNumber()))
                 .thenReturn(Optional.of(bed));
-        when(bedRepository.claimIfFree(bedId, BedStatus.FREE, BedStatus.OCCUPIED)).thenReturn(1);
+        when(bedRepository.claimIfAvailable(
+                bedId,
+                BedStatus.FREE,
+                BedStatus.OCCUPIED,
+                BedCapacityStatus.OPEN,
+                BedReadinessStatus.READY)).thenReturn(1);
         when(bedRepository.findById(bedId)).thenReturn(Optional.of(bed));
         when(hospitalizationRepository.getNextHospitalizationNumberSequenceValue()).thenReturn(42L);
         when(hospitalizationRepository.save(any(HospitalizationEntity.class)))
@@ -118,13 +125,18 @@ class HospitalizationAdmissionServiceTest {
         var response = service.admitPatient(request);
 
         assertNotNull(response);
-        verify(bedRepository).claimIfFree(bedId, BedStatus.FREE, BedStatus.OCCUPIED);
+        verify(bedRepository).claimIfAvailable(
+                bedId,
+                BedStatus.FREE,
+                BedStatus.OCCUPIED,
+                BedCapacityStatus.OPEN,
+                BedReadinessStatus.READY);
         verify(hospitalizationRepository).save(any(HospitalizationEntity.class));
         verify(activeBedAssignmentService).assign(any(), any(), any());
     }
 
     @Test
-    void shouldRejectAdmissionWhenAtomicBedClaimLosesTheRace() {
+    void shouldRejectAdmissionWhenAtomicBedClaimLosesTheRaceOrBedIsNotReady() {
         prepareVisitBasedAdmission();
         UUID bedId = UUID.randomUUID();
         BedEntity bed = configuredBed(bedId);
@@ -135,13 +147,19 @@ class HospitalizationAdmissionServiceTest {
                 request.roomNumber(),
                 request.bedNumber()))
                 .thenReturn(Optional.of(bed));
-        when(bedRepository.claimIfFree(bedId, BedStatus.FREE, BedStatus.OCCUPIED)).thenReturn(0);
+        when(bedRepository.claimIfAvailable(
+                bedId,
+                BedStatus.FREE,
+                BedStatus.OCCUPIED,
+                BedCapacityStatus.OPEN,
+                BedReadinessStatus.READY)).thenReturn(0);
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
                 () -> service.admitPatient(request));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+        assertEquals("Le lit demandé n'est pas ouvert, prêt et disponible.", exception.getReason());
         verify(hospitalizationRepository, never()).save(any());
         verify(activeBedAssignmentService, never()).assign(any(), any(), any());
     }
@@ -187,7 +205,12 @@ class HospitalizationAdmissionServiceTest {
                 request.roomNumber(),
                 request.bedNumber()))
                 .thenReturn(Optional.of(bed));
-        when(bedRepository.claimIfFree(bedId, BedStatus.FREE, BedStatus.OCCUPIED)).thenReturn(1);
+        when(bedRepository.claimIfAvailable(
+                bedId,
+                BedStatus.FREE,
+                BedStatus.OCCUPIED,
+                BedCapacityStatus.OPEN,
+                BedReadinessStatus.READY)).thenReturn(1);
         when(bedRepository.findById(bedId)).thenReturn(Optional.of(bed));
         when(hospitalizationRepository.getNextHospitalizationNumberSequenceValue()).thenReturn(43L);
         when(hospitalizationRepository.save(any(HospitalizationEntity.class)))

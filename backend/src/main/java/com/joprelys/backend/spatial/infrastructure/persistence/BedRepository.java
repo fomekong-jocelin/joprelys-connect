@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface BedRepository extends JpaRepository<BedEntity, UUID> {
     List<BedEntity> findByRoomId(UUID roomId);
@@ -40,10 +41,20 @@ public interface BedRepository extends JpaRepository<BedEntity, UUID> {
             @Param("roomNumber") String roomNumber,
             @Param("bedNumber") String bedNumber);
 
+    @Transactional
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("UPDATE BedEntity b SET b.status = :occupiedStatus WHERE b.id = :bedId AND b.status = :freeStatus")
-    int claimIfFree(
+    @Query("""
+            UPDATE BedEntity b
+            SET b.status = :occupiedStatus
+            WHERE b.id = :bedId
+              AND b.status = :freeStatus
+              AND b.capacityStatus = :openCapacityStatus
+              AND b.readinessStatus = :readyStatus
+            """)
+    int claimIfAvailable(
             @Param("bedId") UUID bedId,
             @Param("freeStatus") BedStatus freeStatus,
-            @Param("occupiedStatus") BedStatus occupiedStatus);
+            @Param("occupiedStatus") BedStatus occupiedStatus,
+            @Param("openCapacityStatus") BedCapacityStatus openCapacityStatus,
+            @Param("readyStatus") BedReadinessStatus readyStatus);
 }

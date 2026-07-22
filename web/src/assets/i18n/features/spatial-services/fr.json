@@ -16,5 +16,18 @@
   "spatial.services.type.PHARMACY.label": "Pharmacie",
   "spatial.services.type.PHARMACY.description": "Service de gestion, préparation et délivrance des médicaments, sans hébergement.",
   "spatial.services.type.ADMINISTRATIVE.label": "Administratif",
-  "spatial.services.type.ADMINISTRATIVE.description": "Caisse, accueil administratif, direction ou autre fonction support, sans chambre ni lit."
+  "spatial.services.type.ADMINISTRATIVE.description": "Caisse, accueil administratif, direction ou autre fonction support, sans chambre ni lit.",
+  "spatial.capacity.installed": "Lits installés",
+  "spatial.capacity.open": "Lits ouverts",
+  "spatial.capacity.ready": "Lits prêts",
+  "spatial.capacity.available": "Lits disponibles",
+  "spatial.capacity.status.OPEN": "Ouvert",
+  "spatial.capacity.status.CLOSED": "Fermé",
+  "spatial.readiness.status.READY": "Prêt",
+  "spatial.readiness.status.CLEANING": "Nettoyage",
+  "spatial.readiness.status.MAINTENANCE": "Maintenance",
+  "spatial.usage.status.OCCUPIED": "Occupé",
+  "spatial.usage.status.UNASSIGNED": "Non affecté",
+  "spatial.action.openCapacity": "Ouvrir",
+  "spatial.action.closeCapacity": "Fermer"
 }

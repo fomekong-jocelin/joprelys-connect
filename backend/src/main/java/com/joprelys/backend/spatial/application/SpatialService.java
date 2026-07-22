@@ -11,7 +11,9 @@ import com.joprelys.backend.spatial.api.RoomOccupancyResponse;
 import com.joprelys.backend.spatial.api.WardOccupancyResponse;
 import com.joprelys.backend.spatial.api.WardResponse;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedCapacityStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedReadinessStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedRepository;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.RoomEntity;
@@ -20,9 +22,13 @@ import com.joprelys.backend.spatial.infrastructure.persistence.WardEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.WardRepository;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -77,25 +83,41 @@ public class SpatialService {
         ward.requireRoomsAllowed();
 
         List<RoomEntity> rooms = roomRepository.findByWardId(wardId);
+        List<BedEntity> wardBeds = bedRepository.findByWardId(wardId);
+        Map<UUID, List<BedEntity>> bedsByRoom = wardBeds.stream()
+                .collect(Collectors.groupingBy(bed -> bed.getRoom().getId()));
+        Set<UUID> activeBedIds = wardBeds.isEmpty()
+                ? Set.of()
+                : new HashSet<>(bedAssignmentRepository.findActiveBedIds(
+                        wardBeds.stream().map(BedEntity::getId).toList()));
+
         List<RoomOccupancyResponse> roomOccupancyResponses = new ArrayList<>();
-        int totalBeds = 0;
+        int installedBeds = 0;
+        int openBeds = 0;
+        int readyBeds = 0;
         int occupiedBeds = 0;
         int availableBeds = 0;
 
         for (RoomEntity room : rooms) {
-            List<BedEntity> beds = bedRepository.findByRoomId(room.getId());
-            List<BedResponse> bedResponses = beds.stream()
-                    .map(BedResponse::fromEntity)
-                    .toList();
+            List<BedEntity> beds = bedsByRoom.getOrDefault(room.getId(), List.of());
+            List<BedResponse> bedResponses = new ArrayList<>();
 
             for (BedEntity bed : beds) {
-                totalBeds++;
-                if (bed.getStatus() == BedStatus.OCCUPIED) {
+                boolean hasActiveAssignment = activeBedIds.contains(bed.getId());
+                installedBeds++;
+                if (bed.isOpen()) {
+                    openBeds++;
+                }
+                if (bed.isOpen() && bed.isReady()) {
+                    readyBeds++;
+                }
+                if (hasActiveAssignment) {
                     occupiedBeds++;
                 }
-                if (bed.getStatus() == BedStatus.FREE) {
+                if (bed.isOperationallyAvailable(hasActiveAssignment)) {
                     availableBeds++;
                 }
+                bedResponses.add(BedResponse.fromEntity(bed, hasActiveAssignment));
             }
 
             roomOccupancyResponses.add(new RoomOccupancyResponse(
@@ -110,43 +132,60 @@ public class SpatialService {
                 ward.getId(),
                 ward.getName(),
                 roomOccupancyResponses,
-                totalBeds,
+                installedBeds,
                 occupiedBeds,
-                availableBeds);
+                availableBeds,
+                openBeds,
+                readyBeds);
     }
 
     @Transactional
     public BedResponse updateBedStatus(UUID bedId, BedStatus newStatus) {
-        BedEntity bed = bedRepository.findById(bedId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lit introuvable"));
-        bed.getRoom().getWard().requireRoomsAllowed();
-
+        BedEntity bed = requireBed(bedId);
         boolean hasActiveAssignment = bedAssignmentRepository.findActiveByBedId(bedId).isPresent();
         bedStatusTransitionPolicy.validateManualTransition(
                 bed.getStatus(),
                 newStatus,
+                bed.getCapacityStatus(),
                 hasActiveAssignment);
 
         if (bed.getStatus() == newStatus) {
-            return BedResponse.fromEntity(bed);
+            return BedResponse.fromEntity(bed, hasActiveAssignment);
         }
 
+        BedStatus previousStatus = bed.getStatus();
         bed.setStatus(newStatus);
         BedEntity saved = bedRepository.save(bed);
+        auditBedChange(
+                saved,
+                "UPDATE_BED_READINESS",
+                "État de préparation du lit " + saved.getBedNumber()
+                        + " changé de " + previousStatus + " à " + newStatus);
+        return BedResponse.fromEntity(saved, false);
+    }
 
-        UserAccountEntity actor = getCurrentUser();
-        if (actor != null) {
-            auditService.logSuccess(
-                    actor.getId(),
-                    actor.getOrganizationId(),
-                    null,
-                    "SPATIAL",
-                    saved.getId(),
-                    "UPDATE_BED_STATUS",
-                    "Statut du lit " + saved.getBedNumber() + " changé à " + newStatus);
+    @Transactional
+    public BedResponse updateBedCapacityStatus(UUID bedId, BedCapacityStatus newCapacityStatus) {
+        BedEntity bed = requireBed(bedId);
+        boolean hasActiveAssignment = bedAssignmentRepository.findActiveByBedId(bedId).isPresent();
+        bedStatusTransitionPolicy.validateCapacityTransition(
+                bed.getStatus(),
+                newCapacityStatus,
+                hasActiveAssignment);
+
+        if (bed.getCapacityStatus() == newCapacityStatus) {
+            return BedResponse.fromEntity(bed, hasActiveAssignment);
         }
 
-        return BedResponse.fromEntity(saved);
+        BedCapacityStatus previousStatus = bed.getCapacityStatus();
+        bed.setCapacityStatus(newCapacityStatus);
+        BedEntity saved = bedRepository.save(bed);
+        auditBedChange(
+                saved,
+                "UPDATE_BED_CAPACITY",
+                "Capacité du lit " + saved.getBedNumber()
+                        + " changée de " + previousStatus + " à " + newCapacityStatus);
+        return BedResponse.fromEntity(saved, false);
     }
 
     @Transactional
@@ -165,9 +204,16 @@ public class SpatialService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Nouveau lit introuvable");
         }
 
-        int claimed = bedRepository.claimIfFree(newBedId, BedStatus.FREE, BedStatus.OCCUPIED);
+        int claimed = bedRepository.claimIfAvailable(
+                newBedId,
+                BedStatus.FREE,
+                BedStatus.OCCUPIED,
+                BedCapacityStatus.OPEN,
+                BedReadinessStatus.READY);
         if (claimed != 1) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Le lit demandé n'est pas libre.");
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Le lit demandé n'est pas ouvert, prêt et disponible.");
         }
         BedEntity occupiedBed = bedRepository.findById(newBedId)
                 .orElseThrow(() -> new IllegalStateException(
@@ -175,7 +221,6 @@ public class SpatialService {
 
         bedAssignmentRepository.findActiveByHospitalizationId(hospitalizationId).ifPresent(oldAssignment -> {
             oldAssignment.releaseAt(Instant.now());
-            // Rendre la clôture visible à la contrainte d'unicité avant l'insertion de remplacement.
             bedAssignmentRepository.saveAndFlush(oldAssignment);
 
             BedEntity oldBed = oldAssignment.getBed();
@@ -208,6 +253,28 @@ public class SpatialService {
         }
 
         return BedAssignmentResponse.fromEntity(savedAssignment);
+    }
+
+    private BedEntity requireBed(UUID bedId) {
+        BedEntity bed = bedRepository.findById(bedId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lit introuvable"));
+        bed.getRoom().getWard().requireRoomsAllowed();
+        return bed;
+    }
+
+    private void auditBedChange(BedEntity bed, String action, String reason) {
+        UserAccountEntity actor = getCurrentUser();
+        if (actor == null) {
+            return;
+        }
+        auditService.logSuccess(
+                actor.getId(),
+                actor.getOrganizationId(),
+                null,
+                "SPATIAL",
+                bed.getId(),
+                action,
+                reason);
     }
 
     private UserAccountEntity getCurrentUser() {

@@ -1,10 +1,12 @@
 package com.joprelys.backend.spatial.infrastructure.persistence;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import java.util.Optional;
-import java.util.UUID;
 
 public interface BedAssignmentRepository extends JpaRepository<BedAssignmentEntity, UUID> {
 
@@ -13,6 +15,9 @@ public interface BedAssignmentRepository extends JpaRepository<BedAssignmentEnti
 
     @Query("SELECT a FROM BedAssignmentEntity a WHERE a.bed.id = :bedId AND a.releasedAt IS NULL")
     Optional<BedAssignmentEntity> findActiveByBedId(@Param("bedId") UUID bedId);
+
+    @Query("SELECT a.bed.id FROM BedAssignmentEntity a WHERE a.bed.id IN :bedIds AND a.releasedAt IS NULL")
+    List<UUID> findActiveBedIds(@Param("bedIds") Collection<UUID> bedIds);
 
     boolean existsByBedId(UUID bedId);
 }
