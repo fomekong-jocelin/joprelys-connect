@@ -15,7 +15,15 @@ import { Hospitalization } from './patient.models';
         <div class="min-w-0">
           <p class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">{{ t('patients.hospitalization', 'Hospitalisation') }}</p>
           <div class="mt-2 flex flex-wrap items-center gap-2">
-            <span class="rounded-md border border-[var(--brand-success-border)] bg-[var(--brand-success-subtle)] px-2 py-1 text-xs font-bold text-[var(--brand-success-text)]">{{ t('patients.hospitalization.status.EN_COURS', 'En cours') }}</span>
+            @if (awaitingPhysicalDeparture()) {
+              <span class="rounded-md border border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] px-2 py-1 text-xs font-bold text-[var(--brand-warning-text)]">
+                {{ t('patients.hospitalization.status.DISCHARGE_DECIDED', 'Sortie médicale décidée') }}
+              </span>
+            } @else {
+              <span class="rounded-md border border-[var(--brand-success-border)] bg-[var(--brand-success-subtle)] px-2 py-1 text-xs font-bold text-[var(--brand-success-text)]">
+                {{ t('patients.hospitalization.status.EN_COURS', 'En cours') }}
+              </span>
+            }
             <span class="font-mono text-xs font-semibold text-[var(--text-secondary)]">{{ stay().hospitalizationNumber }}</span>
           </div>
           <h2 id="stay-workspace-title" class="mt-3 break-words text-lg leading-7 font-bold text-[var(--text-primary)]">{{ stay().serviceName }} · {{ t('patients.hospitalization.room', 'Chambre') }} {{ stay().roomNumber }} · {{ t('patients.hospitalization.bed', 'Lit') }} {{ stay().bedNumber }}</h2>
@@ -28,6 +36,12 @@ import { Hospitalization } from './patient.models';
               <dt class="text-xs font-semibold text-[var(--text-muted)]">{{ t('patients.hospitalization.admittedAt', 'Admis le') }}</dt>
               <dd class="mt-0.5 font-medium text-[var(--text-secondary)]">{{ stay().admittedAt | date:'dd/MM/yyyy HH:mm' }}</dd>
             </div>
+            @if (stay().dischargeDecidedAt) {
+              <div>
+                <dt class="text-xs font-semibold text-[var(--text-muted)]">{{ t('patients.hospitalization.dischargeDecidedAt', 'Sortie décidée le') }}</dt>
+                <dd class="mt-0.5 font-medium text-[var(--text-secondary)]">{{ stay().dischargeDecidedAt | date:'dd/MM/yyyy HH:mm' }}</dd>
+              </div>
+            }
           </dl>
         </div>
         <div class="grid w-full gap-2 sm:grid-cols-2 xl:max-w-[34rem]" [attr.aria-label]="t('patients.hospitalization.actions', 'Actions du séjour')">
@@ -36,10 +50,19 @@ import { Hospitalization } from './patient.models';
             <button type="button" class="ui-button ui-button-secondary min-w-0 whitespace-normal px-3 text-center" (click)="transfer.emit()">{{ t('patients.hospitalization.transfer', 'Transférer de lit') }}</button>
           }
           @if (canDischarge()) {
-            <button type="button" class="ui-button ui-button-danger min-w-0 whitespace-normal px-3 text-center" (click)="discharge.emit()">{{ t('patients.hospitalization.discharge', 'Déclarer la sortie') }}</button>
+            <button type="button" class="ui-button ui-button-danger min-w-0 whitespace-normal px-3 text-center" (click)="discharge.emit()">{{ t('patients.hospitalization.dischargeDecision', 'Décider la sortie médicale') }}</button>
+          }
+          @if (canConfirmPhysicalDeparture()) {
+            <button type="button" class="ui-button ui-button-danger min-w-0 whitespace-normal px-3 text-center sm:col-span-2" (click)="physicalDeparture.emit()">{{ t('patients.hospitalization.confirmPhysicalDeparture', 'Confirmer le départ physique') }}</button>
           }
         </div>
       </div>
+      @if (awaitingPhysicalDeparture()) {
+        <div class="mt-5 border-l-2 border-[var(--brand-warning)] bg-[var(--brand-warning-subtle)] px-4 py-3 text-sm text-[var(--brand-warning-text)]">
+          <p class="font-bold">{{ t('patients.hospitalization.awaitingPhysicalDepartureTitle', 'Patient encore présent dans l’unité') }}</p>
+          <p class="mt-1 leading-6">{{ t('patients.hospitalization.awaitingPhysicalDepartureDetail', 'La décision médicale est enregistrée, mais le séjour et le lit restent actifs jusqu’à la confirmation du départ physique.') }}</p>
+        </div>
+      }
       <div class="mt-5 border-l-2 border-[var(--brand-primary)] bg-[var(--app-surface-muted)] px-4 py-3 text-sm text-[var(--text-secondary)]">
         <p class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">{{ t('patients.hospitalization.reason', 'Motif d’hospitalisation') }}</p>
         <p class="mt-1 leading-6">{{ stay().admissionReason }}</p>
@@ -54,17 +77,28 @@ export class HospitalizationStayHeaderComponent {
   readonly entryPdf = output<void>();
   readonly transfer = output<void>();
   readonly discharge = output<void>();
+  readonly physicalDeparture = output<void>();
 
   private readonly i18n = inject(I18nService);
   private readonly rbacApi = inject(RbacApiService);
 
   readonly t = (key: string, defaultValue: string) => this.i18n.t(key, defaultValue);
 
+  awaitingPhysicalDeparture(): boolean {
+    return Boolean(this.stay().dischargeDecidedAt && !this.stay().physicalDepartureAt);
+  }
+
   canTransfer(): boolean {
-    return this.rbacApi.hasPermission('HOSPITALIZATION_TRANSFER');
+    return !this.awaitingPhysicalDeparture() && this.rbacApi.hasPermission('HOSPITALIZATION_TRANSFER');
   }
 
   canDischarge(): boolean {
-    return this.rbacApi.hasPermission('HOSPITALIZATION_DISCHARGE_DECIDE');
+    return !this.awaitingPhysicalDeparture()
+      && this.rbacApi.hasPermission('HOSPITALIZATION_DISCHARGE_DECIDE');
+  }
+
+  canConfirmPhysicalDeparture(): boolean {
+    return this.awaitingPhysicalDeparture()
+      && this.rbacApi.hasPermission('HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM');
   }
 }
