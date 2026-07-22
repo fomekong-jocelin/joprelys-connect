@@ -185,12 +185,26 @@ export class PatientHospitalizationComponent implements OnInit {
   }
 
   canModify(): boolean {
-    return this.canWriteNotes()
-      || this.canRecordConsent()
-      || this.canWriteCare()
-      || this.canAdministerMedication()
-      || this.canRecordConsumable()
-      || this.canWriteOperatingReport();
+    if (!this.activeHospitalization()) {
+      return this.canAdmit();
+    }
+
+    switch (this.activeTab) {
+      case 'notes':
+        return this.canWriteNotes();
+      case 'consents':
+        return this.canRecordConsent();
+      case 'cares':
+        return this.canWriteCare();
+      case 'meds':
+        return this.canAdministerMedication();
+      case 'consumptions':
+        return this.canRecordConsumable();
+      case 'cro':
+        return this.canWriteOperatingReport();
+      default:
+        return false;
+    }
   }
 
   loadWardsForAdmission(): void {
