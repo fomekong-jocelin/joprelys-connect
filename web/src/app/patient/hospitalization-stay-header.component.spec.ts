@@ -69,7 +69,9 @@ describe('HospitalizationStayHeaderComponent', () => {
     const transfer = vi.fn();
     fixture.componentInstance.transfer.subscribe(transfer);
 
-    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button'),
+    ) as HTMLButtonElement[];
     buttons.find((button) => button.textContent?.includes('Transférer'))?.click();
 
     expect(transfer).toHaveBeenCalledOnce();
@@ -108,9 +110,11 @@ describe('HospitalizationStayHeaderComponent', () => {
     fixture.componentInstance.openPhysicalDepartureDialog();
     fixture.detectChanges();
 
-    const submit = Array.from(fixture.nativeElement.querySelectorAll('button'))
-      .find((button: HTMLButtonElement) => button.type === 'submit') as HTMLButtonElement;
-    expect(submit.disabled).toBe(true);
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button'),
+    ) as HTMLButtonElement[];
+    const submit = buttons.find((button) => button.type === 'submit');
+    expect(submit?.disabled).toBe(true);
     expect(confirmPhysicalDeparture).not.toHaveBeenCalled();
   });
 });
