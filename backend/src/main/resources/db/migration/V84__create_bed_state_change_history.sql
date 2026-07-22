@@ -7,7 +7,7 @@ CREATE TABLE bed_state_changes (
     id UUID PRIMARY KEY,
     organization_id UUID NOT NULL,
     bed_id UUID NOT NULL,
-    axis VARCHAR(20) NOT NULL,
+    state_axis VARCHAR(20) NOT NULL,
     previous_value VARCHAR(50) NOT NULL,
     new_value VARCHAR(50) NOT NULL,
     reason_code VARCHAR(64) NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE bed_state_changes (
     source VARCHAR(40) NOT NULL,
     occurred_at TIMESTAMP NOT NULL,
     CONSTRAINT ck_bed_state_changes_axis
-        CHECK (axis IN ('CAPACITY', 'READINESS')),
+        CHECK (state_axis IN ('CAPACITY', 'READINESS')),
     CONSTRAINT ck_bed_state_changes_source
         CHECK (source IN ('MANUAL', 'SYSTEM_TRANSFER', 'SYSTEM_PHYSICAL_DEPARTURE', 'LEGACY_SUPERVISION')),
     CONSTRAINT ck_bed_state_changes_values
