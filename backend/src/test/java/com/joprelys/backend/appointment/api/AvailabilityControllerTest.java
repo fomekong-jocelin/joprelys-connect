@@ -138,6 +138,7 @@ class AvailabilityControllerTest {
 	@AfterEach
 	void tearDown() {
 		TenantContext.clear();
+		cleanDatabase();
 	}
 
 	@Test
