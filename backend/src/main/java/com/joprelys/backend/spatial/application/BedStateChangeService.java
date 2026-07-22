@@ -32,9 +32,7 @@ public class BedStateChangeService {
             BedStateReasonCode.CAPACITY_SAFETY,
             BedStateReasonCode.CAPACITY_OTHER);
 
-    private static final Set<BedStateReasonCode> CLEANING_START_REASONS = Set.of(
-            BedStateReasonCode.CLEANING_AFTER_DEPARTURE,
-            BedStateReasonCode.CLEANING_AFTER_TRANSFER,
+    private static final Set<BedStateReasonCode> MANUAL_CLEANING_START_REASONS = Set.of(
             BedStateReasonCode.CLEANING_ROUTINE,
             BedStateReasonCode.CLEANING_ISOLATION,
             BedStateReasonCode.CLEANING_INCIDENT);
@@ -168,7 +166,8 @@ public class BedStateChangeService {
         }
 
         boolean allowed = switch (axis) {
-            case CAPACITY -> validateCapacityReason(newValue, reasonCode);
+            case CAPACITY -> source == BedStateChangeSource.MANUAL
+                    && validateCapacityReason(newValue, reasonCode);
             case READINESS -> validateReadinessReason(previousValue, newValue, reasonCode, source);
         };
         requireReason(allowed);
@@ -204,7 +203,8 @@ public class BedStateChangeService {
             if (source == BedStateChangeSource.SYSTEM_PHYSICAL_DEPARTURE) {
                 return reasonCode == BedStateReasonCode.CLEANING_AFTER_DEPARTURE;
             }
-            return CLEANING_START_REASONS.contains(reasonCode);
+            return source == BedStateChangeSource.MANUAL
+                    && MANUAL_CLEANING_START_REASONS.contains(reasonCode);
         }
         if ("MAINTENANCE".equals(newValue)) {
             return source == BedStateChangeSource.MANUAL && MAINTENANCE_START_REASONS.contains(reasonCode);
