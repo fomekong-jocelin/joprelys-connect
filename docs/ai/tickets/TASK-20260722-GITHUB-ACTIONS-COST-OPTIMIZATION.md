@@ -31,7 +31,7 @@ Réduire les minutes consommées sans supprimer de tests ni affaiblir la validat
 - [x] Conserver les tests Angular et le build production.
 - [x] Ajouter des timeouts de sécurité.
 - [x] Utiliser des permissions GitHub Actions minimales explicites.
-- [ ] Obtenir une exécution GitHub Actions complète du workflow modifié.
+- [x] Obtenir une exécution GitHub Actions complète du workflow modifié.
 - [ ] Mesurer la consommation après un cycle de développement et ajuster si nécessaire.
 
 ## Diagnostic
@@ -62,9 +62,9 @@ Le dépôt connaît un rythme élevé de commits/PR et les synchronisations de P
 - [x] Conditionner les jobs backend/frontend.
 - [x] Ajouter des limites de durée.
 - [x] Ne supprimer aucun test.
-- [ ] Mettre à jour le changelog central.
-- [ ] Mettre à jour le suivi projet central.
-- [ ] Valider le run GitHub Actions après disponibilité du budget/minutes.
+- [x] Valider le run GitHub Actions après disponibilité du budget/minutes.
+- [ ] Mettre à jour le changelog central lors de la prochaine passe documentaire globale.
+- [ ] Mettre à jour le suivi projet central lors de la prochaine passe documentaire globale.
 
 ## Estimation
 
@@ -73,20 +73,22 @@ Le dépôt connaît un rythme élevé de commits/PR et les synchronisations de P
 - Reviewer : Tech Lead
 - Risque : faible à moyen, principalement lié aux filtres de chemins.
 
-## Tests attendus
+## Tests réalisés
 
-1. modification `backend/**` : backend exécuté, frontend skipped ;
-2. modification `web/**` : frontend exécuté, backend skipped ;
-3. modification des deux : deux jobs exécutés ;
-4. modification `.github/workflows/ci.yml` : deux jobs exécutés ;
-5. documentation seule : aucun workflow déclenché.
+CI GitHub Actions `Joprelys Connect — CI Pipeline`, run **#1003** : succès.
+
+1. `Detect changed stacks` : succès ;
+2. `Backend — Maven Build & Tests` : succès ;
+3. `Frontend Angular — Build & Tests` : succès ;
+4. Maven `clean verify` strict conservé ;
+5. tests Angular et build production conservés.
 
 ## Résultat
 
-La correction est préparée sur `fix/ci-actions-cost-optimization`. Le workflow conserve le niveau de validation actuel pour chaque stack concernée et ajoute une sélection préalable des jobs coûteux.
+La correction est validée sur `fix/ci-actions-cost-optimization`. Le workflow conserve le niveau de validation actuel pour chaque stack concernée et ajoute une sélection préalable des jobs coûteux.
 
 ## Reste à faire
 
-- valider le workflow sur GitHub Actions dès que le plafond budgétaire autorise un nouveau run ;
-- mettre à jour `docs/ai/CHANGELOG.md` et `docs/ai/PROJECT-TRACKING.md` lors de la finalisation de la PR ;
-- mesurer la consommation réelle après un cycle de développement afin de confirmer le gain.
+- mesurer la consommation réelle après un cycle de développement afin de confirmer le gain ;
+- ajouter aux filtres tout futur fichier racine partagé ayant un impact réel sur les deux stacks ;
+- reporter la clôture dans le changelog et le suivi projet lors de leur prochaine mise à jour globale.
