@@ -1,5 +1,7 @@
 -- HOS-BED-002-D : historiser les changements de capacité et de préparation des lits.
 -- Le journal est append-only au niveau applicatif et relié au lit avec intégrité tenant.
+-- La cascade reste temporairement compatible avec la suppression physique legacy des lits ;
+-- GAP-012 remplacera ce comportement par un archivage métier.
 
 CREATE TABLE bed_state_changes (
     id UUID PRIMARY KEY,
@@ -25,7 +27,7 @@ CREATE TABLE bed_state_changes (
     CONSTRAINT fk_bed_state_changes_bed_organization
         FOREIGN KEY (bed_id, organization_id)
         REFERENCES beds(id, organization_id)
-        ON DELETE RESTRICT
+        ON DELETE CASCADE
 );
 
 CREATE INDEX idx_bed_state_changes_bed_time
