@@ -2,7 +2,7 @@
 
 ## Statut
 
-**EN COURS — QA automatisée à obtenir avant revue**
+**QA AUTOMATISÉE EN COURS — validations externes en attente**
 
 ## Contexte
 
@@ -79,16 +79,27 @@ Les rôles personnalisés peuvent recevoir les permissions nécessaires indépen
 - [x] les six endpoints d’écriture utilisent leur permission dédiée ;
 - [x] tests de réflexion sur toutes les annotations ;
 - [x] tests positifs et négatifs de la matrice système ;
-- [ ] visibilité frontend alignée sur chaque permission ;
-- [ ] continuité urgence → hospitalisation alignée sur `HOSPITALIZATION_ADMIT` ;
-- [ ] CI backend et frontend verte ;
-- [ ] documentation d’audit et contrat API mis à jour.
+- [x] visibilité frontend alignée sur chaque permission ;
+- [x] continuité urgence → hospitalisation alignée sur `HOSPITALIZATION_ADMIT` et testée en refus ;
+- [ ] CI backend et frontend verte sur le head final ;
+- [x] documentation d’audit, conception technique et contrat API mis à jour.
 
 ## Compatibilité et déploiement
 
 Aucune URL ni payload n’est modifié. En revanche, les rôles personnalisés qui dépendaient uniquement de `HOSPITALIZATION_MANAGE` doivent recevoir explicitement les nouvelles permissions avant mise en production.
 
-Le bootstrap RBAC resynchronise le catalogue et les rôles système. Les JWT existants doivent être renouvelés après déploiement afin de refléter les nouvelles autorités.
+Le bootstrap RBAC resynchronise le catalogue et les rôles système. Les JWT existants doivent être renouvelés après déploiement afin de refléter les nouvelles authorities.
+
+Il ne faut pas traduire automatiquement `HOSPITALIZATION_MANAGE` vers l’ensemble des nouvelles permissions : cela recréerait la sur-autorisation que cet incrément supprime.
+
+## Validations externes encore requises
+
+- validation RSSI/DPO de la matrice ;
+- validation direction médicale des responsabilités médecin/infirmier ;
+- validation responsable hospitalisation du droit d’admission ;
+- revue et migration des rôles personnalisés ;
+- recette multi-profils avec comptes représentatifs ;
+- renouvellement des JWT/sessions après synchronisation du catalogue.
 
 ## Hors périmètre
 
