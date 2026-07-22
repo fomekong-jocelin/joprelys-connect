@@ -1,14 +1,16 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { I18nService } from '../core/i18n/i18n.service';
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { Hospitalization } from './patient.models';
+import { PatientApiService } from './patient-api.service';
 
 @Component({
   selector: 'app-hospitalization-stay-header',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe],
+  imports: [DatePipe, FormsModule],
   template: `
     <section class="ui-card overflow-hidden p-4 sm:p-6" aria-labelledby="stay-workspace-title">
       <div class="grid gap-5 border-b border-[var(--app-border)] pb-5 xl:grid-cols-[minmax(0,1fr)_minmax(28rem,34rem)] xl:items-start">
@@ -53,7 +55,7 @@ import { Hospitalization } from './patient.models';
             <button type="button" class="ui-button ui-button-danger min-w-0 whitespace-normal px-3 text-center" (click)="discharge.emit()">{{ t('patients.hospitalization.dischargeDecision', 'Décider la sortie médicale') }}</button>
           }
           @if (canConfirmPhysicalDeparture()) {
-            <button type="button" class="ui-button ui-button-danger min-w-0 whitespace-normal px-3 text-center sm:col-span-2" (click)="physicalDeparture.emit()">{{ t('patients.hospitalization.confirmPhysicalDeparture', 'Confirmer le départ physique') }}</button>
+            <button type="button" class="ui-button ui-button-danger min-w-0 whitespace-normal px-3 text-center sm:col-span-2" (click)="openPhysicalDepartureDialog()">{{ t('patients.hospitalization.confirmPhysicalDeparture', 'Confirmer le départ physique') }}</button>
           }
         </div>
       </div>
@@ -68,6 +70,38 @@ import { Hospitalization } from './patient.models';
         <p class="mt-1 leading-6">{{ stay().admissionReason }}</p>
       </div>
     </section>
+
+    @if (showPhysicalDepartureDialog()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby="physical-departure-title">
+        <div class="w-full max-w-md overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] shadow-xl">
+          <header class="border-b border-[var(--app-border)] px-5 py-4">
+            <h3 id="physical-departure-title" class="font-display font-bold text-[var(--text-primary)]">{{ t('patients.hospitalization.confirmPhysicalDeparture', 'Confirmer le départ physique') }}</h3>
+            <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">{{ t('patients.hospitalization.physicalDepartureWarning', 'Cette action clôt le séjour, libère l’affectation et place le lit en nettoyage. Elle ne doit être réalisée qu’après le départ réel du patient.') }}</p>
+          </header>
+          <form class="space-y-4 p-5" (submit)="confirmPhysicalDeparture($event)">
+            @if (physicalDepartureError()) {
+              <div class="rounded-lg border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3 text-xs font-semibold text-[var(--brand-danger-text)]">
+                {{ physicalDepartureError() }}
+              </div>
+            }
+            <div class="space-y-1">
+              <label for="physical-departure-note" class="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">{{ t('patients.hospitalization.physicalDepartureNote', 'Note de départ — facultative') }}</label>
+              <textarea id="physical-departure-note" name="physicalDepartureNote" [(ngModel)]="physicalDepartureNote" maxlength="500" rows="3" class="ui-textarea" [disabled]="physicalDepartureSubmitting()"></textarea>
+            </div>
+            <label class="flex items-start gap-2 rounded-lg border border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] p-3 text-xs font-semibold text-[var(--brand-warning-text)]">
+              <input type="checkbox" name="departureConfirmed" [(ngModel)]="departureConfirmed" class="mt-0.5 h-4 w-4" [disabled]="physicalDepartureSubmitting()" />
+              <span>{{ t('patients.hospitalization.physicalDepartureExplicitConfirmation', 'Je confirme que le patient a physiquement quitté l’unité.') }}</span>
+            </label>
+            <footer class="flex justify-end gap-2 border-t border-[var(--app-border)] pt-4">
+              <button type="button" class="ui-button ui-button-secondary" (click)="closePhysicalDepartureDialog()" [disabled]="physicalDepartureSubmitting()">{{ t('common.cancel', 'Annuler') }}</button>
+              <button type="submit" class="ui-button ui-button-danger" [disabled]="!departureConfirmed || physicalDepartureSubmitting()">
+                {{ physicalDepartureSubmitting() ? t('common.saving', 'Enregistrement…') : t('patients.hospitalization.confirmPhysicalDeparture', 'Confirmer le départ physique') }}
+              </button>
+            </footer>
+          </form>
+        </div>
+      </div>
+    }
   `,
 })
 export class HospitalizationStayHeaderComponent {
@@ -77,10 +111,16 @@ export class HospitalizationStayHeaderComponent {
   readonly entryPdf = output<void>();
   readonly transfer = output<void>();
   readonly discharge = output<void>();
-  readonly physicalDeparture = output<void>();
+
+  readonly showPhysicalDepartureDialog = signal(false);
+  readonly physicalDepartureError = signal<string | null>(null);
+  readonly physicalDepartureSubmitting = signal(false);
+  physicalDepartureNote = '';
+  departureConfirmed = false;
 
   private readonly i18n = inject(I18nService);
   private readonly rbacApi = inject(RbacApiService);
+  private readonly patientApi = inject(PatientApiService);
 
   readonly t = (key: string, defaultValue: string) => this.i18n.t(key, defaultValue);
 
@@ -100,5 +140,43 @@ export class HospitalizationStayHeaderComponent {
   canConfirmPhysicalDeparture(): boolean {
     return this.awaitingPhysicalDeparture()
       && this.rbacApi.hasPermission('HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM');
+  }
+
+  openPhysicalDepartureDialog(): void {
+    this.physicalDepartureNote = '';
+    this.departureConfirmed = false;
+    this.physicalDepartureError.set(null);
+    this.showPhysicalDepartureDialog.set(true);
+  }
+
+  closePhysicalDepartureDialog(): void {
+    if (this.physicalDepartureSubmitting()) return;
+    this.showPhysicalDepartureDialog.set(false);
+  }
+
+  confirmPhysicalDeparture(event: Event): void {
+    event.preventDefault();
+    if (!this.departureConfirmed || this.physicalDepartureSubmitting()) return;
+
+    this.physicalDepartureError.set(null);
+    this.physicalDepartureSubmitting.set(true);
+    this.patientApi.confirmPhysicalDeparture(this.stay().id, {
+      confirmed: true,
+      note: this.physicalDepartureNote.trim() || undefined,
+    }).subscribe({
+      next: () => {
+        this.physicalDepartureSubmitting.set(false);
+        this.showPhysicalDepartureDialog.set(false);
+        window.location.reload();
+      },
+      error: (err) => {
+        this.physicalDepartureSubmitting.set(false);
+        this.physicalDepartureError.set(
+          err.error?.detail
+          || err.error?.title
+          || this.t('patients.hospitalization.physicalDepartureError', 'Impossible de confirmer le départ physique.'),
+        );
+      },
+    });
   }
 }
