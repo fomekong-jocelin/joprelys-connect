@@ -18,6 +18,8 @@ import com.joprelys.backend.spatial.infrastructure.persistence.BedCapacityStatus
 import com.joprelys.backend.spatial.infrastructure.persistence.BedEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedReadinessStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedStateAxis;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedStateReasonCode;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.RoomEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.RoomRepository;
@@ -39,25 +41,20 @@ class SpatialServiceBedStatusTest {
 
     @Mock
     private WardRepository wardRepository;
-
     @Mock
     private RoomRepository roomRepository;
-
     @Mock
     private BedRepository bedRepository;
-
     @Mock
     private BedAssignmentRepository bedAssignmentRepository;
-
     @Mock
     private ActiveBedAssignmentService activeBedAssignmentService;
-
+    @Mock
+    private BedStateChangeService bedStateChangeService;
     @Mock
     private HospitalizationRepository hospitalizationRepository;
-
     @Mock
     private UserAccountRepository userAccountRepository;
-
     @Mock
     private AuditService auditService;
 
@@ -75,6 +72,7 @@ class SpatialServiceBedStatusTest {
                 bedAssignmentRepository,
                 activeBedAssignmentService,
                 new BedStatusTransitionPolicy(),
+                bedStateChangeService,
                 hospitalizationRepository,
                 userAccountRepository,
                 auditService);
@@ -92,7 +90,7 @@ class SpatialServiceBedStatusTest {
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> spatialService.updateBedStatus(bedId, BedStatus.OCCUPIED));
+                () -> spatialService.updateBedStatus(bedId, BedStatus.OCCUPIED, null));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         assertEquals(BedStatus.FREE, bed.getStatus());
@@ -107,7 +105,7 @@ class SpatialServiceBedStatusTest {
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> spatialService.updateBedStatus(bedId, BedStatus.MAINTENANCE));
+                () -> spatialService.updateBedStatus(bedId, BedStatus.MAINTENANCE, null));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         assertEquals(BedStatus.OCCUPIED, bed.getStatus());
@@ -123,7 +121,7 @@ class SpatialServiceBedStatusTest {
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> spatialService.updateBedStatus(bedId, BedStatus.FREE));
+                () -> spatialService.updateBedStatus(bedId, BedStatus.FREE, null));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         assertEquals(BedStatus.CLEANING, bed.getStatus());
@@ -138,7 +136,7 @@ class SpatialServiceBedStatusTest {
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> spatialService.updateBedStatus(bedId, BedStatus.FREE));
+                () -> spatialService.updateBedStatus(bedId, BedStatus.FREE, null));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         assertEquals(BedStatus.OCCUPIED, bed.getStatus());
@@ -150,11 +148,17 @@ class SpatialServiceBedStatusTest {
         when(bedAssignmentRepository.findActiveByBedId(bedId)).thenReturn(Optional.empty());
         when(bedRepository.save(bed)).thenReturn(bed);
 
-        spatialService.updateBedStatus(bedId, BedStatus.MAINTENANCE);
+        spatialService.updateBedStatus(bedId, BedStatus.MAINTENANCE, "Supervision exceptionnelle");
 
         assertEquals(BedStatus.MAINTENANCE, bed.getStatus());
         assertEquals(BedReadinessStatus.MAINTENANCE, bed.getReadinessStatus());
         verify(bedRepository).save(bed);
+        verify(bedStateChangeService).recordLegacySupervision(
+                bed,
+                BedStateAxis.READINESS,
+                BedReadinessStatus.READY.name(),
+                BedReadinessStatus.MAINTENANCE.name(),
+                "Supervision exceptionnelle");
     }
 
     @Test
@@ -162,13 +166,21 @@ class SpatialServiceBedStatusTest {
         when(bedAssignmentRepository.findActiveByBedId(bedId)).thenReturn(Optional.empty());
         when(bedRepository.save(bed)).thenReturn(bed);
 
-        spatialService.updateBedCapacityStatus(bedId, BedCapacityStatus.CLOSED);
+        spatialService.updateBedCapacityStatus(
+                bedId,
+                BedCapacityStatus.CLOSED,
+                BedStateReasonCode.CAPACITY_TEMPORARY_CLOSURE,
+                "Fermeture planifiée");
 
         assertEquals(BedCapacityStatus.CLOSED, bed.getCapacityStatus());
         assertEquals(BedReadinessStatus.READY, bed.getReadinessStatus());
         assertEquals(BedStatus.MAINTENANCE, bed.getStatus());
 
-        spatialService.updateBedCapacityStatus(bedId, BedCapacityStatus.OPEN);
+        spatialService.updateBedCapacityStatus(
+                bedId,
+                BedCapacityStatus.OPEN,
+                BedStateReasonCode.CAPACITY_REOPENING,
+                "Réouverture validée");
 
         assertEquals(BedCapacityStatus.OPEN, bed.getCapacityStatus());
         assertEquals(BedReadinessStatus.READY, bed.getReadinessStatus());
@@ -179,11 +191,15 @@ class SpatialServiceBedStatusTest {
     void shouldRejectDeclaringAClosedBedFree() {
         when(bedAssignmentRepository.findActiveByBedId(bedId)).thenReturn(Optional.empty());
         when(bedRepository.save(bed)).thenReturn(bed);
-        spatialService.updateBedCapacityStatus(bedId, BedCapacityStatus.CLOSED);
+        spatialService.updateBedCapacityStatus(
+                bedId,
+                BedCapacityStatus.CLOSED,
+                BedStateReasonCode.CAPACITY_SAFETY,
+                "Contrôle sécurité");
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> spatialService.updateBedStatus(bedId, BedStatus.FREE));
+                () -> spatialService.updateBedStatus(bedId, BedStatus.FREE, null));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         assertEquals(BedCapacityStatus.CLOSED, bed.getCapacityStatus());
@@ -198,7 +214,11 @@ class SpatialServiceBedStatusTest {
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> spatialService.updateBedCapacityStatus(bedId, BedCapacityStatus.CLOSED));
+                () -> spatialService.updateBedCapacityStatus(
+                        bedId,
+                        BedCapacityStatus.CLOSED,
+                        BedStateReasonCode.CAPACITY_SAFETY,
+                        "Danger identifié"));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         assertEquals(BedCapacityStatus.OPEN, bed.getCapacityStatus());
@@ -210,11 +230,19 @@ class SpatialServiceBedStatusTest {
         when(bedAssignmentRepository.findActiveByBedId(bedId)).thenReturn(Optional.empty());
         when(bedRepository.save(bed)).thenReturn(bed);
 
-        spatialService.updateBedCleaningStatus(bedId, BedReadinessStatus.CLEANING);
+        spatialService.updateBedCleaningStatus(
+                bedId,
+                BedReadinessStatus.CLEANING,
+                BedStateReasonCode.CLEANING_ROUTINE,
+                "Nettoyage de routine");
         assertEquals(BedReadinessStatus.CLEANING, bed.getReadinessStatus());
         assertEquals(BedStatus.CLEANING, bed.getStatus());
 
-        spatialService.updateBedCleaningStatus(bedId, BedReadinessStatus.READY);
+        spatialService.updateBedCleaningStatus(
+                bedId,
+                BedReadinessStatus.READY,
+                BedStateReasonCode.CLEANING_COMPLETED,
+                "Contrôle visuel conforme");
         assertEquals(BedReadinessStatus.READY, bed.getReadinessStatus());
         assertEquals(BedStatus.FREE, bed.getStatus());
     }
@@ -224,11 +252,19 @@ class SpatialServiceBedStatusTest {
         when(bedAssignmentRepository.findActiveByBedId(bedId)).thenReturn(Optional.empty());
         when(bedRepository.save(bed)).thenReturn(bed);
 
-        spatialService.updateBedMaintenanceStatus(bedId, BedReadinessStatus.MAINTENANCE);
+        spatialService.updateBedMaintenanceStatus(
+                bedId,
+                BedReadinessStatus.MAINTENANCE,
+                BedStateReasonCode.MAINTENANCE_CORRECTIVE,
+                "Frein défectueux");
         assertEquals(BedReadinessStatus.MAINTENANCE, bed.getReadinessStatus());
         assertEquals(BedStatus.MAINTENANCE, bed.getStatus());
 
-        spatialService.updateBedMaintenanceStatus(bedId, BedReadinessStatus.READY);
+        spatialService.updateBedMaintenanceStatus(
+                bedId,
+                BedReadinessStatus.READY,
+                BedStateReasonCode.MAINTENANCE_COMPLETED,
+                "Essai fonctionnel conforme");
         assertEquals(BedReadinessStatus.READY, bed.getReadinessStatus());
         assertEquals(BedStatus.FREE, bed.getStatus());
     }
@@ -240,7 +276,11 @@ class SpatialServiceBedStatusTest {
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> spatialService.updateBedCleaningStatus(bedId, BedReadinessStatus.READY));
+                () -> spatialService.updateBedCleaningStatus(
+                        bedId,
+                        BedReadinessStatus.READY,
+                        BedStateReasonCode.CLEANING_COMPLETED,
+                        "Tentative invalide"));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         assertEquals(BedReadinessStatus.MAINTENANCE, bed.getReadinessStatus());
@@ -254,7 +294,11 @@ class SpatialServiceBedStatusTest {
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> spatialService.updateBedMaintenanceStatus(bedId, BedReadinessStatus.READY));
+                () -> spatialService.updateBedMaintenanceStatus(
+                        bedId,
+                        BedReadinessStatus.READY,
+                        BedStateReasonCode.MAINTENANCE_COMPLETED,
+                        "Tentative invalide"));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         assertEquals(BedReadinessStatus.CLEANING, bed.getReadinessStatus());

@@ -41,6 +41,8 @@ class SpatialServiceBedCapacityProjectionTest {
     @Mock
     private ActiveBedAssignmentService activeBedAssignmentService;
     @Mock
+    private BedStateChangeService bedStateChangeService;
+    @Mock
     private HospitalizationRepository hospitalizationRepository;
     @Mock
     private UserAccountRepository userAccountRepository;
@@ -60,6 +62,7 @@ class SpatialServiceBedCapacityProjectionTest {
                 bedAssignmentRepository,
                 activeBedAssignmentService,
                 new BedStatusTransitionPolicy(),
+                bedStateChangeService,
                 hospitalizationRepository,
                 userAccountRepository,
                 auditService);

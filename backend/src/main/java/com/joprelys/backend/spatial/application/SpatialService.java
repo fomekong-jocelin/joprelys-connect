@@ -7,6 +7,7 @@ import com.joprelys.backend.hospitalization.infrastructure.persistence.Hospitali
 import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository;
 import com.joprelys.backend.spatial.api.BedAssignmentResponse;
 import com.joprelys.backend.spatial.api.BedResponse;
+import com.joprelys.backend.spatial.api.BedStateChangeResponse;
 import com.joprelys.backend.spatial.api.RoomOccupancyResponse;
 import com.joprelys.backend.spatial.api.WardOccupancyResponse;
 import com.joprelys.backend.spatial.api.WardResponse;
@@ -15,6 +16,9 @@ import com.joprelys.backend.spatial.infrastructure.persistence.BedCapacityStatus
 import com.joprelys.backend.spatial.infrastructure.persistence.BedEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedReadinessStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedStateAxis;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedStateChangeSource;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedStateReasonCode;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.RoomEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.RoomRepository;
@@ -44,6 +48,7 @@ public class SpatialService {
     private final BedAssignmentRepository bedAssignmentRepository;
     private final ActiveBedAssignmentService activeBedAssignmentService;
     private final BedStatusTransitionPolicy bedStatusTransitionPolicy;
+    private final BedStateChangeService bedStateChangeService;
     private final HospitalizationRepository hospitalizationRepository;
     private final UserAccountRepository userAccountRepository;
     private final AuditService auditService;
@@ -55,6 +60,7 @@ public class SpatialService {
             BedAssignmentRepository bedAssignmentRepository,
             ActiveBedAssignmentService activeBedAssignmentService,
             BedStatusTransitionPolicy bedStatusTransitionPolicy,
+            BedStateChangeService bedStateChangeService,
             HospitalizationRepository hospitalizationRepository,
             UserAccountRepository userAccountRepository,
             AuditService auditService) {
@@ -64,6 +70,7 @@ public class SpatialService {
         this.bedAssignmentRepository = bedAssignmentRepository;
         this.activeBedAssignmentService = activeBedAssignmentService;
         this.bedStatusTransitionPolicy = bedStatusTransitionPolicy;
+        this.bedStateChangeService = bedStateChangeService;
         this.hospitalizationRepository = hospitalizationRepository;
         this.userAccountRepository = userAccountRepository;
         this.auditService = auditService;
@@ -139,8 +146,18 @@ public class SpatialService {
                 readyBeds);
     }
 
+    @Transactional(readOnly = true)
+    public List<BedStateChangeResponse> getBedStateHistory(UUID bedId) {
+        requireBed(bedId);
+        return bedStateChangeService.listHistory(bedId);
+    }
+
+    public BedStateReasonCode parseBedStateReasonCode(String value) {
+        return bedStateChangeService.parseReasonCode(value);
+    }
+
     @Transactional
-    public BedResponse updateBedStatus(UUID bedId, BedStatus newStatus) {
+    public BedResponse updateBedStatus(UUID bedId, BedStatus newStatus, String note) {
         BedEntity bed = requireBed(bedId);
         boolean hasActiveAssignment = bedAssignmentRepository.findActiveByBedId(bedId).isPresent();
         bedStatusTransitionPolicy.validateManualTransition(
@@ -149,16 +166,15 @@ public class SpatialService {
                 bed.getCapacityStatus(),
                 hasActiveAssignment);
 
-        return persistLegacyStatusChange(
-                bed,
-                newStatus,
-                hasActiveAssignment,
-                "UPDATE_BED_READINESS",
-                "État opérationnel supervisé");
+        return persistLegacyStatusChange(bed, newStatus, hasActiveAssignment, note);
     }
 
     @Transactional
-    public BedResponse updateBedCleaningStatus(UUID bedId, BedReadinessStatus newReadinessStatus) {
+    public BedResponse updateBedCleaningStatus(
+            UUID bedId,
+            BedReadinessStatus newReadinessStatus,
+            BedStateReasonCode reasonCode,
+            String note) {
         BedEntity bed = requireBed(bedId);
         boolean hasActiveAssignment = bedAssignmentRepository.findActiveByBedId(bedId).isPresent();
         bedStatusTransitionPolicy.validateCleaningTransition(
@@ -172,12 +188,18 @@ public class SpatialService {
                 bed,
                 newReadinessStatus,
                 hasActiveAssignment,
+                reasonCode,
+                note,
                 "UPDATE_BED_CLEANING",
                 "Circuit de nettoyage");
     }
 
     @Transactional
-    public BedResponse updateBedMaintenanceStatus(UUID bedId, BedReadinessStatus newReadinessStatus) {
+    public BedResponse updateBedMaintenanceStatus(
+            UUID bedId,
+            BedReadinessStatus newReadinessStatus,
+            BedStateReasonCode reasonCode,
+            String note) {
         BedEntity bed = requireBed(bedId);
         boolean hasActiveAssignment = bedAssignmentRepository.findActiveByBedId(bedId).isPresent();
         bedStatusTransitionPolicy.validateMaintenanceTransition(
@@ -191,12 +213,18 @@ public class SpatialService {
                 bed,
                 newReadinessStatus,
                 hasActiveAssignment,
+                reasonCode,
+                note,
                 "UPDATE_BED_MAINTENANCE",
                 "Circuit de maintenance");
     }
 
     @Transactional
-    public BedResponse updateBedCapacityStatus(UUID bedId, BedCapacityStatus newCapacityStatus) {
+    public BedResponse updateBedCapacityStatus(
+            UUID bedId,
+            BedCapacityStatus newCapacityStatus,
+            BedStateReasonCode reasonCode,
+            String note) {
         BedEntity bed = requireBed(bedId);
         boolean hasActiveAssignment = bedAssignmentRepository.findActiveByBedId(bedId).isPresent();
         bedStatusTransitionPolicy.validateCapacityTransition(
@@ -209,13 +237,21 @@ public class SpatialService {
         }
 
         BedCapacityStatus previousStatus = bed.getCapacityStatus();
+        bedStateChangeService.recordManual(
+                bed,
+                BedStateAxis.CAPACITY,
+                previousStatus.name(),
+                newCapacityStatus.name(),
+                reasonCode,
+                note);
         bed.setCapacityStatus(newCapacityStatus);
         BedEntity saved = bedRepository.save(bed);
         auditBedChange(
                 saved,
                 "UPDATE_BED_CAPACITY",
                 "Capacité du lit " + saved.getBedNumber()
-                        + " changée de " + previousStatus + " à " + newCapacityStatus);
+                        + " changée de " + previousStatus + " à " + newCapacityStatus
+                        + " | motif=" + reasonCode);
         return BedResponse.fromEntity(saved, false);
     }
 
@@ -257,10 +293,24 @@ public class SpatialService {
                         "Le lit réservé a disparu pendant la transaction de transfert."));
 
         bedAssignmentRepository.findActiveByHospitalizationId(hospitalizationId).ifPresent(oldAssignment -> {
+            BedEntity oldBed = oldAssignment.getBed();
+            BedReadinessStatus previousReadiness = oldBed.getReadinessStatus();
+            if (previousReadiness != BedReadinessStatus.READY) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Le lit source présente un état de préparation incohérent pour un transfert.");
+            }
+
             oldAssignment.releaseAt(Instant.now());
             bedAssignmentRepository.saveAndFlush(oldAssignment);
-
-            BedEntity oldBed = oldAssignment.getBed();
+            bedStateChangeService.recordSystem(
+                    oldBed,
+                    BedStateAxis.READINESS,
+                    previousReadiness.name(),
+                    BedReadinessStatus.CLEANING.name(),
+                    BedStateReasonCode.CLEANING_AFTER_TRANSFER,
+                    "Nettoyage déclenché après transfert du séjour " + hospitalizationId,
+                    BedStateChangeSource.SYSTEM_TRANSFER);
             oldBed.setStatus(BedStatus.CLEANING);
             bedRepository.save(oldBed);
         });
@@ -296,20 +346,40 @@ public class SpatialService {
             BedEntity bed,
             BedStatus newStatus,
             boolean hasActiveAssignment,
-            String auditAction,
-            String auditLabel) {
+            String note) {
         if (bed.getStatus() == newStatus) {
             return BedResponse.fromEntity(bed, hasActiveAssignment);
         }
 
         BedStatus previousStatus = bed.getStatus();
+        BedCapacityStatus previousCapacity = bed.getCapacityStatus();
+        BedReadinessStatus previousReadiness = bed.getReadinessStatus();
         bed.setStatus(newStatus);
+
+        if (previousCapacity != bed.getCapacityStatus()) {
+            bedStateChangeService.recordLegacySupervision(
+                    bed,
+                    BedStateAxis.CAPACITY,
+                    previousCapacity.name(),
+                    bed.getCapacityStatus().name(),
+                    note);
+        }
+        if (previousReadiness != bed.getReadinessStatus()) {
+            bedStateChangeService.recordLegacySupervision(
+                    bed,
+                    BedStateAxis.READINESS,
+                    previousReadiness.name(),
+                    bed.getReadinessStatus().name(),
+                    note);
+        }
+
         BedEntity saved = bedRepository.save(bed);
         auditBedChange(
                 saved,
-                auditAction,
-                auditLabel + " du lit " + saved.getBedNumber()
-                        + " : " + previousStatus + " → " + newStatus);
+                "UPDATE_BED_READINESS",
+                "État opérationnel supervisé du lit " + saved.getBedNumber()
+                        + " : " + previousStatus + " → " + newStatus
+                        + " | motif=LEGACY_SUPERVISION");
         return BedResponse.fromEntity(saved, false);
     }
 
@@ -317,6 +387,8 @@ public class SpatialService {
             BedEntity bed,
             BedReadinessStatus newReadinessStatus,
             boolean hasActiveAssignment,
+            BedStateReasonCode reasonCode,
+            String note,
             String auditAction,
             String auditLabel) {
         if (bed.getReadinessStatus() == newReadinessStatus) {
@@ -324,13 +396,21 @@ public class SpatialService {
         }
 
         BedReadinessStatus previousStatus = bed.getReadinessStatus();
+        bedStateChangeService.recordManual(
+                bed,
+                BedStateAxis.READINESS,
+                previousStatus.name(),
+                newReadinessStatus.name(),
+                reasonCode,
+                note);
         bed.setReadinessStatus(newReadinessStatus);
         BedEntity saved = bedRepository.save(bed);
         auditBedChange(
                 saved,
                 auditAction,
                 auditLabel + " du lit " + saved.getBedNumber()
-                        + " : " + previousStatus + " → " + newReadinessStatus);
+                        + " : " + previousStatus + " → " + newReadinessStatus
+                        + " | motif=" + reasonCode);
         return BedResponse.fromEntity(saved, false);
     }
 
