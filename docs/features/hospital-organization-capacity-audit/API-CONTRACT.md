@@ -9,16 +9,32 @@
 |---|---|---|---|
 | Organisations | `/api/organizations` CRUD/statut/admin/API keys | `ORGANIZATION_MANAGE` au contrôleur | tenant plat |
 | Structure | `/api/spatial/configuration`, `/wards`, `/rooms`, `/beds` | `SPATIAL_CONFIGURATION_MANAGE` | hard delete conditionnel, pas de niveaux géographiques |
-| Occupation | `/api/spatial/wards`, `/wards/{id}/occupancy` | `HOSPITALIZATION_READ` | seulement total/occupé |
-| État lit | `/api/spatial/beds/{id}/status` | `HOSPITALIZATION_MANAGE` | commande générique incohérente possible |
-| Transfert | `/api/spatial/transfers` | `HOSPITALIZATION_MANAGE` | séjour + nouveau lit uniquement |
-| Hospitalisation | `/api/hospitalizations` et sous-ressources | `HOSPITALIZATION_READ/MANAGE`, CRO `CLINICAL_*` | admission/sortie directes, droits trop larges |
+| Occupation | `/api/spatial/wards`, `/wards/{id}/occupancy` | `HOSPITALIZATION_READ` | projection par service, sans historique temporel |
+| Capacité du lit | `/api/spatial/beds/{id}/capacity-status` | `BED_OPERATIONAL_STATUS_MANAGE` | ouverture/fermeture sans motif ni date d'effet |
+| État lit legacy | `/api/spatial/beds/{id}/status` | `BED_OPERATIONAL_STATUS_MANAGE` | endpoint de supervision conservé temporairement pour compatibilité |
+| Nettoyage du lit | `/api/spatial/beds/{id}/cleaning-status` | `BED_CLEANING_MANAGE` | `CLEANING ↔ READY`, sans tâche ni preuve structurée |
+| Maintenance du lit | `/api/spatial/beds/{id}/maintenance-status` | `BED_MAINTENANCE_MANAGE` | `MAINTENANCE ↔ READY`, sans ordre de travail |
+| Transfert | `/api/spatial/transfers` | `HOSPITALIZATION_TRANSFER` | séjour + nouveau lit uniquement, sans ordre de mouvement |
+| Hospitalisation | `/api/hospitalizations` et sous-ressources | `HOSPITALIZATION_READ/MANAGE`, sortie `HOSPITALIZATION_DISCHARGE_DECIDE`, CRO `CLINICAL_*` | admission et sortie physique encore confondues |
 | Urgence | `/api/emergencies` + triage/médico-légal/documents | `EMERGENCY_*` granulaires | pas de box/présence/handoff atomique |
 | Visite | `/api/visits` | `VISIT_*` | service/orientation texte |
 | Laboratoire | `/api/lab-orders` | `LAB_*` | transitions de statut non contraintes |
 | Pharmacie | `/api/public/pharmacy/prescriptions` | vérification PIN ; route web gardée | lockout mémoire, pas de pharmacie cible/stock atomique |
 | Stock | `/api/pharmacy/stocks` | `PHARMACY_STOCK_MANAGE` | stock organisationnel unique |
 | Personnel/RBAC | `/api/staff`, `/api/rbac` | `USER_*`, `RBAC_*` | aucun rattachement métier daté |
+
+### 1.1 Rôles système ajoutés par HOS-RBAC-001-B
+
+| Rôle | Droits hospitaliers par défaut |
+|---|---|
+| `MEDECIN` | lecture/gestion historique du séjour, transfert, décision médicale de sortie |
+| `INFIRMIER` | lecture/gestion historique du séjour et transfert ; aucune décision de sortie ni opération technique sur le lit |
+| `RESPONSABLE_HOSPITALISATION` | transfert, supervision de capacité, nettoyage et maintenance ; aucune décision médicale de sortie |
+| `AGENT_HYGIENE` | lecture d'occupation et circuit de nettoyage uniquement |
+| `TECHNICIEN_MAINTENANCE` | lecture d'occupation et circuit de maintenance uniquement |
+| `ADMIN_CLINIQUE` | ensemble des droits de l'établissement, hors exclusions plateforme/portail existantes |
+
+Les rôles personnalisés peuvent recevoir les permissions séparément. Le backend reste la source de vérité ; masquer un bouton ne constitue jamais une autorisation.
 
 ## 2. Principes API cibles
 
@@ -122,9 +138,15 @@ POST /api/v2/turnaround-tasks/{id}/validate
 
 Pendant la migration, l'adaptateur legacy résout les noms actuels vers les nouveaux IDs et maintient les snapshots de documents. Toute ambiguïté retourne une erreur de migration, jamais un choix silencieux. Les endpoints v1 sont marqués deprecated avec date de retrait ; leur suppression exige une version MAJOR et une release note.
 
+L'endpoint `/api/spatial/beds/{id}/status` est conservé comme commande de supervision pour les intégrations existantes, mais l'interface Joprelys utilise exclusivement les circuits `/cleaning-status`, `/maintenance-status` et `/capacity-status`. Son retrait sera préparé après inventaire des consommateurs et publication d'une date de fin de support.
+
 ## 7. Tests de contrat
 
 - isolation tenant et unité ;
+- refus du transfert sans `HOSPITALIZATION_TRANSFER` ;
+- refus de la décision de sortie sans `HOSPITALIZATION_DISCHARGE_DECIDE` ;
+- impossibilité pour le nettoyage de terminer une maintenance et inversement ;
+- refus des opérations techniques sur un lit affecté ;
 - idempotence, optimistic locking et courses concurrentes ;
 - validation des transitions et Problem Details ;
 - compatibilité des filtres/pagination ;

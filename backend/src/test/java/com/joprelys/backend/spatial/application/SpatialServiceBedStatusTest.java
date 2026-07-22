@@ -204,4 +204,60 @@ class SpatialServiceBedStatusTest {
         assertEquals(BedCapacityStatus.OPEN, bed.getCapacityStatus());
         verify(bedRepository, never()).save(any(BedEntity.class));
     }
+
+    @Test
+    void cleaningCircuitShouldStartAndCompleteCleaning() {
+        when(bedAssignmentRepository.findActiveByBedId(bedId)).thenReturn(Optional.empty());
+        when(bedRepository.save(bed)).thenReturn(bed);
+
+        spatialService.updateBedCleaningStatus(bedId, BedReadinessStatus.CLEANING);
+        assertEquals(BedReadinessStatus.CLEANING, bed.getReadinessStatus());
+        assertEquals(BedStatus.CLEANING, bed.getStatus());
+
+        spatialService.updateBedCleaningStatus(bedId, BedReadinessStatus.READY);
+        assertEquals(BedReadinessStatus.READY, bed.getReadinessStatus());
+        assertEquals(BedStatus.FREE, bed.getStatus());
+    }
+
+    @Test
+    void maintenanceCircuitShouldStartAndCompleteMaintenance() {
+        when(bedAssignmentRepository.findActiveByBedId(bedId)).thenReturn(Optional.empty());
+        when(bedRepository.save(bed)).thenReturn(bed);
+
+        spatialService.updateBedMaintenanceStatus(bedId, BedReadinessStatus.MAINTENANCE);
+        assertEquals(BedReadinessStatus.MAINTENANCE, bed.getReadinessStatus());
+        assertEquals(BedStatus.MAINTENANCE, bed.getStatus());
+
+        spatialService.updateBedMaintenanceStatus(bedId, BedReadinessStatus.READY);
+        assertEquals(BedReadinessStatus.READY, bed.getReadinessStatus());
+        assertEquals(BedStatus.FREE, bed.getStatus());
+    }
+
+    @Test
+    void cleaningCircuitShouldNotReleaseAMaintenanceBed() {
+        bed.setReadinessStatus(BedReadinessStatus.MAINTENANCE);
+        when(bedAssignmentRepository.findActiveByBedId(bedId)).thenReturn(Optional.empty());
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> spatialService.updateBedCleaningStatus(bedId, BedReadinessStatus.READY));
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+        assertEquals(BedReadinessStatus.MAINTENANCE, bed.getReadinessStatus());
+        verify(bedRepository, never()).save(any(BedEntity.class));
+    }
+
+    @Test
+    void maintenanceCircuitShouldNotReleaseACleaningBed() {
+        bed.setReadinessStatus(BedReadinessStatus.CLEANING);
+        when(bedAssignmentRepository.findActiveByBedId(bedId)).thenReturn(Optional.empty());
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> spatialService.updateBedMaintenanceStatus(bedId, BedReadinessStatus.READY));
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+        assertEquals(BedReadinessStatus.CLEANING, bed.getReadinessStatus());
+        verify(bedRepository, never()).save(any(BedEntity.class));
+    }
 }

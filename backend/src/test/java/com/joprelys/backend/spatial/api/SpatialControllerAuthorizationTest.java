@@ -11,7 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 class SpatialControllerAuthorizationTest {
 
     @Test
-    void bedStatusEndpointShouldRequireDedicatedOperationalPermission() throws NoSuchMethodException {
+    void legacyBedStatusEndpointShouldRemainSupervisorOnly() throws NoSuchMethodException {
         assertPermission(
                 SpatialController.class.getMethod(
                         "updateBedStatus",
@@ -21,7 +21,27 @@ class SpatialControllerAuthorizationTest {
     }
 
     @Test
-    void bedCapacityEndpointShouldRequireDedicatedOperationalPermission() throws NoSuchMethodException {
+    void cleaningEndpointShouldRequireCleaningPermission() throws NoSuchMethodException {
+        assertPermission(
+                SpatialController.class.getMethod(
+                        "updateBedCleaningStatus",
+                        UUID.class,
+                        UpdateBedCleaningStatusRequest.class),
+                "hasAuthority('BED_CLEANING_MANAGE')");
+    }
+
+    @Test
+    void maintenanceEndpointShouldRequireMaintenancePermission() throws NoSuchMethodException {
+        assertPermission(
+                SpatialController.class.getMethod(
+                        "updateBedMaintenanceStatus",
+                        UUID.class,
+                        UpdateBedMaintenanceStatusRequest.class),
+                "hasAuthority('BED_MAINTENANCE_MANAGE')");
+    }
+
+    @Test
+    void bedCapacityEndpointShouldRemainSupervisorOnly() throws NoSuchMethodException {
         assertPermission(
                 SpatialController.class.getMethod(
                         "updateBedCapacityStatus",
@@ -31,12 +51,12 @@ class SpatialControllerAuthorizationTest {
     }
 
     @Test
-    void transferEndpointShouldKeepHospitalizationPermissionInThisIncrement() throws NoSuchMethodException {
+    void transferEndpointShouldRequireDedicatedTransferPermission() throws NoSuchMethodException {
         assertPermission(
                 SpatialController.class.getMethod(
                         "transferPatient",
                         TransferRequest.class),
-                "hasAuthority('HOSPITALIZATION_MANAGE')");
+                "hasAuthority('HOSPITALIZATION_TRANSFER')");
     }
 
     private void assertPermission(Method method, String expectedExpression) {

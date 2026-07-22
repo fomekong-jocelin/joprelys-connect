@@ -84,7 +84,7 @@ public class HospitalizationController {
     }
 
     @PostMapping("/{id}/discharge")
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_DISCHARGE_DECIDE')")
     public HospitalizationResponse dischargePatient(
             @PathVariable UUID id,
             @Valid @RequestBody DischargeHospitalizationRequest request) {

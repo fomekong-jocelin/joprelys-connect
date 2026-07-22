@@ -2,6 +2,7 @@ package com.joprelys.backend.spatial.api;
 
 import com.joprelys.backend.spatial.application.SpatialService;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedCapacityStatus;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedReadinessStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedStatus;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -51,6 +52,34 @@ public class SpatialController {
         }
     }
 
+    @PostMapping("/beds/{id}/cleaning-status")
+    @PreAuthorize("hasAuthority('BED_CLEANING_MANAGE')")
+    public BedResponse updateBedCleaningStatus(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateBedCleaningStatusRequest request) {
+        BedReadinessStatus status = readinessStatus(request.status(), "nettoyage");
+        if (status != BedReadinessStatus.CLEANING && status != BedReadinessStatus.READY) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Le circuit de nettoyage accepte uniquement CLEANING ou READY.");
+        }
+        return spatialService.updateBedCleaningStatus(id, status);
+    }
+
+    @PostMapping("/beds/{id}/maintenance-status")
+    @PreAuthorize("hasAuthority('BED_MAINTENANCE_MANAGE')")
+    public BedResponse updateBedMaintenanceStatus(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateBedMaintenanceStatusRequest request) {
+        BedReadinessStatus status = readinessStatus(request.status(), "maintenance");
+        if (status != BedReadinessStatus.MAINTENANCE && status != BedReadinessStatus.READY) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Le circuit de maintenance accepte uniquement MAINTENANCE ou READY.");
+        }
+        return spatialService.updateBedMaintenanceStatus(id, status);
+    }
+
     @PostMapping("/beds/{id}/capacity-status")
     @PreAuthorize("hasAuthority('BED_OPERATIONAL_STATUS_MANAGE')")
     public BedResponse updateBedCapacityStatus(
@@ -67,8 +96,18 @@ public class SpatialController {
     }
 
     @PostMapping("/transfers")
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_TRANSFER')")
     public BedAssignmentResponse transferPatient(@Valid @RequestBody TransferRequest request) {
         return spatialService.transferPatient(request.hospitalizationId(), request.newBedId());
+    }
+
+    private BedReadinessStatus readinessStatus(String value, String operation) {
+        try {
+            return BedReadinessStatus.valueOf(value.toUpperCase());
+        } catch (IllegalArgumentException | NullPointerException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "État de " + operation + " du lit invalide: " + value);
+        }
     }
 }

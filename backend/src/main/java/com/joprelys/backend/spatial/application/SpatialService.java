@@ -149,19 +149,50 @@ public class SpatialService {
                 bed.getCapacityStatus(),
                 hasActiveAssignment);
 
-        if (bed.getStatus() == newStatus) {
-            return BedResponse.fromEntity(bed, hasActiveAssignment);
-        }
-
-        BedStatus previousStatus = bed.getStatus();
-        bed.setStatus(newStatus);
-        BedEntity saved = bedRepository.save(bed);
-        auditBedChange(
-                saved,
+        return persistLegacyStatusChange(
+                bed,
+                newStatus,
+                hasActiveAssignment,
                 "UPDATE_BED_READINESS",
-                "État de préparation du lit " + saved.getBedNumber()
-                        + " changé de " + previousStatus + " à " + newStatus);
-        return BedResponse.fromEntity(saved, false);
+                "État opérationnel supervisé");
+    }
+
+    @Transactional
+    public BedResponse updateBedCleaningStatus(UUID bedId, BedReadinessStatus newReadinessStatus) {
+        BedEntity bed = requireBed(bedId);
+        boolean hasActiveAssignment = bedAssignmentRepository.findActiveByBedId(bedId).isPresent();
+        bedStatusTransitionPolicy.validateCleaningTransition(
+                bed.getStatus(),
+                bed.getReadinessStatus(),
+                newReadinessStatus,
+                bed.getCapacityStatus(),
+                hasActiveAssignment);
+
+        return persistReadinessAxisChange(
+                bed,
+                newReadinessStatus,
+                hasActiveAssignment,
+                "UPDATE_BED_CLEANING",
+                "Circuit de nettoyage");
+    }
+
+    @Transactional
+    public BedResponse updateBedMaintenanceStatus(UUID bedId, BedReadinessStatus newReadinessStatus) {
+        BedEntity bed = requireBed(bedId);
+        boolean hasActiveAssignment = bedAssignmentRepository.findActiveByBedId(bedId).isPresent();
+        bedStatusTransitionPolicy.validateMaintenanceTransition(
+                bed.getStatus(),
+                bed.getReadinessStatus(),
+                newReadinessStatus,
+                bed.getCapacityStatus(),
+                hasActiveAssignment);
+
+        return persistReadinessAxisChange(
+                bed,
+                newReadinessStatus,
+                hasActiveAssignment,
+                "UPDATE_BED_MAINTENANCE",
+                "Circuit de maintenance");
     }
 
     @Transactional
@@ -253,6 +284,48 @@ public class SpatialService {
         }
 
         return BedAssignmentResponse.fromEntity(savedAssignment);
+    }
+
+    private BedResponse persistLegacyStatusChange(
+            BedEntity bed,
+            BedStatus newStatus,
+            boolean hasActiveAssignment,
+            String auditAction,
+            String auditLabel) {
+        if (bed.getStatus() == newStatus) {
+            return BedResponse.fromEntity(bed, hasActiveAssignment);
+        }
+
+        BedStatus previousStatus = bed.getStatus();
+        bed.setStatus(newStatus);
+        BedEntity saved = bedRepository.save(bed);
+        auditBedChange(
+                saved,
+                auditAction,
+                auditLabel + " du lit " + saved.getBedNumber()
+                        + " : " + previousStatus + " → " + newStatus);
+        return BedResponse.fromEntity(saved, false);
+    }
+
+    private BedResponse persistReadinessAxisChange(
+            BedEntity bed,
+            BedReadinessStatus newReadinessStatus,
+            boolean hasActiveAssignment,
+            String auditAction,
+            String auditLabel) {
+        if (bed.getReadinessStatus() == newReadinessStatus) {
+            return BedResponse.fromEntity(bed, hasActiveAssignment);
+        }
+
+        BedReadinessStatus previousStatus = bed.getReadinessStatus();
+        bed.setReadinessStatus(newReadinessStatus);
+        BedEntity saved = bedRepository.save(bed);
+        auditBedChange(
+                saved,
+                auditAction,
+                auditLabel + " du lit " + saved.getBedNumber()
+                        + " : " + previousStatus + " → " + newReadinessStatus);
+        return BedResponse.fromEntity(saved, false);
     }
 
     private BedEntity requireBed(UUID bedId) {

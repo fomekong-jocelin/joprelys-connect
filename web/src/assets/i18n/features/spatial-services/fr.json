@@ -29,5 +29,9 @@
   "spatial.usage.status.OCCUPIED": "Occupé",
   "spatial.usage.status.UNASSIGNED": "Non affecté",
   "spatial.action.openCapacity": "Ouvrir",
-  "spatial.action.closeCapacity": "Fermer"
+  "spatial.action.closeCapacity": "Fermer",
+  "spatial.action.cleaning": "Mettre en nettoyage",
+  "spatial.action.cleaningComplete": "Nettoyage terminé",
+  "spatial.action.maintenance": "Mettre en maintenance",
+  "spatial.action.maintenanceComplete": "Remettre en service"
 }

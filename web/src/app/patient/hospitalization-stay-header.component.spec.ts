@@ -1,10 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { HospitalizationStayHeaderComponent } from './hospitalization-stay-header.component';
 import { Hospitalization } from './patient.models';
 
 describe('HospitalizationStayHeaderComponent', () => {
   let fixture: ComponentFixture<HospitalizationStayHeaderComponent>;
+  let hasPermission: ReturnType<typeof vi.fn>;
 
   const stay: Hospitalization = {
     id: 'stay-1',
@@ -23,9 +25,14 @@ describe('HospitalizationStayHeaderComponent', () => {
   };
 
   beforeEach(async () => {
+    hasPermission = vi.fn((permission: string) => permission === 'HOSPITALIZATION_TRANSFER');
+
     await TestBed.configureTestingModule({
       imports: [HospitalizationStayHeaderComponent],
-      providers: [{ provide: I18nService, useValue: { t: (key: string, fallback: string) => fallback || key } }],
+      providers: [
+        { provide: I18nService, useValue: { t: (key: string, fallback: string) => fallback || key } },
+        { provide: RbacApiService, useValue: { hasPermission } },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(HospitalizationStayHeaderComponent);
@@ -44,7 +51,16 @@ describe('HospitalizationStayHeaderComponent', () => {
     expect(text).toContain('Surveillance clinique');
   });
 
-  it('emits the requested action', () => {
+  it('shows transfer independently from discharge permission', () => {
+    const text = fixture.nativeElement.textContent;
+
+    expect(text).toContain('Transférer');
+    expect(text).not.toContain('Déclarer la sortie');
+    expect(hasPermission).toHaveBeenCalledWith('HOSPITALIZATION_TRANSFER');
+    expect(hasPermission).toHaveBeenCalledWith('HOSPITALIZATION_DISCHARGE_DECIDE');
+  });
+
+  it('emits the requested authorized action', () => {
     const transfer = vi.fn();
     fixture.componentInstance.transfer.subscribe(transfer);
 
