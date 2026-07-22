@@ -47,6 +47,7 @@ describe('HospitalizationNotesPanelComponent', () => {
 
   it('blocks note creation without the dedicated permission', () => {
     permissions.clear();
+    fixture.componentRef.setInput('canModify', false);
     fixture.detectChanges();
     fixture.componentInstance.noteContent.set('Surveillance poursuivie');
     fixture.componentInstance.save(new Event('submit'));
