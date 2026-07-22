@@ -2,7 +2,7 @@
 
 ## Statut
 
-`IMPLEMENTATION EN COURS / QA CI EN COURS / VALIDATIONS EXTERNES EN ATTENTE`
+`QA TECHNIQUE VERTE / VALIDATIONS EXTERNES EN ATTENTE`
 
 ## Contexte
 
@@ -115,6 +115,20 @@ Aucun fallback `hasAnyAuthority(nouveau, HOSPITALIZATION_MANAGE)` n’est ajout�
 - absence de toute consultation de `HOSPITALIZATION_MANAGE` ;
 - profil notes seul incapable d’afficher l’administration médicamenteuse.
 
+## QA automatisée
+
+CI **Joprelys Connect — CI Pipeline**, run **#979**, sur le head fonctionnel et documentaire `49f6a168448d22822cb5c073e82b88f81eecd4c5` :
+
+- backend Maven `clean verify` strict : succès ;
+- tests du catalogue et de la matrice RBAC : succès ;
+- tests d’annotations et d’absence de fallback legacy : succès ;
+- parcours d’intégration hospitalisation existants : succès ;
+- migrations H2 et PostgreSQL 16/Testcontainers de la pile : succès ;
+- tests Angular, dont la résolution contextuelle des permissions : succès ;
+- build Angular production : succès.
+
+Le run #964 avait correctement détecté que le parcours d’intégration médecin utilisait encore soins, administration et consommables. La correction a préservé ce parcours avec trois permissions dédiées, sans restaurer `HOSPITALIZATION_MANAGE` et sans transformer l’administration en prescription.
+
 ## Risques résiduels
 
 - les notes restent génériques : le modèle ne distingue pas encore note médicale, transmission infirmière et ordre clinique ;
@@ -140,7 +154,7 @@ Aucun fallback `hasAnyAuthority(nouveau, HOSPITALIZATION_MANAGE)` n’est ajout�
 - [x] endpoints protégés sans fallback legacy ;
 - [x] interface alignée par zone ;
 - [x] tests négatifs ajoutés ;
-- [ ] CI backend et frontend verte sur le head final ;
+- [x] CI backend et frontend verte sur le head fonctionnel et documentaire ;
 - [ ] validation métier et RSSI ;
 - [ ] recette multi-profils ;
 - [ ] remappage des rôles personnalisés avant production.
