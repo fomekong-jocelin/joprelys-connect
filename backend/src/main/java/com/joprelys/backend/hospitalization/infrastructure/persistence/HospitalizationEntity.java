@@ -212,8 +212,12 @@ public class HospitalizationEntity {
     }
 
     public void discharge(String diagnosis, String instructions, String pdfPath, String finalStatus) {
+        if (physicalDepartureAt == null) {
+            throw new IllegalStateException(
+                    "Le séjour ne peut pas être clôturé avant la confirmation du départ physique.");
+        }
         this.status = finalStatus;
-        this.dischargedAt = physicalDepartureAt == null ? Instant.now() : physicalDepartureAt;
+        this.dischargedAt = physicalDepartureAt;
         this.dischargeDiagnosis = diagnosis;
         this.dischargeInstructions = instructions;
         this.pdfFilePath = pdfPath;
