@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { I18nService } from '../core/i18n/i18n.service';
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { PatientApiService } from './patient-api.service';
 import { HospitalizationNote } from './patient.models';
 
@@ -56,7 +57,7 @@ import { HospitalizationNote } from './patient.models';
 })
 export class HospitalizationNotesPanelComponent {
   readonly hospitalizationId = input.required<string>();
-  readonly canModify = input(false);
+  readonly parentCanModify = input(false, { alias: 'canModify' });
   readonly notes = signal<HospitalizationNote[]>([]);
   readonly loading = signal(false);
   readonly saving = signal(false);
@@ -64,11 +65,16 @@ export class HospitalizationNotesPanelComponent {
   readonly noteContent = signal('');
 
   private readonly patientApi = inject(PatientApiService);
+  private readonly rbacApi = inject(RbacApiService);
   private readonly i18n = inject(I18nService);
   readonly t = (key: string, fallback: string) => this.i18n.t(key, fallback);
 
   constructor() {
     effect(() => this.load(this.hospitalizationId()));
+  }
+
+  canModify(): boolean {
+    return this.rbacApi.hasPermission('HOSPITALIZATION_NOTE_WRITE');
   }
 
   reload(): void {
@@ -77,6 +83,7 @@ export class HospitalizationNotesPanelComponent {
 
   save(event: Event): void {
     event.preventDefault();
+    if (!this.canModify()) return;
     const content = this.noteContent().trim();
     if (!content) return;
 
