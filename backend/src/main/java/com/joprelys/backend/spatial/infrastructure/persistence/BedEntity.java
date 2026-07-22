@@ -141,6 +141,13 @@ public class BedEntity {
         return readinessStatus;
     }
 
+    public void setReadinessStatus(BedReadinessStatus readinessStatus) {
+        this.readinessStatus = Objects.requireNonNull(
+                readinessStatus,
+                "L'état de préparation du lit est obligatoire.");
+        synchronizeLegacyStatus();
+    }
+
     public boolean isOpen() {
         return capacityStatus == BedCapacityStatus.OPEN;
     }
