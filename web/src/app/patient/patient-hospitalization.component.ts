@@ -156,8 +156,41 @@ export class PatientHospitalizationComponent implements OnInit {
     return roles.includes(allowedRoles);
   }
 
+  canAdmit(): boolean {
+    return this.rbacApi.hasPermission('HOSPITALIZATION_ADMIT');
+  }
+
+  canWriteNotes(): boolean {
+    return this.rbacApi.hasPermission('HOSPITALIZATION_NOTE_WRITE');
+  }
+
+  canRecordConsent(): boolean {
+    return this.rbacApi.hasPermission('HOSPITALIZATION_CONSENT_RECORD');
+  }
+
+  canWriteCare(): boolean {
+    return this.rbacApi.hasPermission('HOSPITALIZATION_CARE_WRITE');
+  }
+
+  canAdministerMedication(): boolean {
+    return this.rbacApi.hasPermission('HOSPITALIZATION_MEDICATION_ADMINISTER');
+  }
+
+  canRecordConsumable(): boolean {
+    return this.rbacApi.hasPermission('HOSPITALIZATION_CONSUMABLE_RECORD');
+  }
+
+  canWriteOperatingReport(): boolean {
+    return this.rbacApi.hasPermission('CLINICAL_WRITE');
+  }
+
   canModify(): boolean {
-    return this.rbacApi.hasPermission('HOSPITALIZATION_MANAGE');
+    return this.canWriteNotes()
+      || this.canRecordConsent()
+      || this.canWriteCare()
+      || this.canAdministerMedication()
+      || this.canRecordConsumable()
+      || this.canWriteOperatingReport();
   }
 
   loadWardsForAdmission(): void {
@@ -221,6 +254,8 @@ export class PatientHospitalizationComponent implements OnInit {
   }
 
   openAdmitModal(): void {
+    if (!this.canAdmit()) return;
+
     this.roomNumber = '';
     this.bedNumber = '';
     this.admissionReason = '';
@@ -237,7 +272,12 @@ export class PatientHospitalizationComponent implements OnInit {
 
   saveAdmission(event: Event): void {
     event.preventDefault();
-    if (!this.roomNumber.trim() || !this.bedNumber.trim() || !this.admissionReason.trim() || !this.visitId || !this.responsiblePractitionerId) return;
+    if (!this.canAdmit()
+      || !this.roomNumber.trim()
+      || !this.bedNumber.trim()
+      || !this.admissionReason.trim()
+      || !this.visitId
+      || !this.responsiblePractitionerId) return;
 
     this.admitError.set(null);
     this.patientApi.admitPatient({
@@ -419,7 +459,7 @@ export class PatientHospitalizationComponent implements OnInit {
   saveConsent(event: Event): void {
     event.preventDefault();
     const active = this.activeHospitalization();
-    if (!active) return;
+    if (!active || !this.canRecordConsent()) return;
 
     const formData = new FormData();
     formData.append('consentType', this.consentType);
@@ -477,7 +517,7 @@ export class PatientHospitalizationComponent implements OnInit {
   saveOperatingReport(event: Event): void {
     event.preventDefault();
     const active = this.activeHospitalization();
-    if (!active || !this.procedureName.trim()) return;
+    if (!active || !this.canWriteOperatingReport() || !this.procedureName.trim()) return;
 
     this.patientApi.createOperatingReport(active.id, {
       procedureName: this.procedureName.trim(),
@@ -517,6 +557,7 @@ export class PatientHospitalizationComponent implements OnInit {
   }
 
   validateReport(reportId: string): void {
+    if (!this.canWriteOperatingReport()) return;
     if (!confirm('Êtes-vous sûr de vouloir valider ce compte-rendu opératoire ? Cette action le rendra immuable et générera les actes de facturation.')) return;
 
     this.patientApi.validateOperatingReport(reportId).subscribe({
