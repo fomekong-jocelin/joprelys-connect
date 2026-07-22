@@ -36,6 +36,8 @@ public final class RbacCatalog {
     public static final String PERMISSION_BED_OPERATIONAL_STATUS_MANAGE = "BED_OPERATIONAL_STATUS_MANAGE";
     public static final String PERMISSION_HOSPITALIZATION_TRANSFER = "HOSPITALIZATION_TRANSFER";
     public static final String PERMISSION_HOSPITALIZATION_DISCHARGE_DECIDE = "HOSPITALIZATION_DISCHARGE_DECIDE";
+    public static final String PERMISSION_HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM =
+            "HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM";
     public static final String PERMISSION_BED_CLEANING_MANAGE = "BED_CLEANING_MANAGE";
     public static final String PERMISSION_BED_MAINTENANCE_MANAGE = "BED_MAINTENANCE_MANAGE";
 
@@ -86,7 +88,8 @@ public final class RbacCatalog {
                 permission("HOSPITALIZATION_READ", "HOSPITALISATION", "Consulter les hospitalisations", "Consulter les séjours, chambres et lits."),
                 permission("HOSPITALIZATION_MANAGE", "HOSPITALISATION", "Gérer les hospitalisations", "Créer les séjours et renseigner les actes courants encore couverts par le contrat historique."),
                 permission(PERMISSION_HOSPITALIZATION_TRANSFER, "HOSPITALISATION", "Transférer un patient hospitalisé", "Changer le lit, la chambre ou le service d'un séjour actif."),
-                permission(PERMISSION_HOSPITALIZATION_DISCHARGE_DECIDE, "HOSPITALISATION", "Décider la sortie médicale", "Valider le diagnostic, les consignes et la décision médicale de sortie d'un séjour."),
+                permission(PERMISSION_HOSPITALIZATION_DISCHARGE_DECIDE, "HOSPITALISATION", "Décider la sortie médicale", "Valider le diagnostic, les consignes et la décision médicale de sortie sans libérer le lit."),
+                permission(PERMISSION_HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM, "HOSPITALISATION", "Confirmer le départ physique", "Confirmer que le patient a réellement quitté l'unité, clôturer son affectation et déclencher la remise en état du lit."),
                 permission(PERMISSION_BED_OPERATIONAL_STATUS_MANAGE, "HOSPITALISATION", "Superviser la capacité des lits", "Ouvrir ou fermer la capacité d'un lit et superviser exceptionnellement son état opérationnel."),
                 permission(PERMISSION_BED_CLEANING_MANAGE, "HOSPITALISATION", "Gérer le nettoyage des lits", "Placer un lit non affecté en nettoyage et confirmer sa remise à disposition après nettoyage."),
                 permission(PERMISSION_BED_MAINTENANCE_MANAGE, "HOSPITALISATION", "Gérer la maintenance des lits", "Placer un lit non affecté en maintenance et confirmer sa remise en service technique."),
@@ -186,6 +189,7 @@ public final class RbacCatalog {
         mappings.put("RESPONSABLE_HOSPITALISATION", set(
                 "PATIENT_READ", "HOSPITALIZATION_READ", "HOSPITALIZATION_MANAGE",
                 PERMISSION_HOSPITALIZATION_TRANSFER,
+                PERMISSION_HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM,
                 PERMISSION_BED_OPERATIONAL_STATUS_MANAGE,
                 PERMISSION_BED_CLEANING_MANAGE,
                 PERMISSION_BED_MAINTENANCE_MANAGE));
