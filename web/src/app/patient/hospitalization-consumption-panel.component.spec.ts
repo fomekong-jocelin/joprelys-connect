@@ -44,6 +44,7 @@ describe('HospitalizationConsumptionPanelComponent', () => {
 
   it('blocks consumption creation without the dedicated permission', () => {
     permissions.clear();
+    fixture.componentRef.setInput('canModify', false);
     fixture.detectChanges();
     fixture.componentInstance.itemName.set('Seringue');
     fixture.componentInstance.quantity.set(3);
