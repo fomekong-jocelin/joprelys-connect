@@ -169,40 +169,67 @@ import {
                             </span>
                           </div>
 
-                          @if (canModify() && bed.usageStatus !== 'OCCUPIED') {
+                          @if (bed.usageStatus !== 'OCCUPIED' && canOperateBed()) {
                             <div class="flex flex-wrap gap-1 mt-1 border-t border-[var(--app-border)]/40 pt-2 justify-end">
-                              <button
-                                (click)="changeBedCapacityStatus(bed.id, bed.capacityStatus === 'OPEN' ? 'CLOSED' : 'OPEN')"
-                                class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black rounded-sm border cursor-pointer"
-                                [style.background]="'var(--app-surface-muted)'"
-                                [style.color]="'var(--text-secondary)'"
-                                [style.border-color]="'var(--app-border)'"
-                              >
-                                <app-ui-icon [name]="bed.capacityStatus === 'OPEN' ? 'x-mark' : 'check'" />
-                                {{ t(bed.capacityStatus === 'OPEN' ? 'spatial.action.closeCapacity' : 'spatial.action.openCapacity') }}
-                              </button>
-
-                              @if (bed.capacityStatus === 'OPEN' && bed.readinessStatus !== 'READY') {
+                              @if (canManageCapacity()) {
                                 <button
-                                  (click)="changeBedStatus(bed.id, 'FREE')"
+                                  (click)="changeBedCapacityStatus(bed.id, bed.capacityStatus === 'OPEN' ? 'CLOSED' : 'OPEN')"
+                                  class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black rounded-sm border cursor-pointer"
+                                  [style.background]="'var(--app-surface-muted)'"
+                                  [style.color]="'var(--text-secondary)'"
+                                  [style.border-color]="'var(--app-border)'"
+                                >
+                                  <app-ui-icon [name]="bed.capacityStatus === 'OPEN' ? 'x-mark' : 'check'" />
+                                  {{ t(bed.capacityStatus === 'OPEN' ? 'spatial.action.closeCapacity' : 'spatial.action.openCapacity') }}
+                                </button>
+                              }
+
+                              @if (bed.capacityStatus === 'OPEN' && bed.readinessStatus === 'READY') {
+                                @if (canManageCleaning()) {
+                                  <button
+                                    (click)="changeBedCleaningStatus(bed.id, 'CLEANING')"
+                                    class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black rounded-sm border cursor-pointer"
+                                    [style.background]="'var(--brand-warning-subtle)'"
+                                    [style.color]="'var(--brand-warning-text)'"
+                                    [style.border-color]="'var(--brand-warning-border)'"
+                                  >
+                                    <app-ui-icon name="arrow-path" />
+                                    {{ t('spatial.action.cleaning') }}
+                                  </button>
+                                }
+                                @if (canManageMaintenance()) {
+                                  <button
+                                    (click)="changeBedMaintenanceStatus(bed.id, 'MAINTENANCE')"
+                                    class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black rounded-sm border cursor-pointer"
+                                    [style.background]="'var(--app-surface-muted)'"
+                                    [style.color]="'var(--text-secondary)'"
+                                    [style.border-color]="'var(--app-border)'"
+                                  >
+                                    <app-ui-icon name="wrench" />
+                                    {{ t('spatial.action.maintenance') }}
+                                  </button>
+                                }
+                              } @else if (bed.capacityStatus === 'OPEN' && bed.readinessStatus === 'CLEANING' && canManageCleaning()) {
+                                <button
+                                  (click)="changeBedCleaningStatus(bed.id, 'READY')"
                                   class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black rounded-sm border cursor-pointer"
                                   [style.background]="'var(--brand-success-subtle)'"
                                   [style.color]="'var(--brand-success-text)'"
                                   [style.border-color]="'color-mix(in srgb, var(--brand-success-muted) 80%, transparent)'"
                                 >
                                   <app-ui-icon name="check" />
-                                  {{ t('spatial.action.makeFree') }}
+                                  {{ t('spatial.action.cleaningComplete') }}
                                 </button>
-                              } @else if (bed.capacityStatus === 'OPEN' && bed.readinessStatus === 'READY') {
+                              } @else if (bed.capacityStatus === 'OPEN' && bed.readinessStatus === 'MAINTENANCE' && canManageMaintenance()) {
                                 <button
-                                  (click)="changeBedStatus(bed.id, 'MAINTENANCE')"
+                                  (click)="changeBedMaintenanceStatus(bed.id, 'READY')"
                                   class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black rounded-sm border cursor-pointer"
-                                  [style.background]="'var(--app-surface-muted)'"
-                                  [style.color]="'var(--text-secondary)'"
-                                  [style.border-color]="'var(--app-border)'"
+                                  [style.background]="'var(--brand-success-subtle)'"
+                                  [style.color]="'var(--brand-success-text)'"
+                                  [style.border-color]="'color-mix(in srgb, var(--brand-success-muted) 80%, transparent)'"
                                 >
-                                  <app-ui-icon name="wrench" />
-                                  {{ t('spatial.action.maintenance') }}
+                                  <app-ui-icon name="check" />
+                                  {{ t('spatial.action.maintenanceComplete') }}
                                 </button>
                               }
                             </div>
@@ -282,11 +309,14 @@ export class SpatialManagementPageComponent implements OnInit {
     }
   }
 
-  changeBedStatus(
-    bedId: string,
-    newStatus: 'FREE' | 'OCCUPIED' | 'CLEANING' | 'MAINTENANCE',
-  ): void {
-    this.spatialApi.updateBedStatus(bedId, newStatus).subscribe({
+  changeBedCleaningStatus(bedId: string, newStatus: 'CLEANING' | 'READY'): void {
+    this.spatialApi.updateBedCleaningStatus(bedId, newStatus).subscribe({
+      next: () => this.reloadSelectedWard(),
+    });
+  }
+
+  changeBedMaintenanceStatus(bedId: string, newStatus: 'MAINTENANCE' | 'READY'): void {
+    this.spatialApi.updateBedMaintenanceStatus(bedId, newStatus).subscribe({
       next: () => this.reloadSelectedWard(),
     });
   }
@@ -297,8 +327,20 @@ export class SpatialManagementPageComponent implements OnInit {
     });
   }
 
-  canModify(): boolean {
+  canManageCapacity(): boolean {
     return this.rbacApi.hasPermission('BED_OPERATIONAL_STATUS_MANAGE');
+  }
+
+  canManageCleaning(): boolean {
+    return this.rbacApi.hasPermission('BED_CLEANING_MANAGE');
+  }
+
+  canManageMaintenance(): boolean {
+    return this.rbacApi.hasPermission('BED_MAINTENANCE_MANAGE');
+  }
+
+  canOperateBed(): boolean {
+    return this.canManageCapacity() || this.canManageCleaning() || this.canManageMaintenance();
   }
 
   canConfigure(): boolean {
