@@ -42,20 +42,20 @@ L’endpoint actuel est :
 POST /api/hospitalizations/{id}/medication-administrations
 ```
 
-Il ne crée aucune prescription. Le nom de permission reprend donc l’intention réelle `ADMINISTER`. Un médecin ne reçoit pas automatiquement cette permission et un infirmier ne reçoit pas de droit de prescription par implication.
+Il ne crée aucune prescription. Le nom de permission reprend donc l’intention réelle `ADMINISTER`. Les rôles médecin et infirmier reçoivent cette permission pour tracer une administration effectivement réalisée, sans recevoir par implication un droit de prescription, de validation pharmaceutique ou de dispensation.
 
 ## Matrice de rôles système
 
 | Rôle | Admission | Notes | Consentement | Soins | Administration médicament | Consommables |
 |---|---:|---:|---:|---:|---:|---:|
-| `MEDECIN` | oui | oui | oui | non | non | non |
+| `MEDECIN` | oui | oui | oui | oui | oui | oui |
 | `INFIRMIER` | non | oui | non | oui | oui | oui |
 | `RESPONSABLE_HOSPITALISATION` | oui | non | non | non | non | non |
 | `AGENT_HYGIENE` | non | non | non | non | non | non |
 | `TECHNICIEN_MAINTENANCE` | non | non | non | non | non | non |
 | `ADMIN_CLINIQUE` | oui | oui | oui | oui | oui | oui |
 
-Le médecin conserve le droit de décision médicale de sortie. L’infirmier conserve le transfert, mais ne peut ni admettre ni enregistrer un consentement. Le responsable hospitalisation peut réaliser l’admission opérationnelle et gérer le parcours de lit sans écrire les actes cliniques.
+Le médecin conserve le parcours historique de saisie des actes qu’il réalise, mais chaque capacité est désormais révocable séparément. L’infirmier conserve le transfert et les actes réalisés, mais ne peut ni admettre ni enregistrer un consentement. Le responsable hospitalisation peut réaliser l’admission opérationnelle et gérer le parcours de lit sans écrire les actes cliniques.
 
 ## Endpoints modifiés
 
@@ -90,6 +90,7 @@ Les méthodes sensibles du composant parent revérifient également la permissio
 - aucun payload modifié ;
 - aucun schéma de base de données modifié ;
 - les rôles système sont resynchronisés par le bootstrap RBAC ;
+- la capacité historique du médecin à tracer les actes réalisés est conservée via des permissions séparées ;
 - les rôles personnalisés basés sur `HOSPITALIZATION_MANAGE` doivent être remappés explicitement ;
 - les utilisateurs doivent renouveler leur JWT après synchronisation.
 
@@ -101,6 +102,7 @@ Aucun fallback `hasAnyAuthority(nouveau, HOSPITALIZATION_MANAGE)` n’est ajout�
 
 - présence des six permissions dans le catalogue ;
 - matrice positive et négative médecin/infirmier/responsable hospitalisation ;
+- parcours d’intégration médecin existant conservé avec les permissions dédiées ;
 - absence des écritures cliniques sur les rôles hygiène et maintenance ;
 - annotation exacte de chaque endpoint ;
 - test d’architecture interdisant `HOSPITALIZATION_MANAGE` sur les endpoints hospitaliers.
