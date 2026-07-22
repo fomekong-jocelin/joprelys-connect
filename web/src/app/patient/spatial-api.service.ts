@@ -5,6 +5,8 @@ import { Ward, Bed, BedAssignment } from './patient.models';
 import {
   BedCapacityStatus,
   BedCapacityView,
+  BedStateChangeHistoryItem,
+  BedStateReasonCode,
   WardCapacityView,
 } from '../clinic/spatial/bed-capacity.models';
 import {
@@ -28,29 +30,55 @@ export class SpatialApiService {
     return this.http.get<WardCapacityView>(`/api/spatial/wards/${wardId}/occupancy`);
   }
 
+  getBedStateHistory(bedId: string): Observable<BedStateChangeHistoryItem[]> {
+    return this.http.get<BedStateChangeHistoryItem[]>(`/api/spatial/beds/${bedId}/state-history`);
+  }
+
   updateBedStatus(
     bedId: string,
     status: 'FREE' | 'OCCUPIED' | 'CLEANING' | 'MAINTENANCE',
+    note?: string,
   ): Observable<BedCapacityView> {
-    return this.http.post<BedCapacityView>(`/api/spatial/beds/${bedId}/status`, { status });
+    return this.http.post<BedCapacityView>(`/api/spatial/beds/${bedId}/status`, { status, note });
   }
 
   updateBedCleaningStatus(
     bedId: string,
     status: 'CLEANING' | 'READY',
+    reasonCode: BedStateReasonCode = status === 'CLEANING' ? 'CLEANING_ROUTINE' : 'CLEANING_COMPLETED',
+    note?: string,
   ): Observable<BedCapacityView> {
-    return this.http.post<BedCapacityView>(`/api/spatial/beds/${bedId}/cleaning-status`, { status });
+    return this.http.post<BedCapacityView>(`/api/spatial/beds/${bedId}/cleaning-status`, {
+      status,
+      reasonCode,
+      note,
+    });
   }
 
   updateBedMaintenanceStatus(
     bedId: string,
     status: 'MAINTENANCE' | 'READY',
+    reasonCode: BedStateReasonCode = status === 'MAINTENANCE' ? 'MAINTENANCE_CORRECTIVE' : 'MAINTENANCE_COMPLETED',
+    note?: string,
   ): Observable<BedCapacityView> {
-    return this.http.post<BedCapacityView>(`/api/spatial/beds/${bedId}/maintenance-status`, { status });
+    return this.http.post<BedCapacityView>(`/api/spatial/beds/${bedId}/maintenance-status`, {
+      status,
+      reasonCode,
+      note,
+    });
   }
 
-  updateBedCapacityStatus(bedId: string, status: BedCapacityStatus): Observable<BedCapacityView> {
-    return this.http.post<BedCapacityView>(`/api/spatial/beds/${bedId}/capacity-status`, { status });
+  updateBedCapacityStatus(
+    bedId: string,
+    status: BedCapacityStatus,
+    reasonCode: BedStateReasonCode = status === 'OPEN' ? 'CAPACITY_REOPENING' : 'CAPACITY_TEMPORARY_CLOSURE',
+    note?: string,
+  ): Observable<BedCapacityView> {
+    return this.http.post<BedCapacityView>(`/api/spatial/beds/${bedId}/capacity-status`, {
+      status,
+      reasonCode,
+      note,
+    });
   }
 
   transferPatient(hospitalizationId: string, newBedId: string): Observable<BedAssignment> {
