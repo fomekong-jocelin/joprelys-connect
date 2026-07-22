@@ -1,6 +1,8 @@
 # TICKET-PREPROD-ADMIN-CLEANUP — Nettoyage de l'Administrateur par défaut et des données de test pour la préproduction
 
 > Fichier obligatoire pour chaque ticket ou intervention IA.
+>
+> **Réouverture Go-Live — 2026-07-22** : le comportement historique de préproduction ci-dessous reste tracé, mais il n'est plus acceptable pour une production greenfield. Pour le Go-Live, ce ticket est prolongé avec les critères P0 de la section 10 : seed désactivé par défaut, activation explicite, email/nom/password obligatoires, aucun credential de repli versionné et fail-fast si la configuration est incomplète.
 
 ## 1. Objectif
 
@@ -67,6 +69,7 @@ Préparer l'application pour l'environnement de préproduction :
 | Date | Développeur | Temps passé | Avancement | Reste à faire | Blocage | Commentaire |
 |---|---|---:|---:|---:|---|---|
 | 2026-07-06 | Antigravity | 0.05j | 100% | Aucun | Aucun | Modifications de code validées par build et tests OK. |
+| 2026-07-22 | GPT-5.6 Thinking | 0j | 0% | Durcissement Go-Live + tests complets | Aucun | Réouverture documentaire avant code ; aucune action serveur. |
 
 ## 8. Tests et vérifications
 
@@ -87,3 +90,37 @@ Préparer l'application pour l'environnement de préproduction :
 | Impact Angular | Non |
 | Impact Flutter | Non |
 | Changelog requis | Oui |
+
+## 10. Extension P0 — Go-Live production greenfield
+
+### Constat sur `main@078c3dc5f913f615910fad9f061085bc7acdcfec`
+
+- `application.yml` active encore le seed admin par défaut via `JOPRELYS_SEED_ADMIN_ENABLED:true` ;
+- `AdminUserSeeder` utilise `matchIfMissing = true` ;
+- `SeedAdminProperties.isComplete()` ne vérifie que `enabled` ;
+- `AdminUserSeeder` contient des fallbacks d'email, de nom et de mot de passe versionnés.
+
+### Critères d'acceptation Go-Live
+
+- [ ] seed admin désactivé par défaut ;
+- [ ] activation explicite obligatoire ;
+- [ ] email obligatoire ;
+- [ ] nom obligatoire ;
+- [ ] mot de passe obligatoire ;
+- [ ] aucun fallback email/password dans le code ;
+- [ ] configuration activée mais incomplète => fail-fast ;
+- [ ] mot de passe jamais journalisé ;
+- [ ] mot de passe hashé via le `PasswordEncoder` existant ;
+- [ ] création idempotente ;
+- [ ] aucun établissement ou utilisateur de démonstration créé ;
+- [ ] tests ciblés et suite Maven globale verts.
+
+### Commande de validation finale
+
+```bash
+SPRING_DATASOURCE_URL='jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE' \
+JOPRELYS_JWT_SECRET='<secret de TEST uniquement>' \
+./mvnw clean verify -B --no-transfer-progress -Dspring.profiles.active=test
+```
+
+Aucun secret de production ne doit être utilisé ou versionné.
