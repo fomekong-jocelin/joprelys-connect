@@ -318,7 +318,7 @@ public class SpatialControllerTest {
                 """;
 
         mockMvc.perform(post("/api/spatial/beds/" + bedFree.getId() + "/status")
-                        .header("Authorization", "Bearer " + tokenDoctor)
+                        .header("Authorization", "Bearer " + tokenAdmin)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(statusRequest))
                 .andExpect(status().isOk())
