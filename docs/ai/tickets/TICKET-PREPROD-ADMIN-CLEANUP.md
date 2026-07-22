@@ -2,7 +2,7 @@
 
 > Fichier obligatoire pour chaque ticket ou intervention IA.
 >
-> **Réouverture Go-Live — 2026-07-22** : le comportement historique de préproduction ci-dessous reste tracé, mais il n'est plus acceptable pour une production greenfield. Pour le Go-Live, ce ticket est prolongé avec les critères P0 de la section 10 : seed désactivé par défaut, activation explicite, email/nom/password obligatoires, aucun credential de repli versionné et fail-fast si la configuration est incomplète.
+> **Réouverture Go-Live — 2026-07-22** : le comportement historique de préproduction ci-dessous reste tracé, mais il n'est plus acceptable pour une production greenfield. Pour le Go-Live, ce ticket est prolongé avec les critères P0 de la section 8 : seed désactivé par défaut, activation explicite, email/nom/password obligatoires, aucun credential de repli versionné et fail-fast si la configuration est incomplète.
 
 ## 1. Objectif historique
 
@@ -47,16 +47,16 @@ Préparer l'application pour l'environnement de préproduction :
 - bootstrap limité au compte administrateur ;
 - ancien comportement de repli conservé à l'époque pour faciliter la préproduction.
 
-Ce dernier point est précisément celui qui est remplacé par le durcissement Go-Live ci-dessous.
+Ce dernier point est remplacé par le durcissement Go-Live ci-dessous.
 
 ## 6. Suivi d'exécution
 
 | Date | Développeur | Avancement | Reste à faire | Commentaire |
 |---|---|---:|---|---|
 | 2026-07-06 | Antigravity | 100% historique | Aucun | Préproduction validée avec la politique de l'époque. |
-| 2026-07-22 | GPT-5.6 Thinking | En cours | Durcissement Go-Live + tests complets | Réouverture documentaire avant code ; aucune action serveur. |
+| 2026-07-22 | GPT-5.6 Thinking | QA technique verte | Review humaine + merge contrôlé + preflight greenfield | PR #118 ; CI #1021 Maven strict verte ; aucune action serveur. |
 
-## 7. Impact version historique
+## 7. Impact version
 
 | Champ | Valeur |
 |---|---|
@@ -69,34 +69,38 @@ Ce dernier point est précisément celui qui est remplacé par le durcissement G
 
 ## 8. Extension P0 — Go-Live production greenfield
 
-### Constat sur `main@078c3dc5f913f615910fad9f061085bc7acdcfec`
+### Constat initial sur `main@078c3dc5f913f615910fad9f061085bc7acdcfec`
 
-- le seed admin est actif par défaut dans `application.yml` ;
-- le composant seeder est activable lorsque la propriété est absente ;
-- `SeedAdminProperties.isComplete()` ne valide pas encore tous les champs obligatoires ;
-- `AdminUserSeeder` contient encore des valeurs de repli versionnées.
+- le seed admin était actif par défaut dans `application.yml` ;
+- le composant seeder pouvait être activé lorsque la propriété était absente ;
+- `SeedAdminProperties.isComplete()` ne validait pas tous les champs obligatoires ;
+- `AdminUserSeeder` contenait encore des valeurs de repli versionnées.
 
 ### Critères d'acceptation Go-Live
 
-- [ ] seed admin désactivé par défaut ;
-- [ ] activation explicite obligatoire ;
-- [ ] email obligatoire ;
-- [ ] nom obligatoire ;
-- [ ] mot de passe obligatoire ;
-- [ ] aucun fallback email/password dans le code ;
-- [ ] configuration activée mais incomplète => fail-fast ;
-- [ ] mot de passe jamais journalisé ;
-- [ ] mot de passe hashé via le `PasswordEncoder` existant ;
-- [ ] création idempotente ;
-- [ ] aucun établissement ou utilisateur de démonstration créé ;
-- [ ] tests ciblés et suite Maven globale verts.
+- [x] seed admin désactivé par défaut ;
+- [x] activation explicite obligatoire ;
+- [x] email obligatoire ;
+- [x] nom obligatoire ;
+- [x] mot de passe obligatoire ;
+- [x] aucun fallback email/password dans le code ;
+- [x] configuration activée mais incomplète => fail-fast ;
+- [x] mot de passe jamais journalisé ;
+- [x] mot de passe hashé via le `PasswordEncoder` existant ;
+- [x] création idempotente ;
+- [x] aucun établissement ou utilisateur de démonstration créé ;
+- [x] tests ciblés + suite Maven globale verte dans GitHub Actions run #1021.
 
-### Commande de validation finale
+### Validation technique
 
-```bash
-SPRING_DATASOURCE_URL='jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE' \
-JOPRELYS_JWT_SECRET='<secret de TEST uniquement>' \
-./mvnw clean verify -B --no-transfer-progress -Dspring.profiles.active=test
-```
+La CI de la PR #118 a exécuté le job `Backend — Maven Build & Tests`, étape `Build and verify (Maven strict)`, avec succès. Aucun `-DskipTests` ni `-Dmaven.test.skip` n'est introduit par cette intervention.
+
+Le job Angular est `skipped` par la détection de stack, ce qui est attendu : aucun fichier `web/**` n'est modifié dans cette PR.
+
+### Reste à faire
+
+- [ ] review humaine Tech Lead / sécurité ;
+- [ ] merge uniquement après approbation ;
+- [ ] rejeu greenfield PostgreSQL sur le SHA exact fusionné avant toute action PROD.
 
 Aucun secret de production ne doit être utilisé ou versionné.
