@@ -33,6 +33,14 @@ public final class RbacCatalog {
     public static final String PERMISSION_PATIENT_PORTAL_ACCESS = "PATIENT_PORTAL_ACCESS";
     public static final String PERMISSION_PATIENT_APPOINTMENT_MANAGE = "PATIENT_APPOINTMENT_MANAGE";
     public static final String PERMISSION_PATIENT_NOTIFICATION_MANAGE = "PATIENT_NOTIFICATION_MANAGE";
+    public static final String PERMISSION_HOSPITALIZATION_ADMIT = "HOSPITALIZATION_ADMIT";
+    public static final String PERMISSION_HOSPITALIZATION_NOTE_WRITE = "HOSPITALIZATION_NOTE_WRITE";
+    public static final String PERMISSION_HOSPITALIZATION_CONSENT_RECORD = "HOSPITALIZATION_CONSENT_RECORD";
+    public static final String PERMISSION_HOSPITALIZATION_CARE_RECORD = "HOSPITALIZATION_CARE_RECORD";
+    public static final String PERMISSION_HOSPITALIZATION_MEDICATION_ADMINISTER =
+            "HOSPITALIZATION_MEDICATION_ADMINISTER";
+    public static final String PERMISSION_HOSPITALIZATION_CONSUMABLE_RECORD =
+            "HOSPITALIZATION_CONSUMABLE_RECORD";
     public static final String PERMISSION_BED_OPERATIONAL_STATUS_MANAGE = "BED_OPERATIONAL_STATUS_MANAGE";
     public static final String PERMISSION_HOSPITALIZATION_TRANSFER = "HOSPITALIZATION_TRANSFER";
     public static final String PERMISSION_HOSPITALIZATION_DISCHARGE_DECIDE = "HOSPITALIZATION_DISCHARGE_DECIDE";
@@ -86,7 +94,13 @@ public final class RbacCatalog {
                 permission("STOCK_READ", "STOCK", "Consulter les stocks", "Consulter les articles et niveaux de stock."),
                 permission("STOCK_MANAGE", "STOCK", "Gérer les stocks", "Créer et traiter les mouvements de stock."),
                 permission("HOSPITALIZATION_READ", "HOSPITALISATION", "Consulter les hospitalisations", "Consulter les séjours, chambres et lits."),
-                permission("HOSPITALIZATION_MANAGE", "HOSPITALISATION", "Gérer les hospitalisations", "Créer les séjours et renseigner les actes courants encore couverts par le contrat historique."),
+                permission("HOSPITALIZATION_MANAGE", "HOSPITALISATION", "Ancien super-droit hospitalisation", "Permission historique conservée pour la migration des rôles personnalisés ; aucun endpoint hospitalier ne la consomme plus."),
+                permission(PERMISSION_HOSPITALIZATION_ADMIT, "HOSPITALISATION", "Admettre un patient", "Créer un séjour actif et affecter un lit disponible dans le contexte autorisé."),
+                permission(PERMISSION_HOSPITALIZATION_NOTE_WRITE, "HOSPITALISATION", "Rédiger une note de séjour", "Ajouter une note d'évolution ou une transmission horodatée au séjour."),
+                permission(PERMISSION_HOSPITALIZATION_CONSENT_RECORD, "HOSPITALISATION", "Enregistrer un consentement", "Consigner le type de consentement, les signatures déclarées, le témoin et le document associé."),
+                permission(PERMISSION_HOSPITALIZATION_CARE_RECORD, "HOSPITALISATION", "Consigner un soin", "Tracer un soin réalisé pendant le séjour et son éventuelle valorisation."),
+                permission(PERMISSION_HOSPITALIZATION_MEDICATION_ADMINISTER, "HOSPITALISATION", "Tracer une administration médicamenteuse", "Enregistrer une administration effectivement réalisée ; cette permission ne permet pas de prescrire."),
+                permission(PERMISSION_HOSPITALIZATION_CONSUMABLE_RECORD, "HOSPITALISATION", "Tracer un consommable", "Enregistrer les articles et quantités effectivement consommés pendant le séjour."),
                 permission(PERMISSION_HOSPITALIZATION_TRANSFER, "HOSPITALISATION", "Transférer un patient hospitalisé", "Changer le lit, la chambre ou le service d'un séjour actif."),
                 permission(PERMISSION_HOSPITALIZATION_DISCHARGE_DECIDE, "HOSPITALISATION", "Décider la sortie médicale", "Valider le diagnostic, les consignes et la décision médicale de sortie sans libérer le lit."),
                 permission(PERMISSION_HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM, "HOSPITALISATION", "Confirmer le départ physique", "Confirmer que le patient a réellement quitté l'unité, clôturer son affectation et déclencher la remise en état du lit."),
@@ -167,7 +181,10 @@ public final class RbacCatalog {
                 PERMISSION_EMERGENCY_MEDICO_LEGAL_READ,
                 PERMISSION_EMERGENCY_MEDICO_LEGAL_WRITE,
                 PERMISSION_EMERGENCY_BELONGINGS_WRITE,
-                "LAB_ORDER_READ", "LAB_ORDER_CREATE", "HOSPITALIZATION_READ", "HOSPITALIZATION_MANAGE",
+                "LAB_ORDER_READ", "LAB_ORDER_CREATE", "HOSPITALIZATION_READ",
+                PERMISSION_HOSPITALIZATION_ADMIT,
+                PERMISSION_HOSPITALIZATION_NOTE_WRITE,
+                PERMISSION_HOSPITALIZATION_CONSENT_RECORD,
                 PERMISSION_HOSPITALIZATION_TRANSFER,
                 PERMISSION_HOSPITALIZATION_DISCHARGE_DECIDE,
                 "VISIT_READ", "VISIT_CREATE", "VISIT_VITALS_WRITE", "VISIT_MANAGE",
@@ -178,7 +195,11 @@ public final class RbacCatalog {
                 "EMERGENCY_READ", "EMERGENCY_WRITE",
                 PERMISSION_EMERGENCY_MEDICO_LEGAL_READ,
                 PERMISSION_EMERGENCY_BELONGINGS_WRITE,
-                "LAB_ORDER_READ", "HOSPITALIZATION_READ", "HOSPITALIZATION_MANAGE",
+                "LAB_ORDER_READ", "HOSPITALIZATION_READ",
+                PERMISSION_HOSPITALIZATION_NOTE_WRITE,
+                PERMISSION_HOSPITALIZATION_CARE_RECORD,
+                PERMISSION_HOSPITALIZATION_MEDICATION_ADMINISTER,
+                PERMISSION_HOSPITALIZATION_CONSUMABLE_RECORD,
                 PERMISSION_HOSPITALIZATION_TRANSFER,
                 "VISIT_READ", "VISIT_CREATE", "VISIT_VITALS_WRITE", "DOCUMENT_READ", "RECEPTION_READ"));
         mappings.put("BIOLOGISTE", set("PATIENT_READ", "LAB_ORDER_READ", "LAB_QUEUE_READ", "LAB_ORDER_WRITE"));
@@ -187,7 +208,8 @@ public final class RbacCatalog {
                 "DOCUMENT_READ"));
         mappings.put("GESTIONNAIRE_STOCK", set("STOCK_READ", "STOCK_MANAGE"));
         mappings.put("RESPONSABLE_HOSPITALISATION", set(
-                "PATIENT_READ", "HOSPITALIZATION_READ", "HOSPITALIZATION_MANAGE",
+                "PATIENT_READ", "HOSPITALIZATION_READ",
+                PERMISSION_HOSPITALIZATION_ADMIT,
                 PERMISSION_HOSPITALIZATION_TRANSFER,
                 PERMISSION_HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM,
                 PERMISSION_BED_OPERATIONAL_STATUS_MANAGE,
