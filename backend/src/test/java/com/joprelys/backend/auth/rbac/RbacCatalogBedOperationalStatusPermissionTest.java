@@ -27,19 +27,19 @@ class RbacCatalogBedOperationalStatusPermissionTest {
     }
 
     @Test
-    void doctorShouldAdmitWriteNotesRecordConsentTransferAndDecideDischarge() {
+    void doctorShouldUseDedicatedPermissionsForAllPerformedClinicalActions() {
         Set<String> permissions = permissionsFor("MEDECIN");
 
         assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_ADMIT));
         assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_NOTE_WRITE));
         assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_CONSENT_RECORD));
+        assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_CARE_RECORD));
+        assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_MEDICATION_ADMINISTER));
+        assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_CONSUMABLE_RECORD));
         assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_TRANSFER));
         assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_DISCHARGE_DECIDE));
 
         assertFalse(permissions.contains("HOSPITALIZATION_MANAGE"));
-        assertFalse(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_CARE_RECORD));
-        assertFalse(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_MEDICATION_ADMINISTER));
-        assertFalse(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_CONSUMABLE_RECORD));
         assertFalse(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM));
         assertFalse(permissions.contains(RbacCatalog.PERMISSION_BED_OPERATIONAL_STATUS_MANAGE));
         assertFalse(permissions.contains(RbacCatalog.PERMISSION_BED_CLEANING_MANAGE));
