@@ -214,6 +214,11 @@ export class EmergencyHospitalizationContinuationComponent {
   });
 
   constructor() {
+    if (!this.canAdmit()) {
+      this.loading.set(false);
+      return;
+    }
+
     forkJoin({
       spatial: this.spatialApi.getConfiguration(),
       staff: this.staffApi.list(),
