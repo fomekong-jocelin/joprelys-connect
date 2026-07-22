@@ -36,8 +36,8 @@
 
 | Rôle | Droits hospitaliers par défaut |
 |---|---|
-| `MEDECIN` | lecture, admission, notes, consentements, transfert et décision médicale de sortie ; aucun soin infirmier, administration médicamenteuse, consommable, départ physique ni opération technique du lit |
-| `INFIRMIER` | lecture, notes/transmissions, soins, administration médicamenteuse, consommables et transfert ; aucune admission, saisie de consentement, décision de sortie, confirmation de départ ni opération technique du lit |
+| `MEDECIN` | lecture, admission, notes, consentements, soins réalisés, administrations médicamenteuses, consommables, transfert et décision médicale de sortie ; aucun départ physique ni opération technique du lit |
+| `INFIRMIER` | lecture, notes/transmissions, soins, administrations médicamenteuses, consommables et transfert ; aucune admission, saisie de consentement, décision de sortie, confirmation de départ ni opération technique du lit |
 | `RESPONSABLE_HOSPITALISATION` | admission, transfert, confirmation du départ physique, supervision de capacité, nettoyage et maintenance ; aucune écriture clinique ni décision médicale de sortie |
 | `AGENT_HYGIENE` | lecture d'occupation et circuit de nettoyage uniquement |
 | `TECHNICIEN_MAINTENANCE` | lecture d'occupation et circuit de maintenance uniquement |
@@ -58,7 +58,7 @@ Le droit historique `HOSPITALIZATION_MANAGE` reste visible dans le catalogue uni
 | Tracer une administration médicamenteuse | `HOSPITALIZATION_MEDICATION_ADMINISTER` |
 | Tracer un consommable utilisé | `HOSPITALIZATION_CONSUMABLE_RECORD` |
 
-La permission médicamenteuse couvre exclusivement une administration effectivement réalisée. Elle ne permet ni de prescrire, ni de valider une prescription, ni de dispenser depuis la pharmacie.
+La permission médicamenteuse couvre exclusivement une administration effectivement réalisée. Elle ne permet ni de prescrire, ni de valider une prescription, ni de dispenser depuis la pharmacie. Les rôles médecin et infirmier la reçoivent par défaut pour préserver les actes qu'ils réalisent déjà, mais elle peut être retirée indépendamment dans un rôle personnalisé.
 
 Avant déploiement, chaque rôle personnalisé possédant `HOSPITALIZATION_MANAGE` doit être revu et remappé explicitement. Après resynchronisation du catalogue, les JWT doivent être renouvelés.
 
@@ -215,7 +215,7 @@ La permission `HOSPITALIZATION_MANAGE` est dépréciée comme super-droit. Elle 
 - refus de l'administration médicamenteuse sans `HOSPITALIZATION_MEDICATION_ADMINISTER` ;
 - refus des consommables sans `HOSPITALIZATION_CONSUMABLE_RECORD` ;
 - absence de fallback vers `HOSPITALIZATION_MANAGE` ;
-- médecin sans administration médicamenteuse par défaut ;
+- parcours médecin existant conservé uniquement grâce aux permissions dédiées ;
 - infirmier sans admission ni consentement par défaut ;
 - responsable hospitalisation sans écriture clinique par défaut ;
 - refus du transfert sans `HOSPITALIZATION_TRANSFER` ;
