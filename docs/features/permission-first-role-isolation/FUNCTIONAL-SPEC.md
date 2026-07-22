@@ -19,10 +19,18 @@ Un utilisateur ne doit voir, ouvrir ou exécuter que les actions correspondant �
 - RF-11 : une entrée de menu, une route, un onglet et ses appels API partagent la même politique d'accès.
 - RF-12 : `LAB_ORDER_READ` couvre le laboratoire d'un patient autorisé ; la file laboratoire globale exige `LAB_QUEUE_READ`.
 - RF-13 : le rôle système `MEDECIN` ne possède aucune permission de facturation ou de caisse par défaut ; un rôle personnalisé peut les lui apporter explicitement.
+- RF-14 : `ADMIN_JOPRELYS` et `SUPER_ADMIN` sont des rôles plateforme ; ils ne sont jamais attribuables depuis l'administration d'un établissement. Toute tentative explicite d'affectation par un administrateur clinique est une interdiction d'autorisation et retourne `403 Forbidden`, indépendamment du flag persistant `assignable`.
 
 ## Parcours de recette
 
 Pour chaque rôle système et personnalisé : connexion, contrôle du menu, tentative d'URL directe, appels API autorisés, appels API interdits, déconnexion, connexion avec un autre rôle et répétition sans rechargement complet.
+
+Scénarios Go-Live supplémentaires :
+
+- `ADMIN_CLINIQUE -> ADMIN_JOPRELYS` : `403` ;
+- `ADMIN_CLINIQUE -> SUPER_ADMIN` : `403` ;
+- un rôle clinique réellement désactivé ou non attribuable conserve le contrat d'erreur métier existant ;
+- les rôles plateforme ne sont pas retournés dans la liste des rôles administrables d'un établissement.
 
 ## Périmètre de la généralisation
 
