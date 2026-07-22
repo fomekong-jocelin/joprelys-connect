@@ -157,7 +157,25 @@ export class PatientHospitalizationComponent implements OnInit {
   }
 
   canModify(): boolean {
-    return this.rbacApi.hasPermission('HOSPITALIZATION_MANAGE');
+    if (!this.activeHospitalization()) {
+      return this.rbacApi.hasPermission('HOSPITALIZATION_ADMIT');
+    }
+    switch (this.activeTab) {
+      case 'notes':
+        return this.rbacApi.hasPermission('HOSPITALIZATION_NOTE_WRITE');
+      case 'consents':
+        return this.rbacApi.hasPermission('HOSPITALIZATION_CONSENT_MANAGE');
+      case 'cares':
+        return this.rbacApi.hasPermission('HOSPITALIZATION_CARE_WRITE');
+      case 'meds':
+        return this.rbacApi.hasPermission('HOSPITALIZATION_MEDICATION_ADMINISTER');
+      case 'consumptions':
+        return this.rbacApi.hasPermission('HOSPITALIZATION_CONSUMABLE_MANAGE');
+      case 'cro':
+        return this.rbacApi.hasPermission('CLINICAL_WRITE');
+      default:
+        return false;
+    }
   }
 
   loadWardsForAdmission(): void {
@@ -221,6 +239,7 @@ export class PatientHospitalizationComponent implements OnInit {
   }
 
   openAdmitModal(): void {
+    if (!this.rbacApi.hasPermission('HOSPITALIZATION_ADMIT')) return;
     this.roomNumber = '';
     this.bedNumber = '';
     this.admissionReason = '';
@@ -237,6 +256,7 @@ export class PatientHospitalizationComponent implements OnInit {
 
   saveAdmission(event: Event): void {
     event.preventDefault();
+    if (!this.rbacApi.hasPermission('HOSPITALIZATION_ADMIT')) return;
     if (!this.roomNumber.trim() || !this.bedNumber.trim() || !this.admissionReason.trim() || !this.visitId || !this.responsiblePractitionerId) return;
 
     this.admitError.set(null);
@@ -418,6 +438,7 @@ export class PatientHospitalizationComponent implements OnInit {
 
   saveConsent(event: Event): void {
     event.preventDefault();
+    if (!this.rbacApi.hasPermission('HOSPITALIZATION_CONSENT_MANAGE')) return;
     const active = this.activeHospitalization();
     if (!active) return;
 
@@ -476,6 +497,7 @@ export class PatientHospitalizationComponent implements OnInit {
 
   saveOperatingReport(event: Event): void {
     event.preventDefault();
+    if (!this.rbacApi.hasPermission('CLINICAL_WRITE')) return;
     const active = this.activeHospitalization();
     if (!active || !this.procedureName.trim()) return;
 
