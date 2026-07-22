@@ -8,6 +8,7 @@ on:
       - '**/*.md'
   pull_request:
     branches: [main, develop]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths-ignore:
       - 'docs/**'
       - '**/*.md'
@@ -23,6 +24,7 @@ concurrency:
 jobs:
   changes:
     name: Detect changed stacks
+    if: github.event_name == 'push' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
