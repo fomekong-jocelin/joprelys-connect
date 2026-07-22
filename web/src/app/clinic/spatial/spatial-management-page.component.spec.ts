@@ -9,10 +9,14 @@ describe('SpatialManagementPageComponent', () => {
   let component: SpatialManagementPageComponent;
   let hasPermission: ReturnType<typeof vi.fn>;
   let updateBedCapacityStatus: ReturnType<typeof vi.fn>;
+  let updateBedCleaningStatus: ReturnType<typeof vi.fn>;
+  let updateBedMaintenanceStatus: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     hasPermission = vi.fn(() => false);
     updateBedCapacityStatus = vi.fn(() => of({}));
+    updateBedCleaningStatus = vi.fn(() => of({}));
+    updateBedMaintenanceStatus = vi.fn(() => of({}));
 
     TestBed.configureTestingModule({
       imports: [SpatialManagementPageComponent],
@@ -31,7 +35,8 @@ describe('SpatialManagementPageComponent', () => {
               occupiedBedsCount: 1,
               availableBedsCount: 2,
             })),
-            updateBedStatus: vi.fn(() => of({})),
+            updateBedCleaningStatus,
+            updateBedMaintenanceStatus,
             updateBedCapacityStatus,
           },
         },
@@ -56,11 +61,13 @@ describe('SpatialManagementPageComponent', () => {
     expect(component.occupancyRate()).toBe(25);
   });
 
-  it('uses the dedicated operational bed status permission', () => {
-    hasPermission.mockReturnValue(true);
+  it('checks each operational permission independently', () => {
+    hasPermission.mockImplementation((permission: string) => permission === 'BED_CLEANING_MANAGE');
 
-    expect(component.canModify()).toBe(true);
-    expect(hasPermission).toHaveBeenCalledWith('BED_OPERATIONAL_STATUS_MANAGE');
+    expect(component.canManageCleaning()).toBe(true);
+    expect(component.canManageMaintenance()).toBe(false);
+    expect(component.canManageCapacity()).toBe(false);
+    expect(component.canOperateBed()).toBe(true);
   });
 
   it('calls the dedicated capacity endpoint', () => {
@@ -69,5 +76,21 @@ describe('SpatialManagementPageComponent', () => {
     component.changeBedCapacityStatus('bed-1', 'CLOSED');
 
     expect(updateBedCapacityStatus).toHaveBeenCalledWith('bed-1', 'CLOSED');
+  });
+
+  it('calls the dedicated cleaning endpoint', () => {
+    component.ngOnInit();
+
+    component.changeBedCleaningStatus('bed-1', 'CLEANING');
+
+    expect(updateBedCleaningStatus).toHaveBeenCalledWith('bed-1', 'CLEANING');
+  });
+
+  it('calls the dedicated maintenance endpoint', () => {
+    component.ngOnInit();
+
+    component.changeBedMaintenanceStatus('bed-1', 'MAINTENANCE');
+
+    expect(updateBedMaintenanceStatus).toHaveBeenCalledWith('bed-1', 'MAINTENANCE');
   });
 });
