@@ -9,27 +9,62 @@ import org.junit.jupiter.api.Test;
 class RbacCatalogBedOperationalStatusPermissionTest {
 
     @Test
-    void permissionShouldBeRegisteredInCatalog() {
-        assertTrue(RbacCatalog.permissionCodes().contains(
-                RbacCatalog.PERMISSION_BED_OPERATIONAL_STATUS_MANAGE));
+    void segregatedHospitalPermissionsShouldBeRegisteredInCatalog() {
+        Set<String> permissions = RbacCatalog.permissionCodes();
+
+        assertTrue(permissions.contains(RbacCatalog.PERMISSION_BED_OPERATIONAL_STATUS_MANAGE));
+        assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_TRANSFER));
+        assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_DISCHARGE_DECIDE));
+        assertTrue(permissions.contains(RbacCatalog.PERMISSION_BED_CLEANING_MANAGE));
+        assertTrue(permissions.contains(RbacCatalog.PERMISSION_BED_MAINTENANCE_MANAGE));
     }
 
     @Test
-    void clinicAdministratorDoctorAndHospitalizationManagerShouldReceivePermission() {
-        assertTrue(permissionsFor("ADMIN_CLINIQUE").contains(
-                RbacCatalog.PERMISSION_BED_OPERATIONAL_STATUS_MANAGE));
-        assertTrue(permissionsFor("MEDECIN").contains(
-                RbacCatalog.PERMISSION_BED_OPERATIONAL_STATUS_MANAGE));
-        assertTrue(permissionsFor("RESPONSABLE_HOSPITALISATION").contains(
-                RbacCatalog.PERMISSION_BED_OPERATIONAL_STATUS_MANAGE));
+    void doctorShouldTransferAndDecideDischargeWithoutOperatingBeds() {
+        Set<String> permissions = permissionsFor("MEDECIN");
+
+        assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_TRANSFER));
+        assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_DISCHARGE_DECIDE));
+        assertFalse(permissions.contains(RbacCatalog.PERMISSION_BED_OPERATIONAL_STATUS_MANAGE));
+        assertFalse(permissions.contains(RbacCatalog.PERMISSION_BED_CLEANING_MANAGE));
+        assertFalse(permissions.contains(RbacCatalog.PERMISSION_BED_MAINTENANCE_MANAGE));
     }
 
     @Test
-    void standardNurseShouldNotReceiveOperationalBedStatusPermission() {
-        assertTrue(permissionsFor("INFIRMIER").contains("HOSPITALIZATION_MANAGE"),
-                "L'infirmier conserve les autres actions legacy d'hospitalisation dans cet incrément.");
-        assertFalse(permissionsFor("INFIRMIER").contains(
-                RbacCatalog.PERMISSION_BED_OPERATIONAL_STATUS_MANAGE));
+    void nurseShouldTransferWithoutDecidingDischargeOrOperatingBeds() {
+        Set<String> permissions = permissionsFor("INFIRMIER");
+
+        assertTrue(permissions.contains("HOSPITALIZATION_MANAGE"));
+        assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_TRANSFER));
+        assertFalse(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_DISCHARGE_DECIDE));
+        assertFalse(permissions.contains(RbacCatalog.PERMISSION_BED_OPERATIONAL_STATUS_MANAGE));
+        assertFalse(permissions.contains(RbacCatalog.PERMISSION_BED_CLEANING_MANAGE));
+        assertFalse(permissions.contains(RbacCatalog.PERMISSION_BED_MAINTENANCE_MANAGE));
+    }
+
+    @Test
+    void hospitalizationManagerShouldSuperviseCapacityAndBothTechnicalCircuits() {
+        Set<String> permissions = permissionsFor("RESPONSABLE_HOSPITALISATION");
+
+        assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_TRANSFER));
+        assertTrue(permissions.contains(RbacCatalog.PERMISSION_BED_OPERATIONAL_STATUS_MANAGE));
+        assertTrue(permissions.contains(RbacCatalog.PERMISSION_BED_CLEANING_MANAGE));
+        assertTrue(permissions.contains(RbacCatalog.PERMISSION_BED_MAINTENANCE_MANAGE));
+        assertFalse(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_DISCHARGE_DECIDE));
+    }
+
+    @Test
+    void hygieneAndMaintenanceRolesShouldRemainStrictlySeparated() {
+        Set<String> hygienePermissions = permissionsFor(RbacCatalog.ROLE_AGENT_HYGIENE);
+        Set<String> maintenancePermissions = permissionsFor(RbacCatalog.ROLE_TECHNICIEN_MAINTENANCE);
+
+        assertTrue(hygienePermissions.contains(RbacCatalog.PERMISSION_BED_CLEANING_MANAGE));
+        assertFalse(hygienePermissions.contains(RbacCatalog.PERMISSION_BED_MAINTENANCE_MANAGE));
+        assertFalse(hygienePermissions.contains(RbacCatalog.PERMISSION_BED_OPERATIONAL_STATUS_MANAGE));
+
+        assertTrue(maintenancePermissions.contains(RbacCatalog.PERMISSION_BED_MAINTENANCE_MANAGE));
+        assertFalse(maintenancePermissions.contains(RbacCatalog.PERMISSION_BED_CLEANING_MANAGE));
+        assertFalse(maintenancePermissions.contains(RbacCatalog.PERMISSION_BED_OPERATIONAL_STATUS_MANAGE));
     }
 
     private Set<String> permissionsFor(String roleCode) {
