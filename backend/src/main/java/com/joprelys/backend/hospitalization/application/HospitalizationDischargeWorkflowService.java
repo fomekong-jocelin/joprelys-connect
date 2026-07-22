@@ -69,6 +69,12 @@ public class HospitalizationDischargeWorkflowService {
     public HospitalizationResponse confirmPhysicalDeparture(
             UUID hospitalizationId,
             ConfirmPhysicalDepartureRequest request) {
+        if (!Boolean.TRUE.equals(request.confirmed())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Le départ physique doit être explicitement confirmé.");
+        }
+
         HospitalizationEntity hospitalization = requireActiveHospitalization(hospitalizationId);
         if (!hospitalization.hasDischargeDecision()) {
             throw new ResponseStatusException(
