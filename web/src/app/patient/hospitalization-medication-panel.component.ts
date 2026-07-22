@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { I18nService } from '../core/i18n/i18n.service';
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { PatientApiService } from './patient-api.service';
 
 interface MedicationAdministration {
@@ -52,7 +53,7 @@ interface MedicationAdministration {
 })
 export class HospitalizationMedicationPanelComponent {
   readonly hospitalizationId = input.required<string>();
-  readonly canModify = input(false);
+  readonly parentCanModify = input(false, { alias: 'canModify' });
   readonly administrations = signal<MedicationAdministration[]>([]);
   readonly loading = signal(false);
   readonly saving = signal(false);
@@ -62,13 +63,19 @@ export class HospitalizationMedicationPanelComponent {
   readonly dose = signal('');
 
   private readonly patientApi = inject(PatientApiService);
+  private readonly rbacApi = inject(RbacApiService);
   private readonly i18n = inject(I18nService);
   readonly t = (key: string, fallback: string) => this.i18n.t(key, fallback);
 
   constructor() { effect(() => this.load(this.hospitalizationId())); }
 
+  canModify(): boolean {
+    return this.rbacApi.hasPermission('HOSPITALIZATION_MEDICATION_ADMINISTER');
+  }
+
   save(event: Event): void {
     event.preventDefault();
+    if (!this.canModify()) return;
     const medicationName = this.name().trim();
     const dose = this.dose().trim();
     if (!medicationName || !dose) return;
