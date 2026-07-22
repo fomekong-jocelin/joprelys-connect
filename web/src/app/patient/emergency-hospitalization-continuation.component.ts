@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { catchError, finalize, forkJoin, of, switchMap } from 'rxjs';
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { StaffApiService } from '../clinic/staff/staff-api.service';
 import { StaffMember } from '../clinic/staff/staff.models';
 import { WardConfiguration } from '../clinic/spatial/spatial-configuration.models';
@@ -67,7 +68,11 @@ interface FreeBedOption {
         <app-ui-alert tone="success">{{ message }}</app-ui-alert>
       }
 
-      @if (loading()) {
+      @if (!canAdmit()) {
+        <app-ui-alert tone="warning">
+          {{ t('patients.hospitalization.emergencyContinuation.admissionForbidden', 'Votre profil peut consulter le contexte d’urgence, mais ne peut pas créer un séjour hospitalier.') }}
+        </app-ui-alert>
+      } @else if (loading()) {
         <p class="text-sm font-semibold text-[var(--text-muted)]">
           {{ t('common.loading', 'Chargement…') }}
         </p>
@@ -168,6 +173,7 @@ export class EmergencyHospitalizationContinuationComponent {
   private readonly spatialApi = inject(SpatialApiService);
   private readonly staffApi = inject(StaffApiService);
   private readonly documentApi = inject(EmergencyDocumentApiService);
+  private readonly rbacApi = inject(RbacApiService);
   private readonly i18n = inject(I18nService);
 
   readonly patientId = input.required<string>();
@@ -208,6 +214,11 @@ export class EmergencyHospitalizationContinuationComponent {
   });
 
   constructor() {
+    if (!this.canAdmit()) {
+      this.loading.set(false);
+      return;
+    }
+
     forkJoin({
       spatial: this.spatialApi.getConfiguration(),
       staff: this.staffApi.list(),
@@ -229,6 +240,10 @@ export class EmergencyHospitalizationContinuationComponent {
     return this.i18n.t(key, fallback);
   }
 
+  canAdmit(): boolean {
+    return this.rbacApi.hasPermission('HOSPITALIZATION_ADMIT');
+  }
+
   selectWard(wardId: string): void {
     this.selectedWardId.set(wardId);
     this.selectedBedId.set('');
@@ -236,7 +251,8 @@ export class EmergencyHospitalizationContinuationComponent {
 
   canSubmit(): boolean {
     return Boolean(
-      this.selectedWardId()
+      this.canAdmit()
+      && this.selectedWardId()
       && this.selectedBedId()
       && this.responsiblePractitionerId
       && this.admissionReason.trim(),

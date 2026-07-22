@@ -55,7 +55,7 @@ public class HospitalizationController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_ADMIT')")
     public HospitalizationResponse admitPatient(@Valid @RequestBody CreateHospitalizationRequest request) {
         return hospitalizationAdmissionService.admitPatient(request);
     }
@@ -74,7 +74,7 @@ public class HospitalizationController {
 
     @PostMapping("/{id}/notes")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_NOTE_WRITE')")
     public HospitalizationNoteResponse addNote(
             @PathVariable UUID id,
             @Valid @RequestBody CreateHospitalizationNoteRequest request) {
@@ -111,7 +111,7 @@ public class HospitalizationController {
 
     @PostMapping(value = "/{id}/consents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_CONSENT_RECORD')")
     public SurgicalConsentResponse addConsent(
             @PathVariable UUID id,
             @RequestParam("consentType") String consentType,
@@ -135,7 +135,7 @@ public class HospitalizationController {
 
     @PostMapping("/{id}/daily-cares")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_CARE_WRITE')")
     public DailyCareResponse addDailyCare(
             @PathVariable UUID id,
             @Valid @RequestBody CreateDailyCareRequest request) {
@@ -150,7 +150,7 @@ public class HospitalizationController {
 
     @PostMapping("/{id}/medication-administrations")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_MEDICATION_ADMINISTER')")
     public MedicationAdministrationResponse addMedicationAdministration(
             @PathVariable UUID id,
             @Valid @RequestBody CreateMedicationAdministrationRequest request) {
@@ -165,7 +165,7 @@ public class HospitalizationController {
 
     @PostMapping("/{id}/patient-consumptions")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('HOSPITALIZATION_MANAGE')")
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_CONSUMABLE_RECORD')")
     public PatientConsumptionResponse addPatientConsumption(
             @PathVariable UUID id,
             @Valid @RequestBody CreatePatientConsumptionRequest request) {

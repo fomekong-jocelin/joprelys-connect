@@ -101,6 +101,7 @@ class HospitalizationControllerTest {
     private PatientEntity patientA;
     private PatientEntity patientB;
     private String doctorToken;
+    private String nurseToken;
     private String hospitalizationManagerToken;
     private String billingAgentToken;
 
@@ -121,6 +122,15 @@ class HospitalizationControllerTest {
             doctor.setOrganizationId(organization.getId());
             doctor = userAccountRepository.save(doctor);
             doctorToken = jwtService.createToken(doctor).value();
+
+            UserAccountEntity nurse = new UserAccountEntity(
+                    "nurse.hosp@joprelys.local",
+                    "Infirmier hospitalisation",
+                    "INFIRMIER",
+                    "passhash");
+            nurse.setOrganizationId(organization.getId());
+            nurse = userAccountRepository.save(nurse);
+            nurseToken = jwtService.createToken(nurse).value();
 
             UserAccountEntity hospitalizationManager = new UserAccountEntity(
                     "manager.hosp@joprelys.local",
@@ -377,7 +387,7 @@ class HospitalizationControllerTest {
     }
 
     @Test
-    void givenDoctor_whenAddAndGetDailyCareMedsAndConsumptions_thenSuccess() throws Exception {
+    void clinicalWritesShouldRespectDoctorAndNurseDutySegregation() throws Exception {
         VisitEntity visit = createVisit(patientA, "VIS-CARE-01", "Soins", "MÉDECINE GÉNÉRALE");
         String hospitalizationId = admit(
                 patientA,
@@ -401,24 +411,40 @@ class HospitalizationControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.careType").value("PANSEMENT"));
 
+        String medicationPayload = """
+                {
+                  "medicationName":"Paracétamol Injectable",
+                  "dose":"1g IV",
+                  "prescriptionItemId":null
+                }
+                """;
+
         mockMvc.perform(post("/api/hospitalizations/{id}/medication-administrations", hospitalizationId)
                         .header("Authorization", bearer(doctorToken))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "medicationName":"Paracétamol Injectable",
-                                  "dose":"1g IV",
-                                  "prescriptionItemId":null
-                                }
-                                """))
+                        .content(medicationPayload))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/hospitalizations/{id}/medication-administrations", hospitalizationId)
+                        .header("Authorization", bearer(nurseToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(medicationPayload))
                 .andExpect(status().isCreated());
+
+        String consumptionPayload = """
+                {"itemName":"Seringue 5ml","quantity":3,"unitPrice":250.0}
+                """;
 
         mockMvc.perform(post("/api/hospitalizations/{id}/patient-consumptions", hospitalizationId)
                         .header("Authorization", bearer(doctorToken))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"itemName":"Seringue 5ml","quantity":3,"unitPrice":250.0}
-                                """))
+                        .content(consumptionPayload))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/hospitalizations/{id}/patient-consumptions", hospitalizationId)
+                        .header("Authorization", bearer(nurseToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(consumptionPayload))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(get("/api/hospitalizations/{id}/daily-cares", hospitalizationId)

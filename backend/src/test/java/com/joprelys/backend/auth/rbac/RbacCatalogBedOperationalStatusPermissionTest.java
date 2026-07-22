@@ -30,13 +30,14 @@ class RbacCatalogBedOperationalStatusPermissionTest {
         assertFalse(permissions.contains(RbacCatalog.PERMISSION_BED_OPERATIONAL_STATUS_MANAGE));
         assertFalse(permissions.contains(RbacCatalog.PERMISSION_BED_CLEANING_MANAGE));
         assertFalse(permissions.contains(RbacCatalog.PERMISSION_BED_MAINTENANCE_MANAGE));
+        assertFalse(permissions.contains("HOSPITALIZATION_MANAGE"));
     }
 
     @Test
     void nurseShouldTransferWithoutDecidingOrConfirmingDischarge() {
         Set<String> permissions = permissionsFor("INFIRMIER");
 
-        assertTrue(permissions.contains("HOSPITALIZATION_MANAGE"));
+        assertFalse(permissions.contains("HOSPITALIZATION_MANAGE"));
         assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_TRANSFER));
         assertFalse(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_DISCHARGE_DECIDE));
         assertFalse(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM));
@@ -49,6 +50,7 @@ class RbacCatalogBedOperationalStatusPermissionTest {
     void hospitalizationManagerShouldConfirmDepartureAndSuperviseTechnicalCircuits() {
         Set<String> permissions = permissionsFor("RESPONSABLE_HOSPITALISATION");
 
+        assertFalse(permissions.contains("HOSPITALIZATION_MANAGE"));
         assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_TRANSFER));
         assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM));
         assertTrue(permissions.contains(RbacCatalog.PERMISSION_BED_OPERATIONAL_STATUS_MANAGE));
