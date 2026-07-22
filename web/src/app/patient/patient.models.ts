@@ -7,7 +7,7 @@ export interface Patient {
   localPatientNumber: string;
   fullName: string;
   gender: string;
-  birthDate: string; // ISO string date YYYY-MM-DD
+  birthDate: string;
   phone?: string;
   city: string;
   district?: string;
@@ -137,11 +137,17 @@ export interface Hospitalization {
   roomNumber: string;
   bedNumber: string;
   admissionReason: string;
-  status: 'EN_COURS' | 'SORTI';
+  status: 'EN_COURS' | 'SORTI' | 'SORTI_CONTRE_AVIS';
   admittedAt: string;
   dischargedAt?: string;
   dischargeDiagnosis?: string;
   dischargeInstructions?: string;
+  dischargeDecidedAt?: string;
+  dischargeDecidedBy?: string;
+  dischargeAgainstMedicalAdvice?: boolean;
+  physicalDepartureAt?: string;
+  physicalDepartureBy?: string;
+  physicalDepartureNote?: string;
   pdfFilePath?: string;
   hospitalizationNumber: string;
   visitId: string;
@@ -176,6 +182,11 @@ export interface DischargeHospitalizationRequest {
   dischargeDiagnosis: string;
   dischargeInstructions: string;
   againstMedicalAdvice?: boolean;
+}
+
+export interface ConfirmPhysicalDepartureRequest {
+  confirmed: true;
+  note?: string;
 }
 
 export interface PatientDuplicateCandidate {

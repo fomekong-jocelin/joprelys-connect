@@ -71,6 +71,24 @@ public class HospitalizationEntity {
     @Column(name = "discharge_instructions")
     private String dischargeInstructions;
 
+    @Column(name = "discharge_decided_at")
+    private Instant dischargeDecidedAt;
+
+    @Column(name = "discharge_decided_by")
+    private UUID dischargeDecidedBy;
+
+    @Column(name = "discharge_against_medical_advice", nullable = false)
+    private Boolean dischargeAgainstMedicalAdvice;
+
+    @Column(name = "physical_departure_at")
+    private Instant physicalDepartureAt;
+
+    @Column(name = "physical_departure_by")
+    private UUID physicalDepartureBy;
+
+    @Column(name = "physical_departure_note", length = 500)
+    private String physicalDepartureNote;
+
     @Column(name = "pdf_file_path")
     private String pdfFilePath;
 
@@ -97,6 +115,7 @@ public class HospitalizationEntity {
         this.admissionReason = admissionReason;
         this.status = "EN_COURS";
         this.admittedAt = Instant.now();
+        this.dischargeAgainstMedicalAdvice = false;
         this.hospitalizationNumber = "HOSP-TEMP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
@@ -143,6 +162,7 @@ public class HospitalizationEntity {
         this.responsiblePractitionerId = responsiblePractitionerId;
         this.status = "EN_COURS";
         this.admittedAt = Instant.now();
+        this.dischargeAgainstMedicalAdvice = false;
     }
 
     @PrePersist
@@ -150,6 +170,9 @@ public class HospitalizationEntity {
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
+        if (dischargeAgainstMedicalAdvice == null) {
+            dischargeAgainstMedicalAdvice = false;
+        }
     }
 
     @PreUpdate
@@ -157,13 +180,44 @@ public class HospitalizationEntity {
         this.updatedAt = Instant.now();
     }
 
+    public void decideDischarge(
+            String diagnosis,
+            String instructions,
+            boolean againstMedicalAdvice,
+            UUID decidedBy,
+            Instant decidedAt) {
+        this.dischargeDiagnosis = diagnosis;
+        this.dischargeInstructions = instructions;
+        this.dischargeAgainstMedicalAdvice = againstMedicalAdvice;
+        this.dischargeDecidedBy = decidedBy;
+        this.dischargeDecidedAt = decidedAt;
+    }
+
+    public void confirmPhysicalDeparture(UUID confirmedBy, String note, Instant confirmedAt) {
+        this.physicalDepartureBy = confirmedBy;
+        this.physicalDepartureNote = note;
+        this.physicalDepartureAt = confirmedAt;
+    }
+
+    public boolean hasDischargeDecision() {
+        return dischargeDecidedAt != null;
+    }
+
+    public boolean hasPhysicalDeparture() {
+        return physicalDepartureAt != null;
+    }
+
     public void discharge(String diagnosis, String instructions, String pdfPath) {
         discharge(diagnosis, instructions, pdfPath, "SORTI");
     }
 
     public void discharge(String diagnosis, String instructions, String pdfPath, String finalStatus) {
+        if (physicalDepartureAt == null) {
+            throw new IllegalStateException(
+                    "Le séjour ne peut pas être clôturé avant la confirmation du départ physique.");
+        }
         this.status = finalStatus;
-        this.dischargedAt = Instant.now();
+        this.dischargedAt = physicalDepartureAt;
         this.dischargeDiagnosis = diagnosis;
         this.dischargeInstructions = instructions;
         this.pdfFilePath = pdfPath;
@@ -187,6 +241,12 @@ public class HospitalizationEntity {
     public Instant getDischargedAt() { return dischargedAt; }
     public String getDischargeDiagnosis() { return dischargeDiagnosis; }
     public String getDischargeInstructions() { return dischargeInstructions; }
+    public Instant getDischargeDecidedAt() { return dischargeDecidedAt; }
+    public UUID getDischargeDecidedBy() { return dischargeDecidedBy; }
+    public Boolean getDischargeAgainstMedicalAdvice() { return dischargeAgainstMedicalAdvice; }
+    public Instant getPhysicalDepartureAt() { return physicalDepartureAt; }
+    public UUID getPhysicalDepartureBy() { return physicalDepartureBy; }
+    public String getPhysicalDepartureNote() { return physicalDepartureNote; }
     public String getPdfFilePath() { return pdfFilePath; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

@@ -3,6 +3,7 @@ package com.joprelys.backend.hospitalization.api;
 import com.joprelys.backend.hospitalization.application.CanonicalHospitalizationQueryService;
 import com.joprelys.backend.hospitalization.application.HospitalizationAdmissionService;
 import com.joprelys.backend.hospitalization.application.HospitalizationCareService;
+import com.joprelys.backend.hospitalization.application.HospitalizationDischargeWorkflowService;
 import com.joprelys.backend.hospitalization.application.HospitalizationEntryDocumentService;
 import com.joprelys.backend.hospitalization.application.HospitalizationService;
 import com.joprelys.backend.hospitalization.application.OperatingReportService;
@@ -29,6 +30,7 @@ public class HospitalizationController {
 
     private final HospitalizationAdmissionService hospitalizationAdmissionService;
     private final HospitalizationService hospitalizationService;
+    private final HospitalizationDischargeWorkflowService hospitalizationDischargeWorkflowService;
     private final HospitalizationEntryDocumentService hospitalizationEntryDocumentService;
     private final CanonicalHospitalizationQueryService canonicalHospitalizationQueryService;
     private final HospitalizationCareService hospitalizationCareService;
@@ -37,12 +39,14 @@ public class HospitalizationController {
     public HospitalizationController(
             HospitalizationAdmissionService hospitalizationAdmissionService,
             HospitalizationService hospitalizationService,
+            HospitalizationDischargeWorkflowService hospitalizationDischargeWorkflowService,
             HospitalizationEntryDocumentService hospitalizationEntryDocumentService,
             CanonicalHospitalizationQueryService canonicalHospitalizationQueryService,
             HospitalizationCareService hospitalizationCareService,
             OperatingReportService operatingReportService) {
         this.hospitalizationAdmissionService = hospitalizationAdmissionService;
         this.hospitalizationService = hospitalizationService;
+        this.hospitalizationDischargeWorkflowService = hospitalizationDischargeWorkflowService;
         this.hospitalizationEntryDocumentService = hospitalizationEntryDocumentService;
         this.canonicalHospitalizationQueryService = canonicalHospitalizationQueryService;
         this.hospitalizationCareService = hospitalizationCareService;
@@ -85,10 +89,18 @@ public class HospitalizationController {
 
     @PostMapping("/{id}/discharge")
     @PreAuthorize("hasAuthority('HOSPITALIZATION_DISCHARGE_DECIDE')")
-    public HospitalizationResponse dischargePatient(
+    public HospitalizationResponse decideDischarge(
             @PathVariable UUID id,
             @Valid @RequestBody DischargeHospitalizationRequest request) {
-        return hospitalizationService.dischargePatient(id, request);
+        return hospitalizationDischargeWorkflowService.decideDischarge(id, request);
+    }
+
+    @PostMapping("/{id}/physical-departure")
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM')")
+    public HospitalizationResponse confirmPhysicalDeparture(
+            @PathVariable UUID id,
+            @Valid @RequestBody ConfirmPhysicalDepartureRequest request) {
+        return hospitalizationDischargeWorkflowService.confirmPhysicalDeparture(id, request);
     }
 
     @GetMapping("/{id}/entry-pdf")

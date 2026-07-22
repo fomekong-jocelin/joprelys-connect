@@ -1,10 +1,10 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { 
-  CreatePatientDto, 
-  Patient, 
-  LabOrder, 
+import {
+  CreatePatientDto,
+  Patient,
+  LabOrder,
   LabResult,
   PatientAllergy,
   CreatePatientAllergyRequest,
@@ -16,6 +16,7 @@ import {
   CreateHospitalizationRequest,
   HospitalizationNote,
   DischargeHospitalizationRequest,
+  ConfirmPhysicalDepartureRequest,
   PatientDuplicateCandidate,
   MedicalCaptchaResponse,
   PatientPreRegistrationRequest,
@@ -111,6 +112,13 @@ export class PatientApiService {
     return this.http.post<Hospitalization>(`/api/hospitalizations/${id}/discharge`, request);
   }
 
+  confirmPhysicalDeparture(
+    id: string,
+    request: ConfirmPhysicalDepartureRequest,
+  ): Observable<Hospitalization> {
+    return this.http.post<Hospitalization>(`/api/hospitalizations/${id}/physical-departure`, request);
+  }
+
   getDischargePdfUrl(id: string): string {
     return `/api/hospitalizations/${id}/pdf`;
   }
@@ -167,22 +175,18 @@ export class PatientApiService {
     return this.http.post<any>(`/api/hospitalizations/operating-reports/${reportId}/validate`, {});
   }
 
-  // WT2 (PDF): Téléchargement du PDF de synthèse médicale patient
   downloadSummaryPdf(id: string): Observable<Blob> {
     return this.http.get(`/api/patients/${id}/summary-pdf`, { responseType: 'blob' });
   }
 
-  // WT3 (DUPLICATES): Récupération des candidats doublons
   getDuplicates(): Observable<PatientDuplicateCandidate[]> {
     return this.http.get<PatientDuplicateCandidate[]>('/api/patients/duplicates');
   }
 
-  // WT3 (DUPLICATES): Ignorer un candidat doublon
   ignoreDuplicate(id: string): Observable<void> {
     return this.http.post<void>(`/api/patients/duplicates/${id}/ignore`, {});
   }
 
-  // WT3 (DUPLICATES): Fusionner deux dossiers patients
   mergePatients(primaryId: string, secondaryId: string): Observable<void> {
     return this.http.post<void>('/api/patients/merge', { primaryId, secondaryId });
   }
@@ -207,8 +211,6 @@ export class PatientApiService {
     return this.http.get<any[]>(`/api/visits/patient/${patientId}`);
   }
 
-  // --- Enregistrement Autonome (Public) ---
-
   getPublicCaptcha(): Observable<MedicalCaptchaResponse> {
     return this.http.get<MedicalCaptchaResponse>('/api/public/pre-registrations/captcha');
   }
@@ -216,8 +218,6 @@ export class PatientApiService {
   submitPublicPreRegistration(request: PatientPreRegistrationRequest): Observable<PatientPreRegistrationResponse> {
     return this.http.post<PatientPreRegistrationResponse>('/api/public/pre-registrations', request);
   }
-
-  // --- Enregistrement Autonome (Privé) ---
 
   getPendingPreRegistrations(page: number, size: number): Observable<PreRegistrationPage> {
     return this.http.get<PreRegistrationPage>(`/api/pre-registrations?page=${page}&size=${size}`);

@@ -1,7 +1,7 @@
 # Contrat API — Inventaire actuel et principes de la cible
 
 **Référence** : AUDIT-20260721 / EPIC-0027  
-**Statut** : inventaire prouvé pour l'existant ; proposition non implémentée pour la cible
+**Statut** : inventaire prouvé pour l'existant ; cible partiellement implémentée par les incréments de phase 0
 
 ## 1. API actuelle du périmètre
 
@@ -14,8 +14,8 @@
 | État lit legacy | `/api/spatial/beds/{id}/status` | `BED_OPERATIONAL_STATUS_MANAGE` | endpoint de supervision conservé temporairement pour compatibilité |
 | Nettoyage du lit | `/api/spatial/beds/{id}/cleaning-status` | `BED_CLEANING_MANAGE` | `CLEANING ↔ READY`, sans tâche ni preuve structurée |
 | Maintenance du lit | `/api/spatial/beds/{id}/maintenance-status` | `BED_MAINTENANCE_MANAGE` | `MAINTENANCE ↔ READY`, sans ordre de travail |
-| Transfert | `/api/spatial/transfers` | `HOSPITALIZATION_TRANSFER` | séjour + nouveau lit uniquement, sans ordre de mouvement |
-| Hospitalisation | `/api/hospitalizations` et sous-ressources | `HOSPITALIZATION_READ/MANAGE`, sortie `HOSPITALIZATION_DISCHARGE_DECIDE`, CRO `CLINICAL_*` | admission et sortie physique encore confondues |
+| Transfert | `/api/spatial/transfers` | `HOSPITALIZATION_TRANSFER` | séjour + nouveau lit uniquement, sans ordre de mouvement ; interdit après décision médicale de sortie |
+| Hospitalisation | `/api/hospitalizations` et sous-ressources | `HOSPITALIZATION_READ/MANAGE`, décision `HOSPITALIZATION_DISCHARGE_DECIDE`, départ `HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM`, CRO `CLINICAL_*` | clearance administrative, correction de décision et turnover structuré absents |
 | Urgence | `/api/emergencies` + triage/médico-légal/documents | `EMERGENCY_*` granulaires | pas de box/présence/handoff atomique |
 | Visite | `/api/visits` | `VISIT_*` | service/orientation texte |
 | Laboratoire | `/api/lab-orders` | `LAB_*` | transitions de statut non contraintes |
@@ -23,18 +23,31 @@
 | Stock | `/api/pharmacy/stocks` | `PHARMACY_STOCK_MANAGE` | stock organisationnel unique |
 | Personnel/RBAC | `/api/staff`, `/api/rbac` | `USER_*`, `RBAC_*` | aucun rattachement métier daté |
 
-### 1.1 Rôles système ajoutés par HOS-RBAC-001-B
+### 1.1 Rôles système hospitaliers
 
 | Rôle | Droits hospitaliers par défaut |
 |---|---|
-| `MEDECIN` | lecture/gestion historique du séjour, transfert, décision médicale de sortie |
-| `INFIRMIER` | lecture/gestion historique du séjour et transfert ; aucune décision de sortie ni opération technique sur le lit |
-| `RESPONSABLE_HOSPITALISATION` | transfert, supervision de capacité, nettoyage et maintenance ; aucune décision médicale de sortie |
+| `MEDECIN` | lecture/gestion historique du séjour, transfert et décision médicale de sortie ; aucun départ physique ni opération technique du lit |
+| `INFIRMIER` | lecture/gestion historique du séjour et transfert ; aucune décision de sortie, confirmation de départ ni opération technique sur le lit |
+| `RESPONSABLE_HOSPITALISATION` | transfert, confirmation du départ physique, supervision de capacité, nettoyage et maintenance ; aucune décision médicale de sortie |
 | `AGENT_HYGIENE` | lecture d'occupation et circuit de nettoyage uniquement |
 | `TECHNICIEN_MAINTENANCE` | lecture d'occupation et circuit de maintenance uniquement |
 | `ADMIN_CLINIQUE` | ensemble des droits de l'établissement, hors exclusions plateforme/portail existantes |
 
 Les rôles personnalisés peuvent recevoir les permissions séparément. Le backend reste la source de vérité ; masquer un bouton ne constitue jamais une autorisation.
+
+### 1.2 Workflow de sortie implémenté par HOS-DIS-001-A
+
+```text
+POST /api/hospitalizations/{stayId}/discharge
+POST /api/hospitalizations/{stayId}/physical-departure
+```
+
+La première commande enregistre le diagnostic, les consignes, le caractère contre avis médical, l'auteur et l'heure de décision. Le séjour reste `EN_COURS`, l'affectation demeure active, le lit reste occupé et le document final n'est pas disponible.
+
+La deuxième commande exige une confirmation explicite et la permission `HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM`. Elle renseigne la présence réelle, clôt le séjour et l'affectation, fixe `dischargedAt` à l'heure du départ physique, génère le PDF et place le lit en nettoyage.
+
+Les sorties historiques sont rétrocompatibles : la migration V83 déduit décision et départ physique de leur ancien `discharged_at`. L'annulation/correction formelle d'une décision et la clearance administrative restent hors de cet incrément.
 
 ## 2. Principes API cibles
 
@@ -110,6 +123,8 @@ POST /api/v2/hospital-stays/{stayId}/discharge/physical-departure
 
 Aucune première ou deuxième commande ne clôt l'affectation. La troisième le fait et crée le turnover.
 
+La coexistence v1 couvre maintenant les intentions `medical-decisions` et `physical-departure`. La commande `administrative-clearance`, la ressource de processus et la tâche de turnover restent à implémenter avant la cible v2 complète.
+
 ### Remise en état
 
 ```text
@@ -128,7 +143,9 @@ POST /api/v2/turnaround-tasks/{id}/validate
 | `PATIENT_SPACE_INCOMPATIBLE` | 422 | âge, sexe, isolement, niveau ou équipement |
 | `RESERVATION_EXPIRED` | 409 | arrivée après expiration |
 | `MOVEMENT_INVALID_TRANSITION` | 409 | ordre de jalons invalide |
-| `DISCHARGE_PREREQUISITE_MISSING` | 422 | étape obligatoire manquante |
+| `DISCHARGE_PREREQUISITE_MISSING` | 422 | décision, clearance ou confirmation obligatoire manquante |
+| `DISCHARGE_ALREADY_DECIDED` | 409 | décision médicale déjà enregistrée |
+| `PHYSICAL_DEPARTURE_ALREADY_CONFIRMED` | 409 | départ physique déjà confirmé |
 | `STAFF_ASSIGNMENT_REQUIRED` | 403 | acteur non affecté/délégué |
 | `CLINICAL_PRIVILEGE_REQUIRED` | 403 | habilitation insuffisante |
 | `TENANT_RELATION_MISMATCH` | 409 | relations entre tenants différents |
@@ -140,11 +157,18 @@ Pendant la migration, l'adaptateur legacy résout les noms actuels vers les nouv
 
 L'endpoint `/api/spatial/beds/{id}/status` est conservé comme commande de supervision pour les intégrations existantes, mais l'interface Joprelys utilise exclusivement les circuits `/cleaning-status`, `/maintenance-status` et `/capacity-status`. Son retrait sera préparé après inventaire des consommateurs et publication d'une date de fin de support.
 
+Le chemin `/api/hospitalizations/{id}/discharge` est conservé pour compatibilité de nom, mais son effet est désormais limité à la décision médicale. Tout consommateur qui supposait une libération immédiate doit appeler explicitement `/physical-departure` avec le droit correspondant.
+
 ## 7. Tests de contrat
 
 - isolation tenant et unité ;
 - refus du transfert sans `HOSPITALIZATION_TRANSFER` ;
+- refus du transfert après décision médicale de sortie ;
 - refus de la décision de sortie sans `HOSPITALIZATION_DISCHARGE_DECIDE` ;
+- refus du départ physique sans `HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM` ;
+- décision médicale sans clôture du séjour, de l'affectation ni du lit ;
+- refus du départ physique sans décision préalable ou sans confirmation explicite ;
+- clôture de l'affectation et passage en nettoyage uniquement au départ réel ;
 - impossibilité pour le nettoyage de terminer une maintenance et inversement ;
 - refus des opérations techniques sur un lit affecté ;
 - idempotence, optimistic locking et courses concurrentes ;

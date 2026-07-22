@@ -1,6 +1,8 @@
 package com.joprelys.backend.hospitalization.api;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -17,8 +19,10 @@ import com.joprelys.backend.hospitalization.infrastructure.persistence.Hospitali
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.spatial.domain.HospitalServiceType;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentRepository;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.RoomEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.RoomRepository;
 import com.joprelys.backend.spatial.infrastructure.persistence.WardEntity;
@@ -28,6 +32,7 @@ import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -80,6 +85,9 @@ class HospitalizationControllerTest {
     private BedRepository bedRepository;
 
     @Autowired
+    private BedAssignmentRepository bedAssignmentRepository;
+
+    @Autowired
     private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @Autowired
@@ -93,6 +101,7 @@ class HospitalizationControllerTest {
     private PatientEntity patientA;
     private PatientEntity patientB;
     private String doctorToken;
+    private String hospitalizationManagerToken;
     private String billingAgentToken;
 
     @BeforeEach
@@ -112,6 +121,15 @@ class HospitalizationControllerTest {
             doctor.setOrganizationId(organization.getId());
             doctor = userAccountRepository.save(doctor);
             doctorToken = jwtService.createToken(doctor).value();
+
+            UserAccountEntity hospitalizationManager = new UserAccountEntity(
+                    "manager.hosp@joprelys.local",
+                    "Responsable hospitalisation",
+                    "RESPONSABLE_HOSPITALISATION",
+                    "passhash");
+            hospitalizationManager.setOrganizationId(organization.getId());
+            hospitalizationManager = userAccountRepository.save(hospitalizationManager);
+            hospitalizationManagerToken = jwtService.createToken(hospitalizationManager).value();
 
             UserAccountEntity billingAgent = new UserAccountEntity(
                     "billing.hosp@joprelys.local",
@@ -145,7 +163,7 @@ class HospitalizationControllerTest {
     }
 
     @Test
-    void givenDoctor_whenAdmitAndDischargePatient_thenSuccess() throws Exception {
+    void medicalDecisionShouldKeepBedOccupiedUntilPhysicalDeparture() throws Exception {
         VisitEntity visitA = createVisit(patientA, "VIS-H-001", "Motif de visite A", "MÉDECINE GÉNÉRALE");
         VisitEntity visitB = createVisit(patientB, "VIS-H-002", "Motif de visite B", "MÉDECINE GÉNÉRALE");
 
@@ -179,11 +197,6 @@ class HospitalizationControllerTest {
                 .andExpect(jsonPath("$.noteContent").value("Température stable à 37.2°C, réveil calme."))
                 .andExpect(jsonPath("$.authorName").value("Dr. House"));
 
-        mockMvc.perform(get("/api/hospitalizations/{id}/notes", hospitalizationId)
-                        .header("Authorization", bearer(doctorToken)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
-
         mockMvc.perform(post("/api/hospitalizations/{id}/discharge", hospitalizationId)
                         .header("Authorization", bearer(doctorToken))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -194,12 +207,78 @@ class HospitalizationControllerTest {
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("SORTI"));
+                .andExpect(jsonPath("$.status").value("EN_COURS"))
+                .andExpect(jsonPath("$.dischargeDecidedAt").isNotEmpty())
+                .andExpect(jsonPath("$.physicalDepartureAt").isEmpty())
+                .andExpect(jsonPath("$.dischargedAt").isEmpty());
+
+        UUID stayId = UUID.fromString(hospitalizationId);
+        TenantContext.setTenantId(organization.getId());
+        try {
+            assertTrue(bedAssignmentRepository.findActiveByHospitalizationId(stayId).isPresent());
+            assertTrue(hospitalizationRepository.findActiveByPatientId(patientA.getId()).isPresent());
+            assertTrue(configuredBed(PEDIATRICS_SERVICE, PEDIATRICS_ROOM, PEDIATRICS_BED).getStatus()
+                    == BedStatus.OCCUPIED);
+        } finally {
+            TenantContext.clear();
+        }
+
+        mockMvc.perform(get("/api/hospitalizations/{id}/pdf", hospitalizationId)
+                        .header("Authorization", bearer(doctorToken)))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(post("/api/hospitalizations/{id}/physical-departure", hospitalizationId)
+                        .header("Authorization", bearer(doctorToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"confirmed\":true}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/hospitalizations/{id}/physical-departure", hospitalizationId)
+                        .header("Authorization", bearer(hospitalizationManagerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "confirmed":true,
+                                  "note":"Patient accompagné jusqu'à la sortie principale."
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SORTI"))
+                .andExpect(jsonPath("$.physicalDepartureAt").isNotEmpty())
+                .andExpect(jsonPath("$.dischargedAt").isNotEmpty());
+
+        TenantContext.setTenantId(organization.getId());
+        try {
+            assertFalse(bedAssignmentRepository.findActiveByHospitalizationId(stayId).isPresent());
+            assertFalse(hospitalizationRepository.findActiveByPatientId(patientA.getId()).isPresent());
+            assertTrue(configuredBed(PEDIATRICS_SERVICE, PEDIATRICS_ROOM, PEDIATRICS_BED).getStatus()
+                    == BedStatus.CLEANING);
+        } finally {
+            TenantContext.clear();
+        }
 
         mockMvc.perform(get("/api/hospitalizations/{id}/pdf", hospitalizationId)
                         .header("Authorization", bearer(doctorToken)))
                 .andExpect(status().isOk())
                 .andExpect(result -> assertPdf(result.getResponse().getContentType()));
+    }
+
+    @Test
+    void physicalDepartureShouldRequirePriorMedicalDecision() throws Exception {
+        VisitEntity visit = createVisit(patientA, "VIS-NO-DIS-01", "Admission", "MÉDECINE GÉNÉRALE");
+        String hospitalizationId = admit(
+                patientA,
+                visit,
+                PEDIATRICS_SERVICE,
+                PEDIATRICS_ROOM,
+                PEDIATRICS_BED,
+                "Surveillance");
+
+        mockMvc.perform(post("/api/hospitalizations/{id}/physical-departure", hospitalizationId)
+                        .header("Authorization", bearer(hospitalizationManagerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"confirmed\":true}"))
+                .andExpect(status().isConflict());
     }
 
     @Test
@@ -220,7 +299,7 @@ class HospitalizationControllerTest {
     }
 
     @Test
-    void givenDoctor_whenDischargeAgainstMedicalAdvice_thenStatusIsSortiContreAvis() throws Exception {
+    void againstMedicalAdviceShouldBecomeFinalOnlyAfterPhysicalDeparture() throws Exception {
         VisitEntity visit = createVisit(patientA, "VIS-CAD-02", "Admission", "MÉDECINE GÉNÉRALE");
         String hospitalizationId = admit(
                 patientA,
@@ -240,6 +319,14 @@ class HospitalizationControllerTest {
                                   "againstMedicalAdvice":true
                                 }
                                 """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("EN_COURS"))
+                .andExpect(jsonPath("$.dischargeAgainstMedicalAdvice").value(true));
+
+        mockMvc.perform(post("/api/hospitalizations/{id}/physical-departure", hospitalizationId)
+                        .header("Authorization", bearer(hospitalizationManagerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"confirmed\":true}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("SORTI_CONTRE_AVIS"));
 
@@ -501,6 +588,11 @@ class HospitalizationControllerTest {
         BedEntity bed = new BedEntity(room, bedNumber);
         bed.setOrganizationId(organization.getId());
         bedRepository.save(bed);
+    }
+
+    private BedEntity configuredBed(String serviceName, String roomNumber, String bedNumber) {
+        return bedRepository.findConfiguredBed(organization.getId(), serviceName, roomNumber, bedNumber)
+                .orElseThrow();
     }
 
     private void assertPdf(String contentType) {

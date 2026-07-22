@@ -11,17 +11,28 @@ import org.springframework.security.access.prepost.PreAuthorize;
 class HospitalizationControllerAuthorizationTest {
 
     @Test
-    void dischargeEndpointShouldRequireDedicatedPermission() throws NoSuchMethodException {
-        Method method = HospitalizationController.class.getMethod(
-                "dischargePatient",
-                UUID.class,
-                DischargeHospitalizationRequest.class);
+    void dischargeDecisionEndpointShouldRequireMedicalDecisionPermission() throws NoSuchMethodException {
+        assertPermission(
+                HospitalizationController.class.getMethod(
+                        "decideDischarge",
+                        UUID.class,
+                        DischargeHospitalizationRequest.class),
+                "hasAuthority('HOSPITALIZATION_DISCHARGE_DECIDE')");
+    }
 
+    @Test
+    void physicalDepartureEndpointShouldRequireDedicatedConfirmationPermission() throws NoSuchMethodException {
+        assertPermission(
+                HospitalizationController.class.getMethod(
+                        "confirmPhysicalDeparture",
+                        UUID.class,
+                        ConfirmPhysicalDepartureRequest.class),
+                "hasAuthority('HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM')");
+    }
+
+    private void assertPermission(Method method, String expectedExpression) {
         PreAuthorize authorization = method.getAnnotation(PreAuthorize.class);
-
         assertNotNull(authorization);
-        assertEquals(
-                "hasAuthority('HOSPITALIZATION_DISCHARGE_DECIDE')",
-                authorization.value());
+        assertEquals(expectedExpression, authorization.value());
     }
 }

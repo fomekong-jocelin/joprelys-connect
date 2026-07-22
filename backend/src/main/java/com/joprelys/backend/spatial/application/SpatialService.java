@@ -227,6 +227,12 @@ public class SpatialService {
         if (!"EN_COURS".equals(hospitalization.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "L'hospitalisation n'est pas active.");
         }
+        if (hospitalization.hasDischargeDecision()) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Le transfert est interdit après la décision médicale de sortie. "
+                            + "Annulez formellement la décision ou confirmez le départ physique.");
+        }
 
         BedEntity targetBed = bedRepository.findById(newBedId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nouveau lit introuvable"));
