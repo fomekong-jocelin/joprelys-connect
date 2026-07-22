@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { StaffApiService } from '../clinic/staff/staff-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { EmergencyDocumentApiService } from '../emergency/document/emergency-document-api.service';
@@ -11,6 +12,7 @@ describe('EmergencyHospitalizationContinuationComponent', () => {
   let fixture: ComponentFixture<EmergencyHospitalizationContinuationComponent>;
   let patientApi: { admitPatient: ReturnType<typeof vi.fn> };
   let documentApi: { generateBundle: ReturnType<typeof vi.fn> };
+  let rbacApi: { hasPermission: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     patientApi = {
@@ -19,12 +21,16 @@ describe('EmergencyHospitalizationContinuationComponent', () => {
     documentApi = {
       generateBundle: vi.fn().mockReturnValue(of([{ id: 'doc-1' }])),
     };
+    rbacApi = {
+      hasPermission: vi.fn().mockImplementation((permission: string) => permission === 'HOSPITALIZATION_ADMIT'),
+    };
 
     await TestBed.configureTestingModule({
       imports: [EmergencyHospitalizationContinuationComponent],
       providers: [
         { provide: PatientApiService, useValue: patientApi },
         { provide: EmergencyDocumentApiService, useValue: documentApi },
+        { provide: RbacApiService, useValue: rbacApi },
         {
           provide: SpatialApiService,
           useValue: {
@@ -117,5 +123,21 @@ describe('EmergencyHospitalizationContinuationComponent', () => {
     });
     expect(documentApi.generateBundle).toHaveBeenCalledWith('emergency-1');
     expect(admitted).toHaveBeenCalledOnce();
+  });
+
+  it('does not expose or execute admission without the dedicated permission', () => {
+    rbacApi.hasPermission.mockReturnValue(false);
+    fixture.detectChanges();
+
+    fixture.componentInstance.selectedBedId.set('bed-1');
+    fixture.componentInstance.responsiblePractitionerId = 'doctor-1';
+    fixture.componentInstance.admissionReason = 'Surveillance après stabilisation';
+    fixture.componentInstance.submit(new Event('submit'));
+
+    expect(fixture.nativeElement.textContent).toContain(
+      'Votre profil peut consulter le contexte d’urgence, mais ne peut pas créer un séjour hospitalier.',
+    );
+    expect(patientApi.admitPatient).not.toHaveBeenCalled();
+    expect(documentApi.generateBundle).not.toHaveBeenCalled();
   });
 });
