@@ -3,6 +3,7 @@ package com.joprelys.backend.spatial.api;
 import com.joprelys.backend.spatial.application.SpatialService;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedCapacityStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedReadinessStatus;
+import com.joprelys.backend.spatial.infrastructure.persistence.BedStateReasonCode;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedStatus;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -39,6 +40,12 @@ public class SpatialController {
         return spatialService.getWardOccupancy(id);
     }
 
+    @GetMapping("/beds/{id}/state-history")
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
+    public List<BedStateChangeResponse> getBedStateHistory(@PathVariable UUID id) {
+        return spatialService.getBedStateHistory(id);
+    }
+
     @PostMapping("/beds/{id}/status")
     @PreAuthorize("hasAuthority('BED_OPERATIONAL_STATUS_MANAGE')")
     public BedResponse updateBedStatus(
@@ -46,7 +53,7 @@ public class SpatialController {
             @Valid @RequestBody UpdateBedStatusRequest request) {
         try {
             BedStatus status = BedStatus.valueOf(request.status().toUpperCase());
-            return spatialService.updateBedStatus(id, status);
+            return spatialService.updateBedStatus(id, status, request.note());
         } catch (IllegalArgumentException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Statut de lit invalide: " + request.status());
         }
@@ -63,7 +70,11 @@ public class SpatialController {
                     HttpStatus.BAD_REQUEST,
                     "Le circuit de nettoyage accepte uniquement CLEANING ou READY.");
         }
-        return spatialService.updateBedCleaningStatus(id, status);
+        return spatialService.updateBedCleaningStatus(
+                id,
+                status,
+                reasonCode(request.reasonCode()),
+                request.note());
     }
 
     @PostMapping("/beds/{id}/maintenance-status")
@@ -77,7 +88,11 @@ public class SpatialController {
                     HttpStatus.BAD_REQUEST,
                     "Le circuit de maintenance accepte uniquement MAINTENANCE ou READY.");
         }
-        return spatialService.updateBedMaintenanceStatus(id, status);
+        return spatialService.updateBedMaintenanceStatus(
+                id,
+                status,
+                reasonCode(request.reasonCode()),
+                request.note());
     }
 
     @PostMapping("/beds/{id}/capacity-status")
@@ -87,7 +102,11 @@ public class SpatialController {
             @Valid @RequestBody UpdateBedCapacityStatusRequest request) {
         try {
             BedCapacityStatus status = BedCapacityStatus.valueOf(request.status().toUpperCase());
-            return spatialService.updateBedCapacityStatus(id, status);
+            return spatialService.updateBedCapacityStatus(
+                    id,
+                    status,
+                    reasonCode(request.reasonCode()),
+                    request.note());
         } catch (IllegalArgumentException exception) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -109,5 +128,9 @@ public class SpatialController {
                     HttpStatus.BAD_REQUEST,
                     "État de " + operation + " du lit invalide: " + value);
         }
+    }
+
+    private BedStateReasonCode reasonCode(String value) {
+        return spatialService.parseBedStateReasonCode(value);
     }
 }
