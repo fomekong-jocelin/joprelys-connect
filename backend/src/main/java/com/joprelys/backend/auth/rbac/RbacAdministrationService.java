@@ -189,13 +189,13 @@ public class RbacAdministrationService {
                 .map(roleId -> rbacStore.findVisibleRole(roleId, scope.organizationId())
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rôle invalide ou inaccessible.")))
                 .toList();
-        if (roles.stream().anyMatch(role -> !role.enabled() || !role.assignable())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Un rôle sélectionné est désactivé ou non attribuable.");
-        }
         if (roles.stream().map(RbacStore.RoleView::code).anyMatch(RbacCatalog.platformRoleCodes()::contains)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Les rôles plateforme ne peuvent pas être attribués depuis l’administration d’un établissement.");
+        }
+        if (roles.stream().anyMatch(role -> !role.enabled() || !role.assignable())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Un rôle sélectionné est désactivé ou non attribuable.");
         }
 
         boolean targetWasAdmin = rbacStore.userHasAnyRole(target.getId(), RbacCatalog.adminRoleCodes());
