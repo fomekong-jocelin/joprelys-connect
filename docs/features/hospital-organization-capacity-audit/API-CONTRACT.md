@@ -16,7 +16,7 @@
 | Maintenance du lit | `/api/spatial/beds/{id}/maintenance-status` | `BED_MAINTENANCE_MANAGE` | motifs et journal disponibles ; pas d'ordre de travail |
 | Historique du lit | `/api/spatial/beds/{id}/state-history` | `HOSPITALIZATION_READ` | chronologie tenant-aware non paginée ; conservation liée à la ligne physique du lit |
 | Transfert | `/api/spatial/transfers` | `HOSPITALIZATION_TRANSFER` | séjour + nouveau lit uniquement ; interdit après décision médicale ; nettoyage source historisé |
-| Hospitalisation | `/api/hospitalizations` et sous-ressources | `HOSPITALIZATION_READ/MANAGE`, décision `HOSPITALIZATION_DISCHARGE_DECIDE`, départ `HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM`, CRO `CLINICAL_*` | clearance administrative, correction de décision et turnover structuré absents |
+| Hospitalisation | `/api/hospitalizations` et sous-ressources | lecture `HOSPITALIZATION_READ` ; écritures séparées `HOSPITALIZATION_ADMIT`, `HOSPITALIZATION_NOTE_WRITE`, `HOSPITALIZATION_CONSENT_RECORD`, `HOSPITALIZATION_CARE_WRITE`, `HOSPITALIZATION_MEDICATION_ADMINISTER`, `HOSPITALIZATION_CONSUMABLE_RECORD` ; sortie `HOSPITALIZATION_DISCHARGE_DECIDE` ; départ `HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM` ; CRO `CLINICAL_*` | clearance administrative, ABAC unité/relation de soin et corrections compensatoires absents |
 | Urgence | `/api/emergencies` + triage/médico-légal/documents | `EMERGENCY_*` granulaires | pas de box/présence/handoff atomique |
 | Visite | `/api/visits` | `VISIT_*` | service/orientation texte |
 | Laboratoire | `/api/lab-orders` | `LAB_*` | transitions de statut non contraintes |
@@ -28,16 +28,33 @@
 
 | Rôle | Droits hospitaliers par défaut |
 |---|---|
-| `MEDECIN` | lecture/gestion historique du séjour, transfert et décision médicale de sortie ; aucun départ physique ni opération technique du lit |
-| `INFIRMIER` | lecture/gestion historique du séjour et transfert ; aucune décision de sortie, confirmation de départ ni opération technique sur le lit |
-| `RESPONSABLE_HOSPITALISATION` | transfert, confirmation du départ physique, supervision de capacité, nettoyage et maintenance ; aucune décision médicale de sortie |
+| `MEDECIN` | lecture, admission, notes, traçabilité des consentements, soins, transfert et décision médicale de sortie ; aucune administration médicamenteuse ni consommation par défaut, aucun départ physique ni opération technique du lit |
+| `INFIRMIER` | lecture, notes, traçabilité des consentements, soins, administration médicamenteuse, consommables et transfert ; aucune admission, décision de sortie, confirmation de départ ni opération technique du lit |
+| `RESPONSABLE_HOSPITALISATION` | lecture, admission, transfert, confirmation du départ physique, supervision de capacité, nettoyage et maintenance ; aucune écriture clinique ni décision médicale de sortie |
 | `AGENT_HYGIENE` | lecture d'occupation et circuit de nettoyage uniquement |
 | `TECHNICIEN_MAINTENANCE` | lecture d'occupation et circuit de maintenance uniquement |
 | `ADMIN_CLINIQUE` | ensemble des droits de l'établissement, hors exclusions plateforme/portail existantes |
 
 Les rôles personnalisés peuvent recevoir les permissions séparément. Le backend reste la source de vérité ; masquer un bouton ne constitue jamais une autorisation.
 
-### 1.2 Workflow de sortie implémenté par HOS-DIS-001-A
+### 1.2 Écritures de séjour séparées par HOS-RBAC-001-C
+
+Les URL et payloads existants sont conservés ; seule l'autorité exigée change :
+
+| Intention | Endpoint | Permission dédiée |
+|---|---|---|
+| admission | `POST /api/hospitalizations` | `HOSPITALIZATION_ADMIT` |
+| note/transmission | `POST /api/hospitalizations/{id}/notes` | `HOSPITALIZATION_NOTE_WRITE` |
+| traçabilité consentement | `POST /api/hospitalizations/{id}/consents` | `HOSPITALIZATION_CONSENT_RECORD` |
+| soin journalier | `POST /api/hospitalizations/{id}/daily-cares` | `HOSPITALIZATION_CARE_WRITE` |
+| administration effective d'un médicament | `POST /api/hospitalizations/{id}/medication-administrations` | `HOSPITALIZATION_MEDICATION_ADMINISTER` |
+| consommable réellement utilisé | `POST /api/hospitalizations/{id}/patient-consumptions` | `HOSPITALIZATION_CONSUMABLE_RECORD` |
+
+`HOSPITALIZATION_MEDICATION_ADMINISTER` ne permet pas de prescrire. `HOSPITALIZATION_CONSUMABLE_RECORD` ne permet pas de gérer le stock. `HOSPITALIZATION_CONSENT_RECORD` autorise la traçabilité du consentement et de la pièce associée, sans se substituer à l'information médicale ni à la décision du patient.
+
+La permission `HOSPITALIZATION_MANAGE` reste temporairement au catalogue uniquement pour accompagner la migration des rôles personnalisés. Les rôles système médecin, infirmier et responsable hospitalisation ne la reçoivent plus et aucun des six endpoints ci-dessus ne l'utilise comme autorité.
+
+### 1.3 Workflow de sortie implémenté par HOS-DIS-001-A
 
 ```text
 POST /api/hospitalizations/{stayId}/discharge
@@ -50,7 +67,7 @@ La deuxième commande exige une confirmation explicite et la permission `HOSPITA
 
 Les sorties historiques sont rétrocompatibles : la migration V83 déduit décision et départ physique de leur ancien `discharged_at`. L'annulation/correction formelle d'une décision et la clearance administrative restent hors de cet incrément.
 
-### 1.3 Historique des états de lit implémenté par HOS-BED-002-D
+### 1.4 Historique des états de lit implémenté par HOS-BED-002-D
 
 Les commandes spécialisées exigent désormais un `reasonCode` compatible avec la transition et acceptent une note de 500 caractères maximum :
 
@@ -178,9 +195,19 @@ L'endpoint `/api/spatial/beds/{id}/status` est conservé comme commande de super
 
 Le chemin `/api/hospitalizations/{id}/discharge` est conservé pour compatibilité de nom, mais son effet est désormais limité à la décision médicale. Tout consommateur qui supposait une libération immédiate doit appeler explicitement `/physical-departure` avec le droit correspondant.
 
+Pour HOS-RBAC-001-C, aucune URL ni structure de payload ne change. Les intégrations ou rôles personnalisés qui s'appuyaient sur `HOSPITALIZATION_MANAGE` doivent recevoir les permissions explicites correspondant à leurs actions avant déploiement. Les tokens existants doivent être renouvelés après resynchronisation du catalogue.
+
 ## 7. Tests de contrat
 
 - isolation tenant et unité ;
+- refus de l'admission sans `HOSPITALIZATION_ADMIT` ;
+- refus de l'écriture de note sans `HOSPITALIZATION_NOTE_WRITE` ;
+- refus de la traçabilité du consentement sans `HOSPITALIZATION_CONSENT_RECORD` ;
+- refus des soins sans `HOSPITALIZATION_CARE_WRITE` ;
+- refus de l'administration médicamenteuse sans `HOSPITALIZATION_MEDICATION_ADMINISTER` ;
+- refus de la consommation patient sans `HOSPITALIZATION_CONSUMABLE_RECORD` ;
+- vérification que l'administration médicamenteuse n'accorde aucun droit de prescription ;
+- vérification que la consommation patient n'accorde aucun droit de gestion de stock ;
 - refus du transfert sans `HOSPITALIZATION_TRANSFER` ;
 - refus du transfert après décision médicale de sortie ;
 - refus de la décision de sortie sans `HOSPITALIZATION_DISCHARGE_DECIDE` ;
