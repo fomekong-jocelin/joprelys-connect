@@ -70,7 +70,7 @@ joprelys:
       ttl-minutes: ${JOPRELYS_JWT_TTL_MINUTES:120}
   seed:
     admin:
-      enabled: ${JOPRELYS_SEED_ADMIN_ENABLED:true}
+      enabled: ${JOPRELYS_SEED_ADMIN_ENABLED:false}
       email: ${JOPRELYS_ADMIN_EMAIL:}
       name: ${JOPRELYS_ADMIN_NAME:}
       password: ${JOPRELYS_ADMIN_PASSWORD:}
