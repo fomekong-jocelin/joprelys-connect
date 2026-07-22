@@ -6,8 +6,9 @@
 - **Audit** : AUDIT-20260721
 - **Écarts réduits** : GAP-006, GAP-010, GAP-030
 - **Priorité** : phase 0
-- **Statut** : IMPLEMENTED / QA EN COURS
+- **Statut** : QA TECHNIQUE VERTE / VALIDATIONS EXTERNES EN ATTENTE
 - **PR** : #104
+- **CI** : run #948
 
 ## Problème
 
@@ -25,6 +26,8 @@ La migration V84 ajoute un journal `bed_state_changes` append-only au niveau app
 - la source manuelle ou automatique ;
 - l'horodatage.
 
+V85 installe sous PostgreSQL les contraintes fermées sur l'axe et la source. V84 reste portable pour H2, conformément au modèle V81/V82 déjà adopté dans le dépôt.
+
 ## Règles métier
 
 - une fermeture de capacité exige un motif de fermeture compatible ;
@@ -33,7 +36,8 @@ La migration V84 ajoute un journal `bed_state_changes` append-only au niveau app
 - `CAPACITY_OTHER` et `CLEANING_INCIDENT` exigent une note ;
 - `CLEANING_AFTER_TRANSFER` et `CLEANING_AFTER_DEPARTURE` sont réservés aux workflows automatiques ;
 - les anciennes commandes `/status` sont conservées et tracées comme `LEGACY_SUPERVISION` ;
-- aucun événement n'est créé si la valeur ne change pas.
+- aucun événement n'est créé si la valeur ne change pas ;
+- un transfert ou un départ physique refuse un lit source dont la préparation est incohérente.
 
 ## API
 
@@ -56,11 +60,31 @@ Les commandes spécialisées acceptent :
 
 ## Compatibilité
 
-La suppression physique legacy d'un lit supprime encore son historique par cascade. Cette concession est explicitement temporaire ; GAP-012 doit introduire l'archivage métier avant de rendre l'historique indépendant de la durée de vie physique de la ligne `beds`.
+- l'ancien endpoint `/status` accepte toujours son payload historique ;
+- le client Angular compile et envoie des motifs compatibles par défaut afin de ne pas casser l'interface actuelle ;
+- la sélection interactive explicite du motif reste à intégrer avant suppression de ces valeurs par défaut ;
+- la suppression physique legacy d'un lit supprime encore son historique par cascade. GAP-012 doit introduire l'archivage métier avant conservation réglementaire indépendante.
+
+## Validation automatisée
+
+CI **Joprelys Connect — CI Pipeline**, run **#948** :
+
+- Maven `clean verify` strict : succès ;
+- migration V84 sur H2 : succès ;
+- migration V85 et contraintes fortes sur PostgreSQL 16/Testcontainers : succès ;
+- intégrité tenant du journal : succès ;
+- motifs compatibles et incompatibles : succès ;
+- note obligatoire pour motifs ouverts/incident : succès ;
+- nettoyage automatique après transfert et départ physique : succès ;
+- non-régression des scénarios hospitalisation/spatial : succès ;
+- tests Angular : succès ;
+- build Angular production : succès.
+
+Les passages #942, #943 et #946 ont permis d'identifier puis corriger un conflit H2 sur la contrainte `axis`. La solution finale sépare volontairement le schéma portable V84 et les contraintes PostgreSQL V85 ; aucune règle métier n'a été retirée.
 
 ## Critères d'acceptation
 
-- [x] V84 et contraintes tenant ajoutées ;
+- [x] V84, V85 et contraintes tenant ajoutées ;
 - [x] événements manuels historisés ;
 - [x] transfert historisé avec `CLEANING_AFTER_TRANSFER` ;
 - [x] départ physique historisé avec `CLEANING_AFTER_DEPARTURE` ;
@@ -68,12 +92,14 @@ La suppression physique legacy d'un lit supprime encore son historique par casca
 - [x] note obligatoire pour les motifs ouverts/incident ;
 - [x] endpoint de consultation protégé par `HOSPITALIZATION_READ` ;
 - [x] compatibilité de l'ancien endpoint `/status` préservée ;
-- [ ] CI complète verte ;
+- [x] CI complète verte ;
 - [ ] validation du catalogue par responsable hospitalisation, hygiène et maintenance ;
-- [ ] validation RSSI de la consultation de l'historique.
+- [ ] validation RSSI de la consultation de l'historique ;
+- [ ] validation de V84/V85 sur une copie représentative.
 
 ## Risques résiduels
 
+- pas encore de sélecteur de motifs intégré à l'écran spatial ;
 - pas encore de tâche de turnover assignée ;
 - pas d'ordre de travail maintenance ;
 - pas de preuve structurée de contrôle ou de validation ;
