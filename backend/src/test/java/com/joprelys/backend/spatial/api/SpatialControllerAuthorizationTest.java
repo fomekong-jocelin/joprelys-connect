@@ -11,6 +11,13 @@ import org.springframework.security.access.prepost.PreAuthorize;
 class SpatialControllerAuthorizationTest {
 
     @Test
+    void bedStateHistoryShouldRequireHospitalizationReadPermission() throws NoSuchMethodException {
+        assertPermission(
+                SpatialController.class.getMethod("getBedStateHistory", UUID.class),
+                "hasAuthority('HOSPITALIZATION_READ')");
+    }
+
+    @Test
     void legacyBedStatusEndpointShouldRemainSupervisorOnly() throws NoSuchMethodException {
         assertPermission(
                 SpatialController.class.getMethod(
