@@ -32,6 +32,7 @@ class SpatialServiceDischargeDecisionTransferTest {
     @Mock private BedRepository bedRepository;
     @Mock private BedAssignmentRepository bedAssignmentRepository;
     @Mock private ActiveBedAssignmentService activeBedAssignmentService;
+    @Mock private BedStateChangeService bedStateChangeService;
     @Mock private HospitalizationRepository hospitalizationRepository;
     @Mock private UserAccountRepository userAccountRepository;
     @Mock private AuditService auditService;
@@ -61,6 +62,7 @@ class SpatialServiceDischargeDecisionTransferTest {
                 bedAssignmentRepository,
                 activeBedAssignmentService,
                 new BedStatusTransitionPolicy(),
+                bedStateChangeService,
                 hospitalizationRepository,
                 userAccountRepository,
                 auditService);
