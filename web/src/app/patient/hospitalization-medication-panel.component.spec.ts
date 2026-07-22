@@ -47,6 +47,7 @@ describe('HospitalizationMedicationPanelComponent', () => {
   it('does not turn prescription access into administration access', () => {
     permissions.clear();
     permissions.add('PHARMACY_PRESCRIPTION_READ');
+    fixture.componentRef.setInput('canModify', false);
     fixture.detectChanges();
     fixture.componentInstance.name.set('Amoxicilline');
     fixture.componentInstance.dose.set('500 mg');
