@@ -46,6 +46,7 @@ describe('HospitalizationDailyCarePanelComponent', () => {
 
   it('blocks care creation without the dedicated permission', () => {
     permissions.clear();
+    fixture.componentRef.setInput('canModify', false);
     fixture.detectChanges();
     fixture.componentInstance.save(new Event('submit'));
 
