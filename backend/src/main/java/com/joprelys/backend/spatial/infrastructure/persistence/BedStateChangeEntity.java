@@ -23,7 +23,7 @@ public class BedStateChangeEntity {
     @Column(name = "bed_id", nullable = false)
     private UUID bedId;
 
-    @Column(name = "axis", nullable = false, length = 20)
+    @Column(name = "state_axis", nullable = false, length = 20)
     private String axis;
 
     @Column(name = "previous_value", nullable = false, length = 50)
