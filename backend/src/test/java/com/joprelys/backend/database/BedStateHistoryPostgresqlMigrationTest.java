@@ -46,8 +46,8 @@ class BedStateHistoryPostgresqlMigrationTest {
         Instant now = Instant.parse("2026-07-22T07:00:00Z");
 
         jdbc.update(
-                "INSERT INTO wards(id, name, organization_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-                wardId, "Médecine", organizationId, Timestamp.from(now), Timestamp.from(now));
+                "INSERT INTO wards(id, name, service_type, organization_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+                wardId, "Médecine", "HOSPITALIZATION", organizationId, Timestamp.from(now), Timestamp.from(now));
         jdbc.update(
                 "INSERT INTO rooms(id, ward_id, room_number, capacity, comfort_level, organization_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 roomId, wardId, "101", 1, "STANDARD", organizationId, Timestamp.from(now), Timestamp.from(now));
