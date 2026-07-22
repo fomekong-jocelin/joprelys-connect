@@ -1,5 +1,7 @@
 -- HOS-BED-002-D : historiser les changements de capacité et de préparation des lits.
 -- Le journal est append-only au niveau applicatif et relié au lit avec intégrité tenant.
+-- Les contraintes fermées sur l'axe et la source sont installées par V85 sous PostgreSQL ;
+-- H2 reste un moteur de test portable et la matrice de motifs est validée par l'application.
 -- La cascade reste temporairement compatible avec la suppression physique legacy des lits ;
 -- GAP-012 remplacera ce comportement par un archivage métier.
 
@@ -16,10 +18,6 @@ CREATE TABLE bed_state_changes (
     actor_display_name VARCHAR(160) NOT NULL,
     source VARCHAR(40) NOT NULL,
     occurred_at TIMESTAMP NOT NULL,
-    CONSTRAINT ck_bed_state_changes_axis
-        CHECK (state_axis IN ('CAPACITY', 'READINESS')),
-    CONSTRAINT ck_bed_state_changes_source
-        CHECK (source IN ('MANUAL', 'SYSTEM_TRANSFER', 'SYSTEM_PHYSICAL_DEPARTURE', 'LEGACY_SUPERVISION')),
     CONSTRAINT ck_bed_state_changes_values
         CHECK (previous_value <> new_value),
     CONSTRAINT ck_bed_state_changes_actor_name
