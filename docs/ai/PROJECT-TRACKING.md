@@ -6,20 +6,22 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-07-21 (cohérence tenant P0 des affectations validée sous H2 jusqu'à V78 ; PostgreSQL 16 requis avant livraison) |
-| Responsable mise à jour | Codex |
-| État global | AUDIT-20260721 terminé ; HOS-BED-002-A est vert et HOS-BED-001-A/B/C protègent sous H2 l'unicité active, le séjour, la chronologie simple et la cohérence tenant affectation/séjour/lit. RISK-009 diminue mais PostgreSQL et les invariants avancés restent ouverts. |
-| Risques majeurs | Migrations V76–V78 non encore exécutées sur PostgreSQL 16 ; chevauchements historiques et sortie physique non garantis ; cohérence tenant du référentiel spatial complet encore absente ; conservation restrictive à valider DPO/DBA ; permissions hospitalisation trop larges. |
-| Prochaine priorité | Exécuter les préflights V76–V78 et Testcontainers PostgreSQL 16, puis revue DBA/bed manager/RSSI-DPO avant d'arbitrer HOS-BED-001-D et les autres garde-fous P0. |
+| Dernière mise à jour | 2026-07-22 (durcissement Go-Live RBAC/bootstrap en PR #118 ; CI backend stricte verte ; aucune action PROD/RECETTE) |
+| Responsable mise à jour | GPT-5.6 Thinking |
+| État global | Le suivi hospitalisation précédent reste inchangé. En parallèle, l'issue GitHub #23 a été rouverte pour une non-régression RBAC plateforme et `TICKET-PREPROD-ADMIN-CLEANUP` a été prolongé pour le bootstrap greenfield. La PR #118 est Ready ; son job Maven strict est vert, le frontend est correctement skipped car aucun fichier `web/**` n'est modifié. |
+| Risques majeurs | Go-Live : review sécurité de PR #118 encore requise ; preflight PostgreSQL greenfield du SHA final encore à rejouer avant toute opération PROD. Risques hospitalisation précédemment suivis inchangés : migrations V76–V78 PostgreSQL 16, chevauchements historiques, cohérence tenant spatiale et validations DPO/DBA. |
+| Prochaine priorité | Terminer la review de PR #118 sans merge automatique, puis seulement après fusion rejouer le preflight greenfield sur le SHA exact de `main`. Aucun développement ni déploiement directement sur PROD/RECETTE. |
 | Sprint courant | SPRINT-0014 |
-| Capacité sprint | P0 RBAC : 2,25 j senior cumulés ; HOS-BED-001-A/B/C et HOS-BED-002-A : 11 SP / 7 j senior ; EPIC-0026 : 21 SP / 9,5 j senior implémentés ; agenda médecin : 3 SP / 1,5 j senior ; login premium : 3 SP / 1,5 j senior. |
-| Charge engagée | 59.75j (Est. Senior, incluant P0 RBAC, HOS-BED-001-A/B/C, HOS-BED-002-A, EPIC-0026, agenda médecin et login premium) |
+| Capacité sprint | Go-Live P0 : issue #23 + `TICKET-PREPROD-ADMIN-CLEANUP` ≈ 2 SP / 1,0 j senior ; P0 RBAC historique : 2,25 j senior cumulés ; HOS-BED-001-A/B/C et HOS-BED-002-A : 11 SP / 7 j senior ; EPIC-0026 : 21 SP / 9,5 j senior implémentés ; agenda médecin : 3 SP / 1,5 j senior ; login premium : 3 SP / 1,5 j senior. |
+| Charge engagée | 60.75j (59.75j précédents + 1.0j senior réservé au durcissement Go-Live #23/bootstrap) |
 | Dérive globale | 0.0j |
 
 ## Tableau de suivi consolidé
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommandé | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---:|---|---:|---:|---:|---|---|---|---:|---|---|---|
+| GH-23-GOLIVE-RBAC | EPIC-0026 / GitHub #23 | Non-régression sécurité | Refus déterministe des rôles plateforme depuis un établissement | Spring Boot / Spring Security / RBAC | IN_REVIEW — PR #118 / CI BACKEND VERTE | P0 | 1 | Senior backend sécurité | 0.5j | 0.8j | Non recommandé seul | GPT-5.6 Thinking | Tech Lead + RSSI | SPRINT-0014 | Non mesuré | Review humaine ; ne pas merger avant approbation | Élevé | 2026-07-22 |
+| TICKET-PREPROD-ADMIN-CLEANUP | AUTHENTICATION / GO_LIVE | Durcissement sécurité/configuration | Bootstrap `ADMIN_JOPRELYS` explicite et sans credential de repli | Spring Boot / YAML / sécurité | IN_REVIEW — PR #118 / CI BACKEND VERTE | P0 | 1 | Senior backend sécurité/config | 0.5j | 0.8j | 1.5j encadré | GPT-5.6 Thinking | Tech Lead + RSSI/DevOps | SPRINT-0014 | Non mesuré | Review ; puis preflight greenfield du SHA mergé | Critique | 2026-07-22 |
 | AUDIT-20260721-HOSPITAL-ORGANIZATION-CAPACITY-PATIENT-FLOW | EPIC-0027 proposé | Audit métier + architecture + PM | Organisation, espaces, capacité, hospitalisation et parcours patient | Spring Boot / Angular / DB / RBAC / Documentation | DONE (audit) | P0 | 13 | Architecte santé + senior full-stack | 8.0j | 11.0j | Non recommandé | Codex | Médecin + cadre + admissions + DBA + DPO/RSSI | Hors sprint | Non mesuré | Ateliers et validation de l'ADR avant développement | Critique | 2026-07-21 |
 | EPIC-0027 | HOSPITAL_ORGANIZATION_CAPACITY_PATIENT_FLOW | Epic proposé | Référentiels, lits, séjours, personnel, ressources et pilotage | Spring Boot / Angular / PostgreSQL / RBAC / Data | PROPOSED | P0/P1 | 143–145 | Architecte + seniors full-stack/DB/sécurité + QA santé | 103.0j | 143.0j | À redécouper | À assigner | Médecin + cadre + admissions + biomédical + DPO/RSSI + DBA | Non engagé | 0j | Accepter ADR-0002, signer les workflows et réserver 6–9 sprints indicatifs | Critique | 2026-07-21 |
 | BUG-20260721-ACTIVE-BED-ASSIGNMENT-INTEGRITY | EPIC-0027 / HOS-BED-001 | Correctif P0 DB | Unicité d'une affectation active par lit | Spring Boot / Flyway / PostgreSQL / QA | QA H2 VERTE / POSTGRESQL REQUIS | P0 | 3 | Backend senior + DBA | 2.0j | 3.0j | 5.0j | Codex | Lead backend + DBA + cadre infirmier | SPRINT-0014 (incrément P0) | 2.0j | Préflight, Testcontainers PostgreSQL 16 et revue DBA/métier | Élevé | 2026-07-21 |
