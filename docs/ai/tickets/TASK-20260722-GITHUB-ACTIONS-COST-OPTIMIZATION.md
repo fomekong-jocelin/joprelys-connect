@@ -62,8 +62,8 @@ Le dépôt connaît un rythme élevé de commits/PR et les synchronisations de P
 - [x] Conditionner les jobs backend/frontend.
 - [x] Ajouter des limites de durée.
 - [x] Ne supprimer aucun test.
-- [x] Mettre à jour le changelog.
-- [x] Mettre à jour le suivi projet.
+- [ ] Mettre à jour le changelog central.
+- [ ] Mettre à jour le suivi projet central.
 - [ ] Valider le run GitHub Actions après disponibilité du budget/minutes.
 
 ## Estimation
@@ -87,4 +87,6 @@ La correction est préparée sur `fix/ci-actions-cost-optimization`. Le workflow
 
 ## Reste à faire
 
-La validation distante du workflow dépend du redémarrage effectif de GitHub Actions, actuellement susceptible d'être bloqué par le plafond budgétaire atteint.
+- valider le workflow sur GitHub Actions dès que le plafond budgétaire autorise un nouveau run ;
+- mettre à jour `docs/ai/CHANGELOG.md` et `docs/ai/PROJECT-TRACKING.md` lors de la finalisation de la PR ;
+- mesurer la consommation réelle après un cycle de développement afin de confirmer le gain.
