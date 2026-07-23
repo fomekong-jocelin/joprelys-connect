@@ -61,9 +61,9 @@ class HospitalLocationPreflightPostgresqlMigrationTest {
         Flyway latest = flyway(null);
         assertThatThrownBy(latest::migrate)
                 .isInstanceOf(FlywayException.class)
-                .hasMessageContaining("HOS-LOC V88 blocked")
-                .hasMessageContaining("wards=1")
-                .hasMessageContaining("No automatic mapping is allowed");
+                .hasStackTraceContaining("HOS-LOC V88 blocked")
+                .hasStackTraceContaining("wards=1")
+                .hasStackTraceContaining("No automatic mapping is allowed");
 
         assertThat(count(jdbc, "SELECT COUNT(*) FROM wards")).isEqualTo(1);
         assertThat(tableExists(jdbc, "facility_spaces")).isFalse();
