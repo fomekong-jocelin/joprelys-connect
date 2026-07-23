@@ -9,7 +9,7 @@
       <label class="sr-only" for="hospital-org-scope">{{ t('hospitalOrg.scope.label') }}</label>
       <select
         id="hospital-org-scope"
-        class="ui-select min-w-56"
+        class="ui-select w-full min-w-0 sm:w-auto sm:min-w-56"
         [ngModel]="selectedOrganizationId()"
         (ngModelChange)="selectedOrganizationId.set($event); onOrganizationChange()"
       >
@@ -21,7 +21,7 @@
     }
     <button
       type="button"
-      class="ui-button ui-button-primary"
+      class="ui-button ui-button-primary w-full sm:w-auto"
       [disabled]="!canManageScope()"
       (click)="openCreate('SERVICE')"
     >
@@ -30,103 +30,102 @@
     </button>
   </app-page-header>
 
-  <main class="app-container space-y-5 pb-12">
+  <main class="app-container min-w-0 space-y-5 overflow-x-hidden pb-12">
     @if (errorMessage()) {
-      <div class="rounded-[var(--radius-brand-md)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3 text-xs font-semibold text-[var(--brand-danger-text)]" role="alert">
+      <div class="break-words rounded-[var(--radius-brand-md)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3 text-xs font-semibold text-[var(--brand-danger-text)]" role="alert">
         {{ errorMessage() }}
       </div>
     }
     @if (successMessage()) {
-      <div class="rounded-[var(--radius-brand-md)] border border-[var(--brand-success-muted)] bg-[var(--brand-success-subtle)] p-3 text-xs font-semibold text-[var(--brand-success-text)]" role="status">
+      <div class="break-words rounded-[var(--radius-brand-md)] border border-[var(--brand-success-muted)] bg-[var(--brand-success-subtle)] p-3 text-xs font-semibold text-[var(--brand-success-text)]" role="status">
         {{ successMessage() }}
       </div>
     }
 
-    <section class="ui-card p-4 sm:p-5">
-      <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div class="max-w-2xl">
-          <p class="text-[10px] font-bold uppercase tracking-wider text-brand-cyan">{{ t('hospitalOrg.structure.eyebrow') }}</p>
-          <h2 class="mt-1 text-base font-bold text-[var(--text-primary)]">{{ t('hospitalOrg.structure.title') }}</h2>
-          <p class="mt-2 text-xs leading-5 text-[var(--text-secondary)]">{{ t('hospitalOrg.structure.description') }}</p>
+    <section class="ui-card min-w-0 p-4 sm:p-5">
+      <div class="flex min-w-0 flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div class="min-w-0 max-w-2xl">
+          <p class="break-words text-[10px] font-bold uppercase tracking-wider text-brand-cyan">{{ t('hospitalOrg.structure.eyebrow') }}</p>
+          <h2 class="mt-1 break-words text-base font-bold text-[var(--text-primary)]">{{ t('hospitalOrg.structure.title') }}</h2>
+          <p class="mt-2 break-words text-xs leading-5 text-[var(--text-secondary)]">{{ t('hospitalOrg.structure.description') }}</p>
         </div>
-        <label class="flex items-center gap-2 text-xs font-semibold text-[var(--text-secondary)]">
+        <label class="flex min-w-0 items-start gap-2 text-xs font-semibold text-[var(--text-secondary)] md:max-w-xs">
           <input
             type="checkbox"
-            class="h-4 w-4 accent-[var(--brand-primary)]"
+            class="mt-0.5 h-4 w-4 shrink-0 accent-[var(--brand-primary)]"
             [ngModel]="includeInactive()"
             (ngModelChange)="onIncludeInactiveChange($event)"
           />
-          {{ t('hospitalOrg.actions.showInactive') }}
+          <span class="break-words">{{ t('hospitalOrg.actions.showInactive') }}</span>
         </label>
       </div>
     </section>
 
     @if (platformAdministrator() && !canManageScope() && !loading()) {
-      <section class="ui-card-muted p-8 text-center sm:p-12">
+      <section class="ui-card-muted min-w-0 p-8 text-center sm:p-12">
         <app-ui-icon name="building" class="mb-3 text-4xl text-brand-cyan" />
-        <h2 class="text-base font-bold text-[var(--text-primary)]">{{ t('hospitalOrg.scope.requiredTitle') }}</h2>
-        <p class="mx-auto mt-2 max-w-lg text-sm text-[var(--text-secondary)]">{{ t('hospitalOrg.scope.requiredDetail') }}</p>
+        <h2 class="break-words text-base font-bold text-[var(--text-primary)]">{{ t('hospitalOrg.scope.requiredTitle') }}</h2>
+        <p class="mx-auto mt-2 max-w-lg break-words text-sm text-[var(--text-secondary)]">{{ t('hospitalOrg.scope.requiredDetail') }}</p>
       </section>
     } @else if (loading()) {
-      <div class="ui-card-muted flex items-center justify-center gap-3 p-10 text-sm text-[var(--text-secondary)]">
-        <span class="h-5 w-5 animate-spin rounded-full border-2 border-brand-cyan border-r-transparent"></span>
-        {{ t('common.loading') }}
+      <div class="ui-card-muted flex min-w-0 items-center justify-center gap-3 p-10 text-sm text-[var(--text-secondary)]">
+        <span class="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-brand-cyan border-r-transparent"></span>
+        <span class="break-words">{{ t('common.loading') }}</span>
       </div>
     } @else if (rows().length === 0) {
-      <section class="ui-card-muted p-8 text-center sm:p-12">
+      <section class="ui-card-muted min-w-0 p-8 text-center sm:p-12">
         <app-ui-icon name="building" class="mb-3 text-4xl text-brand-cyan" />
-        <h2 class="text-base font-bold text-[var(--text-primary)]">{{ t('hospitalOrg.empty.title') }}</h2>
-        <p class="mx-auto mt-2 max-w-lg text-sm text-[var(--text-secondary)]">{{ t('hospitalOrg.empty.detail') }}</p>
-        <div class="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
-          <button type="button" class="ui-button ui-button-secondary" (click)="openCreate('POLE')">
+        <h2 class="break-words text-base font-bold text-[var(--text-primary)]">{{ t('hospitalOrg.empty.title') }}</h2>
+        <p class="mx-auto mt-2 max-w-lg break-words text-sm text-[var(--text-secondary)]">{{ t('hospitalOrg.empty.detail') }}</p>
+        <div class="mt-5 flex min-w-0 flex-col justify-center gap-2 sm:flex-row">
+          <button type="button" class="ui-button ui-button-secondary w-full sm:w-auto" (click)="openCreate('POLE')">
             <app-ui-icon name="plus" /> {{ t('hospitalOrg.actions.addPole') }}
           </button>
-          <button type="button" class="ui-button ui-button-primary" (click)="openCreate('SERVICE')">
+          <button type="button" class="ui-button ui-button-primary w-full sm:w-auto" (click)="openCreate('SERVICE')">
             <app-ui-icon name="plus" /> {{ t('hospitalOrg.actions.addService') }}
           </button>
         </div>
       </section>
     } @else {
-      <section class="space-y-2" aria-labelledby="hospital-org-tree-title">
+      <section class="min-w-0 space-y-2" aria-labelledby="hospital-org-tree-title">
         <h2 id="hospital-org-tree-title" class="sr-only">{{ t('hospitalOrg.structure.title') }}</h2>
         @for (row of rows(); track row.unit.id) {
           <article
-            class="ui-card flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4"
+            class="ui-card min-w-0 border-l-2 border-l-[var(--app-border)] p-3 sm:flex sm:items-center sm:justify-between sm:gap-3 sm:p-4"
             [class.opacity-60]="!row.unit.active"
-            [style.margin-left.px]="row.depth * 12"
           >
             <div class="flex min-w-0 items-start gap-3">
               <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-brand-sm)] bg-[var(--brand-info-subtle)] text-brand-cyan">
                 <app-ui-icon [name]="row.unit.unitType === 'SERVICE' ? 'building' : 'folder-open'" />
               </span>
-              <div class="min-w-0">
-                <div class="flex flex-wrap items-center gap-2">
-                  <h3 class="text-sm font-bold text-[var(--text-primary)]">{{ unitLabel(row.unit) }}</h3>
-                  <span class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
+              <div class="min-w-0 flex-1">
+                <div class="flex min-w-0 flex-wrap items-center gap-2">
+                  <h3 class="min-w-0 break-words text-sm font-bold text-[var(--text-primary)]">{{ unitLabel(row.unit) }}</h3>
+                  <span class="max-w-full break-words rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
                     {{ typeLabel(row.unit.unitType) }}
                   </span>
                   @if (!row.unit.active) {
-                    <span class="rounded-[var(--radius-brand-sm)] border border-[var(--brand-warning-muted)] bg-[var(--brand-warning-subtle)] px-2 py-1 text-[10px] font-bold text-[var(--brand-warning-text)]">
+                    <span class="max-w-full break-words rounded-[var(--radius-brand-sm)] border border-[var(--brand-warning-muted)] bg-[var(--brand-warning-subtle)] px-2 py-1 text-[10px] font-bold text-[var(--brand-warning-text)]">
                       {{ t('hospitalOrg.status.inactive') }}
                     </span>
                   }
                 </div>
-                <p class="mt-1 text-[11px] font-semibold text-[var(--text-muted)]">{{ row.unit.code }}</p>
+                <p class="mt-1 break-all text-[11px] font-semibold text-[var(--text-muted)]">{{ row.unit.code }}</p>
               </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+            <div class="mt-3 grid min-w-0 grid-cols-1 gap-2 sm:mt-0 sm:flex sm:flex-wrap sm:justify-end">
               @if (canAddChild(row.unit)) {
-                <button type="button" class="ui-button ui-button-secondary" (click)="openCreate(nextChildType(row.unit), row.unit.id)">
+                <button type="button" class="ui-button ui-button-secondary w-full sm:w-auto" (click)="openCreate(nextChildType(row.unit), row.unit.id)">
                   <app-ui-icon name="plus" /> {{ t('hospitalOrg.actions.addChild') }}
                 </button>
               }
-              <button type="button" class="ui-button ui-button-secondary" (click)="openEdit(row.unit)">
+              <button type="button" class="ui-button ui-button-secondary w-full sm:w-auto" (click)="openEdit(row.unit)">
                 <app-ui-icon name="wrench" /> {{ t('common.edit') }}
               </button>
               <button
                 type="button"
-                class="ui-button"
+                class="ui-button w-full sm:w-auto"
                 [class.ui-button-danger]="row.unit.active"
                 [class.ui-button-secondary]="!row.unit.active"
                 [disabled]="busy()"
@@ -140,30 +139,30 @@
       </section>
     }
 
-    <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-      <article class="ui-card p-4 sm:p-5">
-        <p class="text-[10px] font-bold uppercase tracking-wider text-brand-cyan">{{ t('hospitalOrg.catalogs.services.eyebrow') }}</p>
-        <h2 class="mt-1 text-base font-bold text-[var(--text-primary)]">{{ t('hospitalOrg.catalogs.services.title') }}</h2>
-        <p class="mt-2 text-xs leading-5 text-[var(--text-secondary)]">{{ t('hospitalOrg.catalogs.services.description') }}</p>
-        <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+    <section class="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
+      <article class="ui-card min-w-0 p-4 sm:p-5">
+        <p class="break-words text-[10px] font-bold uppercase tracking-wider text-brand-cyan">{{ t('hospitalOrg.catalogs.services.eyebrow') }}</p>
+        <h2 class="mt-1 break-words text-base font-bold text-[var(--text-primary)]">{{ t('hospitalOrg.catalogs.services.title') }}</h2>
+        <p class="mt-2 break-words text-xs leading-5 text-[var(--text-secondary)]">{{ t('hospitalOrg.catalogs.services.description') }}</p>
+        <div class="mt-4 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
           @for (entry of serviceCatalog(); track entry.code) {
-            <div class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3">
-              <p class="text-xs font-bold text-[var(--text-primary)]">{{ serviceLabel(entry) }}</p>
-              <p class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{{ entry.code }}</p>
+            <div class="min-w-0 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3">
+              <p class="break-words text-xs font-bold text-[var(--text-primary)]">{{ serviceLabel(entry) }}</p>
+              <p class="mt-1 break-all text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{{ entry.code }}</p>
             </div>
           }
         </div>
       </article>
 
-      <article class="ui-card p-4 sm:p-5">
-        <p class="text-[10px] font-bold uppercase tracking-wider text-brand-cyan">{{ t('hospitalOrg.catalogs.specialties.eyebrow') }}</p>
-        <h2 class="mt-1 text-base font-bold text-[var(--text-primary)]">{{ t('hospitalOrg.catalogs.specialties.title') }}</h2>
-        <p class="mt-2 text-xs leading-5 text-[var(--text-secondary)]">{{ t('hospitalOrg.catalogs.specialties.description') }}</p>
-        <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <article class="ui-card min-w-0 p-4 sm:p-5">
+        <p class="break-words text-[10px] font-bold uppercase tracking-wider text-brand-cyan">{{ t('hospitalOrg.catalogs.specialties.eyebrow') }}</p>
+        <h2 class="mt-1 break-words text-base font-bold text-[var(--text-primary)]">{{ t('hospitalOrg.catalogs.specialties.title') }}</h2>
+        <p class="mt-2 break-words text-xs leading-5 text-[var(--text-secondary)]">{{ t('hospitalOrg.catalogs.specialties.description') }}</p>
+        <div class="mt-4 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
           @for (entry of specialtyCatalog(); track entry.code) {
-            <div class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3">
-              <p class="text-xs font-bold text-[var(--text-primary)]">{{ specialtyLabel(entry) }}</p>
-              <p class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{{ entry.code }}</p>
+            <div class="min-w-0 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3">
+              <p class="break-words text-xs font-bold text-[var(--text-primary)]">{{ specialtyLabel(entry) }}</p>
+              <p class="mt-1 break-all text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{{ entry.code }}</p>
             </div>
           }
         </div>
@@ -172,68 +171,76 @@
   </main>
 
   @if (editor(); as form) {
-    <div class="fixed inset-0 z-[60] flex items-end justify-center p-3 sm:items-center sm:p-4" (click)="closeEditor()">
+    <div
+      class="fixed inset-0 z-[60] flex min-w-0 items-end justify-center overflow-x-hidden p-3 sm:items-center sm:p-4"
+      tabindex="-1"
+      (keydown.escape)="closeEditor()"
+      (click)="closeEditor()"
+    >
       <div class="absolute inset-0 bg-[var(--overlay-bg)]"></div>
       <form
-        class="relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface)] p-4 shadow-[var(--shadow-panel)] sm:p-5"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="hospital-org-editor-title"
+        class="relative max-h-[92vh] w-full min-w-0 max-w-lg overflow-x-hidden overflow-y-auto rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface)] p-4 shadow-[var(--shadow-panel)] sm:p-5"
         (ngSubmit)="submit()"
         (click)="$event.stopPropagation()"
       >
-        <p class="text-[10px] font-bold uppercase tracking-wider text-brand-cyan">{{ t('hospitalOrg.editor.eyebrow') }}</p>
-        <h2 class="mt-1 text-lg font-bold text-[var(--text-primary)]">{{ editorTitle(form) }}</h2>
+        <p class="break-words text-[10px] font-bold uppercase tracking-wider text-brand-cyan">{{ t('hospitalOrg.editor.eyebrow') }}</p>
+        <h2 id="hospital-org-editor-title" class="mt-1 break-words text-lg font-bold text-[var(--text-primary)]">{{ editorTitle(form) }}</h2>
 
-        <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
+        <div class="mt-5 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="min-w-0">
             <label class="ui-label" for="org-unit-type">{{ t('hospitalOrg.fields.type') }}</label>
-            <select id="org-unit-type" class="ui-select mt-1 w-full" name="unitType" [disabled]="!!form.id" [(ngModel)]="form.unitType">
+            <select id="org-unit-type" class="ui-select mt-1 w-full min-w-0" name="unitType" [disabled]="!!form.id" [(ngModel)]="form.unitType">
               <option value="POLE">{{ typeLabel('POLE') }}</option>
               <option value="DEPARTMENT">{{ typeLabel('DEPARTMENT') }}</option>
               <option value="SERVICE">{{ typeLabel('SERVICE') }}</option>
               <option value="CARE_UNIT">{{ typeLabel('CARE_UNIT') }}</option>
             </select>
           </div>
-          <div>
+          <div class="min-w-0">
             <label class="ui-label" for="org-unit-code">{{ t('hospitalOrg.fields.code') }}</label>
-            <input id="org-unit-code" class="ui-input mt-1 w-full" name="code" maxlength="64" required [(ngModel)]="form.code" />
+            <input id="org-unit-code" class="ui-input mt-1 w-full min-w-0" name="code" maxlength="64" required [(ngModel)]="form.code" />
           </div>
         </div>
 
-        <div class="mt-4">
+        <div class="mt-4 min-w-0">
           <label class="ui-label" for="org-parent">{{ t('hospitalOrg.fields.parent') }}</label>
-          <select id="org-parent" class="ui-select mt-1 w-full" name="parentId" [(ngModel)]="form.parentId">
+          <select id="org-parent" class="ui-select mt-1 w-full min-w-0" name="parentId" [(ngModel)]="form.parentId">
             <option [ngValue]="null">{{ t('hospitalOrg.fields.root') }}</option>
             @for (unit of parentOptionsFor(form); track unit.id) {
               <option [value]="unit.id">{{ unitLabel(unit) }} · {{ typeLabel(unit.unitType) }}</option>
             }
           </select>
           @if (form.unitType === 'CARE_UNIT') {
-            <p class="mt-1 text-xs text-[var(--text-muted)]">{{ t('hospitalOrg.fields.careUnitParentHint') }}</p>
+            <p class="mt-1 break-words text-xs text-[var(--text-muted)]">{{ t('hospitalOrg.fields.careUnitParentHint') }}</p>
           }
         </div>
 
         @if (form.unitType === 'SERVICE') {
-          <div class="mt-4">
+          <div class="mt-4 min-w-0">
             <label class="ui-label" for="service-catalog">{{ t('hospitalOrg.fields.serviceCatalog') }}</label>
-            <select id="service-catalog" class="ui-select mt-1 w-full" name="serviceCatalogCode" required [(ngModel)]="form.serviceCatalogCode">
+            <select id="service-catalog" class="ui-select mt-1 w-full min-w-0" name="serviceCatalogCode" required [(ngModel)]="form.serviceCatalogCode">
               <option value="" disabled>{{ t('hospitalOrg.fields.serviceCatalogPlaceholder') }}</option>
               @for (entry of serviceCatalog(); track entry.code) {
                 <option [value]="entry.code">{{ serviceLabel(entry) }}</option>
               }
             </select>
-            <p class="mt-1 text-xs text-[var(--text-muted)]">{{ t('hospitalOrg.fields.serviceNameHint') }}</p>
+            <p class="mt-1 break-words text-xs text-[var(--text-muted)]">{{ t('hospitalOrg.fields.serviceNameHint') }}</p>
           </div>
         } @else {
-          <div class="mt-4">
+          <div class="mt-4 min-w-0">
             <label class="ui-label" for="org-unit-name">{{ t('hospitalOrg.fields.name') }}</label>
-            <input id="org-unit-name" class="ui-input mt-1 w-full" name="name" maxlength="120" required [(ngModel)]="form.name" />
+            <input id="org-unit-name" class="ui-input mt-1 w-full min-w-0" name="name" maxlength="120" required [(ngModel)]="form.name" />
           </div>
         }
 
-        <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <button type="button" class="ui-button ui-button-secondary" [disabled]="busy()" (click)="closeEditor()">
+        <div class="mt-6 flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button type="button" class="ui-button ui-button-secondary w-full sm:w-auto" [disabled]="busy()" (click)="closeEditor()">
             {{ t('common.cancel') }}
           </button>
-          <button type="submit" class="ui-button ui-button-primary" [disabled]="busy() || !canSubmit(form)">
+          <button type="submit" class="ui-button ui-button-primary w-full sm:w-auto" [disabled]="busy() || !canSubmit(form)">
             @if (busy()) { {{ t('common.saving') }} } @else { {{ t('common.save') }} }
           </button>
         </div>
