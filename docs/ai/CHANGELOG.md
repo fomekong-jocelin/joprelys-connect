@@ -179,7 +179,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **Bordereaux d'assurance et tiers-payant avancé (STORY-2107)** :
   - Création du script de migration Flyway `V52__create_insurance_bordereaux_table.sql` définissant la table `insurance_bordereaux`, la séquence `insurance_bordereau_number_seq`, et la colonne `insurance_bordereau_id` sur `invoices`.
   - Implémentation des entités JPA `InsuranceBordereauEntity`, de l'énumération `InsuranceBordereauStatus` et du repository `InsuranceBordereauRepository`.
-  - Implémentation du service applicatif `InsuranceBordereauService` gérant la génération (sélection automatique des factures éligibles `VALIDATED`, `PENDING`, `PARTIALLY_PAID` sur la période), la numérotation (`BORD-yyyyMMdd-XXXXXX`), le marquage comme envoyé (`SENT`) et l'enregistrement du règlement global passant le statut à `PAID`.
+  - Implémentation du service applicatif `InsuranceBordereauService` gérant la génération (sélection automatique des factures éligibles `VALIDATED`, `PENDING`, `PARTIALLY_PAID` sur la période), la numérotation `BORD-yyyyMMdd-XXXXXX`, le marquage comme envoyé (`SENT`) et l'enregistrement du règlement global passant le statut à `PAID`.
   - Filtre multi-tenant explicite et requêtes en base pour `listBordereaux` et `getBordereauInvoices` (remplacement des `findAll()` en mémoire).
   - Solde automatique des créances assurance (`receivables`) lors du règlement d'un bordereau.
   - Création du contrôleur REST `InsuranceBordereauController` sécurisé pour les rôles `DAF`, `SECRETAIRE_COMPTABLE` et `ADMIN_CLINIQUE`.
@@ -1102,7 +1102,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - Implémentation du module de gestion des visites et de la file d'attente active (STORY-0401).
 - Ajout du script de migration Flyway de création de la table SQL `visits` rattachée au patient et à l'organisation (STORY-0401).
 - Ajout de l'entité JPA `VisitEntity` avec relation FetchType.LAZY pour la performance mémoire et liaison multi-tenant (STORY-0401).
-- Ajout du service de génération d'identifiants séquentiels `VisitNumberGenerator` par jour pour le DPU et le numéro local (STORY-0401).
+- Ajout du service `VisitNumberGenerator` générant des numéros de visites uniques `VIS-YYYYMMDD-XXXXXX` sans collision inter-tenant (STORY-0401).
 - Ajout du service métier `VisitService` et du contrôleur REST `VisitController` exposant les endpoints d'ouverture, de liste et de clôture de visites (STORY-0401).
 - Ajout de l'Exception Handler global pour `ResponseStatusException` dans `AuthExceptionHandler` afin de propager proprement les détails d'erreurs d'API sous format ProblemDetail (STORY-0401).
 - Ajout de l'intégration Angular `VisitApiService`, de la boîte de dialogue d'ouverture de visite sur `PatientDetailComponent` et du tableau/cartes de file d'attente active sur le tableau de bord clinique (STORY-0401).
