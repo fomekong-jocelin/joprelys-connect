@@ -9,9 +9,11 @@ import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationEntity;
 import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository;
+import com.joprelys.backend.hospitalorganization.domain.OrganizationalUnitType;
+import com.joprelys.backend.hospitalorganization.infrastructure.persistence.OrganizationalUnitEntity;
+import com.joprelys.backend.hospitalorganization.infrastructure.persistence.OrganizationalUnitRepository;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
-import com.joprelys.backend.spatial.domain.HospitalServiceType;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import java.sql.Timestamp;
@@ -34,9 +36,11 @@ class BedAssignmentRepositoryTest {
     @Autowired
     private OrganizationRepository organizationRepository;
     @Autowired
-    private WardRepository wardRepository;
+    private OrganizationalUnitRepository organizationalUnitRepository;
     @Autowired
-    private RoomRepository roomRepository;
+    private FacilitySpaceRepository spaceRepository;
+    @Autowired
+    private InpatientSpaceProfileRepository inpatientSpaceProfileRepository;
     @Autowired
     private BedRepository bedRepository;
     @Autowired
@@ -52,6 +56,8 @@ class BedAssignmentRepositoryTest {
 
     private OrganizationEntity organization;
     private OrganizationEntity otherOrganization;
+    private OrganizationalUnitEntity unit;
+    private FacilitySpaceEntity space;
     private BedEntity bed;
     private BedEntity secondBed;
     private HospitalizationEntity hospitalization;
@@ -74,12 +80,23 @@ class BedAssignmentRepositoryTest {
                 "Yaoundé"));
         TenantContext.setTenantId(organization.getId());
 
-        WardEntity ward = wardRepository.save(new WardEntity(
-                "Hospitalisation " + suffix,
-                HospitalServiceType.HOSPITALIZATION));
-        RoomEntity room = roomRepository.save(new RoomEntity(ward, "101", 2, "STANDARD"));
-        bed = bedRepository.save(new BedEntity(room, "101-A"));
-        secondBed = bedRepository.save(new BedEntity(room, "101-B"));
+        unit = organizationalUnitRepository.saveAndFlush(new OrganizationalUnitEntity(
+                organization.getId(),
+                null,
+                "CARE_BED_" + suffix.substring(0, 8).toUpperCase(),
+                "Unité hospitalisation",
+                OrganizationalUnitType.CARE_UNIT,
+                null));
+        space = spaceRepository.saveAndFlush(new FacilitySpaceEntity(
+                organization.getId(),
+                null,
+                "ROOM_101_" + suffix.substring(0, 8).toUpperCase(),
+                "Chambre 101",
+                "HOSPITAL_ROOM"));
+        inpatientSpaceProfileRepository.saveAndFlush(new InpatientSpaceProfileEntity(
+                space.getId(), organization.getId(), "HOSPITAL_ROOM", "STANDARD"));
+        bed = bedRepository.saveAndFlush(new BedEntity(space, "101-A"));
+        secondBed = bedRepository.saveAndFlush(new BedEntity(space, "101-B"));
 
         PatientEntity patient = patientRepository.save(new PatientEntity(
                 "DPU-BED-" + suffix,
@@ -100,24 +117,37 @@ class BedAssignmentRepositoryTest {
                 "VIS-BED-" + suffix,
                 "Test intégrité lit",
                 "HOSPITALISATION"));
-        hospitalization = hospitalizationRepository.save(new HospitalizationEntity(
+        hospitalization = hospitalizationRepository.saveAndFlush(new HospitalizationEntity(
                 patient.getId(),
-                ward.getName(),
-                room.getRoomNumber(),
+                unit.getId(),
+                space.getId(),
+                bed.getId(),
+                "Unité hospitalisation",
+                space.getName(),
                 bed.getBedNumber(),
                 "Test intégrité",
                 "HOSP-BED-1-" + suffix,
                 visit.getId(),
+                null,
                 null));
-        otherHospitalization = hospitalizationRepository.save(new HospitalizationEntity(
+        hospitalization.setOrganizationId(organization.getId());
+        hospitalization = hospitalizationRepository.saveAndFlush(hospitalization);
+
+        otherHospitalization = new HospitalizationEntity(
                 patient.getId(),
-                ward.getName(),
-                room.getRoomNumber(),
+                unit.getId(),
+                space.getId(),
+                secondBed.getId(),
+                "Unité hospitalisation",
+                space.getName(),
                 secondBed.getBedNumber(),
                 "Test second séjour",
                 "HOSP-BED-2-" + suffix,
                 visit.getId(),
-                null));
+                null,
+                null);
+        otherHospitalization.setOrganizationId(organization.getId());
+        otherHospitalization = hospitalizationRepository.saveAndFlush(otherHospitalization);
     }
 
     @AfterEach
@@ -131,8 +161,9 @@ class BedAssignmentRepositoryTest {
         visitRepository.deleteAll();
         patientRepository.deleteAll();
         bedRepository.deleteAll();
-        roomRepository.deleteAll();
-        wardRepository.deleteAll();
+        inpatientSpaceProfileRepository.deleteAll();
+        spaceRepository.deleteAll();
+        organizationalUnitRepository.deleteAll();
         TenantContext.clear();
         organizationRepository.deleteById(organization.getId());
         organizationRepository.deleteById(otherOrganization.getId());
@@ -160,13 +191,11 @@ class BedAssignmentRepositoryTest {
 
     @Test
     void shouldAllowNewAssignmentAfterPreviousRelease() {
-        BedAssignmentEntity previous = bedAssignmentRepository.saveAndFlush(
-                activeAssignment(hospitalization.getId(), bed));
+        BedAssignmentEntity previous = bedAssignmentRepository.saveAndFlush(activeAssignment(hospitalization.getId(), bed));
         previous.releaseAt(Instant.now());
         bedAssignmentRepository.saveAndFlush(previous);
 
-        BedAssignmentEntity current = bedAssignmentRepository.saveAndFlush(
-                activeAssignment(hospitalization.getId(), bed));
+        BedAssignmentEntity current = bedAssignmentRepository.saveAndFlush(activeAssignment(hospitalization.getId(), bed));
 
         assertNull(previous.getActiveBedId());
         assertNull(previous.getActiveHospitalizationId());
