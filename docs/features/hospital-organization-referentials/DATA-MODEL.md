@@ -12,7 +12,7 @@
 | `service_type` | varchar(40) | catégorie fonctionnelle contrôlée |
 | `active` | boolean | défaut true |
 
-Catalogue global piloté par le produit, non éditable par l'établissement dans ce lot.
+Catalogue global piloté par le produit, non éditable par l'établissement dans ce lot. `service_type` correspond à l'enum backend `HospitalServiceType` existante afin de ne pas créer une seconde taxonomie technique concurrente.
 
 ### `medical_specialty_catalog`
 
@@ -31,12 +31,14 @@ Catalogue global piloté par le produit, non éditable par l'établissement dans
 | `organization_id` | uuid | tenant obligatoire |
 | `parent_id` | uuid nullable | parent même tenant |
 | `code` | varchar(64) | unique par tenant |
-| `name` | varchar(120) | nom d'instance ; pour SERVICE dérivé du catalogue |
+| `name` | varchar(120) nullable | nom propre pour POLE/DEPARTMENT/CARE_UNIT ; obligatoirement null pour SERVICE |
 | `unit_type` | varchar(32) | POLE / DEPARTMENT / SERVICE / CARE_UNIT |
 | `service_catalog_code` | varchar(64) nullable | requis uniquement pour SERVICE |
 | `active` | boolean | défaut true |
-| `created_at` | timestamp tz | obligatoire |
-| `updated_at` | timestamp tz | obligatoire |
+| `created_at` | timestamp | obligatoire |
+| `updated_at` | timestamp | obligatoire |
+
+Le libellé d'un `SERVICE` n'est jamais persisté dans une langue particulière. Le client résout le nom FR/EN depuis `service_catalog_code` et le catalogue actif.
 
 ## Contraintes
 
@@ -44,7 +46,7 @@ Catalogue global piloté par le produit, non éditable par l'établissement dans
 - `UNIQUE (id, organization_id)` ;
 - FK composite `(parent_id, organization_id)` → `(id, organization_id)` ;
 - FK restrictive `service_catalog_code` → `hospital_service_catalog(code)` ;
-- CHECK : SERVICE implique `service_catalog_code IS NOT NULL`, autres types impliquent null ;
+- CHECK d'identité : SERVICE => catalogue obligatoire + `name IS NULL` ; autres types => catalogue null + `name` non vide ;
 - CHECK : `code` non vide ;
 - aucune suppression cascade vers l'organisation.
 
