@@ -63,8 +63,8 @@ public class OrganizationalUnitEntity {
         this.organizationId = organizationId;
         this.parentId = parentId;
         this.code = code;
-        this.name = name;
         this.unitType = unitType;
+        this.name = normalizedName(name, unitType);
         this.serviceCatalogCode = serviceCatalogCode;
         this.active = true;
     }
@@ -84,7 +84,7 @@ public class OrganizationalUnitEntity {
     public void update(UUID parentId, String code, String name, String serviceCatalogCode) {
         this.parentId = parentId;
         this.code = code;
-        this.name = name;
+        this.name = normalizedName(name, unitType);
         this.serviceCatalogCode = serviceCatalogCode;
     }
 
@@ -134,5 +134,9 @@ public class OrganizationalUnitEntity {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    private static String normalizedName(String value, OrganizationalUnitType type) {
+        return type == OrganizationalUnitType.SERVICE ? null : value;
     }
 }
