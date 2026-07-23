@@ -2,12 +2,12 @@
 
 - GitHub : #47
 - PR : #97
-- Branche : `feat/47-urg-temp-e2e-workspace`
-- Statut : QA TECHNIQUE VERTE
+- Commit fusion : `678c070eb9e2c4b14d7c59330b5ed2a21a980d1e`
+- Statut : **CODE FUSIONNÉ / QA AUTOMATISÉE VERTE / UAT HUMAINE À FINALISER**
 - Priorité : P0
-- Dépendance : #46 / PR #96
+- Dépendance livrée : #46 / PR #96
 
-## Livré sur la branche
+## Livré dans `main`
 
 - [x] workspace urgence avec synthèse, identité, soins, médico-légal et documents ;
 - [x] numéro URG-TEMP et statut provisoire persistants ;
@@ -16,51 +16,58 @@
 - [x] résultat de décision conservé à l’écran ;
 - [x] accès au DPU canonique ;
 - [x] continuité vers l’hospitalisation avec l’urgence source ;
-- [x] orientation de stabilisation `ADMISSION` / `OR_DIRECT` branchée sur l’hospitalisation ;
+- [x] orientations `ADMISSION` / `OR_DIRECT` branchées sur l’hospitalisation ;
 - [x] onglet Documents et génération idempotente ;
 - [x] tests Angular de navigation, rejeu et documents ;
 - [x] textes FR/EN ;
 - [x] spécification fonctionnelle et plan E2E.
 
-## Scénarios
+## Scénarios techniquement couverts
 
-- [x] patient inconscient arrivé seul — couvert par l’admission unifiée existante ;
-- [x] patient accompagné — couvert par le formulaire et le dossier médico-légal existants ;
-- [x] triage puis réanimation avant administratif — couvert par le workspace urgence ;
+- [x] patient inconscient arrivé seul — admission unifiée ;
+- [x] patient accompagné — formulaire et dossier médico-légal ;
+- [x] triage puis réanimation avant administratif ;
 - [x] hospitalisation et finance différée — apport #46 ;
-- [x] création d’un nouveau DPU — décision existante et continuité ajoutée ;
-- [x] rapprochement DPU existant — décision existante et continuité ajoutée ;
-- [x] plusieurs candidats / report — interface existante conservée ;
-- [x] erreur réseau / rejeu idempotent — test Angular et backend existants ;
-- [x] cross-tenant — contrôles backend existants ;
-- [x] correction — interface, historique et clé d’idempotence conservés.
+- [x] création d’un nouveau DPU ;
+- [x] rapprochement DPU existant ;
+- [x] plusieurs candidats / report ;
+- [x] erreur réseau / rejeu idempotent ;
+- [x] cross-tenant ;
+- [x] correction/traçabilité du rapprochement selon l'architecture existante.
 
-## Validation
+## Validation automatisée
 
-- [x] tests Angular verts ;
-- [x] build Angular production vert ;
-- [x] Maven strict vert ;
-- [x] migrations H2/PostgreSQL couvertes par la CI ;
-- [x] état combiné #46 + #47 validé sur `main` ;
-- [ ] synchronisation finale après fusion de #46 ;
-- [ ] recette manuelle du parcours principal sur l’environnement de recette ;
-- [ ] contrôle mobile, light/dark et FR/EN en navigateur ;
-- [ ] revue métier avant fusion.
+La PR #97 a été fusionnée après validation du différentiel combiné avec #96 :
 
-CI verte sur le commit `6c01387daf4463ff66ba4de369c1c75977b43779`, workflow **#906**.
+- [x] tests Angular ;
+- [x] build Angular production ;
+- [x] Maven strict ;
+- [x] migrations et tests backend ;
+- [x] navigation urgence → rapprochement → hospitalisation ;
+- [x] rejeu idempotent ;
+- [x] lot documentaire et provenance ;
+- [x] workspace à cinq sections.
 
-## Ordre d’intégration
+Les tests actuels incluent notamment :
 
-1. fusionner #95 pour la correction visuelle isolée ;
-2. fusionner #96 ;
-3. revalider le différentiel réduit de #97 sur `main` ;
-4. fusionner #97 puis clôturer #47.
+- `EmergencyTriageAssessmentControllerTest` ;
+- `patient-reconciliation-page.component.spec.ts` ;
+- `emergency-hospitalization-continuation.component.spec.ts` ;
+- `emergency-dashboard.component.spec.ts` ;
+- `emergency-documents-panel.component.spec.ts`.
 
-## Conditions de clôture
+## Validation humaine restante
 
-L’issue #47 sera clôturée après :
+- [ ] répétition du parcours principal sur l'environnement prévu pour la démonstration ;
+- [ ] contrôle 320/375/768/1366/1920 px sur les écrans réellement montrés ;
+- [ ] contrôle light/dark et FR/EN ;
+- [ ] validation métier accueil, urgence, hospitalisation et DPO ;
+- [ ] aucun P0 restant après répétition générale.
 
-1. fusion de #46 ;
-2. CI complète verte sur cette branche ;
-3. fusion de la PR de cette story ;
-4. recette E2E consignée sans régression bloquante.
+## Statut de clôture
+
+L'issue #47 est techniquement clôturée et la PR #97 est fusionnée. L'UAT restante est suivie dans l'epic #36 et la readiness spécifique à la démonstration du 25/07/2026 dans #127.
+
+## Non-régression après HOS-RBAC-001-D
+
+Le parcours ne doit jamais utiliser `HOSPITALIZATION_MANAGE` comme fallback. Depuis V86, les actions hospitalières reposent uniquement sur les permissions spécialisées, notamment `HOSPITALIZATION_ADMIT` pour l'admission.
