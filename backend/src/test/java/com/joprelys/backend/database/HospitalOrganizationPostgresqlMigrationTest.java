@@ -66,7 +66,14 @@ class HospitalOrganizationPostgresqlMigrationTest {
                 INSERT INTO organizational_units (
                     id, organization_id, parent_id, code, name, unit_type,
                     service_catalog_code, active, created_at, updated_at
-                ) VALUES (?, ?, NULL, 'SVC-NO-CATALOG', 'Service invalide', 'SERVICE', NULL, TRUE, ?, ?)
+                ) VALUES (?, ?, NULL, 'SVC-NO-CATALOG', NULL, 'SERVICE', NULL, TRUE, ?, ?)
+                """, UUID.randomUUID(), organizationA, now, now));
+
+        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update("""
+                INSERT INTO organizational_units (
+                    id, organization_id, parent_id, code, name, unit_type,
+                    service_catalog_code, active, created_at, updated_at
+                ) VALUES (?, ?, NULL, 'SVC-FREE-NAME', 'Texte libre interdit', 'SERVICE', 'GENERAL_MEDICINE', TRUE, ?, ?)
                 """, UUID.randomUUID(), organizationA, now, now));
 
         assertThrows(DataIntegrityViolationException.class, () -> jdbc.update("""
@@ -100,7 +107,7 @@ class HospitalOrganizationPostgresqlMigrationTest {
                 INSERT INTO organizational_units (
                     id, organization_id, parent_id, code, name, unit_type,
                     service_catalog_code, active, created_at, updated_at
-                ) VALUES (?, ?, NULL, ?, 'Médecine générale', 'SERVICE', 'GENERAL_MEDICINE', TRUE, ?, ?)
+                ) VALUES (?, ?, NULL, ?, NULL, 'SERVICE', 'GENERAL_MEDICINE', TRUE, ?, ?)
                 """, id, organizationId, code, now, now);
     }
 
