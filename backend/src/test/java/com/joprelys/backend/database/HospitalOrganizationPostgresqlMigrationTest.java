@@ -40,8 +40,10 @@ class HospitalOrganizationPostgresqlMigrationTest {
 
         assertEquals(14, count(jdbc, "hospital_service_catalog"));
         assertEquals(10, count(jdbc, "medical_specialty_catalog"));
+        assertEquals(4, count(jdbc, "organizational_unit_type_catalog"));
         assertEquals(1, countByCode(jdbc, "hospital_service_catalog", "GENERAL_MEDICINE"));
         assertEquals(1, countByCode(jdbc, "medical_specialty_catalog", "GENERAL_MEDICINE"));
+        assertEquals(1, countByCode(jdbc, "organizational_unit_type_catalog", "SERVICE"));
 
         UUID organizationA = insertOrganization(jdbc, "a");
         UUID organizationB = insertOrganization(jdbc, "b");
@@ -81,6 +83,13 @@ class HospitalOrganizationPostgresqlMigrationTest {
                     id, organization_id, parent_id, code, name, unit_type,
                     service_catalog_code, active, created_at, updated_at
                 ) VALUES (?, ?, NULL, 'POLE-CATALOG', 'Pôle invalide', 'POLE', 'GENERAL_MEDICINE', TRUE, ?, ?)
+                """, UUID.randomUUID(), organizationA, now, now));
+
+        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update("""
+                INSERT INTO organizational_units (
+                    id, organization_id, parent_id, code, name, unit_type,
+                    service_catalog_code, active, created_at, updated_at
+                ) VALUES (?, ?, NULL, 'UNKNOWN-TYPE', 'Type inconnu', 'UNKNOWN', NULL, TRUE, ?, ?)
                 """, UUID.randomUUID(), organizationA, now, now));
     }
 
