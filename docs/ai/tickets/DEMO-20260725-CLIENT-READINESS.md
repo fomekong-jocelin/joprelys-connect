@@ -9,7 +9,7 @@
 - **Type** : qualification fonctionnelle, QA, documentation et préparation opérationnelle
 - **Responsable** : Jocelin / équipe Joprelys
 - **Reviewer** : Tech Lead + QA + référent fonctionnel
-- **Statut** : IN_PROGRESS — cadrage et qualification
+- **Statut** : IN_PROGRESS — code qualifié, environnement et répétitions à valider
 
 ## Objectif
 
@@ -30,6 +30,52 @@ Ce ticket ne recrée aucune fonctionnalité déjà livrée. Il qualifie le code 
 | RBAC hospitalier granulaire | PR #100, #102, #107 | suites backend/frontend vertes | profils de démonstration à valider |
 | Suppression du droit générique | #121 / PR #122, Flyway V86 | CI #1027 verte | l'environnement de démo doit être aligné sur le SHA retenu |
 
+## Audit du code présent dans `main`
+
+L'audit a été refait sur `main@81b7d20c4cf44800e436c86b964a38bc62929305`, sans se limiter aux descriptions des anciennes PR.
+
+### Workspace urgence
+
+Le test `EmergencyDashboardComponent` confirme :
+
+- workspace URG-TEMP à cinq sections ;
+- accès à l'espace Documents ;
+- navigation vers le rapprochement avec `patientId` et `emergencyId` ;
+- navigation directe vers l'hospitalisation avec conservation de `emergencyId` ;
+- orientation `ADMISSION` poursuivant automatiquement vers l'hospitalisation.
+
+### Rapprochement DPU
+
+Le test `PatientReconciliationPageComponent` confirme :
+
+- chargement de la file URG-TEMP ;
+- chargement des candidats et de l'historique ;
+- protection contre une réponse asynchrone obsolète ;
+- décision explicite et rafraîchissement de la file ;
+- conservation du parcours terminé et de l'urgence source ;
+- poursuite vers l'hospitalisation sur le DPU canonique avec `emergencyId` ;
+- réutilisation de la clé d'idempotence en cas de rejeu après erreur réseau.
+
+### Admission depuis l'urgence
+
+Le test `EmergencyHospitalizationContinuationComponent` confirme :
+
+- seuls les services autorisant des chambres sont proposés ;
+- un service administratif comme « Caisse » est exclu ;
+- seuls les lits libres préparés sont sélectionnables dans le scénario ;
+- l'admission utilise `patientId`, `emergencyId`, service, chambre, lit, motif et praticien responsable ;
+- le lot documentaire est généré après admission ;
+- sans `HOSPITALIZATION_ADMIT`, les données d'admission ne sont pas chargées et aucune mutation n'est exécutée.
+
+### Conclusion du contrôle code
+
+Le chaînage principal est toujours présent dans `main`. Aucun besoin de réimplémentation n'a été identifié. Le risque avant samedi est désormais principalement :
+
+1. alignement de l'environnement sur le SHA/V86 ;
+2. préparation des données spatiales et des comptes ;
+3. validation humaine du parcours réel ;
+4. répétabilité de la démonstration.
+
 ## Décision de gel
 
 Jusqu'à la démonstration :
@@ -49,12 +95,12 @@ Jusqu'à la démonstration :
 | 3 | Enregistrer les constantes | infirmier/accueil selon matrice | visite ou urgence active | LIVRÉ | À VALIDER |
 | 4 | Ouvrir une consultation | médecin | visite active | LIVRÉ | À VALIDER |
 | 5 | Créer une urgence identifiée | urgence | patient + établissement | LIVRÉ | À VALIDER |
-| 6 | Créer un patient URG-TEMP | urgence | aucun identifiant obligatoire | LIVRÉ | À VALIDER |
-| 7 | Triage, réanimation, tiers et médico-légal | infirmier/médecin urgence | urgence active | LIVRÉ | À VALIDER |
-| 8 | Générer les documents d'urgence | urgence | données minimales du dossier | LIVRÉ | À VALIDER |
-| 9 | Rapprocher vers un DPU canonique | profil habilité | candidat ou nouveau DPU | LIVRÉ | À VALIDER |
+| 6 | Créer un patient URG-TEMP | urgence | aucun identifiant obligatoire | CODE VÉRIFIÉ | À VALIDER |
+| 7 | Triage, réanimation, tiers et médico-légal | infirmier/médecin urgence | urgence active | CODE VÉRIFIÉ | À VALIDER |
+| 8 | Générer les documents d'urgence | urgence | données minimales du dossier | CODE VÉRIFIÉ | À VALIDER |
+| 9 | Rapprocher vers un DPU canonique | profil habilité | candidat ou nouveau DPU | CODE VÉRIFIÉ | À VALIDER |
 | 10 | Afficher la continuité documentaire/financière | accueil/caisse selon permissions | documents/facture différée | LIVRÉ | À VALIDER |
-| 11 | Hospitaliser depuis l'urgence | responsable hospitalisation | service autorisant chambres + lit libre | LIVRÉ | À VALIDER |
+| 11 | Hospitaliser depuis l'urgence | responsable hospitalisation | service autorisant chambres + lit libre | CODE VÉRIFIÉ | À VALIDER |
 | 12 | Consulter le séjour et les activités | médecin/infirmier/responsable | séjour actif | LIVRÉ | À VALIDER |
 
 ## Scénario nominal recommandé
@@ -123,8 +169,8 @@ Aucun mot de passe ni secret ne doit être versionné.
 - [x] créer l'issue #125 ;
 - [x] identifier les PR fonctionnelles #96/#97 et le socle RBAC/lits ;
 - [x] documenter la matrice initiale et le scénario nominal ;
-- [ ] vérifier les routes, composants et tests encore présents dans `main` ;
-- [ ] relever la CI du SHA retenu ;
+- [x] vérifier les routes, composants et tests encore présents dans `main` ;
+- [x] relever les dernières CI fonctionnelles disponibles (#908 et #1027) ;
 - [ ] qualifier l'environnement qui servira à la démonstration ;
 - [ ] préparer les comptes et données sans secret versionné ;
 - [ ] exécuter deux répétitions chronométrées ;
