@@ -1,11 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
+import { HospitalOrganizationApiService } from '../clinic/hospital-organization/hospital-organization-api.service';
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { StaffApiService } from '../clinic/staff/staff-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
+import { HospitalizationLocationApiService } from './hospitalization-location-api.service';
+import { StructuredHospitalization } from './hospitalization-location.models';
 import { PatientHospitalizationComponent } from './patient-hospitalization.component';
 import { PatientApiService } from './patient-api.service';
-import { Hospitalization } from './patient.models';
 import { SpatialApiService } from './spatial-api.service';
 
 describe('PatientHospitalizationComponent permissions', () => {
@@ -13,20 +15,23 @@ describe('PatientHospitalizationComponent permissions', () => {
   let grantedPermissions: Set<string>;
   let hasPermission: ReturnType<typeof vi.fn>;
 
-  const activeStay: Hospitalization = {
+  const activeStay: StructuredHospitalization = {
     id: 'stay-1',
     patientId: 'patient-1',
     organizationId: 'organization-1',
-    visitId: 'visit-1',
-    responsiblePractitionerId: 'doctor-1',
+    version: 0,
+    currentServiceUnitId: 'unit-1',
+    currentSpaceId: 'space-201',
+    currentBedId: 'bed-a',
     serviceName: 'Médecine',
-    roomNumber: '201',
+    spaceName: 'Chambre 201',
     bedNumber: 'A',
     admissionReason: 'Surveillance',
     status: 'EN_COURS',
     admittedAt: '2026-07-22T08:00:00Z',
     hospitalizationNumber: 'HOS-001',
-    version: 0,
+    visitId: 'visit-1',
+    responsiblePractitionerId: 'doctor-1',
   };
 
   beforeEach(async () => {
@@ -37,9 +42,40 @@ describe('PatientHospitalizationComponent permissions', () => {
       imports: [PatientHospitalizationComponent],
       providers: [
         { provide: RbacApiService, useValue: { hasPermission } },
-        { provide: I18nService, useValue: { t: (key: string, fallback?: string) => fallback || key } },
-        { provide: PatientApiService, useValue: {} },
-        { provide: SpatialApiService, useValue: {} },
+        {
+          provide: I18nService,
+          useValue: {
+            t: (key: string, fallback?: string) => fallback || key,
+            currentLanguage: () => 'fr',
+          },
+        },
+        {
+          provide: PatientApiService,
+          useValue: {
+            getPatientVisits: () => of([]),
+            getConsents: () => of([]),
+            getOperatingReports: () => of([]),
+          },
+        },
+        {
+          provide: HospitalizationLocationApiService,
+          useValue: { listForPatient: () => of([]) },
+        },
+        {
+          provide: SpatialApiService,
+          useValue: {
+            listSpaces: () => of([]),
+            listUnitSpaceAssignments: () => of([]),
+            listBeds: () => of([]),
+          },
+        },
+        {
+          provide: HospitalOrganizationApiService,
+          useValue: {
+            listUnits: () => of([]),
+            listServiceCatalog: () => of([]),
+          },
+        },
         { provide: StaffApiService, useValue: { list: () => of([]) } },
       ],
     })
