@@ -8,22 +8,23 @@ import com.joprelys.backend.consultation.infrastructure.persistence.Consultation
 import com.joprelys.backend.lab.infrastructure.persistence.LabResultEntity;
 import com.joprelys.backend.lab.infrastructure.persistence.LabResultRepository;
 import com.joprelys.backend.patient.api.MedicalSummaryResponse;
-import com.joprelys.backend.patient.infrastructure.persistence.*;
+import com.joprelys.backend.patient.infrastructure.persistence.PatientAllergyRepository;
+import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
+import com.joprelys.backend.patient.infrastructure.persistence.PatientMedicalHistoryRepository;
+import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionEntity;
 import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import com.joprelys.backend.common.application.VerificationUrlProvider;
-import org.springframework.beans.factory.annotation.Value;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class PatientSummaryService {
@@ -39,29 +40,29 @@ public class PatientSummaryService {
     private final AuditService auditService;
     private final UserAccountRepository userAccountRepository;
     private final com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository hospitalizationRepository;
-    
     private final com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository organizationRepository;
     private final com.joprelys.backend.visit.infrastructure.persistence.VitalsRepository vitalsRepository;
     private final com.joprelys.backend.visit.application.PdfGeneratorService pdfGeneratorService;
     private final com.joprelys.backend.visit.application.QrCodeGeneratorService qrCodeGeneratorService;
     private final VerificationUrlProvider verificationUrlProvider;
 
-    public PatientSummaryService(PatientRepository patientRepository,
-                                 PatientAllergyRepository patientAllergyRepository,
-                                 PatientMedicalHistoryRepository patientMedicalHistoryRepository,
-                                 PrescriptionRepository prescriptionRepository,
-                                 VisitRepository visitRepository,
-                                 ConsultationRepository consultationRepository,
-                                 LabResultRepository labResultRepository,
-                                 PatientService patientService,
-                                 AuditService auditService,
-                                 UserAccountRepository userAccountRepository,
-                                 com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository hospitalizationRepository,
-                                 com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository organizationRepository,
-                                 com.joprelys.backend.visit.infrastructure.persistence.VitalsRepository vitalsRepository,
-                                 com.joprelys.backend.visit.application.PdfGeneratorService pdfGeneratorService,
-                                 com.joprelys.backend.visit.application.QrCodeGeneratorService qrCodeGeneratorService,
-                                 VerificationUrlProvider verificationUrlProvider) {
+    public PatientSummaryService(
+            PatientRepository patientRepository,
+            PatientAllergyRepository patientAllergyRepository,
+            PatientMedicalHistoryRepository patientMedicalHistoryRepository,
+            PrescriptionRepository prescriptionRepository,
+            VisitRepository visitRepository,
+            ConsultationRepository consultationRepository,
+            LabResultRepository labResultRepository,
+            PatientService patientService,
+            AuditService auditService,
+            UserAccountRepository userAccountRepository,
+            com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository hospitalizationRepository,
+            com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository organizationRepository,
+            com.joprelys.backend.visit.infrastructure.persistence.VitalsRepository vitalsRepository,
+            com.joprelys.backend.visit.application.PdfGeneratorService pdfGeneratorService,
+            com.joprelys.backend.visit.application.QrCodeGeneratorService qrCodeGeneratorService,
+            VerificationUrlProvider verificationUrlProvider) {
         this.patientRepository = patientRepository;
         this.patientAllergyRepository = patientAllergyRepository;
         this.patientMedicalHistoryRepository = patientMedicalHistoryRepository;
@@ -82,136 +83,116 @@ public class PatientSummaryService {
 
     @Transactional(readOnly = true)
     public MedicalSummaryResponse getMedicalSummary(UUID patientId) {
-        // Validate access controls
         patientService.validateAccess(patientId, "medical_records");
 
         PatientEntity patient = patientRepository.findByIdGlobally(patientId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé"));
 
-        // 1. Allergies actives structurées (status = ACTIVE)
         List<MedicalSummaryResponse.AllergySummaryDto> allergies = patientAllergyRepository
                 .findAllByPatientIdAndDeletedAtIsNull(patientId).stream()
-                .filter(a -> "ACTIVE".equalsIgnoreCase(a.getStatus()))
-                .map(a -> new MedicalSummaryResponse.AllergySummaryDto(
-                        a.getId(),
-                        a.getSubstance(),
-                        a.getSeverity(),
-                        a.getReaction(),
-                        a.getStatus(),
-                        a.getDiscoveredAt()
-                ))
+                .filter(allergy -> "ACTIVE".equalsIgnoreCase(allergy.getStatus()))
+                .map(allergy -> new MedicalSummaryResponse.AllergySummaryDto(
+                        allergy.getId(),
+                        allergy.getSubstance(),
+                        allergy.getSeverity(),
+                        allergy.getReaction(),
+                        allergy.getStatus(),
+                        allergy.getDiscoveredAt()))
                 .collect(Collectors.toList());
 
-        // 2. Antécédents importants ou en cours (isOngoing = true ou important = true)
         List<MedicalSummaryResponse.MedicalHistorySummaryDto> histories = patientMedicalHistoryRepository
                 .findAllByPatientIdAndDeletedAtIsNull(patientId).stream()
-                .filter(h -> h.isOngoing() || h.isImportant())
-                .map(h -> new MedicalSummaryResponse.MedicalHistorySummaryDto(
-                        h.getId(),
-                        h.getCategory(),
-                        h.getDescription(),
-                        h.getOnsetDate(),
-                        h.isOngoing(),
-                        h.isImportant(),
-                        h.getComment()
-                ))
+                .filter(history -> history.isOngoing() || history.isImportant())
+                .map(history -> new MedicalSummaryResponse.MedicalHistorySummaryDto(
+                        history.getId(),
+                        history.getCategory(),
+                        history.getDescription(),
+                        history.getOnsetDate(),
+                        history.isOngoing(),
+                        history.isImportant(),
+                        history.getComment()))
                 .collect(Collectors.toList());
 
-        // 3. Traitements / prescriptions en cours (prescriptions ACTIVE)
         List<PrescriptionEntity> activePrescriptionsList = prescriptionRepository
                 .findActivePrescriptionsByPatientId(patientId);
-
         List<MedicalSummaryResponse.TreatmentSummaryDto> activePrescriptions = activePrescriptionsList.stream()
-                .map(p -> new MedicalSummaryResponse.TreatmentSummaryDto(
-                        p.getId(),
-                        p.getPrescriptionNumber(),
-                        p.getStatus(),
-                        p.getCreatedAt(),
-                        p.getItems().stream()
+                .map(prescription -> new MedicalSummaryResponse.TreatmentSummaryDto(
+                        prescription.getId(),
+                        prescription.getPrescriptionNumber(),
+                        prescription.getStatus(),
+                        prescription.getCreatedAt(),
+                        prescription.getItems().stream()
                                 .map(item -> new MedicalSummaryResponse.TreatmentSummaryDto.PrescriptionItemDto(
                                         item.getDrugName(),
                                         item.getDosage(),
                                         item.getPosology(),
                                         item.getDuration(),
                                         item.getQuantity(),
-                                        item.getInstructions()
-                                ))
-                                .collect(Collectors.toList())
-                ))
+                                        item.getInstructions()))
+                                .collect(Collectors.toList())))
                 .collect(Collectors.toList());
 
-        // 4. Dernières visites (3 dernières)
         List<VisitEntity> visits = visitRepository.findByPatientId(patientId).stream()
-                .sorted((v1, v2) -> v2.getCreatedAt().compareTo(v1.getCreatedAt()))
+                .sorted((left, right) -> right.getCreatedAt().compareTo(left.getCreatedAt()))
                 .limit(3)
                 .collect(Collectors.toList());
-
         List<MedicalSummaryResponse.VisitSummaryDto> recentVisits = visits.stream()
-                .map(v -> new MedicalSummaryResponse.VisitSummaryDto(
-                        v.getId(),
-                        v.getVisitNumber(),
-                        v.getReason(),
-                        v.getOrientation(),
-                        v.getService(),
-                        v.getCreatedAt()
-                ))
+                .map(visit -> new MedicalSummaryResponse.VisitSummaryDto(
+                        visit.getId(),
+                        visit.getVisitNumber(),
+                        visit.getReason(),
+                        visit.getOrientation(),
+                        visit.getService(),
+                        visit.getCreatedAt()))
                 .collect(Collectors.toList());
 
-        // 5. Derniers diagnostics (3 derniers)
-        List<ConsultationEntity> consultations = consultationRepository.findByPatientIdOrderByCreatedAtDesc(patientId).stream()
+        List<ConsultationEntity> consultations = consultationRepository
+                .findByPatientIdOrderByCreatedAtDesc(patientId).stream()
                 .limit(3)
                 .collect(Collectors.toList());
-
         List<MedicalSummaryResponse.DiagnosticSummaryDto> recentDiagnostics = consultations.stream()
-                .map(c -> new MedicalSummaryResponse.DiagnosticSummaryDto(
-                        c.getId(),
-                        c.getVisit().getVisitNumber(),
-                        c.getCreatedAt(),
-                        c.getDoctor().getDisplayName(),
-                        c.getSuspectedDiagnosis(),
-                        c.getDiagnosis(),
-                        c.getFinalDiagnosis(),
-                        c.getConclusion()
-                ))
+                .map(consultation -> new MedicalSummaryResponse.DiagnosticSummaryDto(
+                        consultation.getId(),
+                        consultation.getVisit().getVisitNumber(),
+                        consultation.getCreatedAt(),
+                        consultation.getDoctor().getDisplayName(),
+                        consultation.getSuspectedDiagnosis(),
+                        consultation.getDiagnosis(),
+                        consultation.getFinalDiagnosis(),
+                        consultation.getConclusion()))
                 .collect(Collectors.toList());
 
-        // 6. Derniers résultats critiques (interpretation = CRITICAL)
         List<LabResultEntity> criticalResultsList = labResultRepository
                 .findByPatientIdAndInterpretationOrderByCreatedAtDesc(patientId, "CRITICAL");
-
         List<MedicalSummaryResponse.CriticalResultSummaryDto> criticalResults = criticalResultsList.stream()
-                .map(r -> new MedicalSummaryResponse.CriticalResultSummaryDto(
-                        r.getId(),
-                        r.getResultNumber(),
-                        r.getAnalyteName(),
-                        r.getValue(),
-                        r.getUnit(),
-                        r.getReferenceRange(),
-                        r.getInterpretation(),
-                        r.getValidatorName(),
-                        r.getValidatedAt()
-                ))
+                .map(result -> new MedicalSummaryResponse.CriticalResultSummaryDto(
+                        result.getId(),
+                        result.getResultNumber(),
+                        result.getAnalyteName(),
+                        result.getValue(),
+                        result.getUnit(),
+                        result.getReferenceRange(),
+                        result.getInterpretation(),
+                        result.getValidatorName(),
+                        result.getValidatedAt()))
                 .collect(Collectors.toList());
 
-        // 7. Hospitalisations
         List<MedicalSummaryResponse.HospitalizationSummaryDto> hospitalizations = hospitalizationRepository
                 .findByPatientIdOrderByAdmittedAtDesc(patientId).stream()
-                .map(h -> new MedicalSummaryResponse.HospitalizationSummaryDto(
-                        h.getId(),
-                        h.getHospitalizationNumber(),
-                        h.getServiceName(),
-                        h.getRoomNumber(),
-                        h.getBedNumber(),
-                        h.getAdmissionReason(),
-                        h.getStatus(),
-                        h.getAdmittedAt(),
-                        h.getDischargedAt(),
-                        h.getDischargeDiagnosis(),
-                        h.getDischargeInstructions()
-                ))
+                .map(hospitalization -> new MedicalSummaryResponse.HospitalizationSummaryDto(
+                        hospitalization.getId(),
+                        hospitalization.getHospitalizationNumber(),
+                        hospitalization.getServiceName(),
+                        hospitalization.getSpaceName(),
+                        hospitalization.getBedNumber(),
+                        hospitalization.getAdmissionReason(),
+                        hospitalization.getStatus(),
+                        hospitalization.getAdmittedAt(),
+                        hospitalization.getDischargedAt(),
+                        hospitalization.getDischargeDiagnosis(),
+                        hospitalization.getDischargeInstructions()))
                 .collect(Collectors.toList());
 
-        // Audit Log
         UserAccountEntity actor = getCurrentUser();
         if (actor != null) {
             auditService.logSuccess(
@@ -221,8 +202,7 @@ public class PatientSummaryService {
                     "PATIENT_RECORD",
                     patientId,
                     "READ_PATIENT_SUMMARY",
-                    "Lecture de la synthèse médicale pour le patient : " + patient.getFullName()
-            );
+                    "Lecture de la synthèse médicale pour le patient : " + patient.getFullName());
         }
 
         return new MedicalSummaryResponse(
@@ -238,42 +218,38 @@ public class PatientSummaryService {
                 recentVisits,
                 recentDiagnostics,
                 criticalResults,
-                hospitalizations
-        );
+                hospitalizations);
     }
 
     @Transactional(readOnly = true)
     public byte[] generatePatientSummaryPdf(UUID patientId) {
         MedicalSummaryResponse summary = getMedicalSummary(patientId);
 
-        // Get organization details
         UUID orgId = patientRepository.findById(patientId)
-                .map(com.joprelys.backend.patient.infrastructure.persistence.PatientEntity::getOrganizationId)
+                .map(PatientEntity::getOrganizationId)
                 .orElse(null);
-        var orgOpt = orgId != null ? organizationRepository.findById(orgId) : java.util.Optional.<com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity>empty();
+        var orgOpt = orgId != null
+                ? organizationRepository.findById(orgId)
+                : java.util.Optional.<com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity>empty();
         String orgName = orgOpt.map(o -> o.getName()).orElse("Clinique Joprelys");
         String orgAddress = orgOpt.map(o -> o.getAddress()).orElse("");
         String orgPhone = orgOpt.map(o -> o.getPhone()).orElse("");
 
-        // Get recent vitals
         var vitalsList = vitalsRepository.findAllByPatientId(patientId);
-        com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity vitals = vitalsList.isEmpty() ? null : vitalsList.get(0);
+        com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity vitals = vitalsList.isEmpty()
+                ? null
+                : vitalsList.get(0);
 
-        // Generate QR Code pointing to verification page of patient summary
         String verificationUrl = verificationUrlProvider.getVerificationUrl("patient-summary/" + patientId);
         byte[] qrCodeBytes = qrCodeGeneratorService.generateQrCode(verificationUrl, 200, 200);
-
-        // Generate PDF
         byte[] pdfBytes = pdfGeneratorService.generatePatientSummaryPdf(
                 summary,
                 vitals,
                 orgName,
                 orgAddress,
                 orgPhone,
-                qrCodeBytes
-        );
+                qrCodeBytes);
 
-        // Log audit
         var actor = getCurrentUser();
         if (actor != null) {
             auditService.logSuccess(
@@ -283,10 +259,8 @@ public class PatientSummaryService {
                     "PATIENT_RECORD",
                     patientId,
                     "DOWNLOAD_SUMMARY_PDF",
-                    "Téléchargement du PDF de synthèse médicale pour le patient : " + summary.fullName()
-            );
+                    "Téléchargement du PDF de synthèse médicale pour le patient : " + summary.fullName());
         }
-
         return pdfBytes;
     }
 
