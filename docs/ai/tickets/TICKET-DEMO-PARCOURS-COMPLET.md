@@ -22,15 +22,16 @@ Rédiger un document de démo opérationnel permettant de présenter l'ensemble 
 ## Contexte
 
 Le projet dispose aujourd'hui des modules suivants implémentés et fonctionnels :
-- Authentification multi-rôles (OTP staff)
-- Gestion des patients et DPU
-- Visites et constantes vitales
-- Consultation médicale et prescription
-- Pharmacie (vérification et délivrance d'ordonnances)
-- Laboratoire (demandes et résultats d'examens)
-- Portail patient
 
-Il manquait un guide unique et actionnable pour enchaîner ces modules dans une démonstration cohérente devant un client ou un utilisateur final.
+- Authentification multi-rôles ;
+- Gestion des patients et DPU ;
+- Visites et constantes vitales ;
+- Consultation médicale et prescription ;
+- Pharmacie ;
+- Laboratoire ;
+- Portail patient.
+
+Le guide historique reste la documentation canonique du parcours complet. Les démonstrations datées peuvent lui ajouter un runbook borné sans recréer un second guide concurrent.
 
 ## Critères d'acceptation
 
@@ -42,9 +43,13 @@ Il manquait un guide unique et actionnable pour enchaîner ces modules dans une 
 
 ## Livrables
 
-- `docs/features/demo-parcours-complet/DEMO-PARCOURS-COMPLET.md`
-- Mise à jour de `docs/ai/PROJECT-TRACKING.md`
-- Mise à jour de `docs/ai/CHANGELOG.md`
+- `docs/features/demo-parcours-complet/DEMO-PARCOURS-COMPLET.md` — guide canonique complet ;
+- `docs/features/demo-parcours-complet/RUNBOOK-CLIENT-20260725.md` — addendum borné pour la démonstration du 25/07/2026, suivi par #127 ;
+- `docs/ai/PROJECT-TRACKING.md`.
+
+## Règle de sécurité documentaire
+
+Les indications historiques du guide complet ne doivent pas être interprétées comme une autorisation d'exposer des OTP, mots de passe temporaires ou secrets dans une API, un écran ou des logs. La préparation de comptes suit toujours le comportement sécurisé du code courant et les variables/configurations autorisées.
 
 ## Impact version
 
@@ -52,4 +57,4 @@ Aucun bump applicatif : ce ticket est purement documentaire.
 
 ## Notes
 
-Ce document ne modifie aucun code source. Il s'appuie sur l'état actuel de l'application (SPRINT-0011, fin de l'alignement CDC modules 4-12).
+Le guide canonique date du SPRINT-0011. Le runbook du 25/07/2026 décrit uniquement le périmètre client retenu après livraison des parcours URG-TEMP et hospitalisation. Il ne modifie aucun code source et ne vaut pas UAT globale du CDC.
