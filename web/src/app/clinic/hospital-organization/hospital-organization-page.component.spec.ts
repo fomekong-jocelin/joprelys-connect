@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { IconComponent } from '../../shared/ui/icon.component';
@@ -44,7 +45,6 @@ describe('HospitalOrganizationPageComponent', () => {
           code: 'GENERAL_MEDICINE',
           nameFr: 'Médecine générale',
           nameEn: 'General medicine',
-          serviceType: 'OUTPATIENT',
         },
       ])),
       listSpecialtyCatalog: vi.fn().mockReturnValue(of([
@@ -80,6 +80,7 @@ describe('HospitalOrganizationPageComponent', () => {
               'hospitalOrg.title': 'Organisation hospitalière',
               'hospitalOrg.unitType.SERVICE': 'Service',
               'hospitalOrg.actions.addService': 'Ajouter un service',
+              'hospitalOrg.feedback.error': 'Erreur localisée',
               'common.edit': 'Modifier',
               'common.loading': 'Chargement',
               'common.cancel': 'Annuler',
@@ -147,5 +148,16 @@ describe('HospitalOrganizationPageComponent', () => {
       name: null,
       serviceCatalogCode: 'GENERAL_MEDICINE',
     }, undefined);
+  });
+
+  it('shows the localized fallback instead of leaking a backend-language detail', () => {
+    api.setActive.mockReturnValueOnce(throwError(() => new HttpErrorResponse({
+      status: 409,
+      error: { detail: 'Désactivez d abord les unités enfants actives.' },
+    })));
+
+    fixture.componentInstance.setActive(fixture.componentInstance.units()[0], false);
+
+    expect(fixture.componentInstance.errorMessage()).toBe('Erreur localisée');
   });
 });
