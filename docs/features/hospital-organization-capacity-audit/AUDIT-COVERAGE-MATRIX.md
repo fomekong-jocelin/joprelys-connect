@@ -18,16 +18,16 @@ Elle ne remplace ni la recette métier ni la validation réglementaire. Un écar
 
 > Le score est un indicateur de couverture documentaire, pas un pourcentage d’effort ni une prévision de délai. Les 40 écarts n’ont pas la même complexité.
 
-## Synthèse après intégration du socle de phase 0
+## Synthèse après intégration du socle de phase 0 et HOS-RBAC-001-C
 
 - Écarts audités : **40**.
 - `COVERED` : **0**.
 - `PARTIAL` : **10** — GAP-005, GAP-006, GAP-007, GAP-008, GAP-010, GAP-016, GAP-029, GAP-030, GAP-037 et GAP-039.
-- `IN_PROGRESS` : **0** au niveau du statut principal des gaps ; HOS-RBAC-001-C approfondit actuellement GAP-016 déjà `PARTIAL`.
+- `IN_PROGRESS` : **0** au niveau du statut principal des gaps ; HOS-RBAC-001-C est désormais fusionné mais GAP-016 reste `PARTIAL` tant que les validations externes, le remappage des rôles personnalisés et les contrôles contextuels ne sont pas terminés.
 - `OPEN` : **30**.
 - Score pondéré indicatif : **5 / 40 = 12,5 %**.
 
-Les incréments #98 à #104 sont désormais **fusionnés dans `main`** dans cet ordre :
+Les incréments #98 à #107 sont désormais **fusionnés dans `main`** pour le périmètre de phase 0 traité ici :
 
 1. **#98** — HOS-BED-002-B, transitions manuelles sûres et validation PostgreSQL V76–V78 ;
 2. **#99** — HOS-BED-001-D, exclusion des chevauchements historiques et quarantaine ;
@@ -35,9 +35,10 @@ Les incréments #98 à #104 sont désormais **fusionnés dans `main`** dans cet 
 4. **#101** — HOS-BED-002-C, capacité ouverte, préparation, usage dérivé et KPI associés ;
 5. **#102** — HOS-RBAC-001-B, transfert, décision médicale de sortie, nettoyage et maintenance séparés ;
 6. **#103** — HOS-DIS-001-A, décision médicale sans libération, départ physique dédié et migration V83 ;
-7. **#104** — HOS-BED-002-D, motifs codifiés, acteurs, sources et chronologie des états de lit, migrations V84/V85.
+7. **#104** — HOS-BED-002-D, motifs codifiés, acteurs, sources et chronologie des états de lit, migrations V84/V85 ;
+8. **#107** — HOS-RBAC-001-C, séparation de l’admission, des notes, consentements, soins, administrations médicamenteuses et consommables.
 
-L’incrément courant est la **PR Draft #107 — HOS-RBAC-001-C**. Il sépare admission, notes, consentements, soins, administration médicamenteuse et consommables, mais ne fait pas passer GAP-016 à `COVERED` : ABAC, habilitations professionnelles, migration des rôles personnalisés, clearance et validations externes restent ouverts.
+HOS-RBAC-001-C est **fusionné** au commit `4df94f43ee5943a55ae60bac22794b1a8ff746a4`. Il ne fait pas passer GAP-016 à `COVERED` : ABAC, habilitations professionnelles, migration des rôles personnalisés, clearance et validations externes restent ouverts.
 
 ## Matrice détaillée
 
@@ -51,14 +52,14 @@ L’incrément courant est la **PR Draft #107 — HOS-RBAC-001-C**. Il sépare a
 | GAP-006 | Cycle de vie lit | PARTIAL | capacité, préparation et usage séparés ; libération uniquement au départ physique ; V84/V85 historisent valeur, motif, acteur et source, y compris transfert/départ | sélecteur UI de motif, tâche de turnover, preuves hygiène/maintenance et validations métier | HOS-BED-002-E + HOS-DIS-001-B |
 | GAP-007 | Capacité affichée | PARTIAL | compteurs installés, ouverts, prêts, occupés et disponibles séparés ; usage dérivé des affectations actives | validation direction hospitalière, projections historisées et performance multi-services | HOS-KPI-001 |
 | GAP-008 | Sortie | PARTIAL | V83 et #103 séparent décision médicale et départ physique ; seul le départ clôt le séjour, l'affectation et déclenche le nettoyage ; #104 historise ce nettoyage automatique | clearance administrative/financière, correction append-only, remise des documents/effets, tâche de turnover et validation métier | HOS-DIS-001-B/C + HOS-BED-002-E |
-| GAP-009 | Admission | OPEN | admission directe `EN_COURS` ; claim limité aux lits ouverts, prêts et libres ; autorisation d’admission séparée dans #107 | demande, décision, planification, préadmission, réservation | HOS-ADM-001 |
+| GAP-009 | Admission | OPEN | admission directe `EN_COURS` ; claim limité aux lits ouverts, prêts et libres ; autorisation d’admission séparée et fusionnée via #107 | demande, décision, planification, préadmission, réservation | HOS-ADM-001 |
 | GAP-010 | Capacité | PARTIAL | V81/V82 séparent capacité ouverte, préparation et usage ; V84/V85 ajoutent motifs et chronologie tenant-aware | existence/archivage, périodes d'effet, sélecteur UI, preuves hygiène/maintenance | HOS-BED-002-E + HOS-LOC-001 |
 | GAP-011 | Mouvement | OPEN | début/fin de `BedAssignment` ; permission de transfert dédiée ; transfert interdit après décision médicale ; nettoyage source historisé | motif et ordre du mouvement, acteur/origine/destination structurés, correction append-only | HOS-MOV-001 |
 | GAP-012 | Archivage | OPEN | suppressions physiques spatiales conditionnelles ; historique du lit encore supprimé par cascade | statuts, dates d’effet et archivage garantissant la conservation | HOS-ORG-001 + HOS-LOC-001 |
 | GAP-013 | Chambre | OPEN | `comfortLevel` mélange confort, soins et isolement | dimensions et référentiels séparés | HOS-LOC-001 |
 | GAP-014 | Compatibilité patient | OPEN | aucun contrôle sexe/âge/isolement/accompagnant | moteur de compatibilité backend | HOS-ADM-001 |
 | GAP-015 | Personnel | OPEN | spécialité et département texte ; rôles hygiène/maintenance présents sans affectation d’unité | référentiels, emplois et affectations datées | HOS-STAFF-001 |
-| GAP-016 | Séparation des tâches | PARTIAL | #100 sépare la supervision ; #102 sépare transfert, sortie, nettoyage et maintenance ; #103 sépare décision/départ ; #104 attribue les événements aux acteurs ; #107 sépare admission, notes, consentements, soins, administration médicamenteuse et consommables avec matrice positive/négative | validation RSSI/médicale, migration des rôles personnalisés, clearance, contexte unité/relation de soin, habilitations et délégations datées | finaliser #107 puis HOS-DIS-001-B + HOS-STAFF-001 |
+| GAP-016 | Séparation des tâches | PARTIAL | #100 sépare la supervision ; #102 sépare transfert, sortie, nettoyage et maintenance ; #103 sépare décision/départ ; #104 attribue les événements aux acteurs ; #107 fusionné sépare admission, notes, consentements, soins, administration médicamenteuse et consommables avec matrice positive/négative | validation RSSI/médicale, migration des rôles personnalisés, clearance, contexte unité/relation de soin, habilitations et délégations datées | validations HOS-RBAC-001-C puis HOS-DIS-001-B + HOS-STAFF-001 |
 | GAP-017 | Confidentialité | OPEN | accès au séjour et à l'historique du lit tenant-wide ; granularité d’action renforcée par #107 | ABAC unité, affectation et relation de soin | HOS-RBAC-001 + HOS-STAFF-001 |
 | GAP-018 | Parcours patient | OPEN | modules et états juxtaposés ; jalons de sortie explicites et nettoyage historisé | épisode, présence, responsabilité, clearance et prochaine action | HOS-PATH-001 + HOS-DIS-001-B |
 | GAP-019 | Handoff urgences | OPEN | navigation urgence vers hospitalisation non atomique ; #107 exige désormais l’autorité d’admission | demande d’aval et confirmation transactionnelle | HOS-ADM-001 + HOS-MOV-001 |
@@ -93,9 +94,10 @@ L’incrément courant est la **PR Draft #107 — HOS-RBAC-001-C**. Il sépare a
 5. **INTÉGRÉ — #102** : transfert, décision de sortie, nettoyage et maintenance séparés.
 6. **INTÉGRÉ — #103** : décision médicale sans libération et départ physique dédié.
 7. **INTÉGRÉ — #104** : motifs, acteurs et chronologie des changements de lit.
-8. **EN COURS — #107 / HOS-RBAC-001-C** : séparer admission, notes, consentements, soins, administration médicamenteuse et consommables.
-9. **HOS-DIS-001-B** — ajouter clearance administrative, prérequis et correction du processus de sortie.
-10. **HOS-BED-002-E** — sélecteur UI, turnover et preuves opérationnelles.
+8. **INTÉGRÉ — #107 / HOS-RBAC-001-C** : admission, notes, consentements, soins, administration médicamenteuse et consommables séparés.
+9. **VALIDATIONS HOS-RBAC-001-C** — revue RSSI/DPO, direction médicale, responsable hospitalisation, inventaire/remappage des rôles personnalisés et recette multi-profils.
+10. **HOS-DIS-001-B** — ajouter clearance administrative, prérequis et correction du processus de sortie.
+11. **HOS-BED-002-E** — sélecteur UI, turnover et preuves opérationnelles.
 
 ## Conditions de changement de statut
 
