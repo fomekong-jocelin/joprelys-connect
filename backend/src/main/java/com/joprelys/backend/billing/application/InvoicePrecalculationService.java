@@ -1,19 +1,27 @@
 package com.joprelys.backend.billing.application;
 
 import com.joprelys.backend.billing.api.InvoiceResponse;
-import com.joprelys.backend.billing.infrastructure.persistence.*;
+import com.joprelys.backend.billing.infrastructure.persistence.InsuranceConventionEntity;
+import com.joprelys.backend.billing.infrastructure.persistence.InsuranceConventionRepository;
+import com.joprelys.backend.billing.infrastructure.persistence.InvoiceEntity;
+import com.joprelys.backend.billing.infrastructure.persistence.InvoiceItemEntity;
+import com.joprelys.backend.billing.infrastructure.persistence.InvoiceItemType;
 import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationEntity;
 import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationRepository;
-import com.joprelys.backend.hospitalization.infrastructure.persistence.*;
-import com.joprelys.backend.prescription.infrastructure.persistence.*;
-import com.joprelys.backend.spatial.infrastructure.persistence.RoomRepository;
+import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationDailyCareEntity;
+import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationDailyCareRepository;
+import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationEntity;
+import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository;
+import com.joprelys.backend.hospitalization.infrastructure.persistence.OperatingReportEntity;
+import com.joprelys.backend.hospitalization.infrastructure.persistence.OperatingReportRepository;
+import com.joprelys.backend.hospitalization.infrastructure.persistence.PatientConsumptionEntity;
+import com.joprelys.backend.hospitalization.infrastructure.persistence.PatientConsumptionRepository;
+import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionEntity;
+import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionItemEntity;
+import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.InpatientSpaceProfileRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -21,6 +29,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Calcul préventif d'une facture à partir des données cliniques d'une visite
@@ -39,18 +51,19 @@ public class InvoicePrecalculationService {
     private final OperatingReportRepository operatingReportRepository;
     private final ConsultationRepository consultationRepository;
     private final PrescriptionRepository prescriptionRepository;
-    private final RoomRepository roomRepository;
+    private final InpatientSpaceProfileRepository inpatientSpaceProfileRepository;
 
-    public InvoicePrecalculationService(ConventionTariffService conventionTariffService,
-                                        InsuranceConventionRepository insuranceConventionRepository,
-                                        VisitRepository visitRepository,
-                                        HospitalizationRepository hospitalizationRepository,
-                                        HospitalizationDailyCareRepository dailyCareRepository,
-                                        PatientConsumptionRepository patientConsumptionRepository,
-                                        OperatingReportRepository operatingReportRepository,
-                                        ConsultationRepository consultationRepository,
-                                        PrescriptionRepository prescriptionRepository,
-                                        RoomRepository roomRepository) {
+    public InvoicePrecalculationService(
+            ConventionTariffService conventionTariffService,
+            InsuranceConventionRepository insuranceConventionRepository,
+            VisitRepository visitRepository,
+            HospitalizationRepository hospitalizationRepository,
+            HospitalizationDailyCareRepository dailyCareRepository,
+            PatientConsumptionRepository patientConsumptionRepository,
+            OperatingReportRepository operatingReportRepository,
+            ConsultationRepository consultationRepository,
+            PrescriptionRepository prescriptionRepository,
+            InpatientSpaceProfileRepository inpatientSpaceProfileRepository) {
         this.conventionTariffService = conventionTariffService;
         this.insuranceConventionRepository = insuranceConventionRepository;
         this.visitRepository = visitRepository;
@@ -60,7 +73,7 @@ public class InvoicePrecalculationService {
         this.operatingReportRepository = operatingReportRepository;
         this.consultationRepository = consultationRepository;
         this.prescriptionRepository = prescriptionRepository;
-        this.roomRepository = roomRepository;
+        this.inpatientSpaceProfileRepository = inpatientSpaceProfileRepository;
     }
 
     @Transactional(readOnly = true)
@@ -79,7 +92,6 @@ public class InvoicePrecalculationService {
 
         InvoiceEntity invoice = new InvoiceEntity(patientId, visitId, "PRE-CALC", convention);
 
-        // 1. Consultation
         BigDecimal consultationPrice = conventionTariffService.getTariff("CS", new BigDecimal("15000"));
         if (visit != null) {
             invoice.addItem(new InvoiceItemEntity(
@@ -87,192 +99,194 @@ public class InvoicePrecalculationService {
                     InvoiceItemType.CONSULTATION,
                     consultationPrice,
                     BigDecimal.ONE,
-                    null
-            ));
+                    null));
         }
 
-        // 2. Hospitalisation
         if (visit != null) {
-            Optional<HospitalizationEntity> hospOpt = hospitalizationRepository.findByVisitId(visitId);
-            if (hospOpt.isPresent()) {
-                HospitalizationEntity hosp = hospOpt.get();
-                addHospitalizationItems(invoice, hosp);
-            }
-        }
-
-        // 3. Médicaments (ordonnances)
-        if (visit != null) {
+            hospitalizationRepository.findByVisitId(visitId)
+                    .ifPresent(hospitalization -> addHospitalizationItems(invoice, hospitalization));
             addPrescriptionItems(invoice, visitId);
         }
 
         return InvoiceResponse.fromEntity(invoice);
     }
 
-    // -------------------------------------------------------
-    // Helpers privés
-    // -------------------------------------------------------
-
-    private void addHospitalizationItems(InvoiceEntity invoice, HospitalizationEntity hosp) {
-        // Frais de séjour
-        LocalDate start = hosp.getAdmittedAt().atZone(ZoneId.systemDefault()).toLocalDate();
-        LocalDate end = hosp.getDischargedAt() != null
-                ? hosp.getDischargedAt().atZone(ZoneId.systemDefault()).toLocalDate()
+    private void addHospitalizationItems(InvoiceEntity invoice, HospitalizationEntity hospitalization) {
+        LocalDate start = hospitalization.getAdmittedAt().atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate end = hospitalization.getDischargedAt() != null
+                ? hospitalization.getDischargedAt().atZone(ZoneId.systemDefault()).toLocalDate()
                 : LocalDate.now();
         long days = Math.max(1, ChronoUnit.DAYS.between(start, end));
 
-        String comfort = "STANDARD";
-        BigDecimal stayPrice = conventionTariffService.getTariff("ROOM_STANDARD", new BigDecimal("10000"));
-        if (hosp.getRoomNumber() != null) {
-            try {
-                String comfortLevel = roomRepository.findAll().stream()
-                        .filter(r -> r.getRoomNumber().equalsIgnoreCase(hosp.getRoomNumber()))
-                        .map(r -> r.getComfortLevel())
-                        .findFirst()
-                        .orElse("STANDARD");
-                comfort = comfortLevel.toUpperCase();
-                stayPrice = conventionTariffService.getTariff(
-                        "ROOM_" + comfort,
-                        comfort.equals("VIP") ? new BigDecimal("25000") : new BigDecimal("10000")
-                );
-            } catch (Exception ignored) {}
-        }
+        String comfort = inpatientSpaceProfileRepository
+                .findBySpaceIdAndOrganizationId(
+                        hospitalization.getCurrentSpaceId(),
+                        hospitalization.getOrganizationId())
+                .map(profile -> profile.getComfortLevel())
+                .orElse("STANDARD")
+                .toUpperCase();
+        BigDecimal stayPrice = conventionTariffService.getTariff(
+                "ROOM_" + comfort,
+                comfort.equals("VIP") ? new BigDecimal("25000") : new BigDecimal("10000"));
 
         invoice.addItem(new InvoiceItemEntity(
-                "Frais de séjour en chambre (" + comfort + ", N° " + hosp.getRoomNumber() + ", " + days + " nuits)",
+                "Frais de séjour (" + comfort + ", espace " + hospitalization.getSpaceName()
+                        + ", " + days + " nuits)",
                 InvoiceItemType.STAY_FEE,
                 stayPrice,
                 BigDecimal.valueOf(days),
-                null
-        ));
+                null));
 
-        addDailyCares(invoice, hosp.getId());
-        addConsumptions(invoice, hosp.getId());
-        addOperatingReports(invoice, hosp.getId());
+        addDailyCares(invoice, hospitalization.getId());
+        addConsumptions(invoice, hospitalization.getId());
+        addOperatingReports(invoice, hospitalization.getId());
     }
 
     private void addDailyCares(InvoiceEntity invoice, UUID hospitalizationId) {
         try {
             List<HospitalizationDailyCareEntity> cares =
                     dailyCareRepository.findByHospitalizationIdOrderByPerformedAtDesc(hospitalizationId);
-            for (HospitalizationDailyCareEntity dc : cares) {
-                if (dc.isBillable()) {
-                    BigDecimal carePrice = dc.getPrice() != null
-                            ? BigDecimal.valueOf(dc.getPrice())
-                            : conventionTariffService.getTariff(
-                            dc.getCareType(),
-                            new BigDecimal("5000")
-                    );
-                    String label = "Soin : " + dc.getCareType()
-                            + (dc.getDescription() != null && !dc.getDescription().isEmpty()
-                            ? " (" + dc.getDescription() + ")" : "");
-                    invoice.addItem(new InvoiceItemEntity(label, InvoiceItemType.AMI_CARE, carePrice, BigDecimal.ONE, null));
+            for (HospitalizationDailyCareEntity care : cares) {
+                if (care.isBillable()) {
+                    BigDecimal carePrice = care.getPrice() != null
+                            ? BigDecimal.valueOf(care.getPrice())
+                            : conventionTariffService.getTariff(care.getCareType(), new BigDecimal("5000"));
+                    String label = "Soin : " + care.getCareType()
+                            + (care.getDescription() != null && !care.getDescription().isEmpty()
+                                    ? " (" + care.getDescription() + ")"
+                                    : "");
+                    invoice.addItem(new InvoiceItemEntity(
+                            label,
+                            InvoiceItemType.AMI_CARE,
+                            carePrice,
+                            BigDecimal.ONE,
+                            null));
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            // La pré-facturation reste tolérante aux modules optionnels non configurés.
+        }
     }
 
     private void addConsumptions(InvoiceEntity invoice, UUID hospitalizationId) {
         try {
             List<PatientConsumptionEntity> consumptions =
                     patientConsumptionRepository.findByHospitalizationIdOrderByConsumedAtDesc(hospitalizationId);
-            for (PatientConsumptionEntity pc : consumptions) {
-                Double unitPrice = pc.getUnitPrice();
-
-                BigDecimal consPrice = unitPrice != null && unitPrice > 0
+            for (PatientConsumptionEntity consumption : consumptions) {
+                Double unitPrice = consumption.getUnitPrice();
+                BigDecimal consumptionPrice = unitPrice != null && unitPrice > 0
                         ? BigDecimal.valueOf(unitPrice)
-                        : conventionTariffService.getTariff(
-                        pc.getItemName(),
-                        new BigDecimal("1500")
-                );
+                        : conventionTariffService.getTariff(consumption.getItemName(), new BigDecimal("1500"));
                 invoice.addItem(new InvoiceItemEntity(
-                        "Consommation : " + pc.getItemName(),
+                        "Consommation : " + consumption.getItemName(),
                         InvoiceItemType.MEDICATION,
-                        consPrice,
-                        BigDecimal.valueOf(pc.getQuantity()),
-                        null
-                ));
+                        consumptionPrice,
+                        BigDecimal.valueOf(consumption.getQuantity()),
+                        null));
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            // La pré-facturation reste tolérante aux modules optionnels non configurés.
+        }
     }
 
     private void addOperatingReports(InvoiceEntity invoice, UUID hospitalizationId) {
         try {
             List<OperatingReportEntity> reports =
                     operatingReportRepository.findByHospitalizationIdOrderByOperationDateDesc(hospitalizationId);
-            for (OperatingReportEntity op : reports) {
-                if (!op.isValidated()) continue;
+            for (OperatingReportEntity report : reports) {
+                if (!report.isValidated()) {
+                    continue;
+                }
                 BigDecimal kValue = conventionTariffService.getTariff("K", new BigDecimal("1000"));
 
-                if (op.getkSurgeonValue() > 0) {
+                if (report.getkSurgeonValue() > 0) {
                     invoice.addItem(new InvoiceItemEntity(
-                            "CRO : Honoraires Chirurgien (K " + op.getkSurgeonValue() + " - " + op.getProcedureName() + ")",
+                            "CRO : Honoraires Chirurgien (K " + report.getkSurgeonValue()
+                                    + " - " + report.getProcedureName() + ")",
                             InvoiceItemType.K_SURGEON,
-                            kValue.multiply(BigDecimal.valueOf(op.getkSurgeonValue())),
-                            BigDecimal.ONE, null
-                    ));
+                            kValue.multiply(BigDecimal.valueOf(report.getkSurgeonValue())),
+                            BigDecimal.ONE,
+                            null));
                 }
-                if (op.getkAnesthesistValue() > 0) {
+                if (report.getkAnesthesistValue() > 0) {
                     invoice.addItem(new InvoiceItemEntity(
-                            "CRO : Honoraires Anesthésiste (K " + op.getkAnesthesistValue() + " - " + op.getProcedureName() + ")",
+                            "CRO : Honoraires Anesthésiste (K " + report.getkAnesthesistValue()
+                                    + " - " + report.getProcedureName() + ")",
                             InvoiceItemType.K_ANESTHESIST,
-                            kValue.multiply(BigDecimal.valueOf(op.getkAnesthesistValue())),
-                            BigDecimal.ONE, null
-                    ));
+                            kValue.multiply(BigDecimal.valueOf(report.getkAnesthesistValue())),
+                            BigDecimal.ONE,
+                            null));
                 }
-                if (op.getkBlocValue() > 0) {
+                if (report.getkBlocValue() > 0) {
                     invoice.addItem(new InvoiceItemEntity(
-                            "CRO : Frais de Bloc Opératoire (K " + op.getkBlocValue() + " - " + op.getProcedureName() + ")",
+                            "CRO : Frais de Bloc Opératoire (K " + report.getkBlocValue()
+                                    + " - " + report.getProcedureName() + ")",
                             InvoiceItemType.K_BLOC,
-                            kValue.multiply(BigDecimal.valueOf(op.getkBlocValue())),
-                            BigDecimal.ONE, null
-                    ));
+                            kValue.multiply(BigDecimal.valueOf(report.getkBlocValue())),
+                            BigDecimal.ONE,
+                            null));
                 }
 
-                if (op.getImplants() != null) {
-                    for (var implant : op.getImplants()) {
+                if (report.getImplants() != null) {
+                    for (var implant : report.getImplants()) {
                         Double implantUnitPrice = implant.getUnitPrice();
-
                         BigDecimal implantPrice = implantUnitPrice != null && implantUnitPrice > 0
                                 ? BigDecimal.valueOf(implantUnitPrice)
                                 : conventionTariffService.getTariff(
-                                implant.getImplantName(),
-                                new BigDecimal("25000")
-                        );
+                                        implant.getImplantName(),
+                                        new BigDecimal("25000"));
                         String label = "Implant : " + implant.getImplantName()
                                 + (implant.getLotNumber() != null && !implant.getLotNumber().isEmpty()
-                                ? " (Lot: " + implant.getLotNumber() + ")" : "");
+                                        ? " (Lot: " + implant.getLotNumber() + ")"
+                                        : "");
                         invoice.addItem(new InvoiceItemEntity(
-                                label, InvoiceItemType.MEDICATION,
-                                implantPrice, BigDecimal.valueOf(implant.getQuantity()), null
-                        ));
+                                label,
+                                InvoiceItemType.MEDICATION,
+                                implantPrice,
+                                BigDecimal.valueOf(implant.getQuantity()),
+                                null));
                     }
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            // La pré-facturation reste tolérante aux modules optionnels non configurés.
+        }
     }
 
     private void addPrescriptionItems(InvoiceEntity invoice, UUID visitId) {
         try {
-            Optional<ConsultationEntity> consultOpt = consultationRepository.findByVisitId(visitId);
-            if (consultOpt.isEmpty()) return;
-            Optional<PrescriptionEntity> presOpt = prescriptionRepository.findByConsultationId(consultOpt.get().getId());
-            if (presOpt.isEmpty()) return;
-            for (PrescriptionItemEntity item : presOpt.get().getItems()) {
-                BigDecimal qty = BigDecimal.ONE;
+            Optional<ConsultationEntity> consultation = consultationRepository.findByVisitId(visitId);
+            if (consultation.isEmpty()) {
+                return;
+            }
+            Optional<PrescriptionEntity> prescription =
+                    prescriptionRepository.findByConsultationId(consultation.get().getId());
+            if (prescription.isEmpty()) {
+                return;
+            }
+            for (PrescriptionItemEntity item : prescription.get().getItems()) {
+                BigDecimal quantity = BigDecimal.ONE;
                 try {
-                    String cleanQty = item.getQuantity().replaceAll("[^\\d.]", "");
-                    if (!cleanQty.isEmpty()) qty = new BigDecimal(cleanQty);
-                } catch (Exception ignored) {}
+                    String cleanQuantity = item.getQuantity().replaceAll("[^\\d.]", "");
+                    if (!cleanQuantity.isEmpty()) {
+                        quantity = new BigDecimal(cleanQuantity);
+                    }
+                } catch (Exception ignored) {
+                    // Quantité non numérique : conserver une unité.
+                }
 
-                BigDecimal drugPrice = conventionTariffService.getTariff(item.getDrugName(), new BigDecimal("2500"));
+                BigDecimal drugPrice = conventionTariffService.getTariff(
+                        item.getDrugName(),
+                        new BigDecimal("2500"));
                 invoice.addItem(new InvoiceItemEntity(
                         "Médicament : " + item.getDrugName() + " (" + item.getDosage() + ")",
                         InvoiceItemType.MEDICATION,
                         drugPrice,
-                        qty,
-                        null
-                ));
+                        quantity,
+                        null));
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            // La pré-facturation reste tolérante aux modules optionnels non configurés.
+        }
     }
 }
