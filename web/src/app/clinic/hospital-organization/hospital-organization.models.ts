@@ -17,7 +17,7 @@ export interface OrganizationalUnit {
   id: string;
   parentId: string | null;
   code: string;
-  name: string;
+  name: string | null;
   unitType: OrganizationalUnitType;
   serviceCatalogCode: string | null;
   active: boolean;
