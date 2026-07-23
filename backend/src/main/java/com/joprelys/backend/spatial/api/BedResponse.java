@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public record BedResponse(
         UUID id,
-        UUID roomId,
+        UUID spaceId,
         String bedNumber,
         String status,
         String capacityStatus,
@@ -22,7 +22,7 @@ public record BedResponse(
     public static BedResponse fromEntity(BedEntity entity, boolean hasActiveAssignment) {
         return new BedResponse(
                 entity.getId(),
-                entity.getRoom().getId(),
+                entity.getSpace().getId(),
                 entity.getBedNumber(),
                 entity.getStatus().name(),
                 entity.getCapacityStatus().name(),
