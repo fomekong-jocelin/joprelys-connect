@@ -7,15 +7,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface OrganizationalUnitRepository extends JpaRepository<OrganizationalUnitEntity, UUID> {
 
-    List<OrganizationalUnitEntity> findAllByOrderByCodeAsc();
+    List<OrganizationalUnitEntity> findAllByOrganizationIdOrderByCodeAsc(UUID organizationId);
 
-    List<OrganizationalUnitEntity> findAllByActiveTrueOrderByCodeAsc();
+    List<OrganizationalUnitEntity> findAllByOrganizationIdAndActiveTrueOrderByCodeAsc(UUID organizationId);
 
     Optional<OrganizationalUnitEntity> findByIdAndOrganizationId(UUID id, UUID organizationId);
 
-    boolean existsByCodeIgnoreCase(String code);
+    boolean existsByOrganizationIdAndCodeIgnoreCase(UUID organizationId, String code);
 
-    boolean existsByCodeIgnoreCaseAndIdNot(String code, UUID id);
+    boolean existsByOrganizationIdAndCodeIgnoreCaseAndIdNot(UUID organizationId, String code, UUID id);
 
-    boolean existsByParentIdAndActiveTrue(UUID parentId);
+    boolean existsByOrganizationIdAndParentIdAndActiveTrue(UUID organizationId, UUID parentId);
 }
