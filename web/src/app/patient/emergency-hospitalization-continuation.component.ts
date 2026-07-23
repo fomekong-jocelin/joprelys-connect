@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { catchError, finalize, forkJoin, of, switchMap } from 'rxjs';
+import { catchError, finalize, forkJoin, Observable, of, switchMap } from 'rxjs';
 import { HospitalOrganizationApiService } from '../clinic/hospital-organization/hospital-organization-api.service';
 import { HospitalServiceCatalogEntry, OrganizationalUnit } from '../clinic/hospital-organization/hospital-organization.models';
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
@@ -183,13 +183,19 @@ export class EmergencyHospitalizationContinuationComponent {
         this.staff.set(data.staff);
         const inpatientSpaces = data.spaces.filter((space) => space.inpatientProfile && space.active);
         if (inpatientSpaces.length === 0) return of({} as Record<string, BedConfiguration[]>);
-        const requests = Object.fromEntries(inpatientSpaces.map((space) => [space.id, this.spatialApi.listBeds(space.id)]));
-        return forkJoin(requests) as unknown as ReturnType<typeof of<Record<string, BedConfiguration[]>>>;
+        const requests: Record<string, Observable<BedConfiguration[]>> = {};
+        for (const space of inpatientSpaces) {
+          requests[space.id] = this.spatialApi.listBeds(space.id);
+        }
+        return forkJoin(requests);
       }),
       finalize(() => this.loading.set(false)),
     ).subscribe({
-      next: (beds) => this.bedsBySpace.set(beds as Record<string, BedConfiguration[]>),
-      error: () => this.error.set(this.t('patients.hospitalization.emergencyContinuation.loadError', 'Impossible de charger les unités, espaces et lits disponibles.')),
+      next: (beds) => this.bedsBySpace.set(beds),
+      error: () => this.error.set(this.t(
+        'patients.hospitalization.emergencyContinuation.loadError',
+        'Impossible de charger les unités, espaces et lits disponibles.',
+      )),
     });
   }
 
@@ -259,15 +265,24 @@ export class EmergencyHospitalizationContinuationComponent {
     ).subscribe({
       next: () => {
         if (!documentsSecured) {
-          this.documentWarning.set(this.t('patients.hospitalization.emergencyContinuation.documentWarning', 'L’hospitalisation est créée, mais le lot documentaire doit être régénéré depuis le dossier d’urgence.'));
+          this.documentWarning.set(this.t(
+            'patients.hospitalization.emergencyContinuation.documentWarning',
+            'L’hospitalisation est créée, mais le lot documentaire doit être régénéré depuis le dossier d’urgence.',
+          ));
         }
-        this.success.set(this.t('patients.hospitalization.emergencyContinuation.success', 'Hospitalisation créée avec continuité clinique sécurisée.'));
+        this.success.set(this.t(
+          'patients.hospitalization.emergencyContinuation.success',
+          'Hospitalisation créée avec continuité clinique sécurisée.',
+        ));
         this.admitted.emit();
       },
       error: (err) => this.error.set(
         err?.error?.detail
         || err?.error?.title
-        || this.t('patients.hospitalization.emergencyContinuation.error', 'La continuité vers l’hospitalisation n’a pas pu être finalisée.'),
+        || this.t(
+          'patients.hospitalization.emergencyContinuation.error',
+          'La continuité vers l’hospitalisation n’a pas pu être finalisée.',
+        ),
       ),
     });
   }
