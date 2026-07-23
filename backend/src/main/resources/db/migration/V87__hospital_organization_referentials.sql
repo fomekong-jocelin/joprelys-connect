@@ -20,6 +20,16 @@ CREATE TABLE medical_specialty_catalog (
     CONSTRAINT chk_medical_specialty_catalog_names_not_blank CHECK (TRIM(name_fr) <> '' AND TRIM(name_en) <> '')
 );
 
+CREATE TABLE organizational_unit_type_catalog (
+    code VARCHAR(32) PRIMARY KEY
+);
+
+INSERT INTO organizational_unit_type_catalog (code) VALUES
+    ('POLE'),
+    ('DEPARTMENT'),
+    ('SERVICE'),
+    ('CARE_UNIT');
+
 CREATE TABLE organizational_units (
     id UUID PRIMARY KEY,
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
@@ -37,12 +47,15 @@ CREATE TABLE organizational_units (
         FOREIGN KEY (parent_id, organization_id)
         REFERENCES organizational_units(id, organization_id)
         ON DELETE RESTRICT,
+    CONSTRAINT fk_organizational_units_type
+        FOREIGN KEY (unit_type)
+        REFERENCES organizational_unit_type_catalog(code)
+        ON DELETE RESTRICT,
     CONSTRAINT fk_organizational_units_service_catalog
         FOREIGN KEY (service_catalog_code)
         REFERENCES hospital_service_catalog(code)
         ON DELETE RESTRICT,
     CONSTRAINT chk_organizational_units_code_not_blank CHECK (TRIM(code) <> ''),
-    CONSTRAINT chk_organizational_units_type CHECK (unit_type IN ('POLE', 'DEPARTMENT', 'SERVICE', 'CARE_UNIT')),
     CONSTRAINT chk_organizational_units_identity CHECK (
         (unit_type = 'SERVICE' AND service_catalog_code IS NOT NULL AND name IS NULL)
         OR
