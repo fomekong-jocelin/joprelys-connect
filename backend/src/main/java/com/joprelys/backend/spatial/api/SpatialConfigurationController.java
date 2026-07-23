@@ -75,26 +75,4 @@ public class SpatialConfigurationController {
     public void deleteRoom(@RequestParam(required = false) UUID organizationId, @PathVariable UUID id) {
         configurationUseCase.deleteRoom(organizationId, id);
     }
-
-    @PostMapping("/beds")
-    @ResponseStatus(HttpStatus.CREATED)
-    public BedResponse createBed(
-            @RequestParam(required = false) UUID organizationId,
-            @Valid @RequestBody SaveBedRequest request) {
-        return configurationUseCase.createBed(organizationId, request);
-    }
-
-    @PutMapping("/beds/{id}")
-    public BedResponse updateBed(
-            @RequestParam(required = false) UUID organizationId,
-            @PathVariable UUID id,
-            @Valid @RequestBody SaveBedRequest request) {
-        return configurationUseCase.updateBed(organizationId, id, request);
-    }
-
-    @DeleteMapping("/beds/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteBed(@RequestParam(required = false) UUID organizationId, @PathVariable UUID id) {
-        configurationUseCase.deleteBed(organizationId, id);
-    }
 }
