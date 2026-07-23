@@ -1,56 +1,63 @@
-# Comptes de Démo & Rôles Joprelys Connect
+# Comptes de démonstration et rôles — Joprelys Connect
 
-Ce document liste les comptes de test pré-initialisés et les procédures pour obtenir des accès sur les différents écrans de l'application.
+## 1. Principe de sécurité
 
----
+Le dépôt **ne fournit plus de comptes de démonstration avec mot de passe prédéfini**.
 
-## 1. Comptes pré-initialisés (Seeded)
+- aucun mot de passe de démonstration ne doit être commité ;
+- aucun compte médecin, pharmacien ou clinique de test n'est créé automatiquement par `AdminUserSeeder` ;
+- le bootstrap `ADMIN_JOPRELYS` est désactivé par défaut et, lorsqu'il est exceptionnellement activé, ses informations proviennent exclusivement des variables d'environnement / du gestionnaire de secrets ;
+- les accès utilisés pour une démonstration doivent être provisionnés dans l'environnement concerné par les parcours normaux d'administration.
 
-Lors du démarrage de l'application backend, les comptes de test suivants sont automatiquement créés en base de données (se référer à [AdminUserSeeder.java](file:///C:/MES-APPLICATIONS/joprelys-connect/backend/src/main/java/com/joprelys/backend/auth/application/AdminUserSeeder.java)) :
+## 2. Préparation des comptes d'une démonstration
 
-| Rôle | Email | Mot de passe | Description |
-|---|---|---|---|
-| **ADMIN_JOPRELYS** | `admin@joprelys.local` | `Admin@12345` | Super-administrateur de Joprelys HealthTech. Gère les Cliniques Pilotes (organisations) et consulte le journal d'audit global. |
-| **MEDECIN** | `medecin@joprelys.local` | `Admin@12345` | Praticien clinique de test rattaché à la *Clinique Joprelys*. Peut créer des visites, des prescriptions, et des demandes d'examens. **Utilisé également comme rôle de secours (fallback) pour accéder et tester le portail laboratoire.** |
-| **PHARMACIEN** | `pharmacien@joprelys.local` | `Admin@12345` | Pharmacien de test rattaché à la *Clinique Joprelys*. Peut utiliser le portail pharmacie pour vérifier des ordonnances et saisir des dispensations de médicaments. |
+Préparer uniquement les profils nécessaires au scénario :
 
----
+| Profil | Usage typique |
+|---|---|
+| `ADMIN_JOPRELYS` | Administration plateforme et création/gestion des établissements selon les permissions effectives |
+| `ADMIN_CLINIQUE` | Administration de l'établissement, personnel et RBAC clinique |
+| `AGENT_ACCUEIL` | Accueil, patients, visites et parcours administratifs autorisés |
+| `INFIRMIER` | Constantes, soins, urgences et hospitalisation selon permissions |
+| `MEDECIN` | Consultation, prescriptions, examens, urgences et hospitalisation selon permissions |
+| `BIOLOGISTE` | File laboratoire et traitement des résultats |
+| `PHARMACIEN` | Dispensation et fonctions pharmacie autorisées |
+| `RESPONSABLE_HOSPITALISATION` | Admission, transfert, départ physique et opérations de lit selon permissions |
+| `CAISSIER` / profils finance | Encaissement et fonctions financières selon le scénario |
+| `PATIENT` | Portail patient via authentification OTP |
 
-## 2. Accès aux écrans Laboratoire (Biologiste)
+Les rôles visibles et les actions disponibles sont déterminés par le RBAC effectif. Ne jamais utiliser un ancien tableau documentaire de credentials comme source de vérité.
 
-Un rôle spécifique et dédié **BIOLOGISTE** ou **LABORATOIRE** n'est pas encore finalisé/tranché dans le périmètre actuel (post-MVP).
+## 3. Création des accès personnel
 
-* **Comment tester les écrans laboratoire (`/clinic/lab-orders`) ?**
-  Connectez-vous avec le compte **MEDECIN** (`medecin@joprelys.local` / `Admin@12345`) ou un compte **ADMIN_CLINIQUE**. Ces deux rôles disposent des habilitations requises pour accéder au tableau de bord des demandes d'examens biologiques, effectuer les saisies de résultats multi-analytes et téléverser le PDF de résultat.
+1. Le compte plateforme initial, lorsqu'il est nécessaire, est créé par un bootstrap contrôlé et temporaire.
+2. L'administrateur plateforme crée ou sélectionne l'établissement cible.
+3. Un `ADMIN_CLINIQUE` est créé via le parcours produit prévu.
+4. L'administrateur clinique invite ensuite les collaborateurs et leur attribue les rôles nécessaires.
+5. Les secrets temporaires ou liens de première connexion sont transmis par les mécanismes applicatifs prévus et ne sont jamais copiés dans Git.
 
----
+## 4. Portail patient
 
-## 3. Rôles dynamiques (Par invitation)
+Le portail patient utilise un OTP et non un mot de passe statique de démonstration.
 
-Pour tester les autres rôles du personnel de clinique, connectez-vous avec un compte **Administrateur Clinique** (`ADMIN_CLINIQUE`) sur son espace, puis invitez des membres via l'écran **Gestion du Personnel** (`/clinic/staff`).
+Pour tester le parcours :
 
-### Comment obtenir un compte ADMIN_CLINIQUE ?
-1. Connectez-vous en tant que **Super-administrateur** (`admin@joprelys.local`).
-2. Allez sur l'écran **Cliniques Pilotes** (`/organizations`).
-3. Créez un administrateur pour l'organisation (ou lors de la création d'une nouvelle clinique).
-4. Définissez son adresse e-mail. Le mot de passe temporaire sera généré et s'affichera à l'écran.
+1. créer ou sélectionner un patient de démonstration dans l'établissement ;
+2. utiliser les informations patient exigées par le formulaire de connexion ;
+3. demander l'OTP ;
+4. récupérer le code via le canal d'envoi configuré dans l'environnement ;
+5. saisir le code dans sa fenêtre de validité.
 
-### Rôles invitables depuis le portail Administrateur Clinique :
-* **INFIRMIER** : Saisie des constantes vitales, historique patient.
-* **AGENT_ACCUEIL** : Enregistrement de nouveaux patients et ouverture des visites.
-* **MEDECIN** / **PHARMACIEN** (supplémentaires).
+Le code courant utilise le service de messagerie applicatif pour l'OTP de connexion patient. Il ne faut pas compter sur un affichage du code dans la console backend comme procédure normale de démonstration.
 
----
+## 5. Runbook de démonstration
 
-## 4. Accès au Portail Patient (`/patient/dashboard`)
+Les identités fictives, rôles requis et données métier d'un scénario doivent être documentés dans le runbook de la démonstration concernée, **sans mot de passe, OTP, token ou secret**.
 
-Le portail patient n'utilise pas de mot de passe traditionnel, mais une authentification par **Code OTP** à deux étapes (simulée).
+Pour la démonstration du 25 juillet 2026, utiliser les documents canoniques du parcours de démo et le runbook daté associé plutôt que de recréer un second jeu de comptes ou de données concurrent.
 
-### Procédure de connexion pour un Patient :
-1. Créez un patient en vous connectant avec un rôle **AGENT_ACCUEIL** ou **MEDECIN** sur la clinique.
-2. Notez le **N° DPU** généré (ex: `DPU-20260703-0001`), le numéro de **téléphone**, et la **date de naissance** saisie.
-3. Allez sur la page de connexion, basculez sur l'onglet **Patient**.
-4. Remplissez le formulaire avec ces informations et cliquez sur **Recevoir un code OTP**.
-5. Le code de connexion OTP (à 6 chiffres) est imprimé directement dans la console d'exécution du backend Spring Boot sous la forme :
-   `[OTP PATIENT] Code de connexion pour DPU DPU-XXXXXX-XXXX : XXXXXX`
-6. Saisissez ce code dans la deuxième étape pour accéder au tableau de bord patient.
+## 6. Règle de maintenance
+
+Ce document décrit la politique de préparation des accès. Il ne doit jamais redevenir un inventaire de credentials.
+
+Toute valeur ressemblant à un secret, mot de passe, OTP ou token ajoutée à ce fichier doit être considérée comme une anomalie de sécurité et retirée avant fusion.
