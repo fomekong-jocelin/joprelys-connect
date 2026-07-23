@@ -86,13 +86,13 @@ export class SpatialConfigurationPageComponent implements OnInit {
     this.loadConfiguration();
   }
 
-  loadConfiguration(): void {
+  loadConfiguration(preserveMessages = false): void {
     if (!this.canManageScope()) {
       this.loading.set(false);
       return;
     }
     this.loading.set(true);
-    this.clearMessages();
+    if (!preserveMessages) this.clearMessages();
     const scope = this.scopeOrganizationId();
     forkJoin({
       locations: this.spatialApi.listLocations(scope, true),
@@ -208,7 +208,7 @@ export class SpatialConfigurationPageComponent implements OnInit {
         this.editor.set(null);
         this.successMessage.set(this.t('spatial.config.saveSuccess', 'Configuration enregistrée.'));
         this.busy.set(false);
-        this.loadConfiguration();
+        this.loadConfiguration(true);
       },
       error: (error: HttpErrorResponse) => {
         this.errorMessage.set(this.extractError(error));
@@ -333,7 +333,7 @@ export class SpatialConfigurationPageComponent implements OnInit {
       next: () => {
         this.successMessage.set(this.t('spatial.config.saveSuccess', 'Configuration enregistrée.'));
         this.busy.set(false);
-        this.loadConfiguration();
+        this.loadConfiguration(true);
       },
       error: (error: HttpErrorResponse) => {
         this.errorMessage.set(this.extractError(error));
