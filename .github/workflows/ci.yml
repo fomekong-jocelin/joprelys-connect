@@ -151,7 +151,10 @@ jobs:
       - name: Ensure Maven wrapper is executable
         run: chmod +x mvnw
       - name: Build and verify (Maven strict)
-        run: ./mvnw clean verify -B --no-transfer-progress -Dspring.profiles.active=test
+        shell: bash
+        run: |
+          set -o pipefail
+          ./mvnw clean verify -B --no-transfer-progress -Dspring.profiles.active=test 2>&1 | tee backend-verify.log
         env:
           SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
           JOPRELYS_JWT_SECRET: ci-test-jwt-secret-at-least-32-chars-2026
@@ -160,7 +163,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-test-reports
-          path: backend/target/surefire-reports
+          path: |
+            backend/backend-verify.log
+            backend/target/surefire-reports
           if-no-files-found: ignore
           retention-days: 7
 
