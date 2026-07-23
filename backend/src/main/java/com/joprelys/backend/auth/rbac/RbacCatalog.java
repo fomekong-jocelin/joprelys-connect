@@ -21,6 +21,7 @@ public final class RbacCatalog {
     public static final String PERMISSION_RBAC_READ = "RBAC_READ";
     public static final String PERMISSION_RBAC_MANAGE = "RBAC_MANAGE";
     public static final String PERMISSION_ORGANIZATION_MANAGE = "ORGANIZATION_MANAGE";
+    public static final String PERMISSION_ORGANIZATION_STRUCTURE_MANAGE = "ORGANIZATION_STRUCTURE_MANAGE";
     public static final String PERMISSION_AUTH_SESSION_MANAGE = "AUTH_SESSION_MANAGE";
     public static final String PERMISSION_EMERGENCY_MEDICO_LEGAL_READ = "EMERGENCY_MEDICO_LEGAL_READ";
     public static final String PERMISSION_EMERGENCY_MEDICO_LEGAL_WRITE = "EMERGENCY_MEDICO_LEGAL_WRITE";
@@ -64,6 +65,7 @@ public final class RbacCatalog {
                 permission("RBAC_MANAGE", "ADMINISTRATION", "Administrer le RBAC", "Créer des rôles personnalisés et gérer leurs permissions."),
                 permission(PERMISSION_AUTH_SESSION_MANAGE, "ADMINISTRATION", "Gérer les sessions utilisateurs", "Consulter et révoquer les sessions des collaborateurs du même établissement."),
                 permission(PERMISSION_ORGANIZATION_MANAGE, "ADMINISTRATION", "Gérer les établissements", "Créer et administrer les établissements."),
+                permission(PERMISSION_ORGANIZATION_STRUCTURE_MANAGE, "ADMINISTRATION", "Configurer l'organisation hospitalière", "Configurer les pôles, départements, services et unités de soins de l'établissement."),
                 permission("WEBHOOK_MANAGE", "ADMINISTRATION", "Gérer les webhooks", "Créer, consulter, modifier et supprimer les webhooks de l'établissement."),
                 permission("STAFF_PROFILE_ACCESS", "ADMINISTRATION", "Gérer son profil collaborateur", "Consulter et modifier uniquement son propre profil collaborateur."),
                 permission("FILE_UPLOAD", "ADMINISTRATION", "Téléverser des fichiers autorisés", "Téléverser une photo, un logo, une signature ou un cachet selon les règles métier."),
@@ -143,11 +145,12 @@ public final class RbacCatalog {
         Set<String> all = permissionCodes();
 
         mappings.put(ROLE_ADMIN_JOPRELYS, set(
-                PERMISSION_ORGANIZATION_MANAGE, "WEBHOOK_MANAGE", "SPATIAL_CONFIGURATION_MANAGE",
+                PERMISSION_ORGANIZATION_MANAGE, PERMISSION_ORGANIZATION_STRUCTURE_MANAGE,
+                "WEBHOOK_MANAGE", "SPATIAL_CONFIGURATION_MANAGE",
                 "USER_READ", "RBAC_READ", "RBAC_MANAGE"));
         mappings.put(ROLE_SUPER_ADMIN, set(
-                PERMISSION_ORGANIZATION_MANAGE, "SPATIAL_CONFIGURATION_MANAGE",
-                "USER_READ", "RBAC_READ", "RBAC_MANAGE"));
+                PERMISSION_ORGANIZATION_MANAGE, PERMISSION_ORGANIZATION_STRUCTURE_MANAGE,
+                "SPATIAL_CONFIGURATION_MANAGE", "USER_READ", "RBAC_READ", "RBAC_MANAGE"));
         mappings.put(ROLE_ADMIN_CLINIQUE, without(
                 all,
                 PERMISSION_ORGANIZATION_MANAGE,
