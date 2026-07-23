@@ -42,6 +42,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Changed
 
+- **HOS-RBAC-001-D — suppression définitive de `HOSPITALIZATION_MANAGE` (#121 / PR #122)** : retrait de la permission générique du catalogue RBAC et du référentiel persistant via Flyway V86 ; les liens `role_permissions` legacy sont supprimés par cascade sans attribution automatique de droits de remplacement. Les permissions spécialisées livrées par HOS-RBAC-001-A/B/C restent l'unique contrat courant. Un test PostgreSQL 16 couvre V85 → V86 avec rôle personnalisé, conservation du rôle et absence de remapping ; la CI complète #1027 (Maven strict, Angular tests et build) est verte. Changement volontairement fail-closed et cassant pour les rôles personnalisés encore liés à l'autorité supprimée ; impact de release : MAJOR.
 - **Configuration de la structure hospitalière (TASK-20260717-HOSPITAL-STRUCTURE-CONFIG)** : ajout d'un espace administrateur FR/EN pour créer, modifier et supprimer les services, chambres et lits ; capacités, doublons, dépendances et lits occupés sont contrôlés côté backend, les opérations sont auditées et la base impose des index uniques par clinique.
 
 - **E-mails transactionnels premium (TASK-20260717-PREMIUM-ACCOUNT-EMAILS)** : remplacement des messages texte par un modèle HTML responsive partagé avec logo embarqué, code ou mot de passe mis en évidence, consignes de sécurité, texte alternatif et échappement des données dynamiques.
