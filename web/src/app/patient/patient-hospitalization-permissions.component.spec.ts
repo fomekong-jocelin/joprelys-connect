@@ -25,6 +25,7 @@ describe('PatientHospitalizationComponent permissions', () => {
     currentBedId: 'bed-a',
     serviceName: 'Médecine',
     spaceName: 'Chambre 201',
+    roomNumber: 'Chambre 201',
     bedNumber: 'A',
     admissionReason: 'Surveillance',
     status: 'EN_COURS',
