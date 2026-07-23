@@ -24,16 +24,25 @@ describe('SpatialManagementPageComponent', () => {
         {
           provide: SpatialApiService,
           useValue: {
-            listWards: vi.fn(() => of([{ id: 'ward-1', name: 'Médecine' }])),
-            getWardOccupancy: vi.fn(() => of({
-              id: 'ward-1',
-              name: 'Médecine',
-              rooms: [],
-              totalBedsCount: 6,
-              openBedsCount: 4,
-              readyBedsCount: 3,
-              occupiedBedsCount: 1,
-              availableBedsCount: 2,
+            listSpaces: vi.fn(() => of([{
+              id: 'space-1',
+              locationNodeId: null,
+              code: 'MED_201',
+              name: 'Chambre 201',
+              spaceTypeCode: 'HOSPITAL_ROOM',
+              inpatientProfile: true,
+              active: true,
+            }])),
+            getSpaceOccupancy: vi.fn(() => of({
+              spaceId: 'space-1',
+              spaceCode: 'MED_201',
+              spaceName: 'Chambre 201',
+              installedBeds: 6,
+              openBeds: 4,
+              readyBeds: 3,
+              occupiedBeds: 1,
+              availableBeds: 2,
+              beds: [],
             })),
             updateBedCleaningStatus,
             updateBedMaintenanceStatus,
@@ -48,11 +57,11 @@ describe('SpatialManagementPageComponent', () => {
     component = TestBed.createComponent(SpatialManagementPageComponent).componentInstance;
   });
 
-  it('uses the backend availability count instead of total minus occupied', () => {
+  it('uses the backend availability count instead of installed minus occupied', () => {
     component.ngOnInit();
 
-    expect(component.availableBedsCount()).toBe(2);
-    expect(component.occupancy()!.totalBedsCount - component.occupancy()!.occupiedBedsCount).toBe(5);
+    expect(component.occupancy()!.availableBeds).toBe(2);
+    expect(component.occupancy()!.installedBeds - component.occupancy()!.occupiedBeds).toBe(5);
   });
 
   it('calculates the occupancy rate against open beds', () => {
