@@ -25,7 +25,7 @@ CREATE TABLE organizational_units (
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
     parent_id UUID,
     code VARCHAR(64) NOT NULL,
-    name VARCHAR(120) NOT NULL,
+    name VARCHAR(120),
     unit_type VARCHAR(32) NOT NULL,
     service_catalog_code VARCHAR(64),
     active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -42,12 +42,11 @@ CREATE TABLE organizational_units (
         REFERENCES hospital_service_catalog(code)
         ON DELETE RESTRICT,
     CONSTRAINT chk_organizational_units_code_not_blank CHECK (TRIM(code) <> ''),
-    CONSTRAINT chk_organizational_units_name_not_blank CHECK (TRIM(name) <> ''),
     CONSTRAINT chk_organizational_units_type CHECK (unit_type IN ('POLE', 'DEPARTMENT', 'SERVICE', 'CARE_UNIT')),
-    CONSTRAINT chk_organizational_units_service_catalog CHECK (
-        (unit_type = 'SERVICE' AND service_catalog_code IS NOT NULL)
+    CONSTRAINT chk_organizational_units_identity CHECK (
+        (unit_type = 'SERVICE' AND service_catalog_code IS NOT NULL AND name IS NULL)
         OR
-        (unit_type <> 'SERVICE' AND service_catalog_code IS NULL)
+        (unit_type <> 'SERVICE' AND service_catalog_code IS NULL AND name IS NOT NULL AND TRIM(name) <> '')
     )
 );
 
