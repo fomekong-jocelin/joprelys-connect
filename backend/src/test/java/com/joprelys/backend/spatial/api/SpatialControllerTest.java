@@ -16,19 +16,23 @@ import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationEntity;
 import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository;
+import com.joprelys.backend.hospitalorganization.domain.OrganizationalUnitType;
+import com.joprelys.backend.hospitalorganization.infrastructure.persistence.OrganizationalUnitEntity;
+import com.joprelys.backend.hospitalorganization.infrastructure.persistence.OrganizationalUnitRepository;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.spatial.application.SpatialService;
-import com.joprelys.backend.spatial.domain.HospitalServiceType;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentRepository;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedRepository;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedStatus;
-import com.joprelys.backend.spatial.infrastructure.persistence.RoomEntity;
-import com.joprelys.backend.spatial.infrastructure.persistence.RoomRepository;
-import com.joprelys.backend.spatial.infrastructure.persistence.WardEntity;
-import com.joprelys.backend.spatial.infrastructure.persistence.WardRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.FacilitySpaceEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.FacilitySpaceRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.InpatientSpaceProfileEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.InpatientSpaceProfileRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.OrganizationalUnitSpaceAssignmentEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.OrganizationalUnitSpaceAssignmentRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import java.time.Instant;
@@ -46,6 +50,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
@@ -56,47 +61,22 @@ import tools.jackson.databind.json.JsonMapper;
 @ActiveProfiles("test")
 public class SpatialControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private OrganizationRepository organizationRepository;
-
-    @Autowired
-    private UserAccountRepository userAccountRepository;
-
-    @Autowired
-    private PatientRepository patientRepository;
-
-    @Autowired
-    private HospitalizationRepository hospitalizationRepository;
-
-    @Autowired
-    private VisitRepository visitRepository;
-
-    @Autowired
-    private WardRepository wardRepository;
-
-    @Autowired
-    private RoomRepository roomRepository;
-
-    @Autowired
-    private BedRepository bedRepository;
-
-    @Autowired
-    private BedAssignmentRepository bedAssignmentRepository;
-
-    @Autowired
-    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
-
-    @Autowired
-    private JwtService jwtService;
-
-    @Autowired
-    private SpatialService spatialService;
-
-    @Autowired
-    private JsonMapper jsonMapper;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private OrganizationRepository organizationRepository;
+    @Autowired private UserAccountRepository userAccountRepository;
+    @Autowired private PatientRepository patientRepository;
+    @Autowired private HospitalizationRepository hospitalizationRepository;
+    @Autowired private VisitRepository visitRepository;
+    @Autowired private OrganizationalUnitRepository organizationalUnitRepository;
+    @Autowired private FacilitySpaceRepository spaceRepository;
+    @Autowired private InpatientSpaceProfileRepository inpatientSpaceProfileRepository;
+    @Autowired private OrganizationalUnitSpaceAssignmentRepository unitSpaceAssignmentRepository;
+    @Autowired private BedRepository bedRepository;
+    @Autowired private BedAssignmentRepository bedAssignmentRepository;
+    @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private JwtService jwtService;
+    @Autowired private SpatialService spatialService;
+    @Autowired private JsonMapper jsonMapper;
 
     private OrganizationEntity org;
     private UserAccountEntity doctor;
@@ -110,134 +90,92 @@ public class SpatialControllerTest {
     private String tokenAdmin;
     private String tokenPlatformAdmin;
 
-    private WardEntity ward;
-    private RoomEntity room;
+    private OrganizationalUnitEntity unit;
+    private FacilitySpaceEntity space;
     private BedEntity bedFree;
     private BedEntity bedOccupied;
+    private BedEntity bedSourceB;
 
     @BeforeEach
     void setUp() {
         clearTestData();
 
-        org = new OrganizationEntity(
-                "Clinique Spatiale",
-                "spatial@joprelys.local",
-                "123456",
-                "Street Spatial",
-                "Douala");
-        org = organizationRepository.save(org);
-
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        org = organizationRepository.save(new OrganizationEntity(
+                "Clinique Spatiale " + suffix,
+                "spatial-" + suffix + "@joprelys.local",
+                "123456", "Street Spatial", "Douala"));
         TenantContext.setTenantId(org.getId());
 
-        doctor = new UserAccountEntity("dr.spatial@joprelys.local", "Dr. Spatial", "MEDECIN", "passhash");
+        doctor = new UserAccountEntity("dr.spatial-" + suffix + "@joprelys.local", "Dr. Spatial", "MEDECIN", "passhash");
         doctor.setOrganizationId(org.getId());
         doctor = userAccountRepository.save(doctor);
-
         tokenDoctor = jwtService.createToken(doctor).value();
 
         UserAccountEntity admin = new UserAccountEntity(
-                "admin.spatial@joprelys.local", "Admin Spatial", "ADMIN_CLINIQUE", "passhash");
+                "admin.spatial-" + suffix + "@joprelys.local", "Admin Spatial", "ADMIN_CLINIQUE", "passhash");
         admin.setOrganizationId(org.getId());
         admin = userAccountRepository.save(admin);
         tokenAdmin = jwtService.createToken(admin).value();
 
         UserAccountEntity platformAdmin = new UserAccountEntity(
-                "platform.spatial@joprelys.local", "Platform Spatial", "SUPER_ADMIN", "passhash");
+                "platform.spatial-" + suffix + "@joprelys.local", "Platform Spatial", "SUPER_ADMIN", "passhash");
         platformAdmin = userAccountRepository.save(platformAdmin);
         tokenPlatformAdmin = jwtService.createToken(platformAdmin).value();
 
-        patientA = new PatientEntity(
-                "DPU-S-00001",
-                "PAT-S-001",
-                "Alice Spatial",
-                "FEMININ",
-                LocalDate.of(1990, 5, 10),
-                "+237699999991",
-                "Douala",
-                "Akwa",
-                "Street A",
-                "Bob",
-                "+237699445566",
-                "Aucune",
-                "Aucun");
-        patientB = new PatientEntity(
-                "DPU-S-00002",
-                "PAT-S-002",
-                "Bob Spatial",
-                "MASCULIN",
-                LocalDate.of(1985, 7, 20),
-                "+237699999992",
-                "Douala",
-                "Akwa",
-                "Street B",
-                "Alice",
-                "+237699445577",
-                "Aucune",
-                "Aucun");
-        patientA = patientRepository.save(patientA);
-        patientB = patientRepository.save(patientB);
+        patientA = patientRepository.save(new PatientEntity(
+                "DPU-S-A-" + suffix, "PAT-S-A-" + suffix, "Alice Spatial", "FEMININ",
+                LocalDate.of(1990, 5, 10), "+237699999991", "Douala", "Akwa", "Street A",
+                "Bob", "+237699445566", "Aucune", "Aucun"));
+        patientB = patientRepository.save(new PatientEntity(
+                "DPU-S-B-" + suffix, "PAT-S-B-" + suffix, "Bob Spatial", "MASCULIN",
+                LocalDate.of(1985, 7, 20), "+237699999992", "Douala", "Akwa", "Street B",
+                "Alice", "+237699445577", "Aucune", "Aucun"));
 
-        visitA = new VisitEntity(
-                patientA,
-                "VIS-S-001",
-                "Motif A",
-                "Général",
-                "MÉDECINE GÉNÉRALE",
-                doctor.getId(),
-                Instant.now());
-        visitB = new VisitEntity(
-                patientB,
-                "VIS-S-002",
-                "Motif B",
-                "Général",
-                "MÉDECINE GÉNÉRALE",
-                doctor.getId(),
-                Instant.now());
-        visitA = visitRepository.save(visitA);
-        visitB = visitRepository.save(visitB);
+        visitA = visitRepository.save(new VisitEntity(
+                patientA, "VIS-S-A-" + suffix, "Motif A", "Général", "Médecine",
+                doctor.getId(), Instant.now()));
+        visitB = visitRepository.save(new VisitEntity(
+                patientB, "VIS-S-B-" + suffix, "Motif B", "Général", "Médecine",
+                doctor.getId(), Instant.now()));
 
-        ward = new WardEntity("Médecine Hommes", HospitalServiceType.HOSPITALIZATION);
-        ward.setOrganizationId(org.getId());
-        ward = wardRepository.save(ward);
+        unit = organizationalUnitRepository.saveAndFlush(new OrganizationalUnitEntity(
+                org.getId(), null, "CARE_SPATIAL_" + suffix.toUpperCase(),
+                "Unité hospitalisation", OrganizationalUnitType.CARE_UNIT, null));
+        space = spaceRepository.saveAndFlush(new FacilitySpaceEntity(
+                org.getId(), null, "ROOM_10_" + suffix.toUpperCase(), "Chambre 10", "HOSPITAL_ROOM"));
+        inpatientSpaceProfileRepository.saveAndFlush(new InpatientSpaceProfileEntity(
+                space.getId(), org.getId(), "HOSPITAL_ROOM", "STANDARD"));
+        unitSpaceAssignmentRepository.saveAndFlush(new OrganizationalUnitSpaceAssignmentEntity(
+                org.getId(), unit.getId(), space.getId(), Instant.now().minusSeconds(3600), null));
 
-        room = new RoomEntity(ward, "Chambre 10", 2, "STANDARD");
-        room.setOrganizationId(org.getId());
-        room = roomRepository.save(room);
-
-        bedFree = new BedEntity(room, "Lit 10-A");
-        bedFree.setOrganizationId(org.getId());
-        bedFree = bedRepository.save(bedFree);
-
-        bedOccupied = new BedEntity(room, "Lit 10-B");
-        bedOccupied.setOrganizationId(org.getId());
+        bedFree = bedRepository.saveAndFlush(new BedEntity(space, "Lit 10-A"));
+        bedOccupied = new BedEntity(space, "Lit 10-B");
         bedOccupied.setStatus(BedStatus.OCCUPIED);
-        bedOccupied = bedRepository.save(bedOccupied);
+        bedOccupied = bedRepository.saveAndFlush(bedOccupied);
+        bedSourceB = new BedEntity(space, "Lit 10-C");
+        bedSourceB.setStatus(BedStatus.OCCUPIED);
+        bedSourceB = bedRepository.saveAndFlush(bedSourceB);
 
         hospA = new HospitalizationEntity(
-                patientA.getId(),
-                "Médecine Hommes",
-                "Chambre 10",
-                "Lit 10-B",
-                "Observation générale",
-                "HOSP-S-001",
-                visitA.getId(),
-                doctor.getId());
-        hospA = hospitalizationRepository.save(hospA);
-
+                patientA.getId(), unit.getId(), space.getId(), bedOccupied.getId(),
+                "Unité hospitalisation", space.getName(), bedOccupied.getBedNumber(),
+                "Observation générale", "HOSP-S-A-" + suffix, visitA.getId(), null, doctor.getId());
+        hospA.setOrganizationId(org.getId());
+        hospA = hospitalizationRepository.saveAndFlush(hospA);
         BedAssignmentEntity assignmentA = new BedAssignmentEntity(hospA.getId(), bedOccupied);
         assignmentA.setOrganizationId(org.getId());
-        bedAssignmentRepository.save(assignmentA);
+        bedAssignmentRepository.saveAndFlush(assignmentA);
 
         hospB = new HospitalizationEntity(
-                patientB.getId(),
-                "Médecine Hommes",
-                "Chambre 10",
-                "Temp",
-                "Fièvre",
-                "HOSP-S-002",
-                visitB.getId(),
-                doctor.getId());
-        hospB = hospitalizationRepository.save(hospB);
+                patientB.getId(), unit.getId(), space.getId(), bedSourceB.getId(),
+                "Unité hospitalisation", space.getName(), bedSourceB.getBedNumber(),
+                "Fièvre", "HOSP-S-B-" + suffix, visitB.getId(), null, doctor.getId());
+        hospB.setOrganizationId(org.getId());
+        hospB = hospitalizationRepository.saveAndFlush(hospB);
+        BedAssignmentEntity assignmentB = new BedAssignmentEntity(hospB.getId(), bedSourceB);
+        assignmentB.setOrganizationId(org.getId());
+        bedAssignmentRepository.saveAndFlush(assignmentB);
 
         TenantContext.clear();
     }
@@ -250,11 +188,14 @@ public class SpatialControllerTest {
     private void clearTestData() {
         TenantContext.clear();
         jdbcTemplate.update("DELETE FROM audit_logs");
+        jdbcTemplate.update("DELETE FROM bed_state_changes");
         jdbcTemplate.update("DELETE FROM bed_assignments");
         jdbcTemplate.update("DELETE FROM hospitalizations");
         jdbcTemplate.update("DELETE FROM beds");
-        jdbcTemplate.update("DELETE FROM rooms");
-        jdbcTemplate.update("DELETE FROM wards");
+        jdbcTemplate.update("DELETE FROM organizational_unit_space_assignments");
+        jdbcTemplate.update("DELETE FROM inpatient_space_profiles");
+        jdbcTemplate.update("DELETE FROM facility_spaces");
+        jdbcTemplate.update("DELETE FROM organizational_units");
         jdbcTemplate.update("DELETE FROM visits");
         jdbcTemplate.update("DELETE FROM patients");
         userAccountRepository.deleteAll();
@@ -262,61 +203,44 @@ public class SpatialControllerTest {
     }
 
     @Test
-    void testListWardsAndOccupancy() throws Exception {
-        mockMvc.perform(get("/api/spatial/wards")
+    void shouldExposeSpaceOccupancy() throws Exception {
+        mockMvc.perform(get("/api/spatial/spaces/" + space.getId() + "/occupancy")
                         .header("Authorization", "Bearer " + tokenDoctor))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].name").value("Médecine Hommes"));
-
-        mockMvc.perform(get("/api/spatial/wards/" + ward.getId() + "/occupancy")
-                        .header("Authorization", "Bearer " + tokenDoctor))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Médecine Hommes"))
-                .andExpect(jsonPath("$.totalBedsCount").value(2))
-                .andExpect(jsonPath("$.occupiedBedsCount").value(1))
-                .andExpect(jsonPath("$.availableBedsCount").value(1))
-                .andExpect(jsonPath("$.rooms[0].roomNumber").value("Chambre 10"))
-                .andExpect(jsonPath("$.rooms[0].beds.length()").value(2));
+                .andExpect(jsonPath("$.spaceName").value("Chambre 10"))
+                .andExpect(jsonPath("$.installedBeds").value(3))
+                .andExpect(jsonPath("$.occupiedBeds").value(2))
+                .andExpect(jsonPath("$.availableBeds").value(1))
+                .andExpect(jsonPath("$.beds.length()").value(3));
     }
 
     @Test
-    void occupancyShouldOnlyCountFreeBedsAsAvailable() throws Exception {
+    void occupancyShouldOnlyCountOperationallyAvailableBeds() throws Exception {
         TenantContext.setTenantId(org.getId());
         try {
-            RoomEntity unavailableRoom = new RoomEntity(ward, "Chambre 11", 2, "STANDARD");
-            unavailableRoom.setOrganizationId(org.getId());
-            unavailableRoom = roomRepository.save(unavailableRoom);
-
-            BedEntity cleaningBed = new BedEntity(unavailableRoom, "Lit 11-A");
-            cleaningBed.setOrganizationId(org.getId());
+            BedEntity cleaningBed = new BedEntity(space, "Lit 10-D");
             cleaningBed.setStatus(BedStatus.CLEANING);
-            bedRepository.save(cleaningBed);
-
-            BedEntity maintenanceBed = new BedEntity(unavailableRoom, "Lit 11-B");
-            maintenanceBed.setOrganizationId(org.getId());
+            bedRepository.saveAndFlush(cleaningBed);
+            BedEntity maintenanceBed = new BedEntity(space, "Lit 10-E");
             maintenanceBed.setStatus(BedStatus.MAINTENANCE);
-            bedRepository.save(maintenanceBed);
+            bedRepository.saveAndFlush(maintenanceBed);
         } finally {
             TenantContext.clear();
         }
 
-        mockMvc.perform(get("/api/spatial/wards/" + ward.getId() + "/occupancy")
+        mockMvc.perform(get("/api/spatial/spaces/" + space.getId() + "/occupancy")
                         .header("Authorization", "Bearer " + tokenDoctor))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalBedsCount").value(4))
-                .andExpect(jsonPath("$.occupiedBedsCount").value(1))
-                .andExpect(jsonPath("$.availableBedsCount").value(1));
+                .andExpect(jsonPath("$.installedBeds").value(5))
+                .andExpect(jsonPath("$.occupiedBeds").value(2))
+                .andExpect(jsonPath("$.availableBeds").value(1));
     }
 
     @Test
     void testUpdateBedStatus() throws Exception {
         String statusRequest = """
-                {
-                    "status": "MAINTENANCE"
-                }
+                {"status":"MAINTENANCE"}
                 """;
-
         mockMvc.perform(post("/api/spatial/beds/" + bedFree.getId() + "/status")
                         .header("Authorization", "Bearer " + tokenAdmin)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -326,79 +250,54 @@ public class SpatialControllerTest {
     }
 
     @Test
-    void adminShouldCreateHospitalStructureAndRespectRoomCapacity() throws Exception {
-        String wardBody = """
-                {"name":"Cardiologie","serviceType":"HOSPITALIZATION"}
-                """;
-        String wardJson = mockMvc.perform(post("/api/spatial/configuration/wards")
+    void adminShouldCreateLocationSpaceProfileAndBed() throws Exception {
+        String locationJson = mockMvc.perform(post("/api/spatial/configuration/locations")
                         .header("Authorization", "Bearer " + tokenAdmin)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(wardBody))
+                        .content("{\"code\":\"BLD_CARDIO\",\"name\":\"Bâtiment cardio\",\"nodeType\":\"BUILDING\"}"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name").value("Cardiologie"))
-                .andExpect(jsonPath("$.serviceType").value("HOSPITALIZATION"))
-                .andExpect(jsonPath("$.allowsRooms").value(true))
+                .andExpect(jsonPath("$.code").value("BLD_CARDIO"))
                 .andReturn().getResponse().getContentAsString();
-        String wardId = jsonMapper.readTree(wardJson).get("id").asString();
+        String locationId = jsonMapper.readTree(locationJson).get("id").asString();
 
-        String roomBody = """
-                {"wardId":"%s","roomNumber":"201","capacity":1,"comfortLevel":"STANDARD"}
-                """.formatted(wardId);
-        String roomJson = mockMvc.perform(post("/api/spatial/configuration/rooms")
+        String spaceJson = mockMvc.perform(post("/api/spatial/configuration/spaces")
                         .header("Authorization", "Bearer " + tokenAdmin)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(roomBody))
+                        .content("""
+                                {"locationNodeId":"%s","code":"CARDIO_201","name":"Chambre 201","spaceTypeCode":"HOSPITAL_ROOM","enableInpatientProfile":true}
+                                """.formatted(locationId)))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.inpatientProfile").value(true))
                 .andReturn().getResponse().getContentAsString();
-        String roomId = jsonMapper.readTree(roomJson).get("id").asString();
+        String spaceId = jsonMapper.readTree(spaceJson).get("id").asString();
 
-        String firstBed = "{\"roomId\":\"%s\",\"bedNumber\":\"201-A\"}".formatted(roomId);
+        String bedBody = "{\"spaceId\":\"%s\",\"bedNumber\":\"201-A\"}".formatted(spaceId);
         mockMvc.perform(post("/api/spatial/configuration/beds")
                         .header("Authorization", "Bearer " + tokenAdmin)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(firstBed))
-                .andExpect(status().isCreated());
+                        .content(bedBody))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.spaceId").value(spaceId));
 
-        String secondBed = "{\"roomId\":\"%s\",\"bedNumber\":\"201-B\"}".formatted(roomId);
         mockMvc.perform(post("/api/spatial/configuration/beds")
                         .header("Authorization", "Bearer " + tokenAdmin)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(secondBed))
+                        .content(bedBody))
                 .andExpect(status().isConflict());
-
-        mockMvc.perform(get("/api/spatial/configuration")
-                        .header("Authorization", "Bearer " + tokenAdmin))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.wards[?(@.name == 'Cardiologie')].rooms[0].beds[0].bedNumber")
-                        .value("201-A"));
     }
 
     @Test
-    void administrativeServiceShouldRejectRoomCreation() throws Exception {
-        String wardJson = mockMvc.perform(post("/api/spatial/configuration/wards")
+    void nonInpatientSpaceShouldRejectProfileAndBeds() throws Exception {
+        mockMvc.perform(post("/api/spatial/configuration/spaces")
                         .header("Authorization", "Bearer " + tokenAdmin)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Caisse\",\"serviceType\":\"ADMINISTRATIVE\"}"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.serviceType").value("ADMINISTRATIVE"))
-                .andExpect(jsonPath("$.allowsRooms").value(false))
-                .andReturn().getResponse().getContentAsString();
-        String cashDeskId = jsonMapper.readTree(wardJson).get("id").asString();
-
-        String roomBody = """
-                {"wardId":"%s","roomNumber":"CAISSE-01","capacity":1,"comfortLevel":"STANDARD"}
-                """.formatted(cashDeskId);
-
-        mockMvc.perform(post("/api/spatial/configuration/rooms")
-                        .header("Authorization", "Bearer " + tokenAdmin)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(roomBody))
-                .andExpect(status().isConflict());
+                        .content("{\"code\":\"WAIT_01\",\"name\":\"Attente 01\",\"spaceTypeCode\":\"WAITING_ROOM\",\"enableInpatientProfile\":true}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
     void configurationShouldBeForbiddenToDoctorAndProtectOccupiedBed() throws Exception {
-        mockMvc.perform(get("/api/spatial/configuration")
+        mockMvc.perform(get("/api/spatial/configuration/locations")
                         .header("Authorization", "Bearer " + tokenDoctor))
                 .andExpect(status().isForbidden());
 
@@ -409,28 +308,20 @@ public class SpatialControllerTest {
 
     @Test
     void platformAdministratorShouldSelectClinicScope() throws Exception {
-        mockMvc.perform(get("/api/spatial/configuration")
+        mockMvc.perform(get("/api/spatial/configuration/locations")
                         .header("Authorization", "Bearer " + tokenPlatformAdmin))
                 .andExpect(status().isBadRequest());
 
-        mockMvc.perform(get("/api/spatial/configuration")
+        mockMvc.perform(get("/api/spatial/configuration/spaces")
                         .queryParam("organizationId", org.getId().toString())
                         .header("Authorization", "Bearer " + tokenPlatformAdmin))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.wards[0].name").value("Médecine Hommes"))
-                .andExpect(jsonPath("$.wards[0].serviceType").value("HOSPITALIZATION"))
-                .andExpect(jsonPath("$.wards[0].allowsRooms").value(true));
+                .andExpect(jsonPath("$[0].name").value("Chambre 10"));
     }
 
     @Test
     void testTransferPatientSuccess() throws Exception {
-        String transferRequest = String.format("""
-                {
-                    "hospitalizationId": "%s",
-                    "newBedId": "%s"
-                }
-                """, hospA.getId(), bedFree.getId());
-
+        String transferRequest = transferRequest(hospA.getId(), bedFree.getId());
         mockMvc.perform(post("/api/spatial/transfers")
                         .header("Authorization", "Bearer " + tokenDoctor)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -439,30 +330,26 @@ public class SpatialControllerTest {
                 .andExpect(jsonPath("$.bedId").value(bedFree.getId().toString()));
 
         TenantContext.setTenantId(org.getId());
-        BedEntity updatedOldBed = bedRepository.findById(bedOccupied.getId()).orElseThrow();
-        BedEntity updatedNewBed = bedRepository.findById(bedFree.getId()).orElseThrow();
-        HospitalizationEntity updatedHosp = hospitalizationRepository.findById(hospA.getId()).orElseThrow();
-        TenantContext.clear();
-
-        assert updatedOldBed.getStatus() == BedStatus.CLEANING;
-        assert updatedNewBed.getStatus() == BedStatus.OCCUPIED;
-        assert "Chambre 10".equals(updatedHosp.getRoomNumber());
-        assert "Lit 10-A".equals(updatedHosp.getBedNumber());
+        try {
+            BedEntity updatedOldBed = bedRepository.findById(bedOccupied.getId()).orElseThrow();
+            BedEntity updatedNewBed = bedRepository.findById(bedFree.getId()).orElseThrow();
+            HospitalizationEntity updatedHosp = hospitalizationRepository.findById(hospA.getId()).orElseThrow();
+            assertEquals(BedStatus.CLEANING, updatedOldBed.getStatus());
+            assertEquals(BedStatus.OCCUPIED, updatedNewBed.getStatus());
+            assertEquals(space.getId(), updatedHosp.getCurrentSpaceId());
+            assertEquals(bedFree.getId(), updatedHosp.getCurrentBedId());
+            assertEquals("Lit 10-A", updatedHosp.getBedNumber());
+        } finally {
+            TenantContext.clear();
+        }
     }
 
     @Test
     void testTransferPatientToOccupiedBedThrowsConflict() throws Exception {
-        String transferRequest = String.format("""
-                {
-                    "hospitalizationId": "%s",
-                    "newBedId": "%s"
-                }
-                """, hospB.getId(), bedOccupied.getId());
-
         mockMvc.perform(post("/api/spatial/transfers")
                         .header("Authorization", "Bearer " + tokenDoctor)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(transferRequest))
+                        .content(transferRequest(hospB.getId(), bedOccupied.getId())))
                 .andExpect(status().isConflict());
     }
 
@@ -470,6 +357,12 @@ public class SpatialControllerTest {
     void transferShouldRollbackWhenTargetBedHasHiddenActiveAssignment() throws Exception {
         TenantContext.setTenantId(org.getId());
         try {
+            BedAssignmentEntity currentB = bedAssignmentRepository.findActiveByHospitalizationId(hospB.getId()).orElseThrow();
+            currentB.releaseAt(Instant.now());
+            bedAssignmentRepository.saveAndFlush(currentB);
+            bedSourceB.setStatus(BedStatus.CLEANING);
+            bedRepository.saveAndFlush(bedSourceB);
+
             BedAssignmentEntity hiddenAssignment = new BedAssignmentEntity(hospB.getId(), bedFree);
             hiddenAssignment.setOrganizationId(org.getId());
             bedAssignmentRepository.saveAndFlush(hiddenAssignment);
@@ -477,17 +370,10 @@ public class SpatialControllerTest {
             TenantContext.clear();
         }
 
-        String transferRequest = String.format("""
-                {
-                    "hospitalizationId": "%s",
-                    "newBedId": "%s"
-                }
-                """, hospA.getId(), bedFree.getId());
-
         mockMvc.perform(post("/api/spatial/transfers")
                         .header("Authorization", "Bearer " + tokenDoctor)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(transferRequest))
+                        .content(transferRequest(hospA.getId(), bedFree.getId())))
                 .andExpect(status().isConflict());
 
         TenantContext.setTenantId(org.getId());
@@ -509,11 +395,9 @@ public class SpatialControllerTest {
                     () -> executeConcurrentTransfer(hospA.getId(), bedFree.getId(), startLatch));
             Future<Integer> secondTransfer = executor.submit(
                     () -> executeConcurrentTransfer(hospB.getId(), bedFree.getId(), startLatch));
-
             startLatch.countDown();
             int firstStatus = firstTransfer.get(10, TimeUnit.SECONDS);
             int secondStatus = secondTransfer.get(10, TimeUnit.SECONDS);
-
             int successCount = (firstStatus == 200 ? 1 : 0) + (secondStatus == 200 ? 1 : 0);
             int conflictCount = (firstStatus == 409 ? 1 : 0) + (secondStatus == 409 ? 1 : 0);
             assertEquals(1, successCount, "Une seule hospitalisation doit pouvoir réserver le lit libre.");
@@ -523,6 +407,12 @@ public class SpatialControllerTest {
         }
     }
 
+    private String transferRequest(UUID hospitalizationId, UUID bedId) {
+        return """
+                {"hospitalizationId":"%s","targetServiceUnitId":"%s","targetSpaceId":"%s","targetBedId":"%s"}
+                """.formatted(hospitalizationId, unit.getId(), space.getId(), bedId);
+    }
+
     private int executeConcurrentTransfer(
             UUID hospitalizationId,
             UUID bedId,
@@ -530,7 +420,7 @@ public class SpatialControllerTest {
         TenantContext.setTenantId(org.getId());
         try {
             startLatch.await();
-            spatialService.transferPatient(hospitalizationId, bedId);
+            spatialService.transferPatient(hospitalizationId, unit.getId(), space.getId(), bedId);
             return 200;
         } catch (ResponseStatusException exception) {
             return exception.getStatusCode().value();
