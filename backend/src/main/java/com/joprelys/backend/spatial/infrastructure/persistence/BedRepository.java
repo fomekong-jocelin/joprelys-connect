@@ -10,36 +10,18 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 public interface BedRepository extends JpaRepository<BedEntity, UUID> {
-    List<BedEntity> findByRoomId(UUID roomId);
 
-    long countByRoomId(UUID roomId);
+    List<BedEntity> findBySpaceId(UUID spaceId);
 
-    boolean existsByRoomId(UUID roomId);
+    long countBySpaceId(UUID spaceId);
 
-    boolean existsByRoomIdAndBedNumberIgnoreCase(UUID roomId, String bedNumber);
+    boolean existsBySpaceId(UUID spaceId);
 
-    boolean existsByRoomIdAndBedNumberIgnoreCaseAndIdNot(UUID roomId, String bedNumber, UUID id);
+    boolean existsBySpaceIdAndBedNumberIgnoreCase(UUID spaceId, String bedNumber);
 
-    @Query("SELECT b FROM BedEntity b JOIN b.room r WHERE r.ward.id = :wardId")
-    List<BedEntity> findByWardId(@Param("wardId") UUID wardId);
+    boolean existsBySpaceIdAndBedNumberIgnoreCaseAndIdNot(UUID spaceId, String bedNumber, UUID id);
 
-    @Query("""
-            SELECT b
-            FROM BedEntity b
-            JOIN b.room r
-            JOIN r.ward w
-            WHERE b.organizationId = :organizationId
-              AND r.organizationId = :organizationId
-              AND w.organizationId = :organizationId
-              AND LOWER(w.name) = LOWER(:wardName)
-              AND LOWER(r.roomNumber) = LOWER(:roomNumber)
-              AND LOWER(b.bedNumber) = LOWER(:bedNumber)
-            """)
-    Optional<BedEntity> findConfiguredBed(
-            @Param("organizationId") UUID organizationId,
-            @Param("wardName") String wardName,
-            @Param("roomNumber") String roomNumber,
-            @Param("bedNumber") String bedNumber);
+    Optional<BedEntity> findByIdAndOrganizationId(UUID id, UUID organizationId);
 
     @Transactional
     @Modifying(flushAutomatically = true, clearAutomatically = true)
