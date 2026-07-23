@@ -223,6 +223,14 @@ public class HospitalizationEntity {
     public UUID getCurrentBedId() { return currentBedId; }
     public String getServiceName() { return serviceNameSnapshot; }
     public String getSpaceName() { return spaceNameSnapshot; }
+
+    /**
+     * Alias d'affichage strictement transitoire pendant la migration des générateurs PDF et read models.
+     * La source de vérité reste currentSpaceId + spaceNameSnapshot.
+     */
+    @Deprecated(forRemoval = true)
+    public String getRoomNumber() { return spaceNameSnapshot; }
+
     public String getBedNumber() { return bedNumberSnapshot; }
     public String getAdmissionReason() { return admissionReason; }
     public String getHospitalizationNumber() { return hospitalizationNumber; }
