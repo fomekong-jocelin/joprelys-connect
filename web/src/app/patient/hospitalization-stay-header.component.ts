@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, inject, input, output, signal } fro
 import { FormsModule } from '@angular/forms';
 import { I18nService } from '../core/i18n/i18n.service';
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
-import { Hospitalization } from './patient.models';
+import { StructuredHospitalization } from './hospitalization-location.models';
 import { PatientApiService } from './patient-api.service';
 
 @Component({
@@ -28,7 +28,9 @@ import { PatientApiService } from './patient-api.service';
             }
             <span class="font-mono text-xs font-semibold text-[var(--text-secondary)]">{{ stay().hospitalizationNumber }}</span>
           </div>
-          <h2 id="stay-workspace-title" class="mt-3 break-words text-lg leading-7 font-bold text-[var(--text-primary)]">{{ stay().serviceName }} · {{ t('patients.hospitalization.room', 'Chambre') }} {{ stay().roomNumber }} · {{ t('patients.hospitalization.bed', 'Lit') }} {{ stay().bedNumber }}</h2>
+          <h2 id="stay-workspace-title" class="mt-3 break-words text-lg leading-7 font-bold text-[var(--text-primary)]">
+            {{ stay().serviceName }} · {{ t('patients.hospitalization.space', 'Espace') }} {{ stay().spaceName }} · {{ t('patients.hospitalization.bed', 'Lit') }} {{ stay().bedNumber }}
+          </h2>
           <dl class="mt-4 grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
             <div>
               <dt class="text-xs font-semibold text-[var(--text-muted)]">{{ t('patients.hospitalization.responsiblePractitioner', 'Médecin responsable') }}</dt>
@@ -105,7 +107,7 @@ import { PatientApiService } from './patient-api.service';
   `,
 })
 export class HospitalizationStayHeaderComponent {
-  readonly stay = input.required<Hospitalization>();
+  readonly stay = input.required<StructuredHospitalization>();
   readonly responsibleName = input.required<string>();
   readonly canModify = input.required<boolean>();
   readonly entryPdf = output<void>();
