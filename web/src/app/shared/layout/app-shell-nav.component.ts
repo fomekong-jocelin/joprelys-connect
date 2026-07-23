@@ -116,6 +116,9 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
     if (hasPermission('USER_MANAGE')) {
       addUniqueItem(this.item('/clinic/staff', 'menu.staff', 'users'));
     }
+    if (hasPermission('ORGANIZATION_STRUCTURE_MANAGE')) {
+      addUniqueItem(this.item('/clinic/hospital-organization', 'menu.hospitalOrganization', 'building'));
+    }
     if (hasPermission('RBAC_MANAGE')) {
       addUniqueItem(this.item('/clinic/rbac', 'menu.rbac', 'shield-check'));
     }

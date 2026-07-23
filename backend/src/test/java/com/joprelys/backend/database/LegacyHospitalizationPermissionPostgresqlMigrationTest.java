@@ -85,7 +85,11 @@ class LegacyHospitalizationPermissionPostgresqlMigrationTest {
                 .load();
         latestFlyway.migrate();
 
-        assertEquals(86, Integer.parseInt(latestFlyway.info().current().getVersion().getVersion()));
+        assertEquals(1, count(jdbc, """
+                SELECT COUNT(*)
+                FROM flyway_schema_history
+                WHERE version = '86' AND success = TRUE
+                """));
         assertEquals(0, count(jdbc, "SELECT COUNT(*) FROM permissions WHERE code = 'HOSPITALIZATION_MANAGE'"));
         assertEquals(0, count(jdbc, "SELECT COUNT(*) FROM role_permissions WHERE role_id = ?", customRoleId));
         assertEquals(1, count(jdbc, "SELECT COUNT(*) FROM roles WHERE id = ?", customRoleId));
