@@ -30,7 +30,7 @@ public class OrganizationalUnitEntity {
     @Column(nullable = false, length = 64)
     private String code;
 
-    @Column(nullable = false, length = 120)
+    @Column(length = 120)
     private String name;
 
     @Enumerated(EnumType.STRING)
