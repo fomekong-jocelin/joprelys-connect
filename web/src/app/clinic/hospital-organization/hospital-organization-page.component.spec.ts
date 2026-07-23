@@ -160,4 +160,26 @@ describe('HospitalOrganizationPageComponent', () => {
 
     expect(fixture.componentInstance.errorMessage()).toBe('Erreur localisée');
   });
+
+  it('keeps mobile content within the viewport without tree indentation', () => {
+    const main = fixture.nativeElement.querySelector('main');
+    const unitCard = fixture.nativeElement.querySelector('article');
+    const primaryAction = fixture.nativeElement.querySelector('button.ui-button-primary');
+
+    expect(main.classList).toContain('overflow-x-hidden');
+    expect(unitCard.hasAttribute('style')).toBe(false);
+    expect(primaryAction.classList).toContain('w-full');
+    expect(primaryAction.classList).toContain('sm:w-auto');
+  });
+
+  it('renders the editor as an accessible responsive dialog', () => {
+    fixture.componentInstance.openCreate('SERVICE');
+    fixture.detectChanges();
+
+    const dialog = fixture.nativeElement.querySelector('[role="dialog"]');
+    expect(dialog).not.toBeNull();
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(dialog.classList).toContain('overflow-x-hidden');
+    expect(dialog.classList).toContain('min-w-0');
+  });
 });
