@@ -1,5 +1,17 @@
 # HOS-RBAC-001-C — Conception technique de séparation des tâches d’hospitalisation
 
+## 0. État d’intégration
+
+Cette conception est **implémentée et fusionnée dans `main`**.
+
+- PR canonique : **#107** ;
+- commit fusionné : `4df94f43ee5943a55ae60bac22794b1a8ff746a4` ;
+- workflow PR final : **#1011 vert** ;
+- workflow `main` après fusion : **#1012 vert** ;
+- branche `main` actuelle auditée : `078c3dc5f913f615910fad9f061085bc7acdcfec`.
+
+Le code fusionné a été relu dans `RbacCatalog`, `HospitalizationController`, les tests backend d’autorisation et le composant Angular hospitalisation. La documentation doit donc traiter HOS-RBAC-001-C comme **livré techniquement**, sans recréer son code. Restent uniquement les validations externes, l’inventaire des rôles personnalisés, la recette multi-profils et la préparation du déploiement.
+
 ## 1. Décision
 
 Les écritures d’un séjour hospitalier ne doivent plus être autorisées par une permission générique couvrant plusieurs responsabilités métier.
@@ -162,3 +174,7 @@ Réattribuer globalement `HOSPITALIZATION_MANAGE` aux profils n’est pas un rol
 - validation responsable hospitalisation de l’admission administrative ;
 - revue des rôles personnalisés ;
 - recette multi-profils avec comptes représentatifs.
+
+## 12. Règle de non-régression
+
+Les prochains travaux doivent partir du code présent dans `main`. Ils ne doivent ni recréer les six permissions, ni dupliquer les annotations `@PreAuthorize`, ni restaurer `HOSPITALIZATION_MANAGE` comme permission de secours. Toute évolution supplémentaire doit faire l’objet d’un ticket distinct et cibler exclusivement un risque encore ouvert.
