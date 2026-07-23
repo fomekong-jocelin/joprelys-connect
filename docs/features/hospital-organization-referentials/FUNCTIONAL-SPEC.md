@@ -31,17 +31,17 @@ Une petite clinique peut omettre Pôle et Département :
 - RF-01 : chaque unité appartient à un seul tenant.
 - RF-02 : les niveaux sont `POLE`, `DEPARTMENT`, `SERVICE`, `CARE_UNIT`.
 - RF-03 : un `SERVICE` utilise obligatoirement un code issu du catalogue des services.
-- RF-04 : le nom initial d'un `SERVICE` est dérivé du catalogue ; l'UI ne demande pas de nom de service libre.
+- RF-04 : un `SERVICE` ne stocke aucun libellé localisé propre ; son nom visible est résolu depuis le catalogue FR/EN selon la langue active. L'UI ne demande donc jamais de nom de service libre.
 - RF-05 : un `POLE`, `DEPARTMENT` ou `CARE_UNIT` peut avoir un libellé propre à l'établissement.
-- RF-06 : les parents autorisés sont : établissement→tout niveau racine ; POLE→DEPARTMENT/SERVICE ; DEPARTMENT→SERVICE ; SERVICE→CARE_UNIT. Une CARE_UNIT n'a pas d'enfant dans ce lot.
+- RF-06 : les parents autorisés sont : établissement→POLE/DEPARTMENT/SERVICE ; POLE→DEPARTMENT/SERVICE ; DEPARTMENT→SERVICE ; SERVICE→CARE_UNIT. Une CARE_UNIT n'a pas d'enfant dans ce lot.
 - RF-07 : un code d'unité est unique dans un tenant.
 - RF-08 : une unité ne change jamais de tenant.
 - RF-09 : une unité utilisée n'est pas supprimée physiquement ; elle est désactivée.
 - RF-10 : une unité désactivée reste visible dans l'historique mais n'est plus proposée pour de nouvelles affectations.
 - RF-11 : les spécialités médicales sont sélectionnées depuis un catalogue codifié.
 - RF-12 : aucune saisie libre de spécialité n'est ajoutée dans cette fonctionnalité.
-- RF-13 : la gestion nécessite `ORGANIZATION_STRUCTURE_MANAGE` ; la lecture suit le contexte tenant et les permissions de consultation définies par l'API.
-- RF-14 : l'API est l'autorité finale ; Angular ne reconstitue pas les règles de hiérarchie.
+- RF-13 : dans HOS-ORG-001-A, lecture et gestion de cette configuration nécessitent `ORGANIZATION_STRUCTURE_MANAGE`. Les futurs parcours métier disposeront de contrats de lecture adaptés plutôt que d'élargir implicitement l'API d'administration.
+- RF-14 : l'API est l'autorité finale ; Angular peut filtrer les options pour l'ergonomie mais ne remplace aucune validation backend.
 
 ## 4. Catalogue initial de services
 
@@ -92,6 +92,7 @@ Ce catalogue est extensible par migration/application maîtrisée ; il n'est pas
 - ombres légères ;
 - thèmes light/dark ;
 - i18n FR/EN ;
+- service affiché dans la langue active sans dupliquer le libellé dans l'unité ;
 - focus visible ;
 - aucune chaîne visible hardcodée.
 
