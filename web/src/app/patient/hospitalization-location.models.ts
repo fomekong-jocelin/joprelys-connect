@@ -8,6 +8,8 @@ export interface StructuredHospitalization {
   readonly currentBedId: string;
   readonly serviceName: string;
   readonly spaceName: string;
+  /** @deprecated Présentation historique uniquement. Toujours dérivé de spaceName ; jamais une identité métier ou un payload d'écriture. */
+  readonly roomNumber: string;
   readonly bedNumber: string;
   readonly admissionReason: string;
   readonly status: 'EN_COURS' | 'SORTI' | 'SORTI_CONTRE_AVIS';
