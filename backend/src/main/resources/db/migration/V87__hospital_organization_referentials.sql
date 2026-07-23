@@ -5,7 +5,6 @@ CREATE TABLE hospital_service_catalog (
     code VARCHAR(64) PRIMARY KEY,
     name_fr VARCHAR(120) NOT NULL,
     name_en VARCHAR(120) NOT NULL,
-    service_type VARCHAR(40) NOT NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     CONSTRAINT chk_hospital_service_catalog_code_not_blank CHECK (TRIM(code) <> ''),
     CONSTRAINT chk_hospital_service_catalog_names_not_blank CHECK (TRIM(name_fr) <> '' AND TRIM(name_en) <> '')
@@ -70,21 +69,21 @@ CREATE INDEX idx_organizational_units_org_type_active
 CREATE INDEX idx_organizational_units_service_catalog
     ON organizational_units (service_catalog_code);
 
-INSERT INTO hospital_service_catalog (code, name_fr, name_en, service_type, active) VALUES
-    ('GENERAL_MEDICINE', 'Médecine générale', 'General medicine', 'OUTPATIENT', TRUE),
-    ('INTERNAL_MEDICINE', 'Médecine interne', 'Internal medicine', 'HOSPITALIZATION', TRUE),
-    ('MATERNITY_OBGYN', 'Maternité / gynécologie-obstétrique', 'Maternity / obstetrics and gynecology', 'HOSPITALIZATION', TRUE),
-    ('PEDIATRICS', 'Pédiatrie', 'Pediatrics', 'HOSPITALIZATION', TRUE),
-    ('EMERGENCY', 'Urgences', 'Emergency department', 'EMERGENCY', TRUE),
-    ('GENERAL_SURGERY', 'Chirurgie générale', 'General surgery', 'HOSPITALIZATION', TRUE),
-    ('CARDIOLOGY', 'Cardiologie', 'Cardiology', 'HOSPITALIZATION', TRUE),
-    ('INTENSIVE_CARE', 'Réanimation / soins intensifs', 'Intensive care', 'HOSPITALIZATION', TRUE),
-    ('ANESTHESIA', 'Anesthésie', 'Anesthesia', 'MEDICO_TECHNICAL', TRUE),
-    ('OPERATING_THEATRE', 'Bloc opératoire', 'Operating theatre', 'MEDICO_TECHNICAL', TRUE),
-    ('LABORATORY', 'Laboratoire', 'Laboratory', 'MEDICO_TECHNICAL', TRUE),
-    ('IMAGING', 'Imagerie', 'Imaging', 'MEDICO_TECHNICAL', TRUE),
-    ('PHARMACY', 'Pharmacie', 'Pharmacy', 'PHARMACY', TRUE),
-    ('INPATIENT_GENERAL', 'Hospitalisation polyvalente', 'General inpatient care', 'HOSPITALIZATION', TRUE);
+INSERT INTO hospital_service_catalog (code, name_fr, name_en, active) VALUES
+    ('GENERAL_MEDICINE', 'Médecine générale', 'General medicine', TRUE),
+    ('INTERNAL_MEDICINE', 'Médecine interne', 'Internal medicine', TRUE),
+    ('MATERNITY_OBGYN', 'Maternité / gynécologie-obstétrique', 'Maternity / obstetrics and gynecology', TRUE),
+    ('PEDIATRICS', 'Pédiatrie', 'Pediatrics', TRUE),
+    ('EMERGENCY', 'Urgences', 'Emergency department', TRUE),
+    ('GENERAL_SURGERY', 'Chirurgie générale', 'General surgery', TRUE),
+    ('CARDIOLOGY', 'Cardiologie', 'Cardiology', TRUE),
+    ('INTENSIVE_CARE', 'Réanimation / soins intensifs', 'Intensive care', TRUE),
+    ('ANESTHESIA', 'Anesthésie', 'Anesthesia', TRUE),
+    ('OPERATING_THEATRE', 'Bloc opératoire', 'Operating theatre', TRUE),
+    ('LABORATORY', 'Laboratoire', 'Laboratory', TRUE),
+    ('IMAGING', 'Imagerie', 'Imaging', TRUE),
+    ('PHARMACY', 'Pharmacie', 'Pharmacy', TRUE),
+    ('INPATIENT_GENERAL', 'Hospitalisation polyvalente', 'General inpatient care', TRUE);
 
 INSERT INTO medical_specialty_catalog (code, name_fr, name_en, active) VALUES
     ('GENERAL_MEDICINE', 'Médecine générale', 'General medicine', TRUE),
