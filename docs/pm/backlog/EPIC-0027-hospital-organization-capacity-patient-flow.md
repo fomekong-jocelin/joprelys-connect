@@ -1,7 +1,7 @@
 # EPIC-0027 — Organisation hospitalière, capacité et parcours patient
 
 **Origine** : AUDIT-20260721  
-**Statut** : PROPOSED / non engagé  
+**Statut** : IN_PROGRESS — phase 0 engagée sur les invariants lits et le RBAC hospitalier  
 **Priorité globale** : Critique  
 **SemVer cible** : ajout parallèle MINOR possible ; retrait des contrats legacy MAJOR  
 **Effort total indicatif** : 103–143 jours-personnes, QA et documentation incluses
@@ -16,7 +16,7 @@ Fournir à Joprelys un modèle flexible, historisé et sûr permettant à un cab
 |---|---|---:|---:|---|---|---|
 | HOS-BED-001 | invariants et concurrence lits | 12–14, réestimé | 9–12j | backend senior + DBA | cadre + DBA + QA | PostgreSQL concurrence/migration |
 | HOS-BED-002 | capacité et cycles de remise en état | 8, à découper | 8–11j | full-stack senior | cadre + hygiène | API/E2E/KPI |
-| HOS-RBAC-001 | permissions hospitalières contextuelles | 8, à découper | 8–12j | sécurité/backend | RSSI/DPO + métiers | matrice négative multi-tenant |
+| HOS-RBAC-001 | permissions hospitalières contextuelles | 8 SP initiaux, découpé A–D | segmentation d'actions livrée ; contexte ABAC restant via HOS-STAFF-001 / HOS-DIS-001 | sécurité/backend | RSSI/DPO + métiers | matrice négative multi-tenant |
 | HOS-ORG-001 | organisation flexible multi-structure | 13, obligatoire | 12–16j | architecte/full-stack | direction + DBA | hiérarchie/cycles/migration |
 | HOS-LOC-001 | géographie et espaces génériques | 13, obligatoire | 12–16j | full-stack senior | cadre + logistique | type/localisation/partage |
 | HOS-ADM-001 | demande, préadmission et réservation | 13, obligatoire | 12–16j | backend/frontend senior | médecin + admissions | workflow/concurrence/E2E |
@@ -39,8 +39,12 @@ Chaque story supérieure à 5 SP doit être découpée en tâches de 1 à 5 SP a
 | HOS-BED-001-C | HOS-BED-001 | Garantir le même établissement pour l'affectation, le séjour et le lit | 3 | 2j | QA H2 VERTE / POSTGRESQL REQUIS | Lead backend + DBA + RSSI/DPO + cadre | H2 + parcours + PostgreSQL 16 |
 | HOS-BED-001-D | HOS-BED-001 | Interdire les chevauchements entre périodes historiques | 3–5 | 3–5j | PROPOSED / POSTGRESQL REQUIS | Lead backend + DBA + cadre | préflight + PostgreSQL exclusion/concurrence |
 | HOS-BED-002-A | HOS-BED-002 | Corriger le compteur legacy des lits disponibles | 2 | 1j | QA TECHNIQUE VERTE | Lead full-stack + cadre | MockMvc + Angular ciblé + suites complètes |
+| HOS-RBAC-001-A | HOS-RBAC-001 | Séparer la gestion opérationnelle du statut des lits | 2 | 1–2j | DONE — PR #100 / QA automatisée verte | Tech Lead + RSSI + métier | backend + Angular + matrice RBAC |
+| HOS-RBAC-001-B | HOS-RBAC-001 | Séparer transfert, décision de sortie, départ physique, nettoyage et maintenance | 5 | 4–6j | DONE — PR #102 / QA automatisée verte | Tech Lead + RSSI + métiers | backend + Angular + matrice positive/négative |
+| HOS-RBAC-001-C | HOS-RBAC-001 | Séparer admission, notes, consentement, soins, médicaments et consommables | — | — | DONE — PR #107 / CI main #1012 verte | Tech Lead + RSSI + direction médicale | backend + Angular + intégration clinique |
+| HOS-RBAC-001-D | HOS-RBAC-001 | Supprimer définitivement `HOSPITALIZATION_MANAGE` sans fallback ni remapping | 2 | 0,5–1j | DONE — PR #122 / Flyway V86 / CI #1027 verte | Tech Lead + RSSI + DBA | Maven strict + PostgreSQL 16 + Angular |
 
-Ces incréments additifs ne valident pas l'ADR-0002 et n'engagent pas le reste de la phase 0. HOS-BED-002-A réduit GAP-007 ; HOS-BED-001-A/B/C réduisent GAP-005 pour les affectations actives, le rattachement au séjour, la chronologie simple et la cohérence tenant, sans couvrir les chevauchements entre périodes clôturées.
+Ces incréments n'emportent pas à eux seuls validation globale de l'ADR-0002. HOS-BED-002-A réduit GAP-007 ; HOS-BED-001-A/B/C réduisent GAP-005 pour les affectations actives, le rattachement au séjour, la chronologie simple et la cohérence tenant, sans couvrir à eux seuls les chevauchements entre périodes clôturées. HOS-RBAC-001-A/B/C ont séparé les intentions hospitalières et HOS-RBAC-001-D a supprimé en V86 la dernière permission générique `HOSPITALIZATION_MANAGE`. La suite de GAP-016 porte désormais sur le contexte d'accès (unité, relation de soin, délégations/habilitations) et la clearance, pas sur une permission legacy à conserver.
 
 ## Definition of Ready globale
 
@@ -190,52 +194,68 @@ Critique.
 
 ### Titre
 
-Séparer les actions médicales, soignantes, administratives, hygiène et maintenance.
+Séparer les actions médicales, soignantes, administratives, hygiène et maintenance et appliquer leur contexte d'accès.
+
+### État actuel
+
+Les incréments A à D sont livrés sur `main` :
+
+- HOS-RBAC-001-A / PR #100 : permission dédiée pour le statut opérationnel des lits ;
+- HOS-RBAC-001-B / PR #102 : séparation transfert, décision médicale de sortie, départ physique, nettoyage et maintenance ;
+- HOS-RBAC-001-C / PR #107 : séparation admission, notes, consentement, soins, administration médicamenteuse et consommables ;
+- HOS-RBAC-001-D / PR #122 : suppression définitive de `HOSPITALIZATION_MANAGE` via Flyway V86, sans fallback, alias ni remapping automatique.
+
+La segmentation des intentions est donc livrée. GAP-016 reste `PARTIAL` uniquement pour les contrôles contextuels avancés encore hors de ces incréments.
 
 ### Contexte
 
-`HOSPITALIZATION_MANAGE` autorise admission, notes, soins, sortie, transfert et statut lit à plusieurs profils tenant-wide.
+Le modèle initial regroupait plusieurs commandes hospitalières derrière une autorité générique. Cette dette est supprimée : le catalogue courant ne doit plus contenir `HOSPITALIZATION_MANAGE`.
 
-### Problème actuel
+Le risque restant n'est plus la granularité des permissions, mais la décision contextuelle : unité d'affectation, relation de soin, habilitation professionnelle, délégation datée et clearance de sortie.
 
-La séparation des tâches et le principe du moindre privilège ne sont pas assurés.
+### Besoin fonctionnel restant
 
-### Besoin fonctionnel
-
-Créer des permissions par action, évaluées avec affectation d'unité, relation de soin, délégation et tenant.
+Appliquer les permissions spécialisées déjà livrées avec les contraintes contextuelles nécessaires, sans réintroduire une autorité globale de compatibilité.
 
 ### Règles métier
 
-1. Une profession n'accorde aucun droit à elle seule.
-2. La décision médicale, la clearance, le mouvement, le nettoyage et la maintenance sont distincts.
-3. Une délégation expire automatiquement.
-4. Toute décision d'accès sensible est auditée.
+1. Une profession n'accorde aucun droit à elle seule ; la permission effective reste obligatoire.
+2. Aucune permission générique `HOSPITALIZATION_MANAGE` ne doit être recréée, aliasée ou utilisée comme fallback.
+3. La décision médicale, la clearance administrative/financière, le mouvement, le nettoyage et la maintenance restent des responsabilités distinctes.
+4. Les futures règles d'unité, relation de soin, habilitation et délégation sont deny-by-default et historisées.
+5. Une délégation expirée ne confère plus d'accès actif mais reste auditée.
+6. Toute décision d'accès sensible doit être traçable.
 
 ### Critères d'acceptation
 
-- Étant donné un infirmier sans délégation, lorsque celui-ci tente une sortie médicale, alors l'API répond 403.
-- Étant donné un professionnel affecté temporairement, lorsque la période expire, alors l'accès à l'unité est retiré sans effacer l'historique.
-- Étant donné un administrateur sans relation de soin, lorsque le détail clinique est demandé, alors seules les données administratives autorisées sont visibles.
+- Les permissions spécialisées A/B/C sont les seules autorités hospitalières d'écriture pour leurs actions.
+- Après V86, `permissions` et `role_permissions` ne contiennent plus `HOSPITALIZATION_MANAGE`.
+- Un ancien rôle personnalisé ne reçoit aucun droit de remplacement automatiquement.
+- Un infirmier sans droit de décision de sortie reçoit 403 sur la décision médicale.
+- Un rôle hygiène ou maintenance ne reçoit aucune écriture clinique.
+- Les contrôles contextuels futurs ne doivent pas être simulés par un rôle tenant-wide plus large.
 
 ### Cas particuliers
 
-Urgence vitale, garde transverse, petite clinique cumulant plusieurs fonctions, audit légal.
+Urgence vitale, garde transverse, petite clinique cumulant plusieurs fonctions, délégation temporaire et audit légal doivent être traités explicitement par les futurs contrôles contextuels, jamais par restauration de la permission supprimée.
 
 ### Permissions
 
-Catalogue à signer par RSSI/DPO et métiers ; politique deny-by-default.
+Catalogue spécialisé livré par HOS-RBAC-001-A/B/C et nettoyé par HOS-RBAC-001-D. Politique deny-by-default.
 
 ### Données et historique
 
-Rôle, permission, contexte, décision, règle appliquée, motif, délégation.
+Rôle, permission, contexte, décision, règle appliquée, motif, délégation et période d'habilitation.
 
 ### Scénarios de test
 
-`SEC-001`, matrices positives/négatives par endpoint et écran.
+Matrices positives/négatives par endpoint et écran, migration PostgreSQL V85 → V86, tests de contexte stale, puis scénarios ABAC avec HOS-STAFF-001 / HOS-DIS-001.
 
-### Dépendances
+### Dépendances restantes
 
-HOS-STAFF-001 pour le contexte complet ; garde-fous minimaux livrables avant.
+- HOS-STAFF-001 pour les affectations, habilitations et délégations datées ;
+- HOS-DIS-001 pour la clearance de sortie ;
+- validation RSSI/DPO et validation des métiers hospitaliers.
 
 ### Priorité
 
@@ -243,7 +263,7 @@ Critique.
 
 ### Estimation
 
-Très élevée : 8 SP à découper ; 8–12j.
+Le découpage A/B/C/D de la segmentation des permissions est livré. L'effort restant de contextualisation est porté par les stories dépendantes ; il ne doit pas être masqué dans une nouvelle permission générique.
 
 ---
 
