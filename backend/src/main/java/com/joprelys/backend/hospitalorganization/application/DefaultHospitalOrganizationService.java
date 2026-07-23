@@ -83,8 +83,8 @@ public class DefaultHospitalOrganizationService implements HospitalOrganizationU
     public List<OrganizationalUnitResponse> listUnits(UUID requestedOrganizationId, boolean includeInactive) {
         return inOrganizationScope(requestedOrganizationId, scope -> {
             List<OrganizationalUnitEntity> units = includeInactive
-                    ? unitRepository.findAllByOrderByCodeAsc()
-                    : unitRepository.findAllByActiveTrueOrderByCodeAsc();
+                    ? unitRepository.findAllByOrganizationIdOrderByCodeAsc(scope.organizationId())
+                    : unitRepository.findAllByOrganizationIdAndActiveTrueOrderByCodeAsc(scope.organizationId());
             return units.stream().map(OrganizationalUnitResponse::fromEntity).toList();
         });
     }
@@ -95,7 +95,9 @@ public class DefaultHospitalOrganizationService implements HospitalOrganizationU
             SaveOrganizationalUnitRequest request) {
         return inOrganizationScope(requestedOrganizationId, scope -> {
             String code = normalizeCode(request.code());
-            rejectConflict(unitRepository.existsByCodeIgnoreCase(code), "Ce code d'unité est déjà utilisé.");
+            rejectConflict(
+                    unitRepository.existsByOrganizationIdAndCodeIgnoreCase(scope.organizationId(), code),
+                    "Ce code d'unité est déjà utilisé.");
             OrganizationalUnitEntity parent = resolveParent(
                     scope.organizationId(), request.parentId(), request.unitType(), null);
             ResolvedUnitIdentity identity = resolveIdentity(request);
@@ -126,7 +128,8 @@ public class DefaultHospitalOrganizationService implements HospitalOrganizationU
             }
             String code = normalizeCode(request.code());
             rejectConflict(
-                    unitRepository.existsByCodeIgnoreCaseAndIdNot(code, unitId),
+                    unitRepository.existsByOrganizationIdAndCodeIgnoreCaseAndIdNot(
+                            scope.organizationId(), code, unitId),
                     "Ce code d'unité est déjà utilisé.");
             OrganizationalUnitEntity parent = resolveParent(
                     scope.organizationId(), request.parentId(), request.unitType(), unitId);
@@ -154,7 +157,8 @@ public class DefaultHospitalOrganizationService implements HospitalOrganizationU
                 unit.activate();
             } else {
                 rejectConflict(
-                        unitRepository.existsByParentIdAndActiveTrue(unitId),
+                        unitRepository.existsByOrganizationIdAndParentIdAndActiveTrue(
+                                scope.organizationId(), unitId),
                         "Désactivez d'abord les unités enfants actives.");
                 unit.deactivate();
             }
@@ -343,7 +347,9 @@ public class DefaultHospitalOrganizationService implements HospitalOrganizationU
         }
         String name = rawName.trim().replaceAll("\\s+", " ");
         if (name.length() < 2 || name.length() > 120) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le nom de l'unité doit contenir entre 2 et 120 caractères.");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Le nom de l'unité doit contenir entre 2 et 120 caractères.");
         }
         return name;
     }
