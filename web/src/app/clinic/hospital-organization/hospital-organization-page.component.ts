@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ApiErrorI18nService } from '../../core/i18n/api-error-i18n.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { IconComponent } from '../../shared/ui/icon.component';
@@ -43,6 +44,7 @@ export class HospitalOrganizationPageComponent implements OnInit {
   private readonly organizationApi = inject(OrganizationApiService);
   private readonly rbacApi = inject(RbacApiService);
   private readonly i18n = inject(I18nService);
+  private readonly apiErrorI18n = inject(ApiErrorI18nService);
 
   readonly units = signal<OrganizationalUnit[]>([]);
   readonly serviceCatalog = signal<HospitalServiceCatalogEntry[]>([]);
@@ -261,8 +263,11 @@ export class HospitalOrganizationPageComponent implements OnInit {
   }
 
   private handleError(error: HttpErrorResponse): void {
-    const body = error.error as { detail?: string; error?: { message?: string } } | null;
-    this.errorMessage.set(body?.error?.message ?? body?.detail ?? this.t('hospitalOrg.feedback.error'));
+    this.errorMessage.set(this.apiErrorI18n.message(
+      error,
+      'hospitalOrg.errors',
+      'hospitalOrg.feedback.error',
+    ));
     this.loading.set(false);
   }
 
