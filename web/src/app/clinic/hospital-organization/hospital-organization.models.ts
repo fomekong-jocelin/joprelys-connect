@@ -4,7 +4,6 @@ export interface HospitalServiceCatalogEntry {
   code: string;
   nameFr: string;
   nameEn: string;
-  serviceType: 'HOSPITALIZATION' | 'EMERGENCY' | 'OUTPATIENT' | 'MEDICO_TECHNICAL' | 'PHARMACY' | 'ADMINISTRATIVE';
 }
 
 export interface MedicalSpecialtyCatalogEntry {
