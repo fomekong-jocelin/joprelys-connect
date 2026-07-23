@@ -101,7 +101,7 @@
               </span>
               <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
-                  <h3 class="text-sm font-bold text-[var(--text-primary)]">{{ row.unit.name }}</h3>
+                  <h3 class="text-sm font-bold text-[var(--text-primary)]">{{ unitLabel(row.unit) }}</h3>
                   <span class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
                     {{ typeLabel(row.unit.unitType) }}
                   </span>
@@ -115,14 +115,14 @@
               </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-2 xs:grid-cols-2 sm:flex sm:flex-wrap sm:justify-end">
+            <div class="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:justify-end">
               @if (canAddChild(row.unit)) {
                 <button type="button" class="ui-button ui-button-secondary" (click)="openCreate(nextChildType(row.unit), row.unit.id)">
                   <app-ui-icon name="plus" /> {{ t('hospitalOrg.actions.addChild') }}
                 </button>
               }
               <button type="button" class="ui-button ui-button-secondary" (click)="openEdit(row.unit)">
-                <app-ui-icon name="wrench" /> {{ t('common.edit', 'Modifier') }}
+                <app-ui-icon name="wrench" /> {{ t('common.edit') }}
               </button>
               <button
                 type="button"
@@ -202,8 +202,8 @@
           <label class="ui-label" for="org-parent">{{ t('hospitalOrg.fields.parent') }}</label>
           <select id="org-parent" class="ui-select mt-1 w-full" name="parentId" [(ngModel)]="form.parentId">
             <option [ngValue]="null">{{ t('hospitalOrg.fields.root') }}</option>
-            @for (unit of parentOptions(); track unit.id) {
-              <option [value]="unit.id">{{ unit.name }} · {{ typeLabel(unit.unitType) }}</option>
+            @for (unit of parentOptionsFor(form); track unit.id) {
+              <option [value]="unit.id">{{ unitLabel(unit) }} · {{ typeLabel(unit.unitType) }}</option>
             }
           </select>
           @if (form.unitType === 'CARE_UNIT') {
