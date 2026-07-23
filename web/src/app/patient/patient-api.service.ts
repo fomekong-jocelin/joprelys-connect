@@ -1,28 +1,27 @@
-import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { StructuredAdmissionRequest, StructuredHospitalization } from './hospitalization-location.models';
 import {
+  ConfirmPhysicalDepartureRequest,
+  CreatePatientAllergyRequest,
   CreatePatientDto,
-  Patient,
+  CreatePatientMedicalHistoryRequest,
+  CreatePatientVaccinationRequest,
+  DischargeHospitalizationRequest,
+  HospitalizationNote,
   LabOrder,
   LabResult,
-  PatientAllergy,
-  CreatePatientAllergyRequest,
-  PatientMedicalHistory,
-  CreatePatientMedicalHistoryRequest,
-  PatientVaccination,
-  CreatePatientVaccinationRequest,
-  Hospitalization,
-  CreateHospitalizationRequest,
-  HospitalizationNote,
-  DischargeHospitalizationRequest,
-  ConfirmPhysicalDepartureRequest,
-  PatientDuplicateCandidate,
   MedicalCaptchaResponse,
+  Patient,
+  PatientAllergy,
+  PatientDuplicateCandidate,
+  PatientMedicalHistory,
   PatientPreRegistrationRequest,
   PatientPreRegistrationResponse,
+  PatientVaccination,
+  PreRegistrationPage,
   PreRegistrationValidationRequest,
-  PreRegistrationPage
 } from './patient.models';
 
 @Injectable({
@@ -88,16 +87,16 @@ export class PatientApiService {
     return this.http.delete<void>(`/api/patients/${patientId}/medical-history/${historyId}`);
   }
 
-  getHospitalizations(patientId: string): Observable<Hospitalization[]> {
-    return this.http.get<Hospitalization[]>(`/api/hospitalizations/patient/${patientId}`);
+  getHospitalizations(patientId: string): Observable<StructuredHospitalization[]> {
+    return this.http.get<StructuredHospitalization[]>(`/api/hospitalizations/patient/${patientId}`);
   }
 
-  admitPatient(request: CreateHospitalizationRequest): Observable<Hospitalization> {
-    return this.http.post<Hospitalization>('/api/hospitalizations', request);
+  admitPatient(request: StructuredAdmissionRequest): Observable<StructuredHospitalization> {
+    return this.http.post<StructuredHospitalization>('/api/hospitalizations', request);
   }
 
-  getHospitalizationDetails(id: string): Observable<Hospitalization> {
-    return this.http.get<Hospitalization>(`/api/hospitalizations/${id}`);
+  getHospitalizationDetails(id: string): Observable<StructuredHospitalization> {
+    return this.http.get<StructuredHospitalization>(`/api/hospitalizations/${id}`);
   }
 
   addHospitalizationNote(id: string, noteContent: string): Observable<HospitalizationNote> {
@@ -108,15 +107,15 @@ export class PatientApiService {
     return this.http.get<HospitalizationNote[]>(`/api/hospitalizations/${id}/notes`);
   }
 
-  dischargePatient(id: string, request: DischargeHospitalizationRequest): Observable<Hospitalization> {
-    return this.http.post<Hospitalization>(`/api/hospitalizations/${id}/discharge`, request);
+  dischargePatient(id: string, request: DischargeHospitalizationRequest): Observable<StructuredHospitalization> {
+    return this.http.post<StructuredHospitalization>(`/api/hospitalizations/${id}/discharge`, request);
   }
 
   confirmPhysicalDeparture(
     id: string,
     request: ConfirmPhysicalDepartureRequest,
-  ): Observable<Hospitalization> {
-    return this.http.post<Hospitalization>(`/api/hospitalizations/${id}/physical-departure`, request);
+  ): Observable<StructuredHospitalization> {
+    return this.http.post<StructuredHospitalization>(`/api/hospitalizations/${id}/physical-departure`, request);
   }
 
   getDischargePdfUrl(id: string): string {
