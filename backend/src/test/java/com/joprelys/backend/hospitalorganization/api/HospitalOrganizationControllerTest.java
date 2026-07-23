@@ -84,7 +84,9 @@ class HospitalOrganizationControllerTest {
         mockMvc.perform(get("/api/hospital-organization/catalogs/services")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.code == 'GENERAL_MEDICINE')]").exists());
+                .andExpect(jsonPath("$[?(@.code == 'GENERAL_MEDICINE')]").exists())
+                .andExpect(jsonPath("$[?(@.code == 'GENERAL_MEDICINE')].nameFr").value("Médecine générale"))
+                .andExpect(jsonPath("$[?(@.code == 'GENERAL_MEDICINE')].nameEn").value("General medicine"));
 
         mockMvc.perform(post("/api/hospital-organization/units")
                         .header("Authorization", "Bearer " + adminToken)
@@ -98,7 +100,7 @@ class HospitalOrganizationControllerTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.code").value("SVC_GEN_MED"))
-                .andExpect(jsonPath("$.name").value("Médecine générale"))
+                .andExpect(jsonPath("$.name").isEmpty())
                 .andExpect(jsonPath("$.unitType").value("SERVICE"))
                 .andExpect(jsonPath("$.serviceCatalogCode").value("GENERAL_MEDICINE"))
                 .andExpect(jsonPath("$.active").value(true));
