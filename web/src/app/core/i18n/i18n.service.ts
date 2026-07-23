@@ -26,6 +26,10 @@ export class I18nService {
     return this.dictionary()[key] ?? defaultValue ?? key;
   }
 
+  currentLanguage(): AppLocale {
+    return this.locale();
+  }
+
   async setLocale(lang: AppLocale): Promise<void> {
     this.locale.set(lang);
     try {
