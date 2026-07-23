@@ -1,8 +1,6 @@
 package com.joprelys.backend.spatial.application;
 
-import com.joprelys.backend.spatial.api.BedResponse;
 import com.joprelys.backend.spatial.api.RoomResponse;
-import com.joprelys.backend.spatial.api.SaveBedRequest;
 import com.joprelys.backend.spatial.api.SaveRoomRequest;
 import com.joprelys.backend.spatial.api.SaveWardRequest;
 import com.joprelys.backend.spatial.api.SpatialConfigurationResponse;
@@ -17,7 +15,4 @@ public interface SpatialConfigurationUseCase {
     RoomResponse createRoom(UUID organizationId, SaveRoomRequest request);
     RoomResponse updateRoom(UUID organizationId, UUID id, SaveRoomRequest request);
     void deleteRoom(UUID organizationId, UUID id);
-    BedResponse createBed(UUID organizationId, SaveBedRequest request);
-    BedResponse updateBed(UUID organizationId, UUID id, SaveBedRequest request);
-    void deleteBed(UUID organizationId, UUID id);
 }
