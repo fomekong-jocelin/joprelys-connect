@@ -8,12 +8,12 @@ import java.util.UUID;
 public record CreateHospitalizationRequest(
         @NotNull(message = "L'identifiant du patient est obligatoire.")
         UUID patientId,
-        @NotBlank(message = "Le nom du service est obligatoire.")
-        String serviceName,
-        @NotBlank(message = "Le numéro de chambre est obligatoire.")
-        String roomNumber,
-        @NotBlank(message = "Le numéro de lit est obligatoire.")
-        String bedNumber,
+        @NotNull(message = "L'unité de service est obligatoire.")
+        UUID serviceUnitId,
+        @NotNull(message = "L'espace d'hébergement est obligatoire.")
+        UUID spaceId,
+        @NotNull(message = "Le lit est obligatoire.")
+        UUID bedId,
         @NotBlank(message = "Le motif d'admission est obligatoire.")
         String admissionReason,
         UUID visitId,
@@ -21,26 +21,6 @@ public record CreateHospitalizationRequest(
         @NotNull(message = "Le médecin responsable est obligatoire.")
         UUID responsiblePractitionerId
 ) {
-    /** Backward-compatible constructor for the existing visit-based admission flow. */
-    public CreateHospitalizationRequest(
-            UUID patientId,
-            String serviceName,
-            String roomNumber,
-            String bedNumber,
-            String admissionReason,
-            UUID visitId,
-            UUID responsiblePractitionerId) {
-        this(
-                patientId,
-                serviceName,
-                roomNumber,
-                bedNumber,
-                admissionReason,
-                visitId,
-                null,
-                responsiblePractitionerId);
-    }
-
     @AssertTrue(message = "Une visite ou une urgence associée est obligatoire.")
     public boolean hasCareContext() {
         return visitId != null || emergencyId != null;

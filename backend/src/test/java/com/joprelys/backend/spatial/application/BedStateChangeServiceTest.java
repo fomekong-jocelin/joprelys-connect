@@ -8,7 +8,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
-import com.joprelys.backend.spatial.domain.HospitalServiceType;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedRepository;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedStateAxis;
@@ -16,8 +15,7 @@ import com.joprelys.backend.spatial.infrastructure.persistence.BedStateChangeEnt
 import com.joprelys.backend.spatial.infrastructure.persistence.BedStateChangeRepository;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedStateChangeSource;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedStateReasonCode;
-import com.joprelys.backend.spatial.infrastructure.persistence.RoomEntity;
-import com.joprelys.backend.spatial.infrastructure.persistence.WardEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.FacilitySpaceEntity;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,12 +32,9 @@ import org.springframework.web.server.ResponseStatusException;
 @ExtendWith(MockitoExtension.class)
 class BedStateChangeServiceTest {
 
-    @Mock
-    private BedStateChangeRepository bedStateChangeRepository;
-    @Mock
-    private BedRepository bedRepository;
-    @Mock
-    private UserAccountRepository userAccountRepository;
+    @Mock private BedStateChangeRepository bedStateChangeRepository;
+    @Mock private BedRepository bedRepository;
+    @Mock private UserAccountRepository userAccountRepository;
 
     private BedStateChangeService service;
     private BedEntity bed;
@@ -47,27 +42,17 @@ class BedStateChangeServiceTest {
     @BeforeEach
     void setUp() {
         SecurityContextHolder.clearContext();
-        service = new BedStateChangeService(
-                bedStateChangeRepository,
-                bedRepository,
-                userAccountRepository);
-
-        WardEntity ward = new WardEntity("Médecine", HospitalServiceType.HOSPITALIZATION);
-        RoomEntity room = new RoomEntity(ward, "101", 1, "STANDARD");
-        bed = new BedEntity(room, "101-A");
-        bed.setOrganizationId(UUID.randomUUID());
+        service = new BedStateChangeService(bedStateChangeRepository, bedRepository, userAccountRepository);
+        FacilitySpaceEntity space = new FacilitySpaceEntity(
+                UUID.randomUUID(), null, "SPACE_101", "Chambre 101", "HOSPITAL_ROOM");
+        bed = new BedEntity(space, "101-A");
     }
 
     @Test
     void shouldRecordManualCapacityClosureWithSystemFallbackActor() {
         service.recordManual(
-                bed,
-                BedStateAxis.CAPACITY,
-                "OPEN",
-                "CLOSED",
-                BedStateReasonCode.CAPACITY_STAFFING_SHORTAGE,
-                "Équipe de nuit incomplète");
-
+                bed, BedStateAxis.CAPACITY, "OPEN", "CLOSED",
+                BedStateReasonCode.CAPACITY_STAFFING_SHORTAGE, "Équipe de nuit incomplète");
         ArgumentCaptor<BedStateChangeEntity> captor = ArgumentCaptor.forClass(BedStateChangeEntity.class);
         verify(bedStateChangeRepository).save(captor.capture());
         BedStateChangeEntity event = captor.getValue();
@@ -81,13 +66,8 @@ class BedStateChangeServiceTest {
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
                 () -> service.recordManual(
-                        bed,
-                        BedStateAxis.CAPACITY,
-                        "OPEN",
-                        "CLOSED",
-                        BedStateReasonCode.CAPACITY_OTHER,
-                        null));
-
+                        bed, BedStateAxis.CAPACITY, "OPEN", "CLOSED",
+                        BedStateReasonCode.CAPACITY_OTHER, null));
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
         verify(bedStateChangeRepository, never()).save(any(BedStateChangeEntity.class));
     }
@@ -97,13 +77,8 @@ class BedStateChangeServiceTest {
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
                 () -> service.recordManual(
-                        bed,
-                        BedStateAxis.READINESS,
-                        "READY",
-                        "CLEANING",
-                        BedStateReasonCode.CLEANING_AFTER_DEPARTURE,
-                        "Tentative manuelle"));
-
+                        bed, BedStateAxis.READINESS, "READY", "CLEANING",
+                        BedStateReasonCode.CLEANING_AFTER_DEPARTURE, "Tentative manuelle"));
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
         verify(bedStateChangeRepository, never()).save(any(BedStateChangeEntity.class));
     }
@@ -111,14 +86,9 @@ class BedStateChangeServiceTest {
     @Test
     void shouldAllowAutomaticCleaningAfterTransfer() {
         service.recordSystem(
-                bed,
-                BedStateAxis.READINESS,
-                "READY",
-                "CLEANING",
+                bed, BedStateAxis.READINESS, "READY", "CLEANING",
                 BedStateReasonCode.CLEANING_AFTER_TRANSFER,
-                "Transfert vers un autre lit",
-                BedStateChangeSource.SYSTEM_TRANSFER);
-
+                "Transfert vers un autre lit", BedStateChangeSource.SYSTEM_TRANSFER);
         verify(bedStateChangeRepository).save(any(BedStateChangeEntity.class));
     }
 
@@ -136,11 +106,8 @@ class BedStateChangeServiceTest {
                 "Système Joprelys",
                 BedStateChangeSource.MANUAL,
                 java.time.Instant.parse("2026-07-22T06:00:00Z"));
-        when(bedStateChangeRepository.findByBedIdOrderByOccurredAtDesc(bed.getId()))
-                .thenReturn(List.of(first));
-
+        when(bedStateChangeRepository.findByBedIdOrderByOccurredAtDesc(bed.getId())).thenReturn(List.of(first));
         var history = service.listHistory(bed.getId());
-
         assertEquals(1, history.size());
         assertEquals("CAPACITY_SAFETY", history.getFirst().reasonCode());
     }

@@ -28,16 +28,16 @@ public class SpatialController {
         this.spatialService = spatialService;
     }
 
-    @GetMapping("/wards")
+    @GetMapping("/spaces/{id}/occupancy")
     @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
-    public List<WardResponse> listWards() {
-        return spatialService.listWards();
+    public SpaceOccupancyResponse getSpaceOccupancy(@PathVariable UUID id) {
+        return spatialService.getSpaceOccupancy(id);
     }
 
-    @GetMapping("/wards/{id}/occupancy")
+    @GetMapping("/organizational-units/{id}/occupancy")
     @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
-    public WardOccupancyResponse getWardOccupancy(@PathVariable UUID id) {
-        return spatialService.getWardOccupancy(id);
+    public OrganizationalUnitOccupancyResponse getOrganizationalUnitOccupancy(@PathVariable UUID id) {
+        return spatialService.getOrganizationalUnitOccupancy(id);
     }
 
     @GetMapping("/beds/{id}/state-history")
@@ -117,7 +117,11 @@ public class SpatialController {
     @PostMapping("/transfers")
     @PreAuthorize("hasAuthority('HOSPITALIZATION_TRANSFER')")
     public BedAssignmentResponse transferPatient(@Valid @RequestBody TransferRequest request) {
-        return spatialService.transferPatient(request.hospitalizationId(), request.newBedId());
+        return spatialService.transferPatient(
+                request.hospitalizationId(),
+                request.targetServiceUnitId(),
+                request.targetSpaceId(),
+                request.targetBedId());
     }
 
     private BedReadinessStatus readinessStatus(String value, String operation) {

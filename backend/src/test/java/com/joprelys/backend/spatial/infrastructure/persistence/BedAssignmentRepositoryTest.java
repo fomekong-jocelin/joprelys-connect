@@ -9,9 +9,11 @@ import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationEntity;
 import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository;
+import com.joprelys.backend.hospitalorganization.domain.OrganizationalUnitType;
+import com.joprelys.backend.hospitalorganization.infrastructure.persistence.OrganizationalUnitEntity;
+import com.joprelys.backend.hospitalorganization.infrastructure.persistence.OrganizationalUnitRepository;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
-import com.joprelys.backend.spatial.domain.HospitalServiceType;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import java.sql.Timestamp;
@@ -31,27 +33,21 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("test")
 class BedAssignmentRepositoryTest {
 
-    @Autowired
-    private OrganizationRepository organizationRepository;
-    @Autowired
-    private WardRepository wardRepository;
-    @Autowired
-    private RoomRepository roomRepository;
-    @Autowired
-    private BedRepository bedRepository;
-    @Autowired
-    private BedAssignmentRepository bedAssignmentRepository;
-    @Autowired
-    private HospitalizationRepository hospitalizationRepository;
-    @Autowired
-    private VisitRepository visitRepository;
-    @Autowired
-    private PatientRepository patientRepository;
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    @Autowired private OrganizationRepository organizationRepository;
+    @Autowired private OrganizationalUnitRepository organizationalUnitRepository;
+    @Autowired private FacilitySpaceRepository spaceRepository;
+    @Autowired private InpatientSpaceProfileRepository inpatientSpaceProfileRepository;
+    @Autowired private BedRepository bedRepository;
+    @Autowired private BedAssignmentRepository bedAssignmentRepository;
+    @Autowired private HospitalizationRepository hospitalizationRepository;
+    @Autowired private VisitRepository visitRepository;
+    @Autowired private PatientRepository patientRepository;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     private OrganizationEntity organization;
     private OrganizationEntity otherOrganization;
+    private OrganizationalUnitEntity unit;
+    private FacilitySpaceEntity space;
     private BedEntity bed;
     private BedEntity secondBed;
     private HospitalizationEntity hospitalization;
@@ -63,61 +59,46 @@ class BedAssignmentRepositoryTest {
         organization = organizationRepository.save(new OrganizationEntity(
                 "Clinique intégrité lit " + suffix,
                 "bed-integrity-" + suffix + "@joprelys.local",
-                "000",
-                "Adresse test",
-                "Douala"));
+                "000", "Adresse test", "Douala"));
         otherOrganization = organizationRepository.save(new OrganizationEntity(
                 "Autre clinique intégrité lit " + suffix,
                 "other-bed-integrity-" + suffix + "@joprelys.local",
-                "000",
-                "Autre adresse test",
-                "Yaoundé"));
+                "000", "Autre adresse test", "Yaoundé"));
         TenantContext.setTenantId(organization.getId());
 
-        WardEntity ward = wardRepository.save(new WardEntity(
-                "Hospitalisation " + suffix,
-                HospitalServiceType.HOSPITALIZATION));
-        RoomEntity room = roomRepository.save(new RoomEntity(ward, "101", 2, "STANDARD"));
-        bed = bedRepository.save(new BedEntity(room, "101-A"));
-        secondBed = bedRepository.save(new BedEntity(room, "101-B"));
+        unit = organizationalUnitRepository.saveAndFlush(new OrganizationalUnitEntity(
+                organization.getId(), null,
+                "CARE_BED_" + suffix.substring(0, 8).toUpperCase(),
+                "Unité hospitalisation", OrganizationalUnitType.CARE_UNIT, null));
+        space = spaceRepository.saveAndFlush(new FacilitySpaceEntity(
+                organization.getId(), null,
+                "ROOM_101_" + suffix.substring(0, 8).toUpperCase(),
+                "Chambre 101", "HOSPITAL_ROOM"));
+        inpatientSpaceProfileRepository.saveAndFlush(new InpatientSpaceProfileEntity(
+                space.getId(), organization.getId(), "HOSPITAL_ROOM", "STANDARD"));
+        bed = bedRepository.saveAndFlush(new BedEntity(space, "101-A"));
+        secondBed = bedRepository.saveAndFlush(new BedEntity(space, "101-B"));
 
         PatientEntity patient = patientRepository.save(new PatientEntity(
-                "DPU-BED-" + suffix,
-                "PAT-BED-" + suffix,
-                "Patient intégrité lit",
-                "MASCULIN",
-                LocalDate.of(1990, 1, 1),
-                "+237600000000",
-                "Douala",
-                null,
-                null,
-                null,
-                null,
-                null,
-                null));
+                "DPU-BED-" + suffix, "PAT-BED-" + suffix, "Patient intégrité lit",
+                "MASCULIN", LocalDate.of(1990, 1, 1), "+237600000000", "Douala",
+                null, null, null, null, null, null));
         VisitEntity visit = visitRepository.save(new VisitEntity(
-                patient,
-                "VIS-BED-" + suffix,
-                "Test intégrité lit",
-                "HOSPITALISATION"));
-        hospitalization = hospitalizationRepository.save(new HospitalizationEntity(
-                patient.getId(),
-                ward.getName(),
-                room.getRoomNumber(),
-                bed.getBedNumber(),
-                "Test intégrité",
-                "HOSP-BED-1-" + suffix,
-                visit.getId(),
-                null));
-        otherHospitalization = hospitalizationRepository.save(new HospitalizationEntity(
-                patient.getId(),
-                ward.getName(),
-                room.getRoomNumber(),
-                secondBed.getBedNumber(),
-                "Test second séjour",
-                "HOSP-BED-2-" + suffix,
-                visit.getId(),
-                null));
+                patient, "VIS-BED-" + suffix, "Test intégrité lit", "HOSPITALISATION"));
+
+        hospitalization = new HospitalizationEntity(
+                patient.getId(), unit.getId(), space.getId(), bed.getId(),
+                "Unité hospitalisation", space.getName(), bed.getBedNumber(),
+                "Test intégrité", "HOSP-BED-1-" + suffix, visit.getId(), null, null);
+        hospitalization.setOrganizationId(organization.getId());
+        hospitalization = hospitalizationRepository.saveAndFlush(hospitalization);
+
+        otherHospitalization = new HospitalizationEntity(
+                patient.getId(), unit.getId(), space.getId(), secondBed.getId(),
+                "Unité hospitalisation", space.getName(), secondBed.getBedNumber(),
+                "Test second séjour", "HOSP-BED-2-" + suffix, visit.getId(), null, null);
+        otherHospitalization.setOrganizationId(organization.getId());
+        otherHospitalization = hospitalizationRepository.saveAndFlush(otherHospitalization);
     }
 
     @AfterEach
@@ -131,8 +112,9 @@ class BedAssignmentRepositoryTest {
         visitRepository.deleteAll();
         patientRepository.deleteAll();
         bedRepository.deleteAll();
-        roomRepository.deleteAll();
-        wardRepository.deleteAll();
+        inpatientSpaceProfileRepository.deleteAll();
+        spaceRepository.deleteAll();
+        organizationalUnitRepository.deleteAll();
         TenantContext.clear();
         organizationRepository.deleteById(organization.getId());
         organizationRepository.deleteById(otherOrganization.getId());
@@ -141,9 +123,7 @@ class BedAssignmentRepositoryTest {
     @Test
     void shouldRejectTwoActiveAssignmentsForSameBed() {
         bedAssignmentRepository.saveAndFlush(activeAssignment(hospitalization.getId(), bed));
-
-        assertThrows(
-                DataIntegrityViolationException.class,
+        assertThrows(DataIntegrityViolationException.class,
                 () -> bedAssignmentRepository.saveAndFlush(activeAssignment(otherHospitalization.getId(), bed)),
                 "L'index unique doit refuser une seconde affectation active du même lit.");
     }
@@ -151,23 +131,17 @@ class BedAssignmentRepositoryTest {
     @Test
     void shouldRejectTwoActiveAssignmentsForSameHospitalization() {
         bedAssignmentRepository.saveAndFlush(activeAssignment(hospitalization.getId(), bed));
-
-        assertThrows(
-                DataIntegrityViolationException.class,
+        assertThrows(DataIntegrityViolationException.class,
                 () -> bedAssignmentRepository.saveAndFlush(activeAssignment(hospitalization.getId(), secondBed)),
                 "L'index unique doit refuser deux lits actifs pour le même séjour.");
     }
 
     @Test
     void shouldAllowNewAssignmentAfterPreviousRelease() {
-        BedAssignmentEntity previous = bedAssignmentRepository.saveAndFlush(
-                activeAssignment(hospitalization.getId(), bed));
+        BedAssignmentEntity previous = bedAssignmentRepository.saveAndFlush(activeAssignment(hospitalization.getId(), bed));
         previous.releaseAt(Instant.now());
         bedAssignmentRepository.saveAndFlush(previous);
-
-        BedAssignmentEntity current = bedAssignmentRepository.saveAndFlush(
-                activeAssignment(hospitalization.getId(), bed));
-
+        BedAssignmentEntity current = bedAssignmentRepository.saveAndFlush(activeAssignment(hospitalization.getId(), bed));
         assertNull(previous.getActiveBedId());
         assertNull(previous.getActiveHospitalizationId());
         assertEquals(bed.getId(), current.getActiveBedId());
@@ -182,72 +156,50 @@ class BedAssignmentRepositoryTest {
                     active_bed_id, active_hospitalization_id, organization_id
                 ) VALUES (?, ?, ?, ?, NULL, NULL, ?, ?)
                 """;
-
-        assertThrows(
-                DataIntegrityViolationException.class,
-                () -> jdbcTemplate.update(
-                        sql,
-                        UUID.randomUUID(),
-                        hospitalization.getId(),
-                        bed.getId(),
-                        Timestamp.from(Instant.now()),
-                        hospitalization.getId(),
-                        organization.getId()),
+        assertThrows(DataIntegrityViolationException.class,
+                () -> jdbcTemplate.update(sql, UUID.randomUUID(), hospitalization.getId(), bed.getId(),
+                        Timestamp.from(Instant.now()), hospitalization.getId(), organization.getId()),
                 "La contrainte CHECK doit refuser un marqueur actif nul.");
     }
 
     @Test
     void shouldRejectUnknownHospitalization() {
         UUID unknownHospitalizationId = UUID.randomUUID();
-        assertThrows(
-                DataIntegrityViolationException.class,
+        assertThrows(DataIntegrityViolationException.class,
                 () -> jdbcTemplate.update("""
                         INSERT INTO bed_assignments (
                             id, hospitalization_id, bed_id, assigned_at, released_at,
                             active_bed_id, active_hospitalization_id, organization_id
                         ) VALUES (?, ?, ?, ?, NULL, ?, ?, ?)
                         """,
-                        UUID.randomUUID(),
-                        unknownHospitalizationId,
-                        bed.getId(),
-                        Timestamp.from(Instant.now()),
-                        bed.getId(),
-                        unknownHospitalizationId,
-                        organization.getId()),
+                        UUID.randomUUID(), unknownHospitalizationId, bed.getId(), Timestamp.from(Instant.now()),
+                        bed.getId(), unknownHospitalizationId, organization.getId()),
                 "La FK doit refuser une affectation sans séjour existant.");
     }
 
     @Test
     void shouldRejectReleasedAtBeforeAssignedAtInDomainAndDatabase() {
         BedAssignmentEntity assignment = activeAssignment(hospitalization.getId(), bed);
-        assertThrows(
-                IllegalArgumentException.class,
+        assertThrows(IllegalArgumentException.class,
                 () -> assignment.releaseAt(assignment.getAssignedAt().minusSeconds(1)));
 
         Instant assignedAt = Instant.now();
-        assertThrows(
-                DataIntegrityViolationException.class,
+        assertThrows(DataIntegrityViolationException.class,
                 () -> jdbcTemplate.update("""
                         INSERT INTO bed_assignments (
                             id, hospitalization_id, bed_id, assigned_at, released_at,
                             active_bed_id, active_hospitalization_id, organization_id
                         ) VALUES (?, ?, ?, ?, ?, NULL, NULL, ?)
                         """,
-                        UUID.randomUUID(),
-                        hospitalization.getId(),
-                        bed.getId(),
-                        Timestamp.from(assignedAt),
-                        Timestamp.from(assignedAt.minusSeconds(1)),
-                        organization.getId()),
+                        UUID.randomUUID(), hospitalization.getId(), bed.getId(), Timestamp.from(assignedAt),
+                        Timestamp.from(assignedAt.minusSeconds(1)), organization.getId()),
                 "La contrainte chronologique doit refuser une période inversée.");
     }
 
     @Test
     void shouldProtectAssignmentHistoryFromHospitalizationDeletion() {
         bedAssignmentRepository.saveAndFlush(activeAssignment(hospitalization.getId(), bed));
-
-        assertThrows(
-                DataIntegrityViolationException.class,
+        assertThrows(DataIntegrityViolationException.class,
                 () -> hospitalizationRepository.deleteById(hospitalization.getId()),
                 "La FK restrictive doit empêcher la suppression d'un séjour référencé.");
     }
@@ -255,21 +207,15 @@ class BedAssignmentRepositoryTest {
     @Test
     void shouldRejectAssignmentFromAnotherOrganization() {
         Instant assignedAt = Instant.now().minusSeconds(60);
-
-        assertThrows(
-                DataIntegrityViolationException.class,
+        assertThrows(DataIntegrityViolationException.class,
                 () -> jdbcTemplate.update("""
                         INSERT INTO bed_assignments (
                             id, hospitalization_id, bed_id, assigned_at, released_at,
                             active_bed_id, active_hospitalization_id, organization_id
                         ) VALUES (?, ?, ?, ?, ?, NULL, NULL, ?)
                         """,
-                        UUID.randomUUID(),
-                        hospitalization.getId(),
-                        bed.getId(),
-                        Timestamp.from(assignedAt),
-                        Timestamp.from(assignedAt.plusSeconds(30)),
-                        otherOrganization.getId()),
+                        UUID.randomUUID(), hospitalization.getId(), bed.getId(), Timestamp.from(assignedAt),
+                        Timestamp.from(assignedAt.plusSeconds(30)), otherOrganization.getId()),
                 "Les FK composites doivent refuser une affectation d'un autre établissement.");
     }
 
@@ -283,8 +229,7 @@ class BedAssignmentRepositoryTest {
 
     private Integer constraintCount(String constraintName) {
         return jdbcTemplate.queryForObject("""
-                SELECT COUNT(*)
-                FROM information_schema.table_constraints
+                SELECT COUNT(*) FROM information_schema.table_constraints
                 WHERE LOWER(constraint_name) = ?
                 """, Integer.class, constraintName);
     }

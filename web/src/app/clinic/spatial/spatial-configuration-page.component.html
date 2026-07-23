@@ -1,235 +1,238 @@
 <app-shell>
   <app-page-header
-    [title]="t('spatial.config.title')"
-    [subtitle]="t('spatial.config.subtitle')"
+    [title]="t('spatial.config.title', 'Géographie et espaces')"
+    [subtitle]="t('spatial.config.subtitle', 'Configurez les localisations physiques indépendamment des services médicaux.')"
     [backLink]="platformAdministrator() ? '/organizations' : '/clinic/spatial'"
-    [backLabel]="platformAdministrator() ? t('spatial.config.backToClinics') : t('spatial.config.backToOccupancy')"
+    [backLabel]="platformAdministrator() ? t('spatial.config.backToClinics', 'Établissements') : t('spatial.config.backToOccupancy', 'Capacité')"
   >
     @if (platformAdministrator()) {
-      <label class="sr-only" for="structure-organization">{{ t('spatial.config.organization') }}</label>
+      <label class="sr-only" for="structure-organization">{{ t('spatial.config.organization', 'Établissement') }}</label>
       <select
         id="structure-organization"
-        class="ui-select min-w-56"
+        class="ui-select w-full min-w-0 sm:w-auto sm:min-w-56"
         [ngModel]="selectedOrganizationId()"
         (ngModelChange)="selectedOrganizationId.set($event); onOrganizationChange()"
       >
-        <option value="">{{ t('spatial.config.selectOrganization') }}</option>
+        <option value="">{{ t('spatial.config.selectOrganization', 'Sélectionner un établissement') }}</option>
         @for (organization of organizations(); track organization.id) {
           <option [value]="organization.id">{{ organization.name }}</option>
         }
       </select>
     }
-    <button type="button" class="ui-button ui-button-primary" [disabled]="!canManageScope()" (click)="openWardEditor()">
-      <app-ui-icon name="plus" />
-      {{ t('spatial.config.addWard') }}
-    </button>
+    <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+      <button type="button" class="ui-button ui-button-secondary w-full sm:w-auto" [disabled]="!canManageScope()" (click)="openLocationEditor()">
+        <app-ui-icon name="plus" /> {{ t('spatial.location.add', 'Ajouter une localisation') }}
+      </button>
+      <button type="button" class="ui-button ui-button-primary w-full sm:w-auto" [disabled]="!canManageScope()" (click)="openSpaceEditor()">
+        <app-ui-icon name="plus" /> {{ t('spatial.space.add', 'Ajouter un espace') }}
+      </button>
+    </div>
   </app-page-header>
 
-  <main class="app-container pb-12">
+  <main class="app-container min-w-0 space-y-6 overflow-x-hidden pb-12">
     @if (errorMessage()) {
-      <div class="mb-4 rounded-[var(--radius-brand-md)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3 text-xs font-semibold text-[var(--brand-danger-text)]" role="alert">
+      <div class="break-words rounded-[var(--radius-brand-md)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3 text-xs font-semibold text-[var(--brand-danger-text)]" role="alert">
         {{ errorMessage() }}
       </div>
     }
     @if (successMessage()) {
-      <div class="mb-4 rounded-[var(--radius-brand-md)] border border-[var(--brand-success-muted)] bg-[var(--brand-success-subtle)] p-3 text-xs font-semibold text-[var(--brand-success-text)]" role="status">
+      <div class="break-words rounded-[var(--radius-brand-md)] border border-[var(--brand-success-muted)] bg-[var(--brand-success-subtle)] p-3 text-xs font-semibold text-[var(--brand-success-text)]" role="status">
         {{ successMessage() }}
       </div>
     }
 
     @if (platformAdministrator() && !canManageScope() && !loading()) {
-      <section class="ui-card-muted p-12 text-center">
+      <section class="ui-card-muted p-8 text-center sm:p-12">
         <app-ui-icon name="building" class="mb-3 text-4xl text-brand-cyan" />
-        <h2 class="text-base font-bold text-[var(--text-primary)]">{{ t('spatial.config.scopeRequiredTitle') }}</h2>
-        <p class="mx-auto mt-2 max-w-lg text-sm text-[var(--text-secondary)]">{{ t('spatial.config.scopeRequiredDetail') }}</p>
+        <h2 class="text-base font-bold text-[var(--text-primary)]">{{ t('spatial.config.scopeRequiredTitle', 'Sélectionnez un établissement') }}</h2>
       </section>
     } @else if (loading()) {
-      <div class="ui-card-muted flex items-center justify-center gap-3 p-12 text-sm text-[var(--text-secondary)]">
-        <span class="h-5 w-5 animate-spin rounded-full border-2 border-brand-cyan border-r-transparent"></span>
-        {{ t('common.loading') }}
+      <div class="ui-card-muted flex items-center justify-center gap-3 p-10 text-sm text-[var(--text-secondary)]">
+        <span class="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-brand-cyan border-r-transparent"></span>
+        {{ t('common.loading', 'Chargement…') }}
       </div>
-    } @else if (configuration().wards.length === 0) {
-      <section class="ui-card-muted p-12 text-center">
-        <app-ui-icon name="building" class="mb-3 text-4xl text-brand-cyan" />
-        <h2 class="text-base font-bold text-[var(--text-primary)]">{{ t('spatial.config.emptyTitle') }}</h2>
-        <p class="mx-auto mt-2 max-w-lg text-sm text-[var(--text-secondary)]">{{ t('spatial.config.emptyDetail') }}</p>
-        <button type="button" class="ui-button ui-button-primary mt-5" [disabled]="!canManageScope()" (click)="openWardEditor()">
-          <app-ui-icon name="plus" /> {{ t('spatial.config.addWard') }}
-        </button>
-      </section>
     } @else {
-      <div class="space-y-5">
-        @for (ward of configuration().wards; track ward.id) {
-          <section class="ui-card overflow-hidden">
-            <header class="flex flex-col gap-4 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
-              <div class="flex min-w-0 items-start gap-3">
-                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-brand-sm)] bg-[var(--brand-info-subtle)] text-brand-cyan">
-                  <app-ui-icon name="building" />
-                </span>
-                <div class="min-w-0">
-                  <p class="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">{{ t('spatial.config.ward') }}</p>
-                  <div class="mt-1 flex flex-wrap items-center gap-2">
-                    <h2 class="min-w-0 text-base font-bold text-[var(--text-primary)]">{{ ward.name }}</h2>
-                    <span class="inline-flex max-w-full items-center rounded-[var(--radius-brand-sm)] border border-[var(--brand-info-muted)] bg-[var(--brand-info-subtle)] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--brand-info-text)]">
-                      {{ serviceTypeLabel(ward.serviceType) }}
-                    </span>
-                  </div>
-                  <p class="mt-2 max-w-3xl text-xs leading-5 text-[var(--text-secondary)]">
-                    {{ serviceTypeDescription(ward.serviceType) }}
-                  </p>
-                </div>
-              </div>
-              <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap lg:justify-end">
-                @if (ward.allowsRooms) {
-                  <button type="button" class="ui-button ui-button-secondary" (click)="openRoomEditor(ward)">
-                    <app-ui-icon name="plus" /> {{ t('spatial.config.addRoom') }}
-                  </button>
-                }
-                <button type="button" class="ui-button ui-button-secondary" (click)="openWardEditor(ward)">
-                  <app-ui-icon name="wrench" /> {{ t('spatial.config.edit') }}
-                </button>
-                <button type="button" class="ui-button ui-button-danger" (click)="askDelete('ward', ward.id, ward.name)">
-                  <app-ui-icon name="trash" /> {{ t('spatial.config.delete') }}
-                </button>
-              </div>
-            </header>
+      <section class="ui-card min-w-0 p-4 sm:p-5">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div class="min-w-0">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-brand-cyan">{{ t('spatial.location.eyebrow', 'Géographie') }}</p>
+            <h2 class="mt-1 text-base font-bold text-[var(--text-primary)]">{{ t('spatial.location.title', 'Sites, bâtiments, étages et zones') }}</h2>
+            <p class="mt-2 max-w-3xl text-xs leading-5 text-[var(--text-secondary)]">
+              {{ t('spatial.location.description', 'Tous les niveaux sont facultatifs. Un espace peut aussi être rattaché directement à l’établissement.') }}
+            </p>
+          </div>
+          <button type="button" class="ui-button ui-button-secondary w-full sm:w-auto" (click)="openLocationEditor()">
+            <app-ui-icon name="plus" /> {{ t('spatial.location.add', 'Ajouter') }}
+          </button>
+        </div>
 
-            <div class="p-5">
-              @if (!ward.allowsRooms) {
-                <div class="flex items-start gap-3 rounded-[var(--radius-brand-md)] border border-[var(--brand-info-muted)] bg-[var(--brand-info-subtle)] p-4 text-[var(--brand-info-text)]">
-                  <app-ui-icon name="information-circle" class="mt-0.5 shrink-0" />
-                  <div>
-                    <p class="text-xs font-bold">{{ t('spatial.services.noAccommodationTitle') }}</p>
-                    <p class="mt-1 text-xs leading-5">{{ t('spatial.services.noAccommodationDescription') }}</p>
+        @if (locations().length === 0) {
+          <div class="mt-4 rounded-[var(--radius-brand-md)] border border-dashed border-[var(--app-border)] p-5 text-center text-xs text-[var(--text-muted)]">
+            {{ t('spatial.location.empty', 'Aucune localisation : les espaces peuvent être créés directement sous l’établissement.') }}
+          </div>
+        } @else {
+          <div class="mt-4 grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            @for (location of locations(); track location.id) {
+              <article class="min-w-0 rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-4" [class.opacity-60]="!location.active">
+                <div class="flex min-w-0 items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <span class="inline-flex rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] px-2 py-1 text-[10px] font-bold uppercase text-[var(--text-secondary)]">{{ location.nodeType }}</span>
+                    <h3 class="mt-2 break-words text-sm font-bold text-[var(--text-primary)]">{{ location.name }}</h3>
+                    <p class="mt-1 break-all text-[11px] text-[var(--text-muted)]">{{ location.code }}</p>
+                    <p class="mt-2 break-words text-xs text-[var(--text-secondary)]">{{ locationLabel(location.parentId) }}</p>
+                  </div>
+                  <div class="flex shrink-0 gap-1">
+                    <button type="button" class="ui-button ui-button-secondary px-2" (click)="openLocationEditor(location)" [attr.aria-label]="t('common.edit', 'Modifier')"><app-ui-icon name="wrench" /></button>
+                    <button type="button" class="ui-button ui-button-secondary px-2" (click)="setLocationActive(location)" [attr.aria-label]="location.active ? t('common.deactivate', 'Désactiver') : t('common.activate', 'Activer')">
+                      <app-ui-icon [name]="location.active ? 'x-mark' : 'check'" />
+                    </button>
                   </div>
                 </div>
-              } @else if (ward.rooms.length === 0) {
-                <div class="rounded-[var(--radius-brand-md)] border border-dashed border-[var(--app-border)] p-6 text-center text-xs text-[var(--text-muted)]">
-                  {{ t('spatial.config.noRooms') }}
-                </div>
-              } @else {
-                <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                  @for (room of ward.rooms; track room.id) {
-                    <article class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface)] p-4 shadow-[var(--shadow-card)]">
-                      <div class="flex flex-col gap-3 border-b border-[var(--app-border)] pb-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <h3 class="text-sm font-bold text-[var(--text-primary)]">{{ t('spatial.config.room') }} {{ room.roomNumber }}</h3>
-                          <p class="mt-1 text-xs text-[var(--text-secondary)]">
-                            {{ room.comfortLevel }} · {{ room.beds.length }}/{{ room.capacity }} {{ t('spatial.config.bedsConfigured') }}
-                          </p>
-                        </div>
-                        <div class="flex gap-1">
-                          <button type="button" class="ui-button ui-button-secondary" (click)="openRoomEditor(ward, room)" [attr.aria-label]="t('spatial.config.editRoom')">
-                            <app-ui-icon name="wrench" />
-                          </button>
-                          <button type="button" class="ui-button ui-button-danger" (click)="askDelete('room', room.id, room.roomNumber)" [attr.aria-label]="t('spatial.config.deleteRoom')">
-                            <app-ui-icon name="trash" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        @for (bed of room.beds; track bed.id) {
-                          <div class="flex items-center justify-between gap-2 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-2.5">
-                            <div class="min-w-0">
-                              <p class="truncate text-xs font-bold text-[var(--text-primary)]"><app-ui-icon name="bed" /> {{ bed.bedNumber }}</p>
-                              <p class="mt-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">{{ t('spatial.status.' + bed.status.toLowerCase()) }}</p>
-                            </div>
-                            <div class="flex gap-1">
-                              <button type="button" class="ui-button ui-button-secondary px-2" (click)="openBedEditor(room.id, bed)" [attr.aria-label]="t('spatial.config.editBed')">
-                                <app-ui-icon name="wrench" />
-                              </button>
-                              <button type="button" class="ui-button ui-button-danger px-2" (click)="askDelete('bed', bed.id, bed.bedNumber)" [attr.aria-label]="t('spatial.config.deleteBed')">
-                                <app-ui-icon name="trash" />
-                              </button>
-                            </div>
-                          </div>
-                        }
-                        @if (room.beds.length < room.capacity) {
-                          <button type="button" class="flex min-h-14 items-center justify-center gap-2 rounded-[var(--radius-brand-sm)] border border-dashed border-[var(--app-border)] p-2 text-xs font-bold text-brand-cyan hover:bg-[var(--brand-info-subtle)]" (click)="openBedEditor(room.id)">
-                            <app-ui-icon name="plus" /> {{ t('spatial.config.addBed') }}
-                          </button>
-                        }
-                      </div>
-                    </article>
-                  }
-                </div>
-              }
-            </div>
-          </section>
+              </article>
+            }
+          </div>
         }
-      </div>
+      </section>
+
+      <section class="min-w-0 space-y-4">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-brand-cyan">{{ t('spatial.space.eyebrow', 'Espaces') }}</p>
+            <h2 class="mt-1 text-base font-bold text-[var(--text-primary)]">{{ t('spatial.space.title', 'Salles et espaces physiques') }}</h2>
+            <p class="mt-2 max-w-3xl text-xs leading-5 text-[var(--text-secondary)]">{{ t('spatial.space.description', 'Consultation, urgence, attente, laboratoire, imagerie, pharmacie, bloc ou chambre sont des espaces physiques, jamais des services.') }}</p>
+          </div>
+          <button type="button" class="ui-button ui-button-primary w-full sm:w-auto" (click)="openSpaceEditor()"><app-ui-icon name="plus" /> {{ t('spatial.space.add', 'Ajouter un espace') }}</button>
+        </div>
+
+        @if (spaces().length === 0) {
+          <div class="ui-card-muted p-8 text-center text-sm text-[var(--text-muted)]">{{ t('spatial.space.empty', 'Aucun espace configuré.') }}</div>
+        } @else {
+          <div class="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
+            @for (space of spaces(); track space.id) {
+              <article class="ui-card min-w-0 overflow-hidden" [class.opacity-60]="!space.active">
+                <header class="flex min-w-0 flex-col gap-3 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] p-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div class="min-w-0">
+                    <div class="flex min-w-0 flex-wrap items-center gap-2">
+                      <h3 class="break-words text-sm font-bold text-[var(--text-primary)]">{{ space.name }}</h3>
+                      <span class="max-w-full break-words rounded-[var(--radius-brand-sm)] border border-[var(--brand-info-muted)] bg-[var(--brand-info-subtle)] px-2 py-1 text-[10px] font-bold text-[var(--brand-info-text)]">{{ spaceTypeLabel(space.spaceTypeCode) }}</span>
+                      @if (space.inpatientProfile) {
+                        <span class="rounded-[var(--radius-brand-sm)] border border-[var(--brand-success-muted)] bg-[var(--brand-success-subtle)] px-2 py-1 text-[10px] font-bold text-[var(--brand-success-text)]">{{ t('spatial.space.inpatient', 'Hébergement') }}</span>
+                      }
+                    </div>
+                    <p class="mt-1 break-all text-[11px] text-[var(--text-muted)]">{{ space.code }}</p>
+                    <p class="mt-2 break-words text-xs text-[var(--text-secondary)]"><app-ui-icon name="map-pin" /> {{ locationLabel(space.locationNodeId) }}</p>
+                  </div>
+                  <div class="flex shrink-0 gap-1">
+                    <button type="button" class="ui-button ui-button-secondary px-2" (click)="openSpaceEditor(space)" [attr.aria-label]="t('common.edit', 'Modifier')"><app-ui-icon name="wrench" /></button>
+                    <button type="button" class="ui-button ui-button-secondary px-2" (click)="setSpaceActive(space)" [attr.aria-label]="space.active ? t('common.deactivate', 'Désactiver') : t('common.activate', 'Activer')"><app-ui-icon [name]="space.active ? 'x-mark' : 'check'" /></button>
+                  </div>
+                </header>
+
+                @if (space.inpatientProfile) {
+                  <div class="p-4">
+                    <div class="mb-3 flex items-center justify-between gap-3">
+                      <p class="text-xs font-bold text-[var(--text-primary)]">{{ t('spatial.beds.title', 'Lits de cet espace') }}</p>
+                      <button type="button" class="ui-button ui-button-secondary" (click)="openBedEditor(space)"><app-ui-icon name="plus" /> {{ t('spatial.bed.add', 'Ajouter un lit') }}</button>
+                    </div>
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      @for (bed of beds(space.id); track bed.id) {
+                        <div class="flex min-w-0 items-center justify-between gap-2 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3">
+                          <div class="min-w-0">
+                            <p class="truncate text-xs font-bold text-[var(--text-primary)]"><app-ui-icon name="bed" /> {{ bed.bedNumber }}</p>
+                            <p class="mt-1 text-[10px] font-semibold uppercase text-[var(--text-muted)]">{{ bed.capacityStatus }} · {{ bed.readinessStatus }} · {{ bed.usageStatus }}</p>
+                          </div>
+                          <div class="flex shrink-0 gap-1">
+                            <button type="button" class="ui-button ui-button-secondary px-2" (click)="openBedEditor(space, bed)"><app-ui-icon name="wrench" /></button>
+                            <button type="button" class="ui-button ui-button-danger px-2" [disabled]="bed.usageStatus === 'OCCUPIED'" (click)="deleteBed(bed)"><app-ui-icon name="trash" /></button>
+                          </div>
+                        </div>
+                      }
+                      @if (beds(space.id).length === 0) {
+                        <p class="text-xs text-[var(--text-muted)]">{{ t('spatial.beds.empty', 'Aucun lit configuré.') }}</p>
+                      }
+                    </div>
+                  </div>
+                }
+              </article>
+            }
+          </div>
+        }
+      </section>
+
+      <section class="ui-card min-w-0 p-4 sm:p-5">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-brand-cyan">{{ t('spatial.assignment.eyebrow', 'Utilisation des espaces') }}</p>
+            <h2 class="mt-1 text-base font-bold text-[var(--text-primary)]">{{ t('spatial.assignment.title', 'Rattachements service ↔ espace') }}</h2>
+            <p class="mt-2 max-w-3xl text-xs leading-5 text-[var(--text-secondary)]">{{ t('spatial.assignment.description', 'Un service peut utiliser plusieurs espaces et un même espace peut être partagé entre plusieurs services.') }}</p>
+          </div>
+          <button type="button" class="ui-button ui-button-primary w-full sm:w-auto" [disabled]="activeUnits().length === 0 || activeSpaces().length === 0" (click)="openAssignmentEditor()"><app-ui-icon name="plus" /> {{ t('spatial.assignment.add', 'Ajouter un rattachement') }}</button>
+        </div>
+        <div class="mt-4 space-y-2">
+          @for (assignment of assignments(); track assignment.id) {
+            <button type="button" class="flex w-full min-w-0 flex-col gap-2 rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3 text-left sm:flex-row sm:items-center sm:justify-between" (click)="openAssignmentEditor(assignment)">
+              <span class="min-w-0 break-words text-sm font-bold text-[var(--text-primary)]">{{ unitLabel(assignment.organizationalUnitId) }} ↔ {{ spaceLabel(assignment.spaceId) }}</span>
+              <span class="shrink-0 text-xs text-[var(--text-secondary)]">{{ assignment.validFrom | date:'short' }} → {{ assignment.validTo ? (assignment.validTo | date:'short') : '∞' }}</span>
+            </button>
+          }
+          @if (assignments().length === 0) {
+            <div class="rounded-[var(--radius-brand-md)] border border-dashed border-[var(--app-border)] p-5 text-center text-xs text-[var(--text-muted)]">{{ t('spatial.assignment.empty', 'Aucun rattachement service-espace configuré.') }}</div>
+          }
+        </div>
+      </section>
     }
   </main>
 
   @if (editor(); as form) {
-    <div class="fixed inset-0 z-[60] flex items-center justify-center p-4" (click)="closeEditor()">
+    <div class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto p-3 sm:p-4" role="dialog" aria-modal="true" (click)="closeEditor()">
       <div class="absolute inset-0 bg-[var(--overlay-bg)]"></div>
-      <form class="relative w-full max-w-lg rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface)] p-5 shadow-[var(--shadow-panel)]" (ngSubmit)="submitEditor()" (click)="$event.stopPropagation()">
-        <div class="mb-5">
-          <p class="text-[10px] font-bold uppercase tracking-wider text-brand-cyan">{{ t('spatial.config.title') }}</p>
-          <h2 class="mt-1 text-lg font-bold text-[var(--text-primary)]">{{ editorTitle(form) }}</h2>
-        </div>
+      <form class="relative my-auto w-full max-w-xl min-w-0 overflow-x-hidden rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface)] p-4 shadow-[var(--shadow-panel)] sm:p-5" (ngSubmit)="submitEditor()" (click)="$event.stopPropagation()">
+        <h2 class="break-words text-lg font-bold text-[var(--text-primary)]">{{ editorTitle(form) }}</h2>
 
-        <label class="ui-label" for="structure-name">{{ t('spatial.config.name.' + form.kind) }}</label>
-        <input id="structure-name" class="ui-input mt-1 w-full" name="name" maxlength="100" required [(ngModel)]="form.name" />
-
-        @if (form.kind === 'ward') {
-          <div class="mt-4">
-            <label class="ui-label" for="service-type">{{ t('spatial.services.typeLabel') }}</label>
-            <select id="service-type" class="ui-select mt-1 w-full" name="serviceType" required [(ngModel)]="form.serviceType">
-              <option [ngValue]="''" disabled>{{ t('spatial.services.selectType') }}</option>
-              @for (serviceType of serviceTypes; track serviceType) {
-                <option [ngValue]="serviceType" [disabled]="form.hasRooms && !serviceTypeAllowsRooms(serviceType)">
-                  {{ serviceTypeLabel(serviceType) }}
-                </option>
-              }
-            </select>
-            @if (form.serviceType) {
-              <p class="mt-2 text-xs leading-5 text-[var(--text-secondary)]">{{ serviceTypeDescription(form.serviceType) }}</p>
-            }
-            @if (form.hasRooms) {
-              <p class="mt-2 text-xs font-semibold text-[var(--brand-warning-text)]">{{ t('spatial.services.typeLockedByRooms') }}</p>
-            }
+        @if (form.kind === 'location') {
+          <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label class="block"><span class="ui-label">Code</span><input class="ui-input mt-1 w-full" name="code" maxlength="64" required [(ngModel)]="form.code" /></label>
+            <label class="block"><span class="ui-label">{{ t('common.name', 'Nom') }}</span><input class="ui-input mt-1 w-full" name="name" maxlength="120" required [(ngModel)]="form.name" /></label>
+            <label class="block"><span class="ui-label">{{ t('spatial.location.type', 'Type') }}</span><select class="ui-select mt-1 w-full" name="nodeType" [disabled]="!!form.id" [(ngModel)]="form.nodeType"><option value="SITE">SITE</option><option value="BUILDING">BUILDING</option><option value="FLOOR">FLOOR</option><option value="ZONE">ZONE</option></select></label>
+            <label class="block"><span class="ui-label">{{ t('spatial.location.parent', 'Parent facultatif') }}</span><select class="ui-select mt-1 w-full" name="parentId" [(ngModel)]="form.parentId"><option value="">{{ t('spatial.location.root', 'Racine établissement') }}</option>@for (location of locations(); track location.id) {@if (location.id !== form.id) {<option [value]="location.id">{{ location.name }} · {{ location.nodeType }}</option>}}</select></label>
           </div>
         }
 
-        @if (form.kind === 'room') {
+        @if (form.kind === 'space') {
           <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label class="ui-label" for="room-capacity">{{ t('spatial.config.capacity') }}</label>
-              <input id="room-capacity" class="ui-input mt-1 w-full" name="capacity" type="number" min="1" max="100" required [(ngModel)]="form.capacity" />
+            <label class="block"><span class="ui-label">Code</span><input class="ui-input mt-1 w-full" name="spaceCode" maxlength="64" required [(ngModel)]="form.code" /></label>
+            <label class="block"><span class="ui-label">{{ t('common.name', 'Nom') }}</span><input class="ui-input mt-1 w-full" name="spaceName" maxlength="120" required [(ngModel)]="form.name" /></label>
+            <label class="block"><span class="ui-label">{{ t('spatial.space.type', 'Type d’espace') }}</span><select class="ui-select mt-1 w-full" name="spaceTypeCode" required [(ngModel)]="form.spaceTypeCode">@for (type of spaceTypes(); track type.code) {<option [value]="type.code">{{ spaceTypeLabel(type.code) }}</option>}</select></label>
+            <label class="block"><span class="ui-label">{{ t('spatial.space.location', 'Localisation facultative') }}</span><select class="ui-select mt-1 w-full" name="locationNodeId" [(ngModel)]="form.locationNodeId"><option value="">{{ t('spatial.location.root', 'Directement sous l’établissement') }}</option>@for (location of locations(); track location.id) {<option [value]="location.id">{{ location.name }} · {{ location.nodeType }}</option>}</select></label>
+          </div>
+          @if (isInpatientCompatible(form.spaceTypeCode)) {
+            <div class="mt-4 rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-4">
+              <label class="flex items-center gap-2 text-xs font-semibold text-[var(--text-secondary)]"><input type="checkbox" class="h-4 w-4" name="enableInpatientProfile" [(ngModel)]="form.enableInpatientProfile" /> {{ t('spatial.space.enableInpatient', 'Autoriser l’hébergement et les lits') }}</label>
+              @if (form.enableInpatientProfile) {
+                <label class="mt-3 block"><span class="ui-label">{{ t('spatial.config.comfortLevel', 'Niveau de confort') }}</span><select class="ui-select mt-1 w-full" name="comfortLevel" [(ngModel)]="form.comfortLevel"><option value="STANDARD">STANDARD</option><option value="VIP">VIP</option><option value="INTENSIVE_CARE">INTENSIVE CARE</option><option value="ISOLATION">ISOLATION</option></select></label>
+              }
             </div>
-            <div>
-              <label class="ui-label" for="comfort-level">{{ t('spatial.config.comfortLevel') }}</label>
-              <select id="comfort-level" class="ui-select mt-1 w-full" name="comfortLevel" [(ngModel)]="form.comfortLevel">
-                <option value="STANDARD">{{ t('spatial.config.comfort.standard') }}</option>
-                <option value="VIP">{{ t('spatial.config.comfort.vip') }}</option>
-                <option value="INTENSIVE_CARE">{{ t('spatial.config.comfort.intensiveCare') }}</option>
-                <option value="ISOLATION">{{ t('spatial.config.comfort.isolation') }}</option>
-              </select>
-            </div>
+          }
+        }
+
+        @if (form.kind === 'bed') {
+          <div class="mt-4"><p class="text-xs text-[var(--text-secondary)]">{{ spaceLabel(form.spaceId) }}</p><label class="mt-3 block"><span class="ui-label">{{ t('spatial.bed.number', 'Numéro / code du lit') }}</span><input class="ui-input mt-1 w-full" name="bedNumber" maxlength="20" required [(ngModel)]="form.bedNumber" /></label></div>
+        }
+
+        @if (form.kind === 'assignment') {
+          <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label class="block"><span class="ui-label">{{ t('spatial.assignment.unit', 'Service / unité') }}</span><select class="ui-select mt-1 w-full" name="organizationalUnitId" required [disabled]="!!form.id" [(ngModel)]="form.organizationalUnitId">@for (unit of activeUnits(); track unit.id) {<option [value]="unit.id">{{ unitLabel(unit.id) }}</option>}</select></label>
+            <label class="block"><span class="ui-label">{{ t('spatial.assignment.space', 'Espace') }}</span><select class="ui-select mt-1 w-full" name="assignmentSpaceId" required [disabled]="!!form.id" [(ngModel)]="form.spaceId">@for (space of activeSpaces(); track space.id) {<option [value]="space.id">{{ space.name }}</option>}</select></label>
+            <label class="block"><span class="ui-label">{{ t('spatial.assignment.from', 'Valide à partir de') }}</span><input class="ui-input mt-1 w-full" type="datetime-local" name="validFrom" required [(ngModel)]="form.validFrom" /></label>
+            <label class="block"><span class="ui-label">{{ t('spatial.assignment.to', 'Valide jusqu’au') }}</span><input class="ui-input mt-1 w-full" type="datetime-local" name="validTo" [(ngModel)]="form.validTo" /></label>
           </div>
         }
 
         <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <button type="button" class="ui-button ui-button-secondary" [disabled]="busy()" (click)="closeEditor()">{{ t('common.cancel') }}</button>
-          <button type="submit" class="ui-button ui-button-primary" [disabled]="busy() || !canSubmitEditor(form)">
-            @if (busy()) { {{ t('common.saving') }} } @else { {{ t('common.save') }} }
-          </button>
+          <button type="button" class="ui-button ui-button-secondary w-full sm:w-auto" [disabled]="busy()" (click)="closeEditor()">{{ t('common.cancel', 'Annuler') }}</button>
+          <button type="submit" class="ui-button ui-button-primary w-full sm:w-auto" [disabled]="busy() || !canSubmit(form)">{{ busy() ? t('common.saving', 'Enregistrement…') : t('common.save', 'Enregistrer') }}</button>
         </div>
       </form>
     </div>
   }
-
-  <app-confirmation-dialog
-    [visible]="deleteTarget() !== null"
-    [title]="t('spatial.config.deleteTitle')"
-    [message]="deleteMessage()"
-    [confirmLabel]="t('spatial.config.delete')"
-    [cancelLabel]="t('common.cancel')"
-    [busy]="busy()"
-    (confirmed)="confirmDelete()"
-    (cancelled)="cancelDelete()"
-  />
 </app-shell>

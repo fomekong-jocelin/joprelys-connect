@@ -29,14 +29,23 @@ public class HospitalizationEntity {
     @Column(name = "version", nullable = false)
     private Long version;
 
-    @Column(name = "service_name", nullable = false, length = 100)
-    private String serviceName;
+    @Column(name = "current_service_unit_id", nullable = false)
+    private UUID currentServiceUnitId;
 
-    @Column(name = "room_number", nullable = false, length = 50)
-    private String roomNumber;
+    @Column(name = "current_space_id", nullable = false)
+    private UUID currentSpaceId;
 
-    @Column(name = "bed_number", nullable = false, length = 50)
-    private String bedNumber;
+    @Column(name = "current_bed_id", nullable = false)
+    private UUID currentBedId;
+
+    @Column(name = "service_name_snapshot", nullable = false, length = 120)
+    private String serviceNameSnapshot;
+
+    @Column(name = "space_name_snapshot", nullable = false, length = 120)
+    private String spaceNameSnapshot;
+
+    @Column(name = "bed_number_snapshot", nullable = false, length = 50)
+    private String bedNumberSnapshot;
 
     @Column(name = "admission_reason", nullable = false)
     private String admissionReason;
@@ -103,48 +112,12 @@ public class HospitalizationEntity {
 
     public HospitalizationEntity(
             UUID patientId,
-            String serviceName,
-            String roomNumber,
-            String bedNumber,
-            String admissionReason) {
-        this.id = UUID.randomUUID();
-        this.patientId = patientId;
-        this.serviceName = serviceName;
-        this.roomNumber = roomNumber;
-        this.bedNumber = bedNumber;
-        this.admissionReason = admissionReason;
-        this.status = "EN_COURS";
-        this.admittedAt = Instant.now();
-        this.dischargeAgainstMedicalAdvice = false;
-        this.hospitalizationNumber = "HOSP-TEMP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-    }
-
-    public HospitalizationEntity(
-            UUID patientId,
-            String serviceName,
-            String roomNumber,
-            String bedNumber,
-            String admissionReason,
-            String hospitalizationNumber,
-            UUID visitId,
-            UUID responsiblePractitionerId) {
-        this(
-                patientId,
-                serviceName,
-                roomNumber,
-                bedNumber,
-                admissionReason,
-                hospitalizationNumber,
-                visitId,
-                null,
-                responsiblePractitionerId);
-    }
-
-    public HospitalizationEntity(
-            UUID patientId,
-            String serviceName,
-            String roomNumber,
-            String bedNumber,
+            UUID currentServiceUnitId,
+            UUID currentSpaceId,
+            UUID currentBedId,
+            String serviceNameSnapshot,
+            String spaceNameSnapshot,
+            String bedNumberSnapshot,
             String admissionReason,
             String hospitalizationNumber,
             UUID visitId,
@@ -152,9 +125,12 @@ public class HospitalizationEntity {
             UUID responsiblePractitionerId) {
         this.id = UUID.randomUUID();
         this.patientId = patientId;
-        this.serviceName = serviceName;
-        this.roomNumber = roomNumber;
-        this.bedNumber = bedNumber;
+        this.currentServiceUnitId = currentServiceUnitId;
+        this.currentSpaceId = currentSpaceId;
+        this.currentBedId = currentBedId;
+        this.serviceNameSnapshot = serviceNameSnapshot;
+        this.spaceNameSnapshot = spaceNameSnapshot;
+        this.bedNumberSnapshot = bedNumberSnapshot;
         this.admissionReason = admissionReason;
         this.hospitalizationNumber = hospitalizationNumber;
         this.visitId = visitId;
@@ -178,6 +154,21 @@ public class HospitalizationEntity {
     @PreUpdate
     void preUpdate() {
         this.updatedAt = Instant.now();
+    }
+
+    public void relocate(
+            UUID serviceUnitId,
+            UUID spaceId,
+            UUID bedId,
+            String serviceNameSnapshot,
+            String spaceNameSnapshot,
+            String bedNumberSnapshot) {
+        this.currentServiceUnitId = serviceUnitId;
+        this.currentSpaceId = spaceId;
+        this.currentBedId = bedId;
+        this.serviceNameSnapshot = serviceNameSnapshot;
+        this.spaceNameSnapshot = spaceNameSnapshot;
+        this.bedNumberSnapshot = bedNumberSnapshot;
     }
 
     public void decideDischarge(
@@ -227,9 +218,20 @@ public class HospitalizationEntity {
     public UUID getPatientId() { return patientId; }
     public UUID getOrganizationId() { return organizationId; }
     public Long getVersion() { return version; }
-    public String getServiceName() { return serviceName; }
-    public String getRoomNumber() { return roomNumber; }
-    public String getBedNumber() { return bedNumber; }
+    public UUID getCurrentServiceUnitId() { return currentServiceUnitId; }
+    public UUID getCurrentSpaceId() { return currentSpaceId; }
+    public UUID getCurrentBedId() { return currentBedId; }
+    public String getServiceName() { return serviceNameSnapshot; }
+    public String getSpaceName() { return spaceNameSnapshot; }
+
+    /**
+     * Alias d'affichage strictement transitoire pendant la migration des générateurs PDF et read models.
+     * La source de vérité reste currentSpaceId + spaceNameSnapshot.
+     */
+    @Deprecated(forRemoval = true)
+    public String getRoomNumber() { return spaceNameSnapshot; }
+
+    public String getBedNumber() { return bedNumberSnapshot; }
     public String getAdmissionReason() { return admissionReason; }
     public String getHospitalizationNumber() { return hospitalizationNumber; }
     public UUID getVisitId() { return visitId; }
@@ -252,9 +254,6 @@ public class HospitalizationEntity {
     public Instant getUpdatedAt() { return updatedAt; }
 
     public void setOrganizationId(UUID organizationId) { this.organizationId = organizationId; }
-    public void setServiceName(String serviceName) { this.serviceName = serviceName; }
-    public void setRoomNumber(String roomNumber) { this.roomNumber = roomNumber; }
-    public void setBedNumber(String bedNumber) { this.bedNumber = bedNumber; }
     public void setAdmissionReason(String reason) { this.admissionReason = reason; }
     public void setPatientId(UUID patientId) { this.patientId = patientId; }
     public void setHospitalizationNumber(String hospitalizationNumber) { this.hospitalizationNumber = hospitalizationNumber; }

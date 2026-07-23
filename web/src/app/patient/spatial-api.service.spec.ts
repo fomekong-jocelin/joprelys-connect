@@ -17,31 +17,72 @@ describe('SpatialApiService configuration', () => {
 
   afterEach(() => http.verify());
 
-  it('loads the complete hospital structure', () => {
-    service.getConfiguration().subscribe((result) => {
-      expect(result.wards[0].name).toBe('Cardiologie');
+  it('loads spaces with the requested organization scope', () => {
+    service.listSpaces('org-1', undefined, true).subscribe((result) => {
+      expect(result[0].name).toBe('Chambre 201');
+      expect(result[0].inpatientProfile).toBe(true);
     });
 
-    const request = http.expectOne('/api/spatial/configuration');
+    const request = http.expectOne((candidate) =>
+      candidate.url === '/api/spatial/configuration/spaces'
+      && candidate.params.get('organizationId') === 'org-1'
+      && candidate.params.get('includeInactive') === 'true');
     expect(request.request.method).toBe('GET');
-    request.flush({ wards: [{ id: 'ward-1', name: 'Cardiologie', rooms: [] }] });
+    request.flush([{
+      id: 'space-1',
+      locationNodeId: null,
+      code: 'CARDIO_201',
+      name: 'Chambre 201',
+      spaceTypeCode: 'HOSPITAL_ROOM',
+      inpatientProfile: true,
+      active: true,
+    }]);
   });
 
-  it('creates a room through the configuration contract', () => {
+  it('creates a typed space through the configuration contract', () => {
     const payload = {
-      wardId: 'ward-1',
-      roomNumber: '201',
-      capacity: 2,
-      comfortLevel: 'STANDARD',
+      locationNodeId: 'floor-2',
+      code: 'CARDIO_201',
+      name: 'Chambre 201',
+      spaceTypeCode: 'HOSPITAL_ROOM',
+      enableInpatientProfile: true,
     };
 
-    service.createRoom(payload, 'org-1').subscribe();
+    service.createSpace(payload, 'org-1').subscribe();
 
     const request = http.expectOne((candidate) =>
-      candidate.url === '/api/spatial/configuration/rooms'
+      candidate.url === '/api/spatial/configuration/spaces'
       && candidate.params.get('organizationId') === 'org-1');
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual(payload);
-    request.flush({ id: 'room-1', ...payload });
+    request.flush({
+      id: 'space-1',
+      ...payload,
+      inpatientProfile: true,
+      active: true,
+    });
+  });
+
+  it('creates a bed by spaceId, never by roomId', () => {
+    const payload = { spaceId: 'space-1', bedNumber: '201-A' };
+
+    service.createBed(payload, 'org-1').subscribe();
+
+    const request = http.expectOne((candidate) =>
+      candidate.url === '/api/spatial/configuration/beds'
+      && candidate.params.get('organizationId') === 'org-1');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual(payload);
+    request.flush({
+      id: 'bed-1',
+      spaceId: 'space-1',
+      bedNumber: '201-A',
+      status: 'FREE',
+      capacityStatus: 'OPEN',
+      readinessStatus: 'READY',
+      usageStatus: 'UNASSIGNED',
+      available: true,
+      version: 0,
+    });
   });
 });

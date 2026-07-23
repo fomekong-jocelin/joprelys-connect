@@ -16,22 +16,28 @@ import com.joprelys.backend.auth.security.TenantContext;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository;
+import com.joprelys.backend.hospitalorganization.domain.OrganizationalUnitType;
+import com.joprelys.backend.hospitalorganization.infrastructure.persistence.OrganizationalUnitEntity;
+import com.joprelys.backend.hospitalorganization.infrastructure.persistence.OrganizationalUnitRepository;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
-import com.joprelys.backend.spatial.domain.HospitalServiceType;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedAssignmentRepository;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedRepository;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedStatus;
-import com.joprelys.backend.spatial.infrastructure.persistence.RoomEntity;
-import com.joprelys.backend.spatial.infrastructure.persistence.RoomRepository;
-import com.joprelys.backend.spatial.infrastructure.persistence.WardEntity;
-import com.joprelys.backend.spatial.infrastructure.persistence.WardRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.FacilitySpaceEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.FacilitySpaceRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.InpatientSpaceProfileEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.InpatientSpaceProfileRepository;
+import com.joprelys.backend.spatial.infrastructure.persistence.OrganizationalUnitSpaceAssignmentEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.OrganizationalUnitSpaceAssignmentRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +46,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -51,50 +58,29 @@ import tools.jackson.databind.json.JsonMapper;
 class HospitalizationControllerTest {
 
     private static final String PEDIATRICS_SERVICE = "PÉDIATRIE";
-    private static final String PEDIATRICS_ROOM = "101";
+    private static final String PEDIATRICS_SPACE = "101";
     private static final String PEDIATRICS_BED = "Lit A";
     private static final String SURGERY_SERVICE = "CHIRURGIE";
-    private static final String SURGERY_ROOM = "202";
+    private static final String SURGERY_SPACE = "202";
     private static final String SURGERY_BED = "Lit X";
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private OrganizationRepository organizationRepository;
+    @Autowired private UserAccountRepository userAccountRepository;
+    @Autowired private PatientRepository patientRepository;
+    @Autowired private HospitalizationRepository hospitalizationRepository;
+    @Autowired private VisitRepository visitRepository;
+    @Autowired private OrganizationalUnitRepository organizationalUnitRepository;
+    @Autowired private FacilitySpaceRepository facilitySpaceRepository;
+    @Autowired private InpatientSpaceProfileRepository inpatientSpaceProfileRepository;
+    @Autowired private OrganizationalUnitSpaceAssignmentRepository unitSpaceAssignmentRepository;
+    @Autowired private BedRepository bedRepository;
+    @Autowired private BedAssignmentRepository bedAssignmentRepository;
+    @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private JwtService jwtService;
+    @Autowired private JsonMapper jsonMapper;
 
-    @Autowired
-    private OrganizationRepository organizationRepository;
-
-    @Autowired
-    private UserAccountRepository userAccountRepository;
-
-    @Autowired
-    private PatientRepository patientRepository;
-
-    @Autowired
-    private HospitalizationRepository hospitalizationRepository;
-
-    @Autowired
-    private VisitRepository visitRepository;
-
-    @Autowired
-    private WardRepository wardRepository;
-
-    @Autowired
-    private RoomRepository roomRepository;
-
-    @Autowired
-    private BedRepository bedRepository;
-
-    @Autowired
-    private BedAssignmentRepository bedAssignmentRepository;
-
-    @Autowired
-    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
-
-    @Autowired
-    private JwtService jwtService;
-
-    @Autowired
-    private JsonMapper jsonMapper;
+    private final Map<String, PlacementFixture> placements = new HashMap<>();
 
     private OrganizationEntity organization;
     private UserAccountEntity doctor;
@@ -108,6 +94,7 @@ class HospitalizationControllerTest {
     @BeforeEach
     void setUp() {
         clearData();
+        placements.clear();
 
         organization = organizationRepository.save(new OrganizationEntity(
                 "Clinique Hospitalisation",
@@ -159,8 +146,8 @@ class HospitalizationControllerTest {
                     LocalDate.of(1985, 7, 20), "+237699999992", "Douala", "Akwa", "Street B",
                     "Alice", "+237699445577", "Aucune", "Aucun"));
 
-            createConfiguredBed(PEDIATRICS_SERVICE, PEDIATRICS_ROOM, PEDIATRICS_BED);
-            createConfiguredBed(SURGERY_SERVICE, SURGERY_ROOM, SURGERY_BED);
+            createConfiguredBed(PEDIATRICS_SERVICE, PEDIATRICS_SPACE, PEDIATRICS_BED);
+            createConfiguredBed(SURGERY_SERVICE, SURGERY_SPACE, SURGERY_BED);
         } finally {
             TenantContext.clear();
         }
@@ -181,7 +168,7 @@ class HospitalizationControllerTest {
                 patientA,
                 visitA,
                 PEDIATRICS_SERVICE,
-                PEDIATRICS_ROOM,
+                PEDIATRICS_SPACE,
                 PEDIATRICS_BED,
                 "Surveillance post-opératoire");
 
@@ -192,7 +179,7 @@ class HospitalizationControllerTest {
                                 patientB,
                                 visitB,
                                 PEDIATRICS_SERVICE,
-                                PEDIATRICS_ROOM,
+                                PEDIATRICS_SPACE,
                                 PEDIATRICS_BED,
                                 "Fièvre élevée")))
                 .andExpect(status().isConflict());
@@ -227,7 +214,7 @@ class HospitalizationControllerTest {
         try {
             assertTrue(bedAssignmentRepository.findActiveByHospitalizationId(stayId).isPresent());
             assertTrue(hospitalizationRepository.findActiveByPatientId(patientA.getId()).isPresent());
-            assertTrue(configuredBed(PEDIATRICS_SERVICE, PEDIATRICS_ROOM, PEDIATRICS_BED).getStatus()
+            assertTrue(configuredBed(PEDIATRICS_SERVICE, PEDIATRICS_SPACE, PEDIATRICS_BED).getStatus()
                     == BedStatus.OCCUPIED);
         } finally {
             TenantContext.clear();
@@ -261,7 +248,7 @@ class HospitalizationControllerTest {
         try {
             assertFalse(bedAssignmentRepository.findActiveByHospitalizationId(stayId).isPresent());
             assertFalse(hospitalizationRepository.findActiveByPatientId(patientA.getId()).isPresent());
-            assertTrue(configuredBed(PEDIATRICS_SERVICE, PEDIATRICS_ROOM, PEDIATRICS_BED).getStatus()
+            assertTrue(configuredBed(PEDIATRICS_SERVICE, PEDIATRICS_SPACE, PEDIATRICS_BED).getStatus()
                     == BedStatus.CLEANING);
         } finally {
             TenantContext.clear();
@@ -280,7 +267,7 @@ class HospitalizationControllerTest {
                 patientA,
                 visit,
                 PEDIATRICS_SERVICE,
-                PEDIATRICS_ROOM,
+                PEDIATRICS_SPACE,
                 PEDIATRICS_BED,
                 "Surveillance");
 
@@ -298,7 +285,7 @@ class HospitalizationControllerTest {
                 patientA,
                 visit,
                 PEDIATRICS_SERVICE,
-                PEDIATRICS_ROOM,
+                PEDIATRICS_SPACE,
                 PEDIATRICS_BED,
                 "Surveillance");
 
@@ -315,7 +302,7 @@ class HospitalizationControllerTest {
                 patientA,
                 visit,
                 PEDIATRICS_SERVICE,
-                PEDIATRICS_ROOM,
+                PEDIATRICS_SPACE,
                 PEDIATRICS_BED,
                 "Surveillance");
 
@@ -352,7 +339,7 @@ class HospitalizationControllerTest {
                 patientA,
                 visit,
                 PEDIATRICS_SERVICE,
-                PEDIATRICS_ROOM,
+                PEDIATRICS_SPACE,
                 PEDIATRICS_BED,
                 "Surveillance");
 
@@ -393,7 +380,7 @@ class HospitalizationControllerTest {
                 patientA,
                 visit,
                 PEDIATRICS_SERVICE,
-                PEDIATRICS_ROOM,
+                PEDIATRICS_SPACE,
                 PEDIATRICS_BED,
                 "Surveillance soins");
 
@@ -476,7 +463,7 @@ class HospitalizationControllerTest {
                 patientA,
                 visit,
                 SURGERY_SERVICE,
-                SURGERY_ROOM,
+                SURGERY_SPACE,
                 SURGERY_BED,
                 "Chirurgie programmée");
 
@@ -541,17 +528,17 @@ class HospitalizationControllerTest {
             PatientEntity patient,
             VisitEntity visit,
             String serviceName,
-            String roomNumber,
+            String spaceName,
             String bedNumber,
             String reason) throws Exception {
         String response = mockMvc.perform(post("/api/hospitalizations")
                         .header("Authorization", bearer(doctorToken))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(admissionPayload(patient, visit, serviceName, roomNumber, bedNumber, reason)))
+                        .content(admissionPayload(patient, visit, serviceName, spaceName, bedNumber, reason)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("EN_COURS"))
                 .andExpect(jsonPath("$.serviceName").value(serviceName))
-                .andExpect(jsonPath("$.roomNumber").value(roomNumber))
+                .andExpect(jsonPath("$.spaceName").value(spaceName))
                 .andExpect(jsonPath("$.bedNumber").value(bedNumber))
                 .andReturn()
                 .getResponse()
@@ -563,24 +550,25 @@ class HospitalizationControllerTest {
             PatientEntity patient,
             VisitEntity visit,
             String serviceName,
-            String roomNumber,
+            String spaceName,
             String bedNumber,
             String reason) {
+        PlacementFixture placement = placement(serviceName, spaceName, bedNumber);
         return """
                 {
                   "patientId":"%s",
-                  "serviceName":"%s",
-                  "roomNumber":"%s",
-                  "bedNumber":"%s",
+                  "serviceUnitId":"%s",
+                  "spaceId":"%s",
+                  "bedId":"%s",
                   "admissionReason":"%s",
                   "visitId":"%s",
                   "responsiblePractitionerId":"%s"
                 }
                 """.formatted(
                 patient.getId(),
-                serviceName,
-                roomNumber,
-                bedNumber,
+                placement.unit().getId(),
+                placement.space().getId(),
+                placement.bed().getId(),
                 reason,
                 visit.getId(),
                 doctor.getId());
@@ -602,23 +590,52 @@ class HospitalizationControllerTest {
         }
     }
 
-    private void createConfiguredBed(String serviceName, String roomNumber, String bedNumber) {
-        WardEntity ward = new WardEntity(serviceName, HospitalServiceType.HOSPITALIZATION);
-        ward.setOrganizationId(organization.getId());
-        ward = wardRepository.save(ward);
+    private void createConfiguredBed(String serviceName, String spaceName, String bedNumber) {
+        String token = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        OrganizationalUnitEntity unit = organizationalUnitRepository.save(new OrganizationalUnitEntity(
+                organization.getId(),
+                null,
+                "UNIT-" + token,
+                serviceName,
+                OrganizationalUnitType.CARE_UNIT,
+                null));
 
-        RoomEntity room = new RoomEntity(ward, roomNumber, 1, "STANDARD");
-        room.setOrganizationId(organization.getId());
-        room = roomRepository.save(room);
+        FacilitySpaceEntity space = facilitySpaceRepository.save(new FacilitySpaceEntity(
+                organization.getId(),
+                null,
+                "SPACE-" + token,
+                spaceName,
+                "HOSPITAL_ROOM"));
 
-        BedEntity bed = new BedEntity(room, bedNumber);
-        bed.setOrganizationId(organization.getId());
-        bedRepository.save(bed);
+        inpatientSpaceProfileRepository.save(new InpatientSpaceProfileEntity(
+                space.getId(),
+                organization.getId(),
+                "HOSPITAL_ROOM",
+                "STANDARD"));
+
+        unitSpaceAssignmentRepository.save(new OrganizationalUnitSpaceAssignmentEntity(
+                organization.getId(),
+                unit.getId(),
+                space.getId(),
+                Instant.now().minusSeconds(60),
+                null));
+
+        BedEntity bed = bedRepository.save(new BedEntity(space, bedNumber));
+        placements.put(key(serviceName, spaceName, bedNumber), new PlacementFixture(unit, space, bed));
     }
 
-    private BedEntity configuredBed(String serviceName, String roomNumber, String bedNumber) {
-        return bedRepository.findConfiguredBed(organization.getId(), serviceName, roomNumber, bedNumber)
-                .orElseThrow();
+    private PlacementFixture placement(String serviceName, String spaceName, String bedNumber) {
+        PlacementFixture fixture = placements.get(key(serviceName, spaceName, bedNumber));
+        if (fixture == null) {
+            throw new IllegalStateException(
+                    "Placement de test introuvable : " + serviceName + " / " + spaceName + " / " + bedNumber);
+        }
+        return fixture;
+    }
+
+    private BedEntity configuredBed(String serviceName, String spaceName, String bedNumber) {
+        PlacementFixture fixture = placement(serviceName, spaceName, bedNumber);
+        return bedRepository.findById(fixture.bed().getId()).orElseThrow();
     }
 
     private void assertPdf(String contentType) {
@@ -630,6 +647,10 @@ class HospitalizationControllerTest {
 
     private String bearer(String token) {
         return "Bearer " + token;
+    }
+
+    private String key(String serviceName, String spaceName, String bedNumber) {
+        return serviceName + "|" + spaceName + "|" + bedNumber;
     }
 
     private void clearData() {
@@ -650,11 +671,15 @@ class HospitalizationControllerTest {
         jdbcTemplate.update("DELETE FROM medication_administrations");
         jdbcTemplate.update("DELETE FROM hospitalization_daily_cares");
         jdbcTemplate.update("DELETE FROM hospitalization_notes");
+        jdbcTemplate.update("DELETE FROM bed_state_changes");
         jdbcTemplate.update("DELETE FROM bed_assignments");
         jdbcTemplate.update("DELETE FROM hospitalizations");
         jdbcTemplate.update("DELETE FROM beds");
-        jdbcTemplate.update("DELETE FROM rooms");
-        jdbcTemplate.update("DELETE FROM wards");
+        jdbcTemplate.update("DELETE FROM organizational_unit_space_assignments");
+        jdbcTemplate.update("DELETE FROM inpatient_space_profiles");
+        jdbcTemplate.update("DELETE FROM facility_spaces");
+        jdbcTemplate.update("DELETE FROM facility_location_nodes");
+        jdbcTemplate.update("DELETE FROM organizational_units");
         jdbcTemplate.update("DELETE FROM visits");
         jdbcTemplate.update("DELETE FROM patient_allergies");
         jdbcTemplate.update("DELETE FROM patient_medical_history");
@@ -662,5 +687,11 @@ class HospitalizationControllerTest {
         jdbcTemplate.update("DELETE FROM patients");
         userAccountRepository.deleteAll();
         organizationRepository.deleteAll();
+    }
+
+    private record PlacementFixture(
+            OrganizationalUnitEntity unit,
+            FacilitySpaceEntity space,
+            BedEntity bed) {
     }
 }

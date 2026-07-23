@@ -2,76 +2,81 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { forkJoin, Observable, of, switchMap } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
-import { OrganizationApiService } from '../organizations/organization-api.service';
-import { RbacApiService } from '../rbac/rbac-api.service';
-import { Organization } from '../organizations/organizations.models';
 import { SpatialApiService } from '../../patient/spatial-api.service';
-import { Bed } from '../../patient/patient.models';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
-import { ConfirmationDialogComponent } from '../../shared/ui/confirmation-dialog.component';
 import { IconComponent } from '../../shared/ui/icon.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
+import { HospitalOrganizationApiService } from '../hospital-organization/hospital-organization-api.service';
+import { HospitalServiceCatalogEntry, OrganizationalUnit } from '../hospital-organization/hospital-organization.models';
+import { OrganizationApiService } from '../organizations/organization-api.service';
+import { Organization } from '../organizations/organizations.models';
+import { RbacApiService } from '../rbac/rbac-api.service';
 import {
-  HOSPITAL_SERVICE_TYPES,
-  HospitalServiceType,
-  RoomConfiguration,
-  SpatialConfiguration,
-  WardConfiguration,
+  BedConfiguration,
+  FacilityLocationNode,
+  FacilityLocationNodeType,
+  FacilitySpace,
+  SpaceTypeEntry,
+  UnitSpaceAssignment,
 } from './spatial-configuration.models';
 
-type EditorKind = 'ward' | 'room' | 'bed';
-type DeleteKind = EditorKind;
+type EditorKind = 'location' | 'space' | 'bed' | 'assignment';
 
 interface EditorState {
   kind: EditorKind;
   id: string | null;
-  parentId: string | null;
+  code: string;
   name: string;
-  serviceType: HospitalServiceType | '';
-  hasRooms: boolean;
-  capacity: number;
+  parentId: string;
+  nodeType: FacilityLocationNodeType;
+  locationNodeId: string;
+  spaceTypeCode: string;
+  enableInpatientProfile: boolean;
   comfortLevel: string;
-}
-
-interface DeleteTarget {
-  readonly kind: DeleteKind;
-  readonly id: string;
-  readonly label: string;
+  spaceId: string;
+  bedNumber: string;
+  organizationalUnitId: string;
+  validFrom: string;
+  validTo: string;
 }
 
 @Component({
   selector: 'app-spatial-configuration-page',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    AppShellComponent,
-    PageHeaderComponent,
-    IconComponent,
-    ConfirmationDialogComponent,
-  ],
+  imports: [CommonModule, FormsModule, AppShellComponent, PageHeaderComponent, IconComponent],
   templateUrl: './spatial-configuration-page.component.html',
 })
 export class SpatialConfigurationPageComponent implements OnInit {
   private readonly spatialApi = inject(SpatialApiService);
+  private readonly hospitalOrganizationApi = inject(HospitalOrganizationApiService);
   private readonly i18n = inject(I18nService);
   private readonly rbacApi = inject(RbacApiService);
   private readonly organizationApi = inject(OrganizationApiService);
 
-  readonly serviceTypes = HOSPITAL_SERVICE_TYPES;
-  readonly configuration = signal<SpatialConfiguration>({ wards: [] });
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
   readonly editor = signal<EditorState | null>(null);
-  readonly deleteTarget = signal<DeleteTarget | null>(null);
+
+  readonly locations = signal<FacilityLocationNode[]>([]);
+  readonly spaces = signal<FacilitySpace[]>([]);
+  readonly spaceTypes = signal<SpaceTypeEntry[]>([]);
+  readonly units = signal<OrganizationalUnit[]>([]);
+  readonly serviceCatalog = signal<HospitalServiceCatalogEntry[]>([]);
+  readonly assignments = signal<UnitSpaceAssignment[]>([]);
+  readonly bedsBySpace = signal<Record<string, BedConfiguration[]>>({});
+
   readonly platformAdministrator = computed(() => this.rbacApi.hasPermission('ORGANIZATION_MANAGE'));
   readonly organizations = signal<Organization[]>([]);
   readonly selectedOrganizationId = signal('');
-  readonly t = (key: string) => this.i18n.t(key);
+  readonly activeUnits = computed(() => this.units().filter((unit) => unit.active && (unit.unitType === 'SERVICE' || unit.unitType === 'CARE_UNIT')));
+  readonly activeSpaces = computed(() => this.spaces().filter((space) => space.active));
+  readonly inpatientSpaces = computed(() => this.spaces().filter((space) => space.inpatientProfile));
+
+  readonly t = (key: string, fallback = key) => this.i18n.t(key, fallback);
 
   ngOnInit(): void {
     if (this.platformAdministrator()) {
@@ -81,15 +86,37 @@ export class SpatialConfigurationPageComponent implements OnInit {
     this.loadConfiguration();
   }
 
-  loadConfiguration(): void {
-    this.loading.set(true);
+  loadConfiguration(preserveMessages = false): void {
     if (!this.canManageScope()) {
       this.loading.set(false);
       return;
     }
-    this.spatialApi.getConfiguration(this.scopeOrganizationId()).subscribe({
-      next: (configuration) => {
-        this.configuration.set(configuration);
+    this.loading.set(true);
+    if (!preserveMessages) this.clearMessages();
+    const scope = this.scopeOrganizationId();
+    forkJoin({
+      locations: this.spatialApi.listLocations(scope, true),
+      spaces: this.spatialApi.listSpaces(scope, undefined, true),
+      spaceTypes: this.spatialApi.listSpaceTypes(),
+      units: this.hospitalOrganizationApi.listUnits(scope, true),
+      serviceCatalog: this.hospitalOrganizationApi.listServiceCatalog(),
+      assignments: this.spatialApi.listUnitSpaceAssignments(scope),
+    }).pipe(
+      switchMap((data) => {
+        this.locations.set(data.locations);
+        this.spaces.set(data.spaces);
+        this.spaceTypes.set(data.spaceTypes);
+        this.units.set(data.units);
+        this.serviceCatalog.set(data.serviceCatalog);
+        this.assignments.set(data.assignments);
+        const inpatient = data.spaces.filter((space) => space.inpatientProfile);
+        if (inpatient.length === 0) return of({} as Record<string, BedConfiguration[]>);
+        const requests = Object.fromEntries(inpatient.map((space) => [space.id, this.spatialApi.listBeds(space.id, scope)]));
+        return forkJoin(requests) as Observable<Record<string, BedConfiguration[]>>;
+      }),
+    ).subscribe({
+      next: (beds) => {
+        this.bedsBySpace.set(beds);
         this.loading.set(false);
       },
       error: (error: HttpErrorResponse) => {
@@ -100,8 +127,11 @@ export class SpatialConfigurationPageComponent implements OnInit {
   }
 
   onOrganizationChange(): void {
-    this.configuration.set({ wards: [] });
-    this.clearMessages();
+    this.locations.set([]);
+    this.spaces.set([]);
+    this.units.set([]);
+    this.assignments.set([]);
+    this.bedsBySpace.set({});
     this.loadConfiguration();
   }
 
@@ -109,197 +139,227 @@ export class SpatialConfigurationPageComponent implements OnInit {
     return !this.platformAdministrator() || this.selectedOrganizationId().length > 0;
   }
 
-  openWardEditor(ward?: WardConfiguration): void {
-    this.openEditor({
-      kind: 'ward',
-      id: ward?.id ?? null,
-      parentId: null,
-      name: ward?.name ?? '',
-      serviceType: ward?.serviceType ?? '',
-      hasRooms: (ward?.rooms.length ?? 0) > 0,
-      capacity: 1,
-      comfortLevel: 'STANDARD',
+  openLocationEditor(location?: FacilityLocationNode): void {
+    this.editor.set({
+      ...this.emptyEditor('location'),
+      id: location?.id ?? null,
+      code: location?.code ?? '',
+      name: location?.name ?? '',
+      parentId: location?.parentId ?? '',
+      nodeType: location?.nodeType ?? 'SITE',
     });
   }
 
-  openRoomEditor(ward: WardConfiguration, room?: RoomConfiguration): void {
-    if (!ward.allowsRooms) {
-      this.errorMessage.set(this.t('spatial.services.roomsForbidden'));
-      return;
+  openSpaceEditor(space?: FacilitySpace): void {
+    const type = this.spaceTypes().find((entry) => entry.code === space?.spaceTypeCode);
+    this.editor.set({
+      ...this.emptyEditor('space'),
+      id: space?.id ?? null,
+      code: space?.code ?? '',
+      name: space?.name ?? '',
+      locationNodeId: space?.locationNodeId ?? '',
+      spaceTypeCode: space?.spaceTypeCode ?? this.spaceTypes()[0]?.code ?? '',
+      enableInpatientProfile: space?.inpatientProfile ?? false,
+      comfortLevel: type?.inpatientCompatible ? 'STANDARD' : 'STANDARD',
+    });
+    if (space?.inpatientProfile) {
+      this.spatialApi.getInpatientProfile(space.id, this.scopeOrganizationId()).subscribe({
+        next: (profile) => {
+          const current = this.editor();
+          if (current?.kind === 'space' && current.id === space.id) {
+            this.editor.set({ ...current, comfortLevel: profile.comfortLevel });
+          }
+        },
+      });
     }
-    this.openEditor({
-      kind: 'room',
-      id: room?.id ?? null,
-      parentId: ward.id,
-      name: room?.roomNumber ?? '',
-      serviceType: '',
-      hasRooms: false,
-      capacity: room?.capacity ?? 1,
-      comfortLevel: room?.comfortLevel ?? 'STANDARD',
+  }
+
+  openBedEditor(space: FacilitySpace, bed?: BedConfiguration): void {
+    this.editor.set({
+      ...this.emptyEditor('bed'),
+      id: bed?.id ?? null,
+      spaceId: space.id,
+      bedNumber: bed?.bedNumber ?? '',
     });
   }
 
-  openBedEditor(roomId: string, bed?: Bed): void {
-    this.openEditor({
-      kind: 'bed',
-      id: bed?.id ?? null,
-      parentId: roomId,
-      name: bed?.bedNumber ?? '',
-      serviceType: '',
-      hasRooms: false,
-      capacity: 1,
-      comfortLevel: 'STANDARD',
+  openAssignmentEditor(assignment?: UnitSpaceAssignment): void {
+    this.editor.set({
+      ...this.emptyEditor('assignment'),
+      id: assignment?.id ?? null,
+      organizationalUnitId: assignment?.organizationalUnitId ?? this.activeUnits()[0]?.id ?? '',
+      spaceId: assignment?.spaceId ?? this.activeSpaces()[0]?.id ?? '',
+      validFrom: assignment ? this.toLocalDateTime(assignment.validFrom) : this.toLocalDateTime(new Date().toISOString()),
+      validTo: assignment?.validTo ? this.toLocalDateTime(assignment.validTo) : '',
     });
   }
 
   closeEditor(): void {
-    if (!this.busy()) {
-      this.editor.set(null);
-    }
-  }
-
-  canSubmitEditor(state: EditorState): boolean {
-    if (!state.name.trim() || (!state.parentId && state.kind !== 'ward')) {
-      return false;
-    }
-    if (state.kind === 'ward') {
-      return state.serviceType !== '';
-    }
-    if (state.kind === 'room') {
-      return state.capacity >= 1;
-    }
-    return true;
-  }
-
-  serviceTypeAllowsRooms(serviceType: HospitalServiceType): boolean {
-    return serviceType === 'HOSPITALIZATION' || serviceType === 'EMERGENCY';
+    if (!this.busy()) this.editor.set(null);
   }
 
   submitEditor(): void {
-    const state = this.editor();
-    if (!state || !this.canSubmitEditor(state)) {
-      return;
-    }
-
+    const form = this.editor();
+    if (!form || !this.canSubmit(form)) return;
     this.busy.set(true);
     this.clearMessages();
-    this.saveRequest(state).subscribe({
-      next: () => this.afterSave(),
-      error: (error: HttpErrorResponse) => this.handleOperationError(error),
-    });
-  }
-
-  askDelete(kind: DeleteKind, id: string, label: string): void {
-    this.deleteTarget.set({ kind, id, label });
-  }
-
-  cancelDelete(): void {
-    if (!this.busy()) {
-      this.deleteTarget.set(null);
-    }
-  }
-
-  confirmDelete(): void {
-    const target = this.deleteTarget();
-    if (!target) {
-      return;
-    }
-    this.busy.set(true);
-    this.clearMessages();
-    this.deleteRequest(target).subscribe({
+    this.saveRequest(form).subscribe({
       next: () => {
-        this.deleteTarget.set(null);
-        this.successMessage.set(this.t('spatial.config.deleteSuccess'));
+        this.editor.set(null);
+        this.successMessage.set(this.t('spatial.config.saveSuccess', 'Configuration enregistrée.'));
         this.busy.set(false);
-        this.loadConfiguration();
+        this.loadConfiguration(true);
       },
-      error: (error: HttpErrorResponse) => this.handleOperationError(error),
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.extractError(error));
+        this.busy.set(false);
+      },
     });
   }
 
-  editorTitle(state: EditorState): string {
-    const action = state.id ? 'edit' : 'create';
-    return this.t(`spatial.config.${action}.${state.kind}`);
+  canSubmit(form: EditorState): boolean {
+    if (form.kind === 'location') return Boolean(form.code.trim() && form.name.trim() && form.nodeType);
+    if (form.kind === 'space') return Boolean(form.code.trim() && form.name.trim() && form.spaceTypeCode);
+    if (form.kind === 'bed') return Boolean(form.spaceId && form.bedNumber.trim());
+    return Boolean(form.organizationalUnitId && form.spaceId && form.validFrom);
   }
 
-  serviceTypeLabel(serviceType: HospitalServiceType): string {
-    return this.t(`spatial.services.type.${serviceType}.label`);
+  setLocationActive(location: FacilityLocationNode): void {
+    this.runMutation(this.spatialApi.setLocationActive(location.id, !location.active, this.scopeOrganizationId()));
   }
 
-  serviceTypeDescription(serviceType: HospitalServiceType): string {
-    return this.t(`spatial.services.type.${serviceType}.description`);
+  setSpaceActive(space: FacilitySpace): void {
+    this.runMutation(this.spatialApi.setSpaceActive(space.id, !space.active, this.scopeOrganizationId()));
   }
 
-  deleteMessage(): string {
-    const target = this.deleteTarget();
-    return target ? `${this.t('spatial.config.deleteMessage')} « ${target.label} » ?` : '';
+  deleteBed(bed: BedConfiguration): void {
+    this.runMutation(this.spatialApi.deleteBed(bed.id, this.scopeOrganizationId()));
   }
 
-  private openEditor(state: EditorState): void {
+  beds(spaceId: string): BedConfiguration[] {
+    return this.bedsBySpace()[spaceId] ?? [];
+  }
+
+  locationLabel(locationId?: string | null): string {
+    if (!locationId) return this.t('spatial.location.root', 'Directement sous l’établissement');
+    const location = this.locations().find((item) => item.id === locationId);
+    return location ? `${location.name} · ${location.code}` : locationId;
+  }
+
+  spaceTypeLabel(code: string): string {
+    const entry = this.spaceTypes().find((type) => type.code === code);
+    if (!entry) return code;
+    return this.i18n.currentLanguage() === 'en' ? entry.nameEn : entry.nameFr;
+  }
+
+  unitLabel(unitId: string): string {
+    const unit = this.units().find((item) => item.id === unitId);
+    if (!unit) return unitId;
+    if (unit.name) return unit.name;
+    const catalog = this.serviceCatalog().find((entry) => entry.code === unit.serviceCatalogCode);
+    return catalog ? (this.i18n.currentLanguage() === 'en' ? catalog.nameEn : catalog.nameFr) : unit.code;
+  }
+
+  spaceLabel(spaceId: string): string {
+    const space = this.spaces().find((item) => item.id === spaceId);
+    return space ? space.name : spaceId;
+  }
+
+  isInpatientCompatible(code: string): boolean {
+    return this.spaceTypes().find((type) => type.code === code)?.inpatientCompatible ?? false;
+  }
+
+  editorTitle(form: EditorState): string {
+    const verb = form.id ? this.t('common.edit', 'Modifier') : this.t('common.create', 'Créer');
+    const noun = {
+      location: this.t('spatial.location.singular', 'localisation'),
+      space: this.t('spatial.space.singular', 'espace'),
+      bed: this.t('spatial.bed.singular', 'lit'),
+      assignment: this.t('spatial.assignment.singular', 'rattachement'),
+    }[form.kind];
+    return `${verb} ${noun}`;
+  }
+
+  private saveRequest(form: EditorState): Observable<unknown> {
+    const scope = this.scopeOrganizationId();
+    if (form.kind === 'location') {
+      const payload = {
+        parentId: form.parentId || null,
+        code: form.code.trim(),
+        name: form.name.trim(),
+        nodeType: form.nodeType,
+      };
+      return form.id
+        ? this.spatialApi.updateLocation(form.id, payload, scope)
+        : this.spatialApi.createLocation(payload, scope);
+    }
+    if (form.kind === 'space') {
+      const payload = {
+        locationNodeId: form.locationNodeId || null,
+        code: form.code.trim(),
+        name: form.name.trim(),
+        spaceTypeCode: form.spaceTypeCode,
+        enableInpatientProfile: form.enableInpatientProfile,
+      };
+      const saveSpace = form.id
+        ? this.spatialApi.updateSpace(form.id, payload, scope)
+        : this.spatialApi.createSpace(payload, scope);
+      return saveSpace.pipe(switchMap((saved) => {
+        if (!saved.inpatientProfile && !form.enableInpatientProfile) return of(saved);
+        return this.spatialApi.saveInpatientProfile(saved.id, { comfortLevel: form.comfortLevel || 'STANDARD' }, scope);
+      }));
+    }
+    if (form.kind === 'bed') {
+      const payload = { spaceId: form.spaceId, bedNumber: form.bedNumber.trim() };
+      return form.id
+        ? this.spatialApi.updateBed(form.id, payload, scope)
+        : this.spatialApi.createBed(payload, scope);
+    }
+    const payload = {
+      organizationalUnitId: form.organizationalUnitId,
+      spaceId: form.spaceId,
+      validFrom: new Date(form.validFrom).toISOString(),
+      validTo: form.validTo ? new Date(form.validTo).toISOString() : null,
+    };
+    return form.id
+      ? this.spatialApi.updateUnitSpaceAssignment(form.id, payload, scope)
+      : this.spatialApi.createUnitSpaceAssignment(payload, scope);
+  }
+
+  private runMutation(request: Observable<unknown>): void {
+    this.busy.set(true);
     this.clearMessages();
-    this.editor.set(state);
+    request.subscribe({
+      next: () => {
+        this.successMessage.set(this.t('spatial.config.saveSuccess', 'Configuration enregistrée.'));
+        this.busy.set(false);
+        this.loadConfiguration(true);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.extractError(error));
+        this.busy.set(false);
+      },
+    });
   }
 
-  private saveRequest(state: EditorState): Observable<unknown> {
-    if (state.kind === 'ward') {
-      if (state.serviceType === '') {
-        throw new Error('A hospital service type is required before submitting the form.');
-      }
-      const payload = {
-        name: state.name.trim(),
-        serviceType: state.serviceType,
-      };
-      return state.id
-        ? this.spatialApi.updateWard(state.id, payload, this.scopeOrganizationId())
-        : this.spatialApi.createWard(payload, this.scopeOrganizationId());
-    }
-    if (state.kind === 'room') {
-      const payload = {
-        wardId: state.parentId!,
-        roomNumber: state.name.trim(),
-        capacity: state.capacity,
-        comfortLevel: state.comfortLevel,
-      };
-      return state.id
-        ? this.spatialApi.updateRoom(state.id, payload, this.scopeOrganizationId())
-        : this.spatialApi.createRoom(payload, this.scopeOrganizationId());
-    }
-    const payload = { roomId: state.parentId!, bedNumber: state.name.trim() };
-    return state.id
-      ? this.spatialApi.updateBed(state.id, payload, this.scopeOrganizationId())
-      : this.spatialApi.createBed(payload, this.scopeOrganizationId());
-  }
-
-  private deleteRequest(target: DeleteTarget): Observable<void> {
-    if (target.kind === 'ward') {
-      return this.spatialApi.deleteWard(target.id, this.scopeOrganizationId());
-    }
-    if (target.kind === 'room') {
-      return this.spatialApi.deleteRoom(target.id, this.scopeOrganizationId());
-    }
-    return this.spatialApi.deleteBed(target.id, this.scopeOrganizationId());
-  }
-
-  private afterSave(): void {
-    this.editor.set(null);
-    this.successMessage.set(this.t('spatial.config.saveSuccess'));
-    this.busy.set(false);
-    this.loadConfiguration();
-  }
-
-  private handleOperationError(error: HttpErrorResponse): void {
-    this.errorMessage.set(this.extractError(error));
-    this.busy.set(false);
-  }
-
-  private clearMessages(): void {
-    this.errorMessage.set('');
-    this.successMessage.set('');
-  }
-
-  private extractError(error: HttpErrorResponse): string {
-    const body = error.error as { detail?: string; error?: { message?: string } } | null;
-    return body?.error?.message ?? body?.detail ?? this.t('spatial.config.genericError');
+  private emptyEditor(kind: EditorKind): EditorState {
+    return {
+      kind,
+      id: null,
+      code: '',
+      name: '',
+      parentId: '',
+      nodeType: 'SITE',
+      locationNodeId: '',
+      spaceTypeCode: '',
+      enableInpatientProfile: false,
+      comfortLevel: 'STANDARD',
+      spaceId: '',
+      bedNumber: '',
+      organizationalUnitId: '',
+      validFrom: '',
+      validTo: '',
+    };
   }
 
   private loadOrganizations(): void {
@@ -309,17 +369,30 @@ export class SpatialConfigurationPageComponent implements OnInit {
         this.organizations.set(organizations);
         const preferred = organizations.find((organization) => organization.status === 'ACTIVE') ?? organizations[0];
         this.selectedOrganizationId.set(preferred?.id ?? '');
-        if (preferred) {
-          this.loadConfiguration();
-        } else {
-          this.loading.set(false);
-        }
+        if (preferred) this.loadConfiguration();
+        else this.loading.set(false);
       },
       error: (error: HttpErrorResponse) => {
         this.errorMessage.set(this.extractError(error));
         this.loading.set(false);
       },
     });
+  }
+
+  private clearMessages(): void {
+    this.errorMessage.set('');
+    this.successMessage.set('');
+  }
+
+  private extractError(error: HttpErrorResponse): string {
+    const body = error.error as { detail?: string; error?: { message?: string } } | null;
+    return body?.error?.message ?? body?.detail ?? this.t('spatial.config.genericError', 'La configuration spatiale n’a pas pu être enregistrée.');
+  }
+
+  private toLocalDateTime(value: string): string {
+    const date = new Date(value);
+    const pad = (part: number) => String(part).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   }
 
   private scopeOrganizationId(): string | undefined {

@@ -1,0 +1,61 @@
+package com.joprelys.backend.spatial.api;
+
+import com.joprelys.backend.spatial.application.HospitalBedConfigurationService;
+import jakarta.validation.Valid;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/spatial/configuration/beds")
+@PreAuthorize("hasAuthority('SPATIAL_CONFIGURATION_MANAGE')")
+public class HospitalBedConfigurationController {
+
+    private final HospitalBedConfigurationService service;
+
+    public HospitalBedConfigurationController(HospitalBedConfigurationService service) {
+        this.service = service;
+    }
+
+    @GetMapping
+    public List<BedResponse> listBeds(
+            @RequestParam(required = false) UUID organizationId,
+            @RequestParam UUID spaceId) {
+        return service.listBeds(organizationId, spaceId);
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public BedResponse createBed(
+            @RequestParam(required = false) UUID organizationId,
+            @Valid @RequestBody SaveBedRequest request) {
+        return service.createBed(organizationId, request);
+    }
+
+    @PutMapping("/{id}")
+    public BedResponse updateBed(
+            @RequestParam(required = false) UUID organizationId,
+            @PathVariable UUID id,
+            @Valid @RequestBody SaveBedRequest request) {
+        return service.updateBed(organizationId, id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteBed(
+            @RequestParam(required = false) UUID organizationId,
+            @PathVariable UUID id) {
+        service.deleteBed(organizationId, id);
+    }
+}

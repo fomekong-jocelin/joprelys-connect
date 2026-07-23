@@ -52,13 +52,13 @@ class BedAssignmentOverlapPostgresqlMigrationTest {
 
         FlywayException migrationFailure = assertThrows(
                 FlywayException.class,
-                this::migrateAll,
+                this::migrateThroughVersion80,
                 "V80 doit refuser d'activer la contrainte tant qu'un conflit VALID subsiste");
         assertTrue(allMessages(migrationFailure).contains("HOS-BED-001-D bloque V80"));
         assertEquals(1L, unresolvedOverlapCount(jdbcTemplate));
 
         quarantineAssignment(jdbcTemplate, conflictingAssignmentId);
-        migrateAll();
+        migrateThroughVersion80();
 
         assertEquals(1, constraintCount(jdbcTemplate));
         assertEquals(1, extensionCount(jdbcTemplate));
@@ -118,10 +118,11 @@ class BedAssignmentOverlapPostgresqlMigrationTest {
                 .migrate();
     }
 
-    private void migrateAll() {
+    private void migrateThroughVersion80() {
         Flyway.configure()
                 .dataSource(POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword())
                 .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("80"))
                 .cleanDisabled(true)
                 .load()
                 .migrate();

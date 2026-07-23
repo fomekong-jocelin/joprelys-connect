@@ -88,8 +88,7 @@ class BedCapacityPostgresqlMigrationTest {
 
     private UUID insertFreeBed(JdbcTemplate jdbcTemplate) {
         UUID organizationId = UUID.randomUUID();
-        UUID wardId = UUID.randomUUID();
-        UUID roomId = UUID.randomUUID();
+        UUID spaceId = UUID.randomUUID();
         UUID bedId = UUID.randomUUID();
         Timestamp now = Timestamp.from(Instant.now());
 
@@ -101,19 +100,22 @@ class BedCapacityPostgresqlMigrationTest {
                     'ACTIVE', 'CLINIC', 'Cameroun', 'Responsable', TRUE, ?, ?)
                 """, organizationId, "capacity-" + organizationId + "@joprelys.local", now, now);
         jdbcTemplate.update("""
-                INSERT INTO wards (id, name, organization_id, created_at, updated_at, service_type)
-                VALUES (?, 'Hospitalisation', ?, ?, ?, 'HOSPITALIZATION')
-                """, wardId, organizationId, now, now);
+                INSERT INTO facility_spaces (
+                    id, organization_id, location_node_id, code, name, space_type_code,
+                    active, created_at, updated_at
+                ) VALUES (?, ?, NULL, 'CAPACITY_ROOM', 'Chambre capacité', 'HOSPITAL_ROOM', TRUE, ?, ?)
+                """, spaceId, organizationId, now, now);
         jdbcTemplate.update("""
-                INSERT INTO rooms (
-                    id, ward_id, room_number, capacity, comfort_level, organization_id, created_at, updated_at
-                ) VALUES (?, ?, '301', 1, 'STANDARD', ?, ?, ?)
-                """, roomId, wardId, organizationId, now, now);
+                INSERT INTO inpatient_space_profiles (
+                    space_id, organization_id, space_type_code, comfort_level, created_at, updated_at
+                ) VALUES (?, ?, 'HOSPITAL_ROOM', 'STANDARD', ?, ?)
+                """, spaceId, organizationId, now, now);
         jdbcTemplate.update("""
                 INSERT INTO beds (
-                    id, room_id, bed_number, status, organization_id, version, created_at, updated_at
-                ) VALUES (?, ?, '301-A', 'FREE', ?, 0, ?, ?)
-                """, bedId, roomId, organizationId, now, now);
+                    id, space_id, bed_number, status, capacity_status, readiness_status,
+                    organization_id, version, created_at, updated_at
+                ) VALUES (?, ?, '301-A', 'FREE', 'OPEN', 'READY', ?, 0, ?, ?)
+                """, bedId, spaceId, organizationId, now, now);
         return bedId;
     }
 

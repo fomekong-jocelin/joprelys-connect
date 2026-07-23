@@ -48,18 +48,11 @@ final class BedAssignmentPostgresqlMigrationAssertions {
                 FROM pg_constraint
                 WHERE conname = 'ck_bed_assignments_assignment_period'
                 """, Integer.class);
-        Integer hospitalizationTenantUniqueCount = constraintCount(
-                jdbcTemplate,
-                "uq_hospitalizations_id_organization");
-        Integer bedTenantUniqueCount = constraintCount(
-                jdbcTemplate,
-                "uq_beds_id_organization");
+        Integer hospitalizationTenantUniqueCount = constraintCount(jdbcTemplate, "uq_hospitalizations_id_organization");
+        Integer bedTenantUniqueCount = constraintCount(jdbcTemplate, "uq_beds_id_organization");
         Integer hospitalizationTenantForeignKeyCount = constraintCount(
-                jdbcTemplate,
-                "fk_bed_assignments_hospitalization_organization");
-        Integer bedTenantForeignKeyCount = constraintCount(
-                jdbcTemplate,
-                "fk_bed_assignments_bed_organization");
+                jdbcTemplate, "fk_bed_assignments_hospitalization_organization");
+        Integer bedTenantForeignKeyCount = constraintCount(jdbcTemplate, "fk_bed_assignments_bed_organization");
         String hospitalizationDeleteRule = jdbcTemplate.queryForObject("""
                 SELECT delete_rule
                 FROM information_schema.referential_constraints
@@ -81,69 +74,39 @@ final class BedAssignmentPostgresqlMigrationAssertions {
                   AND column_name = 'active_hospitalization_id'
                 """, String.class);
         String hospitalizationTenantDeleteRule = deleteRule(
-                jdbcTemplate,
-                "fk_bed_assignments_hospitalization_organization");
-        String bedTenantDeleteRule = deleteRule(
-                jdbcTemplate,
-                "fk_bed_assignments_bed_organization");
+                jdbcTemplate, "fk_bed_assignments_hospitalization_organization");
+        String bedTenantDeleteRule = deleteRule(jdbcTemplate, "fk_bed_assignments_bed_organization");
 
-        assertEquals(1, activeBedIndexCount,
-                "L'index unique d'affectation active par lit doit exister");
-        assertEquals(1, activeBedCheckCount,
-                "La contrainte de cohérence du marqueur de lit actif doit exister");
-        assertEquals("YES", activeBedNullability,
-                "Le marqueur doit être nullable pour conserver l'historique clôturé");
-        assertEquals(1, activeHospitalizationIndexCount,
-                "L'index unique d'affectation active par séjour doit exister");
-        assertEquals(1, activeHospitalizationCheckCount,
-                "La contrainte de cohérence du marqueur de séjour actif doit exister");
-        assertEquals(1, assignmentPeriodCheckCount,
-                "La contrainte chronologique des affectations doit exister");
-        assertEquals("RESTRICT", hospitalizationDeleteRule,
-                "La suppression d'un séjour référencé doit être restrictive");
-        assertEquals("YES", activeHospitalizationNullability,
-                "Le marqueur de séjour doit être nullable pour l'historique clôturé");
-        assertEquals(1, hospitalizationTenantUniqueCount,
-                "La clé candidate tenant du séjour doit exister");
-        assertEquals(1, bedTenantUniqueCount,
-                "La clé candidate tenant du lit doit exister");
-        assertEquals(1, hospitalizationTenantForeignKeyCount,
-                "La FK composite vers le séjour doit exister");
-        assertEquals(1, bedTenantForeignKeyCount,
-                "La FK composite vers le lit doit exister");
-        assertEquals("RESTRICT", hospitalizationTenantDeleteRule,
-                "La FK tenant du séjour doit préserver l'historique");
-        assertEquals("RESTRICT", bedTenantDeleteRule,
-                "La FK tenant du lit doit préserver l'historique");
+        assertEquals(1, activeBedIndexCount, "L'index unique d'affectation active par lit doit exister");
+        assertEquals(1, activeBedCheckCount, "La contrainte de cohérence du marqueur de lit actif doit exister");
+        assertEquals("YES", activeBedNullability, "Le marqueur doit être nullable pour conserver l'historique clôturé");
+        assertEquals(1, activeHospitalizationIndexCount, "L'index unique d'affectation active par séjour doit exister");
+        assertEquals(1, activeHospitalizationCheckCount, "La contrainte de cohérence du marqueur de séjour actif doit exister");
+        assertEquals(1, assignmentPeriodCheckCount, "La contrainte chronologique des affectations doit exister");
+        assertEquals("RESTRICT", hospitalizationDeleteRule, "La suppression d'un séjour référencé doit être restrictive");
+        assertEquals("YES", activeHospitalizationNullability, "Le marqueur de séjour doit être nullable pour l'historique clôturé");
+        assertEquals(1, hospitalizationTenantUniqueCount, "La clé candidate tenant du séjour doit exister");
+        assertEquals(1, bedTenantUniqueCount, "La clé candidate tenant du lit doit exister");
+        assertEquals(1, hospitalizationTenantForeignKeyCount, "La FK composite vers le séjour doit exister");
+        assertEquals(1, bedTenantForeignKeyCount, "La FK composite vers le lit doit exister");
+        assertEquals("RESTRICT", hospitalizationTenantDeleteRule, "La FK tenant du séjour doit préserver l'historique");
+        assertEquals("RESTRICT", bedTenantDeleteRule, "La FK tenant du lit doit préserver l'historique");
     }
 
     private static void assertDuplicateActiveAssignmentRejected(JdbcTemplate jdbcTemplate) {
         UUID organizationId = UUID.randomUUID();
-        UUID wardId = UUID.randomUUID();
-        UUID roomId = UUID.randomUUID();
+        UUID otherOrganizationId = UUID.randomUUID();
+        UUID patientId = UUID.randomUUID();
+        UUID unitId = UUID.randomUUID();
+        UUID spaceId = UUID.randomUUID();
         UUID firstBedId = UUID.randomUUID();
         UUID secondBedId = UUID.randomUUID();
-        UUID patientId = UUID.randomUUID();
         UUID firstHospitalizationId = UUID.randomUUID();
         UUID secondHospitalizationId = UUID.randomUUID();
-        UUID otherOrganizationId = UUID.randomUUID();
         Instant now = Instant.now();
 
-        jdbcTemplate.update("""
-                INSERT INTO organizations (
-                    id, name, email, phone, address, city, status, type, country,
-                    responsible_name, api_enabled, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', 'CLINIC', 'Cameroun', 'Responsable', TRUE, ?, ?)
-                """, organizationId, "Clinique intégrité lit", "bed-integrity@joprelys.local",
-                "000", "Adresse test", "Douala", timestamp(now), timestamp(now));
-        jdbcTemplate.update("""
-                INSERT INTO organizations (
-                    id, name, email, phone, address, city, status, type, country,
-                    responsible_name, api_enabled, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', 'CLINIC', 'Cameroun', 'Responsable', TRUE, ?, ?)
-                """, otherOrganizationId, "Autre clinique intégrité lit",
-                "other-bed-integrity@joprelys.local", "000", "Autre adresse test", "Yaoundé",
-                timestamp(now), timestamp(now));
+        insertOrganization(jdbcTemplate, organizationId, "bed-integrity", "Douala", now);
+        insertOrganization(jdbcTemplate, otherOrganizationId, "other-bed-integrity", "Yaoundé", now);
         jdbcTemplate.update("""
                 INSERT INTO patients (
                     id, organization_id, global_patient_number, local_patient_number,
@@ -152,94 +115,94 @@ final class BedAssignmentPostgresqlMigrationAssertions {
                     'MASCULIN', ?, '+237600000000', 'Douala', 'ACTIVE', ?, ?)
                 """, patientId, organizationId, LocalDate.of(1990, 1, 1), timestamp(now), timestamp(now));
         jdbcTemplate.update("""
-                INSERT INTO wards (id, name, organization_id, created_at, updated_at, service_type)
-                VALUES (?, 'Hospitalisation', ?, ?, ?, 'HOSPITALIZATION')
-                """, wardId, organizationId, timestamp(now), timestamp(now));
+                INSERT INTO organizational_units (
+                    id, organization_id, parent_id, code, name, unit_type,
+                    service_catalog_code, active, created_at, updated_at
+                ) VALUES (?, ?, NULL, 'BED_INTEGRITY_UNIT', 'Hospitalisation', 'CARE_UNIT',
+                    NULL, TRUE, ?, ?)
+                """, unitId, organizationId, timestamp(now), timestamp(now));
         jdbcTemplate.update("""
-                INSERT INTO rooms (
-                    id, ward_id, room_number, capacity, comfort_level, organization_id, created_at, updated_at
-                ) VALUES (?, ?, '101', 2, 'STANDARD', ?, ?, ?)
-                """, roomId, wardId, organizationId, timestamp(now), timestamp(now));
+                INSERT INTO facility_spaces (
+                    id, organization_id, location_node_id, code, name, space_type_code,
+                    active, created_at, updated_at
+                ) VALUES (?, ?, NULL, 'BED_INTEGRITY_SPACE', 'Chambre 101', 'HOSPITAL_ROOM',
+                    TRUE, ?, ?)
+                """, spaceId, organizationId, timestamp(now), timestamp(now));
         jdbcTemplate.update("""
-                INSERT INTO beds (
-                    id, room_id, bed_number, status, organization_id, version, created_at, updated_at
-                ) VALUES (?, ?, '101-A', 'OCCUPIED', ?, 0, ?, ?)
-                """, firstBedId, roomId, organizationId, timestamp(now), timestamp(now));
-        jdbcTemplate.update("""
-                INSERT INTO beds (
-                    id, room_id, bed_number, status, organization_id, version, created_at, updated_at
-                ) VALUES (?, ?, '101-B', 'FREE', ?, 0, ?, ?)
-                """, secondBedId, roomId, organizationId, timestamp(now), timestamp(now));
+                INSERT INTO inpatient_space_profiles (
+                    space_id, organization_id, space_type_code, comfort_level, created_at, updated_at
+                ) VALUES (?, ?, 'HOSPITAL_ROOM', 'STANDARD', ?, ?)
+                """, spaceId, organizationId, timestamp(now), timestamp(now));
+        insertBed(jdbcTemplate, firstBedId, spaceId, organizationId, "101-A", "OCCUPIED", now);
+        insertBed(jdbcTemplate, secondBedId, spaceId, organizationId, "101-B", "FREE", now);
         insertHospitalization(
-                jdbcTemplate,
-                firstHospitalizationId,
-                patientId,
-                organizationId,
-                "HOSP-BED-PG-1",
-                "101-A",
-                now);
+                jdbcTemplate, firstHospitalizationId, patientId, organizationId, unitId, spaceId,
+                firstBedId, "HOSP-BED-PG-1", "101-A", now);
         insertHospitalization(
-                jdbcTemplate,
-                secondHospitalizationId,
-                patientId,
-                organizationId,
-                "HOSP-BED-PG-2",
-                "101-B",
-                now);
-        insertActiveAssignment(
-                jdbcTemplate,
-                firstHospitalizationId,
-                firstBedId,
-                organizationId,
-                now);
+                jdbcTemplate, secondHospitalizationId, patientId, organizationId, unitId, spaceId,
+                secondBedId, "HOSP-BED-PG-2", "101-B", now);
+        insertActiveAssignment(jdbcTemplate, firstHospitalizationId, firstBedId, organizationId, now);
 
         assertThrows(
                 DataIntegrityViolationException.class,
-                () -> insertActiveAssignment(
-                        jdbcTemplate,
-                        secondHospitalizationId,
-                        firstBedId,
-                        organizationId,
-                        now),
+                () -> insertActiveAssignment(jdbcTemplate, secondHospitalizationId, firstBedId, organizationId, now),
                 "PostgreSQL doit refuser deux affectations actives du même lit");
         assertThrows(
                 DataIntegrityViolationException.class,
-                () -> insertActiveAssignment(
-                        jdbcTemplate,
-                        firstHospitalizationId,
-                        secondBedId,
-                        organizationId,
-                        now),
+                () -> insertActiveAssignment(jdbcTemplate, firstHospitalizationId, secondBedId, organizationId, now),
                 "PostgreSQL doit refuser deux affectations actives du même séjour");
         assertThrows(
                 DataIntegrityViolationException.class,
-                () -> insertActiveAssignment(
-                        jdbcTemplate,
-                        UUID.randomUUID(),
-                        secondBedId,
-                        organizationId,
-                        now),
+                () -> insertActiveAssignment(jdbcTemplate, UUID.randomUUID(), secondBedId, organizationId, now),
                 "PostgreSQL doit refuser une affectation sans séjour");
         assertThrows(
                 DataIntegrityViolationException.class,
                 () -> insertReleasedAssignment(
-                        jdbcTemplate,
-                        secondHospitalizationId,
-                        secondBedId,
-                        organizationId,
-                        now,
-                        now.minusSeconds(1)),
+                        jdbcTemplate, secondHospitalizationId, secondBedId, organizationId, now, now.minusSeconds(1)),
                 "PostgreSQL doit refuser une période d'affectation inversée");
         assertThrows(
                 DataIntegrityViolationException.class,
                 () -> insertReleasedAssignment(
-                        jdbcTemplate,
-                        secondHospitalizationId,
-                        secondBedId,
-                        otherOrganizationId,
-                        now.minusSeconds(1),
-                        now),
+                        jdbcTemplate, secondHospitalizationId, secondBedId, otherOrganizationId,
+                        now.minusSeconds(1), now),
                 "PostgreSQL doit refuser une affectation d'un autre établissement");
+    }
+
+    private static void insertOrganization(
+            JdbcTemplate jdbcTemplate,
+            UUID organizationId,
+            String slug,
+            String city,
+            Instant now) {
+        jdbcTemplate.update("""
+                INSERT INTO organizations (
+                    id, name, email, phone, address, city, status, type, country,
+                    responsible_name, api_enabled, created_at, updated_at
+                ) VALUES (?, ?, ?, '000', 'Adresse test', ?, 'ACTIVE', 'CLINIC', 'Cameroun',
+                    'Responsable', TRUE, ?, ?)
+                """,
+                organizationId,
+                "Clinique " + slug,
+                slug + "-" + organizationId + "@joprelys.local",
+                city,
+                timestamp(now),
+                timestamp(now));
+    }
+
+    private static void insertBed(
+            JdbcTemplate jdbcTemplate,
+            UUID bedId,
+            UUID spaceId,
+            UUID organizationId,
+            String bedNumber,
+            String status,
+            Instant now) {
+        jdbcTemplate.update("""
+                INSERT INTO beds (
+                    id, space_id, bed_number, status, capacity_status, readiness_status,
+                    organization_id, version, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, 'OPEN', 'READY', ?, 0, ?, ?)
+                """, bedId, spaceId, bedNumber, status, organizationId, timestamp(now), timestamp(now));
     }
 
     private static Integer constraintCount(JdbcTemplate jdbcTemplate, String constraintName) {
@@ -295,19 +258,34 @@ final class BedAssignmentPostgresqlMigrationAssertions {
             UUID hospitalizationId,
             UUID patientId,
             UUID organizationId,
+            UUID serviceUnitId,
+            UUID spaceId,
+            UUID bedId,
             String hospitalizationNumber,
             String bedNumber,
             Instant admittedAt) {
         Timestamp admittedTimestamp = timestamp(admittedAt);
         jdbcTemplate.update("""
                 INSERT INTO hospitalizations (
-                    id, patient_id, organization_id, version, service_name, room_number,
-                    bed_number, admission_reason, hospitalization_number, status,
+                    id, patient_id, organization_id, version,
+                    service_name_snapshot, space_name_snapshot, bed_number_snapshot,
+                    current_service_unit_id, current_space_id, current_bed_id,
+                    admission_reason, hospitalization_number, status,
                     admitted_at, created_at, updated_at
-                ) VALUES (?, ?, ?, 0, 'Hospitalisation', '101', ?, 'Test intégrité', ?,
-                    'EN_COURS', ?, ?, ?)
-                """, hospitalizationId, patientId, organizationId, bedNumber,
-                hospitalizationNumber, admittedTimestamp, admittedTimestamp, admittedTimestamp);
+                ) VALUES (?, ?, ?, 0, 'Hospitalisation', 'Chambre 101', ?, ?, ?, ?,
+                    'Test intégrité', ?, 'EN_COURS', ?, ?, ?)
+                """,
+                hospitalizationId,
+                patientId,
+                organizationId,
+                bedNumber,
+                serviceUnitId,
+                spaceId,
+                bedId,
+                hospitalizationNumber,
+                admittedTimestamp,
+                admittedTimestamp,
+                admittedTimestamp);
     }
 
     private static Timestamp timestamp(Instant instant) {

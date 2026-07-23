@@ -18,37 +18,65 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **API `/api/hospital-organization`** : lecture des catalogues, lecture des unités, création/modification et activation/désactivation ; aucun DELETE physique dans ce lot.
 - **UI Angular organisation hospitalière** : route `/clinic/hospital-organization`, navigation permission-first, configuration mobile-first, Tailwind CSS v4, FR/EN, light/dark, sans Angular Material.
 - **Documentation HOS-ORG** : ticket technique, Functional Spec, Technical Design, Data Model, API Contract, Test Plan et ADR-0002 alignés sur l'implémentation fusionnée.
+- **HOS-LOC-001-A / #131 / PR #137 — géographie et espaces hospitaliers structurés** : ajout de la hiérarchie géographique facultative `SITE → BUILDING → FLOOR → ZONE`, d'espaces physiques génériques `SPACE`, d'un catalogue contrôlé des types d'espace et de rattachements datés `OrganizationalUnit ↔ Space`.
+- **Flyway V88 — preflight breaking cleanup** : blocage fail-fast avant toute mutation destructive si des données legacy `wards/rooms/beds/bed_assignments/hospitalizations` nécessitent encore une décision de migration explicite ; aucun mapping automatique par nom n'est autorisé.
+- **Flyway V89 — nouveau modèle spatial** : création des tables de géographie, espaces, catalogues, profils d'hébergement et affectations unité-espace ; passage des lits de `room_id` à `space_id`, références structurées des hospitalisations et suppression finale de `wards/rooms` sur une base compatible.
+- **Flyway V90 — non-chevauchement des affectations unité-espace** : contrainte PostgreSQL empêchant deux périodes actives/chevauchantes pour un même couple unité-espace ; no-op explicite sur H2.
+- **Flyway V91 — confort d'hébergement** : ajout de `comfort_level` dans `InpatientSpaceProfile` afin de préserver la tarification STANDARD/VIP sans dépendre d'une ancienne `Room`.
+- **API spatiale HOS-LOC** : configuration des localisations, espaces, profils d'hébergement, lits et rattachements datés ; lecture de capacité par espace et par unité organisationnelle.
+- **UI Angular HOS-LOC** : configuration mobile-first des localisations/espaces/lits, affichage séparé des rattachements service ↔ espace, capacité par espace et parcours d'admission `unité → espace → lit`, y compris continuité Urgence → Hospitalisation.
 
 ### Changed
 
-- **Séparation organisation / géographie / capacité** : `Ward` n'est plus la cible d'extension pour représenter pôle, département ou unité. Les prochains travaux passent par HOS-LOC-001-A (#131) puis HOS-STAFF-001-A (#132).
+- **Séparation organisation / géographie / capacité** : `SERVICE` / `CARE_UNIT` représente l'organisation médicale ; `SPACE` représente le lieu physique. Un service peut utiliser plusieurs espaces et un espace peut être partagé par plusieurs unités via des affectations datées.
+- **Lits** : `BedEntity` référence désormais `FacilitySpace` via `spaceId`; l'ancien `roomId` n'est plus une identité métier active.
+- **Hospitalisation** : le séjour porte `currentServiceUnitId`, `currentSpaceId` et `currentBedId`; les noms du service, de l'espace et du lit sont conservés comme snapshots lisibles pour l'historique et les documents.
+- **Admission et transfert** : les écritures utilisent exclusivement les UUID structurés `serviceUnitId / spaceId / bedId`; aucune résolution par libellé n'est utilisée.
+- **Facturation d'hébergement** : le niveau de confort est lu depuis `InpatientSpaceProfile` ; la logique STANDARD/VIP est conservée sans lookup d'une `Room` legacy.
 - **Internationalisation des services** : un `SERVICE` ne persiste pas un libellé français dans `organizational_units.name`. Il conserve `serviceCatalogCode` et le client résout le libellé FR/EN depuis le catalogue actif.
-- **Isolation tenant HOS-ORG** : défense en profondeur via scope authentifié, `TenantContext`/`@TenantId`, repositories explicitement filtrés par `organizationId` et FK composite parent/tenant.
-- **Cycle de vie organisationnel** : les unités historiquement utilisables sont désactivées/réactivées au lieu d'être supprimées physiquement. La désactivation d'un parent possédant un enfant actif est refusée.
-- **EPIC-0027** : backlog rebaseliné sur les incréments réellement engagés : HOS-ORG-001-A 9 SP livré, HOS-LOC-001-A 9 SP prochain, HOS-STAFF-001-A 9 SP dépendant.
-- **QA-DEMO-20260725 / #127** : les données de démonstration doivent utiliser les nouveaux référentiels structurés dès leur disponibilité ; aucun nouveau service, département ou spécialité ne doit être créé via un champ texte libre.
+- **Isolation tenant HOS-ORG/HOS-LOC** : défense en profondeur via scope authentifié, `TenantContext`/`@TenantId`, repositories filtrés par `organizationId` et contraintes/FK composites tenant.
+- **Cycle de vie organisationnel et spatial** : les unités/localisations/espaces historiquement utilisés sont activés/désactivés selon leur contrat plutôt que détournés en suppression métier ambiguë.
+- **EPIC-0027** : HOS-ORG-001-A 9 SP livré ; HOS-LOC-001-A réévalué à 13 SP et terminé techniquement ; HOS-STAFF-001-A 9 SP devient le prochain lot après fusion #137.
+- **QA-DEMO-20260725 / #127** : les données de démonstration doivent désormais utiliser unités, espaces, lits et référentiels structurés ; la recette humaine responsive/FR-EN/light-dark reste à rejouer.
+- **CI backend** : le job Maven conserve désormais `backend-verify.log` avec les rapports Surefire en artefact lors d'un échec, ce qui rend les diagnostics de `clean verify` directement exploitables.
+
+### Removed
+
+- **Modèle spatial applicatif Ward/Room** : suppression de `WardEntity`, `RoomEntity`, `WardRepository`, `RoomRepository`, `HospitalServiceType`, des DTO/services/use cases associés et des anciennes routes de configuration Ward/Room.
+- **Contrats d'écriture texte pour l'hospitalisation** : suppression du besoin de `serviceName`, `roomNumber` et `bedNumber` comme clés d'admission/transfert.
+- **Fiche HOS-LOC dupliquée** : suppression de l'ancienne documentation pré-audit 9 SP afin de conserver une seule source de vérité canonique à 13 SP.
 
 ### Fixed
 
 - **Portabilité H2/PostgreSQL de `unit_type`** : remplacement d'un CHECK littéral fragile par `organizational_unit_type_catalog` + FK et converter JPA enum ↔ VARCHAR fail-closed ; la contrainte reste forte au lieu d'être supprimée pour satisfaire les tests.
 - **Test historique V86** : `LegacyHospitalizationPermissionPostgresqlMigrationTest` ne suppose plus que V86 restera éternellement la dernière migration. Il vérifie désormais le contrat réel : V86 appliquée, `HOSPITALIZATION_MANAGE` supprimée, aucun remapping automatique des permissions.
 - **Erreurs UI HOS-ORG** : les erreurs sont traduites via le mécanisme i18n existant au lieu d'exposer un détail backend français dans une interface anglaise.
+- **Tests PostgreSQL historiques** : les tests de capacité, historique d'état et intégrité des affectations utilisent désormais `FacilitySpace`; le scénario historique de chevauchement V80 reste volontairement borné à V80 au lieu de franchir V88 avec des données Ward/Room incompatibles.
+- **Isolation des tests H2** : le test de facturation nettoie aussi unités, espaces, profils et lits afin de ne plus polluer les classes rendez-vous/pharmacie/FHIR suivantes.
+- **Feedback Angular de configuration spatiale** : le message « Configuration enregistrée » n'est plus effacé immédiatement par le rechargement post-mutation.
+- **Tests Angular legacy** : migration des specs configuration spatiale, capacité, urgence→hospitalisation, permissions et `SpatialApiService` vers `Location / Unit / Space / Bed`.
 
 ### Validation
 
-- **Backend** : GitHub Actions CI #1066 — Maven strict `clean verify` vert sur le dernier changement backend fonctionnel, sans `skipTests`.
-- **PostgreSQL 16** : tests de migration V87 couvrant catalogues, FK tenant, contraintes d'identité SERVICE, type inconnu et isolation cross-tenant.
-- **Frontend** : dernière CI frontend fonctionnelle verte — tests Angular et build production ; les commits postérieurs avant merge #133 étaient uniquement documentaires/synchronisation de `main`.
-- **PR #133** : squash merge dans `main` au commit `72b5e139592b20a9ea14ae366d3fcbab99c46cf1`.
+- **HOS-ORG backend** : GitHub Actions CI #1066 — Maven strict `clean verify` vert sur le dernier changement backend fonctionnel, sans `skipTests`.
+- **HOS-ORG PostgreSQL 16** : tests de migration V87 couvrant catalogues, FK tenant, contraintes d'identité SERVICE, type inconnu et isolation cross-tenant.
+- **HOS-ORG PR #133** : squash merge dans `main` au commit `72b5e139592b20a9ea14ae366d3fcbab99c46cf1`.
+- **HOS-LOC gate pré-synchronisation #1193** : Maven strict, tests Angular et build production verts sur `ae99538a01d6105e4efbfb246dd6031c994305ad`.
+- **Synchronisation `main`** : `main@44b599a77c92f3ed812e62961e8ed7e1c9f3397b` intégré non destructivement dans #137 via le merge commit `243671d69bf1e44992626bb4a5ad9a19f3232fc7`; comparaison Git post-sync `behind_by = 0`.
+- **HOS-LOC gate post-synchronisation #1196** : sur le même head synchronisé, `./mvnw clean verify` SUCCESS, tests PostgreSQL/Testcontainers SUCCESS, tests Angular SUCCESS et build Angular production SUCCESS.
+- **Revue #137** : aucun thread de review ouvert au moment de la clôture documentaire.
 
 ### Security
 
-- aucun mapping automatique depuis `Ward.name`, `users.department` ou `users.specialty` ;
-- aucun fallback de rétrocompatibilité introduit pour les nouveaux flux ;
+- aucun mapping automatique depuis `Ward.name`, `Room.roomNumber`, `users.department` ou `users.specialty` ;
+- aucun fallback métier ou persistant n'est introduit pour identifier service, espace ou lit ;
+- l'éventuel alias Angular `roomNumber = spaceName` est strictement un alias de présentation historique, marqué déprécié, jamais persistant et jamais utilisé dans un payload d'écriture ;
+- les affectations unité-espace, lits et séjours sont contrôlés par tenant côté application et base ;
 - aucun secret ajouté au repository ;
-- aucune action PROD/RECETTE et aucun développement serveur pour HOS-ORG-001-A ;
+- aucune action PROD/RECETTE pour HOS-ORG/HOS-LOC ;
 - `HOSPITALIZATION_MANAGE` reste supprimée depuis HOS-RBAC-001-D / V86.
 
 ### Documentation maintenance
 
 - Le snapshot historique du changelog au moment de cette consolidation est conservé dans `docs/ai/CHANGELOG-HISTORY-THROUGH-20260723.md` afin de ne supprimer aucun travail documentaire antérieur tout en gardant le registre actif lisible.
+- La documentation HOS-LOC canonique est `docs/ai/tickets/HOS-LOC-001-A-HOSPITAL-LOCATION-SPACES.md`; l'ancienne variante dupliquée a été supprimée.
