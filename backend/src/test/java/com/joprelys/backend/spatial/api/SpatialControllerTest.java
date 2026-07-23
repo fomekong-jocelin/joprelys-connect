@@ -195,6 +195,7 @@ public class SpatialControllerTest {
         jdbcTemplate.update("DELETE FROM organizational_unit_space_assignments");
         jdbcTemplate.update("DELETE FROM inpatient_space_profiles");
         jdbcTemplate.update("DELETE FROM facility_spaces");
+        jdbcTemplate.update("DELETE FROM facility_location_nodes");
         jdbcTemplate.update("DELETE FROM organizational_units");
         jdbcTemplate.update("DELETE FROM visits");
         jdbcTemplate.update("DELETE FROM patients");
