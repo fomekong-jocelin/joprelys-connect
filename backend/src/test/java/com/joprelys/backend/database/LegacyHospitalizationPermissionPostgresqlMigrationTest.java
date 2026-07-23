@@ -2,6 +2,7 @@ package com.joprelys.backend.database;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.joprelys.backend.auth.rbac.RbacStore;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
@@ -77,13 +78,14 @@ class LegacyHospitalizationPermissionPostgresqlMigrationTest {
         assertEquals(1, count(jdbc, "SELECT COUNT(*) FROM permissions WHERE code = 'HOSPITALIZATION_MANAGE'"));
         assertEquals(1, count(jdbc, "SELECT COUNT(*) FROM role_permissions WHERE role_id = ?", customRoleId));
 
-        Flyway.configure()
+        Flyway latestFlyway = Flyway.configure()
                 .dataSource(POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword())
                 .locations("classpath:db/migration")
                 .cleanDisabled(true)
-                .load()
-                .migrate();
+                .load();
+        latestFlyway.migrate();
 
+        assertEquals(86, Integer.parseInt(latestFlyway.info().current().getVersion().getVersion()));
         assertEquals(0, count(jdbc, "SELECT COUNT(*) FROM permissions WHERE code = 'HOSPITALIZATION_MANAGE'"));
         assertEquals(0, count(jdbc, "SELECT COUNT(*) FROM role_permissions WHERE role_id = ?", customRoleId));
         assertEquals(1, count(jdbc, "SELECT COUNT(*) FROM roles WHERE id = ?", customRoleId));
@@ -93,14 +95,23 @@ class LegacyHospitalizationPermissionPostgresqlMigrationTest {
                 WHERE rp.role_id = ?
                   AND rp.permission_code LIKE 'HOSPITALIZATION_%'
                 """, customRoleId));
-        assertEquals(86, Integer.parseInt(Flyway.configure()
-                .dataSource(POSTGRESQL.getJdbcUrl(), POSTGRESQL.getUsername(), POSTGRESQL.getPassword())
-                .locations("classpath:db/migration")
-                .load()
-                .info()
-                .current()
-                .getVersion()
-                .getVersion()));
+
+        new RbacStore(jdbc).seedCatalog();
+
+        assertEquals(0, count(jdbc, "SELECT COUNT(*) FROM permissions WHERE code = 'HOSPITALIZATION_MANAGE'"));
+        assertEquals(6, count(jdbc, """
+                SELECT COUNT(*)
+                FROM permissions
+                WHERE code IN (
+                    'HOSPITALIZATION_ADMIT',
+                    'HOSPITALIZATION_NOTE_WRITE',
+                    'HOSPITALIZATION_CONSENT_RECORD',
+                    'HOSPITALIZATION_CARE_WRITE',
+                    'HOSPITALIZATION_MEDICATION_ADMINISTER',
+                    'HOSPITALIZATION_CONSUMABLE_RECORD'
+                )
+                """));
+        assertEquals(0, count(jdbc, "SELECT COUNT(*) FROM role_permissions WHERE role_id = ?", customRoleId));
     }
 
     private static int count(JdbcTemplate jdbc, String sql, Object... args) {
