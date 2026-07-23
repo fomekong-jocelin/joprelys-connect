@@ -1,7 +1,10 @@
 package com.joprelys.backend.hospitalorganization.infrastructure.persistence;
 
+import com.joprelys.backend.spatial.domain.HospitalServiceType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
@@ -19,8 +22,9 @@ public class HospitalServiceCatalogEntity {
     @Column(name = "name_en", nullable = false, length = 120)
     private String nameEn;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "service_type", nullable = false, length = 40)
-    private String serviceType;
+    private HospitalServiceType serviceType;
 
     @Column(nullable = false)
     private boolean active;
@@ -40,7 +44,7 @@ public class HospitalServiceCatalogEntity {
         return nameEn;
     }
 
-    public String getServiceType() {
+    public HospitalServiceType getServiceType() {
         return serviceType;
     }
 
