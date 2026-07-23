@@ -37,6 +37,7 @@ describe('HospitalOrganizationPageComponent', () => {
   const locale = signal<'fr' | 'en'>('fr');
 
   beforeEach(async () => {
+    locale.set('fr');
     api = {
       listServiceCatalog: vi.fn().mockReturnValue(of([
         {
