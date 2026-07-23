@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 class RbacCatalogHospitalizationClinicalPermissionTest {
 
     @Test
-    void dedicatedHospitalizationWritePermissionsShouldBeRegistered() {
+    void dedicatedHospitalizationWritePermissionsShouldBeRegisteredWithoutLegacyFallback() {
         Set<String> permissions = RbacCatalog.permissionCodes();
 
         assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_ADMIT));
@@ -18,6 +18,7 @@ class RbacCatalogHospitalizationClinicalPermissionTest {
         assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_CARE_WRITE));
         assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_MEDICATION_ADMINISTER));
         assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_CONSUMABLE_RECORD));
+        assertFalse(permissions.contains("HOSPITALIZATION_MANAGE"));
     }
 
     @Test
@@ -60,7 +61,7 @@ class RbacCatalogHospitalizationClinicalPermissionTest {
     }
 
     @Test
-    void clinicAdminShouldRetainAllDedicatedEstablishmentPermissions() {
+    void clinicAdminShouldRetainAllDedicatedEstablishmentPermissionsWithoutLegacyPermission() {
         Set<String> permissions = permissionsFor(RbacCatalog.ROLE_ADMIN_CLINIQUE);
 
         assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_ADMIT));
@@ -69,6 +70,7 @@ class RbacCatalogHospitalizationClinicalPermissionTest {
         assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_CARE_WRITE));
         assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_MEDICATION_ADMINISTER));
         assertTrue(permissions.contains(RbacCatalog.PERMISSION_HOSPITALIZATION_CONSUMABLE_RECORD));
+        assertFalse(permissions.contains("HOSPITALIZATION_MANAGE"));
     }
 
     @Test
