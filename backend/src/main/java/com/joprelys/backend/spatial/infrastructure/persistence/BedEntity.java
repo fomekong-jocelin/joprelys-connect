@@ -25,8 +25,8 @@ public class BedEntity {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "room_id", nullable = false)
-    private RoomEntity room;
+    @JoinColumn(name = "space_id", nullable = false)
+    private FacilitySpaceEntity space;
 
     @Column(name = "bed_number", nullable = false, length = 20)
     private String bedNumber;
@@ -60,9 +60,10 @@ public class BedEntity {
     protected BedEntity() {
     }
 
-    public BedEntity(RoomEntity room, String bedNumber) {
+    public BedEntity(FacilitySpaceEntity space, String bedNumber) {
         this.id = UUID.randomUUID();
-        this.room = room;
+        this.space = Objects.requireNonNull(space, "L'espace d'hébergement est obligatoire.");
+        this.organizationId = space.getOrganizationId();
         this.bedNumber = bedNumber;
         this.capacityStatus = BedCapacityStatus.OPEN;
         this.readinessStatus = BedReadinessStatus.READY;
@@ -92,12 +93,13 @@ public class BedEntity {
         return id;
     }
 
-    public RoomEntity getRoom() {
-        return room;
+    public FacilitySpaceEntity getSpace() {
+        return space;
     }
 
-    public void setRoom(RoomEntity room) {
-        this.room = room;
+    public void setSpace(FacilitySpaceEntity space) {
+        this.space = Objects.requireNonNull(space, "L'espace d'hébergement est obligatoire.");
+        this.organizationId = space.getOrganizationId();
     }
 
     public String getBedNumber() {
