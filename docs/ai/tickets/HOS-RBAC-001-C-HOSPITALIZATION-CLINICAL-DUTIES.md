@@ -2,14 +2,14 @@
 
 ## Statut
 
-**CODE FUSIONNÉ DANS `main` — QA AUTOMATISÉE VERTE — validations externes et préparation au déploiement en attente**
+**CODE FUSIONNÉ DANS `main` — QA AUTOMATISÉE VERTE — dette legacy reprise par HOS-RBAC-001-D / #121**
 
 - PR canonique : **#107** ;
 - commit fusionné : `4df94f43ee5943a55ae60bac22794b1a8ff746a4` ;
-- branche `main` de référence après optimisation CI : `078c3dc5f913f615910fad9f061085bc7acdcfec` ;
 - workflow PR #107 final observé vert : **#1011** ;
 - workflow `main` après fusion observé vert : **#1012** ;
-- aucune réimplémentation de ce ticket ne doit être créée dans une nouvelle PR.
+- HOS-RBAC-001-D / issue **#121** supprime définitivement `HOSPITALIZATION_MANAGE` et ajoute Flyway V86 ;
+- aucune réimplémentation des six permissions de ce ticket ne doit être créée.
 
 ## Contexte
 
@@ -37,22 +37,22 @@ Remplacer l’autorisation générique par six permissions orientées action, sa
 - `HOSPITALIZATION_MEDICATION_ADMINISTER` ;
 - `HOSPITALIZATION_CONSUMABLE_RECORD`.
 
-`HOSPITALIZATION_MANAGE` reste temporairement au catalogue pour permettre la migration contrôlée des rôles personnalisés, mais ne protège plus les six endpoints concernés.
+La conservation transitoire de `HOSPITALIZATION_MANAGE` décidée dans #107 est **supersédée** par HOS-RBAC-001-D : en phase de développement, la permission legacy est retirée du catalogue et de la base au lieu d'être maintenue pour rétro-compatibilité.
 
-## Preuves dans le code de `main`
+## Preuves dans le code
 
 ### Catalogue RBAC
 
 `RbacCatalog` :
 
 - déclare les six permissions dédiées ;
-- conserve `HOSPITALIZATION_MANAGE` comme permission legacy uniquement ;
 - attribue au médecin : admission, notes, consentement, soins, transfert et décision médicale de sortie ;
 - n’attribue pas par défaut au médecin l’administration médicamenteuse ni les consommables ;
 - attribue à l’infirmier : notes, consentement, soins, administration médicamenteuse, consommables et transfert ;
 - n’attribue pas l’admission à l’infirmier ;
 - limite le responsable hospitalisation à l’admission, au transfert, au départ physique et aux opérations de lit ;
-- n’attribue aucune écriture clinique aux rôles hygiène et maintenance.
+- n’attribue aucune écriture clinique aux rôles hygiène et maintenance ;
+- à partir de HOS-RBAC-001-D, ne catalogue plus `HOSPITALIZATION_MANAGE`.
 
 ### Contrôleur hospitalisation
 
@@ -106,7 +106,7 @@ Les comptes-rendus opératoires restent volontairement sous `CLINICAL_WRITE` en 
 | `AGENT_HYGIENE` | non | non | non | non | non | non |
 | `TECHNICIEN_MAINTENANCE` | non | non | non | non | non | non |
 
-Les rôles personnalisés peuvent recevoir les permissions nécessaires indépendamment.
+Les rôles personnalisés reçoivent eux aussi uniquement des permissions explicites. HOS-RBAC-001-D supprime le dernier fallback legacy au niveau du catalogue persistant.
 
 ## Critères d’acceptation
 
@@ -119,10 +119,11 @@ Les rôles personnalisés peuvent recevoir les permissions nécessaires indépen
 - [x] test d’intégration séparant explicitement soin médecin et administration/consommables infirmier ;
 - [x] visibilité frontend alignée sur chaque permission ;
 - [x] test Angular du mapping onglet → permission sans fallback `HOSPITALIZATION_MANAGE` ;
-- [x] continuité urgence → hospitalisation alignée sur `HOSPITALIZATION_ADMIT`, testée en refus et sans chargement des données d’admission si non autorisée ;
+- [x] continuité urgence → hospitalisation alignée sur `HOSPITALIZATION_ADMIT` ;
 - [x] CI backend et frontend verte sur le head final de la PR #107 ;
 - [x] CI `main` verte après fusion ;
-- [x] documentation d’audit, conception technique et contrat API présents.
+- [x] documentation d’audit, conception technique et contrat API présents ;
+- [ ] suppression définitive de la permission legacy couverte par HOS-RBAC-001-D / #121 et V86.
 
 ## État QA automatisée
 
@@ -132,23 +133,24 @@ Les rôles personnalisés peuvent recevoir les permissions nécessaires indépen
 - fusion de #107 dans `main` au commit `4df94f43ee5943a55ae60bac22794b1a8ff746a4` ;
 - workflow `main` **#1012** : vert après fusion.
 
-Les anciens textes indiquant « QA finale bloquée » ou « PR Draft #107 en cours » sont obsolètes et ne doivent plus servir de référence.
+## Compatibilité et évolution
 
-## Compatibilité et déploiement
+Aucune URL ni payload n’est modifié. La stratégie de compatibilité temporaire des rôles personnalisés a été abandonnée pendant la phase de développement afin de ne pas conserver une autorité large sans intention métier.
 
-Aucune URL ni payload n’est modifié. En revanche, les rôles personnalisés qui dépendaient uniquement de `HOSPITALIZATION_MANAGE` doivent recevoir explicitement les nouvelles permissions avant déploiement.
+HOS-RBAC-001-D applique une suppression **fail closed** :
 
-Le bootstrap RBAC resynchronise le catalogue et les rôles système. Les JWT existants doivent être renouvelés après déploiement afin de refléter les nouvelles authorities.
+- V86 retire `HOSPITALIZATION_MANAGE` de la base ;
+- les associations `role_permissions` correspondantes disparaissent par cascade ;
+- aucun rôle ne reçoit automatiquement les nouvelles permissions ;
+- les rôles personnalisés doivent être configurés avec les permissions dédiées réellement nécessaires.
 
-Il ne faut pas traduire automatiquement `HOSPITALIZATION_MANAGE` vers l’ensemble des nouvelles permissions : cela recréerait la sur-autorisation supprimée par cet incrément.
+Les JWT/sessions doivent être renouvelés après une resynchronisation du catalogue sur un environnement déployé afin de refléter les authorities courantes.
 
 ## Validations externes encore requises
 
 - [ ] validation RSSI/DPO de la matrice ;
 - [ ] validation direction médicale des responsabilités médecin/infirmier ;
 - [ ] validation responsable hospitalisation du droit d’admission ;
-- [ ] inventaire des rôles personnalisés contenant `HOSPITALIZATION_MANAGE` ;
-- [ ] remappage explicite et minimal des rôles personnalisés concernés ;
 - [ ] recette positive et négative avec comptes représentatifs ;
 - [ ] resynchronisation du catalogue sur l’environnement cible ;
 - [ ] renouvellement des JWT/sessions après synchronisation.
@@ -164,4 +166,4 @@ Il ne faut pas traduire automatiquement `HOSPITALIZATION_MANAGE` vers l’ensemb
 
 ## Règle de non-duplication
 
-Toute suite du chantier doit partir de `main` et traiter uniquement les éléments encore ouverts ci-dessus. Il est interdit de recréer les six permissions, de recopier le bootstrap RBAC de #107 ou de réintroduire `HOSPITALIZATION_MANAGE` comme fallback.
+Toute suite du chantier doit partir de `main` et traiter uniquement les risques encore ouverts. Il est interdit de recréer les six permissions, de recopier le bootstrap RBAC de #107 ou de réintroduire `HOSPITALIZATION_MANAGE` sous forme de fallback, alias ou permission de compatibilité.

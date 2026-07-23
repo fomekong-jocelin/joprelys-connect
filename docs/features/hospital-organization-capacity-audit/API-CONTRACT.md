@@ -37,9 +37,9 @@
 
 Les rôles personnalisés peuvent recevoir les permissions séparément. Le backend reste la source de vérité ; masquer un bouton ne constitue jamais une autorisation.
 
-### 1.2 Écritures de séjour séparées par HOS-RBAC-001-C
+### 1.2 Écritures de séjour séparées par HOS-RBAC-001-C/D
 
-Les URL et payloads existants sont conservés ; seule l'autorité exigée change :
+Les URL et payloads existants sont conservés ; seule l'autorité exigée est spécialisée :
 
 | Intention | Endpoint | Permission dédiée |
 |---|---|---|
@@ -52,7 +52,7 @@ Les URL et payloads existants sont conservés ; seule l'autorité exigée change
 
 `HOSPITALIZATION_MEDICATION_ADMINISTER` ne permet pas de prescrire. `HOSPITALIZATION_CONSUMABLE_RECORD` ne permet pas de gérer le stock. `HOSPITALIZATION_CONSENT_RECORD` autorise la traçabilité du consentement et de la pièce associée, sans se substituer à l'information médicale ni à la décision du patient.
 
-La permission `HOSPITALIZATION_MANAGE` reste temporairement au catalogue uniquement pour accompagner la migration des rôles personnalisés. Les rôles système médecin, infirmier et responsable hospitalisation ne la reçoivent plus et aucun des six endpoints ci-dessus ne l'utilise comme autorité.
+`HOSPITALIZATION_MANAGE` est supprimée du catalogue actif par HOS-RBAC-001-D et retirée du référentiel persistant par Flyway V86. Aucun endpoint, écran ou rôle système ne l'utilise comme fallback. Les rôles personnalisés doivent être composés explicitement avec les permissions dédiées nécessaires ; aucun remapping automatique n'est effectué.
 
 ### 1.3 Workflow de sortie implémenté par HOS-DIS-001-A
 
@@ -195,7 +195,7 @@ L'endpoint `/api/spatial/beds/{id}/status` est conservé comme commande de super
 
 Le chemin `/api/hospitalizations/{id}/discharge` est conservé pour compatibilité de nom, mais son effet est désormais limité à la décision médicale. Tout consommateur qui supposait une libération immédiate doit appeler explicitement `/physical-departure` avec le droit correspondant.
 
-Pour HOS-RBAC-001-C, aucune URL ni structure de payload ne change. Les intégrations ou rôles personnalisés qui s'appuyaient sur `HOSPITALIZATION_MANAGE` doivent recevoir les permissions explicites correspondant à leurs actions avant déploiement. Les tokens existants doivent être renouvelés après resynchronisation du catalogue.
+Pour HOS-RBAC-001-C/D, aucune URL ni structure de payload ne change. En revanche, le modèle d'autorisation est volontairement nettoyé : `HOSPITALIZATION_MANAGE` n'existe plus à partir de V86. Les rôles personnalisés doivent recevoir explicitement les permissions correspondant à leurs actions. Les tokens existants doivent être renouvelés après resynchronisation du catalogue.
 
 ## 7. Tests de contrat
 
@@ -208,6 +208,8 @@ Pour HOS-RBAC-001-C, aucune URL ni structure de payload ne change. Les intégrat
 - refus de la consommation patient sans `HOSPITALIZATION_CONSUMABLE_RECORD` ;
 - vérification que l'administration médicamenteuse n'accorde aucun droit de prescription ;
 - vérification que la consommation patient n'accorde aucun droit de gestion de stock ;
+- refus d'un contexte stale ne contenant que `HOSPITALIZATION_MANAGE` ;
+- vérification V86 : permission legacy supprimée, association de rôle personnalisé supprimée, rôle conservé, aucun remapping automatique ;
 - refus du transfert sans `HOSPITALIZATION_TRANSFER` ;
 - refus du transfert après décision médicale de sortie ;
 - refus de la décision de sortie sans `HOSPITALIZATION_DISCHARGE_DECIDE` ;

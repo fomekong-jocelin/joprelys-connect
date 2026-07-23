@@ -76,6 +76,16 @@ describe('PatientHospitalizationComponent permissions', () => {
     expect(hasPermission).not.toHaveBeenCalledWith('HOSPITALIZATION_MANAGE');
   });
 
+  it('fails closed when a stale token only contains the removed legacy permission', () => {
+    component.list.set([activeStay]);
+    component.activeTab = 'cares';
+    grantedPermissions.add('HOSPITALIZATION_MANAGE');
+
+    expect(component.canModify()).toBe(false);
+    expect(hasPermission).toHaveBeenCalledWith('HOSPITALIZATION_CARE_WRITE');
+    expect(hasPermission).not.toHaveBeenCalledWith('HOSPITALIZATION_MANAGE');
+  });
+
   it('does not expose medication administration to a note-only profile', () => {
     component.list.set([activeStay]);
     component.activeTab = 'meds';

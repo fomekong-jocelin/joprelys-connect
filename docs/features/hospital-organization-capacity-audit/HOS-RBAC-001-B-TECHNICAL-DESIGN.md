@@ -1,5 +1,7 @@
 # HOS-RBAC-001-B — Conception technique de la séparation des opérations hospitalières
 
+> **Note d'évolution** : ce document décrit la conception livrée avec #102. Les étapes historiques de migration basées sur `HOSPITALIZATION_MANAGE` sont supersédées par HOS-RBAC-001-C/D. À partir de V86, cette permission n'existe plus dans le catalogue ni en base et aucun remapping automatique n'est effectué.
+
 ## Architecture
 
 ```text
@@ -26,7 +28,7 @@ Les permissions sont ajoutées au catalogue Java, puis `RbacStore.seedCatalog()`
 
 1. insère ou actualise les définitions ;
 2. recrée les associations des rôles système ;
-3. conserve les rôles personnalisés et leurs affectations ;
+3. conserve les rôles personnalisés et leurs affectations encore valides ;
 4. expose les nouvelles permissions à l'administration RBAC.
 
 Deux rôles système assignables sont ajoutés :
@@ -35,6 +37,8 @@ Deux rôles système assignables sont ajoutés :
 - `TECHNICIEN_MAINTENANCE`.
 
 Leurs identifiants restent déterministes via `RbacCatalog.roleId(code)`.
+
+HOS-RBAC-001-D ajoute une règle de convergence que `seedCatalog()` ne pouvait pas fournir seul : Flyway V86 supprime explicitement la permission obsolète `HOSPITALIZATION_MANAGE`, et la FK `ON DELETE CASCADE` retire ses associations de rôles personnalisés.
 
 ## Transitions de préparation
 
@@ -78,7 +82,7 @@ Les actions sont distinguées :
 - `UPDATE_BED_MAINTENANCE` ;
 - `UPDATE_BED_READINESS` pour la supervision legacy.
 
-Les raisons restent textuelles dans cet incrément. HOS-MOV-001 et HOS-BED-002-D devront introduire des événements structurés.
+Les raisons textuelles de cet incrément ont ensuite été structurées par HOS-BED-002-D.
 
 ## Interface Angular
 
@@ -97,30 +101,37 @@ Le masquage UI améliore le parcours utilisateur, mais chaque endpoint est égal
 
 ## API et SemVer
 
-Les endpoints spécialisés sont additifs. Deux endpoints existants changent de permission :
+Les endpoints spécialisés sont additifs. Deux endpoints existants ont changé de permission dans #102 :
 
 - `/api/spatial/transfers` ;
 - `/api/hospitalizations/{id}/discharge`.
 
-Il s'agit d'un changement de contrôle d'accès potentiellement incompatible pour les rôles personnalisés. Une resynchronisation et une revue des rôles personnalisés sont obligatoires avant déploiement. L'impact de release est au minimum `MINOR`, avec note de migration RBAC.
+HOS-RBAC-001-D va plus loin : la suppression de `HOSPITALIZATION_MANAGE` est un breaking change explicite du modèle d'autorisation pour tout rôle personnalisé qui la référençait. Selon les règles internes de SemVer, la release qui l'embarque porte un impact **MAJOR**.
 
-## Déploiement
+## Déploiement — état actuel
 
-1. sauvegarder les associations RBAC ;
-2. exécuter le démarrage backend afin de resynchroniser le catalogue ;
-3. identifier les rôles personnalisés contenant `HOSPITALIZATION_MANAGE` ou `BED_OPERATIONAL_STATUS_MANAGE` ;
-4. leur attribuer explicitement les nouveaux droits nécessaires ;
-5. renouveler les JWT actifs ;
+Le plan historique de remappage de `HOSPITALIZATION_MANAGE` avant déploiement est abandonné pendant la phase de développement.
+
+Le plan courant est :
+
+1. appliquer V86 ;
+2. constater la suppression fail-closed de la permission et de ses associations ;
+3. démarrer le backend et resynchroniser le catalogue explicite ;
+4. attribuer manuellement uniquement les permissions métier réellement nécessaires aux rôles personnalisés ;
+5. renouveler les JWT/sessions ;
 6. déployer le frontend ;
 7. tester chaque profil avec des cas positifs et négatifs.
 
+`BED_OPERATIONAL_STATUS_MANAGE` reste une permission active distincte ; elle n'est pas concernée par V86.
+
 ## Rollback
 
-Un rollback applicatif rétablirait les anciennes annotations, mais les nouvelles permissions et rôles peuvent rester dans le catalogue sans affecter les anciens binaires. Ne pas supprimer les permissions avant d'avoir vérifié qu'aucun rôle personnalisé ne les référence.
+Après V86, un rollback qui réintroduit `HOSPITALIZATION_MANAGE` est interdit. Le modèle de sécurité est forward-only : corriger une permission dédiée ou une matrice de rôle est préférable à restaurer l'autorité générique.
 
 ## Tests
 
-- présence des permissions dans le catalogue ;
+- présence des permissions dédiées dans le catalogue ;
+- absence de `HOSPITALIZATION_MANAGE` à partir de 001-D ;
 - matrice des rôles système ;
 - annotations de contrôleur ;
 - transitions positives nettoyage/maintenance ;
@@ -128,4 +139,5 @@ Un rollback applicatif rétablirait les anciennes annotations, mais les nouvelle
 - refus sur lit affecté ;
 - appels Angular aux endpoints spécialisés ;
 - affichage des actions selon permission ;
+- test PostgreSQL V85→V86 avec rôle personnalisé legacy ;
 - suite complète Maven, PostgreSQL/Testcontainers, Angular et build production.

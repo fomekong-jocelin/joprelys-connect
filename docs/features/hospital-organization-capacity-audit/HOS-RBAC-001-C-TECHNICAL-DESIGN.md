@@ -7,10 +7,9 @@ Cette conception est **implémentée et fusionnée dans `main`**.
 - PR canonique : **#107** ;
 - commit fusionné : `4df94f43ee5943a55ae60bac22794b1a8ff746a4` ;
 - workflow PR final : **#1011 vert** ;
-- workflow `main` après fusion : **#1012 vert** ;
-- branche `main` actuelle auditée : `078c3dc5f913f615910fad9f061085bc7acdcfec`.
+- workflow `main` après fusion : **#1012 vert**.
 
-Le code fusionné a été relu dans `RbacCatalog`, `HospitalizationController`, les tests backend d’autorisation et le composant Angular hospitalisation. La documentation doit donc traiter HOS-RBAC-001-C comme **livré techniquement**, sans recréer son code. Restent uniquement les validations externes, l’inventaire des rôles personnalisés, la recette multi-profils et la préparation du déploiement.
+Le code fusionné a été relu dans `RbacCatalog`, `HospitalizationController`, les tests backend d’autorisation et le composant Angular hospitalisation. HOS-RBAC-001-D / #121 poursuit ce chantier en supprimant définitivement la permission legacy `HOSPITALIZATION_MANAGE` au lieu de la conserver pour rétro-compatibilité.
 
 ## 1. Décision
 
@@ -51,7 +50,7 @@ Ce regroupement créait plusieurs risques :
 | `HOSPITALIZATION_MEDICATION_ADMINISTER` | tracer l’administration effective d’un médicament | prescrire, dispenser ou gérer le stock pharmacie |
 | `HOSPITALIZATION_CONSUMABLE_RECORD` | tracer un consommable réellement utilisé | créer ou déplacer le stock |
 
-`HOSPITALIZATION_MANAGE` reste temporairement déclaré au catalogue afin de permettre une migration contrôlée des rôles personnalisés. Il n’est plus distribué aux trois rôles système concernés et ne protège plus les six endpoints de cet incrément.
+La conservation temporaire de `HOSPITALIZATION_MANAGE` prévue initialement dans #107 est **supersédée par HOS-RBAC-001-D**. La permission est retirée du catalogue Java et supprimée du référentiel persistant par V86. Aucun alias ni fallback n'est conservé.
 
 ## 4. Matrice des rôles système
 
@@ -64,7 +63,7 @@ Ce regroupement créait plusieurs risques :
 | `AGENT_HYGIENE` | — | — | — | — | — | — |
 | `TECHNICIEN_MAINTENANCE` | — | — | — | — | — | — |
 
-Cette matrice est un **défaut système**, pas une règle réglementaire universelle. Les établissements pourront utiliser des rôles personnalisés. Les futures habilitations professionnelles et délégations datées devront encore restreindre les droits effectifs.
+Cette matrice est un **défaut système**, pas une règle réglementaire universelle. Les établissements peuvent utiliser des rôles personnalisés, mais ceux-ci doivent être composés uniquement de permissions explicites existantes. Les futures habilitations professionnelles et délégations datées devront encore restreindre les droits effectifs.
 
 ## 5. Mapping des endpoints
 
@@ -85,7 +84,7 @@ Les comptes-rendus opératoires restent sous `CLINICAL_WRITE` dans cet incrémen
 
 Le frontend ne sert jamais de barrière de sécurité primaire. Il reflète néanmoins les autorités afin de ne pas exposer une action qui sera refusée par le backend.
 
-`PatientHospitalizationComponent` possède désormais une décision par onglet :
+`PatientHospitalizationComponent` possède une décision par onglet :
 
 - séjour absent : admission selon `HOSPITALIZATION_ADMIT` ;
 - Notes : `HOSPITALIZATION_NOTE_WRITE` ;
@@ -97,11 +96,13 @@ Le frontend ne sert jamais de barrière de sécurité primaire. Il reflète néa
 
 La continuité urgence → hospitalisation masque le formulaire d’admission et affiche un message explicite si `HOSPITALIZATION_ADMIT` manque. Le service backend reste la source de vérité en cas d’appel direct.
 
+HOS-RBAC-001-D ajoute un cas de non-régression frontend : une authority stale `HOSPITALIZATION_MANAGE` présente seule dans un ancien contexte ne doit autoriser aucune écriture.
+
 ## 7. Tests de sécurité
 
 ### Backend
 
-`HospitalizationControllerAuthorizationTest` vérifie par réflexion l’autorité exacte de chaque méthode sensible. Une régression vers `HOSPITALIZATION_MANAGE` fait échouer le test.
+`HospitalizationControllerAuthorizationTest` vérifie par réflexion l’autorité exacte de chaque méthode sensible. Une régression vers une permission générique fait échouer le test.
 
 `RbacCatalogHospitalizationClinicalPermissionTest` teste les droits **positifs et négatifs** des rôles système, notamment :
 
@@ -109,38 +110,36 @@ La continuité urgence → hospitalisation masque le formulaire d’admission et
 - infirmier sans admission ;
 - responsable hospitalisation sans écritures cliniques ;
 - rôles hygiène/maintenance sans droits cliniques ;
-- administrateur clinique avec toutes les permissions établissement.
-
-Les tests RBAC existants vérifient également que `HOSPITALIZATION_MANAGE` n’est plus distribué au médecin, à l’infirmier ni au responsable hospitalisation.
+- administrateur clinique avec toutes les permissions établissement ;
+- absence complète de `HOSPITALIZATION_MANAGE` du catalogue à partir de HOS-RBAC-001-D.
 
 ### Frontend
 
-Le test de continuité urgence couvre :
+Le test hospitalisation vérifie :
 
 - admission autorisée avec `HOSPITALIZATION_ADMIT` ;
-- absence d’appel API et message utilisateur lorsque la permission manque.
+- mapping de chaque onglet vers sa permission dédiée ;
+- absence de fallback legacy ;
+- refus fail-closed lorsqu'un contexte stale ne possède que `HOSPITALIZATION_MANAGE`.
 
-La suite Angular et le build production constituent la non-régression globale des templates et dépendances.
+## 8. Suppression du reliquat legacy
 
-## 8. Migration des rôles personnalisés
+Le modèle cible ne comporte plus `HOSPITALIZATION_MANAGE`.
 
-Le changement est rétrocompatible sur le contrat HTTP mais **pas sémantiquement transparent pour les rôles personnalisés**.
+HOS-RBAC-001-D / #121 applique cette convergence :
 
-Avant déploiement production :
+1. retrait de la permission de `RbacCatalog` ;
+2. Flyway V86 supprime la ligne persistée ;
+3. la FK `role_permissions.permission_code -> permissions.code ON DELETE CASCADE` supprime les associations de rôles personnalisés correspondantes ;
+4. aucun mapping automatique n'attribue les nouvelles permissions ;
+5. le rôle personnalisé lui-même est conservé ;
+6. toute permission hospitalière nécessaire est attribuée explicitement ensuite.
 
-1. inventorier les rôles personnalisés contenant `HOSPITALIZATION_MANAGE` ;
-2. déterminer les intentions réellement nécessaires pour chacun ;
-3. attribuer uniquement les nouvelles permissions requises ;
-4. resynchroniser le catalogue et les rôles système ;
-5. renouveler les JWT/sessions afin de recalculer les authorities ;
-6. tester au moins un compte représentatif par profil ;
-7. ne retirer la permission legacy du catalogue qu’après preuve qu’aucun rôle/intégrateur ne l’utilise encore.
-
-Il ne faut pas mapper automatiquement `HOSPITALIZATION_MANAGE` vers les six permissions : cela recréerait l’escalade que cette story cherche précisément à supprimer.
+Cette stratégie est volontairement **fail closed** et évite de transformer une dette de rétro-compatibilité en dette de sécurité.
 
 ## 9. Menaces et limites résiduelles
 
-HOS-RBAC-001-C traite la **granularité de l’action**, mais pas encore le contexte d’autorisation.
+HOS-RBAC-001-C/D traite la **granularité de l’action**, mais pas encore le contexte d’autorisation.
 
 Restent ouverts :
 
@@ -153,28 +152,19 @@ Restent ouverts :
 - correction append-only des actes ;
 - clearance administrative et financière de sortie.
 
-Par conséquent GAP-016 reste `PARTIAL` et GAP-017 reste `OPEN`.
+Par conséquent GAP-016 reste `PARTIAL` et GAP-017 reste `OPEN` tant que ces contrôles et validations externes ne sont pas terminés.
 
 ## 10. Rollback
 
-Le rollback applicatif peut rétablir l’ancienne version du code, mais il ne faut pas supprimer les nouvelles permissions des référentiels tant que des rôles personnalisés les utilisent.
-
-En cas de problème de déploiement, privilégier :
-
-1. correction de la matrice d’un rôle ciblé ;
-2. renouvellement de son jeton ;
-3. rollback applicatif si nécessaire.
-
-Réattribuer globalement `HOSPITALIZATION_MANAGE` aux profils n’est pas un rollback sûr : cela réintroduit volontairement une élévation de privilège.
+Après V86, réintroduire `HOSPITALIZATION_MANAGE` n’est pas un rollback acceptable. Le chantier est forward-only pendant la phase de développement : en cas d'anomalie, la correction doit porter sur la permission dédiée ou la matrice du rôle concerné.
 
 ## 11. Validations externes requises
 
 - validation RSSI/DPO de la matrice ;
 - validation direction médicale des responsabilités médecin/infirmier ;
 - validation responsable hospitalisation de l’admission administrative ;
-- revue des rôles personnalisés ;
 - recette multi-profils avec comptes représentatifs.
 
 ## 12. Règle de non-régression
 
-Les prochains travaux doivent partir du code présent dans `main`. Ils ne doivent ni recréer les six permissions, ni dupliquer les annotations `@PreAuthorize`, ni restaurer `HOSPITALIZATION_MANAGE` comme permission de secours. Toute évolution supplémentaire doit faire l’objet d’un ticket distinct et cibler exclusivement un risque encore ouvert.
+Les prochains travaux doivent partir du code présent dans `main`. Ils ne doivent ni recréer les six permissions, ni dupliquer les annotations `@PreAuthorize`, ni restaurer `HOSPITALIZATION_MANAGE` sous forme de permission, alias ou fallback. Toute évolution supplémentaire doit faire l’objet d’un ticket distinct et cibler exclusivement un risque encore ouvert.
