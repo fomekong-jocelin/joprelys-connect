@@ -31,10 +31,32 @@ class HospitalLocationPreflightPostgresqlMigrationTest {
 
         JdbcTemplate jdbc = jdbc();
         Timestamp now = Timestamp.from(Instant.now());
+        UUID organizationId = UUID.randomUUID();
+
+        jdbc.update("""
+                INSERT INTO organizations (
+                    id, name, email, phone, address, city, status, type, country,
+                    responsible_name, api_enabled, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                organizationId,
+                "Clinique legacy HOS-LOC",
+                "hos-loc-preflight-" + organizationId + "@joprelys.local",
+                "000",
+                "Adresse test",
+                "Douala",
+                "ACTIVE",
+                "CLINIC",
+                "Cameroun",
+                "Responsable test",
+                true,
+                now,
+                now);
+
         jdbc.update("""
                 INSERT INTO wards (id, name, service_type, organization_id, created_at, updated_at)
                 VALUES (?, 'Legacy ward', 'HOSPITALIZATION', ?, ?, ?)
-                """, UUID.randomUUID(), UUID.randomUUID(), now, now);
+                """, UUID.randomUUID(), organizationId, now, now);
 
         Flyway latest = flyway(null);
         assertThatThrownBy(latest::migrate)
@@ -53,6 +75,9 @@ class HospitalLocationPreflightPostgresqlMigrationTest {
 
         assertThat(count(jdbc, "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '88' AND success = TRUE"))
                 .isEqualTo(1);
+        assertThat(tableExists(jdbc, "facility_spaces")).isTrue();
+        assertThat(tableExists(jdbc, "wards")).isFalse();
+        assertThat(tableExists(jdbc, "rooms")).isFalse();
     }
 
     private Flyway flyway(String target) {
