@@ -1,890 +1,438 @@
 # EPIC-0027 — Organisation hospitalière, capacité et parcours patient
 
 **Origine** : AUDIT-20260721  
-**Statut** : IN_PROGRESS — phase 0 engagée sur les invariants lits et le RBAC hospitalier  
+**Statut** : IN_PROGRESS — architecture cible acceptée, socle phase 0 et HOS-ORG-001-A engagés/livrés  
 **Priorité globale** : Critique  
-**SemVer cible** : ajout parallèle MINOR possible ; retrait des contrats legacy MAJOR  
-**Effort total indicatif** : 103–143 jours-personnes, QA et documentation incluses
+**SemVer** : ajouts parallèles MINOR ; suppression des contrats legacy MAJOR  
+**Source d’architecture** : `docs/architecture/adr/ADR-0002-flexible-hospital-organization-and-capacity-model.md`
+
+## 1. Vision
+
+Fournir à Joprelys un modèle flexible, historisé et sûr permettant à un cabinet, une clinique, un hôpital ou un réseau de gérer séparément :
+
+1. l’organisation médicale ;
+2. la géographie physique ;
+3. les capacités et ressources ;
+4. les affectations professionnelles ;
+5. les admissions, mouvements et sorties ;
+6. le parcours transverse du patient ;
+7. les indicateurs et l’interopérabilité.
 
-## Vision
+Le principe structurant est : **organisation ≠ géographie ≠ capacité ≠ personnel**.
 
-Fournir à Joprelys un modèle flexible, historisé et sûr permettant à un cabinet, une clinique, un hôpital ou un réseau de gérer son organisation, ses espaces, ses capacités, ses personnels, ses ressources et le parcours réel d'un patient.
+Aucun nouveau développement ne doit renforcer le modèle plat historique `Organization → Ward → Room → Bed` ni les champs libres `users.department` / `users.specialty`.
+
+## 2. Décisions d’architecture actives
 
-## Découpage EPIC → User Stories → Tasks → Subtasks
+### 2.1 Organisation
 
-| Story | Objectif | SP | Effort | Profil | Reviewer | Tests attendus |
-|---|---|---:|---:|---|---|---|
-| HOS-BED-001 | invariants et concurrence lits | 12–14, réestimé | 9–12j | backend senior + DBA | cadre + DBA + QA | PostgreSQL concurrence/migration |
-| HOS-BED-002 | capacité et cycles de remise en état | 8, à découper | 8–11j | full-stack senior | cadre + hygiène | API/E2E/KPI |
-| HOS-RBAC-001 | permissions hospitalières contextuelles | 8 SP initiaux, découpé A–D | segmentation d'actions livrée ; contexte ABAC restant via HOS-STAFF-001 / HOS-DIS-001 | sécurité/backend | RSSI/DPO + métiers | matrice négative multi-tenant |
-| HOS-ORG-001 | organisation flexible multi-structure | 13, obligatoire | 12–16j | architecte/full-stack | direction + DBA | hiérarchie/cycles/migration |
-| HOS-LOC-001 | géographie et espaces génériques | 13, obligatoire | 12–16j | full-stack senior | cadre + logistique | type/localisation/partage |
-| HOS-ADM-001 | demande, préadmission et réservation | 13, obligatoire | 12–16j | backend/frontend senior | médecin + admissions | workflow/concurrence/E2E |
-| HOS-MOV-001 | présence et mouvements | 13, obligatoire | 10–14j | backend senior | cadres source/destination | transfert/handoff/retry |
-| HOS-DIS-001 | sortie médicale/admin/physique | 8, à découper | 8–11j | full-stack senior | médecin + DAF + cadre | issues/turnover/facturation |
-| HOS-STAFF-001 | affectations et habilitations datées | 13, obligatoire | 10–14j | backend + RH frontend | RH + cadre + RSSI | périodes/délégation/accès |
-| HOS-RES-001 | ressources et équipements partagés | 13, obligatoire | 10–14j | full-stack/biomédical | biomédical + bloc | réservation/maintenance |
-| HOS-PATH-001 | parcours transverse et work-items | 13, obligatoire | 10–14j | architecte/full-stack | métiers + DPO | saga/idempotence/E2E |
-| HOS-KPI-001 | dashboards de capacité | 8, à découper | 7–10j | data/backend/frontend | direction + contrôle gestion | réconciliation/performance |
-| HOS-INT-001 | interopérabilité et mode dégradé | 8, à découper | 7–10j | interop/SRE | RSSI + exploitation | contrats/reprise/charge |
+```text
+Établissement
+└── Pôle (optionnel)
+    └── Département (optionnel)
+        └── Service
+            └── Unité de soins (optionnelle)
+```
+
+Une petite structure peut créer directement un `SERVICE` sous l’établissement. Aucun niveau intermédiaire factice n’est imposé.
 
-Chaque story supérieure à 5 SP doit être découpée en tâches de 1 à 5 SP avant sprint. Aucun lot ne doit combiner migration DB, API, UI et recette complète dans une seule tâche.
+### 2.2 Géographie
+
+```text
+Établissement
+└── Site (optionnel)
+    └── Bâtiment (optionnel)
+        └── Étage (optionnel)
+            └── Zone (optionnelle)
+                └── Espace
+```
+
+Un `SPACE` est générique : consultation, salle d’attente, box d’urgence, chambre d’hospitalisation, bloc, SSPI, réanimation, laboratoire, imagerie, pharmacie, bureau, stockage, morgue, etc.
+
+### 2.3 Relations
+
+- unité organisationnelle ↔ espace : N:N daté ;
+- personnel ↔ unité : N:N daté ;
+- personnel ↔ spécialité : N:N ;
+- aucune relation métier nouvelle par nom libre ;
+- UUID stables et isolation tenant explicite ;
+- désactivation/fermeture plutôt que suppression destructive d’un objet historiquement utilisé.
 
-### Incréments phase 0 engagés
+## 3. État consolidé des stories
 
-| Task | Story | Objectif | SP | Effort senior | Statut | Reviewer | Tests attendus |
-|---|---|---|---:|---:|---|---|---|
-| HOS-BED-001-A | HOS-BED-001 | Interdire plusieurs affectations actives sur un même lit | 3 | 2j | QA H2 VERTE / POSTGRESQL REQUIS | Lead backend + DBA + cadre | H2 + MockMvc + PostgreSQL 16 |
-| HOS-BED-001-B | HOS-BED-001 | Rattacher l'affectation au séjour, limiter une présence active par séjour et valider la période | 3 | 2j | QA H2 VERTE / POSTGRESQL REQUIS | Lead backend + DBA + cadre/DPO | H2 + parcours + PostgreSQL 16 |
-| HOS-BED-001-C | HOS-BED-001 | Garantir le même établissement pour l'affectation, le séjour et le lit | 3 | 2j | QA H2 VERTE / POSTGRESQL REQUIS | Lead backend + DBA + RSSI/DPO + cadre | H2 + parcours + PostgreSQL 16 |
-| HOS-BED-001-D | HOS-BED-001 | Interdire les chevauchements entre périodes historiques | 3–5 | 3–5j | PROPOSED / POSTGRESQL REQUIS | Lead backend + DBA + cadre | préflight + PostgreSQL exclusion/concurrence |
-| HOS-BED-002-A | HOS-BED-002 | Corriger le compteur legacy des lits disponibles | 2 | 1j | QA TECHNIQUE VERTE | Lead full-stack + cadre | MockMvc + Angular ciblé + suites complètes |
-| HOS-RBAC-001-A | HOS-RBAC-001 | Séparer la gestion opérationnelle du statut des lits | 2 | 1–2j | DONE — PR #100 / QA automatisée verte | Tech Lead + RSSI + métier | backend + Angular + matrice RBAC |
-| HOS-RBAC-001-B | HOS-RBAC-001 | Séparer transfert, décision de sortie, départ physique, nettoyage et maintenance | 5 | 4–6j | DONE — PR #102 / QA automatisée verte | Tech Lead + RSSI + métiers | backend + Angular + matrice positive/négative |
-| HOS-RBAC-001-C | HOS-RBAC-001 | Séparer admission, notes, consentement, soins, médicaments et consommables | — | — | DONE — PR #107 / CI main #1012 verte | Tech Lead + RSSI + direction médicale | backend + Angular + intégration clinique |
-| HOS-RBAC-001-D | HOS-RBAC-001 | Supprimer définitivement `HOSPITALIZATION_MANAGE` sans fallback ni remapping | 2 | 0,5–1j | DONE — PR #122 / Flyway V86 / CI #1027 verte | Tech Lead + RSSI + DBA | Maven strict + PostgreSQL 16 + Angular |
+| Story / lot | Objectif | Statut au 23/07/2026 | SP / effort | Prochaine action |
+|---|---|---|---|---|
+| HOS-BED-001 | invariants et concurrence lits | PARTIAL — incréments A/B/C livrés, D à arbitrer | 12–14 SP réestimés | validation métier/DBA et chevauchements historiques |
+| HOS-BED-002 | capacité et cycles de remise en état | PARTIAL — compteur A livré | 8 SP | poursuivre après socle organisation/géographie |
+| HOS-RBAC-001 | permissions hospitalières | PARTIAL — segmentation A/B/C/D livrée ; contexte ABAC restant | 8+ SP | HOS-STAFF / HOS-DIS pour le contexte |
+| HOS-ORG-001-A / #130 | référentiels et unités organisationnelles | **DONE CODE — PR #133 fusionnée, V87** | 9 SP | consolidation docs puis validation métier |
+| HOS-LOC-001-A / #131 | sites, bâtiments, étages, zones, espaces | READY | 9 SP | prochain incrément, depuis `main` post-#133 |
+| HOS-STAFF-001-A / #132 | affectations personnel et spécialités | BLOCKED par #131 | 9 SP | après HOS-LOC |
+| HOS-ADM-001 | demandes, préadmissions, réservations | PROPOSED | 13 SP | après org/loc/capacité |
+| HOS-MOV-001 | présence et transferts | PROPOSED | 13 SP | après admission + staff/loc |
+| HOS-DIS-001 | sortie médicale/admin/physique | PARTIAL conceptuellement via RBAC, workflow complet restant | 8 SP | après mouvements/capacité |
+| HOS-RES-001 | ressources et équipements partagés | PROPOSED | 13 SP | après HOS-LOC + HOS-STAFF |
+| HOS-PATH-001 | parcours transverse/work-items | PROPOSED | 13 SP | après org/loc/staff/mov |
+| HOS-KPI-001 | capacité et saturation | PROPOSED | 8 SP | après modèles fiables |
+| HOS-INT-001 | interopérabilité et mode dégradé | PROPOSED | 8 SP | après stabilisation des contrats |
+
+## 4. Incréments phase 0 déjà livrés
+
+| Task | Story | Objectif | Statut |
+|---|---|---|---|
+| HOS-BED-001-A | HOS-BED-001 | une seule affectation active par lit | intégré / PostgreSQL validé |
+| HOS-BED-001-B | HOS-BED-001 | rattachement séjour + présence active + chronologie | intégré / PostgreSQL validé |
+| HOS-BED-001-C | HOS-BED-001 | cohérence tenant affectation/séjour/lit | intégré / PostgreSQL validé |
+| HOS-BED-001-D | HOS-BED-001 | chevauchements historiques | à arbitrer |
+| HOS-BED-002-A | HOS-BED-002 | compteur fiable des lits disponibles | intégré / QA technique verte |
+| HOS-RBAC-001-A | HOS-RBAC-001 | statut opérationnel des lits | DONE — PR #100 |
+| HOS-RBAC-001-B | HOS-RBAC-001 | transfert/sortie/nettoyage/maintenance | DONE — PR #102 |
+| HOS-RBAC-001-C | HOS-RBAC-001 | admission/notes/consentement/soins/médicaments/consommables | DONE — PR #107 |
+| HOS-RBAC-001-D | HOS-RBAC-001 | suppression de `HOSPITALIZATION_MANAGE` | DONE — PR #122 / V86 / CI #1027 |
+| HOS-ORG-001-A | HOS-ORG-001 | unités + catalogues structurés | DONE CODE — PR #133 / V87 / CI backend #1066 + frontend verte |
+
+## 5. HOS-ORG-001 — Organisation hospitalière flexible
+
+### État livré par HOS-ORG-001-A / #130
+
+La première tranche est fusionnée via PR #133.
+
+Le modèle livré distingue :
+
+- `POLE` ;
+- `DEPARTMENT` ;
+- `SERVICE` ;
+- `CARE_UNIT`.
 
-Ces incréments n'emportent pas à eux seuls validation globale de l'ADR-0002. HOS-BED-002-A réduit GAP-007 ; HOS-BED-001-A/B/C réduisent GAP-005 pour les affectations actives, le rattachement au séjour, la chronologie simple et la cohérence tenant, sans couvrir à eux seuls les chevauchements entre périodes clôturées. HOS-RBAC-001-A/B/C ont séparé les intentions hospitalières et HOS-RBAC-001-D a supprimé en V86 la dernière permission générique `HOSPITALIZATION_MANAGE`. La suite de GAP-016 porte désormais sur le contexte d'accès (unité, relation de soin, délégations/habilitations) et la clearance, pas sur une permission legacy à conserver.
+Les niveaux sont facultatifs et les règles de parentage sont validées côté backend.
 
-## Definition of Ready globale
+### Référentiels livrés
 
-- ADR-0002 acceptée ;
-- workflow validé par les métiers nommés ;
-- contrat API et modèle de données versionnés ;
-- stratégie de migration/restauration écrite ;
-- permissions et jeux de test identifiés ;
-- capacité nominative et reviewer disponibles ;
-- critères de performance et observabilité définis.
+- `hospital_service_catalog` ;
+- `medical_specialty_catalog` ;
+- `organizational_unit_type_catalog` ;
+- `organizational_units`.
 
-## Definition of Done globale
+Un `SERVICE` est identifié par un `serviceCatalogCode` stable. Son libellé n’est pas figé en français en base : l’UI résout FR/EN depuis le catalogue.
 
-- documentation fonctionnelle, technique, API, data, tests et guide à jour ;
-- migrations testées sur PostgreSQL et données anonymisées ;
-- tests unitaires, intégration, concurrence, E2E et RBAC verts ;
-- audit structuré des actions sensibles ;
-- dashboards/alertes opérationnels pour les risques introduits ;
-- validation médecin/cadre/admissions/RSSI selon story ;
-- changelog, VERSION et release note mis à jour au moment de la livraison.
+### Sécurité / tenant
 
----
+- permission dédiée `ORGANIZATION_STRUCTURE_MANAGE` ;
+- `ADMIN_CLINIQUE`, `ADMIN_JOPRELYS`, `SUPER_ADMIN` selon le scope autorisé ;
+- métiers cliniques non autorisés par défaut ;
+- `@TenantId` + filtres repository explicites + FK parent composite tenant ;
+- aucun `organizationId` métier accepté dans le body.
 
-## HOS-BED-001 — Garantir l'unicité temporelle des réservations et occupations
+### Règles
 
-### Titre
+1. aucun niveau intermédiaire n’est obligatoire ;
+2. aucun cycle n’est autorisé ;
+3. un parent appartient au même tenant ;
+4. un service vient du catalogue, pas d’un nom libre ;
+5. une unité désactivée conserve son historique ;
+6. aucune conversion automatique depuis `Ward.name`, `users.department` ou `users.specialty`.
 
-Empêcher toute double réservation ou occupation d'un lit.
+### Critères validés techniquement
 
-### Contexte
+- petite clinique : SERVICE directement à la racine ;
+- CHU : POLE → DEPARTMENT → SERVICE → CARE_UNIT ;
+- service sans catalogue refusé ;
+- service avec nom libre refusé ;
+- code unique par tenant et réutilisable dans un autre tenant ;
+- parent cross-tenant refusé ;
+- désactivation avec enfant actif refusée ;
+- utilisateur médecin sans permission : 403 ;
+- UI mobile-first FR/EN light/dark ;
+- Maven strict, PostgreSQL et Angular verts.
 
-Le claim atomique actuel protège un chemin applicatif, mais `bed_assignments` ne possède ni FK séjour ni contrainte d'unicité active/chevauchement.
+### Reste de HOS-ORG-001 hors incrément A
 
-### Problème actuel
+Les responsabilités organisationnelles datées, liens avancés et besoins multi-établissement éventuels ne doivent être ajoutés que lorsqu’un cas métier concret les exige. Ils ne doivent pas recréer un monolithe organisationnel avant HOS-STAFF/HOS-LOC.
 
-Une écriture concurrente, un import ou un futur endpoint peut créer plusieurs faits incompatibles. Le statut du lit peut diverger de l'affectation.
+## 6. HOS-LOC-001 — Géographie et espaces génériques
 
-### Besoin fonctionnel
+### Incrément suivant : HOS-LOC-001-A / #131
 
-La base et le domaine doivent garantir une seule réservation ferme compatible et une seule occupation sur une période.
+Objectif : remplacer progressivement l’ambiguïté `Ward/Room` par un référentiel géographique indépendant.
 
-### Règles métier
+### Modèle cible
 
-1. Les plages d'occupation d'un lit ne se chevauchent jamais.
-2. Les réservations fermes qui se chevauchent sont refusées.
-3. Une affectation référence un séjour du même tenant.
-4. Les retries idempotents retournent le résultat initial.
+`SITE → BUILDING → FLOOR → ZONE → SPACE`, niveaux facultatifs.
 
-### Critères d'acceptation
+### Types d’espace contrôlés minimaux
 
-- Étant donné deux admissions concurrentes, lorsque le même lit est claimé, alors une seule réussit et l'autre reçoit 409.
-- Étant donné un import avec périodes chevauchantes, lorsque la contrainte est activée, alors les lignes sont mises en quarantaine avant activation, jamais supprimées.
-- Étant donné une affectation active, lorsque son séjour appartient à un autre tenant, alors la base refuse l'écriture.
+- consultation ;
+- soins/examen ;
+- box urgence ;
+- attente ;
+- chambre d’hospitalisation ;
+- bloc opératoire ;
+- SSPI ;
+- réanimation ;
+- laboratoire ;
+- imagerie ;
+- pharmacie ;
+- stockage ;
+- bureau ;
+- morgue ;
+- autre contrôlé.
 
-### Cas particuliers
+### Règles
 
-Corrections rétroactives, changement d'heure, réservation d'urgence prioritaire, retry après timeout.
+1. un espace possède une localisation géographique unique ;
+2. plusieurs unités organisationnelles peuvent utiliser le même espace via liens datés ;
+3. un service peut utiliser des espaces dans plusieurs bâtiments/sites ;
+4. une chambre d’hospitalisation est un espace compatible avec des lits ;
+5. les lits ne sont pas rattachés à un service administratif par simple héritage ;
+6. aucune migration automatique de `Room` par nom si la sémantique n’est pas prouvée.
 
-### Permissions
+### Critères d’acceptation #131
 
-Écriture par use cases admission/bed management uniquement ; aucune mutation SQL/API générique.
+- cabinet : SPACE directement sans bâtiment obligatoire ;
+- hôpital : hiérarchie complète possible ;
+- plateau partagé : une salle, plusieurs liens organisationnels datés ;
+- espaces non hospitaliers représentables ;
+- tenant et hiérarchie protégés en DB et backend ;
+- mobile-first FR/EN light/dark ;
+- migrations PostgreSQL + Maven + Angular verts.
 
-### Données et historique
+## 7. HOS-STAFF-001 — Affectations et habilitations datées
 
-Périodes, statuts, acteur, idempotency key, corrélation, conflits et corrections.
+### Incrément HOS-STAFF-001-A / #132
 
-### Scénarios de test
+Objectif : supprimer le besoin fonctionnel de `users.department` et `users.specialty` libres.
 
-`RES-002`, `BED-002`, `NET-001`, course 10 000 itérations sur PostgreSQL.
+### Modèle attendu
 
-### Dépendances
+- staff ↔ organizational_unit N:N daté ;
+- affectation principale/secondaire ;
+- date début/fin ;
+- statut actif ;
+- staff ↔ specialty_catalog N:N ;
+- spécialité principale facultative ;
+- historique conservé.
 
-Prototype GiST, Testcontainers PostgreSQL, script de réconciliation.
+### Exemple attendu
 
-### Priorité
+```text
+Dr X
+├── spécialité : Médecine générale
+├── service principal : Médecine générale
+└── Urgences : renfort du 01/08 au 31/08
+```
 
-Critique.
+### Règles
 
-### Estimation
+1. une affectation expirée ne donne plus de contexte actif ;
+2. aucun lien cross-tenant ;
+3. le retrait clôt la période sans supprimer l’historique ;
+4. aucun fallback texte `department/specialty` après bascule du parcours staff ;
+5. les rôles RBAC restent distincts des affectations métier.
 
-Élevée : 12–14 SP réestimés ; A/B/C représentent 9 SP réalisés sous H2, D reste à arbitrer à 3–5 SP après prototype PostgreSQL ; 9–12j.
+## 8. HOS-BED-001 — Intégrité temporelle des lits
 
----
+Objectif : garantir qu’une réservation/occupation incohérente ne peut pas être créée par concurrence, import ou futur endpoint.
 
-## HOS-BED-002 — Séparer capacité, disponibilité et remise en état
+Règles structurantes :
 
-### Titre
+- une seule affectation active compatible par lit ;
+- un séjour du même tenant ;
+- une seule présence active compatible par séjour ;
+- chronologie valide ;
+- retries idempotents ;
+- chevauchements historiques à traiter dans HOS-BED-001-D.
 
-Remplacer le statut unique du lit par des axes cohérents.
+Dépendances : PostgreSQL réel, DBA, cadre infirmier.
 
-### Contexte
+## 9. HOS-BED-002 — Capacité et remise en état
 
-`FREE/OCCUPIED/CLEANING/MAINTENANCE` mélange occupation, hygiène et exploitation ; l'UI compte maintenance/nettoyage comme libres.
+Objectif : séparer existence, ouverture clinique, hygiène, maintenance et occupation.
 
-### Problème actuel
+Règles :
 
-Les responsables ne connaissent ni les lits installés, ni ouverts, ni réellement prêts.
+- `FREE` est une projection et non une commande ;
+- disponible = installé + ouvert + prêt + non occupé/réservé ;
+- départ physique → turnover ;
+- maintenance impossible sur lit occupé sans processus préalable ;
+- nettoyage/maintenance non comptés comme libres.
 
-### Besoin fonctionnel
+## 10. HOS-RBAC-001 — Contextualisation des droits
 
-Gérer existence, ouverture, hygiène et usage dérivé, avec turnover après départ.
+La segmentation des intentions A/B/C/D est livrée. Le reliquat n’est **pas** une nouvelle permission générique.
 
-### Règles métier
+Le contexte restant doit s’appuyer sur :
 
-1. `FREE` est une projection, jamais une commande.
-2. Un lit n'est disponible que s'il est installé, ouvert et prêt.
-3. Le départ physique crée une tâche de remise en état.
-4. La maintenance ne peut démarrer sur un lit occupé.
+- affectation active à l’unité ;
+- relation de soin ;
+- délégation/habilitation datée ;
+- clearance de sortie ;
+- tenant et éventuel scope plateforme.
 
-### Critères d'acceptation
+Dépendances principales : HOS-STAFF-001 et HOS-DIS-001.
 
-- Étant donné un lit en nettoyage, lorsque le dashboard calcule les lits libres, alors il n'est pas compté.
-- Étant donné un lit occupé, lorsque la maintenance demande sa fermeture, alors la demande est refusée ou planifiée après transfert.
-- Étant donné un nettoyage validé, lorsque aucun blocage n'existe, alors le lit devient disponible.
+## 11. HOS-ADM-001 — Demandes, préadmissions et réservations
 
-### Cas particuliers
+Objectif : ne plus créer systématiquement un séjour directement `EN_COURS` avec lit.
 
-Isolement, désinfection renforcée, lit temporaire, lit non facturable, fermeture planifiée.
+Règles :
 
-### Permissions
+- demande médicale ;
+- décision ;
+- préadmission ;
+- recherche de compatibilité ;
+- réservation expirante ;
+- arrivée confirmée ;
+- urgence pouvant différer l’administratif avec motif/échéance ;
+- lit occupé uniquement à l’arrivée confirmée.
 
-Cadre : ouverture clinique ; hygiène : étapes nettoyage ; maintenance : downtime technique ; bed manager : lecture/affectation.
+Dépendances : HOS-BED, HOS-ORG, HOS-LOC, RBAC.
 
-### Données et historique
+## 12. HOS-MOV-001 — Présence et transferts
 
-Événements par axe, raisons, tâches, checklists, acteurs, temps de turnover.
+Objectif : connaître position et responsabilité du patient à chaque instant.
 
-### Scénarios de test
+Règles :
 
-`BED-003`, `TURN-001/002`, `MAINT-001/002`, `KPI-001`.
+- mouvement avec motif et jalons ;
+- acceptation destination avant départ sauf urgence documentée ;
+- changement de responsabilité au handoff défini ;
+- événements immuables ;
+- idempotence après coupure réseau ;
+- une seule présence active cohérente.
 
-### Dépendances
+Dépendances : HOS-ADM, HOS-LOC, HOS-STAFF.
 
-HOS-BED-001 et nomenclatures validées.
+## 13. HOS-DIS-001 — Sortie multi-étapes
 
-### Priorité
+Objectif : séparer décision médicale, clearance administrative, départ physique et lit prêt.
 
-Critique.
+Règles :
 
-### Estimation
+- décision médicale ≠ libération du lit ;
+- dette éventuellement autorisée selon politique, jamais masquée ;
+- départ physique → clôture présence + turnover ;
+- nettoyage validé avant disponibilité ;
+- décès, contre-avis, évasion, transfert externe = issues explicites.
 
-Élevée : 8 SP à découper ; 8–11j.
+## 14. HOS-RES-001 — Ressources et équipements
 
----
+Objectif : gérer espaces/équipements partagés, réservations, pannes et maintenance.
 
-## HOS-RBAC-001 — Contextualiser les permissions hospitalières
+Règles :
 
-### Titre
+- pas de réservation ferme chevauchante pour ressource non partageable ;
+- panne → indisponibilité + impact des réservations ;
+- remise en service validée ;
+- équipements mobiles et maintenance préventive supportés.
 
-Séparer les actions médicales, soignantes, administratives, hygiène et maintenance et appliquer leur contexte d'accès.
+Dépendances : HOS-LOC, HOS-STAFF.
 
-### État actuel
+## 15. HOS-PATH-001 — Parcours transverse
 
-Les incréments A à D sont livrés sur `main` :
+Objectif : afficher position, responsable, prochaine étape et actions en attente sans déplacer les règles critiques vers Angular.
 
-- HOS-RBAC-001-A / PR #100 : permission dédiée pour le statut opérationnel des lits ;
-- HOS-RBAC-001-B / PR #102 : séparation transfert, décision médicale de sortie, départ physique, nettoyage et maintenance ;
-- HOS-RBAC-001-C / PR #107 : séparation admission, notes, consentement, soins, administration médicamenteuse et consommables ;
-- HOS-RBAC-001-D / PR #122 : suppression définitive de `HOSPITALIZATION_MANAGE` via Flyway V86, sans fallback, alias ni remapping automatique.
+Règles :
 
-La segmentation des intentions est donc livrée. GAP-016 reste `PARTIAL` uniquement pour les contrôles contextuels avancés encore hors de ces incréments.
+- work-item avec propriétaire, échéance, statut, idempotency key ;
+- modules sources restent maîtres de leurs faits ;
+- visibilité filtrée par profil/contexte ;
+- handoff ouvert jusqu’à acceptation/arrivée ;
+- événements corrélés et rejouables.
 
-### Contexte
+Dépendances : HOS-ORG, HOS-LOC, HOS-STAFF, HOS-MOV.
 
-Le modèle initial regroupait plusieurs commandes hospitalières derrière une autorité générique. Cette dette est supprimée : le catalogue courant ne doit plus contenir `HOSPITALIZATION_MANAGE`.
+## 16. HOS-KPI-001 — Capacité et saturation
 
-Le risque restant n'est plus la granularité des permissions, mais la décision contextuelle : unité d'affectation, relation de soin, habilitation professionnelle, délégation datée et clearance de sortie.
+Objectif : produire des indicateurs réconciliables.
 
-### Besoin fonctionnel restant
+Règles :
 
-Appliquer les permissions spécialisées déjà livrées avec les contraintes contextuelles nécessaires, sans réintroduire une autorité globale de compatibilité.
+- formule/source/fuseau/version pour chaque KPI ;
+- capacité installée, ouverte, prête, réservée et occupée distinguées ;
+- agrégats direction minimisant les données patient ;
+- incohérences signalées ;
+- corrections tardives versionnées.
 
-### Règles métier
+Dépendances : HOS-BED-002, HOS-MOV.
 
-1. Une profession n'accorde aucun droit à elle seule ; la permission effective reste obligatoire.
-2. Aucune permission générique `HOSPITALIZATION_MANAGE` ne doit être recréée, aliasée ou utilisée comme fallback.
-3. La décision médicale, la clearance administrative/financière, le mouvement, le nettoyage et la maintenance restent des responsabilités distinctes.
-4. Les futures règles d'unité, relation de soin, habilitation et délégation sont deny-by-default et historisées.
-5. Une délégation expirée ne confère plus d'accès actif mais reste auditée.
-6. Toute décision d'accès sensible doit être traçable.
+## 17. HOS-INT-001 — Interopérabilité et réseau instable
 
-### Critères d'acceptation
+Objectif : versionner les contrats et rendre les commandes critiques rejouables.
 
-- Les permissions spécialisées A/B/C sont les seules autorités hospitalières d'écriture pour leurs actions.
-- Après V86, `permissions` et `role_permissions` ne contiennent plus `HOSPITALIZATION_MANAGE`.
-- Un ancien rôle personnalisé ne reçoit aucun droit de remplacement automatiquement.
-- Un infirmier sans droit de décision de sortie reçoit 403 sur la décision médicale.
-- Un rôle hygiène ou maintenance ne reçoit aucune écriture clinique.
-- Les contrôles contextuels futurs ne doivent pas être simulés par un rôle tenant-wide plus large.
+Règles :
 
-### Cas particuliers
+- aucune donnée clinique critique confiée au cache navigateur sans politique/chiffrement validés ;
+- admission, réservation, mouvement idempotents ;
+- backend maître des conflits ;
+- fraîcheur des données visible en mode dégradé ;
+- identifiants stables pour Organization/Location/Encounter et autres mappings pertinents.
 
-Urgence vitale, garde transverse, petite clinique cumulant plusieurs fonctions, délégation temporaire et audit légal doivent être traités explicitement par les futurs contrôles contextuels, jamais par restauration de la permission supprimée.
+## 18. Definition of Ready globale
 
-### Permissions
+- ticket et documentation avant code ;
+- modèle de données et contrat API versionnés ;
+- stratégie migration/rollback écrite ;
+- permissions et tests identifiés ;
+- reviewers métier/technique nommés ;
+- aucune dépendance à un champ libre legacy sans plan de retrait ;
+- aucun développement serveur.
 
-Catalogue spécialisé livré par HOS-RBAC-001-A/B/C et nettoyé par HOS-RBAC-001-D. Politique deny-by-default.
+## 19. Definition of Done globale
 
-### Données et historique
+- documentation fonctionnelle, technique, API, data et tests alignée ;
+- migration testée sur PostgreSQL ;
+- Maven strict vert ;
+- Angular tests + build production verts pour tout changement frontend ;
+- isolation tenant et matrice négative vérifiées ;
+- audit des actions sensibles ;
+- responsive 320/375/768/1366 ;
+- FR/EN et light/dark ;
+- aucun Angular Material ;
+- changelog et tracking alignés ;
+- PR fusionnée sur `main` avant démarrage du lot dépendant.
 
-Rôle, permission, contexte, décision, règle appliquée, motif, délégation et période d'habilitation.
+## 20. Ordre de réalisation courant
 
-### Scénarios de test
+```text
+DONE  HOS-BED / RBAC phase 0
+  ↓
+DONE  HOS-ORG-001-A #130 / PR #133 / V87
+  ↓
+NEXT  HOS-LOC-001-A #131
+  ↓
+NEXT  HOS-STAFF-001-A #132
+  ↓
+      données structurées + répétition démo #127
+  ↓
+      HOS-BED-002 complet
+  ↓
+      HOS-ADM → HOS-MOV → HOS-DIS
+  ↓
+      HOS-RES
+  ↓
+      HOS-PATH → HOS-KPI → HOS-INT
+```
 
-Matrices positives/négatives par endpoint et écran, migration PostgreSQL V85 → V86, tests de contexte stale, puis scénarios ABAC avec HOS-STAFF-001 / HOS-DIS-001.
+HOS-STAFF intervient immédiatement après HOS-LOC dans le jalon actuel parce que la démonstration doit créer des professionnels correctement rattachés, sans réintroduire de saisie libre.
 
-### Dépendances restantes
+## 21. Capacité et engagement
 
-- HOS-STAFF-001 pour les affectations, habilitations et délégations datées ;
-- HOS-DIS-001 pour la clearance de sortie ;
-- validation RSSI/DPO et validation des métiers hospitaliers.
+Les estimations globales issues de l’audit restent des ordres de grandeur et non une promesse de remplissage.
 
-### Priorité
+Pour le jalon court :
 
-Critique.
+- HOS-ORG-001-A : 9 SP, techniquement livré ;
+- HOS-LOC-001-A : 9 SP ;
+- HOS-STAFF-001-A : 9 SP ;
+- QA démo #127 : répétition et GO/NO-GO après intégration.
 
-### Estimation
+Chaque lot est développé et fusionné séparément. Aucune PR « monstre » combinant organisation, géographie et personnel n’est autorisée.
 
-Le découpage A/B/C/D de la segmentation des permissions est livré. L'effort restant de contextualisation est porté par les stories dépendantes ; il ne doit pas être masqué dans une nouvelle permission générique.
+## 22. Risques et garde-fous
 
----
-
-## HOS-ORG-001 — Introduire une organisation hospitalière flexible
-
-### Titre
-
-Modéliser groupes, établissements et unités organisationnelles facultatives.
-
-### Contexte
-
-L'organisation actuelle est un tenant plat et un `Ward` ambigu.
-
-### Problème actuel
-
-Réseaux, pôles, départements, unités et rattachements multiples sont impossibles.
-
-### Besoin fonctionnel
-
-Fournir un arbre d'unités typées sans imposer de profondeur et des relations transverses datées.
-
-### Règles métier
-
-1. Aucun niveau intermédiaire n'est obligatoire.
-2. L'arbre ne contient aucun cycle.
-3. Les relations et responsables sont datés.
-4. Un service fermé conserve tout son historique.
-
-### Critères d'acceptation
-
-- Étant donné une petite clinique, lorsque le service est créé directement sous l'établissement, alors aucune entité factice n'est exigée.
-- Étant donné un CHU, lorsque pôle, département, service et unité sont créés, alors la hiérarchie est navigable et historisée.
-- Étant donné un service partagé, lorsque deux spécialités sont rattachées, alors elles coexistent sans duplication du service.
-
-### Cas particuliers
-
-Unité fonctionnelle déportée, service transversal, centre de coût distinct, fusion/fermeture.
-
-### Permissions
-
-`ORG_STRUCTURE_READ/WRITE/APPROVE/ARCHIVE`, séparées par établissement.
-
-### Données et historique
-
-Codes, types, parents, relations, spécialités, responsables, statuts et dates.
-
-### Scénarios de test
-
-`ORG-001/002/003/004`, cycles et multi-tenant.
-
-### Dépendances
-
-ADR-0002, catalogue métier, stratégie tenant groupe.
-
-### Priorité
-
-Haute.
-
-### Estimation
-
-Très élevée : 13 SP, tâches schéma (3), API (5), UI (5), migration (5), QA/docs (3) ; 12–16j.
-
----
-
-## HOS-LOC-001 — Créer le référentiel géographique et les espaces
-
-### Titre
-
-Gérer sites, bâtiments, étages, zones et salles génériques.
-
-### Contexte
-
-`Room` représente uniquement une chambre sous service hébergeant.
-
-### Problème actuel
-
-Consultations, attentes, laboratoires, imagerie, pharmacie, bloc et espaces partagés ne sont pas représentables.
-
-### Besoin fonctionnel
-
-Créer un arbre géographique facultatif et des espaces typés reliés aux unités par affectations datées.
-
-### Règles métier
-
-1. Un espace possède un emplacement unique mais plusieurs unités utilisatrices possibles.
-2. Une chambre est une extension d'espace.
-3. Les caractéristiques cliniques sont séparées de la catégorie hôtelière.
-4. Les changements d'usage sont datés.
-
-### Critères d'acceptation
-
-- Étant donné un cabinet, lorsque sa salle est créée directement, alors site/bâtiment/étage ne sont pas requis.
-- Étant donné un plateau partagé, lorsque deux services l'utilisent, alors une seule salle et deux liens datés existent.
-- Étant donné une chambre d'isolement, lorsque ses politiques sont configurées, alors le moteur d'affectation les évalue.
-
-### Cas particuliers
-
-Adresse multi-site, salle mobile, espace hors service, morgue, dépôt.
-
-### Permissions
-
-Lecture opérationnelle large ; écriture logistique ; caractéristiques cliniques validées par cadre.
-
-### Données et historique
-
-Arbre, type, capacité, politiques, fermetures, affectations et changements d'usage.
-
-### Scénarios de test
-
-`LOC-001/002/003`, partage et archivage.
-
-### Dépendances
-
-HOS-ORG-001, ADR-0002.
-
-### Priorité
-
-Haute.
-
-### Estimation
-
-Très élevée : 13 SP ; 12–16j.
-
----
-
-## HOS-ADM-001 — Gérer demandes, préadmissions et réservations
-
-### Titre
-
-Introduire le parcours d'admission avant l'occupation.
-
-### Contexte
-
-Le séjour est actuellement créé directement `EN_COURS` avec un lit.
-
-### Problème actuel
-
-Admissions programmées, décisions, documents, no-show et anticipation de capacité sont absents.
-
-### Besoin fonctionnel
-
-Gérer demande médicale, approbation, préadmission, recherche de compatibilité, réservation expirante et arrivée.
-
-### Règles métier
-
-1. Une réservation possède une expiration.
-2. L'urgence peut différer l'administratif avec motif et échéance.
-3. Le lit est occupé uniquement à l'arrivée confirmée.
-4. L'affectation valide les contraintes patient/espace.
-
-### Critères d'acceptation
-
-- Étant donné une admission planifiée, lorsque le patient arrive avant expiration, alors la réservation est consommée atomiquement.
-- Étant donné un no-show, lorsque l'expiration survient, alors le lit redevient disponible et l'événement est tracé.
-- Étant donné une chambre incompatible, lorsque l'affectation est tentée, alors l'API explique les incompatibilités sans exposer d'autres patients.
-
-### Cas particuliers
-
-Direct, urgence, identité provisoire, mineur, isolement, accompagnant, paiement différé.
-
-### Permissions
-
-Médecin demande/décide ; admissions complète ; bed manager réserve/affecte.
-
-### Données et historique
-
-Demandes, décisions, checklists, compatibilité, réservation, arrivée, exceptions.
-
-### Scénarios de test
-
-`ADM-001/002/003`, `RES-001/002`, `EMR-001`, `CLIN-001`.
-
-### Dépendances
-
-HOS-BED-001/002, HOS-ORG-001, HOS-LOC-001, permissions minimales.
-
-### Priorité
-
-Haute.
-
-### Estimation
-
-Très élevée : 13 SP ; 12–16j.
-
----
-
-## HOS-MOV-001 — Tracer la présence et les transferts
-
-### Titre
-
-Connaître la position et la responsabilité du patient à chaque instant.
-
-### Contexte
-
-Le transfert actuel change seulement l'affectation de lit et trois libellés du séjour.
-
-### Problème actuel
-
-Pas de demande, acceptation, transport, handoff, transfert externe ni position hors lit.
-
-### Besoin fonctionnel
-
-Introduire présences et mouvements avec jalons, origine/destination et responsabilité.
-
-### Règles métier
-
-1. Un mouvement possède motif et jalons.
-2. La destination accepte avant départ sauf urgence documentée.
-3. La responsabilité change au handoff défini.
-4. Les événements sont immuables.
-
-### Critères d'acceptation
-
-- Étant donné un transfert accepté, lorsque l'arrivée est confirmée, alors une seule présence est active et l'ancien lit part en turnover.
-- Étant donné une perte réseau après départ, lorsque la commande est rejouée, alors aucun mouvement n'est dupliqué.
-- Étant donné un transfert externe, lorsque le handoff est clos, alors le destinataire et les documents transmis sont tracés.
-
-### Cas particuliers
-
-Patient en transit, destination perdue, transfert annulé, morgue, bloc/SSPI.
-
-### Permissions
-
-Source demande, destination accepte, transport jalonne, cadre supervise.
-
-### Données et historique
-
-Origine, destination, motifs, responsables, jalons, documents et corrélation.
-
-### Scénarios de test
-
-`MOV-001/002/003`, `ADM-002`, `NET-001`.
-
-### Dépendances
-
-HOS-ADM-001, espaces et affectations personnel.
-
-### Priorité
-
-Haute.
-
-### Estimation
-
-Très élevée : 13 SP ; 10–14j.
-
----
-
-## HOS-DIS-001 — Séparer les étapes de sortie
-
-### Titre
-
-Découpler décision médicale, clearance administrative, départ physique et lit prêt.
-
-### Contexte
-
-La sortie actuelle ferme immédiatement l'affectation et met le lit à nettoyer.
-
-### Problème actuel
-
-Un patient encore présent peut perdre son lit ; les factures et documents ne participent pas à une readiness consolidée.
-
-### Besoin fonctionnel
-
-Créer un processus de sortie multi-étapes avec issues explicites et turnover.
-
-### Règles métier
-
-1. La sortie médicale ne clôt pas l'occupation.
-2. La dette peut être autorisée selon politique, jamais masquée.
-3. Le départ physique déclenche le turnover.
-4. Chaque issue a ses preuves et permissions.
-
-### Critères d'acceptation
-
-- Étant donné une sortie médicale, lorsque le patient reste dans la chambre, alors le lit reste occupé.
-- Étant donné un départ confirmé, lorsque le nettoyage n'est pas validé, alors le lit reste indisponible.
-- Étant donné un décès, lorsque l'issue est enregistrée, alors les règles morgue/documents sont déclenchées sans utiliser une sortie normale.
-
-### Cas particuliers
-
-Contre avis, décès, évasion, transfert externe, facture en litige, accompagnant.
-
-### Permissions
-
-Médecin, admissions/caisse, infirmier/cadre et hygiène ont des actions distinctes.
-
-### Données et historique
-
-Décisions, diagnostics, documents, clearance, issue, départ, turnover.
-
-### Scénarios de test
-
-`DIS-001`, `TURN-001/002`, variantes décès/CAM/évasion/transfert.
-
-### Dépendances
-
-HOS-BED-002, HOS-MOV-001, facturation.
-
-### Priorité
-
-Critique.
-
-### Estimation
-
-Élevée : 8 SP ; 8–11j.
-
----
-
-## HOS-STAFF-001 — Historiser affectations et habilitations du personnel
-
-### Titre
-
-Gérer profession, emplois, services, unités, gardes et délégations.
-
-### Contexte
-
-L'utilisateur actuel possède une organisation et des textes uniques spécialité/département.
-
-### Problème actuel
-
-Impossible de représenter multi-établissement, multi-service, remplacement ou responsabilité datée.
-
-### Besoin fonctionnel
-
-Séparer personne, profil professionnel, emploi, affectation, habilitation, planning, délégation et compte.
-
-### Règles métier
-
-1. Une affectation a une période et un statut.
-2. Le retrait clôt la période sans supprimer l'historique.
-3. Une spécialité vérifiée a une source et une validité.
-4. Les rôles applicatifs restent séparés.
-
-### Critères d'acceptation
-
-- Étant donné un médecin dans deux établissements, lorsque ses affectations sont consultées, alors une identité et deux emplois datés existent.
-- Étant donné un remplacement expiré, lorsque l'accès est retesté, alors les droits temporaires ont disparu.
-- Étant donné un responsable médical et administratif différents, lorsque la fiche service s'affiche, alors les responsabilités sont correctement datées.
-
-### Cas particuliers
-
-Cumul de fonctions, vacataire, suspension d'exercice, garde transverse, délégation urgente.
-
-### Permissions
-
-RH gère l'emploi ; cadre l'affectation ; direction la responsabilité ; RSSI le compte/rôle.
-
-### Données et historique
-
-Identité, qualifications, vérifications, périodes, décideurs, changements.
-
-### Scénarios de test
-
-`SEC-001`, chevauchements, révocation et délégation.
-
-### Dépendances
-
-HOS-ORG-001 ; alimente HOS-RBAC-001.
-
-### Priorité
-
-Haute.
-
-### Estimation
-
-Très élevée : 13 SP ; 10–14j.
-
----
-
-## HOS-RES-001 — Planifier espaces, ressources et équipements partagés
-
-### Titre
-
-Gérer la disponibilité des salles et équipements médicaux.
-
-### Contexte
-
-Aucun équipement, plateau ou ressource partagée n'est modélisé ; le bloc n'a que des comptes rendus.
-
-### Problème actuel
-
-Conflits, pannes, maintenance et taux d'utilisation sont invisibles.
-
-### Besoin fonctionnel
-
-Créer ressources, emplacements datés, réservations, downtimes et ordres de maintenance.
-
-### Règles métier
-
-1. Une ressource non partageable n'a pas de réservations fermes chevauchantes.
-2. Une panne alerte les réservations impactées.
-3. Une remise en service exige les validations configurées.
-4. Le bloc/SSPI réutilise ce socle.
-
-### Critères d'acceptation
-
-- Étant donné deux services, lorsque la même salle est réservée à la même heure, alors une seule confirmation est possible.
-- Étant donné un équipement en panne, lorsque sa période commence, alors il n'est plus proposé et les réservations sont alertées.
-- Étant donné une opération, lorsque salle, équipe ou équipement critique manque, alors le démarrage est bloqué selon politique.
-
-### Cas particuliers
-
-Priorité urgence, équipement mobile, maintenance préventive, remplacement équivalent.
-
-### Permissions
-
-Planificateur réserve ; biomédical maintient ; cadre arbitre ; clinique voit la disponibilité utile.
-
-### Données et historique
-
-Inventaire, emplacement, réservation, panne, maintenance, validations.
-
-### Scénarios de test
-
-`RESRC-001`, `MAINT-001/002`, parcours bloc/SSPI.
-
-### Dépendances
-
-HOS-LOC-001, HOS-STAFF-001 pour équipes.
-
-### Priorité
-
-Haute.
-
-### Estimation
-
-Très élevée : 13 SP ; 10–14j.
-
----
-
-## HOS-PATH-001 — Orchestrer le parcours patient transverse
-
-### Titre
-
-Afficher position, responsable, prochaine étape et actions en attente.
-
-### Contexte
-
-Visite, urgence, labo, pharmacie, facturation et séjour ont des statuts séparés.
-
-### Problème actuel
-
-Les utilisateurs doivent reconstruire le parcours et les handoffs sont fragiles.
-
-### Besoin fonctionnel
-
-Introduire épisode, encounter, présence et work-items, sans déplacer la logique métier critique vers le frontend.
-
-### Règles métier
-
-1. Chaque work-item a propriétaire, échéance, statut et idempotency key.
-2. Les modules publient des événements ; l'orchestrateur ne réécrit pas leurs faits.
-3. Les détails visibles dépendent du profil.
-4. Un handoff reste ouvert jusqu'à acceptation/arrivée.
-
-### Critères d'acceptation
-
-- Étant donné un patient avec laboratoire en attente, lorsque le parcours est ouvert, alors position, responsable et prélèvement attendu sont visibles aux bons profils.
-- Étant donné une urgence orientée vers admission, lorsque aucun aval n'accepte, alors l'urgence reste marquée « attente d'aval ».
-- Étant donné une tâche rejouée après coupure, lorsque la même clé est reçue, alors elle n'est pas dupliquée.
-
-### Cas particuliers
-
-Étapes parallèles, annulation, retour en arrière, résultat corrigé, transfert externe.
-
-### Permissions
-
-Vue filtrée par fonction : accueil administratif, clinique complète selon relation de soin, direction agrégée.
-
-### Données et historique
-
-Épisodes, présences, responsabilités, dépendances, SLA, outcomes et corrélations.
-
-### Scénarios de test
-
-`PATH-001`, `ADM-002`, `NET-001`, tests de masquage.
-
-### Dépendances
-
-HOS-ORG/LOC/STAFF/MOV et contrats d'événements des modules.
-
-### Priorité
-
-Haute.
-
-### Estimation
-
-Très élevée : 13 SP ; 10–14j.
-
----
-
-## HOS-KPI-001 — Piloter la capacité et la saturation
-
-### Titre
-
-Fournir des indicateurs réconciliables de capacité.
-
-### Contexte
-
-Le tableau actuel ne connaît que total et occupé et calcule mal les libres.
-
-### Problème actuel
-
-La direction ne peut distinguer capacité installée, ouverte, prête ou réservée.
-
-### Besoin fonctionnel
-
-Créer projections, tableaux, alertes et définitions versionnées.
-
-### Règles métier
-
-1. Chaque KPI possède formule, source, fuseau et version.
-2. Les dénominateurs historiques utilisent les périodes d'ouverture.
-3. Les agrégats direction minimisent les données patient.
-4. Une donnée incohérente est signalée, pas silencieusement ignorée.
-
-### Critères d'acceptation
-
-- Étant donné le jeu `KPI-001`, lorsque le dashboard s'affiche, alors chaque compteur se réconcilie aux sources.
-- Étant donné un seuil dépassé, lorsque l'événement est projeté, alors l'alerte est créée et acquittable.
-- Étant donné une correction tardive, lorsque le rapport est recalculé, alors la version et la date de recalcul sont visibles.
-
-### Cas particuliers
-
-Fermeture partielle, timezone, événement retardé, réseau multi-établissements.
-
-### Permissions
-
-Direction agrégée ; cadre unité ; bed manager temps réel ; export contrôlé.
-
-### Données et historique
-
-Snapshots, définitions, seuils, alertes, acquittements, corrections.
-
-### Scénarios de test
-
-`CAP-001`, `KPI-001`, charge et réconciliation SQL.
-
-### Dépendances
-
-HOS-BED-002, HOS-MOV-001 et modèles fiables.
-
-### Priorité
-
-Haute.
-
-### Estimation
-
-Élevée : 8 SP ; 7–10j.
-
----
-
-## HOS-INT-001 — Interopérabilité et continuité en réseau instable
-
-### Titre
-
-Versionner les contrats et rendre les commandes critiques rejouables.
-
-### Contexte
-
-Le contexte africain peut connaître une connectivité variable ; les nouvelles entités doivent aussi être échangeables.
-
-### Problème actuel
-
-Pas de stratégie hospitalière de mode dégradé ni d'identifiants structurés pour organisation/localisation/encounter.
-
-### Besoin fonctionnel
-
-Mapper les référentiels aux standards d'échange pertinents, versionner les API, rendre les commandes critiques idempotentes et prévoir une file locale limitée.
-
-### Règles métier
-
-1. Aucune donnée clinique critique n'est confiée au cache navigateur sans chiffrement/politique validée.
-2. Admission, réservation et mouvement sont idempotents.
-3. Les conflits sont résolus par le backend maître.
-4. Le mode dégradé expose clairement la fraîcheur des données.
-
-### Critères d'acceptation
-
-- Étant donné une coupure après commit, lorsque la commande est rejouée, alors le même résultat est retourné.
-- Étant donné une donnée d'occupation ancienne, lorsque l'UI la montre, alors son âge et son caractère non confirmable sont visibles.
-- Étant donné une exportation, lorsque Location/Organization/Encounter sont produits, alors les identifiants et historiques restent stables.
-
-### Cas particuliers
-
-Conflit offline, horloge appareil fausse, établissement sans connexion prolongée, transfert inter-établissements.
-
-### Permissions
-
-APIs à scopes minimaux ; synchronisation et exports audités.
-
-### Données et historique
-
-Versions de contrat, idempotency keys, offsets, conflits, décisions de reprise.
-
-### Scénarios de test
-
-`NET-001`, contract tests, chaos réseau, reprise après redémarrage.
-
-### Dépendances
-
-Contrats des stories précédentes, validation DPO/RSSI et exploitation.
-
-### Priorité
-
-Haute pour l'idempotence, moyenne pour l'ensemble des mappings.
-
-### Estimation
-
-Élevée : 8 SP ; 7–10j.
-
-## Ordre de réalisation conseillé
-
-1. HOS-BED-001, correction P0 du compteur de lits et garde-fous HOS-RBAC-001.
-2. ADR-0002 puis HOS-ORG-001 et HOS-LOC-001.
-3. HOS-BED-002 et migration des états.
-4. HOS-ADM-001, HOS-MOV-001, HOS-DIS-001.
-5. HOS-STAFF-001 puis contextualisation RBAC complète.
-6. HOS-RES-001, avec sous-epics bloc/labo/imagerie/pharmacie si nécessaire.
-7. HOS-PATH-001, HOS-KPI-001 et HOS-INT-001.
-
-## Capacité et engagement
-
-Le sprint courant est déjà engagé et aucune capacité nominative additionnelle n'est fournie. EPIC-0027 reste donc hors sprint. À 16–20 jours-personnes planifiables par sprint, l'ordre de grandeur est 6–9 sprints, sous réserve des validations métier et de la migration. Une phase 0 de 12–16 jours-personnes doit être arbitrée séparément comme réduction de risque critique.
+- **Risque migration legacy** : aucun mapping automatique par nom ; remapping explicite uniquement si la sémantique est prouvée.
+- **Risque tenant** : FK composites + filtres explicites + tests cross-tenant.
+- **Risque i18n** : codes stables, libellés localisés hors faits métier quand nécessaire.
+- **Risque UI** : mobile-first, composants réutilisables, pas de logique métier dupliquée côté Angular.
+- **Risque calendrier démo** : seuls les blockers P0 justifient une dérogation au gel ; la qualité et les tests ne sont jamais supprimés pour gagner du temps.
+- **Risque dette technique** : aucun alias/fallback legacy durable n’est accepté sous prétexte de rétrocompatibilité pendant la phase de développement.
