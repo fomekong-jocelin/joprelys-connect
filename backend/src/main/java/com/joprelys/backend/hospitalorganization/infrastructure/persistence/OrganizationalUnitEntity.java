@@ -2,18 +2,15 @@ package com.joprelys.backend.hospitalorganization.infrastructure.persistence;
 
 import com.joprelys.backend.hospitalorganization.domain.OrganizationalUnitType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
-import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.TenantId;
-import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "organizational_units")
@@ -35,8 +32,7 @@ public class OrganizationalUnitEntity {
     @Column(length = 120)
     private String name;
 
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Convert(converter = OrganizationalUnitTypeConverter.class)
     @Column(name = "unit_type", nullable = false, length = 32)
     private OrganizationalUnitType unitType;
 
