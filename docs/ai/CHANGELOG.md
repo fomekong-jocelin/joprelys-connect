@@ -30,6 +30,9 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+- **Go-Live bootstrap administrateur** : le seed `ADMIN_JOPRELYS` est désormais désactivé par défaut, sans email/nom/mot de passe de repli ; une activation incomplète échoue explicitement avant toute écriture en base.
+- **Politique RBAC plateforme** : suppression de `RbacPlatformRolePolicyInitializer`, qui rendait `ADMIN_JOPRELYS` et `SUPER_ADMIN` assignables au démarrage malgré le catalogue. Le catalogue redevient la source canonique et l'API conserve un refus explicite `403` des rôles plateforme.
+- **Documentation des accès de démonstration** : retrait des credentials historiques et des faux comptes automatiquement seedés ; le document décrit désormais uniquement la procédure sécurisée de provisionnement.
 - **Portabilité H2/PostgreSQL de `unit_type`** : remplacement d'un CHECK littéral fragile par `organizational_unit_type_catalog` + FK et converter JPA enum ↔ VARCHAR fail-closed ; la contrainte reste forte au lieu d'être supprimée pour satisfaire les tests.
 - **Test historique V86** : `LegacyHospitalizationPermissionPostgresqlMigrationTest` ne suppose plus que V86 restera éternellement la dernière migration. Il vérifie désormais le contrat réel : V86 appliquée, `HOSPITALIZATION_MANAGE` supprimée, aucun remapping automatique des permissions.
 - **Erreurs UI HOS-ORG** : les erreurs sont traduites via le mécanisme i18n existant au lieu d'exposer un détail backend français dans une interface anglaise.
@@ -40,9 +43,12 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **PostgreSQL 16** : tests de migration V87 couvrant catalogues, FK tenant, contraintes d'identité SERVICE, type inconnu et isolation cross-tenant.
 - **Frontend** : dernière CI frontend fonctionnelle verte — tests Angular et build production ; les commits postérieurs avant merge #133 étaient uniquement documentaires/synchronisation de `main`.
 - **PR #133** : squash merge dans `main` au commit `72b5e139592b20a9ea14ae366d3fcbab99c46cf1`.
+- **Go-Live auth hardening** : Maven strict doit être rejoué sur le SHA exact de la PR de durcissement avant fusion ; aucun résultat historique de #118 n'est réutilisé comme preuve de la branche courante.
 
 ### Security
 
+- bootstrap administrateur opt-in uniquement et sans credential de secours ;
+- rôles plateforme `ADMIN_JOPRELYS` / `SUPER_ADMIN` non attribuables depuis l'administration clinique ;
 - aucun mapping automatique depuis `Ward.name`, `users.department` ou `users.specialty` ;
 - aucun fallback de rétrocompatibilité introduit pour les nouveaux flux ;
 - aucun secret ajouté au repository ;
