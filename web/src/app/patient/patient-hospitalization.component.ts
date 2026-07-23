@@ -18,6 +18,10 @@ import { HospitalizationStayHeaderComponent } from './hospitalization-stay-heade
 import { PatientApiService } from './patient-api.service';
 import { SpatialApiService } from './spatial-api.service';
 
+interface PlacementBed extends BedConfiguration {
+  readonly roomNumber: string;
+}
+
 @Component({
   selector: 'app-patient-hospitalization',
   standalone: true,
@@ -95,10 +99,14 @@ export class PatientHospitalizationComponent implements OnInit {
   readonly serviceCatalog = signal<HospitalServiceCatalogEntry[]>([]);
   readonly spaces = signal<FacilitySpace[]>([]);
   readonly assignments = signal<UnitSpaceAssignment[]>([]);
-  readonly freeBeds = signal<BedConfiguration[]>([]);
+  readonly freeBeds = signal<PlacementBed[]>([]);
   readonly selectedUnitId = signal('');
   readonly selectedSpaceId = signal('');
   readonly selectedBedId = signal('');
+
+  // Adaptateurs de template transitoires : les IDs sont désormais ceux des unités HOS-ORG et des Space.
+  readonly selectedWardId = this.selectedUnitId;
+  readonly wards = computed(() => this.eligibleUnits().map((unit) => ({ id: unit.id, name: this.unitLabel(unit) })));
 
   admissionReason = '';
   visitId = '';
@@ -221,23 +229,25 @@ export class PatientHospitalizationComponent implements OnInit {
     this.selectedSpaceId.set(active.currentSpaceId);
     this.selectedBedId.set('');
     this.freeBeds.set([]);
-    this.loadPlacementOptions(() => this.loadFreeBedsForSpace(active.currentSpaceId));
+    this.loadPlacementOptions(() => this.loadFreeBedsForUnit(active.currentServiceUnitId));
     this.showTransferModal.set(true);
   }
 
-  onPlacementUnitChange(): void {
+  onAdmissionWardChange(): void {
     this.selectedSpaceId.set('');
     this.selectedBedId.set('');
     this.freeBeds.set([]);
+    this.loadFreeBedsForUnit(this.selectedUnitId());
   }
 
-  onPlacementSpaceChange(): void {
-    this.selectedBedId.set('');
-    this.loadFreeBedsForSpace(this.selectedSpaceId());
+  onAdmissionBedChange(): void {
+    const bed = this.freeBeds().find((candidate) => candidate.id === this.selectedBedId());
+    this.selectedSpaceId.set(bed?.spaceId ?? '');
   }
 
   saveAdmission(event: Event): void {
     event.preventDefault();
+    this.onAdmissionBedChange();
     if (!this.canAdmit()
       || !this.selectedUnitId()
       || !this.selectedSpaceId()
@@ -269,6 +279,8 @@ export class PatientHospitalizationComponent implements OnInit {
   saveTransfer(event: Event): void {
     event.preventDefault();
     const active = this.activeHospitalization();
+    const bed = this.freeBeds().find((candidate) => candidate.id === this.selectedBedId());
+    if (bed) this.selectedSpaceId.set(bed.spaceId);
     if (!active
       || active.dischargeDecidedAt
       || !this.selectedUnitId()
@@ -325,13 +337,33 @@ export class PatientHospitalizationComponent implements OnInit {
     });
   }
 
-  private loadFreeBedsForSpace(spaceId: string): void {
-    if (!spaceId) {
+  private loadFreeBedsForUnit(unitId: string): void {
+    if (!unitId) {
       this.freeBeds.set([]);
       return;
     }
-    this.spatialApi.listBeds(spaceId).subscribe({
-      next: (beds) => this.freeBeds.set(beds.filter((bed) => bed.available)),
+    const allowedSpaceIds = new Set(this.assignments()
+      .filter((assignment) => assignment.organizationalUnitId === unitId)
+      .map((assignment) => assignment.spaceId));
+    const spaces = this.spaces().filter((space) =>
+      space.active && space.inpatientProfile && allowedSpaceIds.has(space.id));
+    if (spaces.length === 0) {
+      this.freeBeds.set([]);
+      return;
+    }
+    const requests = Object.fromEntries(spaces.map((space) => [space.id, this.spatialApi.listBeds(space.id)]));
+    forkJoin(requests).subscribe({
+      next: (bedsBySpace) => {
+        const candidates: PlacementBed[] = [];
+        for (const space of spaces) {
+          const beds = (bedsBySpace[space.id] ?? []) as BedConfiguration[];
+          for (const bed of beds) {
+            if (bed.available) candidates.push({ ...bed, roomNumber: space.name });
+          }
+        }
+        this.freeBeds.set(candidates);
+        this.selectedBedId.set('');
+      },
       error: () => this.freeBeds.set([]),
     });
   }
