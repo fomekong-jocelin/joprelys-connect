@@ -1,5 +1,7 @@
 # HOS-RBAC-001-B — Séparer les opérations sensibles d'hospitalisation
 
+> **État actuel** : ce ticket décrit l'incrément livré par la PR #102. La dette qu'il signalait encore autour de `HOSPITALIZATION_MANAGE` a ensuite été réduite par HOS-RBAC-001-C (#107) puis supprimée définitivement par HOS-RBAC-001-D / #121 avec Flyway V86. Les mentions historiques ci-dessous décrivent l'état au moment de 001-B et ne constituent plus le modèle RBAC courant.
+
 ## Métadonnées
 
 - **Epic** : EPIC-0027 — Organisation hospitalière, capacité et parcours patient
@@ -13,7 +15,7 @@
 
 ## Problème
 
-La permission historique `HOSPITALIZATION_MANAGE` autorisait simultanément l'admission, les notes, les soins, le transfert et la sortie. La permission `BED_OPERATIONAL_STATUS_MANAGE` regroupait capacité, nettoyage et maintenance.
+Au moment de cet incrément, la permission historique `HOSPITALIZATION_MANAGE` autorisait simultanément l'admission, les notes, les soins, le transfert et la sortie. La permission `BED_OPERATIONAL_STATUS_MANAGE` regroupait capacité, nettoyage et maintenance.
 
 Ces regroupements permettaient notamment :
 
@@ -50,7 +52,7 @@ POST /api/spatial/beds/{id}/maintenance-status
 | `AGENT_HYGIENE` | Non | Non | Non | Oui | Non |
 | `TECHNICIEN_MAINTENANCE` | Non | Non | Non | Non | Oui |
 
-Les rôles personnalisés restent configurables depuis le RBAC.
+Les rôles personnalisés restent configurables depuis le RBAC, exclusivement avec les permissions présentes dans le catalogue courant.
 
 ## Critères d'acceptation
 
@@ -85,13 +87,13 @@ Le seul échec observé lors du premier passage concernait un test historique qu
 
 ## Risques et décisions
 
-- `HOSPITALIZATION_MANAGE` reste encore trop large pour les notes, consentements, soins, médicaments et consommables. Ce découpage relève de HOS-RBAC-001-C.
-- La « sortie » actuelle clôt encore le séjour et libère le lit ; HOS-DIS-001 séparera décision médicale, clearance administrative et départ physique.
-- Les circuits de nettoyage et maintenance ne portent pas encore motif, ordre de travail, preuve, responsable ou validation à quatre yeux.
+- Le risque historique « `HOSPITALIZATION_MANAGE` reste trop large » a été traité par HOS-RBAC-001-C puis HOS-RBAC-001-D : la permission est désormais supprimée au lieu d'être conservée pour compatibilité.
+- La « sortie » a ensuite été séparée par HOS-DIS-001-A entre décision médicale et départ physique ; la clearance administrative reste à traiter.
+- Les circuits de nettoyage et maintenance ne portent pas encore toutes les preuves opérationnelles attendues : tâche, responsable, validation et éléments de contrôle restent des suites de HOS-BED-002-E.
 - Les nouveaux rôles système doivent être validés par les établissements avant affectation aux utilisateurs.
 - Les utilisateurs doivent renouveler leur JWT après resynchronisation du catalogue RBAC.
 
-## Commandes de validation
+## Commandes de validation historiques
 
 ```bash
 cd backend
