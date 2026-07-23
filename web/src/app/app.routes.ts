@@ -71,6 +71,12 @@ export const routes: Routes = [
     data: { expectedPermissions: ['USER_MANAGE'] },
   },
   {
+    path: 'clinic/hospital-organization',
+    loadComponent: () => import('./clinic/hospital-organization/hospital-organization-page.component').then((module) => module.HospitalOrganizationPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedPermissions: ['ORGANIZATION_STRUCTURE_MANAGE'] },
+  },
+  {
     path: 'clinic/availability',
     loadComponent: () => import('./clinic/availability/availability-page.component').then((module) => module.AvailabilityPageComponent),
     canActivate: [roleGuard],
