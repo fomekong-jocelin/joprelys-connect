@@ -94,7 +94,6 @@ public final class RbacCatalog {
                 permission("STOCK_READ", "STOCK", "Consulter les stocks", "Consulter les articles et niveaux de stock."),
                 permission("STOCK_MANAGE", "STOCK", "Gérer les stocks", "Créer et traiter les mouvements de stock."),
                 permission("HOSPITALIZATION_READ", "HOSPITALISATION", "Consulter les hospitalisations", "Consulter les séjours, chambres et lits."),
-                permission("HOSPITALIZATION_MANAGE", "HOSPITALISATION", "Permission hospitalisation historique", "Permission legacy conservée pour migration des rôles personnalisés ; aucun nouvel endpoint métier ne doit s'appuyer dessus."),
                 permission(PERMISSION_HOSPITALIZATION_ADMIT, "HOSPITALISATION", "Admettre un patient", "Créer un séjour hospitalier et affecter son premier lit selon les règles d'admission."),
                 permission(PERMISSION_HOSPITALIZATION_NOTE_WRITE, "HOSPITALISATION", "Renseigner les notes de séjour", "Ajouter une observation ou transmission au séjour actif."),
                 permission(PERMISSION_HOSPITALIZATION_CONSENT_RECORD, "HOSPITALISATION", "Tracer un consentement", "Enregistrer la présence du consentement, le témoin et la pièce signée sans se substituer à l'information médicale du patient."),
