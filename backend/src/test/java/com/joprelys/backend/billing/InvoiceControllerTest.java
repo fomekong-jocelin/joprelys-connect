@@ -48,6 +48,7 @@ import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import java.time.Instant;
 import java.time.LocalDate;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -103,31 +104,7 @@ public class InvoiceControllerTest {
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.update("DELETE FROM cash_movements");
-        jdbcTemplate.update("DELETE FROM cash_register_sessions");
-        jdbcTemplate.update("DELETE FROM cash_registers");
-        jdbcTemplate.update("DELETE FROM payments");
-        jdbcTemplate.update("DELETE FROM invoice_items");
-        jdbcTemplate.update("DELETE FROM invoices");
-        jdbcTemplate.update("DELETE FROM insurance_conventions");
-        jdbcTemplate.update("DELETE FROM tariff_grid");
-        jdbcTemplate.update("DELETE FROM audit_logs");
-        jdbcTemplate.update("DELETE FROM prescription_items");
-        jdbcTemplate.update("DELETE FROM prescriptions");
-        jdbcTemplate.update("DELETE FROM consultations");
-        jdbcTemplate.update("DELETE FROM bed_state_changes");
-        jdbcTemplate.update("DELETE FROM bed_assignments");
-        jdbcTemplate.update("DELETE FROM hospitalizations");
-        jdbcTemplate.update("DELETE FROM beds");
-        jdbcTemplate.update("DELETE FROM organizational_unit_space_assignments");
-        jdbcTemplate.update("DELETE FROM inpatient_space_profiles");
-        jdbcTemplate.update("DELETE FROM facility_spaces");
-        jdbcTemplate.update("DELETE FROM facility_location_nodes");
-        jdbcTemplate.update("DELETE FROM organizational_units");
-        jdbcTemplate.update("DELETE FROM visits");
-        jdbcTemplate.update("DELETE FROM patients");
-        userAccountRepository.deleteAll();
-        organizationRepository.deleteAll();
+        cleanDatabase();
 
         org = new OrganizationEntity(
                 "Clinique de Facturation",
@@ -154,43 +131,20 @@ public class InvoiceControllerTest {
         tokenAdmin = jwtService.createToken(admin).value();
 
         patient = new PatientEntity(
-                "DPU-TEST-001",
-                "PAT-TEST-001",
-                "Marc Dupont",
-                "MASCULIN",
-                LocalDate.of(1985, 5, 20),
-                "670000000",
-                "Yaounde",
-                "Bastos",
-                "Street X",
-                "Julie",
-                "671112233",
-                "Aucune",
-                "Aucun");
+                "DPU-TEST-001", "PAT-TEST-001", "Marc Dupont", "MASCULIN",
+                LocalDate.of(1985, 5, 20), "670000000", "Yaounde", "Bastos", "Street X",
+                "Julie", "671112233", "Aucune", "Aucun");
         patient = patientRepository.save(patient);
 
         visit = new VisitEntity(
-                patient,
-                "VIS-TEST-001",
-                "Paludisme aigu",
-                "Général",
-                "MÉDECINE GÉNÉRALE",
-                admin.getId(),
-                Instant.now());
+                patient, "VIS-TEST-001", "Paludisme aigu", "Général", "MÉDECINE GÉNÉRALE",
+                admin.getId(), Instant.now());
         visit = visitRepository.save(visit);
 
         consultation = new ConsultationEntity(
-                visit,
-                admin,
-                "DOC-2026-0001",
-                "Fievre, Courbatures",
-                "39°C",
-                "Paludisme suspecte",
-                "Paludisme",
-                "Paludisme severe",
-                "Conclusion",
-                "Prendre du repos",
-                "Suivi 3j");
+                visit, admin, "DOC-2026-0001", "Fievre, Courbatures", "39°C",
+                "Paludisme suspecte", "Paludisme", "Paludisme severe", "Conclusion",
+                "Prendre du repos", "Suivi 3j");
         consultation.setOrganizationId(org.getId());
         consultation = consultationRepository.save(consultation);
 
@@ -202,56 +156,64 @@ public class InvoiceControllerTest {
         prescription = prescriptionRepository.save(prescription);
 
         PrescriptionItemEntity pItem = new PrescriptionItemEntity(
-                prescription,
-                "Artesunate",
-                "60mg",
-                "1 injection/jour",
-                "3 jours",
-                "3",
-                "Injection intraveineuse",
-                0);
+                prescription, "Artesunate", "60mg", "1 injection/jour", "3 jours", "3",
+                "Injection intraveineuse", 0);
         prescription.getItems().add(pItem);
         prescriptionRepository.save(prescription);
 
         OrganizationalUnitEntity unit = organizationalUnitRepository.saveAndFlush(new OrganizationalUnitEntity(
-                org.getId(),
-                null,
-                "BILLING_MED_001",
-                "Médecine Hommes",
-                OrganizationalUnitType.CARE_UNIT,
-                null));
+                org.getId(), null, "BILLING_MED_001", "Médecine Hommes",
+                OrganizationalUnitType.CARE_UNIT, null));
         FacilitySpaceEntity space = facilitySpaceRepository.saveAndFlush(new FacilitySpaceEntity(
-                org.getId(),
-                null,
-                "BILLING_A101",
-                "A101",
-                "HOSPITAL_ROOM"));
+                org.getId(), null, "BILLING_A101", "A101", "HOSPITAL_ROOM"));
         inpatientSpaceProfileRepository.saveAndFlush(new InpatientSpaceProfileEntity(
-                space.getId(),
-                org.getId(),
-                "HOSPITAL_ROOM",
-                "STANDARD"));
+                space.getId(), org.getId(), "HOSPITAL_ROOM", "STANDARD"));
         BedEntity bed = bedRepository.saveAndFlush(new BedEntity(space, "Bed-1"));
 
         hospitalization = new HospitalizationEntity(
-                patient.getId(),
-                unit.getId(),
-                space.getId(),
-                bed.getId(),
-                unit.getName(),
-                space.getName(),
-                bed.getBedNumber(),
-                "Motif chirurgie",
-                "HOSP-TEST-999",
-                visit.getId(),
-                null,
-                admin.getId());
+                patient.getId(), unit.getId(), space.getId(), bed.getId(),
+                unit.getName(), space.getName(), bed.getBedNumber(),
+                "Motif chirurgie", "HOSP-TEST-999", visit.getId(), null, admin.getId());
         hospitalization.setOrganizationId(org.getId());
         hospitalization = hospitalizationRepository.saveAndFlush(hospitalization);
 
         convention = new InsuranceConventionEntity("AXA Cameroun", new java.math.BigDecimal("0.8000"));
         convention.setOrganizationId(org.getId());
         convention = insuranceConventionRepository.save(convention);
+    }
+
+    @AfterEach
+    void tearDown() {
+        cleanDatabase();
+    }
+
+    private void cleanDatabase() {
+        TenantContext.clear();
+        jdbcTemplate.update("DELETE FROM cash_movements");
+        jdbcTemplate.update("DELETE FROM cash_register_sessions");
+        jdbcTemplate.update("DELETE FROM cash_registers");
+        jdbcTemplate.update("DELETE FROM payments");
+        jdbcTemplate.update("DELETE FROM invoice_items");
+        jdbcTemplate.update("DELETE FROM invoices");
+        jdbcTemplate.update("DELETE FROM insurance_conventions");
+        jdbcTemplate.update("DELETE FROM tariff_grid");
+        jdbcTemplate.update("DELETE FROM audit_logs");
+        jdbcTemplate.update("DELETE FROM prescription_items");
+        jdbcTemplate.update("DELETE FROM prescriptions");
+        jdbcTemplate.update("DELETE FROM consultations");
+        jdbcTemplate.update("DELETE FROM bed_state_changes");
+        jdbcTemplate.update("DELETE FROM bed_assignments");
+        jdbcTemplate.update("DELETE FROM hospitalizations");
+        jdbcTemplate.update("DELETE FROM beds");
+        jdbcTemplate.update("DELETE FROM organizational_unit_space_assignments");
+        jdbcTemplate.update("DELETE FROM inpatient_space_profiles");
+        jdbcTemplate.update("DELETE FROM facility_spaces");
+        jdbcTemplate.update("DELETE FROM facility_location_nodes");
+        jdbcTemplate.update("DELETE FROM organizational_units");
+        jdbcTemplate.update("DELETE FROM visits");
+        jdbcTemplate.update("DELETE FROM patients");
+        userAccountRepository.deleteAll();
+        organizationRepository.deleteAll();
     }
 
     @Test
@@ -300,12 +262,7 @@ public class InvoiceControllerTest {
                 .andExpect(jsonPath("$.insuranceShare").value(27200.0))
                 .andExpect(jsonPath("$.patientShare").value(6800.0));
 
-        CreateInvoiceRequest req = new CreateInvoiceRequest(
-                patient.getId(),
-                visit.getId(),
-                convention.getId(),
-                null);
-
+        CreateInvoiceRequest req = new CreateInvoiceRequest(patient.getId(), visit.getId(), convention.getId(), null);
         String responseStr = mockMvc.perform(post("/api/invoices")
                         .header("Authorization", "Bearer " + tokenReceptionist)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -326,16 +283,13 @@ public class InvoiceControllerTest {
         CashRegisterEntity register = new CashRegisterEntity("CAISSE-PRINCIPALE", "Caisse Principale");
         register.setOrganizationId(org.getId());
         register = cashRegisterRepository.save(register);
-
         CashRegisterSessionEntity session = new CashRegisterSessionEntity(register, receptionist.getId(), 50000.0);
         session.setOrganizationId(org.getId());
         cashRegisterSessionRepository.save(session);
         TenantContext.clear();
 
         PaymentRequest payReq = new PaymentRequest(
-                new java.math.BigDecimal("3000.0000"),
-                PaymentMethod.CASH,
-                "REF-1111");
+                new java.math.BigDecimal("3000.0000"), PaymentMethod.CASH, "REF-1111");
         mockMvc.perform(post("/api/invoices/" + created.id() + "/payments")
                         .header("Authorization", "Bearer " + tokenReceptionist)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -367,9 +321,7 @@ public class InvoiceControllerTest {
                 .andExpect(jsonPath("$[0].insurance.remainingAmount").value(27200.0));
 
         PaymentRequest payFinal = new PaymentRequest(
-                new java.math.BigDecimal("3800.0000"),
-                PaymentMethod.CASH,
-                "REF-2222");
+                new java.math.BigDecimal("3800.0000"), PaymentMethod.CASH, "REF-2222");
         mockMvc.perform(post("/api/invoices/" + created.id() + "/payments")
                         .header("Authorization", "Bearer " + tokenReceptionist)
                         .contentType(MediaType.APPLICATION_JSON)
