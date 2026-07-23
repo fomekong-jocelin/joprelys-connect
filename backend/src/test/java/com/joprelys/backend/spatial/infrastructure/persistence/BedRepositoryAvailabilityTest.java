@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.joprelys.backend.auth.security.TenantContext;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
-import com.joprelys.backend.spatial.domain.HospitalServiceType;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -21,9 +20,9 @@ class BedRepositoryAvailabilityTest {
     @Autowired
     private OrganizationRepository organizationRepository;
     @Autowired
-    private WardRepository wardRepository;
+    private FacilitySpaceRepository spaceRepository;
     @Autowired
-    private RoomRepository roomRepository;
+    private InpatientSpaceProfileRepository inpatientSpaceProfileRepository;
     @Autowired
     private BedRepository bedRepository;
     @Autowired
@@ -38,8 +37,8 @@ class BedRepositoryAvailabilityTest {
             return;
         }
         jdbcTemplate.update("DELETE FROM beds WHERE organization_id = ?", organizationId);
-        jdbcTemplate.update("DELETE FROM rooms WHERE organization_id = ?", organizationId);
-        jdbcTemplate.update("DELETE FROM wards WHERE organization_id = ?", organizationId);
+        jdbcTemplate.update("DELETE FROM inpatient_space_profiles WHERE organization_id = ?", organizationId);
+        jdbcTemplate.update("DELETE FROM facility_spaces WHERE organization_id = ?", organizationId);
         jdbcTemplate.update("DELETE FROM organizations WHERE id = ?", organizationId);
     }
 
@@ -54,19 +53,20 @@ class BedRepositoryAvailabilityTest {
         organizationId = organization.getId();
         TenantContext.setTenantId(organizationId);
 
-        WardEntity ward = new WardEntity("Hospitalisation", HospitalServiceType.HOSPITALIZATION);
-        ward.setOrganizationId(organizationId);
-        ward = wardRepository.save(ward);
+        FacilitySpaceEntity space = spaceRepository.saveAndFlush(new FacilitySpaceEntity(
+                organizationId,
+                null,
+                "ROOM_401",
+                "Chambre 401",
+                "HOSPITAL_ROOM"));
+        inpatientSpaceProfileRepository.saveAndFlush(new InpatientSpaceProfileEntity(
+                space.getId(), organizationId, "HOSPITAL_ROOM", "STANDARD"));
 
-        RoomEntity room = new RoomEntity(ward, "401", 3, "STANDARD");
-        room.setOrganizationId(organizationId);
-        room = roomRepository.save(room);
-
-        BedEntity available = saveBed(room, "401-A");
-        BedEntity closed = saveBed(room, "401-B");
+        BedEntity available = saveBed(space, "401-A");
+        BedEntity closed = saveBed(space, "401-B");
         closed.setCapacityStatus(BedCapacityStatus.CLOSED);
         bedRepository.saveAndFlush(closed);
-        BedEntity maintenance = saveBed(room, "401-C");
+        BedEntity maintenance = saveBed(space, "401-C");
         maintenance.setStatus(BedStatus.MAINTENANCE);
         bedRepository.saveAndFlush(maintenance);
 
@@ -75,10 +75,8 @@ class BedRepositoryAvailabilityTest {
         assertEquals(0, claim(maintenance.getId()));
     }
 
-    private BedEntity saveBed(RoomEntity room, String number) {
-        BedEntity bed = new BedEntity(room, number);
-        bed.setOrganizationId(organizationId);
-        return bedRepository.saveAndFlush(bed);
+    private BedEntity saveBed(FacilitySpaceEntity space, String number) {
+        return bedRepository.saveAndFlush(new BedEntity(space, number));
     }
 
     private int claim(UUID bedId) {
