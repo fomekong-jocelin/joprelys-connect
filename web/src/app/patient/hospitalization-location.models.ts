@@ -8,6 +8,8 @@ export interface StructuredHospitalization {
   readonly currentBedId: string;
   readonly serviceName: string;
   readonly spaceName: string;
+  /** Alias d'affichage Angular transitoire. La source de vérité reste currentSpaceId/spaceName. */
+  readonly roomNumber: string;
   readonly bedNumber: string;
   readonly admissionReason: string;
   readonly status: 'EN_COURS' | 'SORTI' | 'SORTI_CONTRE_AVIS';
