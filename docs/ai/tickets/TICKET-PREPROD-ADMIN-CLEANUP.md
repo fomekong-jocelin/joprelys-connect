@@ -1,89 +1,103 @@
-# TICKET-PREPROD-ADMIN-CLEANUP — Nettoyage de l'Administrateur par défaut et des données de test pour la préproduction
+# TICKET-PREPROD-ADMIN-CLEANUP — Durcissement du bootstrap administrateur avant préproduction
 
-> Fichier obligatoire pour chaque ticket ou intervention IA.
+> Source de vérité : code courant + configuration versionnée. Aucun credential de bootstrap ne doit être documenté ou fourni par défaut.
 
 ## 1. Objectif
 
-Préparer l'application pour l'environnement de préproduction :
-1. Supprimer les identifiants sensibles et configurés en dur (comme le mot de passe par défaut faible `Admin@12345`) dans le fichier `application.yml`.
-2. Vider la base de données de départ de toute donnée de test en désactivant la création automatique par le seeder de la clinique de test, du médecin de test et du pharmacien de test (seuls les paramètres structuraux et de configuration de base sont conservés).
-3. Créer un unique utilisateur administrateur par défaut (`admin@joprelys.local`) doté d'un mot de passe fort et sécurisé (`Re12#He10@2021!`) s'il n'existe pas déjà, chargé de créer par la suite les cliniques pilotes et les comptes administratifs / métiers.
+Préparer Joprelys Connect pour la préproduction et le Go-Live en supprimant les comportements de bootstrap dangereux ou ambigus :
 
-## 2. Critères d'acceptation
+1. le bootstrap `ADMIN_JOPRELYS` est **désactivé par défaut** ;
+2. son activation est une action explicite via `JOPRELYS_SEED_ADMIN_ENABLED=true` ;
+3. email, nom et mot de passe sont obligatoires lorsque le bootstrap est activé ;
+4. aucun email, mot de passe ou credential de secours n'est codé en dur dans `AdminUserSeeder` ;
+5. une configuration activée mais incomplète provoque un échec explicite au démarrage ;
+6. le mot de passe n'est jamais journalisé et reste encodé via `PasswordEncoder` ;
+7. le seeder ne crée aucun établissement, médecin, pharmacien ou autre donnée de démonstration.
 
-- [x] Les identifiants par défaut en dur d'administrateur sont purgés de `application.yml`.
-- [x] `SeedAdminProperties` permet de lancer l'initialisation si `enabled` est à vrai (sans bloquer si les variables d'environnement d'admin sont absentes au démarrage).
-- [x] `AdminUserSeeder` n'initialise plus l'établissement "Clinique Joprelys", le médecin de test et le pharmacien de test (ceux-ci sont créés manuellement par l'admin désormais).
-- [x] L'administrateur par défaut est initialisé avec l'email `admin@joprelys.local` et le mot de passe fort `Re12#He10@2021!` s'il n'existe pas déjà et si aucune surcharge par variable d'environnement n'est configurée.
-- [x] Les tests unitaires de `AdminUserSeederTest` sont alignés sur le comportement exclusif de création d'admin.
-- [ ] La compilation de production du backend et les tests unitaires / d'intégration passent avec succès.
+## 2. Contexte et réconciliation
 
-## 3. Pilotage projet
+Une ancienne PR de durcissement (#118) a été fermée sans fusion. Une partie de ses intentions restait pertinente, mais aucun cherry-pick global n'est effectué : le correctif est repris proprement depuis le `main` courant afin d'éviter la réintroduction de code obsolète.
 
-| Champ | Valeur |
-|---|---|
-| Epic parent | EPIC-0001 |
-| User story parent | STORY-0104 |
-| Sprint cible | SPRINT-0011 |
-| Priorité business | P1 |
-| Complexité | S |
-| Story points | 1 |
-| Profil recommandé | Backend Engineer |
-| Effort estimé senior | 0.05j |
-| Responsable | Antigravity |
-| Reviewer obligatoire | Lead Developer |
-| Risque fonctionnel | Faible |
-| Risque technique | Très faible |
-| Dépendances | Aucun |
-| Bloquants connus | Aucun |
+L'audit a également identifié une contradiction RBAC :
 
-## 4. Contexte analysé
+- `RbacCatalog` déclare `ADMIN_JOPRELYS` et `SUPER_ADMIN` non attribuables depuis une clinique ;
+- `RbacPlatformRolePolicyInitializer` les remettait `assignable = TRUE` au démarrage.
 
-- [x] `AGENTS.md` lu
-- [x] `SKILL.md` lu
-- [x] Configuration existante `application.yml` analysée
-- [x] Code existant de `AdminUserSeeder.java` et `AdminUserSeederTest.java` analysé
+La politique canonique est désormais le catalogue RBAC. L'initializer contradictoire est supprimé et l'API conserve un refus explicite `403` pour toute tentative clinique d'attribution d'un rôle plateforme.
 
-## 5. Action plan
+## 3. Critères d'acceptation
 
-- [x] Vider les valeurs par défaut en dur de `joprelys.seed.admin` dans `application.yml`.
-- [x] Modifier `SeedAdminProperties.java` pour retourner `enabled` dans `isComplete()`.
-- [x] Modifier `AdminUserSeeder.java` pour ne créer que le compte administrateur avec des replis par défaut solides et sécurisés.
-- [x] Adapter `AdminUserSeederTest.java`.
-- [x] Exécuter `./mvnw test` pour s'assurer du passage au vert.
-- [x] Mettre à jour `CHANGELOG.md` et `PROJECT-TRACKING.md`.
+- [x] `joprelys.seed.admin.enabled` vaut `false` par défaut dans `application.yml`.
+- [x] `AdminUserSeeder` n'est instancié que lorsque `joprelys.seed.admin.enabled=true`.
+- [x] aucune valeur de repli pour l'email, le nom ou le mot de passe n'existe dans le seeder.
+- [x] `SeedAdminProperties.isComplete()` exige `enabled + email + name + password`.
+- [x] une configuration activée mais incomplète échoue avant toute lecture/écriture en base et avant tout hash.
+- [x] la création reste idempotente si le compte existe déjà.
+- [x] l'email est normalisé, le nom est trimé et le mot de passe est hashé.
+- [x] `RbacPlatformRolePolicyInitializer` est supprimé.
+- [x] les rôles plateforme restent non attribuables dans `RbacCatalog`.
+- [x] une tentative clinique vers `ADMIN_JOPRELYS` ou `SUPER_ADMIN` conserve le contrat `403`.
+- [x] un rôle clinique normal désactivé/non attribuable conserve le contrat générique `400` par l'ordre des contrôles.
+- [x] aucun credential réel ou de démonstration n'est documenté dans ce ticket.
+- [ ] Maven strict `clean verify` vert sur le SHA de la PR.
+- [ ] revue Tech Lead / sécurité terminée avant fusion.
 
-## 6. Implémentation réalisée
+## 4. Implémentation
 
-- Suppression des identifiants sensibles et configurés en dur (email, name, password) de `application.yml`.
-- Simplification de `SeedAdminProperties.java` pour que `isComplete()` ne valide que l'état d'activation (`enabled`), évitant de bloquer l'initialisation de l'administrateur système si ces variables d'environnement d'admin ne sont pas déclarées.
-- Restructuration d' `AdminUserSeeder.java` pour qu'il n'initialise plus l'établissement "Clinique Joprelys", le médecin de test et le pharmacien de test (ceux-ci devant être créés dynamiquement).
-- Ajout de valeurs par défaut solides et adaptées pour l'environnement de préproduction directement dans le code du seeder : email `admin@joprelys.local` et mot de passe fort `Re12#He10@2021!`.
-- Alignement du test unitaire `AdminUserSeederTest.java` sur la création exclusive de l'administrateur.
-- Validation par tests de non-régression (`./mvnw test` : 240/240 OK).
+### Configuration
 
-## 7. Suivi d'exécution
-
-| Date | Développeur | Temps passé | Avancement | Reste à faire | Blocage | Commentaire |
-|---|---|---:|---:|---:|---|---|
-| 2026-07-06 | Antigravity | 0.05j | 100% | Aucun | Aucun | Modifications de code validées par build et tests OK. |
-
-## 8. Tests et vérifications
-
-```bash
-./mvnw test
+```yaml
+joprelys:
+  seed:
+    admin:
+      enabled: ${JOPRELYS_SEED_ADMIN_ENABLED:false}
+      email: ${JOPRELYS_ADMIN_EMAIL:}
+      name: ${JOPRELYS_ADMIN_NAME:}
+      password: ${JOPRELYS_ADMIN_PASSWORD:}
 ```
 
-## 9. Impact version / SemVer
+Aucun secret n'est fourni par le dépôt. Les valeurs doivent venir du mécanisme de secrets de l'environnement cible.
+
+### Backend
+
+- `SeedAdminProperties` vérifie que tous les paramètres requis sont renseignés.
+- `AdminUserSeeder` est opt-in et fail-fast en cas de configuration incomplète.
+- aucun fallback de credential n'est conservé.
+- `RbacAdministrationService` refuse les rôles plateforme avant le contrôle générique d'assignabilité.
+- `RbacPlatformRolePolicyInitializer` est supprimé.
+
+### Tests
+
+- `AdminUserSeederTest` : fail-fast, idempotence, normalisation et hash ;
+- `SeedAdminPropertiesTest` : activation et champs obligatoires ;
+- `RbacCatalogPermissionIsolationTest` : rôles plateforme non attribuables ;
+- `RbacControllerTest` existant : attribution `SUPER_ADMIN` / `ADMIN_JOPRELYS` refusée en `403`.
+
+## 5. Procédure d'exploitation
+
+Le bootstrap ne doit être activé que pour une initialisation contrôlée :
+
+1. injecter les quatre variables `JOPRELYS_SEED_ADMIN_ENABLED`, `JOPRELYS_ADMIN_EMAIL`, `JOPRELYS_ADMIN_NAME`, `JOPRELYS_ADMIN_PASSWORD` via le gestionnaire de secrets ;
+2. démarrer l'application et confirmer la création idempotente du compte plateforme ;
+3. désactiver le bootstrap après l'initialisation ;
+4. ne jamais conserver le mot de passe dans Git, un ticket, une capture ou un runbook.
+
+## 6. Risques / garde-fous
+
+- aucune migration Flyway n'est nécessaire ;
+- aucun contrat REST métier n'est modifié ;
+- aucune donnée PROD/RECETTE n'est modifiée par cette intervention ;
+- ne pas réutiliser les anciennes valeurs documentées dans l'historique Git ; elles doivent être considérées comme compromises si elles ont déjà été utilisées ;
+- toute réintroduction d'un credential par défaut bloque la fusion.
+
+## 7. SemVer
 
 | Champ | Valeur |
 |---|---|
 | Changement livrable | Oui |
-| Type de bump | PATCH |
-| Justification | Nettoyage des identifiants d'initialisation en dur pour la préproduction. |
-| Breaking change | Non |
+| Type de bump | PATCH sécurité/configuration |
+| Breaking change API | Non |
 | Migration DB | Non |
-| Changement API | Non |
 | Impact Angular | Non |
 | Impact Flutter | Non |
 | Changelog requis | Oui |
