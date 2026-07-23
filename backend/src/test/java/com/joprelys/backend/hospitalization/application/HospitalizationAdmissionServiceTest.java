@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -226,9 +227,7 @@ class HospitalizationAdmissionServiceTest {
         when(emergency.getChiefComplaint()).thenReturn("Altération de la conscience");
         when(emergency.getCreatedAt()).thenReturn(Instant.now());
         when(emergency.getVisitId()).thenReturn(null);
-        when(visitRepository.findFirstByPatientIdAndStatusOrderByCreatedAtDesc(
-                request.patientId(),
-                "EN_COURS"))
+        when(visitRepository.findFirstByPatientIdAndStatusOrderByCreatedAtDesc(request.patientId(), "EN_COURS"))
                 .thenReturn(Optional.empty());
         when(visitNumberGenerator.generateNextVisitNumber()).thenReturn("VIS-20260721-000001");
         when(visitRepository.save(any(VisitEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -261,19 +260,19 @@ class HospitalizationAdmissionServiceTest {
     private VisitEntity prepareVisitBasedAdmission() {
         prepareCanonicalPatient();
         VisitEntity visit = org.mockito.Mockito.mock(VisitEntity.class);
-        when(visit.getPatient()).thenReturn(patient);
-        when(visitRepository.findById(request.visitId())).thenReturn(Optional.of(visit));
-        when(hospitalizationRepository.findActiveByPatientIds(Set.of(request.patientId())))
+        lenient().when(visit.getPatient()).thenReturn(patient);
+        lenient().when(visitRepository.findById(request.visitId())).thenReturn(Optional.of(visit));
+        lenient().when(hospitalizationRepository.findActiveByPatientIds(Set.of(request.patientId())))
                 .thenReturn(Optional.empty());
-        when(bedAssignmentRepository.findActiveByBedId(request.bedId())).thenReturn(Optional.empty());
-        when(hospitalizationRepository.findActiveByBedId(request.bedId())).thenReturn(Optional.empty());
+        lenient().when(bedAssignmentRepository.findActiveByBedId(request.bedId())).thenReturn(Optional.empty());
+        lenient().when(hospitalizationRepository.findActiveByBedId(request.bedId())).thenReturn(Optional.empty());
         return visit;
     }
 
     private void prepareCanonicalPatient() {
-        when(patient.getId()).thenReturn(request.patientId());
-        when(patient.getOrganizationId()).thenReturn(organizationId);
-        when(canonicalResolver.resolve(request.patientId())).thenReturn(context(patient));
+        lenient().when(patient.getId()).thenReturn(request.patientId());
+        lenient().when(patient.getOrganizationId()).thenReturn(organizationId);
+        lenient().when(canonicalResolver.resolve(request.patientId())).thenReturn(context(patient));
     }
 
     private void preparePlacementWithoutBed() {
@@ -290,26 +289,26 @@ class HospitalizationAdmissionServiceTest {
     }
 
     private void prepareUnitAndSpace() {
-        when(unitRepository.findByIdAndOrganizationId(request.serviceUnitId(), organizationId))
+        lenient().when(unitRepository.findByIdAndOrganizationId(request.serviceUnitId(), organizationId))
                 .thenReturn(Optional.of(unit));
-        when(unit.getId()).thenReturn(request.serviceUnitId());
-        when(unit.getUnitType()).thenReturn(OrganizationalUnitType.CARE_UNIT);
-        when(unit.isActive()).thenReturn(true);
-        when(unit.getName()).thenReturn("Médecine");
-        when(spaceRepository.findByIdAndOrganizationId(request.spaceId(), organizationId))
+        lenient().when(unit.getId()).thenReturn(request.serviceUnitId());
+        lenient().when(unit.getUnitType()).thenReturn(OrganizationalUnitType.CARE_UNIT);
+        lenient().when(unit.isActive()).thenReturn(true);
+        lenient().when(unit.getName()).thenReturn("Médecine");
+        lenient().when(spaceRepository.findByIdAndOrganizationId(request.spaceId(), organizationId))
                 .thenReturn(Optional.of(space));
-        when(space.getId()).thenReturn(request.spaceId());
-        when(space.isActive()).thenReturn(true);
-        when(space.getName()).thenReturn("Chambre 101");
-        when(inpatientProfileRepository.existsBySpaceIdAndOrganizationId(request.spaceId(), organizationId))
+        lenient().when(space.getId()).thenReturn(request.spaceId());
+        lenient().when(space.isActive()).thenReturn(true);
+        lenient().when(space.getName()).thenReturn("Chambre 101");
+        lenient().when(inpatientProfileRepository.existsBySpaceIdAndOrganizationId(request.spaceId(), organizationId))
                 .thenReturn(true);
     }
 
     private BedEntity configuredBed(UUID bedId) {
         BedEntity bed = org.mockito.Mockito.mock(BedEntity.class);
-        when(bed.getId()).thenReturn(bedId);
-        when(bed.getSpace()).thenReturn(space);
-        when(bed.getBedNumber()).thenReturn("101-A");
+        lenient().when(bed.getId()).thenReturn(bedId);
+        lenient().when(bed.getSpace()).thenReturn(space);
+        lenient().when(bed.getBedNumber()).thenReturn("101-A");
         return bed;
     }
 
