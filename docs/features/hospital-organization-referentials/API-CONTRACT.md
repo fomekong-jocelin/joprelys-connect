@@ -2,6 +2,8 @@
 
 Base path : `/api/hospital-organization`
 
+Toutes les routes de ce lot nécessitent `ORGANIZATION_STRUCTURE_MANAGE`. Un administrateur plateforme fournit explicitement `organizationId`; pour un administrateur d'établissement, le tenant est dérivé du compte authentifié.
+
 ## Catalogues
 
 ### `GET /catalogs/services`
@@ -37,14 +39,16 @@ Retourne les spécialités actives :
 
 ### `GET /units?includeInactive=false`
 
-Retourne les unités du tenant courant, triées de manière stable. La réponse contient `parentId` pour permettre au frontend de construire l'arbre sans dupliquer les règles métier.
+Retourne les unités du tenant courant, triées de manière stable. La réponse contient `parentId` afin que le frontend construise l'arbre sans dupliquer les règles métier.
+
+Pour une unité `SERVICE`, `name` vaut volontairement `null` : le libellé visible est résolu depuis `serviceCatalogCode` et le catalogue FR/EN selon la locale active. Cela évite de figer une langue dans la donnée métier.
 
 ```json
 [
   {
     "id": "uuid",
-    "code": "SVC-GEN-MED",
-    "name": "Médecine générale",
+    "code": "SVC_GEN_MED",
+    "name": null,
     "unitType": "SERVICE",
     "serviceCatalogCode": "GENERAL_MEDICINE",
     "parentId": null,
@@ -53,13 +57,13 @@ Retourne les unités du tenant courant, triées de manière stable. La réponse 
 ]
 ```
 
-### `POST /units`
+Pour `POLE`, `DEPARTMENT` et `CARE_UNIT`, `name` contient le nom propre choisi par l'établissement.
 
-Permission : `ORGANIZATION_STRUCTURE_MANAGE`.
+### `POST /units`
 
 ```json
 {
-  "code": "SVC-GEN-MED",
+  "code": "SVC_GEN_MED",
   "unitType": "SERVICE",
   "parentId": null,
   "serviceCatalogCode": "GENERAL_MEDICINE",
@@ -67,13 +71,13 @@ Permission : `ORGANIZATION_STRUCTURE_MANAGE`.
 }
 ```
 
-Pour `SERVICE`, `name` est ignoré/refusé s'il est fourni et le backend dérive le nom du catalogue. Pour `POLE`, `DEPARTMENT`, `CARE_UNIT`, `name` est obligatoire et `serviceCatalogCode` doit être null.
+Pour `SERVICE`, tout `name` non vide est refusé. Le backend conserve uniquement le code du catalogue. Pour `POLE`, `DEPARTMENT`, `CARE_UNIT`, `name` est obligatoire et `serviceCatalogCode` doit être null.
 
 Réponses : `201`, `400`, `403`, `409`.
 
 ### `PUT /units/{id}`
 
-Modifie `code`, `parentId` et, selon le type, `name` ou `serviceCatalogCode`. Un changement de `unitType` n'est pas autorisé dans ce lot : recréer un objet métier différent serait une opération structurante séparée.
+Modifie `code`, `parentId` et, selon le type, `name` ou `serviceCatalogCode`. Un changement de `unitType` n'est pas autorisé dans ce lot.
 
 Réponses : `200`, `400`, `403`, `404`, `409`.
 
@@ -87,7 +91,10 @@ Réactive l'unité si son parent éventuel est actif et si son catalogue éventu
 
 ## Sécurité
 
-- tenant dérivé de l'utilisateur authentifié, jamais fourni dans le payload ;
+- tenant dérivé de l'utilisateur authentifié ou du scope plateforme autorisé ;
+- `organizationId` n'est jamais accepté dans le body métier ;
 - aucune mutation cross-tenant ;
+- requêtes repository explicitement filtrées par `organizationId` en complément de `@TenantId` ;
+- FK composite empêchant un parent d'un autre tenant ;
 - API maître de toutes les validations hiérarchiques ;
 - pas d'exposition d'entités JPA.
