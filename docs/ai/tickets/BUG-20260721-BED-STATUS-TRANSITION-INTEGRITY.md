@@ -1,5 +1,7 @@
 # HOS-BED-002-B — Sécuriser les transitions manuelles de statut d’un lit
 
+> **État actuel** : ce ticket documente le garde-fou livré avant la séparation RBAC complète. Son risque résiduel historique sur `HOSPITALIZATION_MANAGE` a été traité par HOS-RBAC-001-A/B/C puis supprimé définitivement par HOS-RBAC-001-D / #121 avec V86. Les références ci-dessous à cette permission décrivent l'état antérieur au durcissement RBAC.
+
 ## Métadonnées
 
 - **Type** : Bug / garde-fou P0
@@ -14,7 +16,7 @@
 
 ## Contexte
 
-L’endpoint legacy `POST /api/spatial/beds/{id}/status` permettait à tout utilisateur disposant de `HOSPITALIZATION_MANAGE` de modifier directement un lit vers `OCCUPIED`, `CLEANING`, `MAINTENANCE` ou `FREE`.
+À l'origine, l’endpoint legacy `POST /api/spatial/beds/{id}/status` permettait à tout utilisateur disposant de `HOSPITALIZATION_MANAGE` de modifier directement un lit vers `OCCUPIED`, `CLEANING`, `MAINTENANCE` ou `FREE`.
 
 Cette mutation générique pouvait désynchroniser trois sources de vérité :
 
@@ -35,7 +37,7 @@ Transformer l’endpoint legacy en commande opérationnelle limitée aux lits no
 3. Un lit marqué `OCCUPIED` sans affectation active est une incohérence à réconcilier ; l’endpoint ne doit pas la masquer.
 4. Un lit non affecté peut encore passer entre les états opérationnels legacy `FREE`, `CLEANING` et `MAINTENANCE`.
 5. Une requête idempotente conservant le même état d’un lit non affecté ne produit ni écriture ni audit inutile.
-6. La libération d’une occupation doit être réalisée uniquement par les futurs workflows de transfert, sortie physique et remise en état.
+6. La libération d’une occupation doit être réalisée uniquement par les workflows de transfert, sortie physique et remise en état.
 
 ## Critères d’acceptation
 
@@ -51,7 +53,7 @@ Transformer l’endpoint legacy en commande opérationnelle limitée aux lits no
 - Ajouter une politique dédiée `BedStatusTransitionPolicy`.
 - Faire valider toute commande manuelle par cette politique dans `SpatialService.updateBedStatus`.
 - Supprimer la clôture automatique d’affectation lors du passage manuel à `FREE`.
-- Conserver les commandes transactionnelles d’admission et de transfert comme seules sources actuelles de `OCCUPIED`.
+- Conserver les commandes transactionnelles d’admission et de transfert comme seules sources de `OCCUPIED`.
 - Corriger le binding JDBC des `Instant` dans les assertions PostgreSQL V76–V78 afin que leur validation s’exécute réellement en CI.
 
 ## Tests
@@ -75,16 +77,17 @@ Validation CI :
 ## Hors périmètre
 
 - remplacement des quatre statuts legacy par les axes existence/ouverture/hygiène/usage ;
-- séparation complète des permissions hygiène, maintenance, bed manager et sortie ;
 - workflow de sortie médicale, administrative et physique ;
 - tâche de turnover et validation du bionettoyage ;
 - correction automatique des incohérences historiques ;
 - contraintes PostgreSQL de chevauchement HOS-BED-001-D.
 
-## Risques résiduels
+La séparation complète des permissions hygiène, maintenance, transfert, sortie et écritures cliniques a été prise en charge par HOS-RBAC-001-A/B/C/D et n'est plus un hors-périmètre ouvert de ce ticket.
 
-- `HOSPITALIZATION_MANAGE` reste trop large ;
-- les transitions `FREE`, `CLEANING` et `MAINTENANCE` ne portent pas encore raison, acteur métier spécialisé ni checklist ;
+## Risques résiduels actuels
+
+- `HOSPITALIZATION_MANAGE` n'est plus un risque accepté : HOS-RBAC-001-D le retire définitivement.
+- les transitions `FREE`, `CLEANING` et `MAINTENANCE` ne portent pas encore toutes les preuves opérationnelles attendues ;
 - le statut monolithique reste un modèle transitoire ;
 - une procédure de réconciliation doit être définie pour les lits `OCCUPIED` sans affectation active.
 
