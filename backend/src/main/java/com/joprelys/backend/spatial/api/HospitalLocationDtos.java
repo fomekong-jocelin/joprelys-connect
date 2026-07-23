@@ -3,6 +3,7 @@ package com.joprelys.backend.spatial.api;
 import com.joprelys.backend.spatial.domain.FacilityLocationNodeType;
 import com.joprelys.backend.spatial.infrastructure.persistence.FacilityLocationNodeEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.FacilitySpaceEntity;
+import com.joprelys.backend.spatial.infrastructure.persistence.InpatientSpaceProfileEntity;
 import com.joprelys.backend.spatial.infrastructure.persistence.OrganizationalUnitSpaceAssignmentEntity;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -58,13 +59,9 @@ public final class HospitalLocationDtos {
             String name,
             String spaceTypeCode,
             boolean inpatientProfile,
-            String inpatientComfortLevel,
             boolean active) {
 
-        public static FacilitySpaceResponse fromEntity(
-                FacilitySpaceEntity entity,
-                boolean inpatientProfile,
-                String inpatientComfortLevel) {
+        public static FacilitySpaceResponse fromEntity(FacilitySpaceEntity entity, boolean inpatientProfile) {
             return new FacilitySpaceResponse(
                     entity.getId(),
                     entity.getLocationNodeId(),
@@ -72,7 +69,6 @@ public final class HospitalLocationDtos {
                     entity.getName(),
                     entity.getSpaceTypeCode(),
                     inpatientProfile,
-                    inpatientComfortLevel,
                     entity.isActive());
         }
     }
@@ -82,8 +78,24 @@ public final class HospitalLocationDtos {
             @NotBlank @Size(max = 64) String code,
             @NotBlank @Size(max = 120) String name,
             @NotBlank @Size(max = 64) String spaceTypeCode,
-            boolean enableInpatientProfile,
-            @Size(max = 50) String inpatientComfortLevel) {
+            boolean enableInpatientProfile) {
+    }
+
+    public record InpatientProfileResponse(
+            UUID spaceId,
+            String spaceTypeCode,
+            String comfortLevel) {
+
+        public static InpatientProfileResponse fromEntity(InpatientSpaceProfileEntity entity) {
+            return new InpatientProfileResponse(
+                    entity.getSpaceId(),
+                    entity.getSpaceTypeCode(),
+                    entity.getComfortLevel());
+        }
+    }
+
+    public record SaveInpatientProfileRequest(
+            @NotBlank @Size(max = 50) String comfortLevel) {
     }
 
     public record UnitSpaceAssignmentResponse(
