@@ -2,13 +2,17 @@
 
 ## Statut
 
-**IMPLÉMENTATION TERMINÉE — QA FINALE BLOQUÉE PAR LE DÉMARRAGE GITHUB ACTIONS — validations externes en attente**
+**IMPLÉMENTATION ET QA AUTOMATISÉE TERMINÉES — FUSIONNÉ DANS `main` VIA PR #107 — validations externes en attente**
+
+Référence de fusion : `4df94f43ee5943a55ae60bac22794b1a8ff746a4`.
+
+État de référence après consolidation CI : `main@078c3dc5f913f615910fad9f061085bc7acdcfec`. Le seul commit entre la fusion #107 et ce SHA est le correctif CI #111 ; aucun fichier RBAC/hospitalisation de HOS-RBAC-001-C n’a été modifié après la fusion.
 
 ## Contexte
 
-L’audit `AUDIT-20260721` identifie GAP-016 : plusieurs opérations de nature différente restent regroupées derrière la permission historique `HOSPITALIZATION_MANAGE`.
+L’audit `AUDIT-20260721` identifie GAP-016 : plusieurs opérations de nature différente restaient regroupées derrière la permission historique `HOSPITALIZATION_MANAGE`.
 
-Avant cet incrément, la même permission permet de :
+Avant cet incrément, la même permission permettait de :
 
 - créer une hospitalisation ;
 - ajouter une note ;
@@ -30,7 +34,7 @@ Remplacer l’autorisation générique par six permissions orientées action, sa
 - `HOSPITALIZATION_MEDICATION_ADMINISTER` ;
 - `HOSPITALIZATION_CONSUMABLE_RECORD`.
 
-`HOSPITALIZATION_MANAGE` reste temporairement au catalogue pour permettre la migration des rôles personnalisés, mais ne doit plus protéger ces endpoints.
+`HOSPITALIZATION_MANAGE` reste temporairement au catalogue pour permettre la migration des rôles personnalisés, mais ne protège plus les six endpoints de cet incrément.
 
 ## Sémantique de sécurité
 
@@ -58,7 +62,7 @@ Remplacer l’autorisation générique par six permissions orientées action, sa
 
 `HOSPITALIZATION_CONSUMABLE_RECORD` trace l’usage d’un consommable pour le patient. Elle ne permet pas de gérer le stock.
 
-## Matrice système cible
+## Matrice système cible et implémentée
 
 | Rôle | Admission | Notes | Consentement | Soins | Administration médicament | Consommables |
 |---|---:|---:|---:|---:|---:|---:|
@@ -83,19 +87,37 @@ Les rôles personnalisés peuvent recevoir les permissions nécessaires indépen
 - [x] visibilité frontend alignée sur chaque permission ;
 - [x] test Angular du mapping onglet → permission sans fallback `HOSPITALIZATION_MANAGE` ;
 - [x] continuité urgence → hospitalisation alignée sur `HOSPITALIZATION_ADMIT`, testée en refus et sans chargement des données d’admission si non autorisée ;
-- [ ] CI backend et frontend verte sur le head final ;
-- [x] documentation d’audit, conception technique et contrat API mis à jour.
+- [x] CI backend et frontend verte sur le head final #107 ;
+- [x] documentation d’audit, conception technique et contrat API mis à jour au moment de l’incrément.
 
 ## État QA automatisée
 
-- un run antérieur de #107 a exécuté correctement le frontend : tests Angular et build production verts ;
-- ce même run a détecté un ancien test d’intégration qui supposait qu’un médecin pouvait administrer un médicament et enregistrer un consommable ;
-- le test a été corrigé sans restaurer les permissions : médecin `403`, infirmier `201`, puis vérification des lectures et de la facturation ;
-- les runs récents de #107 échouent avant checkout et avant toute étape backend/frontend ; aucun rapport de test n’est produit ;
-- le même comportement de non-démarrage est observé sur une autre PR du dépôt au même moment ;
-- la variante concurrente #106 a obtenu un run complet vert (#982) avant ce blocage, mais ce run ne vaut pas validation du head final #107.
+Le head final de la PR #107 est `b0137e2003b5fc46fc68f95e7df87b2874d9ec7b`.
 
-Par conséquent la PR #107 reste **Draft** et ne doit pas être fusionnée tant qu’un run complet n’a pas réellement exécuté le head final.
+Le workflow GitHub Actions **#1011** a réellement exécuté ce head final et s’est terminé avec succès :
+
+- `Detect changed stacks` : succès ;
+- `Backend — Maven Build & Tests` : succès ;
+- étape `Build and verify (Maven strict)` : succès ;
+- `Frontend Angular — Build & Tests` : succès ;
+- tests Angular : succès ;
+- build Angular production : succès.
+
+La PR #107 a ensuite été fusionnée dans `main` au commit `4df94f43ee5943a55ae60bac22794b1a8ff746a4`.
+
+Les anciennes mentions indiquant que la PR restait Draft ou que la QA finale était bloquée décrivaient un état transitoire antérieur au run #1011 ; elles ne décrivent plus l’état du dépôt.
+
+## Vérification du code actuel
+
+Au SHA `main@078c3dc5f913f615910fad9f061085bc7acdcfec` :
+
+- `RbacCatalog` expose toujours les six permissions dédiées ;
+- `MEDECIN` ne reçoit pas par défaut l’administration médicamenteuse ni les consommables ;
+- `INFIRMIER` ne reçoit pas l’admission ;
+- `RESPONSABLE_HOSPITALISATION` ne reçoit pas les écritures cliniques ;
+- `HospitalizationController` protège les six commandes par leurs autorités dédiées ;
+- le frontend `PatientHospitalizationComponent` mappe les onglets sur les mêmes permissions ;
+- `HOSPITALIZATION_MANAGE` reste uniquement comme permission legacy de migration et n’est pas utilisé comme fallback sur les six commandes.
 
 ## Compatibilité et déploiement
 
@@ -107,12 +129,23 @@ Il ne faut pas traduire automatiquement `HOSPITALIZATION_MANAGE` vers l’ensemb
 
 ## Validations externes encore requises
 
-- validation RSSI/DPO de la matrice ;
-- validation direction médicale des responsabilités médecin/infirmier ;
-- validation responsable hospitalisation du droit d’admission ;
-- revue et migration des rôles personnalisés ;
-- recette multi-profils avec comptes représentatifs ;
-- renouvellement des JWT/sessions après synchronisation du catalogue.
+- [ ] validation RSSI/DPO de la matrice ;
+- [ ] validation direction médicale des responsabilités médecin/infirmier ;
+- [ ] validation responsable hospitalisation du droit d’admission ;
+- [ ] revue et migration des rôles personnalisés ;
+- [ ] recette multi-profils avec comptes représentatifs ;
+- [ ] renouvellement des JWT/sessions après synchronisation du catalogue au déploiement.
+
+## Réconciliation documentaire post-merge — 2026-07-23
+
+- [x] vérifier le SHA actuel de `main` ;
+- [x] vérifier que #107 est bien fusionnée ;
+- [x] vérifier le run CI final #1011 ;
+- [x] vérifier le catalogue RBAC actuel ;
+- [x] vérifier les annotations `@PreAuthorize` actuelles ;
+- [x] vérifier le mapping Angular actuel ;
+- [x] confirmer qu’aucun changement RBAC/hospitalisation n’est intervenu entre #107 et `main@078c3dc5` ;
+- [ ] obtenir les validations externes listées ci-dessus.
 
 ## Hors périmètre
 
