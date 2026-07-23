@@ -11,7 +11,9 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.TenantId;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "organizational_units")
@@ -34,6 +36,7 @@ public class OrganizationalUnitEntity {
     private String name;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "unit_type", nullable = false, length = 32)
     private OrganizationalUnitType unitType;
 
