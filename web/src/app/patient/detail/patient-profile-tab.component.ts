@@ -19,17 +19,24 @@ import { PatientProvisionalIdentityCardComponent } from './patient-provisional-i
   ],
   template: `
     @if (parent.patient(); as patient) {
-      <div class="space-y-6 animate-fade-in">
+      <!--
+        Grid is intentional here instead of space-y-*.
+        Angular component hosts are custom elements and can otherwise behave like
+        inline boxes, making vertical margins between profile cards unreliable.
+        DESIGN.md defines 24 px as the large section spacing.
+      -->
+      <div class="grid gap-6 animate-fade-in">
         @if (isProvisional()) {
           <app-patient-provisional-identity-card
+            class="block"
             [patient]="patient"
             (identifyRequested)="openIdentityDialog()"
           />
         }
 
-        <app-patient-administrative-summary [patient]="patient" />
-        <app-patient-emergency-context [patientId]="patient.id" />
-        <app-patient-medical-info [patientId]="patient.id" />
+        <app-patient-administrative-summary class="block" [patient]="patient" />
+        <app-patient-emergency-context class="block" [patientId]="patient.id" />
+        <app-patient-medical-info class="block" [patientId]="patient.id" />
       </div>
 
       @if (identityDialogOpen()) {
