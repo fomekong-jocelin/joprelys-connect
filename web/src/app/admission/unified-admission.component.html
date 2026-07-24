@@ -71,43 +71,45 @@
 
       @if (currentStep() === 1) {
         <div class="space-y-5">
-          <fieldset>
-            <legend class="ui-label mb-2">{{ text('carePath') }}</legend>
-            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <button
-                type="button"
-                class="min-h-12 rounded-sm border px-3 py-2.5 text-left transition-colors"
-                (click)="setCarePath('NORMAL')"
-                [attr.aria-pressed]="carePath === 'NORMAL'"
-                [class.border-[var(--brand-primary)]]="carePath === 'NORMAL'"
-                [class.bg-[var(--brand-primary-subtle)]]="carePath === 'NORMAL'"
-                [class.border-[var(--app-border)]]="carePath !== 'NORMAL'"
-                [class.bg-[var(--app-surface)]]="carePath !== 'NORMAL'"
-              >
-                <span class="block text-sm font-extrabold text-[var(--text-primary)]">{{ text('normal') }}</span>
-                <span class="mt-0.5 block text-xs text-[var(--text-muted)]">{{ text('normalHint') }}</span>
-              </button>
+          @if (allowCarePathSwitch()) {
+            <fieldset>
+              <legend class="ui-label mb-2">{{ text('carePath') }}</legend>
+              <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  class="min-h-12 rounded-sm border px-3 py-2.5 text-left transition-colors"
+                  (click)="setCarePath('NORMAL')"
+                  [attr.aria-pressed]="carePath === 'NORMAL'"
+                  [class.border-[var(--brand-primary)]]="carePath === 'NORMAL'"
+                  [class.bg-[var(--brand-primary-subtle)]]="carePath === 'NORMAL'"
+                  [class.border-[var(--app-border)]]="carePath !== 'NORMAL'"
+                  [class.bg-[var(--app-surface)]]="carePath !== 'NORMAL'"
+                >
+                  <span class="block text-sm font-extrabold text-[var(--text-primary)]">{{ text('normal') }}</span>
+                  <span class="mt-0.5 block text-xs text-[var(--text-muted)]">{{ text('normalHint') }}</span>
+                </button>
 
-              <button
-                type="button"
-                class="min-h-12 rounded-sm border px-3 py-2.5 text-left transition-colors"
-                (click)="setCarePath('EMERGENCY')"
-                [attr.aria-pressed]="carePath === 'EMERGENCY'"
-                [class.border-[var(--brand-primary)]]="carePath === 'EMERGENCY'"
-                [class.bg-[var(--brand-primary-subtle)]]="carePath === 'EMERGENCY'"
-                [class.border-[var(--app-border)]]="carePath !== 'EMERGENCY'"
-                [class.bg-[var(--app-surface)]]="carePath !== 'EMERGENCY'"
-              >
-                <span class="flex items-center gap-2 text-sm font-extrabold text-[var(--text-primary)]">
-                  <span class="h-2 w-2 rounded-full bg-[var(--brand-danger)]" aria-hidden="true"></span>
-                  {{ text('emergency') }}
-                </span>
-                <span class="mt-0.5 block text-xs text-[var(--text-muted)]">{{ text('emergencyHint') }}</span>
-              </button>
-            </div>
-          </fieldset>
+                <button
+                  type="button"
+                  class="min-h-12 rounded-sm border px-3 py-2.5 text-left transition-colors"
+                  (click)="setCarePath('EMERGENCY')"
+                  [attr.aria-pressed]="carePath === 'EMERGENCY'"
+                  [class.border-[var(--brand-primary)]]="carePath === 'EMERGENCY'"
+                  [class.bg-[var(--brand-primary-subtle)]]="carePath === 'EMERGENCY'"
+                  [class.border-[var(--app-border)]]="carePath !== 'EMERGENCY'"
+                  [class.bg-[var(--app-surface)]]="carePath !== 'EMERGENCY'"
+                >
+                  <span class="flex items-center gap-2 text-sm font-extrabold text-[var(--text-primary)]">
+                    <span class="h-2 w-2 rounded-full bg-[var(--brand-danger)]" aria-hidden="true"></span>
+                    {{ text('emergency') }}
+                  </span>
+                  <span class="mt-0.5 block text-xs text-[var(--text-muted)]">{{ text('emergencyHint') }}</span>
+                </button>
+              </div>
+            </fieldset>
+          }
 
-          <fieldset class="border-t border-[var(--divider-subtle)] pt-5">
+          <fieldset [class.border-t]="allowCarePathSwitch()" [class.border-[var(--divider-subtle)]]="allowCarePathSwitch()" [class.pt-5]="allowCarePathSwitch()">
             <legend class="ui-label mb-2">{{ text('patientSituation') }}</legend>
             <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <button
@@ -120,17 +122,19 @@
                 [class.border-[var(--app-border)]]="patientMode !== 'EXISTING'"
               >{{ text('existing') }}</button>
 
-              <button
-                type="button"
-                class="min-h-11 rounded-sm border px-3 py-2 text-left text-sm font-bold transition-colors"
-                (click)="setPatientMode('NEW')"
-                [attr.aria-pressed]="patientMode === 'NEW'"
-                [class.border-[var(--brand-primary)]]="patientMode === 'NEW'"
-                [class.bg-[var(--brand-primary-subtle)]]="patientMode === 'NEW'"
-                [class.border-[var(--app-border)]]="patientMode !== 'NEW'"
-              >{{ text('new') }}</button>
+              @if (allowNewPatient()) {
+                <button
+                  type="button"
+                  class="min-h-11 rounded-sm border px-3 py-2 text-left text-sm font-bold transition-colors"
+                  (click)="setPatientMode('NEW')"
+                  [attr.aria-pressed]="patientMode === 'NEW'"
+                  [class.border-[var(--brand-primary)]]="patientMode === 'NEW'"
+                  [class.bg-[var(--brand-primary-subtle)]]="patientMode === 'NEW'"
+                  [class.border-[var(--app-border)]]="patientMode !== 'NEW'"
+                >{{ text('new') }}</button>
+              }
 
-              @if (carePath === 'EMERGENCY') {
+              @if (carePath === 'EMERGENCY' && allowProvisionalPatient()) {
                 <button
                   type="button"
                   class="min-h-11 rounded-sm border px-3 py-2 text-left text-sm font-bold transition-colors"
