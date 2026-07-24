@@ -33,10 +33,10 @@
 
           <div class="flex flex-col gap-2 sm:flex-row">
             <app-ui-button variant="secondary" class="w-full sm:w-auto" (pressed)="toggleRuleForm()">
-              {{ showRuleForm() && !editingRule() ? t('common.cancel') : t('availability.rules.add') }}
+              {{ t('availability.rules.add') }}
             </app-ui-button>
             <app-ui-button variant="secondary" class="w-full sm:w-auto" (pressed)="toggleExceptionForm()">
-              {{ showExceptionForm() ? t('common.cancel') : t('availability.exceptions.add') }}
+              {{ t('availability.exceptions.add') }}
             </app-ui-button>
           </div>
         </div>
@@ -88,137 +88,185 @@
         />
       </app-ui-card>
 
+      <!-- Création / modification d'une disponibilité : modal centrée, le calendrier reste en contexte derrière. -->
       @if (showRuleForm()) {
-        <app-ui-card [title]="ruleFormTitle()">
-          <form class="space-y-5" (submit)="$event.preventDefault(); submitRuleForm()">
-            @if (ruleFormError(); as error) {
-              <app-ui-alert tone="error">{{ error }}</app-ui-alert>
-            }
-
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <label class="space-y-1.5">
-                <span class="ui-label">{{ t('availability.form.weekday') }} <span class="text-[var(--brand-danger)]">*</span></span>
-                <select
-                  class="ui-select"
-                  [value]="formWeekday()"
-                  [disabled]="ruleFormLoading()"
-                  (change)="formWeekday.set(+$any($event.target).value)"
-                >
-                  @for (day of weekdays; track day) {
-                    <option [value]="day">{{ t('availability.weekdays.' + day) }}</option>
-                  }
-                </select>
-              </label>
-
-              <label class="space-y-1.5">
-                <span class="ui-label">{{ t('availability.form.startTime') }} <span class="text-[var(--brand-danger)]">*</span></span>
-                <input
-                  class="ui-input"
-                  type="time"
-                  [value]="formStartTime()"
-                  [disabled]="ruleFormLoading()"
-                  (input)="formStartTime.set($any($event.target).value)"
-                />
-              </label>
-
-              <label class="space-y-1.5">
-                <span class="ui-label">{{ t('availability.form.endTime') }} <span class="text-[var(--brand-danger)]">*</span></span>
-                <input
-                  class="ui-input"
-                  type="time"
-                  [value]="formEndTime()"
-                  [disabled]="ruleFormLoading()"
-                  (input)="formEndTime.set($any($event.target).value)"
-                />
-              </label>
-
-              <label class="space-y-1.5">
-                <span class="ui-label">{{ t('availability.form.validFrom') }} <span class="text-[var(--brand-danger)]">*</span></span>
-                <input
-                  class="ui-input"
-                  type="date"
-                  [value]="formValidFrom()"
-                  [disabled]="ruleFormLoading()"
-                  (input)="formValidFrom.set($any($event.target).value)"
-                />
-              </label>
-
-              <label class="space-y-1.5">
-                <span class="ui-label">{{ t('availability.form.validTo') }}</span>
-                <input
-                  class="ui-input"
-                  type="date"
-                  [value]="formValidTo()"
-                  [disabled]="ruleFormLoading()"
-                  (input)="formValidTo.set($any($event.target).value)"
-                />
-              </label>
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div
+            class="ui-card max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto p-5 md:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="availability-rule-dialog-title"
+          >
+            <div class="mb-5 flex items-start justify-between gap-4 border-b border-[var(--app-border)] pb-4">
+              <div>
+                <h3 id="availability-rule-dialog-title" class="ui-title text-lg">{{ ruleFormTitle() }}</h3>
+                <p class="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{{ t('availability.rules.help') }}</p>
+              </div>
+              <button
+                type="button"
+                class="shrink-0 rounded-[var(--radius-brand-sm)] px-2 py-1 text-lg font-semibold leading-none text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] hover:text-[var(--text-primary)] disabled:opacity-50"
+                [disabled]="ruleFormLoading()"
+                [attr.aria-label]="t('common.cancel')"
+                (click)="cancelRuleForm()"
+              >
+                ×
+              </button>
             </div>
 
-            <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <app-ui-button variant="secondary" class="w-full sm:w-auto" (pressed)="cancelRuleForm()">
-                {{ t('common.cancel') }}
-              </app-ui-button>
-              <app-ui-button type="submit" class="w-full sm:w-auto" [disabled]="ruleFormLoading()">
-                {{ ruleFormLoading() ? t('common.saving') : ruleSubmitLabel() }}
-              </app-ui-button>
-            </div>
-          </form>
-        </app-ui-card>
+            <form class="space-y-5" (submit)="$event.preventDefault(); submitRuleForm()">
+              @if (ruleFormError(); as error) {
+                <app-ui-alert tone="error">{{ error }}</app-ui-alert>
+              }
+
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <label class="space-y-1.5">
+                  <span class="ui-label">{{ t('availability.form.weekday') }} <span class="text-[var(--brand-danger)]">*</span></span>
+                  <select
+                    class="ui-select"
+                    [value]="formWeekday()"
+                    [disabled]="ruleFormLoading()"
+                    (change)="formWeekday.set(+$any($event.target).value)"
+                  >
+                    @for (day of weekdays; track day) {
+                      <option [value]="day">{{ t('availability.weekdays.' + day) }}</option>
+                    }
+                  </select>
+                </label>
+
+                <label class="space-y-1.5">
+                  <span class="ui-label">{{ t('availability.form.startTime') }} <span class="text-[var(--brand-danger)]">*</span></span>
+                  <input
+                    class="ui-input"
+                    type="time"
+                    [value]="formStartTime()"
+                    [disabled]="ruleFormLoading()"
+                    (input)="formStartTime.set($any($event.target).value)"
+                  />
+                </label>
+
+                <label class="space-y-1.5">
+                  <span class="ui-label">{{ t('availability.form.endTime') }} <span class="text-[var(--brand-danger)]">*</span></span>
+                  <input
+                    class="ui-input"
+                    type="time"
+                    [value]="formEndTime()"
+                    [disabled]="ruleFormLoading()"
+                    (input)="formEndTime.set($any($event.target).value)"
+                  />
+                </label>
+
+                <label class="space-y-1.5">
+                  <span class="ui-label">{{ t('availability.form.validFrom') }} <span class="text-[var(--brand-danger)]">*</span></span>
+                  <input
+                    class="ui-input"
+                    type="date"
+                    [value]="formValidFrom()"
+                    [disabled]="ruleFormLoading()"
+                    (input)="formValidFrom.set($any($event.target).value)"
+                  />
+                </label>
+
+                <label class="space-y-1.5">
+                  <span class="ui-label">{{ t('availability.form.validTo') }}</span>
+                  <input
+                    class="ui-input"
+                    type="date"
+                    [value]="formValidTo()"
+                    [disabled]="ruleFormLoading()"
+                    (input)="formValidTo.set($any($event.target).value)"
+                  />
+                </label>
+              </div>
+
+              <div class="flex flex-col-reverse gap-3 border-t border-[var(--divider-subtle)] pt-4 sm:flex-row sm:justify-end">
+                <app-ui-button variant="secondary" class="w-full sm:w-auto" [disabled]="ruleFormLoading()" (pressed)="cancelRuleForm()">
+                  {{ t('common.cancel') }}
+                </app-ui-button>
+                <app-ui-button type="submit" class="w-full sm:w-auto" [disabled]="ruleFormLoading()">
+                  {{ ruleFormLoading() ? t('common.saving') : ruleSubmitLabel() }}
+                </app-ui-button>
+              </div>
+            </form>
+          </div>
+        </div>
       }
 
+      <!-- Création d'une indisponibilité : modal dédiée plutôt qu'un formulaire injecté sous l'agenda. -->
       @if (showExceptionForm()) {
-        <app-ui-card [title]="t('availability.exceptions.addTitle')">
-          <form class="space-y-5" (submit)="$event.preventDefault(); submitExceptionForm()">
-            @if (exceptionFormError(); as error) {
-              <app-ui-alert tone="error">{{ error }}</app-ui-alert>
-            }
-
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <label class="space-y-1.5">
-                <span class="ui-label">{{ t('availability.form.exceptionStart') }} <span class="text-[var(--brand-danger)]">*</span></span>
-                <input
-                  class="ui-input"
-                  type="datetime-local"
-                  [value]="exceptionStart()"
-                  [disabled]="exceptionFormLoading()"
-                  (input)="exceptionStart.set($any($event.target).value)"
-                />
-              </label>
-
-              <label class="space-y-1.5">
-                <span class="ui-label">{{ t('availability.form.exceptionEnd') }} <span class="text-[var(--brand-danger)]">*</span></span>
-                <input
-                  class="ui-input"
-                  type="datetime-local"
-                  [value]="exceptionEnd()"
-                  [disabled]="exceptionFormLoading()"
-                  (input)="exceptionEnd.set($any($event.target).value)"
-                />
-              </label>
-
-              <label class="space-y-1.5 sm:col-span-2">
-                <span class="ui-label">{{ t('availability.form.reason') }}</span>
-                <input
-                  class="ui-input"
-                  [value]="exceptionReason()"
-                  [placeholder]="t('availability.form.reasonPlaceholder')"
-                  [disabled]="exceptionFormLoading()"
-                  (input)="exceptionReason.set($any($event.target).value)"
-                />
-              </label>
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div
+            class="ui-card max-h-[calc(100vh-2rem)] w-full max-w-xl overflow-y-auto p-5 md:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="availability-exception-dialog-title"
+          >
+            <div class="mb-5 flex items-start justify-between gap-4 border-b border-[var(--app-border)] pb-4">
+              <div>
+                <h3 id="availability-exception-dialog-title" class="ui-title text-lg">{{ t('availability.exceptions.addTitle') }}</h3>
+                <p class="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{{ t('availability.exceptions.help') }}</p>
+              </div>
+              <button
+                type="button"
+                class="shrink-0 rounded-[var(--radius-brand-sm)] px-2 py-1 text-lg font-semibold leading-none text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] hover:text-[var(--text-primary)] disabled:opacity-50"
+                [disabled]="exceptionFormLoading()"
+                [attr.aria-label]="t('common.cancel')"
+                (click)="cancelExceptionForm()"
+              >
+                ×
+              </button>
             </div>
 
-            <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <app-ui-button variant="secondary" class="w-full sm:w-auto" (pressed)="cancelExceptionForm()">
-                {{ t('common.cancel') }}
-              </app-ui-button>
-              <app-ui-button type="submit" class="w-full sm:w-auto" [disabled]="exceptionFormLoading()">
-                {{ exceptionFormLoading() ? t('common.saving') : t('availability.exceptions.create') }}
-              </app-ui-button>
-            </div>
-          </form>
-        </app-ui-card>
+            <form class="space-y-5" (submit)="$event.preventDefault(); submitExceptionForm()">
+              @if (exceptionFormError(); as error) {
+                <app-ui-alert tone="error">{{ error }}</app-ui-alert>
+              }
+
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label class="space-y-1.5">
+                  <span class="ui-label">{{ t('availability.form.exceptionStart') }} <span class="text-[var(--brand-danger)]">*</span></span>
+                  <input
+                    class="ui-input"
+                    type="datetime-local"
+                    [value]="exceptionStart()"
+                    [disabled]="exceptionFormLoading()"
+                    (input)="exceptionStart.set($any($event.target).value)"
+                  />
+                </label>
+
+                <label class="space-y-1.5">
+                  <span class="ui-label">{{ t('availability.form.exceptionEnd') }} <span class="text-[var(--brand-danger)]">*</span></span>
+                  <input
+                    class="ui-input"
+                    type="datetime-local"
+                    [value]="exceptionEnd()"
+                    [disabled]="exceptionFormLoading()"
+                    (input)="exceptionEnd.set($any($event.target).value)"
+                  />
+                </label>
+
+                <label class="space-y-1.5 sm:col-span-2">
+                  <span class="ui-label">{{ t('availability.form.reason') }}</span>
+                  <input
+                    class="ui-input"
+                    [value]="exceptionReason()"
+                    [placeholder]="t('availability.form.reasonPlaceholder')"
+                    [disabled]="exceptionFormLoading()"
+                    (input)="exceptionReason.set($any($event.target).value)"
+                  />
+                </label>
+              </div>
+
+              <div class="flex flex-col-reverse gap-3 border-t border-[var(--divider-subtle)] pt-4 sm:flex-row sm:justify-end">
+                <app-ui-button variant="secondary" class="w-full sm:w-auto" [disabled]="exceptionFormLoading()" (pressed)="cancelExceptionForm()">
+                  {{ t('common.cancel') }}
+                </app-ui-button>
+                <app-ui-button type="submit" class="w-full sm:w-auto" [disabled]="exceptionFormLoading()">
+                  {{ exceptionFormLoading() ? t('common.saving') : t('availability.exceptions.create') }}
+                </app-ui-button>
+              </div>
+            </form>
+          </div>
+        </div>
       }
 
       <!-- Détails secondaires : fermés au chargement, même lorsqu'ils sont vides. -->

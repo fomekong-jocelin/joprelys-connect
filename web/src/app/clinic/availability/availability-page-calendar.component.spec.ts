@@ -71,7 +71,7 @@ describe('AvailabilityPageComponent calendar UX', () => {
     expect(component.weekStart().getTime()).toBe(initial);
   });
 
-  it('préremplit le formulaire depuis une sélection horaire du calendrier', () => {
+  it('préremplit la disponibilité depuis une sélection horaire et l’ouvre dans une modal', () => {
     const selectedDate = new Date(2026, 6, 21);
 
     component.onCalendarRangeSelected({
@@ -81,12 +81,39 @@ describe('AvailabilityPageComponent calendar UX', () => {
       startTime: '10:30',
       endTime: '11:30',
     });
+    fixture.detectChanges();
 
     expect(component.showRuleForm()).toBe(true);
     expect(component.formWeekday()).toBe(2);
     expect(component.formStartTime()).toBe('10:30');
     expect(component.formEndTime()).toBe('11:30');
     expect(component.formValidFrom()).toBe('2026-07-21');
+
+    const dialog = (fixture.nativeElement as HTMLElement).querySelector('[role="dialog"][aria-labelledby="availability-rule-dialog-title"]');
+    expect(dialog).not.toBeNull();
+    expect(dialog?.closest('.fixed.inset-0')).not.toBeNull();
+  });
+
+  it('ouvre la création d’indisponibilité dans une modal dédiée', () => {
+    component.toggleExceptionForm();
+    fixture.detectChanges();
+
+    const dialog = (fixture.nativeElement as HTMLElement).querySelector('[role="dialog"][aria-labelledby="availability-exception-dialog-title"]');
+    expect(component.showExceptionForm()).toBe(true);
+    expect(dialog).not.toBeNull();
+    expect(dialog?.closest('.fixed.inset-0')).not.toBeNull();
+  });
+
+  it('ferme la modal de disponibilité via l’action Annuler', () => {
+    component.toggleRuleForm();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#availability-rule-dialog-title')).not.toBeNull();
+
+    component.cancelRuleForm();
+    fixture.detectChanges();
+
+    expect(component.showRuleForm()).toBe(false);
+    expect(fixture.nativeElement.querySelector('#availability-rule-dialog-title')).toBeNull();
   });
 
   it('déplie les détails seulement sur action explicite', () => {
