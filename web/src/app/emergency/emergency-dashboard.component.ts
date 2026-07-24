@@ -1,8 +1,9 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { Component, HostListener, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, HostListener, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AdmissionCompleted, UnifiedAdmissionComponent } from '../admission/unified-admission.component';
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
 import { AlertComponent } from '../shared/ui/alert.component';
@@ -38,6 +39,7 @@ type EmergencyDetailTab = 'OVERVIEW' | 'IDENTITY' | 'CARE' | 'LEGAL' | 'DOCUMENT
 })
 export class EmergencyDashboardComponent implements OnInit {
   private readonly emergencyApi = inject(EmergencyApiService);
+  private readonly rbacApi = inject(RbacApiService);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   readonly i18n = inject(I18nService);
@@ -53,6 +55,9 @@ export class EmergencyDashboardComponent implements OnInit {
   readonly selectedEmergency = signal<EmergencyRecord | null>(null);
   readonly isDrawerOpen = signal(false);
   readonly detailTab = signal<EmergencyDetailTab>('OVERVIEW');
+
+  readonly canCreateEmergency = computed(() => this.rbacApi.hasPermission('EMERGENCY_WRITE'));
+  readonly canCreatePatient = computed(() => this.rbacApi.hasPermission('PATIENT_WRITE'));
 
   careForm!: FormGroup;
 
@@ -99,6 +104,10 @@ export class EmergencyDashboardComponent implements OnInit {
   }
 
   openAdmissionModal(): void {
+    if (!this.canCreateEmergency()) {
+      this.isAdmissionModalOpen.set(false);
+      return;
+    }
     this.isAdmissionModalOpen.set(true);
   }
 
