@@ -62,7 +62,7 @@ import { Patient } from '../patient.models';
           type="button"
           class="flex w-full items-center justify-between gap-3 text-left"
           [attr.aria-expanded]="contactExpanded()"
-          (click)="contactExpanded.update(value => !value)"
+          (click)="toggleContact()"
         >
           <h3 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
             {{ t('patient.urgTemp.contact.title') }}
@@ -103,6 +103,10 @@ export class PatientAdministrativeSummaryComponent {
 
   t(key: string): string {
     return this.i18n.t(key);
+  }
+
+  toggleContact(): void {
+    this.contactExpanded.update(value => !value);
   }
 
   isProvisional(patient: Patient): boolean {
