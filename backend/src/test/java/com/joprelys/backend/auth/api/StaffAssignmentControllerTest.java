@@ -16,12 +16,14 @@ import com.joprelys.backend.hospitalorganization.infrastructure.persistence.Orga
 import com.joprelys.backend.hospitalorganization.infrastructure.persistence.OrganizationalUnitRepository;
 import java.time.Instant;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -48,6 +50,9 @@ class StaffAssignmentControllerTest {
 
     @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private OrganizationEntity orgA;
     private OrganizationEntity orgB;
@@ -101,6 +106,13 @@ class StaffAssignmentControllerTest {
 
         adminToken = jwtService.createToken(adminA).value();
         doctorToken = jwtService.createToken(doctorA).value();
+    }
+
+    @AfterEach
+    void tearDown() {
+        TenantContext.clear();
+        cleanupTenant(orgA);
+        cleanupTenant(orgB);
     }
 
     @Test
@@ -275,5 +287,17 @@ class StaffAssignmentControllerTest {
                 passwordEncoder.encode("Staff@12345"));
         user.setOrganizationId(organization.getId());
         return userAccountRepository.save(user);
+    }
+
+    private void cleanupTenant(OrganizationEntity organization) {
+        if (organization == null || organization.getId() == null) {
+            return;
+        }
+        UUID organizationId = organization.getId();
+        jdbcTemplate.update("DELETE FROM staff_organizational_unit_assignments WHERE organization_id = ?", organizationId);
+        jdbcTemplate.update("DELETE FROM staff_specialty_assignments WHERE organization_id = ?", organizationId);
+        jdbcTemplate.update("DELETE FROM organizational_units WHERE organization_id = ?", organizationId);
+        jdbcTemplate.update("DELETE FROM users WHERE organization_id = ?", organizationId);
+        jdbcTemplate.update("DELETE FROM organizations WHERE id = ?", organizationId);
     }
 }
