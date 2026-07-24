@@ -25,6 +25,11 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **Flyway V91 — confort d'hébergement** : ajout de `comfort_level` dans `InpatientSpaceProfile` afin de préserver la tarification STANDARD/VIP sans dépendre d'une ancienne `Room`.
 - **API spatiale HOS-LOC** : configuration des localisations, espaces, profils d'hébergement, lits et rattachements datés ; lecture de capacité par espace et par unité organisationnelle.
 - **UI Angular HOS-LOC** : configuration mobile-first des localisations/espaces/lits, affichage séparé des rattachements service ↔ espace, capacité par espace et parcours d'admission `unité → espace → lit`, y compris continuité Urgence → Hospitalisation.
+- **HOS-STAFF-001-A / #132 / PR #140 — affectations structurées du personnel** : ajout des relations historisées `Staff ↔ OrganizationalUnit` et `Staff ↔ MedicalSpecialty`, avec périodes de validité, affectation principale/secondaire, spécialité principale et rôle d'affectation contextuel distinct du RBAC global.
+- **Flyway V92–V95 — cutover staff structuré** : V92 preflight fail-fast sur les anciennes chaînes `users.department/users.specialty`, V93 tables/catalogue d'affectations, V94 contraintes PostgreSQL de non-chevauchement et d'unicité temporelle des principales, V95 suppression physique des deux colonnes legacy.
+- **API staff structurée** : endpoints `/api/staff/{id}/assignments` pour lire, créer, modifier et clôturer les affectations de spécialité/unité, ainsi que `/api/staff/assignment-roles` pour le catalogue contextuel contrôlé.
+- **UI Angular HOS-STAFF** : éditeur mobile-first des spécialités et unités datées, historique conservé, indicateurs principal/actif, sélecteurs alimentés par HOS-ORG et aucun Angular Material.
+- **Projection structurée du personnel** : `StaffApiService` enrichit la liste avec `activeOrganizationalUnits[]` (`id`, `code`, libellés FR/EN, `primary`) pour permettre aux consommateurs de raisonner sur des UUID stables.
 
 ### Changed
 
@@ -36,15 +41,21 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **Internationalisation des services** : un `SERVICE` ne persiste pas un libellé français dans `organizational_units.name`. Il conserve `serviceCatalogCode` et le client résout le libellé FR/EN depuis le catalogue actif.
 - **Isolation tenant HOS-ORG/HOS-LOC** : défense en profondeur via scope authentifié, `TenantContext`/`@TenantId`, repositories filtrés par `organizationId` et contraintes/FK composites tenant.
 - **Cycle de vie organisationnel et spatial** : les unités/localisations/espaces historiquement utilisés sont activés/désactivés selon leur contrat plutôt que détournés en suppression métier ambiguë.
-- **EPIC-0027** : HOS-ORG-001-A 9 SP livré ; HOS-LOC-001-A réévalué à 13 SP et terminé techniquement ; HOS-STAFF-001-A 9 SP devient le prochain lot après fusion #137.
-- **QA-DEMO-20260725 / #127** : les données de démonstration doivent désormais utiliser unités, espaces, lits et référentiels structurés ; la recette humaine responsive/FR-EN/light-dark reste à rejouer.
-- **CI backend** : le job Maven conserve désormais `backend-verify.log` avec les rapports Surefire en artefact lors d'un échec, ce qui rend les diagnostics de `clean verify` directement exploitables.
+- **Gestion du personnel** : `UserAccount` reste une identité de personne ; l'unité, la spécialité et le rôle contextuel sont désormais des relations structurées et datées, jamais des attributs texte de l'utilisateur.
+- **Contrats staff** : `UpdateStaffRequest`, `StaffResponse`, le profil et les formulaires staff ne lisent/écrivent plus `department` ou `specialty` libres.
+- **Annuaire et prise de rendez-vous patient** : les médecins sont exposés et filtrés par spécialités contrôlées et unités organisationnelles UUID, avec prise en compte des affectations actives.
+- **Module Visite historique** : `visits.service_name` reste un snapshot texte propre au module Visite. La projection Angular `StaffMember.department` éventuellement consommée par ce formulaire est calculée en mémoire depuis l'unité principale active, n'est pas persistée dans `users` et n'est jamais acceptée en écriture staff.
+- **EPIC-0027** : HOS-ORG-001-A 9 SP fusionné ; HOS-LOC-001-A 13 SP fusionné ; HOS-STAFF-001-A 9 SP implémenté et validé par gate combiné #1262 avant consolidation documentaire.
+- **QA-DEMO-20260725 / #127** : la répétition doit désormais utiliser unités, espaces, lits, spécialités et affectations staff structurées ; la recette humaine responsive/FR-EN/light-dark reste à rejouer.
+- **CI backend** : le job Maven conserve `backend-verify.log` avec les rapports Surefire en artefact lors d'un échec, ce qui rend les diagnostics de `clean verify` directement exploitables.
 
 ### Removed
 
 - **Modèle spatial applicatif Ward/Room** : suppression de `WardEntity`, `RoomEntity`, `WardRepository`, `RoomRepository`, `HospitalServiceType`, des DTO/services/use cases associés et des anciennes routes de configuration Ward/Room.
 - **Contrats d'écriture texte pour l'hospitalisation** : suppression du besoin de `serviceName`, `roomNumber` et `bedNumber` comme clés d'admission/transfert.
 - **Fiche HOS-LOC dupliquée** : suppression de l'ancienne documentation pré-audit 9 SP afin de conserver une seule source de vérité canonique à 13 SP.
+- **Colonnes staff libres** : suppression physique de `users.department` et `users.specialty` via V95 après preflight V92 ; aucune compatibilité persistante ou fallback par similarité de nom n'est conservé.
+- **Saisie libre staff** : retrait des champs département/spécialité des écrans d'administration du personnel et du profil.
 
 ### Fixed
 
@@ -55,6 +66,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **Isolation des tests H2** : le test de facturation nettoie aussi unités, espaces, profils et lits afin de ne plus polluer les classes rendez-vous/pharmacie/FHIR suivantes.
 - **Feedback Angular de configuration spatiale** : le message « Configuration enregistrée » n'est plus effacé immédiatement par le rechargement post-mutation.
 - **Tests Angular legacy** : migration des specs configuration spatiale, capacité, urgence→hospitalisation, permissions et `SpatialApiService` vers `Location / Unit / Space / Bed`.
+- **Isolation des tests HOS-STAFF** : `StaffAssignmentControllerTest` crée des tenants uniques, positionne explicitement `TenantContext` pour les entités multi-tenant et nettoie seulement ses propres affectations/unités/utilisateurs/organisations ; aucune purge globale inter-tests n'est utilisée.
 
 ### Validation
 
@@ -64,19 +76,27 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **HOS-LOC gate pré-synchronisation #1193** : Maven strict, tests Angular et build production verts sur `ae99538a01d6105e4efbfb246dd6031c994305ad`.
 - **Synchronisation `main`** : `main@44b599a77c92f3ed812e62961e8ed7e1c9f3397b` intégré non destructivement dans #137 via le merge commit `243671d69bf1e44992626bb4a5ad9a19f3232fc7`; comparaison Git post-sync `behind_by = 0`.
 - **HOS-LOC gate post-synchronisation #1196** : sur le même head synchronisé, `./mvnw clean verify` SUCCESS, tests PostgreSQL/Testcontainers SUCCESS, tests Angular SUCCESS et build Angular production SUCCESS.
-- **Revue #137** : aucun thread de review ouvert au moment de la clôture documentaire.
+- **HOS-LOC PR #137** : squash merge dans `main` au commit `e495477ea02beb05596b20b656bc092bd8fbbd83`; issue #131 fermée.
+- **HOS-STAFF PostgreSQL** : `StructuredStaffAssignmentsPostgresqlMigrationTest` couvre preflight legacy, création du modèle structuré, contraintes et suppression des colonnes libres.
+- **HOS-STAFF gate #1262** : sur `6c0b0123926aca04cdbe9f98b2206c70f9a15506`, Maven strict `clean verify` SUCCESS, tests Angular SUCCESS et build Angular production SUCCESS. Un gate final est relancé après consolidation documentaire avant merge.
+- **Revue #140** : aucun thread de review ouvert lors du contrôle pré-consolidation ; branche `behind_by = 0` par rapport à `main`.
 
 ### Security
 
 - aucun mapping automatique depuis `Ward.name`, `Room.roomNumber`, `users.department` ou `users.specialty` ;
-- aucun fallback métier ou persistant n'est introduit pour identifier service, espace ou lit ;
-- l'éventuel alias Angular `roomNumber = spaceName` est strictement un alias de présentation historique, marqué déprécié, jamais persistant et jamais utilisé dans un payload d'écriture ;
-- les affectations unité-espace, lits et séjours sont contrôlés par tenant côté application et base ;
+- aucun fallback métier ou persistant n'est introduit pour identifier service, espace, lit, unité ou spécialité staff ;
+- les affectations staff sont contrôlées par tenant côté application et base, avec FK composites et refus cross-tenant ;
+- le rôle clinique d'affectation est distinct du rôle RBAC global et n'est jamais déduit automatiquement ;
+- V92 bloque toute donnée legacy libre non vide avant la suppression V95 ;
+- la projection Angular `StaffMember.department` résiduelle est un snapshot de présentation dérivé de l'unité principale active pour le module Visite historique, jamais persistant et jamais utilisé dans un payload d'écriture staff ;
+- les affectations unité-espace, lits et séjours restent contrôlés par tenant côté application et base ;
 - aucun secret ajouté au repository ;
-- aucune action PROD/RECETTE pour HOS-ORG/HOS-LOC ;
+- aucune action PROD/RECETTE pour HOS-ORG/HOS-LOC/HOS-STAFF ;
 - `HOSPITALIZATION_MANAGE` reste supprimée depuis HOS-RBAC-001-D / V86.
 
 ### Documentation maintenance
 
 - Le snapshot historique du changelog au moment de cette consolidation est conservé dans `docs/ai/CHANGELOG-HISTORY-THROUGH-20260723.md` afin de ne supprimer aucun travail documentaire antérieur tout en gardant le registre actif lisible.
 - La documentation HOS-LOC canonique est `docs/ai/tickets/HOS-LOC-001-A-HOSPITAL-LOCATION-SPACES.md`; l'ancienne variante dupliquée a été supprimée.
+- La documentation HOS-STAFF canonique est `docs/ai/tickets/HOS-STAFF-001-A-STRUCTURED-STAFF-ASSIGNMENTS.md`.
+- `docs/features/clinic-staff-department-filter/TECHNICAL-DESIGN.md` est marqué **SUPERSEDED** : il décrit l'ancien filtrage basé sur `users.department` et ne doit plus guider de nouveau développement.
