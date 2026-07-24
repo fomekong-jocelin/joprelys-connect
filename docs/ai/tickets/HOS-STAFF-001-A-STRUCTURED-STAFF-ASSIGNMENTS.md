@@ -8,7 +8,7 @@
 - Dépendances : HOS-ORG-001-A / #130 **DONE**, HOS-LOC-001-A / #131 **DONE**
 - Baseline de départ : `main@e495477ea02beb05596b20b656bc092bd8fbbd83`
 - Branche : `feat/132-hos-staff-001-a`
-- Statut : IN_PROGRESS — implémentation fonctionnelle réalisée, stabilisation CI en cours
+- Statut : IN_PROGRESS — implémentation fonctionnelle réalisée, stabilisation CI et suppression de la dernière dette Angular en cours
 - Priorité : P0 avant répétition finale #127
 - Estimation : 9 SP
 - Profil : senior full-stack sécurité / données RH clinique
@@ -20,16 +20,22 @@
 
 - #140 ouverte sur `main` ;
 - branche synchronisée avec `main` au dernier contrôle (`behind_by = 0`) ;
-- 37 fichiers modifiés couvrant migrations, persistence, API, staff UI, profil et rendez-vous patient ;
-- aucun thread de review ouvert au dernier contrôle.
+- 37 fichiers modifiés avant le dernier cycle de stabilisation, couvrant migrations, persistence, API, staff UI, profil et rendez-vous patient ;
+- aucun thread de review ouvert au dernier contrôle ;
+- PR repassée temporairement en Draft pendant les corrections/documentation afin d'éviter des runs CI annulés par des commits successifs.
 
-### CI
+### CI et stabilisation
 
-- CI #1247 sur `20984329c79be59e957fa94b179bdcfee27fae06` : **backend rouge** ;
-- Maven a atteint l'exécution de **564 tests** avec **0 failure et 8 errors** ;
-- les 8 erreurs provenaient toutes du `setUp()` de `StaffAssignmentControllerTest` qui supprimait globalement les organisations alors que des `visits` d'autres classes de test les referenciaient encore ;
-- correctif publié dans `74a267e8ac5c922bd62dca749ef7f482c0d88afa` : le test ne purge plus les données des autres classes et crée désormais des tenants/comptes/unités uniques par scénario ;
-- nouvelle preuve CI attendue avant de déclarer Maven/Angular verts.
+- CI #1247 sur `20984329c79be59e957fa94b179bdcfee27fae06` : **backend rouge** ; Maven a exécuté **564 tests**, avec **0 failure et 8 errors** ;
+- cause #1247 : `StaffAssignmentControllerTest.setUp()` supprimait globalement les organisations alors que des `visits` d'autres classes les referenciaient encore ;
+- `74a267e8ac5c922bd62dca749ef7f482c0d88afa` : suppression des purges globales et création de fixtures uniques par scénario ;
+- CI #1251 sur `936d15e90cbb75e52349078ca57560b3f88b09f5` : **frontend vert complet** (tests Angular + build production), backend rouge ;
+- cause backend #1251 : création des `OrganizationalUnitEntity` du fixture hors `TenantContext` ;
+- `72a550410f78362359cbe9ab6be4ad6ecbaf5ba3` : création des unités A/B sous leur tenant explicite ;
+- CI #1252 sur `72a550410f78362359cbe9ab6be4ad6ecbaf5ba3` : Maven exécute encore **564 tests**, mais 95 erreurs en cascade apparaissent après HOS-STAFF ;
+- cause #1252 : les fixtures HOS-STAFF uniques n'étaient pas détruites en fin de test ; leurs lignes `staff_organizational_unit_assignments` empêchaient ensuite les nettoyages de `users` / `organizational_units` des tests FHIR, HOS-ORG et Spatial ;
+- `72279a427f2c1bd7598eda003fe45de19505a7f3` : ajout d'un `@AfterEach` ciblé qui supprime uniquement les données des deux tenants créés par `StaffAssignmentControllerTest`, dans l'ordre FK : affectations → unités → utilisateurs → organisations ;
+- prochaine preuve : gate complet à relancer après cette documentation et le dernier nettoyage Angular identifié.
 
 ## Objectif
 
@@ -119,9 +125,12 @@ Migrations : V92 preflight fail-fast, V93 modèle structuré, V94 contraintes Po
 - [x] supprimer les champs texte libres des formulaires staff actifs ;
 - [x] profil personnel : suppression des saisies libres department/specialty ;
 - [x] portail rendez-vous : annuaire et filtres migrés vers codes/UUID structurés ;
-- [x] projection `department` Angular résiduelle explicitement dérivée de l'unité principale, jamais persistée ni envoyée en écriture ;
+- [ ] supprimer la projection Angular résiduelle `StaffMember.department` : `PatientDetailComponent` l'utilise encore pour filtrer les praticiens lors de l'ouverture d'une visite ;
+- [ ] remplacer ce filtrage par les UUID d'affectations organisationnelles actives ; `visits.service_name` peut rester un snapshot lisible du module Visite, mais ne doit plus servir d'identité staff ;
+- [ ] marquer la documentation historique `clinic-staff-department-filter` comme supersédée ;
 - [ ] revue finale FR/EN, light/dark, responsive ;
-- [ ] tests Angular + build production verts sur le head final.
+- [x] tests Angular + build production verts sur #1251 ;
+- [ ] tests Angular + build production verts sur le head final après suppression de la dette résiduelle.
 
 ## Critères d'acceptation
 
@@ -135,7 +144,7 @@ Migrations : V92 preflight fail-fast, V93 modèle structuré, V94 contraintes Po
 - [x] les historiques ne sont pas détruits lors d'un changement d'unité/spécialité ;
 - [x] les affectations cross-tenant sont refusées ;
 - [x] aucun mapping automatique des anciennes chaînes par similarité ;
-- [x] les consommateurs migrés n'utilisent plus `users.department/users.specialty` comme identité métier ;
+- [ ] aucun consommateur actif n'utilise encore une projection `department` comme identité de rattachement du staff ;
 - [ ] Maven strict + PostgreSQL/Testcontainers + tests Angular + build production verts sur le même head final ;
 - [ ] documentation centrale, tracking et changelog alignés ;
 - [x] aucune action PROD/RECETTE.
@@ -145,7 +154,8 @@ Migrations : V92 preflight fail-fast, V93 modèle structuré, V94 contraintes Po
 - le rôle d'affectation organisationnelle possède un catalogue clinique distinct (`staff_assignment_role_catalog`) et n'est pas déduit automatiquement du rôle RBAC global ;
 - les spécialités sont modélisées de façon générique pour permettre plusieurs catégories de professionnels sans changer le schéma ;
 - l'annuaire patient ne filtre plus les médecins par chaînes `department/specialty`, mais par affectations actives structurées ;
-- le preflight V92 bloque toute donnée legacy libre non vide : une reprise de données éventuelle devra faire l'objet d'une décision/script explicitement revu, jamais d'un fuzzy mapping.
+- le preflight V92 bloque toute donnée legacy libre non vide : une reprise de données éventuelle devra faire l'objet d'une décision/script explicitement revu, jamais d'un fuzzy mapping ;
+- pour l'ouverture de visite, `visits.service_name` peut rester un snapshot métier lisible du module Visite, mais la sélection des praticiens doit reposer sur `organizationalUnitId`, jamais sur `StaffMember.department`.
 
 ## Definition of Done
 
