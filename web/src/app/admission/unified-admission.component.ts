@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, input, OnInit, output, signal } from '@angular/core';
+import { Component, computed, inject, input, OnInit, output, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable, catchError, finalize, map, of, switchMap } from 'rxjs';
 import { HospitalOrganizationApiService } from '../clinic/hospital-organization/hospital-organization-api.service';
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { EmergencyApiService } from '../emergency/emergency-api.service';
 import { CreateEmergencyRequest, EmergencyTriageRequest } from '../emergency/emergency.models';
@@ -72,12 +73,13 @@ export class UnifiedAdmissionComponent implements OnInit {
   private readonly emergencyApi = inject(EmergencyApiService);
   private readonly visitApi = inject(VisitApiService);
   private readonly hospitalOrgApi = inject(HospitalOrganizationApiService);
+  private readonly rbacApi = inject(RbacApiService);
   private readonly i18n = inject(I18nService);
   private readonly provisionalAdmissionRequestId = globalThis.crypto.randomUUID();
 
   readonly initialCarePath = input<AdmissionCarePath>('NORMAL');
   readonly allowCarePathSwitch = input(true);
-  readonly allowExistingPatient = input(true);
+  readonly allowExistingPatient = computed(() => this.rbacApi.hasPermission('PATIENT_READ'));
   readonly allowNewPatient = input(true);
   readonly allowProvisionalPatient = input(true);
   readonly cancelled = output<void>();
