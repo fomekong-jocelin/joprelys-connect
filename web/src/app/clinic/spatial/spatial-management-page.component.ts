@@ -140,7 +140,7 @@ export class SpatialManagementPageComponent implements OnInit {
 
   loadSpaces(): void {
     this.loading.set(true);
-    this.spatialApi.listSpaces(undefined, undefined, false).subscribe({
+    this.spatialApi.listInpatientSpaces().subscribe({
       next: (data) => {
         const inpatientSpaces = data.filter((space) => space.inpatientProfile && space.active);
         this.spaces.set(inpatientSpaces);

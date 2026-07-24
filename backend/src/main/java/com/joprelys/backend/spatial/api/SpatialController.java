@@ -1,5 +1,7 @@
 package com.joprelys.backend.spatial.api;
 
+import com.joprelys.backend.spatial.api.HospitalLocationDtos.FacilitySpaceResponse;
+import com.joprelys.backend.spatial.application.HospitalLocationConfigurationService;
 import com.joprelys.backend.spatial.application.SpatialService;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedCapacityStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedReadinessStatus;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -23,9 +26,22 @@ import org.springframework.web.server.ResponseStatusException;
 public class SpatialController {
 
     private final SpatialService spatialService;
+    private final HospitalLocationConfigurationService locationConfigurationService;
 
-    public SpatialController(SpatialService spatialService) {
+    public SpatialController(
+            SpatialService spatialService,
+            HospitalLocationConfigurationService locationConfigurationService) {
         this.spatialService = spatialService;
+        this.locationConfigurationService = locationConfigurationService;
+    }
+
+    @GetMapping("/inpatient-spaces")
+    @PreAuthorize("hasAnyAuthority('HOSPITALIZATION_READ', 'SPATIAL_CONFIGURATION_MANAGE')")
+    public List<FacilitySpaceResponse> listInpatientSpaces(
+            @RequestParam(required = false) UUID organizationId) {
+        return locationConfigurationService.listSpaces(organizationId, null, false).stream()
+                .filter(space -> space.inpatientProfile() && space.active())
+                .toList();
     }
 
     @GetMapping("/spaces/{id}/occupancy")

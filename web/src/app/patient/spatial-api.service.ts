@@ -64,6 +64,11 @@ export class SpatialApiService {
     return this.http.get<FacilitySpace[]>('/api/spatial/configuration/spaces', { params });
   }
 
+  listInpatientSpaces(organizationId?: string): Observable<FacilitySpace[]> {
+    const params = this.scopeParams(organizationId);
+    return this.http.get<FacilitySpace[]>('/api/spatial/inpatient-spaces', { params });
+  }
+
   createSpace(payload: SaveSpacePayload, organizationId?: string): Observable<FacilitySpace> {
     return this.http.post<FacilitySpace>('/api/spatial/configuration/spaces', payload, {
       params: this.scopeParams(organizationId),

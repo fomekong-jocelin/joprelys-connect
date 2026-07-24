@@ -30,6 +30,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **API staff structurée** : endpoints `/api/staff/{id}/assignments` pour lire, créer, modifier et clôturer les affectations de spécialité/unité, ainsi que `/api/staff/assignment-roles` pour le catalogue contextuel contrôlé.
 - **UI Angular HOS-STAFF** : éditeur mobile-first des spécialités et unités datées, historique conservé, indicateurs principal/actif, sélecteurs alimentés par HOS-ORG et aucun Angular Material.
 - **Projection structurée du personnel** : `StaffApiService` enrichit la liste avec `activeOrganizationalUnits[]` (`id`, `code`, libellés FR/EN, `primary`) pour permettre aux consommateurs de raisonner sur des UUID stables.
+- **Endpoint de consultation spatiale soignants (`GET /api/spatial/inpatient-spaces`)** : exposition de la liste des espaces d'hébergement physiques actifs autorisée aux rôles soignants via la permission existante `HOSPITALIZATION_READ`, permettant aux médecins et infirmiers de consulter la capacité et l'occupation des lits (`/clinic/spatial`) sans leur donner accès aux routes d'administration d'infrastructure (`/api/spatial/configuration/*`).
 
 ### Changed
 
