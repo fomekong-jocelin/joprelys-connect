@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
+import { HospitalOrganizationApiService } from '../clinic/hospital-organization/hospital-organization-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { EmergencyApiService } from '../emergency/emergency-api.service';
 import { PatientApiService } from '../patient/patient-api.service';
@@ -35,6 +36,7 @@ describe('UnifiedAdmissionComponent', () => {
   };
 
   beforeEach(async () => {
+    localStorage.clear();
     emergencyApi = {
       create: vi.fn().mockReturnValue(of({ id: 'emergency-1' })),
       createProvisionalAdmission: vi.fn().mockReturnValue(of({
@@ -61,6 +63,10 @@ describe('UnifiedAdmissionComponent', () => {
             create: vi.fn().mockReturnValue(of(patient)),
           },
         },
+        {
+          provide: HospitalOrganizationApiService,
+          useValue: { listServiceCatalog: vi.fn().mockReturnValue(of([])) },
+        },
         { provide: EmergencyApiService, useValue: emergencyApi },
         { provide: VisitApiService, useValue: { create: vi.fn().mockReturnValue(of({ id: 'visit-1' })) } },
       ],
@@ -72,6 +78,8 @@ describe('UnifiedAdmissionComponent', () => {
     fixture.detectChanges();
     component.form.patchValue({ patientId: patient.id });
   });
+
+  afterEach(() => localStorage.clear());
 
   it('guides the user through three steps', () => {
     expect(component.currentStep()).toBe(1);
@@ -133,5 +141,52 @@ describe('UnifiedAdmissionComponent', () => {
       emergency: expect.objectContaining({ chiefComplaint: 'Patient inconscient' }),
     }));
     expect(emergencyApi.create).not.toHaveBeenCalled();
+  });
+
+  it('does not expose or activate new-patient mode when the caller lacks PATIENT_WRITE', () => {
+    fixture.componentRef.setInput('allowNewPatient', false);
+    fixture.detectChanges();
+
+    component.setPatientMode('NEW');
+    fixture.detectChanges();
+
+    expect(component.patientMode).toBe('EXISTING');
+    expect(fixture.nativeElement.textContent).not.toContain('admission.new');
+  });
+
+  it('locks the care path when the caller exposes only one authorized workflow', () => {
+    fixture.componentRef.setInput('allowCarePathSwitch', false);
+    fixture.detectChanges();
+
+    component.setCarePath('NORMAL');
+    fixture.detectChanges();
+
+    expect(component.carePath).toBe('EMERGENCY');
+    expect(fixture.nativeElement.textContent).not.toContain('admission.normalHint');
+  });
+
+  it('normalizes a restored draft that contains a now-forbidden patient mode and care path', () => {
+    localStorage.setItem('joprelys_admission_draft', JSON.stringify({
+      currentStep: 2,
+      formValue: {
+        carePath: 'EMERGENCY',
+        patientMode: 'NEW',
+        fullName: 'Brouillon interdit',
+      },
+    }));
+
+    const restrictedFixture = TestBed.createComponent(UnifiedAdmissionComponent);
+    restrictedFixture.componentRef.setInput('initialCarePath', 'NORMAL');
+    restrictedFixture.componentRef.setInput('allowCarePathSwitch', false);
+    restrictedFixture.componentRef.setInput('allowNewPatient', false);
+    restrictedFixture.componentRef.setInput('allowProvisionalPatient', false);
+    restrictedFixture.detectChanges();
+
+    const restricted = restrictedFixture.componentInstance;
+    expect(restricted.carePath).toBe('NORMAL');
+    expect(restricted.patientMode).toBe('EXISTING');
+    expect(restricted.currentStep()).toBe(2);
+
+    restrictedFixture.destroy();
   });
 });
