@@ -13,10 +13,10 @@ export class PatientAppointmentsApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/patient/appointments';
 
-  listDoctors(specialty = '', department = ''): Observable<DoctorDirectoryEntry[]> {
+  listDoctors(specialtyCode = '', organizationalUnitId = ''): Observable<DoctorDirectoryEntry[]> {
     let params = new HttpParams();
-    if (specialty.trim()) params = params.set('specialty', specialty.trim());
-    if (department.trim()) params = params.set('department', department.trim());
+    if (specialtyCode.trim()) params = params.set('specialtyCode', specialtyCode.trim());
+    if (organizationalUnitId.trim()) params = params.set('organizationalUnitId', organizationalUnitId.trim());
     return this.http.get<DoctorDirectoryEntry[]>(`${this.baseUrl}/doctors`, { params });
   }
 
