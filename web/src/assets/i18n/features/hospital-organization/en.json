@@ -1,5 +1,6 @@
 {
   "menu.hospitalOrganization": "Hospital organization",
+  "breadcrumb.clinic.hospital-organization": "Hospital organization",
   "hospitalOrg.title": "Hospital organization",
   "hospitalOrg.subtitle": "Structure divisions, departments, services and care units without mixing organization with physical location.",
   "hospitalOrg.back": "Back to dashboard",
@@ -40,7 +41,7 @@
   "hospitalOrg.catalogs.services.description": "Services are created from this coded catalog, without free-text business types.",
   "hospitalOrg.catalogs.specialties.eyebrow": "Controlled reference data",
   "hospitalOrg.catalogs.specialties.title": "Medical specialties",
-  "hospitalOrg.catalogs.specialties.description": "This catalog will be used by HOS-STAFF-001-A for structured staff assignments.",
+  "hospitalOrg.catalogs.specialties.description": "This catalog is used for structured staff assignments.",
   "hospitalOrg.feedback.saved": "Organization saved.",
   "hospitalOrg.feedback.activated": "Unit reactivated.",
   "hospitalOrg.feedback.deactivated": "Unit deactivated.",

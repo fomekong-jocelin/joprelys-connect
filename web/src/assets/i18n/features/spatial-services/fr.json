@@ -1,4 +1,10 @@
 {
+  "breadcrumb.clinic.spatial.configuration": "Structure hospitalière",
+  "spatial.config.title": "Structure hospitalière",
+  "spatial.config.subtitle": "Configurez la géographie, les espaces physiques, leurs rattachements aux unités et les lits d’hospitalisation.",
+  "spatial.config.organization": "Établissement",
+  "spatial.config.selectOrganization": "Sélectionner un établissement",
+  "spatial.config.scopeRequiredTitle": "Sélectionnez un établissement",
   "spatial.services.typeLabel": "Type de service",
   "spatial.services.selectType": "Sélectionnez la fonction réelle du service",
   "spatial.services.roomsForbidden": "Ce type de service ne peut pas gérer de chambres ni de lits.",

@@ -1,5 +1,6 @@
 {
   "menu.hospitalOrganization": "Organisation hospitalière",
+  "breadcrumb.clinic.hospital-organization": "Organisation hospitalière",
   "hospitalOrg.title": "Organisation hospitalière",
   "hospitalOrg.subtitle": "Structurez les pôles, départements, services et unités de soins sans confondre organisation et localisation.",
   "hospitalOrg.back": "Retour au tableau de bord",
@@ -40,7 +41,7 @@
   "hospitalOrg.catalogs.services.description": "Les services sont créés depuis ce catalogue codifié, sans saisie libre du type métier.",
   "hospitalOrg.catalogs.specialties.eyebrow": "Référentiel contrôlé",
   "hospitalOrg.catalogs.specialties.title": "Spécialités médicales",
-  "hospitalOrg.catalogs.specialties.description": "Ce catalogue sera utilisé pour les affectations structurées du personnel dans HOS-STAFF-001-A.",
+  "hospitalOrg.catalogs.specialties.description": "Ce catalogue est utilisé pour les affectations structurées du personnel.",
   "hospitalOrg.feedback.saved": "Organisation enregistrée.",
   "hospitalOrg.feedback.activated": "Unité réactivée.",
   "hospitalOrg.feedback.deactivated": "Unité désactivée.",

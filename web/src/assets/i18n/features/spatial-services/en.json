@@ -1,4 +1,10 @@
 {
+  "breadcrumb.clinic.spatial.configuration": "Hospital structure",
+  "spatial.config.title": "Hospital structure",
+  "spatial.config.subtitle": "Configure physical geography, care spaces, unit-to-space assignments and inpatient beds.",
+  "spatial.config.organization": "Facility",
+  "spatial.config.selectOrganization": "Select a facility",
+  "spatial.config.scopeRequiredTitle": "Select a facility",
   "spatial.services.typeLabel": "Service type",
   "spatial.services.selectType": "Select the service's actual operational function",
   "spatial.services.roomsForbidden": "This service type cannot manage rooms or beds.",
