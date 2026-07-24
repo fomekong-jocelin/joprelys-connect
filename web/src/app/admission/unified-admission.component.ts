@@ -76,6 +76,9 @@ export class UnifiedAdmissionComponent implements OnInit {
   private readonly provisionalAdmissionRequestId = globalThis.crypto.randomUUID();
 
   readonly initialCarePath = input<AdmissionCarePath>('NORMAL');
+  readonly allowCarePathSwitch = input(true);
+  readonly allowNewPatient = input(true);
+  readonly allowProvisionalPatient = input(true);
   readonly cancelled = output<void>();
   readonly completed = output<AdmissionCompleted>();
 
@@ -132,6 +135,7 @@ export class UnifiedAdmissionComponent implements OnInit {
     this.loadPatients();
     this.loadHospitalServices();
     this.restoreDraftIfAvailable();
+    this.enforceAllowedState();
     this.form.valueChanges.subscribe(() => this.saveDraft());
   }
 
@@ -153,8 +157,6 @@ export class UnifiedAdmissionComponent implements OnInit {
       if (!raw) return;
       const draft = JSON.parse(raw);
       if (draft && draft.formValue) {
-        if (draft.carePath) this.form.patchValue({ carePath: draft.carePath });
-        if (draft.patientMode) this.form.patchValue({ patientMode: draft.patientMode });
         this.form.patchValue(draft.formValue);
         if (draft.currentStep && [1, 2, 3].includes(draft.currentStep)) {
           this.currentStep.set(draft.currentStep as AdmissionStep);
@@ -196,19 +198,26 @@ export class UnifiedAdmissionComponent implements OnInit {
   }
 
   setCarePath(path: AdmissionCarePath): void {
+    if (!this.allowCarePathSwitch() && path !== this.initialCarePath()) {
+      return;
+    }
     this.form.patchValue({ carePath: path });
     if (path === 'NORMAL' && this.patientMode === 'PROVISIONAL') {
-      this.setPatientMode('NEW');
+      this.setPatientMode(this.allowNewPatient() ? 'NEW' : 'EXISTING');
     }
     this.resetNavigation();
   }
 
   setPatientMode(mode: AdmissionPatientMode): void {
+    if (!this.isPatientModeAllowed(mode)) {
+      return;
+    }
     this.form.patchValue({ patientMode: mode, patientId: '' });
     this.error.set(null);
   }
 
   nextStep(): void {
+    this.enforceAllowedState();
     const validationError = this.validateStep(this.currentStep());
     if (validationError) {
       this.showValidationError(validationError);
@@ -263,6 +272,7 @@ export class UnifiedAdmissionComponent implements OnInit {
   }
 
   submit(): void {
+    this.enforceAllowedState();
     for (const step of this.steps) {
       const validationError = this.validateStep(step);
       if (validationError) {
@@ -304,6 +314,28 @@ export class UnifiedAdmissionComponent implements OnInit {
 
   text(key: string): string {
     return this.i18n.t(`admission.${key}`);
+  }
+
+  private enforceAllowedState(): void {
+    const allowedCarePath = this.allowCarePathSwitch() ? this.carePath : this.initialCarePath();
+    let allowedPatientMode = this.patientMode;
+    if (!this.isPatientModeAllowed(allowedPatientMode, allowedCarePath)) {
+      allowedPatientMode = 'EXISTING';
+    }
+
+    if (this.carePath !== allowedCarePath || this.patientMode !== allowedPatientMode) {
+      this.form.patchValue({
+        carePath: allowedCarePath,
+        patientMode: allowedPatientMode,
+        ...(allowedPatientMode === 'EXISTING' ? {} : { patientId: '' }),
+      }, { emitEvent: false });
+    }
+  }
+
+  private isPatientModeAllowed(mode: AdmissionPatientMode, carePath: AdmissionCarePath = this.carePath): boolean {
+    if (mode === 'EXISTING') return true;
+    if (mode === 'NEW') return this.allowNewPatient();
+    return this.allowProvisionalPatient() && carePath === 'EMERGENCY';
   }
 
   private resetNavigation(): void {
