@@ -155,6 +155,7 @@ describe('UnifiedAdmissionComponent', () => {
 
   it('does not expose or activate existing-patient mode without PATIENT_READ', () => {
     permissions.set(new Set(['EMERGENCY_WRITE']));
+    fixture.componentRef.setInput('allowNewPatient', false);
     fixture.detectChanges();
 
     component.setPatientMode('EXISTING');
