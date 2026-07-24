@@ -1,6 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { forkJoin, map, Observable, of, switchMap } from 'rxjs';
+import {
+  HospitalServiceCatalogEntry,
+  OrganizationalUnit,
+} from '../hospital-organization/hospital-organization.models';
 import {
   CloseStaffAssignmentRequest,
   InviteStaffRequest,
@@ -22,7 +26,20 @@ export class StaffApiService {
   private readonly http = inject(HttpClient);
 
   list(): Observable<StaffMember[]> {
-    return this.http.get<StaffMember[]>('/api/staff');
+    return forkJoin({
+      staff: this.http.get<StaffMember[]>('/api/staff'),
+      units: this.http.get<OrganizationalUnit[]>('/api/hospital-organization/units'),
+      services: this.http.get<HospitalServiceCatalogEntry[]>('/api/hospital-organization/catalogs/services'),
+    }).pipe(
+      switchMap(({ staff, units, services }) => {
+        if (staff.length === 0) return of([] as StaffMember[]);
+        return forkJoin(staff.map((member) =>
+          this.getAssignments(member.id).pipe(
+            map((structure) => this.withPrimaryUnitProjection(member, structure, units, services)),
+          ),
+        ));
+      }),
+    );
   }
 
   invite(request: InviteStaffRequest): Observable<InviteStaffResponse> {
@@ -98,5 +115,25 @@ export class StaffApiService {
       `/api/staff/${staffId}/assignments/units/${assignmentId}/close`,
       request,
     );
+  }
+
+  private withPrimaryUnitProjection(
+    member: StaffMember,
+    structure: StaffAssignmentStructure,
+    units: readonly OrganizationalUnit[],
+    services: readonly HospitalServiceCatalogEntry[],
+  ): StaffMember {
+    const activeUnits = structure.unitAssignments.filter((assignment) => assignment.active);
+    const assignment = activeUnits.find((candidate) => candidate.primary) ?? activeUnits[0];
+    if (!assignment) return member;
+
+    const unit = units.find((candidate) => candidate.id === assignment.organizationalUnitId);
+    if (!unit) return member;
+
+    const service = unit.serviceCatalogCode
+      ? services.find((candidate) => candidate.code === unit.serviceCatalogCode)
+      : undefined;
+    const department = unit.name?.trim() || service?.nameFr || unit.code;
+    return { ...member, department };
   }
 }
