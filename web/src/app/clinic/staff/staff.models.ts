@@ -22,6 +22,13 @@ export interface StaffMember {
   readonly registrationNumber?: string;
   readonly bio?: string;
   readonly activeOrganizationalUnits?: readonly StaffActiveOrganizationalUnit[];
+  /**
+   * @deprecated Snapshot de présentation dérivé de l'unité principale active.
+   * Jamais persisté dans users et jamais envoyé dans un payload d'écriture.
+   * Conservé uniquement pour le formulaire historique de visite, dont le modèle
+   * `visits.service_name` reste textuel et relève d'un cutover séparé.
+   */
+  readonly department?: string;
 }
 
 export interface InviteStaffRequest {
