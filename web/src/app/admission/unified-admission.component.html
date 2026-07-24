@@ -112,15 +112,17 @@
           <fieldset [class.border-t]="allowCarePathSwitch()" [class.border-[var(--divider-subtle)]]="allowCarePathSwitch()" [class.pt-5]="allowCarePathSwitch()">
             <legend class="ui-label mb-2">{{ text('patientSituation') }}</legend>
             <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <button
-                type="button"
-                class="min-h-11 rounded-sm border px-3 py-2 text-left text-sm font-bold transition-colors"
-                (click)="setPatientMode('EXISTING')"
-                [attr.aria-pressed]="patientMode === 'EXISTING'"
-                [class.border-[var(--brand-primary)]]="patientMode === 'EXISTING'"
-                [class.bg-[var(--brand-primary-subtle)]]="patientMode === 'EXISTING'"
-                [class.border-[var(--app-border)]]="patientMode !== 'EXISTING'"
-              >{{ text('existing') }}</button>
+              @if (allowExistingPatient()) {
+                <button
+                  type="button"
+                  class="min-h-11 rounded-sm border px-3 py-2 text-left text-sm font-bold transition-colors"
+                  (click)="setPatientMode('EXISTING')"
+                  [attr.aria-pressed]="patientMode === 'EXISTING'"
+                  [class.border-[var(--brand-primary)]]="patientMode === 'EXISTING'"
+                  [class.bg-[var(--brand-primary-subtle)]]="patientMode === 'EXISTING'"
+                  [class.border-[var(--app-border)]]="patientMode !== 'EXISTING'"
+                >{{ text('existing') }}</button>
+              }
 
               @if (allowNewPatient()) {
                 <button
