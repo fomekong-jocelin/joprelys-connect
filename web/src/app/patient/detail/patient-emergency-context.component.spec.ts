@@ -41,16 +41,26 @@ describe('PatientEmergencyContextComponent disclosure', () => {
   });
 
   it('should automatically reveal an active emergency because it is safety-critical', () => {
-    emergencyApi.getPatientEmergencies.mockReturnValue(of([
-      {
-        id: 'emergency-1',
-        createdAt: '2026-07-24T12:00:00Z',
-        stabilizedAt: null,
-      } as EmergencyRecord,
-    ]));
+    const activeEmergency: EmergencyRecord = {
+      id: 'emergency-1',
+      organizationId: 'organization-1',
+      patientId: 'patient-1',
+      patientName: 'Patient Test',
+      globalPatientNumber: 'DPU-TEST-001',
+      localPatientNumber: 'PAT-TEST-001',
+      arrivalMode: 'WALK_IN',
+      triageLevel: 'GREEN',
+      hemodynamicStatus: 'STABLE',
+      chiefComplaint: 'Céphalée',
+      thirdPartyRecorded: false,
+      resuscitationLogs: [],
+      createdAt: '2026-07-24T12:00:00Z',
+      updatedAt: '2026-07-24T12:00:00Z',
+    };
+    emergencyApi.getPatientEmergencies.mockReturnValue(of([activeEmergency]));
     fixture = TestBed.createComponent(PatientEmergencyContextComponent);
     fixture.componentRef.setInput('patientId', 'patient-1');
-    fixture.componentInstance.ngOnInit();
+    fixture.detectChanges();
 
     expect(fixture.componentInstance.expanded()).toBe(true);
   });
