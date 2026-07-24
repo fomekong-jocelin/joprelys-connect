@@ -1,13 +1,15 @@
 <app-shell>
   <app-page-header [title]="t('emergency.title')" [subtitle]="t('emergency.subtitle')">
-    <app-ui-button variant="danger" (pressed)="openAdmissionModal()" class="shrink-0">
-      <span class="flex items-center gap-2">
-        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-        </svg>
-        {{ t('emergency.admissionBtn') }}
-      </span>
-    </app-ui-button>
+    @if (canCreateEmergency()) {
+      <app-ui-button variant="danger" (pressed)="openAdmissionModal()" class="shrink-0">
+        <span class="flex items-center gap-2">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          {{ t('emergency.admissionBtn') }}
+        </span>
+      </app-ui-button>
+    }
   </app-page-header>
 
   <div class="app-container pb-12">
@@ -334,10 +336,17 @@
   </div>
 }
 
-@if (isAdmissionModalOpen()) {
+@if (isAdmissionModalOpen() && canCreateEmergency()) {
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-bg)] p-3 backdrop-blur-sm sm:p-4" role="presentation" (click)="closeAdmissionModal()">
     <div class="ui-card w-full max-w-2xl overflow-hidden" role="dialog" aria-modal="true" [attr.aria-label]="t('admission.title')" (click)="$event.stopPropagation()">
-      <app-unified-admission initialCarePath="EMERGENCY" (cancelled)="closeAdmissionModal()" (completed)="onAdmissionCompleted($event)" />
+      <app-unified-admission
+        initialCarePath="EMERGENCY"
+        [allowCarePathSwitch]="false"
+        [allowNewPatient]="canCreatePatient()"
+        [allowProvisionalPatient]="true"
+        (cancelled)="closeAdmissionModal()"
+        (completed)="onAdmissionCompleted($event)"
+      />
     </div>
   </div>
 }
