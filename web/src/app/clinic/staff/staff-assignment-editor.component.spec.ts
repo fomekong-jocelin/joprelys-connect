@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { HospitalOrganizationApiService } from '../hospital-organization/hospital-organization-api.service';
 import { StaffApiService } from './staff-api.service';

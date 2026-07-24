@@ -12,7 +12,7 @@ export class AuthSessionRecoveryService {
   private readonly rawHttp = new HttpClient(inject(HttpBackend));
 
   private refreshInFlight$: Observable<string> | null = null;
-  private expiredSessionToken: string | null = null;
+  private isRedirectingToLogin = false;
 
   refreshAccessToken(): Observable<string> {
     const currentRefresh = this.refreshInFlight$;
@@ -23,7 +23,6 @@ export class AuthSessionRecoveryService {
     const refreshRequest = this.rawHttp.post<LoginResponse>('/api/auth/refresh', {}).pipe(
       tap((response) => {
         this.tokenStorage.save(response);
-        this.expiredSessionToken = null;
       }),
       map((response) => response.accessToken),
       finalize(() => {
@@ -37,26 +36,31 @@ export class AuthSessionRecoveryService {
   }
 
   expireSession(): void {
-    const session = this.tokenStorage.session();
-    if (!session || this.expiredSessionToken === session.accessToken) {
+    const currentUrl = this.router.url;
+    const returnUrl = this.resolveReturnUrl(currentUrl);
+
+    this.tokenStorage.clear();
+
+    if (this.isRedirectingToLogin) {
       return;
     }
 
-    this.expiredSessionToken = session.accessToken;
-    const returnUrl = this.resolveReturnUrl(this.router.url);
-    this.tokenStorage.clear();
-
-    void this.router.navigate(['/'], {
-      queryParams: {
-        sessionExpired: 'true',
-        ...(returnUrl ? { returnUrl } : {}),
-      },
-      replaceUrl: true,
-    });
+    if (currentUrl && currentUrl !== '/' && !currentUrl.startsWith('/auth/login') && !currentUrl.startsWith('/?')) {
+      this.isRedirectingToLogin = true;
+      void this.router.navigate(['/'], {
+        queryParams: {
+          sessionExpired: 'true',
+          ...(returnUrl ? { returnUrl } : {}),
+        },
+        replaceUrl: true,
+      }).finally(() => {
+        this.isRedirectingToLogin = false;
+      });
+    }
   }
 
   private resolveReturnUrl(currentUrl: string): string | null {
-    if (!currentUrl || currentUrl === '/' || currentUrl.startsWith('//')) {
+    if (!currentUrl || currentUrl === '/' || currentUrl.startsWith('//') || currentUrl.startsWith('/auth/login')) {
       return null;
     }
     return currentUrl;

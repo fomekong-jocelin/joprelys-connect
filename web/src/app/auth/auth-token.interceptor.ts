@@ -14,19 +14,27 @@ export const authTokenInterceptor: HttpInterceptorFn = (request, next) => {
 
   const session = tokenStorage.session();
   if (!session) {
-    return next(request);
+    sessionRecovery.expireSession();
+    return throwError(
+      () =>
+        new HttpErrorResponse({
+          error: 'Unauthenticated',
+          status: 401,
+          statusText: 'Unauthorized',
+          url: request.url,
+        }),
+    );
   }
 
   const sendWithToken = (token: string) => next(withBearerToken(request, token));
-  const refreshAndRetry = () => sessionRecovery.refreshAccessToken().pipe(
-    switchMap((freshToken) => sendWithToken(freshToken)),
-    catchError((error: HttpErrorResponse) => {
-      if (error.status === 401) {
+  const refreshAndRetry = () =>
+    sessionRecovery.refreshAccessToken().pipe(
+      switchMap((freshToken) => sendWithToken(freshToken)),
+      catchError((error: HttpErrorResponse) => {
         sessionRecovery.expireSession();
-      }
-      return throwError(() => error);
-    }),
-  );
+        return throwError(() => error);
+      }),
+    );
 
   if (tokenStorage.isExpired()) {
     return refreshAndRetry();
@@ -34,10 +42,10 @@ export const authTokenInterceptor: HttpInterceptorFn = (request, next) => {
 
   return sendWithToken(session.accessToken).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status !== 401) {
-        return throwError(() => error);
+      if (error.status === 401 || error.status === 403) {
+        return refreshAndRetry();
       }
-      return refreshAndRetry();
+      return throwError(() => error);
     }),
   );
 };

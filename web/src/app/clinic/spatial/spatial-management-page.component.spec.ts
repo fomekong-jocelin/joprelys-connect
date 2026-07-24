@@ -24,6 +24,15 @@ describe('SpatialManagementPageComponent', () => {
         {
           provide: SpatialApiService,
           useValue: {
+            listInpatientSpaces: vi.fn(() => of([{
+              id: 'space-1',
+              locationNodeId: null,
+              code: 'MED_201',
+              name: 'Chambre 201',
+              spaceTypeCode: 'HOSPITAL_ROOM',
+              inpatientProfile: true,
+              active: true,
+            }])),
             listSpaces: vi.fn(() => of([{
               id: 'space-1',
               locationNodeId: null,
