@@ -1,8 +1,23 @@
+export interface DoctorSpecialtyEntry {
+  code: string;
+  nameFr: string;
+  nameEn: string;
+  primary: boolean;
+}
+
+export interface DoctorUnitEntry {
+  id: string;
+  code: string;
+  nameFr: string;
+  nameEn: string;
+  primary: boolean;
+}
+
 export interface DoctorDirectoryEntry {
   doctorId: string;
   displayName: string;
-  specialty: string | null;
-  department: string | null;
+  specialties: DoctorSpecialtyEntry[];
+  units: DoctorUnitEntry[];
 }
 
 export interface AppointmentSlot {
