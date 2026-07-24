@@ -9,6 +9,7 @@ import {
   CloseStaffAssignmentRequest,
   InviteStaffRequest,
   InviteStaffResponse,
+  StaffActiveOrganizationalUnit,
   StaffAssignmentRole,
   StaffAssignmentStructure,
   StaffMember,
@@ -35,7 +36,7 @@ export class StaffApiService {
         if (staff.length === 0) return of([] as StaffMember[]);
         return forkJoin(staff.map((member) =>
           this.getAssignments(member.id).pipe(
-            map((structure) => this.withPrimaryUnitProjection(member, structure, units, services)),
+            map((structure) => this.withActiveUnitProjection(member, structure, units, services)),
           ),
         ));
       }),
@@ -117,23 +118,36 @@ export class StaffApiService {
     );
   }
 
-  private withPrimaryUnitProjection(
+  private withActiveUnitProjection(
     member: StaffMember,
     structure: StaffAssignmentStructure,
     units: readonly OrganizationalUnit[],
     services: readonly HospitalServiceCatalogEntry[],
   ): StaffMember {
-    const activeUnits = structure.unitAssignments.filter((assignment) => assignment.active);
-    const assignment = activeUnits.find((candidate) => candidate.primary) ?? activeUnits[0];
-    if (!assignment) return member;
+    const activeAssignments = structure.unitAssignments.filter((assignment) => assignment.active);
+    const activeOrganizationalUnits: StaffActiveOrganizationalUnit[] = activeAssignments.flatMap((assignment) => {
+      const unit = units.find((candidate) => candidate.id === assignment.organizationalUnitId);
+      if (!unit || !unit.active) return [];
 
-    const unit = units.find((candidate) => candidate.id === assignment.organizationalUnitId);
-    if (!unit) return member;
+      const service = unit.serviceCatalogCode
+        ? services.find((candidate) => candidate.code === unit.serviceCatalogCode)
+        : undefined;
+      const fallbackName = unit.name?.trim() || unit.code;
 
-    const service = unit.serviceCatalogCode
-      ? services.find((candidate) => candidate.code === unit.serviceCatalogCode)
-      : undefined;
-    const department = unit.name?.trim() || service?.nameFr || unit.code;
-    return { ...member, department };
+      return [{
+        id: unit.id,
+        code: unit.code,
+        nameFr: unit.name?.trim() || service?.nameFr || fallbackName,
+        nameEn: unit.name?.trim() || service?.nameEn || fallbackName,
+        primary: assignment.primary,
+      }];
+    });
+
+    activeOrganizationalUnits.sort((left, right) => {
+      if (left.primary !== right.primary) return left.primary ? -1 : 1;
+      return left.nameFr.localeCompare(right.nameFr);
+    });
+
+    return { ...member, activeOrganizationalUnits };
   }
 }
