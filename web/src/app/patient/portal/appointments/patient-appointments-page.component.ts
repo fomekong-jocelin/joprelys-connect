@@ -54,7 +54,11 @@ import {
               <div class="mt-4 grid gap-3 sm:grid-cols-2">
                 <label class="text-xs font-bold text-[var(--text-secondary)]">
                   {{ i18n.t('appointments.filters.specialty') }}
-                  <select class="ui-select mt-1 w-full" [(ngModel)]="specialtyCodeFilter" (change)="onFilterChanged()">
+                  <select
+                    class="ui-select mt-1 w-full"
+                    [ngModel]="specialtyCodeFilter()"
+                    (ngModelChange)="specialtyCodeFilter.set($event); onFilterChanged()"
+                  >
                     <option value="">{{ i18n.t('appointments.filters.allSpecialties', 'Toutes les spécialités') }}</option>
                     @for (item of specialtyOptions(); track item.code) {
                       <option [value]="item.code">{{ specialtyName(item) }}</option>
@@ -64,7 +68,11 @@ import {
 
                 <label class="text-xs font-bold text-[var(--text-secondary)]">
                   {{ i18n.t('appointments.filters.department') }}
-                  <select class="ui-select mt-1 w-full" [(ngModel)]="organizationalUnitIdFilter" (change)="onFilterChanged()">
+                  <select
+                    class="ui-select mt-1 w-full"
+                    [ngModel]="organizationalUnitIdFilter()"
+                    (ngModelChange)="organizationalUnitIdFilter.set($event); onFilterChanged()"
+                  >
                     <option value="">{{ i18n.t('appointments.filters.allUnits', 'Toutes les unités') }}</option>
                     @for (item of unitOptions(); track item.id) {
                       <option [value]="item.id">{{ unitName(item) }}</option>
@@ -187,11 +195,15 @@ export class PatientAppointmentsPageComponent implements OnInit {
   readonly i18n = inject(I18nService);
 
   readonly directory = signal<DoctorDirectoryEntry[]>([]);
+  readonly specialtyCodeFilter = signal('');
+  readonly organizationalUnitIdFilter = signal('');
   readonly doctors = computed(() => this.directory().filter((doctor) => {
-    const specialtyMatches = !this.specialtyCodeFilter
-      || doctor.specialties.some((item) => item.code === this.specialtyCodeFilter);
-    const unitMatches = !this.organizationalUnitIdFilter
-      || doctor.units.some((item) => item.id === this.organizationalUnitIdFilter);
+    const specialtyCode = this.specialtyCodeFilter();
+    const organizationalUnitId = this.organizationalUnitIdFilter();
+    const specialtyMatches = !specialtyCode
+      || doctor.specialties.some((item) => item.code === specialtyCode);
+    const unitMatches = !organizationalUnitId
+      || doctor.units.some((item) => item.id === organizationalUnitId);
     return specialtyMatches && unitMatches;
   }));
   readonly specialtyOptions = computed(() => this.uniqueSpecialties(this.directory()));
@@ -209,8 +221,6 @@ export class PatientAppointmentsPageComponent implements OnInit {
   readonly error = signal('');
   readonly notice = signal('');
 
-  specialtyCodeFilter = '';
-  organizationalUnitIdFilter = '';
   reason = '';
 
   readonly slotLabels = computed<AppointmentSlotPickerLabels>(() => ({
