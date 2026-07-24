@@ -56,6 +56,15 @@
 
   <form [formGroup]="form" class="flex min-h-0 flex-1 flex-col" (ngSubmit)="submit()">
     <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+      @if (isDraftRestored()) {
+        <app-ui-alert tone="info" class="mb-4">
+          <div class="flex items-center justify-between gap-2">
+            <span>{{ text('draftRestored') }}</span>
+            <button type="button" (click)="clearDraft()" class="text-xs font-bold underline hover:no-underline cursor-pointer shrink-0">{{ text('clearDraft') }}</button>
+          </div>
+        </app-ui-alert>
+      }
+
       @if (error(); as message) {
         <app-ui-alert tone="error" class="mb-4">{{ message }}</app-ui-alert>
       }
@@ -230,12 +239,36 @@
               </div>
               <div>
                 <label class="ui-label mb-1.5" for="admission-orientation">{{ text('orientation') }} *</label>
-                <input id="admission-orientation" formControlName="orientation" class="ui-input" />
+                <select id="admission-orientation" formControlName="orientation" class="ui-input">
+                  @for (opt of orientationOptions; track opt.code) {
+                    <option [value]="opt.code">{{ text(opt.translationKey) }}</option>
+                  }
+                </select>
               </div>
               <div>
                 <label class="ui-label mb-1.5" for="admission-service">{{ text('service') }}</label>
-                <input id="admission-service" formControlName="service" class="ui-input" />
+                <select id="admission-service" formControlName="service" class="ui-input">
+                  <option value="">{{ text('serviceSelectPlaceholder') }}</option>
+                  @for (srv of availableServices(); track srv) {
+                    <option [value]="srv">{{ srv }}</option>
+                  }
+                  <option value="Autre">{{ text('serviceOptionOther') }}</option>
+                </select>
               </div>
+
+              @if (form.get('orientation')?.value === 'OTHER') {
+                <div class="sm:col-span-2">
+                  <label class="ui-label mb-1.5" for="admission-custom-orientation">{{ text('orientationOption.OTHER') }}</label>
+                  <input id="admission-custom-orientation" formControlName="customOrientation" class="ui-input" [placeholder]="text('orientationOption.OTHER')" />
+                </div>
+              }
+
+              @if (form.get('service')?.value === 'Autre') {
+                <div class="sm:col-span-2">
+                  <label class="ui-label mb-1.5" for="admission-custom-service">{{ text('customServicePlaceholder') }}</label>
+                  <input id="admission-custom-service" formControlName="customService" class="ui-input" [placeholder]="text('customServicePlaceholder')" />
+                </div>
+              }
             </div>
           </fieldset>
         } @else {

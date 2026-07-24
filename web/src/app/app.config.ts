@@ -3,6 +3,7 @@ import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/
 import { provideRouter } from '@angular/router';
 
 import { AuthApiService } from './auth/auth-api.service';
+import { AuthSessionKeepAliveService } from './auth/auth-session-keep-alive.service';
 import { authTokenInterceptor } from './auth/auth-token.interceptor';
 import { I18nService } from './core/i18n/i18n.service';
 import { legalRoutes } from './legal/legal.routes';
@@ -20,6 +21,10 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       const authApi = inject(AuthApiService);
       return authApi.restoreSession();
+    }),
+    provideAppInitializer(() => {
+      const keepAlive = inject(AuthSessionKeepAliveService);
+      keepAlive.start();
     }),
   ]
 };

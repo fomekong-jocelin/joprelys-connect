@@ -8,7 +8,9 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
-### Added
+- **BUG-20260724-ADMISSION-FREE-TEXT-SERVICE-ORIENTATION-FIX — Sélecteurs contrôlés pour l'admission et la visite** : remplacement des champs à saisie libre `<input>` d'Orientation et Service dans le formulaire d'admission patient (`app-unified-admission`) par des éléments `<select>` contrôlés. L'orientation propose les orientations cliniques normées (Consultation, Spécialisée, Urgences, Hospitalisation, Ambulatoire, De Jour, Bilan, Autre) et le service s'alimente dynamiquement via `HospitalOrganizationApiService.listServiceCatalog()`.
+- **Persistance et restauration anti-perte de brouillon d'admission (`joprelys_admission_draft`)** : sauvegarde automatique en temps réel de tous les champs saisis de l'admission dans `localStorage`. En cas d'interruption, de rafraîchissement ou de reconnexion suite à une fin de session, le brouillon est restauré à 100% à l'ouverture du formulaire avec une bannière d'information et option d'effacement. Exemption explicite de purge pour les clés de brouillon dans `AuthTokenStorageService`.
+- **Maintien de session actif en arrière-plan (`AuthSessionKeepAliveService`)** : rafraîchissement proactif du jeton JWT à l'approche de l'expiration (sous 15 minutes) pendant que l'utilisateur travaille sur un formulaire, éliminant tout risque de déconnexion inopinée pendant la saisie.
 
 - **HOS-ORG-001-A / #130 / PR #133 — organisation hospitalière structurée** : ajout d'un bounded context `hospitalorganization` séparé de `spatial`, avec hiérarchie facultative `POLE → DEPARTMENT → SERVICE → CARE_UNIT`. Une petite clinique peut créer directement un service sous l'établissement sans niveau factice.
 - **Flyway V87 — référentiels organisationnels** : ajout de `hospital_service_catalog`, `medical_specialty_catalog`, `organizational_unit_type_catalog` et `organizational_units`. Les codes sont stables ; le code d'unité est unique par tenant ; le parent est protégé par FK composite tenant.

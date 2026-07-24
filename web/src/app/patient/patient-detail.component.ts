@@ -16,6 +16,8 @@ import { CardComponent } from '../shared/ui/card.component';
 import { StaffApiService } from '../clinic/staff/staff-api.service';
 import { StaffMember } from '../clinic/staff/staff.models';
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
+import { HospitalOrganizationApiService } from '../clinic/hospital-organization/hospital-organization-api.service';
+import { catchError, of } from 'rxjs';
 
 @Component({
   selector: 'app-patient-detail',
@@ -381,9 +383,11 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
   private readonly activePatientService = inject(ActivePatientService);
   private readonly staffApi = inject(StaffApiService);
   private readonly rbacApi = inject(RbacApiService);
+  private readonly hospitalOrgApi = inject(HospitalOrganizationApiService);
   readonly i18n = inject(I18nService);
 
   readonly loadedPatient = signal<Patient | null>(null);
+  readonly catalogServices = signal<string[]>([]);
   private routerSub?: any;
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -462,6 +466,15 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
     this.staffApi.list().subscribe({
       next: (list) => this.staffList.set(list.filter(s => s.enabled)),
       error: () => {}
+    });
+
+    this.hospitalOrgApi.listServiceCatalog().pipe(
+      catchError(() => of([])),
+    ).subscribe((entries) => {
+      if (entries && entries.length > 0) {
+        const names = entries.map(e => e.nameFr || e.nameEn || e.code).filter(Boolean);
+        this.catalogServices.set(names);
+      }
     });
 
     // If navigation details were supplied via Router state, use them immediately
@@ -696,7 +709,7 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
       'Laboratoire',
       'Cardiologie'
     ];
-    const depts = new Set<string>(defaultDepts);
+    const depts = new Set<string>([...defaultDepts, ...this.catalogServices()]);
     this.staffList().forEach(member => {
       if (member.department) {
         depts.add(member.department);

@@ -90,7 +90,7 @@ export class AuthTokenStorageService {
 
   private purgeBrowserState(): void {
     this.clearStorage(this.storage('sessionStorage'));
-    this.clearStorage(this.storage('localStorage'));
+    this.clearStorageExceptDrafts(this.storage('localStorage'));
     this.clearAccessibleCookies();
     this.session.set(null);
     for (const cleanup of this.sessionBoundaryCleanups) {
@@ -106,6 +106,26 @@ export class AuthTokenStorageService {
     if (!storage) return;
     try {
       storage.clear();
+    } catch {
+      // Storage can be unavailable in hardened/private browser contexts.
+    }
+  }
+
+  private clearStorageExceptDrafts(storage: Storage | null): void {
+    if (!storage) return;
+    try {
+      const draftItems: Array<{ key: string; value: string }> = [];
+      for (let i = 0; i < storage.length; i++) {
+        const key = storage.key(i);
+        if (key && (key.startsWith('joprelys_draft_') || key.startsWith('joprelys_admission_draft'))) {
+          const value = storage.getItem(key);
+          if (value) draftItems.push({ key, value });
+        }
+      }
+      storage.clear();
+      for (const item of draftItems) {
+        storage.setItem(item.key, item.value);
+      }
     } catch {
       // Storage can be unavailable in hardened/private browser contexts.
     }
