@@ -1,7 +1,21 @@
 # Spécification Technique — Menu déroulant des services et filtrage des praticiens lors de l'admission
 
-## 1. Architecture IHM Angular
-Nous allons centraliser la liste des départements/services cliniques sous forme de constante réutilisable.
+> **SUPERSEDED — HOS-STAFF-001-A / #132**
+>
+> Cette conception décrit l'ancien modèle `users.department` / filtrage par libellé texte.
+> Depuis HOS-STAFF-001-A, `users.department` et `users.specialty` ne sont plus des identités métier :
+> les rattachements du personnel reposent sur `staff_organizational_unit_assignments` et
+> `staff_specialty_assignments`, avec UUID/codes contrôlés et périodes de validité.
+>
+> Le champ `visits.service_name` du module Visite reste pour l'instant un snapshot lisible historique.
+> La projection Angular `StaffMember.department`, lorsqu'elle est encore utilisée par ce formulaire,
+> est dérivée de l'unité active principale et n'est jamais persistée ni acceptée dans un payload staff.
+> Toute évolution future du module Visite doit consommer `activeOrganizationalUnits[].id` et ne doit
+> pas réintroduire de saisie libre dans le modèle personnel.
+
+## 1. Architecture IHM Angular — historique
+
+Cette section est conservée uniquement pour retracer la conception remplacée.
 
 ```typescript
 export const DEFAULT_DEPARTMENTS: readonly string[] = [
@@ -15,20 +29,21 @@ export const DEFAULT_DEPARTMENTS: readonly string[] = [
 ];
 ```
 
-### Formulaire Collaborateur (`StaffManagementComponent` & `ProfileComponent`)
-1. Dans le template HTML, remplacer le champ de texte `department` par :
-   - Un élément `<select>` lié à un état temporaire `selectedDepartment`.
-   - Si `selectedDepartment === 'Autre'`, afficher un champ texte libre pour `customDepartment`.
-   - Lors de la soumission du formulaire, concaténer ou assigner la valeur finale : si "Autre", utiliser `customDepartment`, sinon utiliser `selectedDepartment`.
+### Formulaire Collaborateur — historique, ne plus appliquer
 
-### Formulaire Admission (`PatientDetailComponent`)
-1. Remplacer l'élément `<input>` de `visitService` par un `<select>`.
-2. Générer dynamiquement les options de ce `<select>` en combinant `DEFAULT_DEPARTMENTS` et tous les départements uniques non vides présents dans la liste des collaborateurs (`staffList()`).
-3. Mettre à jour `getFilteredPractitioners()` pour filtrer les praticiens :
-   - Si un service clinique est spécifié : filtrer les praticiens dont le département correspond (comparaison insensible à la casse).
-   - Si aucun praticien n'est trouvé pour ce service, utiliser le filtrage d'orientation classique en secours (fallback).
-4. Lorsque `visitOrientation` change, pré-sélectionner le service correspondant s'il y a correspondance.
-5. Lorsque `visitService` change, réinitialiser `visitMainPractitionerId` si le médecin précédemment choisi ne fait pas partie de la liste filtrée.
+L'ancien formulaire proposait un `<select>` de départements et un champ libre « Autre ».
+Cette règle est supprimée du parcours staff par HOS-STAFF-001-A : les unités sont sélectionnées
+exclusivement depuis HOS-ORG et les spécialités depuis `medical_specialty_catalog`.
 
-## 2. Impacts Backend & Base de données
-- Aucun impact backend ou base de données. Le champ `department` (users) et `service` (visits) restent des chaînes de caractères standards au niveau de l'API REST.
+### Formulaire Admission / Visite — dette isolée
+
+Le formulaire historique de visite conserve actuellement `visits.service_name` comme snapshot texte.
+Le filtrage personnel ne doit plus dépendre d'une colonne `users.department` : le service Angular staff
+expose désormais les unités organisationnelles actives structurées (`id`, `code`, libellés FR/EN,
+indicateur principal). Le snapshot de présentation éventuel est dérivé de ces références.
+
+## 2. Impacts Backend & Base de données — état remplacé
+
+L'affirmation historique « aucun impact backend ou base » n'est plus valide.
+HOS-STAFF-001-A introduit V92–V95, les tables d'affectations structurées, les contraintes de période
+et supprime physiquement `users.department` / `users.specialty` après preflight fail-fast.
