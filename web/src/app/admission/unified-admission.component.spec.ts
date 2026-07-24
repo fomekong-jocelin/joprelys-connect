@@ -1,6 +1,8 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { HospitalOrganizationApiService } from '../clinic/hospital-organization/hospital-organization-api.service';
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { EmergencyApiService } from '../emergency/emergency-api.service';
 import { PatientApiService } from '../patient/patient-api.service';
@@ -10,6 +12,7 @@ import { UnifiedAdmissionComponent } from './unified-admission.component';
 describe('UnifiedAdmissionComponent', () => {
   let fixture: ComponentFixture<UnifiedAdmissionComponent>;
   let component: UnifiedAdmissionComponent;
+  let permissions: ReturnType<typeof signal<Set<string>>>;
   let emergencyApi: {
     create: ReturnType<typeof vi.fn>;
     createProvisionalAdmission: ReturnType<typeof vi.fn>;
@@ -37,6 +40,7 @@ describe('UnifiedAdmissionComponent', () => {
 
   beforeEach(async () => {
     localStorage.clear();
+    permissions = signal(new Set(['PATIENT_READ', 'PATIENT_WRITE', 'EMERGENCY_WRITE', 'VISIT_CREATE']));
     emergencyApi = {
       create: vi.fn().mockReturnValue(of({ id: 'emergency-1' })),
       createProvisionalAdmission: vi.fn().mockReturnValue(of({
@@ -54,6 +58,12 @@ describe('UnifiedAdmissionComponent', () => {
           useValue: {
             locale: vi.fn().mockReturnValue('fr'),
             t: vi.fn((key: string, fallback?: string) => translations[key] ?? fallback ?? key),
+          },
+        },
+        {
+          provide: RbacApiService,
+          useValue: {
+            hasPermission: (permission: string) => permissions().has(permission),
           },
         },
         {
@@ -141,6 +151,19 @@ describe('UnifiedAdmissionComponent', () => {
       emergency: expect.objectContaining({ chiefComplaint: 'Patient inconscient' }),
     }));
     expect(emergencyApi.create).not.toHaveBeenCalled();
+  });
+
+  it('does not expose or activate existing-patient mode without PATIENT_READ', () => {
+    permissions.set(new Set(['EMERGENCY_WRITE']));
+    fixture.detectChanges();
+
+    component.setPatientMode('EXISTING');
+    component.nextStep();
+    fixture.detectChanges();
+
+    expect(component.allowExistingPatient()).toBe(false);
+    expect(component.patientMode).toBe('PROVISIONAL');
+    expect(fixture.nativeElement.textContent).not.toContain('admission.existing');
   });
 
   it('does not expose or activate new-patient mode when the caller lacks PATIENT_WRITE', () => {
