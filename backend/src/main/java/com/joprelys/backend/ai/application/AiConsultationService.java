@@ -178,7 +178,7 @@ public class AiConsultationService {
                         || transcription.text() == null
                         || transcription.text().isBlank()) {
                     throw new ResponseStatusException(
-                            HttpStatus.UNPROCESSABLE_ENTITY, "AI_OUTPUT_INVALID");
+                            org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
                 }
                 String transcript = limit(
                         transcription.text().trim(), MAX_TRANSCRIPT_LENGTH);
@@ -307,7 +307,7 @@ public class AiConsultationService {
                     List.copyOf(providerMessages), SYSTEM_PROMPT);
             if (response == null || response.content() == null) {
                 throw new ResponseStatusException(
-                        HttpStatus.UNPROCESSABLE_ENTITY, "AI_OUTPUT_INVALID");
+                        org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
             }
             ParsedResponse parsed = responseParser.parse(response.content());
             if (resolvedClarificationId != null) {
@@ -434,7 +434,7 @@ public class AiConsultationService {
                     + "\nNouvelle dictée, correction ou réponse du médecin: " + text;
         } catch (Exception exception) {
             throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_ENTITY, "AI_OUTPUT_INVALID");
+                    org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
         }
     }
 

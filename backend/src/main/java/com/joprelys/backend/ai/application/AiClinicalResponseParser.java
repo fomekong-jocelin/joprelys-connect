@@ -171,17 +171,17 @@ final class AiClinicalResponseParser {
 
     private ResponseStatusException invalidOutput() {
         return new ResponseStatusException(
-                HttpStatus.UNPROCESSABLE_ENTITY, "AI_OUTPUT_INVALID");
+                org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
     }
 
     private ResponseStatusException invalidChange() {
         return new ResponseStatusException(
-                HttpStatus.UNPROCESSABLE_ENTITY, "AI_CHANGE_INVALID");
+                org.springframework.http.HttpStatusCode.valueOf(422), "AI_CHANGE_INVALID");
     }
 
     private ResponseStatusException invalidClarification() {
         return new ResponseStatusException(
-                HttpStatus.UNPROCESSABLE_ENTITY, "AI_CLARIFICATION_INVALID");
+                org.springframework.http.HttpStatusCode.valueOf(422), "AI_CLARIFICATION_INVALID");
     }
 
     record ParsedChange(

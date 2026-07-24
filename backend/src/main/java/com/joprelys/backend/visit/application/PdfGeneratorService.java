@@ -405,7 +405,7 @@ public class PdfGeneratorService {
             stayCell.setBorder(Rectangle.NO_BORDER);
             stayCell.addElement(new Paragraph("Détails du Séjour", fontSectionHeader));
             stayCell.addElement(new Paragraph("Service : " + hospitalization.getServiceName(), fontBody));
-            stayCell.addElement(new Paragraph("Chambre : " + hospitalization.getRoomNumber() + " | Lit : " + hospitalization.getBedNumber(), fontBody));
+            stayCell.addElement(new Paragraph("Espace : " + hospitalization.getSpaceName() + " | Lit : " + hospitalization.getBedNumber(), fontBody));
             stayCell.addElement(new Paragraph("Admis le : " + DATE_FORMATTER.format(hospitalization.getAdmittedAt()), fontBody));
             if (hospitalization.getDischargedAt() != null) {
                 stayCell.addElement(new Paragraph("Sorti le : " + DATE_FORMATTER.format(hospitalization.getDischargedAt()), fontBody));
@@ -500,7 +500,7 @@ public class PdfGeneratorService {
             stayCell.addElement(new Paragraph("Détails d'Admission", fontSectionHeader));
             stayCell.addElement(new Paragraph("Numéro d'hospitalisation : " + hospitalization.getHospitalizationNumber(), fontBody));
             stayCell.addElement(new Paragraph("Service : " + hospitalization.getServiceName(), fontBody));
-            stayCell.addElement(new Paragraph("Chambre : " + hospitalization.getRoomNumber() + " | Lit : " + hospitalization.getBedNumber(), fontBody));
+            stayCell.addElement(new Paragraph("Espace : " + hospitalization.getSpaceName() + " | Lit : " + hospitalization.getBedNumber(), fontBody));
             stayCell.addElement(new Paragraph("Admis le : " + DATE_FORMATTER.format(hospitalization.getAdmittedAt()), fontBody));
 
             PdfPCell patientCell = new PdfPCell();
