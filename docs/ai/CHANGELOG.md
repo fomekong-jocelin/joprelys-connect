@@ -59,6 +59,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+- **Éditeur d'affectations collaborateur (`StaffAssignmentEditorComponent`)** : refonte ergonomique (affichage prioritaire des cartes d'affectations existantes, ouverture à la demande du formulaire via bouton d'action), correction des espacements (suppression du bouton directement collé aux cartes) et complétude i18n FR/EN pour l'ensemble des clés `staff.assignments.*`.
 - **Portabilité H2/PostgreSQL de `unit_type`** : remplacement d'un CHECK littéral fragile par `organizational_unit_type_catalog` + FK et converter JPA enum ↔ VARCHAR fail-closed ; la contrainte reste forte au lieu d'être supprimée pour satisfaire les tests.
 - **Test historique V86** : `LegacyHospitalizationPermissionPostgresqlMigrationTest` ne suppose plus que V86 restera éternellement la dernière migration. Il vérifie désormais le contrat réel : V86 appliquée, `HOSPITALIZATION_MANAGE` supprimée, aucun remapping automatique des permissions.
 - **Erreurs UI HOS-ORG** : les erreurs sont traduites via le mécanisme i18n existant au lieu d'exposer un détail backend français dans une interface anglaise.
