@@ -148,6 +148,11 @@ export class StaffApiService {
       return left.nameFr.localeCompare(right.nameFr);
     });
 
-    return { ...member, activeOrganizationalUnits };
+    const primaryUnit = activeOrganizationalUnits.find((unit) => unit.primary) ?? activeOrganizationalUnits[0];
+    return {
+      ...member,
+      activeOrganizationalUnits,
+      department: primaryUnit?.nameFr,
+    };
   }
 }
