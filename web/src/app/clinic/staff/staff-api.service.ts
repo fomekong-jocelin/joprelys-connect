@@ -13,6 +13,7 @@ import {
   StaffAssignmentRole,
   StaffAssignmentStructure,
   StaffMember,
+  StaffProfileActiveStructure,
   StaffSpecialtyAssignment,
   StaffSpecialtyAssignmentRequest,
   StaffUnitAssignment,
@@ -61,6 +62,10 @@ export class StaffApiService {
 
   getAssignments(staffId: string): Observable<StaffAssignmentStructure> {
     return this.http.get<StaffAssignmentStructure>(`/api/staff/${staffId}/assignments`);
+  }
+
+  getOwnActiveAssignments(): Observable<StaffProfileActiveStructure> {
+    return this.http.get<StaffProfileActiveStructure>('/api/profile/assignments');
   }
 
   createSpecialtyAssignment(

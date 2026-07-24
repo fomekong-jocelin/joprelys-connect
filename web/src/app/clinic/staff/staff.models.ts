@@ -31,10 +31,30 @@ export interface StaffMember {
   readonly department?: string;
 }
 
+export interface StaffSpecialtyAssignmentRequest {
+  readonly specialtyCode: string;
+  readonly primary: boolean;
+  readonly validFrom: string;
+  readonly validTo?: string;
+}
+
+export interface StaffUnitAssignmentRequest {
+  readonly organizationalUnitId: string;
+  readonly assignmentRoleCode: string;
+  readonly primary: boolean;
+  readonly validFrom: string;
+  readonly validTo?: string;
+}
+
 export interface InviteStaffRequest {
   readonly email: string;
   readonly displayName: string;
   readonly roles: readonly StaffRole[];
+  readonly phone?: string;
+  readonly registrationNumber?: string;
+  readonly bio?: string;
+  readonly specialtyAssignments?: readonly StaffSpecialtyAssignmentRequest[];
+  readonly unitAssignments?: readonly StaffUnitAssignmentRequest[];
 }
 
 export interface UpdateStaffRequest {
@@ -78,19 +98,31 @@ export interface StaffAssignmentStructure {
   readonly unitAssignments: readonly StaffUnitAssignment[];
 }
 
-export interface StaffSpecialtyAssignmentRequest {
+export interface StaffProfileActiveSpecialty {
   readonly specialtyCode: string;
+  readonly nameFr: string;
+  readonly nameEn: string;
   readonly primary: boolean;
   readonly validFrom: string;
   readonly validTo?: string;
 }
 
-export interface StaffUnitAssignmentRequest {
+export interface StaffProfileActiveUnit {
   readonly organizationalUnitId: string;
+  readonly unitCode: string;
+  readonly nameFr: string;
+  readonly nameEn: string;
   readonly assignmentRoleCode: string;
+  readonly assignmentRoleNameFr: string;
+  readonly assignmentRoleNameEn: string;
   readonly primary: boolean;
   readonly validFrom: string;
   readonly validTo?: string;
+}
+
+export interface StaffProfileActiveStructure {
+  readonly specialties: readonly StaffProfileActiveSpecialty[];
+  readonly unitAssignments: readonly StaffProfileActiveUnit[];
 }
 
 export interface CloseStaffAssignmentRequest {

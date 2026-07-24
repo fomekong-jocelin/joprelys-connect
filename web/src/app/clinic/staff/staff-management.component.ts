@@ -8,11 +8,17 @@ import { ButtonComponent } from '../../shared/ui/button.component';
 import { CardComponent } from '../../shared/ui/card.component';
 import { FileDragDropComponent } from '../../shared/ui/file-drag-drop.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
+import { HospitalOrganizationApiService } from '../hospital-organization/hospital-organization-api.service';
+import {
+  HospitalServiceCatalogEntry,
+  MedicalSpecialtyCatalogEntry,
+  OrganizationalUnit,
+} from '../hospital-organization/hospital-organization.models';
 import { RbacApiService } from '../rbac/rbac-api.service';
 import { RbacRole } from '../rbac/rbac.models';
 import { StaffApiService } from './staff-api.service';
 import { StaffAssignmentEditorComponent } from './staff-assignment-editor.component';
-import { StaffMember, StaffRole } from './staff.models';
+import { StaffAssignmentRole, StaffMember, StaffRole } from './staff.models';
 import { StaffTableComponent, StaffTableLabels } from './staff-table.component';
 
 const NON_STAFF_ROLE_CODES = new Set(['SUPER_ADMIN', 'ADMIN_JOPRELYS', 'ADMIN_CLINIQUE', 'PATIENT']);
@@ -49,11 +55,16 @@ interface HttpErrorLike {
 })
 export class StaffManagementComponent implements OnInit {
   private readonly api = inject(StaffApiService);
+  private readonly organizationApi = inject(HospitalOrganizationApiService);
   private readonly rbacApi = inject(RbacApiService);
   private readonly i18n = inject(I18nService);
   private readonly http = inject(HttpClient);
 
   readonly roles = signal<RbacRole[]>([]);
+  readonly specialties = signal<MedicalSpecialtyCatalogEntry[]>([]);
+  readonly serviceCatalog = signal<HospitalServiceCatalogEntry[]>([]);
+  readonly units = signal<OrganizationalUnit[]>([]);
+  readonly assignmentRoles = signal<StaffAssignmentRole[]>([]);
   readonly staff = signal<StaffMember[]>([]);
   readonly loading = signal(false);
   readonly pageError = signal<string | null>(null);
@@ -68,6 +79,11 @@ export class StaffManagementComponent implements OnInit {
   readonly phone = signal('');
   readonly registrationNumber = signal('');
   readonly bio = signal('');
+
+  readonly initialSpecialtyCode = signal('');
+  readonly initialUnitId = signal('');
+  readonly initialAssignmentRoleCode = signal('');
+  readonly initialAssignmentFrom = signal(this.localDateTimeNow());
 
   readonly photoPath = signal<string | null>(null);
   readonly signaturePath = signal<string | null>(null);
@@ -108,8 +124,12 @@ export class StaffManagementComponent implements OnInit {
     forkJoin({
       staff: this.api.list(),
       roles: this.rbacApi.listRoles(),
+      specialties: this.organizationApi.listSpecialtyCatalog(),
+      services: this.organizationApi.listServiceCatalog(),
+      units: this.organizationApi.listUnits(undefined, false),
+      assignmentRoles: this.api.listAssignmentRoles(),
     }).subscribe({
-      next: ({ staff, roles }) => {
+      next: ({ staff, roles, specialties, services, units, assignmentRoles }) => {
         this.staff.set(staff);
         this.roles.set(roles
           .filter((role) => role.assignable && role.enabled && !NON_STAFF_ROLE_CODES.has(role.code))
@@ -117,6 +137,10 @@ export class StaffManagementComponent implements OnInit {
             if (left.systemRole !== right.systemRole) return left.systemRole ? -1 : 1;
             return left.name.localeCompare(right.name);
           }));
+        this.specialties.set(specialties);
+        this.serviceCatalog.set(services);
+        this.units.set(units.filter((unit) => unit.active));
+        this.assignmentRoles.set(assignmentRoles);
         if (this.selectedRoles().length === 0) {
           this.selectedRoles.set(this.defaultSelectedRoles());
         }
@@ -164,6 +188,18 @@ export class StaffManagementComponent implements OnInit {
       this.formError.set(this.t('staff.requiredFields'));
       return;
     }
+    if (this.isDoctorSelected() && !this.registrationNumber().trim()) {
+      this.formError.set(this.t('staff.onboarding.registrationRequired', "Le numéro d'inscription à l'Ordre est obligatoire pour un médecin."));
+      return;
+    }
+    if (!this.editingStaff() && this.initialUnitId() && !this.initialAssignmentRoleCode()) {
+      this.formError.set(this.t('staff.onboarding.unitRoleRequired', "Sélectionnez un rôle contextuel pour l'unité choisie."));
+      return;
+    }
+    if (!this.editingStaff() && (this.initialSpecialtyCode() || this.initialUnitId()) && !this.toIso(this.initialAssignmentFrom())) {
+      this.formError.set(this.t('staff.onboarding.startRequired', "La date de début de l'affectation est obligatoire."));
+      return;
+    }
 
     const current = this.editingStaff();
     this.formLoading.set(true);
@@ -192,10 +228,38 @@ export class StaffManagementComponent implements OnInit {
         ? current.filter((code) => code !== roleCode)
         : [...current, roleCode],
     );
+    if (this.initialUnitId()) {
+      this.initialAssignmentRoleCode.set('');
+      this.applySuggestedAssignmentRole();
+    }
+  }
+
+  onInitialUnitChange(unitId: string): void {
+    this.initialUnitId.set(unitId);
+    this.initialAssignmentRoleCode.set('');
+    if (unitId) this.applySuggestedAssignmentRole();
   }
 
   roleLabel(roleCode: string): string {
     return this.roles().find((role) => role.code === roleCode)?.name ?? roleCode;
+  }
+
+  specialtyLabel(item: MedicalSpecialtyCatalogEntry): string {
+    return this.localized(item.nameFr, item.nameEn);
+  }
+
+  unitLabel(unit: OrganizationalUnit): string {
+    if (unit.name) return `${unit.name} · ${unit.code}`;
+    const service = this.serviceCatalog().find((candidate) => candidate.code === unit.serviceCatalogCode);
+    return `${service ? this.localized(service.nameFr, service.nameEn) : (unit.serviceCatalogCode ?? unit.code)} · ${unit.code}`;
+  }
+
+  assignmentRoleLabel(item: StaffAssignmentRole): string {
+    return this.localized(item.nameFr, item.nameEn);
+  }
+
+  localized(fr: string, en: string): string {
+    return this.i18n.currentLanguage() === 'en' ? en : fr;
   }
 
   t(key: string, fallback?: string): string {
@@ -223,16 +287,34 @@ export class StaffManagementComponent implements OnInit {
   }
 
   private inviteStaff(): void {
+    const validFrom = this.toIso(this.initialAssignmentFrom()) ?? new Date().toISOString();
+    const specialtyAssignments = this.initialSpecialtyCode()
+      ? [{ specialtyCode: this.initialSpecialtyCode(), primary: true, validFrom }]
+      : undefined;
+    const unitAssignments = this.initialUnitId() && this.initialAssignmentRoleCode()
+      ? [{
+          organizationalUnitId: this.initialUnitId(),
+          assignmentRoleCode: this.initialAssignmentRoleCode(),
+          primary: true,
+          validFrom,
+        }]
+      : undefined;
+
     this.api.invite({
       displayName: this.displayName().trim(),
       email: this.email().trim(),
       roles: [...this.selectedRoles()],
+      phone: this.phone().trim() || undefined,
+      registrationNumber: this.registrationNumber().trim() || undefined,
+      bio: this.bio().trim() || undefined,
+      specialtyAssignments,
+      unitAssignments,
     }).subscribe({
-      next: (created) => {
-        this.staff.update((items) => [...items, created]);
+      next: () => {
         this.formLoading.set(false);
         this.showForm.set(false);
         this.resetForm();
+        this.load();
       },
       error: (error) => {
         this.formError.set(this.errorMessage(error, this.t('staff.saveError')));
@@ -277,6 +359,10 @@ export class StaffManagementComponent implements OnInit {
     this.phone.set('');
     this.registrationNumber.set('');
     this.bio.set('');
+    this.initialSpecialtyCode.set('');
+    this.initialUnitId.set('');
+    this.initialAssignmentRoleCode.set('');
+    this.initialAssignmentFrom.set(this.localDateTimeNow());
     this.photoPath.set(null);
     this.signaturePath.set(null);
     this.stampPath.set(null);
@@ -296,14 +382,41 @@ export class StaffManagementComponent implements OnInit {
       : this.defaultSelectedRoles();
   }
 
+  private applySuggestedAssignmentRole(): void {
+    if (this.editingStaff() || !this.initialUnitId() || this.initialAssignmentRoleCode()) return;
+    const suggestions: Array<[string, string]> = [
+      ['MEDECIN', 'PRACTITIONER'],
+      ['INFIRMIER', 'NURSE'],
+      ['PHARMACIEN', 'PHARMACIST'],
+      ['BIOLOGISTE', 'LAB_TECHNICIAN'],
+      ['RESPONSABLE_HOSPITALISATION', 'UNIT_MANAGER'],
+      ['AGENT_ACCUEIL', 'ADMINISTRATIVE_SUPPORT'],
+      ['CAISSIER', 'ADMINISTRATIVE_SUPPORT'],
+      ['DAF', 'ADMINISTRATIVE_SUPPORT'],
+      ['SECRETAIRE_COMPTABLE', 'ADMINISTRATIVE_SUPPORT'],
+    ];
+    const suggested = suggestions.find(([rbacRole]) => this.selectedRoles().includes(rbacRole))?.[1];
+    if (suggested && this.assignmentRoles().some((role) => role.code === suggested)) {
+      this.initialAssignmentRoleCode.set(suggested);
+    }
+  }
+
+  private toIso(value: string): string | null {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+
+  private localDateTimeNow(): string {
+    const date = new Date();
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+    return local.toISOString().slice(0, 16);
+  }
+
   private errorMessage(error: HttpErrorLike, fallback: string): string {
     const code = error.error?.error?.code;
-    if (code === 'MAIL_RECIPIENT_REJECTED') {
-      return this.t('staff.errors.mailRecipientRejected');
-    }
-    if (code === 'MAIL_DELIVERY_UNAVAILABLE') {
-      return this.t('staff.errors.mailDeliveryUnavailable');
-    }
+    if (code === 'MAIL_RECIPIENT_REJECTED') return this.t('staff.errors.mailRecipientRejected');
+    if (code === 'MAIL_DELIVERY_UNAVAILABLE') return this.t('staff.errors.mailDeliveryUnavailable');
     if (error.status === 401) return this.t('common.error.unauthorized');
     if (error.status === 403) return this.t('common.error.forbidden');
 

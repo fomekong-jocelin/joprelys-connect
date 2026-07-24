@@ -17,182 +17,142 @@
 
     @if (showForm()) {
       <app-ui-card [title]="formTitle()">
-        <form class="space-y-5" (submit)="$event.preventDefault(); submitForm()">
+        <form class="space-y-6" (submit)="$event.preventDefault(); submitForm()">
           @if (formError(); as error) {
             <app-ui-alert tone="error">{{ error }}</app-ui-alert>
           }
 
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label class="space-y-1.5">
-              <span class="ui-label">{{ t('staff.displayName') }} <span class="text-[var(--brand-danger)]">*</span></span>
-              <input
-                class="ui-input"
-                [value]="displayName()"
-                [placeholder]="t('staff.displayNamePlaceholder')"
-                [disabled]="formLoading()"
-                (input)="displayName.set($any($event.target).value)"
-              />
-            </label>
+          <section class="space-y-4">
+            <div>
+              <h3 class="font-extrabold text-[var(--text-primary)]">{{ t('staff.onboarding.identityTitle', 'Identité et coordonnées professionnelles') }}</h3>
+              <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">{{ t('staff.onboarding.identityHelp', 'Renseignez les informations nécessaires pour identifier et contacter le collaborateur.') }}</p>
+            </div>
 
-            <label class="space-y-1.5">
-              <span class="ui-label">{{ t('staff.email') }} <span class="text-[var(--brand-danger)]">*</span></span>
-              <input
-                class="ui-input"
-                type="email"
-                [value]="email()"
-                [placeholder]="t('staff.emailPlaceholder')"
-                [disabled]="formLoading() || editingStaff() !== null"
-                (input)="email.set($any($event.target).value)"
-              />
-            </label>
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <label class="space-y-1.5">
+                <span class="ui-label">{{ t('staff.displayName') }} <span class="text-[var(--brand-danger)]">*</span></span>
+                <input class="ui-input" [value]="displayName()" [placeholder]="t('staff.displayNamePlaceholder')" [disabled]="formLoading()" (input)="displayName.set($any($event.target).value)" />
+              </label>
 
-            <section class="space-y-3 sm:col-span-2">
-              <div class="flex flex-wrap items-end justify-between gap-2">
-                <div>
-                  <span class="ui-label block">{{ t('staff.role') }} <span class="text-[var(--brand-danger)]">*</span></span>
-                  <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                    {{ t('staff.roles.selectionHelp', 'Sélectionnez un ou plusieurs rôles. Les permissions effectives seront la combinaison des rôles choisis.') }}
-                  </p>
-                </div>
-                <span class="rounded-md bg-[var(--app-surface-muted)] px-3 py-1 text-xs font-bold text-[var(--text-secondary)]">
-                  {{ selectedRoles().length }} {{ t('staff.roles.selected', 'sélectionné(s)') }}
-                </span>
-              </div>
+              <label class="space-y-1.5">
+                <span class="ui-label">{{ t('staff.email') }} <span class="text-[var(--brand-danger)]">*</span></span>
+                <input class="ui-input" type="email" [value]="email()" [placeholder]="t('staff.emailPlaceholder')" [disabled]="formLoading() || editingStaff() !== null" (input)="email.set($any($event.target).value)" />
+              </label>
 
-              @if (roles().length === 0) {
-                <app-ui-alert tone="info">
-                  {{ t('staff.roles.empty', 'Aucun rôle attribuable n’est disponible. Créez ou activez un rôle depuis « Rôles et permissions ».') }}
-                </app-ui-alert>
-              } @else {
-                <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  @for (option of roles(); track option.id) {
-                    <label
-                      class="cursor-pointer rounded-md border p-4 transition-colors"
-                      [class.border-brand-primary]="hasSelectedRole(option.code)"
-                      [class.bg-brand-primary/5]="hasSelectedRole(option.code)"
-                      [class.border-[var(--app-border)]]="!hasSelectedRole(option.code)"
-                    >
-                      <div class="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          class="ui-checkbox mt-0.5"
-                          [checked]="hasSelectedRole(option.code)"
-                          [disabled]="formLoading()"
-                          (change)="toggleRole(option.code)"
-                        />
-                        <span class="min-w-0 flex-1">
-                          <span class="flex flex-wrap items-center gap-2">
-                            <strong class="text-sm text-[var(--text-primary)]">{{ option.name }}</strong>
-                            <span class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)] bg-[var(--app-surface-muted)]">
-                              {{ option.systemRole ? t('rbac.roles.system', 'Système') : t('rbac.roles.custom', 'Personnalisé') }}
-                            </span>
-                          </span>
-                          <code class="mt-1 block text-[11px] text-brand-cyan">{{ option.code }}</code>
-                          @if (option.description) {
-                            <span class="mt-2 block text-xs leading-5 text-[var(--text-muted)]">{{ option.description }}</span>
-                          }
-                        </span>
-                      </div>
-                    </label>
-                  }
-                </div>
-              }
-            </section>
-          </div>
-
-          @if (editingStaff(); as current) {
-            <div class="mt-4 grid grid-cols-1 gap-4 border-t border-[var(--app-border)] pt-4 sm:grid-cols-2">
               <label class="space-y-1.5">
                 <span class="ui-label">{{ t('profile.phone') }}</span>
-                <input
-                  class="ui-input"
-                  type="tel"
-                  [value]="phone()"
-                  [placeholder]="t('profile.phonePlaceholder')"
-                  [disabled]="formLoading()"
-                  (input)="phone.set($any($event.target).value)"
-                />
+                <input class="ui-input" type="tel" [value]="phone()" [placeholder]="t('profile.phonePlaceholder')" [disabled]="formLoading()" (input)="phone.set($any($event.target).value)" />
               </label>
 
               @if (isDoctorSelected()) {
                 <label class="space-y-1.5">
-                  <span class="ui-label">{{ t('profile.registrationNumber') }}</span>
-                  <input
-                    class="ui-input"
-                    [value]="registrationNumber()"
-                    [placeholder]="t('profile.registrationNumberPlaceholder')"
-                    [disabled]="formLoading()"
-                    (input)="registrationNumber.set($any($event.target).value)"
-                  />
+                  <span class="ui-label">{{ t('profile.registrationNumber') }} <span class="text-[var(--brand-danger)]">*</span></span>
+                  <input class="ui-input" [value]="registrationNumber()" [placeholder]="t('profile.registrationNumberPlaceholder')" [disabled]="formLoading()" (input)="registrationNumber.set($any($event.target).value)" />
                 </label>
               }
 
-              <div class="sm:col-span-2">
-                <label class="block space-y-1.5">
-                  <span class="ui-label">{{ t('profile.bio') }}</span>
-                  <textarea
-                    class="ui-input h-20 resize-y py-2"
-                    [value]="bio()"
-                    [placeholder]="t('profile.bioPlaceholder')"
-                    [disabled]="formLoading()"
-                    (input)="bio.set($any($event.target).value)"
-                  ></textarea>
-                </label>
+              <label class="space-y-1.5 md:col-span-2">
+                <span class="ui-label">{{ t('profile.bio') }}</span>
+                <textarea class="ui-input h-20 resize-y py-2" [value]="bio()" [placeholder]="t('profile.bioPlaceholder')" [disabled]="formLoading()" (input)="bio.set($any($event.target).value)"></textarea>
+              </label>
+            </div>
+          </section>
+
+          <section class="space-y-3 border-t border-[var(--app-border)] pt-5">
+            <div class="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h3 class="font-extrabold text-[var(--text-primary)]">{{ t('staff.onboarding.accessTitle', 'Accès et responsabilités') }}</h3>
+                <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">{{ t('staff.roles.selectionHelp', 'Sélectionnez un ou plusieurs rôles. Les permissions effectives seront la combinaison des rôles choisis.') }}</p>
+              </div>
+              <span class="rounded-md bg-[var(--app-surface-muted)] px-3 py-1 text-xs font-bold text-[var(--text-secondary)]">{{ selectedRoles().length }} {{ t('staff.roles.selected', 'sélectionné(s)') }}</span>
+            </div>
+
+            @if (roles().length === 0) {
+              <app-ui-alert tone="info">{{ t('staff.roles.empty', 'Aucun rôle attribuable n’est disponible. Créez ou activez un rôle depuis « Rôles et permissions ».') }}</app-ui-alert>
+            } @else {
+              <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                @for (option of roles(); track option.id) {
+                  <label class="cursor-pointer rounded-md border p-4 transition-colors" [class.border-brand-primary]="hasSelectedRole(option.code)" [class.bg-brand-primary/5]="hasSelectedRole(option.code)" [class.border-[var(--app-border)]]="!hasSelectedRole(option.code)">
+                    <div class="flex items-start gap-3">
+                      <input type="checkbox" class="ui-checkbox mt-0.5" [checked]="hasSelectedRole(option.code)" [disabled]="formLoading()" (change)="toggleRole(option.code)" />
+                      <span class="min-w-0 flex-1">
+                        <span class="flex flex-wrap items-center gap-2">
+                          <strong class="text-sm text-[var(--text-primary)]">{{ option.name }}</strong>
+                          <span class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)] bg-[var(--app-surface-muted)]">{{ option.systemRole ? t('rbac.roles.system', 'Système') : t('rbac.roles.custom', 'Personnalisé') }}</span>
+                        </span>
+                        <code class="mt-1 block text-[11px] text-brand-cyan">{{ option.code }}</code>
+                        @if (option.description) { <span class="mt-2 block text-xs leading-5 text-[var(--text-muted)]">{{ option.description }}</span> }
+                      </span>
+                    </div>
+                  </label>
+                }
+              </div>
+            }
+          </section>
+
+          @if (!editingStaff()) {
+            <section class="space-y-4 rounded-md border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-4 sm:p-5">
+              <div>
+                <p class="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-cyan">{{ t('staff.onboarding.exerciseEyebrow', 'HOS-STAFF') }}</p>
+                <h3 class="mt-1 font-extrabold text-[var(--text-primary)]">{{ t('staff.onboarding.exerciseTitle', 'Exercice professionnel initial') }}</h3>
+                <p class="mt-1 max-w-3xl text-xs leading-5 text-[var(--text-muted)]">{{ t('staff.onboarding.exerciseHelp', 'Configurez dès maintenant la spécialité et l’unité principales. Ces affectations sont structurées, datées et pourront évoluer ensuite sans perdre l’historique.') }}</p>
               </div>
 
+              <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <label class="space-y-1.5">
+                  <span class="ui-label">{{ t('staff.onboarding.primarySpecialty', 'Spécialité principale') }}</span>
+                  <select class="ui-select" [value]="initialSpecialtyCode()" [disabled]="formLoading()" (change)="initialSpecialtyCode.set($any($event.target).value)">
+                    <option value="">{{ t('staff.onboarding.noSpecialty', 'Aucune spécialité initiale') }}</option>
+                    @for (item of specialties(); track item.code) { <option [value]="item.code">{{ specialtyLabel(item) }}</option> }
+                  </select>
+                </label>
+
+                <label class="space-y-1.5">
+                  <span class="ui-label">{{ t('staff.onboarding.primaryUnit', 'Unité / service principal') }}</span>
+                  <select class="ui-select" [value]="initialUnitId()" [disabled]="formLoading()" (change)="onInitialUnitChange($any($event.target).value)">
+                    <option value="">{{ t('staff.onboarding.noUnit', 'Aucune unité initiale') }}</option>
+                    @for (unit of units(); track unit.id) { <option [value]="unit.id">{{ unitLabel(unit) }}</option> }
+                  </select>
+                </label>
+
+                <label class="space-y-1.5">
+                  <span class="ui-label">{{ t('staff.onboarding.contextRole', 'Rôle dans l’unité') }}</span>
+                  <select class="ui-select" [value]="initialAssignmentRoleCode()" [disabled]="formLoading() || !initialUnitId()" (change)="initialAssignmentRoleCode.set($any($event.target).value)">
+                    <option value="">{{ t('staff.onboarding.noContextRole', 'Aucun rôle contextuel') }}</option>
+                    @for (item of assignmentRoles(); track item.code) { <option [value]="item.code">{{ assignmentRoleLabel(item) }}</option> }
+                  </select>
+                  <p class="text-xs leading-5 text-[var(--text-muted)]">{{ t('staff.onboarding.contextRoleHelp', 'Ce rôle décrit l’exercice dans cette unité et reste distinct des permissions RBAC ci-dessus.') }}</p>
+                </label>
+
+                <label class="space-y-1.5">
+                  <span class="ui-label">{{ t('staff.assignments.validFrom', 'Début de l’affectation') }}</span>
+                  <input class="ui-input" type="datetime-local" [value]="initialAssignmentFrom()" [disabled]="formLoading()" (input)="initialAssignmentFrom.set($any($event.target).value)" />
+                </label>
+              </div>
+            </section>
+          }
+
+          @if (editingStaff(); as current) {
+            <div class="border-t border-[var(--app-border)] pt-5">
               <app-staff-assignment-editor [staffId]="current.id" />
-
-              <div class="mt-2 grid grid-cols-1 gap-4 sm:col-span-2 md:grid-cols-3">
-                <app-file-drag-drop
-                  #photoUploader
-                  [label]="t('profile.photoLabel')"
-                  [previewUrl]="photoViewUrl()"
-                  (fileSelected)="onFileSelected($event, 'photo', photoUploader)"
-                  (fileRemoved)="photoPath.set(null)"
-                />
-
+              <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+                <app-file-drag-drop #photoUploader [label]="t('profile.photoLabel')" [previewUrl]="photoViewUrl()" (fileSelected)="onFileSelected($event, 'photo', photoUploader)" (fileRemoved)="photoPath.set(null)" />
                 @if (isDoctorSelected()) {
-                  <app-file-drag-drop
-                    #sigUploader
-                    [label]="t('profile.signatureLabel')"
-                    [previewUrl]="signatureViewUrl()"
-                    (fileSelected)="onFileSelected($event, 'signature', sigUploader)"
-                    (fileRemoved)="signaturePath.set(null)"
-                  />
-                  <app-file-drag-drop
-                    #stampUploader
-                    [label]="t('profile.stampLabel')"
-                    [previewUrl]="stampViewUrl()"
-                    (fileSelected)="onFileSelected($event, 'stamp', stampUploader)"
-                    (fileRemoved)="stampPath.set(null)"
-                  />
+                  <app-file-drag-drop #sigUploader [label]="t('profile.signatureLabel')" [previewUrl]="signatureViewUrl()" (fileSelected)="onFileSelected($event, 'signature', sigUploader)" (fileRemoved)="signaturePath.set(null)" />
+                  <app-file-drag-drop #stampUploader [label]="t('profile.stampLabel')" [previewUrl]="stampViewUrl()" (fileSelected)="onFileSelected($event, 'stamp', stampUploader)" (fileRemoved)="stampPath.set(null)" />
                 }
               </div>
             </div>
           }
 
-          <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <app-ui-button variant="secondary" class="w-full sm:w-auto" (pressed)="cancelForm()">
-              {{ t('common.cancel') }}
-            </app-ui-button>
-            <app-ui-button
-              type="submit"
-              class="w-full sm:w-auto"
-              [disabled]="formLoading() || selectedRoles().length === 0"
-            >
-              {{ formLoading() ? t('common.saving') : submitLabel() }}
-            </app-ui-button>
+          <div class="flex flex-col-reverse gap-3 border-t border-[var(--app-border)] pt-4 sm:flex-row sm:justify-end">
+            <app-ui-button variant="secondary" class="w-full sm:w-auto" (pressed)="cancelForm()">{{ t('common.cancel') }}</app-ui-button>
+            <app-ui-button type="submit" class="w-full sm:w-auto" [disabled]="formLoading() || selectedRoles().length === 0">{{ formLoading() ? t('common.saving') : submitLabel() }}</app-ui-button>
           </div>
         </form>
       </app-ui-card>
     }
 
-    <app-staff-table
-      [staff]="staff()"
-      [loading]="loading()"
-      [labels]="tableLabels()"
-      (editRequested)="startEdit($event)"
-      (statusToggled)="toggleStatus($event)"
-    />
+    <app-staff-table [staff]="staff()" [loading]="loading()" [labels]="tableLabels()" (editRequested)="startEdit($event)" (statusToggled)="toggleStatus($event)" />
   </div>
 </app-shell>

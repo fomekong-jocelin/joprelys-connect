@@ -2,13 +2,18 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
+import { StaffApiService } from '../clinic/staff/staff-api.service';
+import { StaffProfileActiveStructure } from '../clinic/staff/staff.models';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
 import { AlertComponent } from '../shared/ui/alert.component';
 import { ButtonComponent } from '../shared/ui/button.component';
 import { CardComponent } from '../shared/ui/card.component';
 import { FileDragDropComponent } from '../shared/ui/file-drag-drop.component';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
+
+const EMPTY_ASSIGNMENTS: StaffProfileActiveStructure = { specialties: [], unitAssignments: [] };
 
 @Component({
   selector: 'app-profile',
@@ -77,7 +82,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
             }
           </div>
 
-          <div class="lg:col-span-2">
+          <div class="space-y-6 lg:col-span-2">
             <app-ui-card [title]="t('profile.detailsTitle')">
               <form class="space-y-5" (submit)="$event.preventDefault(); saveProfile()">
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -125,10 +130,6 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                   }
                 </div>
 
-                <app-ui-alert tone="info">
-                  {{ t('profile.assignmentsManaged', 'Les services et spécialités d’exercice sont gérés par l’établissement depuis les affectations structurées du personnel.') }}
-                </app-ui-alert>
-
                 <label class="block space-y-1.5">
                   <span class="ui-label">{{ t('profile.bio') }}</span>
                   <textarea
@@ -147,6 +148,77 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                 </div>
               </form>
             </app-ui-card>
+
+            <app-ui-card [title]="t('profile.professionalContext.title', 'Mon exercice professionnel')">
+              <div class="space-y-5">
+                <div class="flex flex-wrap gap-2">
+                  @for (roleCode of roleCodes(); track roleCode) {
+                    <span class="rounded-md border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-3 py-1.5 text-xs font-bold text-[var(--text-secondary)]">
+                      {{ roleLabel(roleCode) }}
+                    </span>
+                  }
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                  <section class="rounded-md border border-[var(--app-border)] p-4">
+                    <p class="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-cyan">
+                      {{ t('profile.professionalContext.specialtiesEyebrow', 'Spécialités') }}
+                    </p>
+                    <h3 class="mt-1 font-extrabold text-[var(--text-primary)]">
+                      {{ t('profile.professionalContext.specialtiesTitle', 'Spécialités actives') }}
+                    </h3>
+                    <div class="mt-3 space-y-2">
+                      @for (item of assignments().specialties; track item.specialtyCode) {
+                        <div class="rounded-md bg-[var(--app-surface-muted)] p-3">
+                          <div class="flex flex-wrap items-center justify-between gap-2">
+                            <strong class="text-sm text-[var(--text-primary)]">{{ localized(item.nameFr, item.nameEn) }}</strong>
+                            @if (item.primary) {
+                              <span class="rounded bg-[var(--app-surface)] px-2 py-1 text-[10px] font-bold uppercase text-[var(--text-secondary)]">
+                                {{ t('profile.professionalContext.primary', 'Principale') }}
+                              </span>
+                            }
+                          </div>
+                        </div>
+                      } @empty {
+                        <p class="text-sm text-[var(--text-muted)]">{{ t('profile.professionalContext.noSpecialty', 'Aucune spécialité active.') }}</p>
+                      }
+                    </div>
+                  </section>
+
+                  <section class="rounded-md border border-[var(--app-border)] p-4">
+                    <p class="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-cyan">
+                      {{ t('profile.professionalContext.unitsEyebrow', 'Organisation') }}
+                    </p>
+                    <h3 class="mt-1 font-extrabold text-[var(--text-primary)]">
+                      {{ t('profile.professionalContext.unitsTitle', 'Unités d’exercice actives') }}
+                    </h3>
+                    <div class="mt-3 space-y-2">
+                      @for (item of assignments().unitAssignments; track item.organizationalUnitId) {
+                        <div class="rounded-md bg-[var(--app-surface-muted)] p-3">
+                          <div class="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                              <strong class="text-sm text-[var(--text-primary)]">{{ localized(item.nameFr, item.nameEn) }}</strong>
+                              <p class="mt-1 text-xs text-[var(--text-muted)]">{{ localized(item.assignmentRoleNameFr, item.assignmentRoleNameEn) }}</p>
+                            </div>
+                            @if (item.primary) {
+                              <span class="rounded bg-[var(--app-surface)] px-2 py-1 text-[10px] font-bold uppercase text-[var(--text-secondary)]">
+                                {{ t('profile.professionalContext.primary', 'Principale') }}
+                              </span>
+                            }
+                          </div>
+                        </div>
+                      } @empty {
+                        <p class="text-sm text-[var(--text-muted)]">{{ t('profile.professionalContext.noUnit', 'Aucune unité active.') }}</p>
+                      }
+                    </div>
+                  </section>
+                </div>
+
+                <app-ui-alert tone="info">
+                  {{ t('profile.assignmentsManaged', 'Ces affectations sont administrées par l’établissement afin de préserver leur historique et leur cohérence organisationnelle.') }}
+                </app-ui-alert>
+              </div>
+            </app-ui-card>
           </div>
         </div>
       </div>
@@ -155,6 +227,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
 })
 export class ProfileComponent implements OnInit {
   private readonly http = inject(HttpClient);
+  private readonly staffApi = inject(StaffApiService);
   private readonly i18n = inject(I18nService);
 
   @ViewChild('photoUploader') photoUploader!: FileDragDropComponent;
@@ -167,6 +240,7 @@ export class ProfileComponent implements OnInit {
   readonly registrationNumber = signal('');
   readonly bio = signal('');
   readonly role = signal('');
+  readonly assignments = signal<StaffProfileActiveStructure>(EMPTY_ASSIGNMENTS);
 
   readonly photoPath = signal<string | null>(null);
   readonly signaturePath = signal<string | null>(null);
@@ -179,7 +253,8 @@ export class ProfileComponent implements OnInit {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
-  readonly isDoctor = computed(() => this.role().split(',').map((value) => value.trim()).includes('MEDECIN'));
+  readonly roleCodes = computed(() => this.role().split(',').map((value) => value.trim()).filter(Boolean));
+  readonly isDoctor = computed(() => this.roleCodes().includes('MEDECIN'));
 
   ngOnInit(): void {
     this.loadProfile();
@@ -189,20 +264,32 @@ export class ProfileComponent implements OnInit {
     return this.i18n.t(key, fallback);
   }
 
+  localized(fr: string, en: string): string {
+    return this.i18n.currentLanguage() === 'en' ? en : fr;
+  }
+
+  roleLabel(code: string): string {
+    return this.t(`staff.roles.${code}`, code.replaceAll('_', ' '));
+  }
+
   loadProfile(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.http.get<any>('/api/profile').subscribe({
-      next: (data) => {
-        this.displayName.set(data.displayName || '');
-        this.email.set(data.email || '');
-        this.phone.set(data.phone || '');
-        this.registrationNumber.set(data.registrationNumber || '');
-        this.bio.set(data.bio || '');
-        this.role.set(data.role || '');
-        this.photoPath.set(data.photoPath || null);
-        this.signaturePath.set(data.signaturePath || null);
-        this.stampPath.set(data.stampPath || null);
+    forkJoin({
+      profile: this.http.get<any>('/api/profile'),
+      assignments: this.staffApi.getOwnActiveAssignments(),
+    }).subscribe({
+      next: ({ profile, assignments }) => {
+        this.displayName.set(profile.displayName || '');
+        this.email.set(profile.email || '');
+        this.phone.set(profile.phone || '');
+        this.registrationNumber.set(profile.registrationNumber || '');
+        this.bio.set(profile.bio || '');
+        this.role.set(profile.role || '');
+        this.photoPath.set(profile.photoPath || null);
+        this.signaturePath.set(profile.signaturePath || null);
+        this.stampPath.set(profile.stampPath || null);
+        this.assignments.set(assignments);
         this.loading.set(false);
       },
       error: () => {

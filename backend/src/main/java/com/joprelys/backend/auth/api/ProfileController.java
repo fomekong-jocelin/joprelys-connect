@@ -1,5 +1,7 @@
 package com.joprelys.backend.auth.api;
 
+import com.joprelys.backend.auth.application.StaffProfileAssignmentService;
+import com.joprelys.backend.auth.api.StaffProfileAssignmentDtos.ActiveStructureResponse;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import jakarta.validation.Valid;
@@ -22,15 +24,24 @@ import org.springframework.web.server.ResponseStatusException;
 public class ProfileController {
 
     private final UserAccountRepository userAccountRepository;
+    private final StaffProfileAssignmentService profileAssignmentService;
 
-    public ProfileController(UserAccountRepository userAccountRepository) {
+    public ProfileController(
+            UserAccountRepository userAccountRepository,
+            StaffProfileAssignmentService profileAssignmentService) {
         this.userAccountRepository = userAccountRepository;
+        this.profileAssignmentService = profileAssignmentService;
     }
 
     @GetMapping
     public StaffResponse getProfile(Authentication authentication) {
         UserAccountEntity user = currentUser(authentication);
         return toStaffResponse(user);
+    }
+
+    @GetMapping("/assignments")
+    public ActiveStructureResponse getActiveAssignments(Authentication authentication) {
+        return profileAssignmentService.getOwnActiveStructure(authentication);
     }
 
     @PutMapping
