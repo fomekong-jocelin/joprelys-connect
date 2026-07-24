@@ -8,7 +8,7 @@
 - Dépendances : HOS-ORG-001-A / #130 **DONE**, HOS-LOC-001-A / #131 **DONE**
 - Baseline de départ : `main@e495477ea02beb05596b20b656bc092bd8fbbd83`
 - Branche : `feat/132-hos-staff-001-a`
-- Statut : IN_PROGRESS — implémentation fonctionnelle réalisée, stabilisation CI et clôture documentaire en cours
+- Statut : READY TECHNIQUE — gate #1262 vert ; consolidation documentaire réalisée ; gate final post-doc restant
 - Priorité : P0 avant répétition finale #127
 - Estimation : 9 SP
 - Profil : senior full-stack sécurité / données RH clinique
@@ -21,7 +21,8 @@
 - #140 ouverte sur `main` ;
 - branche synchronisée avec `main` au dernier contrôle (`behind_by = 0`) ;
 - aucun thread de review ouvert au dernier contrôle ;
-- PR temporairement en Draft pendant les corrections/documentation afin d'éviter des runs CI annulés par des commits successifs.
+- PR temporairement remise en Draft pendant la consolidation documentaire afin d'éviter les runs CI annulés par des commits successifs ;
+- `PROJECT-TRACKING.md`, `CHANGELOG.md` et backlog EPIC-0027 sont alignés sur l'état HOS-STAFF avant le gate final.
 
 ### CI et stabilisation
 
@@ -34,7 +35,8 @@
 - CI #1252 sur `72a550410f78362359cbe9ab6be4ad6ecbaf5ba3` : Maven exécute **564 tests**, puis 95 erreurs en cascade apparaissent après HOS-STAFF ;
 - cause #1252 : les fixtures HOS-STAFF uniques n'étaient pas détruites en fin de test ; leurs lignes `staff_organizational_unit_assignments` empêchaient ensuite les nettoyages de `users` / `organizational_units` des tests FHIR, HOS-ORG et Spatial ;
 - `72279a427f2c1bd7598eda003fe45de19505a7f3` : `@AfterEach` ciblé supprimant uniquement les données des deux tenants HOS-STAFF, dans l'ordre FK : affectations → unités → utilisateurs → organisations ;
-- prochaine preuve : gate complet à relancer après les commits de clôture Angular/documentaire.
+- **CI #1262 sur `6c0b0123926aca04cdbe9f98b2206c70f9a15506` : Maven strict SUCCESS, tests Angular SUCCESS, build Angular production SUCCESS** ;
+- gate final post-doc à exécuter sur le head contenant cette fiche + tracking + changelog + backlog avant squash merge.
 
 ## Objectif
 
@@ -114,7 +116,8 @@ Migrations : V92 preflight fail-fast, V93 modèle structuré, V94 contraintes Po
 - [x] tenant isolation et contrôles cross-tenant ;
 - [x] annuaire patient migré vers `specialtyCode` + `organizationalUnitId` ;
 - [x] tests backend HOS-STAFF et PostgreSQL ajoutés ;
-- [ ] Maven strict global vert sur le head final.
+- [x] Maven strict global vert sur #1262 ;
+- [ ] Maven strict global vert sur le head final post-doc.
 
 ### Task A3 — Angular / migration consommateurs / QA — 3 SP
 
@@ -128,9 +131,9 @@ Migrations : V92 preflight fail-fast, V93 modèle structuré, V94 contraintes Po
 - [x] la projection `StaffMember.department` résiduelle est explicitement un **snapshot de présentation dérivé** de l'unité principale active : elle n'est ni persistée dans `users`, ni acceptée dans un payload d'écriture ;
 - [x] le module Visite historique conserve `visits.service_name` comme snapshot texte ; son cutover complet vers `organizationalUnitId` est distinct de HOS-STAFF et ne doit pas réintroduire de colonne libre dans Staff ;
 - [x] documentation historique `clinic-staff-department-filter/TECHNICAL-DESIGN.md` marquée **SUPERSEDED** ;
-- [ ] revue finale FR/EN, light/dark, responsive ;
-- [x] tests Angular + build production verts sur #1251 ;
-- [ ] tests Angular + build production verts sur le head final.
+- [ ] revue humaine finale FR/EN, light/dark, responsive dans #127 ;
+- [x] tests Angular + build production verts sur #1262 ;
+- [ ] tests Angular + build production verts sur le head final post-doc.
 
 ## Critères d'acceptation
 
@@ -145,8 +148,8 @@ Migrations : V92 preflight fail-fast, V93 modèle structuré, V94 contraintes Po
 - [x] les affectations cross-tenant sont refusées ;
 - [x] aucun mapping automatique des anciennes chaînes par similarité ;
 - [x] aucun consommateur staff/rendez-vous ne dépend d'une colonne `users.department` / `users.specialty` ;
-- [ ] Maven strict + PostgreSQL/Testcontainers + tests Angular + build production verts sur le même head final ;
-- [ ] documentation centrale, tracking et changelog alignés ;
+- [x] gate #1262 : Maven strict + PostgreSQL/Testcontainers + tests Angular + build production verts sur le même head fonctionnel ;
+- [x] documentation centrale, tracking et changelog alignés avant gate final ;
 - [x] aucune action PROD/RECETTE.
 
 ## Décisions prises pendant l'implémentation
@@ -163,10 +166,11 @@ Migrations : V92 preflight fail-fast, V93 modèle structuré, V94 contraintes Po
 - [x] modèle + migrations cohérents ;
 - [x] contrats backend structurés ;
 - [x] Angular sans saisie libre department/specialty ;
-- [ ] scan final zéro dépendance active aux colonnes legacy `users.department/users.specialty` ;
+- [ ] scan final zéro dépendance active aux **colonnes** legacy `users.department/users.specialty` ;
 - [x] tenant isolation application + DB ;
-- [ ] tests backend/PostgreSQL/Angular verts sur le head final ;
+- [x] gate technique #1262 vert ;
+- [ ] gate technique final post-doc vert sur le head exact à merger ;
 - [x] branche synchronisée avec le `main` courant au dernier contrôle ;
-- [ ] documentation centrale/tracking/changelog alignés ;
+- [x] documentation centrale/tracking/changelog/backlog alignés ;
 - [ ] PR squash-mergée ;
 - [ ] recette humaine #127 rejouée.
