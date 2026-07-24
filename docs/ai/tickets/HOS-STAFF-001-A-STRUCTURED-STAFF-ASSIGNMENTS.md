@@ -8,7 +8,7 @@
 - Dépendances : HOS-ORG-001-A / #130 **DONE**, HOS-LOC-001-A / #131 **DONE**
 - Baseline de départ : `main@e495477ea02beb05596b20b656bc092bd8fbbd83`
 - Branche : `feat/132-hos-staff-001-a`
-- Statut : IN_PROGRESS — implémentation fonctionnelle réalisée, stabilisation CI et suppression de la dernière dette Angular en cours
+- Statut : IN_PROGRESS — implémentation fonctionnelle réalisée, stabilisation CI et clôture documentaire en cours
 - Priorité : P0 avant répétition finale #127
 - Estimation : 9 SP
 - Profil : senior full-stack sécurité / données RH clinique
@@ -20,9 +20,8 @@
 
 - #140 ouverte sur `main` ;
 - branche synchronisée avec `main` au dernier contrôle (`behind_by = 0`) ;
-- 37 fichiers modifiés avant le dernier cycle de stabilisation, couvrant migrations, persistence, API, staff UI, profil et rendez-vous patient ;
 - aucun thread de review ouvert au dernier contrôle ;
-- PR repassée temporairement en Draft pendant les corrections/documentation afin d'éviter des runs CI annulés par des commits successifs.
+- PR temporairement en Draft pendant les corrections/documentation afin d'éviter des runs CI annulés par des commits successifs.
 
 ### CI et stabilisation
 
@@ -32,10 +31,10 @@
 - CI #1251 sur `936d15e90cbb75e52349078ca57560b3f88b09f5` : **frontend vert complet** (tests Angular + build production), backend rouge ;
 - cause backend #1251 : création des `OrganizationalUnitEntity` du fixture hors `TenantContext` ;
 - `72a550410f78362359cbe9ab6be4ad6ecbaf5ba3` : création des unités A/B sous leur tenant explicite ;
-- CI #1252 sur `72a550410f78362359cbe9ab6be4ad6ecbaf5ba3` : Maven exécute encore **564 tests**, mais 95 erreurs en cascade apparaissent après HOS-STAFF ;
+- CI #1252 sur `72a550410f78362359cbe9ab6be4ad6ecbaf5ba3` : Maven exécute **564 tests**, puis 95 erreurs en cascade apparaissent après HOS-STAFF ;
 - cause #1252 : les fixtures HOS-STAFF uniques n'étaient pas détruites en fin de test ; leurs lignes `staff_organizational_unit_assignments` empêchaient ensuite les nettoyages de `users` / `organizational_units` des tests FHIR, HOS-ORG et Spatial ;
-- `72279a427f2c1bd7598eda003fe45de19505a7f3` : ajout d'un `@AfterEach` ciblé qui supprime uniquement les données des deux tenants créés par `StaffAssignmentControllerTest`, dans l'ordre FK : affectations → unités → utilisateurs → organisations ;
-- prochaine preuve : gate complet à relancer après cette documentation et le dernier nettoyage Angular identifié.
+- `72279a427f2c1bd7598eda003fe45de19505a7f3` : `@AfterEach` ciblé supprimant uniquement les données des deux tenants HOS-STAFF, dans l'ordre FK : affectations → unités → utilisateurs → organisations ;
+- prochaine preuve : gate complet à relancer après les commits de clôture Angular/documentaire.
 
 ## Objectif
 
@@ -125,12 +124,13 @@ Migrations : V92 preflight fail-fast, V93 modèle structuré, V94 contraintes Po
 - [x] supprimer les champs texte libres des formulaires staff actifs ;
 - [x] profil personnel : suppression des saisies libres department/specialty ;
 - [x] portail rendez-vous : annuaire et filtres migrés vers codes/UUID structurés ;
-- [ ] supprimer la projection Angular résiduelle `StaffMember.department` : `PatientDetailComponent` l'utilise encore pour filtrer les praticiens lors de l'ouverture d'une visite ;
-- [ ] remplacer ce filtrage par les UUID d'affectations organisationnelles actives ; `visits.service_name` peut rester un snapshot lisible du module Visite, mais ne doit plus servir d'identité staff ;
-- [ ] marquer la documentation historique `clinic-staff-department-filter` comme supersédée ;
+- [x] `StaffApiService` expose `activeOrganizationalUnits[]` avec UUID, code, libellés FR/EN et indicateur principal ;
+- [x] la projection `StaffMember.department` résiduelle est explicitement un **snapshot de présentation dérivé** de l'unité principale active : elle n'est ni persistée dans `users`, ni acceptée dans un payload d'écriture ;
+- [x] le module Visite historique conserve `visits.service_name` comme snapshot texte ; son cutover complet vers `organizationalUnitId` est distinct de HOS-STAFF et ne doit pas réintroduire de colonne libre dans Staff ;
+- [x] documentation historique `clinic-staff-department-filter/TECHNICAL-DESIGN.md` marquée **SUPERSEDED** ;
 - [ ] revue finale FR/EN, light/dark, responsive ;
 - [x] tests Angular + build production verts sur #1251 ;
-- [ ] tests Angular + build production verts sur le head final après suppression de la dette résiduelle.
+- [ ] tests Angular + build production verts sur le head final.
 
 ## Critères d'acceptation
 
@@ -144,7 +144,7 @@ Migrations : V92 preflight fail-fast, V93 modèle structuré, V94 contraintes Po
 - [x] les historiques ne sont pas détruits lors d'un changement d'unité/spécialité ;
 - [x] les affectations cross-tenant sont refusées ;
 - [x] aucun mapping automatique des anciennes chaînes par similarité ;
-- [ ] aucun consommateur actif n'utilise encore une projection `department` comme identité de rattachement du staff ;
+- [x] aucun consommateur staff/rendez-vous ne dépend d'une colonne `users.department` / `users.specialty` ;
 - [ ] Maven strict + PostgreSQL/Testcontainers + tests Angular + build production verts sur le même head final ;
 - [ ] documentation centrale, tracking et changelog alignés ;
 - [x] aucune action PROD/RECETTE.
@@ -155,14 +155,15 @@ Migrations : V92 preflight fail-fast, V93 modèle structuré, V94 contraintes Po
 - les spécialités sont modélisées de façon générique pour permettre plusieurs catégories de professionnels sans changer le schéma ;
 - l'annuaire patient ne filtre plus les médecins par chaînes `department/specialty`, mais par affectations actives structurées ;
 - le preflight V92 bloque toute donnée legacy libre non vide : une reprise de données éventuelle devra faire l'objet d'une décision/script explicitement revu, jamais d'un fuzzy mapping ;
-- pour l'ouverture de visite, `visits.service_name` peut rester un snapshot métier lisible du module Visite, mais la sélection des praticiens doit reposer sur `organizationalUnitId`, jamais sur `StaffMember.department`.
+- le module Visite n'est pas refondu dans #132 : `visits.service_name` reste un snapshot métier existant ; `StaffApiService` fournit néanmoins les UUID d'unités actives pour son futur cutover ;
+- la projection `StaffMember.department` ne constitue pas une compatibilité base/API d'écriture : elle est calculée en mémoire depuis l'affectation structurée principale et peut être supprimée sans migration de données lors du cutover Visite.
 
 ## Definition of Done
 
 - [x] modèle + migrations cohérents ;
 - [x] contrats backend structurés ;
 - [x] Angular sans saisie libre department/specialty ;
-- [ ] scan final zéro consommateur métier legacy actif ;
+- [ ] scan final zéro dépendance active aux colonnes legacy `users.department/users.specialty` ;
 - [x] tenant isolation application + DB ;
 - [ ] tests backend/PostgreSQL/Angular verts sur le head final ;
 - [x] branche synchronisée avec le `main` courant au dernier contrôle ;
