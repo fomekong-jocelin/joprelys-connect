@@ -4,14 +4,32 @@
 
 - Issue GitHub : #132
 - Epic : EPIC-0027 / HOS-STAFF-001
+- PR : #140
 - Dépendances : HOS-ORG-001-A / #130 **DONE**, HOS-LOC-001-A / #131 **DONE**
 - Baseline de départ : `main@e495477ea02beb05596b20b656bc092bd8fbbd83`
 - Branche : `feat/132-hos-staff-001-a`
-- Statut : IN_PROGRESS — cadrage + implémentation
+- Statut : IN_PROGRESS — implémentation fonctionnelle réalisée, stabilisation CI en cours
 - Priorité : P0 avant répétition finale #127
 - Estimation : 9 SP
 - Profil : senior full-stack sécurité / données RH clinique
 - Reviewers : Tech Lead + RH + cadre hospitalier + RSSI/DPO + Product
+
+## Avancement au 24/07/2026
+
+### État Git / PR
+
+- #140 ouverte sur `main` ;
+- branche synchronisée avec `main` au dernier contrôle (`behind_by = 0`) ;
+- 37 fichiers modifiés couvrant migrations, persistence, API, staff UI, profil et rendez-vous patient ;
+- aucun thread de review ouvert au dernier contrôle.
+
+### CI
+
+- CI #1247 sur `20984329c79be59e957fa94b179bdcfee27fae06` : **backend rouge** ;
+- Maven a atteint l'exécution de **564 tests** avec **0 failure et 8 errors** ;
+- les 8 erreurs provenaient toutes du `setUp()` de `StaffAssignmentControllerTest` qui supprimait globalement les organisations alors que des `visits` d'autres classes de test les referenciaient encore ;
+- correctif publié dans `74a267e8ac5c922bd62dca749ef7f482c0d88afa` : le test ne purge plus les données des autres classes et crée désormais des tenants/comptes/unités uniques par scénario ;
+- nouvelle preuve CI attendue avant de déclarer Maven/Angular verts.
 
 ## Objectif
 
@@ -61,73 +79,83 @@ User / Staff Member
 - au plus une affectation principale active par membre ;
 - une unité désactivée ne peut pas recevoir une nouvelle affectation active ;
 - les périodes historiques restent consultables ;
-- les affectations cross-tenant sont interdites par l'application et la base.
+- les affectations cross-tenant sont interdites par l'application et la base ;
+- le rôle d'affectation est contextuel et distinct du rôle RBAC global.
 
 ## Découpage
 
 ### Task A1 — data / migration / invariants — 3 SP
 
-- [ ] analyser les champs legacy `users.department` / `users.specialty` et leurs consommateurs ;
-- [ ] créer `staff_specialty_assignments` ;
-- [ ] créer `staff_organizational_unit_assignments` ;
-- [ ] ajouter contraintes tenant et FK vers les référentiels HOS-ORG ;
-- [ ] empêcher plusieurs affectations principales actives du même type ;
-- [ ] définir le preflight des données legacy ambiguës ;
-- [ ] aucun mapping automatique par nom.
+- [x] analyser les champs legacy `users.department` / `users.specialty` et leurs consommateurs ;
+- [x] créer `staff_specialty_assignments` ;
+- [x] créer `staff_organizational_unit_assignments` ;
+- [x] ajouter contraintes tenant et FK vers les référentiels HOS-ORG ;
+- [x] empêcher plusieurs affectations principales actives du même type ;
+- [x] définir le preflight des données legacy ambiguës via V92 ;
+- [x] aucun mapping automatique par nom ;
+- [x] supprimer physiquement les colonnes legacy via V95 après preflight.
+
+Migrations : V92 preflight fail-fast, V93 modèle structuré, V94 contraintes PostgreSQL de périodes, V95 suppression `users.department/users.specialty`.
 
 ### Task A2 — backend / contrats / sécurité — 3 SP
 
-- [ ] repositories + services métier ;
-- [ ] lecture des spécialités et affectations actives/historiques ;
-- [ ] création/modification/clôture des affectations ;
-- [ ] intégrer les références structurées dans le flux staff ;
-- [ ] supprimer le besoin des champs libres `department/specialty` dans les contrats d'écriture ;
-- [ ] protéger les mutations par permission appropriée ;
-- [ ] tenant isolation et contrôles cross-tenant ;
-- [ ] tests unitaires + intégration + PostgreSQL.
+- [x] repositories + services métier ;
+- [x] lecture des spécialités et affectations actives/historiques ;
+- [x] création/modification/clôture des affectations ;
+- [x] intégrer les références structurées dans le flux staff ;
+- [x] supprimer le besoin des champs libres `department/specialty` dans les contrats d'écriture ;
+- [x] retirer `department/specialty` de `UserAccountEntity`, `StaffResponse`, `UpdateStaffRequest` et du profil ;
+- [x] protéger les mutations par `USER_MANAGE` et les lectures par `USER_READ/USER_MANAGE` ;
+- [x] tenant isolation et contrôles cross-tenant ;
+- [x] annuaire patient migré vers `specialtyCode` + `organizationalUnitId` ;
+- [x] tests backend HOS-STAFF et PostgreSQL ajoutés ;
+- [ ] Maven strict global vert sur le head final.
 
 ### Task A3 — Angular / migration consommateurs / QA — 3 SP
 
-- [ ] modèles et services Angular structurés ;
-- [ ] écran staff : sélecteurs de spécialités et unités depuis référentiels actifs ;
-- [ ] affichage des affectations datées et de l'affectation principale ;
-- [ ] supprimer les champs texte libres des formulaires actifs ;
-- [ ] migrer les consommateurs staff/appointments/hospitalization qui lisent encore `department/specialty` ;
-- [ ] FR/EN, light/dark, responsive ;
-- [ ] tests Angular + build production.
+- [x] modèles et services Angular structurés ;
+- [x] écran staff : sélecteurs de spécialités et unités depuis référentiels actifs ;
+- [x] affichage des affectations datées et de l'affectation principale ;
+- [x] supprimer les champs texte libres des formulaires staff actifs ;
+- [x] profil personnel : suppression des saisies libres department/specialty ;
+- [x] portail rendez-vous : annuaire et filtres migrés vers codes/UUID structurés ;
+- [x] projection `department` Angular résiduelle explicitement dérivée de l'unité principale, jamais persistée ni envoyée en écriture ;
+- [ ] revue finale FR/EN, light/dark, responsive ;
+- [ ] tests Angular + build production verts sur le head final.
 
 ## Critères d'acceptation
 
-- [ ] aucun nouveau staff ne peut enregistrer un `department` libre ;
-- [ ] aucune spécialité libre n'est enregistrée dans le nouveau flux ;
-- [ ] seules les spécialités actives du catalogue sont sélectionnables ;
-- [ ] seules les unités organisationnelles actives du tenant sont assignables ;
-- [ ] un staff peut avoir plusieurs affectations datées ;
-- [ ] une affectation principale active est identifiable sans ambiguïté ;
-- [ ] une spécialité principale active est identifiable sans ambiguïté ;
-- [ ] les historiques ne sont pas détruits lors d'un changement d'unité/spécialité ;
-- [ ] les affectations cross-tenant sont refusées ;
-- [ ] aucun mapping automatique des anciennes chaînes par similarité ;
-- [ ] les consommateurs actifs n'ont plus besoin de `users.department/users.specialty` comme identité métier ;
-- [ ] Maven strict + PostgreSQL/Testcontainers + tests Angular + build production verts ;
-- [ ] documentation, tracking et changelog alignés ;
-- [ ] aucune action PROD/RECETTE.
+- [x] aucun nouveau staff ne peut enregistrer un `department` libre ;
+- [x] aucune spécialité libre n'est enregistrée dans le nouveau flux ;
+- [x] seules les spécialités actives du catalogue sont sélectionnables ;
+- [x] seules les unités organisationnelles actives du tenant sont assignables ;
+- [x] un staff peut avoir plusieurs affectations datées ;
+- [x] une affectation principale active est identifiable sans ambiguïté ;
+- [x] une spécialité principale active est identifiable sans ambiguïté ;
+- [x] les historiques ne sont pas détruits lors d'un changement d'unité/spécialité ;
+- [x] les affectations cross-tenant sont refusées ;
+- [x] aucun mapping automatique des anciennes chaînes par similarité ;
+- [x] les consommateurs migrés n'utilisent plus `users.department/users.specialty` comme identité métier ;
+- [ ] Maven strict + PostgreSQL/Testcontainers + tests Angular + build production verts sur le même head final ;
+- [ ] documentation centrale, tracking et changelog alignés ;
+- [x] aucune action PROD/RECETTE.
 
-## Questions à trancher pendant l'implémentation
+## Décisions prises pendant l'implémentation
 
-- le rôle d'affectation organisationnelle doit-il réutiliser le rôle RBAC global ou posséder un catalogue clinique distinct (`MEDECIN_REFERENT`, `INFIRMIER_UNITE`, etc.) ? Par défaut, ne pas coupler automatiquement RBAC global et rôle contextuel ;
-- les spécialités doivent-elles être limitées aux médecins ou rester disponibles pour d'autres professionnels spécialisés ? Le modèle doit permettre l'extension sans casser le schéma ;
-- les plannings/rendez-vous devront-ils exiger une affectation active à la date du créneau ? Identifier les consommateurs actuels avant de modifier leur règle métier.
+- le rôle d'affectation organisationnelle possède un catalogue clinique distinct (`staff_assignment_role_catalog`) et n'est pas déduit automatiquement du rôle RBAC global ;
+- les spécialités sont modélisées de façon générique pour permettre plusieurs catégories de professionnels sans changer le schéma ;
+- l'annuaire patient ne filtre plus les médecins par chaînes `department/specialty`, mais par affectations actives structurées ;
+- le preflight V92 bloque toute donnée legacy libre non vide : une reprise de données éventuelle devra faire l'objet d'une décision/script explicitement revu, jamais d'un fuzzy mapping.
 
 ## Definition of Done
 
-- [ ] modèle + migrations cohérents ;
-- [ ] contrats backend structurés ;
-- [ ] Angular sans saisie libre department/specialty ;
-- [ ] consommateurs legacy migrés ;
-- [ ] tenant isolation application + DB ;
-- [ ] tests backend/PostgreSQL/Angular verts ;
-- [ ] branche synchronisée avec le `main` courant avant revue finale ;
-- [ ] documentation/tracking/changelog alignés ;
+- [x] modèle + migrations cohérents ;
+- [x] contrats backend structurés ;
+- [x] Angular sans saisie libre department/specialty ;
+- [ ] scan final zéro consommateur métier legacy actif ;
+- [x] tenant isolation application + DB ;
+- [ ] tests backend/PostgreSQL/Angular verts sur le head final ;
+- [x] branche synchronisée avec le `main` courant au dernier contrôle ;
+- [ ] documentation centrale/tracking/changelog alignés ;
 - [ ] PR squash-mergée ;
 - [ ] recette humaine #127 rejouée.
