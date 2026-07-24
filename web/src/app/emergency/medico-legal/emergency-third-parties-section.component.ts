@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { I18nService } from '../../core/i18n/i18n.service';
@@ -26,7 +26,7 @@ const QUALITY_OPTIONS: EmergencyThirdPartyQuality[] = [
 @Component({
   selector: 'app-emergency-third-parties-section',
   standalone: true,
-  imports: [CommonModule, DatePipe, ReactiveFormsModule, ButtonComponent],
+  imports: [CommonModule, ReactiveFormsModule, ButtonComponent],
   templateUrl: './emergency-third-parties-section.component.html',
 })
 export class EmergencyThirdPartiesSectionComponent {
