@@ -136,13 +136,19 @@ export class RbacApiService {
   private currentSessionKey(): string | null {
     const session = this.tokenStorage.session();
     if (!session) return null;
-    const email = session.email.trim().toLowerCase();
-    const roles = session.role
+
+    // Production sessions always contain an email. The display-name fallback keeps
+    // feature/test harnesses that use a minimal session object safe without weakening
+    // real session isolation.
+    const identity = (session.email || session.name || '').trim().toLowerCase();
+    if (!identity) return null;
+
+    const roles = (session.role || '')
       .split(',')
       .map(role => role.trim().toUpperCase())
       .filter(Boolean)
       .sort()
       .join(',');
-    return `${email}|${roles}`;
+    return `${identity}|${roles}`;
   }
 }
