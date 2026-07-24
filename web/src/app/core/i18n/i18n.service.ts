@@ -17,6 +17,12 @@ export class I18nService {
   readonly locale = signal<AppLocale>(this.loadStoredLocale());
   private readonly dictionary = signal<TranslationDictionary>({});
   private readonly loaded = signal<Record<AppLocale, boolean>>({ fr: false, en: false });
+  // Translation JSON files are copied as static assets and are not fingerprinted by
+  // Angular. A deployment can therefore serve the new JS bundle together with a
+  // browser/proxy-cached older dictionary. One revision per application bootstrap
+  // forces a fresh dictionary fetch while keeping all requests cacheable during the
+  // current page lifetime.
+  private readonly translationAssetRevision = Date.now().toString(36);
 
   async init(): Promise<void> {
     await this.loadLocale(this.locale());
@@ -51,7 +57,7 @@ export class I18nService {
   private async loadLocale(lang: AppLocale): Promise<void> {
     try {
       const dictionaries = await firstValueFrom(forkJoin({
-        base: this.http.get<TranslationDictionary>(`/assets/i18n/${lang}.json`),
+        base: this.http.get<TranslationDictionary>(this.translationAssetUrl(`/assets/i18n/${lang}.json`)),
         extension: this.optionalDictionary(`/assets/i18n/extensions/${lang}.json`),
         admission: this.optionalDictionary(`/assets/i18n/features/admission/${lang}.json`),
         urgTemp: this.optionalDictionary(`/assets/i18n/features/urg-temp/${lang}.json`),
@@ -96,9 +102,14 @@ export class I18nService {
   }
 
   private optionalDictionary(path: string) {
-    return this.http.get<TranslationDictionary>(path).pipe(
+    return this.http.get<TranslationDictionary>(this.translationAssetUrl(path)).pipe(
       catchError(() => of(EMPTY_DICTIONARY)),
     );
+  }
+
+  private translationAssetUrl(path: string): string {
+    const separator = path.includes('?') ? '&' : '?';
+    return `${path}${separator}v=${this.translationAssetRevision}`;
   }
 
   private loadStoredLocale(): AppLocale {
