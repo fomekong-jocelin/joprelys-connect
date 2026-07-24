@@ -1,7 +1,7 @@
 # EPIC-0027 — Organisation hospitalière, capacité et parcours patient
 
 **Origine** : AUDIT-20260721  
-**Statut** : IN_PROGRESS — HOS-ORG et HOS-LOC fusionnés ; HOS-STAFF implémenté et validé techniquement dans PR #140  
+**Statut** : IN_PROGRESS — architecture cible acceptée, socle phase 0 et HOS-ORG-001-A engagés/livrés  
 **Priorité globale** : Critique  
 **SemVer** : ajouts parallèles MINOR ; suppression des contrats legacy MAJOR  
 **Source d’architecture** : `docs/architecture/adr/ADR-0002-flexible-hospital-organization-and-capacity-model.md`
@@ -60,14 +60,14 @@ Un `SPACE` est générique : consultation, salle d’attente, box d’urgence, c
 
 ## 3. État consolidé des stories
 
-| Story / lot | Objectif | Statut au 24/07/2026 | SP / effort | Prochaine action |
+| Story / lot | Objectif | Statut au 23/07/2026 | SP / effort | Prochaine action |
 |---|---|---|---|---|
 | HOS-BED-001 | invariants et concurrence lits | PARTIAL — incréments A/B/C livrés, D à arbitrer | 12–14 SP réestimés | validation métier/DBA et chevauchements historiques |
 | HOS-BED-002 | capacité et cycles de remise en état | PARTIAL — compteur A livré | 8 SP | poursuivre après socle organisation/géographie |
 | HOS-RBAC-001 | permissions hospitalières | PARTIAL — segmentation A/B/C/D livrée ; contexte ABAC restant | 8+ SP | HOS-STAFF / HOS-DIS pour le contexte |
-| HOS-ORG-001-A / #130 | référentiels et unités organisationnelles | **DONE — PR #133 fusionnée, V87** | 9 SP | recette métier #127 |
-| HOS-LOC-001-A / #131 | sites, bâtiments, étages, zones, espaces | **DONE — PR #137 fusionnée, V88–V91** | 13 SP réévalués | recette métier #127 |
-| HOS-STAFF-001-A / #132 | affectations personnel et spécialités | **READY TECHNIQUE — PR #140, V92–V95, gate #1262 vert** | 9 SP | docs finales, gate post-doc, squash merge puis #127 |
+| HOS-ORG-001-A / #130 | référentiels et unités organisationnelles | **DONE CODE — PR #133 fusionnée, V87** | 9 SP | consolidation docs puis validation métier |
+| HOS-LOC-001-A / #131 | sites, bâtiments, étages, zones, espaces | READY | 9 SP | prochain incrément, depuis `main` post-#133 |
+| HOS-STAFF-001-A / #132 | affectations personnel et spécialités | BLOCKED par #131 | 9 SP | après HOS-LOC |
 | HOS-ADM-001 | demandes, préadmissions, réservations | PROPOSED | 13 SP | après org/loc/capacité |
 | HOS-MOV-001 | présence et transferts | PROPOSED | 13 SP | après admission + staff/loc |
 | HOS-DIS-001 | sortie médicale/admin/physique | PARTIAL conceptuellement via RBAC, workflow complet restant | 8 SP | après mouvements/capacité |
@@ -89,9 +89,7 @@ Un `SPACE` est générique : consultation, salle d’attente, box d’urgence, c
 | HOS-RBAC-001-B | HOS-RBAC-001 | transfert/sortie/nettoyage/maintenance | DONE — PR #102 |
 | HOS-RBAC-001-C | HOS-RBAC-001 | admission/notes/consentement/soins/médicaments/consommables | DONE — PR #107 |
 | HOS-RBAC-001-D | HOS-RBAC-001 | suppression de `HOSPITALIZATION_MANAGE` | DONE — PR #122 / V86 / CI #1027 |
-| HOS-ORG-001-A | HOS-ORG-001 | unités + catalogues structurés | DONE — PR #133 / V87 / CI backend #1066 + frontend verte |
-| HOS-LOC-001-A | HOS-LOC-001 | géographie, espaces, lits sur `space_id`, hospitalisation structurée | DONE — PR #137 / V88–V91 / main `e495477e` |
-| HOS-STAFF-001-A | HOS-STAFF-001 | spécialités + affectations datées staff↔unité | READY TECHNIQUE — PR #140 / V92–V95 / CI #1262 verte |
+| HOS-ORG-001-A | HOS-ORG-001 | unités + catalogues structurés | DONE CODE — PR #133 / V87 / CI backend #1066 + frontend verte |
 
 ## 5. HOS-ORG-001 — Organisation hospitalière flexible
 
@@ -153,13 +151,11 @@ Les responsabilités organisationnelles datées, liens avancés et besoins multi
 
 ## 6. HOS-LOC-001 — Géographie et espaces génériques
 
-### État livré par HOS-LOC-001-A / #131
+### Incrément suivant : HOS-LOC-001-A / #131
 
-HOS-LOC-001-A est fusionné via PR #137 dans `main@e495477ea02beb05596b20b656bc092bd8fbbd83`.
+Objectif : remplacer progressivement l’ambiguïté `Ward/Room` par un référentiel géographique indépendant.
 
-Le lot remplace l’ambiguïté applicative `Ward/Room` par un référentiel géographique et spatial indépendant, tout en conservant les snapshots lisibles nécessaires aux documents historiques.
-
-### Modèle livré
+### Modèle cible
 
 `SITE → BUILDING → FLOOR → ZONE → SPACE`, niveaux facultatifs.
 
@@ -181,87 +177,310 @@ Le lot remplace l’ambiguïté applicative `Ward/Room` par un référentiel gé
 - morgue ;
 - autre contrôlé.
 
-### Règles livrées
+### Règles
 
-1. un espace possède au plus une localisation géographique ; un espace peut être directement sous l’établissement ;
+1. un espace possède une localisation géographique unique ;
 2. plusieurs unités organisationnelles peuvent utiliser le même espace via liens datés ;
 3. un service peut utiliser des espaces dans plusieurs bâtiments/sites ;
-4. un espace d’hébergement compatible porte le profil nécessaire aux lits ;
-5. les lits référencent `space_id`, pas un service ou une `Room` par héritage ;
-6. aucune migration automatique de `Room` par nom si la sémantique n’est pas prouvée ;
-7. admissions et transferts utilisent `serviceUnitId / spaceId / bedId`.
+4. une chambre d’hospitalisation est un espace compatible avec des lits ;
+5. les lits ne sont pas rattachés à un service administratif par simple héritage ;
+6. aucune migration automatique de `Room` par nom si la sémantique n’est pas prouvée.
 
-### Critères validés techniquement #131
+### Critères d’acceptation #131
 
 - cabinet : SPACE directement sans bâtiment obligatoire ;
 - hôpital : hiérarchie complète possible ;
 - plateau partagé : une salle, plusieurs liens organisationnels datés ;
 - espaces non hospitaliers représentables ;
 - tenant et hiérarchie protégés en DB et backend ;
-- capacité, admission et transfert structurés ;
 - mobile-first FR/EN light/dark ;
-- migrations PostgreSQL + Maven + Angular verts ;
-- PR #137 squash-mergée ; issue #131 fermée.
+- migrations PostgreSQL + Maven + Angular verts.
 
 ## 7. HOS-STAFF-001 — Affectations et habilitations datées
 
-### État de HOS-STAFF-001-A / #132
+### Incrément HOS-STAFF-001-A / #132
 
-HOS-STAFF-001-A est implémenté dans PR #140 et a franchi le gate combiné #1262 avant consolidation documentaire. Un dernier gate est requis sur le head exact contenant tracking/changelog/backlog avant squash merge.
+Objectif : supprimer le besoin fonctionnel de `users.department` et `users.specialty` libres.
 
-### Modèle livré
+### Modèle attendu
 
-- staff ↔ `organizational_units` N:N daté ;
+- staff ↔ organizational_unit N:N daté ;
 - affectation principale/secondaire ;
-- rôle d’affectation contextuel contrôlé et distinct du RBAC global ;
-- date début/fin et statut actif dérivé de la période ;
-- staff ↔ `medical_specialty_catalog` N:N daté ;
+- date début/fin ;
+- statut actif ;
+- staff ↔ specialty_catalog N:N ;
 - spécialité principale facultative ;
-- historique conservé ;
-- refus des chevauchements et des affectations principales concurrentes ;
-- isolation tenant application + DB.
+- historique conservé.
 
-### Migrations
-
-- **V92** : preflight fail-fast si `users.department` ou `users.specialty` contient encore des données libres ;
-- **V93** : catalogue de rôles contextuels et tables d’affectations structurées ;
-- **V94** : contraintes PostgreSQL de non-chevauchement temporel ;
-- **V95** : suppression physique de `users.department` et `users.specialty`.
-
-### Contrats / UI
-
-- `UpdateStaffRequest`, `StaffResponse`, `UserAccountEntity` et le profil n’exposent plus les deux champs libres ;
-- l’éditeur staff sélectionne spécialités et unités depuis HOS-ORG ;
-- l’historique, les périodes et les affectations principales sont visibles ;
-- l’annuaire patient et le parcours rendez-vous utilisent `specialtyCode` et `organizationalUnitId` ;
-- `StaffApiService` expose `activeOrganizationalUnits[]` avec UUID/code/libellés ;
-- le module Visite conserve pour l’instant `visits.service_name` comme snapshot texte historique ; l’éventuel `StaffMember.department` de présentation est dérivé en mémoire de l’unité principale et n’est ni persisté ni accepté en écriture staff.
-
-### Exemple supporté
+### Exemple attendu
 
 ```text
 Dr X
-├── spécialité principale : Médecine générale
-├── unité principale : Médecine générale
+├── spécialité : Médecine générale
+├── service principal : Médecine générale
 └── Urgences : renfort du 01/08 au 31/08
 ```
 
-### Validation technique
+### Règles
 
-- cross-tenant staff/unité refusé ;
-- unité ou spécialité inactive refusée ;
-- chevauchement d’une même unité/spécialité refusé ;
-- deux principales couvrant la même période refusées ;
-- clôture conserve l’historique ;
-- mutation réservée à `USER_MANAGE` ;
-- tests PostgreSQL/Testcontainers dédiés présents ;
-- gate #1262 : Maven strict SUCCESS, tests Angular SUCCESS, build Angular production SUCCESS ;
-- aucune action PROD/RECETTE.
+1. une affectation expirée ne donne plus de contexte actif ;
+2. aucun lien cross-tenant ;
+3. le retrait clôt la période sans supprimer l’historique ;
+4. aucun fallback texte `department/specialty` après bascule du parcours staff ;
+5. les rôles RBAC restent distincts des affectations métier.
 
-### Reste avant clôture
+## 8. HOS-BED-001 — Intégrité temporelle des lits
 
-1. finaliser les sources centrales de documentation ;
-2. relancer le gate combiné sur le head documentaire exact ;
-3. vérifier `behind_by = 0` et l’absence de review threads ;
-4. squash merge PR #140 / fermeture #132 ;
-5. rejouer la recette humaine #127.
+Objectif : garantir qu’une réservation/occupation incohérente ne peut pas être créée par concurrence, import ou futur endpoint.
+
+Règles structurantes :
+
+- une seule affectation active compatible par lit ;
+- un séjour du même tenant ;
+- une seule présence active compatible par séjour ;
+- chronologie valide ;
+- retries idempotents ;
+- chevauchements historiques à traiter dans HOS-BED-001-D.
+
+Dépendances : PostgreSQL réel, DBA, cadre infirmier.
+
+## 9. HOS-BED-002 — Capacité et remise en état
+
+Objectif : séparer existence, ouverture clinique, hygiène, maintenance et occupation.
+
+Règles :
+
+- `FREE` est une projection et non une commande ;
+- disponible = installé + ouvert + prêt + non occupé/réservé ;
+- départ physique → turnover ;
+- maintenance impossible sur lit occupé sans processus préalable ;
+- nettoyage/maintenance non comptés comme libres.
+
+## 10. HOS-RBAC-001 — Contextualisation des droits
+
+La segmentation des intentions A/B/C/D est livrée. Le reliquat n’est **pas** une nouvelle permission générique.
+
+Le contexte restant doit s’appuyer sur :
+
+- affectation active à l’unité ;
+- relation de soin ;
+- délégation/habilitation datée ;
+- clearance de sortie ;
+- tenant et éventuel scope plateforme.
+
+Dépendances principales : HOS-STAFF-001 et HOS-DIS-001.
+
+## 11. HOS-ADM-001 — Demandes, préadmissions et réservations
+
+Objectif : ne plus créer systématiquement un séjour directement `EN_COURS` avec lit.
+
+Règles :
+
+- demande médicale ;
+- décision ;
+- préadmission ;
+- recherche de compatibilité ;
+- réservation expirante ;
+- arrivée confirmée ;
+- urgence pouvant différer l’administratif avec motif/échéance ;
+- lit occupé uniquement à l’arrivée confirmée.
+
+Dépendances : HOS-BED, HOS-ORG, HOS-LOC, RBAC.
+
+## 12. HOS-MOV-001 — Présence et transferts
+
+Objectif : connaître position et responsabilité du patient à chaque instant.
+
+Règles :
+
+- mouvement avec motif et jalons ;
+- acceptation destination avant départ sauf urgence documentée ;
+- changement de responsabilité au handoff défini ;
+- événements immuables ;
+- idempotence après coupure réseau ;
+- une seule présence active cohérente.
+
+Dépendances : HOS-ADM, HOS-LOC, HOS-STAFF.
+
+## 13. HOS-DIS-001 — Sortie multi-étapes
+
+Objectif : séparer décision médicale, clearance administrative, départ physique et lit prêt.
+
+Règles :
+
+- décision médicale ≠ libération du lit ;
+- dette éventuellement autorisée selon politique, jamais masquée ;
+- départ physique → clôture présence + turnover ;
+- nettoyage validé avant disponibilité ;
+- décès, contre-avis, évasion, transfert externe = issues explicites.
+
+## 14. HOS-RES-001 — Ressources et équipements
+
+Objectif : gérer espaces/équipements partagés, réservations, pannes et maintenance.
+
+Règles :
+
+- pas de réservation ferme chevauchante pour ressource non partageable ;
+- panne → indisponibilité + impact des réservations ;
+- remise en service validée ;
+- équipements mobiles et maintenance préventive supportés.
+
+Dépendances : HOS-LOC, HOS-STAFF.
+
+## 15. HOS-PATH-001 — Parcours transverse
+
+Objectif : afficher position, responsable, prochaine étape et actions en attente sans déplacer les règles critiques vers Angular.
+
+Règles :
+
+- work-item avec propriétaire, échéance, statut, idempotency key ;
+- modules sources restent maîtres de leurs faits ;
+- visibilité filtrée par profil/contexte ;
+- handoff ouvert jusqu’à acceptation/arrivée ;
+- événements corrélés et rejouables.
+
+Dépendances : HOS-ORG, HOS-LOC, HOS-STAFF, HOS-MOV.
+
+## 16. HOS-KPI-001 — Capacité et saturation
+
+Objectif : produire des indicateurs réconciliables.
+
+Règles :
+
+- formule/source/fuseau/version pour chaque KPI ;
+- capacité installée, ouverte, prête, réservée et occupée distinguées ;
+- agrégats direction minimisant les données patient ;
+- incohérences signalées ;
+- corrections tardives versionnées.
+
+Dépendances : HOS-BED-002, HOS-MOV.
+
+## 17. HOS-INT-001 — Interopérabilité et réseau instable
+
+Objectif : versionner les contrats et rendre les commandes critiques rejouables.
+
+Règles :
+
+- aucune donnée clinique critique confiée au cache navigateur sans politique/chiffrement validés ;
+- admission, réservation, mouvement idempotents ;
+- backend maître des conflits ;
+- fraîcheur des données visible en mode dégradé ;
+- identifiants stables pour Organization/Location/Encounter et autres mappings pertinents.
+
+## 18. Definition of Ready globale
+
+- ticket et documentation avant code ;
+- modèle de données et contrat API versionnés ;
+- stratégie migration/rollback écrite ;
+- permissions et tests identifiés ;
+- reviewers métier/technique nommés ;
+- aucune dépendance à un champ libre legacy sans plan de retrait ;
+- aucun développement serveur.
+
+## 19. Definition of Done globale
+
+- documentation fonctionnelle, technique, API, data et tests alignée ;
+- migration testée sur PostgreSQL ;
+- Maven strict vert ;
+- Angular tests + build production verts pour tout changement frontend ;
+- isolation tenant et matrice négative vérifiées ;
+- audit des actions sensibles ;
+- responsive 320/375/768/1366 ;
+- FR/EN et light/dark ;
+- aucun Angular Material ;
+- changelog et tracking alignés ;
+- PR fusionnée sur `main` avant démarrage du lot dépendant.
+
+## 20. Ordre de réalisation courant
+
+```text
+DONE  HOS-BED / RBAC phase 0
+  ↓
+DONE  HOS-ORG-001-A #130 / PR #133 / V87
+  ↓
+NEXT  HOS-LOC-001-A #131
+  ↓
+NEXT  HOS-STAFF-001-A #132
+  ↓
+      données structurées + répétition démo #127
+  ↓
+      HOS-BED-002 complet
+  ↓
+      HOS-ADM → HOS-MOV → HOS-DIS
+  ↓
+      HOS-RES
+  ↓
+      HOS-PATH → HOS-KPI → HOS-INT
+```
+
+HOS-STAFF intervient immédiatement après HOS-LOC dans le jalon actuel parce que la démonstration doit créer des professionnels correctement rattachés, sans réintroduire de saisie libre.
+
+## 21. Capacité et engagement
+
+Les estimations globales issues de l’audit restent des ordres de grandeur et non une promesse de remplissage.
+
+Pour le jalon court :
+
+- HOS-ORG-001-A : 9 SP, techniquement livré ;
+- HOS-LOC-001-A : 9 SP ;
+- HOS-STAFF-001-A : 9 SP ;
+- QA démo #127 : répétition et GO/NO-GO après intégration.
+
+Chaque lot est développé et fusionné séparément. Aucune PR « monstre » combinant organisation, géographie et personnel n’est autorisée.
+
+## 22. Risques et garde-fous
+
+- **Risque migration legacy** : aucun mapping automatique par nom ; remapping explicite uniquement si la sémantique est prouvée.
+- **Risque tenant** : FK composites + filtres explicites + tests cross-tenant.
+- **Risque i18n** : codes stables, libellés localisés hors faits métier quand nécessaire.
+- **Risque UI** : mobile-first, composants réutilisables, pas de logique métier dupliquée côté Angular.
+- **Risque calendrier démo** : seuls les blockers P0 justifient une dérogation au gel ; la qualité et les tests ne sont jamais supprimés pour gagner du temps.
+- **Risque dette technique** : aucun alias/fallback legacy durable n’est accepté sous prétexte de rétrocompatibilité pendant la phase de développement.
+
+## 23. Mise à jour jalon HOS-LOC / HOS-STAFF — 24/07/2026
+
+Cette section met à jour l'état opérationnel sans réécrire les sections historiques ci-dessus.
+
+### HOS-LOC-001-A / #131
+
+- **DONE** — PR #137 squash-mergée dans `main@e495477ea02beb05596b20b656bc092bd8fbbd83` ;
+- effort réévalué : **13 SP** ;
+- Flyway V88–V91 ;
+- géographie/espaces, lits sur `space_id`, rattachements datés unité-espace et hospitalisation UUID livrés ;
+- gates #1196/#1202 verts ;
+- reste : recette humaine #127.
+
+### HOS-STAFF-001-A / #132
+
+- **READY TECHNIQUE** — PR #140 ;
+- estimation maintenue : **9 SP** ;
+- Flyway V92–V95 ;
+- affectations datées staff↔unité et staff↔spécialité, rôle contextuel distinct du RBAC global ;
+- suppression physique de `users.department/users.specialty` après preflight fail-fast ;
+- UI staff structurée et portail rendez-vous migré vers `specialtyCode` / `organizationalUnitId` ;
+- gate combiné #1262 : Maven strict SUCCESS, tests Angular SUCCESS, build production SUCCESS ;
+- aucun mapping automatique par texte libre ;
+- aucune action PROD/RECETTE ;
+- reste avant clôture : gate final post-documentation sur le head exact, revue, squash merge #140, puis recette humaine #127.
+
+### Ordre courant actualisé
+
+```text
+DONE  HOS-BED / RBAC phase 0
+  ↓
+DONE  HOS-ORG-001-A #130
+  ↓
+DONE  HOS-LOC-001-A #131
+  ↓
+READY HOS-STAFF-001-A #132 / PR #140
+  ↓
+      répétition démo #127
+  ↓
+      HOS-BED-002 complet
+  ↓
+      HOS-ADM → HOS-MOV → HOS-DIS
+  ↓
+      HOS-RES
+  ↓
+      HOS-PATH → HOS-KPI → HOS-INT
+```
