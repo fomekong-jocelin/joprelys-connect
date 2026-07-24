@@ -72,16 +72,16 @@ describe('WeeklyAvailabilityGridComponent', () => {
   });
 
   it('émet weekdaySelected depuis l’en-tête du jour', () => {
-    let selected: number | null = null;
-    component.weekdaySelected.subscribe((value) => (selected = value));
+    const selectedWeekdays: number[] = [];
+    component.weekdaySelected.subscribe((value) => selectedWeekdays.push(value));
     const headerButtons = (fixture.nativeElement as HTMLElement).querySelectorAll('button[aria-pressed]') as NodeListOf<HTMLButtonElement>;
     headerButtons[2].click();
-    expect(selected).toBe(3);
+    expect(selectedWeekdays[0]).toBe(3);
   });
 
   it('prépare une plage d’une heure arrondie à 30 minutes depuis une zone vide', () => {
-    let selection: WeeklyAvailabilityRangeSelection | null = null;
-    component.rangeSelected.subscribe((value) => (selection = value));
+    const selections: WeeklyAvailabilityRangeSelection[] = [];
+    component.rangeSelected.subscribe((value) => selections.push(value));
     const day = component.days()[1];
     const currentTarget = {
       getBoundingClientRect: () => ({ top: 0, height: component.calendarHeight }),
@@ -94,10 +94,11 @@ describe('WeeklyAvailabilityGridComponent', () => {
 
     component.selectRange(event, day);
 
-    expect(selection?.weekday).toBe(2);
-    expect(selection?.startTime).toBe('10:00');
-    expect(selection?.endTime).toBe('11:00');
-    expect(selection?.validFrom).toBe('2026-07-21');
+    expect(selections).toHaveLength(1);
+    expect(selections[0].weekday).toBe(2);
+    expect(selections[0].startTime).toBe('10:00');
+    expect(selections[0].endTime).toBe('11:00');
+    expect(selections[0].validFrom).toBe('2026-07-21');
   });
 
   it('émet ruleSelected au clic sur une plage visible', () => {
