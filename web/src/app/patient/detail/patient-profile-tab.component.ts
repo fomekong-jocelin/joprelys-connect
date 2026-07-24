@@ -36,7 +36,43 @@ import { PatientProvisionalIdentityCardComponent } from './patient-provisional-i
 
         <app-patient-administrative-summary class="block" [patient]="patient" />
         <app-patient-emergency-context class="block" [patientId]="patient.id" />
-        <app-patient-medical-info class="block" [patientId]="patient.id" />
+
+        <!--
+          Longitudinal medical details are secondary on the identity/profile view.
+          They stay folded until requested; the critical-allergy warning remains
+          permanently visible in PatientDetailComponent when applicable.
+        -->
+        <div class="grid gap-4">
+          <button
+            type="button"
+            class="ui-card flex w-full items-center justify-between gap-4 p-4 text-left sm:p-5"
+            [attr.aria-expanded]="medicalExpanded()"
+            (click)="toggleMedicalInformation()"
+          >
+            <div>
+              <h3 class="font-display text-sm font-black uppercase tracking-wider text-[var(--text-primary)]">
+                {{ parent.i18n.t('patients.medicalInfo.allergies') }} ·
+                {{ parent.i18n.t('patients.medicalInfo.history') }} ·
+                {{ parent.i18n.t('patients.medicalInfo.vaccinations.title') }}
+              </h3>
+            </div>
+            <svg
+              class="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform"
+              [class.rotate-180]="medicalExpanded()"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+
+          @if (medicalExpanded()) {
+            <app-patient-medical-info class="block animate-fade-in" [patientId]="patient.id" />
+          }
+        </div>
       </div>
 
       @if (identityDialogOpen()) {
@@ -52,6 +88,7 @@ import { PatientProvisionalIdentityCardComponent } from './patient-provisional-i
 export class PatientProfileTabComponent {
   readonly parent = inject(PatientDetailComponent);
   readonly identityDialogOpen = signal(false);
+  readonly medicalExpanded = signal(false);
 
   readonly isProvisional = computed(() => {
     const status = this.parent.patient()?.identityStatus;
@@ -73,6 +110,10 @@ export class PatientProfileTabComponent {
     }
     return Math.max(age, 0);
   });
+
+  toggleMedicalInformation(): void {
+    this.medicalExpanded.update(value => !value);
+  }
 
   openIdentityDialog(): void {
     this.identityDialogOpen.set(true);
