@@ -144,7 +144,6 @@ export class StaffManagementComponent implements OnInit {
         if (this.selectedRoles().length === 0) {
           this.selectedRoles.set(this.defaultSelectedRoles());
         }
-        this.applySuggestedAssignmentRole();
         this.loading.set(false);
       },
       error: (error) => {
@@ -193,8 +192,8 @@ export class StaffManagementComponent implements OnInit {
       this.formError.set(this.t('staff.onboarding.registrationRequired', "Le numéro d'inscription à l'Ordre est obligatoire pour un médecin."));
       return;
     }
-    if (!this.editingStaff() && ((this.initialUnitId() && !this.initialAssignmentRoleCode()) || (!this.initialUnitId() && this.initialAssignmentRoleCode()))) {
-      this.formError.set(this.t('staff.onboarding.unitRoleRequired', "Sélectionnez à la fois l'unité et le rôle contextuel."));
+    if (!this.editingStaff() && this.initialUnitId() && !this.initialAssignmentRoleCode()) {
+      this.formError.set(this.t('staff.onboarding.unitRoleRequired', "Sélectionnez un rôle contextuel pour l'unité choisie."));
       return;
     }
     if (!this.editingStaff() && (this.initialSpecialtyCode() || this.initialUnitId()) && !this.toIso(this.initialAssignmentFrom())) {
@@ -229,7 +228,16 @@ export class StaffManagementComponent implements OnInit {
         ? current.filter((code) => code !== roleCode)
         : [...current, roleCode],
     );
-    this.applySuggestedAssignmentRole();
+    if (this.initialUnitId()) {
+      this.initialAssignmentRoleCode.set('');
+      this.applySuggestedAssignmentRole();
+    }
+  }
+
+  onInitialUnitChange(unitId: string): void {
+    this.initialUnitId.set(unitId);
+    this.initialAssignmentRoleCode.set('');
+    if (unitId) this.applySuggestedAssignmentRole();
   }
 
   roleLabel(roleCode: string): string {
@@ -281,11 +289,7 @@ export class StaffManagementComponent implements OnInit {
   private inviteStaff(): void {
     const validFrom = this.toIso(this.initialAssignmentFrom()) ?? new Date().toISOString();
     const specialtyAssignments = this.initialSpecialtyCode()
-      ? [{
-          specialtyCode: this.initialSpecialtyCode(),
-          primary: true,
-          validFrom,
-        }]
+      ? [{ specialtyCode: this.initialSpecialtyCode(), primary: true, validFrom }]
       : undefined;
     const unitAssignments = this.initialUnitId() && this.initialAssignmentRoleCode()
       ? [{
@@ -364,7 +368,6 @@ export class StaffManagementComponent implements OnInit {
     this.stampPath.set(null);
     this.formError.set(null);
     this.formLoading.set(false);
-    this.applySuggestedAssignmentRole();
   }
 
   private defaultSelectedRoles(): string[] {
@@ -380,7 +383,7 @@ export class StaffManagementComponent implements OnInit {
   }
 
   private applySuggestedAssignmentRole(): void {
-    if (this.editingStaff() || this.initialAssignmentRoleCode()) return;
+    if (this.editingStaff() || !this.initialUnitId() || this.initialAssignmentRoleCode()) return;
     const suggestions: Array<[string, string]> = [
       ['MEDECIN', 'PRACTITIONER'],
       ['INFIRMIER', 'NURSE'],
@@ -412,12 +415,8 @@ export class StaffManagementComponent implements OnInit {
 
   private errorMessage(error: HttpErrorLike, fallback: string): string {
     const code = error.error?.error?.code;
-    if (code === 'MAIL_RECIPIENT_REJECTED') {
-      return this.t('staff.errors.mailRecipientRejected');
-    }
-    if (code === 'MAIL_DELIVERY_UNAVAILABLE') {
-      return this.t('staff.errors.mailDeliveryUnavailable');
-    }
+    if (code === 'MAIL_RECIPIENT_REJECTED') return this.t('staff.errors.mailRecipientRejected');
+    if (code === 'MAIL_DELIVERY_UNAVAILABLE') return this.t('staff.errors.mailDeliveryUnavailable');
     if (error.status === 401) return this.t('common.error.unauthorized');
     if (error.status === 403) return this.t('common.error.forbidden');
 
