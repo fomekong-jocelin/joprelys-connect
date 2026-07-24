@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
 import { EmergencyApiService } from './emergency-api.service';
@@ -15,6 +16,7 @@ describe('EmergencyDashboardComponent', () => {
   let fixture: ComponentFixture<EmergencyDashboardComponent>;
   let component: EmergencyDashboardComponent;
   let router: Router;
+  let permissions: ReturnType<typeof signal<Set<string>>>;
   let emergencyApi: {
     getActive: ReturnType<typeof vi.fn>;
     getById: ReturnType<typeof vi.fn>;
@@ -58,12 +60,19 @@ describe('EmergencyDashboardComponent', () => {
       addResuscitationLog: vi.fn().mockReturnValue(of({})),
       stabilize: vi.fn().mockReturnValue(of({ ...record, stabilizedAt: '2026-07-21T10:30:00Z' })),
     };
+    permissions = signal(new Set(['EMERGENCY_READ', 'EMERGENCY_WRITE', 'PATIENT_WRITE']));
 
     await TestBed.configureTestingModule({
       imports: [EmergencyDashboardComponent],
       providers: [
         provideRouter([]),
         { provide: EmergencyApiService, useValue: emergencyApi },
+        {
+          provide: RbacApiService,
+          useValue: {
+            hasPermission: (permission: string) => permissions().has(permission),
+          },
+        },
         { provide: I18nService, useValue: { t: (_key: string, fallback?: string) => fallback ?? _key } },
       ],
     })
@@ -87,6 +96,23 @@ describe('EmergencyDashboardComponent', () => {
     const buttons = workspaceNavigation?.querySelectorAll('button') ?? [];
     expect(buttons.length).toBe(5);
     expect(workspaceNavigation?.textContent).toContain('Documents');
+  });
+
+  it('does not expose or open emergency admission without EMERGENCY_WRITE', () => {
+    permissions.set(new Set(['EMERGENCY_READ']));
+    fixture.detectChanges();
+
+    expect(component.canCreateEmergency()).toBe(false);
+    component.openAdmissionModal();
+    expect(component.isAdmissionModalOpen()).toBe(false);
+    expect(fixture.nativeElement.textContent).not.toContain('emergency.admissionBtn');
+  });
+
+  it('allows emergency admission when EMERGENCY_WRITE is granted', () => {
+    expect(component.canCreateEmergency()).toBe(true);
+    component.openAdmissionModal();
+    fixture.detectChanges();
+    expect(component.isAdmissionModalOpen()).toBe(true);
   });
 
   it('opens the canonical continuation route with the source emergency', () => {
