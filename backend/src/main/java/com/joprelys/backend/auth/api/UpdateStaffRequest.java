@@ -12,9 +12,7 @@ public record UpdateStaffRequest(
         String signaturePath,
         String stampPath,
         String phone,
-        String specialty,
         String registrationNumber,
-        String department,
         String bio
 ) {
 }
