@@ -26,24 +26,24 @@ describe('RbacApiService session isolation', () => {
     sessionStorage.clear();
   });
 
-  it('should hide cached professional access as soon as the authenticated token changes', async () => {
-    storage.save(session('doctor-token', 'doctor@test.local', 'MEDECIN'));
+  it('should keep cached access across a transparent token refresh for the same identity', async () => {
+    storage.save(session('doctor-token-1', 'doctor@test.local', 'MEDECIN'));
     const loaded = firstValueFrom(service.ensureMyAccess());
     http.expectOne('/api/rbac/me').flush({
       userId: 'doctor-1',
       roles: ['MEDECIN'],
-      permissions: ['AVAILABILITY_MANAGE'],
+      permissions: ['AVAILABILITY_MANAGE', 'PATIENT_READ'],
     });
     await loaded;
-    expect(service.access()?.permissions).toContain('AVAILABILITY_MANAGE');
+    expect(service.access()?.permissions).toContain('PATIENT_READ');
 
-    storage.save(session('patient-token', 'DPU-001', 'PATIENT'));
+    storage.save(session('doctor-token-2', 'doctor@test.local', 'MEDECIN'));
 
-    expect(service.access()).toBeNull();
-    expect(service.hasPermission('AVAILABILITY_MANAGE')).toBe(false);
+    expect(service.access()?.permissions).toContain('PATIENT_READ');
+    expect(service.hasPermission('AVAILABILITY_MANAGE')).toBe(true);
   });
 
-  it('should isolate cached permissions between any two professional roles', async () => {
+  it('should isolate cached permissions between any two professional identities', async () => {
     storage.save(session('cashier-token', 'cashier@test.local', 'CAISSIER'));
     const loaded = firstValueFrom(service.ensureMyAccess());
     http.expectOne('/api/rbac/me').flush({
@@ -58,6 +58,22 @@ describe('RbacApiService session isolation', () => {
 
     expect(service.access()).toBeNull();
     expect(service.hasPermission('CASH_PAYMENT_COLLECT')).toBe(false);
+  });
+
+  it('should invalidate cached access when the role set changes for the same email', async () => {
+    storage.save(session('staff-token-1', 'staff@test.local', 'MEDECIN'));
+    const loaded = firstValueFrom(service.ensureMyAccess());
+    http.expectOne('/api/rbac/me').flush({
+      userId: 'staff-1',
+      roles: ['MEDECIN'],
+      permissions: ['CLINICAL_WRITE'],
+    });
+    await loaded;
+
+    storage.save(session('staff-token-2', 'staff@test.local', 'INFIRMIER'));
+
+    expect(service.access()).toBeNull();
+    expect(service.hasPermission('CLINICAL_WRITE')).toBe(false);
   });
 
   it('should ignore a professional RBAC response completed after a patient login', async () => {
