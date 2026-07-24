@@ -57,6 +57,7 @@ export class EmergencyDashboardComponent implements OnInit {
   readonly detailTab = signal<EmergencyDetailTab>('OVERVIEW');
 
   readonly canCreateEmergency = computed(() => this.rbacApi.hasPermission('EMERGENCY_WRITE'));
+  readonly canReadPatient = computed(() => this.rbacApi.hasPermission('PATIENT_READ'));
   readonly canCreatePatient = computed(() => this.rbacApi.hasPermission('PATIENT_WRITE'));
 
   careForm!: FormGroup;
