@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.auth.security.JwtService;
+import com.joprelys.backend.auth.security.TenantContext;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import com.joprelys.backend.hospitalorganization.domain.OrganizationalUnitType;
@@ -80,12 +81,23 @@ class StaffAssignmentControllerTest {
         doctorA = saveUser("doctor.staff.a-" + suffix + "@joprelys.local", "Dr Staff A", "MEDECIN", orgA);
         doctorB = saveUser("doctor.staff.b-" + suffix + "@joprelys.local", "Dr Staff B", "MEDECIN", orgB);
 
-        generalMedicineA = organizationalUnitRepository.save(new OrganizationalUnitEntity(
-                orgA.getId(), null, "MED-GEN-" + suffix, null, OrganizationalUnitType.SERVICE, "GENERAL_MEDICINE"));
-        emergencyA = organizationalUnitRepository.save(new OrganizationalUnitEntity(
-                orgA.getId(), null, "URG-" + suffix, null, OrganizationalUnitType.SERVICE, "EMERGENCY"));
-        generalMedicineB = organizationalUnitRepository.save(new OrganizationalUnitEntity(
-                orgB.getId(), null, "MED-GEN-B-" + suffix, null, OrganizationalUnitType.SERVICE, "GENERAL_MEDICINE"));
+        TenantContext.setTenantId(orgA.getId());
+        try {
+            generalMedicineA = organizationalUnitRepository.save(new OrganizationalUnitEntity(
+                    orgA.getId(), null, "MED-GEN-" + suffix, null, OrganizationalUnitType.SERVICE, "GENERAL_MEDICINE"));
+            emergencyA = organizationalUnitRepository.save(new OrganizationalUnitEntity(
+                    orgA.getId(), null, "URG-" + suffix, null, OrganizationalUnitType.SERVICE, "EMERGENCY"));
+        } finally {
+            TenantContext.clear();
+        }
+
+        TenantContext.setTenantId(orgB.getId());
+        try {
+            generalMedicineB = organizationalUnitRepository.save(new OrganizationalUnitEntity(
+                    orgB.getId(), null, "MED-GEN-B-" + suffix, null, OrganizationalUnitType.SERVICE, "GENERAL_MEDICINE"));
+        } finally {
+            TenantContext.clear();
+        }
 
         adminToken = jwtService.createToken(adminA).value();
         doctorToken = jwtService.createToken(doctorA).value();
