@@ -77,6 +77,7 @@ export class UnifiedAdmissionComponent implements OnInit {
 
   readonly initialCarePath = input<AdmissionCarePath>('NORMAL');
   readonly allowCarePathSwitch = input(true);
+  readonly allowExistingPatient = input(true);
   readonly allowNewPatient = input(true);
   readonly allowProvisionalPatient = input(true);
   readonly cancelled = output<void>();
@@ -132,7 +133,9 @@ export class UnifiedAdmissionComponent implements OnInit {
 
   ngOnInit(): void {
     this.form.patchValue({ carePath: this.initialCarePath() });
-    this.loadPatients();
+    if (this.allowExistingPatient()) {
+      this.loadPatients();
+    }
     this.loadHospitalServices();
     this.restoreDraftIfAvailable();
     this.enforceAllowedState();
@@ -202,8 +205,8 @@ export class UnifiedAdmissionComponent implements OnInit {
       return;
     }
     this.form.patchValue({ carePath: path });
-    if (path === 'NORMAL' && this.patientMode === 'PROVISIONAL') {
-      this.setPatientMode(this.allowNewPatient() ? 'NEW' : 'EXISTING');
+    if (!this.isPatientModeAllowed(this.patientMode, path)) {
+      this.setPatientMode(this.firstAllowedPatientMode(path));
     }
     this.resetNavigation();
   }
@@ -318,10 +321,9 @@ export class UnifiedAdmissionComponent implements OnInit {
 
   private enforceAllowedState(): void {
     const allowedCarePath = this.allowCarePathSwitch() ? this.carePath : this.initialCarePath();
-    let allowedPatientMode = this.patientMode;
-    if (!this.isPatientModeAllowed(allowedPatientMode, allowedCarePath)) {
-      allowedPatientMode = 'EXISTING';
-    }
+    const allowedPatientMode = this.isPatientModeAllowed(this.patientMode, allowedCarePath)
+      ? this.patientMode
+      : this.firstAllowedPatientMode(allowedCarePath);
 
     if (this.carePath !== allowedCarePath || this.patientMode !== allowedPatientMode) {
       this.form.patchValue({
@@ -333,9 +335,17 @@ export class UnifiedAdmissionComponent implements OnInit {
   }
 
   private isPatientModeAllowed(mode: AdmissionPatientMode, carePath: AdmissionCarePath = this.carePath): boolean {
-    if (mode === 'EXISTING') return true;
+    if (mode === 'EXISTING') return this.allowExistingPatient();
     if (mode === 'NEW') return this.allowNewPatient();
     return this.allowProvisionalPatient() && carePath === 'EMERGENCY';
+  }
+
+  private firstAllowedPatientMode(carePath: AdmissionCarePath): AdmissionPatientMode {
+    if (this.allowExistingPatient()) return 'EXISTING';
+    if (this.allowNewPatient()) return 'NEW';
+    if (this.allowProvisionalPatient() && carePath === 'EMERGENCY') return 'PROVISIONAL';
+    // Consumers are expected to render the component only when at least one mode is authorized.
+    return 'EXISTING';
   }
 
   private resetNavigation(): void {
