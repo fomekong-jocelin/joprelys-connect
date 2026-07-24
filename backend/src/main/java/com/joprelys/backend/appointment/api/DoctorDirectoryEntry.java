@@ -1,20 +1,27 @@
 package com.joprelys.backend.appointment.api;
 
-import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
+import java.util.List;
 import java.util.UUID;
 
-/** Médecin visible dans l'annuaire du portail patient. */
+/** Médecin visible dans l'annuaire du portail patient avec référentiels structurés. */
 public record DoctorDirectoryEntry(
-		UUID doctorId,
-		String displayName,
-		String specialty,
-		String department
+        UUID doctorId,
+        String displayName,
+        List<SpecialtyEntry> specialties,
+        List<UnitEntry> units
 ) {
-	public static DoctorDirectoryEntry fromEntity(UserAccountEntity doctor) {
-		return new DoctorDirectoryEntry(
-				doctor.getId(),
-				doctor.getDisplayName(),
-				doctor.getSpecialty(),
-				doctor.getDepartment());
-	}
+    public record SpecialtyEntry(
+            String code,
+            String nameFr,
+            String nameEn,
+            boolean primary) {
+    }
+
+    public record UnitEntry(
+            UUID id,
+            String code,
+            String nameFr,
+            String nameEn,
+            boolean primary) {
+    }
 }
