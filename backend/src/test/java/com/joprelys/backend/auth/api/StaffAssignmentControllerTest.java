@@ -14,13 +14,13 @@ import com.joprelys.backend.hospitalorganization.domain.OrganizationalUnitType;
 import com.joprelys.backend.hospitalorganization.infrastructure.persistence.OrganizationalUnitEntity;
 import com.joprelys.backend.hospitalorganization.infrastructure.persistence.OrganizationalUnitRepository;
 import java.time.Instant;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -48,9 +48,6 @@ class StaffAssignmentControllerTest {
     @Autowired
     private JwtService jwtService;
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
     private OrganizationEntity orgA;
     private OrganizationEntity orgB;
     private UserAccountEntity adminA;
@@ -64,30 +61,31 @@ class StaffAssignmentControllerTest {
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.update("DELETE FROM staff_organizational_unit_assignments");
-        jdbcTemplate.update("DELETE FROM staff_specialty_assignments");
-        jdbcTemplate.update("DELETE FROM organizational_unit_space_assignments");
-        jdbcTemplate.update("DELETE FROM organizational_units");
-        jdbcTemplate.update("DELETE FROM lab_orders");
-        jdbcTemplate.update("DELETE FROM auth_audit_events");
-        userAccountRepository.deleteAll();
-        organizationRepository.deleteAll();
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
 
         orgA = organizationRepository.save(new OrganizationEntity(
-                "Clinique Staff A", "staff-assign-a@joprelys.local", "123", "Street A", "Douala"));
+                "Clinique Staff A " + suffix,
+                "staff-assign-a-" + suffix + "@joprelys.local",
+                "123",
+                "Street A",
+                "Douala"));
         orgB = organizationRepository.save(new OrganizationEntity(
-                "Clinique Staff B", "staff-assign-b@joprelys.local", "456", "Street B", "Yaounde"));
+                "Clinique Staff B " + suffix,
+                "staff-assign-b-" + suffix + "@joprelys.local",
+                "456",
+                "Street B",
+                "Yaounde"));
 
-        adminA = saveUser("admin.staff.a@joprelys.local", "Admin Staff A", "ADMIN_CLINIQUE", orgA);
-        doctorA = saveUser("doctor.staff.a@joprelys.local", "Dr Staff A", "MEDECIN", orgA);
-        doctorB = saveUser("doctor.staff.b@joprelys.local", "Dr Staff B", "MEDECIN", orgB);
+        adminA = saveUser("admin.staff.a-" + suffix + "@joprelys.local", "Admin Staff A", "ADMIN_CLINIQUE", orgA);
+        doctorA = saveUser("doctor.staff.a-" + suffix + "@joprelys.local", "Dr Staff A", "MEDECIN", orgA);
+        doctorB = saveUser("doctor.staff.b-" + suffix + "@joprelys.local", "Dr Staff B", "MEDECIN", orgB);
 
         generalMedicineA = organizationalUnitRepository.save(new OrganizationalUnitEntity(
-                orgA.getId(), null, "MED-GEN", null, OrganizationalUnitType.SERVICE, "GENERAL_MEDICINE"));
+                orgA.getId(), null, "MED-GEN-" + suffix, null, OrganizationalUnitType.SERVICE, "GENERAL_MEDICINE"));
         emergencyA = organizationalUnitRepository.save(new OrganizationalUnitEntity(
-                orgA.getId(), null, "URG", null, OrganizationalUnitType.SERVICE, "EMERGENCY"));
+                orgA.getId(), null, "URG-" + suffix, null, OrganizationalUnitType.SERVICE, "EMERGENCY"));
         generalMedicineB = organizationalUnitRepository.save(new OrganizationalUnitEntity(
-                orgB.getId(), null, "MED-GEN-B", null, OrganizationalUnitType.SERVICE, "GENERAL_MEDICINE"));
+                orgB.getId(), null, "MED-GEN-B-" + suffix, null, OrganizationalUnitType.SERVICE, "GENERAL_MEDICINE"));
 
         adminToken = jwtService.createToken(adminA).value();
         doctorToken = jwtService.createToken(doctorA).value();
