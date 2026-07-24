@@ -2,6 +2,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AdmissionCompleted, UnifiedAdmissionComponent } from '../admission/unified-admission.component';
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
 import { AlertComponent } from '../shared/ui/alert.component';
@@ -27,6 +28,7 @@ import { Patient } from './patient.models';
 })
 export class PatientListComponent implements OnInit {
   private readonly api = inject(PatientApiService);
+  private readonly rbacApi = inject(RbacApiService);
   private readonly i18n = inject(I18nService);
   private readonly router = inject(Router);
 
@@ -40,6 +42,9 @@ export class PatientListComponent implements OnInit {
   readonly emergencyReason = signal('');
   readonly emergencyLoading = signal(false);
   readonly emergencyError = signal<string | null>(null);
+
+  readonly canCreateVisit = computed(() => this.rbacApi.hasPermission('VISIT_CREATE'));
+  readonly canCreatePatient = computed(() => this.rbacApi.hasPermission('PATIENT_WRITE'));
 
   readonly pageTitle = computed(() => this.i18n.t('patients.title'));
   readonly pageSubtitle = computed(() => this.i18n.t('patients.subtitle'));
@@ -73,6 +78,10 @@ export class PatientListComponent implements OnInit {
   }
 
   toggleCreateForm(): void {
+    if (!this.canCreateVisit()) {
+      this.showCreateForm.set(false);
+      return;
+    }
     this.showCreateForm.update((visible) => !visible);
   }
 
