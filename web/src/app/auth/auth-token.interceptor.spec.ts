@@ -99,6 +99,43 @@ describe('authTokenInterceptor', () => {
     retryRequest.flush([]);
   });
 
+  it('should preserve the session and surface a 403 authorization refusal without refreshing', () => {
+    const http = TestBed.inject(HttpClient);
+    const httpTesting = TestBed.inject(HttpTestingController);
+    const tokenStorage = TestBed.inject(AuthTokenStorageService);
+
+    tokenStorage.save(loginResponse('valid-token', '2999-07-02T12:30:00Z'));
+
+    http.get('/api/patients').subscribe({
+      error: (error: HttpErrorResponse) => expect(error.status).toBe(403),
+    });
+
+    httpTesting.expectOne('/api/patients')
+      .flush({}, { status: 403, statusText: 'Forbidden' });
+
+    httpTesting.expectNone('/api/auth/refresh');
+    expect(tokenStorage.accessToken).toBe('valid-token');
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('should not reclassify a refresh server error as an expired session', () => {
+    const http = TestBed.inject(HttpClient);
+    const httpTesting = TestBed.inject(HttpTestingController);
+    const tokenStorage = TestBed.inject(AuthTokenStorageService);
+
+    tokenStorage.save(loginResponse('expired-token', '2020-01-01T00:00:00Z'));
+
+    http.get('/api/patients').subscribe({
+      error: (error: HttpErrorResponse) => expect(error.status).toBe(500),
+    });
+
+    httpTesting.expectOne('/api/auth/refresh')
+      .flush({}, { status: 500, statusText: 'Server Error' });
+
+    expect(tokenStorage.session()).not.toBeNull();
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
   it('should clear the session and redirect with an explanation when refresh is rejected', () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
