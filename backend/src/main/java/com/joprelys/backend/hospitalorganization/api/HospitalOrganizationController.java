@@ -27,19 +27,19 @@ public class HospitalOrganizationController {
     }
 
     @GetMapping("/catalogs/services")
-    @PreAuthorize("hasAnyAuthority('ORGANIZATION_STRUCTURE_MANAGE', 'USER_MANAGE')")
+    @PreAuthorize("hasAnyAuthority('ORGANIZATION_STRUCTURE_MANAGE', 'USER_MANAGE', 'USER_READ')")
     public List<HospitalServiceCatalogResponse> listServiceCatalog() {
         return useCase.listServiceCatalog();
     }
 
     @GetMapping("/catalogs/specialties")
-    @PreAuthorize("hasAnyAuthority('ORGANIZATION_STRUCTURE_MANAGE', 'USER_MANAGE')")
+    @PreAuthorize("hasAnyAuthority('ORGANIZATION_STRUCTURE_MANAGE', 'USER_MANAGE', 'USER_READ')")
     public List<MedicalSpecialtyCatalogResponse> listSpecialtyCatalog() {
         return useCase.listSpecialtyCatalog();
     }
 
     @GetMapping("/units")
-    @PreAuthorize("hasAnyAuthority('ORGANIZATION_STRUCTURE_MANAGE', 'USER_MANAGE')")
+    @PreAuthorize("hasAnyAuthority('ORGANIZATION_STRUCTURE_MANAGE', 'USER_MANAGE', 'USER_READ')")
     public List<OrganizationalUnitResponse> listUnits(
             @RequestParam(required = false) UUID organizationId,
             @RequestParam(defaultValue = "false") boolean includeInactive) {
