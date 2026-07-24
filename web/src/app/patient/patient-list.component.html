@@ -5,7 +5,7 @@
     backLink="/dashboard"
     [backLabel]="backLabel()"
   >
-    @if (!selectedPatient()) {
+    @if (!selectedPatient() && canCreateVisit()) {
       <app-ui-button class="w-full sm:w-auto" (pressed)="toggleCreateForm()">
         {{ createLabel() }}
       </app-ui-button>
@@ -156,7 +156,7 @@
   </div>
 </app-shell>
 
-@if (showCreateForm()) {
+@if (showCreateForm() && canCreateVisit()) {
   <div
     class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-bg)] p-3 backdrop-blur-sm sm:p-4"
     role="presentation"
@@ -171,6 +171,9 @@
     >
       <app-unified-admission
         initialCarePath="NORMAL"
+        [allowCarePathSwitch]="false"
+        [allowNewPatient]="canCreatePatient()"
+        [allowProvisionalPatient]="false"
         (cancelled)="cancelCreate()"
         (completed)="onAdmissionCompleted($event)"
       />
