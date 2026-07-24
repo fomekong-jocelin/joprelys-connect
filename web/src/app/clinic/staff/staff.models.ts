@@ -13,6 +13,12 @@ export interface StaffMember {
   readonly phone?: string;
   readonly registrationNumber?: string;
   readonly bio?: string;
+  /**
+   * @deprecated Projection de présentation dérivée de l'unité principale active.
+   * Jamais persistée, jamais envoyée dans un payload d'écriture.
+   * Maintenue uniquement pour les écrans visite non encore refactorés vers unitId.
+   */
+  readonly department?: string;
 }
 
 export interface InviteStaffRequest {
