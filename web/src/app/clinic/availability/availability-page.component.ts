@@ -29,7 +29,6 @@ import {
 } from './availability-slots.util';
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
-/** Fenêtre de chargement des indisponibilités : du jour courant à +1 an. */
 const EXCEPTIONS_HORIZON_DAYS = 365;
 
 type PendingAction =
@@ -41,13 +40,6 @@ interface ApiErrorShape {
   error?: { code?: string; message?: string; detail?: string };
 }
 
-/**
- * Page « Mes disponibilités » (STORY-2602).
- *
- * Le calendrier hebdomadaire est la vue principale. Les listes techniques de règles,
- * indisponibilités et créneaux restent disponibles dans des panneaux repliables afin
- * d'éviter les grands états vides tout en conservant l'intégralité du CRUD existant.
- */
 @Component({
   selector: 'app-availability-page',
   standalone: true,
@@ -73,19 +65,16 @@ export class AvailabilityPageComponent implements OnInit {
   readonly pageError = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
 
-  // Semaine du calendrier principal.
   readonly weekStart = signal(startOfIsoWeek(new Date()));
   readonly weekEnd = computed(() => addDays(this.weekStart(), 6));
   readonly isCurrentWeek = computed(() =>
     toLocalDateKey(this.weekStart()) === toLocalDateKey(startOfIsoWeek(new Date())));
   readonly weekLabel = computed(() => this.formatWeekLabel(this.weekStart(), this.weekEnd()));
 
-  // Les informations secondaires restent repliées par défaut (DESIGN.md : hiérarchie / densité).
   readonly rulesExpanded = signal(false);
   readonly exceptionsExpanded = signal(false);
   readonly slotsExpanded = signal(false);
 
-  // Formulaire de plage hebdomadaire
   readonly showRuleForm = signal(false);
   readonly ruleFormLoading = signal(false);
   readonly ruleFormError = signal<string | null>(null);
@@ -96,7 +85,6 @@ export class AvailabilityPageComponent implements OnInit {
   readonly formValidFrom = signal('');
   readonly formValidTo = signal('');
 
-  // Formulaire d'indisponibilité
   readonly showExceptionForm = signal(false);
   readonly exceptionFormLoading = signal(false);
   readonly exceptionFormError = signal<string | null>(null);
@@ -104,7 +92,6 @@ export class AvailabilityPageComponent implements OnInit {
   readonly exceptionEnd = signal('');
   readonly exceptionReason = signal('');
 
-  // Confirmation partagée (désactivation de plage / suppression d'indisponibilité)
   readonly pendingAction = signal<PendingAction | null>(null);
   readonly pendingActionLoading = signal(false);
 
@@ -183,8 +170,6 @@ export class AvailabilityPageComponent implements OnInit {
     });
   }
 
-  // ----- Navigation du calendrier -----
-
   previousWeek(): void {
     this.weekStart.update((start) => addDays(start, -7));
   }
@@ -196,8 +181,6 @@ export class AvailabilityPageComponent implements OnInit {
   goToCurrentWeek(): void {
     this.weekStart.set(startOfIsoWeek(new Date()));
   }
-
-  // ----- Plages hebdomadaires -----
 
   toggleRuleForm(): void {
     if (this.showRuleForm() && !this.editingRule()) {
@@ -287,7 +270,7 @@ export class AvailabilityPageComponent implements OnInit {
         this.load();
       },
       error: (error) => {
-        this.ruleFormError.set(this.errorMessage(error, this.t('availability.rules.saveError'));
+        this.ruleFormError.set(this.errorMessage(error, this.t('availability.rules.saveError')));
         this.ruleFormLoading.set(false);
       },
     });
@@ -300,8 +283,6 @@ export class AvailabilityPageComponent implements OnInit {
       this.pendingAction.set({ kind: 'deactivate-rule', rule: current });
     }
   }
-
-  // ----- Indisponibilités -----
 
   toggleExceptionForm(): void {
     if (this.showExceptionForm()) {
@@ -346,7 +327,7 @@ export class AvailabilityPageComponent implements OnInit {
         this.load();
       },
       error: (error) => {
-        this.exceptionFormError.set(this.errorMessage(error, this.t('availability.exceptions.saveError'));
+        this.exceptionFormError.set(this.errorMessage(error, this.t('availability.exceptions.saveError')));
         this.exceptionFormLoading.set(false);
       },
     });
@@ -356,8 +337,6 @@ export class AvailabilityPageComponent implements OnInit {
     this.successMessage.set(null);
     this.pendingAction.set({ kind: 'delete-exception', exception });
   }
-
-  // ----- Panneaux secondaires -----
 
   toggleRulesPanel(): void {
     this.rulesExpanded.update((value) => !value);
@@ -370,8 +349,6 @@ export class AvailabilityPageComponent implements OnInit {
   toggleSlotsPanel(): void {
     this.slotsExpanded.update((value) => !value);
   }
-
-  // ----- Confirmation -----
 
   confirmPendingAction(): void {
     const action = this.pendingAction();
@@ -393,8 +370,6 @@ export class AvailabilityPageComponent implements OnInit {
   cancelPendingAction(): void {
     this.pendingAction.set(null);
   }
-
-  // ----- Utilitaires -----
 
   dayLabel(date: Date): string {
     return this.t(`availability.weekdays.${isoWeekday(date)}`);
