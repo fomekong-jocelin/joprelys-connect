@@ -35,6 +35,19 @@ class RbacCatalogPermissionIsolationTest {
     }
 
     @Test
+    void doctorKeepsCompleteUnifiedAdmissionCapabilities() {
+        Map<String, RbacCatalog.RoleDefinition> roles = rolesByCode();
+
+        assertThat(roles.get("MEDECIN").permissions())
+                .contains(
+                        "PATIENT_READ",
+                        "PATIENT_WRITE",
+                        "VISIT_CREATE",
+                        "EMERGENCY_READ",
+                        "EMERGENCY_WRITE");
+    }
+
+    @Test
     void sensitiveCapabilitiesAreNotInheritedFromUnrelatedRoles() {
         Map<String, RbacCatalog.RoleDefinition> roles = rolesByCode();
 
