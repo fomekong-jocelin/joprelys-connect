@@ -11,6 +11,7 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { RbacApiService } from '../rbac/rbac-api.service';
 import { RbacRole } from '../rbac/rbac.models';
 import { StaffApiService } from './staff-api.service';
+import { StaffAssignmentEditorComponent } from './staff-assignment-editor.component';
 import { StaffMember, StaffRole } from './staff.models';
 import { StaffTableComponent, StaffTableLabels } from './staff-table.component';
 
@@ -41,6 +42,7 @@ interface HttpErrorLike {
     CardComponent,
     PageHeaderComponent,
     StaffTableComponent,
+    StaffAssignmentEditorComponent,
     FileDragDropComponent,
   ],
   templateUrl: './staff-management.component.html',
@@ -63,24 +65,9 @@ export class StaffManagementComponent implements OnInit {
   readonly displayName = signal('');
   readonly email = signal('');
   readonly selectedRoles = signal<string[]>([]);
-
   readonly phone = signal('');
-  readonly specialty = signal('');
   readonly registrationNumber = signal('');
-  readonly department = signal('');
   readonly bio = signal('');
-
-  readonly departments = [
-    { value: 'Médecine générale', labelKey: 'staff.departments.general' },
-    { value: 'Pédiatrie', labelKey: 'staff.departments.pediatrics' },
-    { value: 'Gynécologie', labelKey: 'staff.departments.gynecology' },
-    { value: 'Urgences', labelKey: 'staff.departments.emergency' },
-    { value: 'Pharmacie', labelKey: 'staff.departments.pharmacy' },
-    { value: 'Laboratoire', labelKey: 'staff.departments.laboratory' },
-    { value: 'Cardiologie', labelKey: 'staff.departments.cardiology' },
-  ];
-  readonly selectedDept = signal('');
-  readonly customDept = signal('');
 
   readonly photoPath = signal<string | null>(null);
   readonly signaturePath = signal<string | null>(null);
@@ -157,21 +144,7 @@ export class StaffManagementComponent implements OnInit {
     this.email.set(member.email);
     this.selectedRoles.set(this.parseRoleCodes(member.role));
     this.phone.set(member.phone || '');
-    this.specialty.set(member.specialty || '');
     this.registrationNumber.set(member.registrationNumber || '');
-    const dept = member.department || '';
-    this.department.set(dept);
-    if (this.departments.some((item) => item.value === dept)) {
-      this.selectedDept.set(dept);
-      this.customDept.set('');
-    } else if (dept) {
-      this.selectedDept.set('Autre');
-      this.customDept.set(dept);
-    } else {
-      this.selectedDept.set('');
-      this.customDept.set('');
-    }
-
     this.bio.set(member.bio || '');
     this.photoPath.set(member.photoPath || null);
     this.signaturePath.set(member.signaturePath || null);
@@ -229,21 +202,6 @@ export class StaffManagementComponent implements OnInit {
     return this.i18n.t(key, fallback);
   }
 
-  onDeptChange(value: string): void {
-    this.selectedDept.set(value);
-    if (value !== 'Autre') {
-      this.department.set(value);
-      this.customDept.set('');
-    } else {
-      this.department.set(this.customDept());
-    }
-  }
-
-  onCustomDeptInput(value: string): void {
-    this.customDept.set(value);
-    this.department.set(value);
-  }
-
   onFileSelected(file: File, type: 'photo' | 'signature' | 'stamp', component: FileDragDropComponent): void {
     this.formError.set(null);
     const formData = new FormData();
@@ -291,9 +249,7 @@ export class StaffManagementComponent implements OnInit {
       signaturePath: this.signaturePath() || undefined,
       stampPath: this.stampPath() || undefined,
       phone: this.phone().trim() || undefined,
-      specialty: this.specialty().trim() || undefined,
       registrationNumber: this.registrationNumber().trim() || undefined,
-      department: this.department().trim() || undefined,
       bio: this.bio().trim() || undefined,
     }).subscribe({
       next: (updated) => {
@@ -319,11 +275,7 @@ export class StaffManagementComponent implements OnInit {
     this.email.set('');
     this.selectedRoles.set(this.defaultSelectedRoles());
     this.phone.set('');
-    this.specialty.set('');
     this.registrationNumber.set('');
-    this.department.set('');
-    this.selectedDept.set('');
-    this.customDept.set('');
     this.bio.set('');
     this.photoPath.set(null);
     this.signaturePath.set(null);
