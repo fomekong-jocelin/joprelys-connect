@@ -41,16 +41,19 @@ public class StaffService {
     private final RbacStore rbacStore;
     private final SecureRandom secureRandom;
     private final AccountMailService accountMailService;
+    private final StaffAssignmentService staffAssignmentService;
 
     public StaffService(
             UserAccountRepository userAccountRepository,
             PasswordEncoder passwordEncoder,
             RbacStore rbacStore,
-            AccountMailService accountMailService) {
+            AccountMailService accountMailService,
+            StaffAssignmentService staffAssignmentService) {
         this.userAccountRepository = userAccountRepository;
         this.passwordEncoder = passwordEncoder;
         this.rbacStore = rbacStore;
         this.accountMailService = accountMailService;
+        this.staffAssignmentService = staffAssignmentService;
         this.secureRandom = new SecureRandom();
     }
 
@@ -83,6 +86,7 @@ public class StaffService {
         List<RbacStore.RoleView> roles = resolveManageableRoles(
                 admin.getOrganizationId(), request.role(), request.roles());
         String legacyRoles = joinRoleCodes(roles);
+        validateProfessionalProfile(request, roles);
 
         if (userAccountRepository.existsByEmail(email)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Un utilisateur avec cet email existe déjà.");
@@ -95,9 +99,22 @@ public class StaffService {
                 legacyRoles,
                 passwordEncoder.encode(temporaryPassword));
         staff.setOrganizationId(admin.getOrganizationId());
+        staff.setPhone(normalizeOptional(request.phone()));
+        staff.setRegistrationNumber(normalizeOptional(request.registrationNumber()));
+        staff.setBio(normalizeOptional(request.bio()));
 
         UserAccountEntity saved = userAccountRepository.saveAndFlush(staff);
         rbacStore.replaceUserRoles(saved.getId(), admin.getOrganizationId(), admin.getId(), roles);
+
+        if (request.specialtyAssignments() != null) {
+            request.specialtyAssignments().forEach(item ->
+                    staffAssignmentService.createSpecialty(saved.getId(), item, authentication));
+        }
+        if (request.unitAssignments() != null) {
+            request.unitAssignments().forEach(item ->
+                    staffAssignmentService.createUnit(saved.getId(), item, authentication));
+        }
+
         rbacStore.audit(
                 admin.getOrganizationId(),
                 admin.getId(),
@@ -105,6 +122,9 @@ public class StaffService {
                 "USER",
                 saved.getId().toString(),
                 "roles=" + legacyRoles);
+
+        // L'e-mail n'est envoyé qu'après validation et persistence des affectations.
+        // Toute exception déclenchée avant ce point fait rollbacker le compte et les affectations.
         accountMailService.sendTemporaryPassword(saved.getEmail(), saved.getDisplayName(), temporaryPassword);
 
         return new InviteStaffResponse(
@@ -195,6 +215,15 @@ public class StaffService {
         return admin;
     }
 
+    private void validateProfessionalProfile(InviteStaffRequest request, List<RbacStore.RoleView> roles) {
+        boolean doctor = roles.stream().anyMatch(role -> "MEDECIN".equals(role.code()));
+        if (doctor && normalizeOptional(request.registrationNumber()) == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Le numéro d'inscription à l'Ordre est obligatoire pour un médecin.");
+        }
+    }
+
     private List<RbacStore.RoleView> resolveManageableRoles(
             UUID organizationId,
             String legacyRole,
@@ -276,6 +305,12 @@ public class StaffService {
 
     private static String normalizeRoleCode(String role) {
         return role.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private static String normalizeOptional(String value) {
+        if (value == null) return null;
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     private record StaffWithAccess(UserAccountEntity account, Set<String> roles) {
