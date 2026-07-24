@@ -1,5 +1,13 @@
 export type StaffRole = string;
 
+export interface StaffActiveOrganizationalUnit {
+  readonly id: string;
+  readonly code: string;
+  readonly nameFr: string;
+  readonly nameEn: string;
+  readonly primary: boolean;
+}
+
 export interface StaffMember {
   readonly id: string;
   readonly email: string;
@@ -13,12 +21,7 @@ export interface StaffMember {
   readonly phone?: string;
   readonly registrationNumber?: string;
   readonly bio?: string;
-  /**
-   * @deprecated Projection de présentation dérivée de l'unité principale active.
-   * Jamais persistée, jamais envoyée dans un payload d'écriture.
-   * Maintenue uniquement pour les écrans visite non encore refactorés vers unitId.
-   */
-  readonly department?: string;
+  readonly activeOrganizationalUnits?: readonly StaffActiveOrganizationalUnit[];
 }
 
 export interface InviteStaffRequest {
