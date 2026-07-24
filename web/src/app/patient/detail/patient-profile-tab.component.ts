@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { I18nService } from '../../core/i18n/i18n.service';
 import { PatientDetailComponent } from '../patient-detail.component';
 import { PatientMedicalInfoComponent } from '../patient-medical-info.component';
 import { Patient } from '../patient.models';
@@ -51,9 +52,9 @@ import { PatientProvisionalIdentityCardComponent } from './patient-provisional-i
           >
             <div>
               <h3 class="font-display text-sm font-black uppercase tracking-wider text-[var(--text-primary)]">
-                {{ parent.i18n.t('patients.medicalInfo.allergies') }} ·
-                {{ parent.i18n.t('patients.medicalInfo.history') }} ·
-                {{ parent.i18n.t('patients.medicalInfo.vaccinations.title') }}
+                {{ i18n.t('patients.medicalInfo.allergies') }} ·
+                {{ i18n.t('patients.medicalInfo.history') }} ·
+                {{ i18n.t('patients.medicalInfo.vaccinations.title') }}
               </h3>
             </div>
             <svg
@@ -87,6 +88,7 @@ import { PatientProvisionalIdentityCardComponent } from './patient-provisional-i
 })
 export class PatientProfileTabComponent {
   readonly parent = inject(PatientDetailComponent);
+  readonly i18n = inject(I18nService);
   readonly identityDialogOpen = signal(false);
   readonly medicalExpanded = signal(false);
 
