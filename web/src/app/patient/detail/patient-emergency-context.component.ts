@@ -15,7 +15,7 @@ import { PatientEmergencyMedicoLegalSummaryComponent } from './patient-emergency
         type="button"
         class="flex w-full items-start justify-between gap-3 p-4 text-left sm:p-5"
         [attr.aria-expanded]="expanded()"
-        (click)="expanded.update(value => !value)"
+        (click)="toggleExpanded()"
       >
         <div>
           <h3 class="font-display text-sm font-black uppercase tracking-wider text-[var(--text-primary)]">
@@ -166,6 +166,10 @@ export class PatientEmergencyContextComponent implements OnInit {
         this.expanded.set(true);
       },
     });
+  }
+
+  toggleExpanded(): void {
+    this.expanded.update(value => !value);
   }
 
   t(key: string, fallback?: string): string {
