@@ -26,7 +26,7 @@ public class V94__enforce_structured_staff_assignment_periods extends BaseJavaMi
                     organization_id WITH =,
                     staff_id WITH =,
                     specialty_code WITH =,
-                    tstzrange(valid_from, COALESCE(valid_to, 'infinity'::timestamp), '[)') WITH &&
+                    tsrange(valid_from, COALESCE(valid_to, 'infinity'::timestamp), '[)') WITH &&
                 )
                 """);
 
@@ -36,7 +36,7 @@ public class V94__enforce_structured_staff_assignment_periods extends BaseJavaMi
                 EXCLUDE USING gist (
                     organization_id WITH =,
                     staff_id WITH =,
-                    tstzrange(valid_from, COALESCE(valid_to, 'infinity'::timestamp), '[)') WITH &&
+                    tsrange(valid_from, COALESCE(valid_to, 'infinity'::timestamp), '[)') WITH &&
                 ) WHERE (is_primary)
                 """);
 
@@ -47,7 +47,7 @@ public class V94__enforce_structured_staff_assignment_periods extends BaseJavaMi
                     organization_id WITH =,
                     staff_id WITH =,
                     organizational_unit_id WITH =,
-                    tstzrange(valid_from, COALESCE(valid_to, 'infinity'::timestamp), '[)') WITH &&
+                    tsrange(valid_from, COALESCE(valid_to, 'infinity'::timestamp), '[)') WITH &&
                 )
                 """);
 
@@ -57,7 +57,7 @@ public class V94__enforce_structured_staff_assignment_periods extends BaseJavaMi
                 EXCLUDE USING gist (
                     organization_id WITH =,
                     staff_id WITH =,
-                    tstzrange(valid_from, COALESCE(valid_to, 'infinity'::timestamp), '[)') WITH &&
+                    tsrange(valid_from, COALESCE(valid_to, 'infinity'::timestamp), '[)') WITH &&
                 ) WHERE (is_primary)
                 """);
     }
