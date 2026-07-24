@@ -31,7 +31,12 @@ export const authTokenInterceptor: HttpInterceptorFn = (request, next) => {
     sessionRecovery.refreshAccessToken().pipe(
       switchMap((freshToken) => sendWithToken(freshToken)),
       catchError((error: HttpErrorResponse) => {
-        sessionRecovery.expireSession();
+        // A rejected refresh means the authentication session is no longer usable.
+        // Server/network errors must remain visible and must not be reclassified as
+        // an expired session.
+        if (error.status === 401 || error.status === 403) {
+          sessionRecovery.expireSession();
+        }
         return throwError(() => error);
       }),
     );
@@ -42,7 +47,10 @@ export const authTokenInterceptor: HttpInterceptorFn = (request, next) => {
 
   return sendWithToken(session.accessToken).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401 || error.status === 403) {
+      // 401 means the bearer token is no longer accepted and may be refreshed.
+      // 403 is an authorization refusal: refreshing the token cannot grant a
+      // permission and, critically, must never log the user out.
+      if (error.status === 401) {
         return refreshAndRetry();
       }
       return throwError(() => error);
