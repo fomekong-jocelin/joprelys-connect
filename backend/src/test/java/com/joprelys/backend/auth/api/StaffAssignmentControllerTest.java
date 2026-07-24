@@ -68,6 +68,7 @@ class StaffAssignmentControllerTest {
         jdbcTemplate.update("DELETE FROM staff_specialty_assignments");
         jdbcTemplate.update("DELETE FROM organizational_unit_space_assignments");
         jdbcTemplate.update("DELETE FROM organizational_units");
+        jdbcTemplate.update("DELETE FROM lab_orders");
         jdbcTemplate.update("DELETE FROM auth_audit_events");
         userAccountRepository.deleteAll();
         organizationRepository.deleteAll();
