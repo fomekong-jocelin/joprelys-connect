@@ -102,13 +102,13 @@ describe('PatientAppointmentsPageComponent', () => {
   });
 
   it('filtre l’annuaire par code spécialité et UUID unité sans texte libre', () => {
-    component.specialtyCodeFilter = 'CARDIOLOGY';
-    component.organizationalUnitIdFilter = 'unit-cardio';
+    component.specialtyCodeFilter.set('CARDIOLOGY');
+    component.organizationalUnitIdFilter.set('unit-cardio');
     component.onFilterChanged();
 
     expect(component.doctors()).toEqual([doctor]);
 
-    component.organizationalUnitIdFilter = 'unit-other';
+    component.organizationalUnitIdFilter.set('unit-other');
     component.onFilterChanged();
     expect(component.doctors()).toEqual([]);
   });
