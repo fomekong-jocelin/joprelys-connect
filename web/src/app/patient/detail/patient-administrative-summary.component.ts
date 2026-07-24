@@ -1,4 +1,4 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, inject, input, signal } from '@angular/core';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { Patient } from '../patient.models';
 
@@ -7,77 +7,106 @@ import { Patient } from '../patient.models';
   standalone: true,
   template: `
     @let currentPatient = patient();
-    <section>
-      <div class="mb-4 flex items-center justify-between gap-3">
-        <h3 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
-          {{ t('patient.urgTemp.admin.title') }}
-        </h3>
-        @if (!isProvisional(currentPatient)) {
-          <span class="rounded-sm bg-[var(--brand-success-subtle)] px-2 py-1 text-[10px] font-black uppercase tracking-wider text-[var(--brand-success-text)]">
-            {{ t('patient.urgTemp.admin.verified') }}
-          </span>
+    <div class="grid gap-6">
+      <section>
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <h3 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
+            {{ t('patient.urgTemp.admin.title') }}
+          </h3>
+          @if (!isProvisional(currentPatient)) {
+            <span class="rounded-sm bg-[var(--brand-success-subtle)] px-2 py-1 text-[10px] font-black uppercase tracking-wider text-[var(--brand-success-text)]">
+              {{ t('patient.urgTemp.admin.verified') }}
+            </span>
+          }
+        </div>
+
+        <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div class="ui-card-muted p-3">
+            <dt class="ui-label block">{{ t('patient.urgTemp.admin.gender') }}</dt>
+            <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.gender) }}</dd>
+          </div>
+          <div class="ui-card-muted p-3">
+            <dt class="ui-label block">{{ t('patient.urgTemp.admin.birthDate') }}</dt>
+            <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ birthDateLabel(currentPatient.birthDate) }}</dd>
+          </div>
+          <div class="ui-card-muted p-3">
+            <dt class="ui-label block">{{ t('patient.urgTemp.admin.phone') }}</dt>
+            <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.phone) }}</dd>
+          </div>
+          <div class="ui-card-muted p-3">
+            <dt class="ui-label block">{{ t('patient.urgTemp.admin.bloodGroup') }}</dt>
+            <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.bloodGroup) }}</dd>
+          </div>
+          <div class="ui-card-muted p-3">
+            <dt class="ui-label block">{{ t('patient.urgTemp.admin.email') }}</dt>
+            <dd class="break-words text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.email) }}</dd>
+          </div>
+          <div class="ui-card-muted p-3">
+            <dt class="ui-label block">{{ t('patient.urgTemp.admin.city') }}</dt>
+            <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.city) }}</dd>
+          </div>
+          <div class="ui-card-muted p-3">
+            <dt class="ui-label block">{{ t('patient.urgTemp.admin.district') }}</dt>
+            <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.district) }}</dd>
+          </div>
+          <div class="ui-card-muted p-3">
+            <dt class="ui-label block">{{ t('patient.urgTemp.admin.address') }}</dt>
+            <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.address) }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- Secondary information stays compact by default to reduce cognitive load. -->
+      <section class="border-t border-[var(--divider-subtle)] pt-5">
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 text-left"
+          [attr.aria-expanded]="contactExpanded()"
+          (click)="toggleContact()"
+        >
+          <h3 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
+            {{ t('patient.urgTemp.contact.title') }}
+          </h3>
+          <svg
+            class="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform"
+            [class.rotate-180]="contactExpanded()"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+
+        @if (contactExpanded()) {
+          <dl class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 animate-fade-in">
+            <div class="ui-card-muted p-3">
+              <dt class="ui-label block">{{ t('patient.urgTemp.contact.name') }}</dt>
+              <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.emergencyContactName) }}</dd>
+            </div>
+            <div class="ui-card-muted p-3">
+              <dt class="ui-label block">{{ t('patient.urgTemp.contact.phone') }}</dt>
+              <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.emergencyContactPhone) }}</dd>
+            </div>
+          </dl>
         }
-      </div>
-
-      <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div class="ui-card-muted p-3">
-          <dt class="ui-label block">{{ t('patient.urgTemp.admin.gender') }}</dt>
-          <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.gender) }}</dd>
-        </div>
-        <div class="ui-card-muted p-3">
-          <dt class="ui-label block">{{ t('patient.urgTemp.admin.birthDate') }}</dt>
-          <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ birthDateLabel(currentPatient.birthDate) }}</dd>
-        </div>
-        <div class="ui-card-muted p-3">
-          <dt class="ui-label block">{{ t('patient.urgTemp.admin.phone') }}</dt>
-          <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.phone) }}</dd>
-        </div>
-        <div class="ui-card-muted p-3">
-          <dt class="ui-label block">{{ t('patient.urgTemp.admin.bloodGroup') }}</dt>
-          <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.bloodGroup) }}</dd>
-        </div>
-        <div class="ui-card-muted p-3">
-          <dt class="ui-label block">{{ t('patient.urgTemp.admin.email') }}</dt>
-          <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.email) }}</dd>
-        </div>
-        <div class="ui-card-muted p-3">
-          <dt class="ui-label block">{{ t('patient.urgTemp.admin.city') }}</dt>
-          <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.city) }}</dd>
-        </div>
-        <div class="ui-card-muted p-3">
-          <dt class="ui-label block">{{ t('patient.urgTemp.admin.district') }}</dt>
-          <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.district) }}</dd>
-        </div>
-        <div class="ui-card-muted p-3">
-          <dt class="ui-label block">{{ t('patient.urgTemp.admin.address') }}</dt>
-          <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.address) }}</dd>
-        </div>
-      </dl>
-    </section>
-
-    <section>
-      <h3 class="mb-4 text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
-        {{ t('patient.urgTemp.contact.title') }}
-      </h3>
-      <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div class="ui-card-muted p-3">
-          <dt class="ui-label block">{{ t('patient.urgTemp.contact.name') }}</dt>
-          <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.emergencyContactName) }}</dd>
-        </div>
-        <div class="ui-card-muted p-3">
-          <dt class="ui-label block">{{ t('patient.urgTemp.contact.phone') }}</dt>
-          <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.emergencyContactPhone) }}</dd>
-        </div>
-      </dl>
-    </section>
+      </section>
+    </div>
   `,
 })
 export class PatientAdministrativeSummaryComponent {
   readonly patient = input.required<Patient>();
+  readonly contactExpanded = signal(false);
   private readonly i18n = inject(I18nService);
 
   t(key: string): string {
     return this.i18n.t(key);
+  }
+
+  toggleContact(): void {
+    this.contactExpanded.update(value => !value);
   }
 
   isProvisional(patient: Patient): boolean {

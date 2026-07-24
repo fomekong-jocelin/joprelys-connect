@@ -17,14 +17,22 @@ export class RbacApiService {
   private readonly http = inject(HttpClient);
   private readonly tokenStorage = inject(AuthTokenStorageService);
   private readonly cachedAccess = signal<EffectiveAccess | null>(null);
-  private readonly accessOwnerToken = signal<string | null>(null);
+  private readonly accessOwnerSessionKey = signal<string | null>(null);
   private accessRequest$: Observable<EffectiveAccess> | null = null;
-  private accessRequestOwnerToken: string | null = null;
+  private accessRequestOwnerSessionKey: string | null = null;
   private accessRequestGeneration = 0;
 
+  /**
+   * Effective permissions belong to the authenticated identity, not to one short-lived
+   * access-token string. A transparent JWT refresh for the same user must therefore not
+   * make the navigation collapse to Dashboard while /api/rbac/me is being revalidated.
+   *
+   * A real identity/role boundary still invalidates access immediately because
+   * AuthTokenStorageService purges registered feature state when email or role changes.
+   */
   readonly access = computed<EffectiveAccess | null>(() => {
-    const currentToken = this.currentToken();
-    return currentToken !== null && this.accessOwnerToken() === currentToken
+    const currentSessionKey = this.currentSessionKey();
+    return currentSessionKey !== null && this.accessOwnerSessionKey() === currentSessionKey
       ? this.cachedAccess()
       : null;
   });
@@ -34,36 +42,36 @@ export class RbacApiService {
   }
 
   ensureMyAccess(force = false): Observable<EffectiveAccess> {
-    const ownerToken = this.currentToken();
+    const ownerSessionKey = this.currentSessionKey();
     const currentAccess = this.access();
     if (!force && currentAccess) {
       return of(currentAccess);
     }
-    if (!force && this.accessRequest$ && this.accessRequestOwnerToken === ownerToken) {
+    if (!force && this.accessRequest$ && this.accessRequestOwnerSessionKey === ownerSessionKey) {
       return this.accessRequest$;
     }
 
     const requestGeneration = ++this.accessRequestGeneration;
     const request$ = this.http.get<EffectiveAccess>('/api/rbac/me').pipe(
       tap((access) => {
-        if (ownerToken === null || this.currentToken() !== ownerToken) {
+        if (ownerSessionKey === null || this.currentSessionKey() !== ownerSessionKey) {
           throw new Error('RBAC response no longer belongs to the active session.');
         }
         if (this.accessRequestGeneration === requestGeneration) {
           this.cachedAccess.set(access);
-          this.accessOwnerToken.set(ownerToken);
+          this.accessOwnerSessionKey.set(ownerSessionKey);
         }
       }),
       finalize(() => {
         if (this.accessRequestGeneration === requestGeneration) {
           this.accessRequest$ = null;
-          this.accessRequestOwnerToken = null;
+          this.accessRequestOwnerSessionKey = null;
         }
       }),
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.accessRequest$ = request$;
-    this.accessRequestOwnerToken = ownerToken;
+    this.accessRequestOwnerSessionKey = ownerSessionKey;
     return request$;
   }
 
@@ -77,9 +85,9 @@ export class RbacApiService {
 
   clearAccess(): void {
     this.cachedAccess.set(null);
-    this.accessOwnerToken.set(null);
+    this.accessOwnerSessionKey.set(null);
     this.accessRequest$ = null;
-    this.accessRequestOwnerToken = null;
+    this.accessRequestOwnerSessionKey = null;
     this.accessRequestGeneration++;
   }
 
@@ -125,7 +133,22 @@ export class RbacApiService {
     return organizationId ? new HttpParams().set('organizationId', organizationId) : new HttpParams();
   }
 
-  private currentToken(): string | null {
-    return this.tokenStorage.accessToken;
+  private currentSessionKey(): string | null {
+    const session = this.tokenStorage.session();
+    if (!session) return null;
+
+    // Production sessions always contain an email. The display-name fallback keeps
+    // feature/test harnesses that use a minimal session object safe without weakening
+    // real session isolation.
+    const identity = (session.email || session.name || '').trim().toLowerCase();
+    if (!identity) return null;
+
+    const roles = (session.role || '')
+      .split(',')
+      .map(role => role.trim().toUpperCase())
+      .filter(Boolean)
+      .sort()
+      .join(',');
+    return `${identity}|${roles}`;
   }
 }
