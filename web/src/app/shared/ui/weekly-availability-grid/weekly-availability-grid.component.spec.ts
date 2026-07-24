@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
+  WeeklyAvailabilityExceptionView,
   WeeklyAvailabilityGridComponent,
   WeeklyAvailabilityGridLabels,
+  WeeklyAvailabilityRangeSelection,
   WeeklyAvailabilityRuleView,
 } from './weekly-availability-grid.component';
 
@@ -9,12 +11,19 @@ describe('WeeklyAvailabilityGridComponent', () => {
   let component: WeeklyAvailabilityGridComponent;
   let fixture: ComponentFixture<WeeklyAvailabilityGridComponent>;
 
-  // Volontairement désordonné pour vérifier le tri par heure de début.
+  const weekStart = new Date(2026, 6, 20);
   const rules: WeeklyAvailabilityRuleView[] = [
-    { id: 'rule-2', weekday: 1, startTime: '14:00', endTime: '18:00', active: false },
-    { id: 'rule-1', weekday: 1, startTime: '08:00', endTime: '12:00', active: true },
-    { id: 'rule-3', weekday: 3, startTime: '09:00', endTime: '10:00', active: true },
+    { id: 'rule-1', weekday: 1, startTime: '08:00', endTime: '12:00', active: true, validFrom: '2026-01-01', validTo: null },
+    { id: 'rule-inactive', weekday: 1, startTime: '14:00', endTime: '18:00', active: false, validFrom: '2026-01-01', validTo: null },
+    { id: 'rule-3', weekday: 3, startTime: '09:00', endTime: '10:00', active: true, validFrom: '2026-01-01', validTo: '2026-12-31' },
   ];
+
+  const exceptions: WeeklyAvailabilityExceptionView[] = [{
+    id: 'exception-1',
+    startAt: new Date(2026, 6, 21, 10, 0).toISOString(),
+    endAt: new Date(2026, 6, 21, 12, 0).toISOString(),
+    reason: 'Formation',
+  }];
 
   const labels: WeeklyAvailabilityGridLabels = {
     weekdays: ['Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.'],
@@ -23,70 +32,85 @@ describe('WeeklyAvailabilityGridComponent', () => {
     selectDay: 'Ajouter une plage ce jour',
     editRule: 'Modifier cette plage',
     deactivateRule: 'Désactiver',
+    available: 'Disponible',
+    unavailable: 'Indisponible',
+    clickToAdd: 'Cliquer pour ajouter',
   };
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [WeeklyAvailabilityGridComponent],
-    }).compileComponents();
-
+    await TestBed.configureTestingModule({ imports: [WeeklyAvailabilityGridComponent] }).compileComponents();
     fixture = TestBed.createComponent(WeeklyAvailabilityGridComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('rules', rules);
+    fixture.componentRef.setInput('exceptions', exceptions);
+    fixture.componentRef.setInput('weekStart', weekStart);
     fixture.componentRef.setInput('labels', labels);
     fixture.detectChanges();
   });
 
-  it('regroupe les règles par jour et les trie par heure de début', () => {
-    const columns = component.columns();
-    expect(columns.length).toBe(7);
-    expect(columns[0].label).toBe('Lun.');
-    expect(columns[0].rules.map((rule) => rule.id)).toEqual(['rule-1', 'rule-2']);
-    expect(columns[2].rules.map((rule) => rule.id)).toEqual(['rule-3']);
-    expect(columns[6].rules.length).toBe(0);
+  it('construit sept colonnes datées du lundi au dimanche', () => {
+    const days = component.days();
+    expect(days).toHaveLength(7);
+    expect(days[0].label).toBe('Lun.');
+    expect(days[0].date.getDate()).toBe(20);
+    expect(days[6].date.getDate()).toBe(26);
   });
 
-  it('émet weekdaySelected au clic sur un jour', () => {
-    let selected: number | null = null;
-    component.weekdaySelected.subscribe((value) => (selected = value));
-
-    const dayButtons = (fixture.nativeElement as HTMLElement)
-      .querySelectorAll('section > button') as NodeListOf<HTMLButtonElement>;
-    dayButtons[2].click();
-
-    expect(selected).toBe(3);
+  it('n’affiche dans le calendrier que les règles actives et valides', () => {
+    const monday = component.days()[0];
+    const wednesday = component.days()[2];
+    expect(monday.rules.map((rule) => rule.id)).toEqual(['rule-1']);
+    expect(wednesday.rules.map((rule) => rule.id)).toEqual(['rule-3']);
+    expect(component.blocksForDay(monday).some((block) => block.rule?.id === 'rule-1')).toBe(true);
   });
 
-  it('émet ruleSelected au clic sur une plage', () => {
+  it('positionne les indisponibilités sur le jour civil concerné', () => {
+    const tuesday = component.days()[1];
+    const blocks = component.blocksForDay(tuesday);
+    expect(tuesday.exceptions.map((exception) => exception.id)).toEqual(['exception-1']);
+    expect(blocks.some((block) => block.exception?.id === 'exception-1' && block.subtitle === 'Formation')).toBe(true);
+  });
+
+  it('émet weekdaySelected depuis l’en-tête du jour', () => {
+    const selectedWeekdays: number[] = [];
+    component.weekdaySelected.subscribe((value) => selectedWeekdays.push(value));
+    const headerButtons = (fixture.nativeElement as HTMLElement).querySelectorAll('button[aria-pressed]') as NodeListOf<HTMLButtonElement>;
+    headerButtons[2].click();
+    expect(selectedWeekdays[0]).toBe(3);
+  });
+
+  it('prépare une plage d’une heure arrondie à 30 minutes depuis une zone vide', () => {
+    const selections: WeeklyAvailabilityRangeSelection[] = [];
+    component.rangeSelected.subscribe((value) => selections.push(value));
+    const day = component.days()[1];
+    const currentTarget = {
+      getBoundingClientRect: () => ({ top: 0, height: component.calendarHeight }),
+    } as HTMLElement;
+    const event = {
+      target: document.createElement('div'),
+      currentTarget,
+      clientY: component.rowHeight * 10.25,
+    } as unknown as MouseEvent;
+
+    component.selectRange(event, day);
+
+    expect(selections).toHaveLength(1);
+    expect(selections[0].weekday).toBe(2);
+    expect(selections[0].startTime).toBe('10:00');
+    expect(selections[0].endTime).toBe('11:00');
+    expect(selections[0].validFrom).toBe('2026-07-21');
+  });
+
+  it('émet ruleSelected au clic sur une plage visible', () => {
     const emitted: WeeklyAvailabilityRuleView[] = [];
     component.ruleSelected.subscribe((rule) => emitted.push(rule));
-
-    const chipButtons = (fixture.nativeElement as HTMLElement)
-      .querySelectorAll('article > button') as NodeListOf<HTMLButtonElement>;
-    chipButtons[0].click();
-
+    const ruleButton = (fixture.nativeElement as HTMLElement).querySelector('button[data-calendar-block]') as HTMLButtonElement;
+    ruleButton.click();
     expect(emitted[0]?.id).toBe('rule-1');
   });
 
-  it('émet ruleDeactivateRequested uniquement pour une plage active', () => {
-    const emitted: WeeklyAvailabilityRuleView[] = [];
-    component.ruleDeactivateRequested.subscribe((rule) => emitted.push(rule));
-
-    const deactivateButtons = (fixture.nativeElement as HTMLElement)
-      .querySelectorAll('article div button') as NodeListOf<HTMLButtonElement>;
-    expect(deactivateButtons.length).toBe(2); // rule-1 et rule-3 actives, rule-2 inactive
-
-    deactivateButtons[0].click();
-    expect(emitted[0]?.id).toBe('rule-1');
-  });
-
-  it('surligne le jour sélectionné', () => {
-    fixture.componentRef.setInput('selectedWeekday', 3);
-    fixture.detectChanges();
-
-    const sections = (fixture.nativeElement as HTMLElement)
-      .querySelectorAll('section') as NodeListOf<HTMLElement>;
-    expect(sections[2].style.borderColor).toBe('var(--brand-primary)');
-    expect(sections[0].style.borderColor).toBe('var(--app-border)');
+  it('couvre la journée complète dans une zone scrollable', () => {
+    expect(component.hours).toHaveLength(25);
+    expect(component.calendarHeight).toBe(24 * component.rowHeight);
   });
 });

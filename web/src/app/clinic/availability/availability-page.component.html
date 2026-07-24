@@ -6,7 +6,7 @@
     [backLabel]="t('common.back')"
   />
 
-  <div class="app-container space-y-6 pb-10">
+  <div class="app-container grid gap-6 pb-10">
     @if (pageError(); as error) {
       <app-ui-alert tone="error">{{ error }}</app-ui-alert>
     }
@@ -16,27 +16,73 @@
 
     @if (loading()) {
       <app-ui-card>
-        <div class="py-10 text-center text-sm font-semibold" style="color: var(--text-secondary)">
+        <div class="py-10 text-center text-sm font-semibold text-[var(--text-secondary)]">
           {{ t('common.loading') }}
         </div>
       </app-ui-card>
     } @else {
-      <app-ui-card [title]="t('availability.rules.title')">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <p class="text-xs leading-5 text-[var(--text-secondary)]">
-            {{ t('availability.rules.help') }}
-          </p>
-          <app-ui-button variant="secondary" class="shrink-0" (pressed)="toggleRuleForm()">
-            {{ showRuleForm() ? t('common.cancel') : t('availability.rules.add') }}
-          </app-ui-button>
+      <!-- Vue principale : un seul calendrier, comme un agenda professionnel. -->
+      <app-ui-card>
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h2 class="ui-title text-lg">{{ t('availability.calendar.title') }}</h2>
+            <p class="mt-1 max-w-3xl text-xs leading-5 text-[var(--text-secondary)]">
+              {{ t('availability.calendar.help') }}
+            </p>
+          </div>
+
+          <div class="flex flex-col gap-2 sm:flex-row">
+            <app-ui-button variant="secondary" class="w-full sm:w-auto" (pressed)="toggleRuleForm()">
+              {{ showRuleForm() && !editingRule() ? t('common.cancel') : t('availability.rules.add') }}
+            </app-ui-button>
+            <app-ui-button variant="secondary" class="w-full sm:w-auto" (pressed)="toggleExceptionForm()">
+              {{ showExceptionForm() ? t('common.cancel') : t('availability.exceptions.add') }}
+            </app-ui-button>
+          </div>
+        </div>
+
+        <div class="mt-5 flex flex-col gap-3 border-y border-[var(--divider-subtle)] py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              class="ui-button ui-button-secondary min-w-10 px-3"
+              [attr.aria-label]="t('availability.calendar.previousWeek')"
+              [title]="t('availability.calendar.previousWeek')"
+              (click)="previousWeek()"
+            >
+              ←
+            </button>
+            <button
+              type="button"
+              class="ui-button ui-button-secondary"
+              [disabled]="isCurrentWeek()"
+              (click)="goToCurrentWeek()"
+            >
+              {{ t('availability.calendar.today') }}
+            </button>
+            <button
+              type="button"
+              class="ui-button ui-button-secondary min-w-10 px-3"
+              [attr.aria-label]="t('availability.calendar.nextWeek')"
+              [title]="t('availability.calendar.nextWeek')"
+              (click)="nextWeek()"
+            >
+              →
+            </button>
+          </div>
+
+          <strong class="text-sm font-extrabold text-[var(--text-primary)]">{{ weekLabel() }}</strong>
         </div>
 
         <app-weekly-availability-grid
           class="mt-4 block"
           [rules]="rules()"
+          [exceptions]="exceptions()"
+          [weekStart]="weekStart()"
           [selectedWeekday]="showRuleForm() ? formWeekday() : null"
           [labels]="gridLabels()"
           (weekdaySelected)="onWeekdaySelected($event)"
+          (rangeSelected)="onCalendarRangeSelected($event)"
           (ruleSelected)="startEditRule($event)"
           (ruleDeactivateRequested)="askDeactivateRule($event)"
         />
@@ -121,41 +167,6 @@
         </app-ui-card>
       }
 
-      <app-ui-card [title]="t('availability.exceptions.title')">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <p class="text-xs leading-5 text-[var(--text-secondary)]">
-            {{ t('availability.exceptions.help') }}
-          </p>
-          <app-ui-button variant="secondary" class="shrink-0" (pressed)="toggleExceptionForm()">
-            {{ showExceptionForm() ? t('common.cancel') : t('availability.exceptions.add') }}
-          </app-ui-button>
-        </div>
-
-        <div class="mt-4">
-          @if (sortedExceptions().length === 0) {
-            <app-empty-state [message]="t('availability.exceptions.empty')" />
-          } @else {
-            <ul class="space-y-2">
-              @for (exception of sortedExceptions(); track exception.id) {
-                <li class="flex flex-col gap-2 rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div class="min-w-0">
-                    <p class="text-sm font-semibold text-[var(--text-primary)]">
-                      {{ exception.startAt | date:'dd/MM/yyyy HH:mm' }} → {{ exception.endAt | date:'dd/MM/yyyy HH:mm' }}
-                    </p>
-                    @if (exception.reason) {
-                      <p class="mt-0.5 text-xs text-[var(--text-muted)]">{{ exception.reason }}</p>
-                    }
-                  </div>
-                  <app-ui-button variant="danger" class="shrink-0" (pressed)="askDeleteException(exception)">
-                    {{ t('availability.exceptions.delete') }}
-                  </app-ui-button>
-                </li>
-              }
-            </ul>
-          }
-        </div>
-      </app-ui-card>
-
       @if (showExceptionForm()) {
         <app-ui-card [title]="t('availability.exceptions.addTitle')">
           <form class="space-y-5" (submit)="$event.preventDefault(); submitExceptionForm()">
@@ -210,41 +221,176 @@
         </app-ui-card>
       }
 
-      <app-ui-card [title]="t('availability.slots.title')">
-        <p class="text-xs leading-5 text-[var(--text-secondary)]">
-          {{ t('availability.slots.help') }} {{ slotDurationMinutes }} {{ t('availability.slots.minutes') }}
-        </p>
-
-        @if (!hasAnySlots()) {
-          <div class="mt-4">
-            <app-empty-state [message]="t('availability.slots.empty')" />
+      <!-- Détails secondaires : fermés au chargement, même lorsqu'ils sont vides. -->
+      <section class="ui-card overflow-hidden">
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-4 p-4 text-left md:p-5"
+          [attr.aria-expanded]="rulesExpanded()"
+          (click)="toggleRulesPanel()"
+        >
+          <div>
+            <h3 class="ui-title text-sm">{{ t('availability.rules.title') }}</h3>
+            <p class="mt-1 text-xs text-[var(--text-muted)]">
+              {{ activeRuleCount() }} {{ t('availability.summary.activeRanges') }}
+            </p>
           </div>
-        } @else {
-          <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            @for (day of slotsPreview(); track day.date.getTime()) {
-              <section class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3">
-                <h4 class="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-wide text-[var(--text-secondary)]">
-                  <span>{{ dayLabel(day.date) }} {{ day.date | date:'dd/MM' }}</span>
-                  <span class="rounded-[var(--radius-brand-sm)] bg-[var(--app-surface)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--text-muted)]">
-                    {{ day.slots.length }}
-                  </span>
-                </h4>
-                @if (day.slots.length === 0) {
-                  <p class="mt-2 text-xs text-[var(--text-muted)]">{{ t('availability.slots.noneForDay') }}</p>
-                } @else {
-                  <ul class="mt-2 flex flex-wrap gap-1.5">
-                    @for (slot of day.slots; track slot.start.getTime()) {
-                      <li class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface)] px-2 py-1 text-[11px] font-semibold text-[var(--text-primary)]">
-                        {{ slot.start | date:'HH:mm' }}
-                      </li>
+          <div class="flex items-center gap-3">
+            <span class="rounded-[var(--radius-brand-sm)] bg-[var(--app-surface-muted)] px-2 py-1 text-xs font-black text-[var(--text-secondary)]">
+              {{ rules().length }}
+            </span>
+            <svg class="h-4 w-4 text-[var(--text-muted)] transition-transform" [class.rotate-180]="rulesExpanded()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+            </svg>
+          </div>
+        </button>
+
+        @if (rulesExpanded()) {
+          <div class="border-t border-[var(--divider-subtle)] p-4 md:p-5">
+            <p class="mb-4 text-xs leading-5 text-[var(--text-secondary)]">{{ t('availability.rules.help') }}</p>
+            @if (sortedRules().length === 0) {
+              <p class="rounded-[var(--radius-brand-md)] bg-[var(--app-surface-muted)] px-4 py-3 text-sm text-[var(--text-muted)]">
+                {{ t('availability.summary.noRanges') }}
+              </p>
+            } @else {
+              <ul class="grid gap-2">
+                @for (rule of sortedRules(); track rule.id) {
+                  <li class="flex flex-col gap-3 rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <button type="button" class="min-w-0 text-left" (click)="startEditRule(rule)">
+                      <span class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">{{ ruleWeekdayLabel(rule) }}</span>
+                      <span class="ml-2 text-sm font-extrabold text-[var(--text-primary)]">{{ rule.startTime }} – {{ rule.endTime }}</span>
+                      @if (!rule.active) {
+                        <span class="ml-2 rounded-[var(--radius-brand-sm)] bg-[var(--app-surface)] px-1.5 py-0.5 text-[10px] font-bold uppercase text-[var(--text-muted)]">
+                          {{ t('availability.rules.inactive') }}
+                        </span>
+                      }
+                    </button>
+                    @if (rule.active) {
+                      <app-ui-button variant="danger" class="shrink-0" (pressed)="askDeactivateRule(rule)">
+                        {{ t('availability.rules.deactivate') }}
+                      </app-ui-button>
                     }
-                  </ul>
+                  </li>
                 }
-              </section>
+              </ul>
             }
           </div>
         }
-      </app-ui-card>
+      </section>
+
+      <section class="ui-card overflow-hidden">
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-4 p-4 text-left md:p-5"
+          [attr.aria-expanded]="exceptionsExpanded()"
+          (click)="toggleExceptionsPanel()"
+        >
+          <div>
+            <h3 class="ui-title text-sm">{{ t('availability.exceptions.title') }}</h3>
+            <p class="mt-1 text-xs text-[var(--text-muted)]">
+              {{ sortedExceptions().length === 0 ? t('availability.exceptions.empty') : t('availability.summary.exceptionsConfigured') }}
+            </p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="rounded-[var(--radius-brand-sm)] bg-[var(--app-surface-muted)] px-2 py-1 text-xs font-black text-[var(--text-secondary)]">
+              {{ sortedExceptions().length }}
+            </span>
+            <svg class="h-4 w-4 text-[var(--text-muted)] transition-transform" [class.rotate-180]="exceptionsExpanded()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+            </svg>
+          </div>
+        </button>
+
+        @if (exceptionsExpanded()) {
+          <div class="border-t border-[var(--divider-subtle)] p-4 md:p-5">
+            <p class="mb-4 text-xs leading-5 text-[var(--text-secondary)]">{{ t('availability.exceptions.help') }}</p>
+            @if (sortedExceptions().length === 0) {
+              <p class="rounded-[var(--radius-brand-md)] bg-[var(--app-surface-muted)] px-4 py-3 text-sm text-[var(--text-muted)]">
+                {{ t('availability.exceptions.empty') }}
+              </p>
+            } @else {
+              <ul class="grid gap-2">
+                @for (exception of sortedExceptions(); track exception.id) {
+                  <li class="flex flex-col gap-2 rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="min-w-0">
+                      <p class="text-sm font-semibold text-[var(--text-primary)]">
+                        {{ exception.startAt | date:'dd/MM/yyyy HH:mm' }} → {{ exception.endAt | date:'dd/MM/yyyy HH:mm' }}
+                      </p>
+                      @if (exception.reason) {
+                        <p class="mt-0.5 text-xs text-[var(--text-muted)]">{{ exception.reason }}</p>
+                      }
+                    </div>
+                    <app-ui-button variant="danger" class="shrink-0" (pressed)="askDeleteException(exception)">
+                      {{ t('availability.exceptions.delete') }}
+                    </app-ui-button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        }
+      </section>
+
+      <section class="ui-card overflow-hidden">
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-4 p-4 text-left md:p-5"
+          [attr.aria-expanded]="slotsExpanded()"
+          (click)="toggleSlotsPanel()"
+        >
+          <div>
+            <h3 class="ui-title text-sm">{{ t('availability.slots.title') }}</h3>
+            <p class="mt-1 text-xs text-[var(--text-muted)]">
+              @if (hasAnySlots()) {
+                {{ totalSlots() }} {{ t('availability.summary.freeSlots') }} · {{ slotDurationMinutes }} {{ t('availability.slots.minutes') }}
+              } @else {
+                {{ t('availability.slots.empty') }}
+              }
+            </p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="rounded-[var(--radius-brand-sm)] bg-[var(--app-surface-muted)] px-2 py-1 text-xs font-black text-[var(--text-secondary)]">
+              {{ totalSlots() }}
+            </span>
+            <svg class="h-4 w-4 text-[var(--text-muted)] transition-transform" [class.rotate-180]="slotsExpanded()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+            </svg>
+          </div>
+        </button>
+
+        @if (slotsExpanded()) {
+          <div class="border-t border-[var(--divider-subtle)] p-4 md:p-5">
+            <p class="mb-4 text-xs leading-5 text-[var(--text-secondary)]">
+              {{ t('availability.slots.help') }} {{ slotDurationMinutes }} {{ t('availability.slots.minutes') }}
+            </p>
+
+            @if (!hasAnySlots()) {
+              <p class="rounded-[var(--radius-brand-md)] bg-[var(--app-surface-muted)] px-4 py-3 text-sm text-[var(--text-muted)]">
+                {{ t('availability.slots.empty') }}
+              </p>
+            } @else {
+              <div class="grid gap-2">
+                @for (day of slotsPreview(); track day.date.getTime()) {
+                  @if (day.slots.length > 0) {
+                    <section class="flex flex-col gap-2 rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3 sm:flex-row sm:items-start">
+                      <h4 class="w-28 shrink-0 text-xs font-black uppercase tracking-wide text-[var(--text-secondary)]">
+                        {{ dayLabel(day.date) }} {{ day.date | date:'dd/MM' }}
+                      </h4>
+                      <ul class="flex flex-wrap gap-1.5">
+                        @for (slot of day.slots; track slot.start.getTime()) {
+                          <li class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface)] px-2 py-1 text-[11px] font-semibold text-[var(--text-primary)]">
+                            {{ slot.start | date:'HH:mm' }}
+                          </li>
+                        }
+                      </ul>
+                    </section>
+                  }
+                }
+              </div>
+            }
+          </div>
+        }
+      </section>
     }
 
     <app-confirmation-dialog

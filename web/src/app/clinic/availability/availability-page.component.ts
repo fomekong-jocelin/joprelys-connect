@@ -7,11 +7,11 @@ import { AlertComponent } from '../../shared/ui/alert.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
 import { CardComponent } from '../../shared/ui/card.component';
 import { ConfirmationDialogComponent } from '../../shared/ui/confirmation-dialog.component';
-import { EmptyStateComponent } from '../../shared/ui/empty-state.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import {
   WeeklyAvailabilityGridComponent,
   WeeklyAvailabilityGridLabels,
+  WeeklyAvailabilityRangeSelection,
   WeeklyAvailabilityRuleView,
 } from '../../shared/ui/weekly-availability-grid/weekly-availability-grid.component';
 import { AvailabilityApiService } from './availability-api.service';
@@ -25,10 +25,10 @@ import {
   AvailabilityDaySlots,
   computeUpcomingSlots,
   DEFAULT_SLOT_DURATION_MINUTES,
+  toLocalDateKey,
 } from './availability-slots.util';
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
-/** Fenêtre de chargement des indisponibilités : du jour courant à +1 an. */
 const EXCEPTIONS_HORIZON_DAYS = 365;
 
 type PendingAction =
@@ -40,11 +40,6 @@ interface ApiErrorShape {
   error?: { code?: string; message?: string; detail?: string };
 }
 
-/**
- * Page « Mes disponibilités » (STORY-2602) : plages hebdomadaires récurrentes
- * (CRUD + désactivation logique), indisponibilités (création / suppression) et
- * aperçu indicatif des créneaux libres (calcul client, défaut 30 min).
- */
 @Component({
   selector: 'app-availability-page',
   standalone: true,
@@ -55,7 +50,6 @@ interface ApiErrorShape {
     CardComponent,
     ConfirmationDialogComponent,
     DatePipe,
-    EmptyStateComponent,
     PageHeaderComponent,
     WeeklyAvailabilityGridComponent,
   ],
@@ -71,7 +65,16 @@ export class AvailabilityPageComponent implements OnInit {
   readonly pageError = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
 
-  // Formulaire de plage hebdomadaire
+  readonly weekStart = signal(startOfIsoWeek(new Date()));
+  readonly weekEnd = computed(() => addDays(this.weekStart(), 6));
+  readonly isCurrentWeek = computed(() =>
+    toLocalDateKey(this.weekStart()) === toLocalDateKey(startOfIsoWeek(new Date())));
+  readonly weekLabel = computed(() => this.formatWeekLabel(this.weekStart(), this.weekEnd()));
+
+  readonly rulesExpanded = signal(false);
+  readonly exceptionsExpanded = signal(false);
+  readonly slotsExpanded = signal(false);
+
   readonly showRuleForm = signal(false);
   readonly ruleFormLoading = signal(false);
   readonly ruleFormError = signal<string | null>(null);
@@ -82,7 +85,6 @@ export class AvailabilityPageComponent implements OnInit {
   readonly formValidFrom = signal('');
   readonly formValidTo = signal('');
 
-  // Formulaire d'indisponibilité
   readonly showExceptionForm = signal(false);
   readonly exceptionFormLoading = signal(false);
   readonly exceptionFormError = signal<string | null>(null);
@@ -90,13 +92,16 @@ export class AvailabilityPageComponent implements OnInit {
   readonly exceptionEnd = signal('');
   readonly exceptionReason = signal('');
 
-  // Confirmation partagée (désactivation de plage / suppression d'indisponibilité)
   readonly pendingAction = signal<PendingAction | null>(null);
   readonly pendingActionLoading = signal(false);
 
   readonly weekdays = WEEKDAYS;
   readonly slotDurationMinutes = DEFAULT_SLOT_DURATION_MINUTES;
 
+  readonly sortedRules = computed(() =>
+    [...this.rules()].sort((left, right) =>
+      left.weekday - right.weekday || left.startTime.localeCompare(right.startTime)));
+  readonly activeRuleCount = computed(() => this.rules().filter((rule) => rule.active).length);
   readonly sortedExceptions = computed(() =>
     [...this.exceptions()].sort((left, right) => left.startAt.localeCompare(right.startAt)));
 
@@ -112,11 +117,16 @@ export class AvailabilityPageComponent implements OnInit {
     selectDay: this.t('availability.rules.selectDay'),
     editRule: this.t('availability.rules.edit'),
     deactivateRule: this.t('availability.rules.deactivate'),
+    available: this.t('availability.calendar.available'),
+    unavailable: this.t('availability.calendar.unavailable'),
+    clickToAdd: this.t('availability.calendar.clickToAdd'),
   }));
 
   readonly slotsPreview = computed<readonly AvailabilityDaySlots[]>(() =>
     computeUpcomingSlots(this.rules(), this.exceptions()));
-  readonly hasAnySlots = computed(() => this.slotsPreview().some((day) => day.slots.length > 0));
+  readonly totalSlots = computed(() =>
+    this.slotsPreview().reduce((total, day) => total + day.slots.length, 0));
+  readonly hasAnySlots = computed(() => this.totalSlots() > 0);
 
   readonly pendingActionTitle = computed(() =>
     this.pendingAction()?.kind === 'deactivate-rule'
@@ -160,7 +170,17 @@ export class AvailabilityPageComponent implements OnInit {
     });
   }
 
-  // ----- Plages hebdomadaires -----
+  previousWeek(): void {
+    this.weekStart.update((start) => addDays(start, -7));
+  }
+
+  nextWeek(): void {
+    this.weekStart.update((start) => addDays(start, 7));
+  }
+
+  goToCurrentWeek(): void {
+    this.weekStart.set(startOfIsoWeek(new Date()));
+  }
 
   toggleRuleForm(): void {
     if (this.showRuleForm() && !this.editingRule()) {
@@ -168,6 +188,9 @@ export class AvailabilityPageComponent implements OnInit {
       return;
     }
     this.resetRuleForm();
+    const today = new Date();
+    this.formWeekday.set(isoWeekday(today));
+    this.formValidFrom.set(toLocalDateKey(today));
     this.successMessage.set(null);
     this.showRuleForm.set(true);
   }
@@ -179,6 +202,19 @@ export class AvailabilityPageComponent implements OnInit {
       this.showRuleForm.set(true);
     }
     this.formWeekday.set(weekday);
+    if (this.editingRule() === null) {
+      this.formValidFrom.set(toLocalDateKey(dateForWeekday(this.weekStart(), weekday)));
+    }
+  }
+
+  onCalendarRangeSelected(selection: WeeklyAvailabilityRangeSelection): void {
+    this.resetRuleForm();
+    this.successMessage.set(null);
+    this.formWeekday.set(selection.weekday);
+    this.formStartTime.set(selection.startTime);
+    this.formEndTime.set(selection.endTime);
+    this.formValidFrom.set(selection.validFrom);
+    this.showRuleForm.set(true);
   }
 
   startEditRule(rule: WeeklyAvailabilityRuleView): void {
@@ -248,8 +284,6 @@ export class AvailabilityPageComponent implements OnInit {
     }
   }
 
-  // ----- Indisponibilités -----
-
   toggleExceptionForm(): void {
     if (this.showExceptionForm()) {
       this.cancelExceptionForm();
@@ -304,7 +338,17 @@ export class AvailabilityPageComponent implements OnInit {
     this.pendingAction.set({ kind: 'delete-exception', exception });
   }
 
-  // ----- Confirmation -----
+  toggleRulesPanel(): void {
+    this.rulesExpanded.update((value) => !value);
+  }
+
+  toggleExceptionsPanel(): void {
+    this.exceptionsExpanded.update((value) => !value);
+  }
+
+  toggleSlotsPanel(): void {
+    this.slotsExpanded.update((value) => !value);
+  }
 
   confirmPendingAction(): void {
     const action = this.pendingAction();
@@ -327,15 +371,23 @@ export class AvailabilityPageComponent implements OnInit {
     this.pendingAction.set(null);
   }
 
-  // ----- Utilitaires -----
-
   dayLabel(date: Date): string {
-    const isoWeekday = ((date.getDay() + 6) % 7) + 1;
-    return this.t(`availability.weekdays.${isoWeekday}`);
+    return this.t(`availability.weekdays.${isoWeekday(date)}`);
+  }
+
+  ruleWeekdayLabel(rule: AvailabilityRule): string {
+    return this.t(`availability.weekdays.${rule.weekday}`);
   }
 
   t(key: string, fallback?: string): string {
     return this.i18n.t(key, fallback);
+  }
+
+  private formatWeekLabel(start: Date, end: Date): string {
+    const locale = this.i18n.locale() === 'en' ? 'en-GB' : 'fr-FR';
+    const startFormatter = new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short' });
+    const endFormatter = new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', year: 'numeric' });
+    return `${this.t('availability.calendar.week')} ${startFormatter.format(start)} – ${endFormatter.format(end)}`;
   }
 
   private finishPendingAction(successKey: string): void {
@@ -382,4 +434,22 @@ export class AvailabilityPageComponent implements OnInit {
     }
     return error.error?.message ?? error.error?.detail ?? fallback;
   }
+}
+
+function startOfIsoWeek(value: Date): Date {
+  const date = new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  return date;
+}
+
+function addDays(value: Date, days: number): Date {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate() + days);
+}
+
+function isoWeekday(value: Date): number {
+  return ((value.getDay() + 6) % 7) + 1;
+}
+
+function dateForWeekday(weekStart: Date, weekday: number): Date {
+  return addDays(startOfIsoWeek(weekStart), Math.max(1, Math.min(7, weekday)) - 1);
 }
