@@ -436,3 +436,51 @@ Chaque lot est développé et fusionné séparément. Aucune PR « monstre » co
 - **Risque UI** : mobile-first, composants réutilisables, pas de logique métier dupliquée côté Angular.
 - **Risque calendrier démo** : seuls les blockers P0 justifient une dérogation au gel ; la qualité et les tests ne sont jamais supprimés pour gagner du temps.
 - **Risque dette technique** : aucun alias/fallback legacy durable n’est accepté sous prétexte de rétrocompatibilité pendant la phase de développement.
+
+## 23. Mise à jour jalon HOS-LOC / HOS-STAFF — 24/07/2026
+
+Cette section met à jour l'état opérationnel sans réécrire les sections historiques ci-dessus.
+
+### HOS-LOC-001-A / #131
+
+- **DONE** — PR #137 squash-mergée dans `main@e495477ea02beb05596b20b656bc092bd8fbbd83` ;
+- effort réévalué : **13 SP** ;
+- Flyway V88–V91 ;
+- géographie/espaces, lits sur `space_id`, rattachements datés unité-espace et hospitalisation UUID livrés ;
+- gates #1196/#1202 verts ;
+- reste : recette humaine #127.
+
+### HOS-STAFF-001-A / #132
+
+- **READY TECHNIQUE** — PR #140 ;
+- estimation maintenue : **9 SP** ;
+- Flyway V92–V95 ;
+- affectations datées staff↔unité et staff↔spécialité, rôle contextuel distinct du RBAC global ;
+- suppression physique de `users.department/users.specialty` après preflight fail-fast ;
+- UI staff structurée et portail rendez-vous migré vers `specialtyCode` / `organizationalUnitId` ;
+- gate combiné #1262 : Maven strict SUCCESS, tests Angular SUCCESS, build production SUCCESS ;
+- aucun mapping automatique par texte libre ;
+- aucune action PROD/RECETTE ;
+- reste avant clôture : gate final post-documentation sur le head exact, revue, squash merge #140, puis recette humaine #127.
+
+### Ordre courant actualisé
+
+```text
+DONE  HOS-BED / RBAC phase 0
+  ↓
+DONE  HOS-ORG-001-A #130
+  ↓
+DONE  HOS-LOC-001-A #131
+  ↓
+READY HOS-STAFF-001-A #132 / PR #140
+  ↓
+      répétition démo #127
+  ↓
+      HOS-BED-002 complet
+  ↓
+      HOS-ADM → HOS-MOV → HOS-DIS
+  ↓
+      HOS-RES
+  ↓
+      HOS-PATH → HOS-KPI → HOS-INT
+```

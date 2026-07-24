@@ -4,19 +4,17 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record StaffResponse(
-		UUID id,
-		String email,
-		String displayName,
-		String role,
-		boolean enabled,
-		Instant createdAt,
-		String photoPath,
-		String signaturePath,
-		String stampPath,
-		String phone,
-		String specialty,
-		String registrationNumber,
-		String department,
-		String bio
+        UUID id,
+        String email,
+        String displayName,
+        String role,
+        boolean enabled,
+        Instant createdAt,
+        String photoPath,
+        String signaturePath,
+        String stampPath,
+        String phone,
+        String registrationNumber,
+        String bio
 ) {
 }

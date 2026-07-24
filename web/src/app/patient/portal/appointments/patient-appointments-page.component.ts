@@ -1,67 +1,50 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { I18nService } from '../../../core/i18n/i18n.service';
 import { AppShellComponent } from '../../../shared/layout/app-shell.component';
 import {
   AppointmentSlotPickerComponent,
   AppointmentSlotPickerLabels,
 } from '../../../shared/ui/appointment-slot-picker/appointment-slot-picker.component';
 import { ConfirmationDialogComponent } from '../../../shared/ui/confirmation-dialog.component';
-import { I18nService } from '../../../core/i18n/i18n.service';
 import { PatientAppointmentsApiService } from './patient-appointments-api.service';
 import {
   ApiErrorEnvelope,
   AppointmentSlot,
   DoctorDirectoryEntry,
+  DoctorSpecialtyEntry,
+  DoctorUnitEntry,
   PatientAppointment,
 } from './patient-appointments.models';
 
 @Component({
   selector: 'app-patient-appointments-page',
   standalone: true,
-  imports: [
-    AppShellComponent,
-    FormsModule,
-    AppointmentSlotPickerComponent,
-    ConfirmationDialogComponent,
-  ],
+  imports: [AppShellComponent, FormsModule, AppointmentSlotPickerComponent, ConfirmationDialogComponent],
   template: `
     <app-shell>
-      <main class="app-container py-6 space-y-6">
-        <header class="border border-[var(--app-border)] bg-[var(--app-surface)] p-5 shadow-[var(--shadow-panel)] rounded-[var(--radius-brand-md)]">
-          <p class="text-xs font-black uppercase tracking-wider text-[var(--brand-primary)]">
-            {{ i18n.t('appointments.eyebrow') }}
-          </p>
-          <h1 class="mt-2 font-display text-2xl font-extrabold text-[var(--text-primary)]">
-            {{ i18n.t('appointments.title') }}
-          </h1>
-          <p class="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
-            {{ i18n.t('appointments.description') }}
-          </p>
+      <main class="app-container space-y-6 py-6">
+        <header class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface)] p-5 shadow-[var(--shadow-panel)]">
+          <p class="text-xs font-black uppercase tracking-wider text-[var(--brand-primary)]">{{ i18n.t('appointments.eyebrow') }}</p>
+          <h1 class="mt-2 font-display text-2xl font-extrabold text-[var(--text-primary)]">{{ i18n.t('appointments.title') }}</h1>
+          <p class="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">{{ i18n.t('appointments.description') }}</p>
         </header>
 
         @if (notice()) {
-          <div class="border border-emerald-300 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300 rounded-[var(--radius-brand-sm)]" role="status">
-            {{ notice() }}
-          </div>
+          <div class="rounded-[var(--radius-brand-sm)] border border-emerald-300 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300" role="status">{{ notice() }}</div>
         }
         @if (error()) {
-          <div class="border border-rose-300 bg-rose-50 p-3 text-sm font-semibold text-rose-800 dark:border-rose-800 dark:bg-rose-950/20 dark:text-rose-300 rounded-[var(--radius-brand-sm)]" role="alert">
-            {{ error() }}
-          </div>
+          <div class="rounded-[var(--radius-brand-sm)] border border-rose-300 bg-rose-50 p-3 text-sm font-semibold text-rose-800 dark:border-rose-800 dark:bg-rose-950/20 dark:text-rose-300" role="alert">{{ error() }}</div>
         }
 
         <section class="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
           <div class="space-y-4">
-            <div class="border border-[var(--app-border)] bg-[var(--app-surface)] p-4 rounded-[var(--radius-brand-md)]">
+            <div class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface)] p-4">
               <div class="flex items-center justify-between gap-3">
                 <div>
-                  <h2 class="font-display text-lg font-extrabold text-[var(--text-primary)]">
-                    {{ i18n.t('appointments.doctors.title') }}
-                  </h2>
-                  <p class="mt-1 text-xs text-[var(--text-secondary)]">
-                    {{ i18n.t('appointments.doctors.description') }}
-                  </p>
+                  <h2 class="font-display text-lg font-extrabold text-[var(--text-primary)]">{{ i18n.t('appointments.doctors.title') }}</h2>
+                  <p class="mt-1 text-xs text-[var(--text-secondary)]">{{ i18n.t('appointments.doctors.description') }}</p>
                 </div>
                 <button type="button" class="ui-button ui-button-secondary" [disabled]="loadingDoctors()" (click)="loadDoctors()">
                   {{ i18n.t('appointments.actions.refresh') }}
@@ -71,16 +54,32 @@ import {
               <div class="mt-4 grid gap-3 sm:grid-cols-2">
                 <label class="text-xs font-bold text-[var(--text-secondary)]">
                   {{ i18n.t('appointments.filters.specialty') }}
-                  <input class="ui-input mt-1 w-full" [(ngModel)]="specialtyFilter" (keyup.enter)="loadDoctors()" />
+                  <select
+                    class="ui-select mt-1 w-full"
+                    [ngModel]="specialtyCodeFilter()"
+                    (ngModelChange)="specialtyCodeFilter.set($event); onFilterChanged()"
+                  >
+                    <option value="">{{ i18n.t('appointments.filters.allSpecialties', 'Toutes les spécialités') }}</option>
+                    @for (item of specialtyOptions(); track item.code) {
+                      <option [value]="item.code">{{ specialtyName(item) }}</option>
+                    }
+                  </select>
                 </label>
+
                 <label class="text-xs font-bold text-[var(--text-secondary)]">
                   {{ i18n.t('appointments.filters.department') }}
-                  <input class="ui-input mt-1 w-full" [(ngModel)]="departmentFilter" (keyup.enter)="loadDoctors()" />
+                  <select
+                    class="ui-select mt-1 w-full"
+                    [ngModel]="organizationalUnitIdFilter()"
+                    (ngModelChange)="organizationalUnitIdFilter.set($event); onFilterChanged()"
+                  >
+                    <option value="">{{ i18n.t('appointments.filters.allUnits', 'Toutes les unités') }}</option>
+                    @for (item of unitOptions(); track item.id) {
+                      <option [value]="item.id">{{ unitName(item) }}</option>
+                    }
+                  </select>
                 </label>
               </div>
-              <button type="button" class="ui-button ui-button-primary mt-3 w-full justify-center" [disabled]="loadingDoctors()" (click)="loadDoctors()">
-                {{ i18n.t('appointments.actions.search') }}
-              </button>
 
               @if (loadingDoctors()) {
                 <p class="py-8 text-center text-sm text-[var(--text-secondary)]">{{ i18n.t('appointments.loading.doctors') }}</p>
@@ -91,17 +90,14 @@ import {
                   @for (doctor of doctors(); track doctor.doctorId) {
                     <button
                       type="button"
-                      class="w-full border p-3 text-left transition rounded-[var(--radius-brand-sm)]"
+                      class="w-full rounded-[var(--radius-brand-sm)] border p-3 text-left transition"
                       [style.border-color]="selectedDoctor()?.doctorId === doctor.doctorId ? 'var(--brand-primary)' : 'var(--app-border)'"
                       [style.background]="selectedDoctor()?.doctorId === doctor.doctorId ? 'var(--brand-primary-subtle)' : 'var(--app-surface-muted)'"
                       [attr.aria-pressed]="selectedDoctor()?.doctorId === doctor.doctorId"
                       (click)="selectDoctor(doctor)"
                     >
                       <span class="block text-sm font-extrabold text-[var(--text-primary)]">{{ doctor.displayName }}</span>
-                      <span class="mt-1 block text-xs text-[var(--text-secondary)]">
-                        {{ doctor.specialty || i18n.t('appointments.doctors.specialtyUnknown') }}
-                        · {{ doctor.department || i18n.t('appointments.doctors.departmentUnknown') }}
-                      </span>
+                      <span class="mt-1 block text-xs text-[var(--text-secondary)]">{{ doctorContext(doctor) }}</span>
                     </button>
                   }
                 </div>
@@ -110,10 +106,8 @@ import {
           </div>
 
           <div class="space-y-4">
-            <section class="border border-[var(--app-border)] bg-[var(--app-surface)] p-4 rounded-[var(--radius-brand-md)]">
-              <h2 class="font-display text-lg font-extrabold text-[var(--text-primary)]">
-                {{ i18n.t('appointments.slots.title') }}
-              </h2>
+            <section class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface)] p-4">
+              <h2 class="font-display text-lg font-extrabold text-[var(--text-primary)]">{{ i18n.t('appointments.slots.title') }}</h2>
               @if (!selectedDoctor()) {
                 <p class="py-10 text-center text-sm text-[var(--text-secondary)]">{{ i18n.t('appointments.slots.selectDoctor') }}</p>
               } @else if (loadingSlots()) {
@@ -130,9 +124,7 @@ import {
 
               @if (selectedSlot()) {
                 <div class="mt-5 border-t border-[var(--app-border)] pt-4">
-                  <p class="text-sm font-bold text-[var(--text-primary)]">
-                    {{ selectedDoctor()!.displayName }} — {{ formatDateTime(selectedSlot()!.startAt) }}
-                  </p>
+                  <p class="text-sm font-bold text-[var(--text-primary)]">{{ selectedDoctor()!.displayName }} — {{ formatDateTime(selectedSlot()!.startAt) }}</p>
                   <label class="mt-3 block text-xs font-bold text-[var(--text-secondary)]">
                     {{ i18n.t('appointments.booking.reason') }}
                     <textarea class="ui-input mt-1 min-h-20 w-full" maxlength="2000" [(ngModel)]="reason"></textarea>
@@ -146,7 +138,7 @@ import {
           </div>
         </section>
 
-        <section class="border border-[var(--app-border)] bg-[var(--app-surface)] p-4 rounded-[var(--radius-brand-md)]">
+        <section class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface)] p-4">
           <div class="flex items-center justify-between gap-3">
             <div>
               <h2 class="font-display text-lg font-extrabold text-[var(--text-primary)]">{{ i18n.t('appointments.mine.title') }}</h2>
@@ -164,23 +156,19 @@ import {
           } @else {
             <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               @for (appointment of appointments(); track appointment.id) {
-                <article class="border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-4 rounded-[var(--radius-brand-sm)]">
+                <article class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-4">
                   <div class="flex items-start justify-between gap-3">
                     <div>
                       <h3 class="text-sm font-extrabold text-[var(--text-primary)]">{{ appointment.doctorDisplayName }}</h3>
                       <p class="mt-1 text-xs text-[var(--text-secondary)]">{{ formatDateTime(appointment.startAt) }}</p>
                     </div>
-                    <span class="border border-[var(--app-border)] px-2 py-1 text-[10px] font-black uppercase text-[var(--text-secondary)] rounded-[var(--radius-brand-sm)]">
-                      {{ statusLabel(appointment.status) }}
-                    </span>
+                    <span class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] px-2 py-1 text-[10px] font-black uppercase text-[var(--text-secondary)]">{{ statusLabel(appointment.status) }}</span>
                   </div>
                   @if (appointment.reason) {
                     <p class="mt-3 text-xs leading-5 text-[var(--text-secondary)]">{{ appointment.reason }}</p>
                   }
                   @if (appointment.status === 'CONFIRMED') {
-                    <button type="button" class="ui-button ui-button-danger mt-4 w-full justify-center" (click)="requestCancellation(appointment)">
-                      {{ i18n.t('appointments.actions.cancel') }}
-                    </button>
+                    <button type="button" class="ui-button ui-button-danger mt-4 w-full justify-center" (click)="requestCancellation(appointment)">{{ i18n.t('appointments.actions.cancel') }}</button>
                   }
                 </article>
               }
@@ -206,7 +194,20 @@ export class PatientAppointmentsPageComponent implements OnInit {
   private readonly api = inject(PatientAppointmentsApiService);
   readonly i18n = inject(I18nService);
 
-  readonly doctors = signal<DoctorDirectoryEntry[]>([]);
+  readonly directory = signal<DoctorDirectoryEntry[]>([]);
+  readonly specialtyCodeFilter = signal('');
+  readonly organizationalUnitIdFilter = signal('');
+  readonly doctors = computed(() => this.directory().filter((doctor) => {
+    const specialtyCode = this.specialtyCodeFilter();
+    const organizationalUnitId = this.organizationalUnitIdFilter();
+    const specialtyMatches = !specialtyCode
+      || doctor.specialties.some((item) => item.code === specialtyCode);
+    const unitMatches = !organizationalUnitId
+      || doctor.units.some((item) => item.id === organizationalUnitId);
+    return specialtyMatches && unitMatches;
+  }));
+  readonly specialtyOptions = computed(() => this.uniqueSpecialties(this.directory()));
+  readonly unitOptions = computed(() => this.uniqueUnits(this.directory()));
   readonly slots = signal<AppointmentSlot[]>([]);
   readonly appointments = signal<PatientAppointment[]>([]);
   readonly selectedDoctor = signal<DoctorDirectoryEntry | null>(null);
@@ -220,8 +221,6 @@ export class PatientAppointmentsPageComponent implements OnInit {
   readonly error = signal('');
   readonly notice = signal('');
 
-  specialtyFilter = '';
-  departmentFilter = '';
   reason = '';
 
   readonly slotLabels = computed<AppointmentSlotPickerLabels>(() => ({
@@ -237,19 +236,23 @@ export class PatientAppointmentsPageComponent implements OnInit {
   loadDoctors(): void {
     this.loadingDoctors.set(true);
     this.clearMessages();
-    this.api.listDoctors(this.specialtyFilter, this.departmentFilter).subscribe({
+    this.api.listDoctors().subscribe({
       next: (doctors) => {
-        this.doctors.set(doctors);
+        this.directory.set(doctors);
         this.loadingDoctors.set(false);
-        const selectedId = this.selectedDoctor()?.doctorId;
-        if (selectedId && !doctors.some((doctor) => doctor.doctorId === selectedId)) {
-          this.selectedDoctor.set(null);
-          this.selectedSlot.set(null);
-          this.slots.set([]);
-        }
+        this.onFilterChanged();
       },
       error: (error) => this.handleError(error, 'appointments.errors.loadDoctors', this.loadingDoctors),
     });
+  }
+
+  onFilterChanged(): void {
+    const selectedId = this.selectedDoctor()?.doctorId;
+    if (selectedId && !this.doctors().some((doctor) => doctor.doctorId === selectedId)) {
+      this.selectedDoctor.set(null);
+      this.selectedSlot.set(null);
+      this.slots.set([]);
+    }
   }
 
   selectDoctor(doctor: DoctorDirectoryEntry): void {
@@ -337,6 +340,22 @@ export class PatientAppointmentsPageComponent implements OnInit {
     });
   }
 
+  specialtyName(item: DoctorSpecialtyEntry): string {
+    return this.i18n.currentLanguage() === 'en' ? item.nameEn : item.nameFr;
+  }
+
+  unitName(item: DoctorUnitEntry): string {
+    return this.i18n.currentLanguage() === 'en' ? item.nameEn : item.nameFr;
+  }
+
+  doctorContext(doctor: DoctorDirectoryEntry): string {
+    const specialty = doctor.specialties.find((item) => item.primary) ?? doctor.specialties[0];
+    const unit = doctor.units.find((item) => item.primary) ?? doctor.units[0];
+    const specialtyLabel = specialty ? this.specialtyName(specialty) : this.i18n.t('appointments.doctors.specialtyUnknown');
+    const unitLabel = unit ? this.unitName(unit) : this.i18n.t('appointments.doctors.departmentUnknown');
+    return `${specialtyLabel} · ${unitLabel}`;
+  }
+
   statusLabel(status: string): string {
     return this.i18n.t(`appointments.status.${status}`);
   }
@@ -346,6 +365,18 @@ export class PatientAppointmentsPageComponent implements OnInit {
       dateStyle: 'medium',
       timeStyle: 'short',
     }).format(new Date(value));
+  }
+
+  private uniqueSpecialties(doctors: DoctorDirectoryEntry[]): DoctorSpecialtyEntry[] {
+    const byCode = new Map<string, DoctorSpecialtyEntry>();
+    doctors.flatMap((doctor) => doctor.specialties).forEach((item) => byCode.set(item.code, item));
+    return [...byCode.values()].sort((left, right) => this.specialtyName(left).localeCompare(this.specialtyName(right)));
+  }
+
+  private uniqueUnits(doctors: DoctorDirectoryEntry[]): DoctorUnitEntry[] {
+    const byId = new Map<string, DoctorUnitEntry>();
+    doctors.flatMap((doctor) => doctor.units).forEach((item) => byId.set(item.id, item));
+    return [...byId.values()].sort((left, right) => this.unitName(left).localeCompare(this.unitName(right)));
   }
 
   private clearMessages(): void {

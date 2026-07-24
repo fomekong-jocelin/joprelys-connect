@@ -21,8 +21,23 @@ describe('PatientAppointmentsPageComponent', () => {
   const doctor: DoctorDirectoryEntry = {
     doctorId: 'doctor-1',
     displayName: 'Dr Alice',
-    specialty: 'Cardiologie',
-    department: 'Consultations externes',
+    specialties: [
+      {
+        code: 'CARDIOLOGY',
+        nameFr: 'Cardiologie',
+        nameEn: 'Cardiology',
+        primary: true,
+      },
+    ],
+    units: [
+      {
+        id: 'unit-cardio',
+        code: 'CARDIO',
+        nameFr: 'Cardiologie',
+        nameEn: 'Cardiology',
+        primary: true,
+      },
+    ],
   };
 
   const slot: AppointmentSlot = {
@@ -56,9 +71,11 @@ describe('PatientAppointmentsPageComponent', () => {
       listOwn: vi.fn().mockReturnValue(of([appointment])),
       cancel: vi.fn().mockReturnValue(of({ ...appointment, status: 'CANCELLED_BY_PATIENT' })),
     };
+    const locale = signal<'fr' | 'en'>('fr');
     const i18n = {
       t: vi.fn().mockImplementation((key: string, fallback?: string) => fallback ?? key),
-      locale: signal<'fr' | 'en'>('fr'),
+      locale,
+      currentLanguage: vi.fn().mockImplementation(() => locale()),
     };
 
     await TestBed.configureTestingModule({
@@ -75,11 +92,25 @@ describe('PatientAppointmentsPageComponent', () => {
     fixture.detectChanges();
   });
 
-  it('charge les médecins et les rendez-vous au démarrage', () => {
-    expect(api.listDoctors).toHaveBeenCalledWith('', '');
+  it('charge les médecins structurés et les rendez-vous au démarrage', () => {
+    expect(api.listDoctors).toHaveBeenCalledWith();
     expect(api.listOwn).toHaveBeenCalled();
     expect(component.doctors()).toEqual([doctor]);
     expect(component.appointments()).toEqual([appointment]);
+    expect(component.specialtyOptions().map((item) => item.code)).toEqual(['CARDIOLOGY']);
+    expect(component.unitOptions().map((item) => item.id)).toEqual(['unit-cardio']);
+  });
+
+  it('filtre l’annuaire par code spécialité et UUID unité sans texte libre', () => {
+    component.specialtyCodeFilter.set('CARDIOLOGY');
+    component.organizationalUnitIdFilter.set('unit-cardio');
+    component.onFilterChanged();
+
+    expect(component.doctors()).toEqual([doctor]);
+
+    component.organizationalUnitIdFilter.set('unit-other');
+    component.onFilterChanged();
+    expect(component.doctors()).toEqual([]);
   });
 
   it('charge les créneaux après sélection du médecin', () => {

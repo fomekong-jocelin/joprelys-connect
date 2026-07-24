@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/hospital-organization")
-@PreAuthorize("hasAuthority('ORGANIZATION_STRUCTURE_MANAGE')")
 public class HospitalOrganizationController {
 
     private final HospitalOrganizationUseCase useCase;
@@ -28,16 +27,19 @@ public class HospitalOrganizationController {
     }
 
     @GetMapping("/catalogs/services")
+    @PreAuthorize("hasAnyAuthority('ORGANIZATION_STRUCTURE_MANAGE', 'USER_MANAGE', 'USER_READ')")
     public List<HospitalServiceCatalogResponse> listServiceCatalog() {
         return useCase.listServiceCatalog();
     }
 
     @GetMapping("/catalogs/specialties")
+    @PreAuthorize("hasAnyAuthority('ORGANIZATION_STRUCTURE_MANAGE', 'USER_MANAGE', 'USER_READ')")
     public List<MedicalSpecialtyCatalogResponse> listSpecialtyCatalog() {
         return useCase.listSpecialtyCatalog();
     }
 
     @GetMapping("/units")
+    @PreAuthorize("hasAnyAuthority('ORGANIZATION_STRUCTURE_MANAGE', 'USER_MANAGE', 'USER_READ')")
     public List<OrganizationalUnitResponse> listUnits(
             @RequestParam(required = false) UUID organizationId,
             @RequestParam(defaultValue = "false") boolean includeInactive) {
@@ -46,6 +48,7 @@ public class HospitalOrganizationController {
 
     @PostMapping("/units")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('ORGANIZATION_STRUCTURE_MANAGE')")
     public OrganizationalUnitResponse createUnit(
             @RequestParam(required = false) UUID organizationId,
             @Valid @RequestBody SaveOrganizationalUnitRequest request) {
@@ -53,6 +56,7 @@ public class HospitalOrganizationController {
     }
 
     @PutMapping("/units/{unitId}")
+    @PreAuthorize("hasAuthority('ORGANIZATION_STRUCTURE_MANAGE')")
     public OrganizationalUnitResponse updateUnit(
             @RequestParam(required = false) UUID organizationId,
             @PathVariable UUID unitId,
@@ -61,6 +65,7 @@ public class HospitalOrganizationController {
     }
 
     @PostMapping("/units/{unitId}/activate")
+    @PreAuthorize("hasAuthority('ORGANIZATION_STRUCTURE_MANAGE')")
     public OrganizationalUnitResponse activateUnit(
             @RequestParam(required = false) UUID organizationId,
             @PathVariable UUID unitId) {
@@ -68,6 +73,7 @@ public class HospitalOrganizationController {
     }
 
     @PostMapping("/units/{unitId}/deactivate")
+    @PreAuthorize("hasAuthority('ORGANIZATION_STRUCTURE_MANAGE')")
     public OrganizationalUnitResponse deactivateUnit(
             @RequestParam(required = false) UUID organizationId,
             @PathVariable UUID unitId) {
