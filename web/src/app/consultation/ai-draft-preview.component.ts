@@ -18,14 +18,14 @@ import {
             {{ i18n.t('consultation.ai.acceptedDraft', 'Brouillon accepté') }}
           </p>
           <p class="mt-1 text-[10px] text-[var(--text-muted)]">
-            {{ i18n.t('consultation.ai.acceptedDraftHelp', 'Seules les propositions acceptées apparaissent ici.') }}
+            Consultation, ordonnance, examens et constantes restent sous contrôle du professionnel de santé.
           </p>
         </div>
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
           @for (entry of entries(); track entry.key) {
             <div class="rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface-muted)]/30 p-3">
               <p class="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">{{ fieldLabel(entry.key) }}</p>
-              <p class="mt-1 line-clamp-4 whitespace-pre-wrap text-xs leading-5 text-[var(--text-primary)]">{{ entry.value }}</p>
+              <p class="mt-1 line-clamp-5 whitespace-pre-wrap text-xs leading-5 text-[var(--text-primary)]">{{ formatValue(entry.key, entry.value) }}</p>
             </div>
           }
         </div>
@@ -54,6 +54,31 @@ export class AiDraftPreviewComponent {
       .map(([key, value]) => ({ key, value }));
   }
 
+  formatValue(field: AiField, value: string): string {
+    if (!['prescription', 'labOrders', 'vitals'].includes(field)) return value;
+    try {
+      const parsed = JSON.parse(value);
+      if (field === 'prescription' && Array.isArray(parsed)) {
+        return parsed.map((line: Record<string, unknown>) =>
+          [line['drugName'], line['dosage'], line['frequency'], line['duration']]
+            .filter(Boolean)
+            .join(' · '),
+        ).join('\n');
+      }
+      if (field === 'labOrders' && Array.isArray(parsed)) {
+        return parsed.join(', ');
+      }
+      if (field === 'vitals' && parsed && typeof parsed === 'object') {
+        return Object.entries(parsed as Record<string, unknown>)
+          .map(([key, item]) => `${key}: ${item}`)
+          .join(' · ');
+      }
+    } catch {
+      return value;
+    }
+    return value;
+  }
+
   fieldLabel(field: AiField): string {
     const labels: Record<AiField, string> = {
       symptoms: this.i18n.t('consultation.symptoms.label', 'Symptômes'),
@@ -64,6 +89,9 @@ export class AiDraftPreviewComponent {
       conclusion: this.i18n.t('consultation.conclusion.label', 'Conclusion'),
       advice: this.i18n.t('consultation.advice.label', 'Conseils au patient'),
       followUp: this.i18n.t('consultation.followUp.label', 'Suivi recommandé'),
+      prescription: 'Ordonnance structurée',
+      labOrders: 'Examens prescrits',
+      vitals: 'Constantes vitales',
     };
     return labels[field];
   }
