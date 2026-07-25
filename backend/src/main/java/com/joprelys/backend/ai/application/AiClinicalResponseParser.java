@@ -5,7 +5,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.ObjectMapper;
@@ -103,11 +102,10 @@ final class AiClinicalResponseParser {
         }
         String proposedValue = null;
         if ("SET".equals(operation)) {
-            proposedValue = stringValue(map.get("value"));
-            if (proposedValue.isBlank()) {
-                throw invalidChange();
-            }
-            proposedValue = normalizeFieldValue(field, proposedValue);
+            Object rawValue = map.get("value");
+            proposedValue = STRUCTURED_FIELDS.contains(field)
+                    ? normalizeStructuredFieldValue(field, rawValue)
+                    : normalizeTextFieldValue(field, rawValue);
         }
         return new ParsedChange(
                 field,
@@ -125,18 +123,22 @@ final class AiClinicalResponseParser {
         }
         Map<String, ParsedChange> result = new LinkedHashMap<>();
         draftMap.forEach((key, fieldValue) -> {
-            if (key != null
-                    && fieldValue instanceof String stringValue
-                    && ALLOWED_FIELDS.contains(key.toString())
-                    && !stringValue.isBlank()) {
-                String field = key.toString();
-                result.put(field, new ParsedChange(
-                        field,
-                        "SET",
-                        normalizeFieldValue(field, stringValue.trim()),
-                        limit(assistantMessage, 1000),
-                        "UNKNOWN"));
+            if (key == null || !ALLOWED_FIELDS.contains(key.toString()) || fieldValue == null) {
+                return;
             }
+            String field = key.toString();
+            String normalized;
+            if (STRUCTURED_FIELDS.contains(field)) {
+                normalized = normalizeStructuredFieldValue(field, fieldValue);
+            } else {
+                normalized = normalizeTextFieldValue(field, fieldValue);
+            }
+            result.put(field, new ParsedChange(
+                    field,
+                    "SET",
+                    normalized,
+                    limit(assistantMessage, 1000),
+                    "UNKNOWN"));
         });
         return List.copyOf(result.values());
     }
@@ -168,18 +170,29 @@ final class AiClinicalResponseParser {
                 List.copyOf(options));
     }
 
-    private String normalizeFieldValue(String field, String value) {
-        if (!STRUCTURED_FIELDS.contains(field)) {
-            return limit(value.trim(), maximumFor(field));
+    private String normalizeTextFieldValue(String field, Object value) {
+        String text = stringValue(value);
+        if (text.isBlank()) {
+            throw invalidChange();
+        }
+        return limit(text, maximumFor(field));
+    }
+
+    private String normalizeStructuredFieldValue(String field, Object value) {
+        if (value == null) {
+            throw invalidChange();
         }
         try {
-            Object parsed = switch (field) {
-                case "prescription" -> validatePrescription(value);
-                case "labOrders" -> validateLabOrders(value);
-                case "vitals" -> validateVitals(value);
+            Object parsed = value instanceof String text
+                    ? objectMapper.readValue(text, Object.class)
+                    : value;
+            Object normalized = switch (field) {
+                case "prescription" -> validatePrescription(parsed);
+                case "labOrders" -> validateLabOrders(parsed);
+                case "vitals" -> validateVitals(parsed);
                 default -> throw invalidChange();
             };
-            return limit(objectMapper.writeValueAsString(parsed), maximumFor(field));
+            return limit(objectMapper.writeValueAsString(normalized), maximumFor(field));
         } catch (ResponseStatusException exception) {
             throw exception;
         } catch (Exception exception) {
@@ -187,9 +200,7 @@ final class AiClinicalResponseParser {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private List<Map<String, Object>> validatePrescription(String value) throws Exception {
-        Object parsed = objectMapper.readValue(value, Object.class);
+    private List<Map<String, Object>> validatePrescription(Object parsed) {
         if (!(parsed instanceof List<?> list)) {
             throw invalidChange();
         }
@@ -225,8 +236,7 @@ final class AiClinicalResponseParser {
         return List.copyOf(normalized);
     }
 
-    private List<String> validateLabOrders(String value) throws Exception {
-        Object parsed = objectMapper.readValue(value, Object.class);
+    private List<String> validateLabOrders(Object parsed) {
         if (!(parsed instanceof List<?> list)) {
             throw invalidChange();
         }
@@ -240,8 +250,7 @@ final class AiClinicalResponseParser {
         return List.copyOf(normalized);
     }
 
-    private Map<String, Number> validateVitals(String value) throws Exception {
-        Object parsed = objectMapper.readValue(value, Object.class);
+    private Map<String, Number> validateVitals(Object parsed) {
         if (!(parsed instanceof Map<?, ?> map)) {
             throw invalidChange();
         }
