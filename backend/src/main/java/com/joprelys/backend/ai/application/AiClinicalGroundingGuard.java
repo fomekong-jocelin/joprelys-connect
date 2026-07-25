@@ -29,7 +29,8 @@ final class AiClinicalGroundingGuard {
     ParsedResponse enforce(
             ParsedResponse parsed,
             String latestClinicianUtterance,
-            String resolvedClarificationField) {
+            String resolvedClarificationField,
+            String locale) {
         if (parsed == null) {
             return null;
         }
@@ -72,9 +73,14 @@ final class AiClinicalGroundingGuard {
             log.warn("Blocked ungrounded AI prescription clarification; no explicit medication signal in latest clinician utterance");
         }
 
+        boolean english = "en".equalsIgnoreCase(locale);
         String safeMessage = grounded.isEmpty()
-                ? "J’ai pris en compte votre dictée. Aucun médicament n’a été ajouté sans prescription explicite."
-                : "J’ai structuré les éléments explicitement dictés. Aucun médicament n’a été ajouté sans prescription explicite.";
+                ? (english
+                        ? "I captured your dictation. No medication was added without an explicit prescription."
+                        : "J’ai pris en compte votre dictée. Aucun médicament n’a été ajouté sans prescription explicite.")
+                : (english
+                        ? "I structured only what you explicitly dictated. No medication was added without an explicit prescription."
+                        : "J’ai structuré les éléments explicitement dictés. Aucun médicament n’a été ajouté sans prescription explicite.");
 
         return new ParsedResponse(
                 List.copyOf(grounded),
@@ -123,9 +129,6 @@ final class AiClinicalGroundingGuard {
         if (utterance.contains(drugName)) {
             return true;
         }
-        // The STT can separate punctuation or dosage suffixes. Require every
-        // meaningful token of the proposed name to be present; never fuzzy-match
-        // an unrelated medication because false positives are clinically worse.
         String[] tokens = drugName.split("\\s+");
         int meaningful = 0;
         for (String token : tokens) {
