@@ -46,6 +46,7 @@ public class AiConsultationService {
     private final VisitService visitService;
     private final ObjectMapper objectMapper;
     private final AiClinicalResponseParser responseParser;
+    private final ClinicalContextAssembler clinicalContextAssembler;
     private final AiClinicalGroundingGuard groundingGuard;
     private final AiRevisionManager revisionManager;
     private final AiClarificationManager clarificationManager;
@@ -58,6 +59,7 @@ public class AiConsultationService {
             VisitService visitService,
             ObjectMapper objectMapper,
             AiClinicalResponseParser responseParser,
+            ClinicalContextAssembler clinicalContextAssembler,
             AiRevisionManager revisionManager,
             AiClarificationManager clarificationManager) {
         this.aiProvider = aiProvider;
@@ -65,6 +67,7 @@ public class AiConsultationService {
         this.visitService = visitService;
         this.objectMapper = objectMapper;
         this.responseParser = responseParser;
+        this.clinicalContextAssembler = clinicalContextAssembler;
         this.groundingGuard = new AiClinicalGroundingGuard(objectMapper);
         this.revisionManager = revisionManager;
         this.clarificationManager = clarificationManager;
@@ -93,7 +96,7 @@ public class AiConsultationService {
         String locale = normalizeLocale(requestedLocale);
         SessionKey key = sessionKey(visitId, userId, organizationId);
         AiConsultationSessionState state = new AiConsultationSessionState(
-                UUID.randomUUID(), expiry(), locale);
+                UUID.randomUUID(), visitId, expiry(), locale);
         mergeInitialDraft(state.draft, initialDraft);
         state.assistantMessage = initialAssistantMessage(locale);
         appendVisibleMessage(
@@ -166,10 +169,7 @@ public class AiConsultationService {
             revisionManager.ensureNoPendingRevision(state);
             ClarificationView clarification = clarificationManager.findPending(
                     state, clarificationId);
-            String modelText = "Réponse du médecin à une clarification structurée. Champ: "
-                    + clarification.field()
-                    + ". Question: " + clarification.question()
-                    + ". Réponse: " + answer.trim();
+            String modelText = clarificationModelText(state.locale, clarification, answer.trim());
             return processMessageLocked(
                     state,
                     modelText,
@@ -324,9 +324,10 @@ public class AiConsultationService {
         String resolvedClarificationField = resolvedClarificationId == null
                 ? null
                 : clarificationManager.findPending(state, resolvedClarificationId).field();
+        Map<String, Object> clinicalContext = clinicalContextAssembler.assemble(state.visitId);
         List<AiMessage> providerMessages = new ArrayList<>(state.providerMessages);
         providerMessages.add(AiMessage.user(buildUserMessage(
-                modelText, state.draft, state.locale)));
+                modelText, state.draft, state.locale, clinicalContext)));
         trimProviderConversation(providerMessages);
         try {
             AiChatResponse response = aiProvider.chat(
@@ -461,13 +462,25 @@ public class AiConsultationService {
     private String buildUserMessage(
             String text,
             Map<String, String> draft,
-            String locale) {
+            String locale,
+            Map<String, Object> clinicalContext) {
         try {
             String languageInstruction = "en".equals(locale)
                     ? "Reply in English."
                     : "Réponds en français.";
+            String contextInstruction = "en".equals(locale)
+                    ? "The secure clinical context below is READ-ONLY background. Use it to understand risk, detect conflicts, "
+                            + "and ask a targeted safety clarification when useful. Never turn a background fact into a proposed "
+                            + "consultation change unless the clinician explicitly states or confirms it in the current turn."
+                    : "Le contexte clinique sécurisé ci-dessous est un arrière-plan EN LECTURE SEULE. Utilise-le pour comprendre "
+                            + "les risques, détecter les incohérences et demander une clarification de sécurité ciblée si utile. "
+                            + "Ne transforme jamais un fait de contexte en modification proposée de la consultation tant que le "
+                            + "professionnel ne l'a pas explicitement énoncé ou confirmé dans le tour courant.";
             return "Session locale: " + locale
                     + "\n" + languageInstruction
+                    + "\n" + contextInstruction
+                    + "\nContexte clinique sécurisé: "
+                    + objectMapper.writeValueAsString(clinicalContext)
                     + "\nBrouillon accepté (contexte uniquement, ne pas le recopier spontanément): "
                     + objectMapper.writeValueAsString(draft)
                     + "\nNouvelle dictée, correction ou réponse du médecin: " + text;
@@ -475,6 +488,22 @@ public class AiConsultationService {
             throw new ResponseStatusException(
                     org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
         }
+    }
+
+    private String clarificationModelText(
+            String locale,
+            ClarificationView clarification,
+            String answer) {
+        if ("en".equals(locale)) {
+            return "Clinician answer to a structured clarification. Field: "
+                    + clarification.field()
+                    + ". Question: " + clarification.question()
+                    + ". Answer: " + answer;
+        }
+        return "Réponse du médecin à une clarification structurée. Champ: "
+                + clarification.field()
+                + ". Question: " + clarification.question()
+                + ". Réponse: " + answer;
     }
 
     private void mergeInitialDraft(
