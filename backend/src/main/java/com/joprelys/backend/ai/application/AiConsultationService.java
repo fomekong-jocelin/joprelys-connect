@@ -48,6 +48,7 @@ public class AiConsultationService {
     private final VisitService visitService;
     private final ObjectMapper objectMapper;
     private final AiClinicalResponseParser responseParser;
+    private final AiClinicalGroundingGuard groundingGuard;
     private final AiRevisionManager revisionManager;
     private final AiClarificationManager clarificationManager;
     private final ConcurrentMap<SessionKey, AiConsultationSessionState> sessions =
@@ -66,6 +67,7 @@ public class AiConsultationService {
         this.visitService = visitService;
         this.objectMapper = objectMapper;
         this.responseParser = responseParser;
+        this.groundingGuard = new AiClinicalGroundingGuard(objectMapper);
         this.revisionManager = revisionManager;
         this.clarificationManager = clarificationManager;
     }
@@ -299,6 +301,9 @@ public class AiConsultationService {
             String source,
             UUID resolvedClarificationId,
             String clarificationAnswer) {
+        String resolvedClarificationField = resolvedClarificationId == null
+                ? null
+                : clarificationManager.findPending(state, resolvedClarificationId).field();
         List<AiMessage> providerMessages = new ArrayList<>(state.providerMessages);
         providerMessages.add(AiMessage.user(buildUserMessage(modelText, state.draft)));
         trimProviderConversation(providerMessages);
@@ -309,7 +314,10 @@ public class AiConsultationService {
                 throw new ResponseStatusException(
                         org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
             }
-            ParsedResponse parsed = responseParser.parse(response.content());
+            ParsedResponse rawParsed = responseParser.parse(response.content());
+            ParsedResponse parsed = groundingGuard.enforce(
+                    rawParsed, visibleText, resolvedClarificationField);
+            boolean groundingAdjustedOutput = parsed != rawParsed;
             if (resolvedClarificationId != null) {
                 clarificationManager.resolve(
                         state, resolvedClarificationId, clarificationAnswer);
@@ -333,7 +341,8 @@ public class AiConsultationService {
             state.expiresAt = expiry();
             state.providerMessages.clear();
             state.providerMessages.addAll(providerMessages);
-            state.providerMessages.add(AiMessage.assistant(response.content()));
+            state.providerMessages.add(AiMessage.assistant(
+                    groundingAdjustedOutput ? parsed.assistantMessage() : response.content()));
             trimProviderConversation(state.providerMessages);
             appendVisibleMessage(state, "USER", visibleText, source, false);
             appendVisibleMessage(
