@@ -45,7 +45,7 @@ describe('ConsultationComponent AI draft application', () => {
     });
   });
 
-  it('vide les champs absents du brouillon accepté', () => {
+  it('conserve les champs acceptés absents du nouveau brouillon', () => {
     component.applyAiDraft({
       symptoms: 'Fièvre avec céphalées',
       advice: 'Hydratation',
@@ -53,8 +53,8 @@ describe('ConsultationComponent AI draft application', () => {
 
     expect(component.form.get('symptoms')?.value).toBe('Fièvre avec céphalées');
     expect(component.form.get('advice')?.value).toBe('Hydratation');
-    expect(component.form.get('diagnosis')?.value).toBe('');
+    expect(component.form.get('diagnosis')?.value).toBe('Diagnostic provisoire');
     expect(component.form.dirty).toBe(true);
-    expect(component.form.invalid).toBe(true);
+    expect(component.form.invalid).toBe(false);
   });
 });
