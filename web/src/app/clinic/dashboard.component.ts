@@ -1,4 +1,15 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ApplicationRef,
+  Component,
+  ComponentRef,
+  EnvironmentInjector,
+  OnDestroy,
+  OnInit,
+  computed,
+  createComponent,
+  inject,
+  signal,
+} from '@angular/core';
 import { AuthTokenStorageService } from '../auth/auth-token-storage.service';
 import { Router, RouterLink } from '@angular/router';
 import { I18nService } from '../core/i18n/i18n.service';
@@ -16,22 +27,16 @@ import { SmartVitalsAssistantComponent } from '../consultation/smart-vitals-assi
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
-  imports: [
-    AppShellComponent,
-    RouterLink,
-    DatePipe,
-    EmptyStateComponent,
-    ButtonComponent,
-    FormsModule,
-    SmartVitalsAssistantComponent,
-  ]
+  imports: [AppShellComponent, RouterLink, DatePipe, EmptyStateComponent, ButtonComponent, FormsModule]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   private readonly tokenStorage = inject(AuthTokenStorageService);
   private readonly i18n = inject(I18nService);
   private readonly visitApi = inject(VisitApiService);
   private readonly router = inject(Router);
   private readonly rbacApi = inject(RbacApiService);
+  private readonly applicationRef = inject(ApplicationRef);
+  private readonly environmentInjector = inject(EnvironmentInjector);
 
   readonly session = this.tokenStorage.session;
   readonly welcomeLabel = computed(() => this.i18n.t('dashboard.welcome'));
@@ -42,23 +47,19 @@ export class DashboardComponent implements OnInit {
   isLoadingQueue = signal(false);
   queueError = signal('');
 
-  // Drawer state
   showVisitDrawer = signal(false);
   selectedVisitForDrawer = signal<Visit | null>(null);
 
-  // Close confirmation modal state
   showCloseConfirmModal = signal(false);
   visitIdToClose = signal<string | null>(null);
   isClosingVisit = signal(false);
   closeVisitError = signal<string | null>(null);
 
-  // Vitals entry modal state
   showVitalsModal = signal(false);
   selectedVisitForVitals = signal<Visit | null>(null);
   isSavingVitals = signal(false);
   vitalsError = signal('');
 
-  // Audit security modal state
   showAuditSecurityModal = signal(false);
 
   vitalsTemp?: number;
@@ -72,20 +73,23 @@ export class DashboardComponent implements OnInit {
   vitalsResp?: number;
   vitalsPain?: number;
 
+  private vitalsAssistantRef: ComponentRef<SmartVitalsAssistantComponent> | null = null;
+
   hasPermission(permissions: string[] | string): boolean {
     const expected = Array.isArray(permissions) ? permissions : [permissions];
     return expected.some((permission) => this.rbacApi.hasPermission(permission));
   }
 
   readonly isClinicalRole = computed(() => this.hasPermission('VISIT_READ'));
-
   readonly canStartConsultation = computed(() => this.hasPermission('CLINICAL_WRITE'));
   readonly canCloseVisit = computed(() => this.hasPermission('VISIT_MANAGE'));
 
   ngOnInit(): void {
-    if (this.isClinicalRole()) {
-      this.loadQueue();
-    }
+    if (this.isClinicalRole()) this.loadQueue();
+  }
+
+  ngOnDestroy(): void {
+    this.destroyVitalsAssistant();
   }
 
   loadQueue(): void {
@@ -97,15 +101,11 @@ export class DashboardComponent implements OnInit {
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         ));
         this.isLoadingQueue.set(false);
-
         const currentDrawerVisit = this.selectedVisitForDrawer();
         if (currentDrawerVisit) {
           const updated = data.find(v => v.id === currentDrawerVisit.id);
-          if (updated) {
-            this.selectedVisitForDrawer.set(updated);
-          } else {
-            this.closeVisitDrawer();
-          }
+          if (updated) this.selectedVisitForDrawer.set(updated);
+          else this.closeVisitDrawer();
         }
       },
       error: (err) => {
@@ -142,19 +142,15 @@ export class DashboardComponent implements OnInit {
   confirmCloseVisit(): void {
     const visitId = this.visitIdToClose();
     if (!this.canCloseVisit() || !visitId || this.isClosingVisit()) return;
-
     this.isClosingVisit.set(true);
     this.closeVisitError.set(null);
-
     this.visitApi.closeVisit(visitId).subscribe({
       next: () => {
         this.isClosingVisit.set(false);
         this.showCloseConfirmModal.set(false);
         this.visitIdToClose.set(null);
         const currentDrawerVisit = this.selectedVisitForDrawer();
-        if (currentDrawerVisit && currentDrawerVisit.id === visitId) {
-          this.closeVisitDrawer();
-        }
+        if (currentDrawerVisit?.id === visitId) this.closeVisitDrawer();
         this.loadQueue();
       },
       error: (err) => {
@@ -169,15 +165,11 @@ export class DashboardComponent implements OnInit {
   }
 
   startConsultation(visitId: string): void {
-    if (this.canStartConsultation()) {
-      this.router.navigate(['/clinic/consultation', visitId]);
-    }
+    if (this.canStartConsultation()) this.router.navigate(['/clinic/consultation', visitId]);
   }
 
   get computedBmi(): number | null {
-    if (!this.vitalsWeight || !this.vitalsHeight || this.vitalsHeight <= 0) {
-      return null;
-    }
+    if (!this.vitalsWeight || !this.vitalsHeight || this.vitalsHeight <= 0) return null;
     const heightM = this.vitalsHeight / 100;
     return parseFloat((this.vitalsWeight / (heightM * heightM)).toFixed(2));
   }
@@ -229,6 +221,7 @@ export class DashboardComponent implements OnInit {
 
   openVitalsModal(visit: Visit): void {
     if (!this.hasPermission('VISIT_VITALS_WRITE')) return;
+    this.destroyVitalsAssistant();
     this.selectedVisitForVitals.set(visit);
     this.vitalsError.set('');
     this.isSavingVitals.set(false);
@@ -258,20 +251,21 @@ export class DashboardComponent implements OnInit {
     }
 
     this.showVitalsModal.set(true);
+    queueMicrotask(() => this.mountVitalsAssistant(visit));
   }
 
   closeVitalsModal(): void {
-    if (!this.isSavingVitals()) {
-      this.showVitalsModal.set(false);
-      this.selectedVisitForVitals.set(null);
-    }
+    if (this.isSavingVitals()) return;
+    this.destroyVitalsAssistant();
+    this.showVitalsModal.set(false);
+    this.selectedVisitForVitals.set(null);
   }
 
   submitVitals(): void {
     const selectedVisit = this.selectedVisitForVitals();
     if (!this.hasPermission('VISIT_VITALS_WRITE') || !selectedVisit || this.isSavingVitals()) return;
-
     this.isSavingVitals.set(true);
+    this.vitalsAssistantRef?.setInput('disabled', true);
     this.vitalsError.set('');
 
     const payload = {
@@ -290,18 +284,58 @@ export class DashboardComponent implements OnInit {
     this.visitApi.saveVitals(selectedVisit.id, payload).subscribe({
       next: () => {
         this.isSavingVitals.set(false);
+        this.destroyVitalsAssistant();
         this.showVitalsModal.set(false);
         this.selectedVisitForVitals.set(null);
         this.loadQueue();
       },
       error: (err) => {
         this.isSavingVitals.set(false);
+        this.vitalsAssistantRef?.setInput('disabled', false);
         this.vitalsError.set(err.error?.detail || err.error?.title || this.t('dashboard.vitals.saveError'));
       }
     });
   }
 
-  applyVitalsAssistantProposal(proposal: AiVitalsProposal): void {
+  openAuditSecurityModal(): void {
+    this.showAuditSecurityModal.set(true);
+  }
+
+  closeAuditSecurityModal(): void {
+    this.showAuditSecurityModal.set(false);
+  }
+
+  private mountVitalsAssistant(visit: Visit): void {
+    const selectedVisit = this.selectedVisitForVitals();
+    if (
+      this.vitalsAssistantRef
+      || typeof document === 'undefined'
+      || !this.showVitalsModal()
+      || !selectedVisit
+      || selectedVisit.id !== visit.id
+    ) return;
+
+    const componentRef = createComponent(SmartVitalsAssistantComponent, {
+      environmentInjector: this.environmentInjector,
+    });
+    componentRef.setInput('visitId', visit.id);
+    componentRef.setInput('patientName', visit.patientName);
+    componentRef.setInput('currentVitals', this.currentVitalsForAssistant());
+    componentRef.setInput('disabled', this.isSavingVitals());
+    componentRef.instance.proposed.subscribe(proposal => this.applyVitalsAssistantProposal(proposal));
+    this.applicationRef.attachView(componentRef.hostView);
+    document.body.appendChild(componentRef.location.nativeElement);
+    this.vitalsAssistantRef = componentRef;
+  }
+
+  private destroyVitalsAssistant(): void {
+    if (!this.vitalsAssistantRef) return;
+    this.applicationRef.detachView(this.vitalsAssistantRef.hostView);
+    this.vitalsAssistantRef.destroy();
+    this.vitalsAssistantRef = null;
+  }
+
+  private applyVitalsAssistantProposal(proposal: AiVitalsProposal): void {
     const vitals = proposal.vitals;
     if (typeof vitals.temperature === 'number') this.vitalsTemp = vitals.temperature;
     if (typeof vitals.weight === 'number') this.vitalsWeight = vitals.weight;
@@ -313,9 +347,10 @@ export class DashboardComponent implements OnInit {
     if (typeof vitals.glycemia === 'number') this.vitalsGlycemia = vitals.glycemia;
     if (typeof vitals.respiratoryRate === 'number') this.vitalsResp = vitals.respiratoryRate;
     if (typeof vitals.painScale === 'number') this.vitalsPain = vitals.painScale;
+    this.vitalsAssistantRef?.setInput('currentVitals', this.currentVitalsForAssistant());
   }
 
-  currentVitalsForAssistant(): Partial<Record<AiVitalField, number>> {
+  private currentVitalsForAssistant(): Partial<Record<AiVitalField, number>> {
     const values: Array<[AiVitalField, number | undefined]> = [
       ['temperature', this.vitalsTemp],
       ['weight', this.vitalsWeight],
@@ -331,13 +366,5 @@ export class DashboardComponent implements OnInit {
     return Object.fromEntries(
       values.filter((entry): entry is [AiVitalField, number] => typeof entry[1] === 'number'),
     );
-  }
-
-  openAuditSecurityModal(): void {
-    this.showAuditSecurityModal.set(true);
-  }
-
-  closeAuditSecurityModal(): void {
-    this.showAuditSecurityModal.set(false);
   }
 }
