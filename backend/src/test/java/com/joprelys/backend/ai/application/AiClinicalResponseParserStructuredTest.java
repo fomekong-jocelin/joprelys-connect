@@ -21,14 +21,26 @@ class AiClinicalResponseParserStructuredTest {
                     {
                       "field": "prescription",
                       "operation": "SET",
-                      "value": "[{\"drugName\":\"Paracétamol\",\"dosage\":\"1 g\",\"frequency\":\"3 fois par jour\",\"duration\":\"5 jours\"}]",
+                      "value": [
+                        {
+                          "drugName": "Paracétamol",
+                          "dosage": "1 g",
+                          "frequency": "3 fois par jour",
+                          "duration": "5 jours"
+                        }
+                      ],
                       "reason": "Prescription dictée par le médecin.",
                       "uncertainty": "LOW"
                     },
                     {
                       "field": "vitals",
                       "operation": "SET",
-                      "value": "{\"temperature\":38.2,\"systolic\":128,\"diastolic\":76,\"spo2\":97}",
+                      "value": {
+                        "temperature": 38.2,
+                        "systolic": 128,
+                        "diastolic": 76,
+                        "spo2": 97
+                      },
                       "reason": "Constantes dictées.",
                       "uncertainty": "LOW"
                     }
@@ -54,7 +66,12 @@ class AiClinicalResponseParserStructuredTest {
                             {
                               "field": "prescription",
                               "operation": "SET",
-                              "value": "[{\"drugName\":\"Amoxicilline\",\"autonomousDecision\":true}]",
+                              "value": [
+                                {
+                                  "drugName": "Amoxicilline",
+                                  "autonomousDecision": true
+                                }
+                              ],
                               "reason": "Test.",
                               "uncertainty": "LOW"
                             }
@@ -78,7 +95,10 @@ class AiClinicalResponseParserStructuredTest {
                             {
                               "field": "vitals",
                               "operation": "SET",
-                              "value": "{\"temperature\":37.2,\"clinicalScoreInvented\":99}",
+                              "value": {
+                                "temperature": 37.2,
+                                "clinicalScoreInvented": 99
+                              },
                               "reason": "Test.",
                               "uncertainty": "LOW"
                             }
