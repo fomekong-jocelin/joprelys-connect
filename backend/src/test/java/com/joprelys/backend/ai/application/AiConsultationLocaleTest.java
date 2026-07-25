@@ -23,6 +23,7 @@ class AiConsultationLocaleTest {
     void shouldUseRequestedEnglishLocaleForGreetingAndTranscription() {
         AiProvider provider = mock(AiProvider.class);
         VisitService visitService = mock(VisitService.class);
+        ClinicalContextAssembler contextAssembler = mock(ClinicalContextAssembler.class);
         VisitEntity visit = mock(VisitEntity.class);
         UUID visitId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
@@ -30,6 +31,7 @@ class AiConsultationLocaleTest {
 
         when(visitService.getVisit(visitId)).thenReturn(visit);
         when(visit.getStatus()).thenReturn("EN_COURS");
+        when(contextAssembler.assemble(visitId)).thenReturn(Map.of());
         when(provider.transcribeAudio(any(byte[].class), eq("audio/webm"), eq("en")))
                 .thenReturn(new AiTranscription("Pain on the right side", "en", null));
 
@@ -50,6 +52,7 @@ class AiConsultationLocaleTest {
                 visitService,
                 objectMapper,
                 new AiClinicalResponseParser(objectMapper),
+                contextAssembler,
                 new AiRevisionManager(),
                 new AiClarificationManager(properties));
 
