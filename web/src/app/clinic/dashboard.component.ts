@@ -1,15 +1,4 @@
-import {
-  ApplicationRef,
-  Component,
-  ComponentRef,
-  EnvironmentInjector,
-  OnDestroy,
-  OnInit,
-  computed,
-  createComponent,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { AuthTokenStorageService } from '../auth/auth-token-storage.service';
 import { Router, RouterLink } from '@angular/router';
 import { I18nService } from '../core/i18n/i18n.service';
@@ -27,16 +16,22 @@ import { SmartVitalsAssistantComponent } from '../consultation/smart-vitals-assi
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
-  imports: [AppShellComponent, RouterLink, DatePipe, EmptyStateComponent, ButtonComponent, FormsModule]
+  imports: [
+    AppShellComponent,
+    RouterLink,
+    DatePipe,
+    EmptyStateComponent,
+    ButtonComponent,
+    FormsModule,
+    SmartVitalsAssistantComponent,
+  ]
 })
-export class DashboardComponent implements OnInit, OnDestroy {
+export class DashboardComponent implements OnInit {
   private readonly tokenStorage = inject(AuthTokenStorageService);
   private readonly i18n = inject(I18nService);
   private readonly visitApi = inject(VisitApiService);
   private readonly router = inject(Router);
   private readonly rbacApi = inject(RbacApiService);
-  private readonly applicationRef = inject(ApplicationRef);
-  private readonly environmentInjector = inject(EnvironmentInjector);
 
   readonly session = this.tokenStorage.session;
   readonly welcomeLabel = computed(() => this.i18n.t('dashboard.welcome'));
@@ -77,8 +72,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   vitalsResp?: number;
   vitalsPain?: number;
 
-  private vitalsAssistantRef: ComponentRef<SmartVitalsAssistantComponent> | null = null;
-
   hasPermission(permissions: string[] | string): boolean {
     const expected = Array.isArray(permissions) ? permissions : [permissions];
     return expected.some((permission) => this.rbacApi.hasPermission(permission));
@@ -95,10 +88,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnDestroy(): void {
-    this.destroyVitalsAssistant();
-  }
-
   loadQueue(): void {
     this.isLoadingQueue.set(true);
     this.queueError.set('');
@@ -109,7 +98,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         ));
         this.isLoadingQueue.set(false);
 
-        // Update selected visit in the drawer if it's currently open
         const currentDrawerVisit = this.selectedVisitForDrawer();
         if (currentDrawerVisit) {
           const updated = data.find(v => v.id === currentDrawerVisit.id);
@@ -199,7 +187,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (bmi < 18.5) return 'bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)] bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]';
     if (bmi < 25) return 'bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)] bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]';
     if (bmi < 30) return 'bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)] bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]';
-    return 'bg-[var(--brand-danger-subtle)] text-red-700  dark:text-[var(--brand-danger-text)]';
+    return 'bg-[var(--brand-danger-subtle)] text-red-700 dark:text-[var(--brand-danger-text)]';
   }
 
   isTempInvalid(): boolean {
@@ -270,12 +258,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     this.showVitalsModal.set(true);
-    queueMicrotask(() => this.mountVitalsAssistant(visit));
   }
 
   closeVitalsModal(): void {
     if (!this.isSavingVitals()) {
-      this.destroyVitalsAssistant();
       this.showVitalsModal.set(false);
       this.selectedVisitForVitals.set(null);
     }
@@ -286,7 +272,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!this.hasPermission('VISIT_VITALS_WRITE') || !selectedVisit || this.isSavingVitals()) return;
 
     this.isSavingVitals.set(true);
-    this.vitalsAssistantRef?.setInput('disabled', true);
     this.vitalsError.set('');
 
     const payload = {
@@ -305,50 +290,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.visitApi.saveVitals(selectedVisit.id, payload).subscribe({
       next: () => {
         this.isSavingVitals.set(false);
-        this.destroyVitalsAssistant();
         this.showVitalsModal.set(false);
         this.selectedVisitForVitals.set(null);
         this.loadQueue();
       },
       error: (err) => {
         this.isSavingVitals.set(false);
-        this.vitalsAssistantRef?.setInput('disabled', false);
         this.vitalsError.set(err.error?.detail || err.error?.title || this.t('dashboard.vitals.saveError'));
       }
     });
   }
 
-  openAuditSecurityModal(): void {
-    this.showAuditSecurityModal.set(true);
-  }
-
-  closeAuditSecurityModal(): void {
-    this.showAuditSecurityModal.set(false);
-  }
-
-  private mountVitalsAssistant(visit: Visit): void {
-    if (this.vitalsAssistantRef || typeof document === 'undefined') return;
-    const componentRef = createComponent(SmartVitalsAssistantComponent, {
-      environmentInjector: this.environmentInjector,
-    });
-    componentRef.setInput('visitId', visit.id);
-    componentRef.setInput('patientName', visit.patientName);
-    componentRef.setInput('currentVitals', this.currentVitalsForAssistant());
-    componentRef.setInput('disabled', this.isSavingVitals());
-    componentRef.instance.proposed.subscribe(proposal => this.applyVitalsAssistantProposal(proposal));
-    this.applicationRef.attachView(componentRef.hostView);
-    document.body.appendChild(componentRef.location.nativeElement);
-    this.vitalsAssistantRef = componentRef;
-  }
-
-  private destroyVitalsAssistant(): void {
-    if (!this.vitalsAssistantRef) return;
-    this.applicationRef.detachView(this.vitalsAssistantRef.hostView);
-    this.vitalsAssistantRef.destroy();
-    this.vitalsAssistantRef = null;
-  }
-
-  private applyVitalsAssistantProposal(proposal: AiVitalsProposal): void {
+  applyVitalsAssistantProposal(proposal: AiVitalsProposal): void {
     const vitals = proposal.vitals;
     if (typeof vitals.temperature === 'number') this.vitalsTemp = vitals.temperature;
     if (typeof vitals.weight === 'number') this.vitalsWeight = vitals.weight;
@@ -360,10 +313,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (typeof vitals.glycemia === 'number') this.vitalsGlycemia = vitals.glycemia;
     if (typeof vitals.respiratoryRate === 'number') this.vitalsResp = vitals.respiratoryRate;
     if (typeof vitals.painScale === 'number') this.vitalsPain = vitals.painScale;
-    this.vitalsAssistantRef?.setInput('currentVitals', this.currentVitalsForAssistant());
   }
 
-  private currentVitalsForAssistant(): Partial<Record<AiVitalField, number>> {
+  currentVitalsForAssistant(): Partial<Record<AiVitalField, number>> {
     const values: Array<[AiVitalField, number | undefined]> = [
       ['temperature', this.vitalsTemp],
       ['weight', this.vitalsWeight],
@@ -379,5 +331,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return Object.fromEntries(
       values.filter((entry): entry is [AiVitalField, number] => typeof entry[1] === 'number'),
     );
+  }
+
+  openAuditSecurityModal(): void {
+    this.showAuditSecurityModal.set(true);
+  }
+
+  closeAuditSecurityModal(): void {
+    this.showAuditSecurityModal.set(false);
   }
 }
