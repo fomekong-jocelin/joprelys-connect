@@ -214,10 +214,15 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     operation.subscribe({
       next: response => {
         this.processing.set(false);
+        const requiresValidation = response.revisions.some(revision => revision.status === 'PENDING');
         this.message.emit(response);
         const nextQuestion = response.clarifications.find(item => item.status === 'PENDING')?.question?.trim();
         this.speakApproved(nextQuestion || response.assistantMessage);
-        this.syncMute();
+        if (requiresValidation) {
+          this.bridge.setMuted(true);
+        } else {
+          this.syncMute();
+        }
       },
       error: () => {
         this.processing.set(false);
