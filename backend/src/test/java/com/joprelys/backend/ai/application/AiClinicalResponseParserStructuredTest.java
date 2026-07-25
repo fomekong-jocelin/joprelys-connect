@@ -69,6 +69,30 @@ class AiClinicalResponseParserStructuredTest {
     }
 
     @Test
+    void shouldRejectUnknownVitalAttribute() {
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> parser.parse("""
+                        {
+                          "changes": [
+                            {
+                              "field": "vitals",
+                              "operation": "SET",
+                              "value": "{\"temperature\":37.2,\"clinicalScoreInvented\":99}",
+                              "reason": "Test.",
+                              "uncertainty": "LOW"
+                            }
+                          ],
+                          "assistantMessage": "Test",
+                          "needsClarification": false,
+                          "clarification": null
+                        }
+                        """));
+
+        assertEquals("AI_CHANGE_INVALID", exception.getReason());
+    }
+
+    @Test
     void shouldAllowClarificationOnVitals() {
         var parsed = parser.parse("""
                 {
