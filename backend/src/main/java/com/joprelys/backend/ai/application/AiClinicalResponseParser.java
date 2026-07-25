@@ -15,8 +15,17 @@ final class AiClinicalResponseParser {
 
     static final Set<String> ALLOWED_FIELDS = Set.of(
             "symptoms", "clinicalExam", "suspectedDiagnosis", "diagnosis",
-            "finalDiagnosis", "conclusion", "advice", "followUp");
+            "finalDiagnosis", "conclusion", "advice", "followUp",
+            "prescription", "labOrders", "vitals");
 
+    private static final Set<String> STRUCTURED_FIELDS = Set.of(
+            "prescription", "labOrders", "vitals");
+    private static final Set<String> PRESCRIPTION_FIELDS = Set.of(
+            "drugName", "dosage", "posology", "duration", "quantity",
+            "instructions", "form", "route", "frequency", "substitutionAllowed");
+    private static final Set<String> VITAL_FIELDS = Set.of(
+            "temperature", "weight", "height", "pulse", "systolic", "diastolic",
+            "spo2", "glycemia", "respiratoryRate", "painScale");
     private static final Set<String> ALLOWED_OPERATIONS = Set.of("SET", "CLEAR");
     private static final Set<String> ALLOWED_UNCERTAINTIES = Set.of("LOW", "MEDIUM", "HIGH");
     private static final int MAX_CLARIFICATION_OPTIONS = 5;
@@ -98,8 +107,7 @@ final class AiClinicalResponseParser {
             if (proposedValue.isBlank()) {
                 throw invalidChange();
             }
-            int maximum = field.equals("followUp") ? 1000 : 5000;
-            proposedValue = limit(proposedValue, maximum);
+            proposedValue = normalizeFieldValue(field, proposedValue);
         }
         return new ParsedChange(
                 field,
@@ -122,11 +130,10 @@ final class AiClinicalResponseParser {
                     && ALLOWED_FIELDS.contains(key.toString())
                     && !stringValue.isBlank()) {
                 String field = key.toString();
-                int maximum = field.equals("followUp") ? 1000 : 5000;
                 result.put(field, new ParsedChange(
                         field,
                         "SET",
-                        limit(stringValue.trim(), maximum),
+                        normalizeFieldValue(field, stringValue.trim()),
                         limit(assistantMessage, 1000),
                         "UNKNOWN"));
             }
@@ -159,6 +166,104 @@ final class AiClinicalResponseParser {
                 field,
                 limit(question, 1000),
                 List.copyOf(options));
+    }
+
+    private String normalizeFieldValue(String field, String value) {
+        if (!STRUCTURED_FIELDS.contains(field)) {
+            return limit(value.trim(), maximumFor(field));
+        }
+        try {
+            Object parsed = switch (field) {
+                case "prescription" -> validatePrescription(value);
+                case "labOrders" -> validateLabOrders(value);
+                case "vitals" -> validateVitals(value);
+                default -> throw invalidChange();
+            };
+            return limit(objectMapper.writeValueAsString(parsed), maximumFor(field));
+        } catch (ResponseStatusException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw invalidChange();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> validatePrescription(String value) throws Exception {
+        Object parsed = objectMapper.readValue(value, Object.class);
+        if (!(parsed instanceof List<?> list)) {
+            throw invalidChange();
+        }
+        List<Map<String, Object>> normalized = new ArrayList<>();
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> raw)) {
+                throw invalidChange();
+            }
+            Map<String, Object> line = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : raw.entrySet()) {
+                String key = entry.getKey() == null ? "" : entry.getKey().toString();
+                if (!PRESCRIPTION_FIELDS.contains(key)) {
+                    throw invalidChange();
+                }
+                Object itemValue = entry.getValue();
+                if ("substitutionAllowed".equals(key)) {
+                    if (!(itemValue instanceof Boolean)) {
+                        throw invalidChange();
+                    }
+                    line.put(key, itemValue);
+                } else if (itemValue instanceof String text && !text.isBlank()) {
+                    line.put(key, limit(text.trim(), 500));
+                } else if (itemValue != null) {
+                    throw invalidChange();
+                }
+            }
+            Object drugName = line.get("drugName");
+            if (!(drugName instanceof String name) || name.isBlank()) {
+                throw invalidChange();
+            }
+            normalized.add(line);
+        }
+        return List.copyOf(normalized);
+    }
+
+    private List<String> validateLabOrders(String value) throws Exception {
+        Object parsed = objectMapper.readValue(value, Object.class);
+        if (!(parsed instanceof List<?> list)) {
+            throw invalidChange();
+        }
+        List<String> normalized = new ArrayList<>();
+        for (Object item : list) {
+            if (!(item instanceof String exam) || exam.isBlank()) {
+                throw invalidChange();
+            }
+            normalized.add(limit(exam.trim(), 300));
+        }
+        return List.copyOf(normalized);
+    }
+
+    private Map<String, Number> validateVitals(String value) throws Exception {
+        Object parsed = objectMapper.readValue(value, Object.class);
+        if (!(parsed instanceof Map<?, ?> map)) {
+            throw invalidChange();
+        }
+        Map<String, Number> normalized = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            String key = entry.getKey() == null ? "" : entry.getKey().toString();
+            if (!VITAL_FIELDS.contains(key) || !(entry.getValue() instanceof Number number)) {
+                throw invalidChange();
+            }
+            normalized.put(key, number);
+        }
+        if (normalized.isEmpty()) {
+            throw invalidChange();
+        }
+        return normalized;
+    }
+
+    private int maximumFor(String field) {
+        if (STRUCTURED_FIELDS.contains(field)) {
+            return 12000;
+        }
+        return field.equals("followUp") ? 1000 : 5000;
     }
 
     private String stringValue(Object value) {
