@@ -42,7 +42,7 @@ class HospitalOrganizationControllerTest {
 
     @BeforeEach
     void setUp() {
-        clearTestData();
+        TenantContext.clear();
         organization = organizationRepository.save(new OrganizationEntity(
                 "Clinique Organisation",
                 "org-" + UUID.randomUUID() + "@joprelys.local",
@@ -76,7 +76,27 @@ class HospitalOrganizationControllerTest {
 
     @AfterEach
     void tearDown() {
-        clearTestData();
+        TenantContext.clear();
+        if (organization != null && organization.getId() != null) {
+            // Supprimer uniquement les unités de cette fixture, des feuilles vers la racine,
+            // afin de respecter la FK hiérarchique (parent_id, organization_id).
+            int deleted;
+            do {
+                deleted = jdbcTemplate.update(
+                        """
+                        DELETE FROM organizational_units
+                        WHERE organization_id = ?
+                          AND id NOT IN (
+                              SELECT parent_id
+                              FROM organizational_units
+                              WHERE organization_id = ?
+                                AND parent_id IS NOT NULL
+                          )
+                        """,
+                        organization.getId(),
+                        organization.getId());
+            } while (deleted > 0);
+        }
     }
 
     @Test
@@ -215,13 +235,5 @@ class HospitalOrganizationControllerTest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return jsonMapper.readTree(response).get("id").asString();
-    }
-
-    private void clearTestData() {
-        TenantContext.clear();
-        jdbcTemplate.update("DELETE FROM audit_logs");
-        jdbcTemplate.update("DELETE FROM organizational_units");
-        userAccountRepository.deleteAll();
-        organizationRepository.deleteAll();
     }
 }

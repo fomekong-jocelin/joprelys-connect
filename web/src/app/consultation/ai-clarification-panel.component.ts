@@ -23,6 +23,9 @@ export interface AiClarificationAnswer {
             <p class="mt-1 text-sm font-semibold text-amber-950 dark:text-amber-100">
               {{ clarification.question }}
             </p>
+            <p class="mt-1 text-[10px] text-amber-800/80 dark:text-amber-200/70">
+              En mode conversation, répondez simplement à voix haute. Vous pouvez aussi répondre ci-dessous.
+            </p>
           </div>
           <span class="w-fit rounded-[3px] border border-amber-300 px-2 py-1 text-[10px] font-semibold text-amber-800 dark:border-amber-700 dark:text-amber-200">
             {{ fieldLabel(clarification.field) }}
@@ -132,6 +135,9 @@ export class AiClarificationPanelComponent {
       conclusion: this.i18n.t('consultation.conclusion.label', 'Conclusion'),
       advice: this.i18n.t('consultation.advice.label', 'Conseils au patient'),
       followUp: this.i18n.t('consultation.followUp.label', 'Suivi recommandé'),
+      prescription: 'Ordonnance',
+      labOrders: 'Examens biologiques',
+      vitals: 'Constantes vitales',
     };
     return labels[field];
   }

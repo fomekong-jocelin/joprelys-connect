@@ -28,7 +28,7 @@ export interface AiProposalDecisionRequest {
               {{ i18n.t('consultation.ai.revisionTitle', 'Modifications à valider') }}
             </p>
             <p class="mt-1 text-xs leading-5 text-violet-900 dark:text-violet-100">
-              {{ i18n.t('consultation.ai.revisionHelp', 'Le brouillon accepté reste inchangé tant que vous n’avez pas pris de décision.') }}
+              Le copilote propose uniquement. Les données restent inchangées jusqu’à votre validation explicite.
             </p>
           </div>
           <span class="w-fit rounded-[3px] border border-violet-300 px-2 py-1 text-[10px] font-semibold text-violet-800 dark:border-violet-700 dark:text-violet-200">
@@ -76,7 +76,7 @@ export interface AiProposalDecisionRequest {
                     {{ i18n.t('consultation.ai.previousValue', 'Avant') }}
                   </p>
                   <p class="mt-1 whitespace-pre-wrap text-xs leading-5 text-[var(--text-primary)]">
-                    {{ proposal.previousValue || i18n.t('consultation.ai.emptyValue', 'Vide') }}
+                    {{ proposal.previousValue ? formatValue(proposal.field, proposal.previousValue) : i18n.t('consultation.ai.emptyValue', 'Vide') }}
                   </p>
                 </div>
                 <div class="rounded-[4px] border border-emerald-100 bg-emerald-50/50 p-2.5 dark:border-emerald-950 dark:bg-emerald-950/20">
@@ -86,7 +86,7 @@ export interface AiProposalDecisionRequest {
                   <p class="mt-1 whitespace-pre-wrap text-xs leading-5 text-[var(--text-primary)]">
                     {{ proposal.operation === 'CLEAR'
                       ? i18n.t('consultation.ai.clearValue', 'Supprimer cette valeur')
-                      : proposal.proposedValue }}
+                      : formatValue(proposal.field, proposal.proposedValue || '') }}
                   </p>
                 </div>
               </div>
@@ -217,6 +217,29 @@ export class AiProposalPanelComponent {
     return labels[uncertainty];
   }
 
+  formatValue(field: AiField, value: string): string {
+    if (!['prescription', 'labOrders', 'vitals'].includes(field)) return value;
+    try {
+      const parsed = JSON.parse(value);
+      if (field === 'prescription' && Array.isArray(parsed)) {
+        return parsed.map((line: Record<string, unknown>) =>
+          [line['drugName'], line['dosage'], line['frequency'], line['duration'], line['route']]
+            .filter(Boolean)
+            .join(' · '),
+        ).join('\n');
+      }
+      if (field === 'labOrders' && Array.isArray(parsed)) return parsed.join(', ');
+      if (field === 'vitals' && parsed && typeof parsed === 'object') {
+        return Object.entries(parsed as Record<string, unknown>)
+          .map(([key, item]) => `${key}: ${item}`)
+          .join(' · ');
+      }
+    } catch {
+      return value;
+    }
+    return value;
+  }
+
   fieldLabel(field: AiField): string {
     const labels: Record<AiField, string> = {
       symptoms: this.i18n.t('consultation.symptoms.label', 'Symptômes'),
@@ -227,6 +250,9 @@ export class AiProposalPanelComponent {
       conclusion: this.i18n.t('consultation.conclusion.label', 'Conclusion'),
       advice: this.i18n.t('consultation.advice.label', 'Conseils au patient'),
       followUp: this.i18n.t('consultation.followUp.label', 'Suivi recommandé'),
+      prescription: 'Ordonnance',
+      labOrders: 'Examens biologiques',
+      vitals: 'Constantes vitales',
     };
     return labels[field];
   }
