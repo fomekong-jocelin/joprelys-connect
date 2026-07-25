@@ -9,14 +9,12 @@ import java.util.Locale;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
 /**
  * Deterministic grounding guard applied after LLM parsing and before a clinical
  * proposal can be created. The prompt is guidance; this class is enforcement.
  */
-@Component
 final class AiClinicalGroundingGuard {
 
     private static final Logger log = LoggerFactory.getLogger(AiClinicalGroundingGuard.class);
@@ -32,11 +30,17 @@ final class AiClinicalGroundingGuard {
             ParsedResponse parsed,
             String latestClinicianUtterance,
             String resolvedClarificationField) {
-        if (parsed == null || parsed.changes().stream().noneMatch(this::isPrescriptionChange)) {
-            return parsed;
+        if (parsed == null) {
+            return null;
         }
 
         boolean prescriptionClarification = PRESCRIPTION.equals(resolvedClarificationField);
+        boolean ungroundedPrescriptionClarification = parsed.needsClarification()
+                && parsed.clarification() != null
+                && PRESCRIPTION.equals(parsed.clarification().field())
+                && !prescriptionClarification
+                && !hasExplicitMedicationSignal(latestClinicianUtterance);
+
         List<ParsedChange> grounded = new ArrayList<>();
         boolean prescriptionDropped = false;
 
@@ -60,8 +64,12 @@ final class AiClinicalGroundingGuard {
             }
         }
 
-        if (!prescriptionDropped) {
+        if (!prescriptionDropped && !ungroundedPrescriptionClarification) {
             return parsed;
+        }
+
+        if (ungroundedPrescriptionClarification) {
+            log.warn("Blocked ungrounded AI prescription clarification; no explicit medication signal in latest clinician utterance");
         }
 
         String safeMessage = grounded.isEmpty()
@@ -71,8 +79,8 @@ final class AiClinicalGroundingGuard {
         return new ParsedResponse(
                 List.copyOf(grounded),
                 safeMessage,
-                parsed.needsClarification(),
-                parsed.clarification());
+                ungroundedPrescriptionClarification ? false : parsed.needsClarification(),
+                ungroundedPrescriptionClarification ? null : parsed.clarification());
     }
 
     private boolean isPrescriptionChange(ParsedChange change) {
@@ -132,6 +140,18 @@ final class AiClinicalGroundingGuard {
         return meaningful > 0;
     }
 
+    private boolean hasExplicitMedicationSignal(String utterance) {
+        String normalized = normalize(utterance);
+        if (normalized.isBlank()) {
+            return false;
+        }
+        return containsAny(normalized,
+                "prescris", "prescrire", "prescription", "ordonnance", "medicament", "traitement",
+                "comprime", "gelule", "sirop", "injection", "dose", "posologie", "voie orale",
+                "drug", "medication", "medicine", "tablet", "capsule", "syrup", "prescribe")
+                || normalized.matches(".*\\b\\d+(?:[.,]\\d+)?\\s*(mg|g|ml|mcg|ug|ui)\\b.*");
+    }
+
     private boolean hasExplicitPrescriptionCancellation(String utterance) {
         String normalized = normalize(utterance);
         boolean cancellation = containsAny(normalized,
@@ -158,7 +178,7 @@ final class AiClinicalGroundingGuard {
         String normalized = Normalizer.normalize(value, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
                 .toLowerCase(Locale.ROOT)
-                .replaceAll("[^a-z0-9]+", " ")
+                .replaceAll("[^a-z0-9.,]+", " ")
                 .trim();
         return normalized.replaceAll("\\s+", " ");
     }
