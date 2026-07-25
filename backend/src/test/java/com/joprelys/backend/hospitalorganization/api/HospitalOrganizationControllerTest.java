@@ -19,7 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.json.JsonMapper;
@@ -33,7 +32,6 @@ class HospitalOrganizationControllerTest {
     @Autowired private OrganizationRepository organizationRepository;
     @Autowired private UserAccountRepository userAccountRepository;
     @Autowired private JwtService jwtService;
-    @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private JsonMapper jsonMapper;
 
     private OrganizationEntity organization;
@@ -42,7 +40,7 @@ class HospitalOrganizationControllerTest {
 
     @BeforeEach
     void setUp() {
-        clearTestData();
+        TenantContext.clear();
         organization = organizationRepository.save(new OrganizationEntity(
                 "Clinique Organisation",
                 "org-" + UUID.randomUUID() + "@joprelys.local",
@@ -76,7 +74,10 @@ class HospitalOrganizationControllerTest {
 
     @AfterEach
     void tearDown() {
-        clearTestData();
+        // Les fixtures utilisent un tenant et des identifiants uniques. Ne jamais effacer
+        // toutes les organisations : d'autres classes de test peuvent conserver des visites
+        // qui les référencent dans le même contexte H2 partagé.
+        TenantContext.clear();
     }
 
     @Test
@@ -215,13 +216,5 @@ class HospitalOrganizationControllerTest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return jsonMapper.readTree(response).get("id").asString();
-    }
-
-    private void clearTestData() {
-        TenantContext.clear();
-        jdbcTemplate.update("DELETE FROM audit_logs");
-        jdbcTemplate.update("DELETE FROM organizational_units");
-        userAccountRepository.deleteAll();
-        organizationRepository.deleteAll();
     }
 }
