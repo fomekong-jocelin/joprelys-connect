@@ -65,7 +65,7 @@ import { I18nService } from '../core/i18n/i18n.service';
       }
 
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-        @if (!realtimeActive) {
+        @if (!(conversationMode && blocked)) {
           <button
             type="button"
             (click)="toggleRecording.emit()"
@@ -130,7 +130,6 @@ export class AiAssistantInputComponent {
   @Input() recording = false;
   @Input() speaking = false;
   @Input() conversationMode = false;
-  @Input() realtimeActive = false;
   @Input() audioLevel = 0;
   @Input() mediaRecorderSupported = false;
   @Input() blocked = false;
