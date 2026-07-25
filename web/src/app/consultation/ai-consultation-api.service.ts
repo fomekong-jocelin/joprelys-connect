@@ -25,6 +25,7 @@ export type AiConversationSource =
   | 'AI'
   | 'SYSTEM';
 export type AiDecision = 'ACCEPT' | 'REJECT';
+export type AiLocale = 'fr' | 'en';
 
 export interface AiPrescriptionLine {
   drugName: string;
@@ -133,10 +134,14 @@ export interface AiTranscriptionResponse {
 export class AiConsultationApiService {
   private readonly http = inject(HttpClient);
 
-  startSession(visitId: string, draft: AiConsultationDraft): Observable<AiSessionResponse> {
+  startSession(
+    visitId: string,
+    draft: AiConsultationDraft,
+    locale: AiLocale,
+  ): Observable<AiSessionResponse> {
     return this.http.post<AiSessionResponse>(
       `/api/ai/consultations/${visitId}/sessions`,
-      { draft },
+      { draft, locale },
     );
   }
 
@@ -177,8 +182,12 @@ export class AiConsultationApiService {
     visitId: string,
     clarificationId: string,
     audio: Blob,
+    locale: AiLocale,
   ): Observable<AiMessageResponse> {
-    const headers = new HttpHeaders({ 'Content-Type': audio.type || 'audio/webm' });
+    const headers = new HttpHeaders({
+      'Content-Type': audio.type || 'audio/webm',
+      'X-Joprelys-Locale': locale,
+    });
     return this.http.post<AiMessageResponse>(
       `/api/ai/consultations/${visitId}/clarifications/${clarificationId}/answer/audio`,
       audio,
