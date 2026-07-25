@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.ObjectMapper;
@@ -284,18 +285,15 @@ final class AiClinicalResponseParser {
     }
 
     private ResponseStatusException invalidOutput() {
-        return new ResponseStatusException(
-                org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
+        return new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "AI_OUTPUT_INVALID");
     }
 
     private ResponseStatusException invalidChange() {
-        return new ResponseStatusException(
-                org.springframework.http.HttpStatusCode.valueOf(422), "AI_CHANGE_INVALID");
+        return new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "AI_CHANGE_INVALID");
     }
 
     private ResponseStatusException invalidClarification() {
-        return new ResponseStatusException(
-                org.springframework.http.HttpStatusCode.valueOf(422), "AI_CLARIFICATION_INVALID");
+        return new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "AI_CLARIFICATION_INVALID");
     }
 
     record ParsedChange(
