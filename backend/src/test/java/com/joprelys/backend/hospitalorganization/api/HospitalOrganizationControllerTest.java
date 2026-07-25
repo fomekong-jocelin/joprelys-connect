@@ -78,12 +78,24 @@ class HospitalOrganizationControllerTest {
     void tearDown() {
         TenantContext.clear();
         if (organization != null && organization.getId() != null) {
-            // Nettoyage strictement limité aux unités créées par cette fixture. Les utilisateurs
-            // et l'organisation peuvent être nettoyés ensuite par les suites historiques sans
-            // toucher aux visites ou aux organisations appartenant à d'autres tests.
-            jdbcTemplate.update(
-                    "DELETE FROM organizational_units WHERE organization_id = ?",
-                    organization.getId());
+            // Supprimer uniquement les unités de cette fixture, des feuilles vers la racine,
+            // afin de respecter la FK hiérarchique (parent_id, organization_id).
+            int deleted;
+            do {
+                deleted = jdbcTemplate.update(
+                        """
+                        DELETE FROM organizational_units
+                        WHERE organization_id = ?
+                          AND id NOT IN (
+                              SELECT parent_id
+                              FROM organizational_units
+                              WHERE organization_id = ?
+                                AND parent_id IS NOT NULL
+                          )
+                        """,
+                        organization.getId(),
+                        organization.getId());
+            } while (deleted > 0);
         }
     }
 
