@@ -10,7 +10,10 @@ export type AiField =
   | 'finalDiagnosis'
   | 'conclusion'
   | 'advice'
-  | 'followUp';
+  | 'followUp'
+  | 'prescription'
+  | 'labOrders'
+  | 'vitals';
 
 export type AiConsultationDraft = Partial<Record<AiField, string>>;
 export type AiTranscriptStatus = 'NONE' | 'PENDING_REVIEW' | 'ANALYZED';
@@ -22,6 +25,32 @@ export type AiConversationSource =
   | 'AI'
   | 'SYSTEM';
 export type AiDecision = 'ACCEPT' | 'REJECT';
+
+export interface AiPrescriptionLine {
+  drugName: string;
+  dosage?: string;
+  posology?: string;
+  duration?: string;
+  quantity?: string;
+  instructions?: string;
+  form?: string;
+  route?: string;
+  frequency?: string;
+  substitutionAllowed?: boolean;
+}
+
+export interface AiVitalsDraft {
+  temperature?: number;
+  weight?: number;
+  height?: number;
+  pulse?: number;
+  systolic?: number;
+  diastolic?: number;
+  spo2?: number;
+  glycemia?: number;
+  respiratoryRate?: number;
+  painScale?: number;
+}
 
 export interface AiConversationMessage {
   id: string;
@@ -124,6 +153,15 @@ export class AiConsultationApiService {
     );
   }
 
+  sendAudio(visitId: string, audio: Blob): Observable<AiMessageResponse> {
+    const headers = new HttpHeaders({ 'Content-Type': audio.type || 'audio/webm' });
+    return this.http.post<AiMessageResponse>(
+      `/api/ai/consultations/${visitId}/messages/audio`,
+      audio,
+      { headers },
+    );
+  }
+
   answerClarification(
     visitId: string,
     clarificationId: string,
@@ -132,6 +170,19 @@ export class AiConsultationApiService {
     return this.http.post<AiMessageResponse>(
       `/api/ai/consultations/${visitId}/clarifications/${clarificationId}/answer`,
       { answer },
+    );
+  }
+
+  answerClarificationAudio(
+    visitId: string,
+    clarificationId: string,
+    audio: Blob,
+  ): Observable<AiMessageResponse> {
+    const headers = new HttpHeaders({ 'Content-Type': audio.type || 'audio/webm' });
+    return this.http.post<AiMessageResponse>(
+      `/api/ai/consultations/${visitId}/clarifications/${clarificationId}/answer/audio`,
+      audio,
+      { headers },
     );
   }
 
@@ -178,6 +229,10 @@ export class AiConsultationApiService {
     return this.http.delete<void>(
       `/api/ai/consultations/${visitId}/transcriptions/pending`,
     );
+  }
+
+  synthesizeSpeech(text: string): Observable<Blob> {
+    return this.http.post('/api/ai/voice/speech', { text }, { responseType: 'blob' });
   }
 
   deleteSession(visitId: string): Observable<void> {
