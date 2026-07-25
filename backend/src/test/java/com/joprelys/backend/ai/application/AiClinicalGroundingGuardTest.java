@@ -41,7 +41,11 @@ class AiClinicalGroundingGuardTest {
                 }
                 """);
 
-        var grounded = guard.enforce(parsed, "Le patient a une toux sèche depuis trois jours.", null);
+        var grounded = guard.enforce(
+                parsed,
+                "Le patient a une toux sèche depuis trois jours.",
+                null,
+                "fr");
 
         assertEquals(1, grounded.changes().size());
         assertEquals("symptoms", grounded.changes().getFirst().field());
@@ -70,7 +74,8 @@ class AiClinicalGroundingGuardTest {
         var grounded = guard.enforce(
                 parsed,
                 "Je prescris du Paracétamol un gramme trois fois par jour.",
-                null);
+                null,
+                "fr");
 
         assertEquals(1, grounded.changes().size());
         assertEquals("prescription", grounded.changes().getFirst().field());
@@ -92,7 +97,11 @@ class AiClinicalGroundingGuardTest {
                 }
                 """);
 
-        var grounded = guard.enforce(parsed, "La douleur est à droite depuis ce matin.", null);
+        var grounded = guard.enforce(
+                parsed,
+                "La douleur est à droite depuis ce matin.",
+                null,
+                "fr");
 
         assertFalse(grounded.needsClarification());
         assertNull(grounded.clarification());
@@ -118,8 +127,35 @@ class AiClinicalGroundingGuardTest {
                 }
                 """);
 
-        var grounded = guard.enforce(parsed, "Cinq cents milligrammes trois fois par jour.", "prescription");
+        var grounded = guard.enforce(
+                parsed,
+                "Cinq cents milligrammes trois fois par jour.",
+                "prescription",
+                "fr");
 
         assertEquals(List.of("prescription"), grounded.changes().stream().map(change -> change.field()).toList());
+    }
+
+    @Test
+    void shouldUseEnglishSafetyMessageForEnglishSession() {
+        var parsed = parser.parse("""
+                {
+                  "changes": [{
+                    "field": "prescription",
+                    "operation": "SET",
+                    "value": [{"drugName":"Paracetamol","dosage":"1 g"}],
+                    "reason": "Suggested treatment.",
+                    "uncertainty": "LOW"
+                  }],
+                  "assistantMessage": "Medication added.",
+                  "needsClarification": false,
+                  "clarification": null
+                }
+                """);
+
+        var grounded = guard.enforce(parsed, "The patient has a dry cough.", null, "en");
+
+        assertTrue(grounded.changes().isEmpty());
+        assertTrue(grounded.assistantMessage().contains("No medication"));
     }
 }
