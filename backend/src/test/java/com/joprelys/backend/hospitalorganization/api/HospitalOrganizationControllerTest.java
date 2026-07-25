@@ -19,7 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.json.JsonMapper;
@@ -27,13 +27,13 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class HospitalOrganizationControllerTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private OrganizationRepository organizationRepository;
     @Autowired private UserAccountRepository userAccountRepository;
     @Autowired private JwtService jwtService;
+    @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private JsonMapper jsonMapper;
 
     private OrganizationEntity organization;
@@ -76,11 +76,15 @@ class HospitalOrganizationControllerTest {
 
     @AfterEach
     void tearDown() {
-        // Les fixtures utilisent un tenant et des identifiants uniques. Ne jamais effacer
-        // toutes les organisations : d'autres classes de test peuvent conserver des visites
-        // qui les référencent dans le même contexte H2 partagé. Le contexte Spring de cette
-        // classe est jeté après la classe afin que ses unités ne polluent pas les suites suivantes.
         TenantContext.clear();
+        if (organization != null && organization.getId() != null) {
+            // Nettoyage strictement limité aux unités créées par cette fixture. Les utilisateurs
+            // et l'organisation peuvent être nettoyés ensuite par les suites historiques sans
+            // toucher aux visites ou aux organisations appartenant à d'autres tests.
+            jdbcTemplate.update(
+                    "DELETE FROM organizational_units WHERE organization_id = ?",
+                    organization.getId());
+        }
     }
 
     @Test
