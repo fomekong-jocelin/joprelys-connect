@@ -30,16 +30,17 @@ public class OpenAiSpeechSynthesisService {
             @Value("${joprelys.ai.openai.tts-model:gpt-4o-mini-tts}") String model,
             @Value("${joprelys.ai.openai.tts-voice:marin}") String voice,
             @Value("${joprelys.ai.openai.tts-instructions:Voix médicale professionnelle, calme, chaleureuse, concise et naturelle. Prononcer clairement les nombres, unités et noms de médicaments sans dramatiser.}") String instructions) {
-        if (properties.openai() == null
-                || properties.openai().apiKey() == null
-                || properties.openai().apiKey().isBlank()) {
-            throw new IllegalStateException(
-                    "OPENAI_API_KEY est requis pour la synthèse vocale de l'assistant clinique.");
-        }
-        this.restClient = RestClient.builder()
-                .baseUrl(properties.openai().baseUrl())
-                .defaultHeader("Authorization", "Bearer " + properties.openai().apiKey())
-                .build();
+        AiProperties.OpenAiProperties openAi = properties.openai();
+        this.restClient = openAi == null
+                || openAi.apiKey() == null
+                || openAi.apiKey().isBlank()
+                || openAi.baseUrl() == null
+                || openAi.baseUrl().isBlank()
+                ? null
+                : RestClient.builder()
+                        .baseUrl(openAi.baseUrl())
+                        .defaultHeader("Authorization", "Bearer " + openAi.apiKey())
+                        .build();
         this.model = model;
         this.voice = voice;
         this.instructions = instructions;
@@ -48,6 +49,9 @@ public class OpenAiSpeechSynthesisService {
     public byte[] synthesize(String text) {
         if (text == null || text.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_SPEECH_TEXT_INVALID");
+        }
+        if (restClient == null) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI_SPEECH_NOT_CONFIGURED");
         }
         String normalized = text.trim();
         if (normalized.length() > MAX_TEXT_LENGTH) {
