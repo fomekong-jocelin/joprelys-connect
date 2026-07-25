@@ -25,8 +25,10 @@ import { ExamType } from '../clinic/lab/lab.models';
 import { I18nService } from '../core/i18n/i18n.service';
 import {
   AiConsultationDraft,
-  VoiceAssistantPanelComponent,
-} from './voice-assistant-panel.component';
+  AiPrescriptionLine,
+  AiVitalsDraft,
+} from './ai-consultation-api.service';
+import { VoiceAssistantPanelComponent } from './voice-assistant-panel.component';
 
 @Component({
   selector: 'app-consultation',
@@ -124,7 +126,7 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
 
   applyAiDraft(draft: AiConsultationDraft): void {
     const acceptedDraft: Record<string, string> = {};
-    const fields: Array<keyof AiConsultationDraft> = [
+    const textFields: Array<keyof AiConsultationDraft> = [
       'symptoms',
       'clinicalExam',
       'suspectedDiagnosis',
@@ -134,20 +136,93 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
       'advice',
       'followUp',
     ];
-    fields.forEach(field => {
+    textFields.forEach(field => {
       const value = draft[field];
-      acceptedDraft[field] = typeof value === 'string' ? value.trim() : '';
+      if (typeof value === 'string') acceptedDraft[field] = value.trim();
     });
-    this.form.patchValue(acceptedDraft);
+    if (Object.keys(acceptedDraft).length > 0) {
+      this.form.patchValue(acceptedDraft);
+    }
+
+    try {
+      if (draft.prescription) this.applyAiPrescription(draft.prescription);
+      if (draft.labOrders) this.applyAiLabOrders(draft.labOrders);
+      if (draft.vitals) this.applyAiVitals(draft.vitals);
+    } catch {
+      this.errorMessage.set(
+        'Une proposition structurée de l’IA est illisible. Elle n’a pas été appliquée.',
+      );
+      return;
+    }
+
     this.form.markAsDirty();
     this.syncVoiceDraft();
     this.successMessage.set(
-      this.i18n.t(
-        'consultation.ai.applied',
-        'Le brouillon IA a été copié dans le formulaire. Relisez-le avant de sauvegarder.',
-      ),
+      'Les propositions IA validées ont été appliquées. Relisez la consultation, l’ordonnance, les examens et les constantes avant la sauvegarde finale.',
     );
     this.errorMessage.set('');
+  }
+
+  private applyAiPrescription(raw: string): void {
+    const parsed = JSON.parse(raw) as AiPrescriptionLine[];
+    if (!Array.isArray(parsed)) throw new Error('Invalid prescription');
+    const presc = this.prescription();
+    if (presc && presc.status !== 'DRAFT') {
+      throw new Error('Prescription finalized');
+    }
+    this.prescriptionItems.clear();
+    parsed.forEach(item => {
+      if (!item || typeof item.drugName !== 'string' || !item.drugName.trim()) return;
+      this.prescriptionItems.push(this.fb.group({
+        drugName: [item.drugName.trim(), Validators.required],
+        dosage: [item.dosage?.trim() ?? '', Validators.required],
+        posology: [item.posology?.trim() ?? ''],
+        duration: [item.duration?.trim() ?? ''],
+        quantity: [item.quantity?.trim() ?? ''],
+        instructions: [item.instructions?.trim() ?? ''],
+        form: [item.form?.trim() ?? ''],
+        route: [item.route?.trim() ?? ''],
+        frequency: [item.frequency?.trim() ?? ''],
+        substitutionAllowed: [item.substitutionAllowed !== false],
+      }));
+    });
+  }
+
+  private applyAiLabOrders(raw: string): void {
+    const parsed = JSON.parse(raw) as unknown[];
+    if (!Array.isArray(parsed)) throw new Error('Invalid lab orders');
+    this.labExams.clear();
+    parsed.forEach(item => {
+      if (typeof item === 'string' && item.trim()) this.addLabExam(item.trim());
+    });
+  }
+
+  private applyAiVitals(raw: string): void {
+    const parsed = JSON.parse(raw) as AiVitalsDraft;
+    if (!parsed || typeof parsed !== 'object') throw new Error('Invalid vitals');
+    const vitals: Vitals = {};
+    const numericFields: Array<keyof AiVitalsDraft> = [
+      'temperature', 'weight', 'height', 'pulse', 'systolic', 'diastolic',
+      'spo2', 'glycemia', 'respiratoryRate', 'painScale',
+    ];
+    numericFields.forEach(field => {
+      const value = parsed[field];
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        vitals[field] = value;
+      }
+    });
+    if (Object.keys(vitals).length === 0) return;
+    this.visitApi.saveVitals(this.visitId, vitals).subscribe({
+      next: saved => {
+        this.vitals.set(saved);
+        this.syncVoiceDraft();
+      },
+      error: err => {
+        this.errorMessage.set(
+          err.error?.detail || err.error?.title || 'Les constantes proposées n’ont pas pu être enregistrées.',
+        );
+      },
+    });
   }
 
   private scheduleVoiceAssistantMount(): void {
@@ -173,7 +248,7 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
       environmentInjector: this.environmentInjector,
     });
     componentRef.setInput('visitId', this.visitId);
-    componentRef.setInput('currentDraft', this.form.getRawValue());
+    componentRef.setInput('currentDraft', this.currentVoiceDraft());
     componentRef.instance.applyDraft.subscribe(draft => this.applyAiDraft(draft));
     this.applicationRef.attachView(componentRef.hostView);
     target.insertBefore(componentRef.location.nativeElement, formElement);
@@ -182,7 +257,14 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private syncVoiceDraft(): void {
-    this.voiceAssistantRef?.setInput('currentDraft', this.form.getRawValue());
+    this.voiceAssistantRef?.setInput('currentDraft', this.currentVoiceDraft());
+  }
+
+  private currentVoiceDraft(): Record<string, unknown> {
+    return {
+      ...this.form.getRawValue(),
+      vitals: this.vitals() ?? {},
+    };
   }
 
   private loadData(): void {
@@ -194,6 +276,7 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
         this.vitals.set(data);
         this.isLoading.set(false);
         this.scheduleVoiceAssistantMount();
+        this.syncVoiceDraft();
       },
       error: () => {
         this.isLoading.set(false);
@@ -265,6 +348,7 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
             substitutionAllowed: [{ value: item.substitutionAllowed !== false, disabled: presc.status !== 'DRAFT' }],
           }));
         });
+        this.syncVoiceDraft();
       },
       error: () => {
         this.prescription.set(null);
