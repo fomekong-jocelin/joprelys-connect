@@ -49,8 +49,9 @@ public class AiConsultationController {
         Identity identity = identity(authentication);
         Map<String, String> draft = request == null || request.draft() == null
                 ? Map.of() : request.draft();
+        String locale = request == null ? null : request.locale();
         return service.startSession(
-                visitId, identity.userId(), identity.organizationId(), draft);
+                visitId, identity.userId(), identity.organizationId(), draft, locale);
     }
 
     @GetMapping("/{visitId}/session")
@@ -214,7 +215,9 @@ public class AiConsultationController {
         }
     }
 
-    public record StartSessionRequest(Map<String, String> draft) {
+    public record StartSessionRequest(
+            Map<String, String> draft,
+            @Pattern(regexp = "fr|en") String locale) {
     }
 
     public record TextMessageRequest(
