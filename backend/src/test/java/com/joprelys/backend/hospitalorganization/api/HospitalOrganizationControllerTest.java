@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.json.JsonMapper;
@@ -26,6 +27,7 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class HospitalOrganizationControllerTest {
 
     @Autowired private MockMvc mockMvc;
@@ -76,7 +78,8 @@ class HospitalOrganizationControllerTest {
     void tearDown() {
         // Les fixtures utilisent un tenant et des identifiants uniques. Ne jamais effacer
         // toutes les organisations : d'autres classes de test peuvent conserver des visites
-        // qui les référencent dans le même contexte H2 partagé.
+        // qui les référencent dans le même contexte H2 partagé. Le contexte Spring de cette
+        // classe est jeté après la classe afin que ses unités ne polluent pas les suites suivantes.
         TenantContext.clear();
     }
 
