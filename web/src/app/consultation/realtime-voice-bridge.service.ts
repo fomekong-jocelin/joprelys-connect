@@ -83,7 +83,7 @@ export class RealtimeVoiceBridgeService {
 
       const audio = new Audio();
       audio.autoplay = true;
-      audio.playsInline = true;
+      audio.setAttribute('playsinline', 'true');
       this.remoteAudio = audio;
       pc.ontrack = event => {
         audio.srcObject = event.streams[0] ?? new MediaStream([event.track]);
