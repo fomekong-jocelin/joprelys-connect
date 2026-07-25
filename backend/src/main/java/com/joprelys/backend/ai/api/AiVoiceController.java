@@ -4,7 +4,6 @@ import com.joprelys.backend.ai.application.AiConsultationContract.MessageView;
 import com.joprelys.backend.ai.application.AiConsultationService;
 import com.joprelys.backend.ai.domain.AiProvider;
 import com.joprelys.backend.ai.domain.AiTranscription;
-import com.joprelys.backend.ai.infrastructure.AiProperties;
 import com.joprelys.backend.ai.infrastructure.openai.OpenAiSpeechSynthesisService;
 import com.joprelys.backend.auth.security.JwtClaims;
 import com.joprelys.backend.auth.security.TenantContext;
@@ -39,17 +38,14 @@ public class AiVoiceController {
 
     private final OpenAiSpeechSynthesisService speechSynthesisService;
     private final AiProvider aiProvider;
-    private final AiProperties properties;
     private final AiConsultationService consultationService;
 
     public AiVoiceController(
             OpenAiSpeechSynthesisService speechSynthesisService,
             AiProvider aiProvider,
-            AiProperties properties,
             AiConsultationService consultationService) {
         this.speechSynthesisService = speechSynthesisService;
         this.aiProvider = aiProvider;
-        this.properties = properties;
         this.consultationService = consultationService;
     }
 
@@ -79,9 +75,11 @@ public class AiVoiceController {
         validateAudio(audio, contentType);
         Identity identity = identity(authentication);
         String normalizedMime = normalizeMimeType(contentType);
+        String locale = consultationService.sessionLocale(
+                visitId, identity.userId(), identity.organizationId());
         AiTranscription transcription;
         try {
-            transcription = aiProvider.transcribeAudio(audio, normalizedMime, properties.locale());
+            transcription = aiProvider.transcribeAudio(audio, normalizedMime, locale);
         } catch (RuntimeException exception) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI_UNAVAILABLE");
         }
