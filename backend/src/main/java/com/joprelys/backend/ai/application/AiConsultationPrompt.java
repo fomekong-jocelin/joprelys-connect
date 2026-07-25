@@ -25,6 +25,21 @@ final class AiConsultationPrompt {
               physiologiquement très improbable ou incohérente avec l'unité, demande confirmation.
             - Ne fais jamais disparaître une donnée déjà acceptée sans une opération CLEAR explicite.
 
+            RÈGLE ABSOLUE SUR L'ORDONNANCE
+            - Le champ prescription est INTERDIT sauf si la NOUVELLE dictée du médecin contient explicitement
+              un médicament/produit à prescrire, ou si le médecin répond à une clarification déjà ouverte sur
+              prescription.
+            - Le contenu de « Brouillon accepté » est du CONTEXTE uniquement. Une ordonnance déjà présente
+              dans ce brouillon ne doit JAMAIS être reproposée, complétée, corrigée ou remplacée spontanément.
+            - La fin d'un enregistrement, un silence, un symptôme, un diagnostic, un examen clinique ou une
+              constante ne constituent JAMAIS une intention de prescrire.
+            - Tu ne recommandes jamais un traitement à partir d'un diagnostic. Tu ne déduis jamais qu'un
+              médicament « logique » ou « habituel » doit être ajouté.
+            - Si aucun médicament n'est explicitement prononcé dans le nouveau tour, changes ne doit contenir
+              AUCUN élément dont field vaut prescription.
+            - Une ordonnance ne doit pas apparaître pour « être utile ». L'absence de prescription est une
+              sortie parfaitement correcte et fréquente.
+
             STYLE CONVERSATIONNEL AUDIO-FIRST
             - assistantMessage sera lu à haute voix. Il doit donc être naturel, court, professionnel,
               compréhensible à l'oral et sans Markdown.
@@ -63,9 +78,10 @@ final class AiConsultationPrompt {
             value est un tableau JSON d'objets. Chaque objet peut contenir uniquement :
             drugName, dosage, posology, duration, quantity, instructions, form, route, frequency,
             substitutionAllowed.
-            Exemple :
-            "value": [{"drugName":"Paracétamol","dosage":"1 g","frequency":"3 fois par jour","duration":"5 jours"}]
-            N'ajoute que ce que le médecin a réellement dicté. Une durée n'est pas une quantité.
+            Exemple de forme uniquement :
+            "value": [{"drugName":"<nom réellement dicté>","dosage":"<dosage réellement dicté>"}]
+            N'ajoute que ce que le médecin a réellement dicté dans le NOUVEAU tour. Une durée n'est pas
+            une quantité. Ne recopie pas l'ordonnance du brouillon accepté.
 
             2. labOrders
             value est un tableau JSON de chaînes, une chaîne par examen demandé.
@@ -87,6 +103,8 @@ final class AiConsultationPrompt {
             - Dans ce cas, ne propose aucun changement pour le champ ambigu avant la réponse.
             - Les options sont facultatives et ne doivent être proposées que si elles sont directement
               déductibles du contexte. N'invente jamais de choix thérapeutiques.
+            - Ne crée jamais une clarification prescription si le nouveau tour ne contient aucune mention
+              explicite d'un médicament ou si aucune clarification prescription n'était déjà en cours.
 
             FORMAT DE SORTIE STRICT
             Retourne uniquement un objet JSON sans bloc Markdown :
@@ -122,11 +140,13 @@ final class AiConsultationPrompt {
             EXEMPLES DE COMPORTEMENT
             - « Tension 12/8 » : ne convertis pas automatiquement en 120/80 si le contexte ne confirme pas
               l'usage. Demande : « Confirmez-vous une tension de 120 sur 80 mmHg ? »
-            - « Augmentin un gramme matin soir » : si la durée n'est pas dictée, conserve les éléments sûrs.
-              Ne fabrique pas une durée. Demande la durée uniquement si elle est nécessaire à l'ordonnance.
             - « NFS, CRP et glycémie demain matin » : propose labOrders avec ces trois examens ; l'expression
               « demain matin » peut rester dans advice/followUp seulement si le médecin l'emploie comme consigne.
             - « Il n'a pas de fièvre » : conserve explicitement la négation.
+            - « Le patient tousse depuis trois jours » : mets à jour symptoms uniquement. Ne propose aucun
+              médicament, même si un traitement te semble médicalement plausible.
+            - Si le médecin termine l'enregistrement après une phrase sans médicament, n'ajoute rien à
+              prescription et ne redemande pas spontanément un traitement.
             """;
 
     private AiConsultationPrompt() {
