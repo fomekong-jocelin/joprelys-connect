@@ -1,6 +1,7 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { I18nService } from '../core/i18n/i18n.service';
 
 export type AiField =
   | 'symptoms'
@@ -25,7 +26,6 @@ export type AiConversationSource =
   | 'AI'
   | 'SYSTEM';
 export type AiDecision = 'ACCEPT' | 'REJECT';
-export type AiLocale = 'fr' | 'en';
 
 export interface AiPrescriptionLine {
   drugName: string;
@@ -133,15 +133,12 @@ export interface AiTranscriptionResponse {
 @Injectable({ providedIn: 'root' })
 export class AiConsultationApiService {
   private readonly http = inject(HttpClient);
+  private readonly i18n = inject(I18nService);
 
-  startSession(
-    visitId: string,
-    draft: AiConsultationDraft,
-    locale: AiLocale,
-  ): Observable<AiSessionResponse> {
+  startSession(visitId: string, draft: AiConsultationDraft): Observable<AiSessionResponse> {
     return this.http.post<AiSessionResponse>(
       `/api/ai/consultations/${visitId}/sessions`,
-      { draft, locale },
+      { draft, locale: this.i18n.currentLanguage() },
     );
   }
 
@@ -182,11 +179,10 @@ export class AiConsultationApiService {
     visitId: string,
     clarificationId: string,
     audio: Blob,
-    locale: AiLocale,
   ): Observable<AiMessageResponse> {
     const headers = new HttpHeaders({
       'Content-Type': audio.type || 'audio/webm',
-      'X-Joprelys-Locale': locale,
+      'X-Joprelys-Locale': this.i18n.currentLanguage(),
     });
     return this.http.post<AiMessageResponse>(
       `/api/ai/consultations/${visitId}/clarifications/${clarificationId}/answer/audio`,
