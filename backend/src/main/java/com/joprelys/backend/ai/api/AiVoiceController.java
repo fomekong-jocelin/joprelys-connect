@@ -31,7 +31,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
-@PreAuthorize("hasAuthority('CLINICAL_WRITE')")
 public class AiVoiceController {
 
     private static final int MAX_AUDIO_BYTES = 10 * 1024 * 1024;
@@ -57,6 +56,7 @@ public class AiVoiceController {
     @PostMapping(
             value = "/api/ai/voice/speech",
             produces = "audio/mpeg")
+    @PreAuthorize("hasAnyAuthority('CLINICAL_WRITE','VISIT_VITALS_WRITE')")
     public ResponseEntity<byte[]> synthesizeSpeech(
             @Valid @RequestBody SpeechRequest request) {
         byte[] audio = speechSynthesisService.synthesize(request.text());
@@ -69,6 +69,7 @@ public class AiVoiceController {
     @PostMapping(
             value = "/api/ai/consultations/{visitId}/clarifications/{clarificationId}/answer/audio",
             consumes = {"audio/webm", "audio/mp4", "audio/mpeg", "audio/wav"})
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
     public MessageView answerClarificationAudio(
             @PathVariable UUID visitId,
             @PathVariable UUID clarificationId,
