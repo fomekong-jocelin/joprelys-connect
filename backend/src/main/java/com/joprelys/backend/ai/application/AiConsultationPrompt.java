@@ -55,27 +55,29 @@ final class AiConsultationPrompt {
             - followUp : suivi, contrôle et délai de réévaluation explicitement dictés.
 
             CHAMPS MÉTIER STRUCTURÉS
-            Les valeurs de ces champs sont des chaînes contenant du JSON compact valide.
+            Pour ces champs, value doit être du JSON NATIF dans l'objet de sortie, jamais une chaîne
+            contenant elle-même du JSON. Cela réduit les erreurs d'échappement et permet une validation
+            stricte par Joprelys avant toute proposition au médecin.
 
             1. prescription
-            Valeur SET attendue : tableau JSON d'objets. Chaque objet peut contenir uniquement :
+            value est un tableau JSON d'objets. Chaque objet peut contenir uniquement :
             drugName, dosage, posology, duration, quantity, instructions, form, route, frequency,
             substitutionAllowed.
-            Exemple de value :
-            "[{\"drugName\":\"Paracétamol\",\"dosage\":\"1 g\",\"frequency\":\"3 fois par jour\",\"duration\":\"5 jours\"}]"
+            Exemple :
+            "value": [{"drugName":"Paracétamol","dosage":"1 g","frequency":"3 fois par jour","duration":"5 jours"}]
             N'ajoute que ce que le médecin a réellement dicté. Une durée n'est pas une quantité.
 
             2. labOrders
-            Valeur SET attendue : tableau JSON de chaînes, une chaîne par examen demandé.
-            Exemple : "[\"NFS\",\"CRP\",\"Glycémie à jeun\"]".
+            value est un tableau JSON de chaînes, une chaîne par examen demandé.
+            Exemple : "value": ["NFS","CRP","Glycémie à jeun"].
             Ne transforme pas un résultat d'examen en demande d'examen.
 
             3. vitals
-            Valeur SET attendue : objet JSON contenant uniquement les clés : temperature, weight, height,
+            value est un objet JSON contenant uniquement les clés : temperature, weight, height,
             pulse, systolic, diastolic, spo2, glycemia, respiratoryRate, painScale.
             Unités attendues par Joprelys : température °C, poids kg, taille cm, pouls bpm,
             tension mmHg, SpO2 %, glycémie g/L, fréquence respiratoire cycles/min, douleur 0-10.
-            Exemple : "{\"temperature\":38.2,\"systolic\":128,\"diastolic\":76,\"spo2\":97}".
+            Exemple : "value": {"temperature":38.2,"systolic":128,"diastolic":76,"spo2":97}.
             Pour une tension dictée « 128 sur 76 », utilise systolic=128 et diastolic=76.
 
             CLARIFICATIONS
@@ -93,7 +95,7 @@ final class AiConsultationPrompt {
                 {
                   "field": "symptoms",
                   "operation": "SET",
-                  "value": "nouvelle valeur ou JSON compact pour un champ structuré",
+                  "value": "nouvelle valeur",
                   "reason": "raison courte et factuelle",
                   "uncertainty": "LOW"
                 }
@@ -103,6 +105,7 @@ final class AiConsultationPrompt {
               "clarification": null
             }
 
+            Pour prescription, labOrders et vitals, value suit les formes JSON natives décrites ci-dessus.
             Champs autorisés : symptoms, clinicalExam, suspectedDiagnosis, diagnosis, finalDiagnosis,
             conclusion, advice, followUp, prescription, labOrders, vitals.
 
