@@ -49,9 +49,16 @@ public class AiConsultationController {
         Identity identity = identity(authentication);
         Map<String, String> draft = request == null || request.draft() == null
                 ? Map.of() : request.draft();
-        String locale = request == null ? null : request.locale();
+        if (request == null || request.locale() == null || request.locale().isBlank()) {
+            return service.startSession(
+                    visitId, identity.userId(), identity.organizationId(), draft);
+        }
         return service.startSession(
-                visitId, identity.userId(), identity.organizationId(), draft, locale);
+                visitId,
+                identity.userId(),
+                identity.organizationId(),
+                draft,
+                request.locale());
     }
 
     @GetMapping("/{visitId}/session")
