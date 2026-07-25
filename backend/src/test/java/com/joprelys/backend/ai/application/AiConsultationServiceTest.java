@@ -36,6 +36,7 @@ class AiConsultationServiceTest {
 
     private AiProvider aiProvider;
     private VisitService visitService;
+    private ClinicalContextAssembler clinicalContextAssembler;
     private VisitEntity visit;
     private AiConsultationService service;
     private UUID visitId;
@@ -46,6 +47,7 @@ class AiConsultationServiceTest {
     void setUp() {
         aiProvider = mock(AiProvider.class);
         visitService = mock(VisitService.class);
+        clinicalContextAssembler = mock(ClinicalContextAssembler.class);
         visit = mock(VisitEntity.class);
         visitId = UUID.randomUUID();
         userId = UUID.randomUUID();
@@ -53,6 +55,7 @@ class AiConsultationServiceTest {
 
         when(visitService.getVisit(visitId)).thenReturn(visit);
         when(visit.getStatus()).thenReturn("EN_COURS");
+        when(clinicalContextAssembler.assemble(visitId)).thenReturn(Map.of());
 
         AiProperties properties = new AiProperties(
                 true,
@@ -71,6 +74,7 @@ class AiConsultationServiceTest {
                 visitService,
                 objectMapper,
                 new AiClinicalResponseParser(objectMapper),
+                clinicalContextAssembler,
                 new AiRevisionManager(),
                 new AiClarificationManager(properties));
     }
