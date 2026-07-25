@@ -4,7 +4,6 @@ import com.joprelys.backend.ai.application.AiConsultationContract.MessageView;
 import com.joprelys.backend.ai.application.AiConsultationService;
 import com.joprelys.backend.ai.domain.AiProvider;
 import com.joprelys.backend.ai.domain.AiTranscription;
-import com.joprelys.backend.ai.infrastructure.AiProperties;
 import com.joprelys.backend.ai.infrastructure.openai.OpenAiSpeechSynthesisService;
 import com.joprelys.backend.auth.security.JwtClaims;
 import com.joprelys.backend.auth.security.TenantContext;
@@ -31,7 +30,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
-@PreAuthorize("hasAuthority('CLINICAL_WRITE')")
 public class AiVoiceController {
 
     private static final int MAX_AUDIO_BYTES = 10 * 1024 * 1024;
@@ -40,23 +38,21 @@ public class AiVoiceController {
 
     private final OpenAiSpeechSynthesisService speechSynthesisService;
     private final AiProvider aiProvider;
-    private final AiProperties properties;
     private final AiConsultationService consultationService;
 
     public AiVoiceController(
             OpenAiSpeechSynthesisService speechSynthesisService,
             AiProvider aiProvider,
-            AiProperties properties,
             AiConsultationService consultationService) {
         this.speechSynthesisService = speechSynthesisService;
         this.aiProvider = aiProvider;
-        this.properties = properties;
         this.consultationService = consultationService;
     }
 
     @PostMapping(
             value = "/api/ai/voice/speech",
             produces = "audio/mpeg")
+    @PreAuthorize("hasAnyAuthority('CLINICAL_WRITE','VISIT_VITALS_WRITE')")
     public ResponseEntity<byte[]> synthesizeSpeech(
             @Valid @RequestBody SpeechRequest request) {
         byte[] audio = speechSynthesisService.synthesize(request.text());
@@ -69,6 +65,7 @@ public class AiVoiceController {
     @PostMapping(
             value = "/api/ai/consultations/{visitId}/clarifications/{clarificationId}/answer/audio",
             consumes = {"audio/webm", "audio/mp4", "audio/mpeg", "audio/wav"})
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
     public MessageView answerClarificationAudio(
             @PathVariable UUID visitId,
             @PathVariable UUID clarificationId,
@@ -78,9 +75,11 @@ public class AiVoiceController {
         validateAudio(audio, contentType);
         Identity identity = identity(authentication);
         String normalizedMime = normalizeMimeType(contentType);
+        String locale = consultationService.sessionLocale(
+                visitId, identity.userId(), identity.organizationId());
         AiTranscription transcription;
         try {
-            transcription = aiProvider.transcribeAudio(audio, normalizedMime, properties.locale());
+            transcription = aiProvider.transcribeAudio(audio, normalizedMime, locale);
         } catch (RuntimeException exception) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI_UNAVAILABLE");
         }

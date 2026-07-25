@@ -38,8 +38,6 @@ public class AiConsultationService {
     private static final Logger log = LoggerFactory.getLogger(AiConsultationService.class);
     private static final int MAX_AUDIO_BYTES = 10 * 1024 * 1024;
     private static final int MAX_TRANSCRIPT_LENGTH = 12000;
-    private static final String INITIAL_ASSISTANT_MESSAGE =
-            "Décrivez les symptômes et l'examen clinique.";
     private static final List<String> ALLOWED_MIME_TYPES = List.of(
             "audio/webm", "audio/mp4", "audio/mpeg", "audio/wav");
 
@@ -48,6 +46,7 @@ public class AiConsultationService {
     private final VisitService visitService;
     private final ObjectMapper objectMapper;
     private final AiClinicalResponseParser responseParser;
+    private final AiClinicalGroundingGuard groundingGuard;
     private final AiRevisionManager revisionManager;
     private final AiClarificationManager clarificationManager;
     private final ConcurrentMap<SessionKey, AiConsultationSessionState> sessions =
@@ -66,6 +65,7 @@ public class AiConsultationService {
         this.visitService = visitService;
         this.objectMapper = objectMapper;
         this.responseParser = responseParser;
+        this.groundingGuard = new AiClinicalGroundingGuard(objectMapper);
         this.revisionManager = revisionManager;
         this.clarificationManager = clarificationManager;
     }
@@ -75,16 +75,31 @@ public class AiConsultationService {
             UUID userId,
             UUID organizationId,
             Map<String, String> initialDraft) {
+        return startSession(
+                visitId,
+                userId,
+                organizationId,
+                initialDraft,
+                properties.locale());
+    }
+
+    public SessionView startSession(
+            UUID visitId,
+            UUID userId,
+            UUID organizationId,
+            Map<String, String> initialDraft,
+            String requestedLocale) {
         ensureActiveVisit(visitId);
+        String locale = normalizeLocale(requestedLocale);
         SessionKey key = sessionKey(visitId, userId, organizationId);
         AiConsultationSessionState state = new AiConsultationSessionState(
-                UUID.randomUUID(), expiry());
+                UUID.randomUUID(), expiry(), locale);
         mergeInitialDraft(state.draft, initialDraft);
-        state.assistantMessage = INITIAL_ASSISTANT_MESSAGE;
+        state.assistantMessage = initialAssistantMessage(locale);
         appendVisibleMessage(
                 state,
                 "ASSISTANT",
-                INITIAL_ASSISTANT_MESSAGE,
+                state.assistantMessage,
                 "SYSTEM",
                 false);
         sessions.put(key, state);
@@ -108,6 +123,13 @@ public class AiConsultationService {
             }
             return Optional.of(toSessionView(visitId, state));
         }
+    }
+
+    public String sessionLocale(
+            UUID visitId,
+            UUID userId,
+            UUID organizationId) {
+        return requireSession(visitId, userId, organizationId).locale;
     }
 
     public MessageView processText(
@@ -173,7 +195,7 @@ public class AiConsultationService {
             String normalizedMime = normalizeMimeType(contentType);
             try {
                 AiTranscription transcription = aiProvider.transcribeAudio(
-                        audio, normalizedMime, properties.locale());
+                        audio, normalizedMime, state.locale);
                 if (transcription == null
                         || transcription.text() == null
                         || transcription.text().isBlank()) {
@@ -299,8 +321,12 @@ public class AiConsultationService {
             String source,
             UUID resolvedClarificationId,
             String clarificationAnswer) {
+        String resolvedClarificationField = resolvedClarificationId == null
+                ? null
+                : clarificationManager.findPending(state, resolvedClarificationId).field();
         List<AiMessage> providerMessages = new ArrayList<>(state.providerMessages);
-        providerMessages.add(AiMessage.user(buildUserMessage(modelText, state.draft)));
+        providerMessages.add(AiMessage.user(buildUserMessage(
+                modelText, state.draft, state.locale)));
         trimProviderConversation(providerMessages);
         try {
             AiChatResponse response = aiProvider.chat(
@@ -309,7 +335,10 @@ public class AiConsultationService {
                 throw new ResponseStatusException(
                         org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
             }
-            ParsedResponse parsed = responseParser.parse(response.content());
+            ParsedResponse rawParsed = responseParser.parse(response.content());
+            ParsedResponse parsed = groundingGuard.enforce(
+                    rawParsed, visibleText, resolvedClarificationField, state.locale);
+            boolean groundingAdjustedOutput = parsed != rawParsed;
             if (resolvedClarificationId != null) {
                 clarificationManager.resolve(
                         state, resolvedClarificationId, clarificationAnswer);
@@ -333,7 +362,8 @@ public class AiConsultationService {
             state.expiresAt = expiry();
             state.providerMessages.clear();
             state.providerMessages.addAll(providerMessages);
-            state.providerMessages.add(AiMessage.assistant(response.content()));
+            state.providerMessages.add(AiMessage.assistant(
+                    groundingAdjustedOutput ? parsed.assistantMessage() : response.content()));
             trimProviderConversation(state.providerMessages);
             appendVisibleMessage(state, "USER", visibleText, source, false);
             appendVisibleMessage(
@@ -428,9 +458,18 @@ public class AiConsultationService {
         }
     }
 
-    private String buildUserMessage(String text, Map<String, String> draft) {
+    private String buildUserMessage(
+            String text,
+            Map<String, String> draft,
+            String locale) {
         try {
-            return "Brouillon accepté: " + objectMapper.writeValueAsString(draft)
+            String languageInstruction = "en".equals(locale)
+                    ? "Reply in English."
+                    : "Réponds en français.";
+            return "Session locale: " + locale
+                    + "\n" + languageInstruction
+                    + "\nBrouillon accepté (contexte uniquement, ne pas le recopier spontanément): "
+                    + objectMapper.writeValueAsString(draft)
                     + "\nNouvelle dictée, correction ou réponse du médecin: " + text;
         } catch (Exception exception) {
             throw new ResponseStatusException(
@@ -515,6 +554,16 @@ public class AiConsultationService {
         return contentType == null
                 ? ""
                 : contentType.split(";", 2)[0].trim().toLowerCase();
+    }
+
+    private String normalizeLocale(String locale) {
+        return "en".equalsIgnoreCase(locale) ? "en" : "fr";
+    }
+
+    private String initialAssistantMessage(String locale) {
+        return "en".equals(locale)
+                ? "Hello doctor. I’m listening."
+                : "Bonjour docteur. Je vous écoute.";
     }
 
     private String organizationKey(UUID organizationId) {

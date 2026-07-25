@@ -4,6 +4,7 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
+import { I18nService } from '../core/i18n/i18n.service';
 import {
   AiConsultationApiService,
   AiRevision,
@@ -20,6 +21,10 @@ describe('AiConsultationApiService', () => {
         AiConsultationApiService,
         provideHttpClient(),
         provideHttpClientTesting(),
+        {
+          provide: I18nService,
+          useValue: { currentLanguage: () => 'fr' },
+        },
       ],
     });
     service = TestBed.inject(AiConsultationApiService);
@@ -27,6 +32,18 @@ describe('AiConsultationApiService', () => {
   });
 
   afterEach(() => http.verify());
+
+  it('démarre la session IA avec la langue active', () => {
+    service.startSession('visit-1', { symptoms: 'Fièvre' }).subscribe();
+
+    const request = http.expectOne('/api/ai/consultations/visit-1/sessions');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      draft: { symptoms: 'Fièvre' },
+      locale: 'fr',
+    });
+    request.flush(sessionResponse());
+  });
 
   it('transcrit un audio sans lancer l analyse clinique', () => {
     const audio = new Blob(['audio'], { type: 'audio/webm' });
