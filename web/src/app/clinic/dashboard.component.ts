@@ -1,4 +1,15 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import {
+  ApplicationRef,
+  Component,
+  ComponentRef,
+  EnvironmentInjector,
+  OnDestroy,
+  OnInit,
+  computed,
+  createComponent,
+  inject,
+  signal,
+} from '@angular/core';
 import { AuthTokenStorageService } from '../auth/auth-token-storage.service';
 import { Router, RouterLink } from '@angular/router';
 import { I18nService } from '../core/i18n/i18n.service';
@@ -10,18 +21,22 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { ButtonComponent } from '../shared/ui/button.component';
 import { FormsModule } from '@angular/forms';
 import { RbacApiService } from './rbac/rbac-api.service';
+import { AiVitalField, AiVitalsProposal } from '../consultation/ai-vitals-api.service';
+import { SmartVitalsAssistantComponent } from '../consultation/smart-vitals-assistant.component';
 
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
   imports: [AppShellComponent, RouterLink, DatePipe, EmptyStateComponent, ButtonComponent, FormsModule]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   private readonly tokenStorage = inject(AuthTokenStorageService);
   private readonly i18n = inject(I18nService);
   private readonly visitApi = inject(VisitApiService);
   private readonly router = inject(Router);
   private readonly rbacApi = inject(RbacApiService);
+  private readonly applicationRef = inject(ApplicationRef);
+  private readonly environmentInjector = inject(EnvironmentInjector);
 
   readonly session = this.tokenStorage.session;
   readonly welcomeLabel = computed(() => this.i18n.t('dashboard.welcome'));
@@ -62,6 +77,8 @@ export class DashboardComponent implements OnInit {
   vitalsResp?: number;
   vitalsPain?: number;
 
+  private vitalsAssistantRef: ComponentRef<SmartVitalsAssistantComponent> | null = null;
+
   hasPermission(permissions: string[] | string): boolean {
     const expected = Array.isArray(permissions) ? permissions : [permissions];
     return expected.some((permission) => this.rbacApi.hasPermission(permission));
@@ -76,6 +93,10 @@ export class DashboardComponent implements OnInit {
     if (this.isClinicalRole()) {
       this.loadQueue();
     }
+  }
+
+  ngOnDestroy(): void {
+    this.destroyVitalsAssistant();
   }
 
   loadQueue(): void {
@@ -249,10 +270,12 @@ export class DashboardComponent implements OnInit {
     }
 
     this.showVitalsModal.set(true);
+    queueMicrotask(() => this.mountVitalsAssistant(visit));
   }
 
   closeVitalsModal(): void {
     if (!this.isSavingVitals()) {
+      this.destroyVitalsAssistant();
       this.showVitalsModal.set(false);
       this.selectedVisitForVitals.set(null);
     }
@@ -263,6 +286,7 @@ export class DashboardComponent implements OnInit {
     if (!this.hasPermission('VISIT_VITALS_WRITE') || !selectedVisit || this.isSavingVitals()) return;
 
     this.isSavingVitals.set(true);
+    this.vitalsAssistantRef?.setInput('disabled', true);
     this.vitalsError.set('');
 
     const payload = {
@@ -281,12 +305,14 @@ export class DashboardComponent implements OnInit {
     this.visitApi.saveVitals(selectedVisit.id, payload).subscribe({
       next: () => {
         this.isSavingVitals.set(false);
+        this.destroyVitalsAssistant();
         this.showVitalsModal.set(false);
         this.selectedVisitForVitals.set(null);
         this.loadQueue();
       },
       error: (err) => {
         this.isSavingVitals.set(false);
+        this.vitalsAssistantRef?.setInput('disabled', false);
         this.vitalsError.set(err.error?.detail || err.error?.title || this.t('dashboard.vitals.saveError'));
       }
     });
@@ -298,5 +324,60 @@ export class DashboardComponent implements OnInit {
 
   closeAuditSecurityModal(): void {
     this.showAuditSecurityModal.set(false);
+  }
+
+  private mountVitalsAssistant(visit: Visit): void {
+    if (this.vitalsAssistantRef || typeof document === 'undefined') return;
+    const componentRef = createComponent(SmartVitalsAssistantComponent, {
+      environmentInjector: this.environmentInjector,
+    });
+    componentRef.setInput('visitId', visit.id);
+    componentRef.setInput('patientName', visit.patientName);
+    componentRef.setInput('currentVitals', this.currentVitalsForAssistant());
+    componentRef.setInput('disabled', this.isSavingVitals());
+    componentRef.instance.proposed.subscribe(proposal => this.applyVitalsAssistantProposal(proposal));
+    this.applicationRef.attachView(componentRef.hostView);
+    document.body.appendChild(componentRef.location.nativeElement);
+    this.vitalsAssistantRef = componentRef;
+  }
+
+  private destroyVitalsAssistant(): void {
+    if (!this.vitalsAssistantRef) return;
+    this.applicationRef.detachView(this.vitalsAssistantRef.hostView);
+    this.vitalsAssistantRef.destroy();
+    this.vitalsAssistantRef = null;
+  }
+
+  private applyVitalsAssistantProposal(proposal: AiVitalsProposal): void {
+    const vitals = proposal.vitals;
+    if (typeof vitals.temperature === 'number') this.vitalsTemp = vitals.temperature;
+    if (typeof vitals.weight === 'number') this.vitalsWeight = vitals.weight;
+    if (typeof vitals.height === 'number') this.vitalsHeight = vitals.height;
+    if (typeof vitals.pulse === 'number') this.vitalsPulse = vitals.pulse;
+    if (typeof vitals.systolic === 'number') this.vitalsSystolic = vitals.systolic;
+    if (typeof vitals.diastolic === 'number') this.vitalsDiastolic = vitals.diastolic;
+    if (typeof vitals.spo2 === 'number') this.vitalsSpo2 = vitals.spo2;
+    if (typeof vitals.glycemia === 'number') this.vitalsGlycemia = vitals.glycemia;
+    if (typeof vitals.respiratoryRate === 'number') this.vitalsResp = vitals.respiratoryRate;
+    if (typeof vitals.painScale === 'number') this.vitalsPain = vitals.painScale;
+    this.vitalsAssistantRef?.setInput('currentVitals', this.currentVitalsForAssistant());
+  }
+
+  private currentVitalsForAssistant(): Partial<Record<AiVitalField, number>> {
+    const values: Array<[AiVitalField, number | undefined]> = [
+      ['temperature', this.vitalsTemp],
+      ['weight', this.vitalsWeight],
+      ['height', this.vitalsHeight],
+      ['pulse', this.vitalsPulse],
+      ['systolic', this.vitalsSystolic],
+      ['diastolic', this.vitalsDiastolic],
+      ['spo2', this.vitalsSpo2],
+      ['glycemia', this.vitalsGlycemia],
+      ['respiratoryRate', this.vitalsResp],
+      ['painScale', this.vitalsPain],
+    ];
+    return Object.fromEntries(
+      values.filter((entry): entry is [AiVitalField, number] => typeof entry[1] === 'number'),
+    );
   }
 }
