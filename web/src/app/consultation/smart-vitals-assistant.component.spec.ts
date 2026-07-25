@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { NEVER, of } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AiConsultationApiService } from './ai-consultation-api.service';
 import { AiVitalsApiService } from './ai-vitals-api.service';
@@ -17,7 +17,7 @@ describe('SmartVitalsAssistantComponent', () => {
       analyzeAudio: vi.fn(),
     };
     voiceApi = {
-      synthesizeSpeech: vi.fn().mockReturnValue(of(new Blob(['audio'], { type: 'audio/mpeg' }))),
+      synthesizeSpeech: vi.fn().mockReturnValue(NEVER),
     };
 
     await TestBed.configureTestingModule({
