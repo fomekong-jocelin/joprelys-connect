@@ -14,6 +14,7 @@ final class ClinicalFactExtractionSchema {
         fact.put("type", "object");
         fact.put("additionalProperties", false);
         fact.put("properties", Map.ofEntries(
+                Map.entry("transcriptItemId", string(64)),
                 Map.entry("factType", enumString(List.of(
                         "SYMPTOM", "VITAL", "MEDICATION", "ALLERGY", "HISTORY",
                         "ASSESSMENT", "PLAN", "ORDER"))),
@@ -31,6 +32,7 @@ final class ClinicalFactExtractionSchema {
                 Map.entry("routeText", nullableString(64)),
                 Map.entry("quoteText", string(2000))));
         fact.put("required", List.of(
+                "transcriptItemId",
                 "factType",
                 "authority",
                 "conceptCode",
@@ -51,7 +53,7 @@ final class ClinicalFactExtractionSchema {
         root.put("properties", Map.of(
                 "facts", Map.of(
                         "type", "array",
-                        "maxItems", 12,
+                        "maxItems", 64,
                         "items", fact)));
         root.put("required", List.of("facts"));
         return Map.copyOf(root);
