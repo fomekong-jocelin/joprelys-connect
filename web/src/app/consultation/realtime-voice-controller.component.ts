@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
   EventEmitter,
@@ -116,17 +117,28 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   private manualMuted = false;
   private lastSpokenMessage = '';
   private connectingForVisit = '';
+  private assistantWasSpeaking = false;
+  private awaitingAssistantPlayback = false;
 
   constructor() {
     this.subscriptions.add(this.bridge.state$.subscribe(state => {
+      const assistantJustFinished = this.assistantWasSpeaking && !state.assistantSpeaking;
+      this.assistantWasSpeaking = state.assistantSpeaking;
       this.state.set(state);
       this.activeChange.emit(state.connected);
+
+      if (assistantJustFinished) {
+        this.awaitingAssistantPlayback = false;
+        queueMicrotask(() => this.syncMute());
+      }
     }));
     this.subscriptions.add(this.bridge.transcript$.subscribe(transcript => {
       this.processTranscript(transcript);
     }));
     this.subscriptions.add(this.bridge.error$.subscribe(message => {
+      this.awaitingAssistantPlayback = false;
       this.realtimeError.emit(message);
+      this.syncMute();
     }));
   }
 
@@ -150,7 +162,12 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   }
 
   effectiveMuted(): boolean {
-    return this.blocked || this.manualMuted || this.state().muted;
+    return this.blocked
+      || this.manualMuted
+      || this.processing()
+      || this.awaitingAssistantPlayback
+      || this.state().assistantSpeaking
+      || this.state().muted;
   }
 
   statusLabel(): string {
@@ -172,6 +189,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   private async syncConnection(): Promise<void> {
     if (!this.enabled || !this.visitId || !this.session) {
       this.connectingForVisit = '';
+      this.awaitingAssistantPlayback = false;
       this.bridge.disconnect();
       return;
     }
@@ -181,6 +199,10 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     }
     if (!this.bridge.isSupported()) {
       this.activeChange.emit(false);
+      this.realtimeError.emit(this.i18n.t(
+        'consultation.ai.realtimeBrowserUnsupported',
+        'Ce navigateur ne prend pas en charge le mode Realtime. Le mode audio classique reste disponible.',
+      ));
       return;
     }
 
@@ -189,12 +211,10 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       await this.bridge.connect(this.visitId);
       this.syncMute();
       this.speakCurrentApprovedTurn();
-    } catch {
+    } catch (error) {
+      this.awaitingAssistantPlayback = false;
       this.bridge.disconnect();
-      this.realtimeError.emit(this.i18n.t(
-        'consultation.ai.realtimeUnavailable',
-        'Le temps réel est indisponible. Joprelys conserve le mode audio classique.',
-      ));
+      this.realtimeError.emit(this.realtimeConnectionError(error));
     } finally {
       this.connectingForVisit = '';
     }
@@ -205,6 +225,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     if (!text || this.processing() || this.blocked || !this.session || !this.enabled) return;
 
     this.processing.set(true);
+    this.awaitingAssistantPlayback = false;
     this.bridge.setMuted(true);
     const clarification = this.session.clarifications.find(item => item.status === 'PENDING');
     const operation = clarification
@@ -217,15 +238,23 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
         const requiresValidation = response.revisions.some(revision => revision.status === 'PENDING');
         this.message.emit(response);
         const nextQuestion = response.clarifications.find(item => item.status === 'PENDING')?.question?.trim();
-        this.speakApproved(nextQuestion || response.assistantMessage);
+        const spokenText = nextQuestion || response.assistantMessage?.trim() || '';
+
         if (requiresValidation) {
+          this.awaitingAssistantPlayback = false;
           this.bridge.setMuted(true);
-        } else {
+          this.speakApproved(spokenText, false);
+          return;
+        }
+
+        if (!this.speakApproved(spokenText, true)) {
+          this.awaitingAssistantPlayback = false;
           this.syncMute();
         }
       },
       error: () => {
         this.processing.set(false);
+        this.awaitingAssistantPlayback = false;
         this.realtimeError.emit(this.i18n.t(
           'consultation.ai.realtimeClinicalError',
           'La phrase a été entendue, mais son analyse clinique a échoué.',
@@ -239,18 +268,105 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     const pendingQuestion = this.session?.clarifications.find(
       item => item.status === 'PENDING',
     )?.question?.trim();
-    this.speakApproved(pendingQuestion || this.session?.assistantMessage || '');
+    const text = pendingQuestion || this.session?.assistantMessage || '';
+    const resumeListening = !this.blocked && !this.hasPendingRevision();
+    this.speakApproved(text, resumeListening);
   }
 
-  private speakApproved(message: string): void {
+  private speakApproved(message: string, resumeListening: boolean): boolean {
     const text = message.trim();
-    if (!text || text === this.lastSpokenMessage || !this.state().connected) return;
+    if (!text || text === this.lastSpokenMessage || !this.state().connected) return false;
     this.lastSpokenMessage = text;
+    if (resumeListening) {
+      this.awaitingAssistantPlayback = true;
+      this.bridge.setMuted(true);
+    }
     this.bridge.speakApproved(text);
+    return true;
+  }
+
+  private hasPendingRevision(): boolean {
+    return this.session?.revisions.some(revision => revision.status === 'PENDING') ?? false;
   }
 
   private syncMute(): void {
     if (!this.state().connected) return;
-    this.bridge.setMuted(this.blocked || this.manualMuted || this.processing());
+    this.bridge.setMuted(
+      this.blocked
+      || this.manualMuted
+      || this.processing()
+      || this.awaitingAssistantPlayback
+      || this.state().assistantSpeaking,
+    );
+  }
+
+  private realtimeConnectionError(error: unknown): string {
+    if (!(error instanceof HttpErrorResponse)) {
+      return this.i18n.t(
+        'consultation.ai.realtimeUnavailable',
+        'Le temps réel est indisponible. Joprelys conserve le mode audio classique.',
+      );
+    }
+
+    const detail = this.errorDetail(error);
+    switch (detail) {
+      case 'AI_REALTIME_NOT_CONFIGURED':
+        return this.i18n.t(
+          'consultation.ai.realtimeNotConfigured',
+          'OpenAI Realtime n’est pas configuré sur cet environnement. Le mode audio classique reste disponible.',
+        );
+      case 'AI_REALTIME_QUOTA_OR_BUDGET':
+        return this.i18n.t(
+          'consultation.ai.realtimeQuota',
+          'OpenAI Realtime refuse la connexion pour quota ou budget. Vérifiez le projet et la facturation OpenAI.',
+        );
+      case 'AI_REALTIME_UPSTREAM_AUTH':
+        return this.i18n.t(
+          'consultation.ai.realtimeAuth',
+          'La clé ou le projet OpenAI n’autorise pas Realtime. Vérifiez les droits de la clé configurée.',
+        );
+      case 'AI_REALTIME_CONFIG_REJECTED':
+        return this.i18n.t(
+          'consultation.ai.realtimeConfigRejected',
+          'OpenAI a refusé la configuration Realtime de cette session. Le détail est journalisé côté serveur.',
+        );
+      case 'AI_REALTIME_MODEL_OR_ENDPOINT_UNAVAILABLE':
+        return this.i18n.t(
+          'consultation.ai.realtimeModelUnavailable',
+          'Le modèle Realtime configuré n’est pas disponible pour ce projet OpenAI.',
+        );
+      case 'AI_SESSION_EXPIRED':
+        return this.i18n.t(
+          'consultation.ai.realtimeSessionExpired',
+          'La session IA a expiré. Relancez le copilote pour rétablir le temps réel.',
+        );
+      default:
+        if (error.status === 403) {
+          return this.i18n.t(
+            'consultation.ai.realtimeForbidden',
+            'Votre rôle n’autorise pas le canal Realtime de cette consultation.',
+          );
+        }
+        if (error.status === 0) {
+          return this.i18n.t(
+            'consultation.ai.realtimeNetworkError',
+            'La connexion Realtime n’a pas atteint le serveur. Vérifiez le réseau, le proxy HTTPS et WebRTC.',
+          );
+        }
+        return this.i18n.t(
+          'consultation.ai.realtimeUnavailable',
+          'Le temps réel est indisponible. Joprelys conserve le mode audio classique.',
+        );
+    }
+  }
+
+  private errorDetail(error: HttpErrorResponse): string {
+    const body = error.error;
+    if (typeof body === 'string') return body;
+    if (!body || typeof body !== 'object') return '';
+    const value = (body as { detail?: unknown; title?: unknown; message?: unknown }).detail
+      ?? (body as { title?: unknown }).title
+      ?? (body as { message?: unknown }).message;
+    return typeof value === 'string' ? value : '';
   }
 }
