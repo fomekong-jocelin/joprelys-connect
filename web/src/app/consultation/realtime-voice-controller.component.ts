@@ -18,6 +18,7 @@ import {
   AiSessionResponse,
 } from './ai-consultation-api.service';
 import {
+  RealtimeTranscriptTurn,
   RealtimeVoiceBridgeService,
   RealtimeVoiceState,
 } from './realtime-voice-bridge.service';
@@ -115,7 +116,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
         this.speakCurrentApprovedTurn();
       }
     }));
-    this.subscriptions.add(this.bridge.transcript$.subscribe(transcript => this.processTranscript(transcript)));
+    this.subscriptions.add(this.bridge.transcript$.subscribe(turn => this.processTranscript(turn)));
     this.subscriptions.add(this.bridge.error$.subscribe(message => this.realtimeError.emit(message)));
     this.subscriptions.add(this.bridge.assistantTurnCompleted$.subscribe(() => {
       setTimeout(() => this.syncMute(), 120);
@@ -184,16 +185,35 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     }
   }
 
-  private processTranscript(transcript: string): void {
-    const text = transcript.trim();
+  private processTranscript(turn: RealtimeTranscriptTurn): void {
+    const text = turn.transcript.trim();
     if (!text || this.processing() || this.blocked || !this.session || !this.enabled) return;
+    if (turn.confidence === null || !Number.isFinite(turn.confidence)) {
+      this.realtimeError.emit(this.i18n.t(
+        'consultation.ai.realtimeTranscriptUnverified',
+        'Transcription non vérifiable : Joprelys n’en déduira aucune donnée clinique. Répétez la phrase.',
+      ));
+      return;
+    }
+
     const pendingClarification = this.session.clarifications.find(item => item.status === 'PENDING');
     this.processing.set(true);
     this.bridge.setMuted(true);
     this.lastSpokenMessage = '';
     const request = pendingClarification
-      ? this.api.answerClarification(this.visitId, pendingClarification.id, text)
-      : this.api.sendText(this.visitId, text);
+      ? this.api.answerRealtimeClarification(
+          this.visitId,
+          pendingClarification.id,
+          text,
+          turn.confidence,
+          turn.eventId,
+        )
+      : this.api.sendRealtimeTranscript(
+          this.visitId,
+          text,
+          turn.confidence,
+          turn.eventId,
+        );
     request.subscribe({
       next: response => {
         this.processing.set(false);
@@ -201,15 +221,34 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
         this.bridge.setMuted(this.manualMuted || requiresDecision);
         this.message.emit(response);
       },
-      error: () => {
+      error: error => {
         this.processing.set(false);
-        this.realtimeError.emit(this.i18n.t(
-          'consultation.ai.realtimeClinicalError',
-          'La phrase a été entendue, mais son analyse clinique a échoué. Ne poursuivez pas tant que la connexion applicative n’est pas rétablie.',
-        ));
+        const reason = this.backendReason(error);
+        if (reason === 'AI_TRANSCRIPTION_LOW_CONFIDENCE' || reason === 'AI_REALTIME_TRANSCRIPTION_UNVERIFIED') {
+          this.realtimeError.emit(this.i18n.t(
+            'consultation.ai.realtimeTranscriptLowConfidence',
+            'La transcription est trop incertaine pour être utilisée cliniquement. Répétez la phrase.',
+          ));
+        } else {
+          this.realtimeError.emit(this.i18n.t(
+            'consultation.ai.realtimeClinicalError',
+            'La phrase a été entendue, mais son analyse clinique a échoué. Ne poursuivez pas tant que la connexion applicative n’est pas rétablie.',
+          ));
+        }
         this.syncMute();
       },
     });
+  }
+
+  private backendReason(error: unknown): string {
+    if (!error || typeof error !== 'object') return '';
+    const payload = (error as { error?: unknown }).error;
+    if (payload && typeof payload === 'object') {
+      const detail = (payload as { detail?: unknown; title?: unknown }).detail
+        ?? (payload as { detail?: unknown; title?: unknown }).title;
+      return typeof detail === 'string' ? detail : '';
+    }
+    return typeof payload === 'string' ? payload : '';
   }
 
   private speakCurrentApprovedTurn(): boolean {
