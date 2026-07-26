@@ -54,7 +54,7 @@ public class AmbientAudioChunkJournalService {
             AmbientAudioChunkEntity chunk = existing.get();
             validateSamePayload(chunk, audioSha256, startOffsetMs);
             if (chunk.getStatus() == AmbientAudioChunkStatus.COMPLETED) {
-                return new ChunkClaim(true);
+                return ChunkClaim.completed(chunk.getClaimToken(), chunk.getClaimGeneration());
             }
             if (chunk.getStatus() == AmbientAudioChunkStatus.PROCESSING
                     && chunk.getClaimedAt().plus(STALE_PROCESSING_AFTER).isAfter(now)) {
@@ -62,7 +62,7 @@ public class AmbientAudioChunkJournalService {
             }
             chunk.reclaim(now);
             chunkRepository.save(chunk);
-            return new ChunkClaim(false);
+            return ChunkClaim.processing(chunk.getClaimToken(), chunk.getClaimGeneration());
         }
 
         AmbientAudioChunkEntity created = new AmbientAudioChunkEntity(
@@ -75,7 +75,7 @@ public class AmbientAudioChunkJournalService {
                 userId,
                 now);
         chunkRepository.save(created);
-        return new ChunkClaim(false);
+        return ChunkClaim.processing(created.getClaimToken(), created.getClaimGeneration());
     }
 
     @Transactional
@@ -84,7 +84,8 @@ public class AmbientAudioChunkJournalService {
             UUID userId,
             UUID organizationId,
             String chunkId,
-            long startOffsetMs,
+            UUID claimToken,
+            long chunkStartOffsetMs,
             String locale,
             List<DiarizedSegment> segments) {
         lockVisit(visitId, organizationId);
@@ -94,12 +95,13 @@ public class AmbientAudioChunkJournalService {
         if (chunk.getStatus() == AmbientAudioChunkStatus.COMPLETED) {
             return completedItems(visitId, chunkId);
         }
+        requireCurrentLease(chunk, claimToken);
         List<TranscriptItemView> items = ledgerService.appendDiarizedSegments(
                 visitId,
                 userId,
                 organizationId,
                 chunkId,
-                startOffsetMs,
+                chunkStartOffsetMs,
                 locale,
                 segments);
         chunk.complete(Instant.now());
@@ -108,10 +110,15 @@ public class AmbientAudioChunkJournalService {
     }
 
     @Transactional
-    public void fail(UUID visitId, UUID organizationId, String chunkId, String errorCode) {
+    public void fail(
+            UUID visitId,
+            UUID organizationId,
+            String chunkId,
+            UUID claimToken,
+            String errorCode) {
         lockVisit(visitId, organizationId);
         chunkRepository.findByVisitIdAndChunkId(visitId, chunkId).ifPresent(chunk -> {
-            if (chunk.getStatus() != AmbientAudioChunkStatus.COMPLETED) {
+            if (chunk.ownsLease(claimToken)) {
                 chunk.fail(errorCode);
                 chunkRepository.save(chunk);
             }
@@ -141,6 +148,12 @@ public class AmbientAudioChunkJournalService {
                 .toList();
     }
 
+    private void requireCurrentLease(AmbientAudioChunkEntity chunk, UUID claimToken) {
+        if (!chunk.ownsLease(claimToken)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "AI_AMBIENT_CHUNK_LEASE_LOST");
+        }
+    }
+
     private VisitEntity lockVisit(UUID visitId, UUID organizationId) {
         VisitEntity visit = visitRepository.findByIdForUpdate(visitId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "VISIT_NOT_FOUND"));
@@ -160,6 +173,17 @@ public class AmbientAudioChunkJournalService {
         }
     }
 
-    public record ChunkClaim(boolean alreadyCompleted) {
+    public record ChunkClaim(
+            boolean alreadyCompleted,
+            UUID claimToken,
+            long claimGeneration) {
+
+        static ChunkClaim completed(UUID claimToken, long generation) {
+            return new ChunkClaim(true, claimToken, generation);
+        }
+
+        static ChunkClaim processing(UUID claimToken, long generation) {
+            return new ChunkClaim(false, claimToken, generation);
+        }
     }
 }
