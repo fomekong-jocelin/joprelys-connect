@@ -8,6 +8,7 @@ import com.joprelys.backend.ai.infrastructure.AiProperties;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
@@ -79,8 +80,7 @@ public class OpenAiProvider implements AiProvider {
         List<Map<String, String>> apiMessages = buildApiMessages(messages, systemPrompt);
         Map<String, Object> requestBody = new java.util.HashMap<>(Map.of(
                 "model", config.model(),
-                "messages", apiMessages
-        ));
+                "messages", apiMessages));
         if (supportsCustomTemperature(config.model())) {
             requestBody.put("temperature", 0.3);
         }
@@ -96,11 +96,6 @@ public class OpenAiProvider implements AiProvider {
         return parseCompletionResponse(response);
     }
 
-    /**
-     * Les modèles à raisonnement de la famille GPT-5.x (gpt-5, gpt-5.6-*, o-series)
-     * refusent une {@code temperature} personnalisée : seule la valeur par défaut
-     * est acceptée par l'API.
-     */
     private boolean supportsCustomTemperature(String model) {
         if (model == null) {
             return true;
@@ -113,16 +108,27 @@ public class OpenAiProvider implements AiProvider {
     private List<Map<String, String>> buildApiMessages(
             List<AiMessage> messages,
             String systemPrompt) {
-        List<Map<String, String>> apiMessages = new ArrayList<>();
-        apiMessages.add(Map.of("role", "system", "content", systemPrompt));
+        String dynamicSystem = messages.stream()
+                .filter(message -> message.role() == AiMessage.Role.SYSTEM)
+                .map(AiMessage::content)
+                .filter(content -> content != null && !content.isBlank())
+                .collect(Collectors.joining("\n\n"));
+        String effectiveSystemPrompt = dynamicSystem.isBlank()
+                ? systemPrompt
+                : systemPrompt + "\n\n" + dynamicSystem;
 
-        for (AiMessage msg : messages) {
-            String role = switch (msg.role()) {
-                case SYSTEM -> "system";
+        List<Map<String, String>> apiMessages = new ArrayList<>();
+        apiMessages.add(Map.of("role", "system", "content", effectiveSystemPrompt));
+        for (AiMessage message : messages) {
+            if (message.role() == AiMessage.Role.SYSTEM) {
+                continue;
+            }
+            String role = switch (message.role()) {
                 case USER -> "user";
                 case ASSISTANT -> "assistant";
+                case SYSTEM -> throw new IllegalStateException("SYSTEM_ALREADY_HANDLED");
             };
-            apiMessages.add(Map.of("role", role, "content", msg.content()));
+            apiMessages.add(Map.of("role", role, "content", message.content()));
         }
         return apiMessages;
     }
