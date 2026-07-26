@@ -5,6 +5,7 @@ import com.joprelys.backend.ai.domain.AiMessage;
 import com.joprelys.backend.ai.domain.AiProvider;
 import com.joprelys.backend.ai.domain.AiTranscription;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -32,5 +33,14 @@ public final class RoutingAiProvider implements AiProvider {
     @Override
     public AiChatResponse chat(List<AiMessage> messages, String systemPrompt) {
         return draftProvider.chat(messages, systemPrompt);
+    }
+
+    @Override
+    public AiChatResponse chatStructured(
+            List<AiMessage> messages,
+            String systemPrompt,
+            String schemaName,
+            Map<String, Object> schema) {
+        return draftProvider.chatStructured(messages, systemPrompt, schemaName, schema);
     }
 }
