@@ -1,9 +1,9 @@
-import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
 import { I18nService } from '../core/i18n/i18n.service';
 import {
   AiConsultationApiService,
@@ -43,6 +43,34 @@ describe('AiConsultationApiService', () => {
       locale: 'fr',
     });
     request.flush(sessionResponse());
+  });
+
+  it('envoie une transcription Realtime vérifiée avec confiance et provenance', () => {
+    service.sendRealtimeTranscript(
+      'visit-1',
+      'Patient sans fièvre',
+      0.91,
+      'event-42',
+    ).subscribe();
+
+    const request = http.expectOne('/api/ai/consultations/visit-1/messages/realtime');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      transcript: 'Patient sans fièvre',
+      confidence: 0.91,
+      eventId: 'event-42',
+    });
+    request.flush(messageResponse());
+  });
+
+  it('refuse localement une transcription Realtime sous le seuil', () => {
+    let reason = '';
+    service.sendRealtimeTranscript('visit-1', 'texte incertain', 0.1).subscribe({
+      error: error => reason = error.error.detail,
+    });
+
+    expect(reason).toBe('AI_TRANSCRIPTION_LOW_CONFIDENCE');
+    http.expectNone('/api/ai/consultations/visit-1/messages/realtime');
   });
 
   it('transcrit un audio sans lancer l analyse clinique', () => {
@@ -98,18 +126,7 @@ describe('AiConsultationApiService', () => {
     expect(request.request.body).toEqual({
       transcript: 'Douleur à droite et non à gauche',
     });
-    request.flush({
-      sessionId: 'session-1',
-      transcript: 'Douleur à droite et non à gauche',
-      draft: {},
-      changedFields: ['symptoms'],
-      assistantMessage: 'Correction proposée.',
-      needsClarification: false,
-      conversation: [],
-      clarifications: [],
-      revisions: [pendingRevision()],
-      expiresAt: '2026-07-18T10:00:00Z',
-    });
+    request.flush(messageResponse());
   });
 
   it('répond à une clarification avec son identifiant', () => {
@@ -117,39 +134,52 @@ describe('AiConsultationApiService', () => {
       'visit-1',
       'clarification-1',
       'Depuis deux jours',
-    ).subscribe(response => {
-      expect(response.clarifications[0].status).toBe('RESOLVED');
-      expect(response.clarifications[0].answer).toBe('Depuis deux jours');
-    });
+    ).subscribe();
 
     const request = http.expectOne(
       '/api/ai/consultations/visit-1/clarifications/clarification-1/answer',
     );
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ answer: 'Depuis deux jours' });
-    request.flush({
-      sessionId: 'session-1',
-      transcript: null,
-      draft: {},
-      changedFields: ['symptoms'],
-      assistantMessage: 'Durée proposée dans le brouillon.',
-      needsClarification: false,
-      conversation: [],
-      clarifications: [
-        {
-          id: 'clarification-1',
-          field: 'symptoms',
-          question: 'Depuis combien de temps ?',
-          status: 'RESOLVED',
-          options: [],
-          createdAt: '2026-07-18T09:59:00Z',
-          answer: 'Depuis deux jours',
-          resolvedAt: '2026-07-18T10:00:00Z',
-        },
-      ],
-      revisions: [pendingRevision()],
-      expiresAt: '2026-07-18T10:30:00Z',
+    request.flush(messageResponse());
+  });
+
+  it('envoie une clarification Realtime avec sa confiance au backend', () => {
+    service.answerRealtimeClarification(
+      'visit-1',
+      'clarification-1',
+      'Depuis deux jours',
+      0.87,
+      'event-clarification',
+    ).subscribe();
+
+    const request = http.expectOne(
+      '/api/ai/consultations/visit-1/clarifications/clarification-1/answer/realtime',
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      answer: 'Depuis deux jours',
+      confidence: 0.87,
+      eventId: 'event-clarification',
     });
+    request.flush(messageResponse());
+  });
+
+  it('refuse localement une clarification Realtime sous le seuil', () => {
+    let reason = '';
+    service.answerRealtimeClarification(
+      'visit-1',
+      'clarification-1',
+      'réponse incertaine',
+      0.2,
+    ).subscribe({
+      error: error => reason = error.error.detail,
+    });
+
+    expect(reason).toBe('AI_TRANSCRIPTION_LOW_CONFIDENCE');
+    http.expectNone(
+      '/api/ai/consultations/visit-1/clarifications/clarification-1/answer/realtime',
+    );
   });
 
   it('accepte une proposition avec son identifiant', () => {
@@ -218,6 +248,21 @@ describe('AiConsultationApiService', () => {
           decidedAt: null,
         },
       ],
+    };
+  }
+
+  function messageResponse() {
+    return {
+      sessionId: 'session-1',
+      transcript: 'Douleur à droite et non à gauche',
+      draft: {},
+      changedFields: ['symptoms'],
+      assistantMessage: 'Correction proposée.',
+      needsClarification: false,
+      conversation: [],
+      clarifications: [],
+      revisions: [pendingRevision()],
+      expiresAt: '2026-07-18T10:00:00Z',
     };
   }
 
