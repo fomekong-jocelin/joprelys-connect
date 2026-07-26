@@ -315,6 +315,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
       || selectedVisit.id !== visit.id
     ) return;
 
+    const modalPanel = document.querySelector<HTMLElement>(
+      'app-dashboard .fixed.inset-0.z-\\[60\\] > div.relative',
+    );
+    const separator = modalPanel?.querySelector('hr');
+    if (!modalPanel || !separator) {
+      setTimeout(() => this.mountVitalsAssistant(visit), 0);
+      return;
+    }
+
     const componentRef = createComponent(SmartVitalsAssistantComponent, {
       environmentInjector: this.environmentInjector,
     });
@@ -324,7 +333,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     componentRef.setInput('disabled', this.isSavingVitals());
     componentRef.instance.proposed.subscribe(proposal => this.applyVitalsAssistantProposal(proposal));
     this.applicationRef.attachView(componentRef.hostView);
-    document.body.appendChild(componentRef.location.nativeElement);
+
+    const hostElement = componentRef.location.nativeElement as HTMLElement;
+    const assistantSection = hostElement.querySelector<HTMLElement>('section');
+    if (assistantSection) {
+      assistantSection.className = 'relative z-10 mb-4 block w-full';
+    }
+    separator.insertAdjacentElement('afterend', hostElement);
     this.vitalsAssistantRef = componentRef;
   }
 
