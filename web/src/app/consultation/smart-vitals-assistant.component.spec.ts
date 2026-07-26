@@ -1,3 +1,4 @@
+import { provideHttpClient } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NEVER, of } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
@@ -23,6 +24,7 @@ describe('SmartVitalsAssistantComponent', () => {
     await TestBed.configureTestingModule({
       imports: [SmartVitalsAssistantComponent],
       providers: [
+        provideHttpClient(),
         { provide: AiVitalsApiService, useValue: vitalsApi },
         { provide: AiConsultationApiService, useValue: voiceApi },
         {
@@ -78,5 +80,22 @@ describe('SmartVitalsAssistantComponent', () => {
 
     expect(emitted).not.toHaveBeenCalled();
     expect(component.needsConfirmation()).toBe(true);
+  });
+
+  it('should accept realtime proposals without triggering legacy TTS twice', () => {
+    const proposal = {
+      transcript: 'Saturation 97',
+      vitals: { spo2: 97 },
+      assistantMessage: 'Saturation détectée.',
+      needsConfirmation: false,
+      confirmationReason: '',
+    };
+    const emitted = vi.fn();
+    component.proposed.subscribe(emitted);
+
+    component.handleProposal(proposal, false);
+
+    expect(emitted).toHaveBeenCalledWith(proposal);
+    expect(voiceApi.synthesizeSpeech).not.toHaveBeenCalled();
   });
 });
