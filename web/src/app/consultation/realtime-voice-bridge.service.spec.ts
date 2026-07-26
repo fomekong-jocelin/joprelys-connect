@@ -6,14 +6,16 @@ import { RealtimeVoiceBridgeService, RealtimeVoiceState } from './realtime-voice
 
 describe('RealtimeVoiceBridgeService connection lifecycle', () => {
   let service: RealtimeVoiceBridgeService;
+  let getUserMedia: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.stubGlobal('RTCPeerConnection', FakePeerConnection);
     vi.stubGlobal('Audio', FakeAudio);
+    getUserMedia = vi.fn().mockResolvedValue(fakeMediaStream());
     vi.stubGlobal('navigator', {
       mediaDevices: {
-        getUserMedia: vi.fn().mockResolvedValue(fakeMediaStream()),
+        getUserMedia,
       },
     });
 
@@ -47,12 +49,44 @@ describe('RealtimeVoiceBridgeService connection lifecycle', () => {
     vi.unstubAllGlobals();
   });
 
-  it('should not leave a data-channel timeout after the SDP request fails', async () => {
+  it('should schedule recovery after the SDP request fails without leaking a data-channel timeout', async () => {
     await expect(service.connect('visit-1')).rejects.toThrow(
       'Le modèle Realtime ou sa configuration n’est pas disponible',
     );
 
-    expect(vi.getTimerCount()).toBe(0);
+    expect((service as any).reconnectTimer).not.toBeNull();
+    expect((service as any).disconnectedTimer).toBeNull();
+    expect((service as any).stateSubject.value.connecting).toBe(true);
+  });
+
+  it('should automatically retry after the realtime channel closes', async () => {
+    (service as any).shouldStayConnected = true;
+    (service as any).desiredVisitId = 'visit-1';
+    (service as any).desiredPurpose = 'consultation';
+    (service as any).dataChannel = new FakeDataChannel();
+
+    (service as any).handleConnectionClosed();
+
+    expect((service as any).stateSubject.value.connected).toBe(false);
+    expect((service as any).stateSubject.value.connecting).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
+    expect((service as any).reconnectTimer).not.toBeNull();
+  });
+
+  it('should recover when the microphone track ends', () => {
+    const track = new FakeMediaStreamTrack();
+    (service as any).shouldStayConnected = true;
+    (service as any).desiredVisitId = 'visit-1';
+    (service as any).desiredPurpose = 'consultation';
+    (service as any).watchMicrophoneTrack(track as unknown as MediaStreamTrack);
+
+    track.dispatchEvent(new Event('ended'));
+
+    expect((service as any).stateSubject.value.connecting).toBe(true);
+    expect((service as any).reconnectTimer).not.toBeNull();
   });
 
   it('should wait for the WebRTC output buffer to drain after response.done', () => {
@@ -136,10 +170,12 @@ class FakeDataChannel extends EventTarget {
 class FakePeerConnection extends EventTarget {
   readonly channel = new FakeDataChannel();
   iceGatheringState: RTCIceGatheringState = 'complete';
+  iceConnectionState: RTCIceConnectionState = 'new';
   connectionState: RTCPeerConnectionState = 'new';
   localDescription: RTCSessionDescription | null = null;
   ontrack: ((event: RTCTrackEvent) => void) | null = null;
   onconnectionstatechange: (() => void) | null = null;
+  oniceconnectionstatechange: (() => void) | null = null;
 
   addTrack(): void {
     // No-op for the connection-failure scenario.
@@ -183,8 +219,16 @@ class FakeAudio {
   }
 }
 
+class FakeMediaStreamTrack extends EventTarget {
+  enabled = true;
+  muted = false;
+  stop(): void {
+    // No-op.
+  }
+}
+
 function fakeMediaStream(): MediaStream {
-  const track = { stop: vi.fn(), enabled: true } as unknown as MediaStreamTrack;
+  const track = new FakeMediaStreamTrack() as unknown as MediaStreamTrack;
   return {
     getAudioTracks: () => [track],
     getTracks: () => [track],
