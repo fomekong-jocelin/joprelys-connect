@@ -10,6 +10,7 @@ import com.joprelys.backend.auth.session.infrastructure.persistence.AuthSessionE
 import com.joprelys.backend.auth.session.infrastructure.persistence.AuthSessionRepository;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -20,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PersistentAuthSessionService
         implements IssueAuthSessionUseCase, RefreshAuthSessionUseCase {
+
+    private static final Duration CONCURRENT_REFRESH_WINDOW = Duration.ofSeconds(10);
 
     private final AuthSessionRepository sessionRepository;
     private final RefreshTokenGenerator tokenGenerator;
@@ -71,13 +74,16 @@ public class PersistentAuthSessionService
     }
 
     @Override
-    @Transactional(noRollbackFor = InvalidAuthSessionException.class)
+    @Transactional(noRollbackFor = {InvalidAuthSessionException.class, ConcurrentAuthRefreshException.class})
     public IssuedAuthSession refresh(String refreshToken, SessionClientMetadata metadata) {
         String tokenHash = hashRequiredToken(refreshToken);
         AuthSessionEntity current = sessionRepository.findByRefreshTokenHashForUpdate(tokenHash)
                 .orElseThrow(InvalidAuthSessionException::new);
         Instant now = clock.instant();
         if (isRotated(current)) {
+            if (isLikelyConcurrentRefresh(current, metadata, now)) {
+                throw new ConcurrentAuthRefreshException();
+            }
             handleReplay(current, now);
             throw new InvalidAuthSessionException();
         }
@@ -104,6 +110,21 @@ public class PersistentAuthSessionService
                 AuthSessionRevocationReason.ROTATED.name(),
                 now);
         return issuedSession(replacement, replacementToken);
+    }
+
+    private boolean isLikelyConcurrentRefresh(
+            AuthSessionEntity consumedSession,
+            SessionClientMetadata metadata,
+            Instant now) {
+        Instant rotatedAt = consumedSession.getRevokedAt();
+        if (rotatedAt == null
+                || now.isBefore(rotatedAt)
+                || Duration.between(rotatedAt, now).compareTo(CONCURRENT_REFRESH_WINDOW) > 0) {
+            return false;
+        }
+        return Objects.equals(consumedSession.getClientType(), metadata.clientType())
+                && Objects.equals(consumedSession.getUserAgent(), metadata.userAgent())
+                && Objects.equals(consumedSession.getNetworkPrefix(), metadata.networkPrefix());
     }
 
     private void handleReplay(AuthSessionEntity consumedSession, Instant now) {
