@@ -243,7 +243,7 @@ describe('RealtimeVoiceControllerComponent durable clinical listening', () => {
     transcripts.next(turn('texte incertain', null, 'event-low', 'item-low'));
 
     expect(intake.ingest).not.toHaveBeenCalled();
-    expect(emittedError).toHaveBeenCalledWith(expect.stringContaining('Transcription non vérifiable'));
+    expect(emittedError).toHaveBeenCalledWith(expect.stringContaining('trop incertaine'));
     expect(ambient.stop).not.toHaveBeenCalled();
   });
 

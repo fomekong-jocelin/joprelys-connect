@@ -2,9 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BehaviorSubject } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AmbientAudioCaptureService, AmbientCaptureState } from './ambient-audio-capture.service';
-import {
-  DoctorVoiceCalibrationComponent,
-} from './doctor-voice-calibration.component';
+import { DoctorVoiceCalibrationComponent } from './doctor-voice-calibration.component';
 import {
   DoctorVoiceCalibrationService,
   DoctorVoiceCalibrationState,
@@ -76,11 +74,11 @@ describe('DoctorVoiceCalibrationComponent', () => {
 
   afterEach(() => TestBed.resetTestingModule());
 
-  it('should keep calibration disabled while the ambient capture is inactive', () => {
+  it('should keep the full calibration action disabled while ambient capture is inactive', () => {
     const button = calibrationButton();
 
     expect(button.disabled).toBe(true);
-    expect(fixture.nativeElement.textContent).toContain('Activez d’abord la capture Realtime sécurisée');
+    expect(fixture.nativeElement.textContent).toContain('Reconnaissance de votre voix non activée');
   });
 
   it('should pass the exact existing ambient MediaStream to calibration', async () => {
@@ -94,7 +92,7 @@ describe('DoctorVoiceCalibrationComponent', () => {
     expect(calibration.calibrate).toHaveBeenCalledWith('visit-1', stream);
   });
 
-  it('should display calibrated state and allow clearing only that visit', () => {
+  it('should display calibrated state and allow clearing only that visit in full mode', () => {
     ambient.mediaStreamForVisit.mockReturnValue(stream);
     ambientState.next({ ...ambientState.value, active: true });
     calibrationState.next({
@@ -106,12 +104,27 @@ describe('DoctorVoiceCalibrationComponent', () => {
     });
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Voix médecin calibrée');
+    expect(fixture.nativeElement.textContent).toContain('Reconnaissance de votre voix active');
     const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
     const clear = buttons.find(button => button.textContent?.includes('Effacer'));
     expect(clear).toBeTruthy();
     clear!.click();
     expect(calibration.clear).toHaveBeenCalledWith('visit-1');
+  });
+
+  it('should be invisible in compact mode after calibration succeeds', () => {
+    fixture.componentRef.setInput('compact', true);
+    ambientState.next({ ...ambientState.value, active: true });
+    calibrationState.next({
+      status: 'calibrated',
+      visitId: 'visit-1',
+      progress: 1,
+      error: null,
+      calibratedAt: Date.now(),
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent.trim()).toBe('');
   });
 
   function calibrationButton(): HTMLButtonElement {

@@ -8,7 +8,7 @@ import {
   AmbientTranscriptItem,
 } from './ambient-speaker-review.service';
 
-describe('AmbientSpeakerReviewComponent', () => {
+describe('AmbientSpeakerReviewComponent demo-safe ambiguity flow', () => {
   let fixture: ComponentFixture<AmbientSpeakerReviewComponent>;
   let service: {
     transcript: ReturnType<typeof vi.fn>;
@@ -39,42 +39,67 @@ describe('AmbientSpeakerReviewComponent', () => {
 
   afterEach(() => TestBed.resetTestingModule());
 
-  it('should show unknown provider label and never infer patient automatically', () => {
-    expect(fixture.nativeElement.textContent).toContain('Non attribué');
-    expect(fixture.nativeElement.textContent).toContain('source A');
+  it('should ask one plain-language question and never infer patient automatically', () => {
+    expect(fixture.nativeElement.textContent).toContain('Une phrase doit être vérifiée');
+    expect(fixture.nativeElement.textContent).toContain('Qui a dit cette phrase ?');
+    expect(fixture.nativeElement.textContent).toContain('Texte clinique à attribuer');
     expect(fixture.nativeElement.textContent).toContain('Médecin');
     expect(fixture.nativeElement.textContent).toContain('Patient');
+    expect(fixture.nativeElement.textContent).not.toContain('source A');
     expect(service.assignSpeaker).not.toHaveBeenCalled();
   });
 
-  it('should replace the effective leaf after an explicit doctor decision', () => {
+  it('should disappear immediately after the ambiguity is resolved', () => {
     const original = unknownItem();
-    const corrected = { ...original, id: 'corrected-1', speakerType: 'DOCTOR' as const, speakerLabel: 'human:DOCTOR', supersedesItemId: original.id };
+    const corrected = {
+      ...original,
+      id: 'corrected-1',
+      speakerType: 'DOCTOR' as const,
+      speakerLabel: 'human:DOCTOR',
+      supersedesItemId: original.id,
+    };
     service.assignSpeaker.mockReturnValue(of(corrected));
 
     fixture.componentInstance.assign(original, 'DOCTOR');
     fixture.detectChanges();
 
     expect(service.assignSpeaker).toHaveBeenCalledWith('visit-1', original, 'DOCTOR');
-    expect(fixture.componentInstance.items()).toEqual([corrected]);
-    expect(fixture.componentInstance.unknownCount()).toBe(0);
+    expect(fixture.componentInstance.reviewItems()).toHaveLength(0);
+    expect(fixture.componentInstance.shouldRender()).toBe(false);
+    expect(fixture.nativeElement.textContent).not.toContain('Qui a dit cette phrase ?');
   });
 
-  it('should keep assigned segments hidden until clinician asks to review them', () => {
+  it('should stay invisible when all speakers are already attributed', () => {
     service.transcript.mockReturnValue(of({ visitId: 'visit-1', items: [doctorItem()] }));
     fixture.componentInstance.load();
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.visibleItems()).toHaveLength(0);
-    fixture.componentInstance.showAssigned.set(true);
+    expect(fixture.componentInstance.reviewItems()).toHaveLength(0);
+    expect(fixture.componentInstance.shouldRender()).toBe(false);
+    expect(fixture.nativeElement.textContent.trim()).toBe('');
+  });
+
+  it('should ignore pure filler utterances instead of asking the clinician to classify them', () => {
+    service.transcript.mockReturnValue(of({
+      visitId: 'visit-1',
+      items: [{ ...unknownItem(), text: 'Oh.' }, { ...unknownItem(), id: 'hello', text: 'Hello.' }],
+    }));
+    fixture.componentInstance.load();
     fixture.detectChanges();
-    expect(fixture.componentInstance.visibleItems()).toHaveLength(1);
-    expect(fixture.nativeElement.textContent).toContain('Médecin');
+
+    expect(fixture.componentInstance.reviewItems()).toHaveLength(0);
+    expect(fixture.componentInstance.shouldRender()).toBe(false);
   });
 
   it('should refresh the ledger instead of forcing a stale speaker decision', () => {
     const original = unknownItem();
-    const current = { ...original, id: 'current-leaf', speakerType: 'PATIENT' as const, speakerLabel: 'human:PATIENT', supersedesItemId: original.id };
+    const current = {
+      ...original,
+      id: 'current-leaf',
+      speakerType: 'PATIENT' as const,
+      speakerLabel: 'human:PATIENT',
+      supersedesItemId: original.id,
+    };
     service.assignSpeaker.mockReturnValue(throwError(() => new HttpErrorResponse({
       status: 409,
       error: { detail: 'AI_AMBIENT_TRANSCRIPT_ITEM_SUPERSEDED' },
@@ -86,7 +111,7 @@ describe('AmbientSpeakerReviewComponent', () => {
 
     expect(service.transcript).toHaveBeenCalledTimes(2);
     expect(fixture.componentInstance.items()).toEqual([current]);
-    expect(fixture.nativeElement.textContent).toContain('Ce segment a changé pendant votre revue');
+    expect(fixture.nativeElement.textContent).toContain('Cette phrase a changé');
   });
 
   function unknownItem(): AmbientTranscriptItem {
