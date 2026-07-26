@@ -47,12 +47,14 @@ import {
                 {{ i18n.t('consultation.ai.realtimeGovernedHelp', 'Le copilote reste en direct. La capture de sécurité chiffrée est indépendante des pauses d’analyse IA.') }}
               } @else if (ambientState().active) {
                 {{ i18n.t('consultation.ai.realtimeRecoveryWithSafety', 'Le temps réel est interrompu, mais la capture locale chiffrée continue. Joprelys renverra les fragments après reconnexion.') }}
+              } @else if (manualMuted) {
+                {{ i18n.t('consultation.ai.microphoneExplicitlyStopped', 'Microphone coupé par le clinicien. Aucune capture audio n’est active.') }}
               } @else {
                 {{ i18n.t('consultation.ai.realtimeRecoveryHelp', 'Ne poursuivez pas la dictée : ni le temps réel ni la capture de sécurité ne sont actuellement garantis.') }}
               }
             </p>
           </div>
-          <button type="button" (click)="toggleMute()" [disabled]="!state().connected || blocked"
+          <button type="button" (click)="toggleMute()" [disabled]="!canToggleMute()"
             class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-[6px] border border-cyan-300 bg-white px-4 py-2 text-xs font-bold text-cyan-800 shadow-sm hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-cyan-800 dark:bg-slate-950 dark:text-cyan-200">
             <span class="h-2 w-2 rounded-full" [ngClass]="effectiveMuted() ? 'bg-slate-400' : 'animate-pulse bg-rose-500'"></span>
             {{ effectiveMuted() ? i18n.t('consultation.ai.realtimeUnmute', 'Réactiver le micro') : i18n.t('consultation.ai.realtimeMute', 'Couper le micro') }}
@@ -116,11 +118,13 @@ import {
           </div>
         } @else {
           <div class="mt-3 rounded-[4px] border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
-            {{ state().connecting
-              ? i18n.t('consultation.ai.realtimeRecovering', 'Reconnexion audio temps réel en cours…')
-              : ambientState().active
-                ? i18n.t('consultation.ai.realtimeDisconnectedSafety', 'Temps réel interrompu — capture chiffrée locale toujours active.')
-                : i18n.t('consultation.ai.realtimeDisconnected', 'Audio temps réel interrompu — n’enregistrez pas tant que la sécurité audio n’est pas rétablie.') }}
+            {{ manualMuted
+              ? i18n.t('consultation.ai.microphoneExplicitlyStopped', 'Microphone coupé par le clinicien. Aucune capture audio n’est active.')
+              : state().connecting
+                ? i18n.t('consultation.ai.realtimeRecovering', 'Reconnexion audio temps réel en cours…')
+                : ambientState().active
+                  ? i18n.t('consultation.ai.realtimeDisconnectedSafety', 'Temps réel interrompu — capture chiffrée locale toujours active.')
+                  : i18n.t('consultation.ai.realtimeDisconnected', 'Audio temps réel interrompu — n’enregistrez pas tant que la sécurité audio n’est pas rétablie.') }}
           </div>
         }
       </div>
@@ -158,7 +162,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   readonly bars = Array.from({ length: 24 });
 
   private readonly subscriptions = new Subscription();
-  private manualMuted = false;
+  manualMuted = false;
   private lastSpokenMessage = '';
   private connectingForVisit = '';
   private connectedVisitId = '';
@@ -206,14 +210,15 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   }
 
   toggleMute(): void {
-    if (!this.state().connected || this.blocked || this.connectedVisitId !== this.visitId) return;
+    if (!this.canToggleMute()) return;
     this.manualMuted = !this.manualMuted;
-    this.syncMute();
-    if (this.manualMuted) {
-      void this.ambientCapture.stop();
-    } else if (this.enabled && this.visitId && this.session) {
-      this.queueConnectionSync(false);
-    }
+    this.queueConnectionSync(false);
+  }
+
+  canToggleMute(): boolean {
+    if (this.blocked) return false;
+    if (this.manualMuted) return true;
+    return this.state().connected && this.connectedVisitId === this.visitId.trim();
   }
 
   effectiveMuted(): boolean {
@@ -221,6 +226,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   }
 
   statusLabel(): string {
+    if (this.manualMuted) return this.i18n.t('consultation.ai.microphoneStopped', 'Microphone coupé');
     if (this.state().connecting) return this.i18n.t('consultation.ai.realtimeRecovering', 'Reconnexion audio en cours…');
     if (this.state().connected) return this.i18n.t('consultation.ai.realtimeConnected', 'Copilote Realtime sécurisé');
     return this.i18n.t('consultation.ai.realtimeDisconnected', 'Audio temps réel interrompu');
@@ -277,8 +283,17 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       return;
     }
 
+    if (this.manualMuted) {
+      this.connectingForVisit = '';
+      this.connectedVisitId = '';
+      this.processing.set(false);
+      this.bridge.disconnect();
+      await this.ambientCapture.stop();
+      return;
+    }
+
     if (this.state().connected && this.connectedVisitId === targetVisitId) {
-      if (!this.manualMuted && !this.ambientState().active && !this.ambientState().starting) {
+      if (!this.ambientState().active && !this.ambientState().starting) {
         await this.startAmbientSafetyCapture(targetVisitId, generation);
       }
       this.syncMute();
@@ -299,14 +314,16 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
 
     this.connectingForVisit = targetVisitId;
     try {
-      if (!this.manualMuted) {
-        await this.startAmbientSafetyCapture(targetVisitId, generation);
-      }
+      await this.startAmbientSafetyCapture(targetVisitId, generation);
       if (generation !== this.connectionGeneration || this.visitId.trim() !== targetVisitId || this.destroyed) {
         await this.ambientCapture.stop();
         return;
       }
-      await this.bridge.connect(targetVisitId);
+      await this.bridge.connect(
+        targetVisitId,
+        'consultation',
+        () => this.ambientCapture.mediaStreamForVisit(targetVisitId),
+      );
       if (generation !== this.connectionGeneration || this.visitId.trim() !== targetVisitId || this.destroyed) {
         this.bridge.disconnect();
         await this.ambientCapture.stop();
@@ -344,6 +361,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     if (!text
       || this.processing()
       || this.blocked
+      || this.manualMuted
       || !this.session
       || !this.enabled
       || !this.connectedVisitId
@@ -385,7 +403,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
         }
         this.processing.set(false);
         const requiresDecision = response.revisions.some(revision => revision.status === 'PENDING');
-        this.bridge.setMuted(this.manualMuted || requiresDecision);
+        this.bridge.setMuted(requiresDecision);
         this.message.emit(response);
       },
       error: error => {
