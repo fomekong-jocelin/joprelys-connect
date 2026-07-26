@@ -43,6 +43,26 @@ describe('SmartVitalsAssistantComponent', () => {
     fixture.detectChanges();
   });
 
+  it('should require explicit consent before enabling realtime listening', () => {
+    expect(component.realtimeEnabled()).toBe(false);
+    expect(component.realtimeActive()).toBe(false);
+
+    component.enableRealtime();
+
+    expect(component.realtimeEnabled()).toBe(true);
+  });
+
+  it('should disable continuous listening when the assistant is collapsed', () => {
+    component.enableRealtime();
+    component.realtimeActive.set(true);
+
+    component.toggleExpanded();
+
+    expect(component.expanded()).toBe(false);
+    expect(component.realtimeEnabled()).toBe(false);
+    expect(component.realtimeActive()).toBe(false);
+  });
+
   it('should prefill detected vitals without saving them', () => {
     const proposal = {
       transcript: 'Température 38,4, saturation 96',
