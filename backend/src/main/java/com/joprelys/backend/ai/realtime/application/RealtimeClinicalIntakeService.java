@@ -51,15 +51,27 @@ public class RealtimeClinicalIntakeService {
 
         lockAuthorizedVisit(visitId, organizationId);
 
-        RealtimeClinicalIntakeEntity existing = repository
+        RealtimeClinicalIntakeEntity byEvent = repository
                 .findByVisitIdAndEventId(visitId, normalizedEventId)
                 .orElse(null);
-        if (existing == null && normalizedItemId != null) {
-            existing = repository.findByVisitIdAndItemId(visitId, normalizedItemId).orElse(null);
+        if (byEvent != null) {
+            requireSameEventPayload(
+                    byEvent,
+                    normalizedEventId,
+                    normalizedItemId,
+                    normalizedTranscript,
+                    normalizedConfidence);
+            return view(byEvent);
         }
-        if (existing != null) {
-            requireSamePayload(existing, normalizedEventId, normalizedItemId, normalizedTranscript, normalizedConfidence);
-            return view(existing);
+
+        if (normalizedItemId != null) {
+            RealtimeClinicalIntakeEntity byItem = repository
+                    .findByVisitIdAndItemId(visitId, normalizedItemId)
+                    .orElse(null);
+            if (byItem != null) {
+                requireSameItemPayload(byItem, normalizedItemId, normalizedTranscript, normalizedConfidence);
+                return view(byItem);
+            }
         }
 
         long sequence = repository.findMaximumSequence(visitId) + 1;
@@ -75,14 +87,30 @@ public class RealtimeClinicalIntakeService {
         try {
             return view(repository.saveAndFlush(entity));
         } catch (DataIntegrityViolationException exception) {
-            RealtimeClinicalIntakeEntity raced = repository
+            RealtimeClinicalIntakeEntity racedByEvent = repository
                     .findByVisitIdAndEventId(visitId, normalizedEventId)
-                    .orElseGet(() -> normalizedItemId == null
-                            ? null
-                            : repository.findByVisitIdAndItemId(visitId, normalizedItemId).orElse(null));
-            if (raced != null) {
-                requireSamePayload(raced, normalizedEventId, normalizedItemId, normalizedTranscript, normalizedConfidence);
-                return view(raced);
+                    .orElse(null);
+            if (racedByEvent != null) {
+                requireSameEventPayload(
+                        racedByEvent,
+                        normalizedEventId,
+                        normalizedItemId,
+                        normalizedTranscript,
+                        normalizedConfidence);
+                return view(racedByEvent);
+            }
+            if (normalizedItemId != null) {
+                RealtimeClinicalIntakeEntity racedByItem = repository
+                        .findByVisitIdAndItemId(visitId, normalizedItemId)
+                        .orElse(null);
+                if (racedByItem != null) {
+                    requireSameItemPayload(
+                            racedByItem,
+                            normalizedItemId,
+                            normalizedTranscript,
+                            normalizedConfidence);
+                    return view(racedByItem);
+                }
             }
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
@@ -100,7 +128,7 @@ public class RealtimeClinicalIntakeService {
                 .toList();
     }
 
-    private void requireSamePayload(
+    private void requireSameEventPayload(
             RealtimeClinicalIntakeEntity existing,
             String eventId,
             String itemId,
@@ -108,13 +136,32 @@ public class RealtimeClinicalIntakeService {
             double confidence) {
         boolean same = existing.getEventId().equals(eventId)
                 && Objects.equals(existing.getItemId(), itemId)
-                && existing.getTranscriptText().equals(transcript)
+                && sameContent(existing, transcript, confidence);
+        if (!same) throw reusedId();
+    }
+
+    private void requireSameItemPayload(
+            RealtimeClinicalIntakeEntity existing,
+            String itemId,
+            String transcript,
+            double confidence) {
+        boolean same = Objects.equals(existing.getItemId(), itemId)
+                && sameContent(existing, transcript, confidence);
+        if (!same) throw reusedId();
+    }
+
+    private boolean sameContent(
+            RealtimeClinicalIntakeEntity existing,
+            String transcript,
+            double confidence) {
+        return existing.getTranscriptText().equals(transcript)
                 && Math.abs(existing.getConfidence() - confidence) < 0.000001d;
-        if (!same) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "AI_REALTIME_INTAKE_ID_REUSED");
-        }
+    }
+
+    private ResponseStatusException reusedId() {
+        return new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "AI_REALTIME_INTAKE_ID_REUSED");
     }
 
     private VisitEntity lockAuthorizedVisit(UUID visitId, UUID organizationId) {
