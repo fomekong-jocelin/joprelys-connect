@@ -40,9 +40,16 @@ export interface AmbientVaultStats {
   encryptedBytes: number;
 }
 
+interface ActiveDoctorReference {
+  readonly visitId: string;
+  readonly activatedAtEpochMs: number;
+  readonly wav: ArrayBuffer;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AmbientAudioVaultService {
   private dbPromise: Promise<IDBDatabase> | null = null;
+  private activeDoctorReference: ActiveDoctorReference | null = null;
 
   isSupported(): boolean {
     return typeof indexedDB !== 'undefined'
@@ -56,6 +63,35 @@ export class AmbientAudioVaultService {
     } catch {
       return false;
     }
+  }
+
+  activateDoctorReference(
+    visitId: string,
+    wav: ArrayBuffer,
+    activatedAtEpochMs = Date.now(),
+  ): void {
+    const normalizedVisitId = visitId.trim();
+    if (!normalizedVisitId) throw new Error('AMBIENT_VISIT_REQUIRED');
+    if (!wav.byteLength) throw new Error('AMBIENT_DOCTOR_REFERENCE_EMPTY');
+    if (!Number.isFinite(activatedAtEpochMs) || activatedAtEpochMs <= 0) {
+      throw new Error('AMBIENT_DOCTOR_REFERENCE_ACTIVATION_INVALID');
+    }
+    this.activeDoctorReference = Object.freeze({
+      visitId: normalizedVisitId,
+      activatedAtEpochMs: Math.round(activatedAtEpochMs),
+      wav: this.copyBuffer(wav),
+    });
+  }
+
+  clearDoctorReference(visitId?: string): void {
+    const active = this.activeDoctorReference;
+    if (!active) return;
+    if (visitId?.trim() && active.visitId !== visitId.trim()) return;
+    this.activeDoctorReference = null;
+  }
+
+  hasDoctorReference(visitId: string): boolean {
+    return this.activeDoctorReference?.visitId === visitId.trim();
   }
 
   async getOrCreateTimeline(visitId: string): Promise<AmbientCaptureTimeline> {
@@ -109,10 +145,16 @@ export class AmbientAudioVaultService {
       plaintext,
       this.additionalData(visitId, id),
     );
-    const encryptedDoctorReference = doctorReference?.byteLength
+    const resolvedDoctorReference = doctorReference === undefined
+      ? this.doctorReferenceForChunk(
+          visitId,
+          reservation.originEpochMs + Math.round(startOffsetMs),
+        )
+      : doctorReference;
+    const encryptedDoctorReference = resolvedDoctorReference?.byteLength
       ? await this.encrypt(
           key,
-          doctorReference,
+          resolvedDoctorReference,
           this.doctorReferenceAdditionalData(visitId, id),
         )
       : null;
@@ -226,6 +268,16 @@ export class AmbientAudioVaultService {
         0,
       ),
     };
+  }
+
+  private doctorReferenceForChunk(visitId: string, chunkStartedAtEpochMs: number): ArrayBuffer | null {
+    const active = this.activeDoctorReference;
+    if (!active
+      || active.visitId !== visitId.trim()
+      || chunkStartedAtEpochMs < active.activatedAtEpochMs) {
+      return null;
+    }
+    return this.copyBuffer(active.wav);
   }
 
   private async reserveSequence(visitId: string): Promise<AmbientCaptureTimeline & { sequence: number }> {
@@ -342,6 +394,12 @@ export class AmbientAudioVaultService {
     const encoded = new TextEncoder().encode(value);
     const copy = new Uint8Array(encoded.byteLength);
     copy.set(encoded);
+    return copy.buffer;
+  }
+
+  private copyBuffer(value: ArrayBuffer): ArrayBuffer {
+    const copy = new Uint8Array(value.byteLength);
+    copy.set(new Uint8Array(value));
     return copy.buffer;
   }
 
