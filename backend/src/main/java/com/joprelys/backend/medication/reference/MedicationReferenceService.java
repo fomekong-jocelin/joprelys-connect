@@ -22,6 +22,7 @@ public class MedicationReferenceService {
     private final MedicationReferenceProperties properties;
     private final List<MedicationReferencePort> providers;
     private final ConcurrentMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, IngredientCacheEntry> ingredientCache = new ConcurrentHashMap<>();
 
     public MedicationReferenceService(
             MedicationReferenceProperties properties,
@@ -63,20 +64,56 @@ public class MedicationReferenceService {
                 .filter(candidate -> candidate.source().equals(left.source()))
                 .map(MedicationConcept::conceptId)
                 .collect(Collectors.toSet());
-        return left.candidates().stream()
+        MedicationConcept sharedConcept = left.candidates().stream()
                 .filter(candidate -> rightIds.contains(candidate.conceptId()))
                 .findFirst()
-                .map(candidate -> new MedicationEquivalence(
-                        MedicationEquivalence.Status.SAME_CONCEPT,
-                        candidate.source(),
-                        candidate.conceptId(),
-                        candidate.conceptId(),
-                        "MEDICATION_SHARED_REFERENCE_CONCEPT"))
-                .orElseGet(() -> MedicationEquivalence.unknown("NO_SHARED_REFERENCE_CONCEPT"));
+                .orElse(null);
+        if (sharedConcept != null) {
+            return new MedicationEquivalence(
+                    MedicationEquivalence.Status.SAME_CONCEPT,
+                    sharedConcept.source(),
+                    sharedConcept.conceptId(),
+                    sharedConcept.conceptId(),
+                    "MEDICATION_SHARED_REFERENCE_CONCEPT");
+        }
+
+        MedicationReferencePort provider = providerFor(left.source());
+        if (provider == null || !left.source().equals(right.source())) {
+            return MedicationEquivalence.unknown("NO_SHARED_REFERENCE_CONCEPT");
+        }
+
+        for (MedicationConcept leftCandidate : left.candidates()) {
+            if (!provider.source().equals(leftCandidate.source())) {
+                continue;
+            }
+            Set<String> leftIngredients = ingredientIds(provider, leftCandidate);
+            if (leftIngredients.isEmpty()) {
+                continue;
+            }
+            for (MedicationConcept rightCandidate : right.candidates()) {
+                if (!provider.source().equals(rightCandidate.source())) {
+                    continue;
+                }
+                Set<String> rightIngredients = ingredientIds(provider, rightCandidate);
+                if (rightIngredients.isEmpty()) {
+                    continue;
+                }
+                if (leftIngredients.stream().anyMatch(rightIngredients::contains)) {
+                    return new MedicationEquivalence(
+                            MedicationEquivalence.Status.SAME_INGREDIENT,
+                            provider.source(),
+                            leftCandidate.conceptId(),
+                            rightCandidate.conceptId(),
+                            "MEDICATION_SHARED_ACTIVE_INGREDIENT");
+                }
+            }
+        }
+        return MedicationEquivalence.unknown("NO_SHARED_REFERENCE_CONCEPT_OR_INGREDIENT");
     }
 
     void clearCache() {
         cache.clear();
+        ingredientCache.clear();
     }
 
     private MedicationReferenceLookup resolve(String query) {
@@ -106,6 +143,38 @@ public class MedicationReferenceService {
                 providerFailed ? "MEDICATION_REFERENCE_UNAVAILABLE" : "MEDICATION_NOT_RESOLVED");
     }
 
+    private MedicationReferencePort providerFor(String source) {
+        if (source == null) {
+            return null;
+        }
+        return providers.stream()
+                .filter(provider -> source.equals(provider.source()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private Set<String> ingredientIds(
+            MedicationReferencePort provider,
+            MedicationConcept concept) {
+        String key = provider.source() + ":" + concept.conceptId();
+        IngredientCacheEntry cached = ingredientCache.get(key);
+        if (cached != null && cached.expiresAt().isAfter(Instant.now())) {
+            return cached.ingredientIds();
+        }
+        try {
+            Set<String> resolved = provider.findIngredientConceptIds(concept);
+            Set<String> safe = resolved == null ? Set.of() : Set.copyOf(resolved);
+            ingredientCache.put(key, new IngredientCacheEntry(safe, expiry()));
+            return safe;
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "Medication ingredient reference unavailable source={} concept={}",
+                    provider.source(),
+                    concept.conceptId());
+            return Set.of();
+        }
+    }
+
     private Instant expiry() {
         int minutes = Math.max(1, properties.getCacheTtlMinutes());
         return Instant.now().plus(Duration.ofMinutes(minutes));
@@ -122,6 +191,11 @@ public class MedicationReferenceService {
 
     private record CacheEntry(
             MedicationReferenceLookup lookup,
+            Instant expiresAt) {
+    }
+
+    private record IngredientCacheEntry(
+            Set<String> ingredientIds,
             Instant expiresAt) {
     }
 }
