@@ -24,7 +24,9 @@ export const roleGuard: CanActivateFn = (route, state) => {
     || (routePath === 'profile' && !expectsPatient);
   const allowAnyInternalRole = route.data['allowAnyInternalRole'] === true || isInternalEntryRoute;
   const professionalLoginTree = () => router.createUrlTree(['/'], { queryParams: { returnUrl: state.url } });
-  const patientLoginTree = () => router.createUrlTree(['/patient/login'], { queryParams: { returnUrl: state.url } });
+  const patientLoginTree = () => router.createUrlTree(['/'], {
+    queryParams: { mode: 'patient', returnUrl: state.url },
+  });
 
   const authorizeSession = (session: AuthSession) => {
     const isPatientSession = tokenStorage.isPatientSession(session);
@@ -36,8 +38,8 @@ export const roleGuard: CanActivateFn = (route, state) => {
     }
 
     // A valid professional session in this tab must not be mistaken for patient
-    // authentication. Send the user to the explicit patient login boundary instead
-    // of importing/reusing clinician credentials on a patient route.
+    // authentication. Send the user to the explicit patient login mode instead of
+    // importing/reusing clinician credentials on a patient route.
     if (expectsPatient) {
       return patientLoginTree();
     }
