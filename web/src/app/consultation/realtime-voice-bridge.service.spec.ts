@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { throwError } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
-import { RealtimeVoiceBridgeService } from './realtime-voice-bridge.service';
+import { RealtimeVoiceBridgeService, RealtimeVoiceState } from './realtime-voice-bridge.service';
 
 describe('RealtimeVoiceBridgeService connection lifecycle', () => {
   let service: RealtimeVoiceBridgeService;
@@ -54,6 +54,66 @@ describe('RealtimeVoiceBridgeService connection lifecycle', () => {
 
     expect(vi.getTimerCount()).toBe(0);
   });
+
+  it('should wait for the WebRTC output buffer to drain after response.done', () => {
+    const states: RealtimeVoiceState[] = [];
+    let completedTurns = 0;
+    const stateSubscription = service.state$.subscribe(current => states.push(current));
+    const turnSubscription = service.assistantTurnCompleted$.subscribe(() => completedTurns++);
+
+    serverEvent({ type: 'response.created', response: { id: 'response-1', status: 'in_progress' } });
+    serverEvent({ type: 'output_audio_buffer.started', response_id: 'response-1' });
+    serverEvent({ type: 'response.done', response: { id: 'response-1', status: 'completed' } });
+
+    expect(states.at(-1)?.assistantSpeaking).toBe(true);
+    expect(completedTurns).toBe(0);
+
+    serverEvent({ type: 'output_audio_buffer.stopped', response_id: 'response-1' });
+
+    expect(states.at(-1)?.assistantSpeaking).toBe(false);
+    expect(completedTurns).toBe(1);
+    stateSubscription.unsubscribe();
+    turnSubscription.unsubscribe();
+  });
+
+  it('should clear buffered assistant audio when the clinician interrupts after response.done', () => {
+    const channel = new FakeDataChannel();
+    channel.readyState = 'open';
+    (service as any).dataChannel = channel;
+    let completedTurns = 0;
+    service.assistantTurnCompleted$.subscribe(() => completedTurns++);
+
+    serverEvent({ type: 'response.created', response: { id: 'response-1', status: 'in_progress' } });
+    serverEvent({ type: 'output_audio_buffer.started', response_id: 'response-1' });
+    serverEvent({ type: 'response.done', response: { id: 'response-1', status: 'completed' } });
+    serverEvent({ type: 'input_audio_buffer.speech_started' });
+
+    const sentEvents = channel.sent.map(payload => JSON.parse(payload) as { type: string });
+    expect(sentEvents.some(event => event.type === 'output_audio_buffer.clear')).toBe(true);
+    expect(completedTurns).toBe(1);
+    expect((service as any).stateSubject.value.userSpeaking).toBe(true);
+    expect((service as any).stateSubject.value.assistantSpeaking).toBe(false);
+  });
+
+  it('should cancel an in-progress response and clear audio on barge-in', () => {
+    const channel = new FakeDataChannel();
+    channel.readyState = 'open';
+    (service as any).dataChannel = channel;
+
+    serverEvent({ type: 'response.created', response: { id: 'response-2', status: 'in_progress' } });
+    serverEvent({ type: 'output_audio_buffer.started', response_id: 'response-2' });
+    serverEvent({ type: 'input_audio_buffer.speech_started' });
+
+    const sentEvents = channel.sent.map(payload => JSON.parse(payload) as { type: string });
+    expect(sentEvents.map(event => event.type)).toEqual([
+      'response.cancel',
+      'output_audio_buffer.clear',
+    ]);
+  });
+
+  function serverEvent(event: Record<string, unknown>): void {
+    (service as any).handleServerEvent(JSON.stringify(event));
+  }
 });
 
 class FakeDataChannel extends EventTarget {
@@ -61,14 +121,15 @@ class FakeDataChannel extends EventTarget {
   onmessage: ((event: MessageEvent) => void) | null = null;
   onerror: (() => void) | null = null;
   onclose: (() => void) | null = null;
+  readonly sent: string[] = [];
 
   close(): void {
     this.readyState = 'closed';
     this.onclose?.();
   }
 
-  send(): void {
-    // No-op for the connection-failure scenario.
+  send(data: string): void {
+    this.sent.push(data);
   }
 }
 

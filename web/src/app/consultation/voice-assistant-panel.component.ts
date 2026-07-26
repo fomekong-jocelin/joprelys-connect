@@ -236,9 +236,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
 
   applyCurrentDraft(): void {
     const draft = this.session()?.draft;
-    if (draft && !this.hasPendingRevision()) {
-      this.applyDraft.emit({ ...draft });
-    }
+    if (draft && !this.hasPendingRevision()) this.applyDraft.emit({ ...draft });
   }
 
   finishRealtimeTranscription(response: AiTranscriptionResponse): void {
@@ -250,16 +248,17 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     } : current);
   }
 
+  finishRealtimeMessage(response: AiMessageResponse): void {
+    this.finishMessageResponse(response);
+  }
+
   handleRealtimeError(message: string): void {
     if (!message.trim()) return;
     this.errorMessage.set(message.trim());
   }
 
   private async startRecording(): Promise<void> {
-    if (this.realtimeActive()
-      || !this.mediaRecorderSupported
-      || this.busy()
-      || this.recordingBlocked()) return;
+    if (this.realtimeActive() || !this.mediaRecorderSupported || this.busy() || this.recordingBlocked()) return;
     if (!this.session()) {
       this.startSession();
       this.errorMessage.set('Activez la session puis relancez la dictée.');
@@ -286,10 +285,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
       return;
     }
     if (!capture.hasSpeech) {
-      this.errorMessage.set(this.i18n.t(
-        'consultation.ai.noSpeechDetected',
-        'Aucune parole détectée. Rapprochez-vous du microphone puis réessayez.',
-      ));
+      this.errorMessage.set(this.i18n.t('consultation.ai.noSpeechDetected', 'Aucune parole détectée. Rapprochez-vous du microphone puis réessayez.'));
       return;
     }
     this.startBusy();
@@ -320,16 +316,12 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
         if (!response) return;
         const previousMessage = this.session()?.assistantMessage;
         this.session.set(response);
-        if (this.conversationMode()
-          && !this.realtimeActive()
-          && response.assistantMessage !== previousMessage) {
+        if (this.conversationMode() && !this.realtimeActive() && response.assistantMessage !== previousMessage) {
           this.speakCurrentAssistantTurn();
         }
       },
       error: error => {
-        if (!silent && error.status !== 404) {
-          this.handleError(error, 'Assistant IA indisponible.');
-        }
+        if (!silent && error.status !== 404) this.handleError(error, 'Assistant IA indisponible.');
       },
     });
   }
@@ -355,9 +347,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
       draft: response.draft,
       transcript: response.transcript ?? previous?.transcript ?? null,
       pendingTranscript: null,
-      transcriptStatus: response.transcript
-        ? 'ANALYZED'
-        : previous?.transcriptStatus ?? 'NONE',
+      transcriptStatus: response.transcript ? 'ANALYZED' : previous?.transcriptStatus ?? 'NONE',
       conversation: response.conversation,
       clarifications: response.clarifications,
       revisions: response.revisions,
@@ -373,14 +363,9 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   private speakCurrentAssistantTurn(): void {
-    if (this.realtimeActive()
-      || !this.conversationMode()
-      || this.busy()
-      || this.recording()) return;
+    if (this.realtimeActive() || !this.conversationMode() || this.busy() || this.recording()) return;
     const clarification = this.pendingClarification();
-    const text = clarification?.question?.trim()
-      || this.session()?.assistantMessage?.trim()
-      || '';
+    const text = clarification?.question?.trim() || this.session()?.assistantMessage?.trim() || '';
     if (!text || text === this.lastSpokenText) return;
     this.lastSpokenText = text;
     this.speak(text);
@@ -414,34 +399,22 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   private pendingClarification(): AiClarification | null {
-    return this.session()?.clarifications.find(
-      clarification => clarification.status === 'PENDING',
-    ) ?? null;
+    return this.session()?.clarifications.find(clarification => clarification.status === 'PENDING') ?? null;
   }
 
   private sanitizedCurrentDraft(): AiConsultationDraft {
-    const fields: AiField[] = [
-      'symptoms', 'clinicalExam', 'suspectedDiagnosis', 'diagnosis',
-      'finalDiagnosis', 'conclusion', 'advice', 'followUp',
-    ];
+    const fields: AiField[] = ['symptoms', 'clinicalExam', 'suspectedDiagnosis', 'diagnosis', 'finalDiagnosis', 'conclusion', 'advice', 'followUp'];
     const result: AiConsultationDraft = {};
     for (const field of fields) {
       const value = this.currentDraft?.[field];
       if (typeof value === 'string' && value.trim()) result[field] = value.trim();
     }
-
     const prescription = this.currentDraft?.['prescription'];
-    if (Array.isArray(prescription) && prescription.length > 0) {
-      result.prescription = JSON.stringify(prescription);
-    }
+    if (Array.isArray(prescription) && prescription.length > 0) result.prescription = JSON.stringify(prescription);
     const exams = this.currentDraft?.['exams'];
-    if (Array.isArray(exams) && exams.length > 0) {
-      result.labOrders = JSON.stringify(exams.filter(value => typeof value === 'string' && value.trim()));
-    }
+    if (Array.isArray(exams) && exams.length > 0) result.labOrders = JSON.stringify(exams.filter(value => typeof value === 'string' && value.trim()));
     const vitals = this.currentDraft?.['vitals'];
-    if (vitals && typeof vitals === 'object' && Object.keys(vitals).length > 0) {
-      result.vitals = JSON.stringify(vitals);
-    }
+    if (vitals && typeof vitals === 'object' && Object.keys(vitals).length > 0) result.vitals = JSON.stringify(vitals);
     return result;
   }
 
@@ -483,10 +456,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     this.assistantAudioUrl = null;
   }
 
-  private handleError(
-    error: { status?: number; error?: { detail?: string; title?: string } },
-    fallback: string,
-  ): void {
+  private handleError(error: { status?: number; error?: { detail?: string; title?: string } }, fallback: string): void {
     this.busy.set(false);
     this.recording.set(false);
     this.speaking.set(false);

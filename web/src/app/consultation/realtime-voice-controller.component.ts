@@ -14,8 +14,8 @@ import { Subscription } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import {
   AiConsultationApiService,
+  AiMessageResponse,
   AiSessionResponse,
-  AiTranscriptionResponse,
 } from './ai-consultation-api.service';
 import {
   RealtimeVoiceBridgeService,
@@ -32,43 +32,27 @@ import {
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div class="min-w-0">
             <div class="flex items-center gap-2">
-              <span
-                class="h-2.5 w-2.5 rounded-full"
-                [ngClass]="state().connected ? 'animate-pulse bg-emerald-500' : state().connecting ? 'animate-pulse bg-amber-500' : 'bg-slate-400'"
-              ></span>
-              <p class="text-xs font-black text-[var(--text-primary)]">
-                {{ statusLabel() }}
-              </p>
+              <span class="h-2.5 w-2.5 rounded-full"
+                [ngClass]="state().connected ? 'animate-pulse bg-emerald-500' : state().connecting ? 'animate-pulse bg-amber-500' : 'bg-slate-400'">
+              </span>
+              <p class="text-xs font-black text-[var(--text-primary)]">{{ statusLabel() }}</p>
             </div>
             <p class="mt-1 text-[11px] leading-4 text-[var(--text-muted)]">
-              {{ i18n.t(
-                'consultation.ai.realtimeGovernedHelp',
-                'Le micro reste en direct, mais chaque donnée clinique passe par les validations Joprelys.'
-              ) }}
+              {{ i18n.t('consultation.ai.realtimeGovernedHelp', 'Le micro reste en direct, mais chaque donnée clinique passe par les validations Joprelys.') }}
             </p>
           </div>
-
-          <button
-            type="button"
-            (click)="toggleMute()"
-            [disabled]="!state().connected || blocked"
-            class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-[6px] border border-cyan-300 bg-white px-4 py-2 text-xs font-bold text-cyan-800 shadow-sm hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-cyan-800 dark:bg-slate-950 dark:text-cyan-200"
-          >
+          <button type="button" (click)="toggleMute()" [disabled]="!state().connected || blocked"
+            class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-[6px] border border-cyan-300 bg-white px-4 py-2 text-xs font-bold text-cyan-800 shadow-sm hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-cyan-800 dark:bg-slate-950 dark:text-cyan-200">
             <span class="h-2 w-2 rounded-full" [ngClass]="effectiveMuted() ? 'bg-slate-400' : 'animate-pulse bg-rose-500'"></span>
-            {{ effectiveMuted()
-              ? i18n.t('consultation.ai.realtimeUnmute', 'Réactiver le micro')
-              : i18n.t('consultation.ai.realtimeMute', 'Couper le micro') }}
+            {{ effectiveMuted() ? i18n.t('consultation.ai.realtimeUnmute', 'Réactiver le micro') : i18n.t('consultation.ai.realtimeMute', 'Couper le micro') }}
           </button>
         </div>
-
         @if (state().connected) {
           <div class="mt-3 flex h-9 items-center justify-center gap-[3px]" aria-hidden="true">
             @for (bar of bars; track $index) {
-              <span
-                class="w-[3px] rounded-full bg-cyan-600/75 transition-all dark:bg-cyan-300/80"
+              <span class="w-[3px] rounded-full bg-cyan-600/75 transition-all dark:bg-cyan-300/80"
                 [class.animate-pulse]="state().userSpeaking || state().assistantSpeaking"
-                [style.height.px]="barHeight($index)"
-              ></span>
+                [style.height.px]="barHeight($index)"></span>
             }
           </div>
           <div class="mt-1 text-center text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
@@ -98,17 +82,11 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   @Input() session: AiSessionResponse | null = null;
   @Input() enabled = false;
   @Input() blocked = false;
-  @Output() readonly transcription = new EventEmitter<AiTranscriptionResponse>();
+  @Output() readonly message = new EventEmitter<AiMessageResponse>();
   @Output() readonly activeChange = new EventEmitter<boolean>();
   @Output() readonly realtimeError = new EventEmitter<string>();
 
-  readonly state = signal<RealtimeVoiceState>({
-    connected: false,
-    connecting: false,
-    userSpeaking: false,
-    assistantSpeaking: false,
-    muted: false,
-  });
+  readonly state = signal<RealtimeVoiceState>({ connected: false, connecting: false, userSpeaking: false, assistantSpeaking: false, muted: false });
   readonly processing = signal(false);
   readonly bars = Array.from({ length: 24 });
 
@@ -123,21 +101,15 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       this.state.set(state);
       this.activeChange.emit(state.connected);
     }));
-    this.subscriptions.add(this.bridge.transcript$.subscribe(transcript => {
-      this.processTranscript(transcript);
-    }));
-    this.subscriptions.add(this.bridge.error$.subscribe(message => {
-      this.realtimeError.emit(message);
-    }));
+    this.subscriptions.add(this.bridge.transcript$.subscribe(transcript => this.processTranscript(transcript)));
+    this.subscriptions.add(this.bridge.error$.subscribe(message => this.realtimeError.emit(message)));
     this.subscriptions.add(this.bridge.assistantTurnCompleted$.subscribe(() => {
       setTimeout(() => this.syncMute(), 120);
     }));
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['enabled'] || changes['visitId'] || changes['session']) {
-      void this.syncConnection();
-    }
+    if (changes['enabled'] || changes['visitId'] || changes['session']) void this.syncConnection();
     if (changes['blocked']) this.syncMute();
     if (changes['session'] && this.state().connected) this.speakCurrentApprovedTurn();
   }
@@ -154,20 +126,12 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   }
 
   effectiveMuted(): boolean {
-    return this.blocked
-      || this.manualMuted
-      || this.processing()
-      || this.state().assistantSpeaking
-      || this.state().muted;
+    return this.blocked || this.manualMuted || this.processing() || this.state().muted;
   }
 
   statusLabel(): string {
-    if (this.state().connecting) {
-      return this.i18n.t('consultation.ai.realtimeConnecting', 'Connexion temps réel…');
-    }
-    if (this.state().connected) {
-      return this.i18n.t('consultation.ai.realtimeConnected', 'Copilote Realtime sécurisé');
-    }
+    if (this.state().connecting) return this.i18n.t('consultation.ai.realtimeConnecting', 'Connexion temps réel…');
+    if (this.state().connected) return this.i18n.t('consultation.ai.realtimeConnected', 'Copilote Realtime sécurisé');
     return this.i18n.t('consultation.ai.realtimeFallback', 'Mode audio classique disponible');
   }
 
@@ -184,22 +148,15 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       this.bridge.disconnect();
       return;
     }
-    if (this.state().connected
-      || this.state().connecting
-      || this.connectingForVisit === this.visitId
-      || this.connectionAttemptedForVisit === this.visitId) {
+    if (this.state().connected || this.state().connecting || this.connectingForVisit === this.visitId || this.connectionAttemptedForVisit === this.visitId) {
       this.syncMute();
       return;
     }
     if (!this.bridge.isSupported()) {
       this.activeChange.emit(false);
-      this.realtimeError.emit(this.i18n.t(
-        'consultation.ai.realtimeUnsupported',
-        'Ce navigateur ne prend pas en charge la connexion audio temps réel.',
-      ));
+      this.realtimeError.emit(this.i18n.t('consultation.ai.realtimeUnsupported', 'Ce navigateur ne prend pas en charge la connexion audio temps réel.'));
       return;
     }
-
     this.connectingForVisit = this.visitId;
     this.connectionAttemptedForVisit = this.visitId;
     try {
@@ -208,14 +165,9 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       if (!spoken) this.syncMute();
     } catch (error) {
       this.bridge.disconnect();
-      this.realtimeError.emit(
-        error instanceof Error && error.message.trim()
-          ? error.message
-          : this.i18n.t(
-              'consultation.ai.realtimeUnavailable',
-              'Le temps réel est indisponible. Joprelys conserve le mode audio classique.',
-            ),
-      );
+      this.realtimeError.emit(error instanceof Error && error.message.trim()
+        ? error.message
+        : this.i18n.t('consultation.ai.realtimeUnavailable', 'Le temps réel est indisponible. Joprelys conserve le mode audio classique.'));
     } finally {
       this.connectingForVisit = '';
     }
@@ -224,30 +176,30 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   private processTranscript(transcript: string): void {
     const text = transcript.trim();
     if (!text || this.processing() || this.blocked || !this.session || !this.enabled) return;
-
+    const pendingClarification = this.session.clarifications.find(item => item.status === 'PENDING');
     this.processing.set(true);
     this.bridge.setMuted(true);
-    this.api.stageRealtimeTranscript(this.visitId, text).subscribe({
+    this.lastSpokenMessage = '';
+    const request = pendingClarification
+      ? this.api.answerClarification(this.visitId, pendingClarification.id, text)
+      : this.api.sendText(this.visitId, text);
+    request.subscribe({
       next: response => {
         this.processing.set(false);
-        this.transcription.emit(response);
-        this.bridge.setMuted(true);
+        const requiresDecision = response.revisions.some(revision => revision.status === 'PENDING');
+        this.bridge.setMuted(this.manualMuted || requiresDecision);
+        this.message.emit(response);
       },
       error: () => {
         this.processing.set(false);
-        this.realtimeError.emit(this.i18n.t(
-          'consultation.ai.realtimeClinicalError',
-          'La phrase a été entendue, mais sa mise en relecture a échoué.',
-        ));
+        this.realtimeError.emit(this.i18n.t('consultation.ai.realtimeClinicalError', 'La phrase a été entendue, mais son analyse clinique a échoué.'));
         this.syncMute();
       },
     });
   }
 
   private speakCurrentApprovedTurn(): boolean {
-    const pendingQuestion = this.session?.clarifications.find(
-      item => item.status === 'PENDING',
-    )?.question?.trim();
+    const pendingQuestion = this.session?.clarifications.find(item => item.status === 'PENDING')?.question?.trim();
     return this.speakApproved(pendingQuestion || this.session?.assistantMessage || '');
   }
 
@@ -255,7 +207,6 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     const text = message.trim();
     if (!text || text === this.lastSpokenMessage || !this.state().connected) return false;
     this.lastSpokenMessage = text;
-    this.bridge.setMuted(true);
     const started = this.bridge.speakApproved(text);
     if (!started) this.syncMute();
     return started;
@@ -263,11 +214,6 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
 
   private syncMute(): void {
     if (!this.state().connected) return;
-    this.bridge.setMuted(
-      this.blocked
-      || this.manualMuted
-      || this.processing()
-      || this.state().assistantSpeaking,
-    );
+    this.bridge.setMuted(this.blocked || this.manualMuted || this.processing());
   }
 }

@@ -17,6 +17,7 @@ interface RealtimeServerEvent {
   type?: string;
   transcript?: string;
   message?: string;
+  response_id?: string;
   response?: {
     id?: string;
     status?: string;
@@ -143,8 +144,7 @@ export class RealtimeVoiceBridgeService {
         },
       ));
       await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
-      const channelReady = this.waitForDataChannel(channel, pc);
-      await channelReady;
+      await this.waitForDataChannel(channel, pc);
       this.patchState({ connected: true, connecting: false, muted: false });
     } catch (error) {
       this.disconnect();
@@ -204,12 +204,15 @@ export class RealtimeVoiceBridgeService {
   }
 
   cancelAssistantResponse(): void {
-    if (!this.isChannelOpen() || !this.activeResponseId) return;
-    this.sendEvent({ type: 'response.cancel', response_id: this.activeResponseId });
-    this.sendEvent({ type: 'output_audio_buffer.clear' });
-    this.activeResponseId = null;
-    this.patchState({ assistantSpeaking: false });
-    this.assistantTurnCompletedSubject.next();
+    const assistantSpeaking = this.stateSubject.value.assistantSpeaking;
+    if (!this.isChannelOpen() || (!this.activeResponseId && !assistantSpeaking)) return;
+    if (this.activeResponseId) {
+      this.sendEvent({ type: 'response.cancel', response_id: this.activeResponseId });
+    }
+    if (assistantSpeaking) {
+      this.sendEvent({ type: 'output_audio_buffer.clear' });
+    }
+    this.completeAssistantTurn();
   }
 
   private handleServerEvent(raw: unknown): void {
@@ -240,14 +243,20 @@ export class RealtimeVoiceBridgeService {
       }
       case 'response.created':
         this.activeResponseId = event.response?.id ?? null;
+        break;
+      case 'output_audio_buffer.started':
+        this.activeResponseId = event.response_id ?? this.activeResponseId;
         this.patchState({ assistantSpeaking: true });
         break;
       case 'response.done':
+        this.activeResponseId = null;
+        if (event.response?.status && event.response.status !== 'completed') {
+          this.completeAssistantTurn();
+        }
+        break;
       case 'output_audio_buffer.cleared':
       case 'output_audio_buffer.stopped':
-        this.activeResponseId = null;
-        this.patchState({ assistantSpeaking: false });
-        this.assistantTurnCompletedSubject.next();
+        this.completeAssistantTurn();
         break;
       case 'error':
         this.errorSubject.next(
@@ -255,12 +264,19 @@ export class RealtimeVoiceBridgeService {
           ?? event.message
           ?? this.i18n.t('consultation.ai.realtimeError', 'Erreur audio temps réel.'),
         );
-        if (this.stateSubject.value.assistantSpeaking) {
-          this.patchState({ assistantSpeaking: false });
-          this.assistantTurnCompletedSubject.next();
-        }
+        this.completeAssistantTurn();
         break;
     }
+  }
+
+  private completeAssistantTurn(): void {
+    const hadActiveTurn = this.activeResponseId !== null
+      || this.stateSubject.value.assistantSpeaking;
+    this.activeResponseId = null;
+    if (this.stateSubject.value.assistantSpeaking) {
+      this.patchState({ assistantSpeaking: false });
+    }
+    if (hadActiveTurn) this.assistantTurnCompletedSubject.next();
   }
 
   private callEndpoint(

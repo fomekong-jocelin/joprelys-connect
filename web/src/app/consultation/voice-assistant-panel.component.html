@@ -105,8 +105,8 @@
             [visitId]="visitId"
             [session]="session()"
             [enabled]="conversationMode()"
-            [blocked]="busy() || !!session()?.pendingTranscript || hasPendingRevision() || hasPendingClarification()"
-            (transcription)="finishRealtimeTranscription($event)"
+            [blocked]="busy() || !!session()?.pendingTranscript || hasPendingRevision()"
+            (message)="finishRealtimeMessage($event)"
             (activeChange)="realtimeActive.set($event)"
             (realtimeError)="handleRealtimeError($event)"
           />
