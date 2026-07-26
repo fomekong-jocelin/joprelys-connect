@@ -200,8 +200,12 @@ public class AiConsultationService {
             revisionManager.ensureNoPendingRevision(state);
             ClarificationView clarification = clarificationManager.findPending(
                     state, clarificationId);
-            String modelText = messageBuilder.clarificationModelText(
-                    state.locale, clarification, answer.trim());
+            String originalUtterance = latestUserUtterance(state);
+            String modelText = "Original clinician utterance:\n"
+                    + originalUtterance
+                    + "\n\n"
+                    + messageBuilder.clarificationModelText(
+                            state.locale, clarification, answer.trim());
             return processMessageLocked(
                     state,
                     modelText,
@@ -346,6 +350,9 @@ public class AiConsultationService {
         String resolvedClarificationField = resolvedClarification == null
                 ? null
                 : resolvedClarification.field();
+        String factualSource = "CLARIFICATION".equals(source)
+                ? joinSources(latestUserUtterance(state), visibleText)
+                : visibleText;
         Map<String, Object> clinicalContext = loadClinicalContext(state.visitId);
 
         // Only governed system memory is allowed to survive between turns. Raw model
@@ -370,9 +377,9 @@ public class AiConsultationService {
             }
             ParsedResponse rawParsed = responseParser.parse(response.content());
             ParsedResponse factChecked = factualityGuard.enforce(
-                    rawParsed, visibleText, state.draft, source, state.locale);
+                    rawParsed, factualSource, state.draft, source, state.locale);
             ParsedResponse grounded = groundingGuard.enforce(
-                    factChecked, visibleText, resolvedClarificationField, state.locale);
+                    factChecked, factualSource, resolvedClarificationField, state.locale);
             ParsedResponse medicationChecked = "prescription".equals(resolvedClarificationField)
                     ? grounded
                     : medicationSafetyGuard.enforce(grounded, clinicalContext, state.locale);
@@ -436,6 +443,28 @@ public class AiConsultationService {
             throw new ResponseStatusException(
                     HttpStatus.UNPROCESSABLE_ENTITY, "AI_TRANSCRIPTION_LOW_CONFIDENCE");
         }
+    }
+
+    private String latestUserUtterance(AiConsultationSessionState state) {
+        for (int index = state.conversation.size() - 1; index >= 0; index--) {
+            var message = state.conversation.get(index);
+            if ("USER".equals(message.role()) && message.content() != null && !message.content().isBlank()) {
+                return message.content().trim();
+            }
+        }
+        return "";
+    }
+
+    private String joinSources(String first, String second) {
+        String left = first == null ? "" : first.trim();
+        String right = second == null ? "" : second.trim();
+        if (left.isBlank()) {
+            return right;
+        }
+        if (right.isBlank()) {
+            return left;
+        }
+        return left + "\n" + right;
     }
 
     private Map<String, Object> loadClinicalContext(UUID visitId) {
