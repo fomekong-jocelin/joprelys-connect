@@ -1,13 +1,19 @@
 package com.joprelys.backend.ai.infrastructure.openai;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.joprelys.backend.ai.infrastructure.AiProperties;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.MediaType;
+import org.springframework.util.MultiValueMap;
 import tools.jackson.databind.ObjectMapper;
 
 class OpenAiRealtimeCallServiceTest {
@@ -73,6 +79,32 @@ class OpenAiRealtimeCallServiceTest {
         assertEquals("server_vad", turnDetection.get("type"));
         assertEquals(0.8, turnDetection.get("threshold"));
         assertEquals(Boolean.FALSE, turnDetection.get("create_response"));
+    }
+
+    @Test
+    void shouldPreserveRawSdpAndMultipartContentTypes() {
+        OpenAiRealtimeCallService service = service();
+        String sdp = "v=0\r\n"
+                + "o=- 123 456 IN IP4 127.0.0.1\r\n"
+                + "s=-\r\n"
+                + "t=0 0\r\n"
+                + "m=audio 9 UDP/TLS/RTP/SAVPF 111\r\n";
+
+        MultiValueMap<String, Object> multipart = service.buildMultipartBody(
+                sdp,
+                service.buildSessionConfig("fr"));
+
+        HttpEntity<?> sdpPart = assertInstanceOf(HttpEntity.class, multipart.getFirst("sdp"));
+        byte[] sdpBytes = assertInstanceOf(byte[].class, sdpPart.getBody());
+        assertArrayEquals(sdp.getBytes(StandardCharsets.UTF_8), sdpBytes);
+        assertEquals(MediaType.valueOf("application/sdp"), sdpPart.getHeaders().getContentType());
+
+        HttpEntity<?> sessionPart = assertInstanceOf(HttpEntity.class, multipart.getFirst("session"));
+        byte[] sessionBytes = assertInstanceOf(byte[].class, sessionPart.getBody());
+        String sessionJson = new String(sessionBytes, StandardCharsets.UTF_8);
+        assertEquals(MediaType.APPLICATION_JSON, sessionPart.getHeaders().getContentType());
+        assertTrue(sessionJson.contains("\"type\":\"realtime\""));
+        assertTrue(sessionJson.contains("\"model\":\"gpt-realtime-2.1\""));
     }
 
     private OpenAiRealtimeCallService service() {
