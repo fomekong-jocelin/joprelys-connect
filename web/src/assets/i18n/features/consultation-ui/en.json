@@ -5,6 +5,7 @@
   "consultation.vitals.painModerate": "Moderate",
   "consultation.vitals.painSevere": "Severe",
   "consultation.prescription.line": "Line",
+  "consultation.prescription.instructions": "Patient instructions",
   "consultation.prescription.statusDraft": "Draft",
   "consultation.prescription.statusActive": "Active",
   "consultation.prescription.statusCancelled": "Cancelled",
