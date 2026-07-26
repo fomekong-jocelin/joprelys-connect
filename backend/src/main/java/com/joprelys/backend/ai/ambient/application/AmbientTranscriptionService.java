@@ -48,6 +48,7 @@ public class AmbientTranscriptionService {
             return chunkJournal.completedItems(visitId, chunkId);
         }
 
+        UUID claimToken = claim.claimToken();
         try {
             var diarized = diarizationPort.transcribe(audio, contentType, locale);
             return chunkJournal.complete(
@@ -55,11 +56,17 @@ public class AmbientTranscriptionService {
                     userId,
                     organizationId,
                     chunkId,
+                    claimToken,
                     chunkStartOffsetMs,
                     locale,
                     diarized.segments());
         } catch (RuntimeException exception) {
-            chunkJournal.fail(visitId, organizationId, chunkId, errorCode(exception));
+            chunkJournal.fail(
+                    visitId,
+                    organizationId,
+                    chunkId,
+                    claimToken,
+                    errorCode(exception));
             throw exception;
         }
     }
