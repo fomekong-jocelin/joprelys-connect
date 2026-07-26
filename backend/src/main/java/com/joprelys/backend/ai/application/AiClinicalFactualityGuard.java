@@ -32,6 +32,11 @@ final class AiClinicalFactualityGuard {
     private static final Set<String> NEGATION_TOKENS = Set.of(
             "pas", "sans", "aucun", "aucune", "non", "nie", "negation",
             "not", "no", "without", "denies", "denied");
+    private static final Set<String> CLEAR_INTENT_TOKENS = Set.of(
+            "supprime", "supprimer", "efface", "effacer", "retire", "retirer",
+            "enleve", "enlever", "annule", "annuler", "arrete", "arreter",
+            "corrige", "corriger", "remplace", "remplacer", "delete", "remove",
+            "clear", "cancel", "stop", "discontinue", "replace", "correct");
     private static final Set<String> SAFE_GLUE_WORDS = Set.of(
             "patient", "patiente", "presente", "signale", "rapporte",
             "avec", "pour", "depuis", "dans", "chez", "une", "des", "les", "est",
@@ -96,7 +101,7 @@ final class AiClinicalFactualityGuard {
         }
 
         if ("CLEAR".equals(change.operation())) {
-            return true;
+            return hasExplicitClearIntent(normalizedCurrent);
         }
         String previous = acceptedDraft == null
                 ? ""
@@ -106,6 +111,11 @@ final class AiClinicalFactualityGuard {
             return structuredValueSupported(change, authorizedSource);
         }
         return textValueSupported(change, authorizedSource);
+    }
+
+    private boolean hasExplicitClearIntent(String normalizedCurrent) {
+        Set<String> tokens = significantTokens(normalizedCurrent);
+        return CLEAR_INTENT_TOKENS.stream().anyMatch(tokens::contains);
     }
 
     private boolean textValueSupported(ParsedChange change, String authorizedSource) {
