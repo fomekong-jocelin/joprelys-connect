@@ -266,8 +266,11 @@ export class AmbientAudioVaultService {
     return generated;
   }
 
-  private additionalData(visitId: string, chunkId: string): Uint8Array {
-    return new TextEncoder().encode(`joprelys-ambient:${visitId}:${chunkId}`);
+  private additionalData(visitId: string, chunkId: string): ArrayBuffer {
+    const encoded = new TextEncoder().encode(`joprelys-ambient:${visitId}:${chunkId}`);
+    const copy = new Uint8Array(encoded.byteLength);
+    copy.set(encoded);
+    return copy.buffer;
   }
 
   private normalizeLocale(locale: string): string {
