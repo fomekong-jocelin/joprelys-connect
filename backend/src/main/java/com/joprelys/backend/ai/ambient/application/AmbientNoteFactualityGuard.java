@@ -35,7 +35,7 @@ public class AmbientNoteFactualityGuard {
             "avait", "avoir", "sur", "sous", "par", "et", "ou", "the", "and", "with", "from",
             "for", "has", "have", "reports", "reported", "presents", "presenting", "of", "to");
     private static final Set<String> NEGATION_SKIP = Set.of(
-            "de", "du", "des", "la", "le", "les", "un", "une", "d", "a", "any", "a", "the");
+            "de", "du", "des", "la", "le", "les", "un", "une", "d", "a", "any", "the");
 
     public GroundedNote enforce(
             ParsedNote parsed,
@@ -121,8 +121,9 @@ public class AmbientNoteFactualityGuard {
                 throw ungrounded();
             }
         }
+        Set<String> sourceNumbers = numericTokens(source);
         for (String number : numericTokens(statement.text())) {
-            if (!numericTokens(source).contains(number)) {
+            if (!sourceNumbers.contains(number)) {
                 throw ungrounded();
             }
         }
