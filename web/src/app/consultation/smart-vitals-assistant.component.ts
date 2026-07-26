@@ -16,11 +16,12 @@ import {
   AiVitalsApiService,
   AiVitalsProposal,
 } from './ai-vitals-api.service';
+import { RealtimeVitalsControllerComponent } from './realtime-vitals-controller.component';
 
 @Component({
   selector: 'app-smart-vitals-assistant',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RealtimeVitalsControllerComponent],
   template: `
     <section
       class="fixed inset-x-3 bottom-3 z-[80] sm:left-1/2 sm:right-auto sm:w-[560px] sm:-translate-x-1/2"
@@ -44,7 +45,9 @@ import {
                 {{ i18n.t('vitals.assistant.title', 'Assistant de constantes') }}
               </span>
               <span class="block truncate text-[10px] font-medium text-[var(--text-muted)] sm:text-xs">
-                @if (recording()) {
+                @if (realtimeActive()) {
+                  {{ i18n.t('vitals.assistant.realtimeReady', 'Micro en direct — dictez les paramètres') }}
+                } @else if (recording()) {
                   {{ i18n.t('vitals.assistant.listening', 'Je vous écoute…') }}
                 } @else if (speaking()) {
                   {{ i18n.t('vitals.assistant.speaking', 'Joprelys vous répond…') }}
@@ -74,6 +77,15 @@ import {
               {{ i18n.t('vitals.assistant.example', '« Température 38,4, tension 132 sur 84, saturation 96, pouls 104, poids 73 kilos. »') }}
             </div>
 
+            <app-realtime-vitals-controller
+              [visitId]="visitId"
+              [currentVitals]="currentVitals"
+              [disabled]="disabled"
+              (proposed)="handleProposal($event, false)"
+              (activeChange)="realtimeActive.set($event)"
+              (realtimeError)="errorMessage.set($event)"
+            />
+
             @if (recording() || speaking()) {
               <div class="flex h-12 items-center justify-center gap-1 rounded-[8px] bg-[var(--app-surface-muted)] px-3" aria-hidden="true">
                 @for (bar of waveformBars; track $index) {
@@ -85,26 +97,31 @@ import {
               </div>
             }
 
-            <div class="grid grid-cols-1 gap-2 sm:grid-cols-[auto_1fr_auto] sm:items-center">
-              <button
-                type="button"
-                (click)="toggleRecording()"
-                [disabled]="disabled || busy() || !mediaRecorderSupported"
-                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-[8px] px-4 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
-                [ngClass]="recording() ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]'"
-              >
-                <span class="relative inline-flex h-6 w-6 items-center justify-center">
-                  @if (recording()) {
-                    <span class="absolute h-6 w-6 animate-ping rounded-full bg-white/25"></span>
-                  }
-                  <svg class="relative h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
-                  </svg>
-                </span>
-                {{ recording()
-                  ? i18n.t('vitals.assistant.stop', 'Terminer')
-                  : i18n.t('vitals.assistant.record', 'Dicter les constantes') }}
-              </button>
+            <div
+              class="grid grid-cols-1 gap-2 sm:items-center"
+              [ngClass]="realtimeActive() ? 'sm:grid-cols-[1fr_auto]' : 'sm:grid-cols-[auto_1fr_auto]'"
+            >
+              @if (!realtimeActive()) {
+                <button
+                  type="button"
+                  (click)="toggleRecording()"
+                  [disabled]="disabled || busy() || !mediaRecorderSupported"
+                  class="inline-flex min-h-12 items-center justify-center gap-2 rounded-[8px] px-4 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+                  [ngClass]="recording() ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]'"
+                >
+                  <span class="relative inline-flex h-6 w-6 items-center justify-center">
+                    @if (recording()) {
+                      <span class="absolute h-6 w-6 animate-ping rounded-full bg-white/25"></span>
+                    }
+                    <svg class="relative h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
+                    </svg>
+                  </span>
+                  {{ recording()
+                    ? i18n.t('vitals.assistant.stop', 'Terminer')
+                    : i18n.t('vitals.assistant.record', 'Dicter les constantes') }}
+                </button>
+              }
 
               <input
                 type="text"
@@ -125,7 +142,7 @@ import {
               </button>
             </div>
 
-            @if (!mediaRecorderSupported) {
+            @if (!mediaRecorderSupported && !realtimeActive()) {
               <p class="text-xs font-semibold text-amber-700 dark:text-amber-300">
                 {{ i18n.t('vitals.assistant.micUnsupported', 'Le microphone n’est pas disponible dans ce navigateur. Utilisez la saisie texte.') }}
               </p>
@@ -211,6 +228,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   readonly busy = signal(false);
   readonly recording = signal(false);
   readonly speaking = signal(false);
+  readonly realtimeActive = signal(false);
   readonly audioLevel = signal(0);
   readonly lastTranscript = signal('');
   readonly assistantMessage = signal('');
@@ -241,6 +259,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   }
 
   toggleRecording(): void {
+    if (this.realtimeActive()) return;
     if (this.recording()) {
       this.recorder?.stop();
       return;
@@ -301,8 +320,28 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
     return units[field];
   }
 
+  handleProposal(proposal: AiVitalsProposal, speakResponse = true): void {
+    this.busy.set(false);
+    this.lastProposal.set(proposal);
+    this.lastTranscript.set(proposal.transcript || '');
+    this.assistantMessage.set(proposal.assistantMessage || '');
+    this.needsConfirmation.set(proposal.needsConfirmation);
+    this.confirmationReason.set(proposal.confirmationReason || '');
+    this.errorMessage.set('');
+    if (Object.keys(proposal.vitals).length > 0) {
+      this.proposed.emit(proposal);
+    }
+    if (speakResponse && proposal.assistantMessage) {
+      this.speak(proposal.assistantMessage);
+    }
+  }
+
   private async startRecording(): Promise<void> {
-    if (!this.mediaRecorderSupported || this.busy() || this.disabled || !this.visitId) return;
+    if (this.realtimeActive()
+      || !this.mediaRecorderSupported
+      || this.busy()
+      || this.disabled
+      || !this.visitId) return;
     this.stopAssistantAudio();
     this.errorMessage.set('');
     try {
@@ -356,22 +395,6 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
       next: proposal => this.handleProposal(proposal),
       error: () => this.handleError(),
     });
-  }
-
-  private handleProposal(proposal: AiVitalsProposal): void {
-    this.busy.set(false);
-    this.lastProposal.set(proposal);
-    this.lastTranscript.set(proposal.transcript || '');
-    this.assistantMessage.set(proposal.assistantMessage || '');
-    this.needsConfirmation.set(proposal.needsConfirmation);
-    this.confirmationReason.set(proposal.confirmationReason || '');
-    this.errorMessage.set('');
-    if (Object.keys(proposal.vitals).length > 0) {
-      this.proposed.emit(proposal);
-    }
-    if (proposal.assistantMessage) {
-      this.speak(proposal.assistantMessage);
-    }
   }
 
   private speak(text: string): void {
