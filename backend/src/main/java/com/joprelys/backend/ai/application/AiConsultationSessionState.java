@@ -2,7 +2,6 @@ package com.joprelys.backend.ai.application;
 
 import com.joprelys.backend.ai.application.AiConsultationContract.ClarificationView;
 import com.joprelys.backend.ai.application.AiConsultationContract.ConversationMessageView;
-import com.joprelys.backend.ai.application.AiConsultationContract.MessageView;
 import com.joprelys.backend.ai.application.AiConsultationContract.RevisionView;
 import com.joprelys.backend.ai.domain.AiMessage;
 import java.time.Instant;
@@ -23,7 +22,6 @@ final class AiConsultationSessionState {
     final List<ClarificationView> clarifications = new ArrayList<>();
     final List<RevisionView> revisions = new ArrayList<>();
     final AiClinicalConversationMemory clinicalMemory = new AiClinicalConversationMemory();
-    final LinkedHashMap<String, MessageView> realtimeEventResponses = new LinkedHashMap<>();
 
     Instant expiresAt;
     String transcript;
