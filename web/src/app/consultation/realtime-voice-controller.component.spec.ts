@@ -3,12 +3,13 @@ import { BehaviorSubject, Subject, of } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import {
   AiConsultationApiService,
+  AiMessageResponse,
   AiSessionResponse,
 } from './ai-consultation-api.service';
 import { RealtimeVoiceBridgeService, RealtimeVoiceState } from './realtime-voice-bridge.service';
 import { RealtimeVoiceControllerComponent } from './realtime-voice-controller.component';
 
-describe('RealtimeVoiceControllerComponent safety lifecycle', () => {
+describe('RealtimeVoiceControllerComponent continuous conversation', () => {
   let fixture: ComponentFixture<RealtimeVoiceControllerComponent>;
   let component: RealtimeVoiceControllerComponent;
   let state: BehaviorSubject<RealtimeVoiceState>;
@@ -25,7 +26,8 @@ describe('RealtimeVoiceControllerComponent safety lifecycle', () => {
     speakApproved: ReturnType<typeof vi.fn>;
   };
   let api: {
-    stageRealtimeTranscript: ReturnType<typeof vi.fn>;
+    sendText: ReturnType<typeof vi.fn>;
+    answerClarification: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -49,12 +51,8 @@ describe('RealtimeVoiceControllerComponent safety lifecycle', () => {
       speakApproved: vi.fn().mockReturnValue(false),
     };
     api = {
-      stageRealtimeTranscript: vi.fn().mockReturnValue(of({
-        sessionId: 'session-1',
-        transcript: 'Patient sans fièvre',
-        status: 'PENDING_REVIEW',
-        expiresAt: '2026-07-26T10:00:00Z',
-      })),
+      sendText: vi.fn().mockReturnValue(of(messageResponse('Je vous écoute.'))),
+      answerClarification: vi.fn().mockReturnValue(of(messageResponse('Merci pour la précision.'))),
     };
 
     await TestBed.configureTestingModule({
@@ -85,18 +83,74 @@ describe('RealtimeVoiceControllerComponent safety lifecycle', () => {
     expect(bridge.connect).toHaveBeenCalledTimes(1);
   });
 
-  it('should stage a realtime transcript for medical review without analysing it', () => {
-    const staged = vi.spyOn(component.transcription, 'emit');
+  it('should analyze each realtime transcript immediately without pending review', () => {
+    const emitted = vi.spyOn(component.message, 'emit');
 
     transcripts.next(' Patient sans fièvre ');
 
-    expect(api.stageRealtimeTranscript).toHaveBeenCalledWith(
-      'visit-1',
-      'Patient sans fièvre',
-    );
-    expect(staged).toHaveBeenCalledWith(expect.objectContaining({
-      status: 'PENDING_REVIEW',
+    expect(api.sendText).toHaveBeenCalledWith('visit-1', 'Patient sans fièvre');
+    expect(api.answerClarification).not.toHaveBeenCalled();
+    expect(emitted).toHaveBeenCalledWith(expect.objectContaining({
+      assistantMessage: 'Je vous écoute.',
     }));
+    expect(bridge.setMuted).toHaveBeenNthCalledWith(1, true);
+    expect(bridge.setMuted).toHaveBeenLastCalledWith(false);
+  });
+
+  it('should route the next spoken turn to the pending clarification automatically', () => {
+    component.session = {
+      ...activeSession(),
+      clarifications: [{
+        id: 'clarification-1',
+        field: 'symptoms',
+        question: 'Depuis combien de temps ?',
+        status: 'PENDING',
+        options: [],
+        createdAt: '2026-07-26T10:00:00Z',
+        answer: null,
+        resolvedAt: null,
+      }],
+    };
+
+    transcripts.next(' Depuis trois jours ');
+
+    expect(api.answerClarification).toHaveBeenCalledWith(
+      'visit-1',
+      'clarification-1',
+      'Depuis trois jours',
+    );
+    expect(api.sendText).not.toHaveBeenCalled();
+    expect(bridge.setMuted).toHaveBeenLastCalledWith(false);
+  });
+
+  it('should keep the microphone available while Joprelys is speaking', () => {
+    state.next({
+      connected: true,
+      connecting: false,
+      userSpeaking: false,
+      assistantSpeaking: true,
+      muted: false,
+    });
+
+    expect(component.effectiveMuted()).toBe(false);
+    (component as any).syncMute();
+    expect(bridge.setMuted).toHaveBeenLastCalledWith(false);
+  });
+
+  it('should keep the microphone paused when a clinical revision requires a decision', () => {
+    api.sendText.mockReturnValue(of({
+      ...messageResponse('Une proposition attend votre validation.'),
+      revisions: [{
+        id: 'revision-1',
+        sequence: 1,
+        status: 'PENDING',
+        createdAt: '2026-07-26T10:00:00Z',
+        proposals: [],
+      }],
+    }));
+
+    transcripts.next('Je prescris le traitement indiqué.');
+
     expect(bridge.setMuted).toHaveBeenLastCalledWith(true);
   });
 
@@ -115,6 +169,21 @@ describe('RealtimeVoiceControllerComponent safety lifecycle', () => {
       revisions: [],
       assistantMessage: null,
       needsClarification: false,
+    };
+  }
+
+  function messageResponse(assistantMessage: string): AiMessageResponse {
+    return {
+      sessionId: 'session-1',
+      transcript: 'Patient sans fièvre',
+      draft: {},
+      changedFields: [],
+      assistantMessage,
+      needsClarification: false,
+      conversation: [],
+      clarifications: [],
+      revisions: [],
+      expiresAt: '2026-07-26T10:30:00Z',
     };
   }
 });
