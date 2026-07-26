@@ -16,7 +16,6 @@ import {
   AiClarificationAnswer,
   AiClarificationPanelComponent,
 } from './ai-clarification-panel.component';
-import { AiConversationThreadComponent } from './ai-conversation-thread.component';
 import { AiDraftPreviewComponent } from './ai-draft-preview.component';
 import {
   AiProposalDecisionRequest,
@@ -47,7 +46,6 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
   imports: [
     CommonModule,
     AiAssistantInputComponent,
-    AiConversationThreadComponent,
     AiClarificationPanelComponent,
     AiProposalPanelComponent,
     AiTranscriptReviewComponent,
@@ -67,7 +65,6 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   @Output() readonly applyDraft = new EventEmitter<AiConsultationDraft>();
 
   readonly session = signal<AiSessionResponse | null>(null);
-  readonly qrCodeUrl = signal<string | null>(null);
   readonly busy = signal(false);
   readonly recording = signal(false);
   readonly speaking = signal(false);
@@ -78,28 +75,19 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   readonly composerResetToken = signal(0);
 
   readonly mediaRecorderSupported = this.voiceRecorder.supported;
-
   private pollingSubscription: Subscription | null = null;
-  private speechFrame: number | null = null;
-  private assistantAudio: HTMLAudioElement | null = null;
-  private assistantAudioUrl: string | null = null;
-  private lastSpokenText = '';
 
   ngOnInit(): void {
     if (!this.visitId) return;
-    this.loadQrCode();
     this.refreshSession();
     this.pollingSubscription = interval(4000).subscribe(() => {
-      if (!this.recording() && !this.speaking() && !this.busy()) this.refreshSession(true);
+      if (!this.recording() && !this.busy()) this.refreshSession(true);
     });
   }
 
   ngOnDestroy(): void {
     this.pollingSubscription?.unsubscribe();
-    this.stopAssistantAudio();
     this.voiceRecorder.dispose();
-    const qrCodeUrl = this.qrCodeUrl();
-    if (qrCodeUrl) URL.revokeObjectURL(qrCodeUrl);
   }
 
   interactionBlocked(): boolean {
@@ -120,25 +108,58 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   hasPendingRevision(): boolean {
-    return this.session()?.revisions.some(
-      revision => revision.status === 'PENDING',
-    ) ?? false;
+    return this.session()?.revisions.some(revision => revision.status === 'PENDING') ?? false;
+  }
+
+  hasDraftContent(): boolean {
+    const draft = this.session()?.draft;
+    return !!draft && Object.values(draft).some(value => typeof value === 'string' && value.trim());
+  }
+
+  startRealtime(): void {
+    if (this.busy()) return;
+    this.conversationMode.set(true);
+    if (this.session()) return;
+    this.startSession();
+  }
+
+  startDictation(): void {
+    if (this.busy() || !this.mediaRecorderSupported) return;
+    this.conversationMode.set(false);
+    this.realtimeActive.set(false);
+    if (this.session()) return;
+    this.startSession();
   }
 
   startSession(): void {
     if (!this.visitId || this.busy()) return;
     this.startBusy();
     this.api.startSession(this.visitId, this.sanitizedCurrentDraft()).subscribe({
-      next: response => this.completeSessionUpdate(response, !this.conversationMode()),
+      next: response => this.completeSessionUpdate(response),
       error: error => this.handleError(error, 'Impossible de démarrer la session IA.'),
     });
   }
 
+  switchToDictation(): void {
+    if (this.recording() || this.busy()) return;
+    this.conversationMode.set(false);
+    this.realtimeActive.set(false);
+    this.errorMessage.set('');
+  }
+
+  switchToRealtime(): void {
+    if (this.recording() || this.busy()) return;
+    this.conversationMode.set(true);
+    this.errorMessage.set('');
+  }
+
+  finishRealtime(): void {
+    this.switchToDictation();
+  }
+
   toggleConversationMode(): void {
-    const enabled = !this.conversationMode();
-    this.conversationMode.set(enabled);
-    this.stopAssistantAudio();
-    if (!enabled) this.realtimeActive.set(false);
+    if (this.conversationMode()) this.switchToDictation();
+    else this.switchToRealtime();
   }
 
   toggleRecording(): void {
@@ -191,7 +212,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
           request.decision,
         );
     operation.subscribe({
-      next: response => this.completeSessionUpdate(response, !this.realtimeActive()),
+      next: response => this.completeSessionUpdate(response),
       error: error => this.handleError(error, 'La décision n’a pas pu être enregistrée.'),
     });
   }
@@ -223,12 +244,12 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
 
   deleteSession(): void {
     if (!this.session() || this.busy()) return;
-    this.stopAssistantAudio();
     this.startBusy();
     this.api.deleteSession(this.visitId).subscribe({
       next: () => {
         this.session.set(null);
         this.realtimeActive.set(false);
+        this.recording.set(false);
         this.composerResetToken.update(value => value + 1);
         this.busy.set(false);
       },
@@ -262,12 +283,11 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   private async startRecording(): Promise<void> {
     if (this.realtimeActive() || !this.mediaRecorderSupported || this.busy() || this.recordingBlocked()) return;
     if (!this.session()) {
-      this.startSession();
-      this.errorMessage.set('Activez la session puis relancez la dictée.');
+      this.startDictation();
+      this.errorMessage.set('Démarrez la session puis relancez la dictée.');
       return;
     }
     try {
-      this.stopAssistantAudio();
       this.errorMessage.set('');
       await this.voiceRecorder.start(
         capture => this.handleClassicCapture(capture),
@@ -287,7 +307,10 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
       return;
     }
     if (!capture.hasSpeech) {
-      this.errorMessage.set(this.i18n.t('consultation.ai.noSpeechDetected', 'Aucune parole détectée. Rapprochez-vous du microphone puis réessayez.'));
+      this.errorMessage.set(this.i18n.t(
+        'consultation.ai.noSpeechDetected',
+        'Aucune parole détectée. Rapprochez-vous du microphone puis réessayez.',
+      ));
       return;
     }
     this.startBusy();
@@ -309,33 +332,16 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     this.updateSessionFromMessage(response);
     this.composerResetToken.update(value => value + 1);
     this.busy.set(false);
-    if (!this.realtimeActive()) this.speakCurrentAssistantTurn();
   }
 
   private refreshSession(silent = false): void {
     this.api.getSession(this.visitId).subscribe({
       next: response => {
-        if (!response) return;
-        const previousMessage = this.session()?.assistantMessage;
-        this.session.set(response);
-        if (this.conversationMode() && !this.realtimeActive() && response.assistantMessage !== previousMessage) {
-          this.speakCurrentAssistantTurn();
-        }
+        if (response) this.session.set(response);
       },
       error: error => {
         if (!silent && error.status !== 404) this.handleError(error, 'Assistant IA indisponible.');
       },
-    });
-  }
-
-  private loadQrCode(): void {
-    this.api.loadQrCode(this.visitId).subscribe({
-      next: blob => {
-        const previous = this.qrCodeUrl();
-        if (previous) URL.revokeObjectURL(previous);
-        this.qrCodeUrl.set(URL.createObjectURL(blob));
-      },
-      error: () => this.qrCodeUrl.set(null),
     });
   }
 
@@ -358,46 +364,9 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     });
   }
 
-  private completeSessionUpdate(response: AiSessionResponse, speak = false): void {
+  private completeSessionUpdate(response: AiSessionResponse): void {
     this.session.set(response);
     this.busy.set(false);
-    if (speak && !this.realtimeActive()) this.speakCurrentAssistantTurn();
-  }
-
-  private speakCurrentAssistantTurn(): void {
-    if (this.realtimeActive() || !this.conversationMode() || this.busy() || this.recording()) return;
-    const clarification = this.pendingClarification();
-    const text = clarification?.question?.trim() || this.session()?.assistantMessage?.trim() || '';
-    if (!text || text === this.lastSpokenText) return;
-    this.lastSpokenText = text;
-    this.speak(text);
-  }
-
-  private speak(text: string): void {
-    this.stopAssistantAudio();
-    this.speaking.set(true);
-    this.startSpeechAnimation();
-    this.api.synthesizeSpeech(text).subscribe({
-      next: blob => {
-        const url = URL.createObjectURL(blob);
-        this.assistantAudioUrl = url;
-        const audio = new Audio(url);
-        this.assistantAudio = audio;
-        audio.onended = () => this.finishSpeaking();
-        audio.onerror = () => this.finishSpeaking();
-        void audio.play().catch(() => this.finishSpeaking());
-      },
-      error: () => {
-        this.errorMessage.set('La réponse vocale est indisponible ; le texte reste affiché.');
-        this.finishSpeaking();
-      },
-    });
-  }
-
-  private finishSpeaking(): void {
-    this.speaking.set(false);
-    this.stopSpeechAnimation();
-    this.releaseAssistantAudio();
   }
 
   private pendingClarification(): AiClarification | null {
@@ -405,18 +374,35 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   private sanitizedCurrentDraft(): AiConsultationDraft {
-    const fields: AiField[] = ['symptoms', 'clinicalExam', 'suspectedDiagnosis', 'diagnosis', 'finalDiagnosis', 'conclusion', 'advice', 'followUp'];
+    const fields: AiField[] = [
+      'symptoms',
+      'clinicalExam',
+      'suspectedDiagnosis',
+      'diagnosis',
+      'finalDiagnosis',
+      'conclusion',
+      'advice',
+      'followUp',
+    ];
     const result: AiConsultationDraft = {};
     for (const field of fields) {
       const value = this.currentDraft?.[field];
       if (typeof value === 'string' && value.trim()) result[field] = value.trim();
     }
     const prescription = this.currentDraft?.['prescription'];
-    if (Array.isArray(prescription) && prescription.length > 0) result.prescription = JSON.stringify(prescription);
+    if (Array.isArray(prescription) && prescription.length > 0) {
+      result.prescription = JSON.stringify(prescription);
+    }
     const exams = this.currentDraft?.['exams'];
-    if (Array.isArray(exams) && exams.length > 0) result.labOrders = JSON.stringify(exams.filter(value => typeof value === 'string' && value.trim()));
+    if (Array.isArray(exams) && exams.length > 0) {
+      result.labOrders = JSON.stringify(
+        exams.filter(value => typeof value === 'string' && value.trim()),
+      );
+    }
     const vitals = this.currentDraft?.['vitals'];
-    if (vitals && typeof vitals === 'object' && Object.keys(vitals).length > 0) result.vitals = JSON.stringify(vitals);
+    if (vitals && typeof vitals === 'object' && Object.keys(vitals).length > 0) {
+      result.vitals = JSON.stringify(vitals);
+    }
     return result;
   }
 
@@ -425,44 +411,12 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     this.errorMessage.set('');
   }
 
-  private startSpeechAnimation(): void {
-    const startedAt = performance.now();
-    const tick = (time: number) => {
-      if (!this.speaking()) return;
-      const phase = (time - startedAt) / 180;
-      this.audioLevel.set(0.35 + Math.abs(Math.sin(phase)) * 0.55);
-      this.speechFrame = requestAnimationFrame(tick);
-    };
-    this.speechFrame = requestAnimationFrame(tick);
-  }
-
-  private stopSpeechAnimation(): void {
-    if (this.speechFrame !== null) cancelAnimationFrame(this.speechFrame);
-    this.speechFrame = null;
-    this.audioLevel.set(0);
-  }
-
-  private stopAssistantAudio(): void {
-    if (this.assistantAudio) {
-      this.assistantAudio.pause();
-      this.assistantAudio.currentTime = 0;
-    }
-    this.speaking.set(false);
-    this.stopSpeechAnimation();
-    this.releaseAssistantAudio();
-  }
-
-  private releaseAssistantAudio(): void {
-    this.assistantAudio = null;
-    if (this.assistantAudioUrl) URL.revokeObjectURL(this.assistantAudioUrl);
-    this.assistantAudioUrl = null;
-  }
-
-  private handleError(error: { status?: number; error?: { detail?: string; title?: string } }, fallback: string): void {
+  private handleError(
+    error: { status?: number; error?: { detail?: string; title?: string } },
+    fallback: string,
+  ): void {
     this.busy.set(false);
     this.recording.set(false);
-    this.speaking.set(false);
-    this.stopAssistantAudio();
     this.voiceRecorder.dispose();
     const detail = error.error?.detail || error.error?.title;
     this.errorMessage.set(detail && !detail.startsWith('AI_') ? detail : fallback);
