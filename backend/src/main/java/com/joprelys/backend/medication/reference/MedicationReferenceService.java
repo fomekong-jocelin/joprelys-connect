@@ -6,8 +6,10 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -48,6 +50,29 @@ public class MedicationReferenceService {
         MedicationReferenceLookup resolved = resolve(query);
         cache.put(key, new CacheEntry(resolved, expiry()));
         return resolved;
+    }
+
+    public MedicationEquivalence compare(String leftName, String rightName) {
+        MedicationReferenceLookup left = lookup(leftName);
+        MedicationReferenceLookup right = lookup(rightName);
+        if (!left.resolved() || !right.resolved()) {
+            return MedicationEquivalence.unknown("MEDICATION_CONCEPT_NOT_RESOLVED");
+        }
+
+        Set<String> rightIds = right.candidates().stream()
+                .filter(candidate -> candidate.source().equals(left.source()))
+                .map(MedicationConcept::conceptId)
+                .collect(Collectors.toSet());
+        return left.candidates().stream()
+                .filter(candidate -> rightIds.contains(candidate.conceptId()))
+                .findFirst()
+                .map(candidate -> new MedicationEquivalence(
+                        MedicationEquivalence.Status.SAME_CONCEPT,
+                        candidate.source(),
+                        candidate.conceptId(),
+                        candidate.conceptId(),
+                        "MEDICATION_SHARED_REFERENCE_CONCEPT"))
+                .orElseGet(() -> MedicationEquivalence.unknown("NO_SHARED_REFERENCE_CONCEPT"));
     }
 
     void clearCache() {
