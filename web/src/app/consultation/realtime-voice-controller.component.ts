@@ -161,6 +161,10 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   private manualMuted = false;
   private lastSpokenMessage = '';
   private connectingForVisit = '';
+  private connectedVisitId = '';
+  private connectionGeneration = 0;
+  private connectionTransition: Promise<void> = Promise.resolve();
+  private destroyed = false;
 
   constructor() {
     this.subscriptions.add(this.bridge.state$.subscribe(state => {
@@ -181,25 +185,34 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['enabled'] || changes['visitId'] || changes['session']) void this.syncConnection();
+    const visitChanged = !!changes['visitId']
+      && !changes['visitId'].firstChange
+      && changes['visitId'].previousValue !== changes['visitId'].currentValue;
+    if (changes['enabled'] || changes['visitId'] || changes['session']) {
+      this.queueConnectionSync(visitChanged);
+    }
     if (changes['blocked']) this.syncMute();
-    if (changes['session'] && this.state().connected) this.speakCurrentApprovedTurn();
+    if (changes['session'] && this.state().connected && this.connectedVisitId === this.visitId) {
+      this.speakCurrentApprovedTurn();
+    }
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
+    this.connectionGeneration += 1;
     this.subscriptions.unsubscribe();
     this.bridge.disconnect();
     void this.ambientCapture.stop();
   }
 
   toggleMute(): void {
-    if (!this.state().connected || this.blocked) return;
+    if (!this.state().connected || this.blocked || this.connectedVisitId !== this.visitId) return;
     this.manualMuted = !this.manualMuted;
     this.syncMute();
     if (this.manualMuted) {
       void this.ambientCapture.stop();
     } else if (this.enabled && this.visitId && this.session) {
-      void this.startAmbientSafetyCapture();
+      this.queueConnectionSync(false);
     }
   }
 
@@ -227,43 +240,97 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     return Math.round(6 + wave * (active ? 25 : 8));
   }
 
-  private async syncConnection(): Promise<void> {
-    if (!this.enabled || !this.visitId || !this.session) {
+  private queueConnectionSync(forceVisitReset: boolean): void {
+    const generation = ++this.connectionGeneration;
+    this.connectionTransition = this.connectionTransition
+      .catch(() => undefined)
+      .then(() => this.syncConnection(generation, forceVisitReset))
+      .catch(error => {
+        if (generation !== this.connectionGeneration || this.destroyed) return;
+        this.realtimeError.emit(error instanceof Error && error.message.trim()
+          ? error.message
+          : this.i18n.t('consultation.ai.realtimeUnavailable', 'Le temps réel est indisponible. Reconnexion automatique en cours.'));
+      });
+  }
+
+  private async syncConnection(generation: number, forceVisitReset: boolean): Promise<void> {
+    if (generation !== this.connectionGeneration || this.destroyed) return;
+    const targetVisitId = this.visitId.trim();
+
+    const activeBelongsToAnotherVisit = !!this.connectedVisitId && this.connectedVisitId !== targetVisitId;
+    const connectionInFlightForAnotherVisit = !!this.connectingForVisit && this.connectingForVisit !== targetVisitId;
+    if (forceVisitReset || activeBelongsToAnotherVisit || connectionInFlightForAnotherVisit) {
       this.connectingForVisit = '';
+      this.connectedVisitId = '';
+      this.lastSpokenMessage = '';
+      this.processing.set(false);
+      this.bridge.disconnect();
+      await this.ambientCapture.stop();
+      if (generation !== this.connectionGeneration || this.destroyed) return;
+    }
+
+    if (!this.enabled || !targetVisitId || !this.session) {
+      this.connectingForVisit = '';
+      this.connectedVisitId = '';
       this.bridge.disconnect();
       await this.ambientCapture.stop();
       return;
     }
-    if (this.state().connected || this.state().connecting || this.connectingForVisit === this.visitId) {
+
+    if (this.state().connected && this.connectedVisitId === targetVisitId) {
+      if (!this.manualMuted && !this.ambientState().active && !this.ambientState().starting) {
+        await this.startAmbientSafetyCapture(targetVisitId, generation);
+      }
       this.syncMute();
       return;
     }
+
+    if (this.state().connected || this.state().connecting) {
+      this.bridge.disconnect();
+      await this.ambientCapture.stop();
+      if (generation !== this.connectionGeneration || this.destroyed) return;
+    }
+
     if (!this.bridge.isSupported()) {
       this.activeChange.emit(false);
       this.realtimeError.emit(this.i18n.t('consultation.ai.realtimeUnsupported', 'Ce navigateur ne prend pas en charge la connexion audio temps réel.'));
       return;
     }
-    this.connectingForVisit = this.visitId;
+
+    this.connectingForVisit = targetVisitId;
     try {
       if (!this.manualMuted) {
-        await this.startAmbientSafetyCapture();
+        await this.startAmbientSafetyCapture(targetVisitId, generation);
       }
-      await this.bridge.connect(this.visitId);
+      if (generation !== this.connectionGeneration || this.visitId.trim() !== targetVisitId || this.destroyed) {
+        await this.ambientCapture.stop();
+        return;
+      }
+      await this.bridge.connect(targetVisitId);
+      if (generation !== this.connectionGeneration || this.visitId.trim() !== targetVisitId || this.destroyed) {
+        this.bridge.disconnect();
+        await this.ambientCapture.stop();
+        return;
+      }
+      this.connectedVisitId = targetVisitId;
       const spoken = this.speakCurrentApprovedTurn();
       if (!spoken) this.syncMute();
     } catch (error) {
+      if (generation !== this.connectionGeneration || this.destroyed) return;
+      this.connectedVisitId = '';
       this.bridge.disconnect();
-      this.realtimeError.emit(error instanceof Error && error.message.trim()
-        ? error.message
-        : this.i18n.t('consultation.ai.realtimeUnavailable', 'Le temps réel est indisponible. Reconnexion automatique en cours.'));
+      throw error;
     } finally {
-      this.connectingForVisit = '';
+      if (this.connectingForVisit === targetVisitId) this.connectingForVisit = '';
     }
   }
 
-  private async startAmbientSafetyCapture(): Promise<void> {
+  private async startAmbientSafetyCapture(targetVisitId: string, generation: number): Promise<void> {
     try {
-      await this.ambientCapture.start(this.visitId, this.i18n.currentLanguage());
+      await this.ambientCapture.start(targetVisitId, this.i18n.currentLanguage());
+      if (generation !== this.connectionGeneration || this.visitId.trim() !== targetVisitId || this.destroyed) {
+        await this.ambientCapture.stop();
+      }
     } catch {
       throw new Error(this.i18n.t(
         'consultation.ai.ambientRequired',
@@ -274,7 +341,15 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
 
   private processTranscript(turn: RealtimeTranscriptTurn): void {
     const text = turn.transcript.trim();
-    if (!text || this.processing() || this.blocked || !this.session || !this.enabled) return;
+    if (!text
+      || this.processing()
+      || this.blocked
+      || !this.session
+      || !this.enabled
+      || !this.connectedVisitId
+      || this.connectedVisitId !== this.visitId.trim()) {
+      return;
+    }
     if (turn.confidence === null || !Number.isFinite(turn.confidence)) {
       this.realtimeError.emit(this.i18n.t(
         'consultation.ai.realtimeTranscriptUnverified',
@@ -283,32 +358,41 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       return;
     }
 
+    const transcriptVisitId = this.connectedVisitId;
     const pendingClarification = this.session.clarifications.find(item => item.status === 'PENDING');
     this.processing.set(true);
     this.bridge.setMuted(true);
     this.lastSpokenMessage = '';
     const request = pendingClarification
       ? this.api.answerRealtimeClarification(
-          this.visitId,
+          transcriptVisitId,
           pendingClarification.id,
           text,
           turn.confidence,
           turn.eventId,
         )
       : this.api.sendRealtimeTranscript(
-          this.visitId,
+          transcriptVisitId,
           text,
           turn.confidence,
           turn.eventId,
         );
     request.subscribe({
       next: response => {
+        if (transcriptVisitId !== this.visitId.trim() || transcriptVisitId !== this.connectedVisitId) {
+          this.processing.set(false);
+          return;
+        }
         this.processing.set(false);
         const requiresDecision = response.revisions.some(revision => revision.status === 'PENDING');
         this.bridge.setMuted(this.manualMuted || requiresDecision);
         this.message.emit(response);
       },
       error: error => {
+        if (transcriptVisitId !== this.visitId.trim() || transcriptVisitId !== this.connectedVisitId) {
+          this.processing.set(false);
+          return;
+        }
         this.processing.set(false);
         const reason = this.backendReason(error);
         if (reason === 'AI_TRANSCRIPTION_LOW_CONFIDENCE' || reason === 'AI_REALTIME_TRANSCRIPTION_UNVERIFIED') {
@@ -345,7 +429,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
 
   private speakApproved(message: string): boolean {
     const text = message.trim();
-    if (!text || text === this.lastSpokenMessage || !this.state().connected) return false;
+    if (!text || text === this.lastSpokenMessage || !this.state().connected || this.connectedVisitId !== this.visitId.trim()) return false;
     this.lastSpokenMessage = text;
     const started = this.bridge.speakApproved(text);
     if (!started) this.syncMute();
