@@ -1,6 +1,6 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 
 export type AiField =
@@ -131,6 +131,8 @@ export interface AiTranscriptionResponse {
   expiresAt: string;
 }
 
+const REALTIME_CONFIDENCE_FLOOR = 0.35;
+
 @Injectable({ providedIn: 'root' })
 export class AiConsultationApiService {
   private readonly http = inject(HttpClient);
@@ -162,6 +164,12 @@ export class AiConsultationApiService {
     confidence: number,
     eventId?: string,
   ): Observable<AiMessageResponse> {
+    if (!this.acceptableRealtimeConfidence(confidence)) {
+      return throwError(() => ({
+        status: 422,
+        error: { detail: 'AI_TRANSCRIPTION_LOW_CONFIDENCE' },
+      }));
+    }
     return this.http.post<AiMessageResponse>(
       `/api/ai/consultations/${visitId}/messages/realtime`,
       { transcript, confidence, eventId: eventId || null },
@@ -186,6 +194,24 @@ export class AiConsultationApiService {
       `/api/ai/consultations/${visitId}/clarifications/${clarificationId}/answer`,
       { answer },
     );
+  }
+
+  answerRealtimeClarification(
+    visitId: string,
+    clarificationId: string,
+    answer: string,
+    confidence: number,
+    _eventId?: string,
+  ): Observable<AiMessageResponse> {
+    if (!this.acceptableRealtimeConfidence(confidence)) {
+      return throwError(() => ({
+        status: 422,
+        error: { detail: 'AI_TRANSCRIPTION_LOW_CONFIDENCE' },
+      }));
+    }
+    // The answer is already an explicit response to a server-issued clarification.
+    // We keep the existing endpoint, but low-confidence Realtime ASR never reaches it.
+    return this.answerClarification(visitId, clarificationId, answer);
   }
 
   answerClarificationAudio(
@@ -269,5 +295,11 @@ export class AiConsultationApiService {
 
   loadQrCode(visitId: string): Observable<Blob> {
     return this.http.get(`/api/visits/${visitId}/qrcode`, { responseType: 'blob' });
+  }
+
+  private acceptableRealtimeConfidence(confidence: number): boolean {
+    return Number.isFinite(confidence)
+      && confidence >= REALTIME_CONFIDENCE_FLOOR
+      && confidence <= 1;
   }
 }
