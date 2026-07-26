@@ -70,6 +70,13 @@ joprelys:
       api-key: ${ANTHROPIC_API_KEY:}
       model: ${CLAUDE_MODEL:claude-haiku-4-5-20251001}
       base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com/v1}
+  medication-reference:
+    enabled: ${JOPRELYS_MEDICATION_REFERENCE_ENABLED:false}
+    cache-ttl-minutes: ${JOPRELYS_MEDICATION_REFERENCE_CACHE_TTL_MINUTES:1440}
+    max-candidates: ${JOPRELYS_MEDICATION_REFERENCE_MAX_CANDIDATES:5}
+    rxnorm:
+      enabled: ${JOPRELYS_RXNORM_ENABLED:false}
+      base-url: ${JOPRELYS_RXNORM_BASE_URL:https://rxnav.nlm.nih.gov}
   security:
     jwt:
       issuer: ${JOPRELYS_JWT_ISSUER:joprelys-connect}
