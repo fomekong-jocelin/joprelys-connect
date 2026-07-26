@@ -80,17 +80,68 @@ describe('RealtimeVoiceBridgeService connection lifecycle', () => {
     expect((service as any).reconnectTimer).not.toBeNull();
   });
 
-  it('should recover when the microphone track ends', () => {
+  it('should recover when the current microphone track ends', () => {
     const track = new FakeMediaStreamTrack();
+    const stream = fakeMediaStream(track);
     (service as any).shouldStayConnected = true;
     (service as any).desiredVisitId = 'visit-1';
     (service as any).desiredPurpose = 'consultation';
+    (service as any).mediaStream = stream;
     (service as any).watchMicrophoneTrack(track as unknown as MediaStreamTrack);
 
     track.dispatchEvent(new Event('ended'));
 
     expect((service as any).stateSubject.value.connecting).toBe(true);
     expect((service as any).reconnectTimer).not.toBeNull();
+  });
+
+  it('should use a supplied ambient stream without opening or stopping another microphone', async () => {
+    const sharedTrack = new FakeMediaStreamTrack();
+    const sharedStream = fakeMediaStream(sharedTrack);
+
+    await expect(service.connect(
+      'visit-1',
+      'consultation',
+      () => sharedStream,
+    )).rejects.toThrow('Le modèle Realtime ou sa configuration n’est pas disponible');
+
+    expect(getUserMedia).not.toHaveBeenCalled();
+    expect(sharedTrack.stopCalls).toBe(0);
+    service.disconnect();
+    expect(sharedTrack.stopCalls).toBe(0);
+  });
+
+  it('should pause only the WebRTC sender while leaving the shared track enabled', async () => {
+    const sharedTrack = new FakeMediaStreamTrack();
+    const sharedStream = fakeMediaStream(sharedTrack);
+    const sender = new FakeRtpSender(sharedTrack as unknown as MediaStreamTrack);
+    (service as any).mediaStream = sharedStream;
+    (service as any).mediaStreamOwned = false;
+    (service as any).audioSender = sender;
+    (service as any).shouldStayConnected = true;
+
+    service.setMuted(true);
+    await Promise.resolve();
+
+    expect(sender.replacements).toEqual([null]);
+    expect(sharedTrack.enabled).toBe(true);
+    expect(sharedTrack.stopCalls).toBe(0);
+
+    service.setMuted(false);
+    await Promise.resolve();
+
+    expect(sender.replacements.at(-1)).toBe(sharedTrack);
+    expect(sharedTrack.enabled).toBe(true);
+  });
+
+  it('should still stop a microphone opened by realtime itself for non-shared uses', async () => {
+    const ownedTrack = new FakeMediaStreamTrack();
+    getUserMedia.mockResolvedValue(fakeMediaStream(ownedTrack));
+
+    await expect(service.connect('visit-vitals', 'vitals')).rejects.toThrow();
+
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
+    expect(ownedTrack.stopCalls).toBeGreaterThan(0);
   });
 
   it('should emit transcript with lower-quintile confidence and provenance', () => {
@@ -212,8 +263,20 @@ class FakeDataChannel extends EventTarget {
   }
 }
 
+class FakeRtpSender {
+  readonly replacements: Array<MediaStreamTrack | null> = [];
+
+  constructor(public track: MediaStreamTrack | null) {}
+
+  async replaceTrack(track: MediaStreamTrack | null): Promise<void> {
+    this.track = track;
+    this.replacements.push(track);
+  }
+}
+
 class FakePeerConnection extends EventTarget {
   readonly channel = new FakeDataChannel();
+  readonly senders: FakeRtpSender[] = [];
   iceGatheringState: RTCIceGatheringState = 'complete';
   iceConnectionState: RTCIceConnectionState = 'new';
   connectionState: RTCPeerConnectionState = 'new';
@@ -222,8 +285,10 @@ class FakePeerConnection extends EventTarget {
   onconnectionstatechange: (() => void) | null = null;
   oniceconnectionstatechange: (() => void) | null = null;
 
-  addTrack(): void {
-    // No-op for the connection-failure scenario.
+  addTrack(track: MediaStreamTrack): RTCRtpSender {
+    const sender = new FakeRtpSender(track);
+    this.senders.push(sender);
+    return sender as unknown as RTCRtpSender;
   }
 
   createDataChannel(): RTCDataChannel {
@@ -239,7 +304,7 @@ class FakePeerConnection extends EventTarget {
   }
 
   async setRemoteDescription(): Promise<void> {
-    // The failing HTTP request prevents this method from being called.
+    // The failing HTTP request prevents this method from being called in these tests.
   }
 
   close(): void {
@@ -267,15 +332,18 @@ class FakeAudio {
 class FakeMediaStreamTrack extends EventTarget {
   enabled = true;
   muted = false;
+  readyState: MediaStreamTrackState = 'live';
+  stopCalls = 0;
+
   stop(): void {
-    // No-op.
+    this.stopCalls += 1;
+    this.readyState = 'ended';
   }
 }
 
-function fakeMediaStream(): MediaStream {
-  const track = new FakeMediaStreamTrack() as unknown as MediaStreamTrack;
+function fakeMediaStream(track = new FakeMediaStreamTrack()): MediaStream {
   return {
-    getAudioTracks: () => [track],
-    getTracks: () => [track],
+    getAudioTracks: () => [track as unknown as MediaStreamTrack],
+    getTracks: () => [track as unknown as MediaStreamTrack],
   } as unknown as MediaStream;
 }

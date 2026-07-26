@@ -28,6 +28,7 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
   let state: BehaviorSubject<RealtimeVoiceState>;
   let transcripts: Subject<RealtimeTranscriptTurn>;
   let ambientState: BehaviorSubject<AmbientCaptureState>;
+  let sharedStream: MediaStream;
   let bridge: {
     state$: BehaviorSubject<RealtimeVoiceState>;
     transcript$: Subject<RealtimeTranscriptTurn>;
@@ -43,6 +44,7 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
     state$: BehaviorSubject<AmbientCaptureState>;
     start: ReturnType<typeof vi.fn>;
     stop: ReturnType<typeof vi.fn>;
+    mediaStreamForVisit: ReturnType<typeof vi.fn>;
   };
   let api: {
     sendRealtimeTranscript: ReturnType<typeof vi.fn>;
@@ -63,6 +65,7 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
       storagePressure: false,
       lastError: null,
     });
+    sharedStream = {} as MediaStream;
     transcripts = new Subject<RealtimeTranscriptTurn>();
     bridge = {
       state$: state,
@@ -93,6 +96,7 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
           recovering: false,
         });
       }),
+      mediaStreamForVisit: vi.fn().mockReturnValue(sharedStream),
     };
     api = {
       sendRealtimeTranscript: vi.fn().mockReturnValue(of(messageResponse('Je vous écoute.'))),
@@ -123,14 +127,17 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
     (component as any).connectedVisitId = 'visit-1';
   });
 
-  it('should start encrypted ambient safety capture before attempting realtime', async () => {
+  it('should start encrypted ambient safety capture before realtime and pass its exact stream provider', async () => {
     bridge.connect.mockResolvedValue(undefined);
     (component as any).connectedVisitId = '';
 
     await (component as any).syncConnection(0, false);
 
     expect(ambient.start).toHaveBeenCalledWith('visit-1', 'fr');
-    expect(bridge.connect).toHaveBeenCalledWith('visit-1');
+    expect(bridge.connect).toHaveBeenCalledWith('visit-1', 'consultation', expect.any(Function));
+    const provider = bridge.connect.mock.calls[0][2] as () => MediaStream | null;
+    expect(provider()).toBe(sharedStream);
+    expect(ambient.mediaStreamForVisit).toHaveBeenCalledWith('visit-1');
     expect(ambient.start.mock.invocationCallOrder[0]).toBeLessThan(bridge.connect.mock.invocationCallOrder[0]);
   });
 
@@ -165,7 +172,7 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
     expect(bridge.disconnect).toHaveBeenCalled();
     expect(ambient.stop).toHaveBeenCalled();
     expect(ambient.start).toHaveBeenCalledWith('visit-2', 'fr');
-    expect(bridge.connect).toHaveBeenCalledWith('visit-2');
+    expect(bridge.connect).toHaveBeenCalledWith('visit-2', 'consultation', expect.any(Function));
     expect(ambient.stop.mock.invocationCallOrder[0]).toBeLessThan(ambient.start.mock.invocationCallOrder[0]);
     expect(ambient.start.mock.invocationCallOrder[0]).toBeLessThan(bridge.connect.mock.invocationCallOrder[0]);
     expect((component as any).connectedVisitId).toBe('visit-2');
@@ -199,7 +206,7 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
     expect(emitted).not.toHaveBeenCalled();
   });
 
-  it('should resynchronize realtime mute state when realtime reconnects without stopping ambient capture', () => {
+  it('should resynchronize automatic realtime mute without stopping ambient capture', () => {
     component.blocked = true;
     state.next({
       connected: true,
@@ -271,7 +278,7 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
     expect(bridge.setMuted).toHaveBeenLastCalledWith(false);
   });
 
-  it('should keep the realtime microphone available while Joprelys is speaking', () => {
+  it('should keep the realtime sender available while Joprelys is speaking', () => {
     state.next({
       connected: true,
       connecting: false,
@@ -285,7 +292,7 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
     expect(bridge.setMuted).toHaveBeenLastCalledWith(false);
   });
 
-  it('should pause realtime for a clinical decision while ambient safety capture continues', () => {
+  it('should pause only realtime for a clinical decision while ambient safety capture continues', () => {
     api.sendRealtimeTranscript.mockReturnValue(of({
       ...messageResponse('Une proposition attend votre validation.'),
       revisions: [{
@@ -303,7 +310,7 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
     expect(ambient.stop).not.toHaveBeenCalled();
   });
 
-  it('should stop all microphone capture on an explicit clinician mute and restart it on unmute', async () => {
+  it('should hard-stop realtime and ambient on explicit clinician mute, then reacquire both on unmute', async () => {
     state.next({
       connected: true,
       connecting: false,
@@ -311,15 +318,22 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
       assistantSpeaking: false,
       muted: false,
     });
+    bridge.connect.mockResolvedValue(undefined);
 
     component.toggleMute();
-    expect(ambient.stop).toHaveBeenCalledTimes(1);
-    expect(bridge.setMuted).toHaveBeenLastCalledWith(true);
+    await (component as any).connectionTransition;
+
+    expect(component.manualMuted).toBe(true);
+    expect(bridge.disconnect).toHaveBeenCalled();
+    expect(ambient.stop).toHaveBeenCalled();
+    expect(component.canToggleMute()).toBe(true);
 
     component.toggleMute();
-    await Promise.resolve();
-    await Promise.resolve();
+    await (component as any).connectionTransition;
+
+    expect(component.manualMuted).toBe(false);
     expect(ambient.start).toHaveBeenCalledWith('visit-1', 'fr');
+    expect(bridge.connect).toHaveBeenCalledWith('visit-1', 'consultation', expect.any(Function));
   });
 
   function turn(

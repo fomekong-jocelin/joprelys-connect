@@ -19,6 +19,7 @@ export interface RealtimeTranscriptTurn {
 }
 
 export type RealtimeVoicePurpose = 'consultation' | 'vitals';
+export type RealtimeMediaStreamProvider = () => MediaStream | null;
 
 interface RealtimeServerEvent {
   type?: string;
@@ -66,11 +67,15 @@ export class RealtimeVoiceBridgeService {
   private peerConnection: RTCPeerConnection | null = null;
   private dataChannel: RTCDataChannel | null = null;
   private mediaStream: MediaStream | null = null;
+  private mediaStreamOwned = false;
+  private audioSender: RTCRtpSender | null = null;
+  private senderMuteGeneration = 0;
   private remoteAudio: HTMLAudioElement | null = null;
   private activeResponseId: string | null = null;
 
   private desiredVisitId = '';
   private desiredPurpose: RealtimeVoicePurpose = 'consultation';
+  private desiredMediaStreamProvider: RealtimeMediaStreamProvider | null = null;
   private shouldStayConnected = false;
   private requestedMuted = false;
   private reconnectAttempts = 0;
@@ -88,6 +93,7 @@ export class RealtimeVoiceBridgeService {
   async connect(
     visitId: string,
     purpose: RealtimeVoicePurpose = 'consultation',
+    mediaStreamProvider?: RealtimeMediaStreamProvider,
   ): Promise<void> {
     if (!visitId || !this.isSupported()) {
       throw new Error(this.i18n.t(
@@ -99,6 +105,7 @@ export class RealtimeVoiceBridgeService {
     const targetChanged = this.desiredVisitId !== visitId || this.desiredPurpose !== purpose;
     this.desiredVisitId = visitId;
     this.desiredPurpose = purpose;
+    this.desiredMediaStreamProvider = mediaStreamProvider ?? null;
     this.shouldStayConnected = true;
     if (targetChanged) this.reconnectAttempts = 0;
 
@@ -122,15 +129,14 @@ export class RealtimeVoiceBridgeService {
     this.clearDisconnectedTimer();
     this.clearTrackMutedTimer();
     this.teardownTransport();
+    this.desiredMediaStreamProvider = null;
     this.stateSubject.next({ ...INITIAL_STATE });
   }
 
   setMuted(muted: boolean): void {
     this.requestedMuted = muted;
-    this.mediaStream?.getAudioTracks().forEach(track => {
-      track.enabled = !muted;
-    });
     if (this.stateSubject.value.muted !== muted) this.patchState({ muted });
+    void this.syncOutboundTrack();
   }
 
   speakApproved(message: string): boolean {
@@ -187,28 +193,47 @@ export class RealtimeVoiceBridgeService {
       muted: this.requestedMuted,
     });
 
+    let acquiredStream: MediaStream | null = null;
+    let ownsAcquiredStream = false;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
+      const provider = this.desiredMediaStreamProvider;
+      if (provider) {
+        acquiredStream = provider();
+        if (!this.usableAudioTrack(acquiredStream)) {
+          throw new Error('AI_REALTIME_SHARED_MIC_UNAVAILABLE');
+        }
+      } else {
+        acquiredStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+        ownsAcquiredStream = true;
+      }
+
       if (!this.shouldStayConnected) {
-        stream.getTracks().forEach(track => track.stop());
+        if (ownsAcquiredStream) acquiredStream?.getTracks().forEach(track => track.stop());
         return;
       }
+      if (!this.usableAudioTrack(acquiredStream)) {
+        if (ownsAcquiredStream) acquiredStream?.getTracks().forEach(track => track.stop());
+        throw new Error('AI_REALTIME_MICROPHONE_TRACK_MISSING');
+      }
+
+      const stream = acquiredStream as MediaStream;
+      const microphoneTrack = stream.getAudioTracks()[0];
       this.mediaStream = stream;
+      this.mediaStreamOwned = ownsAcquiredStream;
 
       const pc = new RTCPeerConnection();
       this.peerConnection = pc;
-      stream.getAudioTracks().forEach(track => {
-        track.enabled = !this.requestedMuted;
-        this.watchMicrophoneTrack(track);
-        pc.addTrack(track, stream);
-      });
+      this.watchMicrophoneTrack(microphoneTrack);
+      const sender = pc.addTrack(microphoneTrack, stream);
+      this.audioSender = sender;
+      if (this.requestedMuted) await sender.replaceTrack(null);
 
       const audio = new Audio();
       audio.autoplay = true;
@@ -271,7 +296,11 @@ export class RealtimeVoiceBridgeService {
         connecting: false,
         muted: this.requestedMuted,
       });
+      await this.syncOutboundTrack();
     } catch (error) {
+      if (acquiredStream && ownsAcquiredStream && acquiredStream !== this.mediaStream) {
+        acquiredStream.getTracks().forEach(track => track.stop());
+      }
       this.teardownTransport();
       this.patchState({
         connected: false,
@@ -284,9 +313,40 @@ export class RealtimeVoiceBridgeService {
     }
   }
 
+  private async syncOutboundTrack(): Promise<void> {
+    const sender = this.audioSender;
+    if (!sender) return;
+    const generation = ++this.senderMuteGeneration;
+    const microphoneTrack = this.mediaStream?.getAudioTracks()[0] ?? null;
+    const targetTrack = this.requestedMuted ? null : microphoneTrack;
+    if (!this.requestedMuted && (!microphoneTrack || microphoneTrack.readyState === 'ended')) {
+      if (generation === this.senderMuteGeneration && this.shouldStayConnected) {
+        this.handleConnectionClosed();
+      }
+      return;
+    }
+    if (sender.track === targetTrack) return;
+    try {
+      await sender.replaceTrack(targetTrack);
+    } catch {
+      if (generation !== this.senderMuteGeneration || sender !== this.audioSender) return;
+      this.errorSubject.next(this.i18n.t(
+        'consultation.ai.realtimeSenderError',
+        'Le canal micro temps réel n’a pas pu être sécurisé. Reconnexion automatique…',
+      ));
+      if (this.shouldStayConnected) this.handleConnectionClosed();
+    }
+  }
+
+  private usableAudioTrack(stream: MediaStream | null): MediaStreamTrack | null {
+    const track = stream?.getAudioTracks()[0] ?? null;
+    return track && track.readyState !== 'ended' ? track : null;
+  }
+
   private watchMicrophoneTrack(track: MediaStreamTrack): void {
     if (typeof track.addEventListener !== 'function') return;
     track.addEventListener('ended', () => {
+      if (track !== this.mediaStream?.getAudioTracks()[0]) return;
       if (!this.tearingDown && this.shouldStayConnected) {
         this.errorSubject.next(this.i18n.t(
           'consultation.ai.realtimeMicLost',
@@ -296,11 +356,12 @@ export class RealtimeVoiceBridgeService {
       }
     });
     track.addEventListener('mute', () => {
+      if (track !== this.mediaStream?.getAudioTracks()[0]) return;
       if (this.tearingDown || !this.shouldStayConnected) return;
       this.clearTrackMutedTimer();
       this.trackMutedTimer = setTimeout(() => {
         this.trackMutedTimer = null;
-        if (track.muted && this.shouldStayConnected) {
+        if (track === this.mediaStream?.getAudioTracks()[0] && track.muted && this.shouldStayConnected) {
           this.errorSubject.next(this.i18n.t(
             'consultation.ai.realtimeMicLost',
             'Le microphone ne fournit plus d’audio. Reconnexion automatique…',
@@ -309,7 +370,9 @@ export class RealtimeVoiceBridgeService {
         }
       }, 4000);
     });
-    track.addEventListener('unmute', () => this.clearTrackMutedTimer());
+    track.addEventListener('unmute', () => {
+      if (track === this.mediaStream?.getAudioTracks()[0]) this.clearTrackMutedTimer();
+    });
   }
 
   private handlePeerConnectionState(pc: RTCPeerConnection): void {
@@ -510,6 +573,8 @@ export class RealtimeVoiceBridgeService {
     this.tearingDown = true;
     try {
       this.activeResponseId = null;
+      this.senderMuteGeneration += 1;
+      this.audioSender = null;
       if (this.dataChannel) {
         this.dataChannel.onclose = null;
         this.dataChannel.onerror = null;
@@ -524,8 +589,11 @@ export class RealtimeVoiceBridgeService {
         this.peerConnection.close();
       }
       this.peerConnection = null;
-      this.mediaStream?.getTracks().forEach(track => track.stop());
+      if (this.mediaStreamOwned) {
+        this.mediaStream?.getTracks().forEach(track => track.stop());
+      }
       this.mediaStream = null;
+      this.mediaStreamOwned = false;
       if (this.remoteAudio) {
         this.remoteAudio.pause();
         this.remoteAudio.srcObject = null;
@@ -636,6 +704,12 @@ export class RealtimeVoiceBridgeService {
         );
       }
     }
+    if (error instanceof Error && error.message === 'AI_REALTIME_SHARED_MIC_UNAVAILABLE') {
+      return this.i18n.t(
+        'consultation.ai.realtimeSharedMicUnavailable',
+        'La capture de sécurité n’a pas de flux micro actif. Le temps réel reste désactivé pour éviter une capture non protégée.',
+      );
+    }
     if (error instanceof Error && error.message.startsWith('AI_REALTIME_')) {
       return this.i18n.t(
         'consultation.ai.realtimeConnectionFailed',
@@ -649,12 +723,12 @@ export class RealtimeVoiceBridgeService {
   }
 
   private extractBackendReason(error: HttpErrorResponse): string {
-    const payload = error.error;
-    if (payload && typeof payload === 'object') {
-      const detail = (payload as { detail?: unknown; title?: unknown }).detail
-        ?? (payload as { detail?: unknown; title?: unknown }).title;
-      if (typeof detail === 'string') return detail;
+    if (typeof error.error === 'string') return error.error;
+    if (error.error && typeof error.error === 'object') {
+      const body = error.error as Record<string, unknown>;
+      const value = body['detail'] ?? body['title'] ?? body['message'];
+      return typeof value === 'string' ? value : '';
     }
-    return typeof payload === 'string' ? payload : '';
+    return '';
   }
 }

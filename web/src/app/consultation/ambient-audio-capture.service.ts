@@ -92,6 +92,19 @@ export class AmbientAudioCaptureService implements OnDestroy {
       && this.vault.isSupported();
   }
 
+  mediaStreamForVisit(visitId: string): MediaStream | null {
+    const normalizedVisitId = visitId.trim();
+    if (!normalizedVisitId
+      || !this.stateSubject.value.active
+      || this.activeCapture?.visitId !== normalizedVisitId) {
+      return null;
+    }
+    const stream = this.mediaStream;
+    const track = stream?.getAudioTracks()[0];
+    if (!stream || !track || track.readyState === 'ended') return null;
+    return stream;
+  }
+
   async start(visitId: string, locale?: string): Promise<void> {
     const normalizedVisitId = visitId.trim();
     if (!normalizedVisitId) throw new Error('AMBIENT_VISIT_REQUIRED');
