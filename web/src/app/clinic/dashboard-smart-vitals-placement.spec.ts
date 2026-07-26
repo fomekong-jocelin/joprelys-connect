@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { AuthTokenStorageService } from '../auth/auth-token-storage.service';
 import { I18nService } from '../core/i18n/i18n.service';
@@ -20,13 +20,10 @@ describe('Dashboard Smart Vitals placement', () => {
       imports: [DashboardComponent],
       providers: [
         provideHttpClient(),
+        provideRouter([]),
         {
           provide: AuthTokenStorageService,
           useValue: { session: () => null },
-        },
-        {
-          provide: Router,
-          useValue: { navigate: vi.fn() },
         },
         {
           provide: VisitApiService,
