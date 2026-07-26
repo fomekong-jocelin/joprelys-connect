@@ -57,6 +57,26 @@ class AiClinicalFactualityGuardTest {
     }
 
     @Test
+    void shouldBlockUnsupportedTermEvenInAdviceField() {
+        ParsedResponse response = response(new ParsedChange(
+                "advice",
+                "SET",
+                "hydratation et repos",
+                "Model enrichment",
+                "LOW",
+                List.of("hydratation")));
+
+        ParsedResponse checked = guard.enforce(
+                response,
+                "hydratation",
+                Map.of(),
+                "TEXT",
+                "fr");
+
+        assertTrue(checked.changes().isEmpty());
+    }
+
+    @Test
     void shouldBlockNegationReversal() {
         ParsedResponse response = response(new ParsedChange(
                 "symptoms",
