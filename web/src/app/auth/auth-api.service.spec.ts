@@ -80,7 +80,7 @@ describe('AuthApiService', () => {
     await expect(restored).resolves.toBeUndefined();
   });
 
-  it('should propagate an unexpected refresh failure instead of masking it', async () => {
+  it('should keep bootstrap alive when the refresh service returns a server error', async () => {
     const service = TestBed.inject(AuthApiService);
     const http = TestBed.inject(HttpTestingController);
 
@@ -90,7 +90,24 @@ describe('AuthApiService', () => {
       { status: 500, statusText: 'Internal Server Error' },
     );
 
-    await expect(restored).rejects.toMatchObject({ status: 500 });
+    await expect(restored).resolves.toBeUndefined();
+  });
+
+  it('should preserve an expired local session during a transient refresh outage', async () => {
+    const service = TestBed.inject(AuthApiService);
+    const storage = TestBed.inject(AuthTokenStorageService);
+    const http = TestBed.inject(HttpTestingController);
+
+    storage.save(loginResponse('expired-token', '2020-01-01T00:00:00Z'));
+
+    const restored = firstValueFrom(service.restoreSession());
+    http.expectOne('/api/auth/refresh').flush(
+      { detail: 'Temporary gateway error' },
+      { status: 503, statusText: 'Service Unavailable' },
+    );
+
+    await expect(restored).resolves.toBeUndefined();
+    expect(storage.accessToken).toBe('expired-token');
   });
 });
 
