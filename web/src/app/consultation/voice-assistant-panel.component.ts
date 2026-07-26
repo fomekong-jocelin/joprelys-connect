@@ -32,11 +32,11 @@ import {
   AiSessionResponse,
   AiTranscriptionResponse,
 } from './ai-consultation-api.service';
+import { AmbientSafetyPanelComponent } from './ambient-safety-panel.component';
 import {
   ClassicVoiceCapture,
   ClassicVoiceRecorderService,
 } from './classic-voice-recorder.service';
-import { DoctorVoiceCalibrationComponent } from './doctor-voice-calibration.component';
 import { RealtimeVoiceControllerComponent } from './realtime-voice-controller.component';
 
 export type { AiConsultationDraft } from './ai-consultation-api.service';
@@ -52,7 +52,7 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
     AiProposalPanelComponent,
     AiTranscriptReviewComponent,
     AiDraftPreviewComponent,
-    DoctorVoiceCalibrationComponent,
+    AmbientSafetyPanelComponent,
     RealtimeVoiceControllerComponent,
   ],
   templateUrl: './voice-assistant-panel.component.html',
