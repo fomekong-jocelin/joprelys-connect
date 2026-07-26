@@ -1,5 +1,6 @@
 package com.joprelys.backend.ai.facts.application;
 
+import com.joprelys.backend.ai.ambient.application.AmbientTranscriptLedgerService;
 import com.joprelys.backend.ai.facts.application.ClinicalFactContract.EvidenceSpanCandidate;
 import com.joprelys.backend.ai.facts.application.ClinicalFactContract.EvidenceSpanView;
 import com.joprelys.backend.ai.facts.application.ClinicalFactContract.FactCandidate;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -30,14 +32,17 @@ public class ClinicalFactLedgerService {
     private final ClinicalFactRepository factRepository;
     private final VisitRepository visitRepository;
     private final ClinicalFactEvidenceValidator evidenceValidator;
+    private final AmbientTranscriptLedgerService transcriptLedgerService;
 
     public ClinicalFactLedgerService(
             ClinicalFactRepository factRepository,
             VisitRepository visitRepository,
-            ClinicalFactEvidenceValidator evidenceValidator) {
+            ClinicalFactEvidenceValidator evidenceValidator,
+            AmbientTranscriptLedgerService transcriptLedgerService) {
         this.factRepository = factRepository;
         this.visitRepository = visitRepository;
         this.evidenceValidator = evidenceValidator;
+        this.transcriptLedgerService = transcriptLedgerService;
     }
 
     @Transactional
@@ -81,7 +86,7 @@ public class ClinicalFactLedgerService {
                 eventId,
                 candidate.factType(),
                 candidate.authority(),
-                candidate.conceptCode().trim().toUpperCase(),
+                candidate.conceptCode().trim().toUpperCase(Locale.ROOT),
                 candidate.conceptText().trim(),
                 candidate.polarity(),
                 trimToNull(candidate.valuePrimary()),
@@ -117,6 +122,12 @@ public class ClinicalFactLedgerService {
     @Transactional(readOnly = true)
     public FactLedgerView listEffective(UUID visitId, UUID organizationId) {
         requireAuthorizedVisit(visitId, organizationId);
+        Set<UUID> effectiveTranscriptItemIds = transcriptLedgerService
+                .listFinal(visitId, organizationId)
+                .items()
+                .stream()
+                .map(item -> item.id())
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
         List<ClinicalFactEntity> all = factRepository.findByVisitIdOrderBySequenceNoAsc(visitId);
         Set<UUID> superseded = new HashSet<>();
         for (ClinicalFactEntity fact : all) {
@@ -125,6 +136,8 @@ public class ClinicalFactLedgerService {
         List<FactView> effective = all.stream()
                 .filter(fact -> !superseded.contains(fact.getId()))
                 .filter(fact -> fact.getFactStatus() == FactStatus.ASSERTED)
+                .filter(fact -> fact.getEvidence().stream().allMatch(
+                        evidence -> effectiveTranscriptItemIds.contains(evidence.getTranscriptItemId())))
                 .sorted(Comparator.comparingLong(ClinicalFactEntity::getSequenceNo))
                 .map(this::view)
                 .toList();
@@ -145,7 +158,7 @@ public class ClinicalFactLedgerService {
     private boolean sameCandidate(ClinicalFactEntity existing, FactCandidate candidate) {
         if (existing.getFactType() != candidate.factType()
                 || existing.getAuthority() != candidate.authority()
-                || !existing.getConceptCode().equals(candidate.conceptCode().trim().toUpperCase())
+                || !existing.getConceptCode().equals(candidate.conceptCode().trim().toUpperCase(Locale.ROOT))
                 || !existing.getConceptText().equals(candidate.conceptText().trim())
                 || existing.getPolarity() != candidate.polarity()
                 || !Objects.equals(existing.getValuePrimary(), trimToNull(candidate.valuePrimary()))
@@ -214,7 +227,7 @@ public class ClinicalFactLedgerService {
 
     private String upperToNull(String value) {
         String normalized = trimToNull(value);
-        return normalized == null ? null : normalized.toUpperCase();
+        return normalized == null ? null : normalized.toUpperCase(Locale.ROOT);
     }
 
     private FactView view(ClinicalFactEntity fact) {
