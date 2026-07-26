@@ -65,9 +65,10 @@ class PersistentAccessTokenSessionValidatorTest {
     @Test
     void shouldAcceptAccessTokenFromRotatedPredecessorWhileReplacementFamilyIsActive() {
         UUID organizationId = UUID.randomUUID();
+        UUID familyId = UUID.randomUUID();
         UserAccountEntity user = user(organizationId);
-        AuthSessionEntity predecessor = session(user);
-        AuthSessionEntity replacement = session(user);
+        AuthSessionEntity predecessor = session(user, familyId);
+        AuthSessionEntity replacement = session(user, familyId);
         predecessor.replaceWith(replacement, NOW.minusSeconds(1));
         JwtClaims claims = claims(user, organizationId, predecessor.getId());
 
@@ -80,9 +81,10 @@ class PersistentAccessTokenSessionValidatorTest {
     @Test
     void shouldRejectRotatedPredecessorTokenWhenReplacementFamilyIsRevoked() {
         UUID organizationId = UUID.randomUUID();
+        UUID familyId = UUID.randomUUID();
         UserAccountEntity user = user(organizationId);
-        AuthSessionEntity predecessor = session(user);
-        AuthSessionEntity replacement = session(user);
+        AuthSessionEntity predecessor = session(user, familyId);
+        AuthSessionEntity replacement = session(user, familyId);
         predecessor.replaceWith(replacement, NOW.minusSeconds(2));
         replacement.revoke(AuthSessionRevocationReason.LOGOUT, NOW.minusSeconds(1));
         JwtClaims claims = claims(user, organizationId, predecessor.getId());
@@ -147,9 +149,13 @@ class PersistentAccessTokenSessionValidatorTest {
     }
 
     private static AuthSessionEntity session(UserAccountEntity user) {
+        return session(user, UUID.randomUUID());
+    }
+
+    private static AuthSessionEntity session(UserAccountEntity user, UUID familyId) {
         return AuthSessionEntity.create(
                 user,
-                UUID.randomUUID(),
+                familyId,
                 "a".repeat(64),
                 METADATA,
                 NOW.minusSeconds(60),
