@@ -128,6 +128,9 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     this.subscriptions.add(this.bridge.error$.subscribe(message => {
       this.realtimeError.emit(message);
     }));
+    this.subscriptions.add(this.bridge.assistantTurnCompleted$.subscribe(() => {
+      setTimeout(() => this.syncMute(), 120);
+    }));
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -150,7 +153,11 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   }
 
   effectiveMuted(): boolean {
-    return this.blocked || this.manualMuted || this.state().muted;
+    return this.blocked
+      || this.manualMuted
+      || this.processing()
+      || this.state().assistantSpeaking
+      || this.state().muted;
   }
 
   statusLabel(): string {
@@ -181,20 +188,28 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     }
     if (!this.bridge.isSupported()) {
       this.activeChange.emit(false);
+      this.realtimeError.emit(this.i18n.t(
+        'consultation.ai.realtimeUnsupported',
+        'Ce navigateur ne prend pas en charge la connexion audio temps réel.',
+      ));
       return;
     }
 
     this.connectingForVisit = this.visitId;
     try {
       await this.bridge.connect(this.visitId);
-      this.syncMute();
-      this.speakCurrentApprovedTurn();
-    } catch {
+      const spoken = this.speakCurrentApprovedTurn();
+      if (!spoken) this.syncMute();
+    } catch (error) {
       this.bridge.disconnect();
-      this.realtimeError.emit(this.i18n.t(
-        'consultation.ai.realtimeUnavailable',
-        'Le temps réel est indisponible. Joprelys conserve le mode audio classique.',
-      ));
+      this.realtimeError.emit(
+        error instanceof Error && error.message.trim()
+          ? error.message
+          : this.i18n.t(
+              'consultation.ai.realtimeUnavailable',
+              'Le temps réel est indisponible. Joprelys conserve le mode audio classique.',
+            ),
+      );
     } finally {
       this.connectingForVisit = '';
     }
@@ -216,13 +231,15 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
         this.processing.set(false);
         const requiresValidation = response.revisions.some(revision => revision.status === 'PENDING');
         this.message.emit(response);
-        const nextQuestion = response.clarifications.find(item => item.status === 'PENDING')?.question?.trim();
-        this.speakApproved(nextQuestion || response.assistantMessage);
         if (requiresValidation) {
           this.bridge.setMuted(true);
-        } else {
-          this.syncMute();
+          return;
         }
+        const nextQuestion = response.clarifications.find(
+          item => item.status === 'PENDING',
+        )?.question?.trim();
+        const spoken = this.speakApproved(nextQuestion || response.assistantMessage);
+        if (!spoken) this.syncMute();
       },
       error: () => {
         this.processing.set(false);
@@ -235,22 +252,30 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     });
   }
 
-  private speakCurrentApprovedTurn(): void {
+  private speakCurrentApprovedTurn(): boolean {
     const pendingQuestion = this.session?.clarifications.find(
       item => item.status === 'PENDING',
     )?.question?.trim();
-    this.speakApproved(pendingQuestion || this.session?.assistantMessage || '');
+    return this.speakApproved(pendingQuestion || this.session?.assistantMessage || '');
   }
 
-  private speakApproved(message: string): void {
+  private speakApproved(message: string): boolean {
     const text = message.trim();
-    if (!text || text === this.lastSpokenMessage || !this.state().connected) return;
+    if (!text || text === this.lastSpokenMessage || !this.state().connected) return false;
     this.lastSpokenMessage = text;
-    this.bridge.speakApproved(text);
+    this.bridge.setMuted(true);
+    const started = this.bridge.speakApproved(text);
+    if (!started) this.syncMute();
+    return started;
   }
 
   private syncMute(): void {
     if (!this.state().connected) return;
-    this.bridge.setMuted(this.blocked || this.manualMuted || this.processing());
+    this.bridge.setMuted(
+      this.blocked
+      || this.manualMuted
+      || this.processing()
+      || this.state().assistantSpeaking,
+    );
   }
 }

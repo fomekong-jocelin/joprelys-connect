@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.joprelys.backend.ai.infrastructure.AiProperties;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
@@ -25,6 +26,7 @@ class OpenAiRealtimeCallServiceTest {
 
         assertEquals("realtime", session.get("type"));
         assertEquals("gpt-realtime", session.get("model"));
+        assertEquals(List.of("audio"), session.get("output_modalities"));
         assertEquals("semantic_vad", turnDetection.get("type"));
         assertEquals("medium", turnDetection.get("eagerness"));
         assertEquals(Boolean.FALSE, turnDetection.get("create_response"));
@@ -73,6 +75,7 @@ class OpenAiRealtimeCallServiceTest {
                 properties,
                 new ObjectMapper(),
                 "gpt-realtime",
+                "gpt-realtime-mini",
                 "marin",
                 "gpt-4o-transcribe",
                 "medium",

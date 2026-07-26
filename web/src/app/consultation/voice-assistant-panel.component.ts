@@ -580,7 +580,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
         this.assistantAudio = audio;
         audio.onended = () => this.finishSpeaking(autoListen);
         audio.onerror = () => this.finishSpeaking(autoListen);
-        void audio.play().catch(() => this.finishSpeaking(false));
+        void audio.play().catch(() => this.finishSpeaking(autoListen));
       },
       error: () => {
         this.errorMessage.set('La réponse vocale est indisponible ; le texte reste affiché.');

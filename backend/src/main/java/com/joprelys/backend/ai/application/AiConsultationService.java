@@ -44,6 +44,9 @@ public class AiConsultationService {
     private final ClinicalContextAssembler clinicalContextAssembler;
     private final AiClinicalGroundingGuard groundingGuard;
     private final AiMedicationSafetyGuard medicationSafetyGuard;
+    private final AiRepeatedClarificationGuard repeatedClarificationGuard =
+            new AiRepeatedClarificationGuard();
+    private final AiClinicalMemoryManager memoryManager = new AiClinicalMemoryManager();
     private final AiClinicalToolDispatcher toolDispatcher = new AiClinicalToolDispatcher();
     private final AiRevisionManager revisionManager;
     private final AiClarificationManager clarificationManager;
@@ -96,6 +99,7 @@ public class AiConsultationService {
         AiConsultationSessionState state = new AiConsultationSessionState(
                 UUID.randomUUID(), visitId, expiry(), locale);
         AiConsultationSessionSupport.mergeInitialDraft(state.draft, initialDraft);
+        memoryManager.synchronizeAcceptedDraft(state);
         state.assistantMessage = messageBuilder.initialAssistantMessage(locale);
         appendVisibleMessage(state, "ASSISTANT", state.assistantMessage, "SYSTEM", false);
         sessions.put(key, state);
@@ -316,9 +320,12 @@ public class AiConsultationService {
             String source,
             UUID resolvedClarificationId,
             String clarificationAnswer) {
-        String resolvedClarificationField = resolvedClarificationId == null
+        ClarificationView resolvedClarification = resolvedClarificationId == null
                 ? null
-                : clarificationManager.findPending(state, resolvedClarificationId).field();
+                : clarificationManager.findPending(state, resolvedClarificationId);
+        String resolvedClarificationField = resolvedClarification == null
+                ? null
+                : resolvedClarification.field();
         Map<String, Object> clinicalContext = loadClinicalContext(state.visitId);
         List<AiMessage> providerMessages = new ArrayList<>(state.providerMessages);
         providerMessages.add(AiMessage.user(messageBuilder.buildUserMessage(
@@ -335,9 +342,11 @@ public class AiConsultationService {
             ParsedResponse rawParsed = responseParser.parse(response.content());
             ParsedResponse grounded = groundingGuard.enforce(
                     rawParsed, visibleText, resolvedClarificationField, state.locale);
-            ParsedResponse parsed = "prescription".equals(resolvedClarificationField)
+            ParsedResponse medicationChecked = "prescription".equals(resolvedClarificationField)
                     ? grounded
                     : medicationSafetyGuard.enforce(grounded, clinicalContext, state.locale);
+            ParsedResponse parsed = repeatedClarificationGuard.enforce(
+                    medicationChecked, state, state.locale);
             var toolPlan = toolDispatcher.dispatch(parsed);
             boolean adjustedOutput = parsed != rawParsed;
 
@@ -367,6 +376,10 @@ public class AiConsultationService {
             state.providerMessages.add(AiMessage.assistant(
                     adjustedOutput ? parsed.assistantMessage() : response.content()));
             trimProviderConversation(state.providerMessages);
+            if (resolvedClarification != null) {
+                memoryManager.recordResolvedClarification(
+                        state, resolvedClarification, clarificationAnswer);
+            }
             appendVisibleMessage(state, "USER", visibleText, source, false);
             appendVisibleMessage(
                     state,

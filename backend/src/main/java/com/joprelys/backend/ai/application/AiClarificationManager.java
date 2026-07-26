@@ -14,6 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 final class AiClarificationManager {
 
     private final AiProperties properties;
+    private final AiClinicalMemoryManager memoryManager = new AiClinicalMemoryManager();
 
     AiClarificationManager(AiProperties properties) {
         this.properties = properties;
@@ -48,7 +49,7 @@ final class AiClarificationManager {
             ClarificationView clarification = state.clarifications.get(index);
             if (clarification.id().equals(clarificationId)
                     && "PENDING".equals(clarification.status())) {
-                state.clarifications.set(index, new ClarificationView(
+                ClarificationView resolved = new ClarificationView(
                         clarification.id(),
                         clarification.field(),
                         clarification.question(),
@@ -56,7 +57,9 @@ final class AiClarificationManager {
                         clarification.options(),
                         clarification.createdAt(),
                         answer,
-                        Instant.now()));
+                        Instant.now());
+                state.clarifications.set(index, resolved);
+                memoryManager.recordResolvedClarification(state, resolved, answer);
                 return;
             }
         }

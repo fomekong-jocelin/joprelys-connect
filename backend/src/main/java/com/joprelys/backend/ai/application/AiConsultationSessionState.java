@@ -21,6 +21,7 @@ final class AiConsultationSessionState {
     final List<ConversationMessageView> conversation = new ArrayList<>();
     final List<ClarificationView> clarifications = new ArrayList<>();
     final List<RevisionView> revisions = new ArrayList<>();
+    final AiClinicalConversationMemory clinicalMemory = new AiClinicalConversationMemory();
 
     Instant expiresAt;
     String transcript;

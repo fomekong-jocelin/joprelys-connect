@@ -1,4 +1,4 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Subject, firstValueFrom } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
@@ -42,10 +42,12 @@ export class RealtimeVoiceBridgeService {
   private readonly stateSubject = new BehaviorSubject<RealtimeVoiceState>(INITIAL_STATE);
   private readonly transcriptSubject = new Subject<string>();
   private readonly errorSubject = new Subject<string>();
+  private readonly assistantTurnCompletedSubject = new Subject<void>();
 
   readonly state$ = this.stateSubject.asObservable();
   readonly transcript$ = this.transcriptSubject.asObservable();
   readonly error$ = this.errorSubject.asObservable();
+  readonly assistantTurnCompleted$ = this.assistantTurnCompletedSubject.asObservable();
 
   private peerConnection: RTCPeerConnection | null = null;
   private dataChannel: RTCDataChannel | null = null;
@@ -64,7 +66,10 @@ export class RealtimeVoiceBridgeService {
     purpose: RealtimeVoicePurpose = 'consultation',
   ): Promise<void> {
     if (!visitId || !this.isSupported()) {
-      throw new Error('AI_REALTIME_UNSUPPORTED');
+      throw new Error(this.i18n.t(
+        'consultation.ai.realtimeUnsupported',
+        'Ce navigateur ne prend pas en charge la connexion audio temps réel.',
+      ));
     }
     if (this.stateSubject.value.connected || this.stateSubject.value.connecting) return;
 
@@ -107,13 +112,19 @@ export class RealtimeVoiceBridgeService {
         'consultation.ai.realtimeChannelError',
         'La liaison audio temps réel a rencontré une erreur.',
       ));
-      channel.onclose = () => this.patchState({
-        connected: false,
-        connecting: false,
-        userSpeaking: false,
-        assistantSpeaking: false,
-      });
+      channel.onclose = () => this.handleConnectionClosed();
 
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === 'failed') {
+          this.errorSubject.next(this.i18n.t(
+            'consultation.ai.realtimeNetworkError',
+            'La connexion audio temps réel a échoué. Vérifiez le réseau puis réessayez.',
+          ));
+          this.handleConnectionClosed();
+        }
+      };
+
+      const channelReady = this.waitForDataChannel(channel, pc);
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       await this.waitForIceGathering(pc);
@@ -133,10 +144,11 @@ export class RealtimeVoiceBridgeService {
         },
       ));
       await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+      await channelReady;
       this.patchState({ connected: true, connecting: false, muted: false });
     } catch (error) {
       this.disconnect();
-      throw error;
+      throw new Error(this.describeConnectionError(error));
     }
   }
 
@@ -160,13 +172,14 @@ export class RealtimeVoiceBridgeService {
     this.mediaStream?.getAudioTracks().forEach(track => {
       track.enabled = !muted;
     });
-    this.patchState({ muted });
+    if (this.stateSubject.value.muted !== muted) this.patchState({ muted });
   }
 
-  speakApproved(message: string): void {
+  speakApproved(message: string): boolean {
     const text = message.trim();
-    if (!text || !this.isChannelOpen()) return;
+    if (!text || !this.isChannelOpen()) return false;
 
+    this.cancelAssistantResponse();
     this.sendEvent({
       type: 'response.create',
       response: {
@@ -187,6 +200,7 @@ export class RealtimeVoiceBridgeService {
         ],
       },
     });
+    return true;
   }
 
   cancelAssistantResponse(): void {
@@ -195,6 +209,7 @@ export class RealtimeVoiceBridgeService {
     this.sendEvent({ type: 'output_audio_buffer.clear' });
     this.activeResponseId = null;
     this.patchState({ assistantSpeaking: false });
+    this.assistantTurnCompletedSubject.next();
   }
 
   private handleServerEvent(raw: unknown): void {
@@ -229,8 +244,10 @@ export class RealtimeVoiceBridgeService {
         break;
       case 'response.done':
       case 'output_audio_buffer.cleared':
+      case 'output_audio_buffer.stopped':
         this.activeResponseId = null;
         this.patchState({ assistantSpeaking: false });
+        this.assistantTurnCompletedSubject.next();
         break;
       case 'error':
         this.errorSubject.next(
@@ -238,6 +255,10 @@ export class RealtimeVoiceBridgeService {
           ?? event.message
           ?? this.i18n.t('consultation.ai.realtimeError', 'Erreur audio temps réel.'),
         );
+        if (this.stateSubject.value.assistantSpeaking) {
+          this.patchState({ assistantSpeaking: false });
+          this.assistantTurnCompletedSubject.next();
+        }
         break;
     }
   }
@@ -264,6 +285,16 @@ export class RealtimeVoiceBridgeService {
     this.stateSubject.next({ ...this.stateSubject.value, ...patch });
   }
 
+  private handleConnectionClosed(): void {
+    this.activeResponseId = null;
+    this.patchState({
+      connected: false,
+      connecting: false,
+      userSpeaking: false,
+      assistantSpeaking: false,
+    });
+  }
+
   private waitForIceGathering(pc: RTCPeerConnection): Promise<void> {
     if (pc.iceGatheringState === 'complete') return Promise.resolve();
     return new Promise(resolve => {
@@ -276,7 +307,98 @@ export class RealtimeVoiceBridgeService {
       setTimeout(() => {
         pc.removeEventListener('icegatheringstatechange', listener);
         resolve();
-      }, 2000);
+      }, 5000);
     });
+  }
+
+  private waitForDataChannel(
+    channel: RTCDataChannel,
+    pc: RTCPeerConnection,
+  ): Promise<void> {
+    if (channel.readyState === 'open') return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error('AI_REALTIME_CHANNEL_TIMEOUT'));
+      }, 15000);
+      const open = () => {
+        cleanup();
+        resolve();
+      };
+      const failed = () => {
+        if (pc.connectionState !== 'failed') return;
+        cleanup();
+        reject(new Error('AI_REALTIME_PEER_CONNECTION_FAILED'));
+      };
+      const cleanup = () => {
+        clearTimeout(timeout);
+        channel.removeEventListener('open', open);
+        pc.removeEventListener('connectionstatechange', failed);
+      };
+      channel.addEventListener('open', open);
+      pc.addEventListener('connectionstatechange', failed);
+    });
+  }
+
+  private describeConnectionError(error: unknown): string {
+    if (error instanceof HttpErrorResponse) {
+      const reason = this.extractBackendReason(error);
+      if (reason === 'AI_REALTIME_NOT_CONFIGURED') {
+        return this.i18n.t(
+          'consultation.ai.realtimeNotConfigured',
+          'Le temps réel n’est pas configuré sur le serveur.',
+        );
+      }
+      if (reason === 'AI_REALTIME_AUTHENTICATION_FAILED' || reason === 'AI_REALTIME_ACCESS_DENIED') {
+        return this.i18n.t(
+          'consultation.ai.realtimeAccessDenied',
+          'La clé OpenAI utilisée par le serveur n’autorise pas le mode Realtime.',
+        );
+      }
+      if (reason === 'AI_REALTIME_QUOTA_EXCEEDED') {
+        return this.i18n.t(
+          'consultation.ai.realtimeQuotaExceeded',
+          'Le quota OpenAI Realtime est épuisé ou temporairement limité.',
+        );
+      }
+      if (reason === 'AI_SESSION_EXPIRED') {
+        return this.i18n.t(
+          'consultation.ai.realtimeSessionExpired',
+          'La session IA a expiré. Relancez le copilote vocal.',
+        );
+      }
+      if (reason === 'AI_REALTIME_MODEL_OR_CONFIG_UNAVAILABLE') {
+        return this.i18n.t(
+          'consultation.ai.realtimeModelUnavailable',
+          'Le modèle Realtime ou sa configuration n’est pas disponible pour ce compte.',
+        );
+      }
+      if (error.status === 0) {
+        return this.i18n.t(
+          'consultation.ai.realtimeNetworkError',
+          'La connexion réseau au temps réel est impossible.',
+        );
+      }
+    }
+    if (error instanceof Error && error.message.startsWith('AI_REALTIME_')) {
+      return this.i18n.t(
+        'consultation.ai.realtimeConnectionFailed',
+        'La liaison WebRTC n’a pas pu être établie. Vérifiez le réseau puis réessayez.',
+      );
+    }
+    return this.i18n.t(
+      'consultation.ai.realtimeUnavailable',
+      'Le temps réel est indisponible. Joprelys conserve le mode audio classique.',
+    );
+  }
+
+  private extractBackendReason(error: HttpErrorResponse): string {
+    const payload = error.error;
+    if (payload && typeof payload === 'object') {
+      const detail = (payload as { detail?: unknown; title?: unknown }).detail
+        ?? (payload as { detail?: unknown; title?: unknown }).title;
+      if (typeof detail === 'string') return detail;
+    }
+    return typeof payload === 'string' ? payload : '';
   }
 }

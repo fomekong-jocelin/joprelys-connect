@@ -8,6 +8,7 @@ import com.joprelys.backend.ai.infrastructure.AiProperties;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
@@ -65,9 +66,8 @@ public class ClaudeProvider implements AiProvider {
         Map<String, Object> requestBody = Map.of(
                 "model", config.model(),
                 "max_tokens", 4096,
-                "system", systemPrompt,
-                "messages", apiMessages
-        );
+                "system", effectiveSystemPrompt(messages, systemPrompt),
+                "messages", apiMessages);
 
         @SuppressWarnings("unchecked")
         Map<String, Object> response = claudeRestClient.post()
@@ -80,14 +80,27 @@ public class ClaudeProvider implements AiProvider {
         return parseMessagesResponse(response);
     }
 
+    private String effectiveSystemPrompt(
+            List<AiMessage> messages,
+            String systemPrompt) {
+        String dynamicSystem = messages.stream()
+                .filter(message -> message.role() == AiMessage.Role.SYSTEM)
+                .map(AiMessage::content)
+                .filter(content -> content != null && !content.isBlank())
+                .collect(Collectors.joining("\n\n"));
+        return dynamicSystem.isBlank()
+                ? systemPrompt
+                : systemPrompt + "\n\n" + dynamicSystem;
+    }
+
     private List<Map<String, String>> buildApiMessages(List<AiMessage> messages) {
         List<Map<String, String>> apiMessages = new ArrayList<>();
-        for (AiMessage msg : messages) {
-            if (msg.role() == AiMessage.Role.SYSTEM) {
+        for (AiMessage message : messages) {
+            if (message.role() == AiMessage.Role.SYSTEM) {
                 continue;
             }
-            String role = msg.role() == AiMessage.Role.USER ? "user" : "assistant";
-            apiMessages.add(Map.of("role", role, "content", msg.content()));
+            String role = message.role() == AiMessage.Role.USER ? "user" : "assistant";
+            apiMessages.add(Map.of("role", role, "content", message.content()));
         }
         return apiMessages;
     }

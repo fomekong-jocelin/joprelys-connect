@@ -57,6 +57,7 @@ joprelys:
       tts-voice: ${OPENAI_TTS_VOICE:marin}
       tts-instructions: ${OPENAI_TTS_INSTRUCTIONS:Voix médicale professionnelle, calme, chaleureuse, concise et naturelle. Prononcer clairement les nombres, unités et noms de médicaments sans dramatiser.}
       realtime-model: ${OPENAI_REALTIME_MODEL:gpt-realtime}
+      realtime-fallback-model: ${OPENAI_REALTIME_FALLBACK_MODEL:gpt-realtime-mini}
       realtime-voice: ${OPENAI_REALTIME_VOICE:marin}
       realtime-transcribe-model: ${OPENAI_REALTIME_TRANSCRIBE_MODEL:gpt-4o-transcribe}
       realtime-vad-eagerness: ${OPENAI_REALTIME_VAD_EAGERNESS:medium}
@@ -70,6 +71,13 @@ joprelys:
       api-key: ${ANTHROPIC_API_KEY:}
       model: ${CLAUDE_MODEL:claude-haiku-4-5-20251001}
       base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com/v1}
+  medication-reference:
+    enabled: ${JOPRELYS_MEDICATION_REFERENCE_ENABLED:false}
+    cache-ttl-minutes: ${JOPRELYS_MEDICATION_REFERENCE_CACHE_TTL_MINUTES:1440}
+    max-candidates: ${JOPRELYS_MEDICATION_REFERENCE_MAX_CANDIDATES:5}
+    rxnorm:
+      enabled: ${JOPRELYS_RXNORM_ENABLED:false}
+      base-url: ${JOPRELYS_RXNORM_BASE_URL:https://rxnav.nlm.nih.gov}
   security:
     jwt:
       issuer: ${JOPRELYS_JWT_ISSUER:joprelys-connect}
