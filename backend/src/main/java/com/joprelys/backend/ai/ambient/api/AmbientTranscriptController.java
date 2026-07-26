@@ -6,6 +6,10 @@ import com.joprelys.backend.ai.ambient.application.AmbientTranscriptLedgerServic
 import com.joprelys.backend.ai.ambient.application.AmbientTranscriptionService;
 import com.joprelys.backend.auth.security.JwtClaims;
 import com.joprelys.backend.auth.security.TenantContext;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -62,6 +66,24 @@ public class AmbientTranscriptController {
                 contentType);
     }
 
+    @PostMapping("/transcript/{itemId}/corrections")
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
+    public TranscriptItemView correctTranscriptItem(
+            @PathVariable UUID visitId,
+            @PathVariable UUID itemId,
+            @Valid @RequestBody TranscriptCorrectionRequest request,
+            Authentication authentication) {
+        Identity identity = identity(authentication);
+        return ledgerService.appendCorrection(
+                visitId,
+                itemId,
+                identity.userId(),
+                identity.organizationId(),
+                request.correctionId(),
+                request.speakerType(),
+                request.text());
+    }
+
     @GetMapping("/transcript")
     @PreAuthorize("hasAuthority('CLINICAL_READ') or hasAuthority('CLINICAL_WRITE')")
     public TranscriptLedgerView transcript(
@@ -69,6 +91,15 @@ public class AmbientTranscriptController {
             Authentication authentication) {
         Identity identity = identity(authentication);
         return ledgerService.listFinal(visitId, identity.organizationId());
+    }
+
+    @GetMapping("/transcript/audit")
+    @PreAuthorize("hasAuthority('CLINICAL_READ') or hasAuthority('CLINICAL_WRITE')")
+    public TranscriptLedgerView transcriptAudit(
+            @PathVariable UUID visitId,
+            Authentication authentication) {
+        Identity identity = identity(authentication);
+        return ledgerService.listAudit(visitId, identity.organizationId());
     }
 
     private Identity identity(Authentication authentication) {
@@ -92,6 +123,13 @@ public class AmbientTranscriptController {
         } catch (IllegalArgumentException exception) {
             return Optional.empty();
         }
+    }
+
+    public record TranscriptCorrectionRequest(
+            @NotBlank @Size(max = 150)
+            @Pattern(regexp = "[A-Za-z0-9._:-]+") String correctionId,
+            @NotBlank @Pattern(regexp = "DOCTOR|PATIENT") String speakerType,
+            @Size(max = 12000) String text) {
     }
 
     private record Identity(UUID userId, UUID organizationId) {
