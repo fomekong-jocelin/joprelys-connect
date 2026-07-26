@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ByteArrayResource;
@@ -29,6 +30,7 @@ public class OpenAiAmbientDiarizationAdapter implements AmbientDiarizationPort {
     private final RestClient restClient;
     private final String model;
 
+    @Autowired
     public OpenAiAmbientDiarizationAdapter(
             AiProperties properties,
             @Value("${joprelys.ai.openai.ambient-transcribe-model:gpt-4o-transcribe-diarize}") String model) {
