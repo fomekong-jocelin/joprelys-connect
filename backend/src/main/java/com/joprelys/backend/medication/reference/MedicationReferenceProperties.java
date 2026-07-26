@@ -44,6 +44,8 @@ public class MedicationReferenceProperties {
 
         private boolean enabled;
         private String baseUrl = "https://rxnav.nlm.nih.gov";
+        private int connectTimeoutMs = 1500;
+        private int readTimeoutMs = 2500;
 
         public boolean isEnabled() {
             return enabled;
@@ -59,6 +61,22 @@ public class MedicationReferenceProperties {
 
         public void setBaseUrl(String baseUrl) {
             this.baseUrl = baseUrl;
+        }
+
+        public int getConnectTimeoutMs() {
+            return connectTimeoutMs;
+        }
+
+        public void setConnectTimeoutMs(int connectTimeoutMs) {
+            this.connectTimeoutMs = connectTimeoutMs;
+        }
+
+        public int getReadTimeoutMs() {
+            return readTimeoutMs;
+        }
+
+        public void setReadTimeoutMs(int readTimeoutMs) {
+            this.readTimeoutMs = readTimeoutMs;
         }
     }
 }

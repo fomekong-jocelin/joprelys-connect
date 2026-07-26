@@ -9,6 +9,7 @@ public record MedicationEquivalence(
 
     public enum Status {
         SAME_CONCEPT,
+        SAME_INGREDIENT,
         UNKNOWN
     }
 

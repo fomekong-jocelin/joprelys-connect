@@ -6,6 +6,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -45,6 +46,44 @@ class RxNormMedicationReferencePortTest {
         assertEquals("amoxicillin", concept.canonicalName());
         assertEquals("IN", concept.termType());
         assertTrue(concept.active());
+        assertEquals(Set.of("723"), port.findIngredientConceptIds(concept));
+        server.verify();
+    }
+
+    @Test
+    void shouldResolveIngredientIdsForBrandedOrClinicalDrugConcept() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("https://rxnav.test");
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        RxNormMedicationReferencePort port = new RxNormMedicationReferencePort(builder.build());
+        MedicationConcept branded = new MedicationConcept(
+                "RXNORM",
+                "209459",
+                "acetaminophen 500 MG Oral Tablet [Tylenol]",
+                "SBD",
+                List.of("Tylenol 500 MG Oral Tablet"),
+                true);
+
+        server.expect(requestTo(
+                        "https://rxnav.test/REST/rxcui/209459/related.json?tty=IN%20PIN%20MIN"))
+                .andRespond(withSuccess("""
+                        {
+                          "relatedGroup": {
+                            "rxcui": null,
+                            "conceptGroup": [
+                              {
+                                "tty": "IN",
+                                "conceptProperties": [
+                                  {"rxcui":"161","name":"acetaminophen","tty":"IN","suppress":"N"}
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        Set<String> ingredientIds = port.findIngredientConceptIds(branded);
+
+        assertEquals(Set.of("161"), ingredientIds);
         server.verify();
     }
 

@@ -8,6 +8,10 @@ spring:
     repair-on-migrate: false
 
 joprelys:
+  medication-reference:
+    enabled: ${JOPRELYS_MEDICATION_REFERENCE_ENABLED:true}
+    rxnorm:
+      enabled: ${JOPRELYS_RXNORM_ENABLED:true}
   security:
     jwt:
       secret: ${JOPRELYS_JWT_SECRET}
