@@ -48,6 +48,7 @@ public class AiConsultationService {
     private final AiClinicalResponseParser responseParser;
     private final ClinicalContextAssembler clinicalContextAssembler;
     private final AiClinicalGroundingGuard groundingGuard;
+    private final AiMedicationSafetyGuard medicationSafetyGuard;
     private final AiClinicalToolDispatcher toolDispatcher = new AiClinicalToolDispatcher();
     private final AiRevisionManager revisionManager;
     private final AiClarificationManager clarificationManager;
@@ -70,6 +71,7 @@ public class AiConsultationService {
         this.responseParser = responseParser;
         this.clinicalContextAssembler = clinicalContextAssembler;
         this.groundingGuard = new AiClinicalGroundingGuard(objectMapper);
+        this.medicationSafetyGuard = new AiMedicationSafetyGuard(objectMapper);
         this.revisionManager = revisionManager;
         this.clarificationManager = clarificationManager;
     }
@@ -347,10 +349,13 @@ public class AiConsultationService {
                         org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
             }
             ParsedResponse rawParsed = responseParser.parse(response.content());
-            ParsedResponse parsed = groundingGuard.enforce(
+            ParsedResponse grounded = groundingGuard.enforce(
                     rawParsed, visibleText, resolvedClarificationField, state.locale);
+            ParsedResponse parsed = "prescription".equals(resolvedClarificationField)
+                    ? grounded
+                    : medicationSafetyGuard.enforce(grounded, clinicalContext, state.locale);
             var toolPlan = toolDispatcher.dispatch(parsed);
-            boolean groundingAdjustedOutput = parsed != rawParsed;
+            boolean adjustedOutput = parsed != rawParsed;
 
             if (resolvedClarificationId != null) {
                 clarificationManager.resolve(
@@ -376,7 +381,7 @@ public class AiConsultationService {
             state.providerMessages.clear();
             state.providerMessages.addAll(providerMessages);
             state.providerMessages.add(AiMessage.assistant(
-                    groundingAdjustedOutput ? parsed.assistantMessage() : response.content()));
+                    adjustedOutput ? parsed.assistantMessage() : response.content()));
             trimProviderConversation(state.providerMessages);
             appendVisibleMessage(state, "USER", visibleText, source, false);
             appendVisibleMessage(
