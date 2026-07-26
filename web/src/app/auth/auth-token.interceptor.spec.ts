@@ -70,6 +70,7 @@ describe('authTokenInterceptor', () => {
 
     const refreshRequest = httpTesting.expectOne('/api/auth/refresh');
     expect(refreshRequest.request.method).toBe('POST');
+    expect(refreshRequest.request.withCredentials).toBe(true);
     refreshRequest.flush(loginResponse('fresh-token', '2999-07-02T12:30:00Z'));
 
     const protectedRequest = httpTesting.expectOne('/api/patients');
@@ -96,6 +97,28 @@ describe('authTokenInterceptor', () => {
 
     const retryRequest = httpTesting.expectOne('/api/patients');
     expect(retryRequest.request.headers.get('Authorization')).toBe('Bearer replacement-token');
+    retryRequest.flush([]);
+  });
+
+  it('should reuse a newer token when an in-flight request is rejected after another refresh', () => {
+    const http = TestBed.inject(HttpClient);
+    const httpTesting = TestBed.inject(HttpTestingController);
+    const tokenStorage = TestBed.inject(AuthTokenStorageService);
+
+    tokenStorage.save(loginResponse('old-token', '2999-07-02T12:30:00Z'));
+    http.get('/api/patients').subscribe();
+
+    const firstRequest = httpTesting.expectOne('/api/patients');
+    expect(firstRequest.request.headers.get('Authorization')).toBe('Bearer old-token');
+
+    // Simulates the BroadcastChannel / another in-flight request completing a
+    // refresh while this request is still travelling to the backend.
+    tokenStorage.save(loginResponse('peer-refreshed-token', '2999-07-02T12:45:00Z'));
+    firstRequest.flush({}, { status: 401, statusText: 'Unauthorized' });
+
+    httpTesting.expectNone('/api/auth/refresh');
+    const retryRequest = httpTesting.expectOne('/api/patients');
+    expect(retryRequest.request.headers.get('Authorization')).toBe('Bearer peer-refreshed-token');
     retryRequest.flush([]);
   });
 
