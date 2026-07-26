@@ -116,9 +116,16 @@ export class AuthSessionRecoveryService implements OnDestroy {
   }
 
   private currentUsableReplacement(expectedAccessToken?: string): string | null {
-    if (!expectedAccessToken) return null;
     const current = this.tokenStorage.session();
-    if (!current || current.accessToken === expectedAccessToken || this.tokenStorage.isExpired()) {
+    if (!current || this.tokenStorage.isExpired()) {
+      return null;
+    }
+    if (!expectedAccessToken) {
+      // Typical case when another tab restored/refreshed the shared browser
+      // session while this tab was waiting for the cross-tab lock.
+      return current.accessToken;
+    }
+    if (current.accessToken === expectedAccessToken) {
       return null;
     }
     return current.accessToken;
