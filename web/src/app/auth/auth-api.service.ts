@@ -50,9 +50,9 @@ export class AuthApiService {
       return of(undefined);
     }
 
-    // /patient/* is an explicit identity boundary. A fresh patient tab must never
-    // import the professional session merely because the browser also owns the
-    // professional HttpOnly refresh cookie.
+    // Patient routes/login mode are an explicit identity boundary. A fresh patient
+    // tab must never import the professional session merely because the browser
+    // also owns the professional HttpOnly refresh cookie.
     if (!currentSession && this.isPatientRoute()) {
       return of(undefined);
     }
@@ -95,6 +95,8 @@ export class AuthApiService {
   }
 
   private isPatientRoute(): boolean {
-    return (this.document.defaultView?.location?.pathname ?? '').startsWith('/patient/');
+    const view = this.document.defaultView;
+    if ((view?.location?.pathname ?? '').startsWith('/patient/')) return true;
+    return new URLSearchParams(view?.location?.search ?? '').get('mode') === 'patient';
   }
 }
