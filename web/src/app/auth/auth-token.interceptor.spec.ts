@@ -45,6 +45,24 @@ describe('authTokenInterceptor', () => {
     request.flush([]);
   });
 
+  it('should recover a protected request from the HttpOnly refresh cookie when access token is missing', () => {
+    const http = TestBed.inject(HttpClient);
+    const httpTesting = TestBed.inject(HttpTestingController);
+    const tokenStorage = TestBed.inject(AuthTokenStorageService);
+
+    expect(tokenStorage.session()).toBeNull();
+    http.get('/api/patients').subscribe();
+
+    const refreshRequest = httpTesting.expectOne('/api/auth/refresh');
+    expect(refreshRequest.request.withCredentials).toBe(true);
+    refreshRequest.flush(loginResponse('restored-token', '2999-07-02T12:30:00Z'));
+
+    const protectedRequest = httpTesting.expectOne('/api/patients');
+    expect(protectedRequest.request.headers.get('Authorization')).toBe('Bearer restored-token');
+    protectedRequest.flush([]);
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
   it('should not attach bearer token to external requests', () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
