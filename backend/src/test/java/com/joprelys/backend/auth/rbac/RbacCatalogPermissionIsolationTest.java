@@ -35,6 +35,14 @@ class RbacCatalogPermissionIsolationTest {
     }
 
     @Test
+    void platformRolesAreNeverAssignableFromClinicAdministration() {
+        Map<String, RbacCatalog.RoleDefinition> roles = rolesByCode();
+
+        assertThat(roles.get(RbacCatalog.ROLE_ADMIN_JOPRELYS).assignable()).isFalse();
+        assertThat(roles.get(RbacCatalog.ROLE_SUPER_ADMIN).assignable()).isFalse();
+    }
+
+    @Test
     void doctorKeepsCompleteUnifiedAdmissionCapabilities() {
         Map<String, RbacCatalog.RoleDefinition> roles = rolesByCode();
 
