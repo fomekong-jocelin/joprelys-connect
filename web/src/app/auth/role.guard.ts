@@ -16,22 +16,32 @@ export const roleGuard: CanActivateFn = (route, state) => {
 
   const expectedRoles = (route.data['expectedRoles'] as string[] | undefined) ?? [];
   const expectedPermissions = (route.data['expectedPermissions'] as string[] | undefined) ?? [];
+  const expectsPatient = expectedRoles.includes('PATIENT');
   const routePath = route.routeConfig?.path ?? '';
   const isBillingManagementRoute = routePath === 'clinic/billing'
     || routePath === 'clinic/billing/invoice/:invoiceId';
   const isInternalEntryRoute = routePath === 'dashboard'
-    || (routePath === 'profile' && !expectedRoles.includes('PATIENT'));
+    || (routePath === 'profile' && !expectsPatient);
   const allowAnyInternalRole = route.data['allowAnyInternalRole'] === true || isInternalEntryRoute;
-  const loginTree = () => router.createUrlTree(['/'], { queryParams: { returnUrl: state.url } });
+  const professionalLoginTree = () => router.createUrlTree(['/'], { queryParams: { returnUrl: state.url } });
+  const patientLoginTree = () => router.createUrlTree(['/'], {
+    queryParams: { mode: 'patient', returnUrl: state.url },
+  });
 
   const authorizeSession = (session: AuthSession) => {
-    const legacyRoles = session.role.split(',').map((role) => role.trim()).filter(Boolean);
-    const isPatientSession = legacyRoles.includes('PATIENT');
+    const isPatientSession = tokenStorage.isPatientSession(session);
 
     if (isPatientSession) {
-      return expectedRoles.includes('PATIENT')
+      return expectsPatient
         ? true
         : router.parseUrl('/unauthorized');
+    }
+
+    // A valid professional session in this tab must not be mistaken for patient
+    // authentication. Send the user to the explicit patient login mode instead of
+    // importing/reusing clinician credentials on a patient route.
+    if (expectsPatient) {
+      return patientLoginTree();
     }
 
     if (expectedPermissions.length > 0 || allowAnyInternalRole || isBillingManagementRoute) {
@@ -67,20 +77,24 @@ export const roleGuard: CanActivateFn = (route, state) => {
     return authorizeSession(session);
   }
 
-  // sessionStorage is per-tab while the persistent refresh cookie is HttpOnly and
-  // shared by the origin. A new/reloaded tab must attempt recovery before being
-  // classified as logged out. Transient network/backend outages are not proof of
-  // session expiry; frontend guards are not the security boundary, the API is.
+  // Patient authentication is deliberately JWT/OTP only. Never attempt the
+  // professional refresh cookie while entering a patient route.
+  if (expectsPatient || state.url.startsWith('/patient/')) {
+    return patientLoginTree();
+  }
+
+  // sessionStorage is per-tab while the professional refresh cookie is HttpOnly
+  // and shared by the origin. A professional tab may recover before login.
   return sessionRecovery.refreshAccessToken().pipe(
     switchMap(() => {
       const restored = tokenStorage.session();
-      if (!restored) return of(loginTree());
+      if (!restored) return of(professionalLoginTree());
       const decision = authorizeSession(restored);
       return isObservable(decision) ? decision : of(decision);
     }),
     catchError((error: HttpErrorResponse) => {
       if (error.status === 401 || error.status === 403) {
-        return of(loginTree());
+        return of(professionalLoginTree());
       }
       return of(true);
     }),

@@ -10,7 +10,10 @@ import { roleGuard } from './role.guard';
 
 describe('roleGuard', () => {
   let mockRouter: { parseUrl: ReturnType<typeof vi.fn>; createUrlTree: ReturnType<typeof vi.fn> };
-  let mockTokenStorage: { session: ReturnType<typeof signal<AuthSession | null>> };
+  let mockTokenStorage: {
+    session: ReturnType<typeof signal<AuthSession | null>>;
+    isPatientSession: ReturnType<typeof vi.fn>;
+  };
   let mockRecovery: { refreshAccessToken: ReturnType<typeof vi.fn> };
   let mockRbacApi: { ensureMyAccess: ReturnType<typeof vi.fn> };
   let sessionSignal: ReturnType<typeof signal<AuthSession | null>>;
@@ -19,10 +22,18 @@ describe('roleGuard', () => {
     sessionSignal = signal<AuthSession | null>(null);
     mockRouter = {
       parseUrl: vi.fn((url: string) => url),
-      createUrlTree: vi.fn((_commands: unknown[], options: { queryParams: { returnUrl: string } }) =>
-        `/?returnUrl=${encodeURIComponent(options.queryParams.returnUrl)}`),
+      createUrlTree: vi.fn((_commands: unknown[], options: { queryParams: Record<string, string> }) => {
+        const params = new URLSearchParams(options.queryParams).toString();
+        return `/?${params}`;
+      }),
     };
-    mockTokenStorage = { session: sessionSignal };
+    mockTokenStorage = {
+      session: sessionSignal,
+      isPatientSession: vi.fn((value?: AuthSession | null) => {
+        const current = value ?? sessionSignal();
+        return current?.role.split(',').map(role => role.trim()).includes('PATIENT') ?? false;
+      }),
+    };
     mockRecovery = { refreshAccessToken: vi.fn() };
     mockRbacApi = { ensureMyAccess: vi.fn() };
 
@@ -36,7 +47,7 @@ describe('roleGuard', () => {
     });
   });
 
-  it('should recover the scanned consultation route from the persistent session before redirecting', async () => {
+  it('should recover a professional consultation route from the persistent session before redirecting', async () => {
     sessionSignal.set(null);
     mockRecovery.refreshAccessToken.mockImplementation(() => {
       sessionSignal.set(session('MEDECIN'));
@@ -53,6 +64,30 @@ describe('roleGuard', () => {
     expect(await firstValueFrom(result$)).toBe(true);
     expect(mockRecovery.refreshAccessToken).toHaveBeenCalledOnce();
     expect(mockRouter.createUrlTree).not.toHaveBeenCalled();
+  });
+
+  it('should send a patient route without a session to patient login without professional refresh', () => {
+    sessionSignal.set(null);
+
+    const result = TestBed.runInInjectionContext(() => roleGuard({
+      routeConfig: { path: 'patient/dashboard' },
+      data: { expectedRoles: ['PATIENT'] },
+    } as any, { url: '/patient/dashboard' } as any));
+
+    expect(result).toBe('/?mode=patient&returnUrl=%2Fpatient%2Fdashboard');
+    expect(mockRecovery.refreshAccessToken).not.toHaveBeenCalled();
+  });
+
+  it('should not reuse a professional session to authorize a patient route', () => {
+    sessionSignal.set(session('MEDECIN'));
+
+    const result = TestBed.runInInjectionContext(() => roleGuard({
+      routeConfig: { path: 'patient/dashboard' },
+      data: { expectedRoles: ['PATIENT'] },
+    } as any, { url: '/patient/dashboard' } as any));
+
+    expect(result).toBe('/?mode=patient&returnUrl=%2Fpatient%2Fdashboard');
+    expect(mockRbacApi.ensureMyAccess).not.toHaveBeenCalled();
   });
 
   it('should reject a professional route configured with roles only', () => {

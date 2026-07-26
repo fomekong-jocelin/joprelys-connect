@@ -221,8 +221,8 @@ export const routes: Routes = [
   },
   {
     path: 'patient/login',
-    redirectTo: '',
-    pathMatch: 'full',
+    loadComponent: () => import('./auth/login.component').then((module) => module.LoginComponent),
+    data: { loginMode: 'patient' },
   },
   {
     path: 'patient/dashboard',

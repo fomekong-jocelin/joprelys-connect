@@ -27,7 +27,7 @@ describe('AuthApiService', () => {
     sessionStorage.clear();
   });
 
-  it('should keep a valid session without calling the refresh endpoint', async () => {
+  it('should keep a valid professional session without calling the refresh endpoint', async () => {
     const service = TestBed.inject(AuthApiService);
     const storage = TestBed.inject(AuthTokenStorageService);
     const http = TestBed.inject(HttpTestingController);
@@ -39,7 +39,7 @@ describe('AuthApiService', () => {
     expect(storage.accessToken).toBe('valid-token');
   });
 
-  it('should restore a session from the refresh cookie when a new tab starts', async () => {
+  it('should restore a professional session from the refresh cookie when a new tab starts', async () => {
     const service = TestBed.inject(AuthApiService);
     const storage = TestBed.inject(AuthTokenStorageService);
     const http = TestBed.inject(HttpTestingController);
@@ -54,7 +54,7 @@ describe('AuthApiService', () => {
     expect(storage.accessToken).toBe('restored-token');
   });
 
-  it('should replace an expired stored token from the refresh cookie without clearing state first', async () => {
+  it('should replace an expired professional token from the refresh cookie without clearing state first', async () => {
     const service = TestBed.inject(AuthApiService);
     const storage = TestBed.inject(AuthTokenStorageService);
     const http = TestBed.inject(HttpTestingController);
@@ -70,7 +70,31 @@ describe('AuthApiService', () => {
     expect(storage.accessToken).toBe('renewed-token');
   });
 
-  it('should continue anonymously when no refresh cookie is available', async () => {
+  it('should never restore a professional identity over a valid patient session', async () => {
+    const service = TestBed.inject(AuthApiService);
+    const storage = TestBed.inject(AuthTokenStorageService);
+    const http = TestBed.inject(HttpTestingController);
+
+    storage.save(patientLoginResponse('patient-token', '2999-07-17T20:00:00Z'));
+
+    await expect(firstValueFrom(service.restoreSession())).resolves.toBeUndefined();
+    http.expectNone('/api/auth/refresh');
+    expect(storage.accessToken).toBe('patient-token');
+  });
+
+  it('should expire a patient JWT locally without falling back to the professional refresh cookie', async () => {
+    const service = TestBed.inject(AuthApiService);
+    const storage = TestBed.inject(AuthTokenStorageService);
+    const http = TestBed.inject(HttpTestingController);
+
+    storage.save(patientLoginResponse('expired-patient-token', '2020-01-01T00:00:00Z'));
+
+    await expect(firstValueFrom(service.restoreSession())).resolves.toBeUndefined();
+    http.expectNone('/api/auth/refresh');
+    expect(storage.session()).toBeNull();
+  });
+
+  it('should continue anonymously when no professional refresh cookie is available', async () => {
     const service = TestBed.inject(AuthApiService);
     const http = TestBed.inject(HttpTestingController);
 
@@ -80,7 +104,7 @@ describe('AuthApiService', () => {
     await expect(restored).resolves.toBeUndefined();
   });
 
-  it('should keep bootstrap alive when the refresh service returns a server error', async () => {
+  it('should keep bootstrap alive when the professional refresh service returns a server error', async () => {
     const service = TestBed.inject(AuthApiService);
     const http = TestBed.inject(HttpTestingController);
 
@@ -93,7 +117,7 @@ describe('AuthApiService', () => {
     await expect(restored).resolves.toBeUndefined();
   });
 
-  it('should preserve an expired local session during a transient refresh outage', async () => {
+  it('should preserve an expired professional session during a transient refresh outage', async () => {
     const service = TestBed.inject(AuthApiService);
     const storage = TestBed.inject(AuthTokenStorageService);
     const http = TestBed.inject(HttpTestingController);
@@ -119,5 +143,16 @@ function loginResponse(accessToken: string, expiresAt: string): LoginResponse {
     email: 'doctor@joprelys.local',
     name: 'Doctor',
     role: 'MEDECIN',
+  };
+}
+
+function patientLoginResponse(accessToken: string, expiresAt: string): LoginResponse {
+  return {
+    accessToken,
+    tokenType: 'Bearer',
+    expiresAt,
+    email: 'DPU-001@joprelys.local',
+    name: 'Patient',
+    role: 'PATIENT',
   };
 }

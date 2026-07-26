@@ -18,7 +18,7 @@ export class AuthTokenStorageService {
   save(response: LoginResponse): void {
     const previousSession = this.session();
     if (previousSession && this.isDifferentIdentity(previousSession, response)) {
-      this.purgeBrowserState();
+      this.purgeTabIdentityState();
     }
 
     const session: AuthSession = {
@@ -46,6 +46,15 @@ export class AuthTokenStorageService {
     return expiresAt <= Date.now() + leewaySeconds * 1_000;
   }
 
+  isPatientSession(session: AuthSession | null = this.session()): boolean {
+    if (!session) return false;
+    return session.role
+      .split(',')
+      .map(role => role.trim())
+      .filter(Boolean)
+      .includes('PATIENT');
+  }
+
   clearAccessToken(): void {
     try {
       this.storage('sessionStorage')?.removeItem(SESSION_KEY);
@@ -56,7 +65,7 @@ export class AuthTokenStorageService {
   }
 
   clear(): void {
-    this.purgeBrowserState();
+    this.purgeTabIdentityState();
   }
 
   registerSessionBoundaryCleanup(cleanup: () => void): () => void {
@@ -88,13 +97,12 @@ export class AuthTokenStorageService {
     }
   }
 
-  private purgeBrowserState(): void {
+  private purgeTabIdentityState(): void {
+    // sessionStorage is tab-scoped, so clearing it cannot disconnect another tab.
+    // localStorage, cookies and persistent preferences are origin-scoped and must
+    // not be globally deleted when one tab changes identity. Identity-sensitive
+    // feature caches register an explicit cleanup below (RBAC, active patient...).
     this.clearStorage(this.storage('sessionStorage'));
-    this.clearStorageExceptDrafts(this.storage('localStorage'));
-    // Do not iterate through document.cookie here. The refresh cookie is HttpOnly
-    // and therefore cannot be cleared safely from JavaScript anyway. Deleting all
-    // accessible cookies can remove unrelated functional/consent cookies and make
-    // an authentication incident cascade into other application failures.
     this.session.set(null);
     for (const cleanup of this.sessionBoundaryCleanups) {
       try {
@@ -109,26 +117,6 @@ export class AuthTokenStorageService {
     if (!storage) return;
     try {
       storage.clear();
-    } catch {
-      // Storage can be unavailable in hardened/private browser contexts.
-    }
-  }
-
-  private clearStorageExceptDrafts(storage: Storage | null): void {
-    if (!storage) return;
-    try {
-      const draftItems: Array<{ key: string; value: string }> = [];
-      for (let i = 0; i < storage.length; i++) {
-        const key = storage.key(i);
-        if (key && (key.startsWith('joprelys_draft_') || key.startsWith('joprelys_admission_draft'))) {
-          const value = storage.getItem(key);
-          if (value) draftItems.push({ key, value });
-        }
-      }
-      storage.clear();
-      for (const item of draftItems) {
-        storage.setItem(item.key, item.value);
-      }
     } catch {
       // Storage can be unavailable in hardened/private browser contexts.
     }

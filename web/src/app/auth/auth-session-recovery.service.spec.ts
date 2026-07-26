@@ -11,18 +11,17 @@ describe('AuthSessionRecoveryService', () => {
   let service: AuthSessionRecoveryService;
   let storage: AuthTokenStorageService;
   let http: HttpTestingController;
+  let router: { url: string; navigate: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.useFakeTimers();
     sessionStorage.clear();
+    router = { url: '/consultation/visit-1', navigate: vi.fn().mockResolvedValue(true) };
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        {
-          provide: Router,
-          useValue: { url: '/consultation/visit-1', navigate: vi.fn().mockResolvedValue(true) },
-        },
+        { provide: Router, useValue: router },
       ],
     });
     service = TestBed.inject(AuthSessionRecoveryService);
@@ -37,7 +36,7 @@ describe('AuthSessionRecoveryService', () => {
     vi.useRealTimers();
   });
 
-  it('should share one refresh request inside the same tab', async () => {
+  it('should share one refresh request inside the same professional tab', async () => {
     storage.save(loginResponse('old-token', '2999-07-26T12:00:00Z'));
 
     const first = firstValueFrom(service.refreshAccessToken('old-token'));
@@ -67,6 +66,33 @@ describe('AuthSessionRecoveryService', () => {
     await expect(refresh).resolves.toBe('fresh-token');
     expect(storage.accessToken).toBe('fresh-token');
   });
+
+  it('should refuse to use the professional refresh cookie for a patient session', async () => {
+    storage.save(patientLoginResponse('patient-token', '2999-07-26T12:00:00Z'));
+
+    await expect(firstValueFrom(service.refreshAccessToken('patient-token')))
+      .rejects.toThrow('PATIENT_CONTEXT_HAS_NO_PROFESSIONAL_REFRESH');
+    http.expectNone('/api/auth/refresh');
+    expect(storage.accessToken).toBe('patient-token');
+  });
+
+  it('should redirect an expired patient context back to patient login mode', async () => {
+    storage.save(patientLoginResponse('patient-token', '2999-07-26T12:00:00Z'));
+    router.url = '/patient/dashboard';
+
+    service.expireSession();
+    await Promise.resolve();
+
+    expect(storage.session()).toBeNull();
+    expect(router.navigate).toHaveBeenCalledWith(['/'], {
+      queryParams: {
+        mode: 'patient',
+        sessionExpired: 'true',
+        returnUrl: '/patient/dashboard',
+      },
+      replaceUrl: true,
+    });
+  });
 });
 
 function loginResponse(accessToken: string, expiresAt: string): LoginResponse {
@@ -77,5 +103,16 @@ function loginResponse(accessToken: string, expiresAt: string): LoginResponse {
     email: 'doctor@joprelys.local',
     name: 'Doctor',
     role: 'MEDECIN',
+  };
+}
+
+function patientLoginResponse(accessToken: string, expiresAt: string): LoginResponse {
+  return {
+    accessToken,
+    tokenType: 'Bearer',
+    expiresAt,
+    email: 'DPU-001@joprelys.local',
+    name: 'Patient',
+    role: 'PATIENT',
   };
 }

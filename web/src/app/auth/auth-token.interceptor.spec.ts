@@ -45,7 +45,7 @@ describe('authTokenInterceptor', () => {
     request.flush([]);
   });
 
-  it('should recover a protected request from the HttpOnly refresh cookie when access token is missing', () => {
+  it('should recover a professional request from the HttpOnly refresh cookie when access token is missing', () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
@@ -77,7 +77,7 @@ describe('authTokenInterceptor', () => {
     request.flush({});
   });
 
-  it('should refresh an expired token before sending the protected request', () => {
+  it('should refresh an expired professional token before sending the protected request', () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
@@ -97,7 +97,7 @@ describe('authTokenInterceptor', () => {
     expect(tokenStorage.accessToken).toBe('fresh-token');
   });
 
-  it('should refresh and retry once when the api rejects the current token', () => {
+  it('should refresh and retry once when the professional api rejects the current token', () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
@@ -118,7 +118,7 @@ describe('authTokenInterceptor', () => {
     retryRequest.flush([]);
   });
 
-  it('should reuse a newer token when an in-flight request is rejected after another refresh', () => {
+  it('should reuse a newer professional token when an in-flight request is rejected after another refresh', () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
@@ -129,8 +129,6 @@ describe('authTokenInterceptor', () => {
     const firstRequest = httpTesting.expectOne('/api/patients');
     expect(firstRequest.request.headers.get('Authorization')).toBe('Bearer old-token');
 
-    // Simulates the BroadcastChannel / another in-flight request completing a
-    // refresh while this request is still travelling to the backend.
     tokenStorage.save(loginResponse('peer-refreshed-token', '2999-07-02T12:45:00Z'));
     firstRequest.flush({}, { status: 401, statusText: 'Unauthorized' });
 
@@ -140,7 +138,7 @@ describe('authTokenInterceptor', () => {
     retryRequest.flush([]);
   });
 
-  it('should preserve the session and surface a 403 authorization refusal without refreshing', () => {
+  it('should preserve the professional session and surface a 403 authorization refusal without refreshing', () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
@@ -159,7 +157,7 @@ describe('authTokenInterceptor', () => {
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('should not reclassify a refresh server error as an expired session', () => {
+  it('should not reclassify a professional refresh server error as an expired session', () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
@@ -177,7 +175,7 @@ describe('authTokenInterceptor', () => {
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('should clear the session and redirect with an explanation when refresh is rejected', () => {
+  it('should clear the professional session and redirect when professional refresh is rejected', () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
@@ -200,6 +198,49 @@ describe('authTokenInterceptor', () => {
       replaceUrl: true,
     });
   });
+
+  it('should never refresh a patient JWT with the professional cookie after a 401', () => {
+    const http = TestBed.inject(HttpClient);
+    const httpTesting = TestBed.inject(HttpTestingController);
+    const tokenStorage = TestBed.inject(AuthTokenStorageService);
+    router.url = '/patient/dashboard';
+    tokenStorage.save(patientLoginResponse('patient-token', '2999-07-02T12:30:00Z'));
+
+    http.get('/api/patient/me').subscribe({
+      error: (error: HttpErrorResponse) => expect(error.status).toBe(401),
+    });
+
+    const request = httpTesting.expectOne('/api/patient/me');
+    expect(request.request.headers.get('Authorization')).toBe('Bearer patient-token');
+    request.flush({}, { status: 401, statusText: 'Unauthorized' });
+
+    httpTesting.expectNone('/api/auth/refresh');
+    expect(tokenStorage.session()).toBeNull();
+    expect(router.navigate).toHaveBeenCalledWith(['/'], {
+      queryParams: {
+        mode: 'patient',
+        sessionExpired: 'true',
+        returnUrl: '/patient/dashboard',
+      },
+      replaceUrl: true,
+    });
+  });
+
+  it('should reject an expired patient JWT locally without touching the professional refresh cookie', () => {
+    const http = TestBed.inject(HttpClient);
+    const httpTesting = TestBed.inject(HttpTestingController);
+    const tokenStorage = TestBed.inject(AuthTokenStorageService);
+    router.url = '/patient/dashboard';
+    tokenStorage.save(patientLoginResponse('expired-patient-token', '2020-01-01T00:00:00Z'));
+
+    http.get('/api/patient/me').subscribe({
+      error: (error: HttpErrorResponse) => expect(error.status).toBe(401),
+    });
+
+    httpTesting.expectNone('/api/patient/me');
+    httpTesting.expectNone('/api/auth/refresh');
+    expect(tokenStorage.session()).toBeNull();
+  });
 });
 
 function loginResponse(accessToken: string, expiresAt: string): LoginResponse {
@@ -210,5 +251,16 @@ function loginResponse(accessToken: string, expiresAt: string): LoginResponse {
     email: 'agent@example.com',
     name: 'Agent Accueil',
     role: 'AGENT_ACCUEIL',
+  };
+}
+
+function patientLoginResponse(accessToken: string, expiresAt: string): LoginResponse {
+  return {
+    accessToken,
+    tokenType: 'Bearer',
+    expiresAt,
+    email: 'DPU-001@joprelys.local',
+    name: 'Patient',
+    role: 'PATIENT',
   };
 }
