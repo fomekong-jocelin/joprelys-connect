@@ -2,7 +2,11 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { throwError } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
-import { RealtimeVoiceBridgeService, RealtimeVoiceState } from './realtime-voice-bridge.service';
+import {
+  RealtimeTranscriptTurn,
+  RealtimeVoiceBridgeService,
+  RealtimeVoiceState,
+} from './realtime-voice-bridge.service';
 
 describe('RealtimeVoiceBridgeService connection lifecycle', () => {
   let service: RealtimeVoiceBridgeService;
@@ -87,6 +91,47 @@ describe('RealtimeVoiceBridgeService connection lifecycle', () => {
 
     expect((service as any).stateSubject.value.connecting).toBe(true);
     expect((service as any).reconnectTimer).not.toBeNull();
+  });
+
+  it('should emit transcript with lower-quintile confidence and provenance', () => {
+    const turns: RealtimeTranscriptTurn[] = [];
+    const subscription = service.transcript$.subscribe(turn => turns.push(turn));
+
+    serverEvent({
+      type: 'conversation.item.input_audio_transcription.completed',
+      event_id: 'event-42',
+      item_id: 'item-9',
+      transcript: 'Patient sans fièvre',
+      logprobs: [
+        { token: 'Patient', logprob: Math.log(0.98) },
+        { token: 'sans', logprob: Math.log(0.72) },
+        { token: 'fièvre', logprob: Math.log(0.91) },
+        { token: '.', logprob: Math.log(0.99) },
+        { token: ' ', logprob: Math.log(0.95) },
+      ],
+    });
+
+    expect(turns).toHaveLength(1);
+    expect(turns[0].transcript).toBe('Patient sans fièvre');
+    expect(turns[0].eventId).toBe('event-42');
+    expect(turns[0].itemId).toBe('item-9');
+    expect(turns[0].confidence).toBeCloseTo(0.72, 5);
+    subscription.unsubscribe();
+  });
+
+  it('should mark transcript confidence unverifiable when logprobs are absent', () => {
+    const turns: RealtimeTranscriptTurn[] = [];
+    const subscription = service.transcript$.subscribe(turn => turns.push(turn));
+
+    serverEvent({
+      type: 'conversation.item.input_audio_transcription.completed',
+      event_id: 'event-no-confidence',
+      transcript: 'Texte reconnu',
+    });
+
+    expect(turns).toHaveLength(1);
+    expect(turns[0].confidence).toBeNull();
+    subscription.unsubscribe();
   });
 
   it('should wait for the WebRTC output buffer to drain after response.done', () => {
