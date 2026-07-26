@@ -34,21 +34,28 @@ import {
           <div class="flex items-center gap-2">
             <span
               class="h-2.5 w-2.5 rounded-full"
-              [ngClass]="state().connected ? 'animate-pulse bg-emerald-500' : state().connecting ? 'animate-pulse bg-amber-500' : 'bg-slate-400'"
+              [ngClass]="state().connected ? 'animate-pulse bg-emerald-500' : state().connecting ? 'animate-pulse bg-amber-500' : 'bg-rose-500'"
             ></span>
             <p class="text-xs font-black text-[var(--text-primary)]">
               {{ state().connected
                 ? i18n.t('vitals.assistant.realtimeConnected', 'Constantes Realtime')
                 : state().connecting
-                  ? i18n.t('vitals.assistant.realtimeConnecting', 'Connexion Realtime…')
-                  : i18n.t('vitals.assistant.realtimeFallback', 'Dictée classique disponible') }}
+                  ? i18n.t('vitals.assistant.realtimeRecovering', 'Reconnexion Realtime…')
+                  : i18n.t('vitals.assistant.realtimeDisconnected', 'Audio Realtime interrompu') }}
             </p>
           </div>
           <p class="mt-1 text-[11px] leading-4 text-[var(--text-muted)]">
-            {{ i18n.t(
-              'vitals.assistant.realtimeHelp',
-              'Dictez plusieurs paramètres naturellement. Joprelys préremplit uniquement les valeurs sûres.'
-            ) }}
+            @if (state().connected) {
+              {{ i18n.t(
+                'vitals.assistant.realtimeHelp',
+                'Dictez plusieurs paramètres naturellement. Joprelys préremplit uniquement les valeurs sûres.'
+              ) }}
+            } @else {
+              {{ i18n.t(
+                'vitals.assistant.realtimeRecoveryHelp',
+                'Attendez le retour du voyant vert avant de dicter : le microphone est en cours de rétablissement.'
+              ) }}
+            }
           </p>
         </div>
 
@@ -90,6 +97,12 @@ import {
             {{ i18n.t('vitals.assistant.realtimeReady', 'Micro en direct — dictez les paramètres') }}
           }
         </p>
+      } @else {
+        <div class="mt-3 rounded-[4px] border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
+          {{ state().connecting
+            ? i18n.t('vitals.assistant.realtimeRecovering', 'Reconnexion Realtime…')
+            : i18n.t('vitals.assistant.realtimeDisconnectedHelp', 'N’enregistrez pas les constantes vocalement tant que le voyant n’est pas vert.') }}
+        </div>
       }
     </div>
   `,
@@ -124,8 +137,10 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
 
   constructor() {
     this.subscriptions.add(this.bridge.state$.subscribe(state => {
+      const wasConnected = this.state().connected;
       this.state.set(state);
       this.activeChange.emit(state.connected);
+      if (state.connected && !wasConnected) this.syncMute();
     }));
     this.subscriptions.add(this.bridge.transcript$.subscribe(transcript => {
       this.processTranscript(transcript);
@@ -194,13 +209,12 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
       await this.bridge.connect(this.visitId, 'vitals');
       this.syncMute();
     } catch (error) {
-      this.bridge.disconnect();
       this.realtimeError.emit(
         error instanceof Error && error.message.trim()
           ? error.message
           : this.i18n.t(
               'vitals.assistant.realtimeUnavailable',
-              'Le mode Realtime est indisponible. La dictée classique reste disponible.',
+              'Le mode Realtime est momentanément indisponible. Reconnexion automatique en cours.',
             ),
       );
     } finally {
@@ -255,7 +269,7 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
         this.processing.set(false);
         this.realtimeError.emit(this.i18n.t(
           'vitals.assistant.error',
-          'Joprelys n’a pas pu analyser ces constantes. Réessayez ou saisissez-les manuellement.',
+          'Joprelys n’a pas pu analyser ces constantes. Attendez le rétablissement ou saisissez-les manuellement.',
         ));
         this.syncMute();
       },
@@ -263,7 +277,6 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
   }
 
   private syncMute(): void {
-    if (!this.state().connected) return;
     this.bridge.setMuted(
       this.disabled
       || this.processing()
