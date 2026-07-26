@@ -1,6 +1,7 @@
 package com.joprelys.backend.ai.api;
 
 import com.joprelys.backend.ai.infrastructure.openai.OpenAiRealtimeCallService;
+import com.joprelys.backend.ai.infrastructure.openai.OpenAiRealtimeCallService.RealtimePurpose;
 import com.joprelys.backend.visit.application.VisitService;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -45,7 +46,10 @@ public class AiRealtimeVitalsController {
         if (!"EN_COURS".equals(visit.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "VISIT_NOT_ACTIVE");
         }
-        String answer = realtimeCallService.createCall(sdp, locale);
+        String answer = realtimeCallService.createCall(
+                sdp,
+                locale,
+                RealtimePurpose.VITALS);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .cacheControl(CacheControl.noStore())
                 .contentType(APPLICATION_SDP)

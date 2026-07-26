@@ -30,6 +30,11 @@ public class OpenAiRealtimeCallService {
     private static final int MAX_SDP_LENGTH = 128_000;
     private static final MediaType APPLICATION_SDP = MediaType.valueOf("application/sdp");
 
+    public enum RealtimePurpose {
+        CONSULTATION,
+        VITALS
+    }
+
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
     private final String model;
@@ -72,6 +77,13 @@ public class OpenAiRealtimeCallService {
     }
 
     public String createCall(String sdpOffer, String locale) {
+        return createCall(sdpOffer, locale, RealtimePurpose.CONSULTATION);
+    }
+
+    public String createCall(
+            String sdpOffer,
+            String locale,
+            RealtimePurpose purpose) {
         if (sdpOffer == null || sdpOffer.isBlank() || sdpOffer.length() > MAX_SDP_LENGTH) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_REALTIME_SDP_INVALID");
         }
@@ -79,16 +91,18 @@ public class OpenAiRealtimeCallService {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI_REALTIME_NOT_CONFIGURED");
         }
 
-        List<CallAttempt> attempts = callAttempts(locale);
+        RealtimePurpose normalizedPurpose = purpose == null ? RealtimePurpose.CONSULTATION : purpose;
+        List<CallAttempt> attempts = callAttempts(locale, normalizedPurpose);
         RestClientResponseException lastUpstreamError = null;
         for (int index = 0; index < attempts.size(); index++) {
             CallAttempt attempt = attempts.get(index);
             try {
                 String answer = postCall(sdpOffer, attempt.session());
                 log.info(
-                        "OpenAI Realtime call created model={} compatibilityMode={}",
+                        "OpenAI Realtime call created model={} compatibilityMode={} purpose={}",
                         attempt.model(),
-                        attempt.compatibilityMode());
+                        attempt.compatibilityMode(),
+                        normalizedPurpose);
                 return answer;
             } catch (RestClientResponseException exception) {
                 lastUpstreamError = exception;
@@ -159,30 +173,41 @@ public class OpenAiRealtimeCallService {
         return multipart;
     }
 
-    private List<CallAttempt> callAttempts(String locale) {
+    private List<CallAttempt> callAttempts(
+            String locale,
+            RealtimePurpose purpose) {
         List<CallAttempt> attempts = new ArrayList<>();
-        attempts.add(new CallAttempt(model, false, buildSessionConfig(locale, model)));
-        attempts.add(new CallAttempt(model, true, buildCompatibilitySessionConfig(locale, model)));
+        attempts.add(new CallAttempt(model, false, buildSessionConfig(locale, model, purpose)));
+        attempts.add(new CallAttempt(model, true, buildCompatibilitySessionConfig(locale, model, purpose)));
         if (!fallbackModel.equals(model)) {
             attempts.add(new CallAttempt(
                     fallbackModel,
                     true,
-                    buildCompatibilitySessionConfig(locale, fallbackModel)));
+                    buildCompatibilitySessionConfig(locale, fallbackModel, purpose)));
         }
         return List.copyOf(attempts);
     }
 
     Map<String, Object> buildSessionConfig(String requestedLocale) {
-        return buildSessionConfig(requestedLocale, model);
+        return buildSessionConfig(requestedLocale, model, RealtimePurpose.CONSULTATION);
     }
 
-    private Map<String, Object> buildSessionConfig(String requestedLocale, String selectedModel) {
+    Map<String, Object> buildSessionConfig(
+            String requestedLocale,
+            RealtimePurpose purpose) {
+        return buildSessionConfig(requestedLocale, model, purpose);
+    }
+
+    private Map<String, Object> buildSessionConfig(
+            String requestedLocale,
+            String selectedModel,
+            RealtimePurpose purpose) {
         String locale = normalizeLocale(requestedLocale);
         Map<String, Object> transcription = transcription(locale);
 
         Map<String, Object> turnDetection = new LinkedHashMap<>();
         turnDetection.put("type", "semantic_vad");
-        turnDetection.put("eagerness", vadEagerness);
+        turnDetection.put("eagerness", semanticVadEagerness(purpose));
         turnDetection.put("create_response", false);
         turnDetection.put("interrupt_response", true);
 
@@ -209,13 +234,23 @@ public class OpenAiRealtimeCallService {
     Map<String, Object> buildCompatibilitySessionConfig(
             String requestedLocale,
             String selectedModel) {
+        return buildCompatibilitySessionConfig(
+                requestedLocale,
+                selectedModel,
+                RealtimePurpose.CONSULTATION);
+    }
+
+    Map<String, Object> buildCompatibilitySessionConfig(
+            String requestedLocale,
+            String selectedModel,
+            RealtimePurpose purpose) {
         String locale = normalizeLocale(requestedLocale);
         Map<String, Object> turnDetection = new LinkedHashMap<>();
         turnDetection.put("type", "server_vad");
         turnDetection.put("create_response", false);
         turnDetection.put("interrupt_response", true);
-        turnDetection.put("silence_duration_ms", 650);
-        turnDetection.put("prefix_padding_ms", 300);
+        turnDetection.put("silence_duration_ms", purpose == RealtimePurpose.CONSULTATION ? 1200 : 650);
+        turnDetection.put("prefix_padding_ms", purpose == RealtimePurpose.CONSULTATION ? 500 : 300);
         turnDetection.put("threshold", vadThreshold);
 
         Map<String, Object> input = new LinkedHashMap<>();
@@ -320,6 +355,10 @@ public class OpenAiRealtimeCallService {
                 + "les négations, la latéralité, les nombres, unités, constantes, "
                 + "noms de médicaments, dosages, voies, fréquences et durées. Le vocabulaire clinique camerounais, francophone "
                 + "et international peut être employé.";
+    }
+
+    private String semanticVadEagerness(RealtimePurpose purpose) {
+        return purpose == RealtimePurpose.CONSULTATION ? "low" : vadEagerness;
     }
 
     private String normalizeLocale(String locale) {

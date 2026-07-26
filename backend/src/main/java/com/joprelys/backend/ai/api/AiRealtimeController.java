@@ -2,6 +2,7 @@ package com.joprelys.backend.ai.api;
 
 import com.joprelys.backend.ai.application.AiConsultationService;
 import com.joprelys.backend.ai.infrastructure.openai.OpenAiRealtimeCallService;
+import com.joprelys.backend.ai.infrastructure.openai.OpenAiRealtimeCallService.RealtimePurpose;
 import com.joprelys.backend.auth.security.JwtClaims;
 import com.joprelys.backend.auth.security.TenantContext;
 import java.util.Optional;
@@ -52,7 +53,10 @@ public class AiRealtimeController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "AI_SESSION_EXPIRED");
         }
 
-        String answer = realtimeCallService.createCall(sdp, locale);
+        String answer = realtimeCallService.createCall(
+                sdp,
+                locale,
+                RealtimePurpose.CONSULTATION);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .cacheControl(CacheControl.noStore())
                 .contentType(APPLICATION_SDP)
