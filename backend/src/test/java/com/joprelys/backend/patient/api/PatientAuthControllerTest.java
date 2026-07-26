@@ -1,13 +1,10 @@
 package com.joprelys.backend.patient.api;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.joprelys.backend.auth.api.LoginResponse;
-import com.joprelys.backend.auth.api.RefreshTokenCookieManager;
 import com.joprelys.backend.patient.application.PatientAuthService;
-import jakarta.servlet.http.HttpServletResponse;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,21 +18,15 @@ class PatientAuthControllerTest {
     @Mock
     private PatientAuthService patientAuthService;
 
-    @Mock
-    private RefreshTokenCookieManager cookieManager;
-
-    @Mock
-    private HttpServletResponse response;
-
     private PatientAuthController controller;
 
     @BeforeEach
     void setUp() {
-        controller = new PatientAuthController(patientAuthService, cookieManager);
+        controller = new PatientAuthController(patientAuthService);
     }
 
     @Test
-    void shouldClearPreviousProfessionalCookieWhenPatientLoginSucceeds() {
+    void shouldAuthenticatePatientWithoutTouchingProfessionalCookieContext() {
         VerifyOtpRequest request = new VerifyOtpRequest("DPU-001", "123456");
         LoginResponse expected = new LoginResponse(
                 "patient-token",
@@ -46,9 +37,8 @@ class PatientAuthControllerTest {
                 "PATIENT");
         when(patientAuthService.verifyOtp("DPU-001", "123456")).thenReturn(expected);
 
-        LoginResponse actual = controller.verifyOtp(request, response);
+        LoginResponse actual = controller.verifyOtp(request);
 
         assertSame(expected, actual);
-        verify(cookieManager).clear(response);
     }
 }
