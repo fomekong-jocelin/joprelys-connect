@@ -71,16 +71,24 @@ public class AmbientTranscriptionService {
         validateChunkId(chunkId);
         List<KnownSpeakerReference> references = normalizeKnownSpeakers(knownSpeakers);
         String audioHash = sha256(audio);
-        String contextHash = diarizationContextSha256(references);
-        var claim = chunkJournal.claim(
-                visitId,
-                userId,
-                organizationId,
-                chunkId,
-                audioHash,
-                contextHash,
-                chunkStartOffsetMs,
-                contentType);
+        var claim = references.isEmpty()
+                ? chunkJournal.claim(
+                        visitId,
+                        userId,
+                        organizationId,
+                        chunkId,
+                        audioHash,
+                        chunkStartOffsetMs,
+                        contentType)
+                : chunkJournal.claim(
+                        visitId,
+                        userId,
+                        organizationId,
+                        chunkId,
+                        audioHash,
+                        diarizationContextSha256(references),
+                        chunkStartOffsetMs,
+                        contentType);
         if (claim.alreadyCompleted()) {
             return chunkJournal.completedItems(visitId, chunkId);
         }
