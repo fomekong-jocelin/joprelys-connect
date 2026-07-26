@@ -62,6 +62,17 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+- **BUG-20260726-AI-REALTIME-SILENCE-FALSE-PRESCRIPTION** : suppression du
+  redémarrage automatique du microphone classique, détection locale de parole,
+  dépôt systématique des transcriptions classique/Realtime en `PENDING_REVIEW`,
+  rejet des transcriptions OpenAI de faible confiance et arrêt des tentatives
+  Realtime répétées à chaque polling. Un échec SDP ne laisse plus de timeout data
+  channel tardif et une exception Realtime inattendue est renvoyée en `503`
+  générique sans fuite de détail.
+- **BUG-20260726-RXNORM-SPRING-CONSTRUCTOR-BOOT-FAILURE** : le constructeur
+  `MedicationReferenceProperties` de `RxNormMedicationReferencePort` est désormais
+  explicitement injectable ; un test de contexte couvre les flags actifs et
+  désactivés pour prévenir la boucle de redémarrage Spring.
 - **Éditeur d'affectations collaborateur (`StaffAssignmentEditorComponent`)** : refonte ergonomique (affichage prioritaire des cartes d'affectations existantes, ouverture à la demande du formulaire via bouton d'action), correction des espacements (suppression du bouton directement collé aux cartes) et complétude i18n FR/EN pour l'ensemble des clés `staff.assignments.*`.
 - **Portabilité H2/PostgreSQL de `unit_type`** : remplacement d'un CHECK littéral fragile par `organizational_unit_type_catalog` + FK et converter JPA enum ↔ VARCHAR fail-closed ; la contrainte reste forte au lieu d'être supprimée pour satisfaire les tests.
 - **Test historique V86** : `LegacyHospitalizationPermissionPostgresqlMigrationTest` ne suppose plus que V86 restera éternellement la dernière migration. Il vérifie désormais le contrat réel : V86 appliquée, `HOSPITALIZATION_MANAGE` supprimée, aucun remapping automatique des permissions.
@@ -74,6 +85,10 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Validation
 
+- **Hotfix vocal/RxNorm** : 15 tests Angular ciblés et build production verts ;
+  contrôle i18n vert. La suite Angular complète compte 364 succès et 23 échecs
+  hors périmètre sous Node 25. Maven est bloqué localement avant compilation car le
+  parent Spring Boot 4.1.0 n'est pas disponible dans le cache hors ligne.
 - **HOS-ORG backend** : GitHub Actions CI #1066 — Maven strict `clean verify` vert sur le dernier changement backend fonctionnel, sans `skipTests`.
 - **HOS-ORG PostgreSQL 16** : tests de migration V87 couvrant catalogues, FK tenant, contraintes d'identité SERVICE, type inconnu et isolation cross-tenant.
 - **HOS-ORG PR #133** : squash merge dans `main` au commit `72b5e139592b20a9ea14ae366d3fcbab99c46cf1`.
@@ -87,6 +102,10 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Security
 
+- le transport Realtime ne déclenche aucune décision clinique autonome ; toute
+  transcription attend une relecture et une confirmation médicale explicites ;
+- les captures silencieuses et transcriptions à faible confiance sont rejetées avant
+  création de révision ou proposition d'ordonnance ;
 - aucun mapping automatique depuis `Ward.name`, `Room.roomNumber`, `users.department` ou `users.specialty` ;
 - aucun fallback métier ou persistant n'est introduit pour identifier service, espace, lit, unité ou spécialité staff ;
 - les affectations staff sont contrôlées par tenant côté application et base, avec FK composites et refus cross-tenant ;

@@ -156,6 +156,19 @@ public class AiConsultationController {
                 request.transcript());
     }
 
+    @PostMapping("/{visitId}/transcriptions/realtime")
+    public TranscriptionView stageRealtimeTranscript(
+            @PathVariable UUID visitId,
+            @Valid @RequestBody AnalyzeTranscriptRequest request,
+            Authentication authentication) {
+        Identity identity = identity(authentication);
+        return service.stageRealtimeTranscript(
+                visitId,
+                identity.userId(),
+                identity.organizationId(),
+                request.transcript());
+    }
+
     @DeleteMapping("/{visitId}/transcriptions/pending")
     public ResponseEntity<Void> discardPendingTranscript(
             @PathVariable UUID visitId,

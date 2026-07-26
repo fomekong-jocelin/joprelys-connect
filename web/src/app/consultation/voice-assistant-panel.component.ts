@@ -30,7 +30,12 @@ import {
   AiField,
   AiMessageResponse,
   AiSessionResponse,
+  AiTranscriptionResponse,
 } from './ai-consultation-api.service';
+import {
+  ClassicVoiceCapture,
+  ClassicVoiceRecorderService,
+} from './classic-voice-recorder.service';
 import { RealtimeVoiceControllerComponent } from './realtime-voice-controller.component';
 
 export type { AiConsultationDraft } from './ai-consultation-api.service';
@@ -48,157 +53,11 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
     AiDraftPreviewComponent,
     RealtimeVoiceControllerComponent,
   ],
-  template: `
-    <section class="overflow-hidden rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] shadow-sm">
-      <header class="flex flex-col gap-3 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex items-center gap-3">
-          <span class="inline-flex h-10 w-10 items-center justify-center rounded-[6px] bg-cyan-50 text-cyan-700 dark:bg-cyan-950/30 dark:text-cyan-300">
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
-            </svg>
-          </span>
-          <div>
-            <h2 class="text-sm font-bold text-[var(--text-primary)]">
-              {{ i18n.t('consultation.ai.title', 'Assistant vocal IA') }}
-            </h2>
-            <p class="text-xs text-[var(--text-muted)]">
-              {{ i18n.t(
-                'consultation.ai.voiceSubtitle',
-                'Échange vocal clinique, questions ciblées, structuration et validation médicale explicite.'
-              ) }}
-            </p>
-          </div>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          @if (conversationMode()) {
-            <span class="inline-flex items-center gap-1.5 rounded-[4px] border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-cyan-700 dark:border-cyan-900 dark:bg-cyan-950/30 dark:text-cyan-300">
-              <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-500"></span>
-              {{ realtimeActive()
-                ? i18n.t('consultation.ai.realtimeBadge', 'Realtime sécurisé')
-                : i18n.t('consultation.ai.conversationalAudio', 'Audio conversationnel') }}
-            </span>
-          }
-          <span
-            class="inline-flex w-fit items-center gap-1.5 rounded-[4px] border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
-            [ngClass]="session()
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300'
-              : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'"
-          >
-            <span class="h-1.5 w-1.5 rounded-full" [ngClass]="session() ? 'bg-emerald-500' : 'bg-slate-400'"></span>
-            {{ session() ? i18n.t('consultation.ai.active', 'Session active') : i18n.t('consultation.ai.inactive', 'Session inactive') }}
-          </span>
-        </div>
-      </header>
-
-      <div class="grid grid-cols-1 gap-5 p-4 sm:p-5 md:grid-cols-[180px_1fr]">
-        <aside class="hidden md:block">
-          <div class="rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] p-3 text-center shadow-xs">
-            @if (qrCodeUrl()) {
-              <img [src]="qrCodeUrl()" alt="QR code de la consultation" class="mx-auto h-36 w-36" />
-            } @else {
-              <div class="mx-auto flex h-36 w-36 items-center justify-center bg-[var(--app-surface-muted)] text-xs text-[var(--text-muted)]">
-                {{ i18n.t('consultation.ai.qrLoading', 'Chargement du QR…') }}
-              </div>
-            }
-            <p class="mt-2 text-[11px] font-semibold text-[var(--text-primary)]">
-              {{ i18n.t('consultation.ai.scan', 'Scannez avec votre téléphone') }}
-            </p>
-          </div>
-        </aside>
-
-        <div class="min-w-0 space-y-4">
-          @if (errorMessage()) {
-            <div class="rounded-[4px] border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
-              {{ errorMessage() }}
-            </div>
-          }
-
-          @if (!session()) {
-            <div class="rounded-[4px] border border-dashed border-[var(--app-border)] bg-[var(--app-surface-muted)]/40 p-4">
-              <p class="text-sm font-semibold text-[var(--text-primary)]">
-                {{ i18n.t('consultation.ai.startTitle', 'Démarrer une conversation clinique') }}
-              </p>
-              <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                {{ i18n.t(
-                  'consultation.ai.startRealtimeHelp',
-                  'L’assistant écoute, structure et pose des questions. Aucune donnée clinique n’est acceptée ou sauvegardée automatiquement.'
-                ) }}
-              </p>
-              <button
-                type="button"
-                (click)="startSession()"
-                [disabled]="busy() || !visitId"
-                class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-[4px] bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50 sm:w-auto"
-              >
-                {{ busy()
-                  ? i18n.t('consultation.ai.starting', 'Démarrage…')
-                  : i18n.t('consultation.ai.activateVoiceCopilot', 'Activer le copilote vocal') }}
-              </button>
-            </div>
-          } @else {
-            @if (conversationMode()) {
-              <app-realtime-voice-controller
-                [visitId]="visitId"
-                [session]="session()"
-                [enabled]="conversationMode()"
-                [blocked]="busy() || !!session()?.pendingTranscript || hasPendingRevision()"
-                (message)="finishRealtimeMessage($event)"
-                (activeChange)="realtimeActive.set($event)"
-                (realtimeError)="handleRealtimeError($event)"
-              />
-            }
-
-            <app-ai-assistant-input
-              [busy]="busy()"
-              [recording]="recording()"
-              [speaking]="speaking()"
-              [conversationMode]="conversationMode()"
-              [audioLevel]="audioLevel()"
-              [mediaRecorderSupported]="mediaRecorderSupported"
-              [blocked]="recordingBlocked()"
-              [resetToken]="composerResetToken()"
-              (toggleRecording)="toggleRecording()"
-              (toggleConversationMode)="toggleConversationMode()"
-              (endSession)="deleteSession()"
-              (sendText)="sendText($event)"
-            />
-
-            <app-ai-conversation-thread [messages]="session()?.conversation ?? []" />
-
-            <app-ai-clarification-panel
-              [clarifications]="session()?.clarifications ?? []"
-              [disabled]="busy() || recording()"
-              (answered)="answerClarification($event)"
-            />
-
-            <app-ai-proposal-panel
-              [revisions]="session()?.revisions ?? []"
-              [disabled]="busy() || recording() || speaking()"
-              (decided)="decideProposal($event)"
-            />
-
-            @if (!conversationMode() || session()?.pendingTranscript) {
-              <app-ai-transcript-review
-                [transcript]="session()?.pendingTranscript"
-                [busy]="busy()"
-                (analyze)="analyzeTranscript($event)"
-                (discard)="discardPendingTranscript()"
-              />
-            }
-
-            <app-ai-draft-preview
-              [draft]="session()?.draft ?? {}"
-              [canApply]="!hasPendingRevision()"
-              (apply)="applyCurrentDraft()"
-            />
-          }
-        </div>
-      </div>
-    </section>
-  `,
+  templateUrl: './voice-assistant-panel.component.html',
 })
 export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   private readonly api = inject(AiConsultationApiService);
+  private readonly voiceRecorder = inject(ClassicVoiceRecorderService);
   readonly i18n = inject(I18nService);
 
   @Input({ required: true }) visitId = '';
@@ -216,20 +75,9 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   readonly errorMessage = signal('');
   readonly composerResetToken = signal(0);
 
-  readonly mediaRecorderSupported =
-    typeof window !== 'undefined'
-    && 'MediaRecorder' in window
-    && !!navigator.mediaDevices?.getUserMedia;
+  readonly mediaRecorderSupported = this.voiceRecorder.supported;
 
-  private mediaRecorder: MediaRecorder | null = null;
-  private mediaStream: MediaStream | null = null;
-  private audioChunks: Blob[] = [];
-  private recordingTimeout: ReturnType<typeof setTimeout> | null = null;
   private pollingSubscription: Subscription | null = null;
-  private recordingClarificationId: string | null = null;
-  private audioContext: AudioContext | null = null;
-  private analyser: AnalyserNode | null = null;
-  private meterFrame: number | null = null;
   private speechFrame: number | null = null;
   private assistantAudio: HTMLAudioElement | null = null;
   private assistantAudioUrl: string | null = null;
@@ -247,7 +95,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.pollingSubscription?.unsubscribe();
     this.stopAssistantAudio();
-    this.stopMediaStream();
+    this.voiceRecorder.dispose();
     const qrCodeUrl = this.qrCodeUrl();
     if (qrCodeUrl) URL.revokeObjectURL(qrCodeUrl);
   }
@@ -261,6 +109,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   recordingBlocked(): boolean {
     return this.realtimeActive()
       || !!this.session()?.pendingTranscript
+      || this.hasPendingClarification()
       || this.hasPendingRevision();
   }
 
@@ -293,7 +142,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   toggleRecording(): void {
     if (this.realtimeActive()) return;
     if (this.recording()) {
-      this.mediaRecorder?.stop();
+      this.voiceRecorder.stop();
       return;
     }
     void this.startRecording();
@@ -392,10 +241,13 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     }
   }
 
-  finishRealtimeMessage(response: AiMessageResponse): void {
-    this.updateSessionFromMessage(response);
-    this.composerResetToken.update(value => value + 1);
-    this.busy.set(false);
+  finishRealtimeTranscription(response: AiTranscriptionResponse): void {
+    this.session.update(current => current ? {
+      ...current,
+      pendingTranscript: response.transcript,
+      transcriptStatus: response.status,
+      expiresAt: response.expiresAt,
+    } : current);
   }
 
   handleRealtimeError(message: string): void {
@@ -416,63 +268,32 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     try {
       this.stopAssistantAudio();
       this.errorMessage.set('');
-      this.recordingClarificationId = this.conversationMode()
-        ? this.pendingClarification()?.id ?? null
-        : null;
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
-      this.startAudioMeter(this.mediaStream);
-      const mimeType = this.preferredMimeType();
-      this.audioChunks = [];
-      const options: MediaRecorderOptions = { audioBitsPerSecond: 128000 };
-      if (mimeType) options.mimeType = mimeType;
-      this.mediaRecorder = new MediaRecorder(this.mediaStream, options);
-      this.mediaRecorder.ondataavailable = event => {
-        if (event.data.size > 0) this.audioChunks.push(event.data);
-      };
-      this.mediaRecorder.onstop = () => this.sendRecordedAudio();
-      this.mediaRecorder.start(350);
+      await this.voiceRecorder.start(
+        capture => this.handleClassicCapture(capture),
+        level => this.audioLevel.set(level),
+      );
       this.recording.set(true);
-      this.recordingTimeout = setTimeout(() => this.mediaRecorder?.stop(), 120000);
     } catch {
       this.errorMessage.set('Accès au microphone refusé ou indisponible.');
-      this.stopMediaStream();
+      this.voiceRecorder.dispose();
     }
   }
 
-  private sendRecordedAudio(): void {
+  private handleClassicCapture(capture: ClassicVoiceCapture): void {
     this.recording.set(false);
-    if (this.recordingTimeout) clearTimeout(this.recordingTimeout);
-    const audio = new Blob(this.audioChunks, {
-      type: this.mediaRecorder?.mimeType || 'audio/webm',
-    });
-    const clarificationId = this.recordingClarificationId;
-    this.recordingClarificationId = null;
-    this.stopMediaStream();
-    if (audio.size === 0) {
+    if (capture.audio.size === 0) {
       this.errorMessage.set('Aucun son n’a été enregistré.');
       return;
     }
-    this.startBusy();
-
-    if (this.conversationMode()) {
-      const operation = clarificationId
-        ? this.api.answerClarificationAudio(this.visitId, clarificationId, audio)
-        : this.api.sendAudio(this.visitId, audio);
-      operation.subscribe({
-        next: response => this.finishMessageResponse(response),
-        error: error => this.handleError(error, 'La réponse vocale n’a pas pu être analysée.'),
-      });
+    if (!capture.hasSpeech) {
+      this.errorMessage.set(this.i18n.t(
+        'consultation.ai.noSpeechDetected',
+        'Aucune parole détectée. Rapprochez-vous du microphone puis réessayez.',
+      ));
       return;
     }
-
-    this.api.transcribeAudio(this.visitId, audio).subscribe({
+    this.startBusy();
+    this.api.transcribeAudio(this.visitId, capture.audio).subscribe({
       next: response => {
         this.session.update(current => current ? {
           ...current,
@@ -490,7 +311,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     this.updateSessionFromMessage(response);
     this.composerResetToken.update(value => value + 1);
     this.busy.set(false);
-    if (!this.realtimeActive()) this.speakCurrentAssistantTurn(true);
+    if (!this.realtimeActive()) this.speakCurrentAssistantTurn();
   }
 
   private refreshSession(silent = false): void {
@@ -502,7 +323,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
         if (this.conversationMode()
           && !this.realtimeActive()
           && response.assistantMessage !== previousMessage) {
-          this.speakCurrentAssistantTurn(true);
+          this.speakCurrentAssistantTurn();
         }
       },
       error: error => {
@@ -548,10 +369,10 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   private completeSessionUpdate(response: AiSessionResponse, speak = false): void {
     this.session.set(response);
     this.busy.set(false);
-    if (speak && !this.realtimeActive()) this.speakCurrentAssistantTurn(true);
+    if (speak && !this.realtimeActive()) this.speakCurrentAssistantTurn();
   }
 
-  private speakCurrentAssistantTurn(autoListen: boolean): void {
+  private speakCurrentAssistantTurn(): void {
     if (this.realtimeActive()
       || !this.conversationMode()
       || this.busy()
@@ -560,15 +381,12 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     const text = clarification?.question?.trim()
       || this.session()?.assistantMessage?.trim()
       || '';
-    if (!text || text === this.lastSpokenText) {
-      if (autoListen && this.canAutoListen()) void this.startRecording();
-      return;
-    }
+    if (!text || text === this.lastSpokenText) return;
     this.lastSpokenText = text;
-    this.speak(text, autoListen);
+    this.speak(text);
   }
 
-  private speak(text: string, autoListen: boolean): void {
+  private speak(text: string): void {
     this.stopAssistantAudio();
     this.speaking.set(true);
     this.startSpeechAnimation();
@@ -578,34 +396,21 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
         this.assistantAudioUrl = url;
         const audio = new Audio(url);
         this.assistantAudio = audio;
-        audio.onended = () => this.finishSpeaking(autoListen);
-        audio.onerror = () => this.finishSpeaking(autoListen);
-        void audio.play().catch(() => this.finishSpeaking(autoListen));
+        audio.onended = () => this.finishSpeaking();
+        audio.onerror = () => this.finishSpeaking();
+        void audio.play().catch(() => this.finishSpeaking());
       },
       error: () => {
         this.errorMessage.set('La réponse vocale est indisponible ; le texte reste affiché.');
-        this.finishSpeaking(autoListen);
+        this.finishSpeaking();
       },
     });
   }
 
-  private finishSpeaking(autoListen: boolean): void {
+  private finishSpeaking(): void {
     this.speaking.set(false);
     this.stopSpeechAnimation();
     this.releaseAssistantAudio();
-    if (autoListen && this.canAutoListen()) {
-      setTimeout(() => void this.startRecording(), 300);
-    }
-  }
-
-  private canAutoListen(): boolean {
-    if (this.realtimeActive()
-      || !this.conversationMode()
-      || this.busy()
-      || this.recording()
-      || this.speaking()) return false;
-    if (this.session()?.pendingTranscript || this.hasPendingRevision()) return false;
-    return !!this.session();
   }
 
   private pendingClarification(): AiClarification | null {
@@ -640,45 +445,9 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     return result;
   }
 
-  private preferredMimeType(): string | undefined {
-    const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/wav'];
-    return candidates.find(type => MediaRecorder.isTypeSupported(type));
-  }
-
   private startBusy(): void {
     this.busy.set(true);
     this.errorMessage.set('');
-  }
-
-  private startAudioMeter(stream: MediaStream): void {
-    if (typeof window === 'undefined') return;
-    try {
-      const AudioContextClass = window.AudioContext
-        || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!AudioContextClass) return;
-      this.audioContext = new AudioContextClass();
-      this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 256;
-      this.analyser.smoothingTimeConstant = 0.75;
-      const source = this.audioContext.createMediaStreamSource(stream);
-      source.connect(this.analyser);
-      const data = new Uint8Array(this.analyser.fftSize);
-      const tick = () => {
-        if (!this.analyser || !this.recording()) return;
-        this.analyser.getByteTimeDomainData(data);
-        let sum = 0;
-        for (const sample of data) {
-          const normalized = (sample - 128) / 128;
-          sum += normalized * normalized;
-        }
-        const rms = Math.sqrt(sum / data.length);
-        this.audioLevel.set(Math.min(1, rms * 4.5));
-        this.meterFrame = requestAnimationFrame(tick);
-      };
-      this.meterFrame = requestAnimationFrame(tick);
-    } catch {
-      this.audioLevel.set(0.25);
-    }
   }
 
   private startSpeechAnimation(): void {
@@ -696,19 +465,6 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     if (this.speechFrame !== null) cancelAnimationFrame(this.speechFrame);
     this.speechFrame = null;
     this.audioLevel.set(0);
-  }
-
-  private stopMediaStream(): void {
-    if (this.meterFrame !== null) cancelAnimationFrame(this.meterFrame);
-    this.meterFrame = null;
-    this.analyser = null;
-    void this.audioContext?.close().catch(() => undefined);
-    this.audioContext = null;
-    this.mediaStream?.getTracks().forEach(track => track.stop());
-    this.mediaStream = null;
-    this.mediaRecorder = null;
-    this.audioChunks = [];
-    if (!this.speaking()) this.audioLevel.set(0);
   }
 
   private stopAssistantAudio(): void {
@@ -735,7 +491,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     this.recording.set(false);
     this.speaking.set(false);
     this.stopAssistantAudio();
-    this.stopMediaStream();
+    this.voiceRecorder.dispose();
     const detail = error.error?.detail || error.error?.title;
     this.errorMessage.set(detail && !detail.startsWith('AI_') ? detail : fallback);
   }

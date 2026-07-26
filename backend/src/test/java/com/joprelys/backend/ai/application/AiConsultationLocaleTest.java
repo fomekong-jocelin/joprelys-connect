@@ -41,6 +41,7 @@ class AiConsultationLocaleTest {
                 "openai",
                 30,
                 20,
+                0.35,
                 "fr",
                 null,
                 null,

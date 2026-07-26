@@ -34,6 +34,7 @@ public class OpenAiRealtimeCallService {
     private final String transcriptionModel;
     private final String vadEagerness;
     private final String noiseReduction;
+    private final double vadThreshold;
 
     public OpenAiRealtimeCallService(
             AiProperties properties,
@@ -62,6 +63,8 @@ public class OpenAiRealtimeCallService {
         this.transcriptionModel = transcriptionModel;
         this.vadEagerness = normalizeEagerness(vadEagerness);
         this.noiseReduction = normalizeNoiseReduction(noiseReduction);
+        this.vadThreshold = normalizeVadThreshold(
+                openAi == null ? 0.8 : openAi.transcribeVadThreshold());
     }
 
     public String createCall(String sdpOffer, String locale) {
@@ -175,7 +178,7 @@ public class OpenAiRealtimeCallService {
         return session;
     }
 
-    private Map<String, Object> buildCompatibilitySessionConfig(
+    Map<String, Object> buildCompatibilitySessionConfig(
             String requestedLocale,
             String selectedModel) {
         String locale = normalizeLocale(requestedLocale);
@@ -185,6 +188,7 @@ public class OpenAiRealtimeCallService {
         turnDetection.put("interrupt_response", true);
         turnDetection.put("silence_duration_ms", 650);
         turnDetection.put("prefix_padding_ms", 300);
+        turnDetection.put("threshold", vadThreshold);
 
         Map<String, Object> input = new LinkedHashMap<>();
         input.put("transcription", transcription(locale));
@@ -204,6 +208,7 @@ public class OpenAiRealtimeCallService {
         session.put("type", "realtime");
         session.put("model", selectedModel);
         session.put("output_modalities", List.of("audio"));
+        session.put("include", List.of("item.input_audio_transcription.logprobs"));
         session.put("instructions", realtimeInstructions(locale));
         return session;
     }
@@ -277,10 +282,14 @@ public class OpenAiRealtimeCallService {
 
     private String transcriptionPrompt(String locale) {
         if ("en".equals(locale)) {
-            return "Medical consultation. Preserve negations, laterality, numbers, units, vital signs, drug names, dosages, "
+            return "Transcribe only clearly intelligible speech. Return empty text when there is no distinct speech and "
+                    + "never complete or invent an utterance. Medical consultation. Preserve negations, laterality, "
+                    + "numbers, units, vital signs, drug names, dosages, "
                     + "routes, frequencies and durations exactly. Cameroon and international clinical vocabulary may occur.";
         }
-        return "Consultation médicale. Conserver exactement les négations, la latéralité, les nombres, unités, constantes, "
+        return "Transcrire uniquement la parole clairement intelligible. Retourner un texte vide en l'absence de parole "
+                + "distincte et ne jamais compléter ou inventer un propos. Consultation médicale. Conserver exactement "
+                + "les négations, la latéralité, les nombres, unités, constantes, "
                 + "noms de médicaments, dosages, voies, fréquences et durées. Le vocabulaire clinique camerounais, francophone "
                 + "et international peut être employé.";
     }
@@ -297,6 +306,10 @@ public class OpenAiRealtimeCallService {
             case "low", "medium", "high", "auto" -> value.trim().toLowerCase();
             default -> "medium";
         };
+    }
+
+    private double normalizeVadThreshold(double value) {
+        return value > 0.0 && value <= 1.0 ? value : 0.8;
     }
 
     private String normalizeNoiseReduction(String value) {

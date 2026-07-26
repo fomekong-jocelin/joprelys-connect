@@ -47,7 +47,7 @@ class AiConsultationSafetyIntegrationTest {
         when(contextAssembler.assemble(visitId)).thenReturn(Map.of());
 
         AiProperties properties = new AiProperties(
-                true, "openai", "openai", 30, 20, "fr", null, null, null);
+                true, "openai", "openai", 30, 20, 0.35, "fr", null, null, null);
         ObjectMapper objectMapper = new ObjectMapper();
         service = new AiConsultationService(
                 provider,

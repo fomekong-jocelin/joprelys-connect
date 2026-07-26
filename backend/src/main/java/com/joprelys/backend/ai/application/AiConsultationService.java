@@ -11,7 +11,6 @@ import com.joprelys.backend.ai.application.AiConsultationContract.TranscriptionV
 import com.joprelys.backend.ai.domain.AiChatResponse;
 import com.joprelys.backend.ai.domain.AiMessage;
 import com.joprelys.backend.ai.domain.AiProvider;
-import com.joprelys.backend.ai.domain.AiTranscription;
 import com.joprelys.backend.ai.infrastructure.AiProperties;
 import com.joprelys.backend.medication.reference.MedicationReferenceDuplicateDetector;
 import com.joprelys.backend.visit.application.VisitService;
@@ -52,6 +51,7 @@ public class AiConsultationService {
     private final AiClinicalToolDispatcher toolDispatcher = new AiClinicalToolDispatcher();
     private final AiRevisionManager revisionManager;
     private final AiClarificationManager clarificationManager;
+    private final AiTranscriptionWorkflow transcriptionWorkflow;
     private final ConcurrentMap<SessionKey, AiConsultationSessionState> sessions =
             new ConcurrentHashMap<>();
 
@@ -74,6 +74,7 @@ public class AiConsultationService {
         this.medicationSafetyGuard = new AiMedicationSafetyGuard(objectMapper);
         this.revisionManager = revisionManager;
         this.clarificationManager = clarificationManager;
+        this.transcriptionWorkflow = new AiTranscriptionWorkflow(aiProvider, properties);
     }
 
     @Autowired(required = false)
@@ -198,35 +199,21 @@ public class AiConsultationService {
                 visitId, userId, organizationId);
         synchronized (state) {
             ensureReadyForNewInput(state);
-            String normalizedMime = AiConsultationInputValidator.normalizeMimeType(contentType);
-            try {
-                AiTranscription transcription = aiProvider.transcribeAudio(
-                        audio, normalizedMime, state.locale);
-                if (transcription == null
-                        || transcription.text() == null
-                        || transcription.text().isBlank()) {
-                    throw new ResponseStatusException(
-                            org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
-                }
-                String transcript = limit(
-                        transcription.text().trim(),
-                        AiConsultationInputValidator.MAX_TRANSCRIPT_LENGTH);
-                state.pendingTranscript = transcript;
-                state.transcriptStatus = "PENDING_REVIEW";
-                state.expiresAt = expiry();
-                return new TranscriptionView(
-                        state.sessionId,
-                        transcript,
-                        state.transcriptStatus,
-                        state.expiresAt);
-            } catch (ResponseStatusException exception) {
-                throw exception;
-            } catch (RuntimeException exception) {
-                log.warn("Échec transcription IA provider={}, octets={}",
-                        properties.speechProvider(), audio.length);
-                throw new ResponseStatusException(
-                        HttpStatus.SERVICE_UNAVAILABLE, "AI_UNAVAILABLE");
-            }
+            return transcriptionWorkflow.transcribe(state, audio, contentType);
+        }
+    }
+
+    public TranscriptionView stageRealtimeTranscript(
+            UUID visitId,
+            UUID userId,
+            UUID organizationId,
+            String transcript) {
+        AiConsultationInputValidator.validateText(transcript);
+        AiConsultationSessionState state = requireSession(
+                visitId, userId, organizationId);
+        synchronized (state) {
+            ensureReadyForNewInput(state);
+            return transcriptionWorkflow.stage(state, transcript);
         }
     }
 
@@ -395,7 +382,7 @@ public class AiConsultationService {
                     state.assistantMessage,
                     "AI",
                     state.needsClarification);
-            return toMessageView(state, changedFields);
+            return AiConsultationSessionSupport.toMessageView(state, changedFields);
         } catch (ResponseStatusException exception) {
             throw exception;
         } catch (RuntimeException exception) {
@@ -413,22 +400,6 @@ public class AiConsultationService {
             throw new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE, "AI_CLINICAL_CONTEXT_UNAVAILABLE");
         }
-    }
-
-    private MessageView toMessageView(
-            AiConsultationSessionState state,
-            List<String> changedFields) {
-        return new MessageView(
-                state.sessionId,
-                state.transcript,
-                Map.copyOf(state.draft),
-                changedFields,
-                state.assistantMessage,
-                state.needsClarification,
-                List.copyOf(state.conversation),
-                List.copyOf(state.clarifications),
-                List.copyOf(state.revisions),
-                state.expiresAt);
     }
 
     private AiConsultationSessionState requireSession(

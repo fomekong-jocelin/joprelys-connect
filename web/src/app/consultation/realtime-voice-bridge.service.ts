@@ -124,7 +124,6 @@ export class RealtimeVoiceBridgeService {
         }
       };
 
-      const channelReady = this.waitForDataChannel(channel, pc);
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       await this.waitForIceGathering(pc);
@@ -144,6 +143,7 @@ export class RealtimeVoiceBridgeService {
         },
       ));
       await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+      const channelReady = this.waitForDataChannel(channel, pc);
       await channelReady;
       this.patchState({ connected: true, connecting: false, muted: false });
     } catch (error) {

@@ -64,6 +64,25 @@ describe('AiConsultationApiService', () => {
     });
   });
 
+  it('dépose une transcription Realtime sans lancer l analyse clinique', () => {
+    service.stageRealtimeTranscript('visit-1', 'Patient sans fièvre').subscribe(response => {
+      expect(response.transcript).toBe('Patient sans fièvre');
+      expect(response.status).toBe('PENDING_REVIEW');
+    });
+
+    const request = http.expectOne(
+      '/api/ai/consultations/visit-1/transcriptions/realtime',
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ transcript: 'Patient sans fièvre' });
+    request.flush({
+      sessionId: 'session-1',
+      transcript: 'Patient sans fièvre',
+      status: 'PENDING_REVIEW',
+      expiresAt: '2026-07-18T10:00:00Z',
+    });
+  });
+
   it('envoie la transcription corrigée et reçoit une proposition non appliquée', () => {
     service.analyzeTranscript(
       'visit-1',

@@ -47,12 +47,14 @@ joprelys:
     speech-provider: ${SPEECH_PROVIDER:openai}
     session-ttl-minutes: ${AI_SESSION_TTL_MINUTES:30}
     max-conversation-turns: ${AI_MAX_CONVERSATION_TURNS:20}
+    minimum-transcription-confidence: ${AI_MIN_TRANSCRIPTION_CONFIDENCE:0.35}
     locale: ${AI_LOCALE:fr}
     openai:
       api-key: ${OPENAI_API_KEY:}
       model: ${OPENAI_MODEL:gpt-4.1}
       transcribe-model: ${OPENAI_TRANSCRIBE_MODEL:gpt-4o-mini-transcribe}
-      transcribe-prompt: ${OPENAI_TRANSCRIBE_PROMPT:Consultation médicale en français entre un médecin et un patient, avec vocabulaire clinique, symptômes, examen, diagnostic, ordonnance, médicaments, posologies et constantes vitales. Conserver fidèlement les négations, nombres, unités, noms propres et noms de médicaments.}
+      transcribe-prompt: ${OPENAI_TRANSCRIBE_PROMPT:Transcrire uniquement la parole effectivement intelligible. Retourner un texte vide en l'absence de parole distincte et ne jamais compléter ou inventer un propos. Consultation médicale en français entre un médecin et un patient, avec vocabulaire clinique, symptômes, examen, diagnostic, ordonnance, médicaments, posologies et constantes vitales. Conserver fidèlement les négations, nombres, unités, noms propres et noms de médicaments.}
+      transcribe-vad-threshold: ${OPENAI_TRANSCRIBE_VAD_THRESHOLD:0.8}
       tts-model: ${OPENAI_TTS_MODEL:gpt-4o-mini-tts}
       tts-voice: ${OPENAI_TTS_VOICE:marin}
       tts-instructions: ${OPENAI_TTS_INSTRUCTIONS:Voix médicale professionnelle, calme, chaleureuse, concise et naturelle. Prononcer clairement les nombres, unités et noms de médicaments sans dramatiser.}

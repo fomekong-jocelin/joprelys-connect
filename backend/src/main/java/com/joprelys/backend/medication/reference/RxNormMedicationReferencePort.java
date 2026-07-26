@@ -5,6 +5,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,7 @@ final class RxNormMedicationReferencePort implements MedicationReferencePort {
 
     private final RestClient restClient;
 
+    @Autowired
     RxNormMedicationReferencePort(MedicationReferenceProperties properties) {
         this(buildClient(properties));
     }

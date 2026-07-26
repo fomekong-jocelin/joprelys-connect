@@ -15,6 +15,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param speechProvider       fournisseur de transcription : openai, gemini ou claude
  * @param sessionTtlMinutes    durée de vie des sessions de conversation en minutes
  * @param maxConversationTurns nombre maximum de tours de conversation par session
+ * @param minimumTranscriptionConfidence seuil minimal d'une confiance fournisseur connue
  * @param locale               langue par défaut de transcription et de réponse
  * @param openai               configuration spécifique à OpenAI
  * @param gemini               configuration spécifique à Gemini
@@ -27,6 +28,7 @@ public record AiProperties(
         String speechProvider,
         int sessionTtlMinutes,
         int maxConversationTurns,
+        double minimumTranscriptionConfidence,
         String locale,
         OpenAiProperties openai,
         GeminiProperties gemini,
@@ -41,6 +43,7 @@ public record AiProperties(
      * @param transcribeModel  modèle de transcription audio
      * @param transcribePrompt prompt de contexte transmis à la transcription
      *                         (améliore le vocabulaire médical français)
+     * @param transcribeVadThreshold seuil de détection vocale de la transcription
      * @param baseUrl          URL de base de l'API OpenAI
      */
     public record OpenAiProperties(
@@ -48,6 +51,7 @@ public record AiProperties(
             String model,
             String transcribeModel,
             String transcribePrompt,
+            double transcribeVadThreshold,
             String baseUrl
     ) {
     }

@@ -88,11 +88,13 @@ joprelys:
     speech-provider: ${SPEECH_PROVIDER:openai}
     session-ttl-minutes: ${AI_SESSION_TTL_MINUTES:30}
     max-conversation-turns: ${AI_MAX_CONVERSATION_TURNS:20}
+    minimum-transcription-confidence: ${AI_MIN_TRANSCRIPTION_CONFIDENCE:0.35}
     locale: ${AI_LOCALE:fr}
     openai:
       api-key: ${OPENAI_API_KEY:}
       model: ${OPENAI_MODEL:gpt-4.1}
       transcribe-model: ${OPENAI_TRANSCRIBE_MODEL:gpt-4o-mini-transcribe}
+      transcribe-vad-threshold: ${OPENAI_TRANSCRIBE_VAD_THRESHOLD:0.8}
       base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
     gemini:
       api-key: ${GEMINI_API_KEY:}
@@ -108,6 +110,9 @@ OpenAI est le choix par défaut pour la transcription et le brouillon clinique.
 `AI_PROVIDER` et `SPEECH_PROVIDER` permettent de basculer indépendamment vers
 Gemini ou Claude. Les clés restent exclusivement dans l’environnement ou le
 vault. L’activation avec une configuration incomplète doit échouer au démarrage.
+Une confiance connue sous le seuil est refusée avant analyse. Le seuil VAD plus
+élevé limite l'activation sur silence/bruit faible ; il doit être ajusté uniquement
+après recette clinique représentative.
 
 ## 8. Sécurité et confidentialité
 

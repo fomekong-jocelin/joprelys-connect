@@ -32,4 +32,16 @@ class AiRealtimeExceptionHandlerTest {
 
         assertEquals("AI_REALTIME_UNAVAILABLE", response.getBody());
     }
+
+    @Test
+    void shouldConvertUnexpectedRealtimeFailureToSafeServiceUnavailable() {
+        var response = handler.handleUnexpectedRealtimeFailure(
+                new IllegalStateException("sensitive upstream detail"));
+
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, response.getStatusCode());
+        assertEquals("AI_REALTIME_UNAVAILABLE", response.getBody());
+        assertEquals(
+                "AI_REALTIME_UNAVAILABLE",
+                response.getHeaders().getFirst("X-Joprelys-AI-Realtime-Error"));
+    }
 }

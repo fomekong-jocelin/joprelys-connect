@@ -223,6 +223,16 @@ export class AiConsultationApiService {
     );
   }
 
+  stageRealtimeTranscript(
+    visitId: string,
+    transcript: string,
+  ): Observable<AiTranscriptionResponse> {
+    return this.http.post<AiTranscriptionResponse>(
+      `/api/ai/consultations/${visitId}/transcriptions/realtime`,
+      { transcript },
+    );
+  }
+
   analyzeTranscript(visitId: string, transcript: string): Observable<AiMessageResponse> {
     return this.http.post<AiMessageResponse>(
       `/api/ai/consultations/${visitId}/transcriptions/analyze`,

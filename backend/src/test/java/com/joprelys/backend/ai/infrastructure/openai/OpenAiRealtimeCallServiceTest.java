@@ -27,12 +27,16 @@ class OpenAiRealtimeCallServiceTest {
         assertEquals("realtime", session.get("type"));
         assertEquals("gpt-realtime", session.get("model"));
         assertEquals(List.of("audio"), session.get("output_modalities"));
+        assertEquals(
+                List.of("item.input_audio_transcription.logprobs"),
+                session.get("include"));
         assertEquals("semantic_vad", turnDetection.get("type"));
         assertEquals("medium", turnDetection.get("eagerness"));
         assertEquals(Boolean.FALSE, turnDetection.get("create_response"));
         assertEquals(Boolean.TRUE, turnDetection.get("interrupt_response"));
         assertEquals("gpt-4o-transcribe", transcription.get("model"));
         assertEquals("fr", transcription.get("language"));
+        assertTrue(transcription.get("prompt").toString().contains("texte vide"));
         assertEquals("near_field", ((Map<String, Object>) input.get("noise_reduction")).get("type"));
         assertEquals("marin", output.get("voice"));
         assertEquals("none", session.get("tool_choice"));
@@ -55,6 +59,22 @@ class OpenAiRealtimeCallServiceTest {
         assertTrue(session.get("instructions").toString().contains("Never diagnose"));
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldRaiseServerVadThresholdInCompatibilityMode() {
+        OpenAiRealtimeCallService service = service();
+
+        Map<String, Object> session = service.buildCompatibilitySessionConfig(
+                "fr", "gpt-realtime");
+        Map<String, Object> audio = (Map<String, Object>) session.get("audio");
+        Map<String, Object> input = (Map<String, Object>) audio.get("input");
+        Map<String, Object> turnDetection = (Map<String, Object>) input.get("turn_detection");
+
+        assertEquals("server_vad", turnDetection.get("type"));
+        assertEquals(0.8, turnDetection.get("threshold"));
+        assertEquals(Boolean.FALSE, turnDetection.get("create_response"));
+    }
+
     private OpenAiRealtimeCallService service() {
         AiProperties properties = new AiProperties(
                 true,
@@ -62,12 +82,14 @@ class OpenAiRealtimeCallServiceTest {
                 "openai",
                 30,
                 20,
+                0.35,
                 "fr",
                 new AiProperties.OpenAiProperties(
                         "test-key",
                         "gpt-4.1",
                         "gpt-4o-mini-transcribe",
                         "medical",
+                        0.8,
                         "https://api.openai.com/v1"),
                 null,
                 null);

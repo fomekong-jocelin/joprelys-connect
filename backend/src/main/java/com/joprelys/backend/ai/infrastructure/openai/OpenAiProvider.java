@@ -52,6 +52,13 @@ public class OpenAiProvider implements AiProvider {
         formData.add("model", config.transcribeModel());
         formData.add("language", locale);
         formData.add("response_format", "json");
+        if (supportsTranscriptionLogprobs(config.transcribeModel())) {
+            formData.add("include[]", "logprobs");
+        }
+        if (config.transcribeVadThreshold() > 0.0
+                && config.transcribeVadThreshold() <= 1.0) {
+            formData.add("threshold", config.transcribeVadThreshold());
+        }
         if (config.transcribePrompt() != null && !config.transcribePrompt().isBlank()) {
             formData.add("prompt", config.transcribePrompt());
         }
@@ -70,7 +77,7 @@ public class OpenAiProvider implements AiProvider {
 
         String text = (String) response.get("text");
         String detectedLanguage = (String) response.getOrDefault("language", locale);
-        return new AiTranscription(text, detectedLanguage, null);
+        return new AiTranscription(text, detectedLanguage, extractConfidence(response));
     }
 
     @Override
@@ -103,6 +110,33 @@ public class OpenAiProvider implements AiProvider {
         String normalized = model.toLowerCase();
         return !normalized.startsWith("gpt-5") && !normalized.startsWith("o1")
                 && !normalized.startsWith("o3") && !normalized.startsWith("o4");
+    }
+
+    private boolean supportsTranscriptionLogprobs(String model) {
+        if (model == null) {
+            return false;
+        }
+        String normalized = model.toLowerCase();
+        return normalized.startsWith("gpt-4o-transcribe")
+                || normalized.startsWith("gpt-4o-mini-transcribe");
+    }
+
+    private Double extractConfidence(Map<String, Object> response) {
+        Object rawLogprobs = response.get("logprobs");
+        if (!(rawLogprobs instanceof List<?> logprobs) || logprobs.isEmpty()) {
+            return null;
+        }
+        double probabilitySum = 0.0;
+        int tokenCount = 0;
+        for (Object rawEntry : logprobs) {
+            if (!(rawEntry instanceof Map<?, ?> entry)
+                    || !(entry.get("logprob") instanceof Number logprob)) {
+                continue;
+            }
+            probabilitySum += Math.exp(Math.max(-20.0, logprob.doubleValue()));
+            tokenCount++;
+        }
+        return tokenCount == 0 ? null : probabilitySum / tokenCount;
     }
 
     private List<Map<String, String>> buildApiMessages(

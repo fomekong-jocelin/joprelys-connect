@@ -54,9 +54,30 @@ Retourne la session active du médecin courant. Ne retourne jamais d’audio.
 
 ### `POST /api/ai/consultations/{visitId}/messages/audio`
 
+- Endpoint historique de transcription et analyse directe, non utilisé par le
+  client Angular courant.
 - Corps binaire ; aucun nom de fichier utilisateur.
 - MIME : `audio/webm`, `audio/mp4`, `audio/mpeg`, `audio/wav`.
 - Limite applicative : 10 MiB ; durée UX : 120 secondes maximum.
+
+### `POST /api/ai/consultations/{visitId}/transcriptions/audio`
+
+- Corps et MIME identiques à l'endpoint audio historique.
+- Transcrit uniquement et retourne un statut `PENDING_REVIEW`.
+- Ne crée ni message, ni révision, ni proposition clinique.
+- Peut retourner `422 AI_TRANSCRIPTION_LOW_CONFIDENCE`.
+
+### `POST /api/ai/consultations/{visitId}/transcriptions/realtime`
+
+```json
+{
+  "transcript": "Le patient décrit une douleur abdominale."
+}
+```
+
+Dépose une transcription Realtime en `PENDING_REVIEW` sans lancer l'analyse
+clinique. Le médecin doit ensuite confirmer ou corriger le texte via
+`POST /transcriptions/analyze`.
 
 ### Réponse commune
 
@@ -91,6 +112,7 @@ Supprime le brouillon et l’historique éphémère. Réponse `204`.
 | 413 | `AI_AUDIO_TOO_LARGE` | audio > limite |
 | 415 | `AI_AUDIO_TYPE_UNSUPPORTED` | MIME hors allowlist |
 | 422 | `AI_OUTPUT_INVALID` | sortie provider non conforme |
+| 422 | `AI_TRANSCRIPTION_LOW_CONFIDENCE` | confiance connue sous le seuil |
 | 429 | `AI_RATE_LIMITED` | quota interne/provider |
 | 503 | `AI_UNAVAILABLE` | feature/provider indisponible |
 
@@ -108,3 +130,4 @@ ni contenu clinique.
 | Date | Auteur | Changement |
 |---|---|---|
 | 2026-07-17 | Codex | Contrat cible initial |
+| 2026-07-26 | Codex | Parcours transcription en deux temps et garde de confiance |

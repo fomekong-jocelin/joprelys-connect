@@ -63,6 +63,7 @@ class AiConsultationServiceTest {
                 "openai",
                 30,
                 20,
+                0.35,
                 "fr",
                 null,
                 null,
@@ -405,6 +406,45 @@ class AiConsultationServiceTest {
                 visitId, userId, organizationId).orElseThrow();
         assertEquals("Douleur à gauche", session.pendingTranscript());
         assertTrue(session.draft().isEmpty());
+    }
+
+    @Test
+    void shouldStageRealtimeTranscriptWithoutCallingChatBeforeMedicalReview() {
+        service.startSession(visitId, userId, organizationId, Map.of());
+
+        TranscriptionView response = service.stageRealtimeTranscript(
+                visitId, userId, organizationId, "Patient sans fièvre");
+
+        assertEquals("Patient sans fièvre", response.transcript());
+        assertEquals("PENDING_REVIEW", response.status());
+        verify(aiProvider, never()).chat(anyList(), anyString());
+        SessionView session = service.getSession(
+                visitId, userId, organizationId).orElseThrow();
+        assertEquals("Patient sans fièvre", session.pendingTranscript());
+        assertTrue(session.revisions().isEmpty());
+    }
+
+    @Test
+    void shouldRejectLowConfidenceTranscriptionBeforeClinicalAnalysis() {
+        service.startSession(visitId, userId, organizationId, Map.of());
+        when(aiProvider.transcribeAudio(any(byte[].class), eq("audio/webm"), eq("fr")))
+                .thenReturn(new AiTranscription(
+                        "Prescrire oméprazole 200 mg pendant 14 jours",
+                        "fr",
+                        0.1));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.transcribeAudio(
+                        visitId, userId, organizationId, new byte[] {1}, "audio/webm"));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, exception.getStatusCode());
+        assertEquals("AI_TRANSCRIPTION_LOW_CONFIDENCE", exception.getReason());
+        verify(aiProvider, never()).chat(anyList(), anyString());
+        SessionView session = service.getSession(
+                visitId, userId, organizationId).orElseThrow();
+        assertNull(session.pendingTranscript());
+        assertTrue(session.revisions().isEmpty());
     }
 
     @Test

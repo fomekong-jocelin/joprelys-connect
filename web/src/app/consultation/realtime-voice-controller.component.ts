@@ -14,8 +14,8 @@ import { Subscription } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import {
   AiConsultationApiService,
-  AiMessageResponse,
   AiSessionResponse,
+  AiTranscriptionResponse,
 } from './ai-consultation-api.service';
 import {
   RealtimeVoiceBridgeService,
@@ -98,7 +98,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   @Input() session: AiSessionResponse | null = null;
   @Input() enabled = false;
   @Input() blocked = false;
-  @Output() readonly message = new EventEmitter<AiMessageResponse>();
+  @Output() readonly transcription = new EventEmitter<AiTranscriptionResponse>();
   @Output() readonly activeChange = new EventEmitter<boolean>();
   @Output() readonly realtimeError = new EventEmitter<string>();
 
@@ -116,6 +116,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   private manualMuted = false;
   private lastSpokenMessage = '';
   private connectingForVisit = '';
+  private connectionAttemptedForVisit = '';
 
   constructor() {
     this.subscriptions.add(this.bridge.state$.subscribe(state => {
@@ -179,10 +180,14 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   private async syncConnection(): Promise<void> {
     if (!this.enabled || !this.visitId || !this.session) {
       this.connectingForVisit = '';
+      this.connectionAttemptedForVisit = '';
       this.bridge.disconnect();
       return;
     }
-    if (this.state().connected || this.state().connecting || this.connectingForVisit === this.visitId) {
+    if (this.state().connected
+      || this.state().connecting
+      || this.connectingForVisit === this.visitId
+      || this.connectionAttemptedForVisit === this.visitId) {
       this.syncMute();
       return;
     }
@@ -196,6 +201,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     }
 
     this.connectingForVisit = this.visitId;
+    this.connectionAttemptedForVisit = this.visitId;
     try {
       await this.bridge.connect(this.visitId);
       const spoken = this.speakCurrentApprovedTurn();
@@ -221,31 +227,17 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
 
     this.processing.set(true);
     this.bridge.setMuted(true);
-    const clarification = this.session.clarifications.find(item => item.status === 'PENDING');
-    const operation = clarification
-      ? this.api.answerClarification(this.visitId, clarification.id, text)
-      : this.api.sendText(this.visitId, text);
-
-    operation.subscribe({
+    this.api.stageRealtimeTranscript(this.visitId, text).subscribe({
       next: response => {
         this.processing.set(false);
-        const requiresValidation = response.revisions.some(revision => revision.status === 'PENDING');
-        this.message.emit(response);
-        if (requiresValidation) {
-          this.bridge.setMuted(true);
-          return;
-        }
-        const nextQuestion = response.clarifications.find(
-          item => item.status === 'PENDING',
-        )?.question?.trim();
-        const spoken = this.speakApproved(nextQuestion || response.assistantMessage);
-        if (!spoken) this.syncMute();
+        this.transcription.emit(response);
+        this.bridge.setMuted(true);
       },
       error: () => {
         this.processing.set(false);
         this.realtimeError.emit(this.i18n.t(
           'consultation.ai.realtimeClinicalError',
-          'La phrase a été entendue, mais son analyse clinique a échoué.',
+          'La phrase a été entendue, mais sa mise en relecture a échoué.',
         ));
         this.syncMute();
       },

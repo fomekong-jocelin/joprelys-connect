@@ -24,7 +24,7 @@ class DynamicSystemMemoryProviderTest {
         OpenAiProvider provider = new OpenAiProvider(
                 builder.build(),
                 new AiProperties.OpenAiProperties(
-                        "key", "gpt-4.1", "stt", null, "https://openai.test/v1"));
+                        "key", "gpt-4.1", "stt", null, 0.8, "https://openai.test/v1"));
 
         server.expect(requestTo("https://openai.test/v1/chat/completions"))
                 .andExpect(content().json("""

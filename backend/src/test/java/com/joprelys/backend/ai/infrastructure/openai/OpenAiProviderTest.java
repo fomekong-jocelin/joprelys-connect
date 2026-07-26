@@ -28,12 +28,24 @@ class OpenAiProviderTest {
         server.expect(requestTo("https://api.openai.test/v1/audio/transcriptions"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Contexte médical français")))
-                .andRespond(withSuccess("{\"text\":\"Patient stable\",\"language\":\"fr\"}", MediaType.APPLICATION_JSON));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("logprobs")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("0.8")))
+                .andRespond(withSuccess("""
+                        {
+                          "text":"Patient stable",
+                          "language":"fr",
+                          "logprobs":[
+                            {"token":"Patient","logprob":-0.1},
+                            {"token":" stable","logprob":-0.2}
+                          ]
+                        }
+                        """, MediaType.APPLICATION_JSON));
 
         var transcription = provider.transcribeAudio("audio".getBytes(StandardCharsets.UTF_8), "audio/webm", "fr");
 
         assertThat(transcription.text()).isEqualTo("Patient stable");
         assertThat(transcription.locale()).isEqualTo("fr");
+        assertThat(transcription.confidence()).isBetween(0.8, 1.0);
         server.verify();
     }
 
@@ -77,6 +89,7 @@ class OpenAiProviderTest {
                 model,
                 "gpt-4o-transcribe",
                 transcriptionPrompt,
+                0.8,
                 "https://api.openai.test/v1"
         );
         return new OpenAiProvider(builder.build(), properties);

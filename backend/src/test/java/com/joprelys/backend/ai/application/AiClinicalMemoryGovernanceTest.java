@@ -56,7 +56,7 @@ class AiClinicalMemoryGovernanceTest {
     void shouldRememberResolvedClarification() {
         AiConsultationSessionState state = state();
         AiProperties properties = new AiProperties(
-                true, "openai", "openai", 30, 20, "fr", null, null, null);
+                true, "openai", "openai", 30, 20, 0.35, "fr", null, null, null);
         AiClarificationManager clarifications = new AiClarificationManager(properties);
         clarifications.append(state, new AiClinicalResponseParser.ParsedClarification(
                 "symptoms",

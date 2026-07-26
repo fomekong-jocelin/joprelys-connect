@@ -120,6 +120,29 @@ class AiConsultationControllerTest {
     }
 
     @Test
+    void shouldStageRealtimeTranscriptWithAuthenticatedIdentity() {
+        AiConsultationService service = mock(AiConsultationService.class);
+        AiConsultationController controller = new AiConsultationController(service);
+        Authentication authentication = mock(Authentication.class);
+        UUID visitId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+        when(authentication.getDetails()).thenReturn(claims(userId.toString(), organizationId.toString()));
+        TenantContext.setTenantId(organizationId);
+
+        controller.stageRealtimeTranscript(
+                visitId,
+                new AiConsultationController.AnalyzeTranscriptRequest("Patient sans fièvre"),
+                authentication);
+
+        verify(service).stageRealtimeTranscript(
+                visitId,
+                userId,
+                organizationId,
+                "Patient sans fièvre");
+    }
+
+    @Test
     void shouldRejectUnresolvedLegacyIdentityAtControllerBoundary() {
         AiConsultationService service = mock(AiConsultationService.class);
         AiConsultationController controller = new AiConsultationController(service);

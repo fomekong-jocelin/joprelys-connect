@@ -62,6 +62,10 @@ Ce fichier liste les sources à consulter lorsque les documents internes ne suff
 - RFC 9457 Problem Details : https://www.rfc-editor.org/rfc/rfc9457
 - JSON:API : https://jsonapi.org/
 - Google API Design Guide : https://cloud.google.com/apis/design
+- OpenAI Audio API — transcription, seuil VAD et logprobs :
+  https://platform.openai.com/docs/api-reference/audio
+- OpenAI Realtime API — VAD, transcription asynchrone et champs inclus :
+  https://platform.openai.com/docs/api-reference/realtime
 
 ## Git, versions et changelog
 

@@ -1,6 +1,7 @@
 package com.joprelys.backend.ai.application;
 
 import com.joprelys.backend.ai.application.AiConsultationContract.ConversationMessageView;
+import com.joprelys.backend.ai.application.AiConsultationContract.MessageView;
 import com.joprelys.backend.ai.application.AiConsultationContract.SessionView;
 import com.joprelys.backend.ai.domain.AiMessage;
 import java.time.Instant;
@@ -77,6 +78,22 @@ final class AiConsultationSessionSupport {
                 List.copyOf(state.revisions),
                 state.assistantMessage,
                 state.needsClarification);
+    }
+
+    static MessageView toMessageView(
+            AiConsultationSessionState state,
+            List<String> changedFields) {
+        return new MessageView(
+                state.sessionId,
+                state.transcript,
+                Map.copyOf(state.draft),
+                changedFields,
+                state.assistantMessage,
+                state.needsClarification,
+                List.copyOf(state.conversation),
+                List.copyOf(state.clarifications),
+                List.copyOf(state.revisions),
+                state.expiresAt);
     }
 
     private static String limit(String value, int maximum) {
