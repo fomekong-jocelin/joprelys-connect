@@ -78,6 +78,8 @@ joprelys:
     rxnorm:
       enabled: ${JOPRELYS_RXNORM_ENABLED:false}
       base-url: ${JOPRELYS_RXNORM_BASE_URL:https://rxnav.nlm.nih.gov}
+      connect-timeout-ms: ${JOPRELYS_RXNORM_CONNECT_TIMEOUT_MS:1500}
+      read-timeout-ms: ${JOPRELYS_RXNORM_READ_TIMEOUT_MS:2500}
   security:
     jwt:
       issuer: ${JOPRELYS_JWT_ISSUER:joprelys-connect}
