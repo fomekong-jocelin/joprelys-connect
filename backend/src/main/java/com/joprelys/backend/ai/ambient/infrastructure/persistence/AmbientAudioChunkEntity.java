@@ -17,6 +17,9 @@ import org.hibernate.annotations.TenantId;
 @Table(name = "ai_ambient_audio_chunks")
 public class AmbientAudioChunkEntity {
 
+    public static final String EMPTY_DIARIZATION_CONTEXT_SHA256 =
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
     @Id
     private UUID id;
 
@@ -32,6 +35,9 @@ public class AmbientAudioChunkEntity {
 
     @Column(name = "audio_sha256", nullable = false, length = 64)
     private String audioSha256;
+
+    @Column(name = "diarization_context_sha256", nullable = false, length = 64)
+    private String diarizationContextSha256;
 
     @Column(name = "start_offset_ms", nullable = false)
     private long startOffsetMs;
@@ -79,11 +85,34 @@ public class AmbientAudioChunkEntity {
             String contentType,
             UUID createdByUserId,
             Instant now) {
+        this(
+                organizationId,
+                visitId,
+                chunkId,
+                audioSha256,
+                EMPTY_DIARIZATION_CONTEXT_SHA256,
+                startOffsetMs,
+                contentType,
+                createdByUserId,
+                now);
+    }
+
+    public AmbientAudioChunkEntity(
+            UUID organizationId,
+            UUID visitId,
+            String chunkId,
+            String audioSha256,
+            String diarizationContextSha256,
+            long startOffsetMs,
+            String contentType,
+            UUID createdByUserId,
+            Instant now) {
         this.id = UUID.randomUUID();
         this.organizationId = organizationId;
         this.visitId = visitId;
         this.chunkId = chunkId;
         this.audioSha256 = audioSha256;
+        this.diarizationContextSha256 = normalizeContextHash(diarizationContextSha256);
         this.startOffsetMs = startOffsetMs;
         this.contentType = contentType;
         this.createdByUserId = createdByUserId;
@@ -103,6 +132,7 @@ public class AmbientAudioChunkEntity {
         if (claimedAt == null) claimedAt = now;
         if (claimGeneration < 1) claimGeneration = 1;
         if (claimToken == null) claimToken = UUID.randomUUID();
+        diarizationContextSha256 = normalizeContextHash(diarizationContextSha256);
     }
 
     @PreUpdate
@@ -136,11 +166,16 @@ public class AmbientAudioChunkEntity {
         lastError = errorCode == null ? null : errorCode.substring(0, Math.min(128, errorCode.length()));
     }
 
+    private String normalizeContextHash(String hash) {
+        return hash == null || hash.isBlank() ? EMPTY_DIARIZATION_CONTEXT_SHA256 : hash;
+    }
+
     public UUID getId() { return id; }
     public UUID getOrganizationId() { return organizationId; }
     public UUID getVisitId() { return visitId; }
     public String getChunkId() { return chunkId; }
     public String getAudioSha256() { return audioSha256; }
+    public String getDiarizationContextSha256() { return diarizationContextSha256; }
     public long getStartOffsetMs() { return startOffsetMs; }
     public String getContentType() { return contentType; }
     public AmbientAudioChunkStatus getStatus() { return status; }

@@ -1,11 +1,15 @@
 package com.joprelys.backend.ai.ambient.infrastructure.openai;
 
 import com.joprelys.backend.ai.ambient.application.AmbientDiarizationPort;
+import com.joprelys.backend.ai.ambient.application.AmbientDiarizationPort.KnownSpeakerReference;
 import com.joprelys.backend.ai.infrastructure.AiProperties;
 import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +30,8 @@ public class OpenAiAmbientDiarizationAdapter implements AmbientDiarizationPort {
 
     private static final Logger log = LoggerFactory.getLogger(OpenAiAmbientDiarizationAdapter.class);
     private static final int MAX_AUDIO_BYTES = 25 * 1024 * 1024;
+    private static final int MAX_REFERENCE_BYTES = 5 * 1024 * 1024;
+    private static final int MAX_KNOWN_SPEAKERS = 4;
 
     private final RestClient restClient;
     private final String model;
@@ -60,7 +66,17 @@ public class OpenAiAmbientDiarizationAdapter implements AmbientDiarizationPort {
 
     @Override
     public DiarizedTranscript transcribe(byte[] audio, String contentType, String locale) {
+        return transcribe(audio, contentType, locale, List.of());
+    }
+
+    @Override
+    public DiarizedTranscript transcribe(
+            byte[] audio,
+            String contentType,
+            String locale,
+            List<KnownSpeakerReference> knownSpeakers) {
         validateAudio(audio, contentType);
+        List<KnownSpeakerReference> references = validateKnownSpeakers(knownSpeakers);
         if (restClient == null) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI_AMBIENT_NOT_CONFIGURED");
         }
@@ -84,6 +100,10 @@ public class OpenAiAmbientDiarizationAdapter implements AmbientDiarizationPort {
         String language = normalizeLanguage(locale);
         if (language != null) {
             formData.add("language", language);
+        }
+        for (KnownSpeakerReference reference : references) {
+            formData.add("known_speaker_names[]", reference.name());
+            formData.add("known_speaker_references[]", dataUrl(reference));
         }
 
         try {
@@ -110,6 +130,39 @@ public class OpenAiAmbientDiarizationAdapter implements AmbientDiarizationPort {
             log.warn("OpenAI ambient diarization failed", exception);
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI_AMBIENT_NETWORK_UNAVAILABLE");
         }
+    }
+
+    private List<KnownSpeakerReference> validateKnownSpeakers(List<KnownSpeakerReference> knownSpeakers) {
+        if (knownSpeakers == null || knownSpeakers.isEmpty()) {
+            return List.of();
+        }
+        if (knownSpeakers.size() > MAX_KNOWN_SPEAKERS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_KNOWN_SPEAKER_LIMIT_EXCEEDED");
+        }
+        Set<String> names = new HashSet<>();
+        List<KnownSpeakerReference> normalized = new ArrayList<>();
+        for (KnownSpeakerReference reference : knownSpeakers) {
+            if (reference == null || reference.name() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_KNOWN_SPEAKER_INVALID");
+            }
+            String name = reference.name().trim().toLowerCase(Locale.ROOT);
+            if (!name.matches("[a-z][a-z0-9_-]{0,31}") || !names.add(name)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_KNOWN_SPEAKER_INVALID");
+            }
+            byte[] referenceAudio = reference.audio();
+            String referenceType = normalizeContentType(reference.contentType());
+            if (referenceAudio == null || referenceAudio.length == 0 || referenceAudio.length > MAX_REFERENCE_BYTES) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_KNOWN_SPEAKER_AUDIO_INVALID");
+            }
+            extension(referenceType);
+            normalized.add(new KnownSpeakerReference(name, referenceAudio.clone(), referenceType));
+        }
+        return List.copyOf(normalized);
+    }
+
+    private String dataUrl(KnownSpeakerReference reference) {
+        return "data:" + reference.contentType() + ";base64,"
+                + Base64.getEncoder().encodeToString(reference.audio());
     }
 
     private DiarizedTranscript parse(Map<String, Object> response) {
@@ -155,14 +208,19 @@ public class OpenAiAmbientDiarizationAdapter implements AmbientDiarizationPort {
     }
 
     private String extension(String contentType) {
-        String normalized = contentType == null ? "" : contentType.toLowerCase(Locale.ROOT);
-        if (normalized.startsWith("audio/webm")) return "webm";
-        if (normalized.startsWith("audio/mp4") || normalized.startsWith("audio/m4a")) return "m4a";
-        if (normalized.startsWith("audio/mpeg") || normalized.startsWith("audio/mp3")) return "mp3";
-        if (normalized.startsWith("audio/wav")) return "wav";
-        if (normalized.startsWith("audio/ogg")) return "ogg";
-        if (normalized.startsWith("audio/flac")) return "flac";
+        String normalized = normalizeContentType(contentType);
+        if (normalized.equals("audio/webm")) return "webm";
+        if (normalized.equals("audio/mp4") || normalized.equals("audio/m4a")) return "m4a";
+        if (normalized.equals("audio/mpeg") || normalized.equals("audio/mp3")) return "mp3";
+        if (normalized.equals("audio/wav") || normalized.equals("audio/x-wav")) return "wav";
+        if (normalized.equals("audio/ogg")) return "ogg";
+        if (normalized.equals("audio/flac")) return "flac";
         throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "AI_AMBIENT_AUDIO_TYPE_UNSUPPORTED");
+    }
+
+    private String normalizeContentType(String contentType) {
+        if (contentType == null) return "";
+        return contentType.trim().toLowerCase(Locale.ROOT).split(";", 2)[0].trim();
     }
 
     private String normalizeLanguage(String locale) {

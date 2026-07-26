@@ -1,10 +1,19 @@
 package com.joprelys.backend.ai.ambient.application;
 
+import com.joprelys.backend.ai.ambient.application.AmbientDiarizationPort.KnownSpeakerReference;
 import com.joprelys.backend.ai.ambient.application.AmbientTranscriptContract.TranscriptItemView;
+import com.joprelys.backend.ai.ambient.infrastructure.persistence.AmbientAudioChunkEntity;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HexFormat;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
@@ -14,6 +23,9 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 @ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
 public class AmbientTranscriptionService {
+
+    private static final int MAX_KNOWN_SPEAKERS = 4;
+    private static final int MAX_REFERENCE_BYTES = 5 * 1024 * 1024;
 
     private final AmbientDiarizationPort diarizationPort;
     private final AmbientAudioChunkJournalService chunkJournal;
@@ -34,23 +46,58 @@ public class AmbientTranscriptionService {
             String locale,
             byte[] audio,
             String contentType) {
-        validateChunkId(chunkId);
-        String hash = sha256(audio);
-        var claim = chunkJournal.claim(
+        return ingestAudioChunk(
                 visitId,
                 userId,
                 organizationId,
                 chunkId,
-                hash,
                 chunkStartOffsetMs,
-                contentType);
+                locale,
+                audio,
+                contentType,
+                List.of());
+    }
+
+    public List<TranscriptItemView> ingestAudioChunk(
+            UUID visitId,
+            UUID userId,
+            UUID organizationId,
+            String chunkId,
+            long chunkStartOffsetMs,
+            String locale,
+            byte[] audio,
+            String contentType,
+            List<KnownSpeakerReference> knownSpeakers) {
+        validateChunkId(chunkId);
+        List<KnownSpeakerReference> references = normalizeKnownSpeakers(knownSpeakers);
+        String audioHash = sha256(audio);
+        var claim = references.isEmpty()
+                ? chunkJournal.claim(
+                        visitId,
+                        userId,
+                        organizationId,
+                        chunkId,
+                        audioHash,
+                        chunkStartOffsetMs,
+                        contentType)
+                : chunkJournal.claim(
+                        visitId,
+                        userId,
+                        organizationId,
+                        chunkId,
+                        audioHash,
+                        diarizationContextSha256(references),
+                        chunkStartOffsetMs,
+                        contentType);
         if (claim.alreadyCompleted()) {
             return chunkJournal.completedItems(visitId, chunkId);
         }
 
         UUID claimToken = claim.claimToken();
         try {
-            var diarized = diarizationPort.transcribe(audio, contentType, locale);
+            var diarized = references.isEmpty()
+                    ? diarizationPort.transcribe(audio, contentType, locale)
+                    : diarizationPort.transcribe(audio, contentType, locale, references);
             return chunkJournal.complete(
                     visitId,
                     userId,
@@ -71,6 +118,55 @@ public class AmbientTranscriptionService {
         }
     }
 
+    private List<KnownSpeakerReference> normalizeKnownSpeakers(List<KnownSpeakerReference> knownSpeakers) {
+        if (knownSpeakers == null || knownSpeakers.isEmpty()) {
+            return List.of();
+        }
+        if (knownSpeakers.size() > MAX_KNOWN_SPEAKERS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_KNOWN_SPEAKER_LIMIT_EXCEEDED");
+        }
+        Set<String> names = new HashSet<>();
+        List<KnownSpeakerReference> result = new ArrayList<>();
+        for (KnownSpeakerReference reference : knownSpeakers) {
+            if (reference == null || reference.name() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_KNOWN_SPEAKER_INVALID");
+            }
+            String name = reference.name().trim().toLowerCase(Locale.ROOT);
+            if (!name.matches("[a-z][a-z0-9_-]{0,31}") || !names.add(name)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_KNOWN_SPEAKER_INVALID");
+            }
+            byte[] referenceAudio = reference.audio();
+            if (referenceAudio == null || referenceAudio.length == 0 || referenceAudio.length > MAX_REFERENCE_BYTES) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_KNOWN_SPEAKER_AUDIO_INVALID");
+            }
+            String referenceType = normalizeContentType(reference.contentType());
+            if (referenceType.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_KNOWN_SPEAKER_AUDIO_INVALID");
+            }
+            result.add(new KnownSpeakerReference(name, referenceAudio.clone(), referenceType));
+        }
+        result.sort(Comparator.comparing(KnownSpeakerReference::name));
+        return List.copyOf(result);
+    }
+
+    private String diarizationContextSha256(List<KnownSpeakerReference> references) {
+        if (references.isEmpty()) {
+            return AmbientAudioChunkEntity.EMPTY_DIARIZATION_CONTEXT_SHA256;
+        }
+        MessageDigest digest = sha256Digest();
+        for (KnownSpeakerReference reference : references) {
+            updateLengthPrefixed(digest, reference.name().getBytes(StandardCharsets.UTF_8));
+            updateLengthPrefixed(digest, reference.contentType().getBytes(StandardCharsets.UTF_8));
+            updateLengthPrefixed(digest, reference.audio());
+        }
+        return HexFormat.of().formatHex(digest.digest());
+    }
+
+    private void updateLengthPrefixed(MessageDigest digest, byte[] value) {
+        digest.update(ByteBuffer.allocate(Integer.BYTES).putInt(value.length).array());
+        digest.update(value);
+    }
+
     private void validateChunkId(String chunkId) {
         if (chunkId == null || chunkId.isBlank()
                 || chunkId.length() > 120
@@ -83,11 +179,20 @@ public class AmbientTranscriptionService {
         if (audio == null || audio.length == 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_AUDIO_INVALID");
         }
+        return HexFormat.of().formatHex(sha256Digest().digest(audio));
+    }
+
+    private MessageDigest sha256Digest() {
         try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(audio));
+            return MessageDigest.getInstance("SHA-256");
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 unavailable", exception);
         }
+    }
+
+    private String normalizeContentType(String value) {
+        if (value == null) return "";
+        return value.trim().toLowerCase(Locale.ROOT).split(";", 2)[0].trim();
     }
 
     private String errorCode(RuntimeException exception) {

@@ -4,18 +4,21 @@ import com.joprelys.backend.ai.ambient.application.AmbientTranscriptContract.Tra
 import com.joprelys.backend.ai.ambient.application.AmbientTranscriptContract.TranscriptLedgerView;
 import com.joprelys.backend.ai.ambient.application.AmbientTranscriptLedgerService;
 import com.joprelys.backend.ai.ambient.application.AmbientTranscriptionService;
+import com.joprelys.backend.ai.ambient.application.DoctorSpeakerReferenceFactory;
 import com.joprelys.backend.auth.security.JwtClaims;
 import com.joprelys.backend.auth.security.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,7 +27,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
@@ -34,12 +39,15 @@ public class AmbientTranscriptController {
 
     private final AmbientTranscriptionService transcriptionService;
     private final AmbientTranscriptLedgerService ledgerService;
+    private final DoctorSpeakerReferenceFactory doctorSpeakerReferenceFactory;
 
     public AmbientTranscriptController(
             AmbientTranscriptionService transcriptionService,
-            AmbientTranscriptLedgerService ledgerService) {
+            AmbientTranscriptLedgerService ledgerService,
+            DoctorSpeakerReferenceFactory doctorSpeakerReferenceFactory) {
         this.transcriptionService = transcriptionService;
         this.ledgerService = ledgerService;
+        this.doctorSpeakerReferenceFactory = doctorSpeakerReferenceFactory;
     }
 
     @PostMapping(
@@ -64,6 +72,43 @@ public class AmbientTranscriptController {
                 locale,
                 audio,
                 contentType);
+    }
+
+    @PostMapping(
+            value = "/transcriptions/audio-with-doctor-reference",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
+    public List<TranscriptItemView> ingestAudioChunkWithDoctorReference(
+            @PathVariable UUID visitId,
+            @RequestPart("audio") MultipartFile audio,
+            @RequestPart("doctorReference") MultipartFile doctorReference,
+            @RequestHeader("X-Joprelys-Ambient-Chunk-Id") String chunkId,
+            @RequestHeader(value = "X-Joprelys-Ambient-Start-Ms", defaultValue = "0") long startOffsetMs,
+            @RequestHeader(value = "X-Joprelys-Locale", defaultValue = "fr") String locale,
+            Authentication authentication) {
+        Identity identity = identity(authentication);
+        try {
+            byte[] audioBytes = audio.getBytes();
+            byte[] referenceBytes = doctorReference.getBytes();
+            var doctorReferenceValue = doctorSpeakerReferenceFactory.create(
+                    referenceBytes,
+                    doctorReference.getContentType());
+            return transcriptionService.ingestAudioChunk(
+                    visitId,
+                    identity.userId(),
+                    identity.organizationId(),
+                    chunkId,
+                    startOffsetMs,
+                    locale,
+                    audioBytes,
+                    audio.getContentType(),
+                    List.of(doctorReferenceValue));
+        } catch (IOException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "AI_AMBIENT_MULTIPART_AUDIO_INVALID",
+                    exception);
+        }
     }
 
     @PostMapping("/transcript/{itemId}/corrections")
