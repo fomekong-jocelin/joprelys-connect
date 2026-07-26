@@ -16,32 +16,47 @@
 
         <!-- Role-Specific: ADMIN_JOPRELYS -->
         @if (hasPermission('ORGANIZATION_MANAGE')) {
-          <div class="col-span-1 md:col-span-3 bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+          <div
+            class="col-span-1 md:col-span-3 bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-6">
-              <div class="w-10 h-10 rounded-xl bg-brand-night/10 dark:bg-[var(--bg-input)] flex items-center justify-center text-brand-night dark:text-[var(--text-secondary)]">
+              <div
+                class="w-10 h-10 rounded-xl bg-brand-night/10 dark:bg-[var(--bg-input)] flex items-center justify-center text-brand-night dark:text-[var(--text-secondary)]">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                 </svg>
               </div>
-              <h2 class="font-display font-bold text-xl text-[var(--text-primary)]">{{ t('dashboard.admin.title') }}</h2>
+              <h2
+                class="font-display font-bold text-xl text-[var(--text-primary)]">{{ t('dashboard.admin.title') }}</h2>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <div class="p-5 bg-brand-gray dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl">
-                <h3 class="font-semibold text-brand-night dark:text-[var(--text-primary)] text-sm">{{ t('dashboard.admin.clinics.title') }}</h3>
-                <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('dashboard.admin.clinics.desc') }}</p>
-                <a routerLink="/organizations" class="mt-4 inline-block text-xs font-semibold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">{{ t('common.access') }}</a>
+                <h3
+                  class="font-semibold text-brand-night dark:text-[var(--text-primary)] text-sm">{{ t('dashboard.admin.clinics.title') }}</h3>
+                <p
+                  class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('dashboard.admin.clinics.desc') }}</p>
+                <a routerLink="/organizations"
+                   class="mt-4 inline-block text-xs font-semibold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">{{ t('common.access') }}</a>
               </div>
               <div class="p-5 bg-brand-gray dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl">
-                <h3 class="font-semibold text-brand-night dark:text-[var(--text-primary)] text-sm">{{ t('dashboard.admin.audit.title') }}</h3>
-                <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('dashboard.admin.audit.desc') }}</p>
-                <button (click)="openAuditSecurityModal()" class="mt-4 text-xs font-semibold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">{{ t('common.consult') }}</button>
+                <h3
+                  class="font-semibold text-brand-night dark:text-[var(--text-primary)] text-sm">{{ t('dashboard.admin.audit.title') }}</h3>
+                <p
+                  class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('dashboard.admin.audit.desc') }}</p>
+                <button (click)="openAuditSecurityModal()"
+                        class="mt-4 text-xs font-semibold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">{{ t('common.consult') }}
+                </button>
               </div>
               <div class="p-5 bg-brand-gray dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl">
-                <h3 class="font-semibold text-brand-night dark:text-[var(--text-primary)] text-sm">{{ t('dashboard.admin.interop.title') }}</h3>
-                <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('dashboard.admin.interop.desc') }}</p>
-                <a routerLink="/organizations" class="mt-4 inline-block text-xs font-semibold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">{{ t('common.configure') }}</a>
+                <h3
+                  class="font-semibold text-brand-night dark:text-[var(--text-primary)] text-sm">{{ t('dashboard.admin.interop.title') }}</h3>
+                <p
+                  class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('dashboard.admin.interop.desc') }}</p>
+                <a routerLink="/organizations"
+                   class="mt-4 inline-block text-xs font-semibold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">{{ t('common.configure') }}</a>
               </div>
             </div>
           </div>
@@ -49,21 +64,28 @@
 
         <!-- Role-Specific: Clinical Roles (Dossiers Cliniques) -->
         @if (hasPermission('PATIENT_READ')) {
-          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+          <div
+            class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-4">
-              <div class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan dark:text-cyan-400">
+              <div
+                class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan dark:text-cyan-400">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
               </div>
-              <h2 class="font-display font-bold text-lg text-[var(--text-primary)]">{{ t('dashboard.clinical.records.title') }}</h2>
+              <h2
+                class="font-display font-bold text-lg text-[var(--text-primary)]">{{ t('dashboard.clinical.records.title') }}</h2>
             </div>
-            <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('dashboard.clinical.records.desc') }}</p>
-            <a routerLink="/patients" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
+            <p
+              class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('dashboard.clinical.records.desc') }}</p>
+            <a routerLink="/patients"
+               class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
               {{ t('dashboard.clinical.records.manageLink') }}
             </a>
             @if (hasPermission('PATIENT_EMERGENCY_ACCESS')) {
-              <a routerLink="/clinic/access-request" class="mt-2 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
+              <a routerLink="/clinic/access-request"
+                 class="mt-2 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
                 {{ t('dashboard.clinical.records.requestExternalLink') }}
               </a>
             }
@@ -71,34 +93,42 @@
         }
 
         @if (hasPermission('LAB_QUEUE_READ')) {
-          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+          <div
+            class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-4">
-              <div class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan dark:text-cyan-400">
+              <div
+                class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan dark:text-cyan-400">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3h8l-1 1v4.5l4.5 7.8A3 3 0 0116.9 21H7.1a3 3 0 01-2.6-4.7L9 8.5V4L8 3z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 3h8l-1 1v4.5l4.5 7.8A3 3 0 0116.9 21H7.1a3 3 0 01-2.6-4.7L9 8.5V4L8 3z"/>
                 </svg>
               </div>
               <h2 class="font-display font-bold text-lg text-[var(--text-primary)]">{{ t('lab.dashboardTitle') }}</h2>
             </div>
             <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('lab.dashboardSubtitle') }}</p>
-            <a routerLink="/clinic/lab-orders" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
+            <a routerLink="/clinic/lab-orders"
+               class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
               {{ t('lab.dashboardLink') }}
             </a>
           </div>
         }
 
         @if (hasPermission('USER_MANAGE')) {
-          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+          <div
+            class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-4">
-              <div class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan dark:text-cyan-400">
+              <div
+                class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan dark:text-cyan-400">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m6-4a4 4 0 11-8 0 4 4 0 018 0zm6 2a3 3 0 10-3-5.197" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m6-4a4 4 0 11-8 0 4 4 0 018 0zm6 2a3 3 0 10-3-5.197"/>
                 </svg>
               </div>
               <h2 class="font-display font-bold text-lg text-[var(--text-primary)]">{{ t('staff.dashboardTitle') }}</h2>
             </div>
             <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('staff.dashboardSubtitle') }}</p>
-            <a routerLink="/clinic/staff" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
+            <a routerLink="/clinic/staff"
+               class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
               {{ t('staff.dashboardLink') }}
             </a>
           </div>
@@ -106,17 +136,23 @@
 
         <!-- Role-Specific: PHARMACIEN -->
         @if (hasPermission('PHARMACY_PRESCRIPTION_READ')) {
-          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+          <div
+            class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-4">
-              <div class="w-9 h-9 rounded-lg bg-brand-green/10 dark:bg-brand-green/20 flex items-center justify-center text-brand-green">
+              <div
+                class="w-9 h-9 rounded-lg bg-brand-green/10 dark:bg-brand-green/20 flex items-center justify-center text-brand-green">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 9.172V5L8 4z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 9.172V5L8 4z"/>
                 </svg>
               </div>
-              <h2 class="font-display font-bold text-lg text-[var(--text-primary)]">{{ t('dashboard.pharmacy.prescriptions.title') }}</h2>
+              <h2
+                class="font-display font-bold text-lg text-[var(--text-primary)]">{{ t('dashboard.pharmacy.prescriptions.title') }}</h2>
             </div>
-            <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('dashboard.pharmacy.prescriptions.desc') }}</p>
-            <a routerLink="/pharmacy/prescriptions" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
+            <p
+              class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('dashboard.pharmacy.prescriptions.desc') }}</p>
+            <a routerLink="/pharmacy/prescriptions"
+               class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
               {{ t('dashboard.pharmacy.prescriptions.validateLink') }}
             </a>
           </div>
@@ -124,42 +160,50 @@
 
         <!-- Role-Specific: PHARMACIEN / ADMIN_CLINIQUE (Stocks) -->
         @if (hasPermission(['STOCK_READ', 'STOCK_MANAGE'])) {
-          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+          <div
+            class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
             <div class="flex items-center gap-3 mb-4">
-              <div class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan">
+              <div
+                class="w-9 h-9 rounded-lg bg-brand-cyan/10 dark:bg-brand-cyan/20 flex items-center justify-center text-brand-cyan">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                 </svg>
               </div>
-              <h2 class="font-display font-bold text-lg text-[var(--text-primary)]">{{ t('pharmacy.stocks.title') }}</h2>
+              <h2
+                class="font-display font-bold text-lg text-[var(--text-primary)]">{{ t('pharmacy.stocks.title') }}</h2>
             </div>
             <p class="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">{{ t('pharmacy.stocks.subtitle') }}</p>
-            <a routerLink="/pharmacy/stocks" class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
+            <a routerLink="/pharmacy/stocks"
+               class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand-cyan dark:text-brand-cyan hover:underline cursor-pointer">
               {{ t('pharmacy.stocks.manageLink') || 'Gérer l\'inventaire →' }}
             </a>
           </div>
         }
 
 
-
-
       </div>
 
       <!-- File d'Attente Active (Clinical Queue) -->
       @if (isClinicalRole()) {
-        <div class="mt-10 bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4 mb-6" style="border-color: var(--border-color)">
+        <div
+          class="mt-10 bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-2xl p-6 shadow-xs transition-colors duration-300">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4 mb-6"
+               style="border-color: var(--border-color)">
             <div class="w-full">
               <div class="flex items-center justify-between sm:justify-start gap-4">
-                <h2 class="font-display font-bold text-base sm:text-xl text-[var(--text-primary)]">{{ t('dashboard.queue.title') }}</h2>
+                <h2
+                  class="font-display font-bold text-base sm:text-xl text-[var(--text-primary)]">{{ t('dashboard.queue.title') }}</h2>
                 <button
                   type="button"
                   (click)="loadQueue()"
                   class="p-2 sm:hidden rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-slate-100 dark:text-[var(--text-muted)] dark:hover:text-[var(--text-primary)] dark:hover:bg-slate-800 transition-colors cursor-pointer"
                   [title]="t('common.refresh')"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5"
+                       stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
                   </svg>
                 </button>
               </div>
@@ -177,7 +221,8 @@
               {{ t('dashboard.queue.loading') }}
             </div>
           } @else if (queueError()) {
-            <div class="p-4 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-xl text-xs text-[var(--brand-danger-text)] font-semibold leading-relaxed">
+            <div
+              class="p-4 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-xl text-xs text-[var(--brand-danger-text)] font-semibold leading-relaxed">
               {{ queueError() }}
             </div>
           } @else if (activeVisits().length === 0) {
@@ -187,33 +232,51 @@
             <div class="hidden md:block overflow-x-auto">
               <table class="w-full text-left border-collapse">
                 <thead>
-                  <tr class="border-b" style="border-color: var(--border-color)">
-                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">{{ t('dashboard.queue.table.visitNumber') }}</th>
-                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">{{ t('dashboard.queue.table.patient') }}</th>
-                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider whitespace-nowrap" style="color: var(--text-muted)">{{ t('dashboard.queue.table.arrival') }}</th>
-                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">{{ t('dashboard.queue.table.orientation') }}</th>
-                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider" style="color: var(--text-muted)">{{ t('dashboard.queue.table.status') }}</th>
-                    <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider text-right" style="color: var(--text-muted)">{{ t('dashboard.queue.table.actions') }}</th>
-                  </tr>
+                <tr class="border-b" style="border-color: var(--border-color)">
+                  <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider"
+                      style="color: var(--text-muted)">{{ t('dashboard.queue.table.visitNumber') }}
+                  </th>
+                  <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider"
+                      style="color: var(--text-muted)">{{ t('dashboard.queue.table.patient') }}
+                  </th>
+                  <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider whitespace-nowrap"
+                      style="color: var(--text-muted)">{{ t('dashboard.queue.table.arrival') }}
+                  </th>
+                  <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider"
+                      style="color: var(--text-muted)">{{ t('dashboard.queue.table.orientation') }}
+                  </th>
+                  <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider"
+                      style="color: var(--text-muted)">{{ t('dashboard.queue.table.status') }}
+                  </th>
+                  <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider text-right"
+                      style="color: var(--text-muted)">{{ t('dashboard.queue.table.actions') }}
+                  </th>
+                </tr>
                 </thead>
                 <tbody class="divide-y" style="border-color: var(--border-color)">
                   @for (visit of activeVisits(); track visit.id) {
                     <tr class="hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800/30 transition-colors">
-                      <td class="py-4 px-4 text-sm font-bold text-brand-cyan dark:text-brand-cyan">{{ visit.visitNumber }}</td>
+                      <td
+                        class="py-4 px-4 text-sm font-bold text-brand-cyan dark:text-brand-cyan">{{ visit.visitNumber }}
+                      </td>
                       <td class="py-4 px-4">
-                        <span class="font-bold text-sm block" style="color: var(--text-primary)">{{ visit.patientName }}</span>
-                        <span class="text-xs font-medium block" style="color: var(--text-muted)">{{ visit.patientDpu }}</span>
+                        <span class="font-bold text-sm block"
+                              style="color: var(--text-primary)">{{ visit.patientName }}</span>
+                        <span class="text-xs font-medium block"
+                              style="color: var(--text-muted)">{{ visit.patientDpu }}</span>
                       </td>
                       <td class="py-4 px-4 text-sm font-semibold whitespace-nowrap" style="color: var(--text-primary)">
                         {{ visit.createdAt | date:'HH:mm' }}
                       </td>
                       <td class="py-4 px-4">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[var(--brand-info-subtle)] text-[var(--brand-info-text)]  dark:text-brand-cyan whitespace-nowrap">
+                        <span
+                          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[var(--brand-info-subtle)] text-[var(--brand-info-text)]  dark:text-brand-cyan whitespace-nowrap">
                           {{ visit.orientation }}
                         </span>
                       </td>
                       <td class="py-4 px-4">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]  dark:text-[var(--brand-success-text)] whitespace-nowrap">
+                        <span
+                          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]  dark:text-[var(--brand-success-text)] whitespace-nowrap">
                           {{ visit.status }}
                         </span>
                       </td>
@@ -225,8 +288,10 @@
                             [title]="t('patient.list.viewRecord')"
                             class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-brand-cyan bg-brand-cyan/10 hover:bg-brand-cyan/20 transition-colors cursor-pointer">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                             </svg>
                           </button>
                           <!-- Bouton Clôturer -->
@@ -236,7 +301,8 @@
                               [title]="t('dashboard.close.title')"
                               class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[var(--brand-danger)] bg-[var(--brand-danger-subtle)]0/10 hover:bg-[var(--brand-danger-subtle)]0/20 transition-colors cursor-pointer">
                               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M6 18L18 6M6 6l12 12"/>
                               </svg>
                             </button>
                           }
@@ -251,14 +317,18 @@
             <!-- Mobile Card View -->
             <div class="md:hidden space-y-4">
               @for (visit of activeVisits(); track visit.id) {
-                <div class="p-4 bg-brand-gray dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl space-y-3">
+                <div
+                  class="space-y-3 rounded-[6px] border border-[var(--app-border)]/40 bg-brand-gray p-4 dark:bg-[var(--app-bg)]">
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-bold text-brand-cyan dark:text-brand-cyan">{{ visit.visitNumber }}</span>
-                    <span class="text-xs font-semibold" style="color: var(--text-muted)">{{ visit.createdAt | date:'HH:mm' }}</span>
+                    <span class="text-xs font-semibold"
+                          style="color: var(--text-muted)">{{ visit.createdAt | date:'HH:mm' }}</span>
                   </div>
                   <div>
-                    <span class="font-bold text-sm block" style="color: var(--text-primary)">{{ visit.patientName }}</span>
-                    <span class="text-xs font-medium block" style="color: var(--text-muted)">{{ visit.patientDpu }}</span>
+                    <span class="font-bold text-sm block"
+                          style="color: var(--text-primary)">{{ visit.patientName }}</span>
+                    <span class="text-xs font-medium block"
+                          style="color: var(--text-muted)">{{ visit.patientDpu }}</span>
                   </div>
                   <div class="text-xs leading-relaxed" style="color: var(--text-secondary)">
                     <strong>{{ t('dashboard.drawer.visitReason') }} :</strong> {{ visit.reason }}
@@ -266,27 +336,36 @@
 
                   <!-- Vitals Mobile view -->
                   @if (visit.vitals) {
-                    <div class="p-3 bg-[var(--app-surface)] border border-[var(--app-border)]/50 rounded-xl grid grid-cols-2 gap-2 text-xs font-semibold">
+                    <div
+                      class="grid grid-cols-1 gap-2 rounded-[6px] border border-[var(--app-border)]/50 bg-[var(--app-surface)] p-3 text-xs font-semibold min-[360px]:grid-cols-2">
                       @if (visit.vitals.temperature) {
-                        <div class="text-[var(--text-muted)]">Temp : <strong class="text-[var(--text-primary)]">{{ visit.vitals.temperature }}°C</strong></div>
+                        <div class="text-[var(--text-muted)]">{{ t('dashboard.vitals.short.temperature') }} : <strong
+                          class="text-[var(--text-primary)]">{{ visit.vitals.temperature }}°C</strong></div>
                       }
                       @if (visit.vitals.systolic || visit.vitals.diastolic) {
-                        <div class="text-[var(--text-muted)]">TA : <strong class="text-[var(--text-primary)]">{{ visit.vitals.systolic }}/{{ visit.vitals.diastolic }}</strong></div>
+                        <div class="text-[var(--text-muted)]">{{ t('dashboard.vitals.short.bloodPressure') }} : <strong
+                          class="text-[var(--text-primary)]">{{ visit.vitals.systolic }}
+                          /{{ visit.vitals.diastolic }}</strong></div>
                       }
                       @if (visit.vitals.pulse) {
-                        <div class="text-[var(--text-muted)]">Pouls : <strong class="text-[var(--text-primary)]">{{ visit.vitals.pulse }} bpm</strong></div>
+                        <div class="text-[var(--text-muted)]">{{ t('dashboard.vitals.short.pulse') }} : <strong
+                          class="text-[var(--text-primary)]">{{ visit.vitals.pulse }} bpm</strong></div>
                       }
                       @if (visit.vitals.spo2) {
-                        <div class="text-[var(--text-muted)]">SpO2 : <strong class="text-[var(--text-primary)]">{{ visit.vitals.spo2 }}%</strong></div>
+                        <div class="text-[var(--text-muted)]">{{ t('dashboard.vitals.short.spo2') }} : <strong
+                          class="text-[var(--text-primary)]">{{ visit.vitals.spo2 }}%</strong></div>
                       }
                       @if (visit.vitals.bmi) {
-                        <div class="text-[var(--text-muted)]">IMC : <span class="inline-flex items-center px-1 py-0.25 rounded-md font-bold text-[10px]" [class]="getBmiClass(visit.vitals.bmi)">{{ visit.vitals.bmi }}</span></div>
+                        <div class="text-[var(--text-muted)]">{{ t('dashboard.vitals.short.bmi') }} : <span
+                          class="inline-flex items-center rounded-[4px] px-1 py-0.25 text-[10px] font-bold"
+                          [class]="getBmiClass(visit.vitals.bmi)">{{ visit.vitals.bmi }}</span></div>
                       }
                     </div>
                   }
 
                   <div class="flex items-center justify-between pt-2 border-t border-[var(--app-border)]/40">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-[var(--brand-info-subtle)] text-[var(--brand-info-text)]  dark:text-brand-cyan whitespace-nowrap">
+                    <span
+                      class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-[var(--brand-info-subtle)] text-[var(--brand-info-text)]  dark:text-brand-cyan whitespace-nowrap">
                       {{ visit.orientation }}
                     </span>
                     <div class="inline-flex items-center gap-1">
@@ -296,8 +375,10 @@
                         [title]="t('patient.list.viewRecord')"
                         class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-brand-cyan bg-brand-cyan/10 hover:bg-brand-cyan/20 transition-colors cursor-pointer">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                         </svg>
                       </button>
                       <!-- Bouton Clôturer -->
@@ -307,7 +388,8 @@
                           [title]="t('dashboard.close.title')"
                           class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[var(--brand-danger)] bg-[var(--brand-danger-subtle)]0/10 hover:bg-[var(--brand-danger-subtle)]0/20 transition-colors cursor-pointer">
                           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M6 18L18 6M6 6l12 12"/>
                           </svg>
                         </button>
                       }
@@ -324,36 +406,64 @@
 
   <!-- Vitals Form Modal Dialogue -->
   @if (showVitalsModal() && selectedVisitForVitals(); as selectedVisit) {
-    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-[var(--overlay-bg)] backdrop-blur-sm p-4 animate-fade-in">
-      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-lg max-w-xl w-full shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+    <div
+      class="fixed inset-0 z-[60] flex items-center justify-center bg-[var(--overlay-bg)] p-0 backdrop-blur-sm animate-fade-in sm:p-4">
+      <div
+        class="relative h-[100dvh] max-h-[100dvh] w-full max-w-xl overflow-y-auto rounded-none border border-[var(--app-border)]/80 bg-[var(--app-surface)] p-4 shadow-2xl sm:h-auto sm:max-h-[90dvh] sm:rounded-[8px] sm:p-6"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-label]="t('dashboard.vitals.title')"
+      >
         <!-- Close button -->
-        <button (click)="closeVitalsModal()" class="absolute top-4 right-4 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] dark:hover:text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800 cursor-pointer transition-colors">
+        <button
+          type="button"
+          (click)="closeVitalsModal()"
+          class="absolute right-3 top-3 inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-[6px] text-[var(--text-muted)] transition-colors hover:bg-[var(--app-surface-muted)] hover:text-[var(--text-secondary)] sm:right-4 sm:top-4"
+          [attr.aria-label]="t('dashboard.drawer.closeButton')"
+        >
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
 
         <!-- Header -->
         <div class="flex items-center gap-3 mb-1">
-          <div class="w-10 h-10 rounded-xl bg-brand-cyan/15 flex items-center justify-center text-brand-cyan shrink-0">
+          <div
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[6px] bg-brand-cyan/15 text-brand-cyan">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
           </div>
           <div>
-            <h3 class="font-display font-black text-lg text-[var(--text-primary)] leading-tight">{{ t('dashboard.vitals.title') }}</h3>
+            <h3
+              class="font-display font-black text-lg text-[var(--text-primary)] leading-tight">{{ t('dashboard.vitals.title') }}</h3>
             <p class="text-xs text-[var(--text-muted)] mt-0.5">
-              {{ t('dashboard.vitals.patient') }} : <strong class="text-[var(--text-secondary)]">{{ selectedVisit.patientName }}</strong> ({{ selectedVisit.patientDpu }})
+              {{ t('dashboard.vitals.patient') }} : <strong
+              class="text-[var(--text-secondary)]">{{ selectedVisit.patientName }}</strong>
+              ({{ selectedVisit.patientDpu }})
             </p>
           </div>
         </div>
 
-        <hr class="border-[var(--app-border)]/80 my-4" />
+        <hr class="border-[var(--app-border)]/80 my-4"/>
+
+        <app-smart-vitals-assistant
+          [visitId]="selectedVisit.id"
+          [patientName]="selectedVisit.patientName"
+          [currentVitals]="currentVitalsForAssistant()"
+          [disabled]="isSavingVitals()"
+          [embedded]="true"
+          (proposed)="applyVitalsAssistantProposal($event)"
+        />
 
         @if (vitalsError()) {
-          <div class="p-3 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-xl text-xs text-[var(--brand-danger-text)] font-semibold mb-4 leading-relaxed flex items-start gap-2">
-            <svg class="w-4 h-4 shrink-0 text-[var(--brand-danger)] mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          <div
+            class="mb-4 flex items-start gap-2 rounded-[6px] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3 text-xs font-semibold leading-relaxed text-[var(--brand-danger-text)]">
+            <svg class="w-4 h-4 shrink-0 text-[var(--brand-danger)] mt-0.5" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
             </svg>
             <span>{{ vitalsError() }}</span>
           </div>
@@ -361,11 +471,13 @@
 
         <div class="space-y-5">
           <!-- Section 1 : Paramètres Physiques & BMI -->
-          <div class="p-4 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-[var(--app-border)]/50 rounded-xl space-y-4">
-            <h4 class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
+          <div
+            class="space-y-4 rounded-[6px] border border-[var(--app-border)]/50 bg-[var(--app-surface-muted)] p-3 sm:p-4">
+            <h4
+              class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
               <span>📏</span> {{ t('dashboard.vitals.measurementsTitle') }}
             </h4>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <!-- Poids -->
               <div class="space-y-1">
                 <label class="ui-label text-[11px]">{{ t('dashboard.vitals.weight') }} (Kg)</label>
@@ -374,7 +486,7 @@
                     type="number"
                     step="0.1"
                     [(ngModel)]="vitalsWeight"
-                    placeholder="Ex: 70.5"
+                    [placeholder]="t('dashboard.vitals.placeholder.weight')"
                     class="ui-input pr-10 pl-3 py-2 text-sm w-full font-semibold"
                     [class.border-red-500]="isWeightInvalid()"
                     [class.focus:border-red-500]="isWeightInvalid()"
@@ -383,7 +495,8 @@
                   <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">kg</span>
                 </div>
                 @if (isWeightInvalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.weight') }}</p>
+                  <p
+                    class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.weight') }}</p>
                 }
               </div>
 
@@ -394,7 +507,7 @@
                   <input
                     type="number"
                     [(ngModel)]="vitalsHeight"
-                    placeholder="Ex: 175"
+                    [placeholder]="t('dashboard.vitals.placeholder.height')"
                     class="ui-input pr-10 pl-3 py-2 text-sm w-full font-semibold"
                     [class.border-red-500]="isHeightInvalid()"
                     [class.focus:border-red-500]="isHeightInvalid()"
@@ -403,22 +516,30 @@
                   <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">cm</span>
                 </div>
                 @if (isHeightInvalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.height') }}</p>
+                  <p
+                    class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.height') }}</p>
                 }
               </div>
             </div>
 
             <!-- Calculated BMI Display inside Section -->
             @if (computedBmi) {
-              <div class="p-3 rounded-lg border flex items-center justify-between shadow-3xs transition-colors duration-300"
-                   [class]="getBmiClass(computedBmi) + ' border-current/10'">
+              <div
+                class="flex items-center justify-between rounded-[6px] border p-3 shadow-3xs transition-colors duration-300"
+                [class]="getBmiClass(computedBmi) + ' border-current/10'">
                 <div class="space-y-0.5">
-                  <span class="text-[9px] font-extrabold uppercase tracking-wider opacity-85 block">{{ t('dashboard.vitals.bmi') }}</span>
+                  <span
+                    class="text-[9px] font-extrabold uppercase tracking-wider opacity-85 block">{{ t('dashboard.vitals.bmi') }}</span>
                   <p class="text-xs font-bold opacity-75">
-                    @if (computedBmi < 18.5) { {{ t('dashboard.vitals.bmi.underweight') }} }
-                    @else if (computedBmi < 25) { {{ t('dashboard.vitals.bmi.normal') }} }
-                    @else if (computedBmi < 30) { {{ t('dashboard.vitals.bmi.overweight') }} }
-                    @else { {{ t('dashboard.vitals.bmi.obese') }} }
+                    @if (computedBmi < 18.5) {
+                      {{ t('dashboard.vitals.bmi.underweight') }}
+                    } @else if (computedBmi < 25) {
+                      {{ t('dashboard.vitals.bmi.normal') }}
+                    } @else if (computedBmi < 30) {
+                      {{ t('dashboard.vitals.bmi.overweight') }}
+                    } @else {
+                      {{ t('dashboard.vitals.bmi.obese') }}
+                    }
                   </p>
                 </div>
                 <span class="font-display font-extrabold text-lg tracking-tight">{{ computedBmi }}</span>
@@ -427,12 +548,14 @@
           </div>
 
           <!-- Section 2 : Cardiovasculaire & SpO2 -->
-          <div class="p-4 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-[var(--app-border)]/50 rounded-xl space-y-4">
-            <h4 class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
+          <div
+            class="space-y-4 rounded-[6px] border border-[var(--app-border)]/50 bg-[var(--app-surface-muted)] p-3 sm:p-4">
+            <h4
+              class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
               <span>🩺</span> {{ t('dashboard.vitals.cardioTitle') }}
             </h4>
 
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <!-- Pouls -->
               <div class="space-y-1">
                 <label class="ui-label text-[11px]">{{ t('dashboard.vitals.pulse') }} (BPM)</label>
@@ -440,7 +563,7 @@
                   <input
                     type="number"
                     [(ngModel)]="vitalsPulse"
-                    placeholder="Ex: 75"
+                    [placeholder]="t('dashboard.vitals.placeholder.pulse')"
                     class="ui-input pr-12 pl-3 py-2 text-sm w-full font-semibold"
                     [class.border-red-500]="isPulseInvalid()"
                     [class.focus:border-red-500]="isPulseInvalid()"
@@ -449,7 +572,8 @@
                   <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">bpm</span>
                 </div>
                 @if (isPulseInvalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.pulse') }}</p>
+                  <p
+                    class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.pulse') }}</p>
                 }
               </div>
 
@@ -460,7 +584,7 @@
                   <input
                     type="number"
                     [(ngModel)]="vitalsSpo2"
-                    placeholder="Ex: 98"
+                    [placeholder]="t('dashboard.vitals.placeholder.spo2')"
                     class="ui-input pr-8 pl-3 py-2 text-sm w-full font-semibold"
                     [class.border-red-500]="isSpo2Invalid()"
                     [class.focus:border-red-500]="isSpo2Invalid()"
@@ -469,7 +593,8 @@
                   <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">%</span>
                 </div>
                 @if (isSpo2Invalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.spo2') }}</p>
+                  <p
+                    class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.spo2') }}</p>
                 }
               </div>
 
@@ -480,7 +605,7 @@
                   <input
                     type="number"
                     [(ngModel)]="vitalsSystolic"
-                    placeholder="Ex: 120"
+                    [placeholder]="t('dashboard.vitals.placeholder.systolic')"
                     class="ui-input pr-12 pl-3 py-2 text-sm w-full font-semibold"
                     [class.border-red-500]="isSystolicInvalid()"
                     [class.focus:border-red-500]="isSystolicInvalid()"
@@ -489,7 +614,8 @@
                   <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">mmHg</span>
                 </div>
                 @if (isSystolicInvalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.systolic') }}</p>
+                  <p
+                    class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.systolic') }}</p>
                 }
               </div>
 
@@ -500,7 +626,7 @@
                   <input
                     type="number"
                     [(ngModel)]="vitalsDiastolic"
-                    placeholder="Ex: 80"
+                    [placeholder]="t('dashboard.vitals.placeholder.diastolic')"
                     class="ui-input pr-12 pl-3 py-2 text-sm w-full font-semibold"
                     [class.border-red-500]="isDiastolicInvalid()"
                     [class.focus:border-red-500]="isDiastolicInvalid()"
@@ -509,38 +635,43 @@
                   <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">mmHg</span>
                 </div>
                 @if (isDiastolicInvalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.diastolic') }}</p>
+                  <p
+                    class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.diastolic') }}</p>
                 }
               </div>
 
               <!-- Fréquence Respiratoire (Full Row) -->
-              <div class="space-y-1 col-span-2">
+              <div class="space-y-1 sm:col-span-2">
                 <label class="ui-label text-[11px]">{{ t('dashboard.vitals.respRate') }}</label>
                 <div class="relative">
                   <input
                     type="number"
                     [(ngModel)]="vitalsResp"
-                    placeholder="Ex: 16"
+                    [placeholder]="t('dashboard.vitals.placeholder.respRate')"
                     class="ui-input pr-16 pl-3 py-2 text-sm w-full font-semibold"
                     [class.border-red-500]="isRespInvalid()"
                     [class.focus:border-red-500]="isRespInvalid()"
                     [disabled]="isSavingVitals()"
                   />
-                  <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">cycles/min</span>
+                  <span
+                    class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">cycles/min</span>
                 </div>
                 @if (isRespInvalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.respRate') }}</p>
+                  <p
+                    class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.respRate') }}</p>
                 }
               </div>
             </div>
           </div>
 
           <!-- Section 3 : Métabolisme & Température -->
-          <div class="p-4 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-[var(--app-border)]/50 rounded-xl space-y-4">
-            <h4 class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
+          <div
+            class="space-y-4 rounded-[6px] border border-[var(--app-border)]/50 bg-[var(--app-surface-muted)] p-3 sm:p-4">
+            <h4
+              class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
               <span>🌡️</span> {{ t('dashboard.vitals.thermicTitle') }}
             </h4>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <!-- Température -->
               <div class="space-y-1">
                 <label class="ui-label text-[11px]">{{ t('dashboard.vitals.temp') }} (°C)</label>
@@ -549,7 +680,7 @@
                     type="number"
                     step="0.1"
                     [(ngModel)]="vitalsTemp"
-                    placeholder="Ex: 37.2"
+                    [placeholder]="t('dashboard.vitals.placeholder.temp')"
                     class="ui-input pr-8 pl-3 py-2 text-sm w-full font-semibold"
                     [class.border-red-500]="isTempInvalid()"
                     [class.focus:border-red-500]="isTempInvalid()"
@@ -558,7 +689,8 @@
                   <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">°C</span>
                 </div>
                 @if (isTempInvalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.temp') }}</p>
+                  <p
+                    class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.temp') }}</p>
                 }
               </div>
 
@@ -570,7 +702,7 @@
                     type="number"
                     step="0.01"
                     [(ngModel)]="vitalsGlycemia"
-                    placeholder="Ex: 0.95"
+                    [placeholder]="t('dashboard.vitals.placeholder.glycemia')"
                     class="ui-input pr-8 pl-3 py-2 text-sm w-full font-semibold"
                     [class.border-red-500]="isGlycemiaInvalid()"
                     [class.focus:border-red-500]="isGlycemiaInvalid()"
@@ -579,15 +711,18 @@
                   <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">g/L</span>
                 </div>
                 @if (isGlycemiaInvalid()) {
-                  <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.glycemia') }}</p>
+                  <p
+                    class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.glycemia') }}</p>
                 }
               </div>
             </div>
           </div>
 
           <!-- Section 4 : Douleur (Échelle 0-10) -->
-          <div class="p-4 bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)] border border-[var(--app-border)]/50 rounded-xl space-y-4">
-            <h4 class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
+          <div
+            class="space-y-4 rounded-[6px] border border-[var(--app-border)]/50 bg-[var(--app-surface-muted)] p-3 sm:p-4">
+            <h4
+              class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
               <span>😣</span> {{ t('dashboard.vitals.pain') }}
             </h4>
             <div class="space-y-2">
@@ -595,7 +730,7 @@
                 <label class="ui-label text-[11px]">{{ t('dashboard.vitals.painScaleLabel') }}</label>
                 @if (vitalsPain !== undefined && vitalsPain !== null) {
                   <span class="text-xs font-extrabold px-2 py-0.5 rounded-md"
-                    [class]="vitalsPain === 0 ? 'bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)] bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]' :
+                        [class]="vitalsPain === 0 ? 'bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)] bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]' :
                              vitalsPain <= 3 ? 'bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)] bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]' :
                              vitalsPain <= 6 ? 'bg-orange-50 text-orange-700 dark:bg-orange-950/25 dark:text-orange-300' :
                              'bg-[var(--brand-danger-subtle)] text-red-700  dark:text-[var(--brand-danger-text)]'">
@@ -609,7 +744,7 @@
                   min="0"
                   max="10"
                   [(ngModel)]="vitalsPain"
-                  placeholder="Ex: 3"
+                  [placeholder]="t('dashboard.vitals.placeholder.pain')"
                   class="ui-input pr-12 pl-3 py-2 text-sm w-full font-semibold"
                   [class.border-red-500]="isPainInvalid()"
                   [disabled]="isSavingVitals()"
@@ -617,10 +752,11 @@
                 <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">/10</span>
               </div>
               @if (isPainInvalid()) {
-                <p class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.pain') }}</p>
+                <p
+                  class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.pain') }}</p>
               }
               <!-- Indicateurs visuels de l'échelle -->
-              <div class="flex justify-between text-[9px] font-bold text-[var(--text-muted)] dark:text-[var(--text-secondary)] px-1">
+              <div class="grid grid-cols-3 gap-1 px-1 text-[9px] font-bold text-[var(--text-muted)] sm:grid-cols-5">
                 <span>{{ t('dashboard.vitals.pain.none') }}</span>
                 <span>{{ t('dashboard.vitals.pain.mild') }}</span>
                 <span>{{ t('dashboard.vitals.pain.moderate') }}</span>
@@ -632,14 +768,18 @@
         </div>
 
         <!-- Actions -->
-        <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-[var(--app-border)]/80">
-          <app-ui-button variant="secondary" (pressed)="closeVitalsModal()" [disabled]="isSavingVitals()">
+        <div
+          class="mt-6 flex flex-col-reverse gap-3 border-t border-[var(--app-border)]/80 pt-4 sm:flex-row sm:justify-end">
+          <app-ui-button class="w-full sm:w-auto" variant="secondary" (pressed)="closeVitalsModal()"
+                         [disabled]="isSavingVitals()">
             {{ t('common.cancel') }}
           </app-ui-button>
-          <app-ui-button variant="primary" (pressed)="submitVitals()" [disabled]="isSavingVitals() || isAnyVitalInvalid()">
+          <app-ui-button class="w-full sm:w-auto" variant="primary" (pressed)="submitVitals()"
+                         [disabled]="isSavingVitals() || isAnyVitalInvalid()">
             <span class="flex items-center gap-1.5">
               @if (isSavingVitals()) {
-                <div class="w-3.5 h-3.5 rounded-full border-2 border-[var(--app-border)] border-t-white animate-spin"></div>
+                <div
+                  class="w-3.5 h-3.5 rounded-full border-2 border-[var(--app-border)] border-t-white animate-spin"></div>
                 {{ t('common.saving') }}
               } @else {
                 {{ t('dashboard.vitals.title') }}
@@ -654,28 +794,34 @@
   <!-- Details Slide-over Drawer / Bottom Sheet -->
   @if (showVisitDrawer() && selectedVisitForDrawer(); as selectedVisit) {
     <!-- Backdrop overlay -->
-    <div class="fixed inset-0 z-40 bg-[var(--overlay-bg)] backdrop-blur-xs transition-opacity duration-300 animate-fade-in"
-         (click)="closeVisitDrawer()"></div>
+    <div
+      class="fixed inset-0 z-40 bg-[var(--overlay-bg)] backdrop-blur-xs transition-opacity duration-300 animate-fade-in"
+      (click)="closeVisitDrawer()"></div>
 
     <!-- Drawer Panel Container -->
-    <div class="fixed inset-x-0 bottom-0 md:inset-y-0 md:right-0 md:left-auto w-full md:max-w-md h-[80vh] md:h-full bg-[var(--app-surface)] rounded-t-3xl md:rounded-t-none border-t md:border-t-0 md:border-l border-[var(--app-border)] shadow-2xl z-50 flex flex-col drawer-panel transition-all duration-300">
+    <div
+      class="drawer-panel fixed inset-x-0 bottom-0 z-50 flex h-[80dvh] w-full flex-col rounded-t-[8px] border-t border-[var(--app-border)] bg-[var(--app-surface)] shadow-2xl transition-all duration-300 md:inset-y-0 md:left-auto md:right-0 md:h-full md:max-w-md md:rounded-none md:border-l md:border-t-0">
 
       <!-- Drawer Header -->
-      <div class="px-6 py-4 border-b border-[var(--app-border)]/80 flex items-center justify-between bg-[var(--app-surface-muted)] dark:bg-[var(--brand-danger-subtle)] rounded-t-3xl md:rounded-t-none">
+      <div
+        class="px-6 py-4 border-b border-[var(--app-border)]/80 flex items-center justify-between bg-[var(--app-surface-muted)] dark:bg-[var(--brand-danger-subtle)] rounded-t-3xl md:rounded-t-none">
         <div>
           <div class="flex items-center gap-2">
-            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-brand-cyan/10 text-brand-cyan uppercase tracking-wider">
+            <span
+              class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-brand-cyan/10 text-brand-cyan uppercase tracking-wider">
               {{ t('dashboard.drawer.activeVisit') }}
             </span>
             <span class="text-xs font-bold text-[var(--text-muted)]">
               {{ selectedVisit.visitNumber }}
             </span>
           </div>
-          <h3 class="font-display font-extrabold text-base text-[var(--text-primary)] mt-1">{{ t('dashboard.drawer.title') }}</h3>
+          <h3
+            class="font-display font-extrabold text-base text-[var(--text-primary)] mt-1">{{ t('dashboard.drawer.title') }}</h3>
         </div>
-        <button (click)="closeVisitDrawer()" class="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] dark:hover:text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] cursor-pointer transition-colors">
+        <button (click)="closeVisitDrawer()"
+                class="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] dark:hover:text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] cursor-pointer transition-colors">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
       </div>
@@ -685,8 +831,10 @@
         <!-- Patient Info Card -->
         <div class="p-4 rounded-2xl bg-brand-gray dark:bg-[var(--app-bg)] border border-[var(--app-border)]/50">
           <span class="ui-label text-[10px] opacity-80 mb-1">{{ t('dashboard.vitals.patient') }}</span>
-          <h4 class="font-display font-extrabold text-sm text-[var(--text-primary)]">{{ selectedVisit.patientName }}</h4>
-          <span class="text-xs font-semibold text-[var(--text-muted)] block mt-0.5">DPU : {{ selectedVisit.patientDpu }}</span>
+          <h4
+            class="font-display font-extrabold text-sm text-[var(--text-primary)]">{{ selectedVisit.patientName }}</h4>
+          <span class="text-xs font-semibold text-[var(--text-muted)] block mt-0.5">{{ t('dashboard.drawer.dpu') }}
+            : {{ selectedVisit.patientDpu }}</span>
         </div>
 
         <!-- Visit General Details Grid -->
@@ -696,7 +844,8 @@
             <span class="ui-label text-[10px] mb-1">{{ t('dashboard.drawer.arrivalTime') }}</span>
             <div class="flex items-center gap-1.5 text-sm font-bold text-[var(--text-primary)]">
               <svg class="w-4 h-4 text-brand-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
               {{ selectedVisit.createdAt | date:'HH:mm' }}
             </div>
@@ -705,14 +854,16 @@
           <!-- Orientation -->
           <div class="p-3.5 rounded-xl border border-[var(--app-border)]/60 bg-[var(--app-surface)] shadow-3xs">
             <span class="ui-label text-[10px] mb-1">{{ t('dashboard.queue.table.orientation') }}</span>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[var(--brand-info-subtle)] text-[var(--brand-info-text)]  dark:text-brand-cyan mt-0.5 whitespace-nowrap">
+            <span
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[var(--brand-info-subtle)] text-[var(--brand-info-text)]  dark:text-brand-cyan mt-0.5 whitespace-nowrap">
               {{ selectedVisit.orientation }}
             </span>
           </div>
 
           <!-- Motif de visite (Col-span-2) -->
-          <div class="col-span-2 p-4 rounded-xl border border-[var(--app-border)]/60 bg-[var(--app-surface)] shadow-3xs space-y-1">
-            <span class="ui-label text-[10px]">Motif de la visite</span>
+          <div
+            class="col-span-2 p-4 rounded-xl border border-[var(--app-border)]/60 bg-[var(--app-surface)] shadow-3xs space-y-1">
+            <span class="ui-label text-[10px]">{{ t('dashboard.drawer.visitReason') }}</span>
             <p class="text-sm font-medium text-[var(--text-secondary)] leading-relaxed">{{ selectedVisit.reason }}</p>
           </div>
         </div>
@@ -722,9 +873,11 @@
           <div class="flex items-center justify-between">
             <h5 class="ui-label text-[10px]">{{ t('dashboard.drawer.triageVitals') }}</h5>
             @if (hasPermission('VISIT_VITALS_WRITE')) {
-              <button (click)="openVitalsModal(selectedVisit)" class="text-xs font-extrabold text-brand-cyan hover:underline inline-flex items-center gap-1 cursor-pointer">
+              <button (click)="openVitalsModal(selectedVisit)"
+                      class="text-xs font-extrabold text-brand-cyan hover:underline inline-flex items-center gap-1 cursor-pointer">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
                 </svg>
                 {{ selectedVisit.vitals ? t('common.edit') : t('common.enter') }}
               </button>
@@ -736,81 +889,99 @@
             <div class="grid grid-cols-2 gap-3">
               <!-- Temperature -->
               @if (selectedVisit.vitals.temperature) {
-                <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
+                <div
+                  class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
                   <span class="text-xs text-[var(--text-muted)] font-semibold flex items-center gap-1">
-                    🌡️ Temp
+                    🌡️ {{ t('dashboard.vitals.temp') }}
                   </span>
-                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.temperature }}°C</strong>
+                  <strong
+                    class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.temperature }}
+                    °C</strong>
                 </div>
               }
 
               <!-- Pouls -->
               @if (selectedVisit.vitals.pulse) {
-                <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
+                <div
+                  class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
                   <span class="text-xs text-[var(--text-muted)] font-semibold flex items-center gap-1">
-                    ❤️ Pouls
+                    ❤️ {{ t('dashboard.vitals.pulse') }}
                   </span>
-                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.pulse }} bpm</strong>
+                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.pulse }}
+                    bpm</strong>
                 </div>
               }
 
               <!-- SpO2 -->
               @if (selectedVisit.vitals.spo2) {
-                <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
+                <div
+                  class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
                   <span class="text-xs text-[var(--text-muted)] font-semibold flex items-center gap-1">
                     🫁 SpO2
                   </span>
-                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.spo2 }}%</strong>
+                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.spo2 }}
+                    %</strong>
                 </div>
               }
 
               <!-- Fréquence respiratoire -->
               @if (selectedVisit.vitals.respiratoryRate) {
-                <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
+                <div
+                  class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
                   <span class="text-xs text-[var(--text-muted)] font-semibold flex items-center gap-1">
-                    🌀 Respiration
+                    🌀 {{ t('dashboard.vitals.respRate') }}
                   </span>
-                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.respiratoryRate }} /min</strong>
+                  <strong
+                    class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.respiratoryRate }}
+                    /min</strong>
                 </div>
               }
 
               <!-- Poids -->
               @if (selectedVisit.vitals.weight) {
-                <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
+                <div
+                  class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
                   <span class="text-xs text-[var(--text-muted)] font-semibold flex items-center gap-1">
-                    ⚖️ Poids
+                    ⚖️ {{ t('dashboard.vitals.weight') }}
                   </span>
-                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.weight }} kg</strong>
+                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.weight }}
+                    kg</strong>
                 </div>
               }
 
               <!-- Taille -->
               @if (selectedVisit.vitals.height) {
-                <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
+                <div
+                  class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between">
                   <span class="text-xs text-[var(--text-muted)] font-semibold flex items-center gap-1">
-                    📏 Taille
+                    📏 {{ t('dashboard.vitals.height') }}
                   </span>
-                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.height }} cm</strong>
+                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.height }}
+                    cm</strong>
                 </div>
               }
 
               <!-- Tension Artérielle -->
               @if (selectedVisit.vitals.systolic || selectedVisit.vitals.diastolic) {
-                <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between col-span-2">
+                <div
+                  class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between col-span-2">
                   <span class="text-xs text-[var(--text-muted)] font-semibold flex items-center gap-1">
-                    🩺 Tension artérielle
+                    🩺 {{ t('dashboard.vitals.bloodPressure') }}
                   </span>
-                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.systolic }}/{{ selectedVisit.vitals.diastolic }} mmHg</strong>
+                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.systolic }}
+                    /{{ selectedVisit.vitals.diastolic }} mmHg</strong>
                 </div>
               }
 
               <!-- Glycémie -->
               @if (selectedVisit.vitals.glycemia) {
-                <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between col-span-2">
+                <div
+                  class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border border-[var(--app-border)]/40 rounded-xl flex items-center justify-between col-span-2">
                   <span class="text-xs text-[var(--text-muted)] font-semibold flex items-center gap-1">
-                    🍬 Glycémie
+                    🍬 {{ t('dashboard.vitals.glycemia') }}
                   </span>
-                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.glycemia }} g/L</strong>
+                  <strong class="text-sm text-[var(--text-primary)] font-extrabold">{{ selectedVisit.vitals.glycemia }}
+                    g/L</strong>
                 </div>
               }
 
@@ -819,12 +990,18 @@
                 <div class="p-3.5 rounded-xl border col-span-2 flex items-center justify-between shadow-3xs"
                      [class]="getBmiClass(selectedVisit.vitals.bmi) + ' border-current/10'">
                   <div class="space-y-0.5">
-                    <span class="text-[10px] font-extrabold uppercase tracking-wider opacity-85">{{ t('dashboard.vitals.bmi') }}</span>
+                    <span
+                      class="text-[10px] font-extrabold uppercase tracking-wider opacity-85">{{ t('dashboard.vitals.bmi') }}</span>
                     <p class="text-xs font-bold opacity-75">
-                      @if (selectedVisit.vitals.bmi < 18.5) { {{ t('dashboard.vitals.bmi.underweight') }} }
-                      @else if (selectedVisit.vitals.bmi < 25) { {{ t('dashboard.vitals.bmi.normal') }} }
-                      @else if (selectedVisit.vitals.bmi < 30) { {{ t('dashboard.vitals.bmi.overweight') }} }
-                      @else { {{ t('dashboard.vitals.bmi.obese') }} }
+                      @if (selectedVisit.vitals.bmi < 18.5) {
+                        {{ t('dashboard.vitals.bmi.underweight') }}
+                      } @else if (selectedVisit.vitals.bmi < 25) {
+                        {{ t('dashboard.vitals.bmi.normal') }}
+                      } @else if (selectedVisit.vitals.bmi < 30) {
+                        {{ t('dashboard.vitals.bmi.overweight') }}
+                      } @else {
+                        {{ t('dashboard.vitals.bmi.obese') }}
+                      }
                     </p>
                   </div>
                   <span class="font-display font-extrabold text-xl tracking-tight">{{ selectedVisit.vitals.bmi }}</span>
@@ -833,7 +1010,8 @@
             </div>
           } @else {
             <!-- Empty state vitals card -->
-            <div class="p-5 border border-dashed border-[var(--app-border)] rounded-xl text-center space-y-3 bg-[var(--app-surface-muted)]/20 dark:bg-[var(--app-bg)]/10">
+            <div
+              class="p-5 border border-dashed border-[var(--app-border)] rounded-xl text-center space-y-3 bg-[var(--app-surface-muted)]/20 dark:bg-[var(--app-bg)]/10">
               <p class="text-xs text-[var(--text-muted)] leading-relaxed font-semibold">
                 {{ t('dashboard.drawer.noVitals') }}
               </p>
@@ -848,12 +1026,14 @@
       </div>
 
       <!-- Drawer Footer -->
-      <div class="p-6 border-t border-[var(--app-border)]/80 bg-[var(--app-surface-muted)] dark:bg-[var(--brand-danger-subtle)] flex gap-3 flex-wrap">
+      <div
+        class="p-6 border-t border-[var(--app-border)]/80 bg-[var(--app-surface-muted)] dark:bg-[var(--brand-danger-subtle)] flex gap-3 flex-wrap">
         @if (canStartConsultation()) {
           <app-ui-button variant="primary" class="flex-1" (pressed)="startConsultation(selectedVisit.id)">
             <span class="flex items-center gap-1.5">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
               {{ t('patient.detail.startConsultation') }}
             </span>
@@ -864,7 +1044,8 @@
             {{ t('dashboard.close.title') }}
           </app-ui-button>
         }
-        <app-ui-button variant="secondary" [class]="canCloseVisit() || canStartConsultation() ? 'w-24' : 'flex-1'" (pressed)="closeVisitDrawer()">
+        <app-ui-button variant="secondary" [class]="canCloseVisit() || canStartConsultation() ? 'w-24' : 'flex-1'"
+                       (pressed)="closeVisitDrawer()">
           {{ t('dashboard.drawer.closeButton') }}
         </app-ui-button>
       </div>
@@ -874,16 +1055,21 @@
 
   <!-- Close Visit Confirmation Modal -->
   @if (showCloseConfirmModal()) {
-    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-lg max-w-md w-full shadow-2xl p-6 relative">
+    <div
+      class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
+      <div
+        class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-lg max-w-md w-full shadow-2xl p-6 relative">
         <div class="flex items-center gap-3 mb-4">
-          <div class="w-10 h-10 rounded-xl bg-[var(--brand-danger-subtle)] flex items-center justify-center text-[var(--brand-danger)] shrink-0">
+          <div
+            class="w-10 h-10 rounded-xl bg-[var(--brand-danger-subtle)] flex items-center justify-center text-[var(--brand-danger)] shrink-0">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
             </svg>
           </div>
           <div>
-            <h3 class="font-display font-bold text-base text-[var(--text-primary)]">{{ t('dashboard.close.title') }}</h3>
+            <h3
+              class="font-display font-bold text-base text-[var(--text-primary)]">{{ t('dashboard.close.title') }}</h3>
             <p class="text-xs text-[var(--text-muted)] mt-0.5">{{ t('dashboard.close.subtitle') }}</p>
           </div>
         </div>
@@ -893,7 +1079,8 @@
         </p>
 
         @if (closeVisitError()) {
-          <div class="p-3 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-xl text-xs text-[var(--brand-danger-text)] font-semibold mb-4 leading-relaxed">
+          <div
+            class="p-3 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-xl text-xs text-[var(--brand-danger-text)] font-semibold mb-4 leading-relaxed">
             {{ closeVisitError() }}
           </div>
         }
@@ -905,7 +1092,8 @@
           <app-ui-button variant="primary" (pressed)="confirmCloseVisit()" [disabled]="isClosingVisit()">
             <span class="flex items-center gap-1.5">
               @if (isClosingVisit()) {
-                <div class="w-3.5 h-3.5 rounded-full border-2 border-[var(--app-border)] border-t-white animate-spin"></div>
+                <div
+                  class="w-3.5 h-3.5 rounded-full border-2 border-[var(--app-border)] border-t-white animate-spin"></div>
                 {{ t('dashboard.close.closing') }}
               } @else {
                 {{ t('dashboard.close.confirmButton') }}
@@ -919,22 +1107,28 @@
 
   <!-- Audit Security Explanation Modal -->
   @if (showAuditSecurityModal()) {
-    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-[var(--overlay-bg)] backdrop-blur-sm p-4 animate-fade-in">
-      <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-lg max-w-md w-full shadow-2xl p-6 relative">
-        <button (click)="closeAuditSecurityModal()" class="absolute top-4 right-4 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] dark:hover:text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800 cursor-pointer transition-colors">
+    <div
+      class="fixed inset-0 z-[60] flex items-center justify-center bg-[var(--overlay-bg)] backdrop-blur-sm p-4 animate-fade-in">
+      <div
+        class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-lg max-w-md w-full shadow-2xl p-6 relative">
+        <button (click)="closeAuditSecurityModal()"
+                class="absolute top-4 right-4 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] dark:hover:text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800 cursor-pointer transition-colors">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
 
         <div class="flex items-center gap-3 mb-4">
-          <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-yellow-400 shrink-0">
+          <div
+            class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-yellow-400 shrink-0">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
             </svg>
           </div>
           <div>
-            <h3 class="font-display font-black text-lg text-[var(--text-primary)] leading-tight">{{ t('dashboard.auditExplanation.title') }}</h3>
+            <h3
+              class="font-display font-black text-lg text-[var(--text-primary)] leading-tight">{{ t('dashboard.auditExplanation.title') }}</h3>
           </div>
         </div>
 
@@ -956,16 +1150,27 @@
   <!-- Styles logic for Slide-over animations -->
   <style>
     @keyframes slideInRight {
-      from { transform: translateX(100%); }
-      to { transform: translateX(0); }
+      from {
+        transform: translateX(100%);
+      }
+      to {
+        transform: translateX(0);
+      }
     }
+
     @keyframes slideInUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
+      from {
+        transform: translateY(100%);
+      }
+      to {
+        transform: translateY(0);
+      }
     }
+
     .drawer-panel {
       animation: slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
+
     @media (min-width: 768px) {
       .drawer-panel {
         animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;

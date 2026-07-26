@@ -1,4 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
@@ -42,6 +43,8 @@ describe('Dashboard Smart Vitals placement', () => {
           useValue: {
             t: (key: string, fallback?: string) => fallback ?? key,
             currentLanguage: () => 'fr',
+            locale: signal<'fr' | 'en'>('fr'),
+            setLocale: vi.fn(),
           },
         },
         {
@@ -62,48 +65,26 @@ describe('Dashboard Smart Vitals placement', () => {
     component = fixture.componentInstance;
   });
 
-  afterEach(() => {
-    try {
-      (component as any).destroyVitalsAssistant();
-    } catch {
-      // no-op
-    }
-    document.querySelector('#smart-vitals-placement-test')?.remove();
-  });
-
-  it('should mount the assistant inside the modal instead of as a floating body overlay', () => {
-    const modalRoot = document.createElement('app-dashboard');
-    modalRoot.id = 'smart-vitals-placement-test';
-    modalRoot.innerHTML = `
-      <div class="fixed inset-0 z-[60]">
-        <div class="relative">
-          <hr />
-          <div id="vitals-form">Vitals form</div>
-          <button id="save-vitals">Enregistrer</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modalRoot);
-
+  it('should render the assistant declaratively inside the vitals modal', () => {
     const visit = {
       id: 'visit-1',
       patientName: 'Patient Test',
+      patientDpu: 'DPU-001',
+      createdAt: '2026-07-26T09:00:00Z',
       vitals: null,
     } as unknown as Visit;
     component.selectedVisitForVitals.set(visit);
     component.showVitalsModal.set(true);
+    fixture.detectChanges();
 
-    (component as any).mountVitalsAssistant(visit);
-
-    const modalPanel = modalRoot.querySelector('div.relative') as HTMLElement;
-    const assistantHost = modalPanel.querySelector('app-smart-vitals-assistant') as HTMLElement;
+    const modalPanel = fixture.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
+    const assistantHost = modalPanel?.querySelector('app-smart-vitals-assistant') as HTMLElement;
     const assistantSection = assistantHost?.querySelector('section') as HTMLElement;
-    const saveButton = modalPanel.querySelector('#save-vitals');
 
     expect(assistantHost).toBeTruthy();
     expect(modalPanel.contains(assistantHost)).toBe(true);
     expect(assistantSection.className).toContain('relative');
     expect(assistantSection.className).not.toContain('fixed');
-    expect(saveButton).toBeTruthy();
+    expect(component.currentVitalsForAssistant()).toEqual({});
   });
 });

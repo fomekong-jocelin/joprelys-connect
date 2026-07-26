@@ -4,6 +4,7 @@
   "consultation.ai.clarificationSubmit": "Answer this question",
   "consultation.ai.clarificationHistory": "Previous clarifications",
   "consultation.ai.clarificationAnswer": "Answer",
+  "consultation.ai.clarificationVoiceHelp": "In conversation mode, answer naturally out loud. You can also type your answer below.",
   "consultation.ai.subtitleControlled": "Chat, review, then accept or reject each proposed change.",
   "consultation.ai.startControlledHelp": "No proposal is accepted or saved automatically.",
   "consultation.ai.modeConversation": "Voice conversation",
@@ -50,6 +51,7 @@
   "consultation.ai.noSpeechDetected": "No speech detected. Move closer to the microphone and try again.",
   "consultation.ai.revisionTitle": "Changes to review",
   "consultation.ai.revisionHelp": "The accepted draft remains unchanged until you make a decision.",
+  "consultation.ai.revisionGovernanceHelp": "The copilot only makes proposals. Data remains unchanged until you explicitly approve it.",
   "consultation.ai.proposalAccepted": "Accepted",
   "consultation.ai.proposalRejected": "Rejected",
   "consultation.ai.previousValue": "Before",
@@ -69,5 +71,11 @@
   "consultation.ai.uncertaintyHigh": "High uncertainty",
   "consultation.ai.uncertaintyUnknown": "Not assessed",
   "consultation.ai.acceptedDraft": "Accepted draft",
-  "consultation.ai.acceptedDraftHelp": "Only accepted proposals appear here."
+  "consultation.ai.acceptedDraftHelp": "Only accepted proposals appear here.",
+  "consultation.ai.acceptedDraftGovernanceHelp": "Consultation notes, prescriptions, tests, and vital signs remain under the healthcare professional’s control.",
+  "consultation.ai.apply": "Apply to form",
+  "consultation.ai.qrAlt": "Consultation QR code",
+  "consultation.ai.field.prescription": "Prescription",
+  "consultation.ai.field.labOrders": "Lab tests",
+  "consultation.ai.field.vitals": "Vital signs"
 }

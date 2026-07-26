@@ -4,7 +4,10 @@ export type AppLocale = 'fr' | 'en';
 export interface AppBrandConfig {
   readonly appName: string;
   readonly appShortName: string;
+  readonly productName: string;
   readonly appSlogan: string;
+  readonly logoPath: string;
+  readonly logoOnDarkPath: string;
   readonly publisherName: string;
   readonly defaultLocale: AppLocale;
   readonly supportedLocales: readonly AppLocale[];
@@ -20,7 +23,10 @@ export interface AppBrandConfig {
 export const APP_BRAND_CONFIG: AppBrandConfig = {
   appName: 'Joprelys Connect',
   appShortName: 'Joprelys',
+  productName: 'Connect',
   appSlogan: 'Coordination clinique securisee',
+  logoPath: 'assets/branding/logo_principal.png',
+  logoOnDarkPath: 'assets/branding/logo_white_blue_bg.png',
   publisherName: 'JOPRELYS SARL',
   defaultLocale: 'fr',
   supportedLocales: ['fr', 'en'],

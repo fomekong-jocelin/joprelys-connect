@@ -62,6 +62,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+- **BUG-20260726-UI-I18N-MOBILE-AI-THEME-POLISH** : le panneau institutionnel de connexion utilise désormais un logo contextuel non inversé et du contenu HTML réellement traduit en FR/EN. Les surfaces IA et la modale de constantes gagnent des libellés i18n, une composition Angular déclarative, des actions tactiles et une divulgation progressive mobile ; l'assistant démarre replié sous 640 px et coupe le microphone lorsqu'il est replié ou détruit.
 - **BUG-20260726-AI-REALTIME-SILENCE-FALSE-PRESCRIPTION** : suppression du
   redémarrage automatique du microphone classique, détection locale de parole,
   dépôt systématique des transcriptions classique/Realtime en `PENDING_REVIEW`,
@@ -85,6 +86,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Validation
 
+- **Finitions UI/i18n/mobile IA** : suite Angular complète verte — 81 fichiers et 388 tests ; contrôle i18n shell vert ; build production vert avec bundle initial de 527,82 kB. Les inspections IntelliJ ne relèvent aucune erreur sur les fichiers modifiés. La recette visuelle authentifiée reste à exécuter.
 - **Hotfix vocal/RxNorm** : 15 tests Angular ciblés et build production verts ;
   contrôle i18n vert. La suite Angular complète compte 364 succès et 23 échecs
   hors périmètre sous Node 25. Maven est bloqué localement avant compilation car le
@@ -102,6 +104,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Security
 
+- les propositions de constantes de l'assistant restent des brouillons et aucune donnée clinique n'est enregistrée sans validation explicite du professionnel ;
+- le repli ou la destruction de l'assistant de constantes arrête le microphone et la session Realtime ;
 - le transport Realtime ne déclenche aucune décision clinique autonome ; toute
   transcription attend une relecture et une confirmation médicale explicites ;
 - les captures silencieuses et transcriptions à faible confiance sont rejetées avant

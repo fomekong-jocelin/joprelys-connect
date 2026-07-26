@@ -63,10 +63,16 @@ describe('LoginComponent', () => {
     const englishButton = root.querySelector<HTMLButtonElement>('#login-language-en');
 
     expect(root.querySelector('app-logo')).not.toBeNull();
+    expect(root.querySelector('app-logo[appearance="on-dark"]')).not.toBeNull();
     expect(root.querySelector('#login-theme-toggle')).not.toBeNull();
     expect(frenchButton?.textContent).toContain('🇫🇷');
     expect(englishButton?.textContent).toContain('🇬🇧');
     expect(root.textContent).not.toContain('Flux clinique synchronisé');
+    expect(root.querySelector('.login-brand-copy')?.textContent).toContain('login.showcase.title');
+    expect(root.querySelectorAll('.login-brand-benefits li')).toHaveLength(3);
+    const panelLogo = root.querySelector<HTMLImageElement>('.login-brand-panel app-logo img');
+    expect(panelLogo?.getAttribute('src')).toBe('assets/branding/logo_white_blue_bg.png');
+    expect(panelLogo?.classList.contains('app-logo-image-on-dark')).toBe(true);
     expect(root.querySelector('#toggle-staff')?.getAttribute('aria-pressed')).toBe('true');
   });
 
@@ -244,13 +250,16 @@ describe('LoginComponent', () => {
     component.password.set('Password123!');
     component.submit();
 
-    httpTesting.expectOne('/api/auth/login').flush({
-      error: {
-        code: 'MAIL_RECIPIENT_REJECTED',
-        message: 'Recipient rejected',
-        trace_id: 'trc_test',
+    httpTesting.expectOne('/api/auth/login').flush(
+      {
+        error: {
+          code: 'MAIL_RECIPIENT_REJECTED',
+          message: 'Recipient rejected',
+          trace_id: 'trc_test',
+        },
       },
-    }, { status: 422, statusText: 'Unprocessable Entity' });
+      { status: 422, statusText: 'Unprocessable Entity' },
+    );
 
     expect(component.error()).toBe('login.error.otpRecipientRejected');
     expect(component.staffStep()).toBe(1);
@@ -265,13 +274,16 @@ describe('LoginComponent', () => {
     component.password.set('Password123!');
     component.submit();
 
-    httpTesting.expectOne('/api/auth/login').flush({
-      error: {
-        code: 'MAIL_DELIVERY_UNAVAILABLE',
-        message: 'Mail unavailable',
-        trace_id: 'trc_test',
+    httpTesting.expectOne('/api/auth/login').flush(
+      {
+        error: {
+          code: 'MAIL_DELIVERY_UNAVAILABLE',
+          message: 'Mail unavailable',
+          trace_id: 'trc_test',
+        },
       },
-    }, { status: 503, statusText: 'Service Unavailable' });
+      { status: 503, statusText: 'Service Unavailable' },
+    );
 
     expect(component.error()).toBe('login.error.otpDeliveryUnavailable');
     expect(component.staffStep()).toBe(1);
@@ -286,13 +298,16 @@ describe('LoginComponent', () => {
     component.staffOtpCode.set('000000');
     component.verifyStaffOtp();
 
-    httpTesting.expectOne('/api/auth/verify-otp').flush({
-      error: {
-        code: 'UNAUTHORIZED',
-        message: 'Code de sécurité incorrect.',
-        trace_id: 'trc_test',
+    httpTesting.expectOne('/api/auth/verify-otp').flush(
+      {
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Code de sécurité incorrect.',
+          trace_id: 'trc_test',
+        },
       },
-    }, { status: 401, statusText: 'Unauthorized' });
+      { status: 401, statusText: 'Unauthorized' },
+    );
 
     expect(component.error()).toBe('Code de sécurité incorrect.');
   });

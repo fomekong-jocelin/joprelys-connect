@@ -11,8 +11,22 @@ describe('SmartVitalsAssistantComponent', () => {
   let component: SmartVitalsAssistantComponent;
   let vitalsApi: { analyzeText: ReturnType<typeof vi.fn>; analyzeAudio: ReturnType<typeof vi.fn> };
   let voiceApi: { synthesizeSpeech: ReturnType<typeof vi.fn> };
+  const originalMatchMedia = window.matchMedia;
 
   beforeEach(async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: query === '(min-width: 640px)',
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
     vitalsApi = {
       analyzeText: vi.fn(),
       analyzeAudio: vi.fn(),
@@ -41,6 +55,38 @@ describe('SmartVitalsAssistantComponent', () => {
     component = fixture.componentInstance;
     component.visitId = 'visit-1';
     fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: originalMatchMedia,
+    });
+  });
+
+  it('should start collapsed on a mobile viewport', () => {
+    fixture.destroy();
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: vi.fn().mockReturnValue({
+        matches: false,
+        media: '(min-width: 640px)',
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }),
+    });
+
+    const mobileFixture = TestBed.createComponent(SmartVitalsAssistantComponent);
+    mobileFixture.componentInstance.visitId = 'visit-mobile';
+    mobileFixture.detectChanges();
+
+    expect(mobileFixture.componentInstance.expanded()).toBe(false);
+    expect(mobileFixture.nativeElement.querySelector('details')).toBeNull();
+    mobileFixture.destroy();
   });
 
   it('should require explicit consent before enabling realtime listening', () => {
@@ -85,13 +131,15 @@ describe('SmartVitalsAssistantComponent', () => {
   });
 
   it('should not emit an empty proposal when clarification is required', () => {
-    vitalsApi.analyzeText.mockReturnValue(of({
-      transcript: 'Tension douze sur huit',
-      vitals: {},
-      assistantMessage: 'Pouvez-vous confirmer la tension en mmHg ?',
-      needsConfirmation: true,
-      confirmationReason: 'Valeur abrégée ambiguë.',
-    }));
+    vitalsApi.analyzeText.mockReturnValue(
+      of({
+        transcript: 'Tension douze sur huit',
+        vitals: {},
+        assistantMessage: 'Pouvez-vous confirmer la tension en mmHg ?',
+        needsConfirmation: true,
+        confirmationReason: 'Valeur abrégée ambiguë.',
+      }),
+    );
     const emitted = vi.fn();
     component.proposed.subscribe(emitted);
 

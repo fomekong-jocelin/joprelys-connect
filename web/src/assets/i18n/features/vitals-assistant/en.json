@@ -9,6 +9,7 @@
   "vitals.assistant.stop": "Finish",
   "vitals.assistant.record": "Dictate vitals",
   "vitals.assistant.textPlaceholder": "Or type: SpO₂ 97, temperature 37.8…",
+  "vitals.assistant.textLabel": "Vital signs to analyze",
   "vitals.assistant.analyze": "Analyze",
   "vitals.assistant.micUnsupported": "The microphone is not available in this browser. Use text entry instead.",
   "vitals.assistant.micError": "Microphone access failed. Check your browser permissions.",

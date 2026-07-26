@@ -165,6 +165,19 @@ La page publique de connexion suit les règles suivantes :
 - le décor emploie seulement les tokens centraux avec `color-mix`, les ombres partagées et des rayons de 4 à 8 px ;
 - aucune carte « Flux clinique synchronisé », aucun faux indicateur et aucun nouveau mode d'authentification ne doivent être introduits ;
 - les étapes Personnel, OTP professionnel, Patient et OTP patient conservent la même hiérarchie visuelle et les mêmes contrats fonctionnels.
+- le contenu de vitrine est du HTML réel alimenté par les catalogues FR/EN ; aucun texte visible ne doit être généré avec `content:` ou sélectionné selon la langue via `:has(...)` ;
+- le logo posé sur le panneau institutionnel utilise explicitement l'apparence `on-dark` et l'asset officiel prévu pour ce fond, sans filtre d'inversion hérité du thème global.
+
+### Interfaces IA et assistant de constantes
+
+- mobile d'abord : sous `640px`, l'assistant de constantes démarre replié et ne monopolise pas la modale ;
+- l'explication et l'exemple de dictée utilisent une divulgation progressive ; la tâche principale reste la saisie ou la validation des constantes ;
+- une surface IA mobile est bornée par `dvh`, défilable intérieurement et conserve les actions dans la largeur utile ;
+- les actions tactiles mesurent au moins `44px` et s'empilent en pleine largeur lorsque l'espace est contraint ;
+- replier ou détruire l'assistant coupe le microphone et la session Realtime ;
+- une proposition IA ne modifie que le brouillon visible ; l'enregistrement clinique reste une action explicite du professionnel ;
+- les composants IA utilisent les clés i18n de feature et les libellés partagés, en français et en anglais ;
+- l'intégration dans une modale Angular reste déclarative, sans `querySelector`, mutation de classes ni montage dynamique pour piloter le layout.
 
 ### Disponibilités médecin (STORY-2602)
 

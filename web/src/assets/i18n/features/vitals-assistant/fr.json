@@ -9,6 +9,7 @@
   "vitals.assistant.stop": "Terminer",
   "vitals.assistant.record": "Dicter les constantes",
   "vitals.assistant.textPlaceholder": "Ou saisissez : SpO₂ 97, température 37,8…",
+  "vitals.assistant.textLabel": "Constantes à analyser",
   "vitals.assistant.analyze": "Analyser",
   "vitals.assistant.micUnsupported": "Le microphone n’est pas disponible dans ce navigateur. Utilisez la saisie texte.",
   "vitals.assistant.micError": "Impossible d’accéder au microphone. Vérifiez les autorisations du navigateur.",

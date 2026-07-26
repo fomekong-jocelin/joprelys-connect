@@ -14,20 +14,31 @@ export interface AiClarificationAnswer {
   imports: [CommonModule],
   template: `
     @if (pendingClarification(); as clarification) {
-      <section class="space-y-3 rounded-[6px] border border-amber-300 bg-amber-50/70 p-4 dark:border-amber-800 dark:bg-amber-950/20">
+      <section
+        class="space-y-3 rounded-[6px] border border-amber-300 bg-amber-50/70 p-4 dark:border-amber-800 dark:bg-amber-950/20"
+      >
         <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p class="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+            <p
+              class="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300"
+            >
               {{ i18n.t('consultation.ai.clarificationTitle', 'Précision demandée') }}
             </p>
             <p class="mt-1 text-sm font-semibold text-amber-950 dark:text-amber-100">
               {{ clarification.question }}
             </p>
             <p class="mt-1 text-[10px] text-amber-800/80 dark:text-amber-200/70">
-              En mode conversation, répondez simplement à voix haute. Vous pouvez aussi répondre ci-dessous.
+              {{
+                i18n.t(
+                  'consultation.ai.clarificationVoiceHelp',
+                  'En mode conversation, répondez simplement à voix haute. Vous pouvez aussi répondre ci-dessous.'
+                )
+              }}
             </p>
           </div>
-          <span class="w-fit rounded-[3px] border border-amber-300 px-2 py-1 text-[10px] font-semibold text-amber-800 dark:border-amber-700 dark:text-amber-200">
+          <span
+            class="w-fit rounded-[3px] border border-amber-300 px-2 py-1 text-[10px] font-semibold text-amber-800 dark:border-amber-700 dark:text-amber-200"
+          >
             {{ fieldLabel(clarification.field) }}
           </span>
         </div>
@@ -50,14 +61,16 @@ export interface AiClarificationAnswer {
           rows="2"
           [value]="answer()"
           (input)="onAnswerInput($event)"
-          [placeholder]="i18n.t('consultation.ai.clarificationPlaceholder', 'Saisissez une réponse précise…')"
+          [placeholder]="
+            i18n.t('consultation.ai.clarificationPlaceholder', 'Saisissez une réponse précise…')
+          "
           class="ui-textarea w-full resize-y rounded-[4px] border-amber-300 bg-[var(--app-surface)] p-2.5 text-sm text-[var(--text-primary)] dark:border-amber-700"
         ></textarea>
         <button
           type="button"
           (click)="submitAnswer(clarification.id)"
           [disabled]="disabled || !answer().trim()"
-          class="inline-flex items-center justify-center rounded-[4px] bg-amber-700 px-4 py-2 text-xs font-bold text-white hover:bg-amber-800 disabled:opacity-50"
+          class="inline-flex min-h-11 w-full items-center justify-center rounded-[4px] bg-amber-700 px-4 py-2 text-xs font-bold text-white hover:bg-amber-800 disabled:opacity-50 sm:w-auto"
         >
           {{ i18n.t('consultation.ai.clarificationSubmit', 'Répondre à cette question') }}
         </button>
@@ -65,20 +78,30 @@ export interface AiClarificationAnswer {
     }
 
     @if (resolvedClarifications().length > 0) {
-      <details class="rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface-muted)]/20">
-        <summary class="cursor-pointer px-3 py-2.5 text-xs font-semibold text-[var(--text-secondary)]">
+      <details
+        class="rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface-muted)]/20"
+      >
+        <summary
+          class="cursor-pointer px-3 py-2.5 text-xs font-semibold text-[var(--text-secondary)]"
+        >
           {{ i18n.t('consultation.ai.clarificationHistory', 'Précisions déjà apportées') }}
           ({{ resolvedClarifications().length }})
         </summary>
         <div class="space-y-2 border-t border-[var(--app-border)] p-3">
           @for (clarification of resolvedClarifications(); track clarification.id) {
-            <article class="rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface)] p-3 text-xs">
+            <article
+              class="rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface)] p-3 text-xs"
+            >
               <div class="flex items-start justify-between gap-3">
                 <p class="font-semibold text-[var(--text-primary)]">{{ clarification.question }}</p>
-                <span class="shrink-0 text-[10px] text-[var(--text-muted)]">{{ fieldLabel(clarification.field) }}</span>
+                <span class="shrink-0 text-[10px] text-[var(--text-muted)]">{{
+                  fieldLabel(clarification.field)
+                }}</span>
               </div>
               <p class="mt-1 text-[var(--text-secondary)]">
-                <span class="font-semibold">{{ i18n.t('consultation.ai.clarificationAnswer', 'Réponse') }} :</span>
+                <span class="font-semibold"
+                  >{{ i18n.t('consultation.ai.clarificationAnswer', 'Réponse') }} :</span
+                >
                 {{ clarification.answer }}
               </p>
             </article>
@@ -98,14 +121,16 @@ export class AiClarificationPanelComponent {
   readonly answer = signal('');
 
   pendingClarification(): AiClarification | null {
-    return [...this.clarifications]
-      .reverse()
-      .find(clarification => clarification.status === 'PENDING') ?? null;
+    return (
+      [...this.clarifications]
+        .reverse()
+        .find((clarification) => clarification.status === 'PENDING') ?? null
+    );
   }
 
   resolvedClarifications(): AiClarification[] {
     return this.clarifications
-      .filter(clarification => clarification.status === 'RESOLVED')
+      .filter((clarification) => clarification.status === 'RESOLVED')
       .slice(-5)
       .reverse();
   }
@@ -129,15 +154,18 @@ export class AiClarificationPanelComponent {
     const labels: Record<AiField, string> = {
       symptoms: this.i18n.t('consultation.symptoms.label', 'Symptômes'),
       clinicalExam: this.i18n.t('consultation.clinicalExam.label', 'Examen clinique'),
-      suspectedDiagnosis: this.i18n.t('consultation.suspectedDiagnosis.label', 'Hypothèse diagnostique'),
+      suspectedDiagnosis: this.i18n.t(
+        'consultation.suspectedDiagnosis.label',
+        'Hypothèse diagnostique',
+      ),
       diagnosis: this.i18n.t('consultation.diagnosis.label', 'Diagnostic'),
       finalDiagnosis: this.i18n.t('consultation.finalDiagnosis.label', 'Diagnostic final'),
       conclusion: this.i18n.t('consultation.conclusion.label', 'Conclusion'),
       advice: this.i18n.t('consultation.advice.label', 'Conseils au patient'),
       followUp: this.i18n.t('consultation.followUp.label', 'Suivi recommandé'),
-      prescription: 'Ordonnance',
-      labOrders: 'Examens biologiques',
-      vitals: 'Constantes vitales',
+      prescription: this.i18n.t('consultation.ai.field.prescription', 'Ordonnance'),
+      labOrders: this.i18n.t('consultation.ai.field.labOrders', 'Examens biologiques'),
+      vitals: this.i18n.t('consultation.ai.field.vitals', 'Constantes vitales'),
     };
     return labels[field];
   }

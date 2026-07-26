@@ -1,248 +1,16 @@
 import { CommonModule } from '@angular/common';
-import {
-  Component,
-  EventEmitter,
-  Input,
-  OnDestroy,
-  Output,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, Output, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AiConsultationApiService } from './ai-consultation-api.service';
-import {
-  AiVitalField,
-  AiVitalsApiService,
-  AiVitalsProposal,
-} from './ai-vitals-api.service';
+import { AiVitalField, AiVitalsApiService, AiVitalsProposal } from './ai-vitals-api.service';
 import { RealtimeVitalsControllerComponent } from './realtime-vitals-controller.component';
 
 @Component({
   selector: 'app-smart-vitals-assistant',
   standalone: true,
   imports: [CommonModule, FormsModule, RealtimeVitalsControllerComponent],
-  template: `
-    <section
-      class="fixed inset-x-3 bottom-3 z-[80] sm:left-1/2 sm:right-auto sm:w-[560px] sm:-translate-x-1/2"
-      aria-live="polite"
-    >
-      <div class="overflow-hidden rounded-[10px] border border-cyan-200/80 bg-[var(--app-surface)] shadow-2xl dark:border-cyan-900/70">
-        <header class="flex items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-3 py-2.5 sm:px-4">
-          <button
-            type="button"
-            class="flex min-w-0 flex-1 items-center gap-2 text-left"
-            (click)="toggleExpanded()"
-            [attr.aria-expanded]="expanded()"
-          >
-            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300">
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
-              </svg>
-            </span>
-            <span class="min-w-0">
-              <span class="block truncate text-xs font-extrabold text-[var(--text-primary)] sm:text-sm">
-                {{ i18n.t('vitals.assistant.title', 'Assistant de constantes') }}
-              </span>
-              <span class="block truncate text-[10px] font-medium text-[var(--text-muted)] sm:text-xs">
-                @if (realtimeActive()) {
-                  {{ i18n.t('vitals.assistant.realtimeReady', 'Micro en direct — dictez les paramètres') }}
-                } @else if (recording()) {
-                  {{ i18n.t('vitals.assistant.listening', 'Je vous écoute…') }}
-                } @else if (speaking()) {
-                  {{ i18n.t('vitals.assistant.speaking', 'Joprelys vous répond…') }}
-                } @else {
-                  {{ patientName || i18n.t('vitals.assistant.subtitle', 'Dictez les paramètres, vérifiez, puis enregistrez.') }}
-                }
-              </span>
-            </span>
-          </button>
-
-          <button
-            type="button"
-            class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] text-[var(--text-muted)] hover:bg-[var(--app-surface)]"
-            (click)="toggleExpanded()"
-            [attr.aria-label]="i18n.t('vitals.assistant.toggle', 'Afficher ou réduire l’assistant')"
-          >
-            <svg class="h-4 w-4 transition-transform" [class.rotate-180]="expanded()" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
-            </svg>
-          </button>
-        </header>
-
-        @if (expanded()) {
-          <div class="max-h-[58dvh] space-y-3 overflow-y-auto p-3 sm:p-4">
-            <div class="rounded-[8px] border border-cyan-100 bg-cyan-50/60 p-3 text-xs leading-5 text-cyan-950 dark:border-cyan-950 dark:bg-cyan-950/20 dark:text-cyan-100">
-              <strong>{{ i18n.t('vitals.assistant.exampleTitle', 'Vous pouvez dire :') }}</strong>
-              {{ i18n.t('vitals.assistant.example', '« Température 38,4, tension 132 sur 84, saturation 96, pouls 104, poids 73 kilos. »') }}
-            </div>
-
-            @if (!realtimeEnabled()) {
-              <button
-                type="button"
-                (click)="enableRealtime()"
-                [disabled]="disabled"
-                class="flex min-h-12 w-full items-center justify-between gap-3 rounded-[8px] border border-cyan-200 bg-cyan-50/70 px-4 py-3 text-left transition hover:bg-cyan-100/70 disabled:opacity-50 dark:border-cyan-900 dark:bg-cyan-950/25 dark:hover:bg-cyan-950/40"
-              >
-                <span>
-                  <span class="block text-xs font-extrabold text-cyan-900 dark:text-cyan-100">
-                    {{ i18n.t('vitals.assistant.realtimeActivate', 'Activer l’écoute Realtime') }}
-                  </span>
-                  <span class="mt-0.5 block text-[10px] leading-4 text-cyan-800/80 dark:text-cyan-200/80">
-                    {{ i18n.t('vitals.assistant.realtimeConsent', 'Le microphone ne s’ouvre qu’après votre activation et se coupe lorsque vous quittez ce mode.') }}
-                  </span>
-                </span>
-                <svg class="h-5 w-5 shrink-0 text-cyan-700 dark:text-cyan-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
-                </svg>
-              </button>
-            } @else {
-              <app-realtime-vitals-controller
-                [visitId]="visitId"
-                [currentVitals]="currentVitals"
-                [disabled]="disabled"
-                [enabled]="realtimeEnabled()"
-                (proposed)="handleProposal($event, false)"
-                (activeChange)="realtimeActive.set($event)"
-                (realtimeError)="errorMessage.set($event)"
-              />
-              <div class="flex justify-end">
-                <button
-                  type="button"
-                  (click)="disableRealtime()"
-                  class="min-h-10 rounded-[6px] px-3 text-[11px] font-bold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)]"
-                >
-                  {{ i18n.t('vitals.assistant.realtimeBackToClassic', 'Revenir à la dictée classique') }}
-                </button>
-              </div>
-            }
-
-            @if (recording() || speaking()) {
-              <div class="flex h-12 items-center justify-center gap-1 rounded-[8px] bg-[var(--app-surface-muted)] px-3" aria-hidden="true">
-                @for (bar of waveformBars; track $index) {
-                  <span
-                    class="w-1 rounded-full bg-cyan-500 transition-[height] duration-75"
-                    [style.height.px]="waveHeight($index)"
-                  ></span>
-                }
-              </div>
-            }
-
-            <div
-              class="grid grid-cols-1 gap-2 sm:items-center"
-              [ngClass]="realtimeEnabled() ? 'sm:grid-cols-[1fr_auto]' : 'sm:grid-cols-[auto_1fr_auto]'"
-            >
-              @if (!realtimeEnabled()) {
-                <button
-                  type="button"
-                  (click)="toggleRecording()"
-                  [disabled]="disabled || busy() || !mediaRecorderSupported"
-                  class="inline-flex min-h-12 items-center justify-center gap-2 rounded-[8px] px-4 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
-                  [ngClass]="recording() ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]'"
-                >
-                  <span class="relative inline-flex h-6 w-6 items-center justify-center">
-                    @if (recording()) {
-                      <span class="absolute h-6 w-6 animate-ping rounded-full bg-white/25"></span>
-                    }
-                    <svg class="relative h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
-                    </svg>
-                  </span>
-                  {{ recording()
-                    ? i18n.t('vitals.assistant.stop', 'Terminer')
-                    : i18n.t('vitals.assistant.record', 'Dicter les constantes') }}
-                </button>
-              }
-
-              <input
-                type="text"
-                [(ngModel)]="textInput"
-                (keyup.enter)="sendText()"
-                [disabled]="disabled || busy() || recording()"
-                [placeholder]="i18n.t('vitals.assistant.textPlaceholder', 'Ou saisissez : SpO₂ 97, température 37,8…')"
-                class="ui-input min-h-12 w-full px-3 text-sm"
-              />
-
-              <button
-                type="button"
-                (click)="sendText()"
-                [disabled]="disabled || busy() || recording() || !textInput.trim()"
-                class="inline-flex min-h-12 items-center justify-center rounded-[8px] border border-[var(--app-border)] px-4 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--app-surface-muted)] disabled:opacity-50"
-              >
-                {{ i18n.t('vitals.assistant.analyze', 'Analyser') }}
-              </button>
-            </div>
-
-            @if (!mediaRecorderSupported && !realtimeEnabled()) {
-              <p class="text-xs font-semibold text-amber-700 dark:text-amber-300">
-                {{ i18n.t('vitals.assistant.micUnsupported', 'Le microphone n’est pas disponible dans ce navigateur. Utilisez la saisie texte.') }}
-              </p>
-            }
-
-            @if (busy()) {
-              <div class="flex items-center gap-2 text-xs font-semibold text-[var(--text-muted)]">
-                <span class="h-4 w-4 animate-spin rounded-full border-2 border-cyan-200 border-t-cyan-600"></span>
-                {{ i18n.t('vitals.assistant.processing', 'Analyse des constantes…') }}
-              </div>
-            }
-
-            @if (errorMessage()) {
-              <div class="rounded-[8px] border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
-                {{ errorMessage() }}
-              </div>
-            }
-
-            @if (lastTranscript()) {
-              <div class="rounded-[8px] border border-[var(--app-border)] p-3">
-                <p class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-muted)]">
-                  {{ i18n.t('vitals.assistant.heard', 'J’ai entendu') }}
-                </p>
-                <p class="mt-1 text-xs leading-5 text-[var(--text-primary)]">{{ lastTranscript() }}</p>
-              </div>
-            }
-
-            @if (assistantMessage()) {
-              <div
-                class="rounded-[8px] border p-3"
-                [ngClass]="needsConfirmation()
-                  ? 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/25'
-                  : 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/25'"
-              >
-                <div class="flex items-start gap-2">
-                  <span class="mt-0.5 text-base">{{ needsConfirmation() ? '⚠️' : '✓' }}</span>
-                  <div class="min-w-0">
-                    <p class="text-xs font-bold text-[var(--text-primary)]">{{ assistantMessage() }}</p>
-                    @if (needsConfirmation() && confirmationReason()) {
-                      <p class="mt-1 text-[11px] leading-4 text-[var(--text-muted)]">{{ confirmationReason() }}</p>
-                    }
-                  </div>
-                </div>
-              </div>
-            }
-
-            @if (proposalEntries().length > 0) {
-              <div>
-                <p class="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-muted)]">
-                  {{ i18n.t('vitals.assistant.detected', 'Champs préremplis — à vérifier') }}
-                </p>
-                <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  @for (entry of proposalEntries(); track entry[0]) {
-                    <div class="rounded-[8px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-3 py-2">
-                      <span class="block text-[9px] font-extrabold uppercase tracking-wide text-[var(--text-muted)]">{{ labelFor(entry[0]) }}</span>
-                      <span class="mt-0.5 block text-sm font-black text-[var(--text-primary)]">{{ entry[1] }} {{ unitFor(entry[0]) }}</span>
-                    </div>
-                  }
-                </div>
-                <p class="mt-2 text-[10px] leading-4 text-[var(--text-muted)]">
-                  {{ i18n.t('vitals.assistant.reviewNotice', 'Joprelys remplit les champs mais ne les enregistre jamais sans votre validation.') }}
-                </p>
-              </div>
-            }
-          </div>
-        }
-      </div>
-    </section>
-  `,
+  templateUrl: './smart-vitals-assistant.component.html',
 })
 export class SmartVitalsAssistantComponent implements OnDestroy {
   private readonly api = inject(AiVitalsApiService);
@@ -253,9 +21,10 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   @Input() currentVitals: Partial<Record<AiVitalField, number>> = {};
   @Input() disabled = false;
   @Input() patientName = '';
+  @Input() embedded = false;
   @Output() readonly proposed = new EventEmitter<AiVitalsProposal>();
 
-  readonly expanded = signal(true);
+  readonly expanded = signal(this.initiallyExpanded());
   readonly busy = signal(false);
   readonly recording = signal(false);
   readonly speaking = signal(false);
@@ -272,9 +41,9 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   textInput = '';
   readonly waveformBars = Array.from({ length: 24 });
   readonly mediaRecorderSupported =
-    typeof window !== 'undefined'
-    && 'MediaRecorder' in window
-    && !!navigator.mediaDevices?.getUserMedia;
+    typeof window !== 'undefined' &&
+    'MediaRecorder' in window &&
+    !!navigator.mediaDevices?.getUserMedia;
 
   private recorder: MediaRecorder | null = null;
   private stream: MediaStream | null = null;
@@ -286,6 +55,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   private assistantAudioUrl: string | null = null;
 
   ngOnDestroy(): void {
+    this.disableRealtime();
     this.stopStream();
     this.stopAssistantAudio();
   }
@@ -293,6 +63,8 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   toggleExpanded(): void {
     if (this.expanded()) {
       this.disableRealtime();
+      this.stopStream();
+      this.recording.set(false);
       this.expanded.set(false);
       return;
     }
@@ -327,25 +99,23 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
     if (!text || !this.visitId || this.busy() || this.disabled) return;
     this.busy.set(true);
     this.errorMessage.set('');
-    this.api.analyzeText(
-      this.visitId,
-      text,
-      this.i18n.currentLanguage(),
-      this.currentVitals,
-    ).subscribe({
-      next: proposal => {
-        this.textInput = '';
-        this.handleProposal(proposal);
-      },
-      error: () => this.handleError(),
-    });
+    this.api
+      .analyzeText(this.visitId, text, this.i18n.currentLanguage(), this.currentVitals)
+      .subscribe({
+        next: (proposal) => {
+          this.textInput = '';
+          this.handleProposal(proposal);
+        },
+        error: () => this.handleError(),
+      });
   }
 
   proposalEntries(): Array<[AiVitalField, number]> {
     const proposal = this.lastProposal();
     if (!proposal) return [];
-    return Object.entries(proposal.vitals)
-      .filter((entry): entry is [AiVitalField, number] => typeof entry[1] === 'number');
+    return Object.entries(proposal.vitals).filter(
+      (entry): entry is [AiVitalField, number] => typeof entry[1] === 'number',
+    );
   }
 
   waveHeight(index: number): number {
@@ -391,12 +161,22 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
     }
   }
 
+  private initiallyExpanded(): boolean {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return true;
+    }
+    return window.matchMedia('(min-width: 640px)').matches;
+  }
+
   private async startRecording(): Promise<void> {
-    if (this.realtimeEnabled()
-      || !this.mediaRecorderSupported
-      || this.busy()
-      || this.disabled
-      || !this.visitId) return;
+    if (
+      this.realtimeEnabled() ||
+      !this.mediaRecorderSupported ||
+      this.busy() ||
+      this.disabled ||
+      !this.visitId
+    )
+      return;
     this.stopAssistantAudio();
     this.errorMessage.set('');
     try {
@@ -415,7 +195,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
       this.stream = stream;
       this.recorder = recorder;
       this.chunks = [];
-      recorder.ondataavailable = event => {
+      recorder.ondataavailable = (event) => {
         if (event.data.size > 0) this.chunks.push(event.data);
       };
       recorder.onstop = () => this.finishRecording(recorder.mimeType || mimeType || 'audio/webm');
@@ -423,10 +203,12 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
       this.recording.set(true);
       this.startMeter(stream);
     } catch {
-      this.errorMessage.set(this.i18n.t(
-        'vitals.assistant.micError',
-        'Impossible d’accéder au microphone. Vérifiez les autorisations du navigateur.',
-      ));
+      this.errorMessage.set(
+        this.i18n.t(
+          'vitals.assistant.micError',
+          'Impossible d’accéder au microphone. Vérifiez les autorisations du navigateur.',
+        ),
+      );
     }
   }
 
@@ -441,22 +223,19 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
       return;
     }
     this.busy.set(true);
-    this.api.analyzeAudio(
-      this.visitId,
-      blob,
-      this.i18n.currentLanguage(),
-      this.currentVitals,
-    ).subscribe({
-      next: proposal => this.handleProposal(proposal),
-      error: () => this.handleError(),
-    });
+    this.api
+      .analyzeAudio(this.visitId, blob, this.i18n.currentLanguage(), this.currentVitals)
+      .subscribe({
+        next: (proposal) => this.handleProposal(proposal),
+        error: () => this.handleError(),
+      });
   }
 
   private speak(text: string): void {
     this.stopAssistantAudio();
     this.speaking.set(true);
     this.voiceApi.synthesizeSpeech(text).subscribe({
-      next: blob => {
+      next: (blob) => {
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
         this.assistantAudio = audio;
@@ -474,15 +253,17 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
     this.recording.set(false);
     this.stopMeter();
     this.stopStream();
-    this.errorMessage.set(this.i18n.t(
-      'vitals.assistant.error',
-      'Joprelys n’a pas pu analyser ces constantes. Réessayez ou saisissez-les manuellement.',
-    ));
+    this.errorMessage.set(
+      this.i18n.t(
+        'vitals.assistant.error',
+        'Joprelys n’a pas pu analyser ces constantes. Réessayez ou saisissez-les manuellement.',
+      ),
+    );
   }
 
   private preferredMimeType(): string {
     const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
-    return candidates.find(type => MediaRecorder.isTypeSupported(type)) ?? '';
+    return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? '';
   }
 
   private startMeter(stream: MediaStream): void {
@@ -518,7 +299,8 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   }
 
   private stopStream(): void {
-    this.stream?.getTracks().forEach(track => track.stop());
+    this.stopMeter();
+    this.stream?.getTracks().forEach((track) => track.stop());
     this.stream = null;
     this.recorder = null;
   }

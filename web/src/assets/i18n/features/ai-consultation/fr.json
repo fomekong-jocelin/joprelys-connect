@@ -4,6 +4,7 @@
   "consultation.ai.clarificationSubmit": "Répondre à cette question",
   "consultation.ai.clarificationHistory": "Précisions déjà apportées",
   "consultation.ai.clarificationAnswer": "Réponse",
+  "consultation.ai.clarificationVoiceHelp": "En mode conversation, répondez simplement à voix haute. Vous pouvez aussi répondre ci-dessous.",
   "consultation.ai.subtitleControlled": "Échangez, relisez, puis acceptez ou rejetez chaque modification proposée.",
   "consultation.ai.startControlledHelp": "Aucune proposition n’est acceptée ou sauvegardée automatiquement.",
   "consultation.ai.modeConversation": "Conversation vocale",
@@ -50,6 +51,7 @@
   "consultation.ai.noSpeechDetected": "Aucune parole détectée. Rapprochez-vous du microphone puis réessayez.",
   "consultation.ai.revisionTitle": "Modifications à valider",
   "consultation.ai.revisionHelp": "Le brouillon accepté reste inchangé tant que vous n’avez pas pris de décision.",
+  "consultation.ai.revisionGovernanceHelp": "Le copilote propose uniquement. Les données restent inchangées jusqu’à votre validation explicite.",
   "consultation.ai.proposalAccepted": "Acceptée",
   "consultation.ai.proposalRejected": "Rejetée",
   "consultation.ai.previousValue": "Avant",
@@ -69,5 +71,11 @@
   "consultation.ai.uncertaintyHigh": "Incertitude forte",
   "consultation.ai.uncertaintyUnknown": "Non évaluée",
   "consultation.ai.acceptedDraft": "Brouillon accepté",
-  "consultation.ai.acceptedDraftHelp": "Seules les propositions acceptées apparaissent ici."
+  "consultation.ai.acceptedDraftHelp": "Seules les propositions acceptées apparaissent ici.",
+  "consultation.ai.acceptedDraftGovernanceHelp": "Consultation, ordonnance, examens et constantes restent sous contrôle du professionnel de santé.",
+  "consultation.ai.apply": "Appliquer au formulaire",
+  "consultation.ai.qrAlt": "QR code de la consultation",
+  "consultation.ai.field.prescription": "Ordonnance",
+  "consultation.ai.field.labOrders": "Examens biologiques",
+  "consultation.ai.field.vitals": "Constantes vitales"
 }

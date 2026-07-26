@@ -404,3 +404,20 @@ Règles minimales :
 - conserver les fichiers de gouvernance IA ;
 - conserver `proxy.conf.json` côté Angular sauf variante locale ;
 - adapter le `.gitignore` au projet réel au lieu de copier aveuglément un template.
+
+---
+
+## Exécution — BUG-20260726-UI-I18N-MOBILE-AI-THEME-POLISH
+
+- [x] Documentation First : ticket, spécification fonctionnelle, conception technique et plan de test présents.
+- [x] Tailwind CSS v4 et composants Angular maison conservés ; aucune dépendance ajoutée.
+- [x] Thèmes light/dark, branding centralisé et catalogues FR/EN préservés.
+- [x] Aucun texte visible nouveau codé en dur dans les composants modifiés.
+- [x] Rayons de cartes, formulaires et modales limités à 8 px.
+- [x] Composition déclarative de l'assistant ; aucune logique métier ou sauvegarde automatique ajoutée au frontend.
+- [x] Contrats API, permissions et payloads cliniques inchangés.
+- [x] `proxy.conf.json` et chemins API relatifs inchangés.
+- [x] `.gitignore` contrôlé ; aucun secret ni artefact de build ajouté.
+- [x] Suite Angular complète : 81 fichiers, 388 tests réussis.
+- [x] Contrôle i18n et build production réussis.
+- [ ] Recette visuelle authentifiée mobile/tablette/desktop en FR/EN et light/dark.

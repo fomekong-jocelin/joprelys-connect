@@ -1,15 +1,4 @@
-import {
-  ApplicationRef,
-  Component,
-  ComponentRef,
-  EnvironmentInjector,
-  OnDestroy,
-  OnInit,
-  computed,
-  createComponent,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { AuthTokenStorageService } from '../auth/auth-token-storage.service';
 import { Router, RouterLink } from '@angular/router';
 import { I18nService } from '../core/i18n/i18n.service';
@@ -27,16 +16,22 @@ import { SmartVitalsAssistantComponent } from '../consultation/smart-vitals-assi
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
-  imports: [AppShellComponent, RouterLink, DatePipe, EmptyStateComponent, ButtonComponent, FormsModule]
+  imports: [
+    AppShellComponent,
+    RouterLink,
+    DatePipe,
+    EmptyStateComponent,
+    ButtonComponent,
+    FormsModule,
+    SmartVitalsAssistantComponent,
+  ],
 })
-export class DashboardComponent implements OnInit, OnDestroy {
+export class DashboardComponent implements OnInit {
   private readonly tokenStorage = inject(AuthTokenStorageService);
   private readonly i18n = inject(I18nService);
   private readonly visitApi = inject(VisitApiService);
   private readonly router = inject(Router);
   private readonly rbacApi = inject(RbacApiService);
-  private readonly applicationRef = inject(ApplicationRef);
-  private readonly environmentInjector = inject(EnvironmentInjector);
 
   readonly session = this.tokenStorage.session;
   readonly welcomeLabel = computed(() => this.i18n.t('dashboard.welcome'));
@@ -73,8 +68,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   vitalsResp?: number;
   vitalsPain?: number;
 
-  private vitalsAssistantRef: ComponentRef<SmartVitalsAssistantComponent> | null = null;
-
   hasPermission(permissions: string[] | string): boolean {
     const expected = Array.isArray(permissions) ? permissions : [permissions];
     return expected.some((permission) => this.rbacApi.hasPermission(permission));
@@ -88,22 +81,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (this.isClinicalRole()) this.loadQueue();
   }
 
-  ngOnDestroy(): void {
-    this.destroyVitalsAssistant();
-  }
-
   loadQueue(): void {
     this.isLoadingQueue.set(true);
     this.queueError.set('');
     this.visitApi.getActiveVisits().subscribe({
       next: (data) => {
-        this.activeVisits.set([...data].sort((a, b) =>
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        ));
+        this.activeVisits.set(
+          [...data].sort(
+            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+          ),
+        );
         this.isLoadingQueue.set(false);
         const currentDrawerVisit = this.selectedVisitForDrawer();
         if (currentDrawerVisit) {
-          const updated = data.find(v => v.id === currentDrawerVisit.id);
+          const updated = data.find((v) => v.id === currentDrawerVisit.id);
           if (updated) this.selectedVisitForDrawer.set(updated);
           else this.closeVisitDrawer();
         }
@@ -111,7 +102,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.isLoadingQueue.set(false);
         this.queueError.set(err.error?.detail || this.t('dashboard.queue.loadError'));
-      }
+      },
     });
   }
 
@@ -156,7 +147,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.isClosingVisit.set(false);
         this.closeVisitError.set(err.error?.detail || this.t('dashboard.queue.closeError'));
-      }
+      },
     });
   }
 
@@ -175,53 +166,105 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getBmiClass(bmi?: number): string {
-    if (!bmi) return 'bg-[var(--app-surface-muted)] text-[var(--text-secondary)] dark:bg-slate-900 dark:text-[var(--text-muted)]';
-    if (bmi < 18.5) return 'bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)] bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]';
-    if (bmi < 25) return 'bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)] bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]';
-    if (bmi < 30) return 'bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)] bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]';
+    if (!bmi)
+      return 'bg-[var(--app-surface-muted)] text-[var(--text-secondary)] dark:bg-slate-900 dark:text-[var(--text-muted)]';
+    if (bmi < 18.5)
+      return 'bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)] bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]';
+    if (bmi < 25)
+      return 'bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)] bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]';
+    if (bmi < 30)
+      return 'bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)] bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]';
     return 'bg-[var(--brand-danger-subtle)] text-red-700 dark:text-[var(--brand-danger-text)]';
   }
 
   isTempInvalid(): boolean {
-    return this.vitalsTemp !== undefined && this.vitalsTemp !== null && (this.vitalsTemp < 30 || this.vitalsTemp > 45);
+    return (
+      this.vitalsTemp !== undefined &&
+      this.vitalsTemp !== null &&
+      (this.vitalsTemp < 30 || this.vitalsTemp > 45)
+    );
   }
   isWeightInvalid(): boolean {
-    return this.vitalsWeight !== undefined && this.vitalsWeight !== null && (this.vitalsWeight < 1 || this.vitalsWeight > 500);
+    return (
+      this.vitalsWeight !== undefined &&
+      this.vitalsWeight !== null &&
+      (this.vitalsWeight < 1 || this.vitalsWeight > 500)
+    );
   }
   isHeightInvalid(): boolean {
-    return this.vitalsHeight !== undefined && this.vitalsHeight !== null && (this.vitalsHeight < 30 || this.vitalsHeight > 250);
+    return (
+      this.vitalsHeight !== undefined &&
+      this.vitalsHeight !== null &&
+      (this.vitalsHeight < 30 || this.vitalsHeight > 250)
+    );
   }
   isPulseInvalid(): boolean {
-    return this.vitalsPulse !== undefined && this.vitalsPulse !== null && (this.vitalsPulse < 20 || this.vitalsPulse > 250);
+    return (
+      this.vitalsPulse !== undefined &&
+      this.vitalsPulse !== null &&
+      (this.vitalsPulse < 20 || this.vitalsPulse > 250)
+    );
   }
   isSystolicInvalid(): boolean {
-    return this.vitalsSystolic !== undefined && this.vitalsSystolic !== null && (this.vitalsSystolic < 40 || this.vitalsSystolic > 250);
+    return (
+      this.vitalsSystolic !== undefined &&
+      this.vitalsSystolic !== null &&
+      (this.vitalsSystolic < 40 || this.vitalsSystolic > 250)
+    );
   }
   isDiastolicInvalid(): boolean {
-    return this.vitalsDiastolic !== undefined && this.vitalsDiastolic !== null && (this.vitalsDiastolic < 30 || this.vitalsDiastolic > 150);
+    return (
+      this.vitalsDiastolic !== undefined &&
+      this.vitalsDiastolic !== null &&
+      (this.vitalsDiastolic < 30 || this.vitalsDiastolic > 150)
+    );
   }
   isSpo2Invalid(): boolean {
-    return this.vitalsSpo2 !== undefined && this.vitalsSpo2 !== null && (this.vitalsSpo2 < 50 || this.vitalsSpo2 > 100);
+    return (
+      this.vitalsSpo2 !== undefined &&
+      this.vitalsSpo2 !== null &&
+      (this.vitalsSpo2 < 50 || this.vitalsSpo2 > 100)
+    );
   }
   isGlycemiaInvalid(): boolean {
-    return this.vitalsGlycemia !== undefined && this.vitalsGlycemia !== null && (this.vitalsGlycemia < 0.1 || this.vitalsGlycemia > 10.0);
+    return (
+      this.vitalsGlycemia !== undefined &&
+      this.vitalsGlycemia !== null &&
+      (this.vitalsGlycemia < 0.1 || this.vitalsGlycemia > 10.0)
+    );
   }
   isRespInvalid(): boolean {
-    return this.vitalsResp !== undefined && this.vitalsResp !== null && (this.vitalsResp < 5 || this.vitalsResp > 100);
+    return (
+      this.vitalsResp !== undefined &&
+      this.vitalsResp !== null &&
+      (this.vitalsResp < 5 || this.vitalsResp > 100)
+    );
   }
   isPainInvalid(): boolean {
-    return this.vitalsPain !== undefined && this.vitalsPain !== null && (this.vitalsPain < 0 || this.vitalsPain > 10);
+    return (
+      this.vitalsPain !== undefined &&
+      this.vitalsPain !== null &&
+      (this.vitalsPain < 0 || this.vitalsPain > 10)
+    );
   }
 
   isAnyVitalInvalid(): boolean {
-    return this.isTempInvalid() || this.isWeightInvalid() || this.isHeightInvalid() ||
-        this.isPulseInvalid() || this.isSystolicInvalid() || this.isDiastolicInvalid() ||
-        this.isSpo2Invalid() || this.isGlycemiaInvalid() || this.isRespInvalid() || this.isPainInvalid();
+    return (
+      this.isTempInvalid() ||
+      this.isWeightInvalid() ||
+      this.isHeightInvalid() ||
+      this.isPulseInvalid() ||
+      this.isSystolicInvalid() ||
+      this.isDiastolicInvalid() ||
+      this.isSpo2Invalid() ||
+      this.isGlycemiaInvalid() ||
+      this.isRespInvalid() ||
+      this.isPainInvalid()
+    );
   }
 
   openVitalsModal(visit: Visit): void {
     if (!this.hasPermission('VISIT_VITALS_WRITE')) return;
-    this.destroyVitalsAssistant();
     this.selectedVisitForVitals.set(visit);
     this.vitalsError.set('');
     this.isSavingVitals.set(false);
@@ -251,21 +294,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     this.showVitalsModal.set(true);
-    queueMicrotask(() => this.mountVitalsAssistant(visit));
   }
 
   closeVitalsModal(): void {
     if (this.isSavingVitals()) return;
-    this.destroyVitalsAssistant();
     this.showVitalsModal.set(false);
     this.selectedVisitForVitals.set(null);
   }
 
   submitVitals(): void {
     const selectedVisit = this.selectedVisitForVitals();
-    if (!this.hasPermission('VISIT_VITALS_WRITE') || !selectedVisit || this.isSavingVitals()) return;
+    if (!this.hasPermission('VISIT_VITALS_WRITE') || !selectedVisit || this.isSavingVitals())
+      return;
     this.isSavingVitals.set(true);
-    this.vitalsAssistantRef?.setInput('disabled', true);
     this.vitalsError.set('');
 
     const payload = {
@@ -278,22 +319,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
       spo2: this.vitalsSpo2,
       glycemia: this.vitalsGlycemia,
       respiratoryRate: this.vitalsResp,
-      painScale: this.vitalsPain
+      painScale: this.vitalsPain,
     };
 
     this.visitApi.saveVitals(selectedVisit.id, payload).subscribe({
       next: () => {
         this.isSavingVitals.set(false);
-        this.destroyVitalsAssistant();
         this.showVitalsModal.set(false);
         this.selectedVisitForVitals.set(null);
         this.loadQueue();
       },
       error: (err) => {
         this.isSavingVitals.set(false);
-        this.vitalsAssistantRef?.setInput('disabled', false);
-        this.vitalsError.set(err.error?.detail || err.error?.title || this.t('dashboard.vitals.saveError'));
-      }
+        this.vitalsError.set(
+          err.error?.detail || err.error?.title || this.t('dashboard.vitals.saveError'),
+        );
+      },
     });
   }
 
@@ -305,52 +346,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.showAuditSecurityModal.set(false);
   }
 
-  private mountVitalsAssistant(visit: Visit): void {
-    const selectedVisit = this.selectedVisitForVitals();
-    if (
-      this.vitalsAssistantRef
-      || typeof document === 'undefined'
-      || !this.showVitalsModal()
-      || !selectedVisit
-      || selectedVisit.id !== visit.id
-    ) return;
-
-    const modalPanel = document.querySelector<HTMLElement>(
-      'app-dashboard .fixed.inset-0.z-\\[60\\] > div.relative',
-    );
-    const separator = modalPanel?.querySelector('hr');
-    if (!modalPanel || !separator) {
-      setTimeout(() => this.mountVitalsAssistant(visit), 0);
-      return;
-    }
-
-    const componentRef = createComponent(SmartVitalsAssistantComponent, {
-      environmentInjector: this.environmentInjector,
-    });
-    componentRef.setInput('visitId', visit.id);
-    componentRef.setInput('patientName', visit.patientName);
-    componentRef.setInput('currentVitals', this.currentVitalsForAssistant());
-    componentRef.setInput('disabled', this.isSavingVitals());
-    componentRef.instance.proposed.subscribe(proposal => this.applyVitalsAssistantProposal(proposal));
-    this.applicationRef.attachView(componentRef.hostView);
-
-    const hostElement = componentRef.location.nativeElement as HTMLElement;
-    const assistantSection = hostElement.querySelector<HTMLElement>('section');
-    if (assistantSection) {
-      assistantSection.className = 'relative z-10 mb-4 block w-full';
-    }
-    separator.insertAdjacentElement('afterend', hostElement);
-    this.vitalsAssistantRef = componentRef;
-  }
-
-  private destroyVitalsAssistant(): void {
-    if (!this.vitalsAssistantRef) return;
-    this.applicationRef.detachView(this.vitalsAssistantRef.hostView);
-    this.vitalsAssistantRef.destroy();
-    this.vitalsAssistantRef = null;
-  }
-
-  private applyVitalsAssistantProposal(proposal: AiVitalsProposal): void {
+  applyVitalsAssistantProposal(proposal: AiVitalsProposal): void {
     const vitals = proposal.vitals;
     if (typeof vitals.temperature === 'number') this.vitalsTemp = vitals.temperature;
     if (typeof vitals.weight === 'number') this.vitalsWeight = vitals.weight;
@@ -362,10 +358,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (typeof vitals.glycemia === 'number') this.vitalsGlycemia = vitals.glycemia;
     if (typeof vitals.respiratoryRate === 'number') this.vitalsResp = vitals.respiratoryRate;
     if (typeof vitals.painScale === 'number') this.vitalsPain = vitals.painScale;
-    this.vitalsAssistantRef?.setInput('currentVitals', this.currentVitalsForAssistant());
   }
 
-  private currentVitalsForAssistant(): Partial<Record<AiVitalField, number>> {
+  currentVitalsForAssistant(): Partial<Record<AiVitalField, number>> {
     const values: Array<[AiVitalField, number | undefined]> = [
       ['temperature', this.vitalsTemp],
       ['weight', this.vitalsWeight],
