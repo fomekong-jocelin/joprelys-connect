@@ -4,18 +4,18 @@ import { I18nService } from '../core/i18n/i18n.service';
 import { AiConsultationApiService, AiSessionResponse } from './ai-consultation-api.service';
 import { VoiceAssistantPanelComponent } from './voice-assistant-panel.component';
 
-describe('VoiceAssistantPanelComponent conversational fallback', () => {
+describe('VoiceAssistantPanelComponent focused consultation flow', () => {
   let fixture: ComponentFixture<VoiceAssistantPanelComponent>;
   let component: VoiceAssistantPanelComponent;
   let api: {
-    loadQrCode: ReturnType<typeof vi.fn>;
     getSession: ReturnType<typeof vi.fn>;
     transcribeAudio: ReturnType<typeof vi.fn>;
+    startSession: ReturnType<typeof vi.fn>;
+    synthesizeSpeech: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
     api = {
-      loadQrCode: vi.fn().mockReturnValue(of(new Blob())),
       getSession: vi.fn().mockReturnValue(of(null)),
       transcribeAudio: vi.fn().mockReturnValue(of({
         sessionId: 'session-1',
@@ -23,18 +23,18 @@ describe('VoiceAssistantPanelComponent conversational fallback', () => {
         status: 'PENDING_REVIEW',
         expiresAt: '2026-07-26T10:00:00Z',
       })),
+      startSession: vi.fn().mockReturnValue(of(activeSession())),
+      synthesizeSpeech: vi.fn().mockReturnValue(of(new Blob())),
     };
+
     await TestBed.configureTestingModule({
       imports: [VoiceAssistantPanelComponent],
       providers: [
-        {
-          provide: AiConsultationApiService,
-          useValue: api,
-        },
+        { provide: AiConsultationApiService, useValue: api },
         {
           provide: I18nService,
           useValue: {
-            t: (key: string, fallback?: string) => fallback ?? key,
+            t: (_key: string, fallback?: string) => fallback ?? _key,
             currentLanguage: () => 'fr',
           },
         },
@@ -44,34 +44,32 @@ describe('VoiceAssistantPanelComponent conversational fallback', () => {
     fixture = TestBed.createComponent(VoiceAssistantPanelComponent);
     component = fixture.componentInstance;
     component.visitId = 'visit-1';
+    component.session.set(activeSession());
+  });
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('should never synthesize the generic greeting from the parent panel', () => {
+    (component as any).refreshSession();
+
+    expect(api.synthesizeSpeech).not.toHaveBeenCalled();
+  });
+
+  it('should switch from realtime to dictation without deleting the session', () => {
     component.conversationMode.set(true);
-    component.realtimeActive.set(false);
-    component.session.set({
-      pendingTranscript: null,
-      revisions: [],
-      clarifications: [],
-    } as unknown as AiSessionResponse);
-  });
+    component.realtimeActive.set(true);
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
+    component.finishRealtime();
 
-  it('should never restart classic recording after assistant speech', () => {
-    const startRecording = vi
-      .spyOn(component as any, 'startRecording')
-      .mockResolvedValue(undefined);
-
-    (component as any).finishSpeaking();
-
-    expect(startRecording).not.toHaveBeenCalled();
+    expect(component.conversationMode()).toBe(false);
+    expect(component.realtimeActive()).toBe(false);
+    expect(component.session()).not.toBeNull();
   });
 
   it('should block classic recording while a clarification is pending', () => {
     component.session.set({
-      pendingTranscript: null,
+      ...activeSession(),
       clarifications: [{ status: 'PENDING' }],
-      revisions: [],
     } as unknown as AiSessionResponse);
 
     expect(component.recordingBlocked()).toBe(true);
@@ -87,7 +85,8 @@ describe('VoiceAssistantPanelComponent conversational fallback', () => {
     expect(component.errorMessage()).toContain('Aucune parole détectée');
   });
 
-  it('should stage classic speech for review even in conversation mode', () => {
+  it('should stage classic speech for explicit review', () => {
+    component.conversationMode.set(false);
     (component as any).handleClassicCapture({
       audio: new Blob(['encoded-speech'], { type: 'audio/webm' }),
       hasSpeech: true,
@@ -97,4 +96,22 @@ describe('VoiceAssistantPanelComponent conversational fallback', () => {
     expect(component.session()?.pendingTranscript).toBe('Patient sans fièvre');
     expect(component.session()?.transcriptStatus).toBe('PENDING_REVIEW');
   });
+
+  function activeSession(): AiSessionResponse {
+    return {
+      sessionId: 'session-1',
+      visitId: 'visit-1',
+      status: 'ACTIVE',
+      expiresAt: '2026-07-26T22:00:00Z',
+      draft: {},
+      transcript: null,
+      pendingTranscript: null,
+      transcriptStatus: 'NONE',
+      conversation: [],
+      clarifications: [],
+      revisions: [],
+      assistantMessage: 'Bonjour docteur. Je vous écoute.',
+      needsClarification: false,
+    };
+  }
 });
