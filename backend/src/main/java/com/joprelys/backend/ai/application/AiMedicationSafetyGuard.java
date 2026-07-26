@@ -3,23 +3,27 @@ package com.joprelys.backend.ai.application;
 import com.joprelys.backend.ai.application.AiClinicalResponseParser.ParsedChange;
 import com.joprelys.backend.ai.application.AiClinicalResponseParser.ParsedClarification;
 import com.joprelys.backend.ai.application.AiClinicalResponseParser.ParsedResponse;
+import com.joprelys.backend.medication.reference.MedicationReferenceDuplicateDetector;
+import com.joprelys.backend.medication.reference.MedicationReferenceMatch;
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Narrow deterministic medication safety guard.
+ * Deterministic medication safety boundary applied before a prescription can
+ * become a clinician-facing revision.
  *
- * <p>This intentionally checks only conflicts that can be established without
- * a pharmacological knowledge base: exact medication duplication and an exact
- * medication name explicitly present in documented allergies. Broader drug
- * classes and interactions require an authoritative medication referential and
- * must not be guessed here.</p>
+ * <p>Exact local checks always run first. When a medication reference is
+ * available, Joprelys can additionally hold a prescription when two different
+ * names are proven to represent the same reference concept or active
+ * ingredient. Absence of reference evidence is never interpreted as safe.</p>
  */
 final class AiMedicationSafetyGuard {
 
@@ -27,9 +31,17 @@ final class AiMedicationSafetyGuard {
     private static final String PRESCRIPTION = "prescription";
 
     private final ObjectMapper objectMapper;
+    private final MedicationReferenceDuplicateDetector referenceDuplicateDetector;
 
     AiMedicationSafetyGuard(ObjectMapper objectMapper) {
+        this(objectMapper, null);
+    }
+
+    AiMedicationSafetyGuard(
+            ObjectMapper objectMapper,
+            MedicationReferenceDuplicateDetector referenceDuplicateDetector) {
         this.objectMapper = objectMapper;
+        this.referenceDuplicateDetector = referenceDuplicateDetector;
     }
 
     ParsedResponse enforce(
@@ -54,10 +66,34 @@ final class AiMedicationSafetyGuard {
 
         for (String drugName : drugNames) {
             if (matchesDocumentedAllergy(drugName, clinicalContext)) {
-                return requireConfirmation(parsed, drugName, SafetyReason.DOCUMENTED_ALLERGY, locale);
+                return requireConfirmation(
+                        parsed, drugName, null, SafetyReason.DOCUMENTED_ALLERGY, locale);
             }
             if (matchesActiveMedication(drugName, clinicalContext)) {
-                return requireConfirmation(parsed, drugName, SafetyReason.ACTIVE_DUPLICATE, locale);
+                return requireConfirmation(
+                        parsed, drugName, null, SafetyReason.ACTIVE_DUPLICATE, locale);
+            }
+
+            Optional<MedicationReferenceMatch> allergyMatch = findReferenceAllergy(
+                    drugName, clinicalContext);
+            if (allergyMatch.isPresent()) {
+                return requireConfirmation(
+                        parsed,
+                        drugName,
+                        allergyMatch.orElseThrow(),
+                        SafetyReason.REFERENCE_DOCUMENTED_ALLERGY,
+                        locale);
+            }
+
+            Optional<MedicationReferenceMatch> activeMatch = findReferenceActiveMedication(
+                    drugName, clinicalContext);
+            if (activeMatch.isPresent()) {
+                return requireConfirmation(
+                        parsed,
+                        drugName,
+                        activeMatch.orElseThrow(),
+                        SafetyReason.REFERENCE_ACTIVE_DUPLICATE,
+                        locale);
             }
         }
         return parsed;
@@ -66,13 +102,29 @@ final class AiMedicationSafetyGuard {
     private ParsedResponse requireConfirmation(
             ParsedResponse parsed,
             String drugName,
+            MedicationReferenceMatch referenceMatch,
             SafetyReason reason,
             String locale) {
-        String question = safetyQuestion(drugName, reason, locale);
+        String question = safetyQuestion(drugName, referenceMatch, reason, locale);
         List<ParsedChange> safeChanges = parsed.changes().stream()
                 .filter(change -> !PRESCRIPTION.equals(change.field()))
                 .toList();
-        log.warn("Medication proposal held for clinician confirmation reason={} drug={}", reason, drugName);
+        if (referenceMatch == null) {
+            log.warn(
+                    "Medication proposal held for clinician confirmation reason={} drug={}",
+                    reason,
+                    drugName);
+        } else {
+            log.warn(
+                    "Medication proposal held for reference confirmation reason={} drug={} matched={} source={} status={} proposedConcept={} matchedConcept={}",
+                    reason,
+                    drugName,
+                    referenceMatch.matchedName(),
+                    referenceMatch.source(),
+                    referenceMatch.status(),
+                    referenceMatch.proposedConceptId(),
+                    referenceMatch.matchedConceptId());
+        }
         return new ParsedResponse(
                 safeChanges,
                 question,
@@ -125,19 +177,65 @@ final class AiMedicationSafetyGuard {
     private boolean matchesActiveMedication(
             String drugName,
             Map<String, Object> clinicalContext) {
+        String normalizedDrug = normalize(drugName);
+        return activeMedicationNames(clinicalContext).stream()
+                .map(this::normalize)
+                .anyMatch(normalizedDrug::equals);
+    }
+
+    private Optional<MedicationReferenceMatch> findReferenceAllergy(
+            String drugName,
+            Map<String, Object> clinicalContext) {
+        if (referenceDuplicateDetector == null) {
+            return Optional.empty();
+        }
+        return referenceDuplicateDetector.findEquivalent(
+                drugName,
+                documentedAllergyEntries(clinicalContext));
+    }
+
+    private Optional<MedicationReferenceMatch> findReferenceActiveMedication(
+            String drugName,
+            Map<String, Object> clinicalContext) {
+        if (referenceDuplicateDetector == null) {
+            return Optional.empty();
+        }
+        return referenceDuplicateDetector.findEquivalent(
+                drugName,
+                activeMedicationNames(clinicalContext));
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> documentedAllergyEntries(Map<String, Object> clinicalContext) {
+        Object patientValue = clinicalContext == null ? null : clinicalContext.get("patient");
+        if (!(patientValue instanceof Map<?, ?> patient)) {
+            return List.of();
+        }
+        Object allergyValue = patient.get("allergies");
+        if (!(allergyValue instanceof String allergies) || allergies.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(allergies.split("[;,|\\n\\r]+"))
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .toList();
+    }
+
+    private List<String> activeMedicationNames(Map<String, Object> clinicalContext) {
         Object medicationsValue = clinicalContext == null ? null : clinicalContext.get("activeMedications");
         if (!(medicationsValue instanceof List<?> medications)) {
-            return false;
+            return List.of();
         }
-        String normalizedDrug = normalize(drugName);
+        List<String> names = new ArrayList<>();
         for (Object value : medications) {
             if (value instanceof Map<?, ?> medication
                     && medication.get("drugName") instanceof String activeName
-                    && normalize(activeName).equals(normalizedDrug)) {
-                return true;
+                    && !activeName.isBlank()) {
+                names.add(activeName.trim());
             }
         }
-        return false;
+        return List.copyOf(names);
     }
 
     private boolean containsWholeTerm(String haystack, String needle) {
@@ -148,15 +246,37 @@ final class AiMedicationSafetyGuard {
                 || haystack.equals(needle);
     }
 
-    private String safetyQuestion(String drugName, SafetyReason reason, String locale) {
+    private String safetyQuestion(
+            String drugName,
+            MedicationReferenceMatch referenceMatch,
+            SafetyReason reason,
+            String locale) {
         if ("en".equalsIgnoreCase(locale)) {
-            return reason == SafetyReason.DOCUMENTED_ALLERGY
-                    ? "The record lists an allergy to " + drugName + ". Do you confirm this prescription?"
-                    : drugName + " is already listed as an active medication. Do you confirm adding it to this prescription?";
+            return switch (reason) {
+                case DOCUMENTED_ALLERGY ->
+                        "The record lists an allergy to " + drugName + ". Do you confirm this prescription?";
+                case ACTIVE_DUPLICATE ->
+                        drugName + " is already listed as an active medication. Do you confirm adding it to this prescription?";
+                case REFERENCE_DOCUMENTED_ALLERGY ->
+                        "Joprelys matches " + drugName + " to the documented allergy "
+                                + referenceMatch.matchedName() + " in the medication reference. Do you confirm this prescription?";
+                case REFERENCE_ACTIVE_DUPLICATE ->
+                        "Joprelys matches " + drugName + " to the active medication "
+                                + referenceMatch.matchedName() + " in the medication reference. Do you confirm adding it?";
+            };
         }
-        return reason == SafetyReason.DOCUMENTED_ALLERGY
-                ? "Le dossier mentionne une allergie à " + drugName + ". Confirmez-vous cette prescription ?"
-                : drugName + " figure déjà parmi les traitements actifs. Confirmez-vous son ajout à cette ordonnance ?";
+        return switch (reason) {
+            case DOCUMENTED_ALLERGY ->
+                    "Le dossier mentionne une allergie à " + drugName + ". Confirmez-vous cette prescription ?";
+            case ACTIVE_DUPLICATE ->
+                    drugName + " figure déjà parmi les traitements actifs. Confirmez-vous son ajout à cette ordonnance ?";
+            case REFERENCE_DOCUMENTED_ALLERGY ->
+                    "Joprelys rapproche " + drugName + " de l'allergie documentée "
+                            + referenceMatch.matchedName() + " dans le référentiel médicament. Confirmez-vous cette prescription ?";
+            case REFERENCE_ACTIVE_DUPLICATE ->
+                    "Joprelys rapproche " + drugName + " du traitement actif "
+                            + referenceMatch.matchedName() + " dans le référentiel médicament. Confirmez-vous son ajout ?";
+        };
     }
 
     private String normalize(String value) {
@@ -173,6 +293,8 @@ final class AiMedicationSafetyGuard {
 
     private enum SafetyReason {
         DOCUMENTED_ALLERGY,
-        ACTIVE_DUPLICATE
+        ACTIVE_DUPLICATE,
+        REFERENCE_DOCUMENTED_ALLERGY,
+        REFERENCE_ACTIVE_DUPLICATE
     }
 }
