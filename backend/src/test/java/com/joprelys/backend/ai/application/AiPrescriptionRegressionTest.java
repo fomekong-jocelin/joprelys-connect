@@ -24,6 +24,7 @@ class AiPrescriptionRegressionTest {
     void shouldNeverCreatePrescriptionWhenLatestDictationContainsNoMedication() {
         AiProvider provider = mock(AiProvider.class);
         VisitService visitService = mock(VisitService.class);
+        ClinicalContextAssembler contextAssembler = mock(ClinicalContextAssembler.class);
         VisitEntity visit = mock(VisitEntity.class);
         UUID visitId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
@@ -31,6 +32,8 @@ class AiPrescriptionRegressionTest {
 
         when(visitService.getVisit(visitId)).thenReturn(visit);
         when(visit.getStatus()).thenReturn("EN_COURS");
+        when(contextAssembler.assemble(visitId)).thenReturn(Map.of(
+                "patient", Map.of("allergies", "Pénicilline")));
         when(provider.chat(anyList(), anyString())).thenReturn(new AiChatResponse("""
                 {
                   "changes": [
@@ -72,6 +75,7 @@ class AiPrescriptionRegressionTest {
                 visitService,
                 objectMapper,
                 new AiClinicalResponseParser(objectMapper),
+                contextAssembler,
                 new AiRevisionManager(),
                 new AiClarificationManager(properties));
 

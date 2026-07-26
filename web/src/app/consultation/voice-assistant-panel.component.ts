@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import {
   Component,
-  ComponentRef,
   EventEmitter,
   Input,
   OnDestroy,
@@ -32,6 +31,7 @@ import {
   AiMessageResponse,
   AiSessionResponse,
 } from './ai-consultation-api.service';
+import { RealtimeVoiceControllerComponent } from './realtime-voice-controller.component';
 
 export type { AiConsultationDraft } from './ai-consultation-api.service';
 
@@ -46,6 +46,7 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
     AiProposalPanelComponent,
     AiTranscriptReviewComponent,
     AiDraftPreviewComponent,
+    RealtimeVoiceControllerComponent,
   ],
   template: `
     <section class="overflow-hidden rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] shadow-sm">
@@ -61,7 +62,10 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
               {{ i18n.t('consultation.ai.title', 'Assistant vocal IA') }}
             </h2>
             <p class="text-xs text-[var(--text-muted)]">
-              Échange vocal clinique, questions ciblées, structuration et validation médicale explicite.
+              {{ i18n.t(
+                'consultation.ai.voiceSubtitle',
+                'Échange vocal clinique, questions ciblées, structuration et validation médicale explicite.'
+              ) }}
             </p>
           </div>
         </div>
@@ -69,7 +73,9 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
           @if (conversationMode()) {
             <span class="inline-flex items-center gap-1.5 rounded-[4px] border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-cyan-700 dark:border-cyan-900 dark:bg-cyan-950/30 dark:text-cyan-300">
               <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-500"></span>
-              Audio conversationnel
+              {{ realtimeActive()
+                ? i18n.t('consultation.ai.realtimeBadge', 'Realtime sécurisé')
+                : i18n.t('consultation.ai.conversationalAudio', 'Audio conversationnel') }}
             </span>
           }
           <span
@@ -84,7 +90,7 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
         </div>
       </header>
 
-      <div class="grid grid-cols-1 gap-5 p-5 md:grid-cols-[180px_1fr]">
+      <div class="grid grid-cols-1 gap-5 p-4 sm:p-5 md:grid-cols-[180px_1fr]">
         <aside class="hidden md:block">
           <div class="rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] p-3 text-center shadow-xs">
             @if (qrCodeUrl()) {
@@ -113,18 +119,35 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
                 {{ i18n.t('consultation.ai.startTitle', 'Démarrer une conversation clinique') }}
               </p>
               <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                L’assistant écoute, structure et pose des questions. Aucune donnée clinique n’est acceptée ou sauvegardée automatiquement.
+                {{ i18n.t(
+                  'consultation.ai.startRealtimeHelp',
+                  'L’assistant écoute, structure et pose des questions. Aucune donnée clinique n’est acceptée ou sauvegardée automatiquement.'
+                ) }}
               </p>
               <button
                 type="button"
                 (click)="startSession()"
                 [disabled]="busy() || !visitId"
-                class="mt-3 inline-flex items-center justify-center rounded-[4px] bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
+                class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-[4px] bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50 sm:w-auto"
               >
-                {{ busy() ? i18n.t('consultation.ai.starting', 'Démarrage…') : 'Activer le copilote vocal' }}
+                {{ busy()
+                  ? i18n.t('consultation.ai.starting', 'Démarrage…')
+                  : i18n.t('consultation.ai.activateVoiceCopilot', 'Activer le copilote vocal') }}
               </button>
             </div>
           } @else {
+            @if (conversationMode()) {
+              <app-realtime-voice-controller
+                [visitId]="visitId"
+                [session]="session()"
+                [enabled]="conversationMode()"
+                [blocked]="busy() || !!session()?.pendingTranscript || hasPendingRevision()"
+                (message)="finishRealtimeMessage($event)"
+                (activeChange)="realtimeActive.set($event)"
+                (realtimeError)="handleRealtimeError($event)"
+              />
+            }
+
             <app-ai-assistant-input
               [busy]="busy()"
               [recording]="recording()"
@@ -154,7 +177,7 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
               (decided)="decideProposal($event)"
             />
 
-            @if (!conversationMode()) {
+            @if (!conversationMode() || session()?.pendingTranscript) {
               <app-ai-transcript-review
                 [transcript]="session()?.pendingTranscript"
                 [busy]="busy()"
@@ -188,6 +211,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   readonly recording = signal(false);
   readonly speaking = signal(false);
   readonly conversationMode = signal(true);
+  readonly realtimeActive = signal(false);
   readonly audioLevel = signal(0);
   readonly errorMessage = signal('');
   readonly composerResetToken = signal(0);
@@ -235,7 +259,9 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   recordingBlocked(): boolean {
-    return !!this.session()?.pendingTranscript || this.hasPendingRevision();
+    return this.realtimeActive()
+      || !!this.session()?.pendingTranscript
+      || this.hasPendingRevision();
   }
 
   hasPendingClarification(): boolean {
@@ -252,7 +278,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     if (!this.visitId || this.busy()) return;
     this.startBusy();
     this.api.startSession(this.visitId, this.sanitizedCurrentDraft()).subscribe({
-      next: response => this.completeSessionUpdate(response, true),
+      next: response => this.completeSessionUpdate(response, !this.conversationMode()),
       error: error => this.handleError(error, 'Impossible de démarrer la session IA.'),
     });
   }
@@ -261,12 +287,11 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     const enabled = !this.conversationMode();
     this.conversationMode.set(enabled);
     this.stopAssistantAudio();
-    if (enabled) {
-      this.speakCurrentAssistantTurn(true);
-    }
+    if (!enabled) this.realtimeActive.set(false);
   }
 
   toggleRecording(): void {
+    if (this.realtimeActive()) return;
     if (this.recording()) {
       this.mediaRecorder?.stop();
       return;
@@ -315,7 +340,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
           request.decision,
         );
     operation.subscribe({
-      next: response => this.completeSessionUpdate(response, true),
+      next: response => this.completeSessionUpdate(response, !this.realtimeActive()),
       error: error => this.handleError(error, 'La décision n’a pas pu être enregistrée.'),
     });
   }
@@ -352,6 +377,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     this.api.deleteSession(this.visitId).subscribe({
       next: () => {
         this.session.set(null);
+        this.realtimeActive.set(false);
         this.composerResetToken.update(value => value + 1);
         this.busy.set(false);
       },
@@ -366,8 +392,22 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     }
   }
 
+  finishRealtimeMessage(response: AiMessageResponse): void {
+    this.updateSessionFromMessage(response);
+    this.composerResetToken.update(value => value + 1);
+    this.busy.set(false);
+  }
+
+  handleRealtimeError(message: string): void {
+    if (!message.trim()) return;
+    this.errorMessage.set(message.trim());
+  }
+
   private async startRecording(): Promise<void> {
-    if (!this.mediaRecorderSupported || this.busy() || this.recordingBlocked()) return;
+    if (this.realtimeActive()
+      || !this.mediaRecorderSupported
+      || this.busy()
+      || this.recordingBlocked()) return;
     if (!this.session()) {
       this.startSession();
       this.errorMessage.set('Activez la session puis relancez la dictée.');
@@ -450,7 +490,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     this.updateSessionFromMessage(response);
     this.composerResetToken.update(value => value + 1);
     this.busy.set(false);
-    this.speakCurrentAssistantTurn(true);
+    if (!this.realtimeActive()) this.speakCurrentAssistantTurn(true);
   }
 
   private refreshSession(silent = false): void {
@@ -459,7 +499,9 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
         if (!response) return;
         const previousMessage = this.session()?.assistantMessage;
         this.session.set(response);
-        if (this.conversationMode() && response.assistantMessage !== previousMessage) {
+        if (this.conversationMode()
+          && !this.realtimeActive()
+          && response.assistantMessage !== previousMessage) {
           this.speakCurrentAssistantTurn(true);
         }
       },
@@ -506,11 +548,14 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   private completeSessionUpdate(response: AiSessionResponse, speak = false): void {
     this.session.set(response);
     this.busy.set(false);
-    if (speak) this.speakCurrentAssistantTurn(true);
+    if (speak && !this.realtimeActive()) this.speakCurrentAssistantTurn(true);
   }
 
   private speakCurrentAssistantTurn(autoListen: boolean): void {
-    if (!this.conversationMode() || this.busy() || this.recording()) return;
+    if (this.realtimeActive()
+      || !this.conversationMode()
+      || this.busy()
+      || this.recording()) return;
     const clarification = this.pendingClarification();
     const text = clarification?.question?.trim()
       || this.session()?.assistantMessage?.trim()
@@ -554,7 +599,11 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   private canAutoListen(): boolean {
-    if (!this.conversationMode() || this.busy() || this.recording() || this.speaking()) return false;
+    if (this.realtimeActive()
+      || !this.conversationMode()
+      || this.busy()
+      || this.recording()
+      || this.speaking()) return false;
     if (this.session()?.pendingTranscript || this.hasPendingRevision()) return false;
     return !!this.session();
   }

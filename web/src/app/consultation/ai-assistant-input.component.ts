@@ -65,32 +65,34 @@ import { I18nService } from '../core/i18n/i18n.service';
       }
 
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <button
-          type="button"
-          (click)="toggleRecording.emit()"
-          [disabled]="busy || speaking || !mediaRecorderSupported || blocked"
-          class="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[6px] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
-          [ngClass]="recording ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]'"
-        >
-          @if (recording) {
-            <span class="h-3 w-3 animate-pulse rounded-[2px] bg-white"></span>
-            {{ conversationMode
-              ? i18n.t('consultation.ai.finishAnswer', 'Terminer ma réponse')
-              : i18n.t('consultation.ai.stopRecordingTranscribe', 'Arrêter et préparer la transcription') }}
-          } @else {
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
-            </svg>
-            {{ conversationMode
-              ? i18n.t('consultation.ai.talkToJoprelys', 'Parler à Joprelys')
-              : i18n.t('consultation.ai.record', 'Démarrer la dictée') }}
-          }
-        </button>
+        @if (!(conversationMode && blocked)) {
+          <button
+            type="button"
+            (click)="toggleRecording.emit()"
+            [disabled]="busy || speaking || !mediaRecorderSupported || blocked"
+            class="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[6px] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            [ngClass]="recording ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]'"
+          >
+            @if (recording) {
+              <span class="h-3 w-3 animate-pulse rounded-[2px] bg-white"></span>
+              {{ conversationMode
+                ? i18n.t('consultation.ai.finishAnswer', 'Terminer ma réponse')
+                : i18n.t('consultation.ai.stopRecordingTranscribe', 'Arrêter et préparer la transcription') }}
+            } @else {
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
+              </svg>
+              {{ conversationMode
+                ? i18n.t('consultation.ai.talkToJoprelys', 'Parler à Joprelys')
+                : i18n.t('consultation.ai.record', 'Démarrer la dictée') }}
+            }
+          </button>
+        }
         <button
           type="button"
           (click)="endSession.emit()"
           [disabled]="busy || recording || speaking"
-          class="inline-flex min-h-12 items-center justify-center rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-3 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] disabled:opacity-50"
+          class="inline-flex min-h-12 flex-1 items-center justify-center rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-3 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] disabled:opacity-50 sm:flex-none"
         >
           {{ i18n.t('consultation.ai.reset', 'Terminer la session') }}
         </button>

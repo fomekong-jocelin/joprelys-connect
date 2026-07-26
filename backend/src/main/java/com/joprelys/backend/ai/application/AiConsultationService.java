@@ -4,7 +4,6 @@ import static com.joprelys.backend.ai.application.AiConsultationPrompt.SYSTEM_PR
 
 import com.joprelys.backend.ai.application.AiClinicalResponseParser.ParsedResponse;
 import com.joprelys.backend.ai.application.AiConsultationContract.ClarificationView;
-import com.joprelys.backend.ai.application.AiConsultationContract.ConversationMessageView;
 import com.joprelys.backend.ai.application.AiConsultationContract.MessageView;
 import com.joprelys.backend.ai.application.AiConsultationContract.RevisionView;
 import com.joprelys.backend.ai.application.AiConsultationContract.SessionView;
@@ -36,17 +35,16 @@ import tools.jackson.databind.ObjectMapper;
 public class AiConsultationService {
 
     private static final Logger log = LoggerFactory.getLogger(AiConsultationService.class);
-    private static final int MAX_AUDIO_BYTES = 10 * 1024 * 1024;
-    private static final int MAX_TRANSCRIPT_LENGTH = 12000;
-    private static final List<String> ALLOWED_MIME_TYPES = List.of(
-            "audio/webm", "audio/mp4", "audio/mpeg", "audio/wav");
 
     private final AiProvider aiProvider;
     private final AiProperties properties;
     private final VisitService visitService;
-    private final ObjectMapper objectMapper;
+    private final AiConsultationMessageBuilder messageBuilder;
     private final AiClinicalResponseParser responseParser;
+    private final ClinicalContextAssembler clinicalContextAssembler;
     private final AiClinicalGroundingGuard groundingGuard;
+    private final AiMedicationSafetyGuard medicationSafetyGuard;
+    private final AiClinicalToolDispatcher toolDispatcher = new AiClinicalToolDispatcher();
     private final AiRevisionManager revisionManager;
     private final AiClarificationManager clarificationManager;
     private final ConcurrentMap<SessionKey, AiConsultationSessionState> sessions =
@@ -58,14 +56,17 @@ public class AiConsultationService {
             VisitService visitService,
             ObjectMapper objectMapper,
             AiClinicalResponseParser responseParser,
+            ClinicalContextAssembler clinicalContextAssembler,
             AiRevisionManager revisionManager,
             AiClarificationManager clarificationManager) {
         this.aiProvider = aiProvider;
         this.properties = properties;
         this.visitService = visitService;
-        this.objectMapper = objectMapper;
+        this.messageBuilder = new AiConsultationMessageBuilder(objectMapper);
         this.responseParser = responseParser;
+        this.clinicalContextAssembler = clinicalContextAssembler;
         this.groundingGuard = new AiClinicalGroundingGuard(objectMapper);
+        this.medicationSafetyGuard = new AiMedicationSafetyGuard(objectMapper);
         this.revisionManager = revisionManager;
         this.clarificationManager = clarificationManager;
     }
@@ -90,18 +91,13 @@ public class AiConsultationService {
             Map<String, String> initialDraft,
             String requestedLocale) {
         ensureActiveVisit(visitId);
-        String locale = normalizeLocale(requestedLocale);
+        String locale = messageBuilder.normalizeLocale(requestedLocale);
         SessionKey key = sessionKey(visitId, userId, organizationId);
         AiConsultationSessionState state = new AiConsultationSessionState(
-                UUID.randomUUID(), expiry(), locale);
-        mergeInitialDraft(state.draft, initialDraft);
-        state.assistantMessage = initialAssistantMessage(locale);
-        appendVisibleMessage(
-                state,
-                "ASSISTANT",
-                state.assistantMessage,
-                "SYSTEM",
-                false);
+                UUID.randomUUID(), visitId, expiry(), locale);
+        AiConsultationSessionSupport.mergeInitialDraft(state.draft, initialDraft);
+        state.assistantMessage = messageBuilder.initialAssistantMessage(locale);
+        appendVisibleMessage(state, "ASSISTANT", state.assistantMessage, "SYSTEM", false);
         sessions.put(key, state);
         return toSessionView(visitId, state);
     }
@@ -137,7 +133,7 @@ public class AiConsultationService {
             UUID userId,
             UUID organizationId,
             String text) {
-        validateText(text);
+        AiConsultationInputValidator.validateText(text);
         AiConsultationSessionState state = requireSession(
                 visitId, userId, organizationId);
         synchronized (state) {
@@ -159,17 +155,15 @@ public class AiConsultationService {
             UUID organizationId,
             UUID clarificationId,
             String answer) {
-        validateText(answer);
+        AiConsultationInputValidator.validateText(answer);
         AiConsultationSessionState state = requireSession(
                 visitId, userId, organizationId);
         synchronized (state) {
             revisionManager.ensureNoPendingRevision(state);
             ClarificationView clarification = clarificationManager.findPending(
                     state, clarificationId);
-            String modelText = "Réponse du médecin à une clarification structurée. Champ: "
-                    + clarification.field()
-                    + ". Question: " + clarification.question()
-                    + ". Réponse: " + answer.trim();
+            String modelText = messageBuilder.clarificationModelText(
+                    state.locale, clarification, answer.trim());
             return processMessageLocked(
                     state,
                     modelText,
@@ -187,12 +181,12 @@ public class AiConsultationService {
             UUID organizationId,
             byte[] audio,
             String contentType) {
-        validateAudio(audio, contentType);
+        AiConsultationInputValidator.validateAudio(audio, contentType);
         AiConsultationSessionState state = requireSession(
                 visitId, userId, organizationId);
         synchronized (state) {
             ensureReadyForNewInput(state);
-            String normalizedMime = normalizeMimeType(contentType);
+            String normalizedMime = AiConsultationInputValidator.normalizeMimeType(contentType);
             try {
                 AiTranscription transcription = aiProvider.transcribeAudio(
                         audio, normalizedMime, state.locale);
@@ -203,7 +197,8 @@ public class AiConsultationService {
                             org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
                 }
                 String transcript = limit(
-                        transcription.text().trim(), MAX_TRANSCRIPT_LENGTH);
+                        transcription.text().trim(),
+                        AiConsultationInputValidator.MAX_TRANSCRIPT_LENGTH);
                 state.pendingTranscript = transcript;
                 state.transcriptStatus = "PENDING_REVIEW";
                 state.expiresAt = expiry();
@@ -228,7 +223,7 @@ public class AiConsultationService {
             UUID userId,
             UUID organizationId,
             String transcript) {
-        validateText(transcript);
+        AiConsultationInputValidator.validateText(transcript);
         AiConsultationSessionState state = requireSession(
                 visitId, userId, organizationId);
         synchronized (state) {
@@ -324,10 +319,12 @@ public class AiConsultationService {
         String resolvedClarificationField = resolvedClarificationId == null
                 ? null
                 : clarificationManager.findPending(state, resolvedClarificationId).field();
+        Map<String, Object> clinicalContext = loadClinicalContext(state.visitId);
         List<AiMessage> providerMessages = new ArrayList<>(state.providerMessages);
-        providerMessages.add(AiMessage.user(buildUserMessage(
-                modelText, state.draft, state.locale)));
+        providerMessages.add(AiMessage.user(messageBuilder.buildUserMessage(
+                modelText, state.draft, state.locale, clinicalContext)));
         trimProviderConversation(providerMessages);
+
         try {
             AiChatResponse response = aiProvider.chat(
                     List.copyOf(providerMessages), SYSTEM_PROMPT);
@@ -336,26 +333,31 @@ public class AiConsultationService {
                         org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
             }
             ParsedResponse rawParsed = responseParser.parse(response.content());
-            ParsedResponse parsed = groundingGuard.enforce(
+            ParsedResponse grounded = groundingGuard.enforce(
                     rawParsed, visibleText, resolvedClarificationField, state.locale);
-            boolean groundingAdjustedOutput = parsed != rawParsed;
+            ParsedResponse parsed = "prescription".equals(resolvedClarificationField)
+                    ? grounded
+                    : medicationSafetyGuard.enforce(grounded, clinicalContext, state.locale);
+            var toolPlan = toolDispatcher.dispatch(parsed);
+            boolean adjustedOutput = parsed != rawParsed;
+
             if (resolvedClarificationId != null) {
                 clarificationManager.resolve(
                         state, resolvedClarificationId, clarificationAnswer);
             }
-            if (parsed.needsClarification()) {
-                clarificationManager.append(state, parsed.clarification());
+            if (toolPlan.clarification() != null) {
+                clarificationManager.append(state, toolPlan.clarification());
             }
-            RevisionView revision = parsed.needsClarification()
+            RevisionView revision = toolPlan.clarification() != null
                     ? null
-                    : revisionManager.createRevision(state, parsed.changes());
+                    : revisionManager.createRevision(state, toolPlan.changes());
             List<String> changedFields = revision == null
                     ? List.of()
                     : revision.proposals().stream()
                             .map(AiConsultationContract.FieldProposalView::field)
                             .toList();
             state.assistantMessage = parsed.assistantMessage();
-            state.needsClarification = parsed.needsClarification();
+            state.needsClarification = toolPlan.clarification() != null;
             if (transcript != null) {
                 state.transcript = transcript;
             }
@@ -363,7 +365,7 @@ public class AiConsultationService {
             state.providerMessages.clear();
             state.providerMessages.addAll(providerMessages);
             state.providerMessages.add(AiMessage.assistant(
-                    groundingAdjustedOutput ? parsed.assistantMessage() : response.content()));
+                    adjustedOutput ? parsed.assistantMessage() : response.content()));
             trimProviderConversation(state.providerMessages);
             appendVisibleMessage(state, "USER", visibleText, source, false);
             appendVisibleMessage(
@@ -379,6 +381,16 @@ public class AiConsultationService {
             log.warn("Échec génération brouillon IA provider={}", properties.provider());
             throw new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE, "AI_UNAVAILABLE");
+        }
+    }
+
+    private Map<String, Object> loadClinicalContext(UUID visitId) {
+        try {
+            return clinicalContextAssembler.assemble(visitId);
+        } catch (RuntimeException exception) {
+            log.error("Contexte clinique indisponible visitId={}", visitId, exception);
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE, "AI_CLINICAL_CONTEXT_UNAVAILABLE");
         }
     }
 
@@ -425,32 +437,6 @@ public class AiConsultationService {
         revisionManager.ensureNoPendingRevision(state);
     }
 
-    private void validateAudio(byte[] audio, String contentType) {
-        if (audio == null || audio.length == 0) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "AI_MESSAGE_INVALID");
-        }
-        if (audio.length > MAX_AUDIO_BYTES) {
-            throw new ResponseStatusException(
-                    HttpStatus.PAYLOAD_TOO_LARGE, "AI_AUDIO_TOO_LARGE");
-        }
-        if (!ALLOWED_MIME_TYPES.contains(normalizeMimeType(contentType))) {
-            throw new ResponseStatusException(
-                    HttpStatus.UNSUPPORTED_MEDIA_TYPE, "AI_AUDIO_TYPE_UNSUPPORTED");
-        }
-    }
-
-    private void validateText(String text) {
-        if (text == null || text.isBlank()) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "AI_MESSAGE_INVALID");
-        }
-        if (text.length() > MAX_TRANSCRIPT_LENGTH) {
-            throw new ResponseStatusException(
-                    HttpStatus.PAYLOAD_TOO_LARGE, "AI_TRANSCRIPT_TOO_LARGE");
-        }
-    }
-
     private void ensureActiveVisit(UUID visitId) {
         var visit = visitService.getVisit(visitId);
         if (!"EN_COURS".equals(visit.getStatus())) {
@@ -458,46 +444,9 @@ public class AiConsultationService {
         }
     }
 
-    private String buildUserMessage(
-            String text,
-            Map<String, String> draft,
-            String locale) {
-        try {
-            String languageInstruction = "en".equals(locale)
-                    ? "Reply in English."
-                    : "Réponds en français.";
-            return "Session locale: " + locale
-                    + "\n" + languageInstruction
-                    + "\nBrouillon accepté (contexte uniquement, ne pas le recopier spontanément): "
-                    + objectMapper.writeValueAsString(draft)
-                    + "\nNouvelle dictée, correction ou réponse du médecin: " + text;
-        } catch (Exception exception) {
-            throw new ResponseStatusException(
-                    org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
-        }
-    }
-
-    private void mergeInitialDraft(
-            Map<String, String> target,
-            Map<String, String> source) {
-        if (source == null) {
-            return;
-        }
-        source.forEach((field, value) -> {
-            if (AiClinicalResponseParser.ALLOWED_FIELDS.contains(field)
-                    && value != null
-                    && !value.isBlank()) {
-                int maximum = field.equals("followUp") ? 1000 : 5000;
-                target.put(field, limit(value.trim(), maximum));
-            }
-        });
-    }
-
     private void trimProviderConversation(List<AiMessage> messages) {
-        int maximum = Math.max(2, properties.maxConversationTurns() * 2);
-        while (messages.size() > maximum) {
-            messages.removeFirst();
-        }
+        AiConsultationSessionSupport.trimProviderConversation(
+                messages, properties.maxConversationTurns());
     }
 
     private void appendVisibleMessage(
@@ -506,36 +455,19 @@ public class AiConsultationService {
             String content,
             String source,
             boolean needsClarification) {
-        state.conversation.add(new ConversationMessageView(
-                UUID.randomUUID(),
+        AiConsultationSessionSupport.appendVisibleMessage(
+                state,
                 role,
-                limit(content == null ? "" : content.trim(), MAX_TRANSCRIPT_LENGTH),
+                content,
                 source,
-                Instant.now(),
-                needsClarification));
-        int maximum = Math.max(5, properties.maxConversationTurns() * 2 + 1);
-        while (state.conversation.size() > maximum) {
-            state.conversation.removeFirst();
-        }
+                needsClarification,
+                properties.maxConversationTurns());
     }
 
     private SessionView toSessionView(
             UUID visitId,
             AiConsultationSessionState state) {
-        return new SessionView(
-                state.sessionId,
-                visitId,
-                "ACTIVE",
-                state.expiresAt,
-                Map.copyOf(state.draft),
-                state.transcript,
-                state.pendingTranscript,
-                state.transcriptStatus,
-                List.copyOf(state.conversation),
-                List.copyOf(state.clarifications),
-                List.copyOf(state.revisions),
-                state.assistantMessage,
-                state.needsClarification);
+        return AiConsultationSessionSupport.toSessionView(visitId, state);
     }
 
     private SessionKey sessionKey(
@@ -548,22 +480,6 @@ public class AiConsultationService {
     private Instant expiry() {
         long seconds = Math.max(5, properties.sessionTtlMinutes()) * 60L;
         return Instant.now().plusSeconds(seconds);
-    }
-
-    private String normalizeMimeType(String contentType) {
-        return contentType == null
-                ? ""
-                : contentType.split(";", 2)[0].trim().toLowerCase();
-    }
-
-    private String normalizeLocale(String locale) {
-        return "en".equalsIgnoreCase(locale) ? "en" : "fr";
-    }
-
-    private String initialAssistantMessage(String locale) {
-        return "en".equals(locale)
-                ? "Hello doctor. I’m listening."
-                : "Bonjour docteur. Je vous écoute.";
     }
 
     private String organizationKey(UUID organizationId) {

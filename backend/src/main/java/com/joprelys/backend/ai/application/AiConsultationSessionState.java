@@ -14,6 +14,7 @@ import java.util.UUID;
 final class AiConsultationSessionState {
 
     final UUID sessionId;
+    final UUID visitId;
     final String locale;
     final Map<String, String> draft = new LinkedHashMap<>();
     final List<AiMessage> providerMessages = new ArrayList<>();
@@ -29,8 +30,13 @@ final class AiConsultationSessionState {
     boolean needsClarification;
     int nextRevisionSequence = 1;
 
-    AiConsultationSessionState(UUID sessionId, Instant expiresAt, String locale) {
+    AiConsultationSessionState(
+            UUID sessionId,
+            UUID visitId,
+            Instant expiresAt,
+            String locale) {
         this.sessionId = sessionId;
+        this.visitId = visitId;
         this.expiresAt = expiresAt;
         this.locale = locale;
     }

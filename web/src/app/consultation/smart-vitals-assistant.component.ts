@@ -16,11 +16,12 @@ import {
   AiVitalsApiService,
   AiVitalsProposal,
 } from './ai-vitals-api.service';
+import { RealtimeVitalsControllerComponent } from './realtime-vitals-controller.component';
 
 @Component({
   selector: 'app-smart-vitals-assistant',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RealtimeVitalsControllerComponent],
   template: `
     <section
       class="fixed inset-x-3 bottom-3 z-[80] sm:left-1/2 sm:right-auto sm:w-[560px] sm:-translate-x-1/2"
@@ -31,7 +32,7 @@ import {
           <button
             type="button"
             class="flex min-w-0 flex-1 items-center gap-2 text-left"
-            (click)="expanded.set(!expanded())"
+            (click)="toggleExpanded()"
             [attr.aria-expanded]="expanded()"
           >
             <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300">
@@ -44,7 +45,9 @@ import {
                 {{ i18n.t('vitals.assistant.title', 'Assistant de constantes') }}
               </span>
               <span class="block truncate text-[10px] font-medium text-[var(--text-muted)] sm:text-xs">
-                @if (recording()) {
+                @if (realtimeActive()) {
+                  {{ i18n.t('vitals.assistant.realtimeReady', 'Micro en direct — dictez les paramètres') }}
+                } @else if (recording()) {
                   {{ i18n.t('vitals.assistant.listening', 'Je vous écoute…') }}
                 } @else if (speaking()) {
                   {{ i18n.t('vitals.assistant.speaking', 'Joprelys vous répond…') }}
@@ -58,7 +61,7 @@ import {
           <button
             type="button"
             class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] text-[var(--text-muted)] hover:bg-[var(--app-surface)]"
-            (click)="expanded.set(!expanded())"
+            (click)="toggleExpanded()"
             [attr.aria-label]="i18n.t('vitals.assistant.toggle', 'Afficher ou réduire l’assistant')"
           >
             <svg class="h-4 w-4 transition-transform" [class.rotate-180]="expanded()" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -74,6 +77,46 @@ import {
               {{ i18n.t('vitals.assistant.example', '« Température 38,4, tension 132 sur 84, saturation 96, pouls 104, poids 73 kilos. »') }}
             </div>
 
+            @if (!realtimeEnabled()) {
+              <button
+                type="button"
+                (click)="enableRealtime()"
+                [disabled]="disabled"
+                class="flex min-h-12 w-full items-center justify-between gap-3 rounded-[8px] border border-cyan-200 bg-cyan-50/70 px-4 py-3 text-left transition hover:bg-cyan-100/70 disabled:opacity-50 dark:border-cyan-900 dark:bg-cyan-950/25 dark:hover:bg-cyan-950/40"
+              >
+                <span>
+                  <span class="block text-xs font-extrabold text-cyan-900 dark:text-cyan-100">
+                    {{ i18n.t('vitals.assistant.realtimeActivate', 'Activer l’écoute Realtime') }}
+                  </span>
+                  <span class="mt-0.5 block text-[10px] leading-4 text-cyan-800/80 dark:text-cyan-200/80">
+                    {{ i18n.t('vitals.assistant.realtimeConsent', 'Le microphone ne s’ouvre qu’après votre activation et se coupe lorsque vous quittez ce mode.') }}
+                  </span>
+                </span>
+                <svg class="h-5 w-5 shrink-0 text-cyan-700 dark:text-cyan-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
+                </svg>
+              </button>
+            } @else {
+              <app-realtime-vitals-controller
+                [visitId]="visitId"
+                [currentVitals]="currentVitals"
+                [disabled]="disabled"
+                [enabled]="realtimeEnabled()"
+                (proposed)="handleProposal($event, false)"
+                (activeChange)="realtimeActive.set($event)"
+                (realtimeError)="errorMessage.set($event)"
+              />
+              <div class="flex justify-end">
+                <button
+                  type="button"
+                  (click)="disableRealtime()"
+                  class="min-h-10 rounded-[6px] px-3 text-[11px] font-bold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)]"
+                >
+                  {{ i18n.t('vitals.assistant.realtimeBackToClassic', 'Revenir à la dictée classique') }}
+                </button>
+              </div>
+            }
+
             @if (recording() || speaking()) {
               <div class="flex h-12 items-center justify-center gap-1 rounded-[8px] bg-[var(--app-surface-muted)] px-3" aria-hidden="true">
                 @for (bar of waveformBars; track $index) {
@@ -85,26 +128,31 @@ import {
               </div>
             }
 
-            <div class="grid grid-cols-1 gap-2 sm:grid-cols-[auto_1fr_auto] sm:items-center">
-              <button
-                type="button"
-                (click)="toggleRecording()"
-                [disabled]="disabled || busy() || !mediaRecorderSupported"
-                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-[8px] px-4 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
-                [ngClass]="recording() ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]'"
-              >
-                <span class="relative inline-flex h-6 w-6 items-center justify-center">
-                  @if (recording()) {
-                    <span class="absolute h-6 w-6 animate-ping rounded-full bg-white/25"></span>
-                  }
-                  <svg class="relative h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
-                  </svg>
-                </span>
-                {{ recording()
-                  ? i18n.t('vitals.assistant.stop', 'Terminer')
-                  : i18n.t('vitals.assistant.record', 'Dicter les constantes') }}
-              </button>
+            <div
+              class="grid grid-cols-1 gap-2 sm:items-center"
+              [ngClass]="realtimeEnabled() ? 'sm:grid-cols-[1fr_auto]' : 'sm:grid-cols-[auto_1fr_auto]'"
+            >
+              @if (!realtimeEnabled()) {
+                <button
+                  type="button"
+                  (click)="toggleRecording()"
+                  [disabled]="disabled || busy() || !mediaRecorderSupported"
+                  class="inline-flex min-h-12 items-center justify-center gap-2 rounded-[8px] px-4 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+                  [ngClass]="recording() ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]'"
+                >
+                  <span class="relative inline-flex h-6 w-6 items-center justify-center">
+                    @if (recording()) {
+                      <span class="absolute h-6 w-6 animate-ping rounded-full bg-white/25"></span>
+                    }
+                    <svg class="relative h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
+                    </svg>
+                  </span>
+                  {{ recording()
+                    ? i18n.t('vitals.assistant.stop', 'Terminer')
+                    : i18n.t('vitals.assistant.record', 'Dicter les constantes') }}
+                </button>
+              }
 
               <input
                 type="text"
@@ -125,7 +173,7 @@ import {
               </button>
             </div>
 
-            @if (!mediaRecorderSupported) {
+            @if (!mediaRecorderSupported && !realtimeEnabled()) {
               <p class="text-xs font-semibold text-amber-700 dark:text-amber-300">
                 {{ i18n.t('vitals.assistant.micUnsupported', 'Le microphone n’est pas disponible dans ce navigateur. Utilisez la saisie texte.') }}
               </p>
@@ -211,6 +259,8 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   readonly busy = signal(false);
   readonly recording = signal(false);
   readonly speaking = signal(false);
+  readonly realtimeEnabled = signal(false);
+  readonly realtimeActive = signal(false);
   readonly audioLevel = signal(0);
   readonly lastTranscript = signal('');
   readonly assistantMessage = signal('');
@@ -240,7 +290,31 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
     this.stopAssistantAudio();
   }
 
+  toggleExpanded(): void {
+    if (this.expanded()) {
+      this.disableRealtime();
+      this.expanded.set(false);
+      return;
+    }
+    this.expanded.set(true);
+  }
+
+  enableRealtime(): void {
+    if (this.disabled) return;
+    this.stopAssistantAudio();
+    this.stopStream();
+    this.recording.set(false);
+    this.errorMessage.set('');
+    this.realtimeEnabled.set(true);
+  }
+
+  disableRealtime(): void {
+    this.realtimeEnabled.set(false);
+    this.realtimeActive.set(false);
+  }
+
   toggleRecording(): void {
+    if (this.realtimeEnabled()) return;
     if (this.recording()) {
       this.recorder?.stop();
       return;
@@ -301,8 +375,28 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
     return units[field];
   }
 
+  handleProposal(proposal: AiVitalsProposal, speakResponse = true): void {
+    this.busy.set(false);
+    this.lastProposal.set(proposal);
+    this.lastTranscript.set(proposal.transcript || '');
+    this.assistantMessage.set(proposal.assistantMessage || '');
+    this.needsConfirmation.set(proposal.needsConfirmation);
+    this.confirmationReason.set(proposal.confirmationReason || '');
+    this.errorMessage.set('');
+    if (Object.keys(proposal.vitals).length > 0) {
+      this.proposed.emit(proposal);
+    }
+    if (speakResponse && proposal.assistantMessage) {
+      this.speak(proposal.assistantMessage);
+    }
+  }
+
   private async startRecording(): Promise<void> {
-    if (!this.mediaRecorderSupported || this.busy() || this.disabled || !this.visitId) return;
+    if (this.realtimeEnabled()
+      || !this.mediaRecorderSupported
+      || this.busy()
+      || this.disabled
+      || !this.visitId) return;
     this.stopAssistantAudio();
     this.errorMessage.set('');
     try {
@@ -356,22 +450,6 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
       next: proposal => this.handleProposal(proposal),
       error: () => this.handleError(),
     });
-  }
-
-  private handleProposal(proposal: AiVitalsProposal): void {
-    this.busy.set(false);
-    this.lastProposal.set(proposal);
-    this.lastTranscript.set(proposal.transcript || '');
-    this.assistantMessage.set(proposal.assistantMessage || '');
-    this.needsConfirmation.set(proposal.needsConfirmation);
-    this.confirmationReason.set(proposal.confirmationReason || '');
-    this.errorMessage.set('');
-    if (Object.keys(proposal.vitals).length > 0) {
-      this.proposed.emit(proposal);
-    }
-    if (proposal.assistantMessage) {
-      this.speak(proposal.assistantMessage);
-    }
   }
 
   private speak(text: string): void {
