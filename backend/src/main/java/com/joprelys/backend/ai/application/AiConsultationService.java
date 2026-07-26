@@ -4,7 +4,6 @@ import static com.joprelys.backend.ai.application.AiConsultationPrompt.SYSTEM_PR
 
 import com.joprelys.backend.ai.application.AiClinicalResponseParser.ParsedResponse;
 import com.joprelys.backend.ai.application.AiConsultationContract.ClarificationView;
-import com.joprelys.backend.ai.application.AiConsultationContract.ConversationMessageView;
 import com.joprelys.backend.ai.application.AiConsultationContract.MessageView;
 import com.joprelys.backend.ai.application.AiConsultationContract.RevisionView;
 import com.joprelys.backend.ai.application.AiConsultationContract.SessionView;
@@ -44,7 +43,7 @@ public class AiConsultationService {
     private final AiProvider aiProvider;
     private final AiProperties properties;
     private final VisitService visitService;
-    private final ObjectMapper objectMapper;
+    private final AiConsultationMessageBuilder messageBuilder;
     private final AiClinicalResponseParser responseParser;
     private final ClinicalContextAssembler clinicalContextAssembler;
     private final AiClinicalGroundingGuard groundingGuard;
@@ -67,7 +66,7 @@ public class AiConsultationService {
         this.aiProvider = aiProvider;
         this.properties = properties;
         this.visitService = visitService;
-        this.objectMapper = objectMapper;
+        this.messageBuilder = new AiConsultationMessageBuilder(objectMapper);
         this.responseParser = responseParser;
         this.clinicalContextAssembler = clinicalContextAssembler;
         this.groundingGuard = new AiClinicalGroundingGuard(objectMapper);
@@ -96,18 +95,13 @@ public class AiConsultationService {
             Map<String, String> initialDraft,
             String requestedLocale) {
         ensureActiveVisit(visitId);
-        String locale = normalizeLocale(requestedLocale);
+        String locale = messageBuilder.normalizeLocale(requestedLocale);
         SessionKey key = sessionKey(visitId, userId, organizationId);
         AiConsultationSessionState state = new AiConsultationSessionState(
                 UUID.randomUUID(), visitId, expiry(), locale);
-        mergeInitialDraft(state.draft, initialDraft);
-        state.assistantMessage = initialAssistantMessage(locale);
-        appendVisibleMessage(
-                state,
-                "ASSISTANT",
-                state.assistantMessage,
-                "SYSTEM",
-                false);
+        AiConsultationSessionSupport.mergeInitialDraft(state.draft, initialDraft);
+        state.assistantMessage = messageBuilder.initialAssistantMessage(locale);
+        appendVisibleMessage(state, "ASSISTANT", state.assistantMessage, "SYSTEM", false);
         sessions.put(key, state);
         return toSessionView(visitId, state);
     }
@@ -172,7 +166,8 @@ public class AiConsultationService {
             revisionManager.ensureNoPendingRevision(state);
             ClarificationView clarification = clarificationManager.findPending(
                     state, clarificationId);
-            String modelText = clarificationModelText(state.locale, clarification, answer.trim());
+            String modelText = messageBuilder.clarificationModelText(
+                    state.locale, clarification, answer.trim());
             return processMessageLocked(
                     state,
                     modelText,
@@ -327,20 +322,12 @@ public class AiConsultationService {
         String resolvedClarificationField = resolvedClarificationId == null
                 ? null
                 : clarificationManager.findPending(state, resolvedClarificationId).field();
-
-        Map<String, Object> clinicalContext;
-        try {
-            clinicalContext = clinicalContextAssembler.assemble(state.visitId);
-        } catch (RuntimeException exception) {
-            log.error("Contexte clinique indisponible visitId={}", state.visitId, exception);
-            throw new ResponseStatusException(
-                    HttpStatus.SERVICE_UNAVAILABLE, "AI_CLINICAL_CONTEXT_UNAVAILABLE");
-        }
-
+        Map<String, Object> clinicalContext = loadClinicalContext(state.visitId);
         List<AiMessage> providerMessages = new ArrayList<>(state.providerMessages);
-        providerMessages.add(AiMessage.user(buildUserMessage(
+        providerMessages.add(AiMessage.user(messageBuilder.buildUserMessage(
                 modelText, state.draft, state.locale, clinicalContext)));
         trimProviderConversation(providerMessages);
+
         try {
             AiChatResponse response = aiProvider.chat(
                     List.copyOf(providerMessages), SYSTEM_PROMPT);
@@ -397,6 +384,16 @@ public class AiConsultationService {
             log.warn("Échec génération brouillon IA provider={}", properties.provider());
             throw new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE, "AI_UNAVAILABLE");
+        }
+    }
+
+    private Map<String, Object> loadClinicalContext(UUID visitId) {
+        try {
+            return clinicalContextAssembler.assemble(visitId);
+        } catch (RuntimeException exception) {
+            log.error("Contexte clinique indisponible visitId={}", visitId, exception);
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE, "AI_CLINICAL_CONTEXT_UNAVAILABLE");
         }
     }
 
@@ -476,74 +473,9 @@ public class AiConsultationService {
         }
     }
 
-    private String buildUserMessage(
-            String text,
-            Map<String, String> draft,
-            String locale,
-            Map<String, Object> clinicalContext) {
-        try {
-            String languageInstruction = "en".equals(locale)
-                    ? "Reply in English."
-                    : "Réponds en français.";
-            String contextInstruction = "en".equals(locale)
-                    ? "The secure clinical context below is READ-ONLY background. Use it to understand risk, detect conflicts, "
-                            + "and ask a targeted safety clarification when useful. Never turn a background fact into a proposed "
-                            + "consultation change unless the clinician explicitly states or confirms it in the current turn."
-                    : "Le contexte clinique sécurisé ci-dessous est un arrière-plan EN LECTURE SEULE. Utilise-le pour comprendre "
-                            + "les risques, détecter les incohérences et demander une clarification de sécurité ciblée si utile. "
-                            + "Ne transforme jamais un fait de contexte en modification proposée de la consultation tant que le "
-                            + "professionnel ne l'a pas explicitement énoncé ou confirmé dans le tour courant.";
-            return "Session locale: " + locale
-                    + "\n" + languageInstruction
-                    + "\n" + contextInstruction
-                    + "\nContexte clinique sécurisé: "
-                    + objectMapper.writeValueAsString(clinicalContext)
-                    + "\nBrouillon accepté (contexte uniquement, ne pas le recopier spontanément): "
-                    + objectMapper.writeValueAsString(draft)
-                    + "\nNouvelle dictée, correction ou réponse du médecin: " + text;
-        } catch (Exception exception) {
-            throw new ResponseStatusException(
-                    org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
-        }
-    }
-
-    private String clarificationModelText(
-            String locale,
-            ClarificationView clarification,
-            String answer) {
-        if ("en".equals(locale)) {
-            return "Clinician answer to a structured clarification. Field: "
-                    + clarification.field()
-                    + ". Question: " + clarification.question()
-                    + ". Answer: " + answer;
-        }
-        return "Réponse du médecin à une clarification structurée. Champ: "
-                + clarification.field()
-                + ". Question: " + clarification.question()
-                + ". Réponse: " + answer;
-    }
-
-    private void mergeInitialDraft(
-            Map<String, String> target,
-            Map<String, String> source) {
-        if (source == null) {
-            return;
-        }
-        source.forEach((field, value) -> {
-            if (AiClinicalResponseParser.ALLOWED_FIELDS.contains(field)
-                    && value != null
-                    && !value.isBlank()) {
-                int maximum = field.equals("followUp") ? 1000 : 5000;
-                target.put(field, limit(value.trim(), maximum));
-            }
-        });
-    }
-
     private void trimProviderConversation(List<AiMessage> messages) {
-        int maximum = Math.max(2, properties.maxConversationTurns() * 2);
-        while (messages.size() > maximum) {
-            messages.removeFirst();
-        }
+        AiConsultationSessionSupport.trimProviderConversation(
+                messages, properties.maxConversationTurns());
     }
 
     private void appendVisibleMessage(
@@ -552,36 +484,19 @@ public class AiConsultationService {
             String content,
             String source,
             boolean needsClarification) {
-        state.conversation.add(new ConversationMessageView(
-                UUID.randomUUID(),
+        AiConsultationSessionSupport.appendVisibleMessage(
+                state,
                 role,
-                limit(content == null ? "" : content.trim(), MAX_TRANSCRIPT_LENGTH),
+                content,
                 source,
-                Instant.now(),
-                needsClarification));
-        int maximum = Math.max(5, properties.maxConversationTurns() * 2 + 1);
-        while (state.conversation.size() > maximum) {
-            state.conversation.removeFirst();
-        }
+                needsClarification,
+                properties.maxConversationTurns());
     }
 
     private SessionView toSessionView(
             UUID visitId,
             AiConsultationSessionState state) {
-        return new SessionView(
-                state.sessionId,
-                visitId,
-                "ACTIVE",
-                state.expiresAt,
-                Map.copyOf(state.draft),
-                state.transcript,
-                state.pendingTranscript,
-                state.transcriptStatus,
-                List.copyOf(state.conversation),
-                List.copyOf(state.clarifications),
-                List.copyOf(state.revisions),
-                state.assistantMessage,
-                state.needsClarification);
+        return AiConsultationSessionSupport.toSessionView(visitId, state);
     }
 
     private SessionKey sessionKey(
@@ -600,16 +515,6 @@ public class AiConsultationService {
         return contentType == null
                 ? ""
                 : contentType.split(";", 2)[0].trim().toLowerCase();
-    }
-
-    private String normalizeLocale(String locale) {
-        return "en".equalsIgnoreCase(locale) ? "en" : "fr";
-    }
-
-    private String initialAssistantMessage(String locale) {
-        return "en".equals(locale)
-                ? "Hello doctor. I’m listening."
-                : "Bonjour docteur. Je vous écoute.";
     }
 
     private String organizationKey(UUID organizationId) {
