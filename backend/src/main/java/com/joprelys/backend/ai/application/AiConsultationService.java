@@ -43,6 +43,7 @@ public class AiConsultationService {
     private final AiConsultationMessageBuilder messageBuilder;
     private final AiClinicalResponseParser responseParser;
     private final ClinicalContextAssembler clinicalContextAssembler;
+    private final AiClinicalFactualityGuard factualityGuard;
     private final AiClinicalGroundingGuard groundingGuard;
     private final AiMedicationSafetyGuard medicationSafetyGuard;
     private final AiRepeatedClarificationGuard repeatedClarificationGuard =
@@ -70,6 +71,7 @@ public class AiConsultationService {
         this.messageBuilder = new AiConsultationMessageBuilder(objectMapper);
         this.responseParser = responseParser;
         this.clinicalContextAssembler = clinicalContextAssembler;
+        this.factualityGuard = new AiClinicalFactualityGuard(objectMapper);
         this.groundingGuard = new AiClinicalGroundingGuard(objectMapper);
         this.medicationSafetyGuard = new AiMedicationSafetyGuard(objectMapper);
         this.revisionManager = revisionManager;
@@ -157,6 +159,29 @@ public class AiConsultationService {
                     text.trim(),
                     null,
                     "TEXT",
+                    null,
+                    null);
+        }
+    }
+
+    public MessageView processRealtimeTranscript(
+            UUID visitId,
+            UUID userId,
+            UUID organizationId,
+            String transcript,
+            Double confidence) {
+        AiConsultationInputValidator.validateText(transcript);
+        validateRealtimeConfidence(confidence);
+        AiConsultationSessionState state = requireSession(
+                visitId, userId, organizationId);
+        synchronized (state) {
+            ensureReadyForNewInput(state);
+            return processMessageLocked(
+                    state,
+                    transcript.trim(),
+                    transcript.trim(),
+                    transcript.trim(),
+                    "REALTIME",
                     null,
                     null);
         }
@@ -322,10 +347,19 @@ public class AiConsultationService {
                 ? null
                 : resolvedClarification.field();
         Map<String, Object> clinicalContext = loadClinicalContext(state.visitId);
-        List<AiMessage> providerMessages = new ArrayList<>(state.providerMessages);
+
+        // Only governed system memory is allowed to survive between turns. Raw model
+        // output and rejected proposals are deliberately excluded from future context.
+        List<AiMessage> providerMessages = new ArrayList<>();
+        state.providerMessages.stream()
+                .filter(message -> message.role() == AiMessage.Role.SYSTEM)
+                .forEach(providerMessages::add);
+        providerMessages.add(AiMessage.system(AiClinicalFidelityContract.SYSTEM_INSTRUCTION));
         providerMessages.add(AiMessage.user(messageBuilder.buildUserMessage(
-                modelText, state.draft, state.locale, clinicalContext)));
-        trimProviderConversation(providerMessages);
+                "Input source: " + source + "\n" + modelText,
+                state.draft,
+                state.locale,
+                clinicalContext)));
 
         try {
             AiChatResponse response = aiProvider.chat(
@@ -335,15 +369,16 @@ public class AiConsultationService {
                         org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
             }
             ParsedResponse rawParsed = responseParser.parse(response.content());
+            ParsedResponse factChecked = factualityGuard.enforce(
+                    rawParsed, visibleText, state.draft, source, state.locale);
             ParsedResponse grounded = groundingGuard.enforce(
-                    rawParsed, visibleText, resolvedClarificationField, state.locale);
+                    factChecked, visibleText, resolvedClarificationField, state.locale);
             ParsedResponse medicationChecked = "prescription".equals(resolvedClarificationField)
                     ? grounded
                     : medicationSafetyGuard.enforce(grounded, clinicalContext, state.locale);
             ParsedResponse parsed = repeatedClarificationGuard.enforce(
                     medicationChecked, state, state.locale);
             var toolPlan = toolDispatcher.dispatch(parsed);
-            boolean adjustedOutput = parsed != rawParsed;
 
             if (resolvedClarificationId != null) {
                 clarificationManager.resolve(
@@ -366,11 +401,6 @@ public class AiConsultationService {
                 state.transcript = transcript;
             }
             state.expiresAt = expiry();
-            state.providerMessages.clear();
-            state.providerMessages.addAll(providerMessages);
-            state.providerMessages.add(AiMessage.assistant(
-                    adjustedOutput ? parsed.assistantMessage() : response.content()));
-            trimProviderConversation(state.providerMessages);
             if (resolvedClarification != null) {
                 memoryManager.recordResolvedClarification(
                         state, resolvedClarification, clarificationAnswer);
@@ -389,6 +419,22 @@ public class AiConsultationService {
             log.warn("Échec génération brouillon IA provider={}", properties.provider());
             throw new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE, "AI_UNAVAILABLE");
+        }
+    }
+
+    private void validateRealtimeConfidence(Double confidence) {
+        if (confidence == null || !Double.isFinite(confidence) || confidence < 0.0 || confidence > 1.0) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY, "AI_REALTIME_TRANSCRIPTION_UNVERIFIED");
+        }
+        double minimum = properties.minimumTranscriptionConfidence();
+        if (minimum > 0.0 && confidence < minimum) {
+            log.warn(
+                    "Realtime transcription rejected for low confidence confidence={} minimum={}",
+                    String.format("%.3f", confidence),
+                    String.format("%.3f", minimum));
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY, "AI_TRANSCRIPTION_LOW_CONFIDENCE");
         }
     }
 
@@ -436,11 +482,6 @@ public class AiConsultationService {
         }
     }
 
-    private void trimProviderConversation(List<AiMessage> messages) {
-        AiConsultationSessionSupport.trimProviderConversation(
-                messages, properties.maxConversationTurns());
-    }
-
     private void appendVisibleMessage(
             AiConsultationSessionState state,
             String role,
@@ -476,10 +517,6 @@ public class AiConsultationService {
 
     private String organizationKey(UUID organizationId) {
         return organizationId == null ? "GLOBAL" : organizationId.toString();
-    }
-
-    private String limit(String value, int maximum) {
-        return value.length() <= maximum ? value : value.substring(0, maximum);
     }
 
     private ResponseStatusException conflict(String reason) {
