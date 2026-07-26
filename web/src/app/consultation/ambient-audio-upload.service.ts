@@ -115,22 +115,44 @@ export class AmbientAudioUploadService implements OnDestroy {
 
   private async upload(record: AmbientStoredChunk): Promise<void> {
     const plaintext = await this.vault.decrypt(record);
-    const blob = new Blob([plaintext], { type: record.mimeType || 'audio/wav' });
-    const headers = new HttpHeaders({
-      'Content-Type': record.mimeType || 'audio/wav',
+    const audioBlob = new Blob([plaintext], { type: record.mimeType || 'audio/wav' });
+    const doctorReference = await this.vault.decryptDoctorReference(record);
+    const commonHeaders = new HttpHeaders({
       'X-Joprelys-Ambient-Chunk-Id': record.id,
       'X-Joprelys-Ambient-Start-Ms': String(record.startOffsetMs),
       'X-Joprelys-Locale': record.locale || 'fr',
     });
+
+    if (doctorReference) {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'ambient.wav');
+      formData.append(
+        'doctorReference',
+        new Blob([doctorReference], { type: 'audio/wav' }),
+        'doctor-reference.wav',
+      );
+      await firstValueFrom(this.http.post<unknown>(
+        `/api/ai/consultations/${record.visitId}/ambient/transcriptions/audio-with-doctor-reference`,
+        formData,
+        { headers: commonHeaders },
+      ));
+      return;
+    }
+
     await firstValueFrom(this.http.post<unknown>(
       `/api/ai/consultations/${record.visitId}/ambient/transcriptions/audio`,
-      blob,
-      { headers },
+      audioBlob,
+      {
+        headers: commonHeaders.set('Content-Type', record.mimeType || 'audio/wav'),
+      },
     ));
   }
 
   private isTransient(error: unknown): boolean {
-    if (!(error instanceof HttpErrorResponse)) return true;
+    if (!(error instanceof HttpErrorResponse)) {
+      const message = error instanceof Error ? error.message : '';
+      return !message.startsWith('AMBIENT_DOCTOR_REFERENCE_');
+    }
     if (error.status === 0 || error.status === 408 || error.status === 425 || error.status === 429) {
       return true;
     }
