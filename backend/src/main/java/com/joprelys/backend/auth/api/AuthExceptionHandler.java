@@ -3,6 +3,7 @@ package com.joprelys.backend.auth.api;
 import com.joprelys.backend.auth.security.InvalidTokenException;
 import com.joprelys.backend.auth.session.application.AuthSessionAccessDeniedException;
 import com.joprelys.backend.auth.session.application.AuthSessionNotFoundException;
+import com.joprelys.backend.auth.session.application.ConcurrentAuthRefreshException;
 import com.joprelys.backend.auth.session.application.InvalidAuthSessionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -35,6 +36,14 @@ public class AuthExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED);
         problem.setTitle("Invalid authentication session");
         problem.setDetail("AUTH_SESSION_INVALID");
+        return problem;
+    }
+
+    @ExceptionHandler(ConcurrentAuthRefreshException.class)
+    ProblemDetail concurrentRefresh() {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problem.setTitle("Authentication refresh already in progress");
+        problem.setDetail("AUTH_REFRESH_CONCURRENT");
         return problem;
     }
 
