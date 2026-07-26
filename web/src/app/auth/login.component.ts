@@ -47,7 +47,7 @@ export class LoginComponent {
   readonly theme = this.themeService.theme;
 
   // --- Mode toggle ---
-  readonly mode = signal<LoginMode>('staff');
+  readonly mode = signal<LoginMode>(this.resolveInitialMode());
 
   // --- Staff login state ---
   readonly email = signal('');
@@ -71,9 +71,17 @@ export class LoginComponent {
   constructor() {
     effect(() => {
       const s = this.session();
-      if (s) {
-        this.router.navigateByUrl(this.destinationAfterLogin(s.role));
+      const mode = this.mode();
+      if (!s) return;
+
+      const patientSession = this.tokenStorage.isPatientSession(s);
+      // The login surface can intentionally be opened in the opposite identity
+      // context in the same tab. Do not bounce the user back to the currently
+      // stored identity before they complete the explicit switch.
+      if ((mode === 'patient' && !patientSession) || (mode === 'staff' && patientSession)) {
+        return;
       }
+      this.router.navigateByUrl(this.destinationAfterLogin(s.role));
     });
   }
 
@@ -226,7 +234,14 @@ export class LoginComponent {
   }
 
   private destinationAfterLogin(role: string): string {
-    return this.requestedReturnUrl ?? this.getLandingPage(role);
+    const patient = role.split(',').map(value => value.trim()).includes('PATIENT');
+    if (this.requestedReturnUrl) {
+      const patientReturnUrl = this.requestedReturnUrl.startsWith('/patient/');
+      if (patient === patientReturnUrl) {
+        return this.requestedReturnUrl;
+      }
+    }
+    return this.getLandingPage(role);
   }
 
   private resolveReturnUrl(): string | null {
@@ -235,6 +250,10 @@ export class LoginComponent {
       return null;
     }
     return returnUrl;
+  }
+
+  private resolveInitialMode(): LoginMode {
+    return this.route?.snapshot.queryParamMap.get('mode') === 'patient' ? 'patient' : 'staff';
   }
 
   private resolveInitialError(): string | null {
