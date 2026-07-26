@@ -1,8 +1,10 @@
 package com.joprelys.backend.ai.ambient.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -18,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.server.ResponseStatusException;
 
 class AmbientTranscriptLedgerServiceTest {
 
@@ -124,8 +127,10 @@ class AmbientTranscriptLedgerServiceTest {
                 .thenReturn(Optional.empty());
         when(transcriptRepository.findByIdAndVisitId(original.getId(), visitId))
                 .thenReturn(Optional.of(original));
+        when(transcriptRepository.findByVisitIdAndSupersedesItemId(visitId, original.getId()))
+                .thenReturn(Optional.empty());
         when(transcriptRepository.findMaximumSequence(visitId)).thenReturn(3L);
-        when(transcriptRepository.save(any(AmbientTranscriptItemEntity.class)))
+        when(transcriptRepository.saveAndFlush(any(AmbientTranscriptItemEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         var correction = service.appendCorrection(
@@ -142,6 +147,159 @@ class AmbientTranscriptLedgerServiceTest {
         assertThat(correction.speakerType()).isEqualTo("DOCTOR");
         assertThat(correction.supersedesItemId()).isEqualTo(original.getId());
         assertThat(original.getSpeakerType()).isEqualTo(AmbientTranscriptSpeaker.UNSPECIFIED);
+    }
+
+    @Test
+    void shouldRejectCorrectionOfAlreadySupersededVersion() {
+        UUID visitId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+        VisitEntity visit = visit(visitId, organizationId);
+        AmbientTranscriptItemEntity original = item(
+                organizationId, visitId, 1, "chunk:1",
+                AmbientTranscriptSource.AMBIENT_DIARIZED,
+                AmbientTranscriptSpeaker.UNSPECIFIED, "A", "Texte initial",
+                0, 1_000, userId, null);
+        AmbientTranscriptItemEntity firstCorrection = item(
+                organizationId, visitId, 2, "correction:first",
+                AmbientTranscriptSource.MANUAL_CORRECTION,
+                AmbientTranscriptSpeaker.PATIENT, "human:PATIENT", "Texte corrigé",
+                0, 1_000, userId, original.getId());
+
+        when(visitRepository.findByIdForUpdate(visitId)).thenReturn(Optional.of(visit));
+        when(transcriptRepository.findByVisitIdAndSourceEventId(visitId, "correction:second"))
+                .thenReturn(Optional.empty());
+        when(transcriptRepository.findByIdAndVisitId(original.getId(), visitId))
+                .thenReturn(Optional.of(original));
+        when(transcriptRepository.findByVisitIdAndSupersedesItemId(visitId, original.getId()))
+                .thenReturn(Optional.of(firstCorrection));
+
+        assertThatThrownBy(() -> service.appendCorrection(
+                visitId, original.getId(), userId, organizationId,
+                "second", "PATIENT", "Autre texte"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("AI_AMBIENT_TRANSCRIPT_ITEM_SUPERSEDED");
+
+        verify(transcriptRepository, never()).saveAndFlush(any(AmbientTranscriptItemEntity.class));
+    }
+
+    @Test
+    void shouldAllowLinearCorrectionChainAndExposeOnlyLeaf() {
+        UUID visitId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+        VisitEntity visit = visit(visitId, organizationId);
+        AmbientTranscriptItemEntity original = item(
+                organizationId, visitId, 1, "chunk:root",
+                AmbientTranscriptSource.AMBIENT_DIARIZED,
+                AmbientTranscriptSpeaker.UNSPECIFIED, "A", "Version zéro",
+                0, 1_000, userId, null);
+        AmbientTranscriptItemEntity correction1 = item(
+                organizationId, visitId, 2, "correction:c1",
+                AmbientTranscriptSource.MANUAL_CORRECTION,
+                AmbientTranscriptSpeaker.PATIENT, "human:PATIENT", "Version un",
+                0, 1_000, userId, original.getId());
+
+        when(visitRepository.findByIdForUpdate(visitId)).thenReturn(Optional.of(visit));
+        when(transcriptRepository.findByVisitIdAndSourceEventId(visitId, "correction:c2"))
+                .thenReturn(Optional.empty());
+        when(transcriptRepository.findByIdAndVisitId(correction1.getId(), visitId))
+                .thenReturn(Optional.of(correction1));
+        when(transcriptRepository.findByVisitIdAndSupersedesItemId(visitId, correction1.getId()))
+                .thenReturn(Optional.empty());
+        when(transcriptRepository.findMaximumSequence(visitId)).thenReturn(2L);
+        when(transcriptRepository.saveAndFlush(any(AmbientTranscriptItemEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        var correction2 = service.appendCorrection(
+                visitId, correction1.getId(), userId, organizationId,
+                "c2", "DOCTOR", "Version deux");
+
+        AmbientTranscriptItemEntity correction2Entity = item(
+                organizationId, visitId, correction2.sequence(), correction2.sourceEventId(),
+                AmbientTranscriptSource.MANUAL_CORRECTION,
+                AmbientTranscriptSpeaker.DOCTOR, "human:DOCTOR", correction2.text(),
+                correction2.startOffsetMs(), correction2.endOffsetMs(), userId, correction1.getId());
+        when(visitRepository.findById(visitId)).thenReturn(Optional.of(visit));
+        when(transcriptRepository.findByVisitIdAndStatusOrderByStartOffsetMsAscSequenceNoAsc(
+                visitId, AmbientTranscriptStatus.FINAL))
+                .thenReturn(List.of(original, correction1, correction2Entity));
+
+        var effective = service.listFinal(visitId, organizationId);
+
+        assertThat(effective.items()).hasSize(1);
+        assertThat(effective.items().getFirst().text()).isEqualTo("Version deux");
+        assertThat(effective.items().getFirst().speakerType()).isEqualTo("DOCTOR");
+    }
+
+    @Test
+    void shouldReturnSameCorrectionForStrictlyIdenticalRetry() {
+        UUID visitId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+        VisitEntity visit = visit(visitId, organizationId);
+        AmbientTranscriptItemEntity parent = item(
+                organizationId, visitId, 1, "chunk:retry",
+                AmbientTranscriptSource.AMBIENT_DIARIZED,
+                AmbientTranscriptSpeaker.UNSPECIFIED, "A", "Texte initial",
+                0, 1_000, userId, null);
+        AmbientTranscriptItemEntity existing = item(
+                organizationId, visitId, 2, "correction:retry-1",
+                AmbientTranscriptSource.MANUAL_CORRECTION,
+                AmbientTranscriptSpeaker.DOCTOR, "human:DOCTOR", "Texte confirmé",
+                0, 1_000, userId, parent.getId());
+
+        when(visitRepository.findByIdForUpdate(visitId)).thenReturn(Optional.of(visit));
+        when(transcriptRepository.findByVisitIdAndSourceEventId(visitId, "correction:retry-1"))
+                .thenReturn(Optional.of(existing));
+
+        var retry = service.appendCorrection(
+                visitId, parent.getId(), userId, organizationId,
+                "retry-1", "DOCTOR", "Texte confirmé");
+
+        assertThat(retry.sequence()).isEqualTo(2);
+        assertThat(retry.text()).isEqualTo("Texte confirmé");
+        verify(transcriptRepository, never()).saveAndFlush(any(AmbientTranscriptItemEntity.class));
+    }
+
+    @Test
+    void shouldRejectCorrectionIdReuseWithDifferentParentSpeakerOrText() {
+        UUID visitId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+        VisitEntity visit = visit(visitId, organizationId);
+        AmbientTranscriptItemEntity parent = item(
+                organizationId, visitId, 1, "chunk:parent",
+                AmbientTranscriptSource.AMBIENT_DIARIZED,
+                AmbientTranscriptSpeaker.UNSPECIFIED, "A", "Texte initial",
+                0, 1_000, userId, null);
+        AmbientTranscriptItemEntity existing = item(
+                organizationId, visitId, 2, "correction:same-id",
+                AmbientTranscriptSource.MANUAL_CORRECTION,
+                AmbientTranscriptSpeaker.DOCTOR, "human:DOCTOR", "Texte confirmé",
+                0, 1_000, userId, parent.getId());
+
+        when(visitRepository.findByIdForUpdate(visitId)).thenReturn(Optional.of(visit));
+        when(transcriptRepository.findByVisitIdAndSourceEventId(visitId, "correction:same-id"))
+                .thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> service.appendCorrection(
+                visitId, UUID.randomUUID(), userId, organizationId,
+                "same-id", "DOCTOR", "Texte confirmé"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("AI_AMBIENT_CORRECTION_ID_REUSED");
+
+        assertThatThrownBy(() -> service.appendCorrection(
+                visitId, parent.getId(), userId, organizationId,
+                "same-id", "PATIENT", "Texte confirmé"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("AI_AMBIENT_CORRECTION_ID_REUSED");
+
+        assertThatThrownBy(() -> service.appendCorrection(
+                visitId, parent.getId(), userId, organizationId,
+                "same-id", "DOCTOR", "Texte différent"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("AI_AMBIENT_CORRECTION_ID_REUSED");
     }
 
     @Test

@@ -15,8 +15,10 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -112,8 +114,10 @@ public class AmbientTranscriptLedgerService {
         lockAuthorizedVisit(visitId, organizationId);
 
         String sourceEventId = correctionEventId(correctionId);
+        AmbientTranscriptSpeaker speaker = explicitSpeaker(speakerType);
         var retry = transcriptRepository.findByVisitIdAndSourceEventId(visitId, sourceEventId);
         if (retry.isPresent()) {
+            validateCorrectionRetry(retry.get(), itemId, speaker, correctedText);
             return view(retry.get());
         }
 
@@ -124,8 +128,11 @@ public class AmbientTranscriptLedgerService {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT, "AI_AMBIENT_TRANSCRIPT_ITEM_NOT_FINAL");
         }
+        if (transcriptRepository.findByVisitIdAndSupersedesItemId(visitId, original.getId()).isPresent()) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "AI_AMBIENT_TRANSCRIPT_ITEM_SUPERSEDED");
+        }
 
-        AmbientTranscriptSpeaker speaker = explicitSpeaker(speakerType);
         String text = correctedText == null || correctedText.isBlank()
                 ? original.getTranscriptText()
                 : normalizeText(correctedText);
@@ -146,7 +153,14 @@ public class AmbientTranscriptLedgerService {
                 AmbientTranscriptStatus.FINAL,
                 userId,
                 original.getId());
-        return view(transcriptRepository.save(correction));
+        try {
+            return view(transcriptRepository.saveAndFlush(correction));
+        } catch (DataIntegrityViolationException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "AI_AMBIENT_TRANSCRIPT_CORRECTION_CONFLICT",
+                    exception);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -177,6 +191,25 @@ public class AmbientTranscriptLedgerService {
                 .map(this::view)
                 .toList();
         return new TranscriptLedgerView(visitId, items);
+    }
+
+    private void validateCorrectionRetry(
+            AmbientTranscriptItemEntity existing,
+            UUID expectedParentId,
+            AmbientTranscriptSpeaker expectedSpeaker,
+            String correctedText) {
+        if (existing.getSource() != AmbientTranscriptSource.MANUAL_CORRECTION
+                || !Objects.equals(existing.getSupersedesItemId(), expectedParentId)
+                || existing.getSpeakerType() != expectedSpeaker) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "AI_AMBIENT_CORRECTION_ID_REUSED");
+        }
+        if (correctedText != null
+                && !correctedText.isBlank()
+                && !existing.getTranscriptText().equals(normalizeText(correctedText))) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "AI_AMBIENT_CORRECTION_ID_REUSED");
+        }
     }
 
     private VisitEntity lockAuthorizedVisit(UUID visitId, UUID organizationId) {
