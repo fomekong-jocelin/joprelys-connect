@@ -12,34 +12,29 @@ export const authTokenInterceptor: HttpInterceptorFn = (request, next) => {
     return next(request);
   }
 
-  const session = tokenStorage.session();
-  if (!session) {
-    sessionRecovery.expireSession();
-    return throwError(
-      () =>
-        new HttpErrorResponse({
-          error: 'Unauthenticated',
-          status: 401,
-          statusText: 'Unauthorized',
-          url: request.url,
-        }),
-    );
-  }
-
   const sendWithToken = (token: string) => next(withBearerToken(request, token));
-  const refreshAndRetry = (rejectedToken: string) =>
+  const refreshAndRetry = (rejectedToken?: string) =>
     sessionRecovery.refreshAccessToken(rejectedToken).pipe(
       switchMap((freshToken) => sendWithToken(freshToken)),
       catchError((error: HttpErrorResponse) => {
-        // A rejected refresh means the authentication session is no longer usable.
-        // Server/network/concurrent-refresh errors must remain visible and must not
-        // be reclassified as an expired session.
+        // Only a positive authentication refusal means the browser session is no
+        // longer usable. Network errors, server outages and concurrent-refresh
+        // conflicts must never be converted into a clinician logout.
         if (error.status === 401 || error.status === 403) {
           sessionRecovery.expireSession();
         }
         return throwError(() => error);
       }),
     );
+
+  const session = tokenStorage.session();
+  if (!session) {
+    // A missing access token is not proof that the persistent session expired.
+    // This occurs naturally in a fresh tab, after browser memory pressure or when
+    // bootstrap refresh was temporarily unavailable. Recover from the HttpOnly
+    // refresh cookie before deciding to log the user out.
+    return refreshAndRetry();
+  }
 
   const recoverRejectedToken = (rejectedToken: string) => {
     const latest = tokenStorage.session();
