@@ -14,6 +14,7 @@ import {
 import { Subscription } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import {
+  AiConsultationApiService,
   AiMessageResponse,
   AiSessionResponse,
 } from './ai-consultation-api.service';
@@ -195,6 +196,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   private readonly bridge = inject(RealtimeVoiceBridgeService);
   private readonly ambientCapture = inject(AmbientAudioCaptureService);
   private readonly intake = inject(RealtimeClinicalIntakeApiService);
+  private readonly consultationApi = inject(AiConsultationApiService);
   readonly i18n = inject(I18nService);
 
   @Input({ required: true }) visitId = '';
@@ -602,11 +604,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
           this.processing.set(false);
           return;
         }
-        this.transcriptQueue.shift();
-        this.processing.set(false);
-        this.releaseBackpressureIfPossible();
-        this.syncMute();
-        this.drainTranscriptQueue();
+        this.analyzeDurableRealtimeTurn(transcriptVisitId, turn);
       },
       error: error => {
         if (transcriptVisitId !== this.visitId.trim() || transcriptVisitId !== this.connectedVisitId) {
@@ -638,6 +636,107 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
         this.drainTranscriptQueue();
       },
     });
+  }
+
+  private analyzeDurableRealtimeTurn(
+    transcriptVisitId: string,
+    turn: RealtimeTranscriptTurn,
+  ): void {
+    if (turn.confidence === null || !turn.eventId) {
+      this.finishTurnWithoutAnalysis();
+      return;
+    }
+
+    const pendingClarification = this.session?.clarifications
+      .find(item => item.status === 'PENDING');
+    const request = pendingClarification
+      ? this.consultationApi.answerRealtimeClarification(
+          transcriptVisitId,
+          pendingClarification.id,
+          turn.transcript,
+          turn.confidence,
+          turn.eventId,
+        )
+      : this.consultationApi.sendRealtimeTranscript(
+          transcriptVisitId,
+          turn.transcript,
+          turn.confidence,
+          turn.eventId,
+        );
+
+    request.subscribe({
+      next: response => {
+        if (transcriptVisitId !== this.visitId.trim() || transcriptVisitId !== this.connectedVisitId) {
+          this.processing.set(false);
+          return;
+        }
+
+        this.transcriptQueue.shift();
+        this.processing.set(false);
+        this.applyRealtimeResponseLocally(response);
+        this.message.emit(response);
+
+        const pendingQuestion = response.clarifications
+          .find(item => item.status === 'PENDING')
+          ?.question
+          ?.trim();
+        const approvedVoice = pendingQuestion || response.assistantMessage?.trim() || '';
+        if (approvedVoice) this.speakApproved(approvedVoice);
+
+        const requiresDecision = response.revisions
+          .some(revision => revision.status === 'PENDING');
+        this.releaseBackpressureIfPossible();
+        if (requiresDecision) {
+          this.bridge.setMuted(true);
+          return;
+        }
+        this.syncMute();
+        this.drainTranscriptQueue();
+      },
+      error: () => {
+        if (transcriptVisitId !== this.visitId.trim() || transcriptVisitId !== this.connectedVisitId) {
+          this.processing.set(false);
+          return;
+        }
+
+        // Le journal durable a déjà accusé réception. On ne rejoue pas
+        // automatiquement l'analyse LLM afin d'éviter une double proposition
+        // clinique si la réponse HTTP a été perdue après traitement serveur.
+        this.transcriptQueue.shift();
+        this.processing.set(false);
+        this.realtimeError.emit(this.i18n.t(
+          'consultation.ai.realtimeConversationAnalysisFailed',
+          'La phrase a bien été sauvegardée, mais l’assistant n’a pas pu l’analyser. Vous pouvez continuer : l’audio et la transcription restent conservés.',
+        ));
+        this.releaseBackpressureIfPossible();
+        this.syncMute();
+        this.drainTranscriptQueue();
+      },
+    });
+  }
+
+  private finishTurnWithoutAnalysis(): void {
+    this.transcriptQueue.shift();
+    this.processing.set(false);
+    this.releaseBackpressureIfPossible();
+    this.syncMute();
+    this.drainTranscriptQueue();
+  }
+
+  private applyRealtimeResponseLocally(response: AiMessageResponse): void {
+    if (!this.session) return;
+    this.session = {
+      ...this.session,
+      expiresAt: response.expiresAt,
+      draft: response.draft,
+      transcript: response.transcript ?? this.session.transcript,
+      transcriptStatus: response.transcript ? 'ANALYZED' : this.session.transcriptStatus,
+      conversation: response.conversation,
+      clarifications: response.clarifications,
+      revisions: response.revisions,
+      assistantMessage: response.assistantMessage,
+      needsClarification: response.needsClarification,
+    };
   }
 
   private rememberTranscriptId(id: string): void {
