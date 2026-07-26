@@ -84,12 +84,31 @@ import { I18nService } from '../core/i18n/i18n.service';
       }
 
       @if (!conversationMode && recording) {
-        <div class="mb-3 rounded-[4px] border border-cyan-200 bg-cyan-50/70 px-3 py-3 dark:border-cyan-900 dark:bg-cyan-950/20">
-          <div class="flex items-center gap-2">
-            <span class="h-2.5 w-2.5 animate-pulse rounded-full bg-rose-500"></span>
-            <span class="text-sm font-bold text-[var(--text-primary)]">
-              {{ i18n.t('consultation.ai.listening', 'Je vous écoute…') }}
+        <div class="mb-3 rounded-[6px] border border-cyan-200 bg-cyan-50/70 p-3 shadow-sm dark:border-cyan-900 dark:bg-cyan-950/20">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="relative flex h-3 w-3 items-center justify-center">
+                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
+                <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-500"></span>
+              </span>
+              <span class="text-sm font-extrabold text-[var(--text-primary)]">
+                {{ i18n.t('consultation.ai.listening', 'Je vous écoute…') }}
+              </span>
+            </div>
+            <span class="text-[11px] font-bold text-rose-700 dark:text-rose-300">
+              {{ i18n.t('consultation.ai.recordingActive', 'Enregistrement en cours') }}
             </span>
+          </div>
+
+          <!-- Sound waves visualizer bar -->
+          <div class="mt-2.5 flex h-9 items-center justify-center gap-1.5 rounded-[4px] border border-rose-200/60 bg-slate-900/90 px-3 shadow-inner dark:border-rose-900/60 dark:bg-slate-950"
+               aria-label="Visualisateur d'ondes vocales">
+            @for (bar of waveformBars; track $index) {
+              <span
+                class="w-1.5 rounded-full bg-gradient-to-t from-rose-500 to-amber-300 shadow-[0_0_6px_rgba(244,63,94,0.5)] transition-all duration-100"
+                [style.height.px]="waveBarHeight($index)"
+              ></span>
+            }
           </div>
         </div>
       }
@@ -172,7 +191,15 @@ export class AiAssistantInputComponent {
   @Output() readonly sendText = new EventEmitter<string>();
 
   readonly message = signal('');
+  readonly waveformBars = Array.from({ length: 16 });
   private lastResetToken = 0;
+
+  waveBarHeight(index: number): number {
+    if (!this.recording) return 6;
+    const level = Math.max(0.25, this.audioLevel || 0.35);
+    const sinFactor = 0.35 + Math.abs(Math.sin((index + 1) * 0.85 + (index % 4) * 0.95)) * 0.65;
+    return Math.round(6 + level * sinFactor * 26);
+  }
 
   @Input()
   set resetToken(value: number) {

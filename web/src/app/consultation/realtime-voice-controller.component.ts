@@ -39,16 +39,42 @@ const MAX_SEEN_TRANSCRIPT_IDS = 512;
   template: `
     @if (enabled) {
       <section class="rounded-[6px] border border-cyan-200 bg-cyan-50/45 p-4 shadow-sm dark:border-cyan-900 dark:bg-cyan-950/15">
-        <div class="flex items-start gap-3">
-          <span
-            class="mt-1 h-3 w-3 shrink-0 rounded-full"
-            [ngClass]="statusDotClasses()"
-            aria-hidden="true"
-          ></span>
-          <div class="min-w-0 flex-1">
-            <p class="text-base font-black text-[var(--text-primary)]">{{ statusLabel() }}</p>
-            <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">{{ statusHelp() }}</p>
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="relative flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+              @if (state().connected && !manualMuted) {
+                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+              }
+              <span class="relative inline-flex h-3 w-3 rounded-full" [ngClass]="statusDotClasses()"></span>
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="text-base font-black text-[var(--text-primary)] flex items-center flex-wrap gap-2">
+                {{ statusLabel() }}
+                @if (state().userSpeaking) {
+                  <span class="inline-flex items-center rounded-[4px] bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+                    {{ i18n.t('consultation.ai.userSpeakingBadge', 'Vous parlez') }}
+                  </span>
+                } @else if (state().assistantSpeaking) {
+                  <span class="inline-flex items-center rounded-[4px] bg-indigo-100 px-2 py-0.5 text-[10px] font-extrabold text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200">
+                    {{ i18n.t('consultation.ai.assistantSpeakingBadge', 'Joprelys répond') }}
+                  </span>
+                }
+              </p>
+              <p class="mt-0.5 text-xs leading-5 text-[var(--text-muted)]">{{ statusHelp() }}</p>
+            </div>
           </div>
+        </div>
+
+        <!-- Animated Audio Waveform Equalizer -->
+        <div class="my-3 flex h-10 items-center justify-center gap-1.5 rounded-[6px] border border-cyan-200/60 bg-slate-900/90 px-4 shadow-inner dark:border-cyan-900/60 dark:bg-slate-950"
+             aria-label="Visualisateur d'ondes vocales">
+          @for (bar of waveformBars; track $index) {
+            <span
+              class="w-1.5 rounded-full transition-all duration-150"
+              [ngClass]="waveBarClasses($index)"
+              [style.height.px]="waveBarHeight($index)"
+            ></span>
+          }
         </div>
 
         @if (showSafetyAlert()) {
@@ -129,6 +155,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     lastError: null,
   });
   readonly processing = signal(false);
+  readonly waveformBars = Array.from({ length: 16 });
 
   private readonly subscriptions = new Subscription();
   private readonly transcriptQueue: RealtimeTranscriptTurn[] = [];
@@ -246,6 +273,33 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     if (this.state().connected && !this.backlogPaused) return 'animate-pulse bg-emerald-500';
     if (this.state().connecting || this.ambientState().active || this.backlogPaused) return 'animate-pulse bg-amber-500';
     return 'bg-rose-500';
+  }
+
+  waveBarHeight(index: number): number {
+    if (this.manualMuted || (!this.state().connected && !this.ambientState().active)) return 6;
+    const isUser = this.state().userSpeaking;
+    const isAssistant = this.state().assistantSpeaking;
+    const active = isUser || isAssistant;
+    const sinFactor = 0.3 + Math.abs(Math.sin((index + 1) * 0.75 + (index % 3) * 1.2)) * 0.7;
+    const baseHeight = active ? 28 : 14;
+    return Math.round(6 + sinFactor * baseHeight);
+  }
+
+  waveBarClasses(index: number): string {
+    if (this.manualMuted) return 'bg-slate-500/40 dark:bg-slate-600/40';
+    if (this.state().userSpeaking) {
+      return 'bg-gradient-to-t from-emerald-500 to-cyan-400 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse';
+    }
+    if (this.state().assistantSpeaking) {
+      return 'bg-gradient-to-t from-indigo-500 to-purple-400 shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse';
+    }
+    if (this.state().connected && !this.backlogPaused) {
+      return 'bg-gradient-to-t from-cyan-500 to-cyan-300 shadow-[0_0_6px_rgba(6,182,212,0.4)] animate-pulse';
+    }
+    if (this.state().connecting || this.ambientState().active || this.backlogPaused) {
+      return 'bg-gradient-to-t from-amber-500 to-yellow-300 animate-pulse';
+    }
+    return 'bg-rose-500/50';
   }
 
   showSafetyAlert(): boolean {
