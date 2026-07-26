@@ -104,13 +104,48 @@ class RealtimeClinicalIntakeServiceTest {
         when(repository.findByVisitIdAndItemId(visitId, "item-stable"))
                 .thenReturn(Optional.of(existing));
 
-        assertThatThrownBy(() -> service.ingest(
+        var result = service.ingest(
                 visitId,
                 userId,
                 organizationId,
                 "event-replayed",
                 "item-stable",
                 "Douleur depuis trois jours",
+                0.9);
+
+        assertThat(result.eventId()).isEqualTo("event-original");
+        assertThat(result.itemId()).isEqualTo("item-stable");
+        assertThat(result.transcript()).isEqualTo("Douleur depuis trois jours");
+        verify(repository, never()).findMaximumSequence(visitId);
+        verify(repository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void shouldRejectStableItemIdWhenItsTranscriptChanges() {
+        UUID visitId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+        prepareVisit(visitId, organizationId);
+        RealtimeClinicalIntakeEntity existing = entity(
+                organizationId,
+                visitId,
+                "event-original",
+                "item-stable",
+                "Douleur depuis trois jours",
+                0.9,
+                userId);
+        when(repository.findByVisitIdAndEventId(visitId, "event-replayed"))
+                .thenReturn(Optional.empty());
+        when(repository.findByVisitIdAndItemId(visitId, "item-stable"))
+                .thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> service.ingest(
+                visitId,
+                userId,
+                organizationId,
+                "event-replayed",
+                "item-stable",
+                "Douleur depuis cinq jours",
                 0.9))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("AI_REALTIME_INTAKE_ID_REUSED");
