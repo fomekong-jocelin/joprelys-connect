@@ -36,6 +36,7 @@ import {
   ClassicVoiceCapture,
   ClassicVoiceRecorderService,
 } from './classic-voice-recorder.service';
+import { DoctorVoiceCalibrationComponent } from './doctor-voice-calibration.component';
 import { RealtimeVoiceControllerComponent } from './realtime-voice-controller.component';
 
 export type { AiConsultationDraft } from './ai-consultation-api.service';
@@ -51,6 +52,7 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
     AiProposalPanelComponent,
     AiTranscriptReviewComponent,
     AiDraftPreviewComponent,
+    DoctorVoiceCalibrationComponent,
     RealtimeVoiceControllerComponent,
   ],
   templateUrl: './voice-assistant-panel.component.html',
