@@ -1,55 +1,52 @@
-import {
-  AfterViewInit,
-  ApplicationRef,
-  Component,
-  ComponentRef,
-  EnvironmentInjector,
-  OnDestroy,
-  OnInit,
-  createComponent,
-  inject,
-  signal,
-} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
-import { CommonModule } from '@angular/common';
-import { Subscription } from 'rxjs';
-import { AppShellComponent } from '../shared/layout/app-shell.component';
-import { ConsultationApiService } from './consultation-api.service';
-import { VisitApiService } from '../visit/visit-api.service';
-import { Consultation, Prescription } from './consultation.models';
-import { Visit, Vitals } from '../visit/visit.models';
 import { LabOrderApiService } from '../clinic/lab/lab-api.service';
 import { ExamType } from '../clinic/lab/lab.models';
 import { I18nService } from '../core/i18n/i18n.service';
-import {
-  AiConsultationDraft,
-  AiPrescriptionLine,
-  AiVitalsDraft,
-} from './ai-consultation-api.service';
-import { VoiceAssistantPanelComponent } from './voice-assistant-panel.component';
-import { ClinicalNoteEditorComponent } from './clinical-note-editor.component';
 import { PatientApiService } from '../patient/patient-api.service';
 import {
   Patient,
   PatientAllergy,
   PatientMedicalHistory,
 } from '../patient/patient.models';
+import { AppShellComponent } from '../shared/layout/app-shell.component';
+import { VisitApiService } from '../visit/visit-api.service';
+import { Visit, Vitals } from '../visit/visit.models';
+import {
+  AiConsultationDraft,
+  AiPrescriptionLine,
+  AiVitalsDraft,
+} from './ai-consultation-api.service';
+import { ClinicalNoteEditorComponent } from './clinical-note-editor.component';
+import { ConsultationApiService } from './consultation-api.service';
+import { Consultation, Prescription } from './consultation.models';
+import { VoiceAssistantPanelComponent } from './voice-assistant-panel.component';
+
+interface CommonExam {
+  code: string;
+  labelKey: string;
+}
 
 @Component({
   selector: 'app-consultation',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, AppShellComponent],
-  templateUrl: './consultation.component.html'
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    AppShellComponent,
+    VoiceAssistantPanelComponent,
+    ClinicalNoteEditorComponent,
+  ],
+  templateUrl: './consultation.component.html',
 })
-export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
+export class ConsultationComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly http = inject(HttpClient);
-  private readonly applicationRef = inject(ApplicationRef);
-  private readonly environmentInjector = inject(EnvironmentInjector);
   private readonly consultationApi = inject(ConsultationApiService);
   private readonly visitApi = inject(VisitApiService);
   private readonly patientApi = inject(PatientApiService);
@@ -72,26 +69,18 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
 
   visitId = '';
   private patientId = '';
-  private voiceAssistantRef: ComponentRef<VoiceAssistantPanelComponent> | null = null;
-  private clinicalNoteRef: ComponentRef<ClinicalNoteEditorComponent> | null = null;
-  private legacyClinicalDetailsElement: HTMLElement | null = null;
-  private voiceDraftSubscription: Subscription | null = null;
-  private voiceMountTimer: ReturnType<typeof setTimeout> | null = null;
-  private voiceMountAttempts = 0;
-  private clinicalNoteMountTimer: ReturnType<typeof setTimeout> | null = null;
-  private clinicalNoteMountAttempts = 0;
   shouldCloseAfterSave = false;
 
-  readonly commonExams = [
-    { name: 'NFS / Hémogramme', code: 'NFS' },
-    { name: 'Glycémie à jeun', code: 'Glycémie à jeun' },
-    { name: 'Créatininémie (Bilan Rénal)', code: 'Créatinine' },
-    { name: 'Urée', code: 'Urée' },
-    { name: 'Bilan Lipidique (EAL)', code: 'Bilan Lipidique' },
-    { name: 'Transaminases (SGOT/SGPT)', code: 'Transaminases' },
-    { name: 'CRP (Protéine C-Réactive)', code: 'CRP' },
-    { name: 'ECBU (Urine)', code: 'ECBU' },
-    { name: 'Hémoglobine Glyquée (HbA1c)', code: 'HbA1c' }
+  readonly commonExams: readonly CommonExam[] = [
+    { code: 'NFS', labelKey: 'consultation.lab.common.nfs' },
+    { code: 'Glycémie à jeun', labelKey: 'consultation.lab.common.fastingGlucose' },
+    { code: 'Créatinine', labelKey: 'consultation.lab.common.creatinine' },
+    { code: 'Urée', labelKey: 'consultation.lab.common.urea' },
+    { code: 'Bilan Lipidique', labelKey: 'consultation.lab.common.lipidPanel' },
+    { code: 'Transaminases', labelKey: 'consultation.lab.common.transaminases' },
+    { code: 'CRP', labelKey: 'consultation.lab.common.crp' },
+    { code: 'ECBU', labelKey: 'consultation.lab.common.ecbu' },
+    { code: 'HbA1c', labelKey: 'consultation.lab.common.hba1c' },
   ];
 
   readonly form: FormGroup = this.fb.group({
@@ -99,8 +88,7 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
     clinicalExam: [''],
     suspectedDiagnosis: [''],
     diagnosis: ['', Validators.required],
-    // Conservé pour compatibilité API / données historiques. Le nouvel écran
-    // expose un seul "Diagnostic retenu" et synchronise cette valeur à la sauvegarde.
+    // Compatibilité API historique : le médecin ne voit qu'un seul diagnostic retenu.
     finalDiagnosis: [''],
     conclusion: [''],
     advice: [''],
@@ -108,7 +96,7 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
     prescription: this.fb.array([]),
     exams: this.fb.array([]),
     labPriority: ['NORMALE'],
-    labReason: ['']
+    labReason: [''],
   });
 
   get prescriptionItems(): FormArray {
@@ -121,39 +109,61 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit(): void {
     this.visitId = this.route.snapshot.paramMap.get('visitId') ?? '';
-    this.voiceDraftSubscription = this.form.valueChanges.subscribe(() => this.syncVoiceDraft());
     this.loadData();
   }
 
-  ngAfterViewInit(): void {
-    this.scheduleVoiceAssistantMount();
-    this.scheduleClinicalNoteMount();
+  currentVoiceDraft(): Record<string, unknown> {
+    const raw = this.form.getRawValue();
+    return {
+      ...raw,
+      finalDiagnosis: raw.diagnosis || '',
+      vitals: this.vitals() ?? {},
+    };
   }
 
-  ngOnDestroy(): void {
-    this.voiceDraftSubscription?.unsubscribe();
-    if (this.voiceMountTimer) {
-      clearTimeout(this.voiceMountTimer);
-      this.voiceMountTimer = null;
+  commonExamLabel(exam: CommonExam): string {
+    return this.i18n.t(exam.labelKey);
+  }
+
+  prescriptionStatusLabel(status?: string | null): string {
+    if (!status) return '';
+    const keyByStatus: Record<string, string> = {
+      DRAFT: 'consultation.prescription.statusDraft',
+      ACTIVE: 'consultation.prescription.statusActive',
+      CANCELLED: 'consultation.prescription.statusCancelled',
+      EXPIRED: 'consultation.prescription.statusExpired',
+    };
+    return this.i18n.t(keyByStatus[status] ?? 'consultation.prescription.statusUnknown');
+  }
+
+  prescriptionStatusClasses(status?: string | null): string {
+    if (status === 'ACTIVE') {
+      return 'border-[var(--brand-success-muted)] bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]';
     }
-    if (this.clinicalNoteMountTimer) {
-      clearTimeout(this.clinicalNoteMountTimer);
-      this.clinicalNoteMountTimer = null;
+    if (status === 'DRAFT') {
+      return 'border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]';
     }
-    if (this.voiceAssistantRef) {
-      this.applicationRef.detachView(this.voiceAssistantRef.hostView);
-      this.voiceAssistantRef.destroy();
-      this.voiceAssistantRef = null;
+    return 'border-[var(--app-border)] bg-[var(--app-surface-muted)] text-[var(--text-secondary)]';
+  }
+
+  painLabel(): string {
+    const pain = this.vitals()?.painScale;
+    if (pain === undefined || pain === null) return '';
+    if (pain === 0) return this.i18n.t('consultation.vitals.painNone');
+    if (pain <= 3) return this.i18n.t('consultation.vitals.painMild');
+    if (pain <= 6) return this.i18n.t('consultation.vitals.painModerate');
+    return this.i18n.t('consultation.vitals.painSevere');
+  }
+
+  painClasses(): string {
+    const pain = this.vitals()?.painScale ?? 0;
+    if (pain <= 3) {
+      return 'border-[var(--brand-success-muted)] bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]';
     }
-    if (this.clinicalNoteRef) {
-      this.applicationRef.detachView(this.clinicalNoteRef.hostView);
-      this.clinicalNoteRef.destroy();
-      this.clinicalNoteRef = null;
+    if (pain <= 6) {
+      return 'border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]';
     }
-    if (this.legacyClinicalDetailsElement) {
-      this.legacyClinicalDetailsElement.hidden = false;
-      this.legacyClinicalDetailsElement = null;
-    }
+    return 'border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] text-[var(--brand-danger-text)]';
   }
 
   applyAiDraft(draft: AiConsultationDraft): void {
@@ -171,9 +181,6 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
       if (typeof value === 'string') acceptedDraft[field] = value.trim();
     });
 
-    // Le modèle historique distingue diagnosis/finalDiagnosis. L'UX clinique
-    // n'affiche plus ce doublon : finalDiagnosis prévaut lorsqu'il est fourni,
-    // sinon diagnosis alimente l'unique "Diagnostic retenu".
     const retainedDiagnosis = [draft.finalDiagnosis, draft.diagnosis]
       .find(value => typeof value === 'string' && value.trim())
       ?.trim();
@@ -191,17 +198,12 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
       if (draft.labOrders) this.applyAiLabOrders(draft.labOrders);
       if (draft.vitals) this.applyAiVitals(draft.vitals);
     } catch {
-      this.errorMessage.set(
-        'Une proposition structurée de l’IA est illisible. Elle n’a pas été appliquée.',
-      );
+      this.errorMessage.set(this.i18n.t('consultation.ai.applyInvalidStructuredProposal'));
       return;
     }
 
     this.form.markAsDirty();
-    this.syncVoiceDraft();
-    this.successMessage.set(
-      'Les propositions IA validées ont été appliquées. Relisez la note clinique, l’ordonnance, les examens et les constantes avant la sauvegarde finale.',
-    );
+    this.successMessage.set(this.i18n.t('consultation.ai.applySuccessReview'));
     this.errorMessage.set('');
   }
 
@@ -209,9 +211,8 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
     const parsed = JSON.parse(raw) as AiPrescriptionLine[];
     if (!Array.isArray(parsed)) throw new Error('Invalid prescription');
     const presc = this.prescription();
-    if (presc && presc.status !== 'DRAFT') {
-      throw new Error('Prescription finalized');
-    }
+    if (presc && presc.status !== 'DRAFT') throw new Error('Prescription finalized');
+
     this.prescriptionItems.clear();
     parsed.forEach(item => {
       if (!item || typeof item.drugName !== 'string' || !item.drugName.trim()) return;
@@ -249,112 +250,20 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
     ];
     numericFields.forEach(field => {
       const value = parsed[field];
-      if (typeof value === 'number' && Number.isFinite(value)) {
-        vitals[field] = value;
-      }
+      if (typeof value === 'number' && Number.isFinite(value)) vitals[field] = value;
     });
     if (Object.keys(vitals).length === 0) return;
+
     this.visitApi.saveVitals(this.visitId, vitals).subscribe({
-      next: saved => {
-        this.vitals.set(saved);
-        this.syncVoiceDraft();
-      },
+      next: saved => this.vitals.set(saved),
       error: err => {
         this.errorMessage.set(
-          err.error?.detail || err.error?.title || 'Les constantes proposées n’ont pas pu être enregistrées.',
+          err.error?.detail
+          || err.error?.title
+          || this.i18n.t('consultation.ai.vitalsSaveFailed'),
         );
       },
     });
-  }
-
-  private scheduleVoiceAssistantMount(): void {
-    if (this.voiceAssistantRef || this.voiceMountAttempts >= 40) return;
-    this.voiceMountAttempts += 1;
-    this.voiceMountTimer = setTimeout(() => {
-      this.voiceMountTimer = null;
-      if (!this.mountVoiceAssistant()) {
-        this.scheduleVoiceAssistantMount();
-      }
-    }, this.voiceMountAttempts === 1 ? 0 : 250);
-  }
-
-  private scheduleClinicalNoteMount(): void {
-    if (this.clinicalNoteRef || this.clinicalNoteMountAttempts >= 40) return;
-    this.clinicalNoteMountAttempts += 1;
-    this.clinicalNoteMountTimer = setTimeout(() => {
-      this.clinicalNoteMountTimer = null;
-      if (!this.mountClinicalNoteEditor()) {
-        this.scheduleClinicalNoteMount();
-      }
-    }, this.clinicalNoteMountAttempts === 1 ? 0 : 250);
-  }
-
-  private mountVoiceAssistant(): boolean {
-    if (!this.visitId || this.voiceAssistantRef || typeof document === 'undefined') {
-      return !!this.voiceAssistantRef;
-    }
-    const formElement = document.querySelector('app-consultation form');
-    const target = formElement?.parentElement;
-    if (!formElement || !target) return false;
-
-    const componentRef = createComponent(VoiceAssistantPanelComponent, {
-      environmentInjector: this.environmentInjector,
-    });
-    componentRef.setInput('visitId', this.visitId);
-    componentRef.setInput('currentDraft', this.currentVoiceDraft());
-    componentRef.instance.applyDraft.subscribe(draft => this.applyAiDraft(draft));
-    this.applicationRef.attachView(componentRef.hostView);
-    target.insertBefore(componentRef.location.nativeElement, formElement);
-    this.voiceAssistantRef = componentRef;
-    return true;
-  }
-
-  private mountClinicalNoteEditor(): boolean {
-    if (this.clinicalNoteRef || typeof document === 'undefined') {
-      return !!this.clinicalNoteRef;
-    }
-    const formElement = document.querySelector('app-consultation form') as HTMLFormElement | null;
-    if (!formElement) return false;
-
-    const legacyClinicalDetails = formElement.firstElementChild as HTMLElement | null;
-    if (!legacyClinicalDetails) return false;
-
-    const componentRef = createComponent(ClinicalNoteEditorComponent, {
-      environmentInjector: this.environmentInjector,
-    });
-    componentRef.setInput('form', this.form);
-    componentRef.setInput('patient', this.patient());
-    componentRef.setInput('visitReason', this.visitReason());
-    componentRef.setInput('allergies', this.patientAllergies());
-    componentRef.setInput('medicalHistory', this.patientMedicalHistory());
-    this.applicationRef.attachView(componentRef.hostView);
-    formElement.insertBefore(componentRef.location.nativeElement, legacyClinicalDetails);
-
-    legacyClinicalDetails.hidden = true;
-    this.legacyClinicalDetailsElement = legacyClinicalDetails;
-    this.clinicalNoteRef = componentRef;
-    return true;
-  }
-
-  private syncVoiceDraft(): void {
-    this.voiceAssistantRef?.setInput('currentDraft', this.currentVoiceDraft());
-  }
-
-  private syncClinicalNoteContext(): void {
-    if (!this.clinicalNoteRef) return;
-    this.clinicalNoteRef.setInput('patient', this.patient());
-    this.clinicalNoteRef.setInput('visitReason', this.visitReason());
-    this.clinicalNoteRef.setInput('allergies', this.patientAllergies());
-    this.clinicalNoteRef.setInput('medicalHistory', this.patientMedicalHistory());
-  }
-
-  private currentVoiceDraft(): Record<string, unknown> {
-    const raw = this.form.getRawValue();
-    return {
-      ...raw,
-      finalDiagnosis: raw.diagnosis || '',
-      vitals: this.vitals() ?? {},
-    };
   }
 
   private loadData(): void {
@@ -362,51 +271,40 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
     this.isLoading.set(true);
 
     this.http.get<{ visitNumber?: string } & Vitals>(`/api/visits/${this.visitId}/vitals`).subscribe({
-      next: (data) => {
+      next: data => {
         this.vitals.set(data);
         this.isLoading.set(false);
-        this.scheduleVoiceAssistantMount();
-        this.scheduleClinicalNoteMount();
-        this.syncVoiceDraft();
       },
-      error: () => {
-        this.isLoading.set(false);
-        this.scheduleVoiceAssistantMount();
-        this.scheduleClinicalNoteMount();
-      }
+      error: () => this.isLoading.set(false),
     });
 
     this.http.get<Visit>(`/api/visits/${this.visitId}`).subscribe({
-      next: (visit) => {
-        if (visit?.visitNumber) {
-          this.visitNumber.set(visit.visitNumber);
-        }
+      next: visit => {
+        if (visit?.visitNumber) this.visitNumber.set(visit.visitNumber);
         this.visitReason.set(visit?.reason || '');
-        this.syncClinicalNoteContext();
 
         if (visit?.patientId) {
           this.patientId = visit.patientId;
           this.loadPatientContext(this.patientId);
           this.labOrderApi.getPatientLabOrders(this.patientId).subscribe({
-            next: (orders) => {
-              const currentVisitOrder = orders.find(o => o.visitId === this.visitId);
-              if (currentVisitOrder) {
-                this.labExams.clear();
-                currentVisitOrder.exams.forEach(ex => this.addLabExam(ex));
-                this.form.patchValue({
-                  labPriority: currentVisitOrder.priority,
-                  labReason: currentVisitOrder.reason || ''
-                });
-              }
-            }
+            next: orders => {
+              const currentVisitOrder = orders.find(order => order.visitId === this.visitId);
+              if (!currentVisitOrder) return;
+              this.labExams.clear();
+              currentVisitOrder.exams.forEach(exam => this.addLabExam(exam));
+              this.form.patchValue({
+                labPriority: currentVisitOrder.priority,
+                labReason: currentVisitOrder.reason || '',
+              });
+            },
           });
         }
       },
-      error: () => {}
+      error: () => undefined,
     });
 
     this.consultationApi.getConsultation(this.visitId).subscribe({
-      next: (existing) => {
+      next: existing => {
         this.consultation.set(existing);
         const retainedDiagnosis = existing.finalDiagnosis?.trim() || existing.diagnosis || '';
         this.form.patchValue({
@@ -419,42 +317,32 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
           advice: existing.advice ?? '',
           followUp: existing.followUp ?? '',
         });
-        this.syncVoiceDraft();
         this.loadPrescription(existing.id);
       },
-      error: () => {}
+      error: () => undefined,
     });
   }
 
   private loadPatientContext(patientId: string): void {
     this.patientApi.getById(patientId).subscribe({
-      next: patient => {
-        this.patient.set(patient);
-        this.syncClinicalNoteContext();
-      },
+      next: patient => this.patient.set(patient),
       error: () => this.patient.set(null),
     });
 
     this.patientApi.getAllergies(patientId).subscribe({
-      next: allergies => {
-        this.patientAllergies.set(allergies);
-        this.syncClinicalNoteContext();
-      },
+      next: allergies => this.patientAllergies.set(allergies),
       error: () => this.patientAllergies.set([]),
     });
 
     this.patientApi.getMedicalHistory(patientId).subscribe({
-      next: history => {
-        this.patientMedicalHistory.set(history);
-        this.syncClinicalNoteContext();
-      },
+      next: history => this.patientMedicalHistory.set(history),
       error: () => this.patientMedicalHistory.set([]),
     });
   }
 
   loadPrescription(consultationId: string): void {
     this.consultationApi.getPrescription(consultationId).subscribe({
-      next: (presc) => {
+      next: presc => {
         this.prescription.set(presc);
         this.prescriptionItems.clear();
         presc.items.forEach(item => {
@@ -471,11 +359,8 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
             substitutionAllowed: [{ value: item.substitutionAllowed !== false, disabled: presc.status !== 'DRAFT' }],
           }));
         });
-        this.syncVoiceDraft();
       },
-      error: () => {
-        this.prescription.set(null);
-      }
+      error: () => this.prescription.set(null),
     });
   }
 
@@ -483,7 +368,7 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
     const presc = this.prescription();
     if (presc && presc.status !== 'DRAFT') return;
 
-    const line = this.fb.group({
+    this.prescriptionItems.push(this.fb.group({
       drugName: ['', Validators.required],
       dosage: ['', Validators.required],
       posology: [''],
@@ -494,8 +379,7 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
       route: [''],
       frequency: [''],
       substitutionAllowed: [true],
-    });
-    this.prescriptionItems.push(line);
+    }));
   }
 
   removePrescriptionLine(index: number): void {
@@ -507,11 +391,9 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
   addLabExam(examName: string = ''): void {
     if (!examName.trim()) return;
     const exists = this.labExams.controls.some(
-      (ctrl) => ctrl.value.toLowerCase() === examName.trim().toLowerCase()
+      ctrl => ctrl.value.toLowerCase() === examName.trim().toLowerCase(),
     );
-    if (!exists) {
-      this.labExams.push(this.fb.control(examName.trim(), Validators.required));
-    }
+    if (!exists) this.labExams.push(this.fb.control(examName.trim(), Validators.required));
   }
 
   removeLabExam(index: number): void {
@@ -529,17 +411,18 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
         this.successMessage.set(this.i18n.t('consultation.prescription.finalizedSuccess'));
         this.loadPrescription(presc.consultationId);
       },
-      error: (err) => {
+      error: err => {
         this.isLoading.set(false);
-        this.errorMessage.set(err.error?.detail || 'Error finalizing prescription.');
-      }
+        this.errorMessage.set(
+          err.error?.detail || this.i18n.t('consultation.errors.finalizePrescription'),
+        );
+      },
     });
   }
 
   cancelPrescription(): void {
     const presc = this.prescription();
     if (!presc) return;
-
     if (!confirm(this.i18n.t('consultation.prescription.confirmCancel'))) return;
 
     this.isLoading.set(true);
@@ -549,10 +432,12 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
         this.successMessage.set(this.i18n.t('consultation.prescription.cancelledSuccess'));
         this.loadPrescription(presc.consultationId);
       },
-      error: (err) => {
+      error: err => {
         this.isLoading.set(false);
-        this.errorMessage.set(err.error?.detail || 'Error cancelling prescription.');
-      }
+        this.errorMessage.set(
+          err.error?.detail || this.i18n.t('consultation.errors.cancelPrescription'),
+        );
+      },
     });
   }
 
@@ -562,21 +447,21 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.isLoading.set(true);
     this.consultationApi.downloadDocumentById(presc.documentId).subscribe({
-      next: (blob) => {
+      next: blob => {
         this.isLoading.set(false);
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `ordonnance-${presc.prescriptionNumber}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `ordonnance-${presc.prescriptionNumber}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
       },
       error: () => {
         this.isLoading.set(false);
-        this.errorMessage.set('Error downloading PDF.');
-      }
+        this.errorMessage.set(this.i18n.t('consultation.errors.downloadPrescription'));
+      },
     });
   }
 
@@ -605,14 +490,12 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
       clinicalExam: clinicalExam || undefined,
       suspectedDiagnosis: suspectedDiagnosis || undefined,
       diagnosis: retainedDiagnosis,
-      // Compatibilité historique : une seule valeur clinique est désormais
-      // saisie, mais elle reste persistée dans l'ancien champ finalDiagnosis.
       finalDiagnosis: retainedDiagnosis || undefined,
       conclusion: conclusion || undefined,
       advice: advice || undefined,
       followUp: followUp || undefined,
     }).subscribe({
-      next: (savedConsultation) => {
+      next: savedConsultation => {
         this.consultation.set(savedConsultation);
 
         const prescriptionLines = this.prescriptionItems.getRawValue();
@@ -632,23 +515,29 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
           this.consultationApi.savePrescription(savedConsultation.id, {
             items: prescriptionLines,
           }).subscribe({
-            next: (savedPresc) => {
+            next: savedPresc => {
               this.prescription.set(savedPresc);
               this.saveLabOrderAndComplete(closeVisitAfter, successMsg);
             },
-            error: (err) => {
+            error: err => {
               this.isSaving.set(false);
-              this.errorMessage.set(this.i18n.t('consultation.success.saved') + ' - Error: ' + (err.error?.detail || err.message || 'Prescription error'));
-            }
+              this.errorMessage.set(
+                err.error?.detail || this.i18n.t('consultation.errors.savePrescription'),
+              );
+            },
           });
         } else {
           this.saveLabOrderAndComplete(closeVisitAfter, successMsg);
         }
       },
-      error: (err) => {
+      error: err => {
         this.isSaving.set(false);
-        this.errorMessage.set(err.error?.detail || err.error?.title || 'An error occurred during save.');
-      }
+        this.errorMessage.set(
+          err.error?.detail
+          || err.error?.title
+          || this.i18n.t('consultation.errors.saveConsultation'),
+        );
+      },
     });
   }
 
@@ -661,17 +550,17 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
         examType: ExamType.LABORATOIRE,
         exams: examsList,
         reason: this.form.get('labReason')?.value || undefined,
-        priority: this.form.get('labPriority')?.value || 'NORMALE'
+        priority: this.form.get('labPriority')?.value || 'NORMALE',
       };
 
       this.labOrderApi.create(request).subscribe({
-        next: () => {
-          this.handleAfterSaveSuccess(closeVisitAfter, successMsg);
-        },
-        error: (err) => {
+        next: () => this.handleAfterSaveSuccess(closeVisitAfter, successMsg),
+        error: err => {
           this.isSaving.set(false);
-          this.errorMessage.set(this.i18n.t('consultation.success.saved') + ' - Error: ' + (err.error?.detail || err.message || 'Lab order error'));
-        }
+          this.errorMessage.set(
+            err.error?.detail || this.i18n.t('consultation.errors.saveLabOrder'),
+          );
+        },
       });
     } else {
       this.handleAfterSaveSuccess(closeVisitAfter, successMsg);
@@ -685,25 +574,25 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
         next: () => {
           this.isClosing.set(false);
           this.isSaving.set(false);
-          this.router.navigate(['/dashboard']);
+          void this.router.navigate(['/dashboard']);
         },
-        error: (err) => {
+        error: err => {
           this.isClosing.set(false);
           this.isSaving.set(false);
-          this.errorMessage.set('Saved but failed to close visit: ' + (err.error?.detail || err.message));
-        }
+          this.errorMessage.set(
+            err.error?.detail || this.i18n.t('consultation.errors.closeVisit'),
+          );
+        },
       });
     } else {
       this.isSaving.set(false);
       this.successMessage.set(successMsg);
       const consultationObj = this.consultation();
-      if (consultationObj) {
-        this.loadPrescription(consultationObj.id);
-      }
+      if (consultationObj) this.loadPrescription(consultationObj.id);
     }
   }
 
   goBack(): void {
-    this.router.navigate(['/dashboard']);
+    void this.router.navigate(['/dashboard']);
   }
 }
