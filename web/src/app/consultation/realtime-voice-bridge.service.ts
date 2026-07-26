@@ -204,11 +204,14 @@ export class RealtimeVoiceBridgeService {
   }
 
   cancelAssistantResponse(): void {
-    if (!this.isChannelOpen() || !this.stateSubject.value.assistantSpeaking) return;
+    const assistantSpeaking = this.stateSubject.value.assistantSpeaking;
+    if (!this.isChannelOpen() || (!this.activeResponseId && !assistantSpeaking)) return;
     if (this.activeResponseId) {
       this.sendEvent({ type: 'response.cancel', response_id: this.activeResponseId });
     }
-    this.sendEvent({ type: 'output_audio_buffer.clear' });
+    if (assistantSpeaking) {
+      this.sendEvent({ type: 'output_audio_buffer.clear' });
+    }
     this.completeAssistantTurn();
   }
 
