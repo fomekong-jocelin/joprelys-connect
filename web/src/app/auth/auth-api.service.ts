@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { catchError, finalize, map, Observable, of, tap, throwError } from 'rxjs';
+import { catchError, finalize, map, Observable, of, tap } from 'rxjs';
 import { AuthSessionRecoveryService } from './auth-session-recovery.service';
 import { AuthTokenStorageService } from './auth-token-storage.service';
 import { LoginRequest, LoginResponse } from './auth.models';
@@ -45,10 +45,14 @@ export class AuthApiService {
       map(() => undefined),
       catchError((error: HttpErrorResponse) => {
         if (error.status === 401 || error.status === 403) {
+          // The server positively rejected the authentication session.
           this.tokenStorage.clear();
-          return of(undefined);
         }
-        return throwError(() => error);
+        // A network outage, 409 refresh race or 5xx auth outage must never abort
+        // Angular bootstrap and produce a blank application. Preserve the local
+        // state and let subsequent protected requests recover when connectivity
+        // returns.
+        return of(undefined);
       }),
     );
   }
