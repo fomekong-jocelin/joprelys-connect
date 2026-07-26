@@ -60,14 +60,11 @@ export class AuthSessionRecoveryService implements OnDestroy {
       return;
     }
 
-    const loginTarget = patientContext ? '/patient/login' : '/';
-    if (currentUrl
-      && currentUrl !== loginTarget
-      && !currentUrl.startsWith('/auth/login')
-      && !currentUrl.startsWith('/?')) {
+    if (currentUrl && currentUrl !== '/' && !currentUrl.startsWith('/auth/login')) {
       this.isRedirectingToLogin = true;
-      void this.router.navigate([loginTarget], {
+      void this.router.navigate(['/'], {
         queryParams: {
+          ...(patientContext ? { mode: 'patient' } : {}),
           sessionExpired: 'true',
           ...(returnUrl ? { returnUrl } : {}),
         },
@@ -184,9 +181,12 @@ export class AuthSessionRecoveryService implements OnDestroy {
   private isPatientContext(): boolean {
     if (this.tokenStorage.isPatientSession()) return true;
     const routerUrl = this.router.url ?? '';
-    if (routerUrl.startsWith('/patient/')) return true;
-    const pathname = this.document.defaultView?.location?.pathname ?? '';
-    return pathname.startsWith('/patient/');
+    if (routerUrl.startsWith('/patient/') || routerUrl.includes('mode=patient')) return true;
+    const view = this.document.defaultView;
+    const pathname = view?.location?.pathname ?? '';
+    if (pathname.startsWith('/patient/')) return true;
+    const search = view?.location?.search ?? '';
+    return new URLSearchParams(search).get('mode') === 'patient';
   }
 
   private roles(value: string): string[] {
