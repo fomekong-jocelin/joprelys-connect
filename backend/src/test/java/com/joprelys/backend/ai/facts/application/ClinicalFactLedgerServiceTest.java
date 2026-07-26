@@ -9,6 +9,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.joprelys.backend.ai.ambient.application.AmbientTranscriptContract.TranscriptItemView;
+import com.joprelys.backend.ai.ambient.application.AmbientTranscriptContract.TranscriptLedgerView;
+import com.joprelys.backend.ai.ambient.application.AmbientTranscriptLedgerService;
 import com.joprelys.backend.ai.facts.application.ClinicalFactContract.EvidenceSpanCandidate;
 import com.joprelys.backend.ai.facts.application.ClinicalFactContract.FactCandidate;
 import com.joprelys.backend.ai.facts.domain.ClinicalFactTypes.Authority;
@@ -33,8 +35,9 @@ class ClinicalFactLedgerServiceTest {
     private final ClinicalFactRepository factRepository = mock(ClinicalFactRepository.class);
     private final VisitRepository visitRepository = mock(VisitRepository.class);
     private final ClinicalFactEvidenceValidator validator = mock(ClinicalFactEvidenceValidator.class);
+    private final AmbientTranscriptLedgerService transcriptLedger = mock(AmbientTranscriptLedgerService.class);
     private final ClinicalFactLedgerService service = new ClinicalFactLedgerService(
-            factRepository, visitRepository, validator);
+            factRepository, visitRepository, validator, transcriptLedger);
 
     @Test
     void shouldPersistValidatedFactWithExactEvidenceAndSequence() {
@@ -170,6 +173,7 @@ class ClinicalFactLedgerServiceTest {
         addEvidence(retraction, retractionCandidate.evidence().getFirst());
         when(factRepository.findByVisitIdOrderBySequenceNoAsc(visitId))
                 .thenReturn(List.of(root, retraction));
+        effectiveTranscript(visitId, organizationId, rootCandidate.evidence().getFirst());
 
         var effective = service.listEffective(visitId, organizationId);
         var audit = service.listAudit(visitId, organizationId);
@@ -179,6 +183,49 @@ class ClinicalFactLedgerServiceTest {
         assertThat(audit.facts().get(0).status()).isEqualTo("ASSERTED");
         assertThat(audit.facts().get(1).status()).isEqualTo("RETRACTED");
         assertThat(audit.facts().get(1).supersedesFactId()).isEqualTo(root.getId());
+    }
+
+    @Test
+    void shouldHideAssertedLeafWhenItsTranscriptEvidenceIsNoLongerEffectiveButKeepAudit() {
+        UUID visitId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+        prepareReadableVisit(visitId, organizationId);
+        FactCandidate candidate = symptomCandidate("stale-evidence", null, FactStatus.ASSERTED);
+        ClinicalFactEntity fact = entity(
+                organizationId, visitId, 1, candidate, userId);
+        addEvidence(fact, candidate.evidence().getFirst());
+        when(factRepository.findByVisitIdOrderBySequenceNoAsc(visitId))
+                .thenReturn(List.of(fact));
+        when(transcriptLedger.listFinal(visitId, organizationId))
+                .thenReturn(new TranscriptLedgerView(visitId, List.of()));
+
+        var effective = service.listEffective(visitId, organizationId);
+        var audit = service.listAudit(visitId, organizationId);
+
+        assertThat(effective.facts()).isEmpty();
+        assertThat(audit.facts()).hasSize(1);
+        assertThat(audit.facts().getFirst().sourceEventId()).isEqualTo("stale-evidence");
+    }
+
+    @Test
+    void shouldKeepAssertedLeafWhenAllEvidenceItemsRemainEffective() {
+        UUID visitId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+        prepareReadableVisit(visitId, organizationId);
+        FactCandidate candidate = symptomCandidate("current-evidence", null, FactStatus.ASSERTED);
+        ClinicalFactEntity fact = entity(
+                organizationId, visitId, 1, candidate, userId);
+        addEvidence(fact, candidate.evidence().getFirst());
+        when(factRepository.findByVisitIdOrderBySequenceNoAsc(visitId))
+                .thenReturn(List.of(fact));
+        effectiveTranscript(visitId, organizationId, candidate.evidence().getFirst());
+
+        var effective = service.listEffective(visitId, organizationId);
+
+        assertThat(effective.facts()).hasSize(1);
+        assertThat(effective.facts().getFirst().sourceEventId()).isEqualTo("current-evidence");
     }
 
     private FactCandidate symptomCandidate(
@@ -213,7 +260,14 @@ class ClinicalFactLedgerServiceTest {
 
     private ClinicalFactEvidenceValidator.ValidatedFact validated(FactCandidate candidate) {
         EvidenceSpanCandidate span = candidate.evidence().getFirst();
-        TranscriptItemView item = new TranscriptItemView(
+        TranscriptItemView item = transcriptItem(span);
+        return new ClinicalFactEvidenceValidator.ValidatedFact(
+                candidate,
+                List.of(new ClinicalFactEvidenceValidator.ValidatedEvidence(span, item)));
+    }
+
+    private TranscriptItemView transcriptItem(EvidenceSpanCandidate span) {
+        return new TranscriptItemView(
                 span.transcriptItemId(),
                 1,
                 "source-1",
@@ -227,9 +281,6 @@ class ClinicalFactLedgerServiceTest {
                 "FINAL",
                 null,
                 Instant.now());
-        return new ClinicalFactEvidenceValidator.ValidatedFact(
-                candidate,
-                List.of(new ClinicalFactEvidenceValidator.ValidatedEvidence(span, item)));
     }
 
     private ClinicalFactEntity entity(
@@ -267,6 +318,16 @@ class ClinicalFactLedgerServiceTest {
                 span.quoteEndChar(),
                 span.quoteText(),
                 span.primarySupport()));
+    }
+
+    private void effectiveTranscript(
+            UUID visitId,
+            UUID organizationId,
+            EvidenceSpanCandidate span) {
+        when(transcriptLedger.listFinal(visitId, organizationId))
+                .thenReturn(new TranscriptLedgerView(
+                        visitId,
+                        List.of(transcriptItem(span))));
     }
 
     private void prepareLockedVisit(UUID visitId, UUID organizationId) {
