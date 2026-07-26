@@ -64,11 +64,14 @@ export class AmbientAudioCaptureService implements OnDestroy {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private flushResolver: (() => void) | null = null;
   private stopPromise: Promise<void> | null = null;
+  private pageHideStopPromise: Promise<void> | null = null;
+  private recoveryPromise: Promise<void> | null = null;
 
   constructor() {
     this.subscriptions.add(this.uploader.state$.subscribe(state => this.mergeUploadState(state)));
     this.document.addEventListener('visibilitychange', this.onVisibilityChange);
     this.document.defaultView?.addEventListener('pagehide', this.onPageHide);
+    this.document.defaultView?.addEventListener('pageshow', this.onPageShow);
   }
 
   isSupported(): boolean {
@@ -98,6 +101,7 @@ export class AmbientAudioCaptureService implements OnDestroy {
     if (this.stateSubject.value.active && this.timeline?.visitId === normalizedVisitId) {
       return;
     }
+    if (this.pageHideStopPromise) await this.pageHideStopPromise;
     if (this.audioContext || this.mediaStream) {
       await this.stopGraph(true);
     }
@@ -126,6 +130,7 @@ export class AmbientAudioCaptureService implements OnDestroy {
     this.clearReconnect();
     this.document.removeEventListener('visibilitychange', this.onVisibilityChange);
     this.document.defaultView?.removeEventListener('pagehide', this.onPageHide);
+    this.document.defaultView?.removeEventListener('pageshow', this.onPageShow);
     this.subscriptions.unsubscribe();
     void this.stopGraph(true);
     this.stateSubject.complete();
@@ -205,8 +210,12 @@ export class AmbientAudioCaptureService implements OnDestroy {
       return;
     }
     if (payload?.type !== 'frame' || !(payload.samples instanceof Float32Array)) return;
-    const downsampled = downsamplePcm16(payload.samples, sourceSampleRate, TARGET_SAMPLE_RATE);
-    this.appendSamples(downsampled);
+    try {
+      const downsampled = downsamplePcm16(payload.samples, sourceSampleRate, TARGET_SAMPLE_RATE);
+      this.appendSamples(downsampled);
+    } catch (error) {
+      void this.recoverFromCaptureLoss(this.describeError(error));
+    }
   }
 
   private appendSamples(samples: Int16Array): void {
@@ -367,13 +376,19 @@ export class AmbientAudioCaptureService implements OnDestroy {
     void this.recoverFromCaptureLoss('AMBIENT_MICROPHONE_TRACK_ENDED');
   };
 
-  private async recoverFromCaptureLoss(reason: string): Promise<void> {
-    this.patchState({ active: false, recovering: true, lastError: reason });
-    try {
-      await this.stopGraph(true);
-    } finally {
-      if (this.shouldCapture) this.scheduleReconnect();
-    }
+  private recoverFromCaptureLoss(reason: string): Promise<void> {
+    if (this.recoveryPromise) return this.recoveryPromise;
+    this.recoveryPromise = (async () => {
+      this.patchState({ active: false, recovering: true, lastError: reason });
+      try {
+        await this.stopGraph(true);
+      } finally {
+        if (this.shouldCapture) this.scheduleReconnect();
+      }
+    })().finally(() => {
+      this.recoveryPromise = null;
+    });
+    return this.recoveryPromise;
   }
 
   private readonly onVisibilityChange = (): void => {
@@ -385,7 +400,20 @@ export class AmbientAudioCaptureService implements OnDestroy {
 
   private readonly onPageHide = (): void => {
     if (!this.shouldCapture) return;
-    void this.stopGraph(true);
+    this.patchState({ active: false, recovering: true });
+    this.pageHideStopPromise = this.stopGraph(true)
+      .finally(() => {
+        this.pageHideStopPromise = null;
+      });
+  };
+
+  private readonly onPageShow = (): void => {
+    if (!this.shouldCapture || !this.desiredVisitId) return;
+    void (async () => {
+      if (this.pageHideStopPromise) await this.pageHideStopPromise;
+      if (!this.shouldCapture || this.audioContext || this.mediaStream) return;
+      await this.startGraph();
+    })().catch(() => undefined);
   };
 }
 
