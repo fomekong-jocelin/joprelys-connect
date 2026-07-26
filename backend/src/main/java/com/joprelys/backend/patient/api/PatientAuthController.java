@@ -1,9 +1,7 @@
 package com.joprelys.backend.patient.api;
 
 import com.joprelys.backend.auth.api.LoginResponse;
-import com.joprelys.backend.auth.api.RefreshTokenCookieManager;
 import com.joprelys.backend.patient.application.PatientAuthService;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,13 +14,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class PatientAuthController {
 
     private final PatientAuthService patientAuthService;
-    private final RefreshTokenCookieManager cookieManager;
 
-    public PatientAuthController(
-            PatientAuthService patientAuthService,
-            RefreshTokenCookieManager cookieManager) {
+    public PatientAuthController(PatientAuthService patientAuthService) {
         this.patientAuthService = patientAuthService;
-        this.cookieManager = cookieManager;
     }
 
     @PostMapping("/otp")
@@ -35,15 +29,14 @@ public class PatientAuthController {
     }
 
     @PostMapping("/verify")
-    public LoginResponse verifyOtp(
-            @Valid @RequestBody VerifyOtpRequest request,
-            HttpServletResponse response) {
-        LoginResponse loginResponse = patientAuthService.verifyOtp(
+    public LoginResponse verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        // Patient authentication is JWT/OTP only. It must not mutate the persistent
+        // professional refresh cookie because another tab may hold an active
+        // clinician consultation in the same browser.
+        return patientAuthService.verifyOtp(
                 request.globalPatientNumber(),
                 request.otpCode()
         );
-        cookieManager.clear(response);
-        return loginResponse;
     }
 
     /**
