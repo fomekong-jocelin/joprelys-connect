@@ -31,7 +31,7 @@ describe('AuthTokenStorageService session boundaries', () => {
     clearTestCookie();
   });
 
-  it('should purge browser storage, accessible cookies and registered memory state', () => {
+  it('should purge auth/browser state without deleting unrelated accessible cookies', () => {
     const cleanup = vi.fn();
     service.registerSessionBoundaryCleanup(cleanup);
     service.save(loginResponse('doctor-token', 'doctor@test.local', 'MEDECIN'));
@@ -44,7 +44,7 @@ describe('AuthTokenStorageService session boundaries', () => {
     expect(service.session()).toBeNull();
     expect(local.length).toBe(0);
     expect(session.length).toBe(0);
-    expect(document.cookie).not.toContain('joprelys_test_cookie');
+    expect(document.cookie).toContain('joprelys_test_cookie=secret');
     expect(cleanup).toHaveBeenCalledOnce();
   });
 
