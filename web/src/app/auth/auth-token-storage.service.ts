@@ -46,6 +46,15 @@ export class AuthTokenStorageService {
     return expiresAt <= Date.now() + leewaySeconds * 1_000;
   }
 
+  isPatientSession(session: AuthSession | null = this.session()): boolean {
+    if (!session) return false;
+    return session.role
+      .split(',')
+      .map(role => role.trim())
+      .filter(Boolean)
+      .includes('PATIENT');
+  }
+
   clearAccessToken(): void {
     try {
       this.storage('sessionStorage')?.removeItem(SESSION_KEY);
@@ -91,10 +100,9 @@ export class AuthTokenStorageService {
   private purgeBrowserState(): void {
     this.clearStorage(this.storage('sessionStorage'));
     this.clearStorageExceptDrafts(this.storage('localStorage'));
-    // Do not iterate through document.cookie here. The refresh cookie is HttpOnly
-    // and therefore cannot be cleared safely from JavaScript anyway. Deleting all
-    // accessible cookies can remove unrelated functional/consent cookies and make
-    // an authentication incident cascade into other application failures.
+    // Do not iterate through document.cookie here. The professional refresh cookie
+    // is HttpOnly and intentionally survives a patient login in another tab. Cookie
+    // lifecycle is owned by the backend and must never be inferred from JS storage.
     this.session.set(null);
     for (const cleanup of this.sessionBoundaryCleanups) {
       try {
