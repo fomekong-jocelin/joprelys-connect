@@ -85,7 +85,7 @@ class PersistentAuthSessionControllerTest {
     }
 
     @Test
-    void shouldRevokeReplacementAccessWhenRotatedRefreshTokenIsReplayed() throws Exception {
+    void shouldRevokeReplacementAccessWhenRotatedRefreshTokenIsReplayedFromDifferentClientContext() throws Exception {
         MvcResult login = loginWithOtp("Joprelys-Test/1.0");
 
         JsonNode loginBody = objectMapper.readTree(login.getResponse().getContentAsString());
@@ -123,7 +123,8 @@ class PersistentAuthSessionControllerTest {
         mockMvc.perform(post("/api/auth/refresh").cookie(firstCookie))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.detail").value("AUTH_SESSION_INVALID"))
-                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Max-Age=0")));
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Max-Age=0")))
+                .andExpect(header().doesNotExist("Clear-Site-Data"));
 
         AuthSessionEntity revokedReplacement = sessionRepository.findById(second.getId()).orElseThrow();
         assertEquals("REPLAY_DETECTED", revokedReplacement.getRevocationReason());
@@ -137,7 +138,38 @@ class PersistentAuthSessionControllerTest {
     }
 
     @Test
-    void shouldClearCookieAndBrowserSiteDataOnLogout() throws Exception {
+    void shouldReturnConflictWithoutRevokingFamilyForNearSimultaneousSameBrowserRefresh() throws Exception {
+        String userAgent = "Joprelys-Concurrent/1.0";
+        MvcResult login = loginWithOtp(userAgent);
+        Cookie firstCookie = login.getResponse().getCookie("joprelys_refresh");
+        assertNotNull(firstCookie);
+
+        MvcResult firstRefresh = mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(firstCookie)
+                        .header("User-Agent", userAgent))
+                .andExpect(status().isOk())
+                .andReturn();
+        String replacementAccessToken = objectMapper.readTree(firstRefresh.getResponse().getContentAsString())
+                .get("accessToken").asText();
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(firstCookie)
+                        .header("User-Agent", userAgent))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("AUTH_REFRESH_CONCURRENT"))
+                .andExpect(header().doesNotExist("Set-Cookie"))
+                .andExpect(header().doesNotExist("Clear-Site-Data"));
+
+        assertEquals(1, sessionRepository.findAll().stream()
+                .filter(session -> session.getRevokedAt() == null)
+                .count());
+        mockMvc.perform(get("/api/auth/sessions")
+                        .header("Authorization", "Bearer " + replacementAccessToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldClearOnlyAuthenticationCookieOnLogoutAndPreserveBrowserStorage() throws Exception {
         MvcResult login = loginWithOtp(null);
 
         JsonNode loginBody = objectMapper.readTree(login.getResponse().getContentAsString());
@@ -151,9 +183,7 @@ class PersistentAuthSessionControllerTest {
                 .andExpect(header().string(
                         "Set-Cookie",
                         org.hamcrest.Matchers.containsString("Max-Age=0")))
-                .andExpect(header().string(
-                        "Clear-Site-Data",
-                        "\"cache\", \"cookies\", \"storage\""));
+                .andExpect(header().doesNotExist("Clear-Site-Data"));
     }
 
     private MvcResult loginWithOtp(String userAgent) throws Exception {

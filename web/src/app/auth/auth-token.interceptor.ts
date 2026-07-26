@@ -12,28 +12,14 @@ export const authTokenInterceptor: HttpInterceptorFn = (request, next) => {
     return next(request);
   }
 
-  const session = tokenStorage.session();
-  if (!session) {
-    sessionRecovery.expireSession();
-    return throwError(
-      () =>
-        new HttpErrorResponse({
-          error: 'Unauthenticated',
-          status: 401,
-          statusText: 'Unauthorized',
-          url: request.url,
-        }),
-    );
-  }
-
   const sendWithToken = (token: string) => next(withBearerToken(request, token));
-  const refreshAndRetry = () =>
-    sessionRecovery.refreshAccessToken().pipe(
+  const refreshAndRetry = (rejectedToken?: string) =>
+    sessionRecovery.refreshAccessToken(rejectedToken).pipe(
       switchMap((freshToken) => sendWithToken(freshToken)),
       catchError((error: HttpErrorResponse) => {
-        // A rejected refresh means the authentication session is no longer usable.
-        // Server/network errors must remain visible and must not be reclassified as
-        // an expired session.
+        // Only a positive authentication refusal means the browser session is no
+        // longer usable. Network errors, server outages and concurrent-refresh
+        // conflicts must never be converted into a clinician logout.
         if (error.status === 401 || error.status === 403) {
           sessionRecovery.expireSession();
         }
@@ -41,8 +27,37 @@ export const authTokenInterceptor: HttpInterceptorFn = (request, next) => {
       }),
     );
 
-  if (tokenStorage.isExpired()) {
+  const session = tokenStorage.session();
+  if (!session) {
+    // A missing access token is not proof that the persistent session expired.
+    // This occurs naturally in a fresh tab, after browser memory pressure or when
+    // bootstrap refresh was temporarily unavailable. Recover from the HttpOnly
+    // refresh cookie before deciding to log the user out.
     return refreshAndRetry();
+  }
+
+  const recoverRejectedToken = (rejectedToken: string) => {
+    const latest = tokenStorage.session();
+    if (latest
+      && latest.accessToken !== rejectedToken
+      && !tokenStorage.isExpired()) {
+      // Another request or browser tab already refreshed the session while this
+      // request was in flight. Reuse that token instead of rotating the shared
+      // HttpOnly refresh cookie again.
+      return sendWithToken(latest.accessToken).pipe(
+        catchError((retryError: HttpErrorResponse) => {
+          if (retryError.status === 401) {
+            return refreshAndRetry(latest.accessToken);
+          }
+          return throwError(() => retryError);
+        }),
+      );
+    }
+    return refreshAndRetry(rejectedToken);
+  };
+
+  if (tokenStorage.isExpired()) {
+    return refreshAndRetry(session.accessToken);
   }
 
   return sendWithToken(session.accessToken).pipe(
@@ -51,7 +66,7 @@ export const authTokenInterceptor: HttpInterceptorFn = (request, next) => {
       // 403 is an authorization refusal: refreshing the token cannot grant a
       // permission and, critically, must never log the user out.
       if (error.status === 401) {
-        return refreshAndRetry();
+        return recoverRejectedToken(session.accessToken);
       }
       return throwError(() => error);
     }),

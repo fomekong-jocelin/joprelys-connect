@@ -1,6 +1,7 @@
 package com.joprelys.backend.auth.session.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
@@ -54,7 +55,7 @@ class AuthSessionRotationConcurrencyTest {
     }
 
     @Test
-    void shouldAllowOneResponseThenRevokeFamilyWhenSameTokenIsReplayedConcurrently() throws Exception {
+    void shouldAllowOneRefreshAndTreatTheOtherAsBenignConcurrency() throws Exception {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
         OrganizationEntity organization = organizationRepository.save(new OrganizationEntity(
                 "Clinique Concurrence " + suffix,
@@ -73,34 +74,44 @@ class AuthSessionRotationConcurrencyTest {
 
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
-        Future<Boolean> first = executor.submit(() -> rotate(issued.refreshToken(), ready, start));
-        Future<Boolean> second = executor.submit(() -> rotate(issued.refreshToken(), ready, start));
+        Future<RefreshOutcome> first = executor.submit(() -> rotate(issued.refreshToken(), ready, start));
+        Future<RefreshOutcome> second = executor.submit(() -> rotate(issued.refreshToken(), ready, start));
         ready.await();
         start.countDown();
 
-        int successes = Boolean.TRUE.equals(first.get()) ? 1 : 0;
-        successes += Boolean.TRUE.equals(second.get()) ? 1 : 0;
-        assertEquals(1, successes);
+        List<RefreshOutcome> outcomes = List.of(first.get(), second.get());
+        assertEquals(1, outcomes.stream().filter(RefreshOutcome.SUCCESS::equals).count());
+        assertEquals(1, outcomes.stream().filter(RefreshOutcome.CONCURRENT::equals).count());
 
         List<AuthSessionEntity> allSessions = sessionRepository.findAll();
         assertEquals(2, allSessions.size());
         UUID familyId = allSessions.getFirst().getTokenFamilyId();
         List<AuthSessionEntity> family = sessionRepository.findByTokenFamilyIdOrderByCreatedAtAsc(familyId);
-        assertEquals(0, family.stream().filter(session -> session.getRevokedAt() == null).count());
+        assertEquals(1, family.stream().filter(session -> session.getRevokedAt() == null).count());
         assertTrue(family.stream().anyMatch(session ->
+                AuthSessionRevocationReason.ROTATED.name().equals(session.getRevocationReason())));
+        assertFalse(family.stream().anyMatch(session ->
                 AuthSessionRevocationReason.REPLAY_DETECTED.name().equals(session.getRevocationReason())));
-        assertTrue(auditRepository.existsByEventTypeAndTokenFamilyId(
+        assertFalse(auditRepository.existsByEventTypeAndTokenFamilyId(
                 AuthSessionAuditEventType.REFRESH_REPLAY_DETECTED.name(), familyId));
     }
 
-    private boolean rotate(String token, CountDownLatch ready, CountDownLatch start) throws InterruptedException {
+    private RefreshOutcome rotate(String token, CountDownLatch ready, CountDownLatch start) throws InterruptedException {
         ready.countDown();
         start.await();
         try {
             refreshAuthSessionUseCase.refresh(token, METADATA);
-            return true;
+            return RefreshOutcome.SUCCESS;
+        } catch (ConcurrentAuthRefreshException exception) {
+            return RefreshOutcome.CONCURRENT;
         } catch (InvalidAuthSessionException exception) {
-            return false;
+            return RefreshOutcome.INVALID;
         }
+    }
+
+    private enum RefreshOutcome {
+        SUCCESS,
+        CONCURRENT,
+        INVALID
     }
 }

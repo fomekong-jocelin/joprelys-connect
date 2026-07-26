@@ -3,7 +3,7 @@ import { AuthTokenStorageService } from './auth-token-storage.service';
 import { AuthSessionRecoveryService } from './auth-session-recovery.service';
 
 const KEEP_ALIVE_CHECK_INTERVAL_MS = 60_000; // Check every minute
-const REFRESH_TRIGGER_LEEWAY_SECONDS = 900; // Refresh if token expires in <= 15 minutes
+const REFRESH_TRIGGER_LEEWAY_SECONDS = 120; // Refresh only in the last 2 minutes of a 15-minute access token
 
 @Injectable({ providedIn: 'root' })
 export class AuthSessionKeepAliveService implements OnDestroy {
@@ -33,9 +33,10 @@ export class AuthSessionKeepAliveService implements OnDestroy {
     if (!session) return;
 
     if (this.tokenStorage.isExpired(REFRESH_TRIGGER_LEEWAY_SECONDS)) {
-      this.sessionRecovery.refreshAccessToken().subscribe({
+      this.sessionRecovery.refreshAccessToken(session.accessToken).subscribe({
         error: () => {
-          // Failure handling will be taken care of by sessionRecovery / interceptor if unauthenticated
+          // Failure handling is owned by the recovery/interceptor path. A transient
+          // server/network failure must not be converted into a user logout here.
         },
       });
     }

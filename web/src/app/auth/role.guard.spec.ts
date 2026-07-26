@@ -4,12 +4,14 @@ import { Router } from '@angular/router';
 import { firstValueFrom, Observable, of } from 'rxjs';
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { AuthSession } from './auth.models';
+import { AuthSessionRecoveryService } from './auth-session-recovery.service';
 import { AuthTokenStorageService } from './auth-token-storage.service';
 import { roleGuard } from './role.guard';
 
 describe('roleGuard', () => {
   let mockRouter: { parseUrl: ReturnType<typeof vi.fn>; createUrlTree: ReturnType<typeof vi.fn> };
   let mockTokenStorage: { session: ReturnType<typeof signal<AuthSession | null>> };
+  let mockRecovery: { refreshAccessToken: ReturnType<typeof vi.fn> };
   let mockRbacApi: { ensureMyAccess: ReturnType<typeof vi.fn> };
   let sessionSignal: ReturnType<typeof signal<AuthSession | null>>;
 
@@ -21,31 +23,36 @@ describe('roleGuard', () => {
         `/?returnUrl=${encodeURIComponent(options.queryParams.returnUrl)}`),
     };
     mockTokenStorage = { session: sessionSignal };
+    mockRecovery = { refreshAccessToken: vi.fn() };
     mockRbacApi = { ensureMyAccess: vi.fn() };
 
     TestBed.configureTestingModule({
       providers: [
         { provide: Router, useValue: mockRouter },
         { provide: AuthTokenStorageService, useValue: mockTokenStorage },
+        { provide: AuthSessionRecoveryService, useValue: mockRecovery },
         { provide: RbacApiService, useValue: mockRbacApi },
       ],
     });
   });
 
-  it('should preserve the scanned consultation route when no session exists', () => {
+  it('should recover the scanned consultation route from the persistent session before redirecting', async () => {
     sessionSignal.set(null);
+    mockRecovery.refreshAccessToken.mockImplementation(() => {
+      sessionSignal.set(session('MEDECIN'));
+      return of('restored-token');
+    });
 
-    const result = TestBed.runInInjectionContext(() =>
+    const result$ = TestBed.runInInjectionContext(() =>
       roleGuard(
-        { data: { expectedRoles: ['MEDECIN'] } } as any,
+        { data: { expectedRoles: [] } } as any,
         { url: '/clinic/consultation/visit-123' } as any,
       ),
-    );
+    ) as Observable<boolean | string>;
 
-    expect(result).toBe('/?returnUrl=%2Fclinic%2Fconsultation%2Fvisit-123');
-    expect(mockRouter.createUrlTree).toHaveBeenCalledWith(['/'], {
-      queryParams: { returnUrl: '/clinic/consultation/visit-123' },
-    });
+    expect(await firstValueFrom(result$)).toBe(true);
+    expect(mockRecovery.refreshAccessToken).toHaveBeenCalledOnce();
+    expect(mockRouter.createUrlTree).not.toHaveBeenCalled();
   });
 
   it('should reject a professional route configured with roles only', () => {
@@ -209,7 +216,7 @@ describe('roleGuard', () => {
   function session(role: string): AuthSession {
     return {
       accessToken: 'token',
-      expiresAt: '2026-07-02T12:00:00Z',
+      expiresAt: '2999-07-02T12:00:00Z',
       email: 'user@joprelys.local',
       name: 'User',
       role,

@@ -91,7 +91,10 @@ export class AuthTokenStorageService {
   private purgeBrowserState(): void {
     this.clearStorage(this.storage('sessionStorage'));
     this.clearStorageExceptDrafts(this.storage('localStorage'));
-    this.clearAccessibleCookies();
+    // Do not iterate through document.cookie here. The refresh cookie is HttpOnly
+    // and therefore cannot be cleared safely from JavaScript anyway. Deleting all
+    // accessible cookies can remove unrelated functional/consent cookies and make
+    // an authentication incident cascade into other application failures.
     this.session.set(null);
     for (const cleanup of this.sessionBoundaryCleanups) {
       try {
@@ -128,22 +131,6 @@ export class AuthTokenStorageService {
       }
     } catch {
       // Storage can be unavailable in hardened/private browser contexts.
-    }
-  }
-
-  private clearAccessibleCookies(): void {
-    try {
-      if (!this.document.cookie) {
-        return;
-      }
-      for (const cookie of this.document.cookie.split(';')) {
-        const name = cookie.split('=', 1)[0]?.trim();
-        if (!name) continue;
-        this.document.cookie = `${name}=; Max-Age=0; Path=/; SameSite=Lax`;
-        this.document.cookie = `${name}=; Max-Age=0; Path=/api/auth; SameSite=Lax`;
-      }
-    } catch {
-      // HttpOnly and restricted cookies are cleared by the backend Clear-Site-Data response.
     }
   }
 
