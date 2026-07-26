@@ -5,7 +5,7 @@
 - **Mode** : Engineering + UI/UX Design + QA Review
 - **Epic** : EPIC-0024 / Consultation IA Vocal
 - **Priorité** : P0 — correction UX / retour visuel écoute vocale
-- **Statut** : IMPLEMENTED — 463 tests Angular validés
+- **Statut** : DONE — fusionné dans main@df00a904
 - **Stack** : Angular 19 / Tailwind CSS v4 / Visualiseur audio / i18n
 - **Estimation** : 0.5j senior frontend
 - **Reviewer** : Lead Frontend + QA

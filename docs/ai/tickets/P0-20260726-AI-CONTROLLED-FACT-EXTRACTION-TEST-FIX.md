@@ -5,7 +5,7 @@
 - **Mode** : Diagnostic + Engineering + QA Review
 - **Epic** : #192 Engine Anti-hallucination
 - **Priorité** : P0 — correction blocage CI PR #196
-- **Statut** : IN_PROGRESS — fix appliqué, validation Maven en cours
+- **Statut** : DONE — fusionné dans main@df00a904 (PR #196)
 - **Stack** : Spring Boot / AI Provider / Conditional Beans
 - **Estimation** : 0,25 jour senior
 - **Reviewer** : Lead Backend + QA
