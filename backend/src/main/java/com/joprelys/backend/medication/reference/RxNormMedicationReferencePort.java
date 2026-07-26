@@ -1,9 +1,12 @@
 package com.joprelys.backend.medication.reference;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -17,17 +20,26 @@ import org.springframework.web.client.RestClient;
 final class RxNormMedicationReferencePort implements MedicationReferencePort {
 
     private static final String SOURCE = "RXNORM";
+    private static final Set<String> INGREDIENT_TERM_TYPES = Set.of("IN", "PIN", "MIN");
 
     private final RestClient restClient;
 
     RxNormMedicationReferencePort(MedicationReferenceProperties properties) {
-        this(RestClient.builder()
-                .baseUrl(properties.getRxnorm().getBaseUrl())
-                .build());
+        this(buildClient(properties));
     }
 
     RxNormMedicationReferencePort(RestClient restClient) {
         this.restClient = restClient;
+    }
+
+    private static RestClient buildClient(MedicationReferenceProperties properties) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Math.max(250, properties.getRxnorm().getConnectTimeoutMs()));
+        requestFactory.setReadTimeout(Math.max(500, properties.getRxnorm().getReadTimeoutMs()));
+        return RestClient.builder()
+                .baseUrl(properties.getRxnorm().getBaseUrl())
+                .requestFactory(requestFactory)
+                .build();
     }
 
     @Override
@@ -55,6 +67,56 @@ final class RxNormMedicationReferencePort implements MedicationReferencePort {
             }
         }
         return List.copyOf(concepts);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Set<String> findIngredientConceptIds(MedicationConcept concept) {
+        if (concept == null || concept.conceptId() == null || concept.conceptId().isBlank()) {
+            return Set.of();
+        }
+        if (INGREDIENT_TERM_TYPES.contains(concept.termType())) {
+            return Set.of(concept.conceptId());
+        }
+
+        Map<String, Object> response = restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/REST/rxcui/{rxcui}/related.json")
+                        .queryParam("tty", "IN PIN MIN")
+                        .build(concept.conceptId()))
+                .retrieve()
+                .body(Map.class);
+        if (response == null || !(response.get("relatedGroup") instanceof Map<?, ?> relatedGroup)) {
+            return Set.of();
+        }
+        Object groupsValue = relatedGroup.get("conceptGroup");
+        if (!(groupsValue instanceof List<?> groups)) {
+            return Set.of();
+        }
+
+        Set<String> ingredientIds = new LinkedHashSet<>();
+        for (Object groupValue : groups) {
+            if (!(groupValue instanceof Map<?, ?> group)) {
+                continue;
+            }
+            String termType = stringValue(group.get("tty"));
+            if (!INGREDIENT_TERM_TYPES.contains(termType)) {
+                continue;
+            }
+            Object conceptsValue = group.get("conceptProperties");
+            if (!(conceptsValue instanceof List<?> conceptProperties)) {
+                continue;
+            }
+            for (Object propertyValue : conceptProperties) {
+                if (propertyValue instanceof Map<?, ?> properties) {
+                    String rxcui = stringValue(properties.get("rxcui"));
+                    if (rxcui != null && !rxcui.isBlank()) {
+                        ingredientIds.add(rxcui);
+                    }
+                }
+            }
+        }
+        return Set.copyOf(ingredientIds);
     }
 
     @SuppressWarnings("unchecked")
