@@ -2,9 +2,11 @@ package com.joprelys.backend.auth.session.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -131,7 +133,7 @@ class PersistentAuthSessionServiceTest {
     }
 
     @Test
-    void shouldRevokeActiveFamilyAndAuditWhenRotatedTokenIsReused() {
+    void shouldTreatRecentSameClientReuseAsConcurrentRefreshWithoutRevokingFamily() {
         UserAccountEntity user = user();
         UUID familyId = UUID.randomUUID();
         AuthSessionEntity consumed = AuthSessionEntity.create(
@@ -147,10 +149,44 @@ class PersistentAuthSessionServiceTest {
                 familyId,
                 "c".repeat(64),
                 METADATA,
-                NOW.minusSeconds(1),
+                NOW.minusSeconds(2),
                 NOW.plusSeconds(3_600),
                 NOW.plusSeconds(600));
-        consumed.replaceWith(active, NOW.minusSeconds(1));
+        consumed.replaceWith(active, NOW.minusSeconds(2));
+        when(tokenHasher.hash("old-token")).thenReturn("b".repeat(64));
+        when(sessionRepository.findByRefreshTokenHashForUpdate("b".repeat(64)))
+                .thenReturn(Optional.of(consumed));
+
+        assertThrows(
+                ConcurrentAuthRefreshException.class,
+                () -> service.refresh("old-token", METADATA));
+
+        assertNull(active.getRevocationReason());
+        verify(sessionRepository, never()).findByTokenFamilyIdForUpdate(familyId);
+        verify(sessionRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void shouldRevokeActiveFamilyAndAuditWhenRotatedTokenIsReusedOutsideConcurrencyWindow() {
+        UserAccountEntity user = user();
+        UUID familyId = UUID.randomUUID();
+        AuthSessionEntity consumed = AuthSessionEntity.create(
+                user,
+                familyId,
+                "b".repeat(64),
+                METADATA,
+                NOW.minusSeconds(300),
+                NOW.plusSeconds(3_600),
+                NOW.plusSeconds(600));
+        AuthSessionEntity active = AuthSessionEntity.create(
+                user,
+                familyId,
+                "c".repeat(64),
+                METADATA,
+                NOW.minusSeconds(30),
+                NOW.plusSeconds(3_600),
+                NOW.plusSeconds(600));
+        consumed.replaceWith(active, NOW.minusSeconds(30));
         when(tokenHasher.hash("old-token")).thenReturn("b".repeat(64));
         when(sessionRepository.findByRefreshTokenHashForUpdate("b".repeat(64)))
                 .thenReturn(Optional.of(consumed));
