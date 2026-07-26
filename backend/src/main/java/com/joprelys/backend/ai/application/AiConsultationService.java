@@ -13,6 +13,7 @@ import com.joprelys.backend.ai.domain.AiMessage;
 import com.joprelys.backend.ai.domain.AiProvider;
 import com.joprelys.backend.ai.domain.AiTranscription;
 import com.joprelys.backend.ai.infrastructure.AiProperties;
+import com.joprelys.backend.medication.reference.MedicationReferenceDuplicateDetector;
 import com.joprelys.backend.visit.application.VisitService;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -24,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -72,6 +74,12 @@ public class AiConsultationService {
         this.medicationSafetyGuard = new AiMedicationSafetyGuard(objectMapper);
         this.revisionManager = revisionManager;
         this.clarificationManager = clarificationManager;
+    }
+
+    @Autowired(required = false)
+    void setMedicationReferenceDuplicateDetector(
+            MedicationReferenceDuplicateDetector referenceDuplicateDetector) {
+        this.medicationSafetyGuard.setReferenceDuplicateDetector(referenceDuplicateDetector);
     }
 
     public SessionView startSession(
