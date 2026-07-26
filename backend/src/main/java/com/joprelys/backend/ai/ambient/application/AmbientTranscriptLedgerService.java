@@ -12,8 +12,10 @@ import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -52,15 +54,9 @@ public class AmbientTranscriptLedgerService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_OFFSET_INVALID");
         }
 
-        VisitEntity visit = visitRepository.findByIdForUpdate(visitId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "VISIT_NOT_FOUND"));
-        if (!organizationId.equals(visit.getOrganizationId())) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "VISIT_NOT_FOUND");
-        }
-
+        VisitEntity visit = lockAuthorizedVisit(visitId, organizationId);
         List<DiarizedSegment> orderedSegments = sanitizeAndSortSegments(segments);
-        long nextSequence = transcriptRepository.findMaximumSequence(visitId);
+        long nextSequence = transcriptRepository.findMaximumSequence(visit.getId());
         List<AmbientTranscriptItemEntity> result = new ArrayList<>();
 
         for (int index = 0; index < orderedSegments.size(); index++) {
@@ -103,8 +99,97 @@ public class AmbientTranscriptLedgerService {
                 .toList();
     }
 
+    @Transactional
+    public TranscriptItemView appendCorrection(
+            UUID visitId,
+            UUID itemId,
+            UUID userId,
+            UUID organizationId,
+            String correctionId,
+            String speakerType,
+            String correctedText) {
+        requireIdentity(visitId, userId, organizationId);
+        lockAuthorizedVisit(visitId, organizationId);
+
+        String sourceEventId = correctionEventId(correctionId);
+        var retry = transcriptRepository.findByVisitIdAndSourceEventId(visitId, sourceEventId);
+        if (retry.isPresent()) {
+            return view(retry.get());
+        }
+
+        AmbientTranscriptItemEntity original = transcriptRepository.findByIdAndVisitId(itemId, visitId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "AI_AMBIENT_TRANSCRIPT_ITEM_NOT_FOUND"));
+        if (original.getStatus() != AmbientTranscriptStatus.FINAL) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "AI_AMBIENT_TRANSCRIPT_ITEM_NOT_FINAL");
+        }
+
+        AmbientTranscriptSpeaker speaker = explicitSpeaker(speakerType);
+        String text = correctedText == null || correctedText.isBlank()
+                ? original.getTranscriptText()
+                : normalizeText(correctedText);
+        long sequence = transcriptRepository.findMaximumSequence(visitId) + 1;
+
+        AmbientTranscriptItemEntity correction = new AmbientTranscriptItemEntity(
+                organizationId,
+                visitId,
+                sequence,
+                sourceEventId,
+                AmbientTranscriptSource.MANUAL_CORRECTION,
+                speaker,
+                "human:" + speaker.name(),
+                text,
+                original.getLocale(),
+                original.getStartOffsetMs(),
+                original.getEndOffsetMs(),
+                AmbientTranscriptStatus.FINAL,
+                userId,
+                original.getId());
+        return view(transcriptRepository.save(correction));
+    }
+
     @Transactional(readOnly = true)
     public TranscriptLedgerView listFinal(UUID visitId, UUID organizationId) {
+        requireAuthorizedVisit(visitId, organizationId);
+        List<AmbientTranscriptItemEntity> finalItems = transcriptRepository
+                .findByVisitIdAndStatusOrderByStartOffsetMsAscSequenceNoAsc(
+                        visitId, AmbientTranscriptStatus.FINAL);
+        Set<UUID> supersededIds = new HashSet<>();
+        for (AmbientTranscriptItemEntity item : finalItems) {
+            if (item.getSupersedesItemId() != null) {
+                supersededIds.add(item.getSupersedesItemId());
+            }
+        }
+        List<TranscriptItemView> effectiveItems = finalItems.stream()
+                .filter(item -> !supersededIds.contains(item.getId()))
+                .map(this::view)
+                .toList();
+        return new TranscriptLedgerView(visitId, effectiveItems);
+    }
+
+    @Transactional(readOnly = true)
+    public TranscriptLedgerView listAudit(UUID visitId, UUID organizationId) {
+        requireAuthorizedVisit(visitId, organizationId);
+        List<TranscriptItemView> items = transcriptRepository
+                .findByVisitIdOrderByStartOffsetMsAscSequenceNoAsc(visitId)
+                .stream()
+                .map(this::view)
+                .toList();
+        return new TranscriptLedgerView(visitId, items);
+    }
+
+    private VisitEntity lockAuthorizedVisit(UUID visitId, UUID organizationId) {
+        VisitEntity visit = visitRepository.findByIdForUpdate(visitId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "VISIT_NOT_FOUND"));
+        if (!organizationId.equals(visit.getOrganizationId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "VISIT_NOT_FOUND");
+        }
+        return visit;
+    }
+
+    private void requireAuthorizedVisit(UUID visitId, UUID organizationId) {
         if (visitId == null || organizationId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_IDENTITY_INVALID");
         }
@@ -114,13 +199,6 @@ public class AmbientTranscriptLedgerService {
         if (!organizationId.equals(visit.getOrganizationId())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "VISIT_NOT_FOUND");
         }
-        List<TranscriptItemView> items = transcriptRepository
-                .findByVisitIdAndStatusOrderByStartOffsetMsAscSequenceNoAsc(
-                        visitId, AmbientTranscriptStatus.FINAL)
-                .stream()
-                .map(this::view)
-                .toList();
-        return new TranscriptLedgerView(visitId, items);
     }
 
     private List<DiarizedSegment> sanitizeAndSortSegments(List<DiarizedSegment> segments) {
@@ -151,12 +229,23 @@ public class AmbientTranscriptLedgerService {
         return normalized;
     }
 
+    private String correctionEventId(String correctionId) {
+        if (correctionId == null || correctionId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_CORRECTION_ID_REQUIRED");
+        }
+        String normalized = correctionId.trim();
+        if (normalized.length() > 150 || !normalized.matches("[A-Za-z0-9._:-]+")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_CORRECTION_ID_INVALID");
+        }
+        return "correction:" + normalized;
+    }
+
     private String normalizeLocale(String locale) {
         if (locale == null || locale.isBlank()) {
             return "fr";
         }
-        String normalized = locale.trim().toLowerCase(Locale.ROOT);
-        if (!normalized.matches("[a-z]{2}(?:-[a-z]{2})?")) {
+        String normalized = locale.trim().toLowerCase(Locale.ROOT).replace('_', '-');
+        if (!normalized.matches("[a-z]{2,3}(?:-[a-z]{2})?")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_LOCALE_INVALID");
         }
         return normalized;
@@ -201,6 +290,22 @@ public class AmbientTranscriptLedgerService {
             return AmbientTranscriptSpeaker.PATIENT;
         }
         return AmbientTranscriptSpeaker.UNSPECIFIED;
+    }
+
+    private AmbientTranscriptSpeaker explicitSpeaker(String speakerType) {
+        if (speakerType == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_SPEAKER_REQUIRED");
+        }
+        try {
+            AmbientTranscriptSpeaker speaker = AmbientTranscriptSpeaker.valueOf(
+                    speakerType.trim().toUpperCase(Locale.ROOT));
+            if (speaker == AmbientTranscriptSpeaker.UNSPECIFIED) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_SPEAKER_MUST_BE_EXPLICIT");
+            }
+            return speaker;
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_SPEAKER_INVALID");
+        }
     }
 
     private long secondsToMillis(double seconds) {
