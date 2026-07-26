@@ -8,7 +8,7 @@ import { AuthTokenStorageService } from './auth-token-storage.service';
 
 const AUTH_REFRESH_LOCK = 'joprelys-auth-refresh';
 const AUTH_BROADCAST_CHANNEL = 'joprelys-auth-session';
-const CONCURRENT_REFRESH_RETRY_DELAY_MS = 350;
+const CONCURRENT_REFRESH_RETRY_DELAYS_MS = [250, 750, 1_500] as const;
 
 @Injectable({ providedIn: 'root' })
 export class AuthSessionRecoveryService implements OnDestroy {
@@ -85,23 +85,30 @@ export class AuthSessionRecoveryService implements OnDestroy {
       return synchronizedToken;
     }
 
-    try {
-      return await this.performRefresh();
-    } catch (error) {
-      if (!(error instanceof HttpErrorResponse) || error.status !== 409) {
-        throw error;
-      }
+    let lastConflict: HttpErrorResponse | null = null;
+    for (let attempt = 0; attempt <= CONCURRENT_REFRESH_RETRY_DELAYS_MS.length; attempt++) {
+      try {
+        return await this.performRefresh();
+      } catch (error) {
+        if (!(error instanceof HttpErrorResponse) || error.status !== 409) {
+          throw error;
+        }
+        lastConflict = error;
+        const delayMs = CONCURRENT_REFRESH_RETRY_DELAYS_MS[attempt];
+        if (delayMs === undefined) break;
 
-      // Another request/tab may have rotated the HttpOnly refresh cookie at the
-      // same instant. Do not log the clinician out: give the successful response
-      // time to update the shared cookie / BroadcastChannel, then retry once.
-      await this.delay(CONCURRENT_REFRESH_RETRY_DELAY_MS);
-      const refreshedByPeer = this.currentUsableReplacement(expectedAccessToken);
-      if (refreshedByPeer) {
-        return refreshedByPeer;
+        // Another request/tab may have rotated the HttpOnly refresh cookie at the
+        // same instant. Never log the clinician out for this race. Give the
+        // successful response time to update the shared cookie / BroadcastChannel.
+        await this.delay(delayMs);
+        const refreshedByPeer = this.currentUsableReplacement(expectedAccessToken);
+        if (refreshedByPeer) {
+          return refreshedByPeer;
+        }
       }
-      return this.performRefresh();
     }
+
+    throw lastConflict ?? new Error('AUTH_REFRESH_CONCURRENT');
   }
 
   private async performRefresh(): Promise<string> {
