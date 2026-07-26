@@ -1,34 +1,32 @@
 <app-shell>
-  <div class="app-container py-6 space-y-6">
-    <!-- Page Header -->
-    <div class="flex items-center gap-4 border-b border-[var(--app-border)] pb-5">
+  <div class="app-container space-y-4 py-4 sm:space-y-5 sm:py-6">
+    <header class="flex items-center gap-3 border-b border-[var(--app-border)] pb-4 sm:gap-4">
       <button
+        type="button"
         (click)="goBack()"
-        class="p-2 border border-[var(--app-border)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] dark:hover:text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800 transition-colors cursor-pointer rounded-[6px]"
+        class="ui-button ui-button-secondary h-10 w-10 shrink-0 p-0"
+        [attr.aria-label]="i18n.t('consultation.actions.cancel')"
       >
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
       </button>
-      <div>
-        <div class="flex items-center gap-2 mb-1">
-          <span class="inline-flex items-center px-2 py-0.5 rounded-[4px] text-[10px] font-bold bg-slate-100 dark:bg-[var(--bg-input)] text-slate-800 dark:text-[var(--text-secondary)] uppercase tracking-wider border border-[var(--app-border)] dark:border-slate-700">
+      <div class="min-w-0">
+        <div class="mb-1 flex flex-wrap items-center gap-2">
+          <span class="rounded-[var(--radius-brand-xs)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
             {{ i18n.t('consultation.badge') }}
           </span>
           @if (visitNumber()) {
-            <span class="text-xs font-semibold text-[var(--text-muted)] font-mono">#{{ visitNumber() }}</span>
+            <span class="font-mono text-xs font-semibold text-[var(--text-muted)]">#{{ visitNumber() }}</span>
           }
         </div>
-        <h1 class="text-xl font-bold tracking-tight text-[var(--text-primary)]">
-          {{ i18n.t('consultation.title') }}
-        </h1>
+        <h1 class="ui-title truncate text-lg sm:text-xl">{{ i18n.t('consultation.title') }}</h1>
       </div>
-    </div>
+    </header>
 
-    <!-- Success / Error messages -->
     @if (successMessage()) {
-      <div class="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-[6px] text-sm font-semibold text-[var(--brand-success-text)]">
-        <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div class="flex items-center gap-3 rounded-[var(--radius-brand-md)] border border-[var(--brand-success-muted)] bg-[var(--brand-success-subtle)] p-3 text-sm font-semibold text-[var(--brand-success-text)]" role="status">
+        <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         {{ successMessage() }}
@@ -36,648 +34,335 @@
     }
 
     @if (errorMessage()) {
-      <div class="flex items-center gap-3 p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/40 rounded-[6px] text-sm font-semibold text-rose-700 dark:text-rose-300">
-        <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div class="flex items-center gap-3 rounded-[var(--radius-brand-md)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3 text-sm font-semibold text-[var(--brand-danger-text)]" role="alert">
+        <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         {{ errorMessage() }}
       </div>
     }
 
-    <!-- Loading state -->
     @if (isLoading()) {
       <div class="py-16 text-center">
-        <div class="inline-block w-8 h-8 rounded-full border-4 border-[var(--brand-primary)] border-t-transparent animate-spin"></div>
-        <p class="mt-3 text-sm font-medium text-[var(--text-muted)]">
-          {{ i18n.t('consultation.loading') }}
-        </p>
+        <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent"></div>
+        <p class="mt-3 text-sm font-medium text-[var(--text-muted)]">{{ i18n.t('consultation.loading') }}</p>
       </div>
     } @else {
-      <!-- Main Content Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Left Column: Tri / Constantes vitales (lecture seule) -->
-        <div class="lg:col-span-1 space-y-6">
-          <div class="bg-[var(--app-surface)] border border-[var(--app-border)] rounded-[6px] shadow-sm overflow-hidden">
-            <div class="px-5 py-4 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/50">
-              <h2 class="font-bold text-sm text-slate-950 dark:text-white">
-                {{ i18n.t('consultation.vitals.title') }}
-              </h2>
-              <p class="text-xs text-[var(--text-muted)]">
-                {{ i18n.t('consultation.vitals.subtitle') }}
-              </p>
-            </div>
-            <div class="p-5">
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-5">
+        <aside class="lg:col-span-1">
+          <section class="ui-card overflow-hidden">
+            <header class="border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-4 py-3 sm:px-5 sm:py-4">
+              <h2 class="text-sm font-bold text-[var(--text-primary)]">{{ i18n.t('consultation.vitals.title') }}</h2>
+              <p class="mt-0.5 text-xs text-[var(--text-muted)]">{{ i18n.t('consultation.vitals.subtitle') }}</p>
+            </header>
+
+            <div class="p-4 sm:p-5">
               @if (vitals()) {
-                <div class="grid grid-cols-2 gap-3">
-                  <!-- Température -->
-                  <div class="p-3 rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)]">
-                    <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Température</span>
-                    <span class="text-base font-bold text-[var(--text-primary)] mt-1 block">
-                      {{ vitals()?.temperature ?? '—' }} <span class="text-xs font-normal">°C</span>
-                    </span>
+                <div class="grid grid-cols-2 gap-2.5">
+                  <div class="ui-card-muted p-3">
+                    <span class="ui-label">{{ i18n.t('consultation.ai.vital.temperature') }}</span>
+                    <strong class="mt-1 block text-base text-[var(--text-primary)]">{{ vitals()?.temperature ?? '—' }} <span class="text-xs font-normal">°C</span></strong>
                   </div>
-                  <!-- Poids -->
-                  <div class="p-3 rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)]">
-                    <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Poids</span>
-                    <span class="text-base font-bold text-[var(--text-primary)] mt-1 block">
-                      {{ vitals()?.weight ?? '—' }} <span class="text-xs font-normal">kg</span>
-                    </span>
+                  <div class="ui-card-muted p-3">
+                    <span class="ui-label">{{ i18n.t('consultation.ai.vital.weight') }}</span>
+                    <strong class="mt-1 block text-base text-[var(--text-primary)]">{{ vitals()?.weight ?? '—' }} <span class="text-xs font-normal">kg</span></strong>
                   </div>
-                  <!-- Pouls -->
-                  <div class="p-3 rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)]">
-                    <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Pouls</span>
-                    <span class="text-base font-bold text-[var(--text-primary)] mt-1 block">
-                      {{ vitals()?.pulse ?? '—' }} <span class="text-xs font-normal">bpm</span>
-                    </span>
+                  <div class="ui-card-muted p-3">
+                    <span class="ui-label">{{ i18n.t('consultation.ai.vital.pulse') }}</span>
+                    <strong class="mt-1 block text-base text-[var(--text-primary)]">{{ vitals()?.pulse ?? '—' }} <span class="text-xs font-normal">bpm</span></strong>
                   </div>
-                  <!-- Tension -->
-                  <div class="p-3 rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)]">
-                    <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Tension</span>
-                    <span class="text-base font-bold text-[var(--text-primary)] mt-1 block">
-                      {{ vitals()?.systolic ?? '—' }}/{{ vitals()?.diastolic ?? '—' }} <span class="text-xs font-normal">mmHg</span>
-                    </span>
+                  <div class="ui-card-muted p-3">
+                    <span class="ui-label">{{ i18n.t('consultation.ai.vital.systolic') }} / {{ i18n.t('consultation.ai.vital.diastolic') }}</span>
+                    <strong class="mt-1 block text-base text-[var(--text-primary)]">{{ vitals()?.systolic ?? '—' }}/{{ vitals()?.diastolic ?? '—' }} <span class="text-xs font-normal">mmHg</span></strong>
                   </div>
-                  <!-- SpO2 -->
-                  <div class="p-3 rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)]">
-                    <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">SpO2</span>
-                    <span class="text-base font-bold text-[var(--text-primary)] mt-1 block">
-                      {{ vitals()?.spo2 ?? '—' }} <span class="text-xs font-normal">%</span>
-                    </span>
+                  <div class="ui-card-muted p-3">
+                    <span class="ui-label">{{ i18n.t('consultation.ai.vital.spo2') }}</span>
+                    <strong class="mt-1 block text-base text-[var(--text-primary)]">{{ vitals()?.spo2 ?? '—' }} <span class="text-xs font-normal">%</span></strong>
                   </div>
-                  <!-- Glycémie -->
-                  <div class="p-3 rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)]">
-                    <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Glycémie</span>
-                    <span class="text-base font-bold text-[var(--text-primary)] mt-1 block">
-                      {{ vitals()?.glycemia ?? '—' }} <span class="text-xs font-normal">g/L</span>
-                    </span>
+                  <div class="ui-card-muted p-3">
+                    <span class="ui-label">{{ i18n.t('consultation.ai.vital.glycemia') }}</span>
+                    <strong class="mt-1 block text-base text-[var(--text-primary)]">{{ vitals()?.glycemia ?? '—' }} <span class="text-xs font-normal">g/L</span></strong>
                   </div>
-                  <!-- Fréquence Resp. -->
-                  <div class="p-3 rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)]">
-                    <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Fréq. Resp.</span>
-                    <span class="text-base font-bold text-[var(--text-primary)] mt-1 block">
-                      {{ vitals()?.respiratoryRate ?? '—' }} <span class="text-xs font-normal">/min</span>
-                    </span>
+                  <div class="ui-card-muted p-3">
+                    <span class="ui-label">{{ i18n.t('consultation.ai.vital.respiratoryRate') }}</span>
+                    <strong class="mt-1 block text-base text-[var(--text-primary)]">{{ vitals()?.respiratoryRate ?? '—' }} <span class="text-xs font-normal">/min</span></strong>
                   </div>
-                  <!-- IMC -->
-                  <div class="p-3 rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] dark:bg-[var(--app-surface-muted)]">
-                    <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">IMC</span>
-                    <span class="text-base font-bold text-[var(--text-primary)] mt-1 block">
-                      {{ vitals()?.bmi ?? '—' }} <span class="text-xs font-normal">kg/m²</span>
-                    </span>
+                  <div class="ui-card-muted p-3">
+                    <span class="ui-label">{{ i18n.t('consultation.ai.vital.bmi') }}</span>
+                    <strong class="mt-1 block text-base text-[var(--text-primary)]">{{ vitals()?.bmi ?? '—' }} <span class="text-xs font-normal">kg/m²</span></strong>
                   </div>
-                  <!-- Douleur -->
+
                   @if (vitals()?.painScale !== undefined && vitals()?.painScale !== null) {
-                    <div
-                      class="col-span-2 p-3 rounded-[4px] border flex items-center justify-between"
-                      [ngClass]="{
-                        'bg-[var(--brand-success-subtle)] dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/30 text-emerald-800 dark:text-[var(--brand-success-text)]': (vitals()?.painScale ?? 0) <= 3,
-                        'bg-amber-50/50 dark:bg-amber-950/20 border-amber-100 dark:border-amber-900/30 text-[var(--brand-warning-text)]': (vitals()?.painScale ?? 0) > 3 && (vitals()?.painScale ?? 0) <= 6,
-                        'bg-[var(--brand-danger-subtle)]/50 dark:bg-red-950/20 border-[var(--brand-danger-border)] text-red-800 dark:text-[var(--brand-danger-text)]': (vitals()?.painScale ?? 0) > 6
-                      }"
-                    >
+                    <div class="col-span-2 flex items-center justify-between rounded-[var(--radius-brand-sm)] border p-3" [ngClass]="painClasses()">
                       <div>
-                        <span class="block text-[10px] font-bold uppercase tracking-wider opacity-60">Échelle Douleur</span>
-                        <span class="text-sm font-semibold mt-0.5 block">
-                          {{ (vitals()?.painScale ?? 0) === 0 ? 'Indolore' : (vitals()?.painScale ?? 0) <= 3 ? 'Légère' : (vitals()?.painScale ?? 0) <= 6 ? 'Modérée' : 'Sévère' }}
-                        </span>
+                        <span class="ui-label opacity-75">{{ i18n.t('consultation.vitals.painScale') }}</span>
+                        <span class="mt-0.5 block text-sm font-semibold">{{ painLabel() }}</span>
                       </div>
-                      <span class="text-xl font-bold font-mono">
-                        {{ vitals()?.painScale }}<span class="text-sm font-normal">/10</span>
-                      </span>
+                      <strong class="font-mono text-xl">{{ vitals()?.painScale }}<span class="text-sm font-normal">/10</span></strong>
                     </div>
                   }
                 </div>
               } @else {
-                <p class="text-sm text-[var(--text-muted)] italic text-center py-6">
-                  {{ i18n.t('consultation.vitals.noVitals') }}
-                </p>
+                <p class="py-6 text-center text-sm italic text-[var(--text-muted)]">{{ i18n.t('consultation.vitals.noVitals') }}</p>
               }
             </div>
-          </div>
-        </div>
+          </section>
+        </aside>
 
-        <!-- Right Column: Saisie Form (Consultation details, prescription, lab orders) -->
-        <div class="lg:col-span-2 space-y-6">
-          <form [formGroup]="form" (ngSubmit)="onSave()" class="space-y-6">
-            <!-- Saisie Consultation Details -->
-            <div class="bg-[var(--app-surface)] border border-[var(--app-border)] rounded-[6px] shadow-sm overflow-hidden">
-              <div class="px-5 py-4 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/50">
-                <h2 class="font-bold text-sm text-slate-950 dark:text-white">
-                  {{ i18n.t('consultation.form.title') }}
-                </h2>
-                <p class="text-xs text-[var(--text-muted)]">
-                  {{ i18n.t('consultation.form.subtitle') }}
-                </p>
-              </div>
-              <div class="p-5 space-y-4">
-                <!-- Symptômes -->
-                <div class="space-y-1">
-                  <label class="ui-label text-xs font-semibold">
-                    {{ i18n.t('consultation.symptoms.label') }} <span class="text-[var(--brand-danger)]">*</span>
-                  </label>
-                  <textarea
-                    formControlName="symptoms"
-                    [placeholder]="i18n.t('consultation.symptoms.placeholder')"
-                    rows="3"
-                    class="ui-textarea w-full p-2.5 text-sm rounded-[4px] border-[var(--app-border)] focus:border-[var(--brand-primary)] bg-transparent dark:text-white resize-none"
-                    [class.border-red-400]="form.get('symptoms')?.invalid && form.get('symptoms')?.touched"
-                  ></textarea>
-                  @if (form.get('symptoms')?.invalid && form.get('symptoms')?.touched) {
-                    <p class="text-xs text-[var(--brand-danger)] font-semibold">
-                      {{ i18n.t('consultation.symptoms.required') }}
-                    </p>
-                  }
-                </div>
+        <main class="min-w-0 space-y-4 lg:col-span-2">
+          <app-voice-assistant-panel
+            [visitId]="visitId"
+            [currentDraft]="currentVoiceDraft()"
+            (applyDraft)="applyAiDraft($event)"
+          />
 
-                <!-- Examen clinique -->
-                <div class="space-y-1">
-                  <label class="ui-label text-xs font-semibold">
-                    {{ i18n.t('consultation.clinicalExam.label') }}
-                  </label>
-                  <textarea
-                    formControlName="clinicalExam"
-                    [placeholder]="i18n.t('consultation.clinicalExam.placeholder')"
-                    rows="3"
-                    class="ui-textarea w-full p-2.5 text-sm rounded-[4px] border-[var(--app-border)] focus:border-[var(--brand-primary)] bg-transparent dark:text-white resize-none"
-                  ></textarea>
-                </div>
+          <form [formGroup]="form" (ngSubmit)="onSave()" class="space-y-4">
+            <app-clinical-note-editor
+              [form]="form"
+              [patient]="patient()"
+              [visitReason]="visitReason()"
+              [allergies]="patientAllergies()"
+              [medicalHistory]="patientMedicalHistory()"
+            />
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <!-- Hypothèse diagnostique -->
-                  <div class="space-y-1">
-                    <label class="ui-label text-xs font-semibold">
-                      {{ i18n.t('consultation.suspectedDiagnosis.label') }}
-                    </label>
-                    <textarea
-                      formControlName="suspectedDiagnosis"
-                      [placeholder]="i18n.t('consultation.suspectedDiagnosis.placeholder')"
-                      rows="2"
-                      class="ui-textarea w-full p-2.5 text-sm rounded-[4px] border-[var(--app-border)] focus:border-[var(--brand-primary)] bg-transparent dark:text-white resize-none"
-                    ></textarea>
-                  </div>
-
-                  <!-- Diagnostic -->
-                  <div class="space-y-1">
-                    <label class="ui-label text-xs font-semibold">
-                      {{ i18n.t('consultation.diagnosis.label') }} <span class="text-[var(--brand-danger)]">*</span>
-                    </label>
-                    <textarea
-                      formControlName="diagnosis"
-                      [placeholder]="i18n.t('consultation.diagnosis.placeholder')"
-                      rows="2"
-                      class="ui-textarea w-full p-2.5 text-sm rounded-[4px] border-[var(--app-border)] focus:border-[var(--brand-primary)] bg-transparent dark:text-white resize-none"
-                      [class.border-red-400]="form.get('diagnosis')?.invalid && form.get('diagnosis')?.touched"
-                    ></textarea>
-                    @if (form.get('diagnosis')?.invalid && form.get('diagnosis')?.touched) {
-                      <p class="text-xs text-[var(--brand-danger)] font-semibold">
-                        {{ i18n.t('consultation.diagnosis.required') }}
-                      </p>
-                    }
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <!-- Diagnostic final -->
-                  <div class="space-y-1">
-                    <label class="ui-label text-xs font-semibold">
-                      {{ i18n.t('consultation.finalDiagnosis.label') }}
-                    </label>
-                    <textarea
-                      formControlName="finalDiagnosis"
-                      [placeholder]="i18n.t('consultation.finalDiagnosis.placeholder')"
-                      rows="2"
-                      class="ui-textarea w-full p-2.5 text-sm rounded-[4px] border-[var(--app-border)] focus:border-[var(--brand-primary)] bg-transparent dark:text-white resize-none"
-                    ></textarea>
-                  </div>
-
-                  <!-- Conclusion -->
-                  <div class="space-y-1">
-                    <label class="ui-label text-xs font-semibold">
-                      {{ i18n.t('consultation.conclusion.label') }}
-                    </label>
-                    <textarea
-                      formControlName="conclusion"
-                      [placeholder]="i18n.t('consultation.conclusion.placeholder')"
-                      rows="2"
-                      class="ui-textarea w-full p-2.5 text-sm rounded-[4px] border-[var(--app-border)] focus:border-[var(--brand-primary)] bg-transparent dark:text-white resize-none"
-                    ></textarea>
-                  </div>
-                </div>
-
-                <!-- Conseils patient -->
-                <div class="space-y-1">
-                  <label class="ui-label text-xs font-semibold">
-                    {{ i18n.t('consultation.advice.label') }}
-                  </label>
-                  <textarea
-                    formControlName="advice"
-                    [placeholder]="i18n.t('consultation.advice.placeholder')"
-                    rows="2"
-                    class="ui-textarea w-full p-2.5 text-sm rounded-[4px] border-[var(--app-border)] focus:border-[var(--brand-primary)] bg-transparent dark:text-white resize-none"
-                  ></textarea>
-                </div>
-
-                <!-- Suivi recommandé -->
-                <div class="space-y-1">
-                  <label class="ui-label text-xs font-semibold">
-                    {{ i18n.t('consultation.followUp.label') }}
-                  </label>
-                  <input
-                    type="text"
-                    formControlName="followUp"
-                    [placeholder]="i18n.t('consultation.followUp.placeholder')"
-                    class="ui-input w-full p-2.5 text-sm rounded-[4px] border-[var(--app-border)] focus:border-[var(--brand-primary)] bg-transparent dark:text-white"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Prescription Médicale -->
-            <div class="bg-[var(--app-surface)] border border-[var(--app-border)] rounded-[6px] shadow-sm overflow-hidden">
-              <div class="px-5 py-4 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/50 flex items-center justify-between">
+            <section class="ui-card overflow-hidden">
+              <header class="flex flex-col gap-3 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
                 <div>
-                  <div class="flex items-center gap-2">
-                    <h2 class="font-bold text-sm text-slate-950 dark:text-white">
-                      {{ i18n.t('consultation.prescription.title') }}
-                    </h2>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="text-sm font-bold text-[var(--text-primary)]">{{ i18n.t('consultation.prescription.title') }}</h2>
                     @if (prescription()) {
-                      <span [class]="'text-[10px] px-2 py-0.5 rounded-full font-bold ' + 
-                        (prescription()?.status === 'DRAFT' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/35 dark:text-amber-400' :
-                         prescription()?.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/35 dark:text-emerald-400' :
-                         'bg-slate-100 text-slate-800 dark:bg-[var(--bg-input)] dark:text-[var(--text-muted)]')">
-                        {{ prescription()?.status }}
+                      <span class="rounded-[var(--radius-brand-xs)] border px-2 py-0.5 text-[10px] font-bold" [ngClass]="prescriptionStatusClasses(prescription()?.status)">
+                        {{ prescriptionStatusLabel(prescription()?.status) }}
                       </span>
                     }
                   </div>
-                  <p class="text-xs text-[var(--text-muted)]">
-                    {{ i18n.t('consultation.prescription.subtitle').replace('{count}', prescriptionItems.length.toString()) }}
-                  </p>
+                  <p class="mt-0.5 text-xs text-[var(--text-muted)]">{{ i18n.t('consultation.prescription.subtitle').replace('{count}', prescriptionItems.length.toString()) }}</p>
                 </div>
-                <button
-                  *ngIf="!prescription() || prescription()?.status === 'DRAFT'"
-                  type="button"
-                  (click)="addPrescriptionLine()"
-                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] bg-[var(--brand-primary)] text-white text-xs font-semibold hover:bg-[var(--brand-primary-hover)] transition-colors cursor-pointer"
-                >
-                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                  </svg>
-                  {{ i18n.t('consultation.prescription.add') }}
-                </button>
-              </div>
 
-              <div class="p-5">
+                @if (!prescription() || prescription()?.status === 'DRAFT') {
+                  <button type="button" (click)="addPrescriptionLine()" class="ui-button ui-button-primary w-full sm:w-auto">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    {{ i18n.t('consultation.prescription.add') }}
+                  </button>
+                }
+              </header>
+
+              <div class="p-4 sm:p-5">
                 @if (prescriptionItems.length === 0) {
-                  <div class="py-8 text-center border border-dashed border-[var(--app-border)] rounded-[4px] bg-[var(--app-surface-muted)]/20 dark:bg-[var(--bg-input)]/10">
-                    <p class="text-sm font-semibold text-[var(--text-muted)]">
-                      {{ i18n.t('consultation.prescription.noMedicaments') }}
-                    </p>
-                    <p class="text-xs text-[var(--text-muted)] mt-1">
-                      {{ i18n.t('consultation.prescription.startAdding') }}
-                    </p>
+                  <div class="rounded-[var(--radius-brand-sm)] border border-dashed border-[var(--app-border)] bg-[var(--app-surface-muted)] p-6 text-center">
+                    <p class="text-sm font-semibold text-[var(--text-secondary)]">{{ i18n.t('consultation.prescription.noMedicaments') }}</p>
+                    <p class="mt-1 text-xs text-[var(--text-muted)]">{{ i18n.t('consultation.prescription.startAdding') }}</p>
                   </div>
                 } @else {
-                  <!-- Desktop view -->
-                  <div class="hidden md:block overflow-x-auto">
-                    <table class="w-full border-collapse text-xs" formArrayName="prescription">
-                      <thead>
-                        <tr class="border-b border-[var(--app-border)] text-[var(--text-muted)] font-semibold uppercase text-[10px]">
-                          <th class="py-2 text-left w-[20%]">{{ i18n.t('consultation.prescription.drugName') }} *</th>
-                          <th class="py-2 text-left px-2 w-[12%]">{{ i18n.t('consultation.prescription.dosage') }} *</th>
-                          <th class="py-2 text-left px-2 w-[12%]">{{ i18n.t('consultation.prescription.form') }}</th>
-                          <th class="py-2 text-left px-2 w-[12%]">{{ i18n.t('consultation.prescription.route') }}</th>
-                          <th class="py-2 text-left px-2 w-[12%]">{{ i18n.t('consultation.prescription.frequency') }}</th>
-                          <th class="py-2 text-left px-2 w-[10%]">{{ i18n.t('consultation.prescription.duration') }}</th>
-                          <th class="py-2 text-left px-2 w-[10%]">{{ i18n.t('consultation.prescription.quantity') }}</th>
-                          <th class="py-2 text-center px-2 w-[8%]">{{ i18n.t('consultation.prescription.substitutionAllowed') }}</th>
-                          <th class="py-2 text-right w-[4%]"></th>
-                        </tr>
-                      </thead>
-                      <tbody class="divide-y divide-slate-100 dark:divide-slate-850">
-                        @for (item of prescriptionItems.controls; track $index; let i = $index) {
-                          <tr [formGroupName]="i" class="hover:bg-[var(--app-surface-muted)]/30 dark:hover:bg-slate-800/10 transition-colors border-t border-[var(--app-border)]">
-                            <td class="py-2">
-                              <input type="text" formControlName="drugName" placeholder="Ex: Paracétamol" class="ui-input w-full text-xs p-2 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white" />
-                            </td>
-                            <td class="py-2 px-2">
-                              <input type="text" formControlName="dosage" placeholder="Ex: 500 mg" class="ui-input w-full text-xs p-2 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white" />
-                            </td>
-                            <td class="py-2 px-2">
-                              <input type="text" formControlName="form" placeholder="Ex: Comprimé" class="ui-input w-full text-xs p-2 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white" />
-                            </td>
-                            <td class="py-2 px-2">
-                              <input type="text" formControlName="route" placeholder="Ex: Orale" class="ui-input w-full text-xs p-2 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white" />
-                            </td>
-                            <td class="py-2 px-2">
-                              <input type="text" formControlName="frequency" placeholder="Ex: 3x/jour" class="ui-input w-full text-xs p-2 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white" />
-                            </td>
-                            <td class="py-2 px-2">
-                              <input type="text" formControlName="duration" placeholder="Ex: 5 jours" class="ui-input w-full text-xs p-2 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white" />
-                            </td>
-                            <td class="py-2 px-2">
-                              <input type="text" formControlName="quantity" placeholder="Ex: 1 boîte" class="ui-input w-full text-xs p-2 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white" />
-                            </td>
-                            <td class="py-2 px-2 text-center">
-                              <input type="checkbox" formControlName="substitutionAllowed" class="rounded border-[var(--app-border)] dark:border-slate-800 text-[var(--brand-primary)]" />
-                            </td>
-                            <td class="py-2 text-right">
-                              <button
-                                *ngIf="!prescription() || prescription()?.status === 'DRAFT'"
-                                type="button"
-                                (click)="removePrescriptionLine(i)"
-                                [title]="i18n.t('consultation.prescription.delete')"
-                                class="inline-flex items-center justify-center w-7 h-7 rounded-[4px] text-rose-600 bg-rose-50 dark:bg-rose-950/20 dark:text-rose-400 hover:bg-rose-100/50 dark:hover:bg-rose-900/30 transition-colors cursor-pointer"
-                              >
-                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            </td>
-                          </tr>
-                          <tr [formGroupName]="i" class="border-b border-[var(--app-border)] bg-[var(--app-surface-muted)]/10 dark:bg-slate-900/10">
-                            <td colspan="9" class="pb-2 pt-1 px-2">
-                              <input type="text" formControlName="instructions" placeholder="Instructions additionnelles / Commentaires pour ce médicament" class="ui-input w-full text-xs p-1.5 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white" />
-                            </td>
-                          </tr>
-                        }
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <!-- Mobile view -->
-                  <div class="md:hidden space-y-3" formArrayName="prescription">
+                  <div class="space-y-3" formArrayName="prescription">
                     @for (item of prescriptionItems.controls; track $index; let i = $index) {
-                      <div [formGroupName]="i" class="p-3 bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/20 rounded-[4px] border border-[var(--app-border)]/80 space-y-3">
-                        <div class="flex items-center justify-between">
-                          <span class="text-xs font-bold text-[var(--text-muted)]">Ligne {{ i + 1 }}</span>
-                          <button
-                            *ngIf="!prescription() || prescription()?.status === 'DRAFT'"
-                            type="button"
-                            (click)="removePrescriptionLine(i)"
-                            class="text-rose-500 hover:text-rose-700 cursor-pointer"
-                          >
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                      <article [formGroupName]="i" class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3 sm:p-4">
+                        <div class="mb-3 flex items-center justify-between gap-3">
+                          <span class="text-xs font-bold text-[var(--text-secondary)]">{{ i18n.t('consultation.prescription.line') }} {{ i + 1 }}</span>
+                          @if (!prescription() || prescription()?.status === 'DRAFT') {
+                            <button
+                              type="button"
+                              (click)="removePrescriptionLine(i)"
+                              [title]="i18n.t('consultation.prescription.delete')"
+                              class="inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-brand-sm)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] text-[var(--brand-danger-text)] transition hover:opacity-80"
+                            >
+                              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          }
                         </div>
-                        <div class="grid grid-cols-2 gap-2 text-xs">
-                          <div class="col-span-2 space-y-1">
-                            <label class="ui-label text-[10px]">Médicament *</label>
-                            <input type="text" formControlName="drugName" placeholder="Nom du médicament" class="ui-input w-full text-xs p-2 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white" />
-                          </div>
-                          <div class="space-y-1">
-                            <label class="ui-label text-[10px]">Dosage *</label>
-                            <input type="text" formControlName="dosage" placeholder="Ex: 500mg" class="ui-input w-full text-xs p-2 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white" />
-                          </div>
-                          <div class="space-y-1">
-                            <label class="ui-label text-[10px]">Forme</label>
-                            <input type="text" formControlName="form" placeholder="Ex: Comprimé" class="ui-input w-full text-xs p-2 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white" />
-                          </div>
-                          <div class="space-y-1">
-                            <label class="ui-label text-[10px]">Voie d'administration</label>
-                            <input type="text" formControlName="route" placeholder="Ex: Orale" class="ui-input w-full text-xs p-2 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white" />
-                          </div>
-                          <div class="space-y-1">
-                            <label class="ui-label text-[10px]">Fréquence</label>
-                            <input type="text" formControlName="frequency" placeholder="Ex: 3x/jour" class="ui-input w-full text-xs p-2 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white" />
-                          </div>
-                          <div class="space-y-1">
-                            <label class="ui-label text-[10px]">Durée</label>
-                            <input type="text" formControlName="duration" placeholder="Ex: 5 jours" class="ui-input w-full text-xs p-2 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white" />
-                          </div>
-                          <div class="space-y-1">
-                            <label class="ui-label text-[10px]">Quantité</label>
-                            <input type="text" formControlName="quantity" placeholder="Ex: 1 boîte" class="ui-input w-full text-xs p-2 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white" />
-                          </div>
-                          <div class="col-span-2 flex items-center gap-2 pt-1">
-                            <input type="checkbox" formControlName="substitutionAllowed" id="sub-allowed-{{i}}" class="rounded border-[var(--app-border)] dark:border-slate-800 text-[var(--brand-primary)]" />
-                            <label for="sub-allowed-{{i}}" class="ui-label text-[10px] cursor-pointer">Substitution autorisée</label>
-                          </div>
-                          <div class="col-span-2 space-y-1">
-                            <label class="ui-label text-[10px]">Instructions additionnelles</label>
-                            <input type="text" formControlName="instructions" placeholder="Instructions pour le patient" class="ui-input w-full text-xs p-2 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white" />
-                          </div>
+
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                          <label class="space-y-1">
+                            <span class="ui-label">{{ i18n.t('consultation.prescription.drugName') }} *</span>
+                            <input type="text" formControlName="drugName" class="ui-input" [placeholder]="i18n.t('consultation.prescription.drugName')" />
+                          </label>
+                          <label class="space-y-1">
+                            <span class="ui-label">{{ i18n.t('consultation.prescription.dosage') }} *</span>
+                            <input type="text" formControlName="dosage" class="ui-input" [placeholder]="i18n.t('consultation.prescription.dosage')" />
+                          </label>
+                          <label class="space-y-1">
+                            <span class="ui-label">{{ i18n.t('consultation.prescription.form') }}</span>
+                            <input type="text" formControlName="form" class="ui-input" [placeholder]="i18n.t('consultation.prescription.form')" />
+                          </label>
+                          <label class="space-y-1">
+                            <span class="ui-label">{{ i18n.t('consultation.prescription.route') }}</span>
+                            <input type="text" formControlName="route" class="ui-input" [placeholder]="i18n.t('consultation.prescription.route')" />
+                          </label>
+                          <label class="space-y-1">
+                            <span class="ui-label">{{ i18n.t('consultation.prescription.frequency') }}</span>
+                            <input type="text" formControlName="frequency" class="ui-input" [placeholder]="i18n.t('consultation.prescription.frequency')" />
+                          </label>
+                          <label class="space-y-1">
+                            <span class="ui-label">{{ i18n.t('consultation.prescription.duration') }}</span>
+                            <input type="text" formControlName="duration" class="ui-input" [placeholder]="i18n.t('consultation.prescription.duration')" />
+                          </label>
+                          <label class="space-y-1">
+                            <span class="ui-label">{{ i18n.t('consultation.prescription.quantity') }}</span>
+                            <input type="text" formControlName="quantity" class="ui-input" [placeholder]="i18n.t('consultation.prescription.quantity')" />
+                          </label>
+                          <label class="space-y-1 sm:col-span-2">
+                            <span class="ui-label">{{ i18n.t('consultation.prescription.posology') }}</span>
+                            <input type="text" formControlName="posology" class="ui-input" [placeholder]="i18n.t('consultation.prescription.posology')" />
+                          </label>
+                          <label class="space-y-1 sm:col-span-2 xl:col-span-3">
+                            <span class="ui-label">{{ i18n.t('consultation.prescription.instructions') }}</span>
+                            <input type="text" formControlName="instructions" class="ui-input" [placeholder]="i18n.t('consultation.prescription.instructions')" />
+                          </label>
                         </div>
-                      </div>
+
+                        <label class="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-[var(--text-secondary)]">
+                          <input type="checkbox" formControlName="substitutionAllowed" class="h-4 w-4 rounded-[var(--radius-brand-xs)] border-[var(--app-border)] text-[var(--brand-primary)]" />
+                          {{ i18n.t('consultation.prescription.substitutionAllowed') }}
+                        </label>
+                      </article>
                     }
                   </div>
                 }
               </div>
 
-              <!-- Action Bar for prescription lifecycle -->
               @if (prescription()) {
-                <div class="px-5 py-3 border-t border-[var(--app-border)] bg-[var(--app-surface-muted)] dark:bg-slate-900/50 flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div class="flex items-center gap-4">
+                <footer class="flex flex-col gap-3 border-t border-[var(--app-border)] bg-[var(--app-surface-muted)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                  <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
                     @if (prescription()?.prescriptionNumber) {
-                      <span class="text-[var(--text-muted)]">N° : <strong>{{ prescription()?.prescriptionNumber }}</strong></span>
+                      <span>{{ i18n.t('consultation.prescription.number') }} : <strong>{{ prescription()?.prescriptionNumber }}</strong></span>
                     }
                     @if (prescription()?.pinCode) {
-                      <span class="text-[var(--text-muted)]">PIN : <strong>{{ prescription()?.pinCode }}</strong></span>
+                      <span>{{ i18n.t('consultation.prescription.pin') }} : <strong>{{ prescription()?.pinCode }}</strong></span>
                     }
                   </div>
-                  <div class="flex items-center gap-2">
+                  <div class="flex flex-col gap-2 sm:flex-row">
                     @if (prescription()?.status === 'DRAFT') {
-                      <button
-                        type="button"
-                        (click)="finalizePrescription()"
-                        class="px-3 py-1.5 rounded-[4px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold cursor-pointer transition-colors"
-                      >
-                        {{ i18n.t('consultation.prescription.finalizeBtn') }}
-                      </button>
+                      <button type="button" (click)="finalizePrescription()" class="ui-button ui-button-primary">{{ i18n.t('consultation.prescription.finalizeBtn') }}</button>
                     }
                     @if (prescription()?.status === 'DRAFT' || prescription()?.status === 'ACTIVE') {
-                      <button
-                        type="button"
-                        (click)="cancelPrescription()"
-                        class="px-3 py-1.5 rounded-[4px] bg-rose-600 hover:bg-rose-700 text-white font-semibold cursor-pointer transition-colors"
-                      >
-                        {{ i18n.t('consultation.prescription.cancelBtn') }}
-                      </button>
+                      <button type="button" (click)="cancelPrescription()" class="ui-button ui-button-danger">{{ i18n.t('consultation.prescription.cancelBtn') }}</button>
                     }
                     @if (prescription()?.status === 'ACTIVE' && prescription()?.documentId) {
-                      <button
-                        type="button"
-                        (click)="downloadPrescriptionPdf()"
-                        class="px-3 py-1.5 rounded-[4px] bg-slate-600 hover:bg-slate-700 text-white font-semibold cursor-pointer transition-colors inline-flex items-center gap-1"
-                      >
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <button type="button" (click)="downloadPrescriptionPdf()" class="ui-button ui-button-secondary">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
                         {{ i18n.t('consultation.prescription.downloadPdfBtn') }}
                       </button>
                     }
                   </div>
-                </div>
+                </footer>
               }
-            </div>
+            </section>
 
-            <!-- Demande d'Examens Biologiques -->
-            <div class="bg-[var(--app-surface)] border border-[var(--app-border)] rounded-[6px] shadow-sm overflow-hidden">
-              <div class="px-5 py-4 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/50">
-                <h2 class="font-bold text-sm text-slate-950 dark:text-white">
-                  {{ i18n.t('consultation.lab.title') }}
-                </h2>
-                <p class="text-xs text-[var(--text-muted)]">
-                  {{ i18n.t('consultation.lab.subtitle').replace('{count}', labExams.length.toString()) }}
-                </p>
-              </div>
+            <section class="ui-card overflow-hidden">
+              <header class="border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-4 py-3 sm:px-5 sm:py-4">
+                <h2 class="text-sm font-bold text-[var(--text-primary)]">{{ i18n.t('consultation.lab.title') }}</h2>
+                <p class="mt-0.5 text-xs text-[var(--text-muted)]">{{ i18n.t('consultation.lab.subtitle').replace('{count}', labExams.length.toString()) }}</p>
+              </header>
 
-              <div class="p-5 space-y-4">
-                <!-- Suggestions rapides -->
-                <div class="space-y-1.5">
-                  <label class="ui-label text-xs font-semibold">
-                    {{ i18n.t('consultation.lab.suggestions') }}
-                  </label>
-                  <div class="flex overflow-x-auto md:flex-wrap gap-1.5 scrollbar-none pb-1 -mx-5 px-5 md:mx-0 md:px-0 select-none">
+              <div class="space-y-4 p-4 sm:p-5">
+                <div>
+                  <label class="ui-label">{{ i18n.t('consultation.lab.suggestions') }}</label>
+                  <div class="mt-2 flex flex-wrap gap-1.5">
                     @for (exam of commonExams; track exam.code) {
                       <button
                         type="button"
                         (click)="addLabExam(exam.code)"
-                        class="flex-shrink-0 px-2.5 py-1 rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] hover:bg-slate-100 dark:bg-[var(--bg-input)]/40 dark:hover:bg-slate-700/50 text-xs font-medium text-[var(--text-secondary)] dark:text-slate-350 transition-colors cursor-pointer select-none"
+                        class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition hover:border-[var(--brand-primary-border)] hover:bg-[var(--brand-primary-subtle)]"
                       >
-                        {{ exam.name }}
+                        {{ commonExamLabel(exam) }}
                       </button>
                     }
                   </div>
                 </div>
 
-                <!-- Input personnalisé -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div class="md:col-span-2 space-y-1.5">
-                    <label class="ui-label text-xs font-semibold">
-                      {{ i18n.t('consultation.lab.customLabel') }}
-                    </label>
-                    <div class="relative flex items-center w-full">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <label class="space-y-1 sm:col-span-2">
+                    <span class="ui-label">{{ i18n.t('consultation.lab.customLabel') }}</span>
+                    <div class="flex gap-2">
                       <input
                         #customExamInput
                         type="text"
                         [placeholder]="i18n.t('consultation.lab.customPlaceholder')"
-                        class="ui-input w-full text-xs p-2 pr-12 sm:pr-24 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white"
+                        class="ui-input min-w-0 flex-1"
                         (keyup.enter)="addLabExam(customExamInput.value); customExamInput.value = ''"
                       />
-                      <button
-                        type="button"
-                        (click)="addLabExam(customExamInput.value); customExamInput.value = ''"
-                        class="absolute right-1 top-1 bottom-1 px-3 rounded-[3px] bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white font-bold transition-colors cursor-pointer flex items-center justify-center"
-                        title="Ajouter"
-                      >
-                        <span class="hidden sm:inline text-xs">{{ i18n.t('consultation.lab.customAdd') }}</span>
-                        <svg class="w-4 h-4 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
-                        </svg>
+                      <button type="button" (click)="addLabExam(customExamInput.value); customExamInput.value = ''" class="ui-button ui-button-primary shrink-0">
+                        {{ i18n.t('consultation.lab.customAdd') }}
                       </button>
                     </div>
-                  </div>
-
-                  <div class="space-y-1.5">
-                    <label class="ui-label text-xs font-semibold">
-                      {{ i18n.t('consultation.lab.priority') }}
-                    </label>
-                    <select formControlName="labPriority" class="ui-select w-full text-xs p-2 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white">
-                      <option value="NORMALE">NORMALE</option>
-                      <option value="URGENTE">URGENTE</option>
-                    </select>
-                  </div>
-                </div>
-
-                <!-- Motif de l'examen -->
-                <div class="space-y-1.5">
-                  <label class="ui-label text-xs font-semibold">
-                    {{ i18n.t('consultation.lab.reason') }}
                   </label>
-                  <input
-                    type="text"
-                    formControlName="labReason"
-                    [placeholder]="i18n.t('consultation.lab.reasonPlaceholder')"
-                    class="ui-input w-full text-xs p-2.5 rounded-[4px] border-[var(--app-border)] bg-transparent dark:text-white"
-                  />
+
+                  <label class="space-y-1">
+                    <span class="ui-label">{{ i18n.t('consultation.lab.priority') }}</span>
+                    <select formControlName="labPriority" class="ui-select">
+                      <option value="NORMALE">{{ i18n.t('consultation.lab.priorityNormal') }}</option>
+                      <option value="URGENTE">{{ i18n.t('consultation.lab.priorityUrgent') }}</option>
+                    </select>
+                  </label>
                 </div>
 
-                <!-- Liste des examens prescrits -->
-                <div class="space-y-2">
-                  @if (labExams.length === 0) {
-                    <div class="py-6 text-center border border-dashed border-[var(--app-border)] rounded-[4px] bg-[var(--app-surface-muted)]/20 dark:bg-[var(--bg-input)]/10">
-                      <p class="text-xs text-[var(--text-muted)] font-medium">
-                        {{ i18n.t('consultation.lab.noExams') }}
-                      </p>
-                      <p class="text-[10px] text-[var(--text-muted)] mt-0.5">
-                        {{ i18n.t('consultation.lab.examsHelp') }}
-                      </p>
-                    </div>
-                  } @else {
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                      @for (ctrl of labExams.controls; track $index; let i = $index) {
-                        <div class="flex items-center justify-between p-2 rounded-[4px] bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/40 border border-[var(--app-border)] text-xs text-[var(--text-secondary)] dark:text-slate-350 font-medium">
-                          <span class="truncate max-w-[180px]">{{ ctrl.value }}</span>
-                          <button
-                            type="button"
-                            (click)="removeLabExam(i)"
-                            class="text-rose-500 hover:text-rose-700 transition-colors p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/20 cursor-pointer"
-                            title="Retirer"
-                          >
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </div>
-                      }
-                    </div>
-                  }
-                </div>
+                <label class="block space-y-1">
+                  <span class="ui-label">{{ i18n.t('consultation.lab.reason') }}</span>
+                  <input type="text" formControlName="labReason" [placeholder]="i18n.t('consultation.lab.reasonPlaceholder')" class="ui-input" />
+                </label>
+
+                @if (labExams.length === 0) {
+                  <div class="rounded-[var(--radius-brand-sm)] border border-dashed border-[var(--app-border)] bg-[var(--app-surface-muted)] p-5 text-center">
+                    <p class="text-xs font-medium text-[var(--text-secondary)]">{{ i18n.t('consultation.lab.noExams') }}</p>
+                    <p class="mt-1 text-[10px] text-[var(--text-muted)]">{{ i18n.t('consultation.lab.examsHelp') }}</p>
+                  </div>
+                } @else {
+                  <div class="flex flex-wrap gap-2">
+                    @for (ctrl of labExams.controls; track $index; let i = $index) {
+                      <span class="inline-flex items-center gap-2 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)]">
+                        {{ ctrl.value }}
+                        <button
+                          type="button"
+                          (click)="removeLabExam(i)"
+                          [title]="i18n.t('consultation.lab.remove')"
+                          class="inline-flex h-5 w-5 items-center justify-center rounded-[var(--radius-brand-xs)] text-[var(--brand-danger-text)] hover:bg-[var(--brand-danger-subtle)]"
+                        >
+                          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </span>
+                    }
+                  </div>
+                }
               </div>
-            </div>
+            </section>
 
-            <!-- Action Bar -->
-            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 bg-[var(--app-surface)] border border-[var(--app-border)] rounded-[6px] shadow-sm">
-              <button
-                type="button"
-                (click)="goBack()"
-                [disabled]="isSaving() || isClosing()"
-                class="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] dark:text-[var(--text-primary)] bg-white dark:bg-[var(--bg-input)] border border-[var(--app-border)] dark:border-slate-700 hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-700 disabled:opacity-50 cursor-pointer transition-colors rounded-[6px] w-full sm:w-auto"
-              >
+            <footer class="ui-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+              <button type="button" (click)="goBack()" [disabled]="isSaving() || isClosing()" class="ui-button ui-button-secondary w-full sm:w-auto">
                 {{ i18n.t('consultation.actions.cancel') }}
               </button>
-              <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                <button
-                  type="button"
-                  (click)="onSave(false)"
-                  [disabled]="form.invalid || isSaving() || isClosing()"
-                  class="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] dark:text-[var(--text-primary)] bg-white dark:bg-[var(--bg-input)] border border-[var(--app-border)] dark:border-slate-700 hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-700 disabled:opacity-50 cursor-pointer transition-colors rounded-[6px]"
-                >
+
+              <div class="flex flex-col gap-2 sm:flex-row">
+                <button type="button" (click)="onSave(false)" [disabled]="form.invalid || isSaving() || isClosing()" class="ui-button ui-button-secondary w-full sm:w-auto">
                   @if (isSaving() && !shouldCloseAfterSave) {
-                    <span class="flex items-center gap-2">
-                      <span class="inline-block w-4 h-4 rounded-full border-2 border-[var(--app-border)] border-t-slate-600 animate-spin"></span>
-                      {{ i18n.t('consultation.actions.saving') }}
-                    </span>
+                    <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-[var(--brand-primary)]"></span>
+                    {{ i18n.t('consultation.actions.saving') }}
                   } @else {
-                    <span>{{ i18n.t('consultation.actions.saveDraft') }}</span>
+                    {{ i18n.t('consultation.actions.saveDraft') }}
                   }
                 </button>
-                <button
-                  type="button"
-                  (click)="onSave(true)"
-                  [disabled]="form.invalid || isSaving() || isClosing()"
-                  class="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] disabled:opacity-50 cursor-pointer transition-colors rounded-[6px]"
-                >
+                <button type="button" (click)="onSave(true)" [disabled]="form.invalid || isSaving() || isClosing()" class="ui-button ui-button-primary w-full sm:w-auto">
                   @if (isSaving() && shouldCloseAfterSave) {
-                    <span class="flex items-center gap-2">
-                      <span class="inline-block w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin"></span>
-                      {{ i18n.t('consultation.actions.closing') }}
-                    </span>
+                    <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[var(--text-inverse)]/40 border-t-[var(--text-inverse)]"></span>
+                    {{ i18n.t('consultation.actions.closing') }}
                   } @else {
-                    <span class="flex items-center gap-2">
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                      </svg>
-                      {{ i18n.t('consultation.actions.validateAndClose') }}
-                    </span>
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    {{ i18n.t('consultation.actions.validateAndClose') }}
                   }
                 </button>
               </div>
-            </div>
+            </footer>
           </form>
-        </div>
+        </main>
       </div>
     }
   </div>
