@@ -1,9 +1,11 @@
 package com.joprelys.backend.visit.infrastructure.persistence;
 
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -24,6 +26,10 @@ public interface VisitRepository extends JpaRepository<VisitEntity, UUID> {
 
     @Query(value = "SELECT * FROM visits WHERE id = :id", nativeQuery = true)
     Optional<VisitEntity> findByIdGlobally(@Param("id") UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT v FROM VisitEntity v WHERE v.id = :id")
+    Optional<VisitEntity> findByIdForUpdate(@Param("id") UUID id);
 
     // WT1 (SCOPES): Find patient ID from a visit ID (used for scope validation)
     @Query(value = "SELECT patient_id FROM visits WHERE id = :visitId", nativeQuery = true)

@@ -59,7 +59,8 @@ public class OpenAiProvider implements AiProvider {
                 && config.transcribeVadThreshold() <= 1.0) {
             formData.add("threshold", config.transcribeVadThreshold());
         }
-        if (config.transcribePrompt() != null && !config.transcribePrompt().isBlank()) {
+        if (config.transcribePrompt() != null && !config.transcribePrompt().isBlank()
+                && !isDiarizationModel(config.transcribeModel())) {
             formData.add("prompt", config.transcribePrompt());
         }
 
@@ -113,7 +114,7 @@ public class OpenAiProvider implements AiProvider {
     }
 
     private boolean supportsTranscriptionLogprobs(String model) {
-        if (model == null) {
+        if (model == null || isDiarizationModel(model)) {
             return false;
         }
         String normalized = model.toLowerCase();
@@ -121,22 +122,29 @@ public class OpenAiProvider implements AiProvider {
                 || normalized.startsWith("gpt-4o-mini-transcribe");
     }
 
+    private boolean isDiarizationModel(String model) {
+        return model != null && model.toLowerCase().contains("transcribe-diarize");
+    }
+
     private Double extractConfidence(Map<String, Object> response) {
         Object rawLogprobs = response.get("logprobs");
         if (!(rawLogprobs instanceof List<?> logprobs) || logprobs.isEmpty()) {
             return null;
         }
-        double probabilitySum = 0.0;
-        int tokenCount = 0;
+        List<Double> probabilities = new ArrayList<>();
         for (Object rawEntry : logprobs) {
             if (!(rawEntry instanceof Map<?, ?> entry)
                     || !(entry.get("logprob") instanceof Number logprob)) {
                 continue;
             }
-            probabilitySum += Math.exp(Math.max(-20.0, logprob.doubleValue()));
-            tokenCount++;
+            probabilities.add(Math.exp(Math.max(-20.0, logprob.doubleValue())));
         }
-        return tokenCount == 0 ? null : probabilitySum / tokenCount;
+        if (probabilities.isEmpty()) {
+            return null;
+        }
+        probabilities.sort(Double::compareTo);
+        int lowerQuintileIndex = (int) Math.floor((probabilities.size() - 1) * 0.2);
+        return probabilities.get(lowerQuintileIndex);
     }
 
     private List<Map<String, String>> buildApiMessages(

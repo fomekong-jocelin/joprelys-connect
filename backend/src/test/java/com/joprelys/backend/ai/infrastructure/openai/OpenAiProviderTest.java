@@ -23,7 +23,8 @@ class OpenAiProviderTest {
     void shouldSendMedicalPromptDuringTranscription() {
         RestClient.Builder builder = RestClient.builder().baseUrl("https://api.openai.test/v1");
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        OpenAiProvider provider = provider(builder, "gpt-4.1", "Contexte médical français");
+        OpenAiProvider provider = provider(
+                builder, "gpt-4.1", "gpt-4o-transcribe", "Contexte médical français");
 
         server.expect(requestTo("https://api.openai.test/v1/audio/transcriptions"))
                 .andExpect(method(HttpMethod.POST))
@@ -50,10 +51,63 @@ class OpenAiProviderTest {
     }
 
     @Test
+    void shouldUseLowerConfidenceTailInsteadOfAverage() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("https://api.openai.test/v1");
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        OpenAiProvider provider = provider(builder, "gpt-4.1", "gpt-4o-transcribe", "prompt");
+
+        server.expect(requestTo("https://api.openai.test/v1/audio/transcriptions"))
+                .andRespond(withSuccess("""
+                        {
+                          "text":"Dose dix milligrammes",
+                          "language":"fr",
+                          "logprobs":[
+                            {"token":"Dose","logprob":-0.01},
+                            {"token":" dix","logprob":-2.0},
+                            {"token":" milligrammes","logprob":-0.01},
+                            {"token":".","logprob":-0.01},
+                            {"token":" ","logprob":-0.01}
+                          ]
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        var transcription = provider.transcribeAudio("audio".getBytes(StandardCharsets.UTF_8), "audio/webm", "fr");
+
+        assertThat(transcription.confidence()).isLessThan(0.2);
+        server.verify();
+    }
+
+    @Test
+    void shouldNotRequestUnsupportedLogprobsOrPromptForDiarizationModel() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("https://api.openai.test/v1");
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        OpenAiProvider provider = provider(
+                builder,
+                "gpt-4.1",
+                "gpt-4o-transcribe-diarize",
+                "prompt that is unsupported by diarize");
+
+        server.expect(requestTo("https://api.openai.test/v1/audio/transcriptions"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("logprobs"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("prompt that is unsupported by diarize"))))
+                .andRespond(withSuccess("""
+                        {"text":"Bonjour","language":"fr"}
+                        """, MediaType.APPLICATION_JSON));
+
+        var transcription = provider.transcribeAudio("audio".getBytes(StandardCharsets.UTF_8), "audio/webm", "fr");
+
+        assertThat(transcription.confidence()).isNull();
+        server.verify();
+    }
+
+    @Test
     void shouldNotSendTemperatureForGpt5ReasoningModel() {
         RestClient.Builder builder = RestClient.builder().baseUrl("https://api.openai.test/v1");
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        OpenAiProvider provider = provider(builder, "gpt-5.6-terra", "prompt");
+        OpenAiProvider provider = provider(builder, "gpt-5.6-terra", "gpt-4o-transcribe", "prompt");
 
         server.expect(requestTo("https://api.openai.test/v1/chat/completions"))
                 .andExpect(method(HttpMethod.POST))
@@ -71,7 +125,7 @@ class OpenAiProviderTest {
     void shouldSendTemperatureForClassicModel() {
         RestClient.Builder builder = RestClient.builder().baseUrl("https://api.openai.test/v1");
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        OpenAiProvider provider = provider(builder, "gpt-4.1", "prompt");
+        OpenAiProvider provider = provider(builder, "gpt-4.1", "gpt-4o-transcribe", "prompt");
 
         server.expect(requestTo("https://api.openai.test/v1/chat/completions"))
                 .andExpect(method(HttpMethod.POST))
@@ -83,11 +137,15 @@ class OpenAiProviderTest {
         server.verify();
     }
 
-    private OpenAiProvider provider(RestClient.Builder builder, String model, String transcriptionPrompt) {
+    private OpenAiProvider provider(
+            RestClient.Builder builder,
+            String model,
+            String transcriptionModel,
+            String transcriptionPrompt) {
         AiProperties.OpenAiProperties properties = new AiProperties.OpenAiProperties(
                 "test-key",
                 model,
-                "gpt-4o-transcribe",
+                transcriptionModel,
                 transcriptionPrompt,
                 0.8,
                 "https://api.openai.test/v1"
