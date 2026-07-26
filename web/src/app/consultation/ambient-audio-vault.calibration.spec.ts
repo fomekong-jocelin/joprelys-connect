@@ -86,6 +86,7 @@ describe('AmbientAudioVaultService doctor calibration binding', () => {
   function preparedVault(originEpochMs: number): AmbientAudioVaultService {
     const service = new AmbientAudioVaultService();
     let sequence = 0;
+    service.isSupported = vi.fn(() => true);
     (service as any).reserveSequence = vi.fn(async (visitId: string) => ({
       visitId,
       sessionId: `session-${visitId}`,
