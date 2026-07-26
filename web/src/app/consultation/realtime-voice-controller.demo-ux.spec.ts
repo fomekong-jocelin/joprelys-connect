@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BehaviorSubject, Subject, of } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
-import { AiSessionResponse } from './ai-consultation-api.service';
+import { AiConsultationApiService, AiSessionResponse } from './ai-consultation-api.service';
 import { AmbientAudioCaptureService, AmbientCaptureState } from './ambient-audio-capture.service';
 import { RealtimeClinicalIntakeApiService } from './realtime-clinical-intake-api.service';
 import {
@@ -77,6 +77,13 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
         {
           provide: RealtimeClinicalIntakeApiService,
           useValue: { ingest: vi.fn().mockReturnValue(of({})) },
+        },
+        {
+          provide: AiConsultationApiService,
+          useValue: {
+            sendRealtimeTranscript: vi.fn().mockReturnValue(of(messageResponse())),
+            answerRealtimeClarification: vi.fn().mockReturnValue(of(messageResponse())),
+          },
         },
         {
           provide: I18nService,
@@ -163,6 +170,21 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
     expect(fixture.nativeElement.textContent).toContain('Temps réel interrompu');
     expect(fixture.nativeElement.textContent).toContain('reste enregistrée localement');
   });
+
+  function messageResponse() {
+    return {
+      sessionId: 'session-1',
+      transcript: 'Patient sans fièvre depuis trois jours',
+      draft: {},
+      changedFields: [],
+      assistantMessage: '',
+      needsClarification: false,
+      conversation: [],
+      clarifications: [],
+      revisions: [],
+      expiresAt: '2026-07-26T22:00:00Z',
+    };
+  }
 
   function sessionWithGreeting(): AiSessionResponse {
     return {
