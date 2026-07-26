@@ -9,6 +9,7 @@ import {
 import { RealtimeVoiceBridgeService, RealtimeVoiceState } from './realtime-voice-bridge.service';
 import { RealtimeVoiceControllerComponent } from './realtime-voice-controller.component';
 
+// Regression gate: a Realtime consultation must remain interactive across consecutive spoken turns.
 describe('RealtimeVoiceControllerComponent continuous conversation', () => {
   let fixture: ComponentFixture<RealtimeVoiceControllerComponent>;
   let component: RealtimeVoiceControllerComponent;
