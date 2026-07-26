@@ -18,6 +18,12 @@ final class AiClinicalResponseParser {
             "finalDiagnosis", "conclusion", "advice", "followUp",
             "prescription", "labOrders", "vitals");
 
+    private static final Set<String> ROOT_FIELDS = Set.of(
+            "changes", "assistantMessage", "needsClarification", "clarification");
+    private static final Set<String> CHANGE_FIELDS = Set.of(
+            "field", "operation", "value", "reason", "uncertainty", "evidence");
+    private static final Set<String> CLARIFICATION_FIELDS = Set.of(
+            "field", "question", "options");
     private static final Set<String> STRUCTURED_FIELDS = Set.of(
             "prescription", "labOrders", "vitals");
     private static final Set<String> PRESCRIPTION_FIELDS = Set.of(
@@ -29,6 +35,7 @@ final class AiClinicalResponseParser {
     private static final Set<String> ALLOWED_OPERATIONS = Set.of("SET", "CLEAR");
     private static final Set<String> ALLOWED_UNCERTAINTIES = Set.of("LOW", "MEDIUM", "HIGH");
     private static final int MAX_CLARIFICATION_OPTIONS = 5;
+    private static final int MAX_EVIDENCE_ITEMS = 4;
 
     private final ObjectMapper objectMapper;
 
@@ -46,16 +53,20 @@ final class AiClinicalResponseParser {
                 .replaceFirst("\\s*```$", "");
         try {
             Map<String, Object> root = objectMapper.readValue(cleaned, Map.class);
+            rejectUnknownKeys(root, ROOT_FIELDS);
+            if (!(root.get("changes") instanceof List<?>)) {
+                throw invalidOutput();
+            }
             String assistantMessage = root.get("assistantMessage") instanceof String value
                     && !value.isBlank()
                     ? limit(value.trim(), 2000)
-                    : "Des modifications sont proposées. Vérifiez-les avant de décider.";
+                    : "";
             boolean needsClarification = root.get("needsClarification") instanceof Boolean value
                     && value;
             ParsedClarification clarification = needsClarification
                     ? parseClarification(root.get("clarification"))
                     : null;
-            List<ParsedChange> changes = parseChanges(root, assistantMessage);
+            List<ParsedChange> changes = parseChanges(root.get("changes"));
             if (needsClarification && clarification != null) {
                 changes = changes.stream()
                         .filter(change -> !change.field().equals(clarification.field()))
@@ -73,32 +84,32 @@ final class AiClinicalResponseParser {
         }
     }
 
-    private List<ParsedChange> parseChanges(
-            Map<String, Object> root,
-            String assistantMessage) {
-        Object changesValue = root.get("changes");
-        if (changesValue instanceof List<?> changes) {
-            List<ParsedChange> result = new ArrayList<>();
-            for (Object value : changes) {
-                result.add(parseChange(value));
-            }
-            return result;
+    private List<ParsedChange> parseChanges(Object changesValue) {
+        if (!(changesValue instanceof List<?> changes)) {
+            throw invalidOutput();
         }
-        return parseLegacyDraft(root.get("draft"), assistantMessage);
+        List<ParsedChange> result = new ArrayList<>();
+        for (Object value : changes) {
+            result.add(parseChange(value));
+        }
+        return List.copyOf(result);
     }
 
     private ParsedChange parseChange(Object value) {
         if (!(value instanceof Map<?, ?> map)) {
             throw invalidChange();
         }
+        rejectUnknownKeys(map, CHANGE_FIELDS);
         String field = stringValue(map.get("field"));
         String operation = stringValue(map.get("operation")).toUpperCase();
         String reason = stringValue(map.get("reason"));
         String uncertainty = stringValue(map.get("uncertainty")).toUpperCase();
+        List<String> evidence = parseEvidence(map.get("evidence"));
         if (!ALLOWED_FIELDS.contains(field)
                 || !ALLOWED_OPERATIONS.contains(operation)
                 || reason.isBlank()
-                || !ALLOWED_UNCERTAINTIES.contains(uncertainty)) {
+                || !ALLOWED_UNCERTAINTIES.contains(uncertainty)
+                || evidence.isEmpty()) {
             throw invalidChange();
         }
         String proposedValue = null;
@@ -113,41 +124,32 @@ final class AiClinicalResponseParser {
                 operation,
                 proposedValue,
                 limit(reason, 1000),
-                uncertainty);
+                uncertainty,
+                evidence);
     }
 
-    private List<ParsedChange> parseLegacyDraft(
-            Object value,
-            String assistantMessage) {
-        if (!(value instanceof Map<?, ?> draftMap)) {
-            return List.of();
+    private List<String> parseEvidence(Object value) {
+        if (!(value instanceof List<?> list) || list.isEmpty()) {
+            throw invalidChange();
         }
-        Map<String, ParsedChange> result = new LinkedHashMap<>();
-        draftMap.forEach((key, fieldValue) -> {
-            if (key == null || !ALLOWED_FIELDS.contains(key.toString()) || fieldValue == null) {
-                return;
+        List<String> evidence = new ArrayList<>();
+        for (Object item : list) {
+            if (!(item instanceof String quote) || quote.isBlank()) {
+                throw invalidChange();
             }
-            String field = key.toString();
-            String normalized;
-            if (STRUCTURED_FIELDS.contains(field)) {
-                normalized = normalizeStructuredFieldValue(field, fieldValue);
-            } else {
-                normalized = normalizeTextFieldValue(field, fieldValue);
+            evidence.add(limit(quote.trim(), 500));
+            if (evidence.size() >= MAX_EVIDENCE_ITEMS) {
+                break;
             }
-            result.put(field, new ParsedChange(
-                    field,
-                    "SET",
-                    normalized,
-                    limit(assistantMessage, 1000),
-                    "UNKNOWN"));
-        });
-        return List.copyOf(result.values());
+        }
+        return List.copyOf(evidence);
     }
 
     private ParsedClarification parseClarification(Object value) {
         if (!(value instanceof Map<?, ?> map)) {
             throw invalidClarification();
         }
+        rejectUnknownKeys(map, CLARIFICATION_FIELDS);
         String field = stringValue(map.get("field"));
         String question = stringValue(map.get("question"));
         if (!ALLOWED_FIELDS.contains(field) || question.isBlank()) {
@@ -269,6 +271,14 @@ final class AiClinicalResponseParser {
         return normalized;
     }
 
+    private void rejectUnknownKeys(Map<?, ?> map, Set<String> allowed) {
+        for (Object key : map.keySet()) {
+            if (key == null || !allowed.contains(key.toString())) {
+                throw invalidOutput();
+            }
+        }
+    }
+
     private int maximumFor(String field) {
         if (STRUCTURED_FIELDS.contains(field)) {
             return 12000;
@@ -301,7 +311,17 @@ final class AiClinicalResponseParser {
             String operation,
             String proposedValue,
             String reason,
-            String uncertainty) {
+            String uncertainty,
+            List<String> evidence) {
+
+        ParsedChange(
+                String field,
+                String operation,
+                String proposedValue,
+                String reason,
+                String uncertainty) {
+            this(field, operation, proposedValue, reason, uncertainty, List.of());
+        }
     }
 
     record ParsedClarification(
