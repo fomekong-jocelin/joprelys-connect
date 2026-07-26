@@ -31,7 +31,7 @@ describe('AuthTokenStorageService session boundaries', () => {
     clearTestCookie();
   });
 
-  it('should purge auth/browser state without deleting unrelated accessible cookies', () => {
+  it('should purge tab identity state without deleting shared localStorage or cookies', () => {
     const cleanup = vi.fn();
     service.registerSessionBoundaryCleanup(cleanup);
     service.save(loginResponse('doctor-token', 'doctor@test.local', 'MEDECIN'));
@@ -42,26 +42,27 @@ describe('AuthTokenStorageService session boundaries', () => {
     service.clear();
 
     expect(service.session()).toBeNull();
-    expect(local.length).toBe(0);
+    expect(local.getItem('joprelys.theme')).toBe('dark');
     expect(session.length).toBe(0);
     expect(document.cookie).toContain('joprelys_test_cookie=secret');
     expect(cleanup).toHaveBeenCalledOnce();
   });
 
-  it('should purge previous account state before saving a different identity', () => {
+  it('should purge previous tab identity state before saving a different identity', () => {
     const cleanup = vi.fn();
     service.registerSessionBoundaryCleanup(cleanup);
     service.save(loginResponse('doctor-token', 'doctor@test.local', 'MEDECIN'));
-    local.setItem('sensitive-view-state', 'doctor-data');
+    local.setItem('shared-preference', 'keep-me');
     session.setItem('feature-scope', 'doctor-scope');
 
-    service.save(loginResponse('cashier-token', 'cashier@test.local', 'CAISSIER'));
+    service.save(loginResponse('patient-token', 'patient@test.local', 'PATIENT'));
 
-    expect(service.accessToken).toBe('cashier-token');
-    expect(local.length).toBe(0);
+    expect(service.accessToken).toBe('patient-token');
+    expect(local.getItem('shared-preference')).toBe('keep-me');
     expect(session.getItem('feature-scope')).toBeNull();
     expect(session.length).toBe(1);
     expect(cleanup).toHaveBeenCalledOnce();
+    expect(service.isPatientSession()).toBe(true);
   });
 
   it('should preserve non-session storage during a same-account access-token refresh', () => {
