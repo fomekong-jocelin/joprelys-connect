@@ -3,9 +3,11 @@ package com.joprelys.backend.ai.ambient.application;
 import com.joprelys.backend.ai.ambient.application.AmbientTranscriptContract.TranscriptItemView;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 @Service
+@ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
 public class AmbientTranscriptionService {
 
     private final AmbientDiarizationPort diarizationPort;
