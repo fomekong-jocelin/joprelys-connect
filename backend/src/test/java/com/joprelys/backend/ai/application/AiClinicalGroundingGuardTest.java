@@ -25,14 +25,16 @@ class AiClinicalGroundingGuardTest {
                       "operation": "SET",
                       "value": "Toux sèche depuis trois jours",
                       "reason": "Symptôme dicté.",
-                      "uncertainty": "LOW"
+                      "uncertainty": "LOW",
+                      "evidence": ["toux sèche depuis trois jours"]
                     },
                     {
                       "field": "prescription",
                       "operation": "SET",
                       "value": [{"drugName":"Paracétamol","dosage":"1 g"}],
                       "reason": "Traitement proposé.",
-                      "uncertainty": "LOW"
+                      "uncertainty": "LOW",
+                      "evidence": ["toux sèche depuis trois jours"]
                     }
                   ],
                   "assistantMessage": "J'ai ajouté le symptôme et le traitement.",
@@ -62,7 +64,8 @@ class AiClinicalGroundingGuardTest {
                       "operation": "SET",
                       "value": [{"drugName":"Paracétamol","dosage":"1 g","frequency":"3 fois par jour"}],
                       "reason": "Prescription explicitement dictée.",
-                      "uncertainty": "LOW"
+                      "uncertainty": "LOW",
+                      "evidence": ["Paracétamol un gramme trois fois par jour"]
                     }
                   ],
                   "assistantMessage": "Prescription préparée pour validation.",
@@ -118,7 +121,8 @@ class AiClinicalGroundingGuardTest {
                       "operation": "SET",
                       "value": [{"drugName":"Amoxicilline","dosage":"500 mg","frequency":"3 fois par jour"}],
                       "reason": "Le médecin précise la dose demandée.",
-                      "uncertainty": "LOW"
+                      "uncertainty": "LOW",
+                      "evidence": ["Cinq cents milligrammes trois fois par jour"]
                     }
                   ],
                   "assistantMessage": "Dose précisée, à valider.",
@@ -145,7 +149,8 @@ class AiClinicalGroundingGuardTest {
                     "operation": "SET",
                     "value": [{"drugName":"Paracetamol","dosage":"1 g"}],
                     "reason": "Suggested treatment.",
-                    "uncertainty": "LOW"
+                    "uncertainty": "LOW",
+                    "evidence": ["dry cough"]
                   }],
                   "assistantMessage": "Medication added.",
                   "needsClarification": false,
