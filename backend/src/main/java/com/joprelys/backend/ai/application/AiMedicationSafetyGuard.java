@@ -31,7 +31,7 @@ final class AiMedicationSafetyGuard {
     private static final String PRESCRIPTION = "prescription";
 
     private final ObjectMapper objectMapper;
-    private final MedicationReferenceDuplicateDetector referenceDuplicateDetector;
+    private MedicationReferenceDuplicateDetector referenceDuplicateDetector;
 
     AiMedicationSafetyGuard(ObjectMapper objectMapper) {
         this(objectMapper, null);
@@ -41,6 +41,11 @@ final class AiMedicationSafetyGuard {
             ObjectMapper objectMapper,
             MedicationReferenceDuplicateDetector referenceDuplicateDetector) {
         this.objectMapper = objectMapper;
+        this.referenceDuplicateDetector = referenceDuplicateDetector;
+    }
+
+    void setReferenceDuplicateDetector(
+            MedicationReferenceDuplicateDetector referenceDuplicateDetector) {
         this.referenceDuplicateDetector = referenceDuplicateDetector;
     }
 
@@ -173,7 +178,6 @@ final class AiMedicationSafetyGuard {
         return containsWholeTerm(normalizedAllergies, normalizedDrug);
     }
 
-    @SuppressWarnings("unchecked")
     private boolean matchesActiveMedication(
             String drugName,
             Map<String, Object> clinicalContext) {
@@ -205,7 +209,6 @@ final class AiMedicationSafetyGuard {
                 activeMedicationNames(clinicalContext));
     }
 
-    @SuppressWarnings("unchecked")
     private List<String> documentedAllergyEntries(Map<String, Object> clinicalContext) {
         Object patientValue = clinicalContext == null ? null : clinicalContext.get("patient");
         if (!(patientValue instanceof Map<?, ?> patient)) {
