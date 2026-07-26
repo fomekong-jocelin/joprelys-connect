@@ -117,6 +117,46 @@ class AiClinicalFactualityGuardTest {
     }
 
     @Test
+    void shouldBlockClearWithoutExplicitRemovalIntent() {
+        ParsedResponse response = response(new ParsedChange(
+                "diagnosis",
+                "CLEAR",
+                null,
+                "Unsafe clear",
+                "LOW",
+                List.of("diagnostic provisoire")));
+
+        ParsedResponse checked = guard.enforce(
+                response,
+                "diagnostic provisoire",
+                Map.of("diagnosis", "diagnostic provisoire"),
+                "TEXT",
+                "fr");
+
+        assertTrue(checked.changes().isEmpty());
+    }
+
+    @Test
+    void shouldAllowClearWithExplicitRemovalIntent() {
+        ParsedResponse response = response(new ParsedChange(
+                "diagnosis",
+                "CLEAR",
+                null,
+                "Explicit clear",
+                "LOW",
+                List.of("supprime le diagnostic provisoire")));
+
+        ParsedResponse checked = guard.enforce(
+                response,
+                "supprime le diagnostic provisoire",
+                Map.of("diagnosis", "diagnostic provisoire"),
+                "TEXT",
+                "fr");
+
+        assertEquals(1, checked.changes().size());
+    }
+
+    @Test
     void shouldNeverReuseFreeFormAssistantMessage() {
         ParsedResponse response = new ParsedResponse(
                 List.of(),
