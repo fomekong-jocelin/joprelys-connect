@@ -35,10 +35,6 @@ import tools.jackson.databind.ObjectMapper;
 public class AiConsultationService {
 
     private static final Logger log = LoggerFactory.getLogger(AiConsultationService.class);
-    private static final int MAX_AUDIO_BYTES = 10 * 1024 * 1024;
-    private static final int MAX_TRANSCRIPT_LENGTH = 12000;
-    private static final List<String> ALLOWED_MIME_TYPES = List.of(
-            "audio/webm", "audio/mp4", "audio/mpeg", "audio/wav");
 
     private final AiProvider aiProvider;
     private final AiProperties properties;
@@ -137,7 +133,7 @@ public class AiConsultationService {
             UUID userId,
             UUID organizationId,
             String text) {
-        validateText(text);
+        AiConsultationInputValidator.validateText(text);
         AiConsultationSessionState state = requireSession(
                 visitId, userId, organizationId);
         synchronized (state) {
@@ -159,7 +155,7 @@ public class AiConsultationService {
             UUID organizationId,
             UUID clarificationId,
             String answer) {
-        validateText(answer);
+        AiConsultationInputValidator.validateText(answer);
         AiConsultationSessionState state = requireSession(
                 visitId, userId, organizationId);
         synchronized (state) {
@@ -185,12 +181,12 @@ public class AiConsultationService {
             UUID organizationId,
             byte[] audio,
             String contentType) {
-        validateAudio(audio, contentType);
+        AiConsultationInputValidator.validateAudio(audio, contentType);
         AiConsultationSessionState state = requireSession(
                 visitId, userId, organizationId);
         synchronized (state) {
             ensureReadyForNewInput(state);
-            String normalizedMime = normalizeMimeType(contentType);
+            String normalizedMime = AiConsultationInputValidator.normalizeMimeType(contentType);
             try {
                 AiTranscription transcription = aiProvider.transcribeAudio(
                         audio, normalizedMime, state.locale);
@@ -201,7 +197,8 @@ public class AiConsultationService {
                             org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
                 }
                 String transcript = limit(
-                        transcription.text().trim(), MAX_TRANSCRIPT_LENGTH);
+                        transcription.text().trim(),
+                        AiConsultationInputValidator.MAX_TRANSCRIPT_LENGTH);
                 state.pendingTranscript = transcript;
                 state.transcriptStatus = "PENDING_REVIEW";
                 state.expiresAt = expiry();
@@ -226,7 +223,7 @@ public class AiConsultationService {
             UUID userId,
             UUID organizationId,
             String transcript) {
-        validateText(transcript);
+        AiConsultationInputValidator.validateText(transcript);
         AiConsultationSessionState state = requireSession(
                 visitId, userId, organizationId);
         synchronized (state) {
@@ -440,32 +437,6 @@ public class AiConsultationService {
         revisionManager.ensureNoPendingRevision(state);
     }
 
-    private void validateAudio(byte[] audio, String contentType) {
-        if (audio == null || audio.length == 0) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "AI_MESSAGE_INVALID");
-        }
-        if (audio.length > MAX_AUDIO_BYTES) {
-            throw new ResponseStatusException(
-                    HttpStatus.PAYLOAD_TOO_LARGE, "AI_AUDIO_TOO_LARGE");
-        }
-        if (!ALLOWED_MIME_TYPES.contains(normalizeMimeType(contentType))) {
-            throw new ResponseStatusException(
-                    HttpStatus.UNSUPPORTED_MEDIA_TYPE, "AI_AUDIO_TYPE_UNSUPPORTED");
-        }
-    }
-
-    private void validateText(String text) {
-        if (text == null || text.isBlank()) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "AI_MESSAGE_INVALID");
-        }
-        if (text.length() > MAX_TRANSCRIPT_LENGTH) {
-            throw new ResponseStatusException(
-                    HttpStatus.PAYLOAD_TOO_LARGE, "AI_TRANSCRIPT_TOO_LARGE");
-        }
-    }
-
     private void ensureActiveVisit(UUID visitId) {
         var visit = visitService.getVisit(visitId);
         if (!"EN_COURS".equals(visit.getStatus())) {
@@ -509,12 +480,6 @@ public class AiConsultationService {
     private Instant expiry() {
         long seconds = Math.max(5, properties.sessionTtlMinutes()) * 60L;
         return Instant.now().plusSeconds(seconds);
-    }
-
-    private String normalizeMimeType(String contentType) {
-        return contentType == null
-                ? ""
-                : contentType.split(";", 2)[0].trim().toLowerCase();
     }
 
     private String organizationKey(UUID organizationId) {
