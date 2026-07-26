@@ -46,6 +46,12 @@ public class AmbientAudioChunkEntity {
     @Column(name = "claimed_at", nullable = false)
     private Instant claimedAt;
 
+    @Column(name = "claim_generation", nullable = false)
+    private long claimGeneration;
+
+    @Column(name = "claim_token", nullable = false)
+    private UUID claimToken;
+
     @Column(name = "completed_at")
     private Instant completedAt;
 
@@ -83,6 +89,8 @@ public class AmbientAudioChunkEntity {
         this.createdByUserId = createdByUserId;
         this.status = AmbientAudioChunkStatus.PROCESSING;
         this.claimedAt = now;
+        this.claimGeneration = 1;
+        this.claimToken = UUID.randomUUID();
         this.createdAt = now;
         this.updatedAt = now;
     }
@@ -93,6 +101,8 @@ public class AmbientAudioChunkEntity {
         if (createdAt == null) createdAt = now;
         if (updatedAt == null) updatedAt = now;
         if (claimedAt == null) claimedAt = now;
+        if (claimGeneration < 1) claimGeneration = 1;
+        if (claimToken == null) claimToken = UUID.randomUUID();
     }
 
     @PreUpdate
@@ -103,8 +113,16 @@ public class AmbientAudioChunkEntity {
     public void reclaim(Instant now) {
         status = AmbientAudioChunkStatus.PROCESSING;
         claimedAt = now;
+        claimGeneration += 1;
+        claimToken = UUID.randomUUID();
         completedAt = null;
         lastError = null;
+    }
+
+    public boolean ownsLease(UUID expectedClaimToken) {
+        return status == AmbientAudioChunkStatus.PROCESSING
+                && expectedClaimToken != null
+                && expectedClaimToken.equals(claimToken);
     }
 
     public void complete(Instant now) {
@@ -127,6 +145,8 @@ public class AmbientAudioChunkEntity {
     public String getContentType() { return contentType; }
     public AmbientAudioChunkStatus getStatus() { return status; }
     public Instant getClaimedAt() { return claimedAt; }
+    public long getClaimGeneration() { return claimGeneration; }
+    public UUID getClaimToken() { return claimToken; }
     public Instant getCompletedAt() { return completedAt; }
     public String getLastError() { return lastError; }
     public UUID getCreatedByUserId() { return createdByUserId; }
