@@ -86,7 +86,7 @@ public class OpenAiProvider implements AiProvider {
     public AiChatResponse chat(List<AiMessage> messages, String systemPrompt) {
         log.debug("Chat via OpenAI (modèle={}, messages={})", config.model(), messages.size());
 
-        Map<String, Object> requestBody = baseChatRequest(messages, systemPrompt);
+        Map<String, Object> requestBody = baseChatRequest(messages, systemPrompt, 0.3);
         @SuppressWarnings("unchecked")
         Map<String, Object> response = restClient.post()
                 .uri("/chat/completions")
@@ -116,7 +116,7 @@ public class OpenAiProvider implements AiProvider {
                 messages.size(),
                 schemaName);
 
-        Map<String, Object> requestBody = baseChatRequest(messages, systemPrompt);
+        Map<String, Object> requestBody = baseChatRequest(messages, systemPrompt, 0.0);
         requestBody.put("response_format", Map.of(
                 "type", "json_schema",
                 "json_schema", Map.of(
@@ -137,13 +137,14 @@ public class OpenAiProvider implements AiProvider {
 
     private Map<String, Object> baseChatRequest(
             List<AiMessage> messages,
-            String systemPrompt) {
+            String systemPrompt,
+            double temperature) {
         List<Map<String, String>> apiMessages = buildApiMessages(messages, systemPrompt);
         Map<String, Object> requestBody = new HashMap<>(Map.of(
                 "model", config.model(),
                 "messages", apiMessages));
         if (supportsCustomTemperature(config.model())) {
-            requestBody.put("temperature", 0.0);
+            requestBody.put("temperature", temperature);
         }
         return requestBody;
     }
