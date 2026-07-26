@@ -13,6 +13,7 @@ import com.joprelys.backend.ai.domain.AiMessage;
 import com.joprelys.backend.ai.domain.AiProvider;
 import com.joprelys.backend.ai.domain.AiTranscription;
 import com.joprelys.backend.ai.infrastructure.AiProperties;
+import com.joprelys.backend.ai.medication.MedicationSafetyEngine;
 import com.joprelys.backend.visit.application.VisitService;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -58,7 +59,8 @@ public class AiConsultationService {
             AiClinicalResponseParser responseParser,
             ClinicalContextAssembler clinicalContextAssembler,
             AiRevisionManager revisionManager,
-            AiClarificationManager clarificationManager) {
+            AiClarificationManager clarificationManager,
+            Optional<MedicationSafetyEngine> medicationSafetyEngine) {
         this.aiProvider = aiProvider;
         this.properties = properties;
         this.visitService = visitService;
@@ -66,7 +68,8 @@ public class AiConsultationService {
         this.responseParser = responseParser;
         this.clinicalContextAssembler = clinicalContextAssembler;
         this.groundingGuard = new AiClinicalGroundingGuard(objectMapper);
-        this.medicationSafetyGuard = new AiMedicationSafetyGuard(objectMapper);
+        this.medicationSafetyGuard = new AiMedicationSafetyGuard(
+                objectMapper, medicationSafetyEngine.orElse(null));
         this.revisionManager = revisionManager;
         this.clarificationManager = clarificationManager;
     }
