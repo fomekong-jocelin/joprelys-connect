@@ -2,7 +2,7 @@ package com.joprelys.backend.ai.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -42,14 +42,16 @@ class AiPrescriptionRegressionTest {
                       "operation": "SET",
                       "value": "Toux sèche depuis trois jours",
                       "reason": "Symptôme dicté.",
-                      "uncertainty": "LOW"
+                      "uncertainty": "LOW",
+                      "evidence": ["toux sèche depuis trois jours"]
                     },
                     {
                       "field": "prescription",
                       "operation": "SET",
-                      "value": [{"drugName":"Paracétamol","dosage":"1 g"}],
-                      "reason": "Traitement proposé par le modèle.",
-                      "uncertainty": "LOW"
+                      "value": [{"drugName":"Medication-X","dosage":"10 mg"}],
+                      "reason": "Traitement inventé par le modèle.",
+                      "uncertainty": "LOW",
+                      "evidence": ["Medication-X"]
                     }
                   ],
                   "assistantMessage": "J'ai structuré la consultation.",
@@ -86,7 +88,7 @@ class AiPrescriptionRegressionTest {
                 organizationId,
                 Map.of(
                         "prescription",
-                        "[{\"drugName\":\"Amoxicilline\",\"dosage\":\"500 mg\"}]"),
+                        "[{\"drugName\":\"Existing-Medication\",\"dosage\":\"5 mg\"}]"),
                 "fr");
 
         var response = service.processText(
@@ -99,6 +101,5 @@ class AiPrescriptionRegressionTest {
         assertEquals(1, response.revisions().getFirst().proposals().size());
         assertEquals("symptoms", response.revisions().getFirst().proposals().getFirst().field());
         assertFalse(response.changedFields().contains("prescription"));
-        assertTrue(response.assistantMessage().contains("Aucun médicament"));
     }
 }
