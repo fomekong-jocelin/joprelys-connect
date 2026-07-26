@@ -6,18 +6,21 @@ import {
   AiMessageResponse,
   AiSessionResponse,
 } from './ai-consultation-api.service';
-import { RealtimeVoiceBridgeService, RealtimeVoiceState } from './realtime-voice-bridge.service';
+import {
+  RealtimeTranscriptTurn,
+  RealtimeVoiceBridgeService,
+  RealtimeVoiceState,
+} from './realtime-voice-bridge.service';
 import { RealtimeVoiceControllerComponent } from './realtime-voice-controller.component';
 
-// Regression gate: a Realtime consultation must remain interactive across consecutive spoken turns.
 describe('RealtimeVoiceControllerComponent continuous conversation', () => {
   let fixture: ComponentFixture<RealtimeVoiceControllerComponent>;
   let component: RealtimeVoiceControllerComponent;
   let state: BehaviorSubject<RealtimeVoiceState>;
-  let transcripts: Subject<string>;
+  let transcripts: Subject<RealtimeTranscriptTurn>;
   let bridge: {
     state$: BehaviorSubject<RealtimeVoiceState>;
-    transcript$: Subject<string>;
+    transcript$: Subject<RealtimeTranscriptTurn>;
     error$: Subject<string>;
     assistantTurnCompleted$: Subject<void>;
     connect: ReturnType<typeof vi.fn>;
@@ -27,8 +30,8 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
     speakApproved: ReturnType<typeof vi.fn>;
   };
   let api: {
-    sendText: ReturnType<typeof vi.fn>;
-    answerClarification: ReturnType<typeof vi.fn>;
+    sendRealtimeTranscript: ReturnType<typeof vi.fn>;
+    answerRealtimeClarification: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -39,7 +42,7 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
       assistantSpeaking: false,
       muted: false,
     });
-    transcripts = new Subject<string>();
+    transcripts = new Subject<RealtimeTranscriptTurn>();
     bridge = {
       state$: state,
       transcript$: transcripts,
@@ -52,8 +55,8 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
       speakApproved: vi.fn().mockReturnValue(false),
     };
     api = {
-      sendText: vi.fn().mockReturnValue(of(messageResponse('Je vous écoute.'))),
-      answerClarification: vi.fn().mockReturnValue(of(messageResponse('Merci pour la précision.'))),
+      sendRealtimeTranscript: vi.fn().mockReturnValue(of(messageResponse('Je vous écoute.'))),
+      answerRealtimeClarification: vi.fn().mockReturnValue(of(messageResponse('Merci pour la précision.'))),
     };
 
     await TestBed.configureTestingModule({
@@ -98,13 +101,18 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
     expect(bridge.setMuted).toHaveBeenCalledWith(true);
   });
 
-  it('should analyze each realtime transcript immediately without pending review', () => {
+  it('should analyze a verified realtime transcript with provenance', () => {
     const emitted = vi.spyOn(component.message, 'emit');
 
-    transcripts.next(' Patient sans fièvre ');
+    transcripts.next(turn(' Patient sans fièvre ', 0.91, 'event-1'));
 
-    expect(api.sendText).toHaveBeenCalledWith('visit-1', 'Patient sans fièvre');
-    expect(api.answerClarification).not.toHaveBeenCalled();
+    expect(api.sendRealtimeTranscript).toHaveBeenCalledWith(
+      'visit-1',
+      'Patient sans fièvre',
+      0.91,
+      'event-1',
+    );
+    expect(api.answerRealtimeClarification).not.toHaveBeenCalled();
     expect(emitted).toHaveBeenCalledWith(expect.objectContaining({
       assistantMessage: 'Je vous écoute.',
     }));
@@ -112,7 +120,17 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
     expect(bridge.setMuted).toHaveBeenLastCalledWith(false);
   });
 
-  it('should route the next spoken turn to the pending clarification automatically', () => {
+  it('should refuse a realtime transcript when ASR confidence is unavailable', () => {
+    const emittedError = vi.spyOn(component.realtimeError, 'emit');
+
+    transcripts.next(turn('texte incertain', null));
+
+    expect(api.sendRealtimeTranscript).not.toHaveBeenCalled();
+    expect(api.answerRealtimeClarification).not.toHaveBeenCalled();
+    expect(emittedError).toHaveBeenCalledWith(expect.stringContaining('Transcription non vérifiable'));
+  });
+
+  it('should route a verified spoken answer to the pending clarification', () => {
     component.session = {
       ...activeSession(),
       clarifications: [{
@@ -127,14 +145,16 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
       }],
     };
 
-    transcripts.next(' Depuis trois jours ');
+    transcripts.next(turn(' Depuis trois jours ', 0.88, 'event-2'));
 
-    expect(api.answerClarification).toHaveBeenCalledWith(
+    expect(api.answerRealtimeClarification).toHaveBeenCalledWith(
       'visit-1',
       'clarification-1',
       'Depuis trois jours',
+      0.88,
+      'event-2',
     );
-    expect(api.sendText).not.toHaveBeenCalled();
+    expect(api.sendRealtimeTranscript).not.toHaveBeenCalled();
     expect(bridge.setMuted).toHaveBeenLastCalledWith(false);
   });
 
@@ -153,7 +173,7 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
   });
 
   it('should keep the microphone paused when a clinical revision requires a decision', () => {
-    api.sendText.mockReturnValue(of({
+    api.sendRealtimeTranscript.mockReturnValue(of({
       ...messageResponse('Une proposition attend votre validation.'),
       revisions: [{
         id: 'revision-1',
@@ -164,10 +184,18 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
       }],
     }));
 
-    transcripts.next('Je prescris le traitement indiqué.');
+    transcripts.next(turn('Je confirme le contenu dicté.', 0.9));
 
     expect(bridge.setMuted).toHaveBeenLastCalledWith(true);
   });
+
+  function turn(
+    transcript: string,
+    confidence: number | null,
+    eventId?: string,
+  ): RealtimeTranscriptTurn {
+    return { transcript, confidence, eventId };
+  }
 
   function activeSession(): AiSessionResponse {
     return {

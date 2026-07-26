@@ -135,9 +135,7 @@ class AuthSessionManagementControllerTest {
                         .header("Authorization", bearer(ownerFirst)))
                 .andExpect(status().isNoContent())
                 .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Max-Age=0")))
-                .andExpect(header().string(
-                        "Clear-Site-Data",
-                        "\"cache\", \"cookies\", \"storage\""));
+                .andExpect(header().doesNotExist("Clear-Site-Data"));
 
         mockMvc.perform(get("/api/auth/sessions").header("Authorization", bearer(ownerSecond)))
                 .andExpect(status().isUnauthorized());

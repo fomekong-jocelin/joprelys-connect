@@ -3,12 +3,18 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
+import { of, throwError } from 'rxjs';
+import { AuthSessionRecoveryService } from './auth-session-recovery.service';
 import { AuthTokenStorageService } from './auth-token-storage.service';
 import { authTokenInterceptor } from './auth-token.interceptor';
 import { LoginResponse } from './auth.models';
 
 describe('authTokenInterceptor', () => {
   let router: { url: string; navigate: ReturnType<typeof vi.fn> };
+  let recovery: {
+    refreshAccessToken: ReturnType<typeof vi.fn>;
+    expireSession: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     sessionStorage.clear();
@@ -16,19 +22,28 @@ describe('authTokenInterceptor', () => {
       url: '/patients',
       navigate: vi.fn().mockResolvedValue(true),
     };
+    recovery = {
+      refreshAccessToken: vi.fn(),
+      expireSession: vi.fn(),
+    };
 
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptors([authTokenInterceptor])),
         provideHttpClientTesting(),
         { provide: Router, useValue: router },
+        { provide: AuthSessionRecoveryService, useValue: recovery },
       ],
     });
   });
 
   afterEach(() => {
-    TestBed.inject(HttpTestingController).verify();
-    sessionStorage.clear();
+    try {
+      TestBed.inject(HttpTestingController).verify();
+    } finally {
+      sessionStorage.clear();
+      TestBed.resetTestingModule();
+    }
   });
 
   it('should attach bearer token to api requests', () => {
@@ -45,22 +60,20 @@ describe('authTokenInterceptor', () => {
     request.flush([]);
   });
 
-  it('should recover a professional request from the HttpOnly refresh cookie when access token is missing', () => {
+  it('should recover a professional request when access token is missing', () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
+    recovery.refreshAccessToken.mockReturnValue(of('restored-token'));
 
     expect(tokenStorage.session()).toBeNull();
     http.get('/api/patients').subscribe();
 
-    const refreshRequest = httpTesting.expectOne('/api/auth/refresh');
-    expect(refreshRequest.request.withCredentials).toBe(true);
-    refreshRequest.flush(loginResponse('restored-token', '2999-07-02T12:30:00Z'));
-
+    expect(recovery.refreshAccessToken).toHaveBeenCalledWith(undefined);
     const protectedRequest = httpTesting.expectOne('/api/patients');
     expect(protectedRequest.request.headers.get('Authorization')).toBe('Bearer restored-token');
     protectedRequest.flush([]);
-    expect(router.navigate).not.toHaveBeenCalled();
+    expect(recovery.expireSession).not.toHaveBeenCalled();
   });
 
   it('should not attach bearer token to external requests', () => {
@@ -75,44 +88,38 @@ describe('authTokenInterceptor', () => {
     const request = httpTesting.expectOne('https://example.com/status');
     expect(request.request.headers.has('Authorization')).toBeFalsy();
     request.flush({});
+    expect(recovery.refreshAccessToken).not.toHaveBeenCalled();
   });
 
   it('should refresh an expired professional token before sending the protected request', () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
+    recovery.refreshAccessToken.mockReturnValue(of('fresh-token'));
 
     tokenStorage.save(loginResponse('expired-token', '2020-01-01T00:00:00Z'));
-
     http.get('/api/patients').subscribe();
 
-    const refreshRequest = httpTesting.expectOne('/api/auth/refresh');
-    expect(refreshRequest.request.method).toBe('POST');
-    expect(refreshRequest.request.withCredentials).toBe(true);
-    refreshRequest.flush(loginResponse('fresh-token', '2999-07-02T12:30:00Z'));
-
+    expect(recovery.refreshAccessToken).toHaveBeenCalledWith('expired-token');
     const protectedRequest = httpTesting.expectOne('/api/patients');
     expect(protectedRequest.request.headers.get('Authorization')).toBe('Bearer fresh-token');
     protectedRequest.flush([]);
-    expect(tokenStorage.accessToken).toBe('fresh-token');
   });
 
   it('should refresh and retry once when the professional api rejects the current token', () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
+    recovery.refreshAccessToken.mockReturnValue(of('replacement-token'));
 
     tokenStorage.save(loginResponse('revoked-token', '2999-07-02T12:30:00Z'));
-
     http.get('/api/patients').subscribe();
 
     const firstRequest = httpTesting.expectOne('/api/patients');
     expect(firstRequest.request.headers.get('Authorization')).toBe('Bearer revoked-token');
     firstRequest.flush({}, { status: 401, statusText: 'Unauthorized' });
 
-    httpTesting.expectOne('/api/auth/refresh')
-      .flush(loginResponse('replacement-token', '2999-07-02T12:30:00Z'));
-
+    expect(recovery.refreshAccessToken).toHaveBeenCalledWith('revoked-token');
     const retryRequest = httpTesting.expectOne('/api/patients');
     expect(retryRequest.request.headers.get('Authorization')).toBe('Bearer replacement-token');
     retryRequest.flush([]);
@@ -132,7 +139,7 @@ describe('authTokenInterceptor', () => {
     tokenStorage.save(loginResponse('peer-refreshed-token', '2999-07-02T12:45:00Z'));
     firstRequest.flush({}, { status: 401, statusText: 'Unauthorized' });
 
-    httpTesting.expectNone('/api/auth/refresh');
+    expect(recovery.refreshAccessToken).not.toHaveBeenCalled();
     const retryRequest = httpTesting.expectOne('/api/patients');
     expect(retryRequest.request.headers.get('Authorization')).toBe('Bearer peer-refreshed-token');
     retryRequest.flush([]);
@@ -144,7 +151,6 @@ describe('authTokenInterceptor', () => {
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
 
     tokenStorage.save(loginResponse('valid-token', '2999-07-02T12:30:00Z'));
-
     http.get('/api/patients').subscribe({
       error: (error: HttpErrorResponse) => expect(error.status).toBe(403),
     });
@@ -152,51 +158,46 @@ describe('authTokenInterceptor', () => {
     httpTesting.expectOne('/api/patients')
       .flush({}, { status: 403, statusText: 'Forbidden' });
 
-    httpTesting.expectNone('/api/auth/refresh');
+    expect(recovery.refreshAccessToken).not.toHaveBeenCalled();
+    expect(recovery.expireSession).not.toHaveBeenCalled();
     expect(tokenStorage.accessToken).toBe('valid-token');
-    expect(router.navigate).not.toHaveBeenCalled();
   });
 
   it('should not reclassify a professional refresh server error as an expired session', () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
+    recovery.refreshAccessToken.mockReturnValue(throwError(() => new HttpErrorResponse({
+      status: 500,
+      statusText: 'Server Error',
+    })));
 
     tokenStorage.save(loginResponse('expired-token', '2020-01-01T00:00:00Z'));
-
     http.get('/api/patients').subscribe({
       error: (error: HttpErrorResponse) => expect(error.status).toBe(500),
     });
 
-    httpTesting.expectOne('/api/auth/refresh')
-      .flush({}, { status: 500, statusText: 'Server Error' });
-
+    httpTesting.expectNone('/api/patients');
+    expect(recovery.expireSession).not.toHaveBeenCalled();
     expect(tokenStorage.session()).not.toBeNull();
-    expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('should clear the professional session and redirect when professional refresh is rejected', () => {
+  it('should expire the professional session when refresh is positively rejected', () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
+    recovery.refreshAccessToken.mockReturnValue(throwError(() => new HttpErrorResponse({
+      status: 401,
+      statusText: 'Unauthorized',
+    })));
 
     tokenStorage.save(loginResponse('expired-token', '2020-01-01T00:00:00Z'));
-
     http.get('/api/patients').subscribe({
       error: (error: HttpErrorResponse) => expect(error.status).toBe(401),
     });
 
-    httpTesting.expectOne('/api/auth/refresh')
-      .flush({}, { status: 401, statusText: 'Unauthorized' });
-
-    expect(tokenStorage.session()).toBeNull();
-    expect(router.navigate).toHaveBeenCalledWith(['/'], {
-      queryParams: {
-        sessionExpired: 'true',
-        returnUrl: '/patients',
-      },
-      replaceUrl: true,
-    });
+    httpTesting.expectNone('/api/patients');
+    expect(recovery.expireSession).toHaveBeenCalledTimes(1);
   });
 
   it('should never refresh a patient JWT with the professional cookie after a 401', () => {
@@ -214,16 +215,8 @@ describe('authTokenInterceptor', () => {
     expect(request.request.headers.get('Authorization')).toBe('Bearer patient-token');
     request.flush({}, { status: 401, statusText: 'Unauthorized' });
 
-    httpTesting.expectNone('/api/auth/refresh');
-    expect(tokenStorage.session()).toBeNull();
-    expect(router.navigate).toHaveBeenCalledWith(['/'], {
-      queryParams: {
-        mode: 'patient',
-        sessionExpired: 'true',
-        returnUrl: '/patient/dashboard',
-      },
-      replaceUrl: true,
-    });
+    expect(recovery.refreshAccessToken).not.toHaveBeenCalled();
+    expect(recovery.expireSession).toHaveBeenCalledTimes(1);
   });
 
   it('should reject an expired patient JWT locally without touching the professional refresh cookie', () => {
@@ -238,8 +231,8 @@ describe('authTokenInterceptor', () => {
     });
 
     httpTesting.expectNone('/api/patient/me');
-    httpTesting.expectNone('/api/auth/refresh');
-    expect(tokenStorage.session()).toBeNull();
+    expect(recovery.refreshAccessToken).not.toHaveBeenCalled();
+    expect(recovery.expireSession).toHaveBeenCalledTimes(1);
   });
 });
 

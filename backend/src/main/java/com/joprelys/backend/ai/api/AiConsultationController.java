@@ -4,15 +4,20 @@ import com.joprelys.backend.ai.application.AiConsultationContract.MessageView;
 import com.joprelys.backend.ai.application.AiConsultationContract.SessionView;
 import com.joprelys.backend.ai.application.AiConsultationContract.TranscriptionView;
 import com.joprelys.backend.ai.application.AiConsultationService;
+import com.joprelys.backend.ai.infrastructure.AiProperties;
 import com.joprelys.backend.auth.security.JwtClaims;
 import com.joprelys.backend.auth.security.TenantContext;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -35,10 +40,21 @@ import org.springframework.web.server.ResponseStatusException;
 @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
 public class AiConsultationController {
 
-    private final AiConsultationService service;
+    private static final double DEFAULT_REALTIME_CONFIDENCE_FLOOR = 0.35;
 
-    public AiConsultationController(AiConsultationService service) {
+    private final AiConsultationService service;
+    private final AiProperties properties;
+
+    @Autowired
+    public AiConsultationController(
+            AiConsultationService service,
+            AiProperties properties) {
         this.service = service;
+        this.properties = properties;
+    }
+
+    AiConsultationController(AiConsultationService service) {
+        this(service, null);
     }
 
     @PostMapping("/{visitId}/sessions")
@@ -81,12 +97,42 @@ public class AiConsultationController {
                 visitId, identity.userId(), identity.organizationId(), request.text());
     }
 
+    @PostMapping("/{visitId}/messages/realtime")
+    public MessageView sendRealtimeTranscript(
+            @PathVariable UUID visitId,
+            @Valid @RequestBody RealtimeTranscriptRequest request,
+            Authentication authentication) {
+        Identity identity = identity(authentication);
+        return service.processRealtimeTranscript(
+                visitId,
+                identity.userId(),
+                identity.organizationId(),
+                request.transcript(),
+                request.confidence());
+    }
+
     @PostMapping("/{visitId}/clarifications/{clarificationId}/answer")
     public MessageView answerClarification(
             @PathVariable UUID visitId,
             @PathVariable UUID clarificationId,
             @Valid @RequestBody ClarificationAnswerRequest request,
             Authentication authentication) {
+        Identity identity = identity(authentication);
+        return service.answerClarification(
+                visitId,
+                identity.userId(),
+                identity.organizationId(),
+                clarificationId,
+                request.answer());
+    }
+
+    @PostMapping("/{visitId}/clarifications/{clarificationId}/answer/realtime")
+    public MessageView answerRealtimeClarification(
+            @PathVariable UUID visitId,
+            @PathVariable UUID clarificationId,
+            @Valid @RequestBody RealtimeClarificationAnswerRequest request,
+            Authentication authentication) {
+        requireRealtimeConfidence(request.confidence());
         Identity identity = identity(authentication);
         return service.answerClarification(
                 visitId,
@@ -202,6 +248,28 @@ public class AiConsultationController {
         return ResponseEntity.noContent().build();
     }
 
+    private void requireRealtimeConfidence(Double confidence) {
+        if (confidence == null
+                || !Double.isFinite(confidence)
+                || confidence < 0.0
+                || confidence > 1.0) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "AI_REALTIME_TRANSCRIPTION_UNVERIFIED");
+        }
+        double configured = properties == null
+                ? DEFAULT_REALTIME_CONFIDENCE_FLOOR
+                : properties.minimumTranscriptionConfidence();
+        double minimum = configured > 0.0
+                ? configured
+                : DEFAULT_REALTIME_CONFIDENCE_FLOOR;
+        if (confidence < minimum) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "AI_TRANSCRIPTION_LOW_CONFIDENCE");
+        }
+    }
+
     private void requireContentType(String contentType) {
         if (contentType == null || contentType.isBlank()) {
             throw new ResponseStatusException(
@@ -244,8 +312,20 @@ public class AiConsultationController {
             @NotBlank @Size(max = 12000) String text) {
     }
 
+    public record RealtimeTranscriptRequest(
+            @NotBlank @Size(max = 12000) String transcript,
+            @NotNull @DecimalMin("0.0") @DecimalMax("1.0") Double confidence,
+            @Size(max = 200) String eventId) {
+    }
+
     public record ClarificationAnswerRequest(
             @NotBlank @Size(max = 12000) String answer) {
+    }
+
+    public record RealtimeClarificationAnswerRequest(
+            @NotBlank @Size(max = 12000) String answer,
+            @NotNull @DecimalMin("0.0") @DecimalMax("1.0") Double confidence,
+            @Size(max = 200) String eventId) {
     }
 
     public record DecisionRequest(

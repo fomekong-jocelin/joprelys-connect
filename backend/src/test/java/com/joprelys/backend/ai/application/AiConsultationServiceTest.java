@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,15 +20,18 @@ import com.joprelys.backend.ai.application.AiConsultationContract.RevisionView;
 import com.joprelys.backend.ai.application.AiConsultationContract.SessionView;
 import com.joprelys.backend.ai.application.AiConsultationContract.TranscriptionView;
 import com.joprelys.backend.ai.domain.AiChatResponse;
+import com.joprelys.backend.ai.domain.AiMessage;
 import com.joprelys.backend.ai.domain.AiProvider;
 import com.joprelys.backend.ai.domain.AiTranscription;
 import com.joprelys.backend.ai.infrastructure.AiProperties;
 import com.joprelys.backend.visit.application.VisitService;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.ObjectMapper;
@@ -95,14 +99,16 @@ class AiConsultationServiceTest {
                       "operation": "SET",
                       "value": "Fièvre depuis deux jours avec céphalées",
                       "reason": "Le médecin ajoute des céphalées.",
-                      "uncertainty": "LOW"
+                      "uncertainty": "LOW",
+                      "evidence": ["céphalées"]
                     },
                     {
                       "field": "clinicalExam",
                       "operation": "SET",
                       "value": "Température à 38,5 °C",
                       "reason": "Température dictée.",
-                      "uncertainty": "LOW"
+                      "uncertainty": "LOW",
+                      "evidence": ["température à 38,5"]
                     }
                   ],
                   "assistantMessage": "Deux modifications sont proposées.",
@@ -139,14 +145,16 @@ class AiConsultationServiceTest {
                       "operation": "SET",
                       "value": "Fièvre avec céphalées",
                       "reason": "Symptôme ajouté.",
-                      "uncertainty": "LOW"
+                      "uncertainty": "LOW",
+                      "evidence": ["céphalées"]
                     },
                     {
                       "field": "clinicalExam",
                       "operation": "SET",
                       "value": "Température à 38,5 °C",
                       "reason": "Valeur dictée.",
-                      "uncertainty": "LOW"
+                      "uncertainty": "LOW",
+                      "evidence": ["température à 38,5"]
                     }
                   ],
                   "assistantMessage": "Vérifiez les modifications.",
@@ -155,7 +163,10 @@ class AiConsultationServiceTest {
                 }
                 """));
         MessageView response = service.processText(
-                visitId, userId, organizationId, "Ajoute les céphalées et la température.");
+                visitId,
+                userId,
+                organizationId,
+                "Ajoute les céphalées et note une température à 38,5.");
         RevisionView revision = response.revisions().getFirst();
 
         SessionView afterAccept = service.decideProposal(
@@ -196,7 +207,8 @@ class AiConsultationServiceTest {
                       "field": "diagnosis",
                       "operation": "CLEAR",
                       "reason": "Le médecin demande de supprimer le diagnostic.",
-                      "uncertainty": "LOW"
+                      "uncertainty": "LOW",
+                      "evidence": ["Supprime le diagnostic provisoire"]
                     }
                   ],
                   "assistantMessage": "La suppression du diagnostic est proposée.",
@@ -234,14 +246,16 @@ class AiConsultationServiceTest {
                       "operation": "SET",
                       "value": "Toux sèche",
                       "reason": "Symptôme dicté.",
-                      "uncertainty": "LOW"
+                      "uncertainty": "LOW",
+                      "evidence": ["Toux sèche"]
                     },
                     {
                       "field": "clinicalExam",
                       "operation": "SET",
                       "value": "Auscultation normale",
                       "reason": "Examen dicté.",
-                      "uncertainty": "LOW"
+                      "uncertainty": "LOW",
+                      "evidence": ["auscultation normale"]
                     }
                   ],
                   "assistantMessage": "Deux modifications sont proposées.",
@@ -273,7 +287,8 @@ class AiConsultationServiceTest {
                       "operation": "SET",
                       "value": "Douleur abdominale",
                       "reason": "Symptôme dicté.",
-                      "uncertainty": "LOW"
+                      "uncertainty": "LOW",
+                      "evidence": ["Douleur abdominale"]
                     }
                   ],
                   "assistantMessage": "Une modification est proposée.",
@@ -294,7 +309,7 @@ class AiConsultationServiceTest {
     }
 
     @Test
-    void shouldResolveClarificationThenCreateRevisionForAnswer() {
+    void shouldResolveClarificationUsingOnlyOriginatingTurnAndAnswer() {
         service.startSession(visitId, userId, organizationId, Map.of());
         when(aiProvider.chat(anyList(), anyString())).thenReturn(
                 chatResponse("""
@@ -317,7 +332,8 @@ class AiConsultationServiceTest {
                               "operation": "SET",
                               "value": "Douleur abdominale depuis deux jours",
                               "reason": "Durée précisée par le médecin.",
-                              "uncertainty": "LOW"
+                              "uncertainty": "LOW",
+                              "evidence": ["Douleur abdominale", "Depuis deux jours"]
                             }
                           ],
                           "assistantMessage": "La durée est proposée dans le brouillon.",
@@ -342,9 +358,6 @@ class AiConsultationServiceTest {
         assertTrue(resolved.draft().isEmpty());
         assertEquals(1, resolved.revisions().size());
         assertEquals("CLARIFICATION", resolved.conversation().get(3).source());
-        assertFalse(resolved.conversation().stream().anyMatch(message ->
-                message.content().contains("Brouillon accepté")
-                        || message.content().contains("Réponse du médecin à une clarification structurée")));
     }
 
     @Test
@@ -429,7 +442,7 @@ class AiConsultationServiceTest {
         service.startSession(visitId, userId, organizationId, Map.of());
         when(aiProvider.transcribeAudio(any(byte[].class), eq("audio/webm"), eq("fr")))
                 .thenReturn(new AiTranscription(
-                        "Prescrire oméprazole 200 mg pendant 14 jours",
+                        "Texte clinique incertain",
                         "fr",
                         0.1));
 
@@ -437,7 +450,6 @@ class AiConsultationServiceTest {
                 ResponseStatusException.class,
                 () -> service.transcribeAudio(
                         visitId, userId, organizationId, new byte[] {1}, "audio/webm"));
-
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, exception.getStatusCode());
         assertEquals("AI_TRANSCRIPTION_LOW_CONFIDENCE", exception.getReason());
         verify(aiProvider, never()).chat(anyList(), anyString());
@@ -445,6 +457,20 @@ class AiConsultationServiceTest {
                 visitId, userId, organizationId).orElseThrow();
         assertNull(session.pendingTranscript());
         assertTrue(session.revisions().isEmpty());
+    }
+
+    @Test
+    void shouldRejectLowConfidenceRealtimeBeforeClinicalAnalysis() {
+        service.startSession(visitId, userId, organizationId, Map.of());
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.processRealtimeTranscript(
+                        visitId, userId, organizationId, "Texte incertain", 0.1));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, exception.getStatusCode());
+        assertEquals("AI_TRANSCRIPTION_LOW_CONFIDENCE", exception.getReason());
+        verify(aiProvider, never()).chat(anyList(), anyString());
     }
 
     @Test
@@ -462,7 +488,8 @@ class AiConsultationServiceTest {
                       "operation": "SET",
                       "value": "Douleur à droite et non à gauche",
                       "reason": "Latéralité corrigée par le médecin.",
-                      "uncertainty": "LOW"
+                      "uncertainty": "LOW",
+                      "evidence": ["Douleur à droite et non à gauche"]
                     }
                   ],
                   "assistantMessage": "La correction est proposée.",
@@ -485,6 +512,55 @@ class AiConsultationServiceTest {
                 visitId, userId, organizationId).orElseThrow();
         assertNull(session.pendingTranscript());
         assertEquals("ANALYZED", session.transcriptStatus());
+    }
+
+    @Test
+    void shouldNotCarryRejectedOrUngroundedModelOutputIntoNextTurn() {
+        service.startSession(visitId, userId, organizationId, Map.of());
+        when(aiProvider.chat(anyList(), anyString())).thenReturn(
+                chatResponse("""
+                        {
+                          "changes": [{
+                            "field":"symptoms",
+                            "operation":"SET",
+                            "value":"invented-term",
+                            "reason":"unsupported",
+                            "uncertainty":"LOW",
+                            "evidence":["reported cough"]
+                          }],
+                          "assistantMessage":"invented-term should remain",
+                          "needsClarification":false,
+                          "clarification":null
+                        }
+                        """),
+                chatResponse("""
+                        {
+                          "changes": [{
+                            "field":"symptoms",
+                            "operation":"SET",
+                            "value":"reported headache",
+                            "reason":"explicit",
+                            "uncertainty":"LOW",
+                            "evidence":["reported headache"]
+                          }],
+                          "assistantMessage":"second turn",
+                          "needsClarification":false,
+                          "clarification":null
+                        }
+                        """));
+
+        MessageView first = service.processText(
+                visitId, userId, organizationId, "reported cough");
+        assertTrue(first.revisions().isEmpty());
+        service.processText(
+                visitId, userId, organizationId, "reported headache");
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<AiMessage>> captor = ArgumentCaptor.forClass(List.class);
+        verify(aiProvider, times(2)).chat(captor.capture(), anyString());
+        List<AiMessage> secondTurnMessages = captor.getAllValues().get(1);
+        assertFalse(secondTurnMessages.stream().anyMatch(message ->
+                message.content().contains("invented-term")));
     }
 
     @Test

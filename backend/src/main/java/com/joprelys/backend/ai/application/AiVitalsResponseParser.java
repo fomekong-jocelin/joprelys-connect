@@ -11,9 +11,7 @@ import tools.jackson.databind.ObjectMapper;
 @Component
 public class AiVitalsResponseParser {
 
-    static final Set<String> VITAL_FIELDS = Set.of(
-            "temperature", "weight", "height", "pulse", "systolic", "diastolic",
-            "spo2", "glycemia", "respiratoryRate", "painScale");
+    static final Set<String> VITAL_FIELDS = AiVitalsSafetyRules.VITAL_FIELDS;
 
     private static final Set<String> ROOT_FIELDS = Set.of(
             "assistantMessage", "needsConfirmation", "confirmationReason", "vitals");
@@ -77,32 +75,13 @@ public class AiVitalsResponseParser {
         Map<String, Double> normalized = new LinkedHashMap<>();
         for (Map.Entry<?, ?> entry : map.entrySet()) {
             String key = entry.getKey() == null ? "" : entry.getKey().toString();
-            if (!VITAL_FIELDS.contains(key) || !(entry.getValue() instanceof Number number)) {
+            if (!(entry.getValue() instanceof Number number)
+                    || !AiVitalsSafetyRules.isSafeProposal(key, number)) {
                 throw invalidOutput();
             }
-            double numeric = number.doubleValue();
-            if (!Double.isFinite(numeric) || !withinAcceptedRange(key, numeric)) {
-                throw invalidOutput();
-            }
-            normalized.put(key, numeric);
+            normalized.put(key, number.doubleValue());
         }
         return normalized;
-    }
-
-    private boolean withinAcceptedRange(String field, double value) {
-        return switch (field) {
-            case "temperature" -> value >= 30 && value <= 45;
-            case "weight" -> value >= 1 && value <= 500;
-            case "height" -> value >= 30 && value <= 250;
-            case "pulse" -> value >= 20 && value <= 250;
-            case "systolic" -> value >= 40 && value <= 250;
-            case "diastolic" -> value >= 30 && value <= 150;
-            case "spo2" -> value >= 50 && value <= 100;
-            case "glycemia" -> value >= 0.1 && value <= 10;
-            case "respiratoryRate" -> value >= 5 && value <= 100;
-            case "painScale" -> value >= 0 && value <= 10;
-            default -> false;
-        };
     }
 
     private String stringValue(Object value) {

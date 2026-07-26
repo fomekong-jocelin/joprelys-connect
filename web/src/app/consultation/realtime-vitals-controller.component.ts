@@ -18,9 +18,12 @@ import {
   AiVitalsProposal,
 } from './ai-vitals-api.service';
 import {
+  RealtimeTranscriptTurn,
   RealtimeVoiceBridgeService,
   RealtimeVoiceState,
 } from './realtime-voice-bridge.service';
+
+const REALTIME_CONFIDENCE_FLOOR = 0.35;
 
 @Component({
   selector: 'app-realtime-vitals-controller',
@@ -142,8 +145,8 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
       this.activeChange.emit(state.connected);
       if (state.connected && !wasConnected) this.syncMute();
     }));
-    this.subscriptions.add(this.bridge.transcript$.subscribe(transcript => {
-      this.processTranscript(transcript);
+    this.subscriptions.add(this.bridge.transcript$.subscribe(turn => {
+      this.processTranscript(turn);
     }));
     this.subscriptions.add(this.bridge.error$.subscribe(message => {
       this.realtimeError.emit(message);
@@ -222,9 +225,18 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
     }
   }
 
-  private processTranscript(rawTranscript: string): void {
-    const transcript = rawTranscript.trim();
+  private processTranscript(turn: RealtimeTranscriptTurn): void {
+    const transcript = turn.transcript.trim();
     if (!transcript || this.processing() || this.disabled || !this.state().connected) return;
+    if (turn.confidence === null
+      || !Number.isFinite(turn.confidence)
+      || turn.confidence < REALTIME_CONFIDENCE_FLOOR) {
+      this.realtimeError.emit(this.i18n.t(
+        'vitals.assistant.realtimeLowConfidence',
+        'Valeur vocale trop incertaine : aucune constante n’a été proposée. Répétez la mesure.',
+      ));
+      return;
+    }
 
     const confirmationContext = this.pendingConfirmationContext();
     const modelText = confirmationContext

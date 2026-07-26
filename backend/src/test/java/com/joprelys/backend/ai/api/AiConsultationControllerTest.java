@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -88,6 +89,60 @@ class AiConsultationControllerTest {
                 organizationId,
                 clarificationId,
                 "Depuis deux jours");
+    }
+
+    @Test
+    void shouldRouteVerifiedRealtimeClarification() {
+        AiConsultationService service = mock(AiConsultationService.class);
+        AiConsultationController controller = new AiConsultationController(service);
+        Authentication authentication = mock(Authentication.class);
+        UUID visitId = UUID.randomUUID();
+        UUID clarificationId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+        when(authentication.getDetails()).thenReturn(claims(userId.toString(), organizationId.toString()));
+        TenantContext.setTenantId(organizationId);
+
+        controller.answerRealtimeClarification(
+                visitId,
+                clarificationId,
+                new AiConsultationController.RealtimeClarificationAnswerRequest(
+                        "Depuis deux jours", 0.88, "event-1"),
+                authentication);
+
+        verify(service).answerClarification(
+                visitId,
+                userId,
+                organizationId,
+                clarificationId,
+                "Depuis deux jours");
+    }
+
+    @Test
+    void shouldRejectLowConfidenceRealtimeClarificationBeforeService() {
+        AiConsultationService service = mock(AiConsultationService.class);
+        AiConsultationController controller = new AiConsultationController(service);
+        Authentication authentication = mock(Authentication.class);
+        UUID visitId = UUID.randomUUID();
+        UUID clarificationId = UUID.randomUUID();
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> controller.answerRealtimeClarification(
+                        visitId,
+                        clarificationId,
+                        new AiConsultationController.RealtimeClarificationAnswerRequest(
+                                "Réponse incertaine", 0.1, "event-low"),
+                        authentication));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, exception.getStatusCode());
+        assertEquals("AI_TRANSCRIPTION_LOW_CONFIDENCE", exception.getReason());
+        verify(service, never()).answerClarification(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.anyString());
     }
 
     @Test

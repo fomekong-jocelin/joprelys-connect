@@ -63,7 +63,10 @@ joprelys:
       realtime-voice: ${OPENAI_REALTIME_VOICE:marin}
       realtime-transcribe-model: ${OPENAI_REALTIME_TRANSCRIBE_MODEL:gpt-4o-transcribe}
       realtime-vad-eagerness: ${OPENAI_REALTIME_VAD_EAGERNESS:medium}
-      realtime-noise-reduction: ${OPENAI_REALTIME_NOISE_REDUCTION:near_field}
+      # Consultation Realtime is primarily captured from laptop/mobile room microphones.
+      # OpenAI documents far_field for laptop/conference-room microphones; deployments
+      # using a close-talking headset can override OPENAI_REALTIME_NOISE_REDUCTION.
+      realtime-noise-reduction: ${OPENAI_REALTIME_NOISE_REDUCTION:far_field}
       base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
     gemini:
       api-key: ${GEMINI_API_KEY:}

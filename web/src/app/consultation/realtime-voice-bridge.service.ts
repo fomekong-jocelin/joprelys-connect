@@ -11,13 +11,26 @@ export interface RealtimeVoiceState {
   muted: boolean;
 }
 
+export interface RealtimeTranscriptTurn {
+  transcript: string;
+  confidence: number | null;
+  eventId?: string;
+  itemId?: string;
+}
+
 export type RealtimeVoicePurpose = 'consultation' | 'vitals';
 
 interface RealtimeServerEvent {
   type?: string;
   transcript?: string;
   message?: string;
+  event_id?: string;
+  item_id?: string;
   response_id?: string;
+  logprobs?: Array<{
+    logprob?: number;
+    token?: string;
+  }>;
   response?: {
     id?: string;
     status?: string;
@@ -41,7 +54,7 @@ export class RealtimeVoiceBridgeService {
   private readonly i18n = inject(I18nService);
 
   private readonly stateSubject = new BehaviorSubject<RealtimeVoiceState>(INITIAL_STATE);
-  private readonly transcriptSubject = new Subject<string>();
+  private readonly transcriptSubject = new Subject<RealtimeTranscriptTurn>();
   private readonly errorSubject = new Subject<string>();
   private readonly assistantTurnCompletedSubject = new Subject<void>();
 
@@ -371,7 +384,14 @@ export class RealtimeVoiceBridgeService {
         break;
       case 'conversation.item.input_audio_transcription.completed': {
         const transcript = event.transcript?.trim();
-        if (transcript) this.transcriptSubject.next(transcript);
+        if (transcript) {
+          this.transcriptSubject.next({
+            transcript,
+            confidence: this.transcriptionConfidence(event.logprobs),
+            eventId: event.event_id,
+            itemId: event.item_id,
+          });
+        }
         break;
       }
       case 'response.created':
@@ -400,6 +420,22 @@ export class RealtimeVoiceBridgeService {
         this.completeAssistantTurn();
         break;
     }
+  }
+
+  private transcriptionConfidence(
+    logprobs: RealtimeServerEvent['logprobs'],
+  ): number | null {
+    const probabilities = (logprobs ?? [])
+      .map(entry => entry.logprob)
+      .filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+      .map(value => Math.exp(Math.max(-20, value)))
+      .sort((left, right) => left - right);
+    if (probabilities.length === 0) return null;
+
+    // Use the lower quintile rather than the mean so a few uncertain clinical
+    // tokens (drug name, dose, number, negation) cannot be hidden by easy words.
+    const index = Math.floor((probabilities.length - 1) * 0.2);
+    return probabilities[index];
   }
 
   private completeAssistantTurn(): void {
