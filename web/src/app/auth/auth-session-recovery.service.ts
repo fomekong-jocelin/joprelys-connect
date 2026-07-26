@@ -2,12 +2,12 @@ import { DOCUMENT } from '@angular/common';
 import { HttpBackend, HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
-import { defer, finalize, firstValueFrom, from, Observable, shareReplay } from 'rxjs';
+import { defer, finalize, firstValueFrom, from, Observable, shareReplay, throwError } from 'rxjs';
 import { LoginResponse } from './auth.models';
 import { AuthTokenStorageService } from './auth-token-storage.service';
 
-const AUTH_REFRESH_LOCK = 'joprelys-auth-refresh';
-const AUTH_BROADCAST_CHANNEL = 'joprelys-auth-session';
+const AUTH_REFRESH_LOCK = 'joprelys-professional-auth-refresh';
+const AUTH_BROADCAST_CHANNEL = 'joprelys-professional-auth-session';
 const CONCURRENT_REFRESH_RETRY_DELAYS_MS = [250, 750, 1_500] as const;
 
 @Injectable({ providedIn: 'root' })
@@ -26,6 +26,13 @@ export class AuthSessionRecoveryService implements OnDestroy {
   }
 
   refreshAccessToken(expectedAccessToken?: string): Observable<string> {
+    // Patient JWTs are intentionally non-persistent and must never be exchanged
+    // against the professional HttpOnly refresh cookie. This is the hard context
+    // boundary preventing a patient tab from becoming a clinician tab silently.
+    if (this.isPatientContext()) {
+      return throwError(() => new Error('PATIENT_CONTEXT_HAS_NO_PROFESSIONAL_REFRESH'));
+    }
+
     const currentRefresh = this.refreshInFlight$;
     if (currentRefresh) {
       return currentRefresh;
@@ -44,7 +51,8 @@ export class AuthSessionRecoveryService implements OnDestroy {
 
   expireSession(): void {
     const currentUrl = this.router.url;
-    const returnUrl = this.resolveReturnUrl(currentUrl);
+    const patientContext = this.isPatientContext();
+    const returnUrl = this.resolveReturnUrl(currentUrl, patientContext);
 
     this.tokenStorage.clear();
 
@@ -52,9 +60,13 @@ export class AuthSessionRecoveryService implements OnDestroy {
       return;
     }
 
-    if (currentUrl && currentUrl !== '/' && !currentUrl.startsWith('/auth/login') && !currentUrl.startsWith('/?')) {
+    const loginTarget = patientContext ? '/patient/login' : '/';
+    if (currentUrl
+      && currentUrl !== loginTarget
+      && !currentUrl.startsWith('/auth/login')
+      && !currentUrl.startsWith('/?')) {
       this.isRedirectingToLogin = true;
-      void this.router.navigate(['/'], {
+      void this.router.navigate([loginTarget], {
         queryParams: {
           sessionExpired: 'true',
           ...(returnUrl ? { returnUrl } : {}),
@@ -72,6 +84,9 @@ export class AuthSessionRecoveryService implements OnDestroy {
   }
 
   private async refreshAcrossTabs(expectedAccessToken?: string): Promise<string> {
+    if (this.isPatientContext()) {
+      throw new Error('PATIENT_CONTEXT_HAS_NO_PROFESSIONAL_REFRESH');
+    }
     const navigatorRef = this.document.defaultView?.navigator;
     if (navigatorRef?.locks) {
       return navigatorRef.locks.request(AUTH_REFRESH_LOCK, async () => this.refreshUnderLock(expectedAccessToken));
@@ -97,9 +112,8 @@ export class AuthSessionRecoveryService implements OnDestroy {
         const delayMs = CONCURRENT_REFRESH_RETRY_DELAYS_MS[attempt];
         if (delayMs === undefined) break;
 
-        // Another request/tab may have rotated the HttpOnly refresh cookie at the
-        // same instant. Never log the clinician out for this race. Give the
-        // successful response time to update the shared cookie / BroadcastChannel.
+        // Another professional request/tab may have rotated the HttpOnly cookie at
+        // the same instant. Patient tabs never participate in this channel.
         await this.delay(delayMs);
         const refreshedByPeer = this.currentUsableReplacement(expectedAccessToken);
         if (refreshedByPeer) {
@@ -117,6 +131,9 @@ export class AuthSessionRecoveryService implements OnDestroy {
       {},
       { withCredentials: true },
     ));
+    if (this.roles(response.role).includes('PATIENT')) {
+      throw new Error('PROFESSIONAL_REFRESH_RETURNED_PATIENT_IDENTITY');
+    }
     this.tokenStorage.save(response);
     this.broadcastChannel?.postMessage({ type: 'SESSION_REFRESHED', response });
     return response.accessToken;
@@ -124,12 +141,10 @@ export class AuthSessionRecoveryService implements OnDestroy {
 
   private currentUsableReplacement(expectedAccessToken?: string): string | null {
     const current = this.tokenStorage.session();
-    if (!current || this.tokenStorage.isExpired()) {
+    if (!current || this.tokenStorage.isPatientSession(current) || this.tokenStorage.isExpired()) {
       return null;
     }
     if (!expectedAccessToken) {
-      // Typical case when another tab restored/refreshed the shared browser
-      // session while this tab was waiting for the cross-tab lock.
       return current.accessToken;
     }
     if (current.accessToken === expectedAccessToken) {
@@ -149,6 +164,8 @@ export class AuthSessionRecoveryService implements OnDestroy {
   }
 
   private readonly onBroadcastMessage = (event: MessageEvent<unknown>): void => {
+    if (this.isPatientContext()) return;
+
     const payload = event.data as { type?: unknown; response?: Partial<LoginResponse> } | null;
     if (payload?.type !== 'SESSION_REFRESHED') return;
     const response = payload.response;
@@ -157,18 +174,37 @@ export class AuthSessionRecoveryService implements OnDestroy {
       || typeof response.expiresAt !== 'string'
       || typeof response.email !== 'string'
       || typeof response.name !== 'string'
-      || typeof response.role !== 'string') {
+      || typeof response.role !== 'string'
+      || this.roles(response.role).includes('PATIENT')) {
       return;
     }
     this.tokenStorage.save(response as LoginResponse);
   };
 
+  private isPatientContext(): boolean {
+    if (this.tokenStorage.isPatientSession()) return true;
+    const routerUrl = this.router.url ?? '';
+    if (routerUrl.startsWith('/patient/')) return true;
+    const pathname = this.document.defaultView?.location?.pathname ?? '';
+    return pathname.startsWith('/patient/');
+  }
+
+  private roles(value: string): string[] {
+    return value.split(',').map(role => role.trim()).filter(Boolean);
+  }
+
   private delay(milliseconds: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
   }
 
-  private resolveReturnUrl(currentUrl: string): string | null {
+  private resolveReturnUrl(currentUrl: string, patientContext: boolean): string | null {
     if (!currentUrl || currentUrl === '/' || currentUrl.startsWith('//') || currentUrl.startsWith('/auth/login')) {
+      return null;
+    }
+    if (patientContext && !currentUrl.startsWith('/patient/')) {
+      return null;
+    }
+    if (!patientContext && currentUrl.startsWith('/patient/')) {
       return null;
     }
     return currentUrl;
