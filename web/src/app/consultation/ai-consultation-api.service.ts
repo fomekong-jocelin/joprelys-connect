@@ -22,6 +22,7 @@ export type AiConversationRole = 'USER' | 'ASSISTANT';
 export type AiConversationSource =
   | 'TEXT'
   | 'AUDIO'
+  | 'REALTIME'
   | 'CLARIFICATION'
   | 'AI'
   | 'SYSTEM';
@@ -152,6 +153,18 @@ export class AiConsultationApiService {
     return this.http.post<AiMessageResponse>(
       `/api/ai/consultations/${visitId}/messages/text`,
       { text },
+    );
+  }
+
+  sendRealtimeTranscript(
+    visitId: string,
+    transcript: string,
+    confidence: number,
+    eventId?: string,
+  ): Observable<AiMessageResponse> {
+    return this.http.post<AiMessageResponse>(
+      `/api/ai/consultations/${visitId}/messages/realtime`,
+      { transcript, confidence, eventId: eventId || null },
     );
   }
 
