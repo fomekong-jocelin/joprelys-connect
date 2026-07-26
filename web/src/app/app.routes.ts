@@ -54,7 +54,7 @@ export const routes: Routes = [
         path: 'lab-orders',
         loadComponent: () => import('./patient/detail/patient-lab-orders-tab.component').then(m => m.PatientLabOrdersTabComponent),
         canActivate: [roleGuard],
-        data: { expectedPermissions: ['LAB_ORDER_READ'], breadcrumb: 'breadcrumb.patients.labOrders' }
+        data: { expectedPermissions: ['LAB_ORDER_READ'], breadcrumb: 'breadcrumb.patients.lab-orders' }
       },
       {
         path: 'audit-trail',
