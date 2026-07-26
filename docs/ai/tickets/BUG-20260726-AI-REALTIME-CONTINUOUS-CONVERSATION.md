@@ -4,9 +4,9 @@
 Bug P0 — UX clinique / Realtime vocal / régression conversationnelle
 
 ## Contexte
-Le handshake WebRTC Realtime fonctionne, mais la consultation n'est pas réellement interactive : après un premier tour de parole, la transcription Realtime est déposée en `PENDING_REVIEW`, le contrôleur passe en état bloqué et coupe le microphone. Le professionnel doit relancer ou valider manuellement la transcription avant de poursuivre.
+Le handshake WebRTC Realtime fonctionne, mais la consultation n'était pas réellement interactive : après un premier tour de parole, la transcription Realtime était déposée en `PENDING_REVIEW`, le contrôleur passait en état bloqué et coupait le microphone. Le professionnel devait relancer ou valider manuellement la transcription avant de poursuivre.
 
-Le hotfix de sécurité précédent avait imposé une relecture à toutes les transcriptions audio. Cette règle reste pertinente pour la dictée classique, mais elle casse le mode WebRTC conversationnel.
+Le hotfix de sécurité précédent avait imposé une relecture à toutes les transcriptions audio. Cette règle reste pertinente pour la dictée classique, mais elle cassait le mode WebRTC conversationnel.
 
 ## Objectif
 Obtenir le cycle continu :
@@ -33,7 +33,7 @@ sans redémarrage manuel du microphone entre les tours.
 - [x] `response.done` ne marque plus prématurément la fin audio ; `output_audio_buffer.stopped/cleared` termine le tour.
 - [x] Une révision clinique pending reste bloquante.
 - [x] La dictée classique conserve la relecture manuelle.
-- [ ] Tests Angular et build production verts.
+- [x] Tests Angular et build production verts sur gate #1451.
 - [ ] Recette réelle de 5 tours successifs sans clic micro.
 - [ ] Recette barge-in sur Chrome desktop et Android.
 
@@ -47,8 +47,8 @@ sans redémarrage manuel du microphone entre les tours.
 - [x] Autoriser le barge-in pendant la parole assistant.
 - [x] Corriger le lifecycle `response.done` / `output_audio_buffer.stopped`.
 - [x] Ajouter les tests de non-régression.
-- [ ] Exécuter CI frontend.
-- [ ] Mettre à jour changelog et suivi global.
+- [x] Exécuter CI frontend : tests Angular + build production verts sur #1451.
+- [x] Mettre à jour changelog et suivi global.
 
 ## Estimation / profil
 - Senior : 0,5–1 j.
