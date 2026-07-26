@@ -16,6 +16,10 @@ public interface AmbientTranscriptItemRepository extends JpaRepository<AmbientTr
 
     Optional<AmbientTranscriptItemEntity> findByIdAndVisitId(UUID id, UUID visitId);
 
+    Optional<AmbientTranscriptItemEntity> findByVisitIdAndSupersedesItemId(
+            UUID visitId,
+            UUID supersedesItemId);
+
     List<AmbientTranscriptItemEntity> findByVisitIdAndStatusOrderByStartOffsetMsAscSequenceNoAsc(
             UUID visitId,
             AmbientTranscriptStatus status);
