@@ -47,12 +47,34 @@ public class AmbientAudioChunkJournalService {
             String audioSha256,
             long startOffsetMs,
             String contentType) {
+        return claim(
+                visitId,
+                userId,
+                organizationId,
+                chunkId,
+                audioSha256,
+                AmbientAudioChunkEntity.EMPTY_DIARIZATION_CONTEXT_SHA256,
+                startOffsetMs,
+                contentType);
+    }
+
+    @Transactional
+    public ChunkClaim claim(
+            UUID visitId,
+            UUID userId,
+            UUID organizationId,
+            String chunkId,
+            String audioSha256,
+            String diarizationContextSha256,
+            long startOffsetMs,
+            String contentType) {
+        validateContextHash(diarizationContextSha256);
         lockVisit(visitId, organizationId);
         Instant now = Instant.now();
         var existing = chunkRepository.findByVisitIdAndChunkId(visitId, chunkId);
         if (existing.isPresent()) {
             AmbientAudioChunkEntity chunk = existing.get();
-            validateSamePayload(chunk, audioSha256, startOffsetMs);
+            validateSamePayload(chunk, audioSha256, diarizationContextSha256, startOffsetMs);
             if (chunk.getStatus() == AmbientAudioChunkStatus.COMPLETED) {
                 return ChunkClaim.completed(chunk.getClaimToken(), chunk.getClaimGeneration());
             }
@@ -70,6 +92,7 @@ public class AmbientAudioChunkJournalService {
                 visitId,
                 chunkId,
                 audioSha256,
+                diarizationContextSha256,
                 startOffsetMs,
                 contentType,
                 userId,
@@ -166,10 +189,22 @@ public class AmbientAudioChunkJournalService {
     private void validateSamePayload(
             AmbientAudioChunkEntity chunk,
             String audioSha256,
+            String diarizationContextSha256,
             long startOffsetMs) {
         if (!chunk.getAudioSha256().equals(audioSha256)
                 || chunk.getStartOffsetMs() != startOffsetMs) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "AI_AMBIENT_CHUNK_HASH_MISMATCH");
+        }
+        if (!chunk.getDiarizationContextSha256().equals(diarizationContextSha256)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "AI_AMBIENT_CHUNK_DIARIZATION_CONTEXT_MISMATCH");
+        }
+    }
+
+    private void validateContextHash(String hash) {
+        if (hash == null || !hash.matches("[0-9a-f]{64}")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_DIARIZATION_CONTEXT_INVALID");
         }
     }
 
