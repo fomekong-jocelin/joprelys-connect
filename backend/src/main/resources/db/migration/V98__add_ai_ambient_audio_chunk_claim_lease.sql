@@ -4,14 +4,11 @@ ALTER TABLE ai_ambient_audio_chunks
 ALTER TABLE ai_ambient_audio_chunks
     ADD COLUMN claim_token UUID;
 
+-- Existing rows do not have a live worker that owns a lease. Their immutable
+-- primary key is therefore a safe non-null bootstrap token. Any real reclaim
+-- rotates this value to a fresh random UUID in application code.
 UPDATE ai_ambient_audio_chunks
-SET claim_token = (
-    substr(md5(id::text), 1, 8) || '-' ||
-    substr(md5(id::text), 9, 4) || '-' ||
-    substr(md5(id::text), 13, 4) || '-' ||
-    substr(md5(id::text), 17, 4) || '-' ||
-    substr(md5(id::text), 21, 12)
-)::uuid
+SET claim_token = id
 WHERE claim_token IS NULL;
 
 ALTER TABLE ai_ambient_audio_chunks
