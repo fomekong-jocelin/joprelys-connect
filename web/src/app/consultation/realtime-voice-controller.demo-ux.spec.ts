@@ -10,6 +10,23 @@ import {
 } from './realtime-voice-bridge.service';
 import { RealtimeVoiceControllerComponent } from './realtime-voice-controller.component';
 
+const FR: Record<string, string> = {
+  'consultation.ai.focusSecureListening': 'Écoute sécurisée',
+  'consultation.ai.focusSafetyActive': 'Sauvegarde audio active',
+  'consultation.ai.simpleListening': 'Je vous écoute',
+  'consultation.ai.simpleListeningHelp': 'Parlez naturellement. La transcription apparaît dès qu’une phrase est finalisée.',
+  'consultation.ai.focusTranscriptTitle': 'Transcription en direct',
+  'consultation.ai.focusTranscriptWaiting': 'Parlez normalement. La dernière phrase réellement reconnue apparaîtra ici.',
+  'consultation.ai.pauseListeningShort': 'Pause',
+  'consultation.ai.finishListening': 'Terminer',
+  'consultation.ai.switchToDictation': 'Passer en dictée',
+  'consultation.ai.focusAudioUnavailable': 'Audio non confirmé',
+  'consultation.ai.reconnectingSimple': 'Reconnexion audio…',
+  'consultation.ai.reconnectingProtectedHelp': 'Votre consultation reste protégée pendant la reconnexion.',
+  'consultation.ai.focusTranscriptNoChannel': 'La transcription commencera dès que le canal audio sera confirmé.',
+  'consultation.ai.realtimeProtectedReconnectSimple': 'Temps réel interrompu. La consultation reste enregistrée localement et sera synchronisée automatiquement.',
+};
+
 describe('RealtimeVoiceControllerComponent demo UX', () => {
   let fixture: ComponentFixture<RealtimeVoiceControllerComponent>;
   let component: RealtimeVoiceControllerComponent;
@@ -50,7 +67,7 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
     });
     transcripts = new Subject();
     bridge = {
-      state$ : state,
+      state$: state,
       transcript$: transcripts,
       error$: new Subject(),
       assistantTurnCompleted$: new Subject(),
@@ -89,7 +106,7 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
           provide: I18nService,
           useValue: {
             currentLanguage: () => 'fr',
-            t: (_key: string, fallback?: string) => fallback ?? _key,
+            t: (key: string, fallback?: string) => FR[key] ?? fallback ?? key,
           },
         },
       ],
