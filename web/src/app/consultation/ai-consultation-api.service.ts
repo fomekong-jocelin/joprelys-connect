@@ -165,10 +165,7 @@ export class AiConsultationApiService {
     eventId?: string,
   ): Observable<AiMessageResponse> {
     if (!this.acceptableRealtimeConfidence(confidence)) {
-      return throwError(() => ({
-        status: 422,
-        error: { detail: 'AI_TRANSCRIPTION_LOW_CONFIDENCE' },
-      }));
+      return this.lowConfidenceError();
     }
     return this.http.post<AiMessageResponse>(
       `/api/ai/consultations/${visitId}/messages/realtime`,
@@ -201,17 +198,15 @@ export class AiConsultationApiService {
     clarificationId: string,
     answer: string,
     confidence: number,
-    _eventId?: string,
+    eventId?: string,
   ): Observable<AiMessageResponse> {
     if (!this.acceptableRealtimeConfidence(confidence)) {
-      return throwError(() => ({
-        status: 422,
-        error: { detail: 'AI_TRANSCRIPTION_LOW_CONFIDENCE' },
-      }));
+      return this.lowConfidenceError();
     }
-    // The answer is already an explicit response to a server-issued clarification.
-    // We keep the existing endpoint, but low-confidence Realtime ASR never reaches it.
-    return this.answerClarification(visitId, clarificationId, answer);
+    return this.http.post<AiMessageResponse>(
+      `/api/ai/consultations/${visitId}/clarifications/${clarificationId}/answer/realtime`,
+      { answer, confidence, eventId: eventId || null },
+    );
   }
 
   answerClarificationAudio(
@@ -301,5 +296,12 @@ export class AiConsultationApiService {
     return Number.isFinite(confidence)
       && confidence >= REALTIME_CONFIDENCE_FLOOR
       && confidence <= 1;
+  }
+
+  private lowConfidenceError<T>(): Observable<T> {
+    return throwError(() => ({
+      status: 422,
+      error: { detail: 'AI_TRANSCRIPTION_LOW_CONFIDENCE' },
+    }));
   }
 }
