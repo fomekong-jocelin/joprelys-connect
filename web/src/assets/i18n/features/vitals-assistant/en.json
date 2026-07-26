@@ -26,6 +26,7 @@
   "vitals.assistant.realtimeReady": "Live microphone — dictate the measurements",
   "vitals.assistant.realtimeAwaitingConfirmation": "Answer the clarification or dictate the value again",
   "vitals.assistant.realtimeUnavailable": "Realtime is unavailable. Classic dictation remains available.",
+  "vitals.assistant.realtimeUnsupported": "This browser does not support the real-time audio connection.",
   "vitals.assistant.realtimeActivate": "Enable Realtime listening",
   "vitals.assistant.realtimeConsent": "The microphone opens only after you enable this mode and stops when you leave it.",
   "vitals.assistant.realtimeBackToClassic": "Back to classic dictation",
