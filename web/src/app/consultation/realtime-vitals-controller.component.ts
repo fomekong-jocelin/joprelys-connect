@@ -133,6 +133,9 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
     this.subscriptions.add(this.bridge.error$.subscribe(message => {
       this.realtimeError.emit(message);
     }));
+    this.subscriptions.add(this.bridge.assistantTurnCompleted$.subscribe(() => {
+      setTimeout(() => this.syncMute(), 120);
+    }));
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -154,7 +157,11 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
   }
 
   effectiveMuted(): boolean {
-    return this.disabled || this.processing() || this.manualMuted || this.state().muted;
+    return this.disabled
+      || this.processing()
+      || this.manualMuted
+      || this.state().assistantSpeaking
+      || this.state().muted;
   }
 
   barHeight(index: number): number {
@@ -175,6 +182,10 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
     }
     if (!this.bridge.isSupported()) {
       this.activeChange.emit(false);
+      this.realtimeError.emit(this.i18n.t(
+        'vitals.assistant.realtimeUnsupported',
+        'Ce navigateur ne prend pas en charge la connexion audio temps réel.',
+      ));
       return;
     }
 
@@ -182,12 +193,16 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
     try {
       await this.bridge.connect(this.visitId, 'vitals');
       this.syncMute();
-    } catch {
+    } catch (error) {
       this.bridge.disconnect();
-      this.realtimeError.emit(this.i18n.t(
-        'vitals.assistant.realtimeUnavailable',
-        'Le mode Realtime est indisponible. La dictée classique reste disponible.',
-      ));
+      this.realtimeError.emit(
+        error instanceof Error && error.message.trim()
+          ? error.message
+          : this.i18n.t(
+              'vitals.assistant.realtimeUnavailable',
+              'Le mode Realtime est indisponible. La dictée classique reste disponible.',
+            ),
+      );
     } finally {
       this.connectingForVisit = '';
     }
@@ -229,9 +244,12 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
         }
         this.proposed.emit(userFacingProposal);
         if (proposal.assistantMessage) {
-          this.bridge.speakApproved(proposal.assistantMessage);
+          this.bridge.setMuted(true);
+          const started = this.bridge.speakApproved(proposal.assistantMessage);
+          if (!started) this.syncMute();
+        } else {
+          this.syncMute();
         }
-        this.syncMute();
       },
       error: () => {
         this.processing.set(false);
@@ -246,6 +264,11 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
 
   private syncMute(): void {
     if (!this.state().connected) return;
-    this.bridge.setMuted(this.disabled || this.processing() || this.manualMuted);
+    this.bridge.setMuted(
+      this.disabled
+      || this.processing()
+      || this.manualMuted
+      || this.state().assistantSpeaking,
+    );
   }
 }
