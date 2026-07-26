@@ -14,6 +14,14 @@ import {
 } from './realtime-voice-bridge.service';
 import { RealtimeVoiceControllerComponent } from './realtime-voice-controller.component';
 
+const DISCONNECTED_STATE: RealtimeVoiceState = {
+  connected: false,
+  connecting: false,
+  userSpeaking: false,
+  assistantSpeaking: false,
+  muted: false,
+};
+
 describe('RealtimeVoiceControllerComponent continuous conversation', () => {
   let fixture: ComponentFixture<RealtimeVoiceControllerComponent>;
   let component: RealtimeVoiceControllerComponent;
@@ -42,13 +50,7 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
   };
 
   beforeEach(async () => {
-    state = new BehaviorSubject<RealtimeVoiceState>({
-      connected: false,
-      connecting: false,
-      userSpeaking: false,
-      assistantSpeaking: false,
-      muted: false,
-    });
+    state = new BehaviorSubject<RealtimeVoiceState>({ ...DISCONNECTED_STATE });
     ambientState = new BehaviorSubject<AmbientCaptureState>({
       supported: true,
       active: true,
@@ -68,15 +70,29 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
       error$: new Subject<string>(),
       assistantTurnCompleted$: new Subject<void>(),
       connect: vi.fn().mockRejectedValue(new Error('Realtime indisponible')),
-      disconnect: vi.fn(),
+      disconnect: vi.fn(() => state.next({ ...DISCONNECTED_STATE })),
       isSupported: vi.fn().mockReturnValue(true),
       setMuted: vi.fn(),
       speakApproved: vi.fn().mockReturnValue(false),
     };
     ambient = {
       state$: ambientState,
-      start: vi.fn().mockResolvedValue(undefined),
-      stop: vi.fn().mockResolvedValue(undefined),
+      start: vi.fn().mockImplementation(async () => {
+        ambientState.next({
+          ...ambientState.value,
+          active: true,
+          starting: false,
+          recovering: false,
+        });
+      }),
+      stop: vi.fn().mockImplementation(async () => {
+        ambientState.next({
+          ...ambientState.value,
+          active: false,
+          starting: false,
+          recovering: false,
+        });
+      }),
     };
     api = {
       sendRealtimeTranscript: vi.fn().mockReturnValue(of(messageResponse('Je vous écoute.'))),
@@ -103,13 +119,15 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
     component = fixture.componentInstance;
     component.visitId = 'visit-1';
     component.enabled = true;
-    component.session = activeSession();
+    component.session = activeSession('visit-1');
+    (component as any).connectedVisitId = 'visit-1';
   });
 
   it('should start encrypted ambient safety capture before attempting realtime', async () => {
     bridge.connect.mockResolvedValue(undefined);
+    (component as any).connectedVisitId = '';
 
-    await (component as any).syncConnection();
+    await (component as any).syncConnection(0, false);
 
     expect(ambient.start).toHaveBeenCalledWith('visit-1', 'fr');
     expect(bridge.connect).toHaveBeenCalledWith('visit-1');
@@ -117,8 +135,10 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
   });
 
   it('should keep ambient capture alive when realtime connection fails', async () => {
-    await (component as any).syncConnection();
-    await (component as any).syncConnection();
+    (component as any).connectedVisitId = '';
+
+    await expect((component as any).syncConnection(0, false)).rejects.toThrow('Realtime indisponible');
+    await expect((component as any).syncConnection(0, false)).rejects.toThrow('Realtime indisponible');
 
     expect(bridge.connect).toHaveBeenCalledTimes(2);
     expect(ambient.start).toHaveBeenCalledTimes(2);
@@ -127,11 +147,56 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
 
   it('should refuse realtime when the required ambient safety capture cannot start', async () => {
     ambient.start.mockRejectedValue(new Error('vault unavailable'));
+    (component as any).connectedVisitId = '';
 
-    await (component as any).syncConnection();
+    await expect((component as any).syncConnection(0, false)).rejects.toThrow('capture audio de sécurité');
 
     expect(bridge.connect).not.toHaveBeenCalled();
+  });
+
+  it('should stop and flush visit A before starting visit B', async () => {
+    state.next({ ...DISCONNECTED_STATE, connected: true });
+    bridge.connect.mockResolvedValue(undefined);
+    component.visitId = 'visit-2';
+    component.session = activeSession('visit-2');
+
+    await (component as any).syncConnection(0, true);
+
     expect(bridge.disconnect).toHaveBeenCalled();
+    expect(ambient.stop).toHaveBeenCalled();
+    expect(ambient.start).toHaveBeenCalledWith('visit-2', 'fr');
+    expect(bridge.connect).toHaveBeenCalledWith('visit-2');
+    expect(ambient.stop.mock.invocationCallOrder[0]).toBeLessThan(ambient.start.mock.invocationCallOrder[0]);
+    expect(ambient.start.mock.invocationCallOrder[0]).toBeLessThan(bridge.connect.mock.invocationCallOrder[0]);
+    expect((component as any).connectedVisitId).toBe('visit-2');
+  });
+
+  it('should ignore a late transcript from visit A after navigation to visit B', () => {
+    component.visitId = 'visit-2';
+    component.session = activeSession('visit-2');
+    (component as any).connectedVisitId = 'visit-1';
+
+    transcripts.next(turn('Ancien tour de la visite A', 0.95, 'late-a'));
+
+    expect(api.sendRealtimeTranscript).not.toHaveBeenCalled();
+    expect(api.answerRealtimeClarification).not.toHaveBeenCalled();
+  });
+
+  it('should ignore an in-flight backend response from visit A after navigation to visit B', () => {
+    const response = new Subject<AiMessageResponse>();
+    api.sendRealtimeTranscript.mockReturnValue(response);
+    const emitted = vi.spyOn(component.message, 'emit');
+
+    transcripts.next(turn('Tour visite A', 0.95, 'event-a'));
+    expect(api.sendRealtimeTranscript).toHaveBeenCalledWith('visit-1', 'Tour visite A', 0.95, 'event-a');
+
+    component.visitId = 'visit-2';
+    component.session = activeSession('visit-2');
+    (component as any).connectedVisitId = '';
+    response.next(messageResponse('Réponse tardive A'));
+    response.complete();
+
+    expect(emitted).not.toHaveBeenCalled();
   });
 
   it('should resynchronize realtime mute state when realtime reconnects without stopping ambient capture', () => {
@@ -180,7 +245,7 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
 
   it('should route a verified spoken answer to the pending clarification', () => {
     component.session = {
-      ...activeSession(),
+      ...activeSession('visit-1'),
       clarifications: [{
         id: 'clarification-1',
         field: 'symptoms',
@@ -253,6 +318,7 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
 
     component.toggleMute();
     await Promise.resolve();
+    await Promise.resolve();
     expect(ambient.start).toHaveBeenCalledWith('visit-1', 'fr');
   });
 
@@ -264,10 +330,10 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
     return { transcript, confidence, eventId };
   }
 
-  function activeSession(): AiSessionResponse {
+  function activeSession(visitId: string): AiSessionResponse {
     return {
       sessionId: 'session-1',
-      visitId: 'visit-1',
+      visitId,
       status: 'ACTIVE',
       expiresAt: '2026-07-26T10:30:00Z',
       draft: {},
