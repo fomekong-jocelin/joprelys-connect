@@ -54,7 +54,7 @@ export const routes: Routes = [
         path: 'lab-orders',
         loadComponent: () => import('./patient/detail/patient-lab-orders-tab.component').then(m => m.PatientLabOrdersTabComponent),
         canActivate: [roleGuard],
-        data: { expectedPermissions: ['LAB_ORDER_READ'], breadcrumb: 'breadcrumb.patients.lab-orders' }
+        data: { expectedPermissions: ['LAB_ORDER_READ'], breadcrumb: 'breadcrumb.patients.labOrders' }
       },
       {
         path: 'audit-trail',
@@ -221,8 +221,8 @@ export const routes: Routes = [
   },
   {
     path: 'patient/login',
-    redirectTo: '',
-    pathMatch: 'full',
+    loadComponent: () => import('./auth/login.component').then((module) => module.LoginComponent),
+    data: { loginMode: 'patient' },
   },
   {
     path: 'patient/dashboard',
