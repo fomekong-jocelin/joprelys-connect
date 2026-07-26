@@ -10,7 +10,6 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -21,7 +20,6 @@ import org.springframework.web.server.ResponseStatusException;
  * into the finite set of clinical tools Joprelys permits. The resulting tools
  * still create proposals only; they never persist clinical data.</p>
  */
-@Component
 final class AiClinicalToolDispatcher {
 
     private static final Logger log = LoggerFactory.getLogger(AiClinicalToolDispatcher.class);
