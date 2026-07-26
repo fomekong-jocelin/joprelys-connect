@@ -32,8 +32,19 @@ public class OpenAiAmbientDiarizationAdapter implements AmbientDiarizationPort {
     public OpenAiAmbientDiarizationAdapter(
             AiProperties properties,
             @Value("${joprelys.ai.openai.ambient-transcribe-model:gpt-4o-transcribe-diarize}") String model) {
-        AiProperties.OpenAiProperties openAi = properties.openai();
-        this.restClient = openAi == null
+        this(buildRestClient(properties), model);
+    }
+
+    OpenAiAmbientDiarizationAdapter(RestClient restClient, String model) {
+        this.restClient = restClient;
+        this.model = model == null || model.isBlank()
+                ? "gpt-4o-transcribe-diarize"
+                : model.trim();
+    }
+
+    private static RestClient buildRestClient(AiProperties properties) {
+        AiProperties.OpenAiProperties openAi = properties == null ? null : properties.openai();
+        return openAi == null
                 || openAi.apiKey() == null
                 || openAi.apiKey().isBlank()
                 || openAi.baseUrl() == null
@@ -43,9 +54,6 @@ public class OpenAiAmbientDiarizationAdapter implements AmbientDiarizationPort {
                         .baseUrl(openAi.baseUrl())
                         .defaultHeader("Authorization", "Bearer " + openAi.apiKey())
                         .build();
-        this.model = model == null || model.isBlank()
-                ? "gpt-4o-transcribe-diarize"
-                : model.trim();
     }
 
     @Override
