@@ -1,8 +1,9 @@
 package com.joprelys.backend.auth.application;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -11,6 +12,7 @@ import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,49 +21,64 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 class AdminUserSeederTest {
 
     @Mock
-    private SeedAdminProperties properties;
-
-    @Mock
     private UserAccountRepository userAccountRepository;
 
     @Mock
     private PasswordEncoder passwordEncoder;
 
     @Test
-    void shouldNotSeedWhenPropertiesAreIncomplete() {
-        when(properties.isComplete()).thenReturn(false);
+    void shouldFailFastWhenEnabledConfigurationIsIncomplete() {
+        SeedAdminProperties properties = new SeedAdminProperties(true, "admin@example.test", "Admin", " ");
         AdminUserSeeder seeder = new AdminUserSeeder(properties, userAccountRepository, passwordEncoder);
 
-        seeder.run();
+        assertThatThrownBy(seeder::run)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Configuration du bootstrap administrateur incomplète")
+                .hasMessageNotContaining("admin@example.test");
 
         verify(userAccountRepository, never()).existsByEmail(any());
         verify(userAccountRepository, never()).save(any());
+        verify(passwordEncoder, never()).encode(any());
     }
 
     @Test
     void shouldNotSeedWhenAdminAlreadyExists() {
-        when(properties.isComplete()).thenReturn(true);
-        when(properties.email()).thenReturn("admin@joprelys.local");
-        when(userAccountRepository.existsByEmail("admin@joprelys.local")).thenReturn(true);
+        SeedAdminProperties properties = new SeedAdminProperties(
+                true,
+                "  Admin@Example.Test  ",
+                "Administrateur Joprelys",
+                "test-password");
+        when(userAccountRepository.existsByEmail("admin@example.test")).thenReturn(true);
         AdminUserSeeder seeder = new AdminUserSeeder(properties, userAccountRepository, passwordEncoder);
 
         seeder.run();
 
+        verify(userAccountRepository).existsByEmail("admin@example.test");
         verify(userAccountRepository, never()).save(any());
+        verify(passwordEncoder, never()).encode(any());
     }
 
     @Test
-    void shouldSeedAdminWhenMissing() {
-        when(properties.isComplete()).thenReturn(true);
-        when(properties.email()).thenReturn("admin@joprelys.local");
-        when(properties.name()).thenReturn("Administrateur Joprelys");
-        when(properties.password()).thenReturn("Password");
-        when(userAccountRepository.existsByEmail("admin@joprelys.local")).thenReturn(false);
-        when(passwordEncoder.encode("Password")).thenReturn("hashed_password");
+    void shouldSeedAdminWithEncodedPasswordWhenConfigurationIsComplete() {
+        SeedAdminProperties properties = new SeedAdminProperties(
+                true,
+                "  Admin@Example.Test  ",
+                "  Administrateur Joprelys  ",
+                "test-password");
+        when(userAccountRepository.existsByEmail("admin@example.test")).thenReturn(false);
+        when(passwordEncoder.encode("test-password")).thenReturn("hashed_password");
         AdminUserSeeder seeder = new AdminUserSeeder(properties, userAccountRepository, passwordEncoder);
 
         seeder.run();
 
-        verify(userAccountRepository, times(1)).save(any(UserAccountEntity.class));
+        verify(passwordEncoder).encode("test-password");
+        ArgumentCaptor<UserAccountEntity> captor = ArgumentCaptor.forClass(UserAccountEntity.class);
+        verify(userAccountRepository).save(captor.capture());
+        UserAccountEntity saved = captor.getValue();
+        assertThat(saved.getEmail()).isEqualTo("admin@example.test");
+        assertThat(saved.getDisplayName()).isEqualTo("Administrateur Joprelys");
+        assertThat(saved.getRole()).isEqualTo("ADMIN_JOPRELYS");
+        assertThat(saved.getPasswordHash()).isEqualTo("hashed_password");
+        assertThat(saved.getOrganizationId()).isNull();
     }
 }
