@@ -56,6 +56,16 @@ export class RealtimeVoiceBridgeService {
   private remoteAudio: HTMLAudioElement | null = null;
   private activeResponseId: string | null = null;
 
+  private desiredVisitId = '';
+  private desiredPurpose: RealtimeVoicePurpose = 'consultation';
+  private shouldStayConnected = false;
+  private requestedMuted = false;
+  private reconnectAttempts = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private disconnectedTimer: ReturnType<typeof setTimeout> | null = null;
+  private trackMutedTimer: ReturnType<typeof setTimeout> | null = null;
+  private tearingDown = false;
+
   isSupported(): boolean {
     return typeof window !== 'undefined'
       && typeof RTCPeerConnection !== 'undefined'
@@ -72,103 +82,38 @@ export class RealtimeVoiceBridgeService {
         'Ce navigateur ne prend pas en charge la connexion audio temps réel.',
       ));
     }
+
+    const targetChanged = this.desiredVisitId !== visitId || this.desiredPurpose !== purpose;
+    this.desiredVisitId = visitId;
+    this.desiredPurpose = purpose;
+    this.shouldStayConnected = true;
+    if (targetChanged) this.reconnectAttempts = 0;
+
+    this.clearReconnectTimer();
     if (this.stateSubject.value.connected || this.stateSubject.value.connecting) return;
 
-    this.disconnect();
-    this.patchState({ connecting: true });
-
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
-      this.mediaStream = stream;
-
-      const pc = new RTCPeerConnection();
-      this.peerConnection = pc;
-      stream.getAudioTracks().forEach(track => pc.addTrack(track, stream));
-
-      const audio = new Audio();
-      audio.autoplay = true;
-      audio.setAttribute('playsinline', 'true');
-      this.remoteAudio = audio;
-      pc.ontrack = event => {
-        audio.srcObject = event.streams[0] ?? new MediaStream([event.track]);
-        void audio.play().catch(() => {
-          this.errorSubject.next(this.i18n.t(
-            'consultation.ai.realtimeAutoplayError',
-            'Touchez l’écran puis réactivez l’audio du copilote.',
-          ));
-        });
-      };
-
-      const channel = pc.createDataChannel('oai-events');
-      this.dataChannel = channel;
-      channel.onmessage = event => this.handleServerEvent(event.data);
-      channel.onerror = () => this.errorSubject.next(this.i18n.t(
-        'consultation.ai.realtimeChannelError',
-        'La liaison audio temps réel a rencontré une erreur.',
-      ));
-      channel.onclose = () => this.handleConnectionClosed();
-
-      pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'failed') {
-          this.errorSubject.next(this.i18n.t(
-            'consultation.ai.realtimeNetworkError',
-            'La connexion audio temps réel a échoué. Vérifiez le réseau puis réessayez.',
-          ));
-          this.handleConnectionClosed();
-        }
-      };
-
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      await this.waitForIceGathering(pc);
-      const localSdp = pc.localDescription?.sdp;
-      if (!localSdp) throw new Error('AI_REALTIME_SDP_MISSING');
-
-      const locale = this.i18n.currentLanguage();
-      const answerSdp = await firstValueFrom(this.http.post(
-        this.callEndpoint(visitId, purpose, locale),
-        localSdp,
-        {
-          headers: new HttpHeaders({
-            'Content-Type': 'application/sdp',
-            Accept: 'application/sdp',
-          }),
-          responseType: 'text',
-        },
-      ));
-      await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
-      await this.waitForDataChannel(channel, pc);
-      this.patchState({ connected: true, connecting: false, muted: false });
+      await this.establishConnection();
     } catch (error) {
-      this.disconnect();
+      if (this.shouldStayConnected) this.scheduleReconnect();
       throw new Error(this.describeConnectionError(error));
     }
   }
 
   disconnect(): void {
-    this.activeResponseId = null;
-    this.dataChannel?.close();
-    this.dataChannel = null;
-    this.peerConnection?.close();
-    this.peerConnection = null;
-    this.mediaStream?.getTracks().forEach(track => track.stop());
-    this.mediaStream = null;
-    if (this.remoteAudio) {
-      this.remoteAudio.pause();
-      this.remoteAudio.srcObject = null;
-    }
-    this.remoteAudio = null;
+    this.shouldStayConnected = false;
+    this.desiredVisitId = '';
+    this.reconnectAttempts = 0;
+    this.requestedMuted = false;
+    this.clearReconnectTimer();
+    this.clearDisconnectedTimer();
+    this.clearTrackMutedTimer();
+    this.teardownTransport();
     this.stateSubject.next({ ...INITIAL_STATE });
   }
 
   setMuted(muted: boolean): void {
+    this.requestedMuted = muted;
     this.mediaStream?.getAudioTracks().forEach(track => {
       track.enabled = !muted;
     });
@@ -213,6 +158,194 @@ export class RealtimeVoiceBridgeService {
       this.sendEvent({ type: 'output_audio_buffer.clear' });
     }
     this.completeAssistantTurn();
+  }
+
+  private async establishConnection(): Promise<void> {
+    if (!this.shouldStayConnected || !this.desiredVisitId || this.stateSubject.value.connecting) return;
+
+    this.clearDisconnectedTimer();
+    this.clearTrackMutedTimer();
+    this.teardownTransport();
+    this.patchState({
+      connected: false,
+      connecting: true,
+      userSpeaking: false,
+      assistantSpeaking: false,
+      muted: this.requestedMuted,
+    });
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+      if (!this.shouldStayConnected) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+      this.mediaStream = stream;
+
+      const pc = new RTCPeerConnection();
+      this.peerConnection = pc;
+      stream.getAudioTracks().forEach(track => {
+        track.enabled = !this.requestedMuted;
+        this.watchMicrophoneTrack(track);
+        pc.addTrack(track, stream);
+      });
+
+      const audio = new Audio();
+      audio.autoplay = true;
+      audio.setAttribute('playsinline', 'true');
+      this.remoteAudio = audio;
+      pc.ontrack = event => {
+        audio.srcObject = event.streams[0] ?? new MediaStream([event.track]);
+        void audio.play().catch(() => {
+          this.errorSubject.next(this.i18n.t(
+            'consultation.ai.realtimeAutoplayError',
+            'Touchez l’écran puis réactivez l’audio du copilote.',
+          ));
+        });
+      };
+
+      const channel = pc.createDataChannel('oai-events');
+      this.dataChannel = channel;
+      channel.onmessage = event => this.handleServerEvent(event.data);
+      channel.onerror = () => {
+        if (this.tearingDown) return;
+        this.errorSubject.next(this.i18n.t(
+          'consultation.ai.realtimeChannelError',
+          'La liaison audio temps réel a rencontré une erreur. Reconnexion automatique…',
+        ));
+        this.handleConnectionClosed();
+      };
+      channel.onclose = () => {
+        if (!this.tearingDown) this.handleConnectionClosed();
+      };
+
+      pc.onconnectionstatechange = () => this.handlePeerConnectionState(pc);
+      pc.oniceconnectionstatechange = () => this.handleIceConnectionState(pc);
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await this.waitForIceGathering(pc);
+      const localSdp = pc.localDescription?.sdp;
+      if (!localSdp) throw new Error('AI_REALTIME_SDP_MISSING');
+
+      const locale = this.i18n.currentLanguage();
+      const answerSdp = await firstValueFrom(this.http.post(
+        this.callEndpoint(this.desiredVisitId, this.desiredPurpose, locale),
+        localSdp,
+        {
+          headers: new HttpHeaders({
+            'Content-Type': 'application/sdp',
+            Accept: 'application/sdp',
+          }),
+          responseType: 'text',
+        },
+      ));
+      if (!this.shouldStayConnected) return;
+      await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+      await this.waitForDataChannel(channel, pc);
+      if (!this.shouldStayConnected) return;
+
+      this.reconnectAttempts = 0;
+      this.patchState({
+        connected: true,
+        connecting: false,
+        muted: this.requestedMuted,
+      });
+    } catch (error) {
+      this.teardownTransport();
+      this.patchState({
+        connected: false,
+        connecting: false,
+        userSpeaking: false,
+        assistantSpeaking: false,
+        muted: this.requestedMuted,
+      });
+      throw error;
+    }
+  }
+
+  private watchMicrophoneTrack(track: MediaStreamTrack): void {
+    if (typeof track.addEventListener !== 'function') return;
+    track.addEventListener('ended', () => {
+      if (!this.tearingDown && this.shouldStayConnected) {
+        this.errorSubject.next(this.i18n.t(
+          'consultation.ai.realtimeMicLost',
+          'Le microphone a cessé de fournir de l’audio. Reconnexion automatique…',
+        ));
+        this.handleConnectionClosed();
+      }
+    });
+    track.addEventListener('mute', () => {
+      if (this.tearingDown || !this.shouldStayConnected) return;
+      this.clearTrackMutedTimer();
+      this.trackMutedTimer = setTimeout(() => {
+        this.trackMutedTimer = null;
+        if (track.muted && this.shouldStayConnected) {
+          this.errorSubject.next(this.i18n.t(
+            'consultation.ai.realtimeMicLost',
+            'Le microphone ne fournit plus d’audio. Reconnexion automatique…',
+          ));
+          this.handleConnectionClosed();
+        }
+      }, 4000);
+    });
+    track.addEventListener('unmute', () => this.clearTrackMutedTimer());
+  }
+
+  private handlePeerConnectionState(pc: RTCPeerConnection): void {
+    if (this.tearingDown || pc !== this.peerConnection) return;
+    if (pc.connectionState === 'connected') {
+      this.clearDisconnectedTimer();
+      return;
+    }
+    if (pc.connectionState === 'disconnected') {
+      this.scheduleDisconnectedRecovery();
+      return;
+    }
+    if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+      this.errorSubject.next(this.i18n.t(
+        'consultation.ai.realtimeNetworkError',
+        'La connexion audio temps réel a été interrompue. Reconnexion automatique…',
+      ));
+      this.handleConnectionClosed();
+    }
+  }
+
+  private handleIceConnectionState(pc: RTCPeerConnection): void {
+    if (this.tearingDown || pc !== this.peerConnection) return;
+    if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+      this.clearDisconnectedTimer();
+      return;
+    }
+    if (pc.iceConnectionState === 'disconnected') {
+      this.scheduleDisconnectedRecovery();
+      return;
+    }
+    if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
+      this.handleConnectionClosed();
+    }
+  }
+
+  private scheduleDisconnectedRecovery(): void {
+    if (this.disconnectedTimer || !this.shouldStayConnected) return;
+    this.disconnectedTimer = setTimeout(() => {
+      this.disconnectedTimer = null;
+      if (!this.shouldStayConnected) return;
+      const pc = this.peerConnection;
+      const unhealthy = !pc
+        || pc.connectionState === 'disconnected'
+        || pc.connectionState === 'failed'
+        || pc.iceConnectionState === 'disconnected'
+        || pc.iceConnectionState === 'failed';
+      if (unhealthy) this.handleConnectionClosed();
+    }, 3500);
   }
 
   private handleServerEvent(raw: unknown): void {
@@ -302,13 +435,84 @@ export class RealtimeVoiceBridgeService {
   }
 
   private handleConnectionClosed(): void {
+    if (this.tearingDown) return;
     this.activeResponseId = null;
+    this.clearDisconnectedTimer();
+    this.clearTrackMutedTimer();
+    this.teardownTransport();
     this.patchState({
       connected: false,
       connecting: false,
       userSpeaking: false,
       assistantSpeaking: false,
+      muted: this.requestedMuted,
     });
+    if (this.shouldStayConnected) this.scheduleReconnect();
+  }
+
+  private scheduleReconnect(): void {
+    if (!this.shouldStayConnected || !this.desiredVisitId || this.reconnectTimer) return;
+    const delays = [1000, 2000, 5000, 10000, 15000, 30000];
+    const delay = delays[Math.min(this.reconnectAttempts, delays.length - 1)];
+    this.reconnectAttempts += 1;
+    this.patchState({ connecting: true });
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.patchState({ connecting: false });
+      if (!this.shouldStayConnected) return;
+      void this.establishConnection().catch(error => {
+        if (!this.shouldStayConnected) return;
+        if (this.reconnectAttempts <= 2 || this.reconnectAttempts % 4 === 0) {
+          this.errorSubject.next(this.describeConnectionError(error));
+        }
+        this.scheduleReconnect();
+      });
+    }, delay);
+  }
+
+  private teardownTransport(): void {
+    this.tearingDown = true;
+    try {
+      this.activeResponseId = null;
+      if (this.dataChannel) {
+        this.dataChannel.onclose = null;
+        this.dataChannel.onerror = null;
+        this.dataChannel.onmessage = null;
+        this.dataChannel.close();
+      }
+      this.dataChannel = null;
+      if (this.peerConnection) {
+        this.peerConnection.onconnectionstatechange = null;
+        this.peerConnection.oniceconnectionstatechange = null;
+        this.peerConnection.ontrack = null;
+        this.peerConnection.close();
+      }
+      this.peerConnection = null;
+      this.mediaStream?.getTracks().forEach(track => track.stop());
+      this.mediaStream = null;
+      if (this.remoteAudio) {
+        this.remoteAudio.pause();
+        this.remoteAudio.srcObject = null;
+      }
+      this.remoteAudio = null;
+    } finally {
+      this.tearingDown = false;
+    }
+  }
+
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer !== null) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
+  }
+
+  private clearDisconnectedTimer(): void {
+    if (this.disconnectedTimer !== null) clearTimeout(this.disconnectedTimer);
+    this.disconnectedTimer = null;
+  }
+
+  private clearTrackMutedTimer(): void {
+    if (this.trackMutedTimer !== null) clearTimeout(this.trackMutedTimer);
+    this.trackMutedTimer = null;
   }
 
   private waitForIceGathering(pc: RTCPeerConnection): Promise<void> {
@@ -392,19 +596,19 @@ export class RealtimeVoiceBridgeService {
       if (error.status === 0) {
         return this.i18n.t(
           'consultation.ai.realtimeNetworkError',
-          'La connexion réseau au temps réel est impossible.',
+          'La connexion réseau au temps réel est impossible. Reconnexion automatique en cours.',
         );
       }
     }
     if (error instanceof Error && error.message.startsWith('AI_REALTIME_')) {
       return this.i18n.t(
         'consultation.ai.realtimeConnectionFailed',
-        'La liaison WebRTC n’a pas pu être établie. Vérifiez le réseau puis réessayez.',
+        'La liaison WebRTC n’a pas pu être établie. Reconnexion automatique en cours.',
       );
     }
     return this.i18n.t(
       'consultation.ai.realtimeUnavailable',
-      'Le temps réel est indisponible. Joprelys conserve le mode audio classique.',
+      'Le temps réel est momentanément indisponible. Reconnexion automatique en cours.',
     );
   }
 
