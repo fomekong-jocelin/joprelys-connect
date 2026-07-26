@@ -76,6 +76,23 @@ describe('AuthSessionRecoveryService', () => {
     expect(storage.accessToken).toBe('patient-token');
   });
 
+  it('should clear and redirect an expired professional context', async () => {
+    storage.save(loginResponse('professional-token', '2999-07-26T12:00:00Z'));
+    router.url = '/patients';
+
+    service.expireSession();
+    await Promise.resolve();
+
+    expect(storage.session()).toBeNull();
+    expect(router.navigate).toHaveBeenCalledWith(['/'], {
+      queryParams: {
+        sessionExpired: 'true',
+        returnUrl: '/patients',
+      },
+      replaceUrl: true,
+    });
+  });
+
   it('should redirect an expired patient context back to patient login mode', async () => {
     storage.save(patientLoginResponse('patient-token', '2999-07-26T12:00:00Z'));
     router.url = '/patient/dashboard';
