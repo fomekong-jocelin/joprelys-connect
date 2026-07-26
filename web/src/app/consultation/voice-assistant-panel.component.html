@@ -77,8 +77,6 @@
         (endSession)="finishRealtime()"
       />
 
-      <app-ambient-safety-panel [visitId]="visitId" />
-
       @if (hasPendingClarification()) {
         <app-ai-clarification-panel
           [clarifications]="session()?.clarifications ?? []"

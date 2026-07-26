@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BehaviorSubject, Subject, of } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
-import { AiSessionResponse } from './ai-consultation-api.service';
+import { AiConsultationApiService, AiSessionResponse } from './ai-consultation-api.service';
 import { AmbientAudioCaptureService, AmbientCaptureState } from './ambient-audio-capture.service';
 import { RealtimeClinicalIntakeApiService } from './realtime-clinical-intake-api.service';
 import {
@@ -15,6 +15,7 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
   let component: RealtimeVoiceControllerComponent;
   let state: BehaviorSubject<RealtimeVoiceState>;
   let ambientState: BehaviorSubject<AmbientCaptureState>;
+  let transcripts: Subject<any>;
   let bridge: {
     state$: BehaviorSubject<RealtimeVoiceState>;
     transcript$: Subject<any>;
@@ -47,9 +48,10 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
       storagePressure: false,
       lastError: null,
     });
+    transcripts = new Subject();
     bridge = {
       state$ : state,
-      transcript$: new Subject(),
+      transcript$: transcripts,
       error$: new Subject(),
       assistantTurnCompleted$: new Subject(),
       connect: vi.fn().mockResolvedValue(undefined),
@@ -75,6 +77,13 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
         {
           provide: RealtimeClinicalIntakeApiService,
           useValue: { ingest: vi.fn().mockReturnValue(of({})) },
+        },
+        {
+          provide: AiConsultationApiService,
+          useValue: {
+            sendRealtimeTranscript: vi.fn().mockReturnValue(of(messageResponse())),
+            answerRealtimeClarification: vi.fn().mockReturnValue(of(messageResponse())),
+          },
         },
         {
           provide: I18nService,
@@ -128,17 +137,30 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
     expect(bridge.speakApproved).toHaveBeenCalledWith('Depuis combien de jours la douleur évolue-t-elle ?');
   });
 
-  it('should show only the simple physician actions when healthy', () => {
+  it('should show only the focus physician actions when healthy', () => {
     fixture.detectChanges();
     const text = fixture.nativeElement.textContent as string;
 
     expect(text).toContain('Je vous écoute');
-    expect(text).toContain('Mettre en pause');
+    expect(text).toContain('Transcription en direct');
+    expect(text).toContain('Pause');
     expect(text).toContain('Passer en dictée');
     expect(text).toContain('Terminer');
     expect(text).not.toContain('Capture de sécurité active');
     expect(text).not.toContain('Preuve clinique ambient');
     expect(text).not.toContain('Copilote Realtime sécurisé');
+  });
+
+  it('should display the last transcript really received from realtime', () => {
+    transcripts.next({
+      transcript: 'Patient sans fièvre depuis trois jours',
+      confidence: 0.91,
+      eventId: 'event-1',
+      itemId: 'item-1',
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Patient sans fièvre depuis trois jours');
   });
 
   it('should expose safety information only when realtime is actually degraded', () => {
@@ -148,6 +170,21 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
     expect(fixture.nativeElement.textContent).toContain('Temps réel interrompu');
     expect(fixture.nativeElement.textContent).toContain('reste enregistrée localement');
   });
+
+  function messageResponse() {
+    return {
+      sessionId: 'session-1',
+      transcript: 'Patient sans fièvre depuis trois jours',
+      draft: {},
+      changedFields: [],
+      assistantMessage: '',
+      needsClarification: false,
+      conversation: [],
+      clarifications: [],
+      revisions: [],
+      expiresAt: '2026-07-26T22:00:00Z',
+    };
+  }
 
   function sessionWithGreeting(): AiSessionResponse {
     return {

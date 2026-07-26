@@ -1,8 +1,8 @@
 import {
   AfterViewInit,
   ApplicationRef,
-  ComponentRef,
   Component,
+  ComponentRef,
   EnvironmentInjector,
   OnDestroy,
   OnInit,
@@ -19,7 +19,7 @@ import { AppShellComponent } from '../shared/layout/app-shell.component';
 import { ConsultationApiService } from './consultation-api.service';
 import { VisitApiService } from '../visit/visit-api.service';
 import { Consultation, Prescription } from './consultation.models';
-import { Vitals } from '../visit/visit.models';
+import { Visit, Vitals } from '../visit/visit.models';
 import { LabOrderApiService } from '../clinic/lab/lab-api.service';
 import { ExamType } from '../clinic/lab/lab.models';
 import { I18nService } from '../core/i18n/i18n.service';
@@ -29,6 +29,13 @@ import {
   AiVitalsDraft,
 } from './ai-consultation-api.service';
 import { VoiceAssistantPanelComponent } from './voice-assistant-panel.component';
+import { ClinicalNoteEditorComponent } from './clinical-note-editor.component';
+import { PatientApiService } from '../patient/patient-api.service';
+import {
+  Patient,
+  PatientAllergy,
+  PatientMedicalHistory,
+} from '../patient/patient.models';
 
 @Component({
   selector: 'app-consultation',
@@ -45,6 +52,7 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly environmentInjector = inject(EnvironmentInjector);
   private readonly consultationApi = inject(ConsultationApiService);
   private readonly visitApi = inject(VisitApiService);
+  private readonly patientApi = inject(PatientApiService);
   private readonly labOrderApi = inject(LabOrderApiService);
   readonly i18n = inject(I18nService);
 
@@ -57,13 +65,21 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly consultation = signal<Consultation | null>(null);
   readonly prescription = signal<Prescription | null>(null);
   readonly visitNumber = signal('');
+  readonly visitReason = signal('');
+  readonly patient = signal<Patient | null>(null);
+  readonly patientAllergies = signal<PatientAllergy[]>([]);
+  readonly patientMedicalHistory = signal<PatientMedicalHistory[]>([]);
 
   visitId = '';
   private patientId = '';
   private voiceAssistantRef: ComponentRef<VoiceAssistantPanelComponent> | null = null;
+  private clinicalNoteRef: ComponentRef<ClinicalNoteEditorComponent> | null = null;
+  private legacyClinicalDetailsElement: HTMLElement | null = null;
   private voiceDraftSubscription: Subscription | null = null;
   private voiceMountTimer: ReturnType<typeof setTimeout> | null = null;
   private voiceMountAttempts = 0;
+  private clinicalNoteMountTimer: ReturnType<typeof setTimeout> | null = null;
+  private clinicalNoteMountAttempts = 0;
   shouldCloseAfterSave = false;
 
   readonly commonExams = [
@@ -83,6 +99,8 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
     clinicalExam: [''],
     suspectedDiagnosis: [''],
     diagnosis: ['', Validators.required],
+    // Conservé pour compatibilité API / données historiques. Le nouvel écran
+    // expose un seul "Diagnostic retenu" et synchronise cette valeur à la sauvegarde.
     finalDiagnosis: [''],
     conclusion: [''],
     advice: [''],
@@ -109,6 +127,7 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.scheduleVoiceAssistantMount();
+    this.scheduleClinicalNoteMount();
   }
 
   ngOnDestroy(): void {
@@ -117,10 +136,23 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
       clearTimeout(this.voiceMountTimer);
       this.voiceMountTimer = null;
     }
+    if (this.clinicalNoteMountTimer) {
+      clearTimeout(this.clinicalNoteMountTimer);
+      this.clinicalNoteMountTimer = null;
+    }
     if (this.voiceAssistantRef) {
       this.applicationRef.detachView(this.voiceAssistantRef.hostView);
       this.voiceAssistantRef.destroy();
       this.voiceAssistantRef = null;
+    }
+    if (this.clinicalNoteRef) {
+      this.applicationRef.detachView(this.clinicalNoteRef.hostView);
+      this.clinicalNoteRef.destroy();
+      this.clinicalNoteRef = null;
+    }
+    if (this.legacyClinicalDetailsElement) {
+      this.legacyClinicalDetailsElement.hidden = false;
+      this.legacyClinicalDetailsElement = null;
     }
   }
 
@@ -130,8 +162,6 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
       'symptoms',
       'clinicalExam',
       'suspectedDiagnosis',
-      'diagnosis',
-      'finalDiagnosis',
       'conclusion',
       'advice',
       'followUp',
@@ -140,6 +170,18 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
       const value = draft[field];
       if (typeof value === 'string') acceptedDraft[field] = value.trim();
     });
+
+    // Le modèle historique distingue diagnosis/finalDiagnosis. L'UX clinique
+    // n'affiche plus ce doublon : finalDiagnosis prévaut lorsqu'il est fourni,
+    // sinon diagnosis alimente l'unique "Diagnostic retenu".
+    const retainedDiagnosis = [draft.finalDiagnosis, draft.diagnosis]
+      .find(value => typeof value === 'string' && value.trim())
+      ?.trim();
+    if (retainedDiagnosis) {
+      acceptedDraft['diagnosis'] = retainedDiagnosis;
+      acceptedDraft['finalDiagnosis'] = retainedDiagnosis;
+    }
+
     if (Object.keys(acceptedDraft).length > 0) {
       this.form.patchValue(acceptedDraft);
     }
@@ -158,7 +200,7 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
     this.form.markAsDirty();
     this.syncVoiceDraft();
     this.successMessage.set(
-      'Les propositions IA validées ont été appliquées. Relisez la consultation, l’ordonnance, les examens et les constantes avant la sauvegarde finale.',
+      'Les propositions IA validées ont été appliquées. Relisez la note clinique, l’ordonnance, les examens et les constantes avant la sauvegarde finale.',
     );
     this.errorMessage.set('');
   }
@@ -236,6 +278,17 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
     }, this.voiceMountAttempts === 1 ? 0 : 250);
   }
 
+  private scheduleClinicalNoteMount(): void {
+    if (this.clinicalNoteRef || this.clinicalNoteMountAttempts >= 40) return;
+    this.clinicalNoteMountAttempts += 1;
+    this.clinicalNoteMountTimer = setTimeout(() => {
+      this.clinicalNoteMountTimer = null;
+      if (!this.mountClinicalNoteEditor()) {
+        this.scheduleClinicalNoteMount();
+      }
+    }, this.clinicalNoteMountAttempts === 1 ? 0 : 250);
+  }
+
   private mountVoiceAssistant(): boolean {
     if (!this.visitId || this.voiceAssistantRef || typeof document === 'undefined') {
       return !!this.voiceAssistantRef;
@@ -256,13 +309,50 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
     return true;
   }
 
+  private mountClinicalNoteEditor(): boolean {
+    if (this.clinicalNoteRef || typeof document === 'undefined') {
+      return !!this.clinicalNoteRef;
+    }
+    const formElement = document.querySelector('app-consultation form') as HTMLFormElement | null;
+    if (!formElement) return false;
+
+    const legacyClinicalDetails = formElement.firstElementChild as HTMLElement | null;
+    if (!legacyClinicalDetails) return false;
+
+    const componentRef = createComponent(ClinicalNoteEditorComponent, {
+      environmentInjector: this.environmentInjector,
+    });
+    componentRef.setInput('form', this.form);
+    componentRef.setInput('patient', this.patient());
+    componentRef.setInput('visitReason', this.visitReason());
+    componentRef.setInput('allergies', this.patientAllergies());
+    componentRef.setInput('medicalHistory', this.patientMedicalHistory());
+    this.applicationRef.attachView(componentRef.hostView);
+    formElement.insertBefore(componentRef.location.nativeElement, legacyClinicalDetails);
+
+    legacyClinicalDetails.hidden = true;
+    this.legacyClinicalDetailsElement = legacyClinicalDetails;
+    this.clinicalNoteRef = componentRef;
+    return true;
+  }
+
   private syncVoiceDraft(): void {
     this.voiceAssistantRef?.setInput('currentDraft', this.currentVoiceDraft());
   }
 
+  private syncClinicalNoteContext(): void {
+    if (!this.clinicalNoteRef) return;
+    this.clinicalNoteRef.setInput('patient', this.patient());
+    this.clinicalNoteRef.setInput('visitReason', this.visitReason());
+    this.clinicalNoteRef.setInput('allergies', this.patientAllergies());
+    this.clinicalNoteRef.setInput('medicalHistory', this.patientMedicalHistory());
+  }
+
   private currentVoiceDraft(): Record<string, unknown> {
+    const raw = this.form.getRawValue();
     return {
-      ...this.form.getRawValue(),
+      ...raw,
+      finalDiagnosis: raw.diagnosis || '',
       vitals: this.vitals() ?? {},
     };
   }
@@ -276,21 +366,27 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
         this.vitals.set(data);
         this.isLoading.set(false);
         this.scheduleVoiceAssistantMount();
+        this.scheduleClinicalNoteMount();
         this.syncVoiceDraft();
       },
       error: () => {
         this.isLoading.set(false);
         this.scheduleVoiceAssistantMount();
+        this.scheduleClinicalNoteMount();
       }
     });
 
-    this.http.get<any>(`/api/visits/${this.visitId}`).subscribe({
+    this.http.get<Visit>(`/api/visits/${this.visitId}`).subscribe({
       next: (visit) => {
         if (visit?.visitNumber) {
           this.visitNumber.set(visit.visitNumber);
         }
+        this.visitReason.set(visit?.reason || '');
+        this.syncClinicalNoteContext();
+
         if (visit?.patientId) {
           this.patientId = visit.patientId;
+          this.loadPatientContext(this.patientId);
           this.labOrderApi.getPatientLabOrders(this.patientId).subscribe({
             next: (orders) => {
               const currentVisitOrder = orders.find(o => o.visitId === this.visitId);
@@ -312,12 +408,13 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
     this.consultationApi.getConsultation(this.visitId).subscribe({
       next: (existing) => {
         this.consultation.set(existing);
+        const retainedDiagnosis = existing.finalDiagnosis?.trim() || existing.diagnosis || '';
         this.form.patchValue({
           symptoms: existing.symptoms,
           clinicalExam: existing.clinicalExam ?? '',
           suspectedDiagnosis: existing.suspectedDiagnosis ?? '',
-          diagnosis: existing.diagnosis,
-          finalDiagnosis: existing.finalDiagnosis ?? '',
+          diagnosis: retainedDiagnosis,
+          finalDiagnosis: retainedDiagnosis,
           conclusion: existing.conclusion ?? '',
           advice: existing.advice ?? '',
           followUp: existing.followUp ?? '',
@@ -326,6 +423,32 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
         this.loadPrescription(existing.id);
       },
       error: () => {}
+    });
+  }
+
+  private loadPatientContext(patientId: string): void {
+    this.patientApi.getById(patientId).subscribe({
+      next: patient => {
+        this.patient.set(patient);
+        this.syncClinicalNoteContext();
+      },
+      error: () => this.patient.set(null),
+    });
+
+    this.patientApi.getAllergies(patientId).subscribe({
+      next: allergies => {
+        this.patientAllergies.set(allergies);
+        this.syncClinicalNoteContext();
+      },
+      error: () => this.patientAllergies.set([]),
+    });
+
+    this.patientApi.getMedicalHistory(patientId).subscribe({
+      next: history => {
+        this.patientMedicalHistory.set(history);
+        this.syncClinicalNoteContext();
+      },
+      error: () => this.patientMedicalHistory.set([]),
     });
   }
 
@@ -465,14 +588,26 @@ export class ConsultationComponent implements OnInit, AfterViewInit, OnDestroy {
     this.successMessage.set('');
     this.errorMessage.set('');
 
-    const { symptoms, clinicalExam, suspectedDiagnosis, diagnosis, finalDiagnosis, conclusion, advice, followUp } = this.form.value;
+    const {
+      symptoms,
+      clinicalExam,
+      suspectedDiagnosis,
+      diagnosis,
+      conclusion,
+      advice,
+      followUp,
+    } = this.form.getRawValue();
+    const retainedDiagnosis = typeof diagnosis === 'string' ? diagnosis.trim() : diagnosis;
+    this.form.patchValue({ finalDiagnosis: retainedDiagnosis || '' }, { emitEvent: false });
 
     this.consultationApi.saveConsultation(this.visitId, {
       symptoms,
       clinicalExam: clinicalExam || undefined,
       suspectedDiagnosis: suspectedDiagnosis || undefined,
-      diagnosis,
-      finalDiagnosis: finalDiagnosis || undefined,
+      diagnosis: retainedDiagnosis,
+      // Compatibilité historique : une seule valeur clinique est désormais
+      // saisie, mais elle reste persistée dans l'ancien champ finalDiagnosis.
+      finalDiagnosis: retainedDiagnosis || undefined,
       conclusion: conclusion || undefined,
       advice: advice || undefined,
       followUp: followUp || undefined,

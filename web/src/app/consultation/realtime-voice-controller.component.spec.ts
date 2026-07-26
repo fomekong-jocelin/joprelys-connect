@@ -2,7 +2,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
-import { AiSessionResponse } from './ai-consultation-api.service';
+import {
+  AiConsultationApiService,
+  AiMessageResponse,
+  AiSessionResponse,
+} from './ai-consultation-api.service';
 import { AmbientAudioCaptureService, AmbientCaptureState } from './ambient-audio-capture.service';
 import {
   RealtimeClinicalIntakeAck,
@@ -50,6 +54,10 @@ describe('RealtimeVoiceControllerComponent durable clinical listening', () => {
   let intake: {
     ingest: ReturnType<typeof vi.fn>;
   };
+  let consultationApi: {
+    sendRealtimeTranscript: ReturnType<typeof vi.fn>;
+    answerRealtimeClarification: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     vi.useFakeTimers();
@@ -93,6 +101,12 @@ describe('RealtimeVoiceControllerComponent durable clinical listening', () => {
       ingest: vi.fn().mockImplementation((visitId: string, text: string, confidence: number, eventId: string, itemId?: string) =>
         of(ack(visitId, text, confidence, eventId, itemId))),
     };
+    consultationApi = {
+      sendRealtimeTranscript: vi.fn().mockImplementation((_visitId: string, text: string) =>
+        of(messageResponse(text))),
+      answerRealtimeClarification: vi.fn().mockImplementation((_visitId: string, _clarificationId: string, text: string) =>
+        of(messageResponse(text))),
+    };
 
     await TestBed.configureTestingModule({
       imports: [RealtimeVoiceControllerComponent],
@@ -100,6 +114,7 @@ describe('RealtimeVoiceControllerComponent durable clinical listening', () => {
         { provide: RealtimeVoiceBridgeService, useValue: bridge },
         { provide: AmbientAudioCaptureService, useValue: ambient },
         { provide: RealtimeClinicalIntakeApiService, useValue: intake },
+        { provide: AiConsultationApiService, useValue: consultationApi },
         {
           provide: I18nService,
           useValue: {
@@ -139,6 +154,21 @@ describe('RealtimeVoiceControllerComponent durable clinical listening', () => {
     expect(ambient.start.mock.invocationCallOrder[0]).toBeLessThan(bridge.connect.mock.invocationCallOrder[0]);
   });
 
+  it('should persist a realtime turn before asking the clinical assistant to analyze it', () => {
+    transcripts.next(turn('Douleur depuis trois jours', 0.91, 'event-order', 'item-order'));
+
+    expect(intake.ingest).toHaveBeenCalledTimes(1);
+    expect(consultationApi.sendRealtimeTranscript).toHaveBeenCalledTimes(1);
+    expect(intake.ingest.mock.invocationCallOrder[0])
+      .toBeLessThan(consultationApi.sendRealtimeTranscript.mock.invocationCallOrder[0]);
+    expect(consultationApi.sendRealtimeTranscript).toHaveBeenCalledWith(
+      'visit-1',
+      'Douleur depuis trois jours',
+      0.91,
+      'event-order',
+    );
+  });
+
   it('should queue three final ASR turns while the first server ACK is slow and persist all three in order', () => {
     const firstAck = new Subject<RealtimeClinicalIntakeAck>();
     intake.ingest
@@ -154,6 +184,7 @@ describe('RealtimeVoiceControllerComponent durable clinical listening', () => {
     expect((component as any).transcriptQueue).toHaveLength(3);
     expect(component.processing()).toBe(true);
     expect(bridge.setMuted).not.toHaveBeenCalledWith(true);
+    expect(consultationApi.sendRealtimeTranscript).not.toHaveBeenCalled();
 
     firstAck.next(ack('visit-1', 'Première phrase clinique', 0.91, 'event-1', 'item-1'));
     firstAck.complete();
@@ -164,7 +195,50 @@ describe('RealtimeVoiceControllerComponent durable clinical listening', () => {
       'Deuxième phrase clinique',
       'Troisième phrase clinique',
     ]);
+    expect(consultationApi.sendRealtimeTranscript).toHaveBeenCalledTimes(3);
     expect((component as any).transcriptQueue).toHaveLength(0);
+  });
+
+  it('should route the next durable turn to an outstanding realtime clarification', () => {
+    component.session = {
+      ...activeSession('visit-1'),
+      clarifications: [{
+        id: 'clar-1',
+        field: 'symptoms',
+        question: 'Depuis combien de jours ?',
+        status: 'PENDING',
+        options: [],
+        createdAt: '2026-07-26T18:00:00Z',
+        answer: null,
+        resolvedAt: null,
+      }],
+    };
+
+    transcripts.next(turn('Depuis trois jours', 0.95, 'event-clar', 'item-clar'));
+
+    expect(intake.ingest).toHaveBeenCalledTimes(1);
+    expect(consultationApi.answerRealtimeClarification).toHaveBeenCalledWith(
+      'visit-1',
+      'clar-1',
+      'Depuis trois jours',
+      0.95,
+      'event-clar',
+    );
+    expect(consultationApi.sendRealtimeTranscript).not.toHaveBeenCalled();
+  });
+
+  it('should vocalize only the backend-approved assistant response after durable intake', () => {
+    bridge.speakApproved.mockReturnValue(true);
+    consultationApi.sendRealtimeTranscript.mockReturnValue(of({
+      ...messageResponse('Texte utilisateur'),
+      assistantMessage: 'Pouvez-vous préciser la localisation de la douleur ?',
+    }));
+
+    transcripts.next(turn('J’ai mal depuis hier', 0.93, 'event-voice', 'item-voice'));
+
+    expect(bridge.speakApproved).toHaveBeenCalledWith(
+      'Pouvez-vous préciser la localisation de la douleur ?',
+    );
   });
 
   it('should deduplicate the same OpenAI item even if a second event id is received', () => {
@@ -174,7 +248,7 @@ describe('RealtimeVoiceControllerComponent durable clinical listening', () => {
     expect(intake.ingest).toHaveBeenCalledTimes(1);
   });
 
-  it('should keep a transiently failed turn at the head of the queue and retry it', async () => {
+  it('should keep a transiently failed turn at the head of the queue and retry durable intake', async () => {
     intake.ingest
       .mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 503 })))
       .mockImplementation((visitId: string, text: string, confidence: number, eventId: string, itemId?: string) =>
@@ -184,14 +258,16 @@ describe('RealtimeVoiceControllerComponent durable clinical listening', () => {
 
     expect((component as any).transcriptQueue).toHaveLength(1);
     expect(intake.ingest).toHaveBeenCalledTimes(1);
+    expect(consultationApi.sendRealtimeTranscript).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(1200);
 
     expect(intake.ingest).toHaveBeenCalledTimes(2);
+    expect(consultationApi.sendRealtimeTranscript).toHaveBeenCalledTimes(1);
     expect((component as any).transcriptQueue).toHaveLength(0);
   });
 
-  it('should not mute realtime merely because an intake ACK is in progress', () => {
+  it('should not mute realtime merely because a durable ACK or analysis is in progress', () => {
     const response = new Subject<RealtimeClinicalIntakeAck>();
     intake.ingest.mockReturnValue(response);
     bridge.setMuted.mockClear();
@@ -237,12 +313,14 @@ describe('RealtimeVoiceControllerComponent durable clinical listening', () => {
     expect((component as any).connectedVisitId).toBe('visit-2');
   });
 
-  it('should reject an unverifiable turn but keep ambient capture untouched', () => {
+  it('should display but not clinically analyze an unverifiable turn', () => {
     const emittedError = vi.spyOn(component.realtimeError, 'emit');
 
     transcripts.next(turn('texte incertain', null, 'event-low', 'item-low'));
 
+    expect(component.lastTranscript()).toBe('texte incertain');
     expect(intake.ingest).not.toHaveBeenCalled();
+    expect(consultationApi.sendRealtimeTranscript).not.toHaveBeenCalled();
     expect(emittedError).toHaveBeenCalledWith(expect.stringContaining('trop incertaine'));
     expect(ambient.stop).not.toHaveBeenCalled();
   });
@@ -290,6 +368,21 @@ describe('RealtimeVoiceControllerComponent durable clinical listening', () => {
       transcript,
       confidence,
       receivedAt: '2026-07-26T18:00:00Z',
+    };
+  }
+
+  function messageResponse(transcript: string): AiMessageResponse {
+    return {
+      sessionId: 'session-1',
+      transcript,
+      draft: {},
+      changedFields: [],
+      assistantMessage: '',
+      needsClarification: false,
+      conversation: [],
+      clarifications: [],
+      revisions: [],
+      expiresAt: '2026-07-26T20:00:00Z',
     };
   }
 

@@ -8,8 +8,6 @@ export interface ClassicVoiceCapture {
 type CaptureHandler = (capture: ClassicVoiceCapture) => void;
 type LevelHandler = (level: number) => void;
 
-const MIN_SPEECH_RMS = 0.015;
-const MIN_SPEECH_FRAMES = 8;
 const MAX_RECORDING_DURATION_MS = 120000;
 
 @Injectable({ providedIn: 'root' })
@@ -26,8 +24,6 @@ export class ClassicVoiceRecorderService {
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private meterFrame: number | null = null;
-  private speechFrames = 0;
-  private voiceActivityAvailable = false;
   private captureHandler: CaptureHandler | null = null;
   private levelHandler: LevelHandler | null = null;
 
@@ -59,7 +55,7 @@ export class ClassicVoiceRecorderService {
       };
       this.mediaRecorder.onstop = () => this.finishCapture();
       this.mediaRecorder.start(350);
-      this.startAudioMeter(this.mediaStream);
+      await this.startAudioMeter(this.mediaStream);
       this.recordingTimeout = setTimeout(
         () => this.stop(),
         MAX_RECORDING_DURATION_MS,
@@ -88,19 +84,21 @@ export class ClassicVoiceRecorderService {
     levelHandler: LevelHandler,
   ): void {
     this.audioChunks = [];
-    this.speechFrames = 0;
-    this.voiceActivityAvailable = false;
     this.captureHandler = captureHandler;
     this.levelHandler = levelHandler;
   }
 
   private finishCapture(): void {
+    const audio = new Blob(this.audioChunks, {
+      type: this.mediaRecorder?.mimeType || 'audio/webm',
+    });
+
     const capture: ClassicVoiceCapture = {
-      audio: new Blob(this.audioChunks, {
-        type: this.mediaRecorder?.mimeType || 'audio/webm',
-      }),
-      hasSpeech: !this.voiceActivityAvailable
-        || this.speechFrames >= MIN_SPEECH_FRAMES,
+      audio,
+      // Browser-side metering must never discard a real recording before the
+      // transcription provider sees it. Some mobile browsers suspend or
+      // throttle Web Audio even while MediaRecorder is capturing correctly.
+      hasSpeech: audio.size > 0,
     };
     const handler = this.captureHandler;
     this.cleanup();
@@ -117,14 +115,22 @@ export class ClassicVoiceRecorderService {
     return candidates.find(type => MediaRecorder.isTypeSupported(type));
   }
 
-  private startAudioMeter(stream: MediaStream): void {
+  private async startAudioMeter(stream: MediaStream): Promise<void> {
     try {
       const AudioContextClass = window.AudioContext
         || (window as unknown as { webkitAudioContext?: typeof AudioContext })
           .webkitAudioContext;
       if (!AudioContextClass) return;
-      this.voiceActivityAvailable = true;
+
       this.audioContext = new AudioContextClass();
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume().catch(() => undefined);
+      }
+      if (this.audioContext.state !== 'running') {
+        this.levelHandler?.(0);
+        return;
+      }
+
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 256;
       this.analyser.smoothingTimeConstant = 0.75;
@@ -134,14 +140,12 @@ export class ClassicVoiceRecorderService {
         if (!this.analyser || !this.active) return;
         this.analyser.getByteTimeDomainData(data);
         const rms = this.rootMeanSquare(data);
-        if (rms >= MIN_SPEECH_RMS) this.speechFrames++;
         this.levelHandler?.(Math.min(1, rms * 4.5));
         this.meterFrame = requestAnimationFrame(tick);
       };
       this.meterFrame = requestAnimationFrame(tick);
     } catch {
-      this.voiceActivityAvailable = false;
-      this.levelHandler?.(0.25);
+      this.levelHandler?.(0);
     }
   }
 

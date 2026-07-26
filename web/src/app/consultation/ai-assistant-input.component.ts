@@ -100,16 +100,20 @@ import { I18nService } from '../core/i18n/i18n.service';
             </span>
           </div>
 
-          <!-- Sound waves visualizer bar -->
           <div class="mt-2.5 flex h-9 items-center justify-center gap-1.5 rounded-[4px] border border-rose-200/60 bg-slate-900/90 px-3 shadow-inner dark:border-rose-900/60 dark:bg-slate-950"
-               aria-label="Visualisateur d'ondes vocales">
+               aria-label="Niveau réel du microphone">
             @for (bar of waveformBars; track $index) {
               <span
-                class="w-1.5 rounded-full bg-gradient-to-t from-rose-500 to-amber-300 shadow-[0_0_6px_rgba(244,63,94,0.5)] transition-all duration-100"
+                class="w-1.5 rounded-full bg-gradient-to-t from-rose-500 to-amber-300 transition-[height] duration-75"
                 [style.height.px]="waveBarHeight($index)"
               ></span>
             }
           </div>
+          <p class="mt-2 text-center text-[10px] font-semibold text-[var(--text-muted)]">
+            {{ audioLevel > 0.01
+              ? i18n.t('consultation.ai.microphoneSignalDetected', 'Signal microphone détecté')
+              : i18n.t('consultation.ai.microphoneSignalWaiting', 'Parlez : les barres réagissent uniquement au son réellement capté') }}
+          </p>
         </div>
       }
 
@@ -195,10 +199,11 @@ export class AiAssistantInputComponent {
   private lastResetToken = 0;
 
   waveBarHeight(index: number): number {
-    if (!this.recording) return 6;
-    const level = Math.max(0.25, this.audioLevel || 0.35);
-    const sinFactor = 0.35 + Math.abs(Math.sin((index + 1) * 0.85 + (index % 4) * 0.95)) * 0.65;
-    return Math.round(6 + level * sinFactor * 26);
+    if (!this.recording) return 4;
+    const level = Math.min(1, Math.max(0, this.audioLevel));
+    if (level <= 0.01) return 4;
+    const shape = 0.35 + Math.abs(Math.sin((index + 1) * 0.85)) * 0.65;
+    return Math.round(4 + level * shape * 28);
   }
 
   @Input()
