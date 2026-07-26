@@ -48,6 +48,7 @@ public class AiConsultationService {
     private final AiClinicalResponseParser responseParser;
     private final ClinicalContextAssembler clinicalContextAssembler;
     private final AiClinicalGroundingGuard groundingGuard;
+    private final AiClinicalToolDispatcher toolDispatcher = new AiClinicalToolDispatcher();
     private final AiRevisionManager revisionManager;
     private final AiClarificationManager clarificationManager;
     private final ConcurrentMap<SessionKey, AiConsultationSessionState> sessions =
@@ -324,7 +325,16 @@ public class AiConsultationService {
         String resolvedClarificationField = resolvedClarificationId == null
                 ? null
                 : clarificationManager.findPending(state, resolvedClarificationId).field();
-        Map<String, Object> clinicalContext = clinicalContextAssembler.assemble(state.visitId);
+
+        Map<String, Object> clinicalContext;
+        try {
+            clinicalContext = clinicalContextAssembler.assemble(state.visitId);
+        } catch (RuntimeException exception) {
+            log.error("Contexte clinique indisponible visitId={}", state.visitId, exception);
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE, "AI_CLINICAL_CONTEXT_UNAVAILABLE");
+        }
+
         List<AiMessage> providerMessages = new ArrayList<>(state.providerMessages);
         providerMessages.add(AiMessage.user(buildUserMessage(
                 modelText, state.draft, state.locale, clinicalContext)));
@@ -339,24 +349,26 @@ public class AiConsultationService {
             ParsedResponse rawParsed = responseParser.parse(response.content());
             ParsedResponse parsed = groundingGuard.enforce(
                     rawParsed, visibleText, resolvedClarificationField, state.locale);
+            var toolPlan = toolDispatcher.dispatch(parsed);
             boolean groundingAdjustedOutput = parsed != rawParsed;
+
             if (resolvedClarificationId != null) {
                 clarificationManager.resolve(
                         state, resolvedClarificationId, clarificationAnswer);
             }
-            if (parsed.needsClarification()) {
-                clarificationManager.append(state, parsed.clarification());
+            if (toolPlan.clarification() != null) {
+                clarificationManager.append(state, toolPlan.clarification());
             }
-            RevisionView revision = parsed.needsClarification()
+            RevisionView revision = toolPlan.clarification() != null
                     ? null
-                    : revisionManager.createRevision(state, parsed.changes());
+                    : revisionManager.createRevision(state, toolPlan.changes());
             List<String> changedFields = revision == null
                     ? List.of()
                     : revision.proposals().stream()
                             .map(AiConsultationContract.FieldProposalView::field)
                             .toList();
             state.assistantMessage = parsed.assistantMessage();
-            state.needsClarification = parsed.needsClarification();
+            state.needsClarification = toolPlan.clarification() != null;
             if (transcript != null) {
                 state.transcript = transcript;
             }
