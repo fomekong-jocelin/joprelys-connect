@@ -18,6 +18,9 @@ export interface AmbientStoredChunk {
   locale: string;
   ciphertext: ArrayBuffer;
   iv: ArrayBuffer;
+  doctorReferenceCiphertext?: ArrayBuffer | null;
+  doctorReferenceIv?: ArrayBuffer | null;
+  doctorReferenceMimeType?: string | null;
   createdAt: number;
   attempts: number;
   lastAttemptAt: number | null;
@@ -91,6 +94,7 @@ export class AmbientAudioVaultService {
     mimeType: string,
     locale: string,
     plaintext: ArrayBuffer,
+    doctorReference?: ArrayBuffer | null,
   ): Promise<AmbientStoredChunk> {
     if (!this.isSupported()) throw new Error('AMBIENT_VAULT_UNSUPPORTED');
     if (!Number.isFinite(startOffsetMs) || startOffsetMs < 0) throw new Error('AMBIENT_OFFSET_INVALID');
@@ -100,15 +104,18 @@ export class AmbientAudioVaultService {
     const reservation = await this.reserveSequence(visitId);
     const id = `${reservation.sessionId}:${reservation.sequence.toString().padStart(8, '0')}`;
     const key = await this.cryptoKey();
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const additionalData = this.additionalData(visitId, id);
-    const encrypted = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv, additionalData },
+    const encryptedAudio = await this.encrypt(
       key,
       plaintext,
+      this.additionalData(visitId, id),
     );
-    const ivCopy = new Uint8Array(iv.byteLength);
-    ivCopy.set(iv);
+    const encryptedDoctorReference = doctorReference?.byteLength
+      ? await this.encrypt(
+          key,
+          doctorReference,
+          this.doctorReferenceAdditionalData(visitId, id),
+        )
+      : null;
     const record: AmbientStoredChunk = {
       id,
       visitId,
@@ -118,8 +125,11 @@ export class AmbientAudioVaultService {
       durationMs: Math.round(durationMs),
       mimeType: mimeType || 'audio/wav',
       locale: this.normalizeLocale(locale),
-      ciphertext: encrypted,
-      iv: ivCopy.buffer,
+      ciphertext: encryptedAudio.ciphertext,
+      iv: encryptedAudio.iv,
+      doctorReferenceCiphertext: encryptedDoctorReference?.ciphertext ?? null,
+      doctorReferenceIv: encryptedDoctorReference?.iv ?? null,
+      doctorReferenceMimeType: encryptedDoctorReference ? 'audio/wav' : null,
       createdAt: Date.now(),
       attempts: 0,
       lastAttemptAt: null,
@@ -145,15 +155,30 @@ export class AmbientAudioVaultService {
 
   async decrypt(record: AmbientStoredChunk): Promise<ArrayBuffer> {
     const key = await this.cryptoKey();
-    const iv = new Uint8Array(record.iv);
-    return crypto.subtle.decrypt(
-      {
-        name: 'AES-GCM',
-        iv,
-        additionalData: this.additionalData(record.visitId, record.id),
-      },
+    return this.decryptPayload(
       key,
       record.ciphertext,
+      record.iv,
+      this.additionalData(record.visitId, record.id),
+      'AMBIENT_AUDIO_DECRYPT_FAILED',
+    );
+  }
+
+  async decryptDoctorReference(record: AmbientStoredChunk): Promise<ArrayBuffer | null> {
+    const ciphertext = record.doctorReferenceCiphertext ?? null;
+    const iv = record.doctorReferenceIv ?? null;
+    const mimeType = record.doctorReferenceMimeType ?? null;
+    if (!ciphertext && !iv && !mimeType) return null;
+    if (!ciphertext || !iv || mimeType !== 'audio/wav') {
+      throw new Error('AMBIENT_DOCTOR_REFERENCE_CORRUPTED');
+    }
+    const key = await this.cryptoKey();
+    return this.decryptPayload(
+      key,
+      ciphertext,
+      iv,
+      this.doctorReferenceAdditionalData(record.visitId, record.id),
+      'AMBIENT_DOCTOR_REFERENCE_DECRYPT_FAILED',
     );
   }
 
@@ -194,7 +219,12 @@ export class AmbientAudioVaultService {
     const records = await this.listPending(visitId);
     return {
       pendingChunks: records.length,
-      encryptedBytes: records.reduce((sum, item) => sum + item.ciphertext.byteLength, 0),
+      encryptedBytes: records.reduce(
+        (sum, item) => sum
+          + item.ciphertext.byteLength
+          + (item.doctorReferenceCiphertext?.byteLength ?? 0),
+        0,
+      ),
     };
   }
 
@@ -266,8 +296,50 @@ export class AmbientAudioVaultService {
     return generated;
   }
 
+  private async encrypt(
+    key: CryptoKey,
+    plaintext: ArrayBuffer,
+    additionalData: ArrayBuffer,
+  ): Promise<{ ciphertext: ArrayBuffer; iv: ArrayBuffer }> {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv, additionalData },
+      key,
+      plaintext,
+    );
+    const ivCopy = new Uint8Array(iv.byteLength);
+    ivCopy.set(iv);
+    return { ciphertext, iv: ivCopy.buffer };
+  }
+
+  private async decryptPayload(
+    key: CryptoKey,
+    ciphertext: ArrayBuffer,
+    ivBuffer: ArrayBuffer,
+    additionalData: ArrayBuffer,
+    errorCode: string,
+  ): Promise<ArrayBuffer> {
+    try {
+      return await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: new Uint8Array(ivBuffer), additionalData },
+        key,
+        ciphertext,
+      );
+    } catch {
+      throw new Error(errorCode);
+    }
+  }
+
   private additionalData(visitId: string, chunkId: string): ArrayBuffer {
-    const encoded = new TextEncoder().encode(`joprelys-ambient:${visitId}:${chunkId}`);
+    return this.encodedAdditionalData(`joprelys-ambient:${visitId}:${chunkId}`);
+  }
+
+  private doctorReferenceAdditionalData(visitId: string, chunkId: string): ArrayBuffer {
+    return this.encodedAdditionalData(`joprelys-doctor-reference:${visitId}:${chunkId}`);
+  }
+
+  private encodedAdditionalData(value: string): ArrayBuffer {
+    const encoded = new TextEncoder().encode(value);
     const copy = new Uint8Array(encoded.byteLength);
     copy.set(encoded);
     return copy.buffer;
