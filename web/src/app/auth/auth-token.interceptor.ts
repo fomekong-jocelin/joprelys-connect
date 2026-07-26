@@ -27,13 +27,13 @@ export const authTokenInterceptor: HttpInterceptorFn = (request, next) => {
   }
 
   const sendWithToken = (token: string) => next(withBearerToken(request, token));
-  const refreshAndRetry = () =>
-    sessionRecovery.refreshAccessToken().pipe(
+  const refreshAndRetry = (rejectedToken: string) =>
+    sessionRecovery.refreshAccessToken(rejectedToken).pipe(
       switchMap((freshToken) => sendWithToken(freshToken)),
       catchError((error: HttpErrorResponse) => {
         // A rejected refresh means the authentication session is no longer usable.
-        // Server/network errors must remain visible and must not be reclassified as
-        // an expired session.
+        // Server/network/concurrent-refresh errors must remain visible and must not
+        // be reclassified as an expired session.
         if (error.status === 401 || error.status === 403) {
           sessionRecovery.expireSession();
         }
@@ -41,8 +41,28 @@ export const authTokenInterceptor: HttpInterceptorFn = (request, next) => {
       }),
     );
 
+  const recoverRejectedToken = (rejectedToken: string) => {
+    const latest = tokenStorage.session();
+    if (latest
+      && latest.accessToken !== rejectedToken
+      && !tokenStorage.isExpired()) {
+      // Another request or browser tab already refreshed the session while this
+      // request was in flight. Reuse that token instead of rotating the shared
+      // HttpOnly refresh cookie again.
+      return sendWithToken(latest.accessToken).pipe(
+        catchError((retryError: HttpErrorResponse) => {
+          if (retryError.status === 401) {
+            return refreshAndRetry(latest.accessToken);
+          }
+          return throwError(() => retryError);
+        }),
+      );
+    }
+    return refreshAndRetry(rejectedToken);
+  };
+
   if (tokenStorage.isExpired()) {
-    return refreshAndRetry();
+    return refreshAndRetry(session.accessToken);
   }
 
   return sendWithToken(session.accessToken).pipe(
@@ -51,7 +71,7 @@ export const authTokenInterceptor: HttpInterceptorFn = (request, next) => {
       // 403 is an authorization refusal: refreshing the token cannot grant a
       // permission and, critically, must never log the user out.
       if (error.status === 401) {
-        return refreshAndRetry();
+        return recoverRejectedToken(session.accessToken);
       }
       return throwError(() => error);
     }),
