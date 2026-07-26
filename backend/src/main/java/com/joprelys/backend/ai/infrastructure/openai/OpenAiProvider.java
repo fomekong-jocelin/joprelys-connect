@@ -6,6 +6,7 @@ import com.joprelys.backend.ai.domain.AiProvider;
 import com.joprelys.backend.ai.domain.AiTranscription;
 import com.joprelys.backend.ai.infrastructure.AiProperties;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -85,13 +86,43 @@ public class OpenAiProvider implements AiProvider {
     public AiChatResponse chat(List<AiMessage> messages, String systemPrompt) {
         log.debug("Chat via OpenAI (modèle={}, messages={})", config.model(), messages.size());
 
-        List<Map<String, String>> apiMessages = buildApiMessages(messages, systemPrompt);
-        Map<String, Object> requestBody = new java.util.HashMap<>(Map.of(
-                "model", config.model(),
-                "messages", apiMessages));
-        if (supportsCustomTemperature(config.model())) {
-            requestBody.put("temperature", 0.3);
+        Map<String, Object> requestBody = baseChatRequest(messages, systemPrompt);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> response = restClient.post()
+                .uri("/chat/completions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(requestBody)
+                .retrieve()
+                .body(Map.class);
+
+        return parseCompletionResponse(response, false);
+    }
+
+    @Override
+    public AiChatResponse chatStructured(
+            List<AiMessage> messages,
+            String systemPrompt,
+            String schemaName,
+            Map<String, Object> schema) {
+        if (schemaName == null
+                || !schemaName.matches("[A-Za-z0-9_-]{1,64}")
+                || schema == null
+                || schema.isEmpty()) {
+            throw new IllegalArgumentException("AI_STRUCTURED_OUTPUT_SCHEMA_INVALID");
         }
+        log.debug(
+                "Structured chat via OpenAI (modèle={}, messages={}, schema={})",
+                config.model(),
+                messages.size(),
+                schemaName);
+
+        Map<String, Object> requestBody = baseChatRequest(messages, systemPrompt);
+        requestBody.put("response_format", Map.of(
+                "type", "json_schema",
+                "json_schema", Map.of(
+                        "name", schemaName,
+                        "strict", true,
+                        "schema", schema)));
 
         @SuppressWarnings("unchecked")
         Map<String, Object> response = restClient.post()
@@ -101,7 +132,20 @@ public class OpenAiProvider implements AiProvider {
                 .retrieve()
                 .body(Map.class);
 
-        return parseCompletionResponse(response);
+        return parseCompletionResponse(response, true);
+    }
+
+    private Map<String, Object> baseChatRequest(
+            List<AiMessage> messages,
+            String systemPrompt) {
+        List<Map<String, String>> apiMessages = buildApiMessages(messages, systemPrompt);
+        Map<String, Object> requestBody = new HashMap<>(Map.of(
+                "model", config.model(),
+                "messages", apiMessages));
+        if (supportsCustomTemperature(config.model())) {
+            requestBody.put("temperature", 0.0);
+        }
+        return requestBody;
     }
 
     private boolean supportsCustomTemperature(String model) {
@@ -176,7 +220,9 @@ public class OpenAiProvider implements AiProvider {
     }
 
     @SuppressWarnings("unchecked")
-    private AiChatResponse parseCompletionResponse(Map<String, Object> response) {
+    private AiChatResponse parseCompletionResponse(
+            Map<String, Object> response,
+            boolean structured) {
         if (response == null) {
             throw new IllegalStateException("Réponse vide de l'API Chat Completions");
         }
@@ -187,7 +233,17 @@ public class OpenAiProvider implements AiProvider {
         }
 
         Map<String, Object> message = (Map<String, Object>) choices.getFirst().get("message");
-        String content = (String) message.get("content");
+        if (message == null) {
+            throw new IllegalStateException("AI_STRUCTURED_OUTPUT_INVALID");
+        }
+        if (structured && message.get("refusal") instanceof String refusal && !refusal.isBlank()) {
+            throw new IllegalStateException("AI_STRUCTURED_OUTPUT_REFUSED");
+        }
+        Object rawContent = message.get("content");
+        if (!(rawContent instanceof String content) || content.isBlank()) {
+            throw new IllegalStateException(
+                    structured ? "AI_STRUCTURED_OUTPUT_INVALID" : "AI_OUTPUT_INVALID");
+        }
         Integer tokensUsed = extractTotalTokens(response);
         String model = (String) response.get("model");
         return new AiChatResponse(content, tokensUsed, model);
