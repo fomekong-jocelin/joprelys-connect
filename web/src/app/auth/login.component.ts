@@ -253,7 +253,10 @@ export class LoginComponent {
   }
 
   private resolveInitialMode(): LoginMode {
-    return this.route?.snapshot.queryParamMap.get('mode') === 'patient' ? 'patient' : 'staff';
+    const routeMode = this.route?.snapshot.data?.['loginMode'];
+    return routeMode === 'patient' || this.route?.snapshot.queryParamMap.get('mode') === 'patient'
+      ? 'patient'
+      : 'staff';
   }
 
   private resolveInitialError(): string | null {
