@@ -12,6 +12,7 @@ describe('AmbientAudioUploadService', () => {
     stats: ReturnType<typeof vi.fn>;
     listPending: ReturnType<typeof vi.fn>;
     decrypt: ReturnType<typeof vi.fn>;
+    decryptDoctorReference: ReturnType<typeof vi.fn>;
     acknowledge: ReturnType<typeof vi.fn>;
     markAttempt: ReturnType<typeof vi.fn>;
   };
@@ -25,6 +26,7 @@ describe('AmbientAudioUploadService', () => {
       })),
       listPending: vi.fn().mockImplementation(async () => [...pending]),
       decrypt: vi.fn().mockResolvedValue(new Uint8Array([82, 73, 70, 70]).buffer),
+      decryptDoctorReference: vi.fn().mockResolvedValue(null),
       acknowledge: vi.fn().mockImplementation(async (id: string) => {
         pending = pending.filter(item => item.id !== id);
       }),
@@ -68,6 +70,52 @@ describe('AmbientAudioUploadService', () => {
 
     expect(vault.acknowledge).toHaveBeenCalledWith('session:00000001');
     expect(pending).toHaveLength(0);
+  });
+
+  it('should upload a calibrated chunk as multipart with its exact doctor reference', async () => {
+    pending = [chunk('session:00000006')];
+    vault.decryptDoctorReference.mockResolvedValueOnce(new Uint8Array([1, 2, 3, 4]).buffer);
+
+    const upload = service.flush('visit-1');
+    await settle();
+
+    const request = http.expectOne(
+      '/api/ai/consultations/visit-1/ambient/transcriptions/audio-with-doctor-reference',
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toBeInstanceOf(FormData);
+    const formData = request.request.body as FormData;
+    const ambient = formData.get('audio');
+    const doctorReference = formData.get('doctorReference');
+    expect(ambient).toBeInstanceOf(Blob);
+    expect(doctorReference).toBeInstanceOf(Blob);
+    expect((doctorReference as Blob).type).toBe('audio/wav');
+    expect(request.request.headers.has('Content-Type')).toBe(false);
+    expect(vault.acknowledge).not.toHaveBeenCalled();
+
+    request.flush([]);
+    await upload;
+
+    expect(vault.acknowledge).toHaveBeenCalledWith('session:00000006');
+  });
+
+  it('should fail closed when a calibrated chunk reference is missing or corrupted', async () => {
+    pending = [chunk('session:00000007')];
+    vault.decryptDoctorReference.mockRejectedValueOnce(
+      new Error('AMBIENT_DOCTOR_REFERENCE_CORRUPTED'),
+    );
+
+    await service.flush('visit-1');
+
+    http.expectNone('/api/ai/consultations/visit-1/ambient/transcriptions/audio');
+    http.expectNone('/api/ai/consultations/visit-1/ambient/transcriptions/audio-with-doctor-reference');
+    expect(vault.markAttempt).toHaveBeenCalledWith(
+      'session:00000007',
+      'AMBIENT_DOCTOR_REFERENCE_CORRUPTED',
+    );
+    expect(vault.acknowledge).not.toHaveBeenCalled();
+    expect(pending).toHaveLength(1);
+    expect((service as any).retryTimer).toBeNull();
   });
 
   it('should retain chunk and record attempt when server is unavailable', async () => {
