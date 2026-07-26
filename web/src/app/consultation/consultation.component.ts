@@ -6,6 +6,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { LabOrderApiService } from '../clinic/lab/lab-api.service';
 import { ExamType } from '../clinic/lab/lab.models';
 import { I18nService } from '../core/i18n/i18n.service';
+import { PatientApiService } from '../patient/patient-api.service';
 import {
   Patient,
   PatientAllergy,
@@ -48,7 +49,7 @@ export class ConsultationComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly consultationApi = inject(ConsultationApiService);
   private readonly visitApi = inject(VisitApiService);
-  private readonly patientApi = inject(import('../patient/patient-api.service').then ? null as never : null as never);
+  private readonly patientApi = inject(PatientApiService);
   private readonly labOrderApi = inject(LabOrderApiService);
   readonly i18n = inject(I18nService);
 
