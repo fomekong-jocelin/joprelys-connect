@@ -6,7 +6,7 @@
   aria-live="polite"
 >
   <div
-    class="flex max-h-[calc(100dvh-0.75rem)] flex-col overflow-hidden rounded-t-[8px] border border-cyan-200/80 bg-[var(--app-surface)] shadow-2xl dark:border-cyan-900/70 sm:max-h-[calc(100dvh-1.5rem)] sm:rounded-[8px]">
+    class="flex max-h-[calc(100dvh-0.75rem)] flex-col overflow-hidden rounded-t-[6px] border border-cyan-200/80 bg-[var(--app-surface)] shadow-2xl dark:border-cyan-900/70 sm:max-h-[calc(100dvh-1.5rem)] sm:rounded-[6px]">
     <header
       class="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-3 py-2.5 sm:px-4">
       <button
@@ -16,7 +16,7 @@
         [attr.aria-expanded]="expanded()"
       >
         <span
-          class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300">
+          class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px] bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300">
           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z"/>
@@ -42,7 +42,7 @@
 
       <button
         type="button"
-        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[8px] text-[var(--text-muted)] hover:bg-[var(--app-surface)]"
+        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:bg-[var(--app-surface)]"
         (click)="toggleExpanded()"
         [attr.aria-label]="i18n.t('vitals.assistant.toggle', 'Afficher ou réduire l’assistant')"
       >
@@ -56,7 +56,7 @@
     @if (expanded()) {
       <div class="space-y-3 overflow-y-auto overscroll-contain p-3 sm:p-4">
         <details
-          class="rounded-[6px] border border-cyan-100 bg-cyan-50/60 text-xs text-cyan-950 dark:border-cyan-950 dark:bg-cyan-950/20 dark:text-cyan-100">
+          class="rounded-[4px] border border-cyan-100 bg-cyan-50/60 text-xs text-cyan-950 dark:border-cyan-950 dark:bg-cyan-950/20 dark:text-cyan-100">
           <summary class="min-h-11 cursor-pointer px-3 py-3 font-bold">
             {{ i18n.t('vitals.assistant.exampleTitle', 'Vous pouvez dire :') }}
           </summary>
@@ -65,28 +65,70 @@
           </p>
         </details>
 
-        @if (!realtimeEnabled()) {
-          <button
-            type="button"
-            (click)="enableRealtime()"
-            [disabled]="disabled"
-            class="flex min-h-12 w-full items-center justify-between gap-3 rounded-[8px] border border-cyan-200 bg-cyan-50/70 px-4 py-3 text-left transition hover:bg-cyan-100/70 disabled:opacity-50 dark:border-cyan-900 dark:bg-cyan-950/25 dark:hover:bg-cyan-950/40"
-          >
-            <span>
-              <span class="block text-xs font-extrabold text-cyan-900 dark:text-cyan-100">
-                {{ i18n.t('vitals.assistant.realtimeActivate', 'Activer l’écoute Realtime') }}
+        <div class="rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] p-3 shadow-sm">
+          <p class="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-muted)]">
+            {{ i18n.t('vitals.assistant.voiceModeTitle', 'Mode vocal') }}
+          </p>
+
+          <div class="grid grid-cols-2 gap-2" role="group"
+               [attr.aria-label]="i18n.t('vitals.assistant.voiceModeTitle', 'Mode vocal')">
+            <button
+              type="button"
+              (click)="enableRealtime()"
+              [disabled]="disabled || busy() || recording() || speaking()"
+              [attr.aria-pressed]="realtimeEnabled()"
+              class="flex min-h-14 items-center gap-2 rounded-[4px] border px-3 py-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-50"
+              [ngClass]="realtimeEnabled()
+                ? 'border-[var(--brand-primary)] bg-cyan-50/70 shadow-sm dark:bg-cyan-950/20'
+                : 'border-[var(--app-border)] bg-[var(--app-surface)] hover:border-cyan-300 hover:bg-[var(--app-surface-muted)]'"
+            >
+              <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px]"
+                    [ngClass]="realtimeEnabled() ? 'bg-[var(--brand-primary)] text-white' : 'bg-[var(--app-surface-muted)] text-[var(--text-secondary)]'">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z"/>
+                </svg>
               </span>
-              <span class="mt-0.5 block text-[10px] leading-4 text-cyan-800/80 dark:text-cyan-200/80">
-                {{ i18n.t('vitals.assistant.realtimeConsent', 'Le microphone ne s’ouvre qu’après votre activation et se coupe lorsque vous quittez ce mode.') }}
+              <span class="min-w-0">
+                <span class="block text-xs font-extrabold text-[var(--text-primary)]">
+                  {{ i18n.t('vitals.assistant.realtimeMode', 'Temps réel') }}
+                </span>
+                <span class="mt-0.5 block text-[10px] leading-4 text-[var(--text-muted)]">
+                  {{ i18n.t('vitals.assistant.realtimeModeHelp', 'Micro continu') }}
+                </span>
               </span>
-            </span>
-            <svg class="h-5 w-5 shrink-0 text-cyan-700 dark:text-cyan-300" fill="none" viewBox="0 0 24 24"
-                 stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z"/>
-            </svg>
-          </button>
-        } @else {
+            </button>
+
+            <button
+              type="button"
+              (click)="disableRealtime()"
+              [disabled]="disabled || busy() || recording() || speaking()"
+              [attr.aria-pressed]="!realtimeEnabled()"
+              class="flex min-h-14 items-center gap-2 rounded-[4px] border px-3 py-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-50"
+              [ngClass]="!realtimeEnabled()
+                ? 'border-[var(--brand-primary)] bg-cyan-50/70 shadow-sm dark:bg-cyan-950/20'
+                : 'border-[var(--app-border)] bg-[var(--app-surface)] hover:border-cyan-300 hover:bg-[var(--app-surface-muted)]'"
+            >
+              <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px]"
+                    [ngClass]="!realtimeEnabled() ? 'bg-[var(--brand-primary)] text-white' : 'bg-[var(--app-surface-muted)] text-[var(--text-secondary)]'">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12h6m-6 4h6M8 3h8a2 2 0 012 2v14a2 2 0 01-2 2H8a2 2 0 01-2-2V5a2 2 0 012-2z"/>
+                </svg>
+              </span>
+              <span class="min-w-0">
+                <span class="block text-xs font-extrabold text-[var(--text-primary)]">
+                  {{ i18n.t('vitals.assistant.dictationMode', 'Dictée') }}
+                </span>
+                <span class="mt-0.5 block text-[10px] leading-4 text-[var(--text-muted)]">
+                  {{ i18n.t('vitals.assistant.dictationModeHelp', 'Enregistrement ponctuel') }}
+                </span>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        @if (realtimeEnabled()) {
           <app-realtime-vitals-controller
             [visitId]="visitId"
             [currentVitals]="currentVitals"
@@ -96,17 +138,10 @@
             (activeChange)="realtimeActive.set($event)"
             (realtimeError)="errorMessage.set($event)"
           />
-          <button
-            type="button"
-            (click)="disableRealtime()"
-            class="min-h-11 w-full rounded-[6px] px-3 text-[11px] font-bold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] sm:w-auto"
-          >
-            {{ i18n.t('vitals.assistant.realtimeBackToClassic', 'Revenir à la dictée classique') }}
-          </button>
         }
 
-        @if (recording() || speaking()) {
-          <div class="flex h-12 items-center justify-center gap-1 rounded-[8px] bg-[var(--app-surface-muted)] px-3"
+        @if (!realtimeEnabled() && (recording() || speaking())) {
+          <div class="flex h-12 items-center justify-center gap-1 rounded-[4px] bg-[var(--app-surface-muted)] px-3"
                aria-hidden="true">
             @for (bar of waveformBars; track $index) {
               <span class="w-1 rounded-full bg-cyan-500 transition-[height] duration-75"
@@ -122,7 +157,7 @@
               type="button"
               (click)="toggleRecording()"
               [disabled]="disabled || busy() || !mediaRecorderSupported"
-              class="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[8px] px-4 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              class="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[4px] px-4 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
               [ngClass]="recording() ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]'"
             >
               <span class="relative inline-flex h-6 w-6 items-center justify-center">
@@ -152,7 +187,7 @@
             type="button"
             (click)="sendText()"
             [disabled]="disabled || busy() || recording() || !textInput.trim()"
-            class="inline-flex min-h-12 w-full items-center justify-center rounded-[8px] border border-[var(--app-border)] px-4 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--app-surface-muted)] disabled:opacity-50 sm:w-auto"
+            class="inline-flex min-h-12 w-full items-center justify-center rounded-[4px] border border-[var(--app-border)] px-4 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--app-surface-muted)] disabled:opacity-50 sm:w-auto"
           >
             {{ i18n.t('vitals.assistant.analyze', 'Analyser') }}
           </button>
@@ -173,14 +208,14 @@
 
         @if (errorMessage()) {
           <div
-            class="rounded-[8px] border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300"
+            class="rounded-[4px] border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300"
             role="alert">
             {{ errorMessage() }}
           </div>
         }
 
         @if (lastTranscript()) {
-          <div class="rounded-[8px] border border-[var(--app-border)] p-3">
+          <div class="rounded-[4px] border border-[var(--app-border)] p-3">
             <p class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-muted)]">
               {{ i18n.t('vitals.assistant.heard', 'J’ai entendu') }}
             </p>
@@ -189,7 +224,7 @@
         }
 
         @if (assistantMessage()) {
-          <div class="rounded-[8px] border p-3"
+          <div class="rounded-[4px] border p-3"
                [ngClass]="needsConfirmation() ? 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/25' : 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/25'">
             <div class="flex items-start gap-2">
               <span class="mt-0.5 text-base" aria-hidden="true">{{ needsConfirmation() ? '⚠️' : '✓' }}</span>
@@ -210,7 +245,7 @@
             </p>
             <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
               @for (entry of proposalEntries(); track entry[0]) {
-                <div class="rounded-[8px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-3 py-2">
+                <div class="rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-3 py-2">
                   <span
                     class="block text-[9px] font-extrabold uppercase tracking-wide text-[var(--text-muted)]">{{ labelFor(entry[0]) }}</span>
                   <span
