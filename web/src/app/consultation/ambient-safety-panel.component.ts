@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, signal } from '@angular/core';
 import { AmbientSpeakerReviewComponent } from './ambient-speaker-review.component';
 import { DoctorVoiceCalibrationComponent } from './doctor-voice-calibration.component';
 
@@ -7,14 +7,18 @@ import { DoctorVoiceCalibrationComponent } from './doctor-voice-calibration.comp
   standalone: true,
   imports: [DoctorVoiceCalibrationComponent, AmbientSpeakerReviewComponent],
   template: `
-    <div class="space-y-3">
-      <app-doctor-voice-calibration [visitId]="visitId" />
-      <section class="rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] p-3 shadow-sm">
-        <app-ambient-speaker-review [visitId]="visitId" />
-      </section>
+    <div class="space-y-2">
+      <app-ambient-speaker-review
+        [visitId]="visitId"
+        (ambiguityChange)="pendingAmbiguities.set($event)"
+      />
+      @if (pendingAmbiguities() > 0) {
+        <app-doctor-voice-calibration [visitId]="visitId" [compact]="true" />
+      }
     </div>
   `,
 })
 export class AmbientSafetyPanelComponent {
   @Input({ required: true }) visitId = '';
+  readonly pendingAmbiguities = signal(0);
 }

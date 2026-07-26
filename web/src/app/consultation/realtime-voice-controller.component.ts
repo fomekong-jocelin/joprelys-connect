@@ -38,103 +38,58 @@ const MAX_SEEN_TRANSCRIPT_IDS = 512;
   imports: [CommonModule],
   template: `
     @if (enabled) {
-      <div class="rounded-[8px] border border-cyan-200 bg-cyan-50/60 p-3 dark:border-cyan-900 dark:bg-cyan-950/20">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div class="min-w-0">
-            <div class="flex items-center gap-2">
-              <span class="h-2.5 w-2.5 rounded-full"
-                [ngClass]="state().connected ? 'animate-pulse bg-emerald-500' : state().connecting ? 'animate-pulse bg-amber-500' : 'bg-rose-500'">
-              </span>
-              <p class="text-xs font-black text-[var(--text-primary)]">{{ statusLabel() }}</p>
-            </div>
-            <p class="mt-1 text-[11px] leading-4 text-[var(--text-muted)]">
-              @if (state().connected) {
-                {{ i18n.t('consultation.ai.realtimeGovernedHelp', 'Écoute clinique continue. Les tours entendus sont journalisés dans l’ordre ; la capture de sécurité chiffrée reste indépendante.') }}
-              } @else if (ambientState().active) {
-                {{ i18n.t('consultation.ai.realtimeRecoveryWithSafety', 'Le temps réel est interrompu, mais la capture locale chiffrée continue. Joprelys renverra l’audio après reconnexion.') }}
-              } @else if (manualMuted) {
-                {{ i18n.t('consultation.ai.microphoneExplicitlyStopped', 'Microphone coupé par le clinicien. Aucune capture audio n’est active.') }}
-              } @else {
-                {{ i18n.t('consultation.ai.realtimeRecoveryHelp', 'Ne poursuivez pas la dictée : ni le temps réel ni la capture de sécurité ne sont actuellement garantis.') }}
-              }
-            </p>
+      <section class="rounded-[6px] border border-cyan-200 bg-cyan-50/45 p-4 shadow-sm dark:border-cyan-900 dark:bg-cyan-950/15">
+        <div class="flex items-start gap-3">
+          <span
+            class="mt-1 h-3 w-3 shrink-0 rounded-full"
+            [ngClass]="statusDotClasses()"
+            aria-hidden="true"
+          ></span>
+          <div class="min-w-0 flex-1">
+            <p class="text-base font-black text-[var(--text-primary)]">{{ statusLabel() }}</p>
+            <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">{{ statusHelp() }}</p>
           </div>
-          <button type="button" (click)="toggleMute()" [disabled]="!canToggleMute()"
-            class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-[6px] border border-cyan-300 bg-white px-4 py-2 text-xs font-bold text-cyan-800 shadow-sm hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-cyan-800 dark:bg-slate-950 dark:text-cyan-200">
-            <span class="h-2 w-2 rounded-full" [ngClass]="effectiveMuted() ? 'bg-slate-400' : 'animate-pulse bg-rose-500'"></span>
-            {{ effectiveMuted() ? i18n.t('consultation.ai.realtimeUnmute', 'Réactiver le micro') : i18n.t('consultation.ai.realtimeMute', 'Couper le micro') }}
+        </div>
+
+        @if (showSafetyAlert()) {
+          <div
+            class="mt-3 rounded-[4px] border px-3 py-2 text-xs font-bold"
+            [ngClass]="safetyAlertClasses()"
+          >
+            {{ safetyAlertText() }}
+          </div>
+        }
+
+        <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <button
+            type="button"
+            (click)="toggleMute()"
+            [disabled]="!canToggleMute()"
+            class="min-h-11 rounded-[5px] border border-cyan-300 bg-white px-4 py-2 text-sm font-bold text-cyan-800 shadow-sm hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-cyan-800 dark:bg-slate-950 dark:text-cyan-200"
+          >
+            {{ manualMuted
+              ? i18n.t('consultation.ai.resumeListening', 'Reprendre')
+              : i18n.t('consultation.ai.pauseListening', 'Mettre en pause') }}
+          </button>
+
+          <button
+            type="button"
+            (click)="switchToDictation.emit()"
+            [disabled]="processing()"
+            class="min-h-11 rounded-[5px] border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-2 text-sm font-bold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] disabled:opacity-50"
+          >
+            {{ i18n.t('consultation.ai.switchToDictation', 'Passer en dictée') }}
+          </button>
+
+          <button
+            type="button"
+            (click)="endSession.emit()"
+            class="min-h-11 rounded-[5px] border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-2 text-sm font-bold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)]"
+          >
+            {{ i18n.t('consultation.ai.finishListening', 'Terminer') }}
           </button>
         </div>
-
-        <div class="mt-3 grid gap-2 sm:grid-cols-2">
-          <div class="rounded-[5px] border px-3 py-2 text-[11px]"
-            [ngClass]="ambientState().active
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-200'
-              : ambientState().starting || ambientState().recovering
-                ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200'
-                : 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-200'">
-            <div class="font-black">{{ ambientStatusLabel() }}</div>
-            <div class="mt-0.5 opacity-90">
-              @if (!ambientState().online) {
-                Audio sécurisé conservé localement · en attente du réseau
-              } @else if (ambientState().uploading || ambientState().pendingChunks > 0) {
-                Sauvegarde clinique chiffrée · synchronisation en arrière-plan
-              } @else {
-                Sauvegarde clinique chiffrée · à jour
-              }
-            </div>
-          </div>
-          <div class="rounded-[5px] border border-slate-200 bg-white px-3 py-2 text-[11px] text-[var(--text-muted)] dark:border-slate-800 dark:bg-slate-950">
-            <div class="font-black text-[var(--text-primary)]">
-              {{ i18n.t('consultation.ai.ambientEvidence', 'Preuve clinique ambient') }}
-            </div>
-            <div class="mt-0.5">
-              {{ i18n.t('consultation.ai.ambientEvidenceHelp', 'Audio local chiffré → diarisation → transcript final auditable. Aucun audio non confirmé n’est supprimé.') }}
-            </div>
-          </div>
-        </div>
-
-        @if (ambientState().storagePressure) {
-          <div class="mt-2 rounded-[5px] border border-rose-300 bg-rose-50 px-3 py-2 text-[11px] font-bold text-rose-900 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-100">
-            {{ i18n.t('consultation.ai.ambientStoragePressure', 'Stockage local presque saturé. Joprelys ne supprimera aucun audio non confirmé : rétablissez la connexion ou libérez de l’espace avant de poursuivre.') }}
-          </div>
-        }
-
-        @if (state().connected) {
-          <div class="mt-3 flex h-9 items-center justify-center gap-[3px]" aria-hidden="true">
-            @for (bar of bars; track $index) {
-              <span class="w-[3px] rounded-full bg-cyan-600/75 transition-all dark:bg-cyan-300/80"
-                [class.animate-pulse]="state().userSpeaking || state().assistantSpeaking"
-                [style.height.px]="barHeight($index)"></span>
-            }
-          </div>
-          <div class="mt-1 text-center text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-            @if (blocked || backlogPaused) {
-              {{ ambientState().active
-                ? i18n.t('consultation.ai.realtimeValidationPauseSafety', 'Écoute Realtime en pause — capture sécurisée continue')
-                : i18n.t('consultation.ai.realtimeValidationPause', 'Micro en pause') }}
-            } @else if (processing()) {
-              {{ i18n.t('consultation.ai.realtimeIntakeSaving', 'Écoute continue — journalisation clinique en cours') }}
-            } @else if (state().assistantSpeaking) {
-              {{ i18n.t('consultation.ai.realtimeAssistantSpeaking', 'Joprelys vous répond…') }}
-            } @else if (state().userSpeaking) {
-              {{ i18n.t('consultation.ai.realtimeListening', 'Je vous écoute…') }}
-            } @else {
-              {{ i18n.t('consultation.ai.realtimeReady', 'Micro en direct — parlez naturellement') }}
-            }
-          </div>
-        } @else {
-          <div class="mt-3 rounded-[4px] border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
-            {{ manualMuted
-              ? i18n.t('consultation.ai.microphoneExplicitlyStopped', 'Microphone coupé par le clinicien. Aucune capture audio n’est active.')
-              : state().connecting
-                ? i18n.t('consultation.ai.realtimeRecovering', 'Reconnexion audio temps réel en cours…')
-                : ambientState().active
-                  ? i18n.t('consultation.ai.realtimeDisconnectedSafety', 'Temps réel interrompu — capture chiffrée locale toujours active.')
-                  : i18n.t('consultation.ai.realtimeDisconnected', 'Audio temps réel interrompu — n’enregistrez pas tant que la sécurité audio n’est pas rétablie.') }}
-          </div>
-        }
-      </div>
+      </section>
     }
   `,
 })
@@ -151,8 +106,16 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   @Output() readonly message = new EventEmitter<AiMessageResponse>();
   @Output() readonly activeChange = new EventEmitter<boolean>();
   @Output() readonly realtimeError = new EventEmitter<string>();
+  @Output() readonly switchToDictation = new EventEmitter<void>();
+  @Output() readonly endSession = new EventEmitter<void>();
 
-  readonly state = signal<RealtimeVoiceState>({ connected: false, connecting: false, userSpeaking: false, assistantSpeaking: false, muted: false });
+  readonly state = signal<RealtimeVoiceState>({
+    connected: false,
+    connecting: false,
+    userSpeaking: false,
+    assistantSpeaking: false,
+    muted: false,
+  });
   readonly ambientState = signal<AmbientCaptureState>({
     supported: true,
     active: false,
@@ -166,7 +129,6 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     lastError: null,
   });
   readonly processing = signal(false);
-  readonly bars = Array.from({ length: 24 });
 
   private readonly subscriptions = new Subscription();
   private readonly transcriptQueue: RealtimeTranscriptTurn[] = [];
@@ -189,13 +151,19 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       this.activeChange.emit(state.connected);
       if (state.connected && !wasConnected) {
         this.syncMute();
-        this.speakCurrentApprovedTurn();
+        this.speakPendingClarification();
         this.drainTranscriptQueue();
       }
     }));
-    this.subscriptions.add(this.ambientCapture.state$.subscribe(state => this.ambientState.set(state)));
-    this.subscriptions.add(this.bridge.transcript$.subscribe(turn => this.enqueueTranscript(turn)));
-    this.subscriptions.add(this.bridge.error$.subscribe(message => this.realtimeError.emit(message)));
+    this.subscriptions.add(
+      this.ambientCapture.state$.subscribe(state => this.ambientState.set(state)),
+    );
+    this.subscriptions.add(
+      this.bridge.transcript$.subscribe(turn => this.enqueueTranscript(turn)),
+    );
+    this.subscriptions.add(
+      this.bridge.error$.subscribe(message => this.realtimeError.emit(message)),
+    );
     this.subscriptions.add(this.bridge.assistantTurnCompleted$.subscribe(() => {
       setTimeout(() => this.syncMute(), 120);
     }));
@@ -214,7 +182,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       if (!this.blocked) this.drainTranscriptQueue();
     }
     if (changes['session'] && this.state().connected && this.connectedVisitId === this.visitId) {
-      this.speakCurrentApprovedTurn();
+      this.speakPendingClarification();
     }
   }
 
@@ -245,24 +213,72 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   }
 
   statusLabel(): string {
-    if (this.manualMuted) return this.i18n.t('consultation.ai.microphoneStopped', 'Microphone coupé');
-    if (this.state().connecting) return this.i18n.t('consultation.ai.realtimeRecovering', 'Reconnexion audio en cours…');
-    if (this.state().connected) return this.i18n.t('consultation.ai.realtimeConnected', 'Copilote Realtime sécurisé');
-    return this.i18n.t('consultation.ai.realtimeDisconnected', 'Audio temps réel interrompu');
+    if (this.manualMuted) return this.i18n.t('consultation.ai.listeningPaused', 'En pause');
+    if (this.state().assistantSpeaking) return this.i18n.t('consultation.ai.assistantSpeakingSimple', 'Joprelys parle');
+    if (this.backlogPaused) return this.i18n.t('consultation.ai.realtimeCatchingUp', 'Un instant…');
+    if (this.state().connecting) return this.i18n.t('consultation.ai.connectingAudio', 'Connexion audio…');
+    if (this.state().connected) return this.i18n.t('consultation.ai.simpleListening', 'Je vous écoute');
+    if (this.ambientState().active) return this.i18n.t('consultation.ai.reconnectingSimple', 'Reconnexion audio…');
+    return this.i18n.t('consultation.ai.audioUnavailableSimple', 'Audio indisponible');
   }
 
-  ambientStatusLabel(): string {
-    const ambient = this.ambientState();
-    if (ambient.active) return this.i18n.t('consultation.ai.ambientActive', 'Capture de sécurité active');
-    if (ambient.starting) return this.i18n.t('consultation.ai.ambientStarting', 'Initialisation de la capture sécurisée…');
-    if (ambient.recovering) return this.i18n.t('consultation.ai.ambientRecovering', 'Récupération de la capture sécurisée…');
-    return this.i18n.t('consultation.ai.ambientInactive', 'Capture de sécurité inactive');
+  statusHelp(): string {
+    if (this.manualMuted) {
+      return this.i18n.t('consultation.ai.pausedHelp', 'Appuyez sur Reprendre lorsque vous souhaitez continuer la consultation.');
+    }
+    if (this.state().assistantSpeaking) {
+      return this.i18n.t('consultation.ai.assistantSpeakingHelp', 'Écoutez la question puis répondez naturellement.');
+    }
+    if (this.backlogPaused) {
+      return this.i18n.t('consultation.ai.catchingUpHelp', 'Joprelys sécurise les dernières secondes avant de reprendre automatiquement.');
+    }
+    if (this.state().connected) {
+      return this.i18n.t('consultation.ai.simpleListeningHelp', 'Parlez naturellement avec le patient. Vous n’avez rien d’autre à faire.');
+    }
+    if (this.ambientState().active) {
+      return this.i18n.t('consultation.ai.reconnectingProtectedHelp', 'Votre consultation reste protégée pendant la reconnexion.');
+    }
+    return this.i18n.t('consultation.ai.audioUnavailableHelp', 'Ne poursuivez pas la dictée avant le rétablissement de l’audio.');
   }
 
-  barHeight(index: number): number {
-    const active = this.state().userSpeaking || this.state().assistantSpeaking;
-    const wave = 0.35 + Math.abs(Math.sin((index + 1) * 0.82)) * 0.65;
-    return Math.round(6 + wave * (active ? 25 : 8));
+  statusDotClasses(): string {
+    if (this.manualMuted) return 'bg-slate-400';
+    if (this.state().connected && !this.backlogPaused) return 'animate-pulse bg-emerald-500';
+    if (this.state().connecting || this.ambientState().active || this.backlogPaused) return 'animate-pulse bg-amber-500';
+    return 'bg-rose-500';
+  }
+
+  showSafetyAlert(): boolean {
+    if (this.manualMuted) return false;
+    return this.ambientState().storagePressure
+      || (!this.ambientState().active && !this.ambientState().starting && !this.state().connected)
+      || (!this.state().connected && this.ambientState().active);
+  }
+
+  safetyAlertText(): string {
+    if (this.ambientState().storagePressure) {
+      return this.i18n.t(
+        'consultation.ai.storageCriticalSimple',
+        'Espace de sécurité presque saturé. Rétablissez la connexion ou libérez de l’espace avant de poursuivre.',
+      );
+    }
+    if (!this.state().connected && this.ambientState().active) {
+      return this.i18n.t(
+        'consultation.ai.realtimeProtectedReconnectSimple',
+        'Temps réel interrompu. La consultation reste enregistrée localement et sera synchronisée automatiquement.',
+      );
+    }
+    return this.i18n.t(
+      'consultation.ai.audioProtectionUnavailableSimple',
+      'La protection audio n’est pas garantie. Attendez le rétablissement avant de poursuivre.',
+    );
+  }
+
+  safetyAlertClasses(): string {
+    if (this.ambientState().storagePressure || !this.ambientState().active) {
+      return 'border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-100';
+    }
+    return 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200';
   }
 
   private queueConnectionSync(forceVisitReset: boolean): void {
@@ -272,9 +288,14 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       .then(() => this.syncConnection(generation, forceVisitReset))
       .catch(error => {
         if (generation !== this.connectionGeneration || this.destroyed) return;
-        this.realtimeError.emit(error instanceof Error && error.message.trim()
-          ? error.message
-          : this.i18n.t('consultation.ai.realtimeUnavailable', 'Le temps réel est indisponible. Reconnexion automatique en cours.'));
+        this.realtimeError.emit(
+          error instanceof Error && error.message.trim()
+            ? error.message
+            : this.i18n.t(
+                'consultation.ai.realtimeUnavailable',
+                'Le temps réel est indisponible. Reconnexion automatique en cours.',
+              ),
+        );
       });
   }
 
@@ -327,7 +348,12 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
 
     if (!this.bridge.isSupported()) {
       this.activeChange.emit(false);
-      this.realtimeError.emit(this.i18n.t('consultation.ai.realtimeUnsupported', 'Ce navigateur ne prend pas en charge la connexion audio temps réel.'));
+      this.realtimeError.emit(
+        this.i18n.t(
+          'consultation.ai.realtimeUnsupported',
+          'Ce navigateur ne prend pas en charge la connexion audio temps réel.',
+        ),
+      );
       return;
     }
 
@@ -349,7 +375,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
         return;
       }
       this.connectedVisitId = targetVisitId;
-      const spoken = this.speakCurrentApprovedTurn();
+      const spoken = this.speakPendingClarification();
       if (!spoken) this.syncMute();
       this.drainTranscriptQueue();
     } catch (error) {
@@ -371,7 +397,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     } catch {
       throw new Error(this.i18n.t(
         'consultation.ai.ambientRequired',
-        'La capture audio de sécurité chiffrée n’est pas disponible. Le mode temps réel est désactivé pour éviter une perte silencieuse de consultation.',
+        'La protection audio n’est pas disponible. Le mode temps réel reste désactivé pour éviter toute perte silencieuse.',
       ));
     }
   }
@@ -389,7 +415,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     if (turn.confidence === null || !Number.isFinite(turn.confidence)) {
       this.realtimeError.emit(this.i18n.t(
         'consultation.ai.realtimeTranscriptUnverified',
-        'Transcription non vérifiable : Joprelys n’en déduira aucune donnée clinique. Répétez la phrase.',
+        'Une phrase est trop incertaine pour être utilisée cliniquement. L’audio protégé est conservé.',
       ));
       return;
     }
@@ -397,7 +423,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     if (!eventId) {
       this.realtimeError.emit(this.i18n.t(
         'consultation.ai.realtimeTranscriptUnverified',
-        'Tour audio non traçable : il reste protégé par la capture de sécurité mais ne sera pas utilisé en Realtime.',
+        'Un passage audio n’a pas pu être tracé. Il reste protégé et sera retraité automatiquement.',
       ));
       return;
     }
@@ -412,7 +438,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       this.syncMute();
       this.realtimeError.emit(this.i18n.t(
         'consultation.ai.realtimeBackpressure',
-        'Joprelys a temporairement mis l’écoute Realtime en pause pour vider la file clinique. La capture chiffrée continue sans perte.',
+        'Joprelys sécurise les dernières secondes avant de reprendre automatiquement.',
       ));
     }
     this.drainTranscriptQueue();
@@ -466,7 +492,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
           this.transcriptQueue.shift();
           this.realtimeError.emit(this.i18n.t(
             'consultation.ai.realtimeTranscriptLowConfidence',
-            'La transcription est trop incertaine pour être utilisée cliniquement. L’audio sécurisé est conservé pour la transcription finale.',
+            'Une phrase reste trop incertaine pour être utilisée cliniquement. L’audio protégé est conservé.',
           ));
           this.drainTranscriptQueue();
           return;
@@ -478,7 +504,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
         this.transcriptQueue.shift();
         this.realtimeError.emit(this.i18n.t(
           'consultation.ai.realtimeClinicalError',
-          'Un tour Realtime n’a pas pu être journalisé. L’audio sécurisé reste conservé et sera traité par la chaîne ambient.',
+          'Un passage n’a pas pu être synchronisé. L’audio protégé reste conservé pour retraitement.',
         ));
         this.releaseBackpressureIfPossible();
         this.syncMute();
@@ -544,14 +570,22 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     this.processing.set(false);
   }
 
-  private speakCurrentApprovedTurn(): boolean {
-    const pendingQuestion = this.session?.clarifications.find(item => item.status === 'PENDING')?.question?.trim();
-    return this.speakApproved(pendingQuestion || this.session?.assistantMessage || '');
+  private speakPendingClarification(): boolean {
+    const pendingQuestion = this.session?.clarifications
+      .find(item => item.status === 'PENDING')
+      ?.question
+      ?.trim();
+    return this.speakApproved(pendingQuestion || '');
   }
 
   private speakApproved(message: string): boolean {
     const text = message.trim();
-    if (!text || text === this.lastSpokenMessage || !this.state().connected || this.connectedVisitId !== this.visitId.trim()) return false;
+    if (!text
+      || text === this.lastSpokenMessage
+      || !this.state().connected
+      || this.connectedVisitId !== this.visitId.trim()) {
+      return false;
+    }
     this.lastSpokenMessage = text;
     const started = this.bridge.speakApproved(text);
     if (!started) this.syncMute();

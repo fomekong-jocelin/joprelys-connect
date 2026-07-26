@@ -1,124 +1,89 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, Input, OnChanges, OnDestroy, SimpleChanges, inject, signal } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  OnDestroy,
+  Output,
+  SimpleChanges,
+  inject,
+  signal,
+} from '@angular/core';
 import { Subscription, interval } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import {
   AmbientSpeakerReviewService,
-  AmbientSpeakerType,
   AmbientTranscriptItem,
 } from './ambient-speaker-review.service';
+
+const NON_CLINICAL_FILLERS = new Set([
+  'oh',
+  'hello',
+  'bonjour',
+  'salut',
+  'merci',
+  'hmm',
+  'hum',
+  'euh',
+]);
 
 @Component({
   selector: 'app-ambient-speaker-review',
   standalone: true,
   imports: [CommonModule],
   template: `
-    <section class="border-t border-[var(--app-border)] pt-3">
-      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div class="flex items-center gap-2">
-            <p class="text-xs font-black text-[var(--text-primary)]">
-              {{ i18n.t('consultation.ai.speakerReviewTitle', 'Locuteurs à confirmer') }}
+    @if (shouldRender()) {
+      <section class="rounded-[6px] border border-amber-200 bg-amber-50/60 p-3 shadow-sm dark:border-amber-900 dark:bg-amber-950/15">
+        @if (error()) {
+          <p class="text-xs font-bold text-rose-800 dark:text-rose-200">{{ error() }}</p>
+        } @else {
+          <div>
+            <p class="text-sm font-black text-[var(--text-primary)]">
+              {{ reviewItems().length === 1
+                ? i18n.t('consultation.ai.speakerOnePhrase', 'Une phrase doit être vérifiée')
+                : i18n.t('consultation.ai.speakerSeveralPhrases', 'Quelques phrases doivent être vérifiées') }}
             </p>
-            <span
-              class="rounded-[4px] border px-2 py-0.5 text-[10px] font-black"
-              [ngClass]="unknownCount() > 0
-                ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200'
-                : 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-200'"
-            >
-              {{ unknownCount() }} {{ i18n.t('consultation.ai.speakerReviewPending', 'à confirmer') }}
-            </span>
+            <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+              {{ i18n.t('consultation.ai.speakerSimpleHelp', 'Joprelys n’est pas assez sûr de qui a parlé. Confirmez seulement les phrases que vous reconnaissez.') }}
+            </p>
           </div>
-          <p class="mt-1 text-[11px] leading-4 text-[var(--text-muted)]">
-            {{ i18n.t(
-              'consultation.ai.speakerReviewHelp',
-              'Attribuez seulement ce que vous reconnaissez. Joprelys ne transforme jamais automatiquement les autres voix en patient.'
-            ) }}
-          </p>
-        </div>
-        <div class="flex gap-2">
-          <button
-            type="button"
-            (click)="showAssigned.update(value => !value)"
-            class="min-h-9 rounded-[5px] border border-slate-300 bg-white px-3 text-[10px] font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-          >
-            {{ showAssigned()
-              ? i18n.t('consultation.ai.hideAssignedSpeakers', 'Masquer attribués')
-              : i18n.t('consultation.ai.showAssignedSpeakers', 'Revoir les attribués') }}
-          </button>
-          <button
-            type="button"
-            (click)="load()"
-            [disabled]="loading() || !!updatingItemId()"
-            class="min-h-9 rounded-[5px] border border-cyan-300 bg-cyan-50 px-3 text-[10px] font-black text-cyan-800 hover:bg-cyan-100 disabled:opacity-50 dark:border-cyan-800 dark:bg-cyan-950/30 dark:text-cyan-200"
-          >
-            {{ i18n.t('consultation.ai.refreshSpeakerReview', 'Actualiser') }}
-          </button>
-        </div>
-      </div>
 
-      @if (error()) {
-        <p class="mt-2 rounded-[4px] border border-rose-200 bg-rose-50 px-2.5 py-2 text-[10px] font-bold text-rose-800 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-200">
-          {{ error() }}
-        </p>
-      }
-
-      @if (loading() && !items().length) {
-        <p class="mt-3 text-[11px] text-[var(--text-muted)]">
-          {{ i18n.t('consultation.ai.loadingSpeakerReview', 'Chargement du transcript ambient…') }}
-        </p>
-      } @else if (!visibleItems().length) {
-        <p class="mt-3 rounded-[4px] bg-[var(--app-surface-muted)] px-3 py-2 text-[11px] text-[var(--text-muted)]">
-          {{ unknownCount() === 0
-            ? i18n.t('consultation.ai.noUnknownSpeakers', 'Aucun locuteur non attribué dans le transcript effectif.')
-            : i18n.t('consultation.ai.noVisibleSpeakers', 'Aucun segment à afficher.') }}
-        </p>
-      } @else {
-        <div class="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
-          @for (item of visibleItems(); track item.id) {
-            <article class="rounded-[5px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-3 py-2.5">
-              <div class="flex flex-wrap items-center gap-2 text-[10px] font-bold text-[var(--text-muted)]">
-                <span [ngClass]="speakerBadgeClasses(item.speakerType)">
-                  {{ speakerLabel(item) }}
-                </span>
-                <span>{{ formatOffset(item.startOffsetMs) }} – {{ formatOffset(item.endOffsetMs) }}</span>
-                @if (item.speakerLabel && item.speakerType === 'UNSPECIFIED') {
-                  <span class="rounded-[3px] border border-slate-300 px-1.5 py-0.5 dark:border-slate-700">
-                    source {{ item.speakerLabel }}
-                  </span>
-                }
-              </div>
-              <p class="mt-1.5 text-xs leading-5 text-[var(--text-primary)]">{{ item.text }}</p>
-              <div class="mt-2 grid grid-cols-2 gap-2 sm:flex">
-                <button
-                  type="button"
-                  (click)="assign(item, 'DOCTOR')"
-                  [disabled]="updatingItemId() === item.id || item.speakerType === 'DOCTOR'"
-                  class="min-h-9 rounded-[4px] border px-3 text-[10px] font-black disabled:cursor-default disabled:opacity-60"
-                  [ngClass]="item.speakerType === 'DOCTOR'
-                    ? 'border-cyan-300 bg-cyan-100 text-cyan-900 dark:border-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-100'
-                    : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200'"
-                >
-                  {{ i18n.t('consultation.ai.assignDoctorSpeaker', 'Médecin') }}
-                </button>
-                <button
-                  type="button"
-                  (click)="assign(item, 'PATIENT')"
-                  [disabled]="updatingItemId() === item.id || item.speakerType === 'PATIENT'"
-                  class="min-h-9 rounded-[4px] border px-3 text-[10px] font-black disabled:cursor-default disabled:opacity-60"
-                  [ngClass]="item.speakerType === 'PATIENT'
-                    ? 'border-emerald-300 bg-emerald-100 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100'
-                    : 'border-slate-300 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200'"
-                >
-                  {{ i18n.t('consultation.ai.assignPatientSpeaker', 'Patient') }}
-                </button>
-              </div>
-            </article>
-          }
-        </div>
-      }
-    </section>
+          <div class="mt-3 space-y-3">
+            @for (item of reviewItems(); track item.id) {
+              <article class="rounded-[5px] border border-amber-200 bg-white p-3 dark:border-amber-900 dark:bg-slate-950">
+                <div class="text-[10px] font-bold text-[var(--text-muted)]">
+                  {{ formatOffset(item.startOffsetMs) }}
+                </div>
+                <p class="mt-1 text-sm leading-5 text-[var(--text-primary)]">“{{ item.text }}”</p>
+                <p class="mt-3 text-xs font-black text-[var(--text-primary)]">
+                  {{ i18n.t('consultation.ai.whoSaidThis', 'Qui a dit cette phrase ?') }}
+                </p>
+                <div class="mt-2 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    (click)="assign(item, 'DOCTOR')"
+                    [disabled]="updatingItemId() === item.id"
+                    class="min-h-10 rounded-[4px] border border-cyan-300 bg-cyan-50 px-3 text-xs font-black text-cyan-900 hover:bg-cyan-100 disabled:opacity-50 dark:border-cyan-800 dark:bg-cyan-950/30 dark:text-cyan-100"
+                  >
+                    {{ i18n.t('consultation.ai.assignDoctorSpeaker', 'Médecin') }}
+                  </button>
+                  <button
+                    type="button"
+                    (click)="assign(item, 'PATIENT')"
+                    [disabled]="updatingItemId() === item.id"
+                    class="min-h-10 rounded-[4px] border border-emerald-300 bg-emerald-50 px-3 text-xs font-black text-emerald-900 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100"
+                  >
+                    {{ i18n.t('consultation.ai.assignPatientSpeaker', 'Patient') }}
+                  </button>
+                </div>
+              </article>
+            }
+          </div>
+        }
+      </section>
+    }
   `,
 })
 export class AmbientSpeakerReviewComponent implements OnChanges, OnDestroy {
@@ -126,11 +91,11 @@ export class AmbientSpeakerReviewComponent implements OnChanges, OnDestroy {
   readonly i18n = inject(I18nService);
 
   @Input({ required: true }) visitId = '';
+  @Output() readonly ambiguityChange = new EventEmitter<number>();
 
   readonly items = signal<AmbientTranscriptItem[]>([]);
   readonly loading = signal(false);
   readonly updatingItemId = signal<string | null>(null);
-  readonly showAssigned = signal(false);
   readonly error = signal('');
   private readonly subscriptions = new Subscription();
 
@@ -144,6 +109,7 @@ export class AmbientSpeakerReviewComponent implements OnChanges, OnDestroy {
     if (changes['visitId']) {
       this.items.set([]);
       this.error.set('');
+      this.emitAmbiguityCount();
       if (this.visitId.trim()) this.load();
     }
   }
@@ -152,13 +118,13 @@ export class AmbientSpeakerReviewComponent implements OnChanges, OnDestroy {
     this.subscriptions.unsubscribe();
   }
 
-  unknownCount(): number {
-    return this.items().filter(item => item.speakerType === 'UNSPECIFIED').length;
+  shouldRender(): boolean {
+    return !!this.error() || this.reviewItems().length > 0;
   }
 
-  visibleItems(): AmbientTranscriptItem[] {
+  reviewItems(): AmbientTranscriptItem[] {
     return this.items()
-      .filter(item => this.showAssigned() || item.speakerType === 'UNSPECIFIED')
+      .filter(item => item.speakerType === 'UNSPECIFIED' && this.requiresHumanReview(item.text))
       .sort((a, b) => a.startOffsetMs - b.startOffsetMs || a.sequence - b.sequence);
   }
 
@@ -171,13 +137,14 @@ export class AmbientSpeakerReviewComponent implements OnChanges, OnDestroy {
       next: ledger => {
         this.items.set([...(ledger.items ?? [])]);
         this.loading.set(false);
+        this.emitAmbiguityCount();
       },
       error: () => {
         this.loading.set(false);
         if (!silent) {
           this.error.set(this.i18n.t(
-            'consultation.ai.speakerReviewLoadFailed',
-            'Le transcript ambient n’a pas pu être chargé. Aucune attribution n’a été modifiée.',
+            'consultation.ai.speakerReviewLoadFailedSimple',
+            'La vérification des locuteurs est momentanément indisponible. Aucune attribution n’a été modifiée.',
           ));
         }
       },
@@ -186,7 +153,7 @@ export class AmbientSpeakerReviewComponent implements OnChanges, OnDestroy {
 
   assign(item: AmbientTranscriptItem, speaker: 'DOCTOR' | 'PATIENT'): void {
     const visitId = this.visitId.trim();
-    if (!visitId || this.updatingItemId() || item.speakerType === speaker) return;
+    if (!visitId || this.updatingItemId()) return;
     this.updatingItemId.set(item.id);
     this.error.set('');
     this.api.assignSpeaker(visitId, item, speaker).subscribe({
@@ -195,20 +162,21 @@ export class AmbientSpeakerReviewComponent implements OnChanges, OnDestroy {
         next.push(corrected);
         this.items.set(next);
         this.updatingItemId.set(null);
+        this.emitAmbiguityCount();
       },
       error: error => {
         this.updatingItemId.set(null);
         if (this.isStaleConflict(error)) {
           this.error.set(this.i18n.t(
-            'consultation.ai.speakerReviewStale',
-            'Ce segment a changé pendant votre revue. Le transcript a été actualisé ; vérifiez la version courante avant de décider.',
+            'consultation.ai.speakerReviewStaleSimple',
+            'Cette phrase a changé pendant votre vérification. Joprelys recharge la version actuelle.',
           ));
           this.load(true);
           return;
         }
         this.error.set(this.i18n.t(
-          'consultation.ai.speakerReviewSaveFailed',
-          'L’attribution n’a pas été enregistrée. Le transcript original reste inchangé.',
+          'consultation.ai.speakerReviewSaveFailedSimple',
+          'La confirmation n’a pas été enregistrée. La phrase originale reste inchangée.',
         ));
       },
     });
@@ -221,20 +189,18 @@ export class AmbientSpeakerReviewComponent implements OnChanges, OnDestroy {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
-  speakerLabel(item: AmbientTranscriptItem): string {
-    if (item.speakerType === 'DOCTOR') return this.i18n.t('consultation.ai.speakerDoctor', 'Médecin');
-    if (item.speakerType === 'PATIENT') return this.i18n.t('consultation.ai.speakerPatient', 'Patient');
-    return this.i18n.t('consultation.ai.speakerUnknown', 'Non attribué');
+  private requiresHumanReview(text: string): boolean {
+    const normalized = text
+      .trim()
+      .toLowerCase()
+      .replace(/[.!?,;:]+$/g, '')
+      .replace(/\s+/g, ' ');
+    if (!normalized) return false;
+    return !NON_CLINICAL_FILLERS.has(normalized);
   }
 
-  speakerBadgeClasses(speaker: AmbientSpeakerType): string {
-    if (speaker === 'DOCTOR') {
-      return 'rounded-[3px] bg-cyan-100 px-1.5 py-0.5 text-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-200';
-    }
-    if (speaker === 'PATIENT') {
-      return 'rounded-[3px] bg-emerald-100 px-1.5 py-0.5 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200';
-    }
-    return 'rounded-[3px] bg-amber-100 px-1.5 py-0.5 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200';
+  private emitAmbiguityCount(): void {
+    this.ambiguityChange.emit(this.reviewItems().length);
   }
 
   private isStaleConflict(error: unknown): boolean {
