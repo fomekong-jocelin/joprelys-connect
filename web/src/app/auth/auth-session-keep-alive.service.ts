@@ -30,7 +30,7 @@ export class AuthSessionKeepAliveService implements OnDestroy {
 
   private checkAndKeepAlive(): void {
     const session = this.tokenStorage.session();
-    if (!session) return;
+    if (!session || this.tokenStorage.isPatientSession(session)) return;
 
     if (this.tokenStorage.isExpired(REFRESH_TRIGGER_LEEWAY_SECONDS)) {
       this.sessionRecovery.refreshAccessToken(session.accessToken).subscribe({
