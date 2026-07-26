@@ -7,40 +7,86 @@ import { I18nService } from '../core/i18n/i18n.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="rounded-[8px] border border-[var(--app-border)] bg-[var(--app-surface-muted)]/35 p-3">
-      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p class="text-xs font-bold text-[var(--text-primary)]">
-            {{ conversationMode
-              ? i18n.t('consultation.ai.modeConversation', 'Conversation vocale')
-              : i18n.t('consultation.ai.modeControlled', 'Dictée contrôlée') }}
-          </p>
-          <p class="text-[10px] text-[var(--text-muted)]">
-            {{ conversationMode
-              ? i18n.t('consultation.ai.modeConversationHelp', 'L’assistant parle, écoute votre réponse et poursuit la consultation.')
-              : i18n.t('consultation.ai.modeControlledHelp', 'Relisez la transcription avant de demander son analyse.') }}
-          </p>
+    <div class="rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] p-3 shadow-sm">
+      <div class="mb-3">
+        <p class="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-muted)]">
+          {{ i18n.t('consultation.ai.voiceModeTitle', 'Mode audio') }}
+        </p>
+
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2" role="group"
+             [attr.aria-label]="i18n.t('consultation.ai.voiceModeTitle', 'Mode audio')">
+          <button
+            type="button"
+            (click)="selectConversationMode(true)"
+            [disabled]="busy || recording || speaking"
+            [attr.aria-pressed]="conversationMode"
+            class="flex min-h-14 items-center gap-3 rounded-[4px] border px-3 py-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-50"
+            [ngClass]="conversationMode
+              ? 'border-[var(--brand-primary)] bg-cyan-50/70 text-[var(--text-primary)] shadow-sm dark:bg-cyan-950/20'
+              : 'border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--text-primary)] hover:border-cyan-300 hover:bg-[var(--app-surface-muted)]'"
+          >
+            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px]"
+                  [ngClass]="conversationMode ? 'bg-[var(--brand-primary)] text-white' : 'bg-[var(--app-surface-muted)] text-[var(--text-secondary)]'">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
+              </svg>
+            </span>
+            <span class="min-w-0">
+              <span class="flex items-center gap-2 text-xs font-extrabold">
+                {{ i18n.t('consultation.ai.realtimeMode', 'Temps réel') }}
+                @if (conversationMode) {
+                  <span class="text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+                    {{ i18n.t('consultation.ai.modeActive', 'Actif') }}
+                  </span>
+                }
+              </span>
+              <span class="mt-0.5 block text-[10px] leading-4 text-[var(--text-muted)]">
+                {{ i18n.t('consultation.ai.realtimeModeHelp', 'Conversation continue avec Joprelys') }}
+              </span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            (click)="selectConversationMode(false)"
+            [disabled]="busy || recording || speaking"
+            [attr.aria-pressed]="!conversationMode"
+            class="flex min-h-14 items-center gap-3 rounded-[4px] border px-3 py-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-50"
+            [ngClass]="!conversationMode
+              ? 'border-[var(--brand-primary)] bg-cyan-50/70 text-[var(--text-primary)] shadow-sm dark:bg-cyan-950/20'
+              : 'border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--text-primary)] hover:border-cyan-300 hover:bg-[var(--app-surface-muted)]'"
+          >
+            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px]"
+                  [ngClass]="!conversationMode ? 'bg-[var(--brand-primary)] text-white' : 'bg-[var(--app-surface-muted)] text-[var(--text-secondary)]'">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 12h6m-6 4h6M8 3h8a2 2 0 012 2v14a2 2 0 01-2 2H8a2 2 0 01-2-2V5a2 2 0 012-2z" />
+              </svg>
+            </span>
+            <span class="min-w-0">
+              <span class="flex items-center gap-2 text-xs font-extrabold">
+                {{ i18n.t('consultation.ai.dictationMode', 'Dictée') }}
+                @if (!conversationMode) {
+                  <span class="text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+                    {{ i18n.t('consultation.ai.modeActive', 'Actif') }}
+                  </span>
+                }
+              </span>
+              <span class="mt-0.5 block text-[10px] leading-4 text-[var(--text-muted)]">
+                {{ i18n.t('consultation.ai.dictationModeHelp', 'Un enregistrement ponctuel à relire') }}
+              </span>
+            </span>
+          </button>
         </div>
-        <button
-          type="button"
-          (click)="toggleConversationMode.emit()"
-          [disabled]="busy || recording || speaking"
-          class="rounded-[999px] border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-1.5 text-[10px] font-bold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] disabled:opacity-50"
-        >
-          {{ conversationMode
-            ? i18n.t('consultation.ai.backToDictation', 'Revenir à la dictée')
-            : i18n.t('consultation.ai.enableConversation', 'Activer le mode conversation') }}
-        </button>
       </div>
 
-      @if (recording || speaking) {
-        <div class="mb-3 overflow-hidden rounded-[8px] border border-cyan-200 bg-cyan-50/70 px-3 py-3 dark:border-cyan-900 dark:bg-cyan-950/20">
+      @if (!conversationMode && (recording || speaking)) {
+        <div class="mb-3 overflow-hidden rounded-[4px] border border-cyan-200 bg-cyan-50/70 px-3 py-3 dark:border-cyan-900 dark:bg-cyan-950/20">
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-2">
-              <span
-                class="h-2.5 w-2.5 rounded-full"
-                [ngClass]="recording ? 'animate-pulse bg-rose-500' : 'animate-pulse bg-cyan-500'"
-              ></span>
+              <span class="h-2.5 w-2.5 rounded-full"
+                    [ngClass]="recording ? 'animate-pulse bg-rose-500' : 'animate-pulse bg-cyan-500'"></span>
               <span class="text-xs font-bold text-[var(--text-primary)]">
                 {{ recording
                   ? i18n.t('consultation.ai.listening', 'Je vous écoute…')
@@ -55,48 +101,55 @@ import { I18nService } from '../core/i18n/i18n.service';
           </div>
           <div class="mt-3 flex h-12 items-center justify-center gap-[3px]" aria-hidden="true">
             @for (bar of waveformBars; track $index) {
-              <span
-                class="w-[3px] rounded-full bg-cyan-600/80 transition-[height] duration-75 dark:bg-cyan-300/80"
-                [style.height.px]="barHeight($index)"
-              ></span>
+              <span class="w-[3px] rounded-full bg-cyan-600/80 transition-[height] duration-75 dark:bg-cyan-300/80"
+                    [style.height.px]="barHeight($index)"></span>
             }
           </div>
         </div>
       }
 
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-        @if (!(conversationMode && blocked)) {
+      @if (!conversationMode) {
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
             type="button"
             (click)="toggleRecording.emit()"
             [disabled]="busy || speaking || !mediaRecorderSupported || blocked"
-            class="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[6px] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            class="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[4px] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
             [ngClass]="recording ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]'"
           >
             @if (recording) {
               <span class="h-3 w-3 animate-pulse rounded-[2px] bg-white"></span>
-              {{ conversationMode
-                ? i18n.t('consultation.ai.finishAnswer', 'Terminer ma réponse')
-                : i18n.t('consultation.ai.stopRecordingTranscribe', 'Arrêter et préparer la transcription') }}
+              {{ i18n.t('consultation.ai.stopRecordingTranscribe', 'Arrêter et préparer la transcription') }}
             } @else {
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
               </svg>
-              {{ conversationMode
-                ? i18n.t('consultation.ai.talkToJoprelys', 'Parler à Joprelys')
-                : i18n.t('consultation.ai.record', 'Démarrer la dictée') }}
+              {{ i18n.t('consultation.ai.record', 'Démarrer la dictée') }}
             }
           </button>
-        }
-        <button
-          type="button"
-          (click)="endSession.emit()"
-          [disabled]="busy || recording || speaking"
-          class="inline-flex min-h-12 flex-1 items-center justify-center rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-3 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] disabled:opacity-50 sm:flex-none"
-        >
-          {{ i18n.t('consultation.ai.reset', 'Terminer la session') }}
-        </button>
-      </div>
+
+          <button
+            type="button"
+            (click)="endSession.emit()"
+            [disabled]="busy || recording || speaking"
+            class="inline-flex min-h-12 items-center justify-center rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-3 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] disabled:opacity-50"
+          >
+            {{ i18n.t('consultation.ai.reset', 'Terminer la session') }}
+          </button>
+        </div>
+      } @else {
+        <div class="flex justify-end">
+          <button
+            type="button"
+            (click)="endSession.emit()"
+            [disabled]="busy || speaking"
+            class="inline-flex min-h-11 items-center justify-center rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] disabled:opacity-50"
+          >
+            {{ i18n.t('consultation.ai.reset', 'Terminer la session') }}
+          </button>
+        </div>
+      }
     </div>
 
     @if (!blocked && !conversationMode) {
@@ -148,6 +201,11 @@ export class AiAssistantInputComponent {
       this.lastResetToken = value;
       this.message.set('');
     }
+  }
+
+  selectConversationMode(enabled: boolean): void {
+    if (this.busy || this.recording || this.speaking || this.conversationMode === enabled) return;
+    this.toggleConversationMode.emit();
   }
 
   onInput(event: Event): void {
