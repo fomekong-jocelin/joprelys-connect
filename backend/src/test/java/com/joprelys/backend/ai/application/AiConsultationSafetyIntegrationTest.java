@@ -2,8 +2,8 @@ package com.joprelys.backend.ai.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -76,14 +76,14 @@ class AiConsultationSafetyIntegrationTest {
     @Test
     void shouldAskClinicianBeforeExactDuplicateActiveMedication() {
         when(contextAssembler.assemble(visitId)).thenReturn(Map.of(
-                "activeMedications", List.of(Map.of("drugName", "Amlodipine", "dosage", "5 mg"))));
-        when(provider.chat(anyList(), anyString())).thenReturn(responseWithPrescription("Amlodipine"));
+                "activeMedications", List.of(Map.of("drugName", "Medication-A", "dosage", "5 mg"))));
+        when(provider.chat(anyList(), anyString())).thenReturn(responseWithPrescription("Medication-A"));
 
         var response = service.processText(
                 visitId,
                 userId,
                 organizationId,
-                "Je prescris Amlodipine cinq milligrammes une fois par jour.");
+                "Je prescris Medication-A 5 mg 1 fois par jour.");
 
         assertTrue(response.needsClarification());
         assertTrue(response.revisions().isEmpty());
@@ -96,8 +96,8 @@ class AiConsultationSafetyIntegrationTest {
         when(provider.chat(anyList(), anyString())).thenReturn(new AiChatResponse("""
                 {
                   "changes": [
-                    {"field":"symptoms","operation":"SET","value":"Fièvre","reason":"dicté","uncertainty":"LOW"},
-                    {"field":"symptoms","operation":"SET","value":"Fièvre et céphalées","reason":"dicté","uncertainty":"LOW"}
+                    {"field":"symptoms","operation":"SET","value":"Fièvre","reason":"dicté","uncertainty":"LOW","evidence":["Fièvre"]},
+                    {"field":"symptoms","operation":"SET","value":"Fièvre et céphalées","reason":"dicté","uncertainty":"LOW","evidence":["Fièvre avec céphalées"]}
                   ],
                   "assistantMessage":"Deux versions.",
                   "needsClarification":false,
@@ -124,12 +124,13 @@ class AiConsultationSafetyIntegrationTest {
                     "operation":"SET",
                     "value":[{"drugName":"%s","dosage":"5 mg","frequency":"1 fois par jour"}],
                     "reason":"Prescription explicitement dictée.",
-                    "uncertainty":"LOW"
+                    "uncertainty":"LOW",
+                    "evidence":["Je prescris %s 5 mg 1 fois par jour"]
                   }],
                   "assistantMessage":"Prescription proposée.",
                   "needsClarification":false,
                   "clarification":null
                 }
-                """.formatted(drugName), 100, "test");
+                """.formatted(drugName, drugName), 100, "test");
     }
 }
