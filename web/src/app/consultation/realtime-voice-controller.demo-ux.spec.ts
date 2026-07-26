@@ -15,6 +15,7 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
   let component: RealtimeVoiceControllerComponent;
   let state: BehaviorSubject<RealtimeVoiceState>;
   let ambientState: BehaviorSubject<AmbientCaptureState>;
+  let transcripts: Subject<any>;
   let bridge: {
     state$: BehaviorSubject<RealtimeVoiceState>;
     transcript$: Subject<any>;
@@ -47,9 +48,10 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
       storagePressure: false,
       lastError: null,
     });
+    transcripts = new Subject();
     bridge = {
       state$ : state,
-      transcript$: new Subject(),
+      transcript$: transcripts,
       error$: new Subject(),
       assistantTurnCompleted$: new Subject(),
       connect: vi.fn().mockResolvedValue(undefined),
@@ -128,17 +130,30 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
     expect(bridge.speakApproved).toHaveBeenCalledWith('Depuis combien de jours la douleur évolue-t-elle ?');
   });
 
-  it('should show only the simple physician actions when healthy', () => {
+  it('should show only the focus physician actions when healthy', () => {
     fixture.detectChanges();
     const text = fixture.nativeElement.textContent as string;
 
     expect(text).toContain('Je vous écoute');
-    expect(text).toContain('Mettre en pause');
+    expect(text).toContain('Transcription en direct');
+    expect(text).toContain('Pause');
     expect(text).toContain('Passer en dictée');
     expect(text).toContain('Terminer');
     expect(text).not.toContain('Capture de sécurité active');
     expect(text).not.toContain('Preuve clinique ambient');
     expect(text).not.toContain('Copilote Realtime sécurisé');
+  });
+
+  it('should display the last transcript really received from realtime', () => {
+    transcripts.next({
+      transcript: 'Patient sans fièvre depuis trois jours',
+      confidence: 0.91,
+      eventId: 'event-1',
+      itemId: 'item-1',
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Patient sans fièvre depuis trois jours');
   });
 
   it('should expose safety information only when realtime is actually degraded', () => {
