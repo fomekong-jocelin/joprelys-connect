@@ -23,6 +23,13 @@ export interface AmbientCaptureState {
   lastError: string | null;
 }
 
+interface AmbientCaptureContext {
+  readonly visitId: string;
+  readonly locale: string;
+  readonly generationId: number;
+  readonly timeline: AmbientCaptureTimeline;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AmbientAudioCaptureService implements OnDestroy {
   private readonly document = inject(DOCUMENT);
@@ -48,6 +55,8 @@ export class AmbientAudioCaptureService implements OnDestroy {
   private desiredVisitId = '';
   private desiredLocale = 'fr';
   private shouldCapture = false;
+  private captureGeneration = 0;
+  private activeCapture: AmbientCaptureContext | null = null;
   private timeline: AmbientCaptureTimeline | null = null;
   private audioContext: AudioContext | null = null;
   private mediaStream: MediaStream | null = null;
@@ -86,9 +95,7 @@ export class AmbientAudioCaptureService implements OnDestroy {
   async start(visitId: string, locale?: string): Promise<void> {
     const normalizedVisitId = visitId.trim();
     if (!normalizedVisitId) throw new Error('AMBIENT_VISIT_REQUIRED');
-    this.desiredVisitId = normalizedVisitId;
-    this.desiredLocale = this.normalizeLocale(locale || this.i18n.currentLanguage());
-    this.shouldCapture = true;
+    const normalizedLocale = this.normalizeLocale(locale || this.i18n.currentLanguage());
     if (!this.isSupported()) {
       this.patchState({
         supported: false,
@@ -98,10 +105,23 @@ export class AmbientAudioCaptureService implements OnDestroy {
       });
       throw new Error('AMBIENT_CAPTURE_UNSUPPORTED');
     }
-    if (this.stateSubject.value.active && this.timeline?.visitId === normalizedVisitId) {
+
+    if (this.pageHideStopPromise) await this.pageHideStopPromise;
+
+    const currentVisitId = this.activeCapture?.visitId ?? this.timeline?.visitId ?? this.desiredVisitId;
+    if ((this.audioContext || this.mediaStream) && currentVisitId && currentVisitId !== normalizedVisitId) {
+      this.shouldCapture = false;
+      this.clearReconnect();
+      await this.stopGraph(true);
+    }
+
+    this.desiredVisitId = normalizedVisitId;
+    this.desiredLocale = normalizedLocale;
+    this.shouldCapture = true;
+
+    if (this.stateSubject.value.active && this.activeCapture?.visitId === normalizedVisitId) {
       return;
     }
-    if (this.pageHideStopPromise) await this.pageHideStopPromise;
     if (this.audioContext || this.mediaStream) {
       await this.stopGraph(true);
     }
@@ -110,6 +130,7 @@ export class AmbientAudioCaptureService implements OnDestroy {
 
   async stop(): Promise<void> {
     this.shouldCapture = false;
+    this.captureGeneration += 1;
     this.clearReconnect();
     if (this.stopPromise) return this.stopPromise;
     this.stopPromise = this.stopGraph(true)
@@ -122,11 +143,13 @@ export class AmbientAudioCaptureService implements OnDestroy {
 
   async flushPending(): Promise<void> {
     await this.persistenceChain;
-    await this.uploader.flush(this.desiredVisitId || undefined);
+    const visitId = this.activeCapture?.visitId ?? this.desiredVisitId;
+    await this.uploader.flush(visitId || undefined);
   }
 
   ngOnDestroy(): void {
     this.shouldCapture = false;
+    this.captureGeneration += 1;
     this.clearReconnect();
     this.document.removeEventListener('visibilitychange', this.onVisibilityChange);
     this.document.defaultView?.removeEventListener('pagehide', this.onPageHide);
@@ -137,9 +160,12 @@ export class AmbientAudioCaptureService implements OnDestroy {
   }
 
   private async startGraph(): Promise<void> {
+    const targetVisitId = this.desiredVisitId;
+    const targetLocale = this.desiredLocale;
+    const generationId = ++this.captureGeneration;
     this.patchState({ starting: true, recovering: this.reconnectAttempt > 0, lastError: null });
     try {
-      this.timeline = await this.vault.getOrCreateTimeline(this.desiredVisitId);
+      const timeline = await this.vault.getOrCreateTimeline(targetVisitId);
       void this.vault.requestPersistentStorage();
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -150,7 +176,9 @@ export class AmbientAudioCaptureService implements OnDestroy {
         },
         video: false,
       });
-      if (!this.shouldCapture) {
+      if (!this.shouldCapture
+        || this.captureGeneration !== generationId
+        || this.desiredVisitId !== targetVisitId) {
         stream.getTracks().forEach(track => track.stop());
         return;
       }
@@ -161,6 +189,13 @@ export class AmbientAudioCaptureService implements OnDestroy {
       if (!context.audioWorklet) throw new Error('AMBIENT_AUDIO_WORKLET_UNSUPPORTED');
       await context.audioWorklet.addModule('/joprelys-ambient-capture-processor.js');
       if (context.state === 'suspended') await context.resume();
+      if (!this.shouldCapture
+        || this.captureGeneration !== generationId
+        || this.desiredVisitId !== targetVisitId) {
+        stream.getTracks().forEach(track => track.stop());
+        await context.close().catch(() => undefined);
+        return;
+      }
 
       const source = context.createMediaStreamSource(stream);
       const worklet = new AudioWorkletNode(context, 'joprelys-ambient-capture', {
@@ -174,11 +209,19 @@ export class AmbientAudioCaptureService implements OnDestroy {
       worklet.connect(silentGain);
       silentGain.connect(context.destination);
 
-      worklet.port.onmessage = event => this.handleWorkletMessage(event, context.sampleRate);
+      worklet.port.onmessage = event => this.handleWorkletMessage(event, context.sampleRate, generationId);
       const track = stream.getAudioTracks()[0];
       if (!track) throw new Error('AMBIENT_MICROPHONE_TRACK_MISSING');
       track.addEventListener('ended', this.onTrackEnded);
 
+      const capture: AmbientCaptureContext = Object.freeze({
+        visitId: targetVisitId,
+        locale: targetLocale,
+        generationId,
+        timeline,
+      });
+      this.timeline = timeline;
+      this.activeCapture = capture;
       this.audioContext = context;
       this.mediaStream = stream;
       this.sourceNode = source;
@@ -186,23 +229,28 @@ export class AmbientAudioCaptureService implements OnDestroy {
       this.silentGain = silentGain;
       this.currentChunk = new Int16Array(CHUNK_SAMPLES);
       this.currentChunkOffset = 0;
-      this.captureStartOffsetMs = Math.max(0, Date.now() - this.timeline.originEpochMs);
+      this.captureStartOffsetMs = Math.max(0, Date.now() - timeline.originEpochMs);
       this.capturedTargetSamples = 0;
       this.currentChunkStartOffsetMs = this.captureStartOffsetMs;
       this.reconnectAttempt = 0;
       this.patchState({ active: true, starting: false, recovering: false, lastError: null });
-      await this.uploader.refreshState(this.desiredVisitId);
-      void this.uploader.flush(this.desiredVisitId);
+      await this.uploader.refreshState(capture.visitId);
+      void this.uploader.flush(capture.visitId);
     } catch (error) {
       await this.teardownGraph();
       const reason = this.describeError(error);
       this.patchState({ active: false, starting: false, lastError: reason });
-      if (this.shouldCapture) this.scheduleReconnect();
+      if (this.shouldCapture && this.captureGeneration === generationId) this.scheduleReconnect();
       throw error;
     }
   }
 
-  private handleWorkletMessage(event: MessageEvent<unknown>, sourceSampleRate: number): void {
+  private handleWorkletMessage(
+    event: MessageEvent<unknown>,
+    sourceSampleRate: number,
+    generationId: number,
+  ): void {
+    if (this.activeCapture?.generationId !== generationId) return;
     const payload = event.data as { type?: unknown; samples?: unknown } | null;
     if (payload?.type === 'flushed') {
       this.flushResolver?.();
@@ -219,6 +267,8 @@ export class AmbientAudioCaptureService implements OnDestroy {
   }
 
   private appendSamples(samples: Int16Array): void {
+    const capture = this.activeCapture;
+    if (!capture) return;
     let offset = 0;
     while (offset < samples.length) {
       if (this.currentChunkOffset === 0) {
@@ -235,12 +285,17 @@ export class AmbientAudioCaptureService implements OnDestroy {
         const startOffset = this.currentChunkStartOffsetMs;
         this.currentChunk = new Int16Array(CHUNK_SAMPLES);
         this.currentChunkOffset = 0;
-        this.queuePersistence(completed, startOffset);
+        this.queuePersistence(completed, startOffset, capture);
       }
     }
   }
 
-  private queuePersistence(samples: Int16Array, startOffsetMs: number): void {
+  private queuePersistence(
+    samples: Int16Array,
+    startOffsetMs: number,
+    capture: AmbientCaptureContext,
+  ): void {
+    const snapshot = capture;
     const copy = new Int16Array(samples.length);
     copy.set(samples);
     const durationMs = Math.round(copy.length * 1000 / TARGET_SAMPLE_RATE);
@@ -248,28 +303,29 @@ export class AmbientAudioCaptureService implements OnDestroy {
       .then(async () => {
         const wav = encodePcm16Wav(copy, TARGET_SAMPLE_RATE);
         await this.vault.storeEncryptedChunk(
-          this.desiredVisitId,
+          snapshot.visitId,
           startOffsetMs,
           durationMs,
           'audio/wav',
-          this.desiredLocale,
+          snapshot.locale,
           wav,
         );
-        await this.uploader.refreshState(this.desiredVisitId);
-        void this.uploader.flush(this.desiredVisitId);
+        await this.uploader.refreshState(snapshot.visitId);
+        void this.uploader.flush(snapshot.visitId);
       })
       .catch(error => {
-        this.handlePersistenceFailure(error);
+        this.handlePersistenceFailure(error, snapshot);
       });
   }
 
-  private async persistPartialChunk(): Promise<void> {
+  private async persistPartialChunk(capture: AmbientCaptureContext | null): Promise<void> {
     if (this.currentChunkOffset <= 0) return;
+    if (!capture) throw new Error('AMBIENT_CAPTURE_CONTEXT_MISSING');
     const partial = this.currentChunk.slice(0, this.currentChunkOffset);
     const startOffset = this.currentChunkStartOffsetMs;
     this.currentChunk = new Int16Array(CHUNK_SAMPLES);
     this.currentChunkOffset = 0;
-    this.queuePersistence(partial, startOffset);
+    this.queuePersistence(partial, startOffset, capture);
     await this.persistenceChain;
   }
 
@@ -291,20 +347,21 @@ export class AmbientAudioCaptureService implements OnDestroy {
   }
 
   private async stopGraph(flush: boolean): Promise<void> {
+    const capture = this.activeCapture;
     if (flush) {
       try {
         await this.flushWorklet();
-        await this.persistPartialChunk();
+        await this.persistPartialChunk(capture);
         await this.persistenceChain;
       } catch (error) {
         this.patchState({ lastError: this.describeError(error) });
       }
     }
-    await this.teardownGraph();
-    if (this.desiredVisitId) void this.uploader.flush(this.desiredVisitId);
+    await this.teardownGraph(capture?.generationId);
+    if (capture?.visitId) void this.uploader.flush(capture.visitId);
   }
 
-  private async teardownGraph(): Promise<void> {
+  private async teardownGraph(generationId?: number): Promise<void> {
     const stream = this.mediaStream;
     stream?.getAudioTracks().forEach(track => track.removeEventListener('ended', this.onTrackEnded));
     this.sourceNode?.disconnect();
@@ -317,16 +374,22 @@ export class AmbientAudioCaptureService implements OnDestroy {
     this.sourceNode = null;
     this.workletNode = null;
     this.silentGain = null;
+    if (generationId === undefined || this.activeCapture?.generationId === generationId) {
+      this.activeCapture = null;
+      this.timeline = null;
+    }
     if (context && context.state !== 'closed') {
       try { await context.close(); } catch { /* best effort */ }
     }
   }
 
-  private handlePersistenceFailure(error: unknown): void {
+  private handlePersistenceFailure(error: unknown, capture: AmbientCaptureContext): void {
     const reason = this.describeError(error);
     this.shouldCapture = false;
     this.patchState({ active: false, starting: false, recovering: false, lastError: reason });
-    void this.teardownGraph();
+    if (this.activeCapture?.generationId === capture.generationId) {
+      void this.teardownGraph(capture.generationId);
+    }
   }
 
   private scheduleReconnect(): void {
