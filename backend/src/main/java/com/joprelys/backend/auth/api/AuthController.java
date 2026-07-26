@@ -2,6 +2,7 @@ package com.joprelys.backend.auth.api;
 
 import com.joprelys.backend.auth.application.AuthenticationOutcome;
 import com.joprelys.backend.auth.application.AuthenticationService;
+import com.joprelys.backend.auth.security.JwtClaims;
 import com.joprelys.backend.auth.session.api.SessionActorFactory;
 import com.joprelys.backend.auth.session.application.InvalidAuthSessionException;
 import com.joprelys.backend.auth.session.application.IssuedAuthSession;
@@ -10,6 +11,7 @@ import com.joprelys.backend.auth.session.application.RefreshAuthSessionUseCase;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import java.util.Arrays;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -94,8 +96,15 @@ public class AuthController {
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void logout(Authentication authentication, HttpServletResponse response) {
-        logoutCurrentSessionUseCase.logout(actorFactory.claims(authentication));
-        cookieManager.clear(response);
+        JwtClaims claims = actorFactory.claims(authentication);
+        logoutCurrentSessionUseCase.logout(claims);
+
+        // Patient JWTs are independent from the professional persistent session.
+        // Revoking a patient JWT must never delete the clinician refresh cookie
+        // shared by another tab in the same browser.
+        if (!isPatient(claims)) {
+            cookieManager.clear(response);
+        }
     }
 
     private void writeCookieWhenAuthenticated(
@@ -104,6 +113,14 @@ public class AuthController {
         if (outcome.session() != null) {
             cookieManager.write(response, outcome.session());
         }
+    }
+
+    private static boolean isPatient(JwtClaims claims) {
+        return claims != null
+                && claims.role() != null
+                && Arrays.stream(claims.role().split(","))
+                        .map(String::trim)
+                        .anyMatch("PATIENT"::equals);
     }
 
     private static String clientIp(HttpServletRequest request) {
