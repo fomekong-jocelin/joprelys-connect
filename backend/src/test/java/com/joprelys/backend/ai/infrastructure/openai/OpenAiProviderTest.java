@@ -1,6 +1,7 @@
 package com.joprelys.backend.ai.infrastructure.openai;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -11,6 +12,7 @@ import com.joprelys.backend.ai.domain.AiMessage;
 import com.joprelys.backend.ai.infrastructure.AiProperties;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -122,7 +124,7 @@ class OpenAiProviderTest {
     }
 
     @Test
-    void shouldSendTemperatureForClassicModel() {
+    void shouldPreserveLegacyChatTemperatureForClassicModel() {
         RestClient.Builder builder = RestClient.builder().baseUrl("https://api.openai.test/v1");
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         OpenAiProvider provider = provider(builder, "gpt-4.1", "gpt-4o-transcribe", "prompt");
@@ -134,6 +136,66 @@ class OpenAiProviderTest {
 
         provider.chat(List.of(AiMessage.user("Bonjour")), "Système");
 
+        server.verify();
+    }
+
+    @Test
+    void shouldSendStrictJsonSchemaForClinicalStructuredOutput() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("https://api.openai.test/v1");
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        OpenAiProvider provider = provider(builder, "gpt-4.1", "gpt-4o-transcribe", "prompt");
+        Map<String, Object> schema = Map.of(
+                "type", "object",
+                "additionalProperties", false,
+                "properties", Map.of("facts", Map.of("type", "array")),
+                "required", List.of("facts"));
+
+        server.expect(requestTo("https://api.openai.test/v1/chat/completions"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"temperature\":0.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"type\":\"json_schema\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"name\":\"clinical_facts_v1\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"strict\":true")))
+                .andRespond(withSuccess("""
+                        {
+                          "model":"gpt-4.1",
+                          "choices":[{"message":{"content":"{\\\"facts\\\":[]}"}}],
+                          "usage":{"total_tokens":21}
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        AiChatResponse response = provider.chatStructured(
+                List.of(AiMessage.user("transcript")),
+                "extractor",
+                "clinical_facts_v1",
+                schema);
+
+        assertThat(response.content()).isEqualTo("{\"facts\":[]}");
+        assertThat(response.tokensUsed()).isEqualTo(21);
+        server.verify();
+    }
+
+    @Test
+    void shouldFailClosedWhenStructuredOutputIsRefused() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("https://api.openai.test/v1");
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        OpenAiProvider provider = provider(builder, "gpt-4.1", "gpt-4o-transcribe", "prompt");
+
+        server.expect(requestTo("https://api.openai.test/v1/chat/completions"))
+                .andRespond(withSuccess("""
+                        {
+                          "model":"gpt-4.1",
+                          "choices":[{"message":{"refusal":"cannot comply","content":null}}]
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> provider.chatStructured(
+                List.of(AiMessage.user("transcript")),
+                "extractor",
+                "clinical_facts_v1",
+                Map.of("type", "object")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("AI_STRUCTURED_OUTPUT_REFUSED");
         server.verify();
     }
 
