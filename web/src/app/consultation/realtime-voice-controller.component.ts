@@ -33,12 +33,16 @@ import {
           <div class="min-w-0">
             <div class="flex items-center gap-2">
               <span class="h-2.5 w-2.5 rounded-full"
-                [ngClass]="state().connected ? 'animate-pulse bg-emerald-500' : state().connecting ? 'animate-pulse bg-amber-500' : 'bg-slate-400'">
+                [ngClass]="state().connected ? 'animate-pulse bg-emerald-500' : state().connecting ? 'animate-pulse bg-amber-500' : 'bg-rose-500'">
               </span>
               <p class="text-xs font-black text-[var(--text-primary)]">{{ statusLabel() }}</p>
             </div>
             <p class="mt-1 text-[11px] leading-4 text-[var(--text-muted)]">
-              {{ i18n.t('consultation.ai.realtimeGovernedHelp', 'Le micro reste en direct, mais chaque donnée clinique passe par les validations Joprelys.') }}
+              @if (state().connected) {
+                {{ i18n.t('consultation.ai.realtimeGovernedHelp', 'Le micro reste en direct, mais chaque donnée clinique passe par les validations Joprelys.') }}
+              } @else {
+                {{ i18n.t('consultation.ai.realtimeRecoveryHelp', 'Ne poursuivez pas la dictée tant que la reconnexion n’est pas terminée : Joprelys rétablit automatiquement le microphone.') }}
+              }
             </p>
           </div>
           <button type="button" (click)="toggleMute()" [disabled]="!state().connected || blocked"
@@ -68,6 +72,12 @@ import {
               {{ i18n.t('consultation.ai.realtimeReady', 'Micro en direct — parlez naturellement') }}
             }
           </div>
+        } @else {
+          <div class="mt-3 rounded-[4px] border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
+            {{ state().connecting
+              ? i18n.t('consultation.ai.realtimeRecovering', 'Reconnexion audio en cours…')
+              : i18n.t('consultation.ai.realtimeDisconnected', 'Audio temps réel interrompu — n’enregistrez pas tant que le voyant n’est pas vert.') }}
+          </div>
         }
       </div>
     }
@@ -94,12 +104,16 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   private manualMuted = false;
   private lastSpokenMessage = '';
   private connectingForVisit = '';
-  private connectionAttemptedForVisit = '';
 
   constructor() {
     this.subscriptions.add(this.bridge.state$.subscribe(state => {
+      const wasConnected = this.state().connected;
       this.state.set(state);
       this.activeChange.emit(state.connected);
+      if (state.connected && !wasConnected) {
+        this.syncMute();
+        this.speakCurrentApprovedTurn();
+      }
     }));
     this.subscriptions.add(this.bridge.transcript$.subscribe(transcript => this.processTranscript(transcript)));
     this.subscriptions.add(this.bridge.error$.subscribe(message => this.realtimeError.emit(message)));
@@ -130,9 +144,9 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   }
 
   statusLabel(): string {
-    if (this.state().connecting) return this.i18n.t('consultation.ai.realtimeConnecting', 'Connexion temps réel…');
+    if (this.state().connecting) return this.i18n.t('consultation.ai.realtimeRecovering', 'Reconnexion audio en cours…');
     if (this.state().connected) return this.i18n.t('consultation.ai.realtimeConnected', 'Copilote Realtime sécurisé');
-    return this.i18n.t('consultation.ai.realtimeFallback', 'Mode audio classique disponible');
+    return this.i18n.t('consultation.ai.realtimeDisconnected', 'Audio temps réel interrompu');
   }
 
   barHeight(index: number): number {
@@ -144,11 +158,10 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   private async syncConnection(): Promise<void> {
     if (!this.enabled || !this.visitId || !this.session) {
       this.connectingForVisit = '';
-      this.connectionAttemptedForVisit = '';
       this.bridge.disconnect();
       return;
     }
-    if (this.state().connected || this.state().connecting || this.connectingForVisit === this.visitId || this.connectionAttemptedForVisit === this.visitId) {
+    if (this.state().connected || this.state().connecting || this.connectingForVisit === this.visitId) {
       this.syncMute();
       return;
     }
@@ -158,16 +171,14 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       return;
     }
     this.connectingForVisit = this.visitId;
-    this.connectionAttemptedForVisit = this.visitId;
     try {
       await this.bridge.connect(this.visitId);
       const spoken = this.speakCurrentApprovedTurn();
       if (!spoken) this.syncMute();
     } catch (error) {
-      this.bridge.disconnect();
       this.realtimeError.emit(error instanceof Error && error.message.trim()
         ? error.message
-        : this.i18n.t('consultation.ai.realtimeUnavailable', 'Le temps réel est indisponible. Joprelys conserve le mode audio classique.'));
+        : this.i18n.t('consultation.ai.realtimeUnavailable', 'Le temps réel est indisponible. Reconnexion automatique en cours.'));
     } finally {
       this.connectingForVisit = '';
     }
@@ -192,7 +203,10 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       },
       error: () => {
         this.processing.set(false);
-        this.realtimeError.emit(this.i18n.t('consultation.ai.realtimeClinicalError', 'La phrase a été entendue, mais son analyse clinique a échoué.'));
+        this.realtimeError.emit(this.i18n.t(
+          'consultation.ai.realtimeClinicalError',
+          'La phrase a été entendue, mais son analyse clinique a échoué. Ne poursuivez pas tant que la connexion applicative n’est pas rétablie.',
+        ));
         this.syncMute();
       },
     });
@@ -213,7 +227,6 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   }
 
   private syncMute(): void {
-    if (!this.state().connected) return;
     this.bridge.setMuted(this.blocked || this.manualMuted || this.processing());
   }
 }

@@ -45,7 +45,7 @@ joprelys:
     enabled: ${JOPRELYS_AI_ENABLED:false}
     provider: ${AI_PROVIDER:openai}
     speech-provider: ${SPEECH_PROVIDER:openai}
-    session-ttl-minutes: ${AI_SESSION_TTL_MINUTES:30}
+    session-ttl-minutes: ${AI_SESSION_TTL_MINUTES:180}
     max-conversation-turns: ${AI_MAX_CONVERSATION_TURNS:20}
     minimum-transcription-confidence: ${AI_MIN_TRANSCRIPTION_CONFIDENCE:0.35}
     locale: ${AI_LOCALE:fr}

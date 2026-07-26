@@ -77,11 +77,25 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
     component.session = activeSession();
   });
 
-  it('should attempt realtime only once per visit after a connection failure', async () => {
+  it('should keep realtime connection retryable after a connection failure', async () => {
     await (component as any).syncConnection();
     await (component as any).syncConnection();
 
-    expect(bridge.connect).toHaveBeenCalledTimes(1);
+    expect(bridge.connect).toHaveBeenCalledTimes(2);
+    expect(bridge.disconnect).not.toHaveBeenCalled();
+  });
+
+  it('should resynchronize mute state when realtime reconnects', () => {
+    component.blocked = true;
+    state.next({
+      connected: true,
+      connecting: false,
+      userSpeaking: false,
+      assistantSpeaking: false,
+      muted: true,
+    });
+
+    expect(bridge.setMuted).toHaveBeenCalledWith(true);
   });
 
   it('should analyze each realtime transcript immediately without pending review', () => {
