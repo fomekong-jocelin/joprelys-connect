@@ -27,6 +27,17 @@ const DISCONNECTED_STATE: RealtimeVoiceState = {
   muted: false,
 };
 
+const FR: Record<string, string> = {
+  'consultation.ai.realtimeTranscriptUnverified': 'Une phrase a été entendue mais sa confiance est trop incertaine pour être utilisée cliniquement. L’audio protégé est conservé.',
+  'consultation.ai.realtimeTranscriptLowConfidence': 'Une phrase reste trop incertaine pour être utilisée cliniquement. L’audio protégé est conservé.',
+  'consultation.ai.realtimeBackpressure': 'Joprelys sécurise les dernières secondes avant de reprendre automatiquement.',
+  'consultation.ai.realtimeClinicalError': 'La phrase a été entendue, mais son analyse clinique a échoué.',
+  'consultation.ai.realtimeConversationAnalysisFailed': 'La phrase a bien été sauvegardée, mais l’assistant n’a pas pu l’analyser.',
+  'consultation.ai.realtimeUnavailable': 'Le temps réel est momentanément indisponible. Reconnexion automatique en cours.',
+  'consultation.ai.realtimeUnsupported': 'Ce navigateur ne prend pas en charge la connexion audio temps réel.',
+  'consultation.ai.ambientRequired': 'La protection audio n’est pas disponible.',
+};
+
 describe('RealtimeVoiceControllerComponent durable clinical listening', () => {
   let fixture: ComponentFixture<RealtimeVoiceControllerComponent>;
   let component: RealtimeVoiceControllerComponent;
@@ -119,7 +130,7 @@ describe('RealtimeVoiceControllerComponent durable clinical listening', () => {
           provide: I18nService,
           useValue: {
             currentLanguage: () => 'fr',
-            t: (key: string, fallback?: string) => fallback ?? key,
+            t: (key: string, fallback?: string) => FR[key] ?? fallback ?? key,
           },
         },
       ],

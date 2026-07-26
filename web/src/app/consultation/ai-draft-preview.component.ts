@@ -9,43 +9,32 @@ import { AiConsultationDraft, AiField } from './ai-consultation-api.service';
   imports: [CommonModule],
   template: `
     @if (entries().length > 0) {
-      <section class="space-y-2">
+      <section class="ui-card-subtle space-y-3 p-3 sm:p-4">
         <div>
-          <p class="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-            {{ i18n.t('consultation.ai.acceptedDraft', 'Brouillon accepté') }}
-          </p>
-          <p class="mt-1 text-[10px] text-[var(--text-muted)]">
-            {{
-              i18n.t(
-                'consultation.ai.acceptedDraftGovernanceHelp',
-                'Consultation, ordonnance, examens et constantes restent sous contrôle du professionnel de santé.'
-              )
-            }}
+          <p class="ui-label">{{ i18n.t('consultation.ai.acceptedDraft') }}</p>
+          <p class="mt-1 text-[10px] leading-4 text-[var(--text-muted)]">
+            {{ i18n.t('consultation.ai.acceptedDraftGovernanceHelp') }}
           </p>
         </div>
+
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
           @for (entry of entries(); track entry.key) {
-            <div
-              class="rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface-muted)]/30 p-3"
-            >
-              <p class="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                {{ fieldLabel(entry.key) }}
-              </p>
-              <p
-                class="mt-1 line-clamp-5 whitespace-pre-wrap text-xs leading-5 text-[var(--text-primary)]"
-              >
+            <div class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3">
+              <p class="ui-label">{{ fieldLabel(entry.key) }}</p>
+              <p class="mt-1 line-clamp-5 whitespace-pre-wrap text-xs leading-5 text-[var(--text-primary)]">
                 {{ formatValue(entry.key, entry.value) }}
               </p>
             </div>
           }
         </div>
+
         <button
           type="button"
           (click)="apply.emit()"
           [disabled]="!canApply"
-          class="inline-flex w-full items-center justify-center rounded-[6px] bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+          class="ui-button ui-button-primary w-full sm:w-auto"
         >
-          {{ i18n.t('consultation.ai.apply', 'Appliquer au formulaire') }}
+          {{ i18n.t('consultation.ai.apply') }}
         </button>
       </section>
     }
@@ -59,8 +48,13 @@ export class AiDraftPreviewComponent {
   @Output() readonly apply = new EventEmitter<void>();
 
   entries(): Array<{ key: AiField; value: string }> {
+    const diagnosis = this.draft.diagnosis?.trim();
     return (Object.entries(this.draft) as Array<[AiField, string]>)
-      .filter(([, value]) => !!value?.trim())
+      .filter(([key, value]) => {
+        if (!value?.trim()) return false;
+        if (key === 'finalDiagnosis' && diagnosis && value.trim() === diagnosis) return false;
+        return true;
+      })
       .map(([key, value]) => ({ key, value }));
   }
 
@@ -82,7 +76,7 @@ export class AiDraftPreviewComponent {
       }
       if (field === 'vitals' && parsed && typeof parsed === 'object') {
         return Object.entries(parsed as Record<string, unknown>)
-          .map(([key, item]) => `${key}: ${item}`)
+          .map(([key, item]) => `${this.vitalLabel(key)}: ${this.vitalValue(key, item)}`)
           .join(' · ');
       }
     } catch {
@@ -93,21 +87,27 @@ export class AiDraftPreviewComponent {
 
   fieldLabel(field: AiField): string {
     const labels: Record<AiField, string> = {
-      symptoms: this.i18n.t('consultation.symptoms.label', 'Symptômes'),
-      clinicalExam: this.i18n.t('consultation.clinicalExam.label', 'Examen clinique'),
-      suspectedDiagnosis: this.i18n.t(
-        'consultation.suspectedDiagnosis.label',
-        'Hypothèse diagnostique',
-      ),
-      diagnosis: this.i18n.t('consultation.diagnosis.label', 'Diagnostic'),
-      finalDiagnosis: this.i18n.t('consultation.finalDiagnosis.label', 'Diagnostic final'),
-      conclusion: this.i18n.t('consultation.conclusion.label', 'Conclusion'),
-      advice: this.i18n.t('consultation.advice.label', 'Conseils au patient'),
-      followUp: this.i18n.t('consultation.followUp.label', 'Suivi recommandé'),
-      prescription: this.i18n.t('consultation.ai.field.prescription', 'Ordonnance structurée'),
-      labOrders: this.i18n.t('consultation.ai.field.labOrders', 'Examens prescrits'),
-      vitals: this.i18n.t('consultation.ai.field.vitals', 'Constantes vitales'),
+      symptoms: this.i18n.t('consultation.symptoms.label'),
+      clinicalExam: this.i18n.t('consultation.clinicalExam.label'),
+      suspectedDiagnosis: this.i18n.t('consultation.suspectedDiagnosis.label'),
+      diagnosis: this.i18n.t('consultation.diagnosis.label'),
+      finalDiagnosis: this.i18n.t('consultation.finalDiagnosis.label'),
+      conclusion: this.i18n.t('consultation.conclusion.label'),
+      advice: this.i18n.t('consultation.advice.label'),
+      followUp: this.i18n.t('consultation.followUp.label'),
+      prescription: this.i18n.t('consultation.ai.field.prescription'),
+      labOrders: this.i18n.t('consultation.ai.field.labOrders'),
+      vitals: this.i18n.t('consultation.ai.field.vitals'),
     };
     return labels[field];
+  }
+
+  private vitalLabel(key: string): string {
+    return this.i18n.t(`consultation.ai.vital.${key}`, key);
+  }
+
+  private vitalValue(key: string, value: unknown): string {
+    const unit = this.i18n.t(`consultation.ai.vitalUnit.${key}`, '');
+    return `${String(value)}${unit ? ` ${unit}` : ''}`;
   }
 }

@@ -6,8 +6,24 @@ import {
 } from './ai-proposal-panel.component';
 
 class I18nStub {
-  t(_key: string, defaultValue?: string): string {
-    return defaultValue ?? _key;
+  private readonly translations: Record<string, string> = {
+    'consultation.ai.revisionTitle': 'Modifications à valider',
+    'consultation.ai.revisionGovernanceHelp': 'Le copilote propose uniquement.',
+    'consultation.ai.uncertaintyLow': 'Confiance élevée',
+    'consultation.ai.previousValue': 'Avant',
+    'consultation.ai.proposedValue': 'Après',
+    'consultation.ai.emptyValue': 'Vide',
+    'consultation.ai.clearValue': 'Supprimer cette valeur',
+    'consultation.ai.acceptProposal': 'Accepter ce champ',
+    'consultation.ai.rejectProposal': 'Rejeter ce champ',
+    'consultation.ai.acceptAll': 'Tout accepter',
+    'consultation.ai.rejectAll': 'Tout rejeter',
+    'consultation.symptoms.label': 'Symptômes',
+    'consultation.diagnosis.label': 'Diagnostic',
+  };
+
+  t(key: string, defaultValue?: string): string {
+    return this.translations[key] ?? defaultValue ?? key;
   }
 }
 
