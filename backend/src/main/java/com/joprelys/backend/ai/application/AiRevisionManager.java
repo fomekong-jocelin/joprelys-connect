@@ -18,6 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 final class AiRevisionManager {
 
     private static final int MAX_REVISIONS = 10;
+    private final AiClinicalMemoryManager memoryManager = new AiClinicalMemoryManager();
 
     RevisionView createRevision(
             AiConsultationSessionState state,
@@ -73,6 +74,9 @@ final class AiRevisionManager {
         List<FieldProposalView> proposals = new ArrayList<>(revision.proposals());
         proposals.set(proposalIndex, decide(state, proposal, decision));
         state.revisions.set(revisionIndex, replaceRevision(revision, proposals));
+        if ("ACCEPT".equals(decision)) {
+            memoryManager.synchronizeAcceptedDraft(state);
+        }
     }
 
     void decideRevision(
@@ -93,6 +97,9 @@ final class AiRevisionManager {
                         : proposal)
                 .toList();
         state.revisions.set(revisionIndex, replaceRevision(revision, proposals));
+        if ("ACCEPT".equals(decision)) {
+            memoryManager.synchronizeAcceptedDraft(state);
+        }
     }
 
     boolean hasPendingRevision(AiConsultationSessionState state) {
