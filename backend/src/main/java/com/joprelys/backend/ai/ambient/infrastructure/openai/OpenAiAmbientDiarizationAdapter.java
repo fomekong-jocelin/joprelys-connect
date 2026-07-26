@@ -4,6 +4,7 @@ import com.joprelys.backend.ai.ambient.application.AmbientDiarizationPort;
 import com.joprelys.backend.ai.infrastructure.AiProperties;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +54,7 @@ public class OpenAiAmbientDiarizationAdapter implements AmbientDiarizationPort {
         if (restClient == null) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI_AMBIENT_NOT_CONFIGURED");
         }
-        if (!model.toLowerCase().startsWith("gpt-4o-transcribe-diarize")) {
+        if (!model.toLowerCase(Locale.ROOT).startsWith("gpt-4o-transcribe-diarize")) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI_AMBIENT_DIARIZATION_MODEL_REQUIRED");
         }
 
@@ -70,8 +71,9 @@ public class OpenAiAmbientDiarizationAdapter implements AmbientDiarizationPort {
         formData.add("model", model);
         formData.add("response_format", "diarized_json");
         formData.add("chunking_strategy", "auto");
-        if (locale != null && !locale.isBlank()) {
-            formData.add("language", locale.trim().toLowerCase());
+        String language = normalizeLanguage(locale);
+        if (language != null) {
+            formData.add("language", language);
         }
 
         try {
@@ -143,7 +145,7 @@ public class OpenAiAmbientDiarizationAdapter implements AmbientDiarizationPort {
     }
 
     private String extension(String contentType) {
-        String normalized = contentType == null ? "" : contentType.toLowerCase();
+        String normalized = contentType == null ? "" : contentType.toLowerCase(Locale.ROOT);
         if (normalized.startsWith("audio/webm")) return "webm";
         if (normalized.startsWith("audio/mp4") || normalized.startsWith("audio/m4a")) return "m4a";
         if (normalized.startsWith("audio/mpeg") || normalized.startsWith("audio/mp3")) return "mp3";
@@ -151,6 +153,15 @@ public class OpenAiAmbientDiarizationAdapter implements AmbientDiarizationPort {
         if (normalized.startsWith("audio/ogg")) return "ogg";
         if (normalized.startsWith("audio/flac")) return "flac";
         throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "AI_AMBIENT_AUDIO_TYPE_UNSUPPORTED");
+    }
+
+    private String normalizeLanguage(String locale) {
+        if (locale == null || locale.isBlank()) {
+            return null;
+        }
+        String normalized = locale.trim().toLowerCase(Locale.ROOT).replace('_', '-');
+        String language = normalized.split("-", 2)[0];
+        return language.matches("[a-z]{2,3}") ? language : null;
     }
 
     private String asString(Object value) {
