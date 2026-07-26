@@ -26,6 +26,7 @@
   "vitals.assistant.realtimeReady": "Micro en direct — dictez les paramètres",
   "vitals.assistant.realtimeAwaitingConfirmation": "Répondez à la clarification ou redictez la valeur",
   "vitals.assistant.realtimeUnavailable": "Le mode Realtime est indisponible. La dictée classique reste disponible.",
+  "vitals.assistant.realtimeUnsupported": "Ce navigateur ne prend pas en charge la connexion audio temps réel.",
   "vitals.assistant.realtimeActivate": "Activer l’écoute Realtime",
   "vitals.assistant.realtimeConsent": "Le microphone ne s’ouvre qu’après votre activation et se coupe lorsque vous quittez ce mode.",
   "vitals.assistant.realtimeBackToClassic": "Revenir à la dictée classique",
