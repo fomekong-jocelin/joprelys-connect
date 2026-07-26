@@ -29,9 +29,7 @@ final class AiClinicalResponseParser {
     private static final Set<String> PRESCRIPTION_FIELDS = Set.of(
             "drugName", "dosage", "posology", "duration", "quantity",
             "instructions", "form", "route", "frequency", "substitutionAllowed");
-    private static final Set<String> VITAL_FIELDS = Set.of(
-            "temperature", "weight", "height", "pulse", "systolic", "diastolic",
-            "spo2", "glycemia", "respiratoryRate", "painScale");
+    private static final Set<String> VITAL_FIELDS = AiVitalsSafetyRules.VITAL_FIELDS;
     private static final Set<String> ALLOWED_OPERATIONS = Set.of("SET", "CLEAR");
     private static final Set<String> ALLOWED_UNCERTAINTIES = Set.of("LOW", "MEDIUM", "HIGH");
     private static final int MAX_CLARIFICATION_OPTIONS = 5;
@@ -260,7 +258,8 @@ final class AiClinicalResponseParser {
         Map<String, Number> normalized = new LinkedHashMap<>();
         for (Map.Entry<?, ?> entry : map.entrySet()) {
             String key = entry.getKey() == null ? "" : entry.getKey().toString();
-            if (!VITAL_FIELDS.contains(key) || !(entry.getValue() instanceof Number number)) {
+            if (!(entry.getValue() instanceof Number number)
+                    || !AiVitalsSafetyRules.isSafeProposal(key, number)) {
                 throw invalidChange();
             }
             normalized.put(key, number);
