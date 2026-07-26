@@ -22,6 +22,7 @@ public class OpenAiRealtimeCallService {
 
     private static final Logger log = LoggerFactory.getLogger(OpenAiRealtimeCallService.class);
     private static final int MAX_SDP_LENGTH = 128_000;
+    private static final int MAX_UPSTREAM_ERROR_LOG_LENGTH = 800;
     private static final MediaType APPLICATION_SDP = MediaType.valueOf("application/sdp");
 
     private final RestClient restClient;
@@ -51,6 +52,23 @@ public class OpenAiRealtimeCallService {
                         .baseUrl(openAi.baseUrl())
                         .defaultHeader("Authorization", "Bearer " + openAi.apiKey())
                         .build();
+        this.objectMapper = objectMapper;
+        this.model = model;
+        this.voice = voice;
+        this.transcriptionModel = transcriptionModel;
+        this.vadEagerness = normalizeEagerness(vadEagerness);
+        this.noiseReduction = normalizeNoiseReduction(noiseReduction);
+    }
+
+    OpenAiRealtimeCallService(
+            RestClient restClient,
+            ObjectMapper objectMapper,
+            String model,
+            String voice,
+            String transcriptionModel,
+            String vadEagerness,
+            String noiseReduction) {
+        this.restClient = restClient;
         this.objectMapper = objectMapper;
         this.model = model;
         this.voice = voice;
@@ -91,11 +109,19 @@ public class OpenAiRealtimeCallService {
         } catch (ResponseStatusException exception) {
             throw exception;
         } catch (RestClientResponseException exception) {
-            log.warn("Échec création appel OpenAI Realtime status={}", exception.getStatusCode());
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI_REALTIME_UNAVAILABLE");
+            String upstreamBody = safeUpstreamError(exception.getResponseBodyAsString());
+            log.warn(
+                    "Échec création appel OpenAI Realtime status={} body={}",
+                    exception.getStatusCode(),
+                    upstreamBody);
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    upstreamReason(exception.getStatusCode().value()));
         } catch (RuntimeException exception) {
             log.warn("Échec création appel OpenAI Realtime", exception);
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI_REALTIME_UNAVAILABLE");
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "AI_REALTIME_UPSTREAM_UNAVAILABLE");
         }
     }
 
@@ -128,11 +154,35 @@ public class OpenAiRealtimeCallService {
         Map<String, Object> session = new LinkedHashMap<>();
         session.put("type", "realtime");
         session.put("model", model);
+        session.put("output_modalities", java.util.List.of("audio"));
         session.put("instructions", realtimeInstructions(locale));
         session.put("audio", audio);
         session.put("tool_choice", "none");
         session.put("max_output_tokens", 450);
         return session;
+    }
+
+    private String upstreamReason(int status) {
+        return switch (status) {
+            case 400, 422 -> "AI_REALTIME_CONFIG_REJECTED";
+            case 401, 403 -> "AI_REALTIME_UPSTREAM_AUTH";
+            case 404 -> "AI_REALTIME_MODEL_OR_ENDPOINT_UNAVAILABLE";
+            case 409 -> "AI_REALTIME_UPSTREAM_CONFLICT";
+            case 429 -> "AI_REALTIME_QUOTA_OR_BUDGET";
+            default -> status >= 500
+                    ? "AI_REALTIME_UPSTREAM_UNAVAILABLE"
+                    : "AI_REALTIME_UNAVAILABLE";
+        };
+    }
+
+    private String safeUpstreamError(String body) {
+        if (body == null || body.isBlank()) {
+            return "<empty>";
+        }
+        String compact = body.replaceAll("[\\r\\n\\t]+", " ").trim();
+        return compact.length() <= MAX_UPSTREAM_ERROR_LOG_LENGTH
+                ? compact
+                : compact.substring(0, MAX_UPSTREAM_ERROR_LOG_LENGTH) + "…";
     }
 
     private String realtimeInstructions(String locale) {
