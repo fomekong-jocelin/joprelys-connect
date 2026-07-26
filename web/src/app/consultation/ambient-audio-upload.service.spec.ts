@@ -85,6 +85,43 @@ describe('AmbientAudioUploadService', () => {
     );
     expect(vault.acknowledge).not.toHaveBeenCalled();
     expect(pending).toHaveLength(1);
+    expect((service as any).retryTimer).not.toBeNull();
+  });
+
+  it('should retain and schedule retry when a stale worker loses the server lease', async () => {
+    pending = [chunk('session:00000004')];
+
+    const upload = service.flush('visit-1');
+    await settle();
+    http.expectOne('/api/ai/consultations/visit-1/ambient/transcriptions/audio')
+      .flush({ detail: 'AI_AMBIENT_CHUNK_LEASE_LOST' }, { status: 409, statusText: 'Conflict' });
+    await upload;
+
+    expect(vault.markAttempt).toHaveBeenCalledWith(
+      'session:00000004',
+      'AI_AMBIENT_CHUNK_LEASE_LOST',
+    );
+    expect(vault.acknowledge).not.toHaveBeenCalled();
+    expect(pending).toHaveLength(1);
+    expect((service as any).retryTimer).not.toBeNull();
+  });
+
+  it('should retain and schedule retry while another worker is processing the chunk', async () => {
+    pending = [chunk('session:00000005')];
+
+    const upload = service.flush('visit-1');
+    await settle();
+    http.expectOne('/api/ai/consultations/visit-1/ambient/transcriptions/audio')
+      .flush({ detail: 'AI_AMBIENT_CHUNK_PROCESSING' }, { status: 409, statusText: 'Conflict' });
+    await upload;
+
+    expect(vault.markAttempt).toHaveBeenCalledWith(
+      'session:00000005',
+      'AI_AMBIENT_CHUNK_PROCESSING',
+    );
+    expect(vault.acknowledge).not.toHaveBeenCalled();
+    expect(pending).toHaveLength(1);
+    expect((service as any).retryTimer).not.toBeNull();
   });
 
   it('should not retry a hash mismatch as if it were a transient race', async () => {
@@ -101,6 +138,8 @@ describe('AmbientAudioUploadService', () => {
       'AI_AMBIENT_CHUNK_HASH_MISMATCH',
     );
     expect(vault.acknowledge).not.toHaveBeenCalled();
+    expect(pending).toHaveLength(1);
+    expect((service as any).retryTimer).toBeNull();
   });
 
   function chunk(id: string): AmbientStoredChunk {

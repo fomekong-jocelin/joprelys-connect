@@ -27,10 +27,11 @@ class AmbientTranscriptionServiceTest {
             new AmbientTranscriptionService(diarizationPort, chunkJournal);
 
     @Test
-    void shouldClaimHashBeforeCallingProviderAndCompleteOnce() {
+    void shouldClaimHashBeforeCallingProviderAndCompleteWithSameLease() {
         UUID visitId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         UUID organizationId = UUID.randomUUID();
+        UUID claimToken = UUID.randomUUID();
         byte[] audio = "stable-audio".getBytes(StandardCharsets.UTF_8);
         var segment = new DiarizedSegment("seg-1", 0, 1.2, "Bonjour", "A");
         var expected = List.of(view(visitId));
@@ -38,11 +39,11 @@ class AmbientTranscriptionServiceTest {
         when(chunkJournal.claim(
                 eq(visitId), eq(userId), eq(organizationId), eq("chunk-1"),
                 org.mockito.ArgumentMatchers.anyString(), eq(12_000L), eq("audio/wav")))
-                .thenReturn(new AmbientAudioChunkJournalService.ChunkClaim(false));
+                .thenReturn(new AmbientAudioChunkJournalService.ChunkClaim(false, claimToken, 1));
         when(diarizationPort.transcribe(audio, "audio/wav", "fr"))
                 .thenReturn(new DiarizedTranscript("Bonjour", List.of(segment)));
         when(chunkJournal.complete(
-                visitId, userId, organizationId, "chunk-1", 12_000L, "fr", List.of(segment)))
+                visitId, userId, organizationId, "chunk-1", claimToken, 12_000L, "fr", List.of(segment)))
                 .thenReturn(expected);
 
         var result = service.ingestAudioChunk(
@@ -55,6 +56,8 @@ class AmbientTranscriptionServiceTest {
                 hash.capture(), eq(12_000L), eq("audio/wav"));
         assertThat(hash.getValue()).matches("[0-9a-f]{64}");
         verify(diarizationPort).transcribe(audio, "audio/wav", "fr");
+        verify(chunkJournal).complete(
+                visitId, userId, organizationId, "chunk-1", claimToken, 12_000L, "fr", List.of(segment));
     }
 
     @Test
@@ -68,7 +71,7 @@ class AmbientTranscriptionServiceTest {
         when(chunkJournal.claim(
                 eq(visitId), eq(userId), eq(organizationId), eq("chunk-retry"),
                 org.mockito.ArgumentMatchers.anyString(), eq(0L), eq("audio/wav")))
-                .thenReturn(new AmbientAudioChunkJournalService.ChunkClaim(true));
+                .thenReturn(new AmbientAudioChunkJournalService.ChunkClaim(true, UUID.randomUUID(), 3));
         when(chunkJournal.completedItems(visitId, "chunk-retry")).thenReturn(expected);
 
         var result = service.ingestAudioChunk(
@@ -81,20 +84,21 @@ class AmbientTranscriptionServiceTest {
                 org.mockito.ArgumentMatchers.anyString());
         verify(chunkJournal, never()).complete(
                 eq(visitId), eq(userId), eq(organizationId), eq("chunk-retry"),
-                eq(0L), eq("fr"), anyList());
+                org.mockito.ArgumentMatchers.any(), eq(0L), eq("fr"), anyList());
     }
 
     @Test
-    void shouldKeepChunkRetryableWhenProviderFails() {
+    void shouldFailOnlyTheLeaseThatCalledProvider() {
         UUID visitId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         UUID organizationId = UUID.randomUUID();
+        UUID claimToken = UUID.randomUUID();
         byte[] audio = "audio".getBytes(StandardCharsets.UTF_8);
 
         when(chunkJournal.claim(
                 eq(visitId), eq(userId), eq(organizationId), eq("chunk-fail"),
                 org.mockito.ArgumentMatchers.anyString(), eq(100L), eq("audio/wav")))
-                .thenReturn(new AmbientAudioChunkJournalService.ChunkClaim(false));
+                .thenReturn(new AmbientAudioChunkJournalService.ChunkClaim(false, claimToken, 2));
         when(diarizationPort.transcribe(audio, "audio/wav", "fr"))
                 .thenThrow(new ResponseStatusException(
                         org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
@@ -105,7 +109,11 @@ class AmbientTranscriptionServiceTest {
                 .isInstanceOf(ResponseStatusException.class);
 
         verify(chunkJournal).fail(
-                visitId, organizationId, "chunk-fail", "AI_AMBIENT_UPSTREAM_UNAVAILABLE");
+                visitId,
+                organizationId,
+                "chunk-fail",
+                claimToken,
+                "AI_AMBIENT_UPSTREAM_UNAVAILABLE");
     }
 
     @Test

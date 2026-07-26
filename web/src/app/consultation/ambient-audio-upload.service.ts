@@ -136,7 +136,9 @@ export class AmbientAudioUploadService implements OnDestroy {
     }
     if (error.status >= 500) return true;
     if (error.status === 409) {
-      return this.backendReason(error) === 'AI_AMBIENT_CHUNK_PROCESSING';
+      const reason = this.backendReason(error);
+      return reason === 'AI_AMBIENT_CHUNK_PROCESSING'
+        || reason === 'AI_AMBIENT_CHUNK_LEASE_LOST';
     }
     return false;
   }
