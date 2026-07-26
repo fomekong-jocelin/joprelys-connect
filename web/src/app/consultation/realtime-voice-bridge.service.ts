@@ -11,6 +11,8 @@ export interface RealtimeVoiceState {
   muted: boolean;
 }
 
+export type RealtimeVoicePurpose = 'consultation' | 'vitals';
+
 interface RealtimeServerEvent {
   type?: string;
   transcript?: string;
@@ -57,7 +59,10 @@ export class RealtimeVoiceBridgeService {
       && !!navigator.mediaDevices?.getUserMedia;
   }
 
-  async connect(visitId: string): Promise<void> {
+  async connect(
+    visitId: string,
+    purpose: RealtimeVoicePurpose = 'consultation',
+  ): Promise<void> {
     if (!visitId || !this.isSupported()) {
       throw new Error('AI_REALTIME_UNSUPPORTED');
     }
@@ -117,7 +122,7 @@ export class RealtimeVoiceBridgeService {
 
       const locale = this.i18n.currentLanguage();
       const answerSdp = await firstValueFrom(this.http.post(
-        `/api/ai/realtime/consultations/${visitId}/calls?locale=${encodeURIComponent(locale)}`,
+        this.callEndpoint(visitId, purpose, locale),
         localSdp,
         {
           headers: new HttpHeaders({
@@ -235,6 +240,15 @@ export class RealtimeVoiceBridgeService {
         );
         break;
     }
+  }
+
+  private callEndpoint(
+    visitId: string,
+    purpose: RealtimeVoicePurpose,
+    locale: string,
+  ): string {
+    const scope = purpose === 'vitals' ? 'vitals' : 'consultations';
+    return `/api/ai/realtime/${scope}/${visitId}/calls?locale=${encodeURIComponent(locale)}`;
   }
 
   private sendEvent(payload: Record<string, unknown>): void {
