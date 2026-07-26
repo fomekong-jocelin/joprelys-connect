@@ -1,7 +1,6 @@
 package com.joprelys.backend.ai.ambient.application;
 
 import com.joprelys.backend.ai.ambient.application.AmbientNoteContract.NoteRevisionView;
-import com.joprelys.backend.ai.ambient.application.AmbientNoteContract.NoteStatementView;
 import com.joprelys.backend.ai.ambient.application.AmbientNoteFactualityGuard.GroundedNote;
 import com.joprelys.backend.ai.ambient.application.AmbientNoteFactualityGuard.GroundedStatement;
 import com.joprelys.backend.ai.ambient.application.AmbientTranscriptContract.TranscriptItemView;
@@ -32,6 +31,10 @@ public class AmbientNoteEngineService {
     private static final int MAX_BATCH_ITEMS = 40;
     private static final int MAX_BATCH_CHARACTERS = 18_000;
     private static final int MAX_PROVIDER_CALLS = 30;
+    private static final Comparator<TranscriptItemView> AUDIO_ORDER = Comparator
+            .comparingLong(TranscriptItemView::startOffsetMs)
+            .thenComparingLong(TranscriptItemView::endOffsetMs)
+            .thenComparingLong(TranscriptItemView::sequence);
 
     private final AiProvider aiProvider;
     private final AmbientTranscriptLedgerService ledgerService;
@@ -65,7 +68,7 @@ public class AmbientNoteEngineService {
         String locale = normalizeLocale(localeValue);
         List<TranscriptItemView> effective = new ArrayList<>(
                 ledgerService.listFinal(visitId, organizationId).items());
-        effective.sort(Comparator.comparingLong(TranscriptItemView::sequence));
+        effective.sort(AUDIO_ORDER);
         if (effective.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "AI_AMBIENT_TRANSCRIPT_EMPTY");
         }
@@ -93,9 +96,10 @@ public class AmbientNoteEngineService {
 
         List<TranscriptItemView> pending = effective.stream()
                 .filter(item -> item.sequence() > alreadyProcessedSequence)
+                .sorted(AUDIO_ORDER)
                 .toList();
         if (pending.isEmpty()) {
-            pending = effective;
+            pending = List.copyOf(effective);
             currentNote = new GroundedNote(List.of());
             alreadyProcessedSequence = 0;
         }
@@ -105,21 +109,26 @@ public class AmbientNoteEngineService {
             throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "AI_AMBIENT_NOTE_TRANSCRIPT_TOO_LARGE");
         }
 
+        Set<UUID> processedEvidenceIds = new HashSet<>();
+        long initialSequence = alreadyProcessedSequence;
+        effective.stream()
+                .filter(item -> item.sequence() <= initialSequence)
+                .map(TranscriptItemView::id)
+                .forEach(processedEvidenceIds::add);
+
         String lastModel = null;
         int totalTokens = 0;
         boolean hasTokenUsage = false;
-        long processedThrough = alreadyProcessedSequence;
         for (List<TranscriptItemView> batch : batches) {
             AiChatResponse response = aiProvider.chat(
                     List.of(AiMessage.user(userPayload(template, currentNote, batch))),
                     systemPrompt(locale, template));
             var parsed = responseParser.parse(response.content(), template);
-            long batchMax = batch.stream().mapToLong(TranscriptItemView::sequence).max().orElse(processedThrough);
+            batch.stream().map(TranscriptItemView::id).forEach(processedEvidenceIds::add);
             List<TranscriptItemView> processedEvidence = effective.stream()
-                    .filter(item -> item.sequence() <= batchMax)
+                    .filter(item -> processedEvidenceIds.contains(item.id()))
                     .toList();
             currentNote = factualityGuard.enforce(parsed, template, processedEvidence);
-            processedThrough = batchMax;
             if (response.model() != null && !response.model().isBlank()) lastModel = response.model();
             if (response.tokensUsed() != null) {
                 totalTokens += response.tokensUsed();
@@ -199,6 +208,7 @@ public class AmbientNoteEngineService {
                             "evidenceItemIds", statement.evidenceItemIds().stream().map(UUID::toString).toList()))
                     .toList());
             payload.put("newTranscriptItems", batch.stream()
+                    .sorted(AUDIO_ORDER)
                     .map(item -> Map.of(
                             "id", item.id().toString(),
                             "sequence", item.sequence(),
@@ -255,7 +265,9 @@ public class AmbientNoteEngineService {
     }
 
     private String normalizeLocale(String value) {
-        String locale = value == null || value.isBlank() ? "fr" : value.trim().toLowerCase(Locale.ROOT).replace('_', '-');
+        String locale = value == null || value.isBlank()
+                ? "fr"
+                : value.trim().toLowerCase(Locale.ROOT).replace('_', '-');
         if (!locale.matches("[a-z]{2,3}(?:-[a-z]{2})?")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_AMBIENT_NOTE_LOCALE_INVALID");
         }
