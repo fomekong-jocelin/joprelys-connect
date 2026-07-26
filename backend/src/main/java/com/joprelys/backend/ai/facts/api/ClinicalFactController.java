@@ -1,6 +1,8 @@
 package com.joprelys.backend.ai.facts.api;
 
 import com.joprelys.backend.ai.facts.application.ClinicalFactContract.FactLedgerView;
+import com.joprelys.backend.ai.facts.application.ClinicalFactExtractionService;
+import com.joprelys.backend.ai.facts.application.ClinicalFactExtractionService.ExtractionReport;
 import com.joprelys.backend.ai.facts.application.ClinicalFactLedgerService;
 import com.joprelys.backend.auth.security.JwtClaims;
 import com.joprelys.backend.auth.security.TenantContext;
@@ -12,6 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -22,9 +25,25 @@ import org.springframework.web.server.ResponseStatusException;
 public class ClinicalFactController {
 
     private final ClinicalFactLedgerService factLedgerService;
+    private final ClinicalFactExtractionService extractionService;
 
-    public ClinicalFactController(ClinicalFactLedgerService factLedgerService) {
+    public ClinicalFactController(
+            ClinicalFactLedgerService factLedgerService,
+            ClinicalFactExtractionService extractionService) {
         this.factLedgerService = factLedgerService;
+        this.extractionService = extractionService;
+    }
+
+    @PostMapping("/extract")
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
+    public ExtractionReport extract(
+            @PathVariable UUID visitId,
+            Authentication authentication) {
+        Identity identity = identity(authentication);
+        return extractionService.extractNewFacts(
+                visitId,
+                identity.userId(),
+                identity.organizationId());
     }
 
     @GetMapping
