@@ -14,7 +14,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 - **HOS-ORG-001-A / #130 / PR #133 — organisation hospitalière structurée** : ajout d'un bounded context `hospitalorganization` séparé de `spatial`, avec hiérarchie facultative `POLE → DEPARTMENT → SERVICE → CARE_UNIT`. Une petite clinique peut créer directement un service sous l'établissement sans niveau factice.
 - **Flyway V87 — référentiels organisationnels** : ajout de `hospital_service_catalog`, `medical_specialty_catalog`, `organizational_unit_type_catalog` et `organizational_units`. Les codes sont stables ; le code d'unité est unique par tenant ; le parent est protégé par FK composite tenant.
-- **Catalogue services FR/EN** : 14 types initiaux contrôlés couvrant notamment médecine générale, médecine interne, maternité/gynécologie-obstétrique, pédiatrie, urgences, chirurgie générale, cardiologie, réanimation, anesthésie, bloc, laboratoire, imagerie, pharmacie et hospitalisation polyvalente.
+- **Catalogue services FR/EN** : 14 types initiaux contrôlés couvrant notamment médecine générale, médecine interne, maternité/gynécologie-obstétrique, pédiatrie, urgences, hospitalisation polyvalente.
 - **Catalogue spécialités FR/EN** : 10 spécialités initiales contrôlées pour préparer HOS-STAFF-001-A sans nouvelle saisie libre.
 - **Permission `ORGANIZATION_STRUCTURE_MANAGE`** : capacité dédiée à la gestion des pôles, départements, services et unités ; attribuée aux profils administratifs prévus, non accordée par défaut aux métiers cliniques.
 - **API `/api/hospital-organization`** : lecture des catalogues, lecture des unités, création/modification et activation/désactivation ; aucun DELETE physique dans ce lot.
@@ -62,20 +62,18 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Fixed
 
+- **BUG-20260726-AI-REALTIME-CONTINUOUS-CONVERSATION** : la consultation WebRTC n'utilise plus le workflow de relecture `PENDING_REVIEW` à chaque tour. Les phrases Realtime sont analysées immédiatement par le pipeline clinique existant, les clarifications sont routées automatiquement, le microphone reste disponible pendant la voix de Joprelys pour permettre le barge-in, et la fin audio suit `output_audio_buffer.stopped/cleared` plutôt que `response.done`. Les révisions cliniques restent volontairement bloquantes et la dictée classique conserve sa relecture.
 - **BUG-20260726-UI-I18N-MOBILE-AI-THEME-POLISH** : le panneau institutionnel de connexion utilise désormais un logo contextuel non inversé et du contenu HTML réellement traduit en FR/EN. Les surfaces IA et la modale de constantes gagnent des libellés i18n, une composition Angular déclarative, des actions tactiles et une divulgation progressive mobile ; l'assistant démarre replié sous 640 px et coupe le microphone lorsqu'il est replié ou détruit.
 - **BUG-20260726-AI-REALTIME-SILENCE-FALSE-PRESCRIPTION** : suppression du
   redémarrage automatique du microphone classique, détection locale de parole,
-  dépôt systématique des transcriptions classique/Realtime en `PENDING_REVIEW`,
-  rejet des transcriptions OpenAI de faible confiance et arrêt des tentatives
-  Realtime répétées à chaque polling. Un échec SDP ne laisse plus de timeout data
-  channel tardif et une exception Realtime inattendue est renvoyée en `503`
-  générique sans fuite de détail. Les modèles par défaut sont alignés sur
-  `gpt-realtime-2.1` et `gpt-realtime-2.1-mini` ; aucune dépendance
-  `reactive-streams` inutilisée n'est ajoutée au backend MVC.
-- **BUG-20260726-RXNORM-SPRING-CONSTRUCTOR-BOOT-FAILURE** : le constructeur
-  `MedicationReferenceProperties` de `RxNormMedicationReferencePort` est désormais
-  explicitement injectable ; un test de contexte couvre les flags actifs et
-  désactivés pour prévenir la boucle de redémarrage Spring.
+  dépôt des transcriptions de dictée classique en `PENDING_REVIEW`, rejet des
+  transcriptions OpenAI de faible confiance et arrêt des tentatives Realtime répétées
+  à chaque polling. Un échec SDP ne laisse plus de timeout data channel tardif et une
+  exception Realtime inattendue est renvoyée en `503` générique sans fuite de détail.
+  Les modèles par défaut sont alignés sur `gpt-realtime-2.1` et
+  `gpt-realtime-2.1-mini` ; aucune dépendance `reactive-streams` inutilisée n'est
+  ajoutée au backend MVC.
+- **BUG-20260726-RXNORM-SPRING-CONSTRUCTOR-BOOT-FAILURE** : le constructeur `MedicationReferenceProperties` de `RxNormMedicationReferencePort` est désormais explicitement injectable ; un test de contexte couvre les flags actifs et désactivés pour prévenir la boucle de redémarrage Spring.
 - **Éditeur d'affectations collaborateur (`StaffAssignmentEditorComponent`)** : refonte ergonomique (affichage prioritaire des cartes d'affectations existantes, ouverture à la demande du formulaire via bouton d'action), correction des espacements (suppression du bouton directement collé aux cartes) et complétude i18n FR/EN pour l'ensemble des clés `staff.assignments.*`.
 - **Portabilité H2/PostgreSQL de `unit_type`** : remplacement d'un CHECK littéral fragile par `organizational_unit_type_catalog` + FK et converter JPA enum ↔ VARCHAR fail-closed ; la contrainte reste forte au lieu d'être supprimée pour satisfaire les tests.
 - **Test historique V86** : `LegacyHospitalizationPermissionPostgresqlMigrationTest` ne suppose plus que V86 restera éternellement la dernière migration. Il vérifie désormais le contrat réel : V86 appliquée, `HOSPITALIZATION_MANAGE` supprimée, aucun remapping automatique des permissions.
@@ -88,6 +86,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ### Validation
 
+- **Conversation Realtime continue** : tests Angular et build production à valider sur la PR dédiée ; recette manuelle requise sur Chrome desktop/Android pour cinq tours successifs et barge-in.
 - **Finitions UI/i18n/mobile IA** : suite Angular complète verte — 81 fichiers et 388 tests ; contrôle i18n shell vert ; build production vert avec bundle initial de 527,82 kB. Les inspections IntelliJ ne relèvent aucune erreur sur les fichiers modifiés. La recette visuelle authentifiée reste à exécuter.
 - **Hotfix vocal/RxNorm** : 15 tests Angular ciblés, suite Angular complète 388/388,
   contrôle i18n et build production verts. Les 20 tests Maven ciblés et les
@@ -109,10 +108,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 - les propositions de constantes de l'assistant restent des brouillons et aucune donnée clinique n'est enregistrée sans validation explicite du professionnel ;
 - le repli ou la destruction de l'assistant de constantes arrête le microphone et la session Realtime ;
-- le transport Realtime ne déclenche aucune décision clinique autonome ; toute
-  transcription attend une relecture et une confirmation médicale explicites ;
-- les captures silencieuses et transcriptions à faible confiance sont rejetées avant
-  création de révision ou proposition d'ordonnance ;
+- le transport Realtime ne déclenche aucune décision clinique autonome : les transcriptions Realtime sont analysées immédiatement, mais toute proposition/révision clinique attend une validation médicale explicite ; la dictée classique conserve la relecture de transcription ;
+- les captures silencieuses et transcriptions à faible confiance sont rejetées avant création de révision ou proposition d'ordonnance ;
 - aucun mapping automatique depuis `Ward.name`, `Room.roomNumber`, `users.department` ou `users.specialty` ;
 - aucun fallback métier ou persistant n'est introduit pour identifier service, espace, lit, unité ou spécialité staff ;
 - les affectations staff sont contrôlées par tenant côté application et base, avec FK composites et refus cross-tenant ;
