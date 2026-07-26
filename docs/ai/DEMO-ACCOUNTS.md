@@ -1,56 +1,74 @@
-# Comptes de Démo & Rôles Joprelys Connect
+# Accès de démonstration et rôles — Joprelys Connect
 
-Ce document liste les comptes de test pré-initialisés et les procédures pour obtenir des accès sur les différents écrans de l'application.
-
----
-
-## 1. Comptes pré-initialisés (Seeded)
-
-Lors du démarrage de l'application backend, les comptes de test suivants sont automatiquement créés en base de données (se référer à [AdminUserSeeder.java](file:///C:/MES-APPLICATIONS/joprelys-connect/backend/src/main/java/com/joprelys/backend/auth/application/AdminUserSeeder.java)) :
-
-| Rôle | Email | Mot de passe | Description |
-|---|---|---|---|
-| **ADMIN_JOPRELYS** | `admin@joprelys.local` | `Admin@12345` | Super-administrateur de Joprelys HealthTech. Gère les Cliniques Pilotes (organisations) et consulte le journal d'audit global. |
-| **MEDECIN** | `medecin@joprelys.local` | `Admin@12345` | Praticien clinique de test rattaché à la *Clinique Joprelys*. Peut créer des visites, des prescriptions, et des demandes d'examens. **Utilisé également comme rôle de secours (fallback) pour accéder et tester le portail laboratoire.** |
-| **PHARMACIEN** | `pharmacien@joprelys.local` | `Admin@12345` | Pharmacien de test rattaché à la *Clinique Joprelys*. Peut utiliser le portail pharmacie pour vérifier des ordonnances et saisir des dispensations de médicaments. |
+Ce document décrit la procédure sûre pour provisionner des accès de test. **Aucun compte, mot de passe ou OTP statique ne doit être versionné dans le dépôt.**
 
 ---
 
-## 2. Accès aux écrans Laboratoire (Biologiste)
+## 1. Bootstrap exceptionnel de l'administrateur plateforme
 
-Un rôle spécifique et dédié **BIOLOGISTE** ou **LABORATOIRE** n'est pas encore finalisé/tranché dans le périmètre actuel (post-MVP).
+Le backend **ne crée aucun `ADMIN_JOPRELYS` par défaut**.
 
-* **Comment tester les écrans laboratoire (`/clinic/lab-orders`) ?**
-  Connectez-vous avec le compte **MEDECIN** (`medecin@joprelys.local` / `Admin@12345`) ou un compte **ADMIN_CLINIQUE**. Ces deux rôles disposent des habilitations requises pour accéder au tableau de bord des demandes d'examens biologiques, effectuer les saisies de résultats multi-analytes et téléverser le PDF de résultat.
+Pour un environnement de développement ou de recette explicitement autorisé, le bootstrap doit être activé avec des secrets injectés par l'environnement :
+
+```text
+JOPRELYS_SEED_ADMIN_ENABLED=true
+JOPRELYS_ADMIN_EMAIL=<secret/environment>
+JOPRELYS_ADMIN_NAME=<secret/environment>
+JOPRELYS_ADMIN_PASSWORD=<secret/environment>
+```
+
+Les quatre conditions suivantes sont obligatoires :
+
+- activation explicite du bootstrap ;
+- email fourni ;
+- nom fourni ;
+- mot de passe fourni.
+
+Une configuration activée mais incomplète provoque un échec explicite au démarrage. Il n'existe aucun email, nom ou mot de passe de repli dans le code.
+
+Après provisionnement de l'environnement, désactiver le bootstrap sauf besoin opérationnel documenté.
 
 ---
 
-## 3. Rôles dynamiques (Par invitation)
+## 2. Comptes professionnels de test
 
-Pour tester les autres rôles du personnel de clinique, connectez-vous avec un compte **Administrateur Clinique** (`ADMIN_CLINIQUE`) sur son espace, puis invitez des membres via l'écran **Gestion du Personnel** (`/clinic/staff`).
+Les comptes `MEDECIN`, `BIOLOGISTE`, `PHARMACIEN`, `INFIRMIER`, `AGENT_ACCUEIL`, etc. doivent être créés ou invités via les parcours d'administration prévus pour l'établissement de test.
 
-### Comment obtenir un compte ADMIN_CLINIQUE ?
-1. Connectez-vous en tant que **Super-administrateur** (`admin@joprelys.local`).
-2. Allez sur l'écran **Cliniques Pilotes** (`/organizations`).
-3. Créez un administrateur pour l'organisation (ou lors de la création d'une nouvelle clinique).
-4. Définissez son adresse e-mail. Le mot de passe temporaire sera généré et s'affichera à l'écran.
+Ne documentez jamais ici :
 
-### Rôles invitables depuis le portail Administrateur Clinique :
-* **INFIRMIER** : Saisie des constantes vitales, historique patient.
-* **AGENT_ACCUEIL** : Enregistrement de nouveaux patients et ouverture des visites.
-* **MEDECIN** / **PHARMACIEN** (supplémentaires).
+- un mot de passe réel ;
+- un mot de passe partagé ;
+- un token ;
+- une clé API ;
+- un code OTP ;
+- un secret temporaire encore utilisable.
+
+Les secrets de recette ou de démonstration doivent être transmis par le gestionnaire de secrets / canal opérationnel autorisé de l'environnement concerné.
 
 ---
 
-## 4. Accès au Portail Patient (`/patient/dashboard`)
+## 3. ADMIN_CLINIQUE
 
-Le portail patient n'utilise pas de mot de passe traditionnel, mais une authentification par **Code OTP** à deux étapes (simulée).
+Un `ADMIN_CLINIQUE` est rattaché à un établissement et administre les utilisateurs et rôles cliniques autorisés de cet établissement.
 
-### Procédure de connexion pour un Patient :
-1. Créez un patient en vous connectant avec un rôle **AGENT_ACCUEIL** ou **MEDECIN** sur la clinique.
-2. Notez le **N° DPU** généré (ex: `DPU-20260703-0001`), le numéro de **téléphone**, et la **date de naissance** saisie.
-3. Allez sur la page de connexion, basculez sur l'onglet **Patient**.
-4. Remplissez le formulaire avec ces informations et cliquez sur **Recevoir un code OTP**.
-5. Le code de connexion OTP (à 6 chiffres) est imprimé directement dans la console d'exécution du backend Spring Boot sous la forme :
-   `[OTP PATIENT] Code de connexion pour DPU DPU-XXXXXX-XXXX : XXXXXX`
-6. Saisissez ce code dans la deuxième étape pour accéder au tableau de bord patient.
+Les rôles plateforme `ADMIN_JOPRELYS` et `SUPER_ADMIN` ne sont pas attribuables depuis l'administration d'une clinique.
+
+---
+
+## 4. Portail patient
+
+Le portail patient suit son propre contexte d'identité et son mécanisme OTP. Il ne doit pas réutiliser les credentials professionnels.
+
+Pour une recette :
+
+1. créer un patient de test via le parcours autorisé ;
+2. utiliser ses informations de test ;
+3. demander un OTP via le flux prévu pour l'environnement ;
+4. récupérer le code uniquement via le canal de recette prévu ;
+5. ne jamais ajouter ce code ou un exemple encore valide dans Git.
+
+---
+
+## 5. Règle de sécurité
+
+Toute ancienne documentation contenant des identifiants versionnés doit être considérée comme **historique compromis**. Un secret qui a été commité doit être remplacé côté environnement ; sa suppression du fichier courant ne constitue pas à elle seule une rotation du secret.
