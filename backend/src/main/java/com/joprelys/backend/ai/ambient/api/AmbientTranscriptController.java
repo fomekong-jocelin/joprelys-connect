@@ -26,7 +26,6 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/api/ai/consultations/{visitId}/ambient")
 @ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
-@PreAuthorize("hasAuthority('CLINICAL_WRITE')")
 public class AmbientTranscriptController {
 
     private final AmbientTranscriptionService transcriptionService;
@@ -42,6 +41,7 @@ public class AmbientTranscriptController {
     @PostMapping(
             value = "/transcriptions/audio",
             consumes = {"audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/ogg", "audio/flac"})
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
     public List<TranscriptItemView> ingestAudioChunk(
             @PathVariable UUID visitId,
             @RequestBody byte[] audio,
