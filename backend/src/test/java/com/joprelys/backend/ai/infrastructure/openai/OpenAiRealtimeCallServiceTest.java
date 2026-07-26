@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.joprelys.backend.ai.infrastructure.AiProperties;
+import com.joprelys.backend.ai.infrastructure.openai.OpenAiRealtimeCallService.RealtimePurpose;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +21,7 @@ class OpenAiRealtimeCallServiceTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void shouldDisableAutonomousResponsesAndEnableSemanticBargeIn() {
+    void shouldUsePatientSemanticVadForNaturalConsultationSpeech() {
         OpenAiRealtimeCallService service = service();
 
         Map<String, Object> session = service.buildSessionConfig("fr");
@@ -37,7 +38,7 @@ class OpenAiRealtimeCallServiceTest {
                 List.of("item.input_audio_transcription.logprobs"),
                 session.get("include"));
         assertEquals("semantic_vad", turnDetection.get("type"));
-        assertEquals("medium", turnDetection.get("eagerness"));
+        assertEquals("low", turnDetection.get("eagerness"));
         assertEquals(Boolean.FALSE, turnDetection.get("create_response"));
         assertEquals(Boolean.TRUE, turnDetection.get("interrupt_response"));
         assertEquals("gpt-4o-transcribe", transcription.get("model"));
@@ -48,6 +49,22 @@ class OpenAiRealtimeCallServiceTest {
         assertEquals("none", session.get("tool_choice"));
         assertTrue(session.get("instructions").toString().contains("Ne diagnostiquez jamais"));
         assertFalse(session.get("instructions").toString().contains("prescrivez un traitement"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldKeepVitalsSemanticVadResponsive() {
+        OpenAiRealtimeCallService service = service();
+
+        Map<String, Object> session = service.buildSessionConfig("fr", RealtimePurpose.VITALS);
+        Map<String, Object> audio = (Map<String, Object>) session.get("audio");
+        Map<String, Object> input = (Map<String, Object>) audio.get("input");
+        Map<String, Object> turnDetection = (Map<String, Object>) input.get("turn_detection");
+
+        assertEquals("semantic_vad", turnDetection.get("type"));
+        assertEquals("medium", turnDetection.get("eagerness"));
+        assertEquals(Boolean.FALSE, turnDetection.get("create_response"));
+        assertEquals(Boolean.TRUE, turnDetection.get("interrupt_response"));
     }
 
     @Test
@@ -67,17 +84,37 @@ class OpenAiRealtimeCallServiceTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void shouldRaiseServerVadThresholdInCompatibilityMode() {
+    void shouldUseLongerServerVadSilenceForConsultationCompatibilityMode() {
         OpenAiRealtimeCallService service = service();
 
         Map<String, Object> session = service.buildCompatibilitySessionConfig(
-                "fr", "gpt-realtime-2.1");
+                "fr", "gpt-realtime-2.1", RealtimePurpose.CONSULTATION);
         Map<String, Object> audio = (Map<String, Object>) session.get("audio");
         Map<String, Object> input = (Map<String, Object>) audio.get("input");
         Map<String, Object> turnDetection = (Map<String, Object>) input.get("turn_detection");
 
         assertEquals("server_vad", turnDetection.get("type"));
         assertEquals(0.8, turnDetection.get("threshold"));
+        assertEquals(1200, turnDetection.get("silence_duration_ms"));
+        assertEquals(500, turnDetection.get("prefix_padding_ms"));
+        assertEquals(Boolean.FALSE, turnDetection.get("create_response"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldKeepVitalsServerVadCompatibilityModeFast() {
+        OpenAiRealtimeCallService service = service();
+
+        Map<String, Object> session = service.buildCompatibilitySessionConfig(
+                "fr", "gpt-realtime-2.1", RealtimePurpose.VITALS);
+        Map<String, Object> audio = (Map<String, Object>) session.get("audio");
+        Map<String, Object> input = (Map<String, Object>) audio.get("input");
+        Map<String, Object> turnDetection = (Map<String, Object>) input.get("turn_detection");
+
+        assertEquals("server_vad", turnDetection.get("type"));
+        assertEquals(0.8, turnDetection.get("threshold"));
+        assertEquals(650, turnDetection.get("silence_duration_ms"));
+        assertEquals(300, turnDetection.get("prefix_padding_ms"));
         assertEquals(Boolean.FALSE, turnDetection.get("create_response"));
     }
 
