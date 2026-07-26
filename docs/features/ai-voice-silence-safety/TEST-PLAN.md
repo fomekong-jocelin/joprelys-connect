@@ -20,12 +20,18 @@
 - acceptation lorsque la confiance est absente mais parcours de relecture actif ;
 - aucune révision ni conversation créée lors du rejet ;
 - configuration YAML et valeurs par défaut validées.
+- modèle principal par défaut `gpt-realtime-2.1` ;
+- modèle de repli par défaut `gpt-realtime-2.1-mini` ;
+- absence de dépendance Reactive Streams non utilisée dans le POM ;
+- payload de session toujours conforme au schéma Realtime avec réponses autonomes
+  désactivées.
 
 ## Commandes
 
 ```text
 cd backend
 ./mvnw test -Dtest=OpenAiProviderTest,AiConsultationServiceTest,OpenAiRealtimeCallServiceTest
+./mvnw dependency:tree -Dincludes=org.reactivestreams:reactive-streams
 ./mvnw clean verify
 
 cd web
@@ -38,11 +44,11 @@ npm run build
 - tests Angular ciblés : 15/15 verts ;
 - build Angular production : vert ;
 - contrôle i18n : 49 clés shell FR/EN présentes ;
-- suite Angular complète : 364 tests verts et 23 échecs hors périmètre liés à
-  l'environnement Node 25 (`localStorage.clear` et initialisation TestBed), hors
-  fichiers modifiés ;
-- tests Maven ciblés : non démarrés, parent Spring Boot 4.1.0 absent du cache Maven
-  et accès réseau indisponible.
+- suite Angular complète : 81 fichiers et 388/388 tests verts ;
+- arbre Maven `org.reactivestreams:reactive-streams` : vide ;
+- tests Maven ciblés : 20/20 verts ;
+- suite Maven complète : 637/637 tests verts, zéro échec, erreur ou test ignoré ;
+- cycle Maven `verify -DskipTests` : succès, JAR Spring Boot généré.
 
 ## Recette clinique manuelle
 

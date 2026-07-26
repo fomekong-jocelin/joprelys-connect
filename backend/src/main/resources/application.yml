@@ -58,8 +58,8 @@ joprelys:
       tts-model: ${OPENAI_TTS_MODEL:gpt-4o-mini-tts}
       tts-voice: ${OPENAI_TTS_VOICE:marin}
       tts-instructions: ${OPENAI_TTS_INSTRUCTIONS:Voix médicale professionnelle, calme, chaleureuse, concise et naturelle. Prononcer clairement les nombres, unités et noms de médicaments sans dramatiser.}
-      realtime-model: ${OPENAI_REALTIME_MODEL:gpt-realtime}
-      realtime-fallback-model: ${OPENAI_REALTIME_FALLBACK_MODEL:gpt-realtime-mini}
+      realtime-model: ${OPENAI_REALTIME_MODEL:gpt-realtime-2.1}
+      realtime-fallback-model: ${OPENAI_REALTIME_FALLBACK_MODEL:gpt-realtime-2.1-mini}
       realtime-voice: ${OPENAI_REALTIME_VOICE:marin}
       realtime-transcribe-model: ${OPENAI_REALTIME_TRANSCRIBE_MODEL:gpt-4o-transcribe}
       realtime-vad-eagerness: ${OPENAI_REALTIME_VAD_EAGERNESS:medium}

@@ -39,8 +39,8 @@ public class OpenAiRealtimeCallService {
     public OpenAiRealtimeCallService(
             AiProperties properties,
             ObjectMapper objectMapper,
-            @Value("${joprelys.ai.openai.realtime-model:gpt-realtime}") String model,
-            @Value("${joprelys.ai.openai.realtime-fallback-model:gpt-realtime-mini}") String fallbackModel,
+            @Value("${joprelys.ai.openai.realtime-model:gpt-realtime-2.1}") String model,
+            @Value("${joprelys.ai.openai.realtime-fallback-model:gpt-realtime-2.1-mini}") String fallbackModel,
             @Value("${joprelys.ai.openai.realtime-voice:marin}") String voice,
             @Value("${joprelys.ai.openai.realtime-transcribe-model:gpt-4o-transcribe}") String transcriptionModel,
             @Value("${joprelys.ai.openai.realtime-vad-eagerness:medium}") String vadEagerness,
@@ -57,8 +57,8 @@ public class OpenAiRealtimeCallService {
                         .defaultHeader("Authorization", "Bearer " + openAi.apiKey())
                         .build();
         this.objectMapper = objectMapper;
-        this.model = normalizeModel(model, "gpt-realtime");
-        this.fallbackModel = normalizeModel(fallbackModel, "gpt-realtime-mini");
+        this.model = normalizeModel(model, "gpt-realtime-2.1");
+        this.fallbackModel = normalizeModel(fallbackModel, "gpt-realtime-2.1-mini");
         this.voice = voice;
         this.transcriptionModel = transcriptionModel;
         this.vadEagerness = normalizeEagerness(vadEagerness);

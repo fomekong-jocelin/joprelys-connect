@@ -22,6 +22,35 @@ Les erreurs Realtime attendues conservent leur statut et leur code fonctionnel. 
 exception inattendue limitée aux contrôleurs Realtime est transformée en
 `503 AI_REALTIME_UNAVAILABLE` sans exposer son message, au lieu d'un `500` générique.
 
+### Configuration OpenAI Realtime
+
+L'intégration utilise l'interface WebRTC unifiée documentée par OpenAI :
+`POST https://api.openai.com/v1/realtime/calls`, avec les parties multipart `sdp` et
+`session`. Le schéma actuel `type: realtime`, `output_modalities: [audio]`,
+`audio.input.turn_detection` et la voix `marin` est conforme aux exemples officiels.
+
+Les valeurs par défaut deviennent :
+
+- `OPENAI_REALTIME_MODEL=gpt-realtime-2.1` ;
+- `OPENAI_REALTIME_FALLBACK_MODEL=gpt-realtime-2.1-mini` ;
+- `OPENAI_REALTIME_TRANSCRIBE_MODEL=gpt-4o-transcribe`.
+
+`gpt-4o-transcribe` est conservé pour la précision et le guidage par prompt. Le
+modèle `gpt-realtime-whisper`, recommandé pour la transcription streaming à latence
+minimale, ne supporte pas le prompt dans ce mode et impose un découpage audio
+différent. Ce changement nécessite donc une évaluation clinique séparée.
+
+Le service emploie `RestClient` de Spring MVC. Il n'importe ni Reactive Streams, ni
+Reactor, ni WebFlux. L'ajout direct de `org.reactivestreams:reactive-streams` au
+`pom.xml` serait inutilisé et ne corrigerait aucun rejet HTTP OpenAI ; il n'est donc
+pas introduit sans preuve de `ClassNotFoundException` ou consommateur direct.
+
+Les valeurs d'environnement explicites priment sur les défauts YAML. Au déploiement
+en Recette, une ancienne valeur `OPENAI_REALTIME_MODEL=gpt-realtime` ou
+`OPENAI_REALTIME_FALLBACK_MODEL=gpt-realtime-mini` doit donc être remplacée par les
+identifiants 2.1 ci-dessus ; un redéploiement du même artefact sans mise à jour de
+ces surcharges conserverait l'ancien modèle.
+
 ### Repli classique
 
 La synthèse vocale ne déclenche plus `startRecording`. Le bouton microphone reste
@@ -79,3 +108,12 @@ audio, nom de médicament ni donnée patient.
 
 PATCH : correction rétrocompatible de sécurité et de cycle de vie. Aucun contrat
 public n'est supprimé.
+
+## Références officielles vérifiées le 26 juillet 2026
+
+- https://developers.openai.com/api/docs/guides/realtime-webrtc
+- https://developers.openai.com/api/docs/guides/realtime-conversations
+- https://developers.openai.com/api/docs/guides/realtime-vad
+- https://developers.openai.com/api/docs/models/gpt-realtime-2.1
+- https://developers.openai.com/api/docs/models/gpt-realtime-2.1-mini
+- https://developers.openai.com/api/docs/guides/realtime-transcription

@@ -20,12 +20,14 @@ Realtime ne doit pas dégrader ce principe.
 - détection d'activité vocale locale ;
 - relecture obligatoire de la transcription classique ;
 - rejet des transcriptions à faible confiance.
+- maintien de la configuration Realtime sur les modèles OpenAI officiels non dépréciés.
 
 ## Hors périmètre
 
 - diarisation médecin/patient ;
 - moteur complet d'interactions médicamenteuses ;
-- changement de fournisseur ou de modèle Realtime ;
+- changement de fournisseur IA ;
+- migration vers une session de transcription seule ou vers `gpt-realtime-whisper` ;
 - persistance des audios.
 
 ## Règles métier
@@ -39,6 +41,8 @@ Realtime ne doit pas dégrader ce principe.
    existantes ; aucune persistance automatique n'est ajoutée.
 7. Une clarification en attente se répond par le contrôle explicite prévu ; elle ne
    déclenche pas une capture audio implicite.
+8. Les modèles Realtime par défaut doivent correspondre aux identifiants officiels
+   courants ; une valeur d'environnement explicite reste prioritaire.
 
 ## Parcours attendu
 

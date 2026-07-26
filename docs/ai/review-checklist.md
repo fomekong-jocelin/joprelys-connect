@@ -421,3 +421,14 @@ Règles minimales :
 - [x] Suite Angular complète : 81 fichiers, 388 tests réussis.
 - [x] Contrôle i18n et build production réussis.
 - [ ] Recette visuelle authentifiée mobile/tablette/desktop en FR/EN et light/dark.
+
+## Exécution — alignement OpenAI Realtime 2.1
+
+- [x] Documentation First, ticket, conception et plan de test mis à jour.
+- [x] Documentation officielle OpenAI contrôlée pour endpoint, schéma, VAD, voix et modèles.
+- [x] `application.yml` conservé comme source de défauts externalisables.
+- [x] Aucun contrat API, permission, schéma de données ou secret modifié.
+- [x] Aucune dépendance `reactive-streams` ajoutée sans consommateur direct.
+- [x] Tests Maven ciblés : 20/20.
+- [x] Suite Maven complète : 637/637 ; JAR Spring Boot généré.
+- [ ] Recette clinique réelle silence/voix faible/bruit après déploiement avec les modèles 2.1.

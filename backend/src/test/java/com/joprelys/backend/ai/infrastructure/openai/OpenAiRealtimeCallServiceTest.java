@@ -25,7 +25,7 @@ class OpenAiRealtimeCallServiceTest {
         Map<String, Object> output = (Map<String, Object>) audio.get("output");
 
         assertEquals("realtime", session.get("type"));
-        assertEquals("gpt-realtime", session.get("model"));
+        assertEquals("gpt-realtime-2.1", session.get("model"));
         assertEquals(List.of("audio"), session.get("output_modalities"));
         assertEquals(
                 List.of("item.input_audio_transcription.logprobs"),
@@ -65,7 +65,7 @@ class OpenAiRealtimeCallServiceTest {
         OpenAiRealtimeCallService service = service();
 
         Map<String, Object> session = service.buildCompatibilitySessionConfig(
-                "fr", "gpt-realtime");
+                "fr", "gpt-realtime-2.1");
         Map<String, Object> audio = (Map<String, Object>) session.get("audio");
         Map<String, Object> input = (Map<String, Object>) audio.get("input");
         Map<String, Object> turnDetection = (Map<String, Object>) input.get("turn_detection");
@@ -96,8 +96,8 @@ class OpenAiRealtimeCallServiceTest {
         return new OpenAiRealtimeCallService(
                 properties,
                 new ObjectMapper(),
-                "gpt-realtime",
-                "gpt-realtime-mini",
+                "gpt-realtime-2.1",
+                "gpt-realtime-2.1-mini",
                 "marin",
                 "gpt-4o-transcribe",
                 "medium",

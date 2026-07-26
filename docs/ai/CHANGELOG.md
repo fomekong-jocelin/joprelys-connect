@@ -69,7 +69,9 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   rejet des transcriptions OpenAI de faible confiance et arrêt des tentatives
   Realtime répétées à chaque polling. Un échec SDP ne laisse plus de timeout data
   channel tardif et une exception Realtime inattendue est renvoyée en `503`
-  générique sans fuite de détail.
+  générique sans fuite de détail. Les modèles par défaut sont alignés sur
+  `gpt-realtime-2.1` et `gpt-realtime-2.1-mini` ; aucune dépendance
+  `reactive-streams` inutilisée n'est ajoutée au backend MVC.
 - **BUG-20260726-RXNORM-SPRING-CONSTRUCTOR-BOOT-FAILURE** : le constructeur
   `MedicationReferenceProperties` de `RxNormMedicationReferencePort` est désormais
   explicitement injectable ; un test de contexte couvre les flags actifs et
@@ -87,10 +89,11 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 ### Validation
 
 - **Finitions UI/i18n/mobile IA** : suite Angular complète verte — 81 fichiers et 388 tests ; contrôle i18n shell vert ; build production vert avec bundle initial de 527,82 kB. Les inspections IntelliJ ne relèvent aucune erreur sur les fichiers modifiés. La recette visuelle authentifiée reste à exécuter.
-- **Hotfix vocal/RxNorm** : 15 tests Angular ciblés et build production verts ;
-  contrôle i18n vert. La suite Angular complète compte 364 succès et 23 échecs
-  hors périmètre sous Node 25. Maven est bloqué localement avant compilation car le
-  parent Spring Boot 4.1.0 n'est pas disponible dans le cache hors ligne.
+- **Hotfix vocal/RxNorm** : 15 tests Angular ciblés, suite Angular complète 388/388,
+  contrôle i18n et build production verts. Les 20 tests Maven ciblés et les
+  637 tests du `clean verify` sont verts ; le cycle Maven produit le JAR Spring Boot.
+  L'arbre de dépendances confirme l'absence de consommateur
+  `org.reactivestreams:reactive-streams`.
 - **HOS-ORG backend** : GitHub Actions CI #1066 — Maven strict `clean verify` vert sur le dernier changement backend fonctionnel, sans `skipTests`.
 - **HOS-ORG PostgreSQL 16** : tests de migration V87 couvrant catalogues, FK tenant, contraintes d'identité SERVICE, type inconnu et isolation cross-tenant.
 - **HOS-ORG PR #133** : squash merge dans `main` au commit `72b5e139592b20a9ea14ae366d3fcbab99c46cf1`.

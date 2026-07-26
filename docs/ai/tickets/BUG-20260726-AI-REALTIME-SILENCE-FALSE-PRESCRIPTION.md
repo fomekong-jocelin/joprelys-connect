@@ -5,7 +5,7 @@
 - **Mode** : Diagnostic + Engineering + QA Review
 - **Epic** : EPIC-0024 / AI_VOICE_CONSULTATION
 - **Priorité** : P0 — sécurité clinique
-- **Statut** : IMPLEMENTED — QA ciblée verte, recette clinique requise
+- **Statut** : IMPLEMENTED — Maven 637/637 vert, recette clinique requise
 - **Stack** : Angular / WebRTC / Spring Boot / OpenAI transcription
 - **Profil recommandé** : senior full-stack + reviewer clinique
 - **Reviewer** : Tech Lead + médecin référent + QA
@@ -31,6 +31,21 @@ halluciner une prescription qui est présentée au médecin comme une dictée ex
   analyse immédiatement sans relecture.
 - [x] Le garde ordonnance fait confiance au texte transcrit et ne peut pas prouver
   l'origine acoustique d'un nom de médicament.
+- [x] Les valeurs par défaut utilisent encore `gpt-realtime` et
+  `gpt-realtime-mini`, désormais dépréciés dans le catalogue officiel OpenAI.
+- [x] Le transport backend utilise `RestClient` MVC et ne consomme aucune API
+  `org.reactivestreams`, Reactor ou WebFlux.
+
+## Alignement fournisseur du 26 juillet 2026
+
+- [x] Vérifier l'endpoint unifié `POST /v1/realtime/calls`.
+- [x] Vérifier le schéma `type=realtime`, `output_modalities`, audio, voix et VAD.
+- [x] Vérifier les identifiants de modèles dans le catalogue officiel.
+- [x] Vérifier l'arbre Maven pour `org.reactivestreams:reactive-streams`.
+- [x] Remplacer les valeurs par défaut par `gpt-realtime-2.1` et
+  `gpt-realtime-2.1-mini`.
+- [x] Adapter les tests de configuration.
+- [x] Exécuter les tests Maven et mettre à jour les preuves.
 
 ## Critères d'acceptation
 
@@ -48,8 +63,7 @@ halluciner une prescription qui est présentée au médecin comme une dictée ex
 - [x] Une transcription dont la confiance fournisseur est sous le seuil configuré
   est rejetée sans message clinique, révision ni prescription.
 - [x] Les libellés de sécurité sont disponibles en français et en anglais.
-- [ ] Les tests Angular et Maven ciblés passent : Angular vert ; Maven non exécutable
-  dans l'environnement local faute de parent Spring Boot 4.1.0 en cache.
+- [x] Les tests Angular (388/388) et Maven (637/637) passent.
 - [x] Les builds complets pertinents passent ou les limites sont documentées.
 
 ## Plan d'action
@@ -61,7 +75,7 @@ halluciner une prescription qui est présentée au médecin comme une dictée ex
 - [x] Rendre la dictée classique manuelle et contrôlée.
 - [x] Ajouter la détection locale de parole et le seuil de confiance backend.
 - [x] Ajouter les tests de non-régression.
-- [x] Exécuter les validations Angular et consigner le blocage Maven local.
+- [x] Exécuter les validations Angular et Maven.
 - [x] Mettre à jour le changelog, le suivi projet et la checklist QA.
 
 ## Definition of Done
@@ -74,9 +88,17 @@ halluciner une prescription qui est présentée au médecin comme une dictée ex
 
 ## Reste à faire
 
-Exécuter la suite Maven dans un environnement disposant des dépendances, puis réaliser
+Déployer en Recette avec les valeurs explicites `gpt-realtime-2.1` et
+`gpt-realtime-2.1-mini` si l'environnement surcharge les valeurs YAML, puis réaliser
 la recette clinique réelle silence/voix faible/bruit. L'ancien endpoint
 `POST /messages/audio`, conservé pour les clients historiques, doit rester suivi
 jusqu'à migration complète vers le parcours en deux temps. Les trois classes
 signalées entre 300 et 500 lignes dans la review restent une dette de découpage non
 bloquante.
+
+## Preuves de validation
+
+- arbre Maven ciblé : aucune dépendance `org.reactivestreams:reactive-streams` ;
+- tests Maven ciblés : 20/20 ;
+- suite Maven complète : 637/637, zéro échec, erreur ou test ignoré ;
+- cycle Maven `verify -DskipTests` : succès et JAR Spring Boot généré.
