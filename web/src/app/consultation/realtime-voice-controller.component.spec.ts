@@ -77,8 +77,22 @@ describe('RealtimeVoiceControllerComponent continuous conversation', () => {
     };
     ambient = {
       state$: ambientState,
-      start: vi.fn().mockResolvedValue(undefined),
-      stop: vi.fn().mockResolvedValue(undefined),
+      start: vi.fn().mockImplementation(async () => {
+        ambientState.next({
+          ...ambientState.value,
+          active: true,
+          starting: false,
+          recovering: false,
+        });
+      }),
+      stop: vi.fn().mockImplementation(async () => {
+        ambientState.next({
+          ...ambientState.value,
+          active: false,
+          starting: false,
+          recovering: false,
+        });
+      }),
     };
     api = {
       sendRealtimeTranscript: vi.fn().mockReturnValue(of(messageResponse('Je vous écoute.'))),
