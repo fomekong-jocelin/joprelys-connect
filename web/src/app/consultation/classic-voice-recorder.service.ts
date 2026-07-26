@@ -8,8 +8,6 @@ export interface ClassicVoiceCapture {
 type CaptureHandler = (capture: ClassicVoiceCapture) => void;
 type LevelHandler = (level: number) => void;
 
-const MIN_SPEECH_RMS = 0.015;
-const MIN_SPEECH_FRAMES = 8;
 const MAX_RECORDING_DURATION_MS = 120000;
 
 @Injectable({ providedIn: 'root' })
@@ -26,8 +24,6 @@ export class ClassicVoiceRecorderService {
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private meterFrame: number | null = null;
-  private speechFrames = 0;
-  private voiceActivityAvailable = false;
   private captureHandler: CaptureHandler | null = null;
   private levelHandler: LevelHandler | null = null;
 
@@ -88,8 +84,6 @@ export class ClassicVoiceRecorderService {
     levelHandler: LevelHandler,
   ): void {
     this.audioChunks = [];
-    this.speechFrames = 0;
-    this.voiceActivityAvailable = false;
     this.captureHandler = captureHandler;
     this.levelHandler = levelHandler;
   }
@@ -101,10 +95,9 @@ export class ClassicVoiceRecorderService {
 
     const capture: ClassicVoiceCapture = {
       audio,
-      // Browser-side VAD is telemetry only. A suspended/quirky AudioContext must
-      // never discard a real recording before OpenAI gets the chance to
-      // transcribe it. The server-side transcription pipeline remains the
-      // authority for deciding whether speech is actually present.
+      // Browser-side metering must never discard a real recording before the
+      // transcription provider sees it. Some mobile browsers suspend or
+      // throttle Web Audio even while MediaRecorder is capturing correctly.
       hasSpeech: audio.size > 0,
     };
     const handler = this.captureHandler;
@@ -134,12 +127,10 @@ export class ClassicVoiceRecorderService {
         await this.audioContext.resume().catch(() => undefined);
       }
       if (this.audioContext.state !== 'running') {
-        this.voiceActivityAvailable = false;
         this.levelHandler?.(0);
         return;
       }
 
-      this.voiceActivityAvailable = true;
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 256;
       this.analyser.smoothingTimeConstant = 0.75;
@@ -149,13 +140,11 @@ export class ClassicVoiceRecorderService {
         if (!this.analyser || !this.active) return;
         this.analyser.getByteTimeDomainData(data);
         const rms = this.rootMeanSquare(data);
-        if (rms >= MIN_SPEECH_RMS) this.speechFrames++;
         this.levelHandler?.(Math.min(1, rms * 4.5));
         this.meterFrame = requestAnimationFrame(tick);
       };
       this.meterFrame = requestAnimationFrame(tick);
     } catch {
-      this.voiceActivityAvailable = false;
       this.levelHandler?.(0);
     }
   }
@@ -175,7 +164,6 @@ export class ClassicVoiceRecorderService {
     if (this.meterFrame !== null) cancelAnimationFrame(this.meterFrame);
     this.meterFrame = null;
     this.analyser = null;
-    this.voiceActivityAvailable = false;
     void this.audioContext?.close().catch(() => undefined);
     this.audioContext = null;
     this.mediaStream?.getTracks().forEach(track => track.stop());
