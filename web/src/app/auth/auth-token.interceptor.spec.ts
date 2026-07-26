@@ -27,8 +27,12 @@ describe('authTokenInterceptor', () => {
   });
 
   afterEach(() => {
-    TestBed.inject(HttpTestingController).verify();
-    sessionStorage.clear();
+    try {
+      TestBed.inject(HttpTestingController).verify();
+    } finally {
+      sessionStorage.clear();
+      TestBed.resetTestingModule();
+    }
   });
 
   it('should attach bearer token to api requests', () => {
@@ -45,7 +49,7 @@ describe('authTokenInterceptor', () => {
     request.flush([]);
   });
 
-  it('should recover a professional request from the HttpOnly refresh cookie when access token is missing', () => {
+  it('should recover a professional request from the HttpOnly refresh cookie when access token is missing', async () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
@@ -56,6 +60,7 @@ describe('authTokenInterceptor', () => {
     const refreshRequest = httpTesting.expectOne('/api/auth/refresh');
     expect(refreshRequest.request.withCredentials).toBe(true);
     refreshRequest.flush(loginResponse('restored-token', '2999-07-02T12:30:00Z'));
+    await settleRefresh();
 
     const protectedRequest = httpTesting.expectOne('/api/patients');
     expect(protectedRequest.request.headers.get('Authorization')).toBe('Bearer restored-token');
@@ -77,7 +82,7 @@ describe('authTokenInterceptor', () => {
     request.flush({});
   });
 
-  it('should refresh an expired professional token before sending the protected request', () => {
+  it('should refresh an expired professional token before sending the protected request', async () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
@@ -90,6 +95,7 @@ describe('authTokenInterceptor', () => {
     expect(refreshRequest.request.method).toBe('POST');
     expect(refreshRequest.request.withCredentials).toBe(true);
     refreshRequest.flush(loginResponse('fresh-token', '2999-07-02T12:30:00Z'));
+    await settleRefresh();
 
     const protectedRequest = httpTesting.expectOne('/api/patients');
     expect(protectedRequest.request.headers.get('Authorization')).toBe('Bearer fresh-token');
@@ -97,7 +103,7 @@ describe('authTokenInterceptor', () => {
     expect(tokenStorage.accessToken).toBe('fresh-token');
   });
 
-  it('should refresh and retry once when the professional api rejects the current token', () => {
+  it('should refresh and retry once when the professional api rejects the current token', async () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
@@ -110,8 +116,9 @@ describe('authTokenInterceptor', () => {
     expect(firstRequest.request.headers.get('Authorization')).toBe('Bearer revoked-token');
     firstRequest.flush({}, { status: 401, statusText: 'Unauthorized' });
 
-    httpTesting.expectOne('/api/auth/refresh')
-      .flush(loginResponse('replacement-token', '2999-07-02T12:30:00Z'));
+    const refreshRequest = httpTesting.expectOne('/api/auth/refresh');
+    refreshRequest.flush(loginResponse('replacement-token', '2999-07-02T12:30:00Z'));
+    await settleRefresh();
 
     const retryRequest = httpTesting.expectOne('/api/patients');
     expect(retryRequest.request.headers.get('Authorization')).toBe('Bearer replacement-token');
@@ -157,7 +164,7 @@ describe('authTokenInterceptor', () => {
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('should not reclassify a professional refresh server error as an expired session', () => {
+  it('should not reclassify a professional refresh server error as an expired session', async () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
@@ -170,12 +177,13 @@ describe('authTokenInterceptor', () => {
 
     httpTesting.expectOne('/api/auth/refresh')
       .flush({}, { status: 500, statusText: 'Server Error' });
+    await settleRefresh();
 
     expect(tokenStorage.session()).not.toBeNull();
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('should clear the professional session and redirect when professional refresh is rejected', () => {
+  it('should clear the professional session and redirect when professional refresh is rejected', async () => {
     const http = TestBed.inject(HttpClient);
     const httpTesting = TestBed.inject(HttpTestingController);
     const tokenStorage = TestBed.inject(AuthTokenStorageService);
@@ -188,6 +196,7 @@ describe('authTokenInterceptor', () => {
 
     httpTesting.expectOne('/api/auth/refresh')
       .flush({}, { status: 401, statusText: 'Unauthorized' });
+    await settleRefresh();
 
     expect(tokenStorage.session()).toBeNull();
     expect(router.navigate).toHaveBeenCalledWith(['/'], {
@@ -242,6 +251,15 @@ describe('authTokenInterceptor', () => {
     expect(tokenStorage.session()).toBeNull();
   });
 });
+
+async function settleRefresh(): Promise<void> {
+  // AuthSessionRecoveryService deliberately crosses a Promise boundary so it can
+  // coordinate refresh with Web Locks across browser tabs. HttpTestingController
+  // flushes the refresh response synchronously, therefore tests must allow the
+  // firstValueFrom/Promise continuation to enqueue the protected retry.
+  await Promise.resolve();
+  await Promise.resolve();
+}
 
 function loginResponse(accessToken: string, expiresAt: string): LoginResponse {
   return {
