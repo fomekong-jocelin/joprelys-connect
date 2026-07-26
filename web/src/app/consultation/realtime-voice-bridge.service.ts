@@ -133,6 +133,7 @@ export class RealtimeVoiceBridgeService {
         },
       ));
       await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+      await this.waitForDataChannel(channel);
       this.patchState({ connected: true, connecting: false, muted: false });
     } catch (error) {
       this.disconnect();
@@ -163,9 +164,9 @@ export class RealtimeVoiceBridgeService {
     this.patchState({ muted });
   }
 
-  speakApproved(message: string): void {
+  speakApproved(message: string): boolean {
     const text = message.trim();
-    if (!text || !this.isChannelOpen()) return;
+    if (!text || !this.isChannelOpen()) return false;
 
     this.sendEvent({
       type: 'response.create',
@@ -187,6 +188,7 @@ export class RealtimeVoiceBridgeService {
         ],
       },
     });
+    return true;
   }
 
   cancelAssistantResponse(): void {
@@ -277,6 +279,31 @@ export class RealtimeVoiceBridgeService {
         pc.removeEventListener('icegatheringstatechange', listener);
         resolve();
       }, 2000);
+    });
+  }
+
+  private waitForDataChannel(channel: RTCDataChannel): Promise<void> {
+    if (channel.readyState === 'open') return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error('AI_REALTIME_CHANNEL_TIMEOUT'));
+      }, 5000);
+      const onOpen = () => {
+        cleanup();
+        resolve();
+      };
+      const onClose = () => {
+        cleanup();
+        reject(new Error('AI_REALTIME_CHANNEL_CLOSED'));
+      };
+      const cleanup = () => {
+        clearTimeout(timeout);
+        channel.removeEventListener('open', onOpen);
+        channel.removeEventListener('close', onClose);
+      };
+      channel.addEventListener('open', onOpen);
+      channel.addEventListener('close', onClose);
     });
   }
 }
