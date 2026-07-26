@@ -15,6 +15,7 @@ export interface AmbientStoredChunk {
   startOffsetMs: number;
   durationMs: number;
   mimeType: string;
+  locale: string;
   ciphertext: ArrayBuffer;
   iv: ArrayBuffer;
   createdAt: number;
@@ -88,6 +89,7 @@ export class AmbientAudioVaultService {
     startOffsetMs: number,
     durationMs: number,
     mimeType: string,
+    locale: string,
     plaintext: ArrayBuffer,
   ): Promise<AmbientStoredChunk> {
     if (!this.isSupported()) throw new Error('AMBIENT_VAULT_UNSUPPORTED');
@@ -105,6 +107,8 @@ export class AmbientAudioVaultService {
       key,
       plaintext,
     );
+    const ivCopy = new Uint8Array(iv.byteLength);
+    ivCopy.set(iv);
     const record: AmbientStoredChunk = {
       id,
       visitId,
@@ -113,8 +117,9 @@ export class AmbientAudioVaultService {
       startOffsetMs: Math.round(startOffsetMs),
       durationMs: Math.round(durationMs),
       mimeType: mimeType || 'audio/wav',
+      locale: this.normalizeLocale(locale),
       ciphertext: encrypted,
-      iv: iv.buffer.slice(iv.byteOffset, iv.byteOffset + iv.byteLength),
+      iv: ivCopy.buffer,
       createdAt: Date.now(),
       attempts: 0,
       lastAttemptAt: null,
@@ -195,6 +200,7 @@ export class AmbientAudioVaultService {
 
   private async reserveSequence(visitId: string): Promise<AmbientCaptureTimeline & { sequence: number }> {
     const normalizedVisitId = visitId.trim();
+    if (!normalizedVisitId) throw new Error('AMBIENT_VISIT_REQUIRED');
     const db = await this.db();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(SESSION_STORE, 'readwrite');
@@ -262,6 +268,11 @@ export class AmbientAudioVaultService {
 
   private additionalData(visitId: string, chunkId: string): Uint8Array {
     return new TextEncoder().encode(`joprelys-ambient:${visitId}:${chunkId}`);
+  }
+
+  private normalizeLocale(locale: string): string {
+    const normalized = (locale || 'fr').trim().toLowerCase().replace('_', '-');
+    return /^[a-z]{2,3}(?:-[a-z]{2})?$/.test(normalized) ? normalized : 'fr';
   }
 
   private db(): Promise<IDBDatabase> {
