@@ -22,6 +22,10 @@ public interface AmbientTranscriptItemRepository extends JpaRepository<AmbientTr
 
     List<AmbientTranscriptItemEntity> findByVisitIdOrderByStartOffsetMsAscSequenceNoAsc(UUID visitId);
 
+    List<AmbientTranscriptItemEntity> findByVisitIdAndSourceEventIdStartingWithOrderByStartOffsetMsAscSequenceNoAsc(
+            UUID visitId,
+            String sourceEventIdPrefix);
+
     @Query("select coalesce(max(item.sequenceNo), 0) from AmbientTranscriptItemEntity item where item.visitId = :visitId")
     long findMaximumSequence(@Param("visitId") UUID visitId);
 }
