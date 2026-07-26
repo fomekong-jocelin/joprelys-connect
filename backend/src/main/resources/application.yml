@@ -48,6 +48,16 @@ joprelys:
     session-ttl-minutes: ${AI_SESSION_TTL_MINUTES:30}
     max-conversation-turns: ${AI_MAX_CONVERSATION_TURNS:20}
     locale: ${AI_LOCALE:fr}
+    medication-safety:
+      enabled: ${AI_MEDICATION_SAFETY_ENABLED:true}
+      fail-closed: ${AI_MEDICATION_SAFETY_FAIL_CLOSED:true}
+      knowledge-provider: ${AI_MEDICATION_KNOWLEDGE_PROVIDER:rxnorm}
+      interaction-provider: ${AI_MEDICATION_INTERACTION_PROVIDER:none}
+      rxnorm:
+        base-url: ${RXNORM_BASE_URL:https://rxnav.nlm.nih.gov/REST}
+        connect-timeout-millis: ${RXNORM_CONNECT_TIMEOUT_MILLIS:2000}
+        read-timeout-millis: ${RXNORM_READ_TIMEOUT_MILLIS:3000}
+        cache-minutes: ${RXNORM_CACHE_MINUTES:1440}
     openai:
       api-key: ${OPENAI_API_KEY:}
       model: ${OPENAI_MODEL:gpt-4.1}
