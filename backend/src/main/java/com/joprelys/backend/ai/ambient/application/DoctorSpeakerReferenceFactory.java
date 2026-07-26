@@ -13,7 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class DoctorSpeakerReferenceFactory {
 
     private static final int MIN_WAV_HEADER_BYTES = 44;
-    private static final int MAX_REFERENCE_BYTES = 2 * 1024 * 1024;
+    private static final int MAX_REFERENCE_BYTES = 5 * 1024 * 1024;
     private static final double MIN_DURATION_SECONDS = 2.0;
     private static final double MAX_DURATION_SECONDS = 10.0;
 
@@ -49,7 +49,7 @@ public class DoctorSpeakerReferenceFactory {
             long chunkSize = unsignedIntLe(audio, offset + 4);
             long dataOffset = (long) offset + 8;
             long nextOffset = dataOffset + chunkSize + (chunkSize % 2);
-            if (chunkSize < 0 || dataOffset > audio.length || dataOffset + chunkSize > audio.length) {
+            if (dataOffset > audio.length || dataOffset + chunkSize > audio.length) {
                 throw invalidReference();
             }
 
