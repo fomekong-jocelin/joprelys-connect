@@ -154,6 +154,8 @@
             (activeChange)="realtimeActive.set($event)"
             (realtimeError)="handleRealtimeError($event)"
           />
+
+          <app-doctor-voice-calibration [visitId]="visitId" />
         }
 
         <app-ai-conversation-thread [messages]="session()?.conversation ?? []"/>
