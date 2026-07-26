@@ -21,22 +21,19 @@ import tools.jackson.databind.ObjectMapper;
  * clinical proposal can be created.
  *
  * <p>LLM output is never accepted as evidence. A proposed change must cite the
- * current source verbatim and may not introduce unsupported critical tokens.
+ * current source verbatim and may not introduce any unsupported clinical token.
  * When in doubt the change is dropped (fail closed).</p>
  */
 final class AiClinicalFactualityGuard {
 
     private static final Logger log = LoggerFactory.getLogger(AiClinicalFactualityGuard.class);
-    private static final Set<String> HIGH_RISK_FIELDS = Set.of(
-            "suspectedDiagnosis", "diagnosis", "finalDiagnosis",
-            "prescription", "labOrders", "vitals");
     private static final Set<String> STRUCTURED_FIELDS = Set.of(
             "prescription", "labOrders", "vitals");
     private static final Set<String> NEGATION_TOKENS = Set.of(
-            "pas", "sans", "aucun", "aucune", "non", "nie", "négation",
+            "pas", "sans", "aucun", "aucune", "non", "nie", "negation",
             "not", "no", "without", "denies", "denied");
     private static final Set<String> SAFE_GLUE_WORDS = Set.of(
-            "patient", "patiente", "presente", "présente", "signale", "rapporte",
+            "patient", "patiente", "presente", "signale", "rapporte",
             "avec", "pour", "depuis", "dans", "chez", "une", "des", "les", "est",
             "sont", "avait", "avoir", "the", "and", "with", "from", "for", "has",
             "have", "reports", "reported", "presents", "presenting", "of", "to");
@@ -128,27 +125,17 @@ final class AiClinicalFactualityGuard {
             }
         }
 
-        int unsupported = 0;
-        int checked = 0;
         for (String token : proposedTokens) {
             if (SAFE_GLUE_WORDS.contains(token)) {
                 continue;
             }
-            checked++;
             if (!sourceTokens.contains(token)) {
-                unsupported++;
+                return false;
             }
         }
-        if (checked == 0) {
-            return true;
-        }
-        if (HIGH_RISK_FIELDS.contains(change.field())) {
-            return unsupported == 0;
-        }
-        return ((double) unsupported / checked) <= 0.15;
+        return true;
     }
 
-    @SuppressWarnings("unchecked")
     private boolean structuredValueSupported(ParsedChange change, String authorizedSource) {
         if (change.proposedValue() == null || change.proposedValue().isBlank()) {
             return false;
@@ -157,8 +144,7 @@ final class AiClinicalFactualityGuard {
             Object value = objectMapper.readValue(change.proposedValue(), Object.class);
             return switch (change.field()) {
                 case "vitals" -> valuesSupported(value, authorizedSource, true);
-                case "labOrders" -> valuesSupported(value, authorizedSource, false);
-                case "prescription" -> valuesSupported(value, authorizedSource, false);
+                case "labOrders", "prescription" -> valuesSupported(value, authorizedSource, false);
                 default -> false;
             };
         } catch (Exception exception) {
@@ -191,7 +177,6 @@ final class AiClinicalFactualityGuard {
             return true;
         }
         if (value instanceof Boolean) {
-            // Boolean clinical attributes must not be invented by a language model.
             return false;
         }
         String text = value.toString();
