@@ -128,6 +128,28 @@ class AiClinicalResponseParserStructuredTest {
     }
 
     @Test
+    void shouldRejectPhysiologicallyInvalidVitalInGeneralConsultation() {
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> parser.parse("""
+                        {
+                          "changes": [{
+                            "field":"vitals",
+                            "operation":"SET",
+                            "value":{"spo2":150},
+                            "reason":"Test",
+                            "uncertainty":"LOW",
+                            "evidence":["SpO2 150"]
+                          }],
+                          "assistantMessage":"Test",
+                          "needsClarification":false,
+                          "clarification":null
+                        }
+                        """));
+        assertEquals("AI_CHANGE_INVALID", exception.getReason());
+    }
+
+    @Test
     void shouldAllowClarificationOnVitals() {
         var parsed = parser.parse("""
                 {
