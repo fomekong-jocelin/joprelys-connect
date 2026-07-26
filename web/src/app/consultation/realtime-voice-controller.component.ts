@@ -38,82 +38,154 @@ const MAX_SEEN_TRANSCRIPT_IDS = 512;
   imports: [CommonModule],
   template: `
     @if (enabled) {
-      <section class="rounded-[6px] border border-cyan-200 bg-cyan-50/45 p-4 shadow-sm dark:border-cyan-900 dark:bg-cyan-950/15">
-        <div class="flex items-center justify-between gap-3">
-          <div class="flex items-center gap-3 min-w-0">
-            <span class="relative flex h-3.5 w-3.5 shrink-0 items-center justify-center">
-              @if (state().connected && !manualMuted) {
-                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+      <section class="relative min-h-[560px] overflow-hidden rounded-[8px] bg-slate-950 text-white shadow-xl sm:min-h-[620px]">
+        <div class="pointer-events-none absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full bg-cyan-500/10 blur-3xl"></div>
+        <div class="pointer-events-none absolute bottom-8 left-1/2 h-52 w-52 -translate-x-1/2 rounded-full bg-emerald-500/5 blur-3xl"></div>
+
+        <div class="relative flex min-h-[560px] flex-col px-4 pb-5 pt-4 sm:min-h-[620px] sm:px-8 sm:pb-7 sm:pt-6">
+          <div class="flex items-center justify-between gap-3">
+            <div class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-bold text-slate-200 backdrop-blur">
+              <span class="h-2 w-2 rounded-full" [ngClass]="statusDotClasses()"></span>
+              {{ state().connected
+                ? i18n.t('consultation.ai.focusSecureListening', 'Écoute sécurisée')
+                : state().connecting
+                  ? i18n.t('consultation.ai.focusConnecting', 'Connexion du microphone')
+                  : i18n.t('consultation.ai.focusAudioUnavailable', 'Audio non confirmé') }}
+            </div>
+
+            @if (ambientState().active) {
+              <span class="text-[10px] font-semibold text-slate-400">
+                {{ i18n.t('consultation.ai.focusSafetyActive', 'Sauvegarde audio active') }}
+              </span>
+            }
+          </div>
+
+          <div class="flex flex-1 flex-col items-center justify-center py-8 text-center sm:py-10">
+            <div class="relative flex h-44 w-44 items-center justify-center sm:h-52 sm:w-52">
+              @if (state().userSpeaking || state().assistantSpeaking) {
+                <span class="absolute inset-0 animate-ping rounded-full border border-cyan-300/20"></span>
+                <span class="absolute inset-4 animate-pulse rounded-full border border-cyan-300/25"></span>
               }
-              <span class="relative inline-flex h-3 w-3 rounded-full" [ngClass]="statusDotClasses()"></span>
-            </span>
-            <div class="min-w-0 flex-1">
-              <p class="text-base font-black text-[var(--text-primary)] flex items-center flex-wrap gap-2">
-                {{ statusLabel() }}
-                @if (state().userSpeaking) {
-                  <span class="inline-flex items-center rounded-[4px] bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
-                    {{ i18n.t('consultation.ai.userSpeakingBadge', 'Vous parlez') }}
-                  </span>
-                } @else if (state().assistantSpeaking) {
-                  <span class="inline-flex items-center rounded-[4px] bg-indigo-100 px-2 py-0.5 text-[10px] font-extrabold text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200">
-                    {{ i18n.t('consultation.ai.assistantSpeakingBadge', 'Joprelys répond') }}
+              <div class="absolute inset-2 rounded-full border border-white/5 bg-white/[0.02]"></div>
+              <div class="absolute inset-7 rounded-full border border-white/10 bg-white/[0.03]"></div>
+              <div
+                class="relative flex h-28 w-28 items-center justify-center rounded-full shadow-2xl transition-all duration-300 sm:h-32 sm:w-32"
+                [ngClass]="orbClasses()"
+              >
+                @if (state().assistantSpeaking) {
+                  <svg class="h-12 w-12 text-white sm:h-14 sm:w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M8 9h.01M16 9h.01M9 15h6m5-3a8 8 0 10-16 0 8 8 0 0016 0z" />
+                  </svg>
+                } @else {
+                  <svg class="h-12 w-12 text-white sm:h-14 sm:w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
+                  </svg>
+                }
+              </div>
+            </div>
+
+            <h2 class="mt-6 text-2xl font-black tracking-tight text-white sm:text-3xl">
+              {{ statusLabel() }}
+            </h2>
+            <p class="mt-2 max-w-lg text-sm leading-6 text-slate-400">
+              {{ statusHelp() }}
+            </p>
+
+            <div class="mt-6 w-full max-w-2xl rounded-[8px] border border-white/10 bg-white/[0.04] px-4 py-4 text-left backdrop-blur sm:px-5">
+              <div class="flex items-center justify-between gap-3">
+                <p class="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-500">
+                  {{ i18n.t('consultation.ai.focusTranscriptTitle', 'Transcription en direct') }}
+                </p>
+                @if (processing()) {
+                  <span class="text-[10px] font-bold text-cyan-300">
+                    {{ i18n.t('consultation.ai.focusSecuring', 'Sécurisation…') }}
                   </span>
                 }
-              </p>
-              <p class="mt-0.5 text-xs leading-5 text-[var(--text-muted)]">{{ statusHelp() }}</p>
+              </div>
+
+              @if (lastTranscript()) {
+                <p class="mt-2 text-sm font-medium leading-6 text-slate-100 sm:text-base">
+                  “{{ lastTranscript() }}”
+                </p>
+                @if (lastTranscriptConfidence() === null) {
+                  <p class="mt-2 text-[10px] leading-4 text-amber-300/90">
+                    {{ i18n.t('consultation.ai.focusTranscriptUnverified', 'Texte entendu mais confiance non vérifiable : il reste visible sans être utilisé automatiquement comme fait clinique.') }}
+                  </p>
+                }
+              } @else if (state().userSpeaking) {
+                <p class="mt-2 text-sm font-semibold text-cyan-100">
+                  {{ i18n.t('consultation.ai.focusTranscribing', 'Voix détectée — transcription en cours…') }}
+                </p>
+              } @else {
+                <p class="mt-2 text-sm leading-6 text-slate-500">
+                  {{ state().connected
+                    ? i18n.t('consultation.ai.focusTranscriptWaiting', 'Parlez normalement. La dernière phrase réellement reconnue apparaîtra ici.')
+                    : i18n.t('consultation.ai.focusTranscriptNoChannel', 'La transcription commencera dès que le canal audio sera confirmé.') }}
+                </p>
+              }
             </div>
           </div>
-        </div>
 
-        <!-- Animated Audio Waveform Equalizer -->
-        <div class="my-3 flex h-10 items-center justify-center gap-1.5 rounded-[6px] border border-cyan-200/60 bg-slate-900/90 px-4 shadow-inner dark:border-cyan-900/60 dark:bg-slate-950"
-             aria-label="Visualisateur d'ondes vocales">
-          @for (bar of waveformBars; track $index) {
-            <span
-              class="w-1.5 rounded-full transition-all duration-150"
-              [ngClass]="waveBarClasses($index)"
-              [style.height.px]="waveBarHeight($index)"
-            ></span>
+          @if (showSafetyAlert()) {
+            <div
+              class="mb-5 rounded-[6px] border px-3 py-2.5 text-xs font-bold"
+              [ngClass]="safetyAlertClasses()"
+            >
+              {{ safetyAlertText() }}
+            </div>
           }
-        </div>
 
-        @if (showSafetyAlert()) {
-          <div
-            class="mt-3 rounded-[4px] border px-3 py-2 text-xs font-bold"
-            [ngClass]="safetyAlertClasses()"
-          >
-            {{ safetyAlertText() }}
+          <div class="flex items-end justify-center gap-10 sm:gap-14">
+            <div class="flex flex-col items-center gap-2">
+              <button
+                type="button"
+                (click)="toggleMute()"
+                [disabled]="!canToggleMute()"
+                class="inline-flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white shadow-lg transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40 sm:h-16 sm:w-16"
+                [attr.aria-label]="manualMuted ? i18n.t('consultation.ai.resumeListening', 'Reprendre') : i18n.t('consultation.ai.pauseListening', 'Pause')"
+              >
+                @if (manualMuted) {
+                  <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                } @else {
+                  <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 5h4v14H6zm8 0h4v14h-4z" />
+                  </svg>
+                }
+              </button>
+              <span class="text-[11px] font-semibold text-slate-400">
+                {{ manualMuted
+                  ? i18n.t('consultation.ai.resumeListening', 'Reprendre')
+                  : i18n.t('consultation.ai.pauseListeningShort', 'Pause') }}
+              </span>
+            </div>
+
+            <div class="flex flex-col items-center gap-2">
+              <button
+                type="button"
+                (click)="endSession.emit()"
+                class="inline-flex h-14 w-14 items-center justify-center rounded-full bg-rose-500 text-white shadow-lg shadow-rose-950/30 transition hover:bg-rose-400 sm:h-16 sm:w-16"
+                [attr.aria-label]="i18n.t('consultation.ai.finishListening', 'Terminer')"
+              >
+                <span class="h-5 w-5 rounded-[4px] bg-white"></span>
+              </button>
+              <span class="text-[11px] font-semibold text-slate-400">
+                {{ i18n.t('consultation.ai.finishListening', 'Terminer') }}
+              </span>
+            </div>
           </div>
-        }
 
-        <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <button
-            type="button"
-            (click)="toggleMute()"
-            [disabled]="!canToggleMute()"
-            class="min-h-11 rounded-[5px] border border-cyan-300 bg-white px-4 py-2 text-sm font-bold text-cyan-800 shadow-sm hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-cyan-800 dark:bg-slate-950 dark:text-cyan-200"
-          >
-            {{ manualMuted
-              ? i18n.t('consultation.ai.resumeListening', 'Reprendre')
-              : i18n.t('consultation.ai.pauseListening', 'Mettre en pause') }}
-          </button>
-
-          <button
-            type="button"
-            (click)="switchToDictation.emit()"
-            [disabled]="processing()"
-            class="min-h-11 rounded-[5px] border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-2 text-sm font-bold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] disabled:opacity-50"
-          >
-            {{ i18n.t('consultation.ai.switchToDictation', 'Passer en dictée') }}
-          </button>
-
-          <button
-            type="button"
-            (click)="endSession.emit()"
-            class="min-h-11 rounded-[5px] border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-2 text-sm font-bold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)]"
-          >
-            {{ i18n.t('consultation.ai.finishListening', 'Terminer') }}
-          </button>
+          <div class="mt-5 text-center">
+            <button
+              type="button"
+              (click)="switchToDictation.emit()"
+              [disabled]="processing()"
+              class="text-xs font-semibold text-slate-500 underline decoration-slate-700 underline-offset-4 transition hover:text-slate-300 disabled:opacity-40"
+            >
+              {{ i18n.t('consultation.ai.switchToDictation', 'Passer en dictée') }}
+            </button>
+          </div>
         </div>
       </section>
     }
@@ -155,7 +227,8 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     lastError: null,
   });
   readonly processing = signal(false);
-  readonly waveformBars = Array.from({ length: 16 });
+  readonly lastTranscript = signal('');
+  readonly lastTranscriptConfidence = signal<number | null>(null);
 
   private readonly subscriptions = new Subscription();
   private readonly transcriptQueue: RealtimeTranscriptTurn[] = [];
@@ -241,7 +314,8 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
 
   statusLabel(): string {
     if (this.manualMuted) return this.i18n.t('consultation.ai.listeningPaused', 'En pause');
-    if (this.state().assistantSpeaking) return this.i18n.t('consultation.ai.assistantSpeakingSimple', 'Joprelys parle');
+    if (this.state().assistantSpeaking) return this.i18n.t('consultation.ai.assistantSpeakingSimple', 'Joprelys répond');
+    if (this.state().userSpeaking) return this.i18n.t('consultation.ai.focusHearingYou', 'Je vous entends');
     if (this.backlogPaused) return this.i18n.t('consultation.ai.realtimeCatchingUp', 'Un instant…');
     if (this.state().connecting) return this.i18n.t('consultation.ai.connectingAudio', 'Connexion audio…');
     if (this.state().connected) return this.i18n.t('consultation.ai.simpleListening', 'Je vous écoute');
@@ -251,55 +325,48 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
 
   statusHelp(): string {
     if (this.manualMuted) {
-      return this.i18n.t('consultation.ai.pausedHelp', 'Appuyez sur Reprendre lorsque vous souhaitez continuer la consultation.');
+      return this.i18n.t('consultation.ai.pausedHelp', 'L’écoute est arrêtée. Appuyez sur Reprendre pour continuer.');
     }
     if (this.state().assistantSpeaking) {
-      return this.i18n.t('consultation.ai.assistantSpeakingHelp', 'Écoutez la question puis répondez naturellement.');
+      return this.i18n.t('consultation.ai.assistantSpeakingHelp', 'Écoutez Joprelys puis répondez naturellement.');
+    }
+    if (this.state().userSpeaking) {
+      return this.i18n.t('consultation.ai.focusHearingHelp', 'Votre voix est détectée par le canal Realtime. Continuez à parler normalement.');
     }
     if (this.backlogPaused) {
       return this.i18n.t('consultation.ai.catchingUpHelp', 'Joprelys sécurise les dernières secondes avant de reprendre automatiquement.');
     }
     if (this.state().connected) {
-      return this.i18n.t('consultation.ai.simpleListeningHelp', 'Parlez naturellement avec le patient. Vous n’avez rien d’autre à faire.');
+      return this.i18n.t('consultation.ai.simpleListeningHelp', 'Parlez naturellement avec le patient. La transcription apparaît dès qu’une phrase est finalisée.');
     }
     if (this.ambientState().active) {
       return this.i18n.t('consultation.ai.reconnectingProtectedHelp', 'Votre consultation reste protégée pendant la reconnexion.');
     }
-    return this.i18n.t('consultation.ai.audioUnavailableHelp', 'Ne poursuivez pas la dictée avant le rétablissement de l’audio.');
+    return this.i18n.t('consultation.ai.audioUnavailableHelp', 'Ne poursuivez pas la consultation vocale avant le rétablissement de l’audio.');
   }
 
   statusDotClasses(): string {
-    if (this.manualMuted) return 'bg-slate-400';
-    if (this.state().connected && !this.backlogPaused) return 'animate-pulse bg-emerald-500';
-    if (this.state().connecting || this.ambientState().active || this.backlogPaused) return 'animate-pulse bg-amber-500';
-    return 'bg-rose-500';
+    if (this.manualMuted) return 'bg-slate-500';
+    if (this.state().connected && !this.backlogPaused) return this.state().userSpeaking ? 'animate-pulse bg-emerald-300' : 'bg-emerald-400';
+    if (this.state().connecting || this.ambientState().active || this.backlogPaused) return 'animate-pulse bg-amber-400';
+    return 'bg-rose-400';
   }
 
-  waveBarHeight(index: number): number {
-    if (this.manualMuted || (!this.state().connected && !this.ambientState().active)) return 6;
-    const isUser = this.state().userSpeaking;
-    const isAssistant = this.state().assistantSpeaking;
-    const active = isUser || isAssistant;
-    const sinFactor = 0.3 + Math.abs(Math.sin((index + 1) * 0.75 + (index % 3) * 1.2)) * 0.7;
-    const baseHeight = active ? 28 : 14;
-    return Math.round(6 + sinFactor * baseHeight);
-  }
-
-  waveBarClasses(index: number): string {
-    if (this.manualMuted) return 'bg-slate-500/40 dark:bg-slate-600/40';
-    if (this.state().userSpeaking) {
-      return 'bg-gradient-to-t from-emerald-500 to-cyan-400 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse';
-    }
+  orbClasses(): string {
+    if (this.manualMuted) return 'bg-slate-700 shadow-slate-950/50';
     if (this.state().assistantSpeaking) {
-      return 'bg-gradient-to-t from-indigo-500 to-purple-400 shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse';
+      return 'animate-pulse bg-gradient-to-br from-indigo-400 via-violet-500 to-purple-600 shadow-violet-950/50';
+    }
+    if (this.state().userSpeaking) {
+      return 'animate-pulse bg-gradient-to-br from-cyan-300 via-cyan-500 to-emerald-500 shadow-cyan-950/50';
     }
     if (this.state().connected && !this.backlogPaused) {
-      return 'bg-gradient-to-t from-cyan-500 to-cyan-300 shadow-[0_0_6px_rgba(6,182,212,0.4)] animate-pulse';
+      return 'bg-gradient-to-br from-cyan-400 via-cyan-600 to-blue-700 shadow-cyan-950/50';
     }
     if (this.state().connecting || this.ambientState().active || this.backlogPaused) {
-      return 'bg-gradient-to-t from-amber-500 to-yellow-300 animate-pulse';
+      return 'animate-pulse bg-gradient-to-br from-amber-300 via-amber-500 to-orange-600 shadow-amber-950/50';
     }
-    return 'bg-rose-500/50';
+    return 'bg-gradient-to-br from-rose-400 to-rose-700 shadow-rose-950/50';
   }
 
   showSafetyAlert(): boolean {
@@ -330,9 +397,9 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
 
   safetyAlertClasses(): string {
     if (this.ambientState().storagePressure || !this.ambientState().active) {
-      return 'border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-100';
+      return 'border-rose-400/30 bg-rose-500/10 text-rose-100';
     }
-    return 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200';
+    return 'border-amber-300/20 bg-amber-400/10 text-amber-100';
   }
 
   private queueConnectionSync(forceVisitReset: boolean): void {
@@ -466,10 +533,16 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       || this.connectedVisitId !== this.visitId.trim()) {
       return;
     }
+
+    // Le transcript reçu est d'abord rendu visible. Les règles de confiance
+    // décident ensuite s'il peut alimenter le journal clinique automatique.
+    this.lastTranscript.set(text);
+    this.lastTranscriptConfidence.set(turn.confidence);
+
     if (turn.confidence === null || !Number.isFinite(turn.confidence)) {
       this.realtimeError.emit(this.i18n.t(
         'consultation.ai.realtimeTranscriptUnverified',
-        'Une phrase est trop incertaine pour être utilisée cliniquement. L’audio protégé est conservé.',
+        'Une phrase a été entendue mais sa confiance est trop incertaine pour être utilisée cliniquement. L’audio protégé est conservé.',
       ));
       return;
     }
@@ -622,6 +695,8 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     this.seenTranscriptOrder.length = 0;
     this.backlogPaused = false;
     this.processing.set(false);
+    this.lastTranscript.set('');
+    this.lastTranscriptConfidence.set(null);
   }
 
   private speakPendingClarification(): boolean {
