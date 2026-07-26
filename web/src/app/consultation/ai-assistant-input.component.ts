@@ -1,5 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  OnDestroy,
+  Output,
+  SimpleChanges,
+  inject,
+  signal,
+} from '@angular/core';
 import { I18nService } from '../core/i18n/i18n.service';
 
 @Component({
@@ -123,7 +133,7 @@ import { I18nService } from '../core/i18n/i18n.service';
     }
   `,
 })
-export class AiAssistantInputComponent {
+export class AiAssistantInputComponent implements OnChanges, OnDestroy {
   readonly i18n = inject(I18nService);
 
   @Input() busy = false;
@@ -141,6 +151,7 @@ export class AiAssistantInputComponent {
   readonly message = signal('');
   readonly waveformBars = Array.from({ length: 28 });
   private lastResetToken = 0;
+  private autoResumeTimer: ReturnType<typeof setTimeout> | null = null;
 
   @Input()
   set resetToken(value: number) {
@@ -148,6 +159,21 @@ export class AiAssistantInputComponent {
       this.lastResetToken = value;
       this.message.set('');
     }
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    const speakingChange = changes['speaking'];
+    if (speakingChange?.previousValue === true && speakingChange.currentValue === false) {
+      this.scheduleConversationResume();
+      return;
+    }
+    if (this.recording || this.busy || this.blocked || !this.conversationMode) {
+      this.cancelConversationResume();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.cancelConversationResume();
   }
 
   onInput(event: Event): void {
@@ -166,5 +192,28 @@ export class AiAssistantInputComponent {
     const value = this.message().trim();
     if (this.busy || this.blocked || !value) return;
     this.sendText.emit(value);
+  }
+
+  private scheduleConversationResume(): void {
+    this.cancelConversationResume();
+    if (!this.canResumeConversation()) return;
+    this.autoResumeTimer = setTimeout(() => {
+      this.autoResumeTimer = null;
+      if (this.canResumeConversation()) this.toggleRecording.emit();
+    }, 650);
+  }
+
+  private canResumeConversation(): boolean {
+    return this.conversationMode
+      && !this.busy
+      && !this.recording
+      && !this.speaking
+      && !this.blocked
+      && this.mediaRecorderSupported;
+  }
+
+  private cancelConversationResume(): void {
+    if (this.autoResumeTimer !== null) clearTimeout(this.autoResumeTimer);
+    this.autoResumeTimer = null;
   }
 }
