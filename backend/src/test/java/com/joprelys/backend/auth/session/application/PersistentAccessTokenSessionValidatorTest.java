@@ -63,6 +63,37 @@ class PersistentAccessTokenSessionValidatorTest {
     }
 
     @Test
+    void shouldAcceptAccessTokenFromRotatedPredecessorWhileReplacementFamilyIsActive() {
+        UUID organizationId = UUID.randomUUID();
+        UserAccountEntity user = user(organizationId);
+        AuthSessionEntity predecessor = session(user);
+        AuthSessionEntity replacement = session(user);
+        predecessor.replaceWith(replacement, NOW.minusSeconds(1));
+        JwtClaims claims = claims(user, organizationId, predecessor.getId());
+
+        when(sessionRepository.findByIdWithUser(predecessor.getId())).thenReturn(Optional.of(predecessor));
+        when(sessionRepository.findByIdWithUser(replacement.getId())).thenReturn(Optional.of(replacement));
+
+        assertTrue(validator.isValid(claims));
+    }
+
+    @Test
+    void shouldRejectRotatedPredecessorTokenWhenReplacementFamilyIsRevoked() {
+        UUID organizationId = UUID.randomUUID();
+        UserAccountEntity user = user(organizationId);
+        AuthSessionEntity predecessor = session(user);
+        AuthSessionEntity replacement = session(user);
+        predecessor.replaceWith(replacement, NOW.minusSeconds(2));
+        replacement.revoke(AuthSessionRevocationReason.LOGOUT, NOW.minusSeconds(1));
+        JwtClaims claims = claims(user, organizationId, predecessor.getId());
+
+        when(sessionRepository.findByIdWithUser(predecessor.getId())).thenReturn(Optional.of(predecessor));
+        when(sessionRepository.findByIdWithUser(replacement.getId())).thenReturn(Optional.of(replacement));
+
+        assertFalse(validator.isValid(claims));
+    }
+
+    @Test
     void shouldRejectSessionBoundTokenAfterRevocation() {
         UUID organizationId = UUID.randomUUID();
         UserAccountEntity user = user(organizationId);
