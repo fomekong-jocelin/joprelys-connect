@@ -7,7 +7,10 @@ import com.joprelys.backend.ai.application.AiConsultationService;
 import com.joprelys.backend.auth.security.JwtClaims;
 import com.joprelys.backend.auth.security.TenantContext;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.Map;
@@ -79,6 +82,20 @@ public class AiConsultationController {
         Identity identity = identity(authentication);
         return service.processText(
                 visitId, identity.userId(), identity.organizationId(), request.text());
+    }
+
+    @PostMapping("/{visitId}/messages/realtime")
+    public MessageView sendRealtimeTranscript(
+            @PathVariable UUID visitId,
+            @Valid @RequestBody RealtimeTranscriptRequest request,
+            Authentication authentication) {
+        Identity identity = identity(authentication);
+        return service.processRealtimeTranscript(
+                visitId,
+                identity.userId(),
+                identity.organizationId(),
+                request.transcript(),
+                request.confidence());
     }
 
     @PostMapping("/{visitId}/clarifications/{clarificationId}/answer")
@@ -242,6 +259,12 @@ public class AiConsultationController {
 
     public record TextMessageRequest(
             @NotBlank @Size(max = 12000) String text) {
+    }
+
+    public record RealtimeTranscriptRequest(
+            @NotBlank @Size(max = 12000) String transcript,
+            @NotNull @DecimalMin("0.0") @DecimalMax("1.0") Double confidence,
+            @Size(max = 200) String eventId) {
     }
 
     public record ClarificationAnswerRequest(
