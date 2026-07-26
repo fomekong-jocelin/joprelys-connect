@@ -28,15 +28,25 @@ public class RxNormMedicationKnowledgeProvider implements MedicationKnowledgePro
     private final Map<String, CacheEntry> cache = new ConcurrentHashMap<>();
 
     public RxNormMedicationKnowledgeProvider(MedicationSafetyProperties properties) {
-        MedicationSafetyProperties.RxNormProperties config = properties.rxnorm();
+        this(buildRestClient(properties.rxnorm()),
+                Duration.ofMinutes(Math.max(1, properties.rxnorm().cacheMinutes())));
+    }
+
+    RxNormMedicationKnowledgeProvider(RestClient restClient, Duration cacheTtl) {
+        this.restClient = restClient;
+        this.cacheTtl = cacheTtl.isNegative() || cacheTtl.isZero()
+                ? Duration.ofMinutes(1)
+                : cacheTtl;
+    }
+
+    private static RestClient buildRestClient(MedicationSafetyProperties.RxNormProperties config) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofMillis(Math.max(500, config.connectTimeoutMillis())));
         requestFactory.setReadTimeout(Duration.ofMillis(Math.max(500, config.readTimeoutMillis())));
-        this.restClient = RestClient.builder()
+        return RestClient.builder()
                 .baseUrl(config.baseUrl())
                 .requestFactory(requestFactory)
                 .build();
-        this.cacheTtl = Duration.ofMinutes(Math.max(1, config.cacheMinutes()));
     }
 
     @Override
