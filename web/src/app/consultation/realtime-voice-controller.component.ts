@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
   EventEmitter,
@@ -13,7 +14,6 @@ import {
 import { Subscription } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import {
-  AiConsultationApiService,
   AiMessageResponse,
   AiSessionResponse,
 } from './ai-consultation-api.service';
@@ -21,11 +21,16 @@ import {
   AmbientAudioCaptureService,
   AmbientCaptureState,
 } from './ambient-audio-capture.service';
+import { RealtimeClinicalIntakeApiService } from './realtime-clinical-intake-api.service';
 import {
   RealtimeTranscriptTurn,
   RealtimeVoiceBridgeService,
   RealtimeVoiceState,
 } from './realtime-voice-bridge.service';
+
+const HIGH_WATER_MARK = 32;
+const LOW_WATER_MARK = 8;
+const MAX_SEEN_TRANSCRIPT_IDS = 512;
 
 @Component({
   selector: 'app-realtime-voice-controller',
@@ -44,9 +49,9 @@ import {
             </div>
             <p class="mt-1 text-[11px] leading-4 text-[var(--text-muted)]">
               @if (state().connected) {
-                {{ i18n.t('consultation.ai.realtimeGovernedHelp', 'Le copilote reste en direct. La capture de sécurité chiffrée est indépendante des pauses d’analyse IA.') }}
+                {{ i18n.t('consultation.ai.realtimeGovernedHelp', 'Écoute clinique continue. Les tours entendus sont journalisés dans l’ordre ; la capture de sécurité chiffrée reste indépendante.') }}
               } @else if (ambientState().active) {
-                {{ i18n.t('consultation.ai.realtimeRecoveryWithSafety', 'Le temps réel est interrompu, mais la capture locale chiffrée continue. Joprelys renverra les fragments après reconnexion.') }}
+                {{ i18n.t('consultation.ai.realtimeRecoveryWithSafety', 'Le temps réel est interrompu, mais la capture locale chiffrée continue. Joprelys renverra l’audio après reconnexion.') }}
               } @else if (manualMuted) {
                 {{ i18n.t('consultation.ai.microphoneExplicitlyStopped', 'Microphone coupé par le clinicien. Aucune capture audio n’est active.') }}
               } @else {
@@ -70,9 +75,13 @@ import {
                 : 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-200'">
             <div class="font-black">{{ ambientStatusLabel() }}</div>
             <div class="mt-0.5 opacity-90">
-              {{ ambientState().pendingChunks }} fragment(s) chiffré(s) en attente
-              @if (ambientState().uploading) { · synchronisation en cours }
-              @if (!ambientState().online) { · hors ligne }
+              @if (!ambientState().online) {
+                Audio sécurisé conservé localement · en attente du réseau
+              } @else if (ambientState().uploading || ambientState().pendingChunks > 0) {
+                Sauvegarde clinique chiffrée · synchronisation en arrière-plan
+              } @else {
+                Sauvegarde clinique chiffrée · à jour
+              }
             </div>
           </div>
           <div class="rounded-[5px] border border-slate-200 bg-white px-3 py-2 text-[11px] text-[var(--text-muted)] dark:border-slate-800 dark:bg-slate-950">
@@ -80,14 +89,14 @@ import {
               {{ i18n.t('consultation.ai.ambientEvidence', 'Preuve clinique ambient') }}
             </div>
             <div class="mt-0.5">
-              {{ i18n.t('consultation.ai.ambientEvidenceHelp', 'Audio local chiffré → diarisation → transcript final auditable. Aucun fragment n’est supprimé avant accusé de réception serveur.') }}
+              {{ i18n.t('consultation.ai.ambientEvidenceHelp', 'Audio local chiffré → diarisation → transcript final auditable. Aucun audio non confirmé n’est supprimé.') }}
             </div>
           </div>
         </div>
 
         @if (ambientState().storagePressure) {
           <div class="mt-2 rounded-[5px] border border-rose-300 bg-rose-50 px-3 py-2 text-[11px] font-bold text-rose-900 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-100">
-            {{ i18n.t('consultation.ai.ambientStoragePressure', 'Stockage local presque saturé. Joprelys ne supprimera aucun fragment non confirmé : rétablissez la connexion ou libérez de l’espace avant de poursuivre.') }}
+            {{ i18n.t('consultation.ai.ambientStoragePressure', 'Stockage local presque saturé. Joprelys ne supprimera aucun audio non confirmé : rétablissez la connexion ou libérez de l’espace avant de poursuivre.') }}
           </div>
         }
 
@@ -100,14 +109,12 @@ import {
             }
           </div>
           <div class="mt-1 text-center text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-            @if (blocked) {
+            @if (blocked || backlogPaused) {
               {{ ambientState().active
-                ? i18n.t('consultation.ai.realtimeValidationPauseSafety', 'Copilote temps réel en pause — capture sécurisée continue')
-                : i18n.t('consultation.ai.realtimeValidationPause', 'Micro en pause — validation requise') }}
+                ? i18n.t('consultation.ai.realtimeValidationPauseSafety', 'Écoute Realtime en pause — capture sécurisée continue')
+                : i18n.t('consultation.ai.realtimeValidationPause', 'Micro en pause') }}
             } @else if (processing()) {
-              {{ ambientState().active
-                ? i18n.t('consultation.ai.realtimeClinicalAnalysisSafety', 'Analyse clinique sécurisée — capture ambient continue')
-                : i18n.t('consultation.ai.realtimeClinicalAnalysis', 'Analyse clinique sécurisée…') }}
+              {{ i18n.t('consultation.ai.realtimeIntakeSaving', 'Écoute continue — journalisation clinique en cours') }}
             } @else if (state().assistantSpeaking) {
               {{ i18n.t('consultation.ai.realtimeAssistantSpeaking', 'Joprelys vous répond…') }}
             } @else if (state().userSpeaking) {
@@ -132,9 +139,9 @@ import {
   `,
 })
 export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
-  private readonly api = inject(AiConsultationApiService);
   private readonly bridge = inject(RealtimeVoiceBridgeService);
   private readonly ambientCapture = inject(AmbientAudioCaptureService);
+  private readonly intake = inject(RealtimeClinicalIntakeApiService);
   readonly i18n = inject(I18nService);
 
   @Input({ required: true }) visitId = '';
@@ -162,12 +169,17 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   readonly bars = Array.from({ length: 24 });
 
   private readonly subscriptions = new Subscription();
+  private readonly transcriptQueue: RealtimeTranscriptTurn[] = [];
+  private readonly seenTranscriptIds = new Set<string>();
+  private readonly seenTranscriptOrder: string[] = [];
   manualMuted = false;
+  backlogPaused = false;
   private lastSpokenMessage = '';
   private connectingForVisit = '';
   private connectedVisitId = '';
   private connectionGeneration = 0;
   private connectionTransition: Promise<void> = Promise.resolve();
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private destroyed = false;
 
   constructor() {
@@ -178,10 +190,11 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       if (state.connected && !wasConnected) {
         this.syncMute();
         this.speakCurrentApprovedTurn();
+        this.drainTranscriptQueue();
       }
     }));
     this.subscriptions.add(this.ambientCapture.state$.subscribe(state => this.ambientState.set(state)));
-    this.subscriptions.add(this.bridge.transcript$.subscribe(turn => this.processTranscript(turn)));
+    this.subscriptions.add(this.bridge.transcript$.subscribe(turn => this.enqueueTranscript(turn)));
     this.subscriptions.add(this.bridge.error$.subscribe(message => this.realtimeError.emit(message)));
     this.subscriptions.add(this.bridge.assistantTurnCompleted$.subscribe(() => {
       setTimeout(() => this.syncMute(), 120);
@@ -192,10 +205,14 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     const visitChanged = !!changes['visitId']
       && !changes['visitId'].firstChange
       && changes['visitId'].previousValue !== changes['visitId'].currentValue;
+    if (visitChanged) this.resetTranscriptPipeline();
     if (changes['enabled'] || changes['visitId'] || changes['session']) {
       this.queueConnectionSync(visitChanged);
     }
-    if (changes['blocked']) this.syncMute();
+    if (changes['blocked']) {
+      this.syncMute();
+      if (!this.blocked) this.drainTranscriptQueue();
+    }
     if (changes['session'] && this.state().connected && this.connectedVisitId === this.visitId) {
       this.speakCurrentApprovedTurn();
     }
@@ -204,6 +221,8 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   ngOnDestroy(): void {
     this.destroyed = true;
     this.connectionGeneration += 1;
+    this.clearRetry();
+    this.resetTranscriptPipeline();
     this.subscriptions.unsubscribe();
     this.bridge.disconnect();
     void this.ambientCapture.stop();
@@ -222,7 +241,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   }
 
   effectiveMuted(): boolean {
-    return this.blocked || this.manualMuted || this.processing() || this.state().muted;
+    return this.blocked || this.manualMuted || this.backlogPaused || this.state().muted;
   }
 
   statusLabel(): string {
@@ -266,10 +285,10 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     const activeBelongsToAnotherVisit = !!this.connectedVisitId && this.connectedVisitId !== targetVisitId;
     const connectionInFlightForAnotherVisit = !!this.connectingForVisit && this.connectingForVisit !== targetVisitId;
     if (forceVisitReset || activeBelongsToAnotherVisit || connectionInFlightForAnotherVisit) {
+      this.resetTranscriptPipeline();
       this.connectingForVisit = '';
       this.connectedVisitId = '';
       this.lastSpokenMessage = '';
-      this.processing.set(false);
       this.bridge.disconnect();
       await this.ambientCapture.stop();
       if (generation !== this.connectionGeneration || this.destroyed) return;
@@ -286,7 +305,6 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     if (this.manualMuted) {
       this.connectingForVisit = '';
       this.connectedVisitId = '';
-      this.processing.set(false);
       this.bridge.disconnect();
       await this.ambientCapture.stop();
       return;
@@ -297,6 +315,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
         await this.startAmbientSafetyCapture(targetVisitId, generation);
       }
       this.syncMute();
+      this.drainTranscriptQueue();
       return;
     }
 
@@ -332,6 +351,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       this.connectedVisitId = targetVisitId;
       const spoken = this.speakCurrentApprovedTurn();
       if (!spoken) this.syncMute();
+      this.drainTranscriptQueue();
     } catch (error) {
       if (generation !== this.connectionGeneration || this.destroyed) return;
       this.connectedVisitId = '';
@@ -356,11 +376,9 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     }
   }
 
-  private processTranscript(turn: RealtimeTranscriptTurn): void {
+  private enqueueTranscript(turn: RealtimeTranscriptTurn): void {
     const text = turn.transcript.trim();
     if (!text
-      || this.processing()
-      || this.blocked
       || this.manualMuted
       || !this.session
       || !this.enabled
@@ -375,36 +393,67 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       ));
       return;
     }
+    const eventId = turn.eventId?.trim();
+    if (!eventId) {
+      this.realtimeError.emit(this.i18n.t(
+        'consultation.ai.realtimeTranscriptUnverified',
+        'Tour audio non traçable : il reste protégé par la capture de sécurité mais ne sera pas utilisé en Realtime.',
+      ));
+      return;
+    }
+
+    const dedupeId = turn.itemId?.trim() ? `item:${turn.itemId.trim()}` : `event:${eventId}`;
+    if (this.seenTranscriptIds.has(dedupeId)) return;
+    this.rememberTranscriptId(dedupeId);
+    this.transcriptQueue.push({ ...turn, transcript: text, eventId });
+
+    if (this.transcriptQueue.length >= HIGH_WATER_MARK && !this.backlogPaused) {
+      this.backlogPaused = true;
+      this.syncMute();
+      this.realtimeError.emit(this.i18n.t(
+        'consultation.ai.realtimeBackpressure',
+        'Joprelys a temporairement mis l’écoute Realtime en pause pour vider la file clinique. La capture chiffrée continue sans perte.',
+      ));
+    }
+    this.drainTranscriptQueue();
+  }
+
+  private drainTranscriptQueue(): void {
+    if (this.processing()
+      || this.blocked
+      || this.manualMuted
+      || !this.session
+      || !this.enabled
+      || !this.state().connected
+      || !this.connectedVisitId
+      || this.connectedVisitId !== this.visitId.trim()) {
+      return;
+    }
+    const turn = this.transcriptQueue[0];
+    if (!turn || turn.confidence === null || !turn.eventId) {
+      this.releaseBackpressureIfPossible();
+      return;
+    }
 
     const transcriptVisitId = this.connectedVisitId;
-    const pendingClarification = this.session.clarifications.find(item => item.status === 'PENDING');
     this.processing.set(true);
-    this.bridge.setMuted(true);
-    this.lastSpokenMessage = '';
-    const request = pendingClarification
-      ? this.api.answerRealtimeClarification(
-          transcriptVisitId,
-          pendingClarification.id,
-          text,
-          turn.confidence,
-          turn.eventId,
-        )
-      : this.api.sendRealtimeTranscript(
-          transcriptVisitId,
-          text,
-          turn.confidence,
-          turn.eventId,
-        );
-    request.subscribe({
-      next: response => {
+    this.intake.ingest(
+      transcriptVisitId,
+      turn.transcript,
+      turn.confidence,
+      turn.eventId,
+      turn.itemId,
+    ).subscribe({
+      next: () => {
         if (transcriptVisitId !== this.visitId.trim() || transcriptVisitId !== this.connectedVisitId) {
           this.processing.set(false);
           return;
         }
+        this.transcriptQueue.shift();
         this.processing.set(false);
-        const requiresDecision = response.revisions.some(revision => revision.status === 'PENDING');
-        this.bridge.setMuted(requiresDecision);
-        this.message.emit(response);
+        this.releaseBackpressureIfPossible();
+        this.syncMute();
+        this.drainTranscriptQueue();
       },
       error: error => {
         if (transcriptVisitId !== this.visitId.trim() || transcriptVisitId !== this.connectedVisitId) {
@@ -414,19 +463,65 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
         this.processing.set(false);
         const reason = this.backendReason(error);
         if (reason === 'AI_TRANSCRIPTION_LOW_CONFIDENCE' || reason === 'AI_REALTIME_TRANSCRIPTION_UNVERIFIED') {
+          this.transcriptQueue.shift();
           this.realtimeError.emit(this.i18n.t(
             'consultation.ai.realtimeTranscriptLowConfidence',
-            'La transcription est trop incertaine pour être utilisée cliniquement. Répétez la phrase.',
+            'La transcription est trop incertaine pour être utilisée cliniquement. L’audio sécurisé est conservé pour la transcription finale.',
           ));
-        } else {
-          this.realtimeError.emit(this.i18n.t(
-            'consultation.ai.realtimeClinicalError',
-            'La phrase a été entendue. La capture de sécurité conserve l’audio pendant le rétablissement de l’analyse clinique.',
-          ));
+          this.drainTranscriptQueue();
+          return;
         }
+        if (this.isTransient(error)) {
+          this.scheduleRetry();
+          return;
+        }
+        this.transcriptQueue.shift();
+        this.realtimeError.emit(this.i18n.t(
+          'consultation.ai.realtimeClinicalError',
+          'Un tour Realtime n’a pas pu être journalisé. L’audio sécurisé reste conservé et sera traité par la chaîne ambient.',
+        ));
+        this.releaseBackpressureIfPossible();
         this.syncMute();
+        this.drainTranscriptQueue();
       },
     });
+  }
+
+  private rememberTranscriptId(id: string): void {
+    this.seenTranscriptIds.add(id);
+    this.seenTranscriptOrder.push(id);
+    while (this.seenTranscriptOrder.length > MAX_SEEN_TRANSCRIPT_IDS) {
+      const oldest = this.seenTranscriptOrder.shift();
+      if (oldest) this.seenTranscriptIds.delete(oldest);
+    }
+  }
+
+  private releaseBackpressureIfPossible(): void {
+    if (this.backlogPaused && this.transcriptQueue.length <= LOW_WATER_MARK) {
+      this.backlogPaused = false;
+    }
+  }
+
+  private scheduleRetry(): void {
+    if (this.retryTimer || this.destroyed) return;
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      this.drainTranscriptQueue();
+    }, 1200);
+  }
+
+  private clearRetry(): void {
+    if (this.retryTimer) clearTimeout(this.retryTimer);
+    this.retryTimer = null;
+  }
+
+  private isTransient(error: unknown): boolean {
+    if (!(error instanceof HttpErrorResponse)) return true;
+    return error.status === 0
+      || error.status === 408
+      || error.status === 425
+      || error.status === 429
+      || error.status >= 500;
   }
 
   private backendReason(error: unknown): string {
@@ -438,6 +533,15 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       return typeof detail === 'string' ? detail : '';
     }
     return typeof payload === 'string' ? payload : '';
+  }
+
+  private resetTranscriptPipeline(): void {
+    this.clearRetry();
+    this.transcriptQueue.length = 0;
+    this.seenTranscriptIds.clear();
+    this.seenTranscriptOrder.length = 0;
+    this.backlogPaused = false;
+    this.processing.set(false);
   }
 
   private speakCurrentApprovedTurn(): boolean {
@@ -455,6 +559,6 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   }
 
   private syncMute(): void {
-    this.bridge.setMuted(this.blocked || this.manualMuted || this.processing());
+    this.bridge.setMuted(this.blocked || this.manualMuted || this.backlogPaused);
   }
 }
