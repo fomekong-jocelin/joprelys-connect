@@ -43,6 +43,12 @@ describe('SmartVitalsAssistantComponent', () => {
     fixture.detectChanges();
   });
 
+  it('should start collapsed and keep a safe offset above mobile modal actions', () => {
+    expect(component.expanded()).toBe(false);
+    const section = fixture.nativeElement.querySelector('section') as HTMLElement;
+    expect(section.className).toContain('bottom-[calc(env(safe-area-inset-bottom)+7rem)]');
+  });
+
   it('should require explicit consent before enabling realtime listening', () => {
     expect(component.realtimeEnabled()).toBe(false);
     expect(component.realtimeActive()).toBe(false);
@@ -52,7 +58,9 @@ describe('SmartVitalsAssistantComponent', () => {
     expect(component.realtimeEnabled()).toBe(true);
   });
 
-  it('should disable continuous listening when the assistant is collapsed', () => {
+  it('should disable continuous listening when the expanded assistant is collapsed', () => {
+    component.toggleExpanded();
+    expect(component.expanded()).toBe(true);
     component.enableRealtime();
     component.realtimeActive.set(true);
 
