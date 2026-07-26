@@ -24,11 +24,11 @@ import { RealtimeVitalsControllerComponent } from './realtime-vitals-controller.
   imports: [CommonModule, FormsModule, RealtimeVitalsControllerComponent],
   template: `
     <section
-      class="fixed inset-x-3 bottom-3 z-[80] sm:left-1/2 sm:right-auto sm:w-[560px] sm:-translate-x-1/2"
+      class="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+7rem)] z-[80] sm:bottom-auto sm:left-auto sm:right-5 sm:top-20 sm:w-[420px]"
       aria-live="polite"
     >
       <div class="overflow-hidden rounded-[10px] border border-cyan-200/80 bg-[var(--app-surface)] shadow-2xl dark:border-cyan-900/70">
-        <header class="flex items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-3 py-2.5 sm:px-4">
+        <header class="flex items-center justify-between gap-3 bg-[var(--app-surface-muted)] px-3 py-2.5 sm:px-4">
           <button
             type="button"
             class="flex min-w-0 flex-1 items-center gap-2 text-left"
@@ -44,7 +44,7 @@ import { RealtimeVitalsControllerComponent } from './realtime-vitals-controller.
               <span class="block truncate text-xs font-extrabold text-[var(--text-primary)] sm:text-sm">
                 {{ i18n.t('vitals.assistant.title', 'Assistant de constantes') }}
               </span>
-              <span class="block truncate text-[10px] font-medium text-[var(--text-muted)] sm:text-xs">
+              <span class="block truncate text-[10px] font-medium text-[var(--text-muted)]">
                 @if (realtimeActive()) {
                   {{ i18n.t('vitals.assistant.realtimeReady', 'Micro en direct — dictez les paramètres') }}
                 } @else if (recording()) {
@@ -52,7 +52,7 @@ import { RealtimeVitalsControllerComponent } from './realtime-vitals-controller.
                 } @else if (speaking()) {
                   {{ i18n.t('vitals.assistant.speaking', 'Joprelys vous répond…') }}
                 } @else {
-                  {{ patientName || i18n.t('vitals.assistant.subtitle', 'Dictez les paramètres, vérifiez, puis enregistrez.') }}
+                  {{ patientName || i18n.t('vitals.assistant.subtitle', 'Dictez, vérifiez, puis enregistrez.') }}
                 }
               </span>
             </span>
@@ -71,9 +71,8 @@ import { RealtimeVitalsControllerComponent } from './realtime-vitals-controller.
         </header>
 
         @if (expanded()) {
-          <div class="max-h-[58dvh] space-y-3 overflow-y-auto p-3 sm:p-4">
-            <div class="rounded-[8px] border border-cyan-100 bg-cyan-50/60 p-3 text-xs leading-5 text-cyan-950 dark:border-cyan-950 dark:bg-cyan-950/20 dark:text-cyan-100">
-              <strong>{{ i18n.t('vitals.assistant.exampleTitle', 'Vous pouvez dire :') }}</strong>
+          <div class="max-h-[45dvh] space-y-3 overflow-y-auto border-t border-[var(--app-border)] p-3 sm:p-4">
+            <div class="rounded-[8px] border border-cyan-100 bg-cyan-50/60 p-3 text-[11px] leading-5 text-cyan-950 dark:border-cyan-950 dark:bg-cyan-950/20 dark:text-cyan-100">
               {{ i18n.t('vitals.assistant.example', '« Température 38,4, tension 132 sur 84, saturation 96, pouls 104, poids 73 kilos. »') }}
             </div>
 
@@ -82,17 +81,17 @@ import { RealtimeVitalsControllerComponent } from './realtime-vitals-controller.
                 type="button"
                 (click)="enableRealtime()"
                 [disabled]="disabled"
-                class="flex min-h-12 w-full items-center justify-between gap-3 rounded-[8px] border border-cyan-200 bg-cyan-50/70 px-4 py-3 text-left transition hover:bg-cyan-100/70 disabled:opacity-50 dark:border-cyan-900 dark:bg-cyan-950/25 dark:hover:bg-cyan-950/40"
+                class="flex min-h-12 w-full items-center justify-between gap-3 rounded-[8px] border border-cyan-200 bg-cyan-50/70 px-4 py-3 text-left disabled:opacity-50 dark:border-cyan-900 dark:bg-cyan-950/25"
               >
                 <span>
                   <span class="block text-xs font-extrabold text-cyan-900 dark:text-cyan-100">
                     {{ i18n.t('vitals.assistant.realtimeActivate', 'Activer l’écoute Realtime') }}
                   </span>
                   <span class="mt-0.5 block text-[10px] leading-4 text-cyan-800/80 dark:text-cyan-200/80">
-                    {{ i18n.t('vitals.assistant.realtimeConsent', 'Le microphone ne s’ouvre qu’après votre activation et se coupe lorsque vous quittez ce mode.') }}
+                    {{ i18n.t('vitals.assistant.realtimeConsent', 'Le microphone ne s’ouvre qu’après votre activation.') }}
                   </span>
                 </span>
-                <svg class="h-5 w-5 shrink-0 text-cyan-700 dark:text-cyan-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
                 </svg>
               </button>
@@ -106,78 +105,57 @@ import { RealtimeVitalsControllerComponent } from './realtime-vitals-controller.
                 (activeChange)="realtimeActive.set($event)"
                 (realtimeError)="errorMessage.set($event)"
               />
-              <div class="flex justify-end">
-                <button
-                  type="button"
-                  (click)="disableRealtime()"
-                  class="min-h-10 rounded-[6px] px-3 text-[11px] font-bold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)]"
-                >
-                  {{ i18n.t('vitals.assistant.realtimeBackToClassic', 'Revenir à la dictée classique') }}
-                </button>
-              </div>
+              <button
+                type="button"
+                (click)="disableRealtime()"
+                class="min-h-10 w-full rounded-[6px] text-[11px] font-bold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)]"
+              >
+                {{ i18n.t('vitals.assistant.realtimeBackToClassic', 'Revenir à la dictée classique') }}
+              </button>
             }
 
             @if (recording() || speaking()) {
-              <div class="flex h-12 items-center justify-center gap-1 rounded-[8px] bg-[var(--app-surface-muted)] px-3" aria-hidden="true">
+              <div class="flex h-10 items-center justify-center gap-1 rounded-[8px] bg-[var(--app-surface-muted)] px-3" aria-hidden="true">
                 @for (bar of waveformBars; track $index) {
-                  <span
-                    class="w-1 rounded-full bg-cyan-500 transition-[height] duration-75"
-                    [style.height.px]="waveHeight($index)"
-                  ></span>
+                  <span class="w-1 rounded-full bg-cyan-500" [style.height.px]="waveHeight($index)"></span>
                 }
               </div>
             }
 
-            <div
-              class="grid grid-cols-1 gap-2 sm:items-center"
-              [ngClass]="realtimeEnabled() ? 'sm:grid-cols-[1fr_auto]' : 'sm:grid-cols-[auto_1fr_auto]'"
-            >
+            <div class="grid grid-cols-1 gap-2">
               @if (!realtimeEnabled()) {
                 <button
                   type="button"
                   (click)="toggleRecording()"
                   [disabled]="disabled || busy() || !mediaRecorderSupported"
-                  class="inline-flex min-h-12 items-center justify-center gap-2 rounded-[8px] px-4 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
-                  [ngClass]="recording() ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]'"
+                  class="inline-flex min-h-12 items-center justify-center gap-2 rounded-[8px] px-4 text-sm font-bold text-white disabled:opacity-50"
+                  [ngClass]="recording() ? 'bg-rose-600' : 'bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]'"
                 >
-                  <span class="relative inline-flex h-6 w-6 items-center justify-center">
-                    @if (recording()) {
-                      <span class="absolute h-6 w-6 animate-ping rounded-full bg-white/25"></span>
-                    }
-                    <svg class="relative h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
-                    </svg>
-                  </span>
                   {{ recording()
                     ? i18n.t('vitals.assistant.stop', 'Terminer')
                     : i18n.t('vitals.assistant.record', 'Dicter les constantes') }}
                 </button>
               }
 
-              <input
-                type="text"
-                [(ngModel)]="textInput"
-                (keyup.enter)="sendText()"
-                [disabled]="disabled || busy() || recording()"
-                [placeholder]="i18n.t('vitals.assistant.textPlaceholder', 'Ou saisissez : SpO₂ 97, température 37,8…')"
-                class="ui-input min-h-12 w-full px-3 text-sm"
-              />
-
-              <button
-                type="button"
-                (click)="sendText()"
-                [disabled]="disabled || busy() || recording() || !textInput.trim()"
-                class="inline-flex min-h-12 items-center justify-center rounded-[8px] border border-[var(--app-border)] px-4 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--app-surface-muted)] disabled:opacity-50"
-              >
-                {{ i18n.t('vitals.assistant.analyze', 'Analyser') }}
-              </button>
+              <div class="grid grid-cols-[1fr_auto] gap-2">
+                <input
+                  type="text"
+                  [(ngModel)]="textInput"
+                  (keyup.enter)="sendText()"
+                  [disabled]="disabled || busy() || recording()"
+                  [placeholder]="i18n.t('vitals.assistant.textPlaceholder', 'SpO₂ 97, température 37,8…')"
+                  class="ui-input min-h-11 w-full px-3 text-sm"
+                />
+                <button
+                  type="button"
+                  (click)="sendText()"
+                  [disabled]="disabled || busy() || recording() || !textInput.trim()"
+                  class="min-h-11 rounded-[8px] border border-[var(--app-border)] px-3 text-xs font-bold text-[var(--text-primary)] disabled:opacity-50"
+                >
+                  {{ i18n.t('vitals.assistant.analyze', 'Analyser') }}
+                </button>
+              </div>
             </div>
-
-            @if (!mediaRecorderSupported && !realtimeEnabled()) {
-              <p class="text-xs font-semibold text-amber-700 dark:text-amber-300">
-                {{ i18n.t('vitals.assistant.micUnsupported', 'Le microphone n’est pas disponible dans ce navigateur. Utilisez la saisie texte.') }}
-              </p>
-            }
 
             @if (busy()) {
               <div class="flex items-center gap-2 text-xs font-semibold text-[var(--text-muted)]">
@@ -208,15 +186,10 @@ import { RealtimeVitalsControllerComponent } from './realtime-vitals-controller.
                   ? 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/25'
                   : 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/25'"
               >
-                <div class="flex items-start gap-2">
-                  <span class="mt-0.5 text-base">{{ needsConfirmation() ? '⚠️' : '✓' }}</span>
-                  <div class="min-w-0">
-                    <p class="text-xs font-bold text-[var(--text-primary)]">{{ assistantMessage() }}</p>
-                    @if (needsConfirmation() && confirmationReason()) {
-                      <p class="mt-1 text-[11px] leading-4 text-[var(--text-muted)]">{{ confirmationReason() }}</p>
-                    }
-                  </div>
-                </div>
+                <p class="text-xs font-bold text-[var(--text-primary)]">{{ assistantMessage() }}</p>
+                @if (needsConfirmation() && confirmationReason()) {
+                  <p class="mt-1 text-[11px] leading-4 text-[var(--text-muted)]">{{ confirmationReason() }}</p>
+                }
               </div>
             }
 
@@ -225,7 +198,7 @@ import { RealtimeVitalsControllerComponent } from './realtime-vitals-controller.
                 <p class="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-muted)]">
                   {{ i18n.t('vitals.assistant.detected', 'Champs préremplis — à vérifier') }}
                 </p>
-                <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <div class="grid grid-cols-2 gap-2">
                   @for (entry of proposalEntries(); track entry[0]) {
                     <div class="rounded-[8px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-3 py-2">
                       <span class="block text-[9px] font-extrabold uppercase tracking-wide text-[var(--text-muted)]">{{ labelFor(entry[0]) }}</span>
@@ -255,7 +228,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   @Input() patientName = '';
   @Output() readonly proposed = new EventEmitter<AiVitalsProposal>();
 
-  readonly expanded = signal(true);
+  readonly expanded = signal(false);
   readonly busy = signal(false);
   readonly recording = signal(false);
   readonly speaking = signal(false);
