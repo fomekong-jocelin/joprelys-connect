@@ -1,6 +1,7 @@
 package com.joprelys.backend.ai.domain;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Interface stratégie pour les fournisseurs d'IA.
@@ -33,4 +34,19 @@ public interface AiProvider {
      * @return la réponse du modèle contenant le contenu, les tokens et le modèle utilisé
      */
     AiChatResponse chat(List<AiMessage> messages, String systemPrompt);
+
+    /**
+     * Demande une sortie strictement conforme à un JSON Schema.
+     *
+     * <p>Cette capacité est volontairement fail-closed : un fournisseur qui ne
+     * garantit pas l'adhérence au schéma ne doit pas être utilisé pour extraire
+     * des faits cliniques.</p>
+     */
+    default AiChatResponse chatStructured(
+            List<AiMessage> messages,
+            String systemPrompt,
+            String schemaName,
+            Map<String, Object> schema) {
+        throw new UnsupportedOperationException("AI_STRUCTURED_OUTPUT_UNSUPPORTED");
+    }
 }
