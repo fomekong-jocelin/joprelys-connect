@@ -1,6 +1,7 @@
 package com.joprelys.backend.ai.infrastructure.openai;
 
 import com.joprelys.backend.ai.infrastructure.AiProperties;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -9,10 +10,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
@@ -108,27 +112,51 @@ public class OpenAiRealtimeCallService {
     }
 
     private String postCall(String sdpOffer, Map<String, Object> sessionConfig) {
-        MultipartBodyBuilder multipart = new MultipartBodyBuilder();
-        multipart.part("sdp", sdpOffer.trim()).contentType(APPLICATION_SDP);
-        try {
-            multipart.part("session", objectMapper.writeValueAsString(sessionConfig))
-                    .contentType(MediaType.APPLICATION_JSON);
-        } catch (Exception exception) {
-            throw new ResponseStatusException(
-                    HttpStatus.INTERNAL_SERVER_ERROR, "AI_REALTIME_CONFIG_INVALID");
+        MultiValueMap<String, Object> multipart = buildMultipartBody(sdpOffer, sessionConfig);
+        if (log.isDebugEnabled()) {
+            log.debug(
+                    "Préparation offre OpenAI Realtime sdpLength={} endsWithCrlf={}",
+                    sdpOffer.length(),
+                    sdpOffer.endsWith("\r\n"));
         }
 
         String answer = restClient.post()
                 .uri("/realtime/calls")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .accept(APPLICATION_SDP)
-                .body(multipart.build())
+                .body(multipart)
                 .retrieve()
                 .body(String.class);
         if (answer == null || answer.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI_REALTIME_EMPTY_SDP");
         }
         return answer;
+    }
+
+    MultiValueMap<String, Object> buildMultipartBody(
+            String sdpOffer,
+            Map<String, Object> sessionConfig) {
+        String sessionJson;
+        try {
+            sessionJson = objectMapper.writeValueAsString(sessionConfig);
+        } catch (Exception exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "AI_REALTIME_CONFIG_INVALID");
+        }
+
+        HttpHeaders sdpHeaders = new HttpHeaders();
+        sdpHeaders.setContentType(APPLICATION_SDP);
+        HttpHeaders sessionHeaders = new HttpHeaders();
+        sessionHeaders.setContentType(MediaType.APPLICATION_JSON);
+
+        MultiValueMap<String, Object> multipart = new LinkedMultiValueMap<>();
+        multipart.add(
+                "sdp",
+                new HttpEntity<>(sdpOffer.getBytes(StandardCharsets.UTF_8), sdpHeaders));
+        multipart.add(
+                "session",
+                new HttpEntity<>(sessionJson.getBytes(StandardCharsets.UTF_8), sessionHeaders));
+        return multipart;
     }
 
     private List<CallAttempt> callAttempts(String locale) {
@@ -252,7 +280,7 @@ public class OpenAiRealtimeCallService {
             RestClientResponseException exception,
             CallAttempt attempt) {
         String body = exception.getResponseBodyAsString();
-        String safeBody = body == null ? "" : body.replaceAll("[\\r\\n]+", " ");
+        String safeBody = body == null ? "" : body.replaceAll("[\r\n]+", " ");
         if (safeBody.length() > 600) {
             safeBody = safeBody.substring(0, 600);
         }
