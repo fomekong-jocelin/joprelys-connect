@@ -24,7 +24,9 @@ projection déterministe suivante
 
 - `KEEP` ne crée et ne modifie aucun fait ;
 - `ADD` crée un fait `ASSERTED` validé par le validateur relationnel existant ;
+- `ADD` d'un fait strictement identique déjà effectif est refusé : l'opération correcte est `KEEP` ;
 - `REPLACE` cible uniquement un fait effectif de la projection de base et crée un nouveau fait `ASSERTED` qui le supersède ;
+- `REPLACE` sans changement clinique ni changement de preuve est refusé : l'opération correcte est `KEEP` ;
 - `RETRACT` ne fait jamais de `DELETE` physique : une opération append-only documente le retrait ;
 - `RETRACT` exige une preuve `FINAL` exacte et une justification explicite de correction, négation ou annulation ;
 - une information issue d'une décision/observation du clinicien ne peut pas être rétractée à partir d'une parole patient seule ;
@@ -119,13 +121,16 @@ Une rétraction doit :
 - acquisition du verrou visite avant lecture de la projection de base ;
 - `KEEP` sans création de fait ;
 - `ADD` via le validateur factuel existant ;
+- rejet d'un `ADD` strictement identique à un fait effectif ;
 - `REPLACE` par supersession append-only ;
+- rejet d'un `REPLACE` sans changement réel ;
 - `RETRACT` sans suppression physique ;
 - preuve `FINAL` exacte pour la rétraction ;
 - patient incapable de rétracter seul une décision clinique ;
 - conflit si deux opérations ciblent le même fait ;
 - refus d'une cible non effective ;
 - retry strictement idempotent ;
+- canonicalisation du SHA-256 indépendante de l'ordre des preuves ;
 - refus d'un `revisionId` réutilisé avec un payload différent ;
 - invalidation d'une rétraction lorsque sa preuve n'est plus effective ;
 - historique des batchs sans réexécution clinique ;
