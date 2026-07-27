@@ -43,11 +43,37 @@ final class ClinicalFactRevisionSemanticGuard {
                 .map(ClinicalFactRevisionSemanticGuard::key)
                 .sorted()
                 .toList();
-        List<String> proposedEvidence = proposed.evidence().stream()
+        return currentEvidence.equals(candidateEvidenceKeys(proposed.evidence()));
+    }
+
+    static boolean samePayload(FactPayload left, FactPayload right) {
+        if (left == null || right == null
+                || left.factType() != right.factType()
+                || left.authority() != right.authority()
+                || left.polarity() != right.polarity()
+                || left.laterality() != right.laterality()
+                || !Objects.equals(upper(left.conceptCode()), upper(right.conceptCode()))
+                || !Objects.equals(trim(left.conceptText()), trim(right.conceptText()))
+                || !Objects.equals(trim(left.valuePrimary()), trim(right.valuePrimary()))
+                || !Objects.equals(trim(left.valueSecondary()), trim(right.valueSecondary()))
+                || !Objects.equals(upper(left.unitCode()), upper(right.unitCode()))
+                || !Objects.equals(trim(left.temporalityText()), trim(right.temporalityText()))
+                || !Objects.equals(trim(left.frequencyText()), trim(right.frequencyText()))
+                || !Objects.equals(trim(left.routeText()), trim(right.routeText()))) {
+            return false;
+        }
+        if (left.evidence() == null || right.evidence() == null
+                || left.evidence().size() != right.evidence().size()) {
+            return false;
+        }
+        return candidateEvidenceKeys(left.evidence()).equals(candidateEvidenceKeys(right.evidence()));
+    }
+
+    private static List<String> candidateEvidenceKeys(List<EvidenceSpanCandidate> evidence) {
+        return evidence.stream()
                 .map(ClinicalFactRevisionSemanticGuard::key)
                 .sorted()
                 .toList();
-        return currentEvidence.equals(proposedEvidence);
     }
 
     private static String key(EvidenceSpanView evidence) {
