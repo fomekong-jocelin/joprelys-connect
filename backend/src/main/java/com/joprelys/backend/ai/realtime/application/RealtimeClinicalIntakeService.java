@@ -9,6 +9,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class RealtimeClinicalIntakeService {
 
+    private static final Logger log = LoggerFactory.getLogger(RealtimeClinicalIntakeService.class);
     private static final double DEFAULT_CONFIDENCE_FLOOR = 0.35;
     private static final int MAX_TRANSCRIPT_LENGTH = 12_000;
 
@@ -47,7 +50,7 @@ public class RealtimeClinicalIntakeService {
         String normalizedEventId = requiredId(eventId, "AI_REALTIME_EVENT_ID_REQUIRED");
         String normalizedItemId = optionalId(itemId);
         String normalizedTranscript = normalizeTranscript(transcript);
-        double normalizedConfidence = validateConfidence(confidence);
+        double normalizedConfidence = normalizeConfidence(confidence);
 
         lockAuthorizedVisit(visitId, organizationId);
 
@@ -159,9 +162,7 @@ public class RealtimeClinicalIntakeService {
     }
 
     private ResponseStatusException reusedId() {
-        return new ResponseStatusException(
-                HttpStatus.CONFLICT,
-                "AI_REALTIME_INTAKE_ID_REUSED");
+        return new ResponseStatusException(HttpStatus.CONFLICT, "AI_REALTIME_INTAKE_ID_REUSED");
     }
 
     private VisitEntity lockAuthorizedVisit(UUID visitId, UUID organizationId) {
@@ -215,16 +216,23 @@ public class RealtimeClinicalIntakeService {
         return normalized;
     }
 
-    private double validateConfidence(Double confidence) {
-        if (confidence == null || !Double.isFinite(confidence) || confidence < 0.0 || confidence > 1.0) {
+    private double normalizeConfidence(Double confidence) {
+        double configured = properties.minimumTranscriptionConfidence();
+        double minimum = configured > 0.0 ? configured : DEFAULT_CONFIDENCE_FLOOR;
+        if (confidence == null) {
+            log.warn("Realtime transcript persisted without ASR confidence; clinician review remains required");
+            return 0.0d;
+        }
+        if (!Double.isFinite(confidence) || confidence < 0.0 || confidence > 1.0) {
             throw new ResponseStatusException(
                     HttpStatus.UNPROCESSABLE_ENTITY,
                     "AI_REALTIME_TRANSCRIPTION_UNVERIFIED");
         }
-        double configured = properties.minimumTranscriptionConfidence();
-        double minimum = configured > 0.0 ? configured : DEFAULT_CONFIDENCE_FLOOR;
         if (confidence < minimum) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "AI_TRANSCRIPTION_LOW_CONFIDENCE");
+            log.warn(
+                    "Low-confidence realtime transcript persisted confidence={} minimum={}",
+                    String.format("%.3f", confidence),
+                    String.format("%.3f", minimum));
         }
         return confidence;
     }
