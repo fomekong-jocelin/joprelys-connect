@@ -40,28 +40,26 @@ const MAX_SEEN_TRANSCRIPT_IDS = 512;
   template: `
     @if (enabled) {
       <section class="ui-card overflow-hidden">
-        <header class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-4 py-3 sm:px-5">
-          <div class="inline-flex items-center gap-2 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--text-secondary)]">
-            <span class="h-2 w-2 rounded-full" [ngClass]="statusDotClasses()" aria-hidden="true"></span>
-            {{ state().connected
+        <header class="flex min-h-14 flex-wrap items-center justify-between gap-2 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-4 py-3 sm:px-5">
+          <div class="inline-flex min-h-8 items-center gap-2 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--text-secondary)]">
+            <span class="h-2 w-2 shrink-0 rounded-full" [ngClass]="statusDotClasses()" aria-hidden="true"></span>
+            <span>{{ state().connected
               ? i18n.t('consultation.ai.focusSecureListening')
               : state().connecting
                 ? i18n.t('consultation.ai.focusConnecting')
-                : i18n.t('consultation.ai.focusAudioUnavailable') }}
+                : i18n.t('consultation.ai.focusAudioUnavailable') }}</span>
           </div>
 
-          @if (ambientState().active) {
-            <span class="text-[10px] font-semibold text-[var(--text-muted)]">
-              {{ i18n.t('consultation.ai.focusSafetyActive') }}
-            </span>
-          }
+          <span class="min-h-4 whitespace-nowrap text-[10px] font-semibold text-[var(--text-muted)]">
+            {{ ambientState().active ? i18n.t('consultation.ai.focusSafetyActive') : ' ' }}
+          </span>
         </header>
 
         <div class="p-4 sm:p-5">
           <div class="flex flex-col items-center text-center" aria-live="polite">
             <div class="relative flex h-32 w-32 items-center justify-center sm:h-36 sm:w-36">
               @if (state().userSpeaking || state().assistantSpeaking) {
-                <span class="absolute inset-0 animate-pulse rounded-full border border-[var(--brand-primary-border)]"></span>
+                <span class="absolute inset-0 rounded-full border border-[var(--brand-primary-border)]"></span>
               }
               <div class="absolute inset-3 rounded-full border border-[var(--app-border)] bg-[var(--app-surface-muted)]"></div>
               <div
@@ -80,53 +78,53 @@ const MAX_SEEN_TRANSCRIPT_IDS = 512;
               </div>
             </div>
 
-            <h2 class="ui-title mt-3 text-lg sm:text-xl">{{ statusLabel() }}</h2>
-            <p class="mt-1 max-w-xl text-xs leading-5 text-[var(--text-muted)] sm:text-sm">
+            <h2 class="ui-title mt-3 flex min-h-8 items-center justify-center text-lg sm:text-xl">
+              {{ statusLabel() }}
+            </h2>
+            <p class="mt-1 flex min-h-12 max-w-xl items-start justify-center text-xs leading-5 text-[var(--text-muted)] sm:min-h-10 sm:text-sm">
               {{ statusHelp() }}
             </p>
 
-            <div class="ui-card-muted mt-4 w-full max-w-2xl p-3 text-left sm:p-4">
-              <div class="flex items-center justify-between gap-3">
+            <div class="ui-card-muted mt-4 min-h-32 w-full max-w-2xl p-3 text-left sm:min-h-28 sm:p-4">
+              <div class="flex min-h-5 items-center justify-between gap-3">
                 <p class="ui-label">{{ i18n.t('consultation.ai.focusTranscriptTitle') }}</p>
-                @if (processing()) {
-                  <span class="text-[10px] font-bold text-[var(--brand-primary)]">
-                    {{ i18n.t('consultation.ai.focusSecuring') }}
-                  </span>
-                }
+                <span class="min-w-16 text-right text-[10px] font-bold text-[var(--brand-primary)]">
+                  {{ processing() ? i18n.t('consultation.ai.focusSecuring') : ' ' }}
+                </span>
               </div>
 
-              @if (lastTranscript()) {
-                <p class="mt-2 text-sm font-medium leading-6 text-[var(--text-primary)]">
-                  “{{ lastTranscript() }}”
-                </p>
-                @if (lastTranscriptConfidence() === null) {
-                  <p class="mt-2 text-[10px] leading-4 text-[var(--brand-warning-text)]">
-                    {{ i18n.t('consultation.ai.focusTranscriptUnverified') }}
+              <div class="mt-2 min-h-16">
+                @if (lastTranscript()) {
+                  <p class="text-sm font-medium leading-6 text-[var(--text-primary)]">
+                    “{{ lastTranscript() }}”
+                  </p>
+                  @if (lastTranscriptConfidence() === null) {
+                    <p class="mt-2 text-[10px] leading-4 text-[var(--brand-warning-text)]">
+                      {{ i18n.t('consultation.ai.focusTranscriptUnverified') }}
+                    </p>
+                  }
+                } @else if (state().userSpeaking) {
+                  <p class="text-sm font-semibold text-[var(--brand-primary)]">
+                    {{ i18n.t('consultation.ai.focusTranscribing') }}
+                  </p>
+                } @else {
+                  <p class="text-xs leading-5 text-[var(--text-muted)] sm:text-sm">
+                    {{ state().connected
+                      ? i18n.t('consultation.ai.focusTranscriptWaiting')
+                      : i18n.t('consultation.ai.focusTranscriptNoChannel') }}
                   </p>
                 }
-              } @else if (state().userSpeaking) {
-                <p class="mt-2 text-sm font-semibold text-[var(--brand-primary)]">
-                  {{ i18n.t('consultation.ai.focusTranscribing') }}
-                </p>
-              } @else {
-                <p class="mt-2 text-xs leading-5 text-[var(--text-muted)] sm:text-sm">
-                  {{ state().connected
-                    ? i18n.t('consultation.ai.focusTranscriptWaiting')
-                    : i18n.t('consultation.ai.focusTranscriptNoChannel') }}
-                </p>
-              }
+              </div>
             </div>
           </div>
 
-          @if (showSafetyAlert()) {
-            <div
-              class="mt-4 rounded-[var(--radius-brand-sm)] border px-3 py-2.5 text-xs font-semibold"
-              [ngClass]="safetyAlertClasses()"
-              role="status"
-            >
-              {{ safetyAlertText() }}
-            </div>
-          }
+          <div
+            class="mt-4 flex min-h-[68px] items-center rounded-[var(--radius-brand-sm)] border px-3 py-2.5 text-xs font-semibold leading-5"
+            [ngClass]="connectionBannerClasses()"
+            role="status"
+          >
+            {{ connectionBannerText() }}
+          </div>
 
           <div class="mx-auto mt-4 grid w-full max-w-md grid-cols-2 gap-2">
             <button
@@ -158,7 +156,7 @@ const MAX_SEEN_TRANSCRIPT_IDS = 512;
             </button>
           </div>
 
-          <div class="mt-3 text-center">
+          <div class="mt-3 min-h-5 text-center">
             <button
               type="button"
               (click)="switchToDictation.emit()"
@@ -231,6 +229,9 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     this.subscriptions.add(this.bridge.state$.subscribe(state => {
       const wasConnected = this.state().connected;
       this.state.set(state);
+      if (state.connected && this.enabled && this.session && !this.manualMuted) {
+        this.connectedVisitId = this.visitId.trim();
+      }
       this.activeChange.emit(state.connected);
       if (state.connected && !wasConnected) {
         this.syncMute();
@@ -257,7 +258,17 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       && !changes['visitId'].firstChange
       && changes['visitId'].previousValue !== changes['visitId'].currentValue;
     if (visitChanged) this.resetTranscriptPipeline();
-    if (changes['enabled'] || changes['visitId'] || changes['session']) {
+
+    const sessionChange = changes['session'];
+    const previousSession = sessionChange?.previousValue as AiSessionResponse | null | undefined;
+    const currentSession = sessionChange?.currentValue as AiSessionResponse | null | undefined;
+    const sessionIdentityChanged = !!sessionChange && (
+      previousSession?.sessionId !== currentSession?.sessionId
+      || previousSession?.visitId !== currentSession?.visitId
+      || (!!previousSession !== !!currentSession)
+    );
+
+    if (changes['enabled'] || changes['visitId'] || sessionIdentityChanged) {
       this.queueConnectionSync(visitChanged);
     }
     if (changes['blocked']) {
@@ -320,11 +331,11 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     if (this.manualMuted) return 'bg-[var(--text-muted)]';
     if (this.state().connected && !this.backlogPaused) {
       return this.state().userSpeaking
-        ? 'animate-pulse bg-[var(--brand-success)]'
+        ? 'bg-[var(--brand-success)]'
         : 'bg-[var(--brand-success)]';
     }
     if (this.state().connecting || this.ambientState().active || this.backlogPaused) {
-      return 'animate-pulse bg-[var(--brand-warning)]';
+      return 'bg-[var(--brand-warning)]';
     }
     return 'bg-[var(--brand-danger)]';
   }
@@ -334,16 +345,16 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       return 'bg-[var(--app-surface-muted)] text-[var(--text-muted)]';
     }
     if (this.state().assistantSpeaking) {
-      return 'animate-pulse bg-[var(--brand-primary-active)] text-[var(--text-inverse)]';
+      return 'bg-[var(--brand-primary-active)] text-[var(--text-inverse)]';
     }
     if (this.state().userSpeaking) {
-      return 'animate-pulse bg-[var(--brand-success)] text-[var(--text-inverse)]';
+      return 'bg-[var(--brand-success)] text-[var(--text-inverse)]';
     }
     if (this.state().connected && !this.backlogPaused) {
       return 'bg-[var(--brand-primary)] text-[var(--text-inverse)]';
     }
     if (this.state().connecting || this.ambientState().active || this.backlogPaused) {
-      return 'animate-pulse bg-[var(--brand-warning)] text-[var(--text-inverse)]';
+      return 'bg-[var(--brand-warning)] text-[var(--text-inverse)]';
     }
     return 'bg-[var(--brand-danger)] text-[var(--text-inverse)]';
   }
@@ -370,6 +381,20 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       return 'border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] text-[var(--brand-danger-text)]';
     }
     return 'border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]';
+  }
+
+  connectionBannerText(): string {
+    if (this.showSafetyAlert()) return this.safetyAlertText();
+    if (this.manualMuted) return this.i18n.t('consultation.ai.realtimePausedSafe');
+    return this.i18n.t('consultation.ai.realtimeStableSimple');
+  }
+
+  connectionBannerClasses(): string {
+    if (this.showSafetyAlert()) return this.safetyAlertClasses();
+    if (this.manualMuted) {
+      return 'border-[var(--app-border)] bg-[var(--app-surface-muted)] text-[var(--text-secondary)]';
+    }
+    return 'border-[var(--brand-success-muted)] bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]';
   }
 
   private queueConnectionSync(forceVisitReset: boolean): void {
@@ -428,6 +453,12 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       return;
     }
 
+    // Never tear down an in-flight connection to the same visit. The bridge owns its
+    // own bounded reconnect policy and should be allowed to complete it uninterrupted.
+    if (this.state().connecting && this.connectingForVisit === targetVisitId) {
+      return;
+    }
+
     if (this.state().connected || this.state().connecting) {
       this.bridge.disconnect();
       await this.ambientCapture.stop();
@@ -464,7 +495,9 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     } catch (error) {
       if (generation !== this.connectionGeneration || this.destroyed) return;
       this.connectedVisitId = '';
-      this.bridge.disconnect();
+      // RealtimeVoiceBridgeService already scheduled its bounded reconnect here.
+      // Calling disconnect() would cancel that retry and caused the former 4-second
+      // reconnect loop. Keep ambient safety capture alive while the bridge recovers.
       throw error;
     } finally {
       if (this.connectingForVisit === targetVisitId) this.connectingForVisit = '';
