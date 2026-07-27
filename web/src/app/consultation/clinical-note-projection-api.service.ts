@@ -1,6 +1,6 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, map, of, switchMap } from 'rxjs';
+import { Observable, switchMap } from 'rxjs';
 
 export type ClinicalNoteSectionCode =
   | 'HISTORY_OF_PRESENT_ILLNESS'
@@ -11,8 +11,6 @@ export type ClinicalNoteSectionCode =
   | 'MEDICATIONS'
   | 'ORDERS'
   | 'PLAN';
-
-export type ClinicalProjectionRefreshWarning = 'READ_ONLY' | 'EXTRACTION_FAILED' | null;
 
 export interface ClinicalLinkedEvidence {
   transcriptItemId: string;
@@ -67,11 +65,6 @@ export interface ClinicalFactExtractionReport {
   model: string | null;
 }
 
-export interface ClinicalProjectionRefreshResult {
-  projection: ClinicalNoteProjection;
-  warning: ClinicalProjectionRefreshWarning;
-}
-
 export interface ValidatedClinicalFactRef {
   factId: string;
   factSequence: number;
@@ -107,19 +100,14 @@ export class ClinicalNoteProjectionApiService {
     );
   }
 
-  refreshProjection(visitId: string): Observable<ClinicalProjectionRefreshResult> {
-    return this.extractNewFacts(visitId).pipe(
-      map((): ClinicalProjectionRefreshWarning => null),
-      catchError((error: unknown) => of(this.extractionWarning(error))),
-      switchMap(warning => this.getProjection(visitId).pipe(
-        map(projection => ({ projection, warning })),
-      )),
-    );
-  }
-
+  /**
+   * A clinician-facing projection must reflect every FINAL transcript item that can
+   * currently be extracted. Never display an apparently current note after a failed
+   * extraction step: the manual consultation remains available as the safe fallback.
+   */
   getProjection(visitId: string): Observable<ClinicalNoteProjection> {
-    return this.http.get<ClinicalNoteProjection>(
-      `/api/ai/consultations/${encodeURIComponent(visitId)}/facts/note-projection`,
+    return this.extractNewFacts(visitId).pipe(
+      switchMap(() => this.fetchProjection(visitId)),
     );
   }
 
@@ -140,9 +128,9 @@ export class ClinicalNoteProjectionApiService {
     );
   }
 
-  private extractionWarning(error: unknown): ClinicalProjectionRefreshWarning {
-    return error instanceof HttpErrorResponse && error.status === 403
-      ? 'READ_ONLY'
-      : 'EXTRACTION_FAILED';
+  private fetchProjection(visitId: string): Observable<ClinicalNoteProjection> {
+    return this.http.get<ClinicalNoteProjection>(
+      `/api/ai/consultations/${encodeURIComponent(visitId)}/facts/note-projection`,
+    );
   }
 }
