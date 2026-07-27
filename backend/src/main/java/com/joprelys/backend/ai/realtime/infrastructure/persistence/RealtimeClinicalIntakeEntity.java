@@ -1,7 +1,10 @@
 package com.joprelys.backend.ai.realtime.infrastructure.persistence;
 
+import com.joprelys.backend.ai.realtime.application.RealtimeIntakeSource;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
@@ -22,6 +25,10 @@ public class RealtimeClinicalIntakeEntity {
 
     @Column(name = "visit_id", nullable = false)
     private UUID visitId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source", nullable = false, length = 16)
+    private RealtimeIntakeSource source;
 
     @Column(name = "sequence_no", nullable = false)
     private long sequenceNo;
@@ -50,6 +57,7 @@ public class RealtimeClinicalIntakeEntity {
     public RealtimeClinicalIntakeEntity(
             UUID organizationId,
             UUID visitId,
+            RealtimeIntakeSource source,
             long sequenceNo,
             String eventId,
             String itemId,
@@ -59,6 +67,7 @@ public class RealtimeClinicalIntakeEntity {
         this.id = UUID.randomUUID();
         this.organizationId = organizationId;
         this.visitId = visitId;
+        this.source = source;
         this.sequenceNo = sequenceNo;
         this.eventId = eventId;
         this.itemId = itemId;
@@ -75,6 +84,7 @@ public class RealtimeClinicalIntakeEntity {
     public UUID getId() { return id; }
     public UUID getOrganizationId() { return organizationId; }
     public UUID getVisitId() { return visitId; }
+    public RealtimeIntakeSource getSource() { return source; }
     public long getSequenceNo() { return sequenceNo; }
     public String getEventId() { return eventId; }
     public String getItemId() { return itemId; }
