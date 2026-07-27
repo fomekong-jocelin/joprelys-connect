@@ -15,6 +15,17 @@ public final class ClinicalNoteProjectionContract {
     private ClinicalNoteProjectionContract() {
     }
 
+    public enum NoteSectionCode {
+        HISTORY_OF_PRESENT_ILLNESS,
+        MEDICAL_HISTORY,
+        ALLERGIES,
+        VITALS,
+        ASSESSMENT,
+        MEDICATIONS,
+        ORDERS,
+        PLAN
+    }
+
     public record LinkedEvidenceView(
             UUID transcriptItemId,
             String speakerType,
@@ -46,7 +57,7 @@ public final class ClinicalNoteProjectionContract {
     }
 
     public record NoteSectionView(
-            String code,
+            NoteSectionCode code,
             List<NoteEntryView> entries) {
     }
 
