@@ -96,6 +96,28 @@ class ClinicalFactRetractionValidatorTest {
     }
 
     @Test
+    void shouldRejectPatientEvidenceWhenTargetWasAuthoredByClinician() {
+        UUID visitId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+        String text = "Je n'ai pas de scanner";
+        TranscriptItemView item = finalItem(text, "PATIENT");
+        when(transcriptLedger.listFinal(visitId, organizationId))
+                .thenReturn(new TranscriptLedgerView(visitId, List.of(item)));
+        RetractionPayload payload = new RetractionPayload(
+                Authority.PATIENT_REPORTED,
+                RetractionReason.EXPLICIT_NEGATION,
+                List.of(span(item, text)));
+
+        assertThatThrownBy(() -> validator.validate(
+                visitId,
+                organizationId,
+                fact(FactType.ORDER, "scanner", Authority.CLINICIAN_DECISION),
+                payload))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("AI_CLINICAL_FACT_RETRACTION_TARGET_DOCTOR_EVIDENCE_REQUIRED");
+    }
+
+    @Test
     void shouldRejectRetractionWhenFinalEvidenceDoesNotNameTargetConcept() {
         UUID visitId = UUID.randomUUID();
         UUID organizationId = UUID.randomUUID();
@@ -165,12 +187,16 @@ class ClinicalFactRetractionValidatorTest {
     }
 
     private FactView fact(FactType type, String concept) {
+        return fact(type, concept, Authority.PATIENT_REPORTED);
+    }
+
+    private FactView fact(FactType type, String concept, Authority authority) {
         return new FactView(
                 UUID.randomUUID(),
                 1,
                 "fact-source",
                 type.name(),
-                Authority.PATIENT_REPORTED.name(),
+                authority.name(),
                 "TEST_CONCEPT",
                 concept,
                 Polarity.POSITIVE.name(),
