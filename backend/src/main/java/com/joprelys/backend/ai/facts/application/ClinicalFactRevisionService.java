@@ -272,12 +272,22 @@ public class ClinicalFactRevisionService {
             }
 
             validateOperationShape(operation);
+            if (operation.type() == OperationType.ADD
+                    && effectiveFacts.values().stream().anyMatch(
+                            current -> ClinicalFactRevisionSemanticGuard.sameFact(current, operation.fact()))) {
+                throw conflict("AI_CLINICAL_FACT_REVISION_ADD_DUPLICATES_EFFECTIVE_FACT");
+            }
             if (operation.targetFactId() != null) {
                 if (!targetedFacts.add(operation.targetFactId())) {
                     throw conflict("AI_CLINICAL_FACT_REVISION_TARGET_CONFLICT");
                 }
-                if (!effectiveFacts.containsKey(operation.targetFactId())) {
+                FactView target = effectiveFacts.get(operation.targetFactId());
+                if (target == null) {
                     throw conflict("AI_CLINICAL_FACT_REVISION_TARGET_NOT_EFFECTIVE");
+                }
+                if (operation.type() == OperationType.REPLACE
+                        && ClinicalFactRevisionSemanticGuard.sameFact(target, operation.fact())) {
+                    throw invalid("AI_CLINICAL_FACT_REVISION_REPLACE_NO_CHANGE");
                 }
             }
         }
