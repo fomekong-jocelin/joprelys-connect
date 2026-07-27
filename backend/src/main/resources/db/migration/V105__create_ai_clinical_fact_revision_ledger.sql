@@ -1,3 +1,6 @@
+ALTER TABLE ai_clinical_facts
+    ADD CONSTRAINT uq_ai_clinical_fact_scope UNIQUE (id, organization_id, visit_id);
+
 CREATE TABLE ai_clinical_fact_revision_batches (
     id UUID PRIMARY KEY,
     organization_id UUID NOT NULL REFERENCES organizations(id),
@@ -9,23 +12,43 @@ CREATE TABLE ai_clinical_fact_revision_batches (
     created_by_user_id UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT ck_ai_clinical_fact_revision_hash CHECK (request_sha256 ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_ai_clinical_fact_revision_base_version CHECK (length(trim(base_projection_version)) > 0),
+    CONSTRAINT ck_ai_clinical_fact_revision_result_version CHECK (length(trim(result_projection_version)) > 0),
     CONSTRAINT uq_ai_clinical_fact_revision_request UNIQUE (
         organization_id, visit_id, revision_request_id
+    ),
+    CONSTRAINT uq_ai_clinical_fact_revision_batch_scope UNIQUE (
+        id, organization_id, visit_id
     )
 );
 
 CREATE TABLE ai_clinical_fact_revision_operations (
     id UUID PRIMARY KEY,
-    batch_id UUID NOT NULL REFERENCES ai_clinical_fact_revision_batches(id) ON DELETE CASCADE,
+    batch_id UUID NOT NULL,
     organization_id UUID NOT NULL REFERENCES organizations(id),
     visit_id UUID NOT NULL REFERENCES visits(id),
     operation_request_id UUID NOT NULL,
     position_no INTEGER NOT NULL,
     operation_type VARCHAR(16) NOT NULL,
-    target_fact_id UUID REFERENCES ai_clinical_facts(id),
-    result_fact_id UUID REFERENCES ai_clinical_facts(id),
+    target_fact_id UUID,
+    result_fact_id UUID,
     retraction_reason VARCHAR(32),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    CONSTRAINT fk_ai_clinical_fact_revision_batch_scope FOREIGN KEY (
+        batch_id, organization_id, visit_id
+    ) REFERENCES ai_clinical_fact_revision_batches (
+        id, organization_id, visit_id
+    ) ON DELETE CASCADE,
+    CONSTRAINT fk_ai_clinical_fact_revision_target_scope FOREIGN KEY (
+        target_fact_id, organization_id, visit_id
+    ) REFERENCES ai_clinical_facts (
+        id, organization_id, visit_id
+    ),
+    CONSTRAINT fk_ai_clinical_fact_revision_result_scope FOREIGN KEY (
+        result_fact_id, organization_id, visit_id
+    ) REFERENCES ai_clinical_facts (
+        id, organization_id, visit_id
+    ),
     CONSTRAINT ck_ai_clinical_fact_revision_position CHECK (position_no >= 0),
     CONSTRAINT ck_ai_clinical_fact_revision_type CHECK (
         operation_type IN ('KEEP', 'ADD', 'REPLACE', 'RETRACT')
@@ -59,18 +82,28 @@ CREATE TABLE ai_clinical_fact_revision_operations (
     CONSTRAINT uq_ai_clinical_fact_revision_position UNIQUE (batch_id, position_no),
     CONSTRAINT uq_ai_clinical_fact_revision_operation UNIQUE (
         organization_id, visit_id, operation_request_id
+    ),
+    CONSTRAINT uq_ai_clinical_fact_revision_operation_scope UNIQUE (
+        id, organization_id, visit_id
     )
 );
 
 CREATE TABLE ai_clinical_fact_revision_evidence (
     id UUID PRIMARY KEY,
-    operation_id UUID NOT NULL REFERENCES ai_clinical_fact_revision_operations(id) ON DELETE CASCADE,
+    operation_id UUID NOT NULL,
+    organization_id UUID NOT NULL REFERENCES organizations(id),
+    visit_id UUID NOT NULL REFERENCES visits(id),
     transcript_item_id UUID NOT NULL REFERENCES ai_ambient_transcript_items(id),
     quote_start_char INTEGER NOT NULL,
     quote_end_char INTEGER NOT NULL,
     quote_text TEXT NOT NULL,
     primary_support BOOLEAN NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    CONSTRAINT fk_ai_clinical_fact_revision_evidence_scope FOREIGN KEY (
+        operation_id, organization_id, visit_id
+    ) REFERENCES ai_clinical_fact_revision_operations (
+        id, organization_id, visit_id
+    ) ON DELETE CASCADE,
     CONSTRAINT ck_ai_clinical_fact_revision_evidence_range CHECK (
         quote_start_char >= 0 AND quote_end_char > quote_start_char
     ),
@@ -88,4 +121,4 @@ CREATE INDEX idx_ai_clinical_fact_revision_retracted_target
     );
 
 CREATE INDEX idx_ai_clinical_fact_revision_evidence_transcript
-    ON ai_clinical_fact_revision_evidence (transcript_item_id);
+    ON ai_clinical_fact_revision_evidence (organization_id, visit_id, transcript_item_id);
