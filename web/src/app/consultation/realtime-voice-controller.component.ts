@@ -17,6 +17,7 @@ import {
   AiConsultationApiService,
   AiMessageResponse,
   AiSessionResponse,
+  AiTranscriptionResponse,
 } from './ai-consultation-api.service';
 import {
   AmbientAudioCaptureService,
@@ -32,6 +33,15 @@ import {
 const HIGH_WATER_MARK = 32;
 const LOW_WATER_MARK = 8;
 const MAX_SEEN_TRANSCRIPT_IDS = 512;
+const RETRY_DELAY_MS = 1200;
+
+interface DurableRealtimeTurn {
+  transcript: string;
+  confidence: number;
+  originalConfidence: number | null;
+  eventId: string;
+  itemId?: string;
+}
 
 @Component({
   selector: 'app-realtime-voice-controller',
@@ -40,132 +50,84 @@ const MAX_SEEN_TRANSCRIPT_IDS = 512;
   template: `
     @if (enabled) {
       <section class="ui-card overflow-hidden">
-        <header class="flex min-h-14 flex-wrap items-center justify-between gap-2 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-4 py-3 sm:px-5">
-          <div class="inline-flex min-h-8 items-center gap-2 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--text-secondary)]">
-            <span class="h-2 w-2 shrink-0 rounded-full" [ngClass]="statusDotClasses()" aria-hidden="true"></span>
-            <span>{{ state().connected
-              ? i18n.t('consultation.ai.focusSecureListening')
-              : state().connecting
-                ? i18n.t('consultation.ai.focusConnecting')
-                : i18n.t('consultation.ai.focusAudioUnavailable') }}</span>
+        <header class="flex min-h-12 items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-3 py-2.5 sm:px-4">
+          <div class="flex min-w-0 items-center gap-2">
+            <span class="h-2.5 w-2.5 shrink-0 rounded-full" [ngClass]="statusDotClasses()" aria-hidden="true"></span>
+            <div class="min-w-0">
+              <p class="truncate text-sm font-bold text-[var(--text-primary)]">{{ statusLabel() }}</p>
+              <p class="truncate text-[10px] text-[var(--text-muted)] sm:text-[11px]">{{ statusHelp() }}</p>
+            </div>
           </div>
-
-          <span class="min-h-4 whitespace-nowrap text-[10px] font-semibold text-[var(--text-muted)]">
-            {{ ambientState().active ? i18n.t('consultation.ai.focusSafetyActive') : ' ' }}
-          </span>
+          @if (queuedCount() > 0) {
+            <span class="shrink-0 rounded-[var(--radius-brand-xs)] border border-[var(--app-border)] bg-[var(--app-surface)] px-2 py-1 text-[10px] font-bold text-[var(--text-secondary)]">
+              {{ queuedCount() }} {{ i18n.t('consultation.ai.realtimeQueued', 'en attente') }}
+            </span>
+          }
         </header>
 
-        <div class="p-4 sm:p-5">
-          <div class="flex flex-col items-center text-center" aria-live="polite">
-            <div class="relative flex h-32 w-32 items-center justify-center sm:h-36 sm:w-36">
-              @if (state().userSpeaking || state().assistantSpeaking) {
-                <span class="absolute inset-0 rounded-full border border-[var(--brand-primary-border)]"></span>
-              }
-              <div class="absolute inset-3 rounded-full border border-[var(--app-border)] bg-[var(--app-surface-muted)]"></div>
-              <div
-                class="relative flex h-20 w-20 items-center justify-center rounded-full border border-[var(--app-border)] transition-colors duration-200 sm:h-24 sm:w-24"
-                [ngClass]="orbClasses()"
-              >
-                @if (state().assistantSpeaking) {
-                  <svg class="h-9 w-9 sm:h-10 sm:w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 9h.01M16 9h.01M9 15h6m5-3a8 8 0 10-16 0 8 8 0 0016 0z" />
-                  </svg>
-                } @else {
-                  <svg class="h-9 w-9 sm:h-10 sm:w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
-                  </svg>
-                }
-              </div>
-            </div>
-
-            <h2 class="ui-title mt-3 flex min-h-8 items-center justify-center text-lg sm:text-xl">
-              {{ statusLabel() }}
-            </h2>
-            <p class="mt-1 flex min-h-12 max-w-xl items-start justify-center text-xs leading-5 text-[var(--text-muted)] sm:min-h-10 sm:text-sm">
-              {{ statusHelp() }}
-            </p>
-
-            <div class="ui-card-muted mt-4 min-h-32 w-full max-w-2xl p-3 text-left sm:min-h-28 sm:p-4">
-              <div class="flex min-h-5 items-center justify-between gap-3">
-                <p class="ui-label">{{ i18n.t('consultation.ai.focusTranscriptTitle') }}</p>
-                <span class="min-w-16 text-right text-[10px] font-bold text-[var(--brand-primary)]">
-                  {{ processing() ? i18n.t('consultation.ai.focusSecuring') : ' ' }}
+        <div class="space-y-3 p-3 sm:p-4">
+          <div class="min-h-16 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3" aria-live="polite">
+            <div class="flex items-center justify-between gap-3">
+              <p class="ui-label">{{ i18n.t('consultation.ai.focusTranscriptTitle') }}</p>
+              @if (processing()) {
+                <span class="text-[10px] font-bold text-[var(--brand-primary)]">
+                  {{ i18n.t('consultation.ai.processingBackground', 'Traitement en arrière-plan') }}
                 </span>
-              </div>
-
-              <div class="mt-2 min-h-16">
-                @if (lastTranscript()) {
-                  <p class="text-sm font-medium leading-6 text-[var(--text-primary)]">
-                    “{{ lastTranscript() }}”
-                  </p>
-                  @if (lastTranscriptConfidence() === null) {
-                    <p class="mt-2 text-[10px] leading-4 text-[var(--brand-warning-text)]">
-                      {{ i18n.t('consultation.ai.focusTranscriptUnverified') }}
-                    </p>
-                  }
-                } @else if (state().userSpeaking) {
-                  <p class="text-sm font-semibold text-[var(--brand-primary)]">
-                    {{ i18n.t('consultation.ai.focusTranscribing') }}
-                  </p>
-                } @else {
-                  <p class="text-xs leading-5 text-[var(--text-muted)] sm:text-sm">
-                    {{ state().connected
-                      ? i18n.t('consultation.ai.focusTranscriptWaiting')
-                      : i18n.t('consultation.ai.focusTranscriptNoChannel') }}
-                  </p>
-                }
-              </div>
+              }
             </div>
+            @if (lastTranscript()) {
+              <p class="mt-1 line-clamp-3 text-sm leading-5 text-[var(--text-primary)]">“{{ lastTranscript() }}”</p>
+              @if (lastTranscriptConfidence() === null) {
+                <p class="mt-1 text-[10px] leading-4 text-[var(--brand-warning-text)]">
+                  {{ i18n.t('consultation.ai.focusTranscriptUnverified') }}
+                </p>
+              }
+            } @else {
+              <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                {{ state().connected
+                  ? i18n.t('consultation.ai.focusTranscriptWaiting')
+                  : i18n.t('consultation.ai.focusTranscriptNoChannel') }}
+              </p>
+            }
           </div>
 
-          <div
-            class="mt-4 flex min-h-[68px] items-center rounded-[var(--radius-brand-sm)] border px-3 py-2.5 text-xs font-semibold leading-5"
-            [ngClass]="connectionBannerClasses()"
-            role="status"
-          >
-            {{ connectionBannerText() }}
-          </div>
+          @if (showSafetyAlert() || backlogPaused) {
+            <div
+              class="rounded-[var(--radius-brand-sm)] border px-3 py-2 text-xs font-semibold leading-5"
+              [ngClass]="connectionBannerClasses()"
+              role="status"
+            >
+              {{ connectionBannerText() }}
+            </div>
+          }
 
-          <div class="mx-auto mt-4 grid w-full max-w-md grid-cols-2 gap-2">
+          <div class="grid grid-cols-2 gap-2">
             <button
               type="button"
               (click)="toggleMute()"
               [disabled]="!canToggleMute()"
               class="ui-button ui-button-secondary min-h-11 w-full"
             >
-              @if (manualMuted) {
-                <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-                {{ i18n.t('consultation.ai.resumeListening') }}
-              } @else {
-                <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6 5h4v14H6zm8 0h4v14h-4z" />
-                </svg>
-                {{ i18n.t('consultation.ai.pauseListeningShort') }}
-              }
+              {{ manualMuted
+                ? i18n.t('consultation.ai.resumeListening')
+                : i18n.t('consultation.ai.pauseListeningShort') }}
             </button>
-
             <button
               type="button"
               (click)="endSession.emit()"
               class="ui-button ui-button-primary min-h-11 w-full"
             >
-              <span class="h-3 w-3 rounded-[2px] bg-[var(--text-inverse)]" aria-hidden="true"></span>
               {{ i18n.t('consultation.ai.finishListening') }}
             </button>
           </div>
 
-          <div class="mt-3 min-h-5 text-center">
-            <button
-              type="button"
-              (click)="switchToDictation.emit()"
-              [disabled]="processing()"
-              class="ui-link text-xs disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {{ i18n.t('consultation.ai.switchToDictation') }}
-            </button>
-          </div>
+          <button
+            type="button"
+            (click)="switchToDictation.emit()"
+            class="ui-link min-h-10 w-full text-xs"
+          >
+            {{ i18n.t('consultation.ai.switchToDictation') }}
+          </button>
         </div>
       </section>
     }
@@ -181,8 +143,10 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   @Input({ required: true }) visitId = '';
   @Input() session: AiSessionResponse | null = null;
   @Input() enabled = false;
+  /** Blocks clinical analysis only. Durable capture must continue. */
   @Input() blocked = false;
   @Output() readonly message = new EventEmitter<AiMessageResponse>();
+  @Output() readonly transcriptionReview = new EventEmitter<AiTranscriptionResponse>();
   @Output() readonly activeChange = new EventEmitter<boolean>();
   @Output() readonly realtimeError = new EventEmitter<string>();
   @Output() readonly switchToDictation = new EventEmitter<void>();
@@ -212,44 +176,48 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   readonly lastTranscriptConfidence = signal<number | null>(null);
 
   private readonly subscriptions = new Subscription();
-  private readonly transcriptQueue: RealtimeTranscriptTurn[] = [];
+  private readonly intakeQueue: DurableRealtimeTurn[] = [];
+  private readonly analysisQueue: DurableRealtimeTurn[] = [];
   private readonly seenTranscriptIds = new Set<string>();
   private readonly seenTranscriptOrder: string[] = [];
   manualMuted = false;
   backlogPaused = false;
+  private intakeBusy = false;
+  private analysisBusy = false;
   private lastSpokenMessage = '';
   private connectingForVisit = '';
   private connectedVisitId = '';
   private connectionGeneration = 0;
+  private pipelineGeneration = 0;
+  private fallbackEventSequence = 0;
   private connectionTransition: Promise<void> = Promise.resolve();
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private destroyed = false;
 
   constructor() {
     this.subscriptions.add(this.bridge.state$.subscribe(state => {
-      const wasConnected = this.state().connected;
+      const previous = this.state();
       this.state.set(state);
       if (state.connected && this.enabled && this.session && !this.manualMuted) {
         this.connectedVisitId = this.visitId.trim();
       }
       this.activeChange.emit(state.connected);
-      if (state.connected && !wasConnected) {
-        this.syncMute();
+      if (state.connected && !previous.connected) {
         this.speakPendingClarification();
-        this.drainTranscriptQueue();
+        this.drainIntakeQueue();
+        this.drainAnalysisQueue();
       }
+      if (state.assistantSpeaking !== previous.assistantSpeaking) this.syncMute();
     }));
-    this.subscriptions.add(
-      this.ambientCapture.state$.subscribe(state => this.ambientState.set(state)),
-    );
-    this.subscriptions.add(
-      this.bridge.transcript$.subscribe(turn => this.enqueueTranscript(turn)),
-    );
-    this.subscriptions.add(
-      this.bridge.error$.subscribe(message => this.realtimeError.emit(message)),
-    );
+    this.subscriptions.add(this.ambientCapture.state$.subscribe(state => this.ambientState.set(state)));
+    this.subscriptions.add(this.bridge.transcript$.subscribe(turn => this.enqueueTranscript(turn)));
+    this.subscriptions.add(this.bridge.error$.subscribe(message => this.realtimeError.emit(message)));
     this.subscriptions.add(this.bridge.assistantTurnCompleted$.subscribe(() => {
-      setTimeout(() => this.syncMute(), 120);
+      setTimeout(() => {
+        this.syncMute();
+        this.drainIntakeQueue();
+        this.drainAnalysisQueue();
+      }, 120);
     }));
   }
 
@@ -271,19 +239,18 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     if (changes['enabled'] || changes['visitId'] || sessionIdentityChanged) {
       this.queueConnectionSync(visitChanged);
     }
-    if (changes['blocked']) {
-      this.syncMute();
-      if (!this.blocked) this.drainTranscriptQueue();
+    if (changes['blocked'] && !this.blocked) {
+      this.drainAnalysisQueue();
     }
-    if (changes['session'] && this.state().connected && this.connectedVisitId === this.visitId) {
+    if (changes['session'] && this.state().connected && this.connectedVisitId === this.visitId.trim()) {
       this.speakPendingClarification();
+      this.drainAnalysisQueue();
     }
   }
 
   ngOnDestroy(): void {
     this.destroyed = true;
     this.connectionGeneration += 1;
-    this.clearRetry();
     this.resetTranscriptPipeline();
     this.subscriptions.unsubscribe();
     this.bridge.disconnect();
@@ -297,19 +264,20 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   }
 
   canToggleMute(): boolean {
-    if (this.blocked) return false;
     if (this.manualMuted) return true;
     return this.state().connected && this.connectedVisitId === this.visitId.trim();
   }
 
   effectiveMuted(): boolean {
-    return this.blocked || this.manualMuted || this.backlogPaused || this.state().muted;
+    return this.manualMuted || this.backlogPaused || this.state().assistantSpeaking || this.state().muted;
+  }
+
+  queuedCount(): number {
+    return this.intakeQueue.length + this.analysisQueue.length;
   }
 
   statusLabel(): string {
     if (this.manualMuted) return this.i18n.t('consultation.ai.listeningPaused');
-    if (this.state().assistantSpeaking) return this.i18n.t('consultation.ai.assistantSpeakingSimple');
-    if (this.state().userSpeaking) return this.i18n.t('consultation.ai.focusHearingYou');
     if (this.backlogPaused) return this.i18n.t('consultation.ai.realtimeCatchingUp');
     if (this.state().connecting) return this.i18n.t('consultation.ai.connectingAudio');
     if (this.state().connected) return this.i18n.t('consultation.ai.simpleListening');
@@ -319,9 +287,19 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
 
   statusHelp(): string {
     if (this.manualMuted) return this.i18n.t('consultation.ai.pausedHelp');
-    if (this.state().assistantSpeaking) return this.i18n.t('consultation.ai.assistantSpeakingHelp');
-    if (this.state().userSpeaking) return this.i18n.t('consultation.ai.focusHearingHelp');
     if (this.backlogPaused) return this.i18n.t('consultation.ai.catchingUpHelp');
+    if (this.blocked && this.state().connected) {
+      return this.i18n.t(
+        'consultation.ai.captureContinuesWhileReviewing',
+        'La capture continue. Les propositions attendent votre validation.',
+      );
+    }
+    if (this.processing() && this.state().connected) {
+      return this.i18n.t(
+        'consultation.ai.processingBackgroundHelp',
+        'Traitement en arrière-plan — continuez la consultation.',
+      );
+    }
     if (this.state().connected) return this.i18n.t('consultation.ai.simpleListeningHelp');
     if (this.ambientState().active) return this.i18n.t('consultation.ai.reconnectingProtectedHelp');
     return this.i18n.t('consultation.ai.audioUnavailableHelp');
@@ -329,34 +307,11 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
 
   statusDotClasses(): string {
     if (this.manualMuted) return 'bg-[var(--text-muted)]';
-    if (this.state().connected && !this.backlogPaused) {
-      return this.state().userSpeaking
-        ? 'bg-[var(--brand-success)]'
-        : 'bg-[var(--brand-success)]';
-    }
+    if (this.state().connected && !this.backlogPaused) return 'bg-[var(--brand-success)]';
     if (this.state().connecting || this.ambientState().active || this.backlogPaused) {
       return 'bg-[var(--brand-warning)]';
     }
     return 'bg-[var(--brand-danger)]';
-  }
-
-  orbClasses(): string {
-    if (this.manualMuted) {
-      return 'bg-[var(--app-surface-muted)] text-[var(--text-muted)]';
-    }
-    if (this.state().assistantSpeaking) {
-      return 'bg-[var(--brand-primary-active)] text-[var(--text-inverse)]';
-    }
-    if (this.state().userSpeaking) {
-      return 'bg-[var(--brand-success)] text-[var(--text-inverse)]';
-    }
-    if (this.state().connected && !this.backlogPaused) {
-      return 'bg-[var(--brand-primary)] text-[var(--text-inverse)]';
-    }
-    if (this.state().connecting || this.ambientState().active || this.backlogPaused) {
-      return 'bg-[var(--brand-warning)] text-[var(--text-inverse)]';
-    }
-    return 'bg-[var(--brand-danger)] text-[var(--text-inverse)]';
   }
 
   showSafetyAlert(): boolean {
@@ -366,35 +321,20 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       || (!this.state().connected && this.ambientState().active);
   }
 
-  safetyAlertText(): string {
-    if (this.ambientState().storagePressure) {
-      return this.i18n.t('consultation.ai.storageCriticalSimple');
-    }
+  connectionBannerText(): string {
+    if (this.ambientState().storagePressure) return this.i18n.t('consultation.ai.storageCriticalSimple');
     if (!this.state().connected && this.ambientState().active) {
       return this.i18n.t('consultation.ai.realtimeProtectedReconnectSimple');
     }
+    if (this.backlogPaused) return this.i18n.t('consultation.ai.realtimeBackpressure');
     return this.i18n.t('consultation.ai.audioProtectionUnavailableSimple');
   }
 
-  safetyAlertClasses(): string {
+  connectionBannerClasses(): string {
     if (this.ambientState().storagePressure || !this.ambientState().active) {
       return 'border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] text-[var(--brand-danger-text)]';
     }
     return 'border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]';
-  }
-
-  connectionBannerText(): string {
-    if (this.showSafetyAlert()) return this.safetyAlertText();
-    if (this.manualMuted) return this.i18n.t('consultation.ai.realtimePausedSafe');
-    return this.i18n.t('consultation.ai.realtimeStableSimple');
-  }
-
-  connectionBannerClasses(): string {
-    if (this.showSafetyAlert()) return this.safetyAlertClasses();
-    if (this.manualMuted) {
-      return 'border-[var(--app-border)] bg-[var(--app-surface-muted)] text-[var(--text-secondary)]';
-    }
-    return 'border-[var(--brand-success-muted)] bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]';
   }
 
   private queueConnectionSync(forceVisitReset: boolean): void {
@@ -415,9 +355,9 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   private async syncConnection(generation: number, forceVisitReset: boolean): Promise<void> {
     if (generation !== this.connectionGeneration || this.destroyed) return;
     const targetVisitId = this.visitId.trim();
-
     const activeBelongsToAnotherVisit = !!this.connectedVisitId && this.connectedVisitId !== targetVisitId;
     const connectionInFlightForAnotherVisit = !!this.connectingForVisit && this.connectingForVisit !== targetVisitId;
+
     if (forceVisitReset || activeBelongsToAnotherVisit || connectionInFlightForAnotherVisit) {
       this.resetTranscriptPipeline();
       this.connectingForVisit = '';
@@ -449,15 +389,12 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
         await this.startAmbientSafetyCapture(targetVisitId, generation);
       }
       this.syncMute();
-      this.drainTranscriptQueue();
+      this.drainIntakeQueue();
+      this.drainAnalysisQueue();
       return;
     }
 
-    // Never tear down an in-flight connection to the same visit. The bridge owns its
-    // own bounded reconnect policy and should be allowed to complete it uninterrupted.
-    if (this.state().connecting && this.connectingForVisit === targetVisitId) {
-      return;
-    }
+    if (this.state().connecting && this.connectingForVisit === targetVisitId) return;
 
     if (this.state().connected || this.state().connecting) {
       this.bridge.disconnect();
@@ -491,13 +428,11 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       this.connectedVisitId = targetVisitId;
       const spoken = this.speakPendingClarification();
       if (!spoken) this.syncMute();
-      this.drainTranscriptQueue();
+      this.drainIntakeQueue();
+      this.drainAnalysisQueue();
     } catch (error) {
       if (generation !== this.connectionGeneration || this.destroyed) return;
       this.connectedVisitId = '';
-      // RealtimeVoiceBridgeService already scheduled its bounded reconnect here.
-      // Calling disconnect() would cancel that retry and caused the former 4-second
-      // reconnect loop. Keep ambient safety capture alive while the bridge recovers.
       throw error;
     } finally {
       if (this.connectingForVisit === targetVisitId) this.connectingForVisit = '';
@@ -529,32 +464,31 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     this.lastTranscript.set(text);
     this.lastTranscriptConfidence.set(turn.confidence);
 
-    if (turn.confidence === null || !Number.isFinite(turn.confidence)) {
-      this.realtimeError.emit(this.i18n.t('consultation.ai.realtimeTranscriptUnverified'));
-      return;
-    }
-    const eventId = turn.eventId?.trim();
-    if (!eventId) {
-      this.realtimeError.emit(this.i18n.t('consultation.ai.realtimeTranscriptUnverified'));
-      return;
-    }
-
-    const dedupeId = turn.itemId?.trim() ? `item:${turn.itemId.trim()}` : `event:${eventId}`;
+    const confidence = turn.confidence !== null
+      && Number.isFinite(turn.confidence)
+      && turn.confidence >= 0
+      && turn.confidence <= 1
+      ? turn.confidence
+      : 0;
+    const eventId = turn.eventId?.trim() || this.nextFallbackEventId();
+    const itemId = turn.itemId?.trim() || undefined;
+    const dedupeId = itemId ? `item:${itemId}` : `event:${eventId}`;
     if (this.seenTranscriptIds.has(dedupeId)) return;
     this.rememberTranscriptId(dedupeId);
-    this.transcriptQueue.push({ ...turn, transcript: text, eventId });
 
-    if (this.transcriptQueue.length >= HIGH_WATER_MARK && !this.backlogPaused) {
-      this.backlogPaused = true;
-      this.syncMute();
-      this.realtimeError.emit(this.i18n.t('consultation.ai.realtimeBackpressure'));
-    }
-    this.drainTranscriptQueue();
+    this.intakeQueue.push({
+      transcript: text,
+      confidence,
+      originalConfidence: turn.confidence,
+      eventId,
+      itemId,
+    });
+    this.applyBackpressureIfNeeded();
+    this.drainIntakeQueue();
   }
 
-  private drainTranscriptQueue(): void {
-    if (this.processing()
-      || this.blocked
+  private drainIntakeQueue(): void {
+    if (this.intakeBusy
       || this.manualMuted
       || !this.session
       || !this.enabled
@@ -563,14 +497,13 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       || this.connectedVisitId !== this.visitId.trim()) {
       return;
     }
-    const turn = this.transcriptQueue[0];
-    if (!turn || turn.confidence === null || !turn.eventId) {
-      this.releaseBackpressureIfPossible();
-      return;
-    }
+    const turn = this.intakeQueue[0];
+    if (!turn) return;
 
     const transcriptVisitId = this.connectedVisitId;
-    this.processing.set(true);
+    const generation = this.pipelineGeneration;
+    this.intakeBusy = true;
+    this.updateProcessing();
     this.intake.ingest(
       transcriptVisitId,
       turn.transcript,
@@ -579,49 +512,49 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       turn.itemId,
     ).subscribe({
       next: () => {
-        if (transcriptVisitId !== this.visitId.trim() || transcriptVisitId !== this.connectedVisitId) {
-          this.processing.set(false);
-          return;
-        }
-        this.analyzeDurableRealtimeTurn(transcriptVisitId, turn);
+        if (!this.isCurrentPipeline(transcriptVisitId, generation)) return;
+        this.shiftQueue(this.intakeQueue, turn);
+        this.intakeBusy = false;
+        this.analysisQueue.push(turn);
+        this.updateProcessing();
+        this.releaseBackpressureIfPossible();
+        this.drainIntakeQueue();
+        this.drainAnalysisQueue();
       },
       error: error => {
-        if (transcriptVisitId !== this.visitId.trim() || transcriptVisitId !== this.connectedVisitId) {
-          this.processing.set(false);
-          return;
-        }
-        this.processing.set(false);
-        const reason = this.backendReason(error);
-        if (reason === 'AI_TRANSCRIPTION_LOW_CONFIDENCE' || reason === 'AI_REALTIME_TRANSCRIPTION_UNVERIFIED') {
-          this.transcriptQueue.shift();
-          this.realtimeError.emit(this.i18n.t('consultation.ai.realtimeTranscriptLowConfidence'));
-          this.drainTranscriptQueue();
-          return;
-        }
+        if (!this.isCurrentPipeline(transcriptVisitId, generation)) return;
+        this.intakeBusy = false;
+        this.updateProcessing();
         if (this.isTransient(error)) {
           this.scheduleRetry();
           return;
         }
-        this.transcriptQueue.shift();
+        this.shiftQueue(this.intakeQueue, turn);
         this.realtimeError.emit(this.i18n.t('consultation.ai.realtimeClinicalError'));
         this.releaseBackpressureIfPossible();
-        this.syncMute();
-        this.drainTranscriptQueue();
+        this.drainIntakeQueue();
       },
     });
   }
 
-  private analyzeDurableRealtimeTurn(
-    transcriptVisitId: string,
-    turn: RealtimeTranscriptTurn,
-  ): void {
-    if (turn.confidence === null || !turn.eventId) {
-      this.finishTurnWithoutAnalysis();
+  private drainAnalysisQueue(): void {
+    if (this.analysisBusy
+      || this.blocked
+      || this.manualMuted
+      || !this.session
+      || !this.enabled
+      || !this.state().connected
+      || this.state().assistantSpeaking
+      || !this.connectedVisitId
+      || this.connectedVisitId !== this.visitId.trim()) {
       return;
     }
+    const turn = this.analysisQueue[0];
+    if (!turn) return;
 
-    const pendingClarification = this.session?.clarifications
-      .find(item => item.status === 'PENDING');
+    const transcriptVisitId = this.connectedVisitId;
+    const generation = this.pipelineGeneration;
+    const pendingClarification = this.session.clarifications.find(item => item.status === 'PENDING');
     const request = pendingClarification
       ? this.consultationApi.answerRealtimeClarification(
           transcriptVisitId,
@@ -637,57 +570,78 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
           turn.eventId,
         );
 
+    this.analysisBusy = true;
+    this.updateProcessing();
     request.subscribe({
       next: response => {
-        if (transcriptVisitId !== this.visitId.trim() || transcriptVisitId !== this.connectedVisitId) {
-          this.processing.set(false);
-          return;
-        }
-
-        this.transcriptQueue.shift();
-        this.processing.set(false);
+        if (!this.isCurrentPipeline(transcriptVisitId, generation)) return;
+        this.shiftQueue(this.analysisQueue, turn);
+        this.analysisBusy = false;
         this.applyRealtimeResponseLocally(response);
         this.message.emit(response);
+        this.updateProcessing();
+        this.releaseBackpressureIfPossible();
 
         const pendingQuestion = response.clarifications
           .find(item => item.status === 'PENDING')
           ?.question
           ?.trim();
         const approvedVoice = pendingQuestion || response.assistantMessage?.trim() || '';
-        if (approvedVoice) this.speakApproved(approvedVoice);
-
-        const requiresDecision = response.revisions
-          .some(revision => revision.status === 'PENDING');
-        this.releaseBackpressureIfPossible();
-        if (requiresDecision) {
-          this.bridge.setMuted(true);
-          return;
+        const spoken = approvedVoice ? this.speakApproved(approvedVoice) : false;
+        const requiresDecision = response.revisions.some(revision => revision.status === 'PENDING');
+        if (!spoken && !requiresDecision) {
+          this.syncMute();
+          this.drainAnalysisQueue();
         }
-        this.syncMute();
-        this.drainTranscriptQueue();
       },
-      error: () => {
-        if (transcriptVisitId !== this.visitId.trim() || transcriptVisitId !== this.connectedVisitId) {
-          this.processing.set(false);
+      error: error => {
+        if (!this.isCurrentPipeline(transcriptVisitId, generation)) return;
+        const reason = this.backendReason(error);
+        if (reason === 'AI_TRANSCRIPTION_LOW_CONFIDENCE' || reason === 'AI_REALTIME_TRANSCRIPTION_UNVERIFIED') {
+          this.stageForHumanReview(transcriptVisitId, turn, generation);
           return;
         }
 
-        this.transcriptQueue.shift();
-        this.processing.set(false);
+        this.shiftQueue(this.analysisQueue, turn);
+        this.analysisBusy = false;
+        this.updateProcessing();
         this.realtimeError.emit(this.i18n.t('consultation.ai.realtimeConversationAnalysisFailed'));
         this.releaseBackpressureIfPossible();
         this.syncMute();
-        this.drainTranscriptQueue();
+        this.drainAnalysisQueue();
       },
     });
   }
 
-  private finishTurnWithoutAnalysis(): void {
-    this.transcriptQueue.shift();
-    this.processing.set(false);
-    this.releaseBackpressureIfPossible();
-    this.syncMute();
-    this.drainTranscriptQueue();
+  private stageForHumanReview(
+    transcriptVisitId: string,
+    turn: DurableRealtimeTurn,
+    generation: number,
+  ): void {
+    this.consultationApi.stageRealtimeTranscript(transcriptVisitId, turn.transcript).subscribe({
+      next: response => {
+        if (!this.isCurrentPipeline(transcriptVisitId, generation)) return;
+        this.shiftQueue(this.analysisQueue, turn);
+        this.analysisBusy = false;
+        this.updateProcessing();
+        this.transcriptionReview.emit(response);
+        this.releaseBackpressureIfPossible();
+        this.syncMute();
+      },
+      error: () => {
+        if (!this.isCurrentPipeline(transcriptVisitId, generation)) return;
+        this.shiftQueue(this.analysisQueue, turn);
+        this.analysisBusy = false;
+        this.updateProcessing();
+        this.realtimeError.emit(this.i18n.t(
+          'consultation.ai.realtimeReviewStagingFailed',
+          'La phrase est sauvegardée, mais sa revue n’a pas pu être ouverte. Continuez la consultation ; elle reste dans le journal sécurisé.',
+        ));
+        this.releaseBackpressureIfPossible();
+        this.syncMute();
+        this.drainAnalysisQueue();
+      },
+    });
   }
 
   private applyRealtimeResponseLocally(response: AiMessageResponse): void {
@@ -706,6 +660,22 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     };
   }
 
+  private isCurrentPipeline(visitId: string, generation: number): boolean {
+    return !this.destroyed
+      && generation === this.pipelineGeneration
+      && visitId === this.visitId.trim()
+      && visitId === this.connectedVisitId;
+  }
+
+  private shiftQueue<T>(queue: T[], item: T): void {
+    if (queue[0] === item) queue.shift();
+  }
+
+  private nextFallbackEventId(): string {
+    this.fallbackEventSequence += 1;
+    return `client:${Date.now()}:${this.fallbackEventSequence}`;
+  }
+
   private rememberTranscriptId(id: string): void {
     this.seenTranscriptIds.add(id);
     this.seenTranscriptOrder.push(id);
@@ -715,9 +685,17 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     }
   }
 
+  private applyBackpressureIfNeeded(): void {
+    if (this.queuedCount() < HIGH_WATER_MARK || this.backlogPaused) return;
+    this.backlogPaused = true;
+    this.syncMute();
+    this.realtimeError.emit(this.i18n.t('consultation.ai.realtimeBackpressure'));
+  }
+
   private releaseBackpressureIfPossible(): void {
-    if (this.backlogPaused && this.transcriptQueue.length <= LOW_WATER_MARK) {
+    if (this.backlogPaused && this.queuedCount() <= LOW_WATER_MARK) {
       this.backlogPaused = false;
+      this.syncMute();
     }
   }
 
@@ -725,8 +703,8 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     if (this.retryTimer || this.destroyed) return;
     this.retryTimer = setTimeout(() => {
       this.retryTimer = null;
-      this.drainTranscriptQueue();
-    }, 1200);
+      this.drainIntakeQueue();
+    }, RETRY_DELAY_MS);
   }
 
   private clearRetry(): void {
@@ -754,12 +732,20 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     return typeof payload === 'string' ? payload : '';
   }
 
+  private updateProcessing(): void {
+    this.processing.set(this.intakeBusy || this.analysisBusy);
+  }
+
   private resetTranscriptPipeline(): void {
+    this.pipelineGeneration += 1;
     this.clearRetry();
-    this.transcriptQueue.length = 0;
+    this.intakeQueue.length = 0;
+    this.analysisQueue.length = 0;
     this.seenTranscriptIds.clear();
     this.seenTranscriptOrder.length = 0;
     this.backlogPaused = false;
+    this.intakeBusy = false;
+    this.analysisBusy = false;
     this.processing.set(false);
     this.lastTranscript.set('');
     this.lastTranscriptConfidence.set(null);
@@ -788,6 +774,6 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   }
 
   private syncMute(): void {
-    this.bridge.setMuted(this.blocked || this.manualMuted || this.backlogPaused);
+    this.bridge.setMuted(this.manualMuted || this.backlogPaused || this.state().assistantSpeaking);
   }
 }
