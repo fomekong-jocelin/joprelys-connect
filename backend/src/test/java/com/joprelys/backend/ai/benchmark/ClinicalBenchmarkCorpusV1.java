@@ -277,7 +277,10 @@ final class ClinicalBenchmarkCorpusV1 {
         long durationMs = durationMinutes * MINUTE;
         int fillerIndex = 0;
         for (long offset = 10_000; offset < durationMs; offset += 10_000) {
-            if (clinicalTurns.stream().anyMatch(turn -> Math.abs(turn.startOffsetMs() - offset) < 5_000)) continue;
+            long currentOffset = offset;
+            boolean overlapsClinicalTurn = clinicalTurns.stream()
+                    .anyMatch(turn -> Math.abs(turn.startOffsetMs() - currentOffset) < 5_000);
+            if (overlapsClinicalTurn) continue;
             String speaker = fillerIndex % 2 == 0 ? "DOCTOR" : "PATIENT";
             String text = DISTRACTORS[fillerIndex % DISTRACTORS.length];
             turns.add(new TranscriptTurn(
