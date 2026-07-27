@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 import com.joprelys.backend.ai.facts.application.ClinicalFactContract.FactLedgerView;
@@ -42,8 +43,6 @@ class ClinicalFactRevisionConcurrencyAuditTest {
                 .thenReturn(new NoteProjectionView(fixture.visitId(), "projection-v1", 1, List.of()));
         when(fixture.factLedgerService().listEffective(fixture.visitId(), fixture.organizationId()))
                 .thenReturn(new FactLedgerView(fixture.visitId(), List.of(target)));
-        when(fixture.batchRepository().save(any(ClinicalFactRevisionBatchEntity.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
         when(fixture.batchRepository().saveAndFlush(any(ClinicalFactRevisionBatchEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(fixture.operationRepository().save(any(ClinicalFactRevisionOperationEntity.class)))
@@ -63,7 +62,8 @@ class ClinicalFactRevisionConcurrencyAuditTest {
 
         var ordered = inOrder(fixture.visitRepository(), fixture.projectionService());
         ordered.verify(fixture.visitRepository()).findByIdForUpdate(fixture.visitId());
-        ordered.verify(fixture.projectionService()).project(fixture.visitId(), fixture.organizationId());
+        ordered.verify(fixture.projectionService(), times(2))
+                .project(fixture.visitId(), fixture.organizationId());
     }
 
     @Test
