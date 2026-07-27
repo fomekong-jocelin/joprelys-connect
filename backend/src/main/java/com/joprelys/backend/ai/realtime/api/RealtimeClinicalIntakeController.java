@@ -8,7 +8,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.List;
@@ -92,7 +91,7 @@ public class RealtimeClinicalIntakeController {
             @NotBlank @Size(max = 200) @Pattern(regexp = "[A-Za-z0-9._:-]+") String eventId,
             @Size(max = 200) @Pattern(regexp = "[A-Za-z0-9._:-]+") String itemId,
             @NotBlank @Size(max = 12000) String transcript,
-            @NotNull @DecimalMin("0.0") @DecimalMax("1.0") Double confidence) {
+            @DecimalMin("0.0") @DecimalMax("1.0") Double confidence) {
     }
 
     private record Identity(UUID userId, UUID organizationId) {
