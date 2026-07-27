@@ -70,13 +70,14 @@ class ClinicalFactRevisionSemanticPolicyServiceTest {
         UUID userId = UUID.randomUUID();
         UUID organizationId = UUID.randomUUID();
         UUID transcriptItemId = UUID.randomUUID();
+        String quote = "douleur abdominale";
         EvidenceSpanCandidate evidence = new EvidenceSpanCandidate(
-                transcriptItemId, 0, 19, "douleur abdominale", true);
+                transcriptItemId, 0, quote.length(), quote, true);
         FactPayload payload = new FactPayload(
                 FactType.SYMPTOM,
                 Authority.PATIENT_REPORTED,
                 "ABDOMINAL_PAIN",
-                "douleur abdominale",
+                quote,
                 Polarity.POSITIVE,
                 null,
                 null,
@@ -93,7 +94,7 @@ class ClinicalFactRevisionSemanticPolicyServiceTest {
                 FactType.SYMPTOM.name(),
                 Authority.PATIENT_REPORTED.name(),
                 "ABDOMINAL_PAIN",
-                "douleur abdominale",
+                quote,
                 Polarity.POSITIVE.name(),
                 null,
                 null,
@@ -106,7 +107,7 @@ class ClinicalFactRevisionSemanticPolicyServiceTest {
                 null,
                 Instant.now(),
                 List.of(new EvidenceSpanView(
-                        UUID.randomUUID(), transcriptItemId, 0, 19, "douleur abdominale", true)));
+                        UUID.randomUUID(), transcriptItemId, 0, quote.length(), quote, true)));
 
         ClinicalNoteProjectionService projectionService = mock(ClinicalNoteProjectionService.class);
         ClinicalFactLedgerService factLedgerService = mock(ClinicalFactLedgerService.class);
