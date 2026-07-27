@@ -7,17 +7,17 @@ final class ClinicalFactRevisionPlannerModelContract {
     private ClinicalFactRevisionPlannerModelContract() {
     }
 
-    record PlannerEnvelope(List<PlannerOperation> operations) {
+    public record PlannerEnvelope(List<PlannerOperation> operations) {
     }
 
-    record PlannerOperation(
+    public record PlannerOperation(
             String type,
             String targetFactId,
             PlannerFact fact,
             PlannerRetraction retraction) {
     }
 
-    record PlannerFact(
+    public record PlannerFact(
             String factType,
             String authority,
             String conceptCode,
@@ -33,13 +33,13 @@ final class ClinicalFactRevisionPlannerModelContract {
             List<PlannerEvidence> evidence) {
     }
 
-    record PlannerRetraction(
+    public record PlannerRetraction(
             String authority,
             String reason,
             List<PlannerEvidence> evidence) {
     }
 
-    record PlannerEvidence(
+    public record PlannerEvidence(
             String transcriptItemId,
             String quoteText,
             boolean primarySupport) {
