@@ -4,6 +4,10 @@ import com.joprelys.backend.ai.facts.application.ClinicalFactContract.FactLedger
 import com.joprelys.backend.ai.facts.application.ClinicalFactExtractionService;
 import com.joprelys.backend.ai.facts.application.ClinicalFactExtractionService.ExtractionReport;
 import com.joprelys.backend.ai.facts.application.ClinicalFactLedgerService;
+import com.joprelys.backend.ai.facts.application.ClinicalFactRevisionContract.ApplyRevisionRequest;
+import com.joprelys.backend.ai.facts.application.ClinicalFactRevisionContract.RevisionBatchView;
+import com.joprelys.backend.ai.facts.application.ClinicalFactRevisionContract.RevisionHistoryView;
+import com.joprelys.backend.ai.facts.application.ClinicalFactRevisionService;
 import com.joprelys.backend.ai.facts.application.ClinicalNoteProjectionContract.NoteProjectionView;
 import com.joprelys.backend.ai.facts.application.ClinicalNoteProjectionService;
 import com.joprelys.backend.ai.facts.application.ClinicalNoteValidationContract.NoteValidationHistoryView;
@@ -36,16 +40,19 @@ public class ClinicalFactController {
     private final ClinicalFactExtractionService extractionService;
     private final ClinicalNoteProjectionService noteProjectionService;
     private final ClinicalNoteValidationService noteValidationService;
+    private final ClinicalFactRevisionService revisionService;
 
     public ClinicalFactController(
             ClinicalFactLedgerService factLedgerService,
             ClinicalFactExtractionService extractionService,
             ClinicalNoteProjectionService noteProjectionService,
-            ClinicalNoteValidationService noteValidationService) {
+            ClinicalNoteValidationService noteValidationService,
+            ClinicalFactRevisionService revisionService) {
         this.factLedgerService = factLedgerService;
         this.extractionService = extractionService;
         this.noteProjectionService = noteProjectionService;
         this.noteValidationService = noteValidationService;
+        this.revisionService = revisionService;
     }
 
     @PostMapping("/extract")
@@ -67,6 +74,29 @@ public class ClinicalFactController {
             Authentication authentication) {
         Identity identity = identity(authentication);
         return factLedgerService.listEffective(visitId, identity.organizationId());
+    }
+
+    @PostMapping("/revisions")
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
+    public RevisionBatchView applyRevision(
+            @PathVariable UUID visitId,
+            @RequestBody ApplyRevisionRequest request,
+            Authentication authentication) {
+        Identity identity = identity(authentication);
+        return revisionService.apply(
+                visitId,
+                identity.userId(),
+                identity.organizationId(),
+                request);
+    }
+
+    @GetMapping("/revisions")
+    @PreAuthorize("hasAuthority('CLINICAL_READ') or hasAuthority('CLINICAL_WRITE')")
+    public RevisionHistoryView revisionHistory(
+            @PathVariable UUID visitId,
+            Authentication authentication) {
+        Identity identity = identity(authentication);
+        return revisionService.history(visitId, identity.organizationId());
     }
 
     @GetMapping("/note-projection")
