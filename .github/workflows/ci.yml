@@ -8,6 +8,9 @@ on:
       - '**/*.md'
   pull_request:
     branches: [main, develop]
+    # Draft PRs are the development workspace. A full CI gate is deliberately
+    # requested by moving the PR to Ready. New commits pushed after that gate
+    # only run the cheap freshness guard and require Draft -> Ready again.
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths-ignore:
       - 'docs/**'
@@ -22,10 +25,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  pr-gate-freshness:
+    name: PR gate freshness
+    if: ${{ github.event_name == 'pull_request' && github.event.action == 'synchronize' && github.event.pull_request.draft == false }}
+    runs-on: ubuntu-slim
+    timeout-minutes: 2
+    steps:
+      - name: Require a deliberate gate for the new HEAD
+        shell: bash
+        run: |
+          echo "::error title=CI gate stale::New commits were pushed after this PR was Ready. Convert the PR to Draft, finish the changes, then move it back to Ready to run the full gate once on the final HEAD."
+          exit 1
+
   changes:
     name: Detect changed stacks
-    if: github.event_name == 'push' || github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    # Heavy validation is only started on pushes to protected integration branches
+    # or on an explicit PR gate event. A synchronize event on an already-Ready PR
+    # is handled by the cheap freshness guard above.
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.event.action != 'synchronize') }}
+    runs-on: ubuntu-slim
     timeout-minutes: 5
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
@@ -41,7 +59,6 @@ jobs:
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
-          EVENT_ACTION: ${{ github.event.action }}
           EVENT_BEFORE: ${{ github.event.before }}
           EVENT_AFTER: ${{ github.event.after }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -60,40 +77,27 @@ jobs:
             git cat-file -e "${sha}^{commit}" 2>/dev/null
           }
 
-          use_global_pr_diff() {
-            FROM_SHA="$PR_BASE_SHA"
-            TO_SHA="$PR_HEAD_SHA"
-            MODE="pr-global"
-          }
-
           if [[ "$EVENT_NAME" == "push" ]]; then
             FROM_SHA="$EVENT_BEFORE"
             TO_SHA="$EVENT_AFTER"
             MODE="push-delta"
-          elif [[ "$EVENT_ACTION" == "synchronize" ]] && is_valid_sha "$EVENT_BEFORE" && is_valid_sha "$EVENT_AFTER"; then
-            FROM_SHA="$EVENT_BEFORE"
-            TO_SHA="$EVENT_AFTER"
-            MODE="pr-synchronize-delta"
           else
-            use_global_pr_diff
+            FROM_SHA="$PR_BASE_SHA"
+            TO_SHA="$PR_HEAD_SHA"
+            MODE="pr-final-gate"
           fi
 
           if ! is_valid_sha "$FROM_SHA" || ! is_valid_sha "$TO_SHA" || [[ "$FROM_SHA" == "$TO_SHA" ]]; then
             if [[ "$EVENT_NAME" == "pull_request" ]]; then
-              use_global_pr_diff
-            else
-              echo "Invalid push comparison range; forcing both stacks for safety."
+              echo "Invalid PR comparison range; forcing both stacks for safety."
               echo "backend=true" >> "$GITHUB_OUTPUT"
               echo "frontend=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-          fi
-
-          if ! ensure_commit "$FROM_SHA" || ! ensure_commit "$TO_SHA"; then
-            if [[ "$EVENT_NAME" == "pull_request" && "$MODE" != "pr-global" ]]; then
-              echo "Incremental PR range unavailable; falling back to global PR diff."
-              use_global_pr_diff
-            fi
+            echo "Invalid push comparison range; forcing both stacks for safety."
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
           if ! ensure_commit "$FROM_SHA" || ! ensure_commit "$TO_SHA"; then
