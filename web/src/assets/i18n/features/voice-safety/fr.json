@@ -3,6 +3,7 @@
   "consultation.ai.processingBackground": "Traitement en arrière-plan",
   "consultation.ai.captureContinuesWhileReviewing": "La capture continue. Les propositions attendent votre validation.",
   "consultation.ai.processingBackgroundHelp": "Traitement en arrière-plan — continuez la consultation.",
+  "consultation.ai.realtimeDurableIntakeBlocked": "La sauvegarde sécurisée est interrompue. Joprelys met le Realtime en pause sans supprimer les phrases en attente.",
   "consultation.ai.realtimeReviewStagingFailed": "La phrase est sauvegardée, mais sa revue n’a pas pu être ouverte. Continuez la consultation ; elle reste dans le journal sécurisé.",
   "consultation.ai.safeMergeConflict": "Des saisies plus récentes du médecin ont été conservées. Vérifiez les champs signalés avant l’enregistrement.",
   "consultation.ai.vitalsRequireDedicatedValidation": "Les constantes détectées ne sont pas enregistrées depuis le brouillon de consultation. Validez-les dans le bloc Constantes."
