@@ -25,7 +25,7 @@ public class ClinicalFactRetractionValidator {
     private static final Set<String> CORRECTION_MARKERS = Set.of(
             "correction", "corrige", "corriger", "erreur", "ignorez", "ignorer",
             "retirez", "retirer", "supprimez", "supprimer", "je me suis trompe",
-            "mistake", "correct", "correction", "ignore", "disregard", "remove", "retract");
+            "mistake", "correct", "ignore", "disregard", "remove", "retract");
     private static final Set<String> NEGATION_MARKERS = Set.of(
             "pas", "sans", "aucun", "aucune", "non", "nie", "nient",
             "no", "not", "without", "deny", "denies");
@@ -64,7 +64,7 @@ public class ClinicalFactRetractionValidator {
             validateExactSpan(span, item);
         }
 
-        validateSpeakerPolicy(payload.authority(), payload.evidence(), effective);
+        validateSpeakerPolicy(target, payload.authority(), payload.evidence(), effective);
         EvidenceSpanCandidate primary = payload.evidence().stream()
                 .filter(EvidenceSpanCandidate::primarySupport)
                 .findFirst()
@@ -88,6 +88,7 @@ public class ClinicalFactRetractionValidator {
     }
 
     private void validateSpeakerPolicy(
+            FactView target,
             Authority authority,
             List<EvidenceSpanCandidate> evidence,
             Map<UUID, TranscriptItemView> effective) {
@@ -100,6 +101,17 @@ public class ClinicalFactRetractionValidator {
                 .map(effective::get)
                 .anyMatch(item -> item != null
                         && ("DOCTOR".equals(item.speakerType()) || "PATIENT".equals(item.speakerType())));
+
+        Authority targetAuthority;
+        try {
+            targetAuthority = Authority.valueOf(target.authority());
+        } catch (IllegalArgumentException | NullPointerException exception) {
+            throw invalid("AI_CLINICAL_FACT_RETRACTION_TARGET_AUTHORITY_INVALID");
+        }
+
+        if (targetAuthority != Authority.PATIENT_REPORTED && !doctor) {
+            throw invalid("AI_CLINICAL_FACT_RETRACTION_TARGET_DOCTOR_EVIDENCE_REQUIRED");
+        }
         if ((authority == Authority.CLINICIAN_OBSERVED || authority == Authority.CLINICIAN_DECISION) && !doctor) {
             throw invalid("AI_CLINICAL_FACT_RETRACTION_DOCTOR_EVIDENCE_REQUIRED");
         }
