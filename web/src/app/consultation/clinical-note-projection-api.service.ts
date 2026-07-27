@@ -54,6 +54,17 @@ export interface ClinicalNoteProjection {
   sections: ClinicalNoteSection[];
 }
 
+export interface ClinicalFactExtractionReport {
+  visitId: string;
+  processedItems: number;
+  alreadyProcessedItems: number;
+  unspecifiedSpeakerItems: number;
+  candidateCount: number;
+  acceptedCount: number;
+  rejectedCount: number;
+  model: string | null;
+}
+
 export interface ValidatedClinicalFactRef {
   factId: string;
   factSequence: number;
@@ -81,6 +92,13 @@ export interface ClinicalNoteValidationHistory {
 @Injectable({ providedIn: 'root' })
 export class ClinicalNoteProjectionApiService {
   private readonly http = inject(HttpClient);
+
+  extractNewFacts(visitId: string): Observable<ClinicalFactExtractionReport> {
+    return this.http.post<ClinicalFactExtractionReport>(
+      `/api/ai/consultations/${encodeURIComponent(visitId)}/facts/extract`,
+      {},
+    );
+  }
 
   getProjection(visitId: string): Observable<ClinicalNoteProjection> {
     return this.http.get<ClinicalNoteProjection>(
