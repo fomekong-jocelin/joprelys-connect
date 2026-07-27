@@ -31,6 +31,7 @@
   "consultation.ai.switchToDictation": "Passer en dictée",
   "consultation.ai.realtimeStableSimple": "Temps réel actif. Le canal audio est connecté et la sauvegarde de sécurité reste disponible.",
   "consultation.ai.realtimePausedSafe": "Écoute en pause. Aucun nouvel audio n’est envoyé tant que vous n’avez pas repris.",
+  "consultation.ai.realtimeSenderError": "Le canal microphone temps réel n’a pas pu être sécurisé. Reconnexion automatique…",
   "consultation.ai.errorStartSession": "Impossible de démarrer la session IA.",
   "consultation.ai.errorAnalyzeMessage": "Le message n’a pas pu être analysé.",
   "consultation.ai.errorAnalyzeClarification": "La réponse à la clarification n’a pas pu être analysée.",
