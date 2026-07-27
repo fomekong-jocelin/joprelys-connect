@@ -8,9 +8,11 @@ Décider objectivement si le planner rolling #211 peut être branché vers le mo
 
 La CI ne contacte **aucun modèle externe**. Elle évalue uniquement des sorties candidates versionnées/capturées contre un gold synthétique. Les générations modèle seront produites par un runner manuel séparé, hors CI.
 
+La fusion du harness ne constitue donc **pas** une décision GO pour le branchement live. Le GO exige encore des captures réelles des deux pipelines évaluées par ce scorer.
+
 ## Corpus
 
-Le corpus V1 est synthétique, sans PHI, FR prioritaire et matérialisable sur des fenêtres de 5, 15, 30 et 60 minutes.
+Le corpus V1 est synthétique, sans PHI, FR prioritaire Cameroun et matérialisé sur des fenêtres de 5, 15, 30 et 60 minutes.
 
 Chaque scénario décrit :
 
@@ -31,6 +33,10 @@ Un fait est un vrai positif clinique uniquement si son identité relationnelle c
 
 La preuve est scorée séparément afin qu'une bonne valeur clinique avec une mauvaise citation ne soit jamais masquée.
 
+Les preuves attendues des faits manquants restent dans le dénominateur du recall. Les preuves d'un fait candidat non supporté restent dans le dénominateur de precision : une hallucination ou une omission ne peut donc pas améliorer artificiellement le score de preuve.
+
+Pour un fait critique correspondant au gold, la Linked Evidence doit être exactement celle attendue par le scénario. Toute divergence incrémente `criticalEvidenceErrors` et fait échouer le gate absolu.
+
 ## Champs critiques
 
 Le gold marque explicitement les faits critiques. En plus, tout candidat de type suivant est considéré critique par défaut :
@@ -49,27 +55,43 @@ Un fait critique candidat sans correspondance gold exacte compte comme `unsuppor
 Le scorer évalue séparément :
 
 - `KEEP` — cible exacte ;
-- `ADD` — résultat clinique exact ;
-- `REPLACE` — cible exacte + résultat clinique exact ;
-- `RETRACT` — cible exacte.
+- `ADD` — résultat clinique **et preuve** exacts ;
+- `REPLACE` — cible exacte + résultat clinique **et preuve** exacts ;
+- `RETRACT` — cible exacte + raison explicite + preuve transcript exacte.
 
 L'absence d'opération sur un fait n'est **jamais** interprétée comme une suppression.
 
+Les signatures d'opération dupliquées ou deux opérations ciblant le même fait rendent la capture invalide : elles ne sont jamais fusionnées silencieusement dans un `Set`.
+
 ## Gates absolus GO/NO-GO
 
-Aucun score agrégé ne peut compenser une erreur critique. GO interdit si :
+Aucun score agrégé ne peut compenser une erreur critique. Le gate sécurité échoue si l'un des compteurs suivants est non nul :
 
-- `unsupportedCriticalClaims > 0` ;
-- `falseCriticalRetracts > 0` ;
-- `falseCriticalReplaces > 0` ;
-- rupture critique concept↔nombre/unité ;
-- rupture médicament↔dose↔unité↔fréquence↔voie.
+- `missingCriticalFacts` ;
+- `unsupportedCriticalClaims` ;
+- `criticalRelationErrors` ;
+- `criticalEvidenceErrors` ;
+- `falseCriticalRetracts` ;
+- `falseCriticalReplaces`.
 
-Precision/recall globales et preuve sont reportées en plus, mais ne masquent jamais ces gates absolus.
+`criticalRelationErrors` couvre notamment les ruptures concept↔nombre/unité et médicament↔dose↔unité↔fréquence↔voie.
+
+Precision/recall globales des faits, preuves et opérations sont reportées en plus, mais ne masquent jamais ces gates absolus.
+
+## Rapports
+
+Le harness produit deux représentations déterministes à partir des mêmes `Score` :
+
+- Markdown pour revue humaine ;
+- JSON pour archivage, comparaison et automatisation future.
+
+Chaque ligne conserve les métriques et les compteurs de sécurité séparément par scénario et pipeline.
 
 ## Comparaison #196 / #211
 
 Une capture benchmark indique son pipeline (`FACT_EXTRACTION_196` ou `ROLLING_PLANNER_211`), son modèle, la version du prompt/schema et le scénario. Les deux pipelines sont scorés avec le même moteur et le même gold.
+
+La prochaine incision de #213 est le runner manuel de capture modèle. Il devra enregistrer modèle, prompt/schema, tokens/coût et sorties structurées sans jamais écrire dans une visite réelle.
 
 ## Données réelles
 
