@@ -139,9 +139,9 @@ Chargement centralisé dans `I18nService`.
 - [x] mobile-first ;
 - [x] tests du contrat HTTP ;
 - [x] tests de preuve, validation, stale-check et navigation ;
-- [ ] tests Angular complets verts sur le HEAD final ;
-- [ ] build Angular production vert sur le HEAD final ;
-- [ ] fusion dans `main` uniquement après le gate Ready final.
+- [x] tests Angular complets verts sur le HEAD final ;
+- [x] build Angular production vert sur le HEAD final ;
+- [x] fusion dans `main` uniquement après le gate Ready final.
 
 ## Non-régression
 
@@ -164,4 +164,11 @@ Cette incision ne modifie pas :
 
 ## Gate CI
 
-La PR reste Draft pendant toute l’implémentation. Avec le workflow coût V2 (#206), un seul passage `Ready for review` déclenche le gate frontend complet sur le HEAD final. Tout commit postérieur rendrait volontairement le gate stale et imposerait un nouveau cycle Draft -> Ready.
+Run GitHub Actions **#1593** sur le HEAD exact `6f8203985e818c048b43bd23a9d8395b1c67c8cd` :
+
+- `Detect changed stacks` : SUCCESS ;
+- tests Angular : SUCCESS ;
+- build Angular production : SUCCESS ;
+- backend : SKIPPED car aucun changement `backend/**` ;
+- aucun commit ajouté après le gate ;
+- PR #207 fusionnée dans `main` au commit `5c949cb4db3cf24299ce2ec63c4f92b7b0e14180`.
