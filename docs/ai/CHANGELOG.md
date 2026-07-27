@@ -8,6 +8,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **PR #204 / P0-192 — Projection clinique déterministe sourcée / Linked Evidence** : ajout d'une projection de note construite exclusivement depuis les faits cliniques effectifs et le transcript FINAL canonique. Chaque entrée expose sa preuve exacte (`transcriptItemId`, locuteur, offsets audio, offsets caractères, quote verbatim), les sections sont typées et déterministes, et un `projectionVersion` SHA-256 permet le futur stale-check de validation médecin. Aucun LLM n'est appelé pour rédiger ou reformuler la note.
 - **PR #196 / P0-192 — Extraction contrôlée des faits cliniques** : ajout de `@ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")` sur `ClinicalFactExtractionService` pour éviter l'échec de chargement du contexte Spring dans les tests d'intégration non-IA (351 erreurs de tests résolues). Réconciliation complète de la branche de la PR #196 (`feat/ai-controlled-fact-extraction-p0-192`) avec `main@90d5a3c`.
 
 - **BUG-20260724-ADMISSION-FREE-TEXT-SERVICE-ORIENTATION-FIX — Sélecteurs contrôlés pour l'admission et la visite** : remplacement des champs à saisie libre `<input>` d'Orientation et Service dans le formulaire d'admission patient (`app-unified-admission`) par des éléments `<select>` contrôlés. L'orientation propose les orientations cliniques normées (Consultation, Spécialisée, Urgences, Hospitalisation, Ambulatoire, De Jour, Bilan, Autre) et le service s'alimente dynamiquement via `HospitalOrganizationApiService.listServiceCatalog()`.
@@ -17,7 +18,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **HOS-ORG-001-A / #130 / PR #133 — organisation hospitalière structurée** : ajout d'un bounded context `hospitalorganization` séparé de `spatial`, avec hiérarchie facultative `POLE → DEPARTMENT → SERVICE → CARE_UNIT`. Une petite clinique peut créer directement un service sous l'établissement sans niveau factice.
 - **Flyway V87 — référentiels organisationnels** : ajout de `hospital_service_catalog`, `medical_specialty_catalog`, `organizational_unit_type_catalog` et `organizational_units`. Les codes sont stables ; le code d'unité est unique par tenant ; le parent est protégé par FK composite tenant.
 - **Catalogue services FR/EN** : 14 types initiaux contrôlés couvrant notamment médecine générale, médecine interne, maternité/gynécologie-obstétrique, pédiatrie, urgences, chirurgie générale, cardiologie, réanimation, anesthésie, bloc, laboratoire, imagerie, pharmacie et hospitalisation polyvalente.
-- **Catalogue spécialités FR/EN** : 10 spécialités initiales contrôlées pour préparer HOS-STAFF-001-A sans nouvelle saisie libre.
+- **Catalogue spécialités FR/EN** : 10 spécialités initiaux contrôlés pour préparer HOS-STAFF-001-A sans nouvelle saisie libre.
 - **Permission `ORGANIZATION_STRUCTURE_MANAGE`** : capacité dédiée à la gestion des pôles, départements, services et unités ; attribuée aux profils administratifs prévus, non accordée par défaut aux métiers cliniques.
 - **API `/api/hospital-organization`** : lecture des catalogues, lecture des unités, création/modification et activation/désactivation ; aucun DELETE physique dans ce lot.
 - **UI Angular organisation hospitalière** : route `/clinic/hospital-organization`, navigation permission-first, configuration mobile-first, Tailwind CSS v4, FR/EN, light/dark, sans Angular Material.
@@ -68,9 +69,11 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **BUG-20260726-UI-I18N-MOBILE-AI-THEME-POLISH** : le panneau institutionnel de connexion utilise désormais un logo contextuel non inversé et du contenu HTML réellement traduit en FR/EN. Les surfaces IA et la modale de constantes gagnent des libellés i18n, une composition Angular déclarative, des actions tactiles et une divulgation progressive mobile ; l'assistant démarre replié sous 640 px et coupe le microphone lorsqu'il est replié ou détruit.
 - **BUG-20260726-AI-REALTIME-SILENCE-FALSE-PRESCRIPTION** : suppression du
   redémarrage automatique du microphone classique, détection locale de parole,
-  dépôt des transcriptions de dictée classique en `PENDING_REVIEW`, rejet des
-  transcriptions OpenAI de faible confiance et arrêt des tentatives Realtime répétées
-  à chaque polling. Un échec SDP ne laisse plus de timeout data channel tardif et une
+  dépôt des transcriptions de dictée classique en `PENDING_REVIEW` et arrêt des
+  tentatives Realtime répétées à chaque polling. Une dictée non vide reste toujours
+  proposée au médecin pour relecture même si sa confiance ASR agrégée est faible ; le
+  Realtime conserve en revanche son contrôle de confiance avant traitement clinique
+  automatique. Un échec SDP ne laisse plus de timeout data channel tardif et une
   exception Realtime inattendue est renvoyée en `503` générique sans fuite de détail.
   Les modèles par défaut sont alignés sur `gpt-realtime-2.1` et
   `gpt-realtime-2.1-mini` ; aucune dépendance `reactive-streams` inutilisée n'est
@@ -111,7 +114,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - les propositions de constantes de l'assistant restent des brouillons et aucune donnée clinique n'est enregistrée sans validation explicite du professionnel ;
 - le repli ou la destruction de l'assistant de constantes arrête le microphone et la session Realtime ;
 - le transport Realtime ne déclenche aucune décision clinique autonome : les transcriptions Realtime sont analysées immédiatement, mais toute proposition/révision clinique attend une validation médicale explicite ; la dictée classique conserve la relecture de transcription ;
-- les captures silencieuses et transcriptions à faible confiance sont rejetées avant création de révision ou proposition d'ordonnance ;
+- une dictée non vide reste relisible même à faible confiance ; le Realtime faible confiance reste refusé avant toute analyse clinique automatique ;
 - aucun mapping automatique depuis `Ward.name`, `Room.roomNumber`, `users.department` ou `users.specialty` ;
 - aucun fallback métier ou persistant n'est introduit pour identifier service, espace, lit, unité ou spécialité staff ;
 - les affectations staff sont contrôlées par tenant côté application et base, avec FK composites et refus cross-tenant ;
