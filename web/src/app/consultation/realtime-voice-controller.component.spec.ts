@@ -30,7 +30,6 @@ const DISCONNECTED_STATE: RealtimeVoiceState = {
 
 const FR: Record<string, string> = {
   'consultation.ai.realtimeBackpressure': 'Joprelys sécurise les dernières secondes avant de reprendre automatiquement.',
-  'consultation.ai.realtimeClinicalError': 'La phrase a été entendue, mais sa sauvegarde a échoué.',
   'consultation.ai.realtimeConversationAnalysisFailed': 'La phrase a bien été sauvegardée, mais l’assistant n’a pas pu l’analyser.',
   'consultation.ai.realtimeUnavailable': 'Le temps réel est momentanément indisponible.',
   'consultation.ai.realtimeUnsupported': 'Ce navigateur ne prend pas en charge la connexion audio temps réel.',
@@ -171,7 +170,7 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
       .toBeLessThan(consultationApi.sendRealtimeTranscript.mock.invocationCallOrder[0]);
   });
 
-  it('queues three final ASR turns while the first durable ACK is slow and persists all in order', () => {
+  it('queues final ASR turns while the first durable ACK is slow and persists all in order', () => {
     const firstAck = new Subject<RealtimeClinicalIntakeAck>();
     intake.ingest
       .mockReturnValueOnce(firstAck)
@@ -183,7 +182,7 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
     transcripts.next(turn('Troisième phrase clinique', 0.93, 'event-3', 'item-3'));
 
     expect(intake.ingest).toHaveBeenCalledTimes(1);
-    expect((component as any).intakeQueue).toHaveLength(3);
+    expect((component as any).pipeline.intakeQueueSize()).toBe(3);
     expect(consultationApi.sendRealtimeTranscript).not.toHaveBeenCalled();
     expect(bridge.setMuted).not.toHaveBeenCalledWith(true);
 
@@ -200,7 +199,7 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
     expect(component.queuedCount()).toBe(0);
   });
 
-  it('persists 21 turns while clinical review blocks analysis, then analyzes all in order after unblock', () => {
+  it('persists 21 turns while a revision blocks analysis, then analyzes all in order after unblock', () => {
     component.blocked = true;
     bridge.setMuted.mockClear();
 
@@ -213,7 +212,7 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
       Array.from({ length: 21 }, (_, index) => `Phrase ${index}`),
     );
     expect(consultationApi.sendRealtimeTranscript).not.toHaveBeenCalled();
-    expect((component as any).analysisQueue).toHaveLength(21);
+    expect((component as any).pipeline.analysisQueueSize()).toBe(21);
     expect(bridge.setMuted).not.toHaveBeenCalledWith(true);
 
     component.blocked = false;
@@ -242,16 +241,12 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
     transcripts.next(turn('Le patient nie toute fièvre', null, 'event-null', 'item-null'));
 
     expect(component.lastTranscript()).toBe('Le patient nie toute fièvre');
+    expect(component.transcriptNeedsReview()).toBe(true);
     expect(intake.ingest).toHaveBeenCalledWith(
-      'visit-1',
-      'Le patient nie toute fièvre',
-      0,
-      'event-null',
-      'item-null',
+      'visit-1', 'Le patient nie toute fièvre', 0, 'event-null', 'item-null',
     );
     expect(consultationApi.stageRealtimeTranscript).toHaveBeenCalledWith(
-      'visit-1',
-      'Le patient nie toute fièvre',
+      'visit-1', 'Le patient nie toute fièvre',
     );
     expect(review).toHaveBeenCalledWith(expect.objectContaining({
       transcript: 'Le patient nie toute fièvre',
@@ -260,19 +255,32 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
     expect(component.queuedCount()).toBe(0);
   });
 
+  it('keeps durable capture running while a transcript review is pending', () => {
+    consultationApi.sendRealtimeTranscript.mockReturnValueOnce(
+      throwError(() => ({ status: 422, error: { detail: 'AI_TRANSCRIPTION_LOW_CONFIDENCE' } })),
+    );
+    transcripts.next(turn('Dose incertaine', 0.2, 'event-review', 'item-review'));
+    expect(component.session?.pendingTranscript).toBe('Dose incertaine');
+
+    transcripts.next(turn('Phrase suivante', 0.9, 'event-after', 'item-after'));
+
+    expect(intake.ingest).toHaveBeenCalledTimes(2);
+    expect(consultationApi.sendRealtimeTranscript).toHaveBeenCalledTimes(1);
+    expect((component as any).pipeline.analysisQueueSize()).toBe(1);
+    expect(bridge.setMuted).not.toHaveBeenCalledWith(true);
+  });
+
   it('generates a safe client event id when OpenAI omits event_id instead of losing the transcript', () => {
     transcripts.next(turn('Saturation quatre-vingt-seize', 0.92, undefined, 'item-without-event'));
 
     expect(intake.ingest).toHaveBeenCalledTimes(1);
-    const eventId = intake.ingest.mock.calls[0][3] as string;
-    expect(eventId).toMatch(/^client:\d+:\d+$/);
+    expect(intake.ingest.mock.calls[0][3] as string).toMatch(/^client:\d+:\d+$/);
     expect(consultationApi.sendRealtimeTranscript).toHaveBeenCalledTimes(1);
   });
 
   it('deduplicates the same OpenAI item even if a second event id is received', () => {
     transcripts.next(turn('Patient sans fièvre', 0.9, 'event-a', 'item-same'));
     transcripts.next(turn('Patient sans fièvre', 0.9, 'event-b', 'item-same'));
-
     expect(intake.ingest).toHaveBeenCalledTimes(1);
   });
 
@@ -284,7 +292,7 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
 
     transcripts.next(turn('Tension cent vingt sur quatre-vingt', 0.94, 'event-retry', 'item-retry'));
 
-    expect((component as any).intakeQueue).toHaveLength(1);
+    expect((component as any).pipeline.intakeQueueSize()).toBe(1);
     expect(intake.ingest).toHaveBeenCalledTimes(1);
     expect(consultationApi.sendRealtimeTranscript).not.toHaveBeenCalled();
 
@@ -319,7 +327,7 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
     expect(component.backlogPaused).toBe(true);
     expect(bridge.setMuted).toHaveBeenCalledWith(true);
     expect(ambient.stop).not.toHaveBeenCalled();
-    expect((component as any).intakeQueue).toHaveLength(32);
+    expect((component as any).pipeline.intakeQueueSize()).toBe(32);
   });
 
   it('resets queues and ignores late responses when navigating from visit A to B', async () => {
@@ -327,7 +335,7 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
     intake.ingest.mockReturnValue(slow);
     transcripts.next(turn('Tour A', 0.9, 'event-a', 'item-a'));
     transcripts.next(turn('Tour A deux', 0.9, 'event-a2', 'item-a2'));
-    expect((component as any).intakeQueue).toHaveLength(2);
+    expect((component as any).pipeline.intakeQueueSize()).toBe(2);
 
     bridge.connect.mockResolvedValue(undefined);
     component.visitId = 'visit-2';
@@ -335,16 +343,12 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
     await (component as any).syncConnection(0, true);
 
     expect(component.queuedCount()).toBe(0);
-    expect((component as any).seenTranscriptIds.size).toBe(0);
     expect((component as any).connectedVisitId).toBe('visit-2');
 
     slow.next(ack('visit-1', 'Tour A', 0.9, 'event-a', 'item-a'));
     slow.complete();
     expect(consultationApi.sendRealtimeTranscript).not.toHaveBeenCalledWith(
-      'visit-2',
-      'Tour A',
-      expect.anything(),
-      expect.anything(),
+      'visit-2', 'Tour A', expect.anything(), expect.anything(),
     );
   });
 
@@ -366,12 +370,7 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
     expect(bridge.connect).toHaveBeenCalledWith('visit-1', 'consultation', expect.any(Function));
   });
 
-  function turn(
-    transcript: string,
-    confidence: number | null,
-    eventId?: string,
-    itemId?: string,
-  ): RealtimeTranscriptTurn {
+  function turn(transcript: string, confidence: number | null, eventId?: string, itemId?: string): RealtimeTranscriptTurn {
     return { transcript, confidence, eventId, itemId };
   }
 
