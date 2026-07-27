@@ -14,6 +14,8 @@ import com.joprelys.backend.ai.facts.domain.ClinicalFactTypes.Polarity;
 import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactEntity;
 import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactEvidenceEntity;
 import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactRepository;
+import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactRevisionEvidenceRepository;
+import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactRevisionOperationRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import java.util.List;
@@ -30,11 +32,17 @@ class ClinicalFactLedgerSnapshotConsistencyTest {
         VisitRepository visitRepository = mock(VisitRepository.class);
         ClinicalFactEvidenceValidator validator = mock(ClinicalFactEvidenceValidator.class);
         AmbientTranscriptLedgerService transcriptLedger = mock(AmbientTranscriptLedgerService.class);
+        ClinicalFactRevisionOperationRepository revisionOperationRepository =
+                mock(ClinicalFactRevisionOperationRepository.class);
+        ClinicalFactRevisionEvidenceRepository revisionEvidenceRepository =
+                mock(ClinicalFactRevisionEvidenceRepository.class);
         ClinicalFactLedgerService service = new ClinicalFactLedgerService(
                 factRepository,
                 visitRepository,
                 validator,
-                transcriptLedger);
+                transcriptLedger,
+                revisionOperationRepository,
+                revisionEvidenceRepository);
 
         UUID visitId = UUID.randomUUID();
         UUID organizationId = UUID.randomUUID();
@@ -44,6 +52,10 @@ class ClinicalFactLedgerSnapshotConsistencyTest {
         VisitEntity visit = mock(VisitEntity.class);
         when(visit.getOrganizationId()).thenReturn(organizationId);
         when(visitRepository.findById(visitId)).thenReturn(Optional.of(visit));
+        when(revisionOperationRepository.findByVisitIdAndOperationTypeOrderByCreatedAtAsc(
+                visitId,
+                ClinicalFactRevisionContract.OperationType.RETRACT))
+                .thenReturn(List.of());
 
         ClinicalFactEntity fact = new ClinicalFactEntity(
                 organizationId,
