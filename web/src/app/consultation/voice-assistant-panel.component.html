@@ -73,7 +73,7 @@
         [enabled]="true"
         [blocked]="busy() || !!session()?.pendingTranscript || hasPendingRevision()"
         (message)="finishRealtimeMessage($event)"
-        (activeChange)="realtimeActive.set($event)"
+        (activeChange)="realtimeActive.set($event); errorMessage.set($event ? '' : errorMessage())"
         (realtimeError)="handleRealtimeError($event)"
         (switchToDictation)="switchToDictation()"
         (endSession)="finishRealtime()"
