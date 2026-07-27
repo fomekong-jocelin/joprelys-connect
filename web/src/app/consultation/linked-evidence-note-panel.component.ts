@@ -258,6 +258,8 @@ export class LinkedEvidenceNotePanelComponent implements OnChanges {
   readonly validationNoticeKey = signal('');
   readonly openEvidenceFactId = signal<string | null>(null);
 
+  private loadGeneration = 0;
+
   readonly currentValidation = computed(() => {
     const note = this.projection();
     if (!note) return null;
@@ -265,30 +267,34 @@ export class LinkedEvidenceNotePanelComponent implements OnChanges {
   });
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['visitId']) {
-      this.projection.set(null);
-      this.validations.set([]);
-      this.openEvidenceFactId.set(null);
-      this.validationNoticeKey.set('');
-      this.refresh();
-    }
+    if (!changes['visitId']) return;
+    this.loadGeneration += 1;
+    this.loading.set(false);
+    this.validating.set(false);
+    this.projection.set(null);
+    this.validations.set([]);
+    this.openEvidenceFactId.set(null);
+    this.validationNoticeKey.set('');
+    this.loadErrorKey.set('');
+    this.refresh();
   }
 
   refresh(): void {
     const visitId = this.visitId.trim();
-    if (!visitId || this.loading()) return;
+    if (!visitId) return;
+    const generation = ++this.loadGeneration;
     this.loading.set(true);
     this.loadErrorKey.set('');
 
     this.api.getProjection(visitId).subscribe({
       next: note => {
-        if (visitId !== this.visitId.trim()) return;
+        if (!this.isCurrentLoad(visitId, generation)) return;
         this.projection.set(note);
         this.loading.set(false);
-        this.loadValidationHistory(visitId);
+        this.loadValidationHistory(visitId, generation);
       },
       error: error => {
-        if (visitId !== this.visitId.trim()) return;
+        if (!this.isCurrentLoad(visitId, generation)) return;
         this.loading.set(false);
         this.projection.set(null);
         this.loadErrorKey.set(this.projectionErrorKey(error));
@@ -301,12 +307,14 @@ export class LinkedEvidenceNotePanelComponent implements OnChanges {
     const note = this.projection();
     if (!visitId || !note || note.sections.length === 0 || this.validating()) return;
 
+    const reviewedVersion = note.projectionVersion;
     this.validating.set(true);
     this.validationNoticeKey.set('');
-    this.api.validateProjection(visitId, this.uuid(), note.projectionVersion).subscribe({
+    this.api.validateProjection(visitId, this.uuid(), reviewedVersion).subscribe({
       next: validation => {
         if (visitId !== this.visitId.trim()) return;
         this.validating.set(false);
+        if (this.projection()?.projectionVersion !== reviewedVersion) return;
         this.validations.update(current => [validation, ...current]);
         this.validationNoticeKey.set('consultation.linkedEvidence.validationSuccess');
       },
@@ -446,15 +454,19 @@ export class LinkedEvidenceNotePanelComponent implements OnChanges {
     return 'border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]';
   }
 
-  private loadValidationHistory(visitId: string): void {
+  private loadValidationHistory(visitId: string, generation: number): void {
     this.api.getValidationHistory(visitId).subscribe({
       next: history => {
-        if (visitId === this.visitId.trim()) this.validations.set(history.validations ?? []);
+        if (this.isCurrentLoad(visitId, generation)) this.validations.set(history.validations ?? []);
       },
       error: () => {
-        if (visitId === this.visitId.trim()) this.validations.set([]);
+        if (this.isCurrentLoad(visitId, generation)) this.validations.set([]);
       },
     });
+  }
+
+  private isCurrentLoad(visitId: string, generation: number): boolean {
+    return generation === this.loadGeneration && visitId === this.visitId.trim();
   }
 
   private projectionErrorKey(error: unknown): string {
@@ -484,6 +496,13 @@ export class LinkedEvidenceNotePanelComponent implements OnChanges {
   private uuid(): string {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
       return crypto.randomUUID();
+    }
+    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+      const bytes = crypto.getRandomValues(new Uint8Array(16));
+      bytes[6] = (bytes[6] & 0x0f) | 0x40;
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;
+      const hex = Array.from(bytes, value => value.toString(16).padStart(2, '0')).join('');
+      return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
     }
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, token => {
       const random = Math.floor(Math.random() * 16);
