@@ -2,6 +2,7 @@ package com.joprelys.backend.ai.realtime.api;
 
 import com.joprelys.backend.ai.realtime.application.RealtimeClinicalIntakeService;
 import com.joprelys.backend.ai.realtime.application.RealtimeClinicalIntakeService.IntakeView;
+import com.joprelys.backend.ai.realtime.application.RealtimeIntakeSource;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -16,15 +17,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/ai/consultations/{visitId}/realtime-intake")
+@RequestMapping("/api/ai/realtime/vitals/{visitId}/intake")
 @ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
-@PreAuthorize("hasAuthority('CLINICAL_WRITE')")
-public class RealtimeClinicalIntakeController {
+@PreAuthorize("hasAuthority('VISIT_VITALS_WRITE')")
+public class RealtimeVitalsIntakeController {
 
     private final RealtimeClinicalIntakeService service;
     private final RealtimeIntakeIdentityResolver identityResolver;
 
-    public RealtimeClinicalIntakeController(
+    public RealtimeVitalsIntakeController(
             RealtimeClinicalIntakeService service,
             RealtimeIntakeIdentityResolver identityResolver) {
         this.service = service;
@@ -41,6 +42,7 @@ public class RealtimeClinicalIntakeController {
                 visitId,
                 identity.userId(),
                 identity.organizationId(),
+                RealtimeIntakeSource.VITALS,
                 request.eventId(),
                 request.itemId(),
                 request.transcript(),
@@ -48,11 +50,10 @@ public class RealtimeClinicalIntakeController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('CLINICAL_READ') or hasAuthority('CLINICAL_WRITE')")
     public List<IntakeView> list(
             @PathVariable UUID visitId,
             Authentication authentication) {
         var identity = identityResolver.resolve(authentication);
-        return service.list(visitId, identity.organizationId());
+        return service.list(visitId, identity.organizationId(), RealtimeIntakeSource.VITALS);
     }
 }

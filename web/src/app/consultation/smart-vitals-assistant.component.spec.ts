@@ -85,7 +85,7 @@ describe('SmartVitalsAssistantComponent', () => {
     mobileFixture.detectChanges();
 
     expect(mobileFixture.componentInstance.expanded()).toBe(false);
-    expect(mobileFixture.nativeElement.querySelector('details')).toBeNull();
+    expect(mobileFixture.nativeElement.querySelector('input')).toBeNull();
     mobileFixture.destroy();
   });
 
@@ -109,7 +109,7 @@ describe('SmartVitalsAssistantComponent', () => {
     expect(component.realtimeActive()).toBe(false);
   });
 
-  it('should prefill detected vitals without saving them', () => {
+  it('should keep detected vitals as a proposal until the clinician explicitly applies them', () => {
     const proposal = {
       transcript: 'Température 38,4, saturation 96',
       vitals: { temperature: 38.4, spo2: 96 },
@@ -125,9 +125,19 @@ describe('SmartVitalsAssistantComponent', () => {
     component.sendText();
 
     expect(vitalsApi.analyzeText).toHaveBeenCalledWith('visit-1', proposal.transcript, 'fr', {});
-    expect(emitted).toHaveBeenCalledWith(proposal);
+    expect(emitted).not.toHaveBeenCalled();
     expect(component.lastTranscript()).toBe(proposal.transcript);
     expect(component.proposalEntries()).toHaveLength(2);
+    expect(component.proposalApplied()).toBe(false);
+
+    component.applyCurrentProposal();
+
+    expect(emitted).toHaveBeenCalledTimes(1);
+    expect(emitted).toHaveBeenCalledWith(proposal);
+    expect(component.proposalApplied()).toBe(true);
+
+    component.applyCurrentProposal();
+    expect(emitted).toHaveBeenCalledTimes(1);
   });
 
   it('should not emit an empty proposal when clarification is required', () => {
@@ -145,12 +155,13 @@ describe('SmartVitalsAssistantComponent', () => {
 
     component.textInput = 'Tension douze sur huit';
     component.sendText();
+    component.applyCurrentProposal();
 
     expect(emitted).not.toHaveBeenCalled();
     expect(component.needsConfirmation()).toBe(true);
   });
 
-  it('should accept realtime proposals without triggering legacy TTS twice', () => {
+  it('should keep a realtime proposal pending without triggering legacy TTS or parent mutation', () => {
     const proposal = {
       transcript: 'Saturation 97',
       vitals: { spo2: 97 },
@@ -163,7 +174,11 @@ describe('SmartVitalsAssistantComponent', () => {
 
     component.handleProposal(proposal, false);
 
-    expect(emitted).toHaveBeenCalledWith(proposal);
+    expect(emitted).not.toHaveBeenCalled();
+    expect(component.lastProposal()).toEqual(proposal);
     expect(voiceApi.synthesizeSpeech).not.toHaveBeenCalled();
+
+    component.applyCurrentProposal();
+    expect(emitted).toHaveBeenCalledWith(proposal);
   });
 });

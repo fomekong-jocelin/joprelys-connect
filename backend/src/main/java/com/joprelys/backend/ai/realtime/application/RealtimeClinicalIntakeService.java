@@ -9,6 +9,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class RealtimeClinicalIntakeService {
 
+    private static final Logger log = LoggerFactory.getLogger(RealtimeClinicalIntakeService.class);
     private static final double DEFAULT_CONFIDENCE_FLOOR = 0.35;
     private static final int MAX_TRANSCRIPT_LENGTH = 12_000;
 
@@ -43,30 +46,46 @@ public class RealtimeClinicalIntakeService {
             String itemId,
             String transcript,
             Double confidence) {
-        requireIdentity(visitId, userId, organizationId);
+        return ingest(
+                visitId,
+                userId,
+                organizationId,
+                RealtimeIntakeSource.CONSULTATION,
+                eventId,
+                itemId,
+                transcript,
+                confidence);
+    }
+
+    @Transactional
+    public IntakeView ingest(
+            UUID visitId,
+            UUID userId,
+            UUID organizationId,
+            RealtimeIntakeSource source,
+            String eventId,
+            String itemId,
+            String transcript,
+            Double confidence) {
+        requireIdentity(visitId, userId, organizationId, source);
         String normalizedEventId = requiredId(eventId, "AI_REALTIME_EVENT_ID_REQUIRED");
         String normalizedItemId = optionalId(itemId);
         String normalizedTranscript = normalizeTranscript(transcript);
-        double normalizedConfidence = validateConfidence(confidence);
+        double normalizedConfidence = normalizeConfidence(confidence);
 
         lockAuthorizedVisit(visitId, organizationId);
 
         RealtimeClinicalIntakeEntity byEvent = repository
-                .findByVisitIdAndEventId(visitId, normalizedEventId)
+                .findByVisitIdAndSourceAndEventId(visitId, source, normalizedEventId)
                 .orElse(null);
         if (byEvent != null) {
-            requireSameEventPayload(
-                    byEvent,
-                    normalizedEventId,
-                    normalizedItemId,
-                    normalizedTranscript,
-                    normalizedConfidence);
+            requireSameEventPayload(byEvent, normalizedEventId, normalizedItemId, normalizedTranscript, normalizedConfidence);
             return view(byEvent);
         }
 
         if (normalizedItemId != null) {
             RealtimeClinicalIntakeEntity byItem = repository
-                    .findByVisitIdAndItemId(visitId, normalizedItemId)
+                    .findByVisitIdAndSourceAndItemId(visitId, source, normalizedItemId)
                     .orElse(null);
             if (byItem != null) {
                 requireSameItemPayload(byItem, normalizedItemId, normalizedTranscript, normalizedConfidence);
@@ -78,6 +97,7 @@ public class RealtimeClinicalIntakeService {
         RealtimeClinicalIntakeEntity entity = new RealtimeClinicalIntakeEntity(
                 organizationId,
                 visitId,
+                source,
                 sequence,
                 normalizedEventId,
                 normalizedItemId,
@@ -88,7 +108,7 @@ public class RealtimeClinicalIntakeService {
             return view(repository.saveAndFlush(entity));
         } catch (DataIntegrityViolationException exception) {
             RealtimeClinicalIntakeEntity racedByEvent = repository
-                    .findByVisitIdAndEventId(visitId, normalizedEventId)
+                    .findByVisitIdAndSourceAndEventId(visitId, source, normalizedEventId)
                     .orElse(null);
             if (racedByEvent != null) {
                 requireSameEventPayload(
@@ -101,14 +121,10 @@ public class RealtimeClinicalIntakeService {
             }
             if (normalizedItemId != null) {
                 RealtimeClinicalIntakeEntity racedByItem = repository
-                        .findByVisitIdAndItemId(visitId, normalizedItemId)
+                        .findByVisitIdAndSourceAndItemId(visitId, source, normalizedItemId)
                         .orElse(null);
                 if (racedByItem != null) {
-                    requireSameItemPayload(
-                            racedByItem,
-                            normalizedItemId,
-                            normalizedTranscript,
-                            normalizedConfidence);
+                    requireSameItemPayload(racedByItem, normalizedItemId, normalizedTranscript, normalizedConfidence);
                     return view(racedByItem);
                 }
             }
@@ -121,8 +137,19 @@ public class RealtimeClinicalIntakeService {
 
     @Transactional(readOnly = true)
     public List<IntakeView> list(UUID visitId, UUID organizationId) {
+        return list(visitId, organizationId, RealtimeIntakeSource.CONSULTATION);
+    }
+
+    @Transactional(readOnly = true)
+    public List<IntakeView> list(
+            UUID visitId,
+            UUID organizationId,
+            RealtimeIntakeSource source) {
         requireAuthorizedVisit(visitId, organizationId);
-        return repository.findByVisitIdOrderBySequenceNoAsc(visitId)
+        if (source == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_REALTIME_INTAKE_SOURCE_INVALID");
+        }
+        return repository.findByVisitIdAndSourceOrderBySequenceNoAsc(visitId, source)
                 .stream()
                 .map(this::view)
                 .toList();
@@ -159,9 +186,7 @@ public class RealtimeClinicalIntakeService {
     }
 
     private ResponseStatusException reusedId() {
-        return new ResponseStatusException(
-                HttpStatus.CONFLICT,
-                "AI_REALTIME_INTAKE_ID_REUSED");
+        return new ResponseStatusException(HttpStatus.CONFLICT, "AI_REALTIME_INTAKE_ID_REUSED");
     }
 
     private VisitEntity lockAuthorizedVisit(UUID visitId, UUID organizationId) {
@@ -215,22 +240,33 @@ public class RealtimeClinicalIntakeService {
         return normalized;
     }
 
-    private double validateConfidence(Double confidence) {
-        if (confidence == null || !Double.isFinite(confidence) || confidence < 0.0 || confidence > 1.0) {
+    private double normalizeConfidence(Double confidence) {
+        double configured = properties.minimumTranscriptionConfidence();
+        double minimum = configured > 0.0 ? configured : DEFAULT_CONFIDENCE_FLOOR;
+        if (confidence == null) {
+            log.warn("Realtime transcript persisted without ASR confidence; clinician review remains required");
+            return 0.0d;
+        }
+        if (!Double.isFinite(confidence) || confidence < 0.0 || confidence > 1.0) {
             throw new ResponseStatusException(
                     HttpStatus.UNPROCESSABLE_ENTITY,
                     "AI_REALTIME_TRANSCRIPTION_UNVERIFIED");
         }
-        double configured = properties.minimumTranscriptionConfidence();
-        double minimum = configured > 0.0 ? configured : DEFAULT_CONFIDENCE_FLOOR;
         if (confidence < minimum) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "AI_TRANSCRIPTION_LOW_CONFIDENCE");
+            log.warn(
+                    "Low-confidence realtime transcript persisted confidence={} minimum={}",
+                    String.format("%.3f", confidence),
+                    String.format("%.3f", minimum));
         }
         return confidence;
     }
 
-    private void requireIdentity(UUID visitId, UUID userId, UUID organizationId) {
-        if (visitId == null || userId == null || organizationId == null) {
+    private void requireIdentity(
+            UUID visitId,
+            UUID userId,
+            UUID organizationId,
+            RealtimeIntakeSource source) {
+        if (visitId == null || userId == null || organizationId == null || source == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_REALTIME_INTAKE_IDENTITY_INVALID");
         }
     }
@@ -240,6 +276,7 @@ public class RealtimeClinicalIntakeService {
         return new IntakeView(
                 entity.getId(),
                 entity.getVisitId(),
+                entity.getSource(),
                 entity.getSequenceNo(),
                 entity.getEventId(),
                 entity.getItemId(),
@@ -251,6 +288,7 @@ public class RealtimeClinicalIntakeService {
     public record IntakeView(
             UUID id,
             UUID visitId,
+            RealtimeIntakeSource source,
             long sequence,
             String eventId,
             String itemId,

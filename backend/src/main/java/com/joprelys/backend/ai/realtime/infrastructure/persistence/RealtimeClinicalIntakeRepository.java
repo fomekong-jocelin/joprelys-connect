@@ -1,5 +1,6 @@
 package com.joprelys.backend.ai.realtime.infrastructure.persistence;
 
+import com.joprelys.backend.ai.realtime.application.RealtimeIntakeSource;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -9,11 +10,19 @@ import org.springframework.data.repository.query.Param;
 
 public interface RealtimeClinicalIntakeRepository extends JpaRepository<RealtimeClinicalIntakeEntity, UUID> {
 
-    Optional<RealtimeClinicalIntakeEntity> findByVisitIdAndEventId(UUID visitId, String eventId);
+    Optional<RealtimeClinicalIntakeEntity> findByVisitIdAndSourceAndEventId(
+            UUID visitId,
+            RealtimeIntakeSource source,
+            String eventId);
 
-    Optional<RealtimeClinicalIntakeEntity> findByVisitIdAndItemId(UUID visitId, String itemId);
+    Optional<RealtimeClinicalIntakeEntity> findByVisitIdAndSourceAndItemId(
+            UUID visitId,
+            RealtimeIntakeSource source,
+            String itemId);
 
-    List<RealtimeClinicalIntakeEntity> findByVisitIdOrderBySequenceNoAsc(UUID visitId);
+    List<RealtimeClinicalIntakeEntity> findByVisitIdAndSourceOrderBySequenceNoAsc(
+            UUID visitId,
+            RealtimeIntakeSource source);
 
     @Query("select coalesce(max(item.sequenceNo), 0) from RealtimeClinicalIntakeEntity item where item.visitId = :visitId")
     long findMaximumSequence(@Param("visitId") UUID visitId);

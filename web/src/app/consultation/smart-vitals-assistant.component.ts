@@ -36,6 +36,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   readonly needsConfirmation = signal(false);
   readonly confirmationReason = signal('');
   readonly lastProposal = signal<AiVitalsProposal | null>(null);
+  readonly proposalApplied = signal(false);
   readonly errorMessage = signal('');
 
   textInput = '';
@@ -102,7 +103,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
     this.api
       .analyzeText(this.visitId, text, this.i18n.currentLanguage(), this.currentVitals)
       .subscribe({
-        next: (proposal) => {
+        next: proposal => {
           this.textInput = '';
           this.handleProposal(proposal);
         },
@@ -116,6 +117,14 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
     return Object.entries(proposal.vitals).filter(
       (entry): entry is [AiVitalField, number] => typeof entry[1] === 'number',
     );
+  }
+
+  applyCurrentProposal(): void {
+    const proposal = this.lastProposal();
+    if (!proposal || this.disabled || this.proposalApplied()) return;
+    if (Object.keys(proposal.vitals).length === 0) return;
+    this.proposed.emit(proposal);
+    this.proposalApplied.set(true);
   }
 
   waveHeight(index: number): number {
@@ -148,14 +157,12 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   handleProposal(proposal: AiVitalsProposal, speakResponse = true): void {
     this.busy.set(false);
     this.lastProposal.set(proposal);
+    this.proposalApplied.set(false);
     this.lastTranscript.set(proposal.transcript || '');
     this.assistantMessage.set(proposal.assistantMessage || '');
     this.needsConfirmation.set(proposal.needsConfirmation);
     this.confirmationReason.set(proposal.confirmationReason || '');
     this.errorMessage.set('');
-    if (Object.keys(proposal.vitals).length > 0) {
-      this.proposed.emit(proposal);
-    }
     if (speakResponse && proposal.assistantMessage) {
       this.speak(proposal.assistantMessage);
     }
@@ -170,13 +177,12 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
 
   private async startRecording(): Promise<void> {
     if (
-      this.realtimeEnabled() ||
-      !this.mediaRecorderSupported ||
-      this.busy() ||
-      this.disabled ||
-      !this.visitId
-    )
-      return;
+      this.realtimeEnabled()
+      || !this.mediaRecorderSupported
+      || this.busy()
+      || this.disabled
+      || !this.visitId
+    ) return;
     this.stopAssistantAudio();
     this.errorMessage.set('');
     try {
@@ -195,7 +201,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
       this.stream = stream;
       this.recorder = recorder;
       this.chunks = [];
-      recorder.ondataavailable = (event) => {
+      recorder.ondataavailable = event => {
         if (event.data.size > 0) this.chunks.push(event.data);
       };
       recorder.onstop = () => this.finishRecording(recorder.mimeType || mimeType || 'audio/webm');
@@ -226,7 +232,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
     this.api
       .analyzeAudio(this.visitId, blob, this.i18n.currentLanguage(), this.currentVitals)
       .subscribe({
-        next: (proposal) => this.handleProposal(proposal),
+        next: proposal => this.handleProposal(proposal),
         error: () => this.handleError(),
       });
   }
@@ -235,7 +241,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
     this.stopAssistantAudio();
     this.speaking.set(true);
     this.voiceApi.synthesizeSpeech(text).subscribe({
-      next: (blob) => {
+      next: blob => {
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
         this.assistantAudio = audio;
@@ -263,7 +269,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
 
   private preferredMimeType(): string {
     const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
-    return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? '';
+    return candidates.find(type => MediaRecorder.isTypeSupported(type)) ?? '';
   }
 
   private startMeter(stream: MediaStream): void {
@@ -300,7 +306,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
 
   private stopStream(): void {
     this.stopMeter();
-    this.stream?.getTracks().forEach((track) => track.stop());
+    this.stream?.getTracks().forEach(track => track.stop());
     this.stream = null;
     this.recorder = null;
   }

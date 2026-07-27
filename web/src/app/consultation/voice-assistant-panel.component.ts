@@ -16,6 +16,7 @@ import {
   AiClarificationAnswer,
   AiClarificationPanelComponent,
 } from './ai-clarification-panel.component';
+import { AiDraftMergeService } from './ai-draft-merge.service';
 import { AiDraftPreviewComponent } from './ai-draft-preview.component';
 import {
   AiProposalDecisionRequest,
@@ -60,6 +61,7 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
 export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   private readonly api = inject(AiConsultationApiService);
   private readonly voiceRecorder = inject(ClassicVoiceRecorderService);
+  private readonly draftMerge = inject(AiDraftMergeService);
   readonly i18n = inject(I18nService);
 
   @Input({ required: true }) visitId = '';
@@ -78,15 +80,13 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
 
   readonly mediaRecorderSupported = this.voiceRecorder.supported;
   private pollingSubscription: Subscription | null = null;
+  private sessionBaseDraft: AiConsultationDraft = {};
+  private sessionBaseReady = false;
 
   ngOnInit(): void {
     if (!this.visitId) return;
     this.refreshSession();
     this.pollingSubscription = interval(4000).subscribe(() => {
-      // Realtime already owns its connection/session lifecycle. Polling while it is
-      // connecting or connected used to replace the session input every 4 seconds
-      // and could make the child controller tear down an in-flight WebRTC setup.
-      // Keep polling only for the controlled dictation workflow.
       if (!this.conversationMode() && !this.recording() && !this.busy()) {
         this.refreshSession(true);
       }
@@ -141,13 +141,16 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
 
   startSession(): void {
     if (!this.visitId || this.busy()) return;
+    const baseDraft = this.sanitizedCurrentDraft();
+    this.sessionBaseDraft = this.cloneDraft(baseDraft);
+    this.sessionBaseReady = true;
     this.startBusy();
-    this.api.startSession(this.visitId, this.sanitizedCurrentDraft()).subscribe({
+    this.api.startSession(this.visitId, baseDraft).subscribe({
       next: response => this.completeSessionUpdate(response),
-      error: error => this.handleError(
-        error,
-        this.i18n.t('consultation.ai.errorStartSession'),
-      ),
+      error: error => {
+        this.sessionBaseReady = false;
+        this.handleError(error, this.i18n.t('consultation.ai.errorStartSession'));
+      },
     });
   }
 
@@ -187,26 +190,16 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     this.startBusy();
     this.api.sendText(this.visitId, text.trim()).subscribe({
       next: response => this.finishMessageResponse(response),
-      error: error => this.handleError(
-        error,
-        this.i18n.t('consultation.ai.errorAnalyzeMessage'),
-      ),
+      error: error => this.handleError(error, this.i18n.t('consultation.ai.errorAnalyzeMessage')),
     });
   }
 
   answerClarification(request: AiClarificationAnswer): void {
     if (this.busy()) return;
     this.startBusy();
-    this.api.answerClarification(
-      this.visitId,
-      request.clarificationId,
-      request.answer,
-    ).subscribe({
+    this.api.answerClarification(this.visitId, request.clarificationId, request.answer).subscribe({
       next: response => this.finishMessageResponse(response),
-      error: error => this.handleError(
-        error,
-        this.i18n.t('consultation.ai.errorAnalyzeClarification'),
-      ),
+      error: error => this.handleError(error, this.i18n.t('consultation.ai.errorAnalyzeClarification')),
     });
   }
 
@@ -220,17 +213,10 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
           request.proposalId,
           request.decision,
         )
-      : this.api.decideRevision(
-          this.visitId,
-          request.revisionId,
-          request.decision,
-        );
+      : this.api.decideRevision(this.visitId, request.revisionId, request.decision);
     operation.subscribe({
       next: response => this.completeSessionUpdate(response),
-      error: error => this.handleError(
-        error,
-        this.i18n.t('consultation.ai.errorSaveDecision'),
-      ),
+      error: error => this.handleError(error, this.i18n.t('consultation.ai.errorSaveDecision')),
     });
   }
 
@@ -239,10 +225,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     this.startBusy();
     this.api.analyzeTranscript(this.visitId, transcript.trim()).subscribe({
       next: response => this.finishMessageResponse(response),
-      error: error => this.handleError(
-        error,
-        this.i18n.t('consultation.ai.errorAnalyzeTranscript'),
-      ),
+      error: error => this.handleError(error, this.i18n.t('consultation.ai.errorAnalyzeTranscript')),
     });
   }
 
@@ -258,10 +241,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
         } : current);
         this.busy.set(false);
       },
-      error: error => this.handleError(
-        error,
-        this.i18n.t('consultation.ai.errorDiscardTranscript'),
-      ),
+      error: error => this.handleError(error, this.i18n.t('consultation.ai.errorDiscardTranscript')),
     });
   }
 
@@ -271,21 +251,61 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     this.api.deleteSession(this.visitId).subscribe({
       next: () => {
         this.session.set(null);
+        this.sessionBaseDraft = {};
+        this.sessionBaseReady = false;
         this.realtimeActive.set(false);
         this.recording.set(false);
         this.composerResetToken.update(value => value + 1);
         this.busy.set(false);
       },
-      error: error => this.handleError(
-        error,
-        this.i18n.t('consultation.ai.errorEndSession'),
-      ),
+      error: error => this.handleError(error, this.i18n.t('consultation.ai.errorEndSession')),
     });
   }
 
   applyCurrentDraft(): void {
     const draft = this.session()?.draft;
-    if (draft && !this.hasPendingRevision()) this.applyDraft.emit({ ...draft });
+    if (!draft || this.hasPendingRevision()) return;
+    if (!this.sessionBaseReady) {
+      this.sessionBaseDraft = this.sanitizedCurrentDraft();
+      this.sessionBaseReady = true;
+    }
+
+    const current = this.currentDraft ?? {};
+    const plan = this.draftMerge.plan(
+      { baseDraft: this.cloneDraft(this.sessionBaseDraft), draft: this.cloneDraft(draft) },
+      current,
+    );
+    const safeDraft: AiConsultationDraft = { ...plan.textPatch };
+
+    if (draft.prescription?.trim()) {
+      const currentPrescription = Array.isArray(current['prescription']) ? current['prescription'] : [];
+      safeDraft.prescription = JSON.stringify([...currentPrescription, ...plan.prescriptionAdds]);
+    }
+    if (draft.labOrders?.trim()) {
+      const currentExams = Array.isArray(current['exams'])
+        ? current['exams'].filter((item): item is string => typeof item === 'string' && !!item.trim())
+        : [];
+      safeDraft.labOrders = JSON.stringify([...currentExams, ...plan.labAdds]);
+    }
+
+    const warnings: string[] = [];
+    if (plan.conflicts.length > 0) {
+      warnings.push(this.i18n.t(
+        'consultation.ai.safeMergeConflict',
+        'Des saisies plus récentes du médecin ont été conservées. Vérifiez les champs signalés avant l’enregistrement.',
+      ));
+    }
+    if (plan.vitalsProposal) {
+      warnings.push(this.i18n.t(
+        'consultation.ai.vitalsRequireDedicatedValidation',
+        'Les constantes détectées ne sont pas enregistrées depuis le brouillon de consultation. Validez-les dans le bloc Constantes.',
+      ));
+    }
+    this.errorMessage.set(warnings.join(' '));
+
+    if (Object.keys(safeDraft).length > 0) {
+      this.applyDraft.emit(safeDraft);
+    }
   }
 
   finishRealtimeTranscription(response: AiTranscriptionResponse): void {
@@ -332,10 +352,6 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
       this.errorMessage.set(this.i18n.t('consultation.ai.errorEmptyRecording'));
       return;
     }
-
-    // Browser-side VAD is only a UX hint. It must never veto a non-empty recording:
-    // the speech model is better placed to decide what was said, and even a low-
-    // confidence transcript is now shown to the clinician for correction/review.
     this.startBusy();
     this.api.transcribeAudio(this.visitId, capture.audio).subscribe({
       next: response => {
@@ -347,10 +363,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
         } : current);
         this.busy.set(false);
       },
-      error: error => this.handleError(
-        error,
-        this.i18n.t('consultation.ai.errorTranscribeDictation'),
-      ),
+      error: error => this.handleError(error, this.i18n.t('consultation.ai.errorTranscribeDictation')),
     });
   }
 
@@ -363,7 +376,12 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   private refreshSession(silent = false): void {
     this.api.getSession(this.visitId).subscribe({
       next: response => {
-        if (response) this.session.set(response);
+        if (!response) return;
+        if (!this.sessionBaseReady) {
+          this.sessionBaseDraft = this.sanitizedCurrentDraft();
+          this.sessionBaseReady = true;
+        }
+        this.session.set(response);
       },
       error: error => {
         if (!silent && error.status !== 404) {
@@ -432,6 +450,10 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
       result.vitals = JSON.stringify(vitals);
     }
     return result;
+  }
+
+  private cloneDraft(draft: AiConsultationDraft): AiConsultationDraft {
+    return { ...draft };
   }
 
   private startBusy(): void {

@@ -1,0 +1,10 @@
+{
+  "consultation.ai.realtimeQueued": "queued",
+  "consultation.ai.processingBackground": "Processing in the background",
+  "consultation.ai.captureContinuesWhileReviewing": "Capture continues. Proposals are waiting for your review.",
+  "consultation.ai.processingBackgroundHelp": "Processing in the background — continue the consultation.",
+  "consultation.ai.realtimeDurableIntakeBlocked": "Secure persistence is interrupted. Joprelys pauses Realtime without deleting the queued sentences.",
+  "consultation.ai.realtimeReviewStagingFailed": "The sentence is safely stored, but its review could not be opened. Continue the consultation; it remains in the secure journal.",
+  "consultation.ai.safeMergeConflict": "Newer physician entries were preserved. Review the flagged fields before saving.",
+  "consultation.ai.vitalsRequireDedicatedValidation": "Detected vital signs are not saved from the consultation draft. Validate them in the Vitals section."
+}

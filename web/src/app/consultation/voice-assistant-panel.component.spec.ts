@@ -51,7 +51,6 @@ describe('VoiceAssistantPanelComponent focused consultation flow', () => {
 
   it('should never synthesize the generic greeting from the parent panel', () => {
     (component as any).refreshSession();
-
     expect(api.synthesizeSpeech).not.toHaveBeenCalled();
   });
 
@@ -96,6 +95,56 @@ describe('VoiceAssistantPanelComponent focused consultation flow', () => {
     expect(api.transcribeAudio).toHaveBeenCalledTimes(1);
     expect(component.session()?.pendingTranscript).toBe('Patient sans fièvre');
     expect(component.session()?.transcriptStatus).toBe('PENDING_REVIEW');
+  });
+
+  it('should preserve newer physician text and existing prescription when applying an older AI draft', () => {
+    component.session.set(null);
+    component.currentDraft = {
+      symptoms: 'Douleur abdominale',
+      prescription: [{ drugName: 'Paracétamol', dosage: '1 g' }],
+      exams: ['NFS'],
+      vitals: { temperature: 37.2 },
+    };
+    component.startSession();
+
+    component.currentDraft = {
+      symptoms: 'Douleur abdominale irradiant en fosse iliaque droite',
+      prescription: [
+        { drugName: 'Paracétamol', dosage: '1 g' },
+        { drugName: 'Amoxicilline', dosage: '500 mg' },
+      ],
+      exams: ['NFS', 'Créatinine'],
+      vitals: { temperature: 37.2 },
+    };
+    component.session.set({
+      ...activeSession(),
+      draft: {
+        symptoms: 'Douleur abdominale avec nausées',
+        prescription: JSON.stringify([
+          { drugName: 'Paracétamol', dosage: '1 g' },
+          { drugName: 'Spasfon', dosage: '80 mg' },
+        ]),
+        labOrders: JSON.stringify(['NFS', 'CRP']),
+        vitals: JSON.stringify({ temperature: 38.4 }),
+      },
+    });
+    const emitted = vi.fn();
+    component.applyDraft.subscribe(emitted);
+
+    component.applyCurrentDraft();
+
+    expect(emitted).toHaveBeenCalledTimes(1);
+    const safeDraft = emitted.mock.calls[0][0];
+    expect(safeDraft.symptoms).toBeUndefined();
+    expect(JSON.parse(safeDraft.prescription)).toEqual([
+      { drugName: 'Paracétamol', dosage: '1 g' },
+      { drugName: 'Amoxicilline', dosage: '500 mg' },
+      expect.objectContaining({ drugName: 'Spasfon', dosage: '80 mg' }),
+    ]);
+    expect(JSON.parse(safeDraft.labOrders)).toEqual(['NFS', 'Créatinine', 'CRP']);
+    expect(safeDraft.vitals).toBeUndefined();
+    expect(component.errorMessage()).toContain('saisies plus récentes');
+    expect(component.errorMessage()).toContain('constantes');
   });
 
   function activeSession(): AiSessionResponse {
