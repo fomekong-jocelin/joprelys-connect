@@ -55,8 +55,8 @@ class ClinicalNoteProjectionServiceTest {
                 null,
                 null,
                 transcriptItemId,
-                7,
-                29,
+                9,
+                32,
                 "douleur du genou gauche");
 
         when(transcriptLedgerService.listFinal(visitId, organizationId))
@@ -114,7 +114,7 @@ class ClinicalNoteProjectionServiceTest {
                 null,
                 transcriptItemId,
                 0,
-                36,
+                34,
                 "Tension artérielle 120 sur 80 mmHg");
 
         when(transcriptLedgerService.listFinal(visitId, organizationId))
