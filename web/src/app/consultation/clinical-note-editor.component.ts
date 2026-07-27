@@ -175,8 +175,8 @@ import {
               ></textarea>
             </div>
 
-            <div class="rounded-[var(--radius-brand-md)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] p-3">
-              <label class="ui-label text-[var(--text-primary)]">
+            <div>
+              <label class="ui-label">
                 {{ i18n.t('consultation.clinicalNote.retainedDiagnosis') }}
                 <span class="text-[var(--brand-danger-text)]">*</span>
               </label>
@@ -184,7 +184,7 @@ import {
                 formControlName="diagnosis"
                 rows="4"
                 [placeholder]="i18n.t('consultation.clinicalNote.retainedDiagnosisPlaceholder')"
-                class="ui-textarea mt-1.5 resize-y font-semibold"
+                class="ui-textarea mt-1.5 resize-y"
                 [attr.aria-invalid]="form.get('diagnosis')?.invalid && form.get('diagnosis')?.touched"
               ></textarea>
               @if (form.get('diagnosis')?.invalid && form.get('diagnosis')?.touched) {
