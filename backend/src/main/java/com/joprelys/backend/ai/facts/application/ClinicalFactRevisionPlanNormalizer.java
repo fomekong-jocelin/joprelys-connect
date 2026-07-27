@@ -156,7 +156,7 @@ class ClinicalFactRevisionPlanNormalizer {
         dryRunFact(visitId, organizationId, revisionId, operationId, payload, null);
 
         List<FactView> duplicates = effectiveById.values().stream()
-                .filter(current -> ClinicalFactRevisionSemanticGuard.sameFact(current, payload))
+                .filter(current -> ClinicalFactRevisionSemanticGuard.sameClinicalMeaning(current, payload))
                 .toList();
         if (duplicates.size() > 1) {
             throw conflict("AI_CLINICAL_FACT_REVISION_PLAN_DUPLICATE_EFFECTIVE_AMBIGUOUS");
@@ -169,7 +169,8 @@ class ClinicalFactRevisionPlanNormalizer {
                     null,
                     null);
         }
-        if (plannedAdds.stream().anyMatch(existing -> ClinicalFactRevisionSemanticGuard.samePayload(existing, payload))) {
+        if (plannedAdds.stream().anyMatch(
+                existing -> ClinicalFactRevisionSemanticGuard.sameClinicalMeaning(existing, payload))) {
             throw upstreamInvalid("AI_CLINICAL_FACT_REVISION_PLAN_DUPLICATE_ADD");
         }
         plannedAdds.add(payload);
@@ -190,7 +191,7 @@ class ClinicalFactRevisionPlanNormalizer {
         validateReplacementLineage(target, payload);
         validatePatientPrimaryPolicy(payload, allowedTranscriptItems);
         dryRunFact(visitId, organizationId, revisionId, operationId, payload, targetFactId);
-        if (ClinicalFactRevisionSemanticGuard.sameFact(target, payload)) {
+        if (ClinicalFactRevisionSemanticGuard.sameClinicalMeaning(target, payload)) {
             return new RevisionOperationRequest(operationId, OperationType.KEEP, targetFactId, null, null);
         }
         return new RevisionOperationRequest(
