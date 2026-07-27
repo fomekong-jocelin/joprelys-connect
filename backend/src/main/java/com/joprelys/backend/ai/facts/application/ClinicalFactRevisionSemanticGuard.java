@@ -13,26 +13,29 @@ final class ClinicalFactRevisionSemanticGuard {
     private ClinicalFactRevisionSemanticGuard() {
     }
 
+    static boolean sameClinicalMeaning(FactView current, FactPayload proposed) {
+        return current != null
+                && proposed != null
+                && proposed.factType() != null
+                && proposed.authority() != null
+                && proposed.polarity() != null
+                && proposed.laterality() != null
+                && current.factType().equals(proposed.factType().name())
+                && current.authority().equals(proposed.authority().name())
+                && Objects.equals(current.conceptCode(), upper(proposed.conceptCode()))
+                && Objects.equals(current.conceptText(), trim(proposed.conceptText()))
+                && current.polarity().equals(proposed.polarity().name())
+                && Objects.equals(current.valuePrimary(), trim(proposed.valuePrimary()))
+                && Objects.equals(current.valueSecondary(), trim(proposed.valueSecondary()))
+                && Objects.equals(current.unitCode(), upper(proposed.unitCode()))
+                && Objects.equals(current.temporalityText(), trim(proposed.temporalityText()))
+                && current.laterality().equals(proposed.laterality().name())
+                && Objects.equals(current.frequencyText(), trim(proposed.frequencyText()))
+                && Objects.equals(current.routeText(), trim(proposed.routeText()));
+    }
+
     static boolean sameFact(FactView current, FactPayload proposed) {
-        if (current == null || proposed == null
-                || proposed.factType() == null
-                || proposed.authority() == null
-                || proposed.polarity() == null
-                || proposed.laterality() == null) {
-            return false;
-        }
-        if (!current.factType().equals(proposed.factType().name())
-                || !current.authority().equals(proposed.authority().name())
-                || !Objects.equals(current.conceptCode(), upper(proposed.conceptCode()))
-                || !Objects.equals(current.conceptText(), trim(proposed.conceptText()))
-                || !current.polarity().equals(proposed.polarity().name())
-                || !Objects.equals(current.valuePrimary(), trim(proposed.valuePrimary()))
-                || !Objects.equals(current.valueSecondary(), trim(proposed.valueSecondary()))
-                || !Objects.equals(current.unitCode(), upper(proposed.unitCode()))
-                || !Objects.equals(current.temporalityText(), trim(proposed.temporalityText()))
-                || !current.laterality().equals(proposed.laterality().name())
-                || !Objects.equals(current.frequencyText(), trim(proposed.frequencyText()))
-                || !Objects.equals(current.routeText(), trim(proposed.routeText()))) {
+        if (!sameClinicalMeaning(current, proposed)) {
             return false;
         }
         if (current.evidence() == null || proposed.evidence() == null
@@ -46,20 +49,25 @@ final class ClinicalFactRevisionSemanticGuard {
         return currentEvidence.equals(candidateEvidenceKeys(proposed.evidence()));
     }
 
+    static boolean sameClinicalMeaning(FactPayload left, FactPayload right) {
+        return left != null
+                && right != null
+                && left.factType() == right.factType()
+                && left.authority() == right.authority()
+                && left.polarity() == right.polarity()
+                && left.laterality() == right.laterality()
+                && Objects.equals(upper(left.conceptCode()), upper(right.conceptCode()))
+                && Objects.equals(trim(left.conceptText()), trim(right.conceptText()))
+                && Objects.equals(trim(left.valuePrimary()), trim(right.valuePrimary()))
+                && Objects.equals(trim(left.valueSecondary()), trim(right.valueSecondary()))
+                && Objects.equals(upper(left.unitCode()), upper(right.unitCode()))
+                && Objects.equals(trim(left.temporalityText()), trim(right.temporalityText()))
+                && Objects.equals(trim(left.frequencyText()), trim(right.frequencyText()))
+                && Objects.equals(trim(left.routeText()), trim(right.routeText()));
+    }
+
     static boolean samePayload(FactPayload left, FactPayload right) {
-        if (left == null || right == null
-                || left.factType() != right.factType()
-                || left.authority() != right.authority()
-                || left.polarity() != right.polarity()
-                || left.laterality() != right.laterality()
-                || !Objects.equals(upper(left.conceptCode()), upper(right.conceptCode()))
-                || !Objects.equals(trim(left.conceptText()), trim(right.conceptText()))
-                || !Objects.equals(trim(left.valuePrimary()), trim(right.valuePrimary()))
-                || !Objects.equals(trim(left.valueSecondary()), trim(right.valueSecondary()))
-                || !Objects.equals(upper(left.unitCode()), upper(right.unitCode()))
-                || !Objects.equals(trim(left.temporalityText()), trim(right.temporalityText()))
-                || !Objects.equals(trim(left.frequencyText()), trim(right.frequencyText()))
-                || !Objects.equals(trim(left.routeText()), trim(right.routeText()))) {
+        if (!sameClinicalMeaning(left, right)) {
             return false;
         }
         if (left.evidence() == null || right.evidence() == null
