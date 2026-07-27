@@ -6,6 +6,7 @@ import com.joprelys.backend.ai.facts.application.ClinicalFactContract.FactView;
 import com.joprelys.backend.ai.facts.application.ClinicalNoteProjectionContract.LinkedEvidenceView;
 import com.joprelys.backend.ai.facts.application.ClinicalNoteProjectionContract.NoteEntryView;
 import com.joprelys.backend.ai.facts.application.ClinicalNoteProjectionContract.NoteProjectionView;
+import com.joprelys.backend.ai.facts.application.ClinicalNoteProjectionContract.NoteSectionCode;
 import com.joprelys.backend.ai.facts.application.ClinicalNoteProjectionContract.NoteSectionView;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -37,15 +38,15 @@ public class ClinicalNoteProjectionService {
 
     static final String PROJECTION_SCHEMA_VERSION = "clinical-note-projection-v1";
 
-    private static final List<String> SECTION_ORDER = List.of(
-            "HISTORY_OF_PRESENT_ILLNESS",
-            "MEDICAL_HISTORY",
-            "ALLERGIES",
-            "VITALS",
-            "ASSESSMENT",
-            "MEDICATIONS",
-            "ORDERS",
-            "PLAN");
+    private static final List<NoteSectionCode> SECTION_ORDER = List.of(
+            NoteSectionCode.HISTORY_OF_PRESENT_ILLNESS,
+            NoteSectionCode.MEDICAL_HISTORY,
+            NoteSectionCode.ALLERGIES,
+            NoteSectionCode.VITALS,
+            NoteSectionCode.ASSESSMENT,
+            NoteSectionCode.MEDICATIONS,
+            NoteSectionCode.ORDERS,
+            NoteSectionCode.PLAN);
 
     private final ClinicalFactLedgerService factLedgerService;
     private final AmbientTranscriptLedgerService transcriptLedgerService;
@@ -74,7 +75,7 @@ public class ClinicalNoteProjectionService {
                 organizationId,
                 transcriptIds);
 
-        Map<String, List<NoteEntryView>> sections = new LinkedHashMap<>();
+        Map<NoteSectionCode, List<NoteEntryView>> sections = new LinkedHashMap<>();
         SECTION_ORDER.forEach(section -> sections.put(section, new ArrayList<>()));
 
         long maxFactSequence = 0;
@@ -154,16 +155,16 @@ public class ClinicalNoteProjectionService {
                 evidence);
     }
 
-    private String sectionFor(String factType) {
+    private NoteSectionCode sectionFor(String factType) {
         return switch (factType) {
-            case "SYMPTOM" -> "HISTORY_OF_PRESENT_ILLNESS";
-            case "HISTORY" -> "MEDICAL_HISTORY";
-            case "ALLERGY" -> "ALLERGIES";
-            case "VITAL" -> "VITALS";
-            case "ASSESSMENT" -> "ASSESSMENT";
-            case "MEDICATION" -> "MEDICATIONS";
-            case "ORDER" -> "ORDERS";
-            case "PLAN" -> "PLAN";
+            case "SYMPTOM" -> NoteSectionCode.HISTORY_OF_PRESENT_ILLNESS;
+            case "HISTORY" -> NoteSectionCode.MEDICAL_HISTORY;
+            case "ALLERGY" -> NoteSectionCode.ALLERGIES;
+            case "VITAL" -> NoteSectionCode.VITALS;
+            case "ASSESSMENT" -> NoteSectionCode.ASSESSMENT;
+            case "MEDICATION" -> NoteSectionCode.MEDICATIONS;
+            case "ORDER" -> NoteSectionCode.ORDERS;
+            case "PLAN" -> NoteSectionCode.PLAN;
             default -> throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     "AI_CLINICAL_NOTE_FACT_TYPE_UNSUPPORTED");
@@ -175,7 +176,7 @@ public class ClinicalNoteProjectionService {
                 .append('|')
                 .append(visitId);
         for (NoteSectionView section : sections) {
-            canonical.append("\nS|").append(section.code());
+            canonical.append("\nS|").append(section.code().name());
             for (NoteEntryView entry : section.entries()) {
                 canonical.append("\nF|")
                         .append(entry.factId()).append('|')
