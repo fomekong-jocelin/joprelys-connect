@@ -68,8 +68,7 @@ class RealtimeClinicalIntakeServiceTest {
                 "Tension 120 sur 80",
                 0.93,
                 userId);
-        when(repository.findByVisitIdAndEventId(visitId, "event-2"))
-                .thenReturn(Optional.of(existing));
+        when(repository.findByVisitIdAndEventId(visitId, "event-2")).thenReturn(Optional.of(existing));
 
         var result = service.ingest(
                 visitId,
@@ -99,10 +98,8 @@ class RealtimeClinicalIntakeServiceTest {
                 "Douleur depuis trois jours",
                 0.9,
                 userId);
-        when(repository.findByVisitIdAndEventId(visitId, "event-replayed"))
-                .thenReturn(Optional.empty());
-        when(repository.findByVisitIdAndItemId(visitId, "item-stable"))
-                .thenReturn(Optional.of(existing));
+        when(repository.findByVisitIdAndEventId(visitId, "event-replayed")).thenReturn(Optional.empty());
+        when(repository.findByVisitIdAndItemId(visitId, "item-stable")).thenReturn(Optional.of(existing));
 
         var result = service.ingest(
                 visitId,
@@ -134,10 +131,8 @@ class RealtimeClinicalIntakeServiceTest {
                 "Douleur depuis trois jours",
                 0.9,
                 userId);
-        when(repository.findByVisitIdAndEventId(visitId, "event-replayed"))
-                .thenReturn(Optional.empty());
-        when(repository.findByVisitIdAndItemId(visitId, "item-stable"))
-                .thenReturn(Optional.of(existing));
+        when(repository.findByVisitIdAndEventId(visitId, "event-replayed")).thenReturn(Optional.empty());
+        when(repository.findByVisitIdAndItemId(visitId, "item-stable")).thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> service.ingest(
                 visitId,
@@ -165,8 +160,7 @@ class RealtimeClinicalIntakeServiceTest {
                 "Pouls 72",
                 0.92,
                 userId);
-        when(repository.findByVisitIdAndEventId(visitId, "event-3"))
-                .thenReturn(Optional.of(existing));
+        when(repository.findByVisitIdAndEventId(visitId, "event-3")).thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> service.ingest(
                 visitId,
@@ -181,24 +175,55 @@ class RealtimeClinicalIntakeServiceTest {
     }
 
     @Test
-    void shouldRejectLowConfidenceBeforePersistence() {
+    void shouldPersistLowConfidenceInsteadOfDestroyingNonEmptyTranscript() {
         UUID visitId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         UUID organizationId = UUID.randomUUID();
+        prepareVisit(visitId, organizationId);
+        when(repository.findByVisitIdAndEventId(visitId, "event-low")).thenReturn(Optional.empty());
+        when(repository.findByVisitIdAndItemId(visitId, "item-low")).thenReturn(Optional.empty());
+        when(repository.findMaximumSequence(visitId)).thenReturn(0L);
+        when(repository.saveAndFlush(any(RealtimeClinicalIntakeEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThatThrownBy(() -> service.ingest(
+        var result = service.ingest(
                 visitId,
                 userId,
                 organizationId,
                 "event-low",
                 "item-low",
                 "texte incertain",
-                0.2))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("AI_TRANSCRIPTION_LOW_CONFIDENCE");
+                0.2);
 
-        verify(visitRepository, never()).findByIdForUpdate(any());
-        verify(repository, never()).saveAndFlush(any());
+        assertThat(result.transcript()).isEqualTo("texte incertain");
+        assertThat(result.confidence()).isEqualTo(0.2);
+        verify(repository).saveAndFlush(any());
+    }
+
+    @Test
+    void shouldPersistMissingConfidenceAsZeroForReviewableTranscript() {
+        UUID visitId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+        prepareVisit(visitId, organizationId);
+        when(repository.findByVisitIdAndEventId(visitId, "event-null")).thenReturn(Optional.empty());
+        when(repository.findByVisitIdAndItemId(visitId, "item-null")).thenReturn(Optional.empty());
+        when(repository.findMaximumSequence(visitId)).thenReturn(0L);
+        when(repository.saveAndFlush(any(RealtimeClinicalIntakeEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        var result = service.ingest(
+                visitId,
+                userId,
+                organizationId,
+                "event-null",
+                "item-null",
+                "négation de fièvre",
+                null);
+
+        assertThat(result.transcript()).isEqualTo("négation de fièvre");
+        assertThat(result.confidence()).isZero();
+        verify(repository).saveAndFlush(any());
     }
 
     @Test
