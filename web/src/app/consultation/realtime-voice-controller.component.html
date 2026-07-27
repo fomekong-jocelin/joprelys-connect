@@ -8,35 +8,44 @@
           <p class="truncate text-[10px] text-[var(--text-muted)] sm:text-[11px]">{{ statusHelp() }}</p>
         </div>
       </div>
-      @if (queuedCount() > 0) {
-        <span class="shrink-0 rounded-[var(--radius-brand-xs)] border border-[var(--app-border)] bg-[var(--app-surface)] px-2 py-1 text-[10px] font-bold text-[var(--text-secondary)]">
-          {{ queuedCount() }} {{ i18n.t('consultation.ai.realtimeQueued') }}
-        </span>
-      }
     </header>
 
     <div class="space-y-3 p-3 sm:p-4">
-      <div class="min-h-16 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3" aria-live="polite">
+      <div class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3" aria-live="polite">
         <div class="flex items-center justify-between gap-3">
           <p class="ui-label">{{ i18n.t('consultation.ai.focusTranscriptTitle') }}</p>
-          @if (processing()) {
-            <span class="text-[10px] font-bold text-[var(--brand-primary)]">
-              {{ i18n.t('consultation.ai.processingBackground') }}
-            </span>
-          }
+          <div class="flex items-center gap-2">
+            @if (queuedCount() > 0) {
+              <span class="inline-flex items-center gap-1 rounded-[var(--radius-brand-xs)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] px-2 py-0.5 text-[10px] font-bold text-[var(--brand-primary)]">
+                <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand-primary)]"></span>
+                {{ queuedCount() }} {{ i18n.t('consultation.ai.realtimeQueued') }}
+              </span>
+            }
+            @if (processing()) {
+              <span class="flex items-center gap-1 text-[10px] font-bold text-[var(--brand-primary)]">
+                <span class="h-3 w-3 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-[var(--brand-primary)]"></span>
+                {{ i18n.t('consultation.ai.processingBackground') }}
+              </span>
+            }
+          </div>
         </div>
-        @if (lastTranscript()) {
-          <p class="mt-1 line-clamp-3 text-sm leading-5 text-[var(--text-primary)]">“{{ lastTranscript() }}”</p>
+        @if (transcriptHistory().length > 0) {
+          <div class="mt-2 max-h-36 space-y-1.5 overflow-y-auto overscroll-contain pr-1">
+            @for (entry of transcriptHistory(); track entry.timestamp) {
+              <div class="flex items-baseline gap-2 text-xs leading-5">
+                <span class="shrink-0 text-[10px] tabular-nums text-[var(--text-muted)]">{{ formatTime(entry.timestamp) }}</span>
+                <p class="min-w-0 text-[var(--text-primary)]">{{ entry.text }}</p>
+              </div>
+            }
+          </div>
           @if (transcriptNeedsReview()) {
-            <p class="mt-1 text-[10px] leading-4 text-[var(--brand-warning-text)]">
+            <p class="mt-1.5 text-[10px] leading-4 text-[var(--brand-warning-text)]">
               {{ i18n.t('consultation.ai.focusTranscriptUnverified') }}
             </p>
           }
         } @else {
           <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-            {{ state().connected
-              ? i18n.t('consultation.ai.focusTranscriptWaiting')
-              : i18n.t('consultation.ai.focusTranscriptNoChannel') }}
+            {{ state().connected ? i18n.t('consultation.ai.focusTranscriptWaiting') : i18n.t('consultation.ai.focusTranscriptNoChannel') }}
           </p>
         }
       </div>

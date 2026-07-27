@@ -29,6 +29,8 @@ import {
   RealtimeVoiceState,
 } from './realtime-voice-bridge.service';
 
+interface TranscriptEntry { text: string; timestamp: number; }
+
 const LOW_CONFIDENCE_REVIEW_FLOOR = 0.35;
 
 @Component({
@@ -78,6 +80,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   readonly processing = this.pipeline.processing;
   readonly lastTranscript = this.pipeline.lastTranscript;
   readonly lastTranscriptConfidence = this.pipeline.lastTranscriptConfidence;
+  readonly transcriptHistory = signal<TranscriptEntry[]>([]);
 
   private readonly subscriptions = new Subscription();
   manualMuted = false;
@@ -125,6 +128,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     }));
     this.subscriptions.add(this.ambientCapture.state$.subscribe(state => this.ambientState.set(state)));
     this.subscriptions.add(this.bridge.transcript$.subscribe(turn => this.pipeline.enqueue(turn)));
+    this.subscriptions.add(this.bridge.transcript$.subscribe(turn => { const text = turn.transcript.trim(); if (text) { this.transcriptHistory.update(h => [...h, { text, timestamp: Date.now() }]); } }));
     this.subscriptions.add(this.bridge.error$.subscribe(error => this.realtimeError.emit(error)));
     this.subscriptions.add(this.bridge.assistantTurnCompleted$.subscribe(() => {
       setTimeout(() => {
@@ -139,6 +143,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       && !changes['visitId'].firstChange
       && changes['visitId'].previousValue !== changes['visitId'].currentValue;
     if (visitChanged) this.pipeline.reset();
+    if (visitChanged) this.transcriptHistory.set([]);
 
     const sessionChange = changes['session'];
     const previousSession = sessionChange?.previousValue as AiSessionResponse | null | undefined;
@@ -230,6 +235,8 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     }
     return 'bg-[var(--brand-danger)]';
   }
+
+  formatTime(ts: number): string { const d = new Date(ts); return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0'); }
 
   showSafetyAlert(): boolean {
     if (this.manualMuted) return false;

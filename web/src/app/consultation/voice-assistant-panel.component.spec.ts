@@ -144,7 +144,7 @@ describe('VoiceAssistantPanelComponent focused consultation flow', () => {
     expect(JSON.parse(safeDraft.labOrders)).toEqual(['NFS', 'Créatinine', 'CRP']);
     expect(safeDraft.vitals).toBeUndefined();
     expect(component.errorMessage()).toContain('saisies plus récentes');
-    expect(component.errorMessage()).toContain('constantes');
+    expect(component.vitalsWarning()).toContain('constantes');
   });
 
   function activeSession(): AiSessionResponse {

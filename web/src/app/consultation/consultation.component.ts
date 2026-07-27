@@ -59,6 +59,7 @@ export class ConsultationComponent implements OnInit {
   readonly successMessage = signal('');
   readonly errorMessage = signal('');
   readonly vitals = signal<Vitals | null>(null);
+  readonly pendingVitalsProposal = signal<Vitals | null>(null);
   readonly consultation = signal<Consultation | null>(null);
   readonly prescription = signal<Prescription | null>(null);
   readonly visitNumber = signal('');
@@ -203,8 +204,53 @@ export class ConsultationComponent implements OnInit {
     }
 
     this.form.markAsDirty();
-    this.successMessage.set(this.i18n.t('consultation.ai.applySuccessReview'));
+    const fieldCount = Object.keys(acceptedDraft).length;
+    this.successMessage.set(
+      this.i18n.t('consultation.ai.applySuccessReview') + (fieldCount > 0 ? ' (' + fieldCount + ' ' + this.i18n.t('consultation.ai.fieldsUpdated', 'champs') + ')' : ''),
+    );
     this.errorMessage.set('');
+  }
+
+  confirmVitalsProposal(): void {
+    const vitals = this.pendingVitalsProposal();
+    if (!vitals) return;
+    this.visitApi.saveVitals(this.visitId, vitals).subscribe({
+      next: saved => {
+        this.vitals.set(saved);
+        this.pendingVitalsProposal.set(null);
+        this.successMessage.set(this.i18n.t('consultation.ai.vitalsApplied', 'Constantes enregistrées.'));
+      },
+      error: err => {
+        this.errorMessage.set(
+          err.error?.detail || err.error?.title || this.i18n.t('consultation.ai.vitalsSaveFailed'),
+        );
+      },
+    });
+  }
+
+  dismissVitalsProposal(): void {
+    this.pendingVitalsProposal.set(null);
+  }
+
+  vitalsProposalEntries(): Array<[string, number]> {
+    const proposal = this.pendingVitalsProposal();
+    if (!proposal) return [];
+    return Object.entries(proposal).filter(
+      (entry): entry is [string, number] => typeof entry[1] === 'number',
+    );
+  }
+
+  vitalsFieldLabel(field: string): string {
+    return this.i18n.t('vitals.assistant.field.' + field, field);
+  }
+
+  vitalsFieldUnit(field: string): string {
+    const units: Record<string, string> = {
+      temperature: '°C', weight: 'kg', height: 'cm', pulse: 'bpm',
+      systolic: 'mmHg', diastolic: 'mmHg', spo2: '%',
+      glycemia: 'g/L', respiratoryRate: 'resp/min', painScale: '/10',
+    };
+    return units[field] ?? '';
   }
 
   private applyAiPrescription(raw: string): void {
@@ -253,17 +299,7 @@ export class ConsultationComponent implements OnInit {
       if (typeof value === 'number' && Number.isFinite(value)) vitals[field] = value;
     });
     if (Object.keys(vitals).length === 0) return;
-
-    this.visitApi.saveVitals(this.visitId, vitals).subscribe({
-      next: saved => this.vitals.set(saved),
-      error: err => {
-        this.errorMessage.set(
-          err.error?.detail
-          || err.error?.title
-          || this.i18n.t('consultation.ai.vitalsSaveFailed'),
-        );
-      },
-    });
+    this.pendingVitalsProposal.set(vitals);
   }
 
   private loadData(): void {

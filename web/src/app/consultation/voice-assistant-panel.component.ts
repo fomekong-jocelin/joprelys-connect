@@ -76,6 +76,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   readonly realtimeActive = signal(false);
   readonly audioLevel = signal(0);
   readonly errorMessage = signal('');
+  readonly vitalsWarning = signal('');
   readonly composerResetToken = signal(0);
 
   readonly mediaRecorderSupported = this.voiceRecorder.supported;
@@ -87,7 +88,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     if (!this.visitId) return;
     this.refreshSession();
     this.pollingSubscription = interval(4000).subscribe(() => {
-      if (!this.conversationMode() && !this.recording() && !this.busy()) {
+      if (this.session() && !this.conversationMode() && !this.recording() && !this.busy()) {
         this.refreshSession(true);
       }
     });
@@ -262,6 +263,10 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     });
   }
 
+  dismissVitalsWarning(): void {
+    this.vitalsWarning.set('');
+  }
+
   applyCurrentDraft(): void {
     const draft = this.session()?.draft;
     if (!draft || this.hasPendingRevision()) return;
@@ -288,20 +293,18 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
       safeDraft.labOrders = JSON.stringify([...currentExams, ...plan.labAdds]);
     }
 
-    const warnings: string[] = [];
     if (plan.conflicts.length > 0) {
-      warnings.push(this.i18n.t(
+      this.errorMessage.set(this.i18n.t(
         'consultation.ai.safeMergeConflict',
-        'Des saisies plus récentes du médecin ont été conservées. Vérifiez les champs signalés avant l’enregistrement.',
+        'Des saisies plus récentes du médecin ont été conservées. Vérifiez les champs signalés avant l\'enregistrement.',
       ));
     }
     if (plan.vitalsProposal) {
-      warnings.push(this.i18n.t(
+      this.vitalsWarning.set(this.i18n.t(
         'consultation.ai.vitalsRequireDedicatedValidation',
         'Les constantes détectées ne sont pas enregistrées depuis le brouillon de consultation. Validez-les dans le bloc Constantes.',
       ));
     }
-    this.errorMessage.set(warnings.join(' '));
 
     if (Object.keys(safeDraft).length > 0) {
       this.applyDraft.emit(safeDraft);

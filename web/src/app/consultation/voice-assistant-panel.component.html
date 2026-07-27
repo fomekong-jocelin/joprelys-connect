@@ -23,6 +23,22 @@
         </div>
       }
 
+      @if (vitalsWarning()) {
+        <div class="flex items-start gap-2 rounded-[var(--radius-brand-sm)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] p-3" role="alert">
+          <svg class="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-semibold leading-5 text-[var(--text-primary)]">{{ vitalsWarning() }}</p>
+          </div>
+          <button type="button" (click)="dismissVitalsWarning()" class="shrink-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]" [attr.aria-label]="i18n.t('common.dismiss', 'Fermer')">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      }
+
       @if (!session()) {
         <div>
           <p class="text-sm font-bold text-[var(--text-primary)]">{{ i18n.t('consultation.ai.chooseHowToWork') }}</p>
