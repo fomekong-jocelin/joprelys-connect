@@ -7,10 +7,16 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.joprelys.backend.ai.facts.application.ClinicalFactContract.FactLedgerView;
+import com.joprelys.backend.ai.facts.application.ClinicalFactContract.FactView;
 import com.joprelys.backend.ai.facts.application.ClinicalFactRevisionContract.ApplyRevisionRequest;
 import com.joprelys.backend.ai.facts.application.ClinicalFactRevisionContract.OperationType;
 import com.joprelys.backend.ai.facts.application.ClinicalFactRevisionContract.RevisionOperationRequest;
 import com.joprelys.backend.ai.facts.application.ClinicalNoteProjectionContract.NoteProjectionView;
+import com.joprelys.backend.ai.facts.domain.ClinicalFactTypes.Authority;
+import com.joprelys.backend.ai.facts.domain.ClinicalFactTypes.FactStatus;
+import com.joprelys.backend.ai.facts.domain.ClinicalFactTypes.FactType;
+import com.joprelys.backend.ai.facts.domain.ClinicalFactTypes.Laterality;
+import com.joprelys.backend.ai.facts.domain.ClinicalFactTypes.Polarity;
 import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactRepository;
 import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactRevisionBatchEntity;
 import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactRevisionBatchRepository;
@@ -19,6 +25,7 @@ import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactRevi
 import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactRevisionOperationRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,7 +37,7 @@ class ClinicalFactRevisionConcurrencyAuditTest {
     void shouldLockVisitBeforeReadingBaseProjection() {
         Fixture fixture = fixture();
         UUID targetFactId = UUID.randomUUID();
-        var target = ClinicalFactRevisionTestFixtures.fact(targetFactId, "douleur abdominale");
+        FactView target = fact(targetFactId, "douleur abdominale");
         when(fixture.projectionService().project(fixture.visitId(), fixture.organizationId()))
                 .thenReturn(new NoteProjectionView(fixture.visitId(), "projection-v1", 1, List.of()));
         when(fixture.factLedgerService().listEffective(fixture.visitId(), fixture.organizationId()))
@@ -96,6 +103,29 @@ class ClinicalFactRevisionConcurrencyAuditTest {
         assertThat(history.revisions().getFirst().resultProjectionVersion()).isEqualTo("projection-v2");
         assertThat(history.revisions().getFirst().operations()).hasSize(1);
         assertThat(history.revisions().getFirst().operations().getFirst().type()).isEqualTo("KEEP");
+    }
+
+    private FactView fact(UUID id, String concept) {
+        return new FactView(
+                id,
+                1,
+                "source-" + id,
+                FactType.SYMPTOM.name(),
+                Authority.PATIENT_REPORTED.name(),
+                "SYMPTOM_TEST",
+                concept,
+                Polarity.POSITIVE.name(),
+                null,
+                null,
+                null,
+                null,
+                Laterality.UNSPECIFIED.name(),
+                null,
+                null,
+                FactStatus.ASSERTED.name(),
+                null,
+                Instant.now(),
+                List.of());
     }
 
     private Fixture fixture() {
