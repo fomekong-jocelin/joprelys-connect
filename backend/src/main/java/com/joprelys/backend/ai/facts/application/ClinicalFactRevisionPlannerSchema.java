@@ -109,9 +109,10 @@ final class ClinicalFactRevisionPlannerSchema {
     }
 
     private static Map<String, Object> nullableObject(Map<String, Object> schema) {
-        Map<String, Object> result = new LinkedHashMap<>(schema);
-        result.put("type", List.of("object", "null"));
-        return result;
+        return Map.of(
+                "anyOf", List.of(
+                        schema,
+                        Map.of("type", "null")));
     }
 
     private static Map<String, Object> string(int maxLength) {
