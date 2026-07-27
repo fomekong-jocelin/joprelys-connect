@@ -11,7 +11,7 @@ CREATE TABLE ai_clinical_fact_revision_batches (
     request_sha256 VARCHAR(64) NOT NULL,
     created_by_user_id UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    CONSTRAINT ck_ai_clinical_fact_revision_hash CHECK (request_sha256 ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_ai_clinical_fact_revision_hash CHECK (length(request_sha256) = 64),
     CONSTRAINT ck_ai_clinical_fact_revision_base_version CHECK (length(trim(base_projection_version)) > 0),
     CONSTRAINT ck_ai_clinical_fact_revision_result_version CHECK (length(trim(result_projection_version)) > 0),
     CONSTRAINT uq_ai_clinical_fact_revision_request UNIQUE (
