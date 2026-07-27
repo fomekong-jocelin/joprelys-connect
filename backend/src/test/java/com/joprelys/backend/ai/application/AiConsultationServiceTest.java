@@ -438,7 +438,7 @@ class AiConsultationServiceTest {
     }
 
     @Test
-    void shouldRejectLowConfidenceTranscriptionBeforeClinicalAnalysis() {
+    void shouldKeepLowConfidenceTranscriptionPendingForMedicalReview() {
         service.startSession(visitId, userId, organizationId, Map.of());
         when(aiProvider.transcribeAudio(any(byte[].class), eq("audio/webm"), eq("fr")))
                 .thenReturn(new AiTranscription(
@@ -446,16 +446,15 @@ class AiConsultationServiceTest {
                         "fr",
                         0.1));
 
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
-                () -> service.transcribeAudio(
-                        visitId, userId, organizationId, new byte[] {1}, "audio/webm"));
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, exception.getStatusCode());
-        assertEquals("AI_TRANSCRIPTION_LOW_CONFIDENCE", exception.getReason());
+        TranscriptionView response = service.transcribeAudio(
+                visitId, userId, organizationId, new byte[] {1}, "audio/webm");
+
+        assertEquals("Texte clinique incertain", response.transcript());
+        assertEquals("PENDING_REVIEW", response.status());
         verify(aiProvider, never()).chat(anyList(), anyString());
         SessionView session = service.getSession(
                 visitId, userId, organizationId).orElseThrow();
-        assertNull(session.pendingTranscript());
+        assertEquals("Texte clinique incertain", session.pendingTranscript());
         assertTrue(session.revisions().isEmpty());
     }
 
