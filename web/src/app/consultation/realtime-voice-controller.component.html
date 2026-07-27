@@ -1,0 +1,83 @@
+@if (enabled) {
+  <section class="ui-card overflow-hidden">
+    <header class="flex min-h-12 items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-3 py-2.5 sm:px-4">
+      <div class="flex min-w-0 items-center gap-2">
+        <span class="h-2.5 w-2.5 shrink-0 rounded-full" [ngClass]="statusDotClasses()" aria-hidden="true"></span>
+        <div class="min-w-0">
+          <p class="truncate text-sm font-bold text-[var(--text-primary)]">{{ statusLabel() }}</p>
+          <p class="truncate text-[10px] text-[var(--text-muted)] sm:text-[11px]">{{ statusHelp() }}</p>
+        </div>
+      </div>
+      @if (queuedCount() > 0) {
+        <span class="shrink-0 rounded-[var(--radius-brand-xs)] border border-[var(--app-border)] bg-[var(--app-surface)] px-2 py-1 text-[10px] font-bold text-[var(--text-secondary)]">
+          {{ queuedCount() }} {{ i18n.t('consultation.ai.realtimeQueued') }}
+        </span>
+      }
+    </header>
+
+    <div class="space-y-3 p-3 sm:p-4">
+      <div class="min-h-16 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3" aria-live="polite">
+        <div class="flex items-center justify-between gap-3">
+          <p class="ui-label">{{ i18n.t('consultation.ai.focusTranscriptTitle') }}</p>
+          @if (processing()) {
+            <span class="text-[10px] font-bold text-[var(--brand-primary)]">
+              {{ i18n.t('consultation.ai.processingBackground') }}
+            </span>
+          }
+        </div>
+        @if (lastTranscript()) {
+          <p class="mt-1 line-clamp-3 text-sm leading-5 text-[var(--text-primary)]">“{{ lastTranscript() }}”</p>
+          @if (transcriptNeedsReview()) {
+            <p class="mt-1 text-[10px] leading-4 text-[var(--brand-warning-text)]">
+              {{ i18n.t('consultation.ai.focusTranscriptUnverified') }}
+            </p>
+          }
+        } @else {
+          <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+            {{ state().connected
+              ? i18n.t('consultation.ai.focusTranscriptWaiting')
+              : i18n.t('consultation.ai.focusTranscriptNoChannel') }}
+          </p>
+        }
+      </div>
+
+      @if (showSafetyAlert() || backlogPaused) {
+        <div
+          class="rounded-[var(--radius-brand-sm)] border px-3 py-2 text-xs font-semibold leading-5"
+          [ngClass]="connectionBannerClasses()"
+          role="status"
+        >
+          {{ connectionBannerText() }}
+        </div>
+      }
+
+      <div class="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          (click)="toggleMute()"
+          [disabled]="!canToggleMute()"
+          class="ui-button ui-button-secondary min-h-11 w-full"
+        >
+          {{ manualMuted
+            ? i18n.t('consultation.ai.resumeListening')
+            : i18n.t('consultation.ai.pauseListeningShort') }}
+        </button>
+        <button
+          type="button"
+          (click)="endSession.emit()"
+          class="ui-button ui-button-primary min-h-11 w-full"
+        >
+          {{ i18n.t('consultation.ai.finishListening') }}
+        </button>
+      </div>
+
+      <button
+        type="button"
+        (click)="switchToDictation.emit()"
+        class="ui-link min-h-10 w-full text-xs"
+      >
+        {{ i18n.t('consultation.ai.switchToDictation') }}
+      </button>
+    </div>
+  </section>
+}
