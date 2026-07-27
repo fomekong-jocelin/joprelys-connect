@@ -43,6 +43,28 @@ class AiTranscriptionWorkflowTest {
     }
 
     @Test
+    void shouldKeepTranscriptPendingWhenProviderConfidenceIsUnavailable() {
+        AiProvider provider = mock(AiProvider.class);
+        when(provider.transcribeAudio(any(byte[].class), eq("audio/webm"), eq("fr")))
+                .thenReturn(new AiTranscription(
+                        "Le patient nie toute fièvre depuis le début des symptômes.",
+                        "fr",
+                        null));
+
+        AiTranscriptionWorkflow workflow = new AiTranscriptionWorkflow(provider, properties());
+        AiConsultationSessionState state = state();
+
+        var result = workflow.transcribe(state, new byte[] {1, 2, 3}, "audio/webm");
+
+        assertEquals(
+                "Le patient nie toute fièvre depuis le début des symptômes.",
+                result.transcript());
+        assertEquals("PENDING_REVIEW", result.status());
+        assertEquals(result.transcript(), state.pendingTranscript);
+        assertEquals("PENDING_REVIEW", state.transcriptStatus);
+    }
+
+    @Test
     void shouldStillRejectBlankProviderTranscript() {
         AiProvider provider = mock(AiProvider.class);
         when(provider.transcribeAudio(any(byte[].class), eq("audio/webm"), eq("fr")))
