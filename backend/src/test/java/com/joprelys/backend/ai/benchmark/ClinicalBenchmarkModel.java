@@ -46,7 +46,9 @@ final class ClinicalBenchmarkModel {
     record Operation(
             String type,
             String targetFactKey,
-            Fact resultFact) {
+            Fact resultFact,
+            String retractionReason,
+            List<Evidence> evidence) {
     }
 
     record Scenario(
@@ -81,6 +83,7 @@ final class ClinicalBenchmarkModel {
             int missingCriticalFacts,
             int unsupportedCriticalClaims,
             int criticalRelationErrors,
+            int criticalEvidenceErrors,
             int expectedEvidenceCount,
             int candidateEvidenceCount,
             int supportedEvidenceCount,
