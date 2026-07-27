@@ -7,7 +7,8 @@ import java.util.UUID;
  * Read-only projection contract built exclusively from effective, sourced clinical facts.
  *
  * <p>The projection is intentionally not a free-form LLM note. Every rendered entry keeps
- * direct links to the canonical FINAL transcript evidence that supports it.</p>
+ * direct links to the canonical FINAL transcript evidence that supports it. The backend
+ * remains locale-neutral; the client renders labels from the central i18n catalog.</p>
  */
 public final class ClinicalNoteProjectionContract {
 
@@ -31,8 +32,16 @@ public final class ClinicalNoteProjectionContract {
             long factSequence,
             String factType,
             String authority,
+            String conceptCode,
+            String conceptText,
             String polarity,
-            String text,
+            String valuePrimary,
+            String valueSecondary,
+            String unitCode,
+            String temporalityText,
+            String laterality,
+            String frequencyText,
+            String routeText,
             List<LinkedEvidenceView> evidence) {
     }
 
