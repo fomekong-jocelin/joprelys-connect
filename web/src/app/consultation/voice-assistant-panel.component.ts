@@ -36,6 +36,7 @@ import {
   ClassicVoiceCapture,
   ClassicVoiceRecorderService,
 } from './classic-voice-recorder.service';
+import { LinkedEvidenceNotePanelComponent } from './linked-evidence-note-panel.component';
 import { RealtimeVoiceControllerComponent } from './realtime-voice-controller.component';
 
 export type { AiConsultationDraft } from './ai-consultation-api.service';
@@ -51,6 +52,7 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
     AiTranscriptReviewComponent,
     AiDraftPreviewComponent,
     AmbientSafetyPanelComponent,
+    LinkedEvidenceNotePanelComponent,
     RealtimeVoiceControllerComponent,
   ],
   templateUrl: './voice-assistant-panel.component.html',
