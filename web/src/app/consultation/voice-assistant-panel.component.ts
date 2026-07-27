@@ -16,7 +16,7 @@ import {
   AiClarificationAnswer,
   AiClarificationPanelComponent,
 } from './ai-clarification-panel.component';
-import { AiDraftApplyRequest } from './ai-draft-apply.model';
+import { AiDraftMergeService } from './ai-draft-merge.service';
 import { AiDraftPreviewComponent } from './ai-draft-preview.component';
 import {
   AiProposalDecisionRequest,
@@ -61,11 +61,12 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
 export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   private readonly api = inject(AiConsultationApiService);
   private readonly voiceRecorder = inject(ClassicVoiceRecorderService);
+  private readonly draftMerge = inject(AiDraftMergeService);
   readonly i18n = inject(I18nService);
 
   @Input({ required: true }) visitId = '';
   @Input() currentDraft: Record<string, unknown> | null = null;
-  @Output() readonly applyDraft = new EventEmitter<AiDraftApplyRequest>();
+  @Output() readonly applyDraft = new EventEmitter<AiConsultationDraft>();
 
   readonly session = signal<AiSessionResponse | null>(null);
   readonly busy = signal(false);
@@ -196,11 +197,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   answerClarification(request: AiClarificationAnswer): void {
     if (this.busy()) return;
     this.startBusy();
-    this.api.answerClarification(
-      this.visitId,
-      request.clarificationId,
-      request.answer,
-    ).subscribe({
+    this.api.answerClarification(this.visitId, request.clarificationId, request.answer).subscribe({
       next: response => this.finishMessageResponse(response),
       error: error => this.handleError(error, this.i18n.t('consultation.ai.errorAnalyzeClarification')),
     });
@@ -216,11 +213,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
           request.proposalId,
           request.decision,
         )
-      : this.api.decideRevision(
-          this.visitId,
-          request.revisionId,
-          request.decision,
-        );
+      : this.api.decideRevision(this.visitId, request.revisionId, request.decision);
     operation.subscribe({
       next: response => this.completeSessionUpdate(response),
       error: error => this.handleError(error, this.i18n.t('consultation.ai.errorSaveDecision')),
@@ -276,10 +269,43 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
       this.sessionBaseDraft = this.sanitizedCurrentDraft();
       this.sessionBaseReady = true;
     }
-    this.applyDraft.emit({
-      baseDraft: this.cloneDraft(this.sessionBaseDraft),
-      draft: this.cloneDraft(draft),
-    });
+
+    const current = this.currentDraft ?? {};
+    const plan = this.draftMerge.plan(
+      { baseDraft: this.cloneDraft(this.sessionBaseDraft), draft: this.cloneDraft(draft) },
+      current,
+    );
+    const safeDraft: AiConsultationDraft = { ...plan.textPatch };
+
+    if (draft.prescription?.trim()) {
+      const currentPrescription = Array.isArray(current['prescription']) ? current['prescription'] : [];
+      safeDraft.prescription = JSON.stringify([...currentPrescription, ...plan.prescriptionAdds]);
+    }
+    if (draft.labOrders?.trim()) {
+      const currentExams = Array.isArray(current['exams'])
+        ? current['exams'].filter((item): item is string => typeof item === 'string' && !!item.trim())
+        : [];
+      safeDraft.labOrders = JSON.stringify([...currentExams, ...plan.labAdds]);
+    }
+
+    const warnings: string[] = [];
+    if (plan.conflicts.length > 0) {
+      warnings.push(this.i18n.t(
+        'consultation.ai.safeMergeConflict',
+        'Des saisies plus récentes du médecin ont été conservées. Vérifiez les champs signalés avant l’enregistrement.',
+      ));
+    }
+    if (plan.vitalsProposal) {
+      warnings.push(this.i18n.t(
+        'consultation.ai.vitalsRequireDedicatedValidation',
+        'Les constantes détectées ne sont pas enregistrées depuis le brouillon de consultation. Validez-les dans le bloc Constantes.',
+      ));
+    }
+    this.errorMessage.set(warnings.join(' '));
+
+    if (Object.keys(safeDraft).length > 0) {
+      this.applyDraft.emit(safeDraft);
+    }
   }
 
   finishRealtimeTranscription(response: AiTranscriptionResponse): void {
@@ -326,7 +352,6 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
       this.errorMessage.set(this.i18n.t('consultation.ai.errorEmptyRecording'));
       return;
     }
-
     this.startBusy();
     this.api.transcribeAudio(this.visitId, capture.audio).subscribe({
       next: response => {
