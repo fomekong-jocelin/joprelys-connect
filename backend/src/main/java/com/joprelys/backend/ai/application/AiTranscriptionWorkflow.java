@@ -31,13 +31,17 @@ final class AiTranscriptionWorkflow {
         try {
             AiTranscription transcription = aiProvider.transcribeAudio(
                     audio, normalizedMime, state.locale);
-            validateConfidence(transcription);
             if (transcription == null
                     || transcription.text() == null
                     || transcription.text().isBlank()) {
                 throw new ResponseStatusException(
                         HttpStatus.UNPROCESSABLE_ENTITY, "AI_OUTPUT_INVALID");
             }
+
+            // A low ASR confidence must never destroy text that was actually heard.
+            // Dictation is a clinician-reviewed workflow: the transcript is staged and
+            // shown for correction before any clinical analysis can happen.
+            logLowConfidence(transcription);
             return stage(state, transcription.text());
         } catch (ResponseStatusException exception) {
             throw exception;
@@ -63,16 +67,17 @@ final class AiTranscriptionWorkflow {
                 state.expiresAt);
     }
 
-    private void validateConfidence(AiTranscription transcription) {
-        Double confidence = transcription == null ? null : transcription.confidence();
+    private void logLowConfidence(AiTranscription transcription) {
+        Double confidence = transcription.confidence();
         double minimum = properties.minimumTranscriptionConfidence();
         if (confidence == null || minimum <= 0.0 || confidence >= minimum) {
             return;
         }
-        log.warn("Transcription IA rejetée pour confiance insuffisante provider={}, confiance={}",
-                properties.speechProvider(), String.format("%.3f", confidence));
-        throw new ResponseStatusException(
-                HttpStatus.UNPROCESSABLE_ENTITY, "AI_TRANSCRIPTION_LOW_CONFIDENCE");
+        log.warn(
+                "Transcription IA de confiance faible conservée pour validation humaine provider={}, confiance={}, seuil={}",
+                properties.speechProvider(),
+                String.format("%.3f", confidence),
+                String.format("%.3f", minimum));
     }
 
     private String limit(String value, int maximum) {

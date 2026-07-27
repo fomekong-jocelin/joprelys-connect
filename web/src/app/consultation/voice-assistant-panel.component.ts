@@ -81,7 +81,13 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     if (!this.visitId) return;
     this.refreshSession();
     this.pollingSubscription = interval(4000).subscribe(() => {
-      if (!this.recording() && !this.busy()) this.refreshSession(true);
+      // Realtime already owns its connection/session lifecycle. Polling while it is
+      // connecting or connected used to replace the session input every 4 seconds
+      // and could make the child controller tear down an in-flight WebRTC setup.
+      // Keep polling only for the controlled dictation workflow.
+      if (!this.conversationMode() && !this.recording() && !this.busy()) {
+        this.refreshSession(true);
+      }
     });
   }
 
@@ -136,7 +142,10 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     this.startBusy();
     this.api.startSession(this.visitId, this.sanitizedCurrentDraft()).subscribe({
       next: response => this.completeSessionUpdate(response),
-      error: error => this.handleError(error, 'Impossible de démarrer la session IA.'),
+      error: error => this.handleError(
+        error,
+        this.i18n.t('consultation.ai.errorStartSession'),
+      ),
     });
   }
 
@@ -176,7 +185,10 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     this.startBusy();
     this.api.sendText(this.visitId, text.trim()).subscribe({
       next: response => this.finishMessageResponse(response),
-      error: error => this.handleError(error, 'Le message n’a pas pu être analysé.'),
+      error: error => this.handleError(
+        error,
+        this.i18n.t('consultation.ai.errorAnalyzeMessage'),
+      ),
     });
   }
 
@@ -191,7 +203,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
       next: response => this.finishMessageResponse(response),
       error: error => this.handleError(
         error,
-        'La réponse à la clarification n’a pas pu être analysée.',
+        this.i18n.t('consultation.ai.errorAnalyzeClarification'),
       ),
     });
   }
@@ -213,7 +225,10 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
         );
     operation.subscribe({
       next: response => this.completeSessionUpdate(response),
-      error: error => this.handleError(error, 'La décision n’a pas pu être enregistrée.'),
+      error: error => this.handleError(
+        error,
+        this.i18n.t('consultation.ai.errorSaveDecision'),
+      ),
     });
   }
 
@@ -222,7 +237,10 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     this.startBusy();
     this.api.analyzeTranscript(this.visitId, transcript.trim()).subscribe({
       next: response => this.finishMessageResponse(response),
-      error: error => this.handleError(error, 'La transcription n’a pas pu être analysée.'),
+      error: error => this.handleError(
+        error,
+        this.i18n.t('consultation.ai.errorAnalyzeTranscript'),
+      ),
     });
   }
 
@@ -238,7 +256,10 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
         } : current);
         this.busy.set(false);
       },
-      error: error => this.handleError(error, 'La transcription n’a pas pu être abandonnée.'),
+      error: error => this.handleError(
+        error,
+        this.i18n.t('consultation.ai.errorDiscardTranscript'),
+      ),
     });
   }
 
@@ -253,7 +274,10 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
         this.composerResetToken.update(value => value + 1);
         this.busy.set(false);
       },
-      error: error => this.handleError(error, 'Impossible de terminer la session IA.'),
+      error: error => this.handleError(
+        error,
+        this.i18n.t('consultation.ai.errorEndSession'),
+      ),
     });
   }
 
@@ -284,7 +308,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     if (this.realtimeActive() || !this.mediaRecorderSupported || this.busy() || this.recordingBlocked()) return;
     if (!this.session()) {
       this.startDictation();
-      this.errorMessage.set('Démarrez la session puis relancez la dictée.');
+      this.errorMessage.set(this.i18n.t('consultation.ai.errorStartBeforeDictation'));
       return;
     }
     try {
@@ -295,7 +319,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
       );
       this.recording.set(true);
     } catch {
-      this.errorMessage.set('Accès au microphone refusé ou indisponible.');
+      this.errorMessage.set(this.i18n.t('consultation.ai.errorMicrophoneUnavailable'));
       this.voiceRecorder.dispose();
     }
   }
@@ -303,16 +327,13 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   private handleClassicCapture(capture: ClassicVoiceCapture): void {
     this.recording.set(false);
     if (capture.audio.size === 0) {
-      this.errorMessage.set('Aucun son n’a été enregistré.');
+      this.errorMessage.set(this.i18n.t('consultation.ai.errorEmptyRecording'));
       return;
     }
-    if (!capture.hasSpeech) {
-      this.errorMessage.set(this.i18n.t(
-        'consultation.ai.noSpeechDetected',
-        'Aucune parole détectée. Rapprochez-vous du microphone puis réessayez.',
-      ));
-      return;
-    }
+
+    // Browser-side VAD is only a UX hint. It must never veto a non-empty recording:
+    // the speech model is better placed to decide what was said, and even a low-
+    // confidence transcript is now shown to the clinician for correction/review.
     this.startBusy();
     this.api.transcribeAudio(this.visitId, capture.audio).subscribe({
       next: response => {
@@ -324,7 +345,10 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
         } : current);
         this.busy.set(false);
       },
-      error: error => this.handleError(error, 'La dictée n’a pas pu être transcrite.'),
+      error: error => this.handleError(
+        error,
+        this.i18n.t('consultation.ai.errorTranscribeDictation'),
+      ),
     });
   }
 
@@ -340,7 +364,9 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
         if (response) this.session.set(response);
       },
       error: error => {
-        if (!silent && error.status !== 404) this.handleError(error, 'Assistant IA indisponible.');
+        if (!silent && error.status !== 404) {
+          this.handleError(error, this.i18n.t('consultation.ai.errorAssistantUnavailable'));
+        }
       },
     });
   }

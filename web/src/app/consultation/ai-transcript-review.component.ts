@@ -8,37 +8,40 @@ import { I18nService } from '../core/i18n/i18n.service';
   imports: [CommonModule],
   template: `
     @if (sourceTranscript) {
-      <section class="space-y-3 rounded-[6px] border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/20">
+      <section class="rounded-[var(--radius-brand-md)] border border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] p-3 sm:p-4">
         <div>
-          <p class="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
-            {{ i18n.t('consultation.ai.pendingTranscript', 'Transcription à relire') }}
+          <p class="ui-label text-[var(--brand-warning-text)]">
+            {{ i18n.t('consultation.ai.pendingTranscript') }}
           </p>
-          <p class="mt-1 text-xs leading-5 text-amber-700 dark:text-amber-400">
-            {{ i18n.t('consultation.ai.pendingTranscriptHelp', 'Corrigez les noms, nombres, doses, négations et côtés avant de lancer l’analyse.') }}
+          <p class="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
+            {{ i18n.t('consultation.ai.pendingTranscriptHelp') }}
           </p>
         </div>
+
         <textarea
           rows="6"
           [value]="editableTranscript()"
           (input)="onInput($event)"
-          class="ui-textarea w-full resize-y rounded-[4px] border-amber-300 bg-[var(--app-surface)] p-3 text-sm text-[var(--text-primary)] focus:border-[var(--brand-primary)] focus:outline-none"
+          class="ui-textarea mt-3 w-full resize-y"
+          [attr.aria-label]="i18n.t('consultation.ai.pendingTranscript')"
         ></textarea>
-        <div class="flex flex-col gap-2 sm:flex-row">
+
+        <div class="mt-3 flex flex-col gap-2 sm:flex-row">
           <button
             type="button"
             (click)="submit()"
             [disabled]="busy || !editableTranscript().trim()"
-            class="inline-flex items-center justify-center rounded-[4px] bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
+            class="ui-button ui-button-primary min-h-11 w-full sm:w-auto"
           >
-            {{ busy ? i18n.t('consultation.ai.processing', 'Traitement…') : i18n.t('consultation.ai.confirmAnalyze', 'Confirmer et analyser') }}
+            {{ busy ? i18n.t('consultation.ai.processing') : i18n.t('consultation.ai.confirmAnalyze') }}
           </button>
           <button
             type="button"
             (click)="discard.emit()"
             [disabled]="busy"
-            class="inline-flex items-center justify-center rounded-[4px] border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-2.5 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] disabled:opacity-50"
+            class="ui-button ui-button-secondary min-h-11 w-full sm:w-auto"
           >
-            {{ i18n.t('consultation.ai.discardTranscript', 'Abandonner cette transcription') }}
+            {{ i18n.t('consultation.ai.discardTranscript') }}
           </button>
         </div>
       </section>

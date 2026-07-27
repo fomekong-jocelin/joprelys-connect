@@ -75,14 +75,15 @@ describe('VoiceAssistantPanelComponent focused consultation flow', () => {
     expect(component.recordingBlocked()).toBe(true);
   });
 
-  it('should discard a non-empty audio container when no speech was detected', () => {
+  it('should send a non-empty audio container to transcription even when browser VAD is uncertain', () => {
     (component as any).handleClassicCapture({
       audio: new Blob(['encoded-silence'], { type: 'audio/webm' }),
       hasSpeech: false,
     });
 
-    expect(api.transcribeAudio).not.toHaveBeenCalled();
-    expect(component.errorMessage()).toContain('Aucune parole détectée');
+    expect(api.transcribeAudio).toHaveBeenCalledTimes(1);
+    expect(component.session()?.pendingTranscript).toBe('Patient sans fièvre');
+    expect(component.session()?.transcriptStatus).toBe('PENDING_REVIEW');
   });
 
   it('should stage classic speech for explicit review', () => {

@@ -19,11 +19,13 @@
   </header>
 
   <div class="space-y-4 p-4 sm:p-5">
-    @if (errorMessage()) {
-      <div class="rounded-[var(--radius-brand-sm)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3 text-xs font-semibold text-[var(--brand-danger-text)]" role="alert">
-        {{ errorMessage() }}
-      </div>
-    }
+    <div class="min-h-12" aria-live="polite">
+      @if (errorMessage()) {
+        <div class="rounded-[var(--radius-brand-sm)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3 text-xs font-semibold leading-5 text-[var(--brand-danger-text)]" role="alert">
+          {{ errorMessage() }}
+        </div>
+      }
+    </div>
 
     @if (!session()) {
       <div>
@@ -71,7 +73,7 @@
         [enabled]="true"
         [blocked]="busy() || !!session()?.pendingTranscript || hasPendingRevision()"
         (message)="finishRealtimeMessage($event)"
-        (activeChange)="realtimeActive.set($event)"
+        (activeChange)="realtimeActive.set($event); errorMessage.set($event ? '' : errorMessage())"
         (realtimeError)="handleRealtimeError($event)"
         (switchToDictation)="switchToDictation()"
         (endSession)="finishRealtime()"
