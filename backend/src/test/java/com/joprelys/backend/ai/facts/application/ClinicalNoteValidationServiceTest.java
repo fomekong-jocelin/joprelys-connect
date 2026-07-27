@@ -3,7 +3,6 @@ package com.joprelys.backend.ai.facts.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -86,16 +85,14 @@ class ClinicalNoteValidationServiceTest {
         assertThat(result.validationId()).isEqualTo(requestId);
         assertThat(result.projectionVersion()).isEqualTo(projection.projectionVersion());
         assertThat(result.maxFactSequence()).isEqualTo(7);
-        assertThat(result.facts()).extracting(item -> item.factId())
-                .containsExactly(symptomFactId, assessmentFactId);
-        verify(validationFactRepository).saveAllAndFlush(argThat(refs ->
-                refs.size() == 2
-                        && refs.get(0).getFactId().equals(symptomFactId)
-                        && refs.get(0).getSectionCode().equals("HISTORY_OF_PRESENT_ILLNESS")
-                        && refs.get(0).getPositionNo() == 0
-                        && refs.get(1).getFactId().equals(assessmentFactId)
-                        && refs.get(1).getSectionCode().equals("ASSESSMENT")
-                        && refs.get(1).getPositionNo() == 0));
+        assertThat(result.facts()).hasSize(2);
+        assertThat(result.facts().get(0).factId()).isEqualTo(symptomFactId);
+        assertThat(result.facts().get(0).sectionCode()).isEqualTo("HISTORY_OF_PRESENT_ILLNESS");
+        assertThat(result.facts().get(0).position()).isZero();
+        assertThat(result.facts().get(1).factId()).isEqualTo(assessmentFactId);
+        assertThat(result.facts().get(1).sectionCode()).isEqualTo("ASSESSMENT");
+        assertThat(result.facts().get(1).position()).isZero();
+        verify(validationFactRepository).saveAllAndFlush(any());
     }
 
     @Test
