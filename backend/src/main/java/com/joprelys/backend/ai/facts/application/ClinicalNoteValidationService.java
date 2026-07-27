@@ -65,6 +65,11 @@ public class ClinicalNoteValidationService {
         }
 
         NoteProjectionView current = projectionService.project(visitId, organizationId);
+        if (current.sections().isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "AI_CLINICAL_NOTE_PROJECTION_EMPTY");
+        }
         String expectedVersion = request.projectionVersion().trim();
         if (!current.projectionVersion().equals(expectedVersion)) {
             throw new ResponseStatusException(
