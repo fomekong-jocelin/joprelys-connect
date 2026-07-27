@@ -105,9 +105,9 @@ public class ClinicalFactRevisionService {
                 requestedBaseVersion,
                 requestHash,
                 userId);
-        batchRepository.save(batch);
 
         try {
+            batch = batchRepository.saveAndFlush(batch);
             for (int position = 0; position < request.operations().size(); position++) {
                 executeOperation(
                         batch,
@@ -121,7 +121,7 @@ public class ClinicalFactRevisionService {
 
             var resultingProjection = projectionService.project(visitId, organizationId);
             batch.complete(resultingProjection.projectionVersion());
-            batchRepository.saveAndFlush(batch);
+            batch = batchRepository.saveAndFlush(batch);
             return view(batch);
         } catch (DataIntegrityViolationException exception) {
             throw new ResponseStatusException(
@@ -186,6 +186,7 @@ public class ClinicalFactRevisionService {
                         operation.targetFactId(),
                         null,
                         operation.retraction().reason());
+                operationRepository.flush();
                 revisionEvidenceRepository.saveAll(evidence.stream()
                         .map(span -> new ClinicalFactRevisionEvidenceEntity(
                                 persisted.getId(),
