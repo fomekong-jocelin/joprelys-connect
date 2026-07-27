@@ -6,8 +6,13 @@ import com.joprelys.backend.ai.facts.application.ClinicalFactExtractionService.E
 import com.joprelys.backend.ai.facts.application.ClinicalFactLedgerService;
 import com.joprelys.backend.ai.facts.application.ClinicalNoteProjectionContract.NoteProjectionView;
 import com.joprelys.backend.ai.facts.application.ClinicalNoteProjectionService;
+import com.joprelys.backend.ai.facts.application.ClinicalNoteValidationContract.NoteValidationHistoryView;
+import com.joprelys.backend.ai.facts.application.ClinicalNoteValidationContract.NoteValidationView;
+import com.joprelys.backend.ai.facts.application.ClinicalNoteValidationContract.ValidateProjectionRequest;
+import com.joprelys.backend.ai.facts.application.ClinicalNoteValidationService;
 import com.joprelys.backend.auth.security.JwtClaims;
 import com.joprelys.backend.auth.security.TenantContext;
+import jakarta.validation.Valid;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -17,6 +22,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -29,14 +35,17 @@ public class ClinicalFactController {
     private final ClinicalFactLedgerService factLedgerService;
     private final ClinicalFactExtractionService extractionService;
     private final ClinicalNoteProjectionService noteProjectionService;
+    private final ClinicalNoteValidationService noteValidationService;
 
     public ClinicalFactController(
             ClinicalFactLedgerService factLedgerService,
             ClinicalFactExtractionService extractionService,
-            ClinicalNoteProjectionService noteProjectionService) {
+            ClinicalNoteProjectionService noteProjectionService,
+            ClinicalNoteValidationService noteValidationService) {
         this.factLedgerService = factLedgerService;
         this.extractionService = extractionService;
         this.noteProjectionService = noteProjectionService;
+        this.noteValidationService = noteValidationService;
     }
 
     @PostMapping("/extract")
@@ -67,6 +76,29 @@ public class ClinicalFactController {
             Authentication authentication) {
         Identity identity = identity(authentication);
         return noteProjectionService.project(visitId, identity.organizationId());
+    }
+
+    @PostMapping("/note-projection/validations")
+    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
+    public NoteValidationView validateNoteProjection(
+            @PathVariable UUID visitId,
+            @Valid @RequestBody ValidateProjectionRequest request,
+            Authentication authentication) {
+        Identity identity = identity(authentication);
+        return noteValidationService.validate(
+                visitId,
+                identity.userId(),
+                identity.organizationId(),
+                request);
+    }
+
+    @GetMapping("/note-projection/validations")
+    @PreAuthorize("hasAuthority('CLINICAL_READ') or hasAuthority('CLINICAL_WRITE')")
+    public NoteValidationHistoryView noteValidationHistory(
+            @PathVariable UUID visitId,
+            Authentication authentication) {
+        Identity identity = identity(authentication);
+        return noteValidationService.history(visitId, identity.organizationId());
     }
 
     @GetMapping("/audit")
