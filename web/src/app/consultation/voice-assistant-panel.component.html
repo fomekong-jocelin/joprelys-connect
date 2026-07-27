@@ -19,7 +19,7 @@
   </header>
 
   <div class="space-y-4 p-4 sm:p-5">
-    <div class="min-h-0" [class.min-h-12]="!!errorMessage()" aria-live="polite">
+    <div class="min-h-12" aria-live="polite">
       @if (errorMessage()) {
         <div class="rounded-[var(--radius-brand-sm)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3 text-xs font-semibold leading-5 text-[var(--brand-danger-text)]" role="alert">
           {{ errorMessage() }}
