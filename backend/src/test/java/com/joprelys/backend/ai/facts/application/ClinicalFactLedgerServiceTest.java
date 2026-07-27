@@ -21,6 +21,8 @@ import com.joprelys.backend.ai.facts.domain.ClinicalFactTypes.Polarity;
 import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactEntity;
 import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactEvidenceEntity;
 import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactRepository;
+import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactRevisionEvidenceRepository;
+import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactRevisionOperationRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import java.time.Instant;
@@ -36,8 +38,17 @@ class ClinicalFactLedgerServiceTest {
     private final VisitRepository visitRepository = mock(VisitRepository.class);
     private final ClinicalFactEvidenceValidator validator = mock(ClinicalFactEvidenceValidator.class);
     private final AmbientTranscriptLedgerService transcriptLedger = mock(AmbientTranscriptLedgerService.class);
+    private final ClinicalFactRevisionOperationRepository revisionOperationRepository =
+            mock(ClinicalFactRevisionOperationRepository.class);
+    private final ClinicalFactRevisionEvidenceRepository revisionEvidenceRepository =
+            mock(ClinicalFactRevisionEvidenceRepository.class);
     private final ClinicalFactLedgerService service = new ClinicalFactLedgerService(
-            factRepository, visitRepository, validator, transcriptLedger);
+            factRepository,
+            visitRepository,
+            validator,
+            transcriptLedger,
+            revisionOperationRepository,
+            revisionEvidenceRepository);
 
     @Test
     void shouldPersistValidatedFactWithExactEvidenceAndSequence() {

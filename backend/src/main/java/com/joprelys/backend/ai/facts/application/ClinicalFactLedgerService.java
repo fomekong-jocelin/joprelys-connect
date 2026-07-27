@@ -6,10 +6,13 @@ import com.joprelys.backend.ai.facts.application.ClinicalFactContract.EvidenceSp
 import com.joprelys.backend.ai.facts.application.ClinicalFactContract.FactCandidate;
 import com.joprelys.backend.ai.facts.application.ClinicalFactContract.FactLedgerView;
 import com.joprelys.backend.ai.facts.application.ClinicalFactContract.FactView;
+import com.joprelys.backend.ai.facts.application.ClinicalFactRevisionContract.OperationType;
 import com.joprelys.backend.ai.facts.domain.ClinicalFactTypes.FactStatus;
 import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactEntity;
 import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactEvidenceEntity;
 import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactRepository;
+import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactRevisionEvidenceRepository;
+import com.joprelys.backend.ai.facts.infrastructure.persistence.ClinicalFactRevisionOperationRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import java.util.ArrayList;
@@ -33,16 +36,22 @@ public class ClinicalFactLedgerService {
     private final VisitRepository visitRepository;
     private final ClinicalFactEvidenceValidator evidenceValidator;
     private final AmbientTranscriptLedgerService transcriptLedgerService;
+    private final ClinicalFactRevisionOperationRepository revisionOperationRepository;
+    private final ClinicalFactRevisionEvidenceRepository revisionEvidenceRepository;
 
     public ClinicalFactLedgerService(
             ClinicalFactRepository factRepository,
             VisitRepository visitRepository,
             ClinicalFactEvidenceValidator evidenceValidator,
-            AmbientTranscriptLedgerService transcriptLedgerService) {
+            AmbientTranscriptLedgerService transcriptLedgerService,
+            ClinicalFactRevisionOperationRepository revisionOperationRepository,
+            ClinicalFactRevisionEvidenceRepository revisionEvidenceRepository) {
         this.factRepository = factRepository;
         this.visitRepository = visitRepository;
         this.evidenceValidator = evidenceValidator;
         this.transcriptLedgerService = transcriptLedgerService;
+        this.revisionOperationRepository = revisionOperationRepository;
+        this.revisionEvidenceRepository = revisionEvidenceRepository;
     }
 
     @Transactional
@@ -163,8 +172,10 @@ public class ClinicalFactLedgerService {
         for (ClinicalFactEntity fact : all) {
             if (fact.getSupersedesFactId() != null) superseded.add(fact.getSupersedesFactId());
         }
+        Set<UUID> retracted = effectiveRetractions(visitId, effectiveTranscriptItemIds);
         List<FactView> effective = all.stream()
                 .filter(fact -> !superseded.contains(fact.getId()))
+                .filter(fact -> !retracted.contains(fact.getId()))
                 .filter(fact -> fact.getFactStatus() == FactStatus.ASSERTED)
                 .filter(fact -> fact.getEvidence().stream().allMatch(
                         evidence -> effectiveTranscriptItemIds.contains(evidence.getTranscriptItemId())))
@@ -172,6 +183,25 @@ public class ClinicalFactLedgerService {
                 .map(this::view)
                 .toList();
         return new FactLedgerView(visitId, effective);
+    }
+
+    private Set<UUID> effectiveRetractions(
+            UUID visitId,
+            Set<UUID> effectiveTranscriptItemIds) {
+        Set<UUID> retracted = new HashSet<>();
+        revisionOperationRepository
+                .findByVisitIdAndOperationTypeOrderByCreatedAtAsc(visitId, OperationType.RETRACT)
+                .forEach(operation -> {
+                    var evidence = revisionEvidenceRepository
+                            .findByOperationIdOrderByPrimarySupportDescQuoteStartCharAsc(operation.getId());
+                    boolean hasPrimary = evidence.stream().anyMatch(item -> item.isPrimarySupport());
+                    boolean allEffective = !evidence.isEmpty() && evidence.stream().allMatch(
+                            item -> effectiveTranscriptItemIds.contains(item.getTranscriptItemId()));
+                    if (hasPrimary && allEffective && operation.getTargetFactId() != null) {
+                        retracted.add(operation.getTargetFactId());
+                    }
+                });
+        return retracted;
     }
 
     @Transactional(readOnly = true)
