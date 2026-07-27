@@ -4,6 +4,8 @@ import com.joprelys.backend.ai.facts.application.ClinicalFactContract.FactLedger
 import com.joprelys.backend.ai.facts.application.ClinicalFactExtractionService;
 import com.joprelys.backend.ai.facts.application.ClinicalFactExtractionService.ExtractionReport;
 import com.joprelys.backend.ai.facts.application.ClinicalFactLedgerService;
+import com.joprelys.backend.ai.facts.application.ClinicalNoteProjectionContract.NoteProjectionView;
+import com.joprelys.backend.ai.facts.application.ClinicalNoteProjectionService;
 import com.joprelys.backend.auth.security.JwtClaims;
 import com.joprelys.backend.auth.security.TenantContext;
 import java.util.Optional;
@@ -26,12 +28,15 @@ public class ClinicalFactController {
 
     private final ClinicalFactLedgerService factLedgerService;
     private final ClinicalFactExtractionService extractionService;
+    private final ClinicalNoteProjectionService noteProjectionService;
 
     public ClinicalFactController(
             ClinicalFactLedgerService factLedgerService,
-            ClinicalFactExtractionService extractionService) {
+            ClinicalFactExtractionService extractionService,
+            ClinicalNoteProjectionService noteProjectionService) {
         this.factLedgerService = factLedgerService;
         this.extractionService = extractionService;
+        this.noteProjectionService = noteProjectionService;
     }
 
     @PostMapping("/extract")
@@ -53,6 +58,15 @@ public class ClinicalFactController {
             Authentication authentication) {
         Identity identity = identity(authentication);
         return factLedgerService.listEffective(visitId, identity.organizationId());
+    }
+
+    @GetMapping("/note-projection")
+    @PreAuthorize("hasAuthority('CLINICAL_READ') or hasAuthority('CLINICAL_WRITE')")
+    public NoteProjectionView noteProjection(
+            @PathVariable UUID visitId,
+            Authentication authentication) {
+        Identity identity = identity(authentication);
+        return noteProjectionService.project(visitId, identity.organizationId());
     }
 
     @GetMapping("/audit")
