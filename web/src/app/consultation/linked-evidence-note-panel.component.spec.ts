@@ -1,6 +1,6 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
-import { of, throwError } from 'rxjs';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Subject, of, throwError } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import {
   ClinicalNoteProjection,
@@ -32,6 +32,7 @@ const FR: Record<string, string> = {
   'consultation.linkedEvidence.section.hpi': 'Histoire de la maladie actuelle',
   'consultation.linkedEvidence.authority.patient': 'Rapporté par le patient',
   'consultation.linkedEvidence.polarity.positive': 'Présent',
+  'consultation.linkedEvidence.laterality.right': 'Droite',
   'consultation.linkedEvidence.speaker.patient': 'Patient',
   'consultation.linkedEvidence.fact.symptom': 'Symptôme',
 };
@@ -122,10 +123,38 @@ describe('LinkedEvidenceNotePanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Valider cette version');
   });
 
-  function projection(): ClinicalNoteProjection {
+  it('ignores a late projection response from a previous visit', () => {
+    const delayedVisit2 = new Subject<ClinicalNoteProjection>();
+    api.getProjection
+      .mockReturnValueOnce(delayedVisit2)
+      .mockReturnValueOnce(of(projection('visit-3', 'clinical-note-projection-v1:visit3')));
+    api.getValidationHistory.mockReturnValue(of({ visitId: 'visit-3', validations: [] }));
+
+    fixture.componentRef.setInput('visitId', 'visit-2');
+    fixture.detectChanges();
+    expect(fixture.componentInstance.loading()).toBe(true);
+
+    fixture.componentRef.setInput('visitId', 'visit-3');
+    fixture.detectChanges();
+    expect(fixture.componentInstance.projection()?.visitId).toBe('visit-3');
+    expect(fixture.componentInstance.loading()).toBe(false);
+
+    delayedVisit2.next(projection('visit-2', 'clinical-note-projection-v1:late'));
+    delayedVisit2.complete();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.projection()?.visitId).toBe('visit-3');
+    expect(fixture.componentInstance.projection()?.projectionVersion)
+      .toBe('clinical-note-projection-v1:visit3');
+  });
+
+  function projection(
+    visitId = 'visit-1',
+    projectionVersion = 'clinical-note-projection-v1:abc123456789',
+  ): ClinicalNoteProjection {
     return {
-      visitId: 'visit-1',
-      projectionVersion: 'clinical-note-projection-v1:abc123456789',
+      visitId,
+      projectionVersion,
       maxFactSequence: 7,
       sections: [{
         code: 'HISTORY_OF_PRESENT_ILLNESS',
