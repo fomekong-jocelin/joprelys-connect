@@ -35,6 +35,7 @@
   "vitals.assistant.realtimeFallback": "Classic dictation available",
   "vitals.assistant.realtimeHelp": "Dictate vital signs naturally. Values remain proposals until you validate them.",
   "vitals.assistant.realtimeProcessingBackground": "Processing in the background — keep dictating.",
+  "vitals.assistant.realtimeDurableBlocked": "Secure persistence is interrupted. Realtime is paused; use manual entry without closing this screen.",
   "vitals.assistant.realtimeMute": "Pause",
   "vitals.assistant.realtimeUnmute": "Resume",
   "vitals.assistant.realtimeReady": "Microphone active",
