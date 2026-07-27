@@ -29,6 +29,8 @@
   "consultation.ai.applySuccessReview": "Approved AI proposals were applied. Review the clinical note, prescription, tests, and vital signs before final save.",
   "consultation.ai.vitalsSaveFailed": "The proposed vital signs could not be saved.",
   "consultation.ai.switchToDictation": "Switch to dictation",
+  "consultation.ai.realtimeStableSimple": "Realtime is active. The audio channel is connected and safety recording remains available.",
+  "consultation.ai.realtimePausedSafe": "Listening is paused. No new audio is sent until you resume.",
   "consultation.ai.errorStartSession": "The AI session could not be started.",
   "consultation.ai.errorAnalyzeMessage": "The message could not be analyzed.",
   "consultation.ai.errorAnalyzeClarification": "The clarification response could not be analyzed.",
