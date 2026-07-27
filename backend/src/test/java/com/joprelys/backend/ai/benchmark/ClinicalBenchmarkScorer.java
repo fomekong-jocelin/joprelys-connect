@@ -6,6 +6,7 @@ import com.joprelys.backend.ai.benchmark.ClinicalBenchmarkModel.Fact;
 import com.joprelys.backend.ai.benchmark.ClinicalBenchmarkModel.Operation;
 import com.joprelys.backend.ai.benchmark.ClinicalBenchmarkModel.Scenario;
 import com.joprelys.backend.ai.benchmark.ClinicalBenchmarkModel.Score;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -43,18 +44,20 @@ final class ClinicalBenchmarkScorer {
         int criticalRelationErrors = countCriticalRelationErrors(
                 scenario.expectedEffectiveFacts(),
                 factFalsePositiveKeys.stream().map(candidateByClinicalKey::get).toList());
+        int criticalEvidenceErrors = countCriticalEvidenceErrors(
+                factTruePositiveKeys,
+                expectedByClinicalKey,
+                candidateByClinicalKey);
 
         EvidenceScore evidenceScore = evidenceScore(
                 factTruePositiveKeys,
                 expectedByClinicalKey,
                 candidateByClinicalKey);
 
-        Set<String> expectedOperationSignatures = scenario.expectedOperations().stream()
-                .map(this::operationSignature)
-                .collect(Collectors.toCollection(HashSet::new));
-        Set<String> candidateOperationSignatures = candidate.operations().stream()
-                .map(this::operationSignature)
-                .collect(Collectors.toCollection(HashSet::new));
+        Set<String> expectedOperationSignatures = uniqueOperationSignatures(
+                scenario.expectedOperations(), "gold");
+        Set<String> candidateOperationSignatures = uniqueOperationSignatures(
+                candidate.operations(), "candidate");
         Set<String> operationTruePositives = intersection(
                 expectedOperationSignatures, candidateOperationSignatures);
         Set<String> operationFalsePositives = difference(
@@ -80,6 +83,7 @@ final class ClinicalBenchmarkScorer {
         boolean gatePassed = missingCriticalFacts == 0
                 && unsupportedCriticalClaims == 0
                 && criticalRelationErrors == 0
+                && criticalEvidenceErrors == 0
                 && falseCriticalRetracts == 0
                 && falseCriticalReplaces == 0;
 
@@ -96,6 +100,7 @@ final class ClinicalBenchmarkScorer {
                 missingCriticalFacts,
                 unsupportedCriticalClaims,
                 criticalRelationErrors,
+                criticalEvidenceErrors,
                 evidenceScore.expectedCount(),
                 evidenceScore.candidateCount(),
                 evidenceScore.supportedCount(),
@@ -118,19 +123,34 @@ final class ClinicalBenchmarkScorer {
             Set<String> matchedClinicalKeys,
             Map<String, Fact> expectedByClinicalKey,
             Map<String, Fact> candidateByClinicalKey) {
-        int expected = 0;
-        int candidate = 0;
-        int supported = 0;
-        int recovered = 0;
+        int expected = expectedByClinicalKey.values().stream()
+                .mapToInt(fact -> evidenceKeys(fact.evidence()).size())
+                .sum();
+        int candidate = candidateByClinicalKey.values().stream()
+                .mapToInt(fact -> evidenceKeys(fact.evidence()).size())
+                .sum();
+        int matched = 0;
         for (String key : matchedClinicalKeys) {
             Set<String> expectedEvidence = evidenceKeys(expectedByClinicalKey.get(key).evidence());
             Set<String> candidateEvidence = evidenceKeys(candidateByClinicalKey.get(key).evidence());
-            expected += expectedEvidence.size();
-            candidate += candidateEvidence.size();
-            supported += intersection(expectedEvidence, candidateEvidence).size();
-            recovered += intersection(expectedEvidence, candidateEvidence).size();
+            matched += intersection(expectedEvidence, candidateEvidence).size();
         }
-        return new EvidenceScore(expected, candidate, supported, recovered);
+        return new EvidenceScore(expected, candidate, matched, matched);
+    }
+
+    private int countCriticalEvidenceErrors(
+            Set<String> matchedClinicalKeys,
+            Map<String, Fact> expectedByClinicalKey,
+            Map<String, Fact> candidateByClinicalKey) {
+        int errors = 0;
+        for (String key : matchedClinicalKeys) {
+            Fact expected = expectedByClinicalKey.get(key);
+            if (!expected.critical()) continue;
+            Set<String> expectedEvidence = evidenceKeys(expected.evidence());
+            Set<String> candidateEvidence = evidenceKeys(candidateByClinicalKey.get(key).evidence());
+            if (!expectedEvidence.equals(candidateEvidence)) errors++;
+        }
+        return errors;
     }
 
     private int countCriticalRelationErrors(List<Fact> expected, List<Fact> falsePositives) {
@@ -139,7 +159,8 @@ final class ClinicalBenchmarkScorer {
                 .collect(Collectors.groupingBy(fact -> normalize(fact.conceptCode())));
         int errors = 0;
         for (Fact candidate : falsePositives) {
-            List<Fact> sameConcept = expectedByConcept.getOrDefault(normalize(candidate.conceptCode()), List.of());
+            List<Fact> sameConcept = expectedByConcept.getOrDefault(
+                    normalize(candidate.conceptCode()), List.of());
             if (!sameConcept.isEmpty()) errors++;
         }
         return errors;
@@ -161,6 +182,7 @@ final class ClinicalBenchmarkScorer {
     }
 
     private boolean isCriticalCandidate(Fact fact, List<Fact> expectedFacts) {
+        if (fact.critical()) return true;
         if (DEFAULT_CRITICAL_TYPES.contains(normalizeUpper(fact.factType()))) return true;
         if (fact.valuePrimary() != null || fact.valueSecondary() != null || fact.unitCode() != null) return true;
         return expectedFacts.stream()
@@ -180,15 +202,39 @@ final class ClinicalBenchmarkScorer {
         return Map.copyOf(result);
     }
 
+    private Set<String> uniqueOperationSignatures(List<Operation> operations, String source) {
+        Set<String> signatures = new HashSet<>();
+        Set<String> targets = new HashSet<>();
+        for (Operation operation : operations) {
+            String signature = operationSignature(operation);
+            if (!signatures.add(signature)) {
+                throw new IllegalArgumentException("duplicate " + source + " operation: " + signature);
+            }
+            if (operation.targetFactKey() != null && !targets.add(operation.targetFactKey())) {
+                throw new IllegalArgumentException(
+                        "duplicate " + source + " operation target: " + operation.targetFactKey());
+            }
+        }
+        return Set.copyOf(signatures);
+    }
+
     private String operationSignature(Operation operation) {
+        require(operation, "operation");
         String type = normalizeUpper(operation.type());
         return switch (type) {
-            case "KEEP", "RETRACT" -> type + "|" + require(operation.targetFactKey(), "targetFactKey");
-            case "ADD" -> type + "|" + clinicalKey(require(operation.resultFact(), "resultFact"));
-            case "REPLACE" -> type + "|" + require(operation.targetFactKey(), "targetFactKey")
-                    + "|" + clinicalKey(require(operation.resultFact(), "resultFact"));
+            case "KEEP" -> "KEEP|" + require(operation.targetFactKey(), "targetFactKey");
+            case "ADD" -> "ADD|" + factOperationKey(require(operation.resultFact(), "resultFact"));
+            case "REPLACE" -> "REPLACE|" + require(operation.targetFactKey(), "targetFactKey")
+                    + "|" + factOperationKey(require(operation.resultFact(), "resultFact"));
+            case "RETRACT" -> "RETRACT|" + require(operation.targetFactKey(), "targetFactKey")
+                    + "|" + normalizeUpper(require(operation.retractionReason(), "retractionReason"))
+                    + "|" + orderedEvidenceKey(operation.evidence());
             default -> throw new IllegalArgumentException("unsupported operation type: " + operation.type());
         };
+    }
+
+    private String factOperationKey(Fact fact) {
+        return clinicalKey(fact) + "|" + orderedEvidenceKey(fact.evidence());
     }
 
     private String clinicalKey(Fact fact) {
@@ -208,12 +254,23 @@ final class ClinicalBenchmarkScorer {
                 normalize(fact.routeText()));
     }
 
+    private String orderedEvidenceKey(List<Evidence> evidence) {
+        List<String> keys = new ArrayList<>(evidenceKeys(evidence));
+        keys.sort(String::compareTo);
+        return String.join(";", keys);
+    }
+
     private Set<String> evidenceKeys(List<Evidence> evidence) {
         if (evidence == null) return Set.of();
-        return evidence.stream()
-                .map(item -> require(item.transcriptTurnId(), "transcriptTurnId")
-                        + "|" + require(item.quoteText(), "quoteText"))
-                .collect(Collectors.toUnmodifiableSet());
+        Set<String> result = new HashSet<>();
+        for (Evidence item : evidence) {
+            String key = require(item.transcriptTurnId(), "transcriptTurnId")
+                    + "|" + require(item.quoteText(), "quoteText");
+            if (!result.add(key)) {
+                throw new IllegalArgumentException("duplicate evidence: " + key);
+            }
+        }
+        return Set.copyOf(result);
     }
 
     private void validateScenarioAndCandidate(Scenario scenario, CandidateRun candidate) {
@@ -226,8 +283,38 @@ final class ClinicalBenchmarkScorer {
             throw new IllegalArgumentException("candidate run incomplete");
         }
         if (scenario.expectedEffectiveFacts() == null || scenario.expectedOperations() == null
-                || scenario.initialFacts() == null) {
+                || scenario.initialFacts() == null || scenario.transcript() == null) {
             throw new IllegalArgumentException("scenario gold incomplete");
+        }
+        validateEvidenceAgainstTranscript(scenario, scenario.expectedEffectiveFacts(), scenario.expectedOperations());
+        validateEvidenceAgainstTranscript(scenario, candidate.effectiveFacts(), candidate.operations());
+    }
+
+    private void validateEvidenceAgainstTranscript(
+            Scenario scenario,
+            List<Fact> facts,
+            List<Operation> operations) {
+        Map<String, TranscriptText> transcript = scenario.transcript().stream()
+                .collect(Collectors.toMap(
+                        turn -> require(turn.id(), "transcriptTurnId"),
+                        turn -> new TranscriptText(require(turn.text(), "transcriptText")),
+                        (left, right) -> {
+                            throw new IllegalArgumentException("duplicate transcript turn id");
+                        }));
+        for (Fact fact : facts) validateEvidenceList(fact.evidence(), transcript);
+        for (Operation operation : operations) {
+            validateEvidenceList(operation.evidence(), transcript);
+            if (operation.resultFact() != null) validateEvidenceList(operation.resultFact().evidence(), transcript);
+        }
+    }
+
+    private void validateEvidenceList(List<Evidence> evidence, Map<String, TranscriptText> transcript) {
+        if (evidence == null) return;
+        for (Evidence item : evidence) {
+            TranscriptText text = transcript.get(require(item.transcriptTurnId(), "transcriptTurnId"));
+            if (text == null || !text.value().contains(require(item.quoteText(), "quoteText"))) {
+                throw new IllegalArgumentException("evidence is not verbatim from transcript");
+            }
         }
     }
 
@@ -267,5 +354,8 @@ final class ClinicalBenchmarkScorer {
             int candidateCount,
             int supportedCount,
             int recoveredCount) {
+    }
+
+    private record TranscriptText(String value) {
     }
 }
