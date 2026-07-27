@@ -2,7 +2,7 @@ package com.joprelys.backend.ai.facts.application;
 
 import java.util.List;
 
-final class ClinicalFactRevisionPlannerModelContract {
+public final class ClinicalFactRevisionPlannerModelContract {
 
     private ClinicalFactRevisionPlannerModelContract() {
     }
