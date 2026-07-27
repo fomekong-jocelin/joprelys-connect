@@ -29,6 +29,8 @@
   "consultation.ai.applySuccessReview": "Les propositions IA validées ont été appliquées. Relisez la note clinique, l’ordonnance, les examens et les constantes avant la sauvegarde finale.",
   "consultation.ai.vitalsSaveFailed": "Les constantes proposées n’ont pas pu être enregistrées.",
   "consultation.ai.switchToDictation": "Passer en dictée",
+  "consultation.ai.realtimeStableSimple": "Temps réel actif. Le canal audio est connecté et la sauvegarde de sécurité reste disponible.",
+  "consultation.ai.realtimePausedSafe": "Écoute en pause. Aucun nouvel audio n’est envoyé tant que vous n’avez pas repris.",
   "consultation.ai.errorStartSession": "Impossible de démarrer la session IA.",
   "consultation.ai.errorAnalyzeMessage": "Le message n’a pas pu être analysé.",
   "consultation.ai.errorAnalyzeClarification": "La réponse à la clarification n’a pas pu être analysée.",
