@@ -98,11 +98,9 @@ public class ClinicalNoteValidationService {
             validationFactRepository.saveAllAndFlush(factRefs);
             return view(validation, factRefs);
         } catch (DataIntegrityViolationException exception) {
-            return resolveConcurrentRetry(
-                    visitId,
-                    userId,
-                    request,
-                    current.projectionVersion(),
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "AI_CLINICAL_NOTE_VALIDATION_CONFLICT",
                     exception);
         }
     }
@@ -129,32 +127,6 @@ public class ClinicalNoteValidationService {
                     "AI_CLINICAL_NOTE_VALIDATION_ID_REUSED");
         }
         return view(existing);
-    }
-
-    private NoteValidationView resolveConcurrentRetry(
-            UUID visitId,
-            UUID userId,
-            ValidateProjectionRequest request,
-            String projectionVersion,
-            DataIntegrityViolationException exception) {
-        var byRequest = validationRepository.findByVisitIdAndValidationRequestId(
-                visitId,
-                request.validationId());
-        if (byRequest.isPresent()) {
-            return validateIdempotentRetry(byRequest.get(), userId, request);
-        }
-        var byProjection = validationRepository
-                .findByVisitIdAndProjectionVersionAndValidatedByUserId(
-                        visitId,
-                        projectionVersion,
-                        userId);
-        if (byProjection.isPresent()) {
-            return view(byProjection.get());
-        }
-        throw new ResponseStatusException(
-                HttpStatus.CONFLICT,
-                "AI_CLINICAL_NOTE_VALIDATION_CONFLICT",
-                exception);
     }
 
     private List<ClinicalNoteValidationFactEntity> snapshotFactRefs(
