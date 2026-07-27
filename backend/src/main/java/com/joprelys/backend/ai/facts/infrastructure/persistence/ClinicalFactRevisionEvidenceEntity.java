@@ -7,6 +7,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.TenantId;
 
 @Entity
 @Table(name = "ai_clinical_fact_revision_evidence")
@@ -17,6 +18,13 @@ public class ClinicalFactRevisionEvidenceEntity {
 
     @Column(name = "operation_id", nullable = false)
     private UUID operationId;
+
+    @TenantId
+    @Column(name = "organization_id", nullable = false)
+    private UUID organizationId;
+
+    @Column(name = "visit_id", nullable = false)
+    private UUID visitId;
 
     @Column(name = "transcript_item_id", nullable = false)
     private UUID transcriptItemId;
@@ -41,6 +49,8 @@ public class ClinicalFactRevisionEvidenceEntity {
 
     public ClinicalFactRevisionEvidenceEntity(
             UUID operationId,
+            UUID organizationId,
+            UUID visitId,
             UUID transcriptItemId,
             int quoteStartChar,
             int quoteEndChar,
@@ -48,6 +58,8 @@ public class ClinicalFactRevisionEvidenceEntity {
             boolean primarySupport) {
         this.id = UUID.randomUUID();
         this.operationId = operationId;
+        this.organizationId = organizationId;
+        this.visitId = visitId;
         this.transcriptItemId = transcriptItemId;
         this.quoteStartChar = quoteStartChar;
         this.quoteEndChar = quoteEndChar;
@@ -62,6 +74,8 @@ public class ClinicalFactRevisionEvidenceEntity {
 
     public UUID getId() { return id; }
     public UUID getOperationId() { return operationId; }
+    public UUID getOrganizationId() { return organizationId; }
+    public UUID getVisitId() { return visitId; }
     public UUID getTranscriptItemId() { return transcriptItemId; }
     public int getQuoteStartChar() { return quoteStartChar; }
     public int getQuoteEndChar() { return quoteEndChar; }
