@@ -13,7 +13,6 @@ import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -56,7 +55,7 @@ public class ClinicalNoteValidationService {
             UUID organizationId,
             ValidateProjectionRequest request) {
         requireIdentity(visitId, userId, organizationId, request);
-        VisitEntity visit = lockAuthorizedVisit(visitId, organizationId);
+        lockAuthorizedVisit(visitId, organizationId);
 
         var existingByRequest = validationRepository.findByVisitIdAndValidationRequestId(
                 visitId,
@@ -205,7 +204,7 @@ public class ClinicalNoteValidationService {
                 facts);
     }
 
-    private VisitEntity lockAuthorizedVisit(UUID visitId, UUID organizationId) {
+    private void lockAuthorizedVisit(UUID visitId, UUID organizationId) {
         VisitEntity visit = visitRepository.findByIdForUpdate(visitId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -213,7 +212,6 @@ public class ClinicalNoteValidationService {
         if (!organizationId.equals(visit.getOrganizationId())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "VISIT_NOT_FOUND");
         }
-        return visit;
     }
 
     private void requireAuthorizedVisit(UUID visitId, UUID organizationId) {
