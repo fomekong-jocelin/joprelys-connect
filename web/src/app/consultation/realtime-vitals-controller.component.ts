@@ -99,9 +99,9 @@ interface QueuedVitalsTurn {
               {{ i18n.t('vitals.assistant.realtimeReady') }}
             }
           </p>
-          @if (transcriptQueue.length > 0) {
+          @if (queuedCount() > 0) {
             <span class="shrink-0 text-[10px] font-bold text-[var(--brand-primary)]">
-              {{ transcriptQueue.length }} {{ i18n.t('vitals.assistant.realtimeQueued') }}
+              {{ queuedCount() }} {{ i18n.t('vitals.assistant.realtimeQueued') }}
             </span>
           }
         </div>
@@ -139,9 +139,10 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
   readonly processing = signal(false);
   readonly pendingConfirmationContext = signal('');
   readonly durableBlocked = signal(false);
-  readonly transcriptQueue: QueuedVitalsTurn[] = [];
 
   private readonly subscriptions = new Subscription();
+  private readonly intakeQueue: QueuedVitalsTurn[] = [];
+  private readonly analysisQueue: QueuedVitalsTurn[] = [];
   private readonly seenTranscriptIds = new Set<string>();
   private readonly seenTranscriptOrder: string[] = [];
   private manualMuted = false;
@@ -149,12 +150,15 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
   private connectedVisitId = '';
   private pipelineGeneration = 0;
   private fallbackEventSequence = 0;
+  private intakeBusy = false;
+  private analysisBusy = false;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private destroyed = false;
 
   constructor() {
     this.subscriptions.add(this.bridge.state$.subscribe(state => {
       const wasConnected = this.state().connected;
+      const wasAssistantSpeaking = this.state().assistantSpeaking;
       this.state.set(state);
       if (state.connected && this.enabled && this.visitId.trim()) {
         this.connectedVisitId = this.visitId.trim();
@@ -162,16 +166,16 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
       this.activeChange.emit(state.connected);
       if (state.connected && !wasConnected) {
         this.syncMute();
-        this.drainTranscriptQueue();
+        this.resumePipeline();
       }
-      if (state.assistantSpeaking) this.syncMute();
+      if (state.assistantSpeaking !== wasAssistantSpeaking) this.syncMute();
     }));
     this.subscriptions.add(this.bridge.transcript$.subscribe(turn => this.enqueueTranscript(turn)));
     this.subscriptions.add(this.bridge.error$.subscribe(message => this.realtimeError.emit(message)));
     this.subscriptions.add(this.bridge.assistantTurnCompleted$.subscribe(() => {
       setTimeout(() => {
         this.syncMute();
-        this.drainTranscriptQueue();
+        this.resumePipeline();
       }, 120);
     }));
   }
@@ -187,7 +191,7 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
     if (changes['enabled'] || changes['visitId']) void this.syncConnection(visitChanged);
     if (changes['disabled']) {
       this.syncMute();
-      if (!this.disabled) this.drainTranscriptQueue();
+      if (!this.disabled) this.resumePipeline();
     }
   }
 
@@ -202,7 +206,7 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
     if (!this.state().connected || this.disabled || this.durableBlocked()) return;
     this.manualMuted = !this.manualMuted;
     this.syncMute();
-    if (!this.manualMuted) this.drainTranscriptQueue();
+    if (!this.manualMuted) this.resumePipeline();
   }
 
   effectiveMuted(): boolean {
@@ -211,6 +215,10 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
       || this.durableBlocked()
       || this.state().assistantSpeaking
       || this.state().muted;
+  }
+
+  queuedCount(): number {
+    return this.intakeQueue.length + this.analysisQueue.length;
   }
 
   private async syncConnection(forceVisitReset = false): Promise<void> {
@@ -232,7 +240,7 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
     }
     if (this.state().connected && this.connectedVisitId === targetVisitId) {
       this.syncMute();
-      this.drainTranscriptQueue();
+      this.resumePipeline();
       return;
     }
     if (this.state().connecting && this.connectingForVisit === targetVisitId) return;
@@ -252,7 +260,7 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
       }
       this.connectedVisitId = targetVisitId;
       this.syncMute();
-      this.drainTranscriptQueue();
+      this.resumePipeline();
     } catch (error) {
       if (this.destroyed || this.visitId.trim() !== targetVisitId) return;
       this.realtimeError.emit(
@@ -290,12 +298,56 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
       && turn.confidence <= 1
       ? turn.confidence
       : 0;
-    this.transcriptQueue.push({ transcript, confidence, eventId, itemId });
-    this.drainTranscriptQueue();
+    this.intakeQueue.push({ transcript, confidence, eventId, itemId });
+    this.drainIntakeQueue();
   }
 
-  private drainTranscriptQueue(): void {
-    if (this.processing()
+  private drainIntakeQueue(): void {
+    if (this.intakeBusy
+      || this.disabled
+      || this.manualMuted
+      || this.durableBlocked()
+      || !this.enabled
+      || !this.state().connected
+      || !this.connectedVisitId
+      || this.connectedVisitId !== this.visitId.trim()) {
+      return;
+    }
+    const turn = this.intakeQueue[0];
+    if (!turn) return;
+
+    const visitId = this.connectedVisitId;
+    const generation = this.pipelineGeneration;
+    this.intakeBusy = true;
+    this.updateProcessing();
+    this.intake.ingestVitals(visitId, turn.transcript, turn.confidence, turn.eventId, turn.itemId).subscribe({
+      next: () => {
+        if (!this.isCurrentTurnContext(visitId, generation)) return;
+        this.shiftQueue(this.intakeQueue, turn);
+        this.intakeBusy = false;
+        this.analysisQueue.push(turn);
+        this.updateProcessing();
+        this.drainIntakeQueue();
+        this.drainAnalysisQueue();
+      },
+      error: error => {
+        if (!this.isCurrentTurnContext(visitId, generation)) return;
+        this.intakeBusy = false;
+        this.updateProcessing();
+        if (this.isTransient(error)) {
+          this.scheduleRetry();
+          return;
+        }
+        // Keep every unacknowledged turn and stop new Realtime capture rather than dropping it.
+        this.durableBlocked.set(true);
+        this.syncMute();
+        this.realtimeError.emit(this.i18n.t('vitals.assistant.realtimeDurableBlocked'));
+      },
+    });
+  }
+
+  private drainAnalysisQueue(): void {
+    if (this.analysisBusy
       || this.disabled
       || this.manualMuted
       || this.durableBlocked()
@@ -306,56 +358,29 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
       || this.connectedVisitId !== this.visitId.trim()) {
       return;
     }
-    const turn = this.transcriptQueue[0];
+    const turn = this.analysisQueue[0];
     if (!turn) return;
 
-    const turnVisitId = this.connectedVisitId;
+    const visitId = this.connectedVisitId;
     const generation = this.pipelineGeneration;
-    this.processing.set(true);
-    this.intake.ingestVitals(
-      turnVisitId,
-      turn.transcript,
-      turn.confidence,
-      turn.eventId,
-      turn.itemId,
-    ).subscribe({
-      next: () => this.analyzeDurableTurn(turnVisitId, turn, generation),
-      error: error => {
-        if (!this.isCurrentTurnContext(turnVisitId, generation)) return;
-        this.processing.set(false);
-        if (this.isTransient(error)) {
-          this.scheduleRetry();
-          return;
-        }
-        // Keep the unacknowledged turn in memory and stop Realtime rather than dropping it.
-        this.durableBlocked.set(true);
-        this.syncMute();
-        this.realtimeError.emit(this.i18n.t('vitals.assistant.realtimeDurableBlocked'));
-      },
-    });
-  }
-
-  private analyzeDurableTurn(
-    turnVisitId: string,
-    turn: QueuedVitalsTurn,
-    generation: number,
-  ): void {
-    if (!this.isCurrentTurnContext(turnVisitId, generation)) return;
     const confirmationContext = this.pendingConfirmationContext();
     const modelText = confirmationContext
       ? `${confirmationContext}\nClinician confirmation or correction: ${turn.transcript}`
       : turn.transcript;
 
+    this.analysisBusy = true;
+    this.updateProcessing();
     this.api.analyzeText(
-      turnVisitId,
+      visitId,
       modelText,
       this.i18n.currentLanguage(),
       this.currentVitals,
     ).subscribe({
       next: proposal => {
-        if (!this.isCurrentTurnContext(turnVisitId, generation)) return;
-        this.shiftTurn(turn);
-        this.processing.set(false);
+        if (!this.isCurrentTurnContext(visitId, generation)) return;
+        this.shiftQueue(this.analysisQueue, turn);
+        this.analysisBusy = false;
+        this.updateProcessing();
         const userFacingProposal: AiVitalsProposal = { ...proposal, transcript: turn.transcript };
         if (proposal.needsConfirmation) {
           this.pendingConfirmationContext.set([
@@ -372,23 +397,29 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
           const started = this.bridge.speakApproved(proposal.assistantMessage);
           if (!started) {
             this.syncMute();
-            this.drainTranscriptQueue();
+            this.drainAnalysisQueue();
           }
         } else {
           this.syncMute();
-          this.drainTranscriptQueue();
+          this.drainAnalysisQueue();
         }
       },
       error: () => {
-        if (!this.isCurrentTurnContext(turnVisitId, generation)) return;
-        // The transcript is already durable. Avoid retrying a potentially committed model mutation.
-        this.shiftTurn(turn);
-        this.processing.set(false);
+        if (!this.isCurrentTurnContext(visitId, generation)) return;
+        // The transcript is already durable. Do not retry a potentially committed model mutation.
+        this.shiftQueue(this.analysisQueue, turn);
+        this.analysisBusy = false;
+        this.updateProcessing();
         this.realtimeError.emit(this.i18n.t('vitals.assistant.error'));
         this.syncMute();
-        this.drainTranscriptQueue();
+        this.drainAnalysisQueue();
       },
     });
+  }
+
+  private resumePipeline(): void {
+    this.drainIntakeQueue();
+    this.drainAnalysisQueue();
   }
 
   private isCurrentTurnContext(visitId: string, generation: number): boolean {
@@ -398,8 +429,8 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
       && visitId === this.connectedVisitId;
   }
 
-  private shiftTurn(turn: QueuedVitalsTurn): void {
-    if (this.transcriptQueue[0] === turn) this.transcriptQueue.shift();
+  private shiftQueue(queue: QueuedVitalsTurn[], turn: QueuedVitalsTurn): void {
+    if (queue[0] === turn) queue.shift();
   }
 
   private nextFallbackEventId(): string {
@@ -420,7 +451,7 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
     if (this.retryTimer || this.destroyed) return;
     this.retryTimer = setTimeout(() => {
       this.retryTimer = null;
-      this.drainTranscriptQueue();
+      this.drainIntakeQueue();
     }, RETRY_DELAY_MS);
   }
 
@@ -433,14 +464,21 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
       || error.status >= 500;
   }
 
+  private updateProcessing(): void {
+    this.processing.set(this.intakeBusy || this.analysisBusy);
+  }
+
   private resetTranscriptPipeline(): void {
     this.pipelineGeneration += 1;
     if (this.retryTimer) clearTimeout(this.retryTimer);
     this.retryTimer = null;
-    this.transcriptQueue.length = 0;
+    this.intakeQueue.length = 0;
+    this.analysisQueue.length = 0;
     this.seenTranscriptIds.clear();
     this.seenTranscriptOrder.length = 0;
     this.pendingConfirmationContext.set('');
+    this.intakeBusy = false;
+    this.analysisBusy = false;
     this.processing.set(false);
     this.durableBlocked.set(false);
   }
