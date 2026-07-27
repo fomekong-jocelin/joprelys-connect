@@ -121,14 +121,44 @@ public class ClinicalFactLedgerService {
 
     @Transactional(readOnly = true)
     public FactLedgerView listEffective(UUID visitId, UUID organizationId) {
-        requireAuthorizedVisit(visitId, organizationId);
         Set<UUID> effectiveTranscriptItemIds = transcriptLedgerService
                 .listFinal(visitId, organizationId)
                 .items()
                 .stream()
                 .map(item -> item.id())
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
-        List<ClinicalFactEntity> all = factRepository.findByVisitIdOrderBySequenceNoAsc(visitId);
+        return listEffectiveForTranscriptSnapshot(
+                visitId,
+                organizationId,
+                effectiveTranscriptItemIds);
+    }
+
+    /**
+     * Resolves the effective fact leaves against one immutable transcript snapshot.
+     * Package-private on purpose: projections in this application package can build a
+     * self-consistent linked-evidence snapshot without exposing this internal primitive
+     * through the API layer.
+     */
+    FactLedgerView listEffectiveForTranscriptSnapshot(
+            UUID visitId,
+            UUID organizationId,
+            Set<UUID> effectiveTranscriptItemIds) {
+        requireAuthorizedVisit(visitId, organizationId);
+        if (effectiveTranscriptItemIds == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "AI_CLINICAL_FACT_TRANSCRIPT_SNAPSHOT_INVALID");
+        }
+        return resolveEffective(
+                visitId,
+                factRepository.findByVisitIdOrderBySequenceNoAsc(visitId),
+                effectiveTranscriptItemIds);
+    }
+
+    private FactLedgerView resolveEffective(
+            UUID visitId,
+            List<ClinicalFactEntity> all,
+            Set<UUID> effectiveTranscriptItemIds) {
         Set<UUID> superseded = new HashSet<>();
         for (ClinicalFactEntity fact : all) {
             if (fact.getSupersedesFactId() != null) superseded.add(fact.getSupersedesFactId());
