@@ -28,13 +28,12 @@ class RealtimeClinicalIntakeServiceTest {
             properties());
 
     @Test
-    void shouldPersistVerifiedTurnWithNextVisitSequence() {
+    void shouldPersistVerifiedConsultationTurnWithNextVisitSequence() {
         UUID visitId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         UUID organizationId = UUID.randomUUID();
         prepareVisit(visitId, organizationId);
-        when(repository.findByVisitIdAndEventId(visitId, "event-1")).thenReturn(Optional.empty());
-        when(repository.findByVisitIdAndItemId(visitId, "item-1")).thenReturn(Optional.empty());
+        expectMissing(visitId, RealtimeIntakeSource.CONSULTATION, "event-1", "item-1");
         when(repository.findMaximumSequence(visitId)).thenReturn(7L);
         when(repository.saveAndFlush(any(RealtimeClinicalIntakeEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -48,10 +47,44 @@ class RealtimeClinicalIntakeServiceTest {
                 " Patient sans fièvre ",
                 0.91);
 
+        assertThat(result.source()).isEqualTo(RealtimeIntakeSource.CONSULTATION);
         assertThat(result.sequence()).isEqualTo(8);
         assertThat(result.transcript()).isEqualTo("Patient sans fièvre");
         assertThat(result.eventId()).isEqualTo("event-1");
         assertThat(result.itemId()).isEqualTo("item-1");
+    }
+
+    @Test
+    void shouldPersistVitalsTurnInAnIsolatedSourceNamespace() {
+        UUID visitId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+        prepareVisit(visitId, organizationId);
+        expectMissing(visitId, RealtimeIntakeSource.VITALS, "event-shared", "item-shared");
+        when(repository.findMaximumSequence(visitId)).thenReturn(3L);
+        when(repository.saveAndFlush(any(RealtimeClinicalIntakeEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        var result = service.ingest(
+                visitId,
+                userId,
+                organizationId,
+                RealtimeIntakeSource.VITALS,
+                "event-shared",
+                "item-shared",
+                "Saturation 96",
+                0.88);
+
+        assertThat(result.source()).isEqualTo(RealtimeIntakeSource.VITALS);
+        assertThat(result.sequence()).isEqualTo(4);
+        verify(repository).findByVisitIdAndSourceAndEventId(
+                visitId,
+                RealtimeIntakeSource.VITALS,
+                "event-shared");
+        verify(repository, never()).findByVisitIdAndSourceAndEventId(
+                visitId,
+                RealtimeIntakeSource.CONSULTATION,
+                "event-shared");
     }
 
     @Test
@@ -63,12 +96,15 @@ class RealtimeClinicalIntakeServiceTest {
         RealtimeClinicalIntakeEntity existing = entity(
                 organizationId,
                 visitId,
+                RealtimeIntakeSource.CONSULTATION,
                 "event-2",
                 "item-2",
                 "Tension 120 sur 80",
                 0.93,
                 userId);
-        when(repository.findByVisitIdAndEventId(visitId, "event-2")).thenReturn(Optional.of(existing));
+        when(repository.findByVisitIdAndSourceAndEventId(
+                visitId, RealtimeIntakeSource.CONSULTATION, "event-2"))
+                .thenReturn(Optional.of(existing));
 
         var result = service.ingest(
                 visitId,
@@ -85,7 +121,7 @@ class RealtimeClinicalIntakeServiceTest {
     }
 
     @Test
-    void shouldDeduplicateByOpenAiItemIdEvenWhenEventIdChanges() {
+    void shouldDeduplicateByOpenAiItemIdWithinSameSourceEvenWhenEventIdChanges() {
         UUID visitId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         UUID organizationId = UUID.randomUUID();
@@ -93,13 +129,18 @@ class RealtimeClinicalIntakeServiceTest {
         RealtimeClinicalIntakeEntity existing = entity(
                 organizationId,
                 visitId,
+                RealtimeIntakeSource.CONSULTATION,
                 "event-original",
                 "item-stable",
                 "Douleur depuis trois jours",
                 0.9,
                 userId);
-        when(repository.findByVisitIdAndEventId(visitId, "event-replayed")).thenReturn(Optional.empty());
-        when(repository.findByVisitIdAndItemId(visitId, "item-stable")).thenReturn(Optional.of(existing));
+        when(repository.findByVisitIdAndSourceAndEventId(
+                visitId, RealtimeIntakeSource.CONSULTATION, "event-replayed"))
+                .thenReturn(Optional.empty());
+        when(repository.findByVisitIdAndSourceAndItemId(
+                visitId, RealtimeIntakeSource.CONSULTATION, "item-stable"))
+                .thenReturn(Optional.of(existing));
 
         var result = service.ingest(
                 visitId,
@@ -126,13 +167,18 @@ class RealtimeClinicalIntakeServiceTest {
         RealtimeClinicalIntakeEntity existing = entity(
                 organizationId,
                 visitId,
+                RealtimeIntakeSource.CONSULTATION,
                 "event-original",
                 "item-stable",
                 "Douleur depuis trois jours",
                 0.9,
                 userId);
-        when(repository.findByVisitIdAndEventId(visitId, "event-replayed")).thenReturn(Optional.empty());
-        when(repository.findByVisitIdAndItemId(visitId, "item-stable")).thenReturn(Optional.of(existing));
+        when(repository.findByVisitIdAndSourceAndEventId(
+                visitId, RealtimeIntakeSource.CONSULTATION, "event-replayed"))
+                .thenReturn(Optional.empty());
+        when(repository.findByVisitIdAndSourceAndItemId(
+                visitId, RealtimeIntakeSource.CONSULTATION, "item-stable"))
+                .thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> service.ingest(
                 visitId,
@@ -155,12 +201,15 @@ class RealtimeClinicalIntakeServiceTest {
         RealtimeClinicalIntakeEntity existing = entity(
                 organizationId,
                 visitId,
+                RealtimeIntakeSource.CONSULTATION,
                 "event-3",
                 "item-3",
                 "Pouls 72",
                 0.92,
                 userId);
-        when(repository.findByVisitIdAndEventId(visitId, "event-3")).thenReturn(Optional.of(existing));
+        when(repository.findByVisitIdAndSourceAndEventId(
+                visitId, RealtimeIntakeSource.CONSULTATION, "event-3"))
+                .thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> service.ingest(
                 visitId,
@@ -180,8 +229,7 @@ class RealtimeClinicalIntakeServiceTest {
         UUID userId = UUID.randomUUID();
         UUID organizationId = UUID.randomUUID();
         prepareVisit(visitId, organizationId);
-        when(repository.findByVisitIdAndEventId(visitId, "event-low")).thenReturn(Optional.empty());
-        when(repository.findByVisitIdAndItemId(visitId, "item-low")).thenReturn(Optional.empty());
+        expectMissing(visitId, RealtimeIntakeSource.CONSULTATION, "event-low", "item-low");
         when(repository.findMaximumSequence(visitId)).thenReturn(0L);
         when(repository.saveAndFlush(any(RealtimeClinicalIntakeEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -206,8 +254,7 @@ class RealtimeClinicalIntakeServiceTest {
         UUID userId = UUID.randomUUID();
         UUID organizationId = UUID.randomUUID();
         prepareVisit(visitId, organizationId);
-        when(repository.findByVisitIdAndEventId(visitId, "event-null")).thenReturn(Optional.empty());
-        when(repository.findByVisitIdAndItemId(visitId, "item-null")).thenReturn(Optional.empty());
+        expectMissing(visitId, RealtimeIntakeSource.CONSULTATION, "event-null", "item-null");
         when(repository.findMaximumSequence(visitId)).thenReturn(0L);
         when(repository.saveAndFlush(any(RealtimeClinicalIntakeEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -247,6 +294,17 @@ class RealtimeClinicalIntakeServiceTest {
                 .hasMessageContaining("VISIT_NOT_ACTIVE");
     }
 
+    private void expectMissing(
+            UUID visitId,
+            RealtimeIntakeSource source,
+            String eventId,
+            String itemId) {
+        when(repository.findByVisitIdAndSourceAndEventId(visitId, source, eventId))
+                .thenReturn(Optional.empty());
+        when(repository.findByVisitIdAndSourceAndItemId(visitId, source, itemId))
+                .thenReturn(Optional.empty());
+    }
+
     private void prepareVisit(UUID visitId, UUID organizationId) {
         VisitEntity visit = mock(VisitEntity.class);
         when(visit.getOrganizationId()).thenReturn(organizationId);
@@ -257,6 +315,7 @@ class RealtimeClinicalIntakeServiceTest {
     private RealtimeClinicalIntakeEntity entity(
             UUID organizationId,
             UUID visitId,
+            RealtimeIntakeSource source,
             String eventId,
             String itemId,
             String text,
@@ -265,6 +324,7 @@ class RealtimeClinicalIntakeServiceTest {
         return new RealtimeClinicalIntakeEntity(
                 organizationId,
                 visitId,
+                source,
                 1,
                 eventId,
                 itemId,
