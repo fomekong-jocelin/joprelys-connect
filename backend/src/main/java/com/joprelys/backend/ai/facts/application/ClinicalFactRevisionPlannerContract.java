@@ -22,6 +22,7 @@ public final class ClinicalFactRevisionPlannerContract {
             List<UUID> transcriptItemIds,
             int modelOperationCount,
             int normalizedOperationCount,
+            boolean applyRequired,
             ApplyRevisionRequest proposedRevision) {
     }
 }
