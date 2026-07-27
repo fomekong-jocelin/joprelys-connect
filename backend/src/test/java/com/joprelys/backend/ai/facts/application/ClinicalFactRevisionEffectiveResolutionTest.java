@@ -100,6 +100,8 @@ class ClinicalFactRevisionEffectiveResolutionTest {
         when(evidenceRepository.findByOperationIdOrderByPrimarySupportDescQuoteStartCharAsc(retraction.getId()))
                 .thenReturn(List.of(new ClinicalFactRevisionEvidenceEntity(
                         retraction.getId(),
+                        organizationId,
+                        visitId,
                         retractionEvidenceItemId,
                         0,
                         20,
