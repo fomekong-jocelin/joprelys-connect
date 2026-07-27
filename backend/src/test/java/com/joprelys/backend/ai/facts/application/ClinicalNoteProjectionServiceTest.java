@@ -12,6 +12,7 @@ import com.joprelys.backend.ai.ambient.application.AmbientTranscriptLedgerServic
 import com.joprelys.backend.ai.facts.application.ClinicalFactContract.EvidenceSpanView;
 import com.joprelys.backend.ai.facts.application.ClinicalFactContract.FactLedgerView;
 import com.joprelys.backend.ai.facts.application.ClinicalFactContract.FactView;
+import com.joprelys.backend.ai.facts.application.ClinicalNoteProjectionContract.NoteSectionCode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -73,7 +74,7 @@ class ClinicalNoteProjectionServiceTest {
         assertThat(projection.maxFactSequence()).isEqualTo(4);
         assertThat(projection.sections()).hasSize(1);
         assertThat(projection.sections().getFirst().code())
-                .isEqualTo("HISTORY_OF_PRESENT_ILLNESS");
+                .isEqualTo(NoteSectionCode.HISTORY_OF_PRESENT_ILLNESS);
         var entry = projection.sections().getFirst().entries().getFirst();
         assertThat(entry.conceptCode()).isEqualTo("KNEE_PAIN");
         assertThat(entry.laterality()).isEqualTo("LEFT");
