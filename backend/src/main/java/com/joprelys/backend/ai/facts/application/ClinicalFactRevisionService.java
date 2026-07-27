@@ -189,6 +189,8 @@ public class ClinicalFactRevisionService {
                 revisionEvidenceRepository.saveAll(evidence.stream()
                         .map(span -> new ClinicalFactRevisionEvidenceEntity(
                                 persisted.getId(),
+                                organizationId,
+                                visitId,
                                 span.transcriptItemId(),
                                 span.quoteStartChar(),
                                 span.quoteEndChar(),
