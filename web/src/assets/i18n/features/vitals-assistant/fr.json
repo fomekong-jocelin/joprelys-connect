@@ -35,6 +35,7 @@
   "vitals.assistant.realtimeFallback": "Dictée classique disponible",
   "vitals.assistant.realtimeHelp": "Dictez naturellement les constantes. Les valeurs restent à valider.",
   "vitals.assistant.realtimeProcessingBackground": "Traitement en arrière-plan — continuez à dicter.",
+  "vitals.assistant.realtimeDurableBlocked": "La sauvegarde sécurisée est interrompue. Le micro Realtime est en pause ; utilisez la saisie manuelle sans fermer cette fenêtre.",
   "vitals.assistant.realtimeMute": "Pause",
   "vitals.assistant.realtimeUnmute": "Reprendre",
   "vitals.assistant.realtimeReady": "Micro actif",
