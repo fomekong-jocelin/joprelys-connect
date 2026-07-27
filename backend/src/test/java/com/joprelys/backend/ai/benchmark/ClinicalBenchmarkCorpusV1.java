@@ -160,9 +160,18 @@ final class ClinicalBenchmarkCorpusV1 {
                 List.of(medication, order, nausea),
                 List.of(),
                 List.of(
-                        retract(medication),
-                        retract(order),
-                        retract(nausea)));
+                        retract(
+                                medication,
+                                "CLINICIAN_CANCELLATION",
+                                evidence(medicationCancel, "annule amoxicilline")),
+                        retract(
+                                order,
+                                "CLINICIAN_CANCELLATION",
+                                evidence(orderCancel, "annule le scanner abdominal")),
+                        retract(
+                                nausea,
+                                "EXPLICIT_NEGATION",
+                                evidence(nauseaNegated, "pas de nausées"))));
     }
 
     private static Scenario sixtyMinutes() {
@@ -319,18 +328,21 @@ final class ClinicalBenchmarkCorpusV1 {
     }
 
     private static Operation add(Fact fact) {
-        return new Operation("ADD", null, fact);
+        return new Operation("ADD", null, fact, null, List.of());
     }
 
     private static Operation keep(Fact fact) {
-        return new Operation("KEEP", fact.key(), null);
+        return new Operation("KEEP", fact.key(), null, null, List.of());
     }
 
     private static Operation replace(Fact target, Fact result) {
-        return new Operation("REPLACE", target.key(), result);
+        return new Operation("REPLACE", target.key(), result, null, List.of());
     }
 
-    private static Operation retract(Fact target) {
-        return new Operation("RETRACT", target.key(), null);
+    private static Operation retract(
+            Fact target,
+            String reason,
+            List<Evidence> evidence) {
+        return new Operation("RETRACT", target.key(), null, reason, List.copyOf(evidence));
     }
 }
