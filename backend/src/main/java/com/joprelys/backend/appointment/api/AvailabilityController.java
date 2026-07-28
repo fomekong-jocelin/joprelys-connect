@@ -21,6 +21,25 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import com.joprelys.backend.auth.security.JwtClaims;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,7 +49,7 @@ import org.springframework.web.bind.annotation.RestController;
  * extraite du jeton JWT.
  */
 @RestController
-@RequestMapping("/api/availabilities")
+@RequestMapping({"/api/availabilities", "/api/availabilities/"})
 @Tag(name = "Disponibilités médecins", description = "Gestion des plages de disponibilité récurrentes et des indisponibilités ponctuelles des médecins")
 public class AvailabilityController {
 
@@ -40,7 +59,7 @@ public class AvailabilityController {
 		this.availabilityService = availabilityService;
 	}
 
-	@GetMapping
+	@GetMapping({"", "/"})
 	@PreAuthorize("hasAuthority('AVAILABILITY_MANAGE')")
 	@Operation(summary = "Lister les règles de disponibilité",
 			description = "Retourne les règles récurrentes du médecin connecté, ou du médecin indiqué pour un administrateur de clinique.",
@@ -56,7 +75,7 @@ public class AvailabilityController {
 		return availabilityService.listRules(doctorId, callerId(authentication), canManageAll(authentication));
 	}
 
-	@PostMapping
+	@PostMapping({"", "/"})
 	@PreAuthorize("hasAuthority('AVAILABILITY_MANAGE')")
 	@Operation(summary = "Créer une règle de disponibilité",
 			description = "Crée une plage hebdomadaire récurrente. Un médecin ne peut créer que ses propres règles.",
@@ -111,7 +130,7 @@ public class AvailabilityController {
 		return availabilityService.deactivateRule(id, callerId(authentication), canManageAll(authentication));
 	}
 
-	@GetMapping("/exceptions")
+	@GetMapping({"/exceptions", "/exceptions/"})
 	@PreAuthorize("hasAuthority('AVAILABILITY_MANAGE')")
 	@Operation(summary = "Lister les indisponibilités",
 			description = "Retourne les indisponibilités du médecin connecté, ou du médecin indiqué pour un administrateur de clinique, éventuellement bornées par une période.",
@@ -130,12 +149,6 @@ public class AvailabilityController {
 			@RequestParam(required = false) Instant to,
 			Authentication authentication) {
 		return availabilityService.listExceptions(doctorId, from, to, callerId(authentication), canManageAll(authentication));
-	}
-
-	@PostMapping("/exceptions")
-	@PreAuthorize("hasAuthority('AVAILABILITY_MANAGE')")
-	@Operation(summary = "Créer une indisponibilité",
-			description = "Déclare une indisponibilité ponctuelle (congé, absence) qui masque les créneaux correspondants.",
 			responses = {
 					@ApiResponse(responseCode = "200", description = "Indisponibilité créée"),
 					@ApiResponse(responseCode = "400", description = "Plage invalide"),

@@ -1,4 +1,4 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
 
 const HOUR_ROW_HEIGHT = 48;
 const DAY_MINUTES = 24 * 60;
@@ -61,28 +61,161 @@ interface CalendarBlock {
   readonly exception?: WeeklyAvailabilityExceptionView;
 }
 
-/** Calendrier hebdomadaire type agenda, sans dépendance externe. */
+/** Calendrier hebdomadaire type agenda, sans dépendance externe et 100% mobile-first. */
 @Component({
   selector: 'app-weekly-availability-grid',
   standalone: true,
   template: `
-    <div class="space-y-3">
-      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-semibold text-[var(--text-muted)]">
-        <span class="inline-flex items-center gap-1.5">
-          <span class="h-2.5 w-2.5 rounded-[var(--radius-brand-xs)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)]"></span>
-          {{ labels().available || 'Available' }}
-        </span>
-        <span class="inline-flex items-center gap-1.5">
-          <span class="h-2.5 w-2.5 rounded-[var(--radius-brand-xs)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)]"></span>
-          {{ labels().unavailable || 'Unavailable' }}
-        </span>
+    <div class="space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-[11px] font-semibold text-[var(--text-muted)]">
+        <div class="flex items-center gap-3">
+          <span class="inline-flex items-center gap-1.5">
+            <span class="h-2.5 w-2.5 rounded-[var(--radius-brand-xs)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)]"></span>
+            {{ labels().available || 'Disponible' }}
+          </span>
+          <span class="inline-flex items-center gap-1.5">
+            <span class="h-2.5 w-2.5 rounded-[var(--radius-brand-xs)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)]"></span>
+            {{ labels().unavailable || 'Indisponible' }}
+          </span>
+        </div>
         @if (labels().clickToAdd) {
-          <span class="ml-auto hidden sm:inline">{{ labels().clickToAdd }}</span>
+          <span class="hidden sm:inline">{{ labels().clickToAdd }}</span>
         }
       </div>
 
-      <div class="max-h-[640px] overflow-auto rounded-[var(--radius-brand-lg)] border border-[var(--app-border)] bg-[var(--app-surface)]">
-        <div class="min-w-[980px]">
+      <!-- VUE MOBILE (< 768px) : Onglets jour par jour + timeline fluide -->
+      <div class="block md:hidden">
+        <!-- Bandeau d'onglets pour les 7 jours de la semaine -->
+        <div class="flex overflow-x-auto rounded-[var(--radius-brand-lg)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-1 gap-1">
+          @for (day of days(); track day.dateKey) {
+            <button
+              type="button"
+              class="flex flex-1 min-w-[70px] flex-col items-center justify-center rounded-[var(--radius-brand-md)] py-2 px-1 text-center transition-colors border"
+              [class.bg-[var(--brand-primary)]]="selectedMobileWeekday() === day.weekday"
+              [class.text-white]="selectedMobileWeekday() === day.weekday"
+              [class.border-transparent]="selectedMobileWeekday() === day.weekday"
+              [class.bg-[var(--app-surface)]]="selectedMobileWeekday() !== day.weekday && day.today"
+              [class.border-[var(--brand-primary-border)]]="selectedMobileWeekday() !== day.weekday && day.today"
+              [class.border-transparent]="selectedMobileWeekday() !== day.weekday && !day.today"
+              (click)="selectMobileDay(day.weekday)"
+            >
+              <span class="text-[10px] font-black uppercase tracking-wider" [class.text-[var(--brand-primary)]]="selectedMobileWeekday() !== day.weekday && day.today" [class.text-[var(--text-muted)]]="selectedMobileWeekday() !== day.weekday && !day.today">{{ day.label.substring(0, 3) }}</span>
+              <span class="text-sm font-extrabold" [class.text-[var(--text-primary)]]="selectedMobileWeekday() !== day.weekday">{{ day.date.getDate() }}</span>
+              @if (day.rules.length > 0) {
+                <span class="mt-0.5 h-1.5 w-1.5 rounded-full" [class.bg-white]="selectedMobileWeekday() === day.weekday" [class.bg-[var(--brand-primary)]]="selectedMobileWeekday() !== day.weekday"></span>
+              }
+            </button>
+          }
+        </div>
+
+        <!-- Détail du jour sélectionné sur mobile -->
+        @if (selectedMobileDay(); as currentDay) {
+          <div class="mt-3 rounded-[var(--radius-brand-lg)] border border-[var(--app-border)] bg-[var(--app-surface)] p-4 space-y-3">
+            <div class="flex items-center justify-between border-b border-[var(--divider-subtle)] pb-3">
+              <div>
+                <h3 class="text-sm font-extrabold text-[var(--text-primary)]">
+                  {{ currentDay.label }} {{ currentDay.date.getDate() }}
+                </h3>
+                <p class="text-xs text-[var(--text-muted)]">
+                  {{ currentDay.rules.length }} {{ labels().available || 'plage(s)' }}
+                </p>
+              </div>
+              <button
+                type="button"
+                class="ui-button ui-button-primary min-h-[38px] text-xs py-1.5 px-3"
+                (click)="addRuleForDay(currentDay)"
+              >
+                + Ajouter une plage
+              </button>
+            </div>
+
+            <!-- Liste des plages du jour -->
+            @if (currentDay.rules.length === 0 && currentDay.exceptions.length === 0) {
+              <div class="py-6 text-center text-xs text-[var(--text-muted)] bg-[var(--app-surface-muted)] rounded-[var(--radius-brand-md)]">
+                {{ labels().emptyDay || 'Aucune plage configurée pour ce jour' }}
+              </div>
+            } @else {
+              <div class="space-y-2">
+                @for (rule of currentDay.rules; track rule.id) {
+                  <div class="flex items-center justify-between rounded-[var(--radius-brand-md)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] p-3">
+                    <button type="button" class="text-left flex-1" (click)="ruleSelected.emit(rule)">
+                      <span class="block text-sm font-black text-[var(--brand-primary)]">{{ rule.startTime }} – {{ rule.endTime }}</span>
+                      <span class="block text-xs text-[var(--text-secondary)]">{{ labels().available || 'Disponible' }}</span>
+                    </button>
+                    <div class="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        class="ui-button ui-button-secondary text-xs px-2 py-1"
+                        (click)="ruleSelected.emit(rule)"
+                      >
+                        Éditer
+                      </button>
+                      <button
+                        type="button"
+                        class="ui-button ui-button-danger text-xs px-2 py-1"
+                        (click)="ruleDeactivateRequested.emit(rule)"
+                      >
+                        Désactiver
+                      </button>
+                    </div>
+                  </div>
+                }
+
+                @for (exception of currentDay.exceptions; track exception.id) {
+                  <div class="rounded-[var(--radius-brand-md)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3">
+                    <span class="block text-xs font-black text-[var(--brand-danger-text)]">{{ labels().unavailable || 'Indisponible' }}</span>
+                    <span class="block text-xs text-[var(--text-secondary)]">
+                      {{ formatExceptionTimes(exception) }}
+                    </span>
+                    @if (exception.reason) {
+                      <span class="mt-1 block text-xs italic text-[var(--text-muted)]">{{ exception.reason }}</span>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Créneaux rapides de la journée -->
+            <div class="pt-2">
+              <h4 class="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Créer une plage rapide</h4>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button
+                  type="button"
+                  class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] py-2 text-center text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)]"
+                  (click)="addSlotForDay(currentDay, '08:00', '12:00')"
+                >
+                  Matin (08h - 12h)
+                </button>
+                <button
+                  type="button"
+                  class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] py-2 text-center text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)]"
+                  (click)="addSlotForDay(currentDay, '14:00', '18:00')"
+                >
+                  Après-midi (14h - 18h)
+                </button>
+                <button
+                  type="button"
+                  class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] py-2 text-center text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)]"
+                  (click)="addSlotForDay(currentDay, '08:00', '17:00')"
+                >
+                  Journée (08h - 17h)
+                </button>
+                <button
+                  type="button"
+                  class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] py-2 text-center text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)]"
+                  (click)="addRuleForDay(currentDay)"
+                >
+                  Personnalisé...
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- VUE DESKTOP (>= 768px) : Grille 7 jours type agenda -->
+      <div class="hidden md:block max-h-[640px] overflow-auto rounded-[var(--radius-brand-lg)] border border-[var(--app-border)] bg-[var(--app-surface)]">
+        <div class="w-full">
           <div class="sticky top-0 z-30 grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-[var(--app-border)] bg-[var(--app-surface-muted)]">
             <div class="border-r border-[var(--app-border)]"></div>
             @for (day of days(); track day.dateKey) {
@@ -170,6 +303,8 @@ export class WeeklyAvailabilityGridComponent {
   readonly ruleSelected = output<WeeklyAvailabilityRuleView>();
   readonly ruleDeactivateRequested = output<WeeklyAvailabilityRuleView>();
 
+  readonly activeMobileDay = signal<number>(1);
+
   readonly rowHeight = HOUR_ROW_HEIGHT;
   readonly hours = Array.from({ length: 25 }, (_, index) => index);
   readonly calendarHeight = 24 * HOUR_ROW_HEIGHT;
@@ -195,6 +330,42 @@ export class WeeklyAvailabilityGridComponent {
       };
     });
   });
+
+  readonly selectedMobileWeekday = computed(() => this.selectedWeekday() ?? this.activeMobileDay());
+  readonly selectedMobileDay = computed(() =>
+    this.days().find((d) => d.weekday === this.selectedMobileWeekday()) ?? this.days()[0] ?? null);
+
+  selectMobileDay(weekday: number): void {
+    this.activeMobileDay.set(weekday);
+    this.weekdaySelected.emit(weekday);
+  }
+
+  addRuleForDay(day: CalendarDay): void {
+    this.rangeSelected.emit({
+      weekday: day.weekday,
+      date: new Date(day.date),
+      validFrom: day.dateKey,
+      startTime: '08:00',
+      endTime: '17:00',
+    });
+  }
+
+  addSlotForDay(day: CalendarDay, startTime: string, endTime: string): void {
+    this.rangeSelected.emit({
+      weekday: day.weekday,
+      date: new Date(day.date),
+      validFrom: day.dateKey,
+      startTime,
+      endTime,
+    });
+  }
+
+  formatExceptionTimes(exception: WeeklyAvailabilityExceptionView): string {
+    const start = new Date(exception.startAt);
+    const end = new Date(exception.endAt);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
+    return `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} → ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  }
 
   blocksForDay(day: CalendarDay): readonly CalendarBlock[] {
     const blocks: CalendarBlock[] = [];
@@ -248,7 +419,6 @@ export class WeeklyAvailabilityGridComponent {
       Math.floor(rawMinutes / SELECTION_STEP_MINUTES) * SELECTION_STEP_MINUTES);
     const endMinutes = Math.min(DAY_MINUTES, startMinutes + 60);
 
-    this.weekdaySelected.emit(day.weekday);
     this.rangeSelected.emit({
       weekday: day.weekday,
       date: new Date(day.date),

@@ -8,6 +8,11 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **BUG-20260728-DOCTOR-AVAILABILITY-MOBILE-GRID-AND-WEEKDAY-BUG — Correctifs UX & Backend Disponibilités (Mobile-First, Sync Jour/Date & Trailing Slash API)** :
+  - **Grille Calendrier Mobile-First (`WeeklyAvailabilityGridComponent`)** : Support responsive sous `768px` avec bandeau d'onglets jour par jour (Lun → Dim), timeline verticale fluide du jour avec boutons d'action tactiles (hauteur min 38-44px) et raccourcis de création rapide ("Matin 08h-12h", "Après-midi 14h-18h", "Journée 08h-17h"), évitant tout défilement horizontal forcé sur mobile. Grille 7 jours desktop conservée pour les écrans larges.
+  - **Synchronisation strict jour / date (`AvailabilityPageComponent`)** : Élimination du désalignement entre le jour de semaine (`formWeekday`) et la date de début de validité (`formValidFrom`) lors de la sélection d'une date ou d'un créneau dans la grille (la sélection d'un mardi ou vendredi n'affiche plus "Lundi" dans la modale). Ajout de `[selected]="day === formWeekday()"` et liaison réactive `onFormWeekdayChange` / `onFormValidFromChange`.
+  - **Résilience Backend (`AvailabilityController.java`)** : Support de `@RequestMapping({"/api/availabilities", "/api/availabilities/"})` et des sous-routes avec/sans slash final sous Spring Boot 3 pour parer aux réécritures et normalisations d'URL de reverse proxy/Nginx.
+
 - **FEAT-20260728-UNIVERSAL-VOICE-FUSION — Évolution R1 : Micro Ambiant Universel Unifié (Note Clinique + Constantes)** :
   - **Unification du Flux Vocale Ambiant** : Élimination de la dualité des assistants vocaux sur la page de consultation. Le micro universel principal (`app-voice-assistant-panel`) gère désormais l'écoute unique et réalise l'extraction simultanée de la note clinique, des prescriptions, des examens ET des constantes vitales (`vitals`).
   - **Routage Automatique Dual (Formulaire + Constantes)** : Mise à jour de `applyAiDraft` dans `consultation.component.ts` pour que la validation globale d'un brouillon applique à la fois les champs de la note et prépare le bloc de validation des constantes (`pendingVitalsProposal`).

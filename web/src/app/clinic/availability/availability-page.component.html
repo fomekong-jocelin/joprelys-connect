@@ -125,10 +125,10 @@
                     class="ui-select"
                     [value]="formWeekday()"
                     [disabled]="ruleFormLoading()"
-                    (change)="formWeekday.set(+$any($event.target).value)"
+                    (change)="onFormWeekdayChange(+$any($event.target).value)"
                   >
                     @for (day of weekdays; track day) {
-                      <option [value]="day">{{ t('availability.weekdays.' + day) }}</option>
+                      <option [value]="day" [selected]="day === formWeekday()">{{ t('availability.weekdays.' + day) }}</option>
                     }
                   </select>
                 </label>
@@ -162,7 +162,7 @@
                     type="date"
                     [value]="formValidFrom()"
                     [disabled]="ruleFormLoading()"
-                    (input)="formValidFrom.set($any($event.target).value)"
+                    (input)="onFormValidFromChange($any($event.target).value)"
                   />
                 </label>
 

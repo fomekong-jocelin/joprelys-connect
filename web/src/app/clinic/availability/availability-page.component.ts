@@ -197,24 +197,48 @@ export class AvailabilityPageComponent implements OnInit {
 
   onWeekdaySelected(weekday: number): void {
     this.successMessage.set(null);
-    if (!this.showRuleForm() || this.editingRule() !== null) {
-      this.resetRuleForm();
-      this.showRuleForm.set(true);
-    }
+    this.editingRule.set(null);
+    this.ruleFormError.set(null);
+    this.formWeekday.set(weekday);
+    this.formValidFrom.set(toLocalDateKey(dateForWeekday(this.weekStart(), weekday)));
+    if (!this.formStartTime()) this.formStartTime.set('08:00');
+    if (!this.formEndTime()) this.formEndTime.set('17:00');
+    this.showRuleForm.set(true);
+  }
+
+  onCalendarRangeSelected(selection: WeeklyAvailabilityRangeSelection): void {
+    this.editingRule.set(null);
+    this.ruleFormError.set(null);
+    this.successMessage.set(null);
+    this.formWeekday.set(selection.weekday);
+    this.formStartTime.set(selection.startTime);
+    this.formEndTime.set(selection.endTime);
+    this.formValidFrom.set(selection.validFrom);
+    this.formValidTo.set('');
+    this.showRuleForm.set(true);
+  }
+
+  onFormWeekdayChange(weekday: number): void {
     this.formWeekday.set(weekday);
     if (this.editingRule() === null) {
       this.formValidFrom.set(toLocalDateKey(dateForWeekday(this.weekStart(), weekday)));
     }
   }
 
-  onCalendarRangeSelected(selection: WeeklyAvailabilityRangeSelection): void {
-    this.resetRuleForm();
-    this.successMessage.set(null);
-    this.formWeekday.set(selection.weekday);
-    this.formStartTime.set(selection.startTime);
-    this.formEndTime.set(selection.endTime);
-    this.formValidFrom.set(selection.validFrom);
-    this.showRuleForm.set(true);
+  onFormValidFromChange(dateStr: string): void {
+    this.formValidFrom.set(dateStr);
+    if (dateStr && this.editingRule() === null) {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        const parsed = new Date(year, month, day);
+        if (!Number.isNaN(parsed.getTime())) {
+          this.formWeekday.set(isoWeekday(parsed));
+        }
+      }
+    }
   }
 
   startEditRule(rule: WeeklyAvailabilityRuleView): void {

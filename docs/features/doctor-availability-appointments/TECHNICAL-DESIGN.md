@@ -135,3 +135,16 @@ Correctif P0 `BUG-20260718-PATIENT-PROFESSIONAL-RBAC-CONTEXT-LEAK` :
 - `roleGuard` refuse une route ne déclarant pas `PATIENT` avant toute résolution RBAC ;
 - `JwtAuthenticationFilter` ne crée que `ROLE_PATIENT` lorsqu'un token est classé patient, même en présence d'un claim de rôles mixte ;
 - les contrôleurs restent la source de vérité ; `/api/availabilities/**` exige `hasAuthority('AVAILABILITY_MANAGE')` et des tests de refus patient explicites.
+
+## 14. Ergonomie Mobile-First & Résilience des Endpoints (Correctif P0 du 2026-07-28)
+
+Correctif `BUG-20260728-DOCTOR-AVAILABILITY-MOBILE-GRID-AND-WEEKDAY-BUG` :
+
+- **Routage Backend résilient** : `@RequestMapping({"/api/availabilities", "/api/availabilities/"})` dans `AvailabilityController.java` pour supporter les réécritures proxy/Nginx avec ou sans trailing slash sans générer de faux 404.
+- **Grille Mobile-First `WeeklyAvailabilityGridComponent`** :
+  - **Mobile (< 768px)** : Affichage d'un bandeau horizontal d'onglets pour naviguer entre les jours (Lun → Dim). Timeline verticale du jour avec boutons tactiles ergonomiques (hauteur min 38-44px), liste des cartes de plages actives/exceptions et raccourcis de création rapide (Matin 08h-12h, Après-midi 14h-18h, Journée 08h-17h).
+  - **Desktop (≥ 768px)** : Grille 7 colonnes standard conservée dans un conteneur responsive.
+- **Formulaire de plage `AvailabilityPageComponent`** :
+  - Suppression des réinitialisations parasites (`resetRuleForm()`) lors des sélections de plages/jours.
+  - Liaison bidirectionnelle réactive `onFormWeekdayChange` et `onFormValidFromChange` avec attribut `[selected]="day === formWeekday()"` sur l'élément HTML `<select>`.
+
