@@ -1,12 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ExternalAccessApiService, CreateExternalAccessRequestDto } from './external-access-api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
-import { CardComponent } from '../../shared/ui/card.component';
 import { AlertComponent } from '../../shared/ui/alert.component';
 
 const DURATION_OPTIONS = [
@@ -41,6 +40,12 @@ const ACCESS_SCOPES = [
         </div>
 
         <div class="ui-card-subtle p-5 lg:p-6 flex flex-col gap-5 max-w-2xl">
+          @if (requestedScopeLabel()) {
+            <app-ui-alert tone="info">
+              Accès requis : {{ requestedScopeLabel() }}. Le périmètre concerné a été présélectionné.
+            </app-ui-alert>
+          }
+
           @if (success()) {
             <div class="p-4 rounded-[var(--radius-brand-md)] bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 text-[var(--brand-success-text)] text-sm font-semibold flex items-start gap-3">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 shrink-0 mt-0.5">
@@ -57,7 +62,6 @@ const ACCESS_SCOPES = [
               </app-ui-button>
             </div>
           } @else {
-            <!-- DPU Patient -->
             <div class="space-y-1.5">
               <label for="dpu" class="ui-label">{{ i18n.t('clinic.accessRequest.dpuLabel') }} <span class="text-[var(--brand-danger)]">*</span></label>
               <input
@@ -70,7 +74,6 @@ const ACCESS_SCOPES = [
               />
             </div>
 
-            <!-- Motif -->
             <div class="space-y-1.5">
               <label for="reason" class="ui-label">{{ i18n.t('clinic.accessRequest.reasonLabel') }} <span class="text-[var(--brand-danger)]">*</span></label>
               <textarea
@@ -82,7 +85,6 @@ const ACCESS_SCOPES = [
               ></textarea>
             </div>
 
-            <!-- Durée -->
             <div class="space-y-1.5">
               <label for="duration" class="ui-label">{{ i18n.t('clinic.accessRequest.durationLabel') }} <span class="text-[var(--brand-danger)]">*</span></label>
               <select
@@ -98,7 +100,6 @@ const ACCESS_SCOPES = [
               </select>
             </div>
 
-            <!-- Scopes granulaires -->
             <div class="space-y-2">
               <p class="ui-label">{{ i18n.t('clinic.accessRequest.scopesLabel') }}</p>
               <div class="grid grid-cols-2 gap-2">
@@ -142,18 +143,39 @@ const ACCESS_SCOPES = [
 export class ClinicAccessRequestComponent {
   private readonly api = inject(ExternalAccessApiService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   readonly i18n = inject(I18nService);
 
   readonly dpuNumber = signal('');
   readonly reason = signal('');
   readonly durationHours = signal<number | ''>('');
   readonly selectedScopes = signal<string[]>(ACCESS_SCOPES.map(s => s.key));
+  readonly requestedScope = signal<string | null>(null);
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal(false);
 
   readonly durationOptions = DURATION_OPTIONS;
   readonly accessScopes = ACCESS_SCOPES;
+
+  constructor() {
+    const scope = this.route.snapshot.queryParamMap.get('scope');
+    const reason = this.route.snapshot.queryParamMap.get('reason');
+    if (scope && ACCESS_SCOPES.some(item => item.key === scope)) {
+      this.requestedScope.set(scope);
+      this.selectedScopes.set([scope]);
+    }
+    if (reason?.trim()) {
+      this.reason.set(reason.trim());
+    }
+  }
+
+  requestedScopeLabel(): string {
+    const scope = this.requestedScope();
+    if (!scope) return '';
+    const item = ACCESS_SCOPES.find(candidate => candidate.key === scope);
+    return item ? this.localeLabel(item) : scope;
+  }
 
   isScopeSelected(key: string): boolean {
     return this.selectedScopes().includes(key);
@@ -168,7 +190,8 @@ export class ClinicAccessRequestComponent {
   isFormValid(): boolean {
     return this.dpuNumber().trim().length > 0
       && this.reason().trim().length > 0
-      && this.durationHours() !== '';
+      && this.durationHours() !== ''
+      && this.selectedScopes().length > 0;
   }
 
   localeLabel(item: { labelFr: string; labelEn: string }): string {
@@ -195,7 +218,12 @@ export class ClinicAccessRequestComponent {
       },
       error: (err) => {
         this.isLoading.set(false);
-        this.error.set(err.error?.detail || err.error?.title || this.i18n.t('clinic.accessRequest.error'));
+        this.error.set(
+          err.error?.error?.message
+          || err.error?.detail
+          || err.error?.title
+          || this.i18n.t('clinic.accessRequest.error'),
+        );
       }
     });
   }
@@ -205,6 +233,7 @@ export class ClinicAccessRequestComponent {
     this.reason.set('');
     this.durationHours.set('');
     this.selectedScopes.set(ACCESS_SCOPES.map(s => s.key));
+    this.requestedScope.set(null);
     this.error.set(null);
     this.success.set(false);
   }
