@@ -93,6 +93,7 @@ public class FinalClinicalReviewService {
                 response.model(),
                 createdAt,
                 createdAt.plus(REVIEW_TTL_MINUTES, ChronoUnit.MINUTES),
+                draft,
                 revision);
         reviews.put(new ReviewKey(visitId, userId, organizationId), state);
         return toView(state);
@@ -104,10 +105,12 @@ public class FinalClinicalReviewService {
             UUID organizationId,
             UUID reviewId,
             UUID proposalId,
-            String decision) {
+            String decision,
+            Map<String, String> currentDraft) {
         validateDecision(decision);
         ReviewState state = requireState(visitId, userId, organizationId, reviewId);
         synchronized (state) {
+            requireFreshDraft(state, currentDraft);
             List<FieldProposalView> proposals = new ArrayList<>(state.revision.proposals());
             int proposalIndex = proposalIndex(proposals, proposalId);
             FieldProposalView proposal = proposals.get(proposalIndex);
@@ -125,10 +128,12 @@ public class FinalClinicalReviewService {
             UUID userId,
             UUID organizationId,
             UUID reviewId,
-            String decision) {
+            String decision,
+            Map<String, String> currentDraft) {
         validateDecision(decision);
         ReviewState state = requireState(visitId, userId, organizationId, reviewId);
         synchronized (state) {
+            requireFreshDraft(state, currentDraft);
             boolean hasPending = state.revision.proposals().stream()
                     .anyMatch(proposal -> "PENDING".equals(proposal.status()));
             if (!hasPending) {
@@ -195,6 +200,12 @@ public class FinalClinicalReviewService {
             throw conflict("AI_FINAL_REVIEW_EXPIRED");
         }
         return state;
+    }
+
+    private void requireFreshDraft(ReviewState state, Map<String, String> currentDraft) {
+        if (!state.baseDraft.equals(sanitizeDraft(currentDraft))) {
+            throw conflict("AI_FINAL_REVIEW_STALE");
+        }
     }
 
     private ReviewView toView(ReviewState state) {
@@ -291,6 +302,7 @@ public class FinalClinicalReviewService {
         private final String model;
         private final Instant createdAt;
         private final Instant expiresAt;
+        private final Map<String, String> baseDraft;
         private RevisionView revision;
 
         private ReviewState(
@@ -299,12 +311,14 @@ public class FinalClinicalReviewService {
                 String model,
                 Instant createdAt,
                 Instant expiresAt,
+                Map<String, String> baseDraft,
                 RevisionView revision) {
             this.reviewId = reviewId;
             this.visitId = visitId;
             this.model = model;
             this.createdAt = createdAt;
             this.expiresAt = expiresAt;
+            this.baseDraft = baseDraft;
             this.revision = revision;
         }
     }
