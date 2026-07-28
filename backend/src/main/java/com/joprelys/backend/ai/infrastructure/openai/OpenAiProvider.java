@@ -79,6 +79,11 @@ public class OpenAiProvider implements AiProvider {
 
         String text = (String) response.get("text");
         String detectedLanguage = (String) response.getOrDefault("language", locale);
+        log.info(
+                "AI_USAGE provider=openai operation=transcription model={} audioBytes={} locale={}",
+                config.transcribeModel(),
+                audioData.length,
+                locale == null ? "unknown" : locale);
         return new AiTranscription(text, detectedLanguage, extractConfidence(response));
     }
 
@@ -95,7 +100,9 @@ public class OpenAiProvider implements AiProvider {
                 .retrieve()
                 .body(Map.class);
 
-        return parseCompletionResponse(response, false);
+        AiChatResponse parsed = parseCompletionResponse(response, false);
+        logUsage("chat", parsed);
+        return parsed;
     }
 
     @Override
@@ -132,7 +139,9 @@ public class OpenAiProvider implements AiProvider {
                 .retrieve()
                 .body(Map.class);
 
-        return parseCompletionResponse(response, true);
+        AiChatResponse parsed = parseCompletionResponse(response, true);
+        logUsage("structured_chat", parsed);
+        return parsed;
     }
 
     private Map<String, Object> baseChatRequest(
@@ -248,6 +257,18 @@ public class OpenAiProvider implements AiProvider {
         Integer tokensUsed = extractTotalTokens(response);
         String model = (String) response.get("model");
         return new AiChatResponse(content, tokensUsed, model);
+    }
+
+    private void logUsage(String operation, AiChatResponse response) {
+        String responseModel = response.model() == null || response.model().isBlank()
+                ? config.model()
+                : response.model();
+        String tokens = response.tokensUsed() == null ? "unknown" : response.tokensUsed().toString();
+        log.info(
+                "AI_USAGE provider=openai operation={} model={} totalTokens={}",
+                operation,
+                responseModel,
+                tokens);
     }
 
     @SuppressWarnings("unchecked")
