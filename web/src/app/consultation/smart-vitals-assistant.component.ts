@@ -5,11 +5,17 @@ import { I18nService } from '../core/i18n/i18n.service';
 import { AiConsultationApiService } from './ai-consultation-api.service';
 import { AiVitalField, AiVitalsApiService, AiVitalsProposal } from './ai-vitals-api.service';
 import { RealtimeVitalsControllerComponent } from './realtime-vitals-controller.component';
+import { VoiceListeningSurfaceComponent } from './voice-listening-surface.component';
 
 @Component({
   selector: 'app-smart-vitals-assistant',
   standalone: true,
-  imports: [CommonModule, FormsModule, RealtimeVitalsControllerComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RealtimeVitalsControllerComponent,
+    VoiceListeningSurfaceComponent,
+  ],
   templateUrl: './smart-vitals-assistant.component.html',
 })
 export class SmartVitalsAssistantComponent implements OnDestroy {
@@ -40,7 +46,6 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   readonly errorMessage = signal('');
 
   textInput = '';
-  readonly waveformBars = Array.from({ length: 24 });
   readonly mediaRecorderSupported =
     typeof window !== 'undefined' &&
     'MediaRecorder' in window &&
@@ -125,13 +130,6 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
     if (Object.keys(proposal.vitals).length === 0) return;
     this.proposed.emit(proposal);
     this.proposalApplied.set(true);
-  }
-
-  waveHeight(index: number): number {
-    const level = this.audioLevel();
-    const oscillation = 0.45 + Math.abs(Math.sin((index + 1) * 1.7)) * 0.55;
-    const active = this.recording() ? Math.max(0.16, level) : this.speaking() ? 0.65 : 0.12;
-    return Math.round(6 + 32 * active * oscillation);
   }
 
   labelFor(field: AiVitalField): string {

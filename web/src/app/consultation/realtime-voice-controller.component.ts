@@ -1,16 +1,7 @@
 import { CommonModule } from '@angular/common';
 import {
-  Component,
-  ElementRef,
-  EventEmitter,
-  Input,
-  OnChanges,
-  OnDestroy,
-  Output,
-  SimpleChanges,
-  ViewChild,
-  inject,
-  signal,
+  Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output,
+  SimpleChanges, ViewChild, inject, signal,
 } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
@@ -30,8 +21,7 @@ import {
   RealtimeVoiceBridgeService,
   RealtimeVoiceState,
 } from './realtime-voice-bridge.service';
-
-import { VoiceWaveVisualizerComponent } from './voice-wave-visualizer.component';
+import { VoiceListeningSurfaceComponent } from './voice-listening-surface.component';
 
 interface TranscriptEntry { text: string; timestamp: number; }
 
@@ -40,7 +30,7 @@ const LOW_CONFIDENCE_REVIEW_FLOOR = 0.35;
 @Component({
   selector: 'app-realtime-voice-controller',
   standalone: true,
-  imports: [CommonModule, VoiceWaveVisualizerComponent],
+  imports: [CommonModule, VoiceListeningSurfaceComponent],
   providers: [RealtimeClinicalTurnCoordinator],
   templateUrl: './realtime-voice-controller.component.html',
 })
@@ -237,6 +227,21 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     if (this.state().connecting) return this.i18n.t('consultation.ai.connectingAudio');
     if (this.state().connected) return this.i18n.t('consultation.ai.simpleListening');
     if (this.ambientState().active) return this.i18n.t('consultation.ai.reconnectingSimple');
+    return this.i18n.t('consultation.ai.audioUnavailableSimple');
+  }
+
+  listeningSurfaceStatus(): string {
+    if (this.manualMuted) return this.i18n.t('consultation.ai.listeningPaused');
+    if (this.backlogPaused) return this.i18n.t('consultation.ai.realtimeCatchingUp');
+    if (this.state().connecting || this.ambientState().active && !this.state().connected) {
+      return this.i18n.t('consultation.ai.reconnectingSimple');
+    }
+    if (this.state().connected) {
+      return this.i18n.t(
+        'consultation.ai.listenNaturally',
+        'Écoute en cours... Parlez naturellement',
+      );
+    }
     return this.i18n.t('consultation.ai.audioUnavailableSimple');
   }
 

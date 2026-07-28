@@ -1,0 +1,40 @@
+<div class="space-y-3">
+  <app-voice-listening-surface
+    [active]="state().connected && !effectiveMuted()"
+    [audioLevel]="state().userSpeaking ? 0.7 : 0.28"
+    [badgeText]="i18n.t('consultation.ai.aiInProgress', 'IA en cours...')"
+    [stopText]="i18n.t('consultation.ai.stopListening', 'Arrêter')"
+    [statusText]="listeningSurfaceStatus()"
+    [tipText]="i18n.t('consultation.ai.tipVitalsNaturally', 'Conseil : Vous pouvez dicter vos constantes de façon naturelle.')"
+    [accessibleLabel]="i18n.t('consultation.ai.microphoneLevelLabel', 'Niveau réel du microphone')"
+    [stopDisabled]="disabled"
+    (stop)="stopListening.emit()"
+  />
+
+  @if (state().connected && (processing() || queuedCount() > 0 || pendingConfirmationContext())) {
+    <div class="flex min-h-10 items-center justify-between gap-3 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-3 py-2">
+      <p class="min-w-0 truncate text-[11px] font-semibold text-[var(--text-secondary)]">
+        @if (processing()) {
+          {{ i18n.t('vitals.assistant.processing') }}
+        } @else if (pendingConfirmationContext()) {
+          {{ i18n.t('vitals.assistant.realtimeAwaitingConfirmation') }}
+        } @else {
+          {{ i18n.t('vitals.assistant.realtimeReady') }}
+        }
+      </p>
+      @if (queuedCount() > 0) {
+        <span class="shrink-0 text-[10px] font-bold text-[var(--brand-primary)]">
+          {{ queuedCount() }} {{ i18n.t('vitals.assistant.realtimeQueued') }}
+        </span>
+      }
+    </div>
+  }
+
+  @if (!state().connected) {
+    <div class="rounded-[var(--radius-brand-sm)] border border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] px-3 py-2 text-[11px] font-semibold text-[var(--brand-warning-text)]">
+      {{ state().connecting
+        ? i18n.t('vitals.assistant.realtimeRecovering')
+        : i18n.t('vitals.assistant.realtimeDisconnectedHelp') }}
+    </div>
+  }
+</div>

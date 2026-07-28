@@ -479,3 +479,48 @@ Les éléments suivants sont **explicitement exclus** de cette version :
 | **Push-to-Talk** | Mode d'enregistrement où le microphone est actif tant que le bouton est maintenu |
 | **QR Code** | Quick Response Code — Code-barres bidimensionnel contenant l'identifiant de visite |
 | **Tenant** | Organisation (clinique/hôpital) dans le système multi-tenant Joprelys Connect |
+
+---
+
+## 13. Uniformisation de la surface d’écoute vocale
+
+### 13.1 Besoin
+
+Le professionnel ne doit pas apprendre quatre représentations différentes du
+microphone selon qu’il utilise la Dictée ou le Realtime dans la Consultation ou
+la saisie des Constantes. À état équivalent, la surface d’écoute est strictement
+identique dans les quatre parcours.
+
+### 13.2 Parcours couverts
+
+| Contexte | Moteur | Surface attendue |
+|---|---|---|
+| Consultation | Realtime | carte Soft UI partagée |
+| Consultation | Dictée | carte Soft UI partagée |
+| Constantes | Realtime | carte Soft UI partagée |
+| Constantes | Dictée | carte Soft UI partagée |
+
+### 13.3 Règles fonctionnelles
+
+- La carte contient toujours le badge d’activité, l’action d’arrêt, le micro
+  central, les ondes, le message d’état et un conseil.
+- Le conseil peut mentionner les notes de consultation ou les constantes, sans
+  changer la structure, les dimensions ni la hiérarchie visuelle.
+- Le composant partagé ne décide pas comment arrêter le moteur : il émet une
+  intention et chaque contrôleur conserve son comportement existant.
+- Les messages de connexion, pause ou indisponibilité utilisent la même zone
+  d’état sans créer une autre carte concurrente.
+- L’historique de transcription n’appartient pas à la surface d’écoute. Il reste
+  disponible juste après la carte dans une zone bornée et scrollable.
+- Les propositions IA, clarifications, validations et sauvegardes restent
+  inchangées et toujours explicites.
+
+### 13.4 Critères d’acceptation
+
+- Les quatre parcours réutilisent un seul composant de présentation.
+- L’interface correspond à la maquette
+  `docs/ai/mockups/exact_soft_voice_card_1785238037119.jpg`.
+- Les textes sont traduits en français et en anglais.
+- Les thèmes light/dark et les viewports mobile/desktop conservent le même ordre
+  visuel et des actions tactiles d’au moins 44 px.
+- Aucun moteur vocal, contrat API ou comportement clinique n’est modifié.

@@ -24,6 +24,7 @@ import {
   RealtimeVoiceBridgeService,
   RealtimeVoiceState,
 } from './realtime-voice-bridge.service';
+import { VoiceListeningSurfaceComponent } from './voice-listening-surface.component';
 
 const MAX_SEEN_TRANSCRIPT_IDS = 512;
 const RETRY_DELAY_MS = 1200;
@@ -38,82 +39,9 @@ interface QueuedVitalsTurn {
 @Component({
   selector: 'app-realtime-vitals-controller',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, VoiceListeningSurfaceComponent],
   providers: [RealtimeVoiceBridgeService],
-  template: `
-    <div class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div class="min-w-0">
-          <div class="flex items-center gap-2">
-            <span class="h-2.5 w-2.5 rounded-full"
-              [ngClass]="state().connected && !durableBlocked() ? 'bg-[var(--brand-success)]' : state().connecting ? 'bg-[var(--brand-warning)]' : 'bg-[var(--brand-danger)]'">
-            </span>
-            <p class="text-xs font-bold text-[var(--text-primary)]">
-              {{ state().connected && !durableBlocked()
-                ? i18n.t('vitals.assistant.realtimeConnected')
-                : state().connecting
-                  ? i18n.t('vitals.assistant.realtimeRecovering')
-                  : i18n.t('vitals.assistant.realtimeDisconnected') }}
-            </p>
-          </div>
-          <p class="mt-1 text-[11px] leading-4 text-[var(--text-muted)]">
-            @if (durableBlocked()) {
-              {{ i18n.t('vitals.assistant.realtimeDurableBlocked') }}
-            } @else if (state().connected) {
-              {{ processing()
-                ? i18n.t('vitals.assistant.realtimeProcessingBackground')
-                : i18n.t('vitals.assistant.realtimeHelp') }}
-            } @else {
-              {{ i18n.t('vitals.assistant.realtimeRecoveryHelp') }}
-            }
-          </p>
-        </div>
-
-        @if (state().connected) {
-          <button
-            type="button"
-            (click)="toggleMute()"
-            [disabled]="disabled || durableBlocked()"
-            class="ui-button ui-button-secondary min-h-11 shrink-0"
-          >
-            <span class="h-2 w-2 rounded-full" [ngClass]="effectiveMuted() ? 'bg-[var(--text-muted)]' : 'bg-[var(--brand-success)]'"></span>
-            {{ effectiveMuted()
-              ? i18n.t('vitals.assistant.realtimeUnmute')
-              : i18n.t('vitals.assistant.realtimeMute') }}
-          </button>
-        }
-      </div>
-
-      @if (state().connected) {
-        <div class="mt-3 flex min-h-9 items-center justify-between gap-3 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-2">
-          <p class="min-w-0 truncate text-[11px] font-semibold text-[var(--text-secondary)]">
-            @if (processing()) {
-              {{ i18n.t('vitals.assistant.processing') }}
-            } @else if (state().assistantSpeaking) {
-              {{ i18n.t('vitals.assistant.speaking') }}
-            } @else if (state().userSpeaking) {
-              {{ i18n.t('vitals.assistant.listening') }}
-            } @else if (pendingConfirmationContext()) {
-              {{ i18n.t('vitals.assistant.realtimeAwaitingConfirmation') }}
-            } @else {
-              {{ i18n.t('vitals.assistant.realtimeReady') }}
-            }
-          </p>
-          @if (queuedCount() > 0) {
-            <span class="shrink-0 text-[10px] font-bold text-[var(--brand-primary)]">
-              {{ queuedCount() }} {{ i18n.t('vitals.assistant.realtimeQueued') }}
-            </span>
-          }
-        </div>
-      } @else {
-        <div class="mt-3 rounded-[var(--radius-brand-sm)] border border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] px-3 py-2 text-[11px] font-semibold text-[var(--brand-warning-text)]">
-          {{ state().connecting
-            ? i18n.t('vitals.assistant.realtimeRecovering')
-            : i18n.t('vitals.assistant.realtimeDisconnectedHelp') }}
-        </div>
-      }
-    </div>
-  `,
+  templateUrl: './realtime-vitals-controller.component.html',
 })
 export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
   private readonly api = inject(AiVitalsApiService);
@@ -128,6 +56,7 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
   @Output() readonly proposed = new EventEmitter<AiVitalsProposal>();
   @Output() readonly activeChange = new EventEmitter<boolean>();
   @Output() readonly realtimeError = new EventEmitter<string>();
+  @Output() readonly stopListening = new EventEmitter<void>();
 
   readonly state = signal<RealtimeVoiceState>({
     connected: false,
@@ -219,6 +148,18 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
 
   queuedCount(): number {
     return this.intakeQueue.length + this.analysisQueue.length;
+  }
+
+  listeningSurfaceStatus(): string {
+    if (this.durableBlocked()) return this.i18n.t('vitals.assistant.realtimeDurableBlocked');
+    if (this.state().connecting) return this.i18n.t('vitals.assistant.realtimeRecovering');
+    if (!this.state().connected) return this.i18n.t('vitals.assistant.realtimeDisconnected');
+    if (this.state().assistantSpeaking) return this.i18n.t('vitals.assistant.speaking');
+    if (this.effectiveMuted()) return this.i18n.t('consultation.ai.listeningPaused');
+    return this.i18n.t(
+      'consultation.ai.listenNaturally',
+      'Écoute en cours... Parlez naturellement',
+    );
   }
 
   private async syncConnection(forceVisitReset = false): Promise<void> {

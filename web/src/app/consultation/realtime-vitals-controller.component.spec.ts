@@ -139,6 +139,16 @@ describe('RealtimeVitalsControllerComponent clinical queue safety', () => {
       .toBeLessThan(api.analyzeText.mock.invocationCallOrder[0]);
   });
 
+  it('uses the shared listening surface and delegates its stop action', () => {
+    fixture.detectChanges();
+    const stopped = vi.spyOn(component.stopListening, 'emit');
+
+    expect(fixture.nativeElement.querySelector('app-voice-listening-surface')).not.toBeNull();
+    fixture.nativeElement.querySelector('[data-testid="voice-listening-stop"]').click();
+
+    expect(stopped).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps a non-empty null-confidence transcript reviewable and durable', () => {
     transcripts.next(turn('Saturation quatre-vingt-seize', null, 'event-null', 'item-null'));
 

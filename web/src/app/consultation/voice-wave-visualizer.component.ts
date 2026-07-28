@@ -1,79 +1,231 @@
-import { CommonModule } from '@angular/common';
-import { Component, Input, inject } from '@angular/core';
-import { I18nService } from '../core/i18n/i18n.service';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  Input,
+  OnChanges,
+  OnDestroy,
+  SimpleChanges,
+  ViewChild,
+} from '@angular/core';
+import { IconComponent } from '../shared/ui/icon.component';
 
 @Component({
   selector: 'app-voice-wave-visualizer',
   standalone: true,
-  imports: [CommonModule],
+  imports: [IconComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex flex-col items-center justify-center space-y-3 py-1">
-      <!-- Grand micro circulaire central avec auras de vagues pulsatiles (Soft UI Style pasted-image-4.png) -->
-      <div class="relative flex items-center justify-center">
-        @if (active) {
-          <span class="absolute inline-flex h-24 w-24 animate-ping rounded-full bg-[var(--brand-primary)] opacity-15"></span>
-          <span class="absolute inline-flex h-20 w-20 animate-pulse rounded-full bg-[var(--brand-primary)] opacity-25"></span>
-        }
+    <div
+      class="relative mx-auto min-h-48 w-full max-w-4xl overflow-hidden text-[var(--brand-primary)] sm:min-h-52"
+      [attr.aria-label]="accessibleLabel"
+      aria-live="polite"
+      role="status"
+    >
+      <canvas
+        #waveCanvas
+        class="pointer-events-none absolute inset-x-0 top-12 h-28 w-full sm:top-14 sm:h-32"
+        aria-hidden="true"
+      ></canvas>
+
+      <div class="relative z-10 mx-auto flex h-28 w-28 items-center justify-center sm:h-32 sm:w-32">
+        <span class="voice-halo voice-halo-outer absolute h-28 w-28 rounded-full border border-[var(--brand-primary-border)] sm:h-32 sm:w-32"></span>
+        <span class="voice-halo voice-halo-middle absolute h-24 w-24 rounded-full border border-[var(--brand-primary-border)] sm:h-28 sm:w-28"></span>
+        <span class="voice-halo voice-halo-inner absolute h-20 w-20 rounded-full bg-[var(--brand-primary-subtle)] sm:h-24 sm:w-24"></span>
         <div
-          class="relative flex h-16 w-16 items-center justify-center rounded-full transition-all duration-300 shadow-md"
-          [ngClass]="active
-            ? 'bg-gradient-to-tr from-[var(--brand-primary)] to-[#00b4d8] text-[var(--text-inverse)] scale-105'
-            : 'bg-[var(--app-surface-muted)] text-[var(--text-muted)] border border-[var(--app-border)]'"
+          class="voice-micro relative flex h-16 w-16 items-center justify-center rounded-full text-[var(--text-inverse)] shadow-[var(--shadow-panel)] transition sm:h-20 sm:w-20"
+          [class.voice-micro-active]="active"
+          [class.voice-micro-idle]="!active"
         >
-          <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 10-6 0v6.75a3 3 0 10-6 0" />
-          </svg>
+          <app-ui-icon name="microphone" class="text-4xl sm:text-5xl" aria-hidden="true" />
         </div>
       </div>
 
-      <!-- Ondes sinusoïdales fluides et douces (Sine Wave Ribbons - pasted-image-4.png) -->
-      <div class="flex h-10 w-full max-w-sm items-center justify-center gap-1.5 px-2" aria-label="Visualiseur d'ondes sonores fluides">
-        @for (wave of waves; track $index) {
-          <span
-            class="w-1.5 rounded-full transition-all duration-150 ease-out"
-            [ngClass]="active ? 'bg-gradient-to-b from-[#22a8c8] via-[var(--brand-primary)] to-[#00b4d8]' : 'bg-[var(--app-border)]'"
-            [style.height.px]="waveHeight($index)"
-            [style.opacity]="waveOpacity($index)"
-          ></span>
-        }
-      </div>
-
-      <!-- Message principal centré : Écoute en cours... Parlez naturellement -->
-      <div class="text-center">
-        <p class="text-sm font-bold text-[var(--brand-primary)] sm:text-base">
-          {{ active
-            ? i18n.t('consultation.ai.listenNaturally', 'Écoute en cours... Parlez naturellement')
-            : i18n.t('consultation.ai.listeningPaused', 'Écoute en pause') }}
-        </p>
-        <span class="sr-only">
-          {{ active ? i18n.t('consultation.ai.optimalLevel', 'Niveau optimal · Écoute active') : i18n.t('consultation.ai.listeningPaused', 'Écoute en pause') }}
-        </span>
-      </div>
+      <p
+        class="absolute inset-x-2 bottom-2 z-10 text-center text-sm font-bold leading-5 text-[var(--text-primary)] sm:bottom-1 sm:text-base"
+      >
+        {{ statusText }}
+      </p>
     </div>
   `,
-})
-export class VoiceWaveVisualizerComponent {
-  readonly i18n = inject(I18nService);
+  styles: `
+    .voice-micro {
+      background: var(--app-surface-muted);
+      border: 1px solid var(--app-border);
+      color: var(--text-muted);
+    }
 
+    .voice-micro-active {
+      background:
+        linear-gradient(
+          145deg,
+          var(--brand-primary-hover),
+          var(--brand-primary)
+        );
+      border-color: color-mix(in srgb, var(--brand-primary) 68%, transparent);
+      color: var(--text-inverse);
+      box-shadow:
+        0 10px 28px color-mix(in srgb, var(--brand-primary) 28%, transparent),
+        inset 0 1px 0 color-mix(in srgb, var(--app-surface) 55%, transparent);
+    }
+
+    .voice-micro-idle {
+      box-shadow: var(--shadow-panel-subtle);
+    }
+
+    .voice-halo {
+      transform-origin: center;
+    }
+
+    .voice-halo-outer {
+      animation: voice-halo-pulse 2.8s ease-out infinite;
+      opacity: 0.42;
+    }
+
+    .voice-halo-middle {
+      animation: voice-halo-pulse 2.8s 0.45s ease-out infinite;
+      opacity: 0.58;
+    }
+
+    .voice-halo-inner {
+      animation: voice-halo-breathe 2.2s ease-in-out infinite;
+    }
+
+    @keyframes voice-halo-pulse {
+      0%, 100% { opacity: 0.26; transform: scale(0.94); }
+      50% { opacity: 0.66; transform: scale(1); }
+    }
+
+    @keyframes voice-halo-breathe {
+      0%, 100% { opacity: 0.56; transform: scale(0.96); }
+      50% { opacity: 0.9; transform: scale(1.03); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .voice-halo {
+        animation: none;
+      }
+    }
+  `,
+})
+export class VoiceWaveVisualizerComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input() active = false;
   @Input() audioLevel = 0;
+  @Input() statusText = '';
+  @Input() accessibleLabel = '';
 
-  readonly waves = Array.from({ length: 28 });
+  @ViewChild('waveCanvas', { static: true })
+  private readonly waveCanvas?: ElementRef<HTMLCanvasElement>;
 
-  waveHeight(index: number): number {
-    if (!this.active) return 5;
-    const level = Math.min(1, Math.max(0.12, this.audioLevel));
-    // Calcul de courbe sinusoïdale fluide identique au modèle soft
-    const centerFactor = 1 - Math.abs(index - 13.5) / 14;
-    const waveSin = Math.abs(Math.sin((index + 1) * 0.45 + Date.now() * 0.007));
-    const dynamicHeight = 5 + (level * 24 + waveSin * 12) * centerFactor;
-    return Math.round(Math.min(36, Math.max(4, dynamicHeight)));
+  private animationFrame: number | null = null;
+  private viewReady = false;
+  private phase = 0;
+
+  ngAfterViewInit(): void {
+    this.viewReady = true;
+    this.refreshAnimation();
   }
 
-  waveOpacity(index: number): number {
-    if (!this.active) return 0.2;
-    const centerFactor = 0.5 + (1 - Math.abs(index - 13.5) / 14) * 0.5;
-    return Math.min(1, Math.max(0.35, centerFactor));
+  ngOnChanges(_changes: SimpleChanges): void {
+    if (this.viewReady) this.refreshAnimation();
+  }
+
+  ngOnDestroy(): void {
+    this.stopAnimation();
+  }
+
+  private refreshAnimation(): void {
+    this.stopAnimation();
+    if (typeof CanvasRenderingContext2D === 'undefined') return;
+    this.drawFrame();
+    if (!this.active || this.prefersReducedMotion()) return;
+    this.animate();
+  }
+
+  private animate(): void {
+    const tick = () => {
+      this.phase += 0.055 + this.normalizedLevel() * 0.04;
+      this.drawFrame();
+      this.animationFrame = requestAnimationFrame(tick);
+    };
+    this.animationFrame = requestAnimationFrame(tick);
+  }
+
+  private stopAnimation(): void {
+    if (this.animationFrame !== null) cancelAnimationFrame(this.animationFrame);
+    this.animationFrame = null;
+  }
+
+  private drawFrame(): void {
+    const canvas = this.waveCanvas?.nativeElement;
+    if (!canvas) return;
+    let context: CanvasRenderingContext2D | null = null;
+    try {
+      context = canvas.getContext('2d');
+    } catch {
+      return;
+    }
+    if (!context) return;
+
+    const width = Math.max(1, Math.round(canvas.clientWidth));
+    const height = Math.max(1, Math.round(canvas.clientHeight));
+    const ratio = Math.max(1, globalThis.devicePixelRatio || 1);
+    if (canvas.width !== width * ratio || canvas.height !== height * ratio) {
+      canvas.width = width * ratio;
+      canvas.height = height * ratio;
+    }
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.clearRect(0, 0, width, height);
+    context.strokeStyle = getComputedStyle(canvas).color;
+    this.drawBaseline(context, width, height);
+    this.drawWaveRibbons(context, width, height);
+  }
+
+  private drawBaseline(context: CanvasRenderingContext2D, width: number, height: number): void {
+    context.save();
+    context.globalAlpha = this.active ? 0.28 : 0.18;
+    context.lineWidth = 1;
+    context.setLineDash([2, 6]);
+    context.beginPath();
+    context.moveTo(0, height * 0.56);
+    context.lineTo(width, height * 0.56);
+    context.stroke();
+    context.restore();
+  }
+
+  private drawWaveRibbons(context: CanvasRenderingContext2D, width: number, height: number): void {
+    const level = this.normalizedLevel();
+    const baseline = height * 0.56;
+    const ribbonCount = 5;
+    for (let ribbon = 0; ribbon < ribbonCount; ribbon += 1) {
+      context.save();
+      context.globalAlpha = this.active ? 0.2 + ribbon * 0.11 : 0.12;
+      context.lineWidth = ribbon === ribbonCount - 1 ? 2 : 1.15;
+      context.setLineDash([]);
+      context.beginPath();
+      for (let x = 0; x <= width; x += 3) {
+        const progress = x / width;
+        const envelope = Math.pow(Math.sin(Math.PI * progress), 0.72);
+        const amplitude = (6 + level * (18 + ribbon * 2.5)) * envelope;
+        const frequency = 4.4 + ribbon * 0.44;
+        const wave = Math.sin(progress * Math.PI * frequency + this.phase + ribbon * 0.72);
+        const detail = Math.sin(progress * Math.PI * 11.5 - this.phase * 0.7 + ribbon) * 0.28;
+        const y = baseline + (wave + detail) * amplitude;
+        if (x === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
+      }
+      context.stroke();
+      context.restore();
+    }
+  }
+
+  private normalizedLevel(): number {
+    if (!this.active) return 0.08;
+    return Math.min(1, Math.max(0.22, this.audioLevel));
+  }
+
+  private prefersReducedMotion(): boolean {
+    return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 }

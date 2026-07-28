@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
 import { I18nService } from '../core/i18n/i18n.service';
+import { VoiceListeningSurfaceComponent } from './voice-listening-surface.component';
 
 @Component({
   selector: 'app-ai-assistant-input',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, VoiceListeningSurfaceComponent],
   template: `
     <div class="ui-card-subtle p-3 sm:p-4">
       @if (showModePicker) {
@@ -88,42 +89,19 @@ import { I18nService } from '../core/i18n/i18n.service';
       }
 
       @if (!conversationMode && recording) {
-        <div class="mb-3 rounded-[var(--radius-brand-md)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] p-3">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center gap-2">
-              <span class="relative flex h-3 w-3 items-center justify-center" aria-hidden="true">
-                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--brand-primary)] opacity-30"></span>
-                <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-[var(--brand-primary)]"></span>
-              </span>
-              <span class="text-sm font-bold text-[var(--text-primary)]">
-                {{ i18n.t('consultation.ai.listening') }}
-              </span>
-            </div>
-            <span class="text-[11px] font-bold text-[var(--brand-primary)]">
-              {{ i18n.t('consultation.ai.recordingActive') }}
-            </span>
-          </div>
-
-          <div
-            class="mt-3 flex h-10 items-center justify-center gap-1.5 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface)] px-3"
-            [attr.aria-label]="i18n.t('consultation.ai.microphoneLevelLabel')"
-          >
-            @for (bar of waveformBars; track $index) {
-              <span
-                class="w-1.5 rounded-[2px] bg-[var(--brand-primary)] transition-[height] duration-75"
-                [style.height.px]="waveBarHeight($index)"
-              ></span>
-            }
-          </div>
-          <p class="mt-2 text-center text-[10px] font-semibold text-[var(--text-muted)]">
-            {{ audioLevel > 0.01
-              ? i18n.t('consultation.ai.microphoneSignalDetected')
-              : i18n.t('consultation.ai.microphoneSignalWaiting') }}
-          </p>
-        </div>
+        <app-voice-listening-surface
+          [active]="true"
+          [audioLevel]="audioLevel"
+          [badgeText]="i18n.t('consultation.ai.aiInProgress', 'IA en cours...')"
+          [stopText]="i18n.t('consultation.ai.stopListening', 'Arrêter')"
+          [statusText]="i18n.t('consultation.ai.listenNaturally', 'Écoute en cours... Parlez naturellement')"
+          [tipText]="i18n.t('consultation.ai.tipDictateNaturally', 'Conseil : Vous pouvez dicter vos notes de consultation de façon naturelle.')"
+          [accessibleLabel]="i18n.t('consultation.ai.microphoneLevelLabel', 'Niveau réel du microphone')"
+          (stop)="toggleRecording.emit()"
+        />
       }
 
-      @if (!conversationMode) {
+      @if (!conversationMode && !recording) {
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
             type="button"
@@ -200,16 +178,7 @@ export class AiAssistantInputComponent {
   @Output() readonly sendText = new EventEmitter<string>();
 
   readonly message = signal('');
-  readonly waveformBars = Array.from({ length: 16 });
   private lastResetToken = 0;
-
-  waveBarHeight(index: number): number {
-    if (!this.recording) return 4;
-    const level = Math.min(1, Math.max(0, this.audioLevel));
-    if (level <= 0.01) return 4;
-    const shape = 0.35 + Math.abs(Math.sin((index + 1) * 0.85)) * 0.65;
-    return Math.round(4 + level * shape * 28);
-  }
 
   @Input()
   set resetToken(value: number) {

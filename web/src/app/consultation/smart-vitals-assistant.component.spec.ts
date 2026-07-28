@@ -181,4 +181,14 @@ describe('SmartVitalsAssistantComponent', () => {
     component.applyCurrentProposal();
     expect(emitted).toHaveBeenCalledWith(proposal);
   });
+
+  it('uses the shared listening surface while classic vitals dictation records', () => {
+    component.recording.set(true);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-voice-listening-surface')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain(
+      'Écoute en cours... Parlez naturellement',
+    );
+  });
 });

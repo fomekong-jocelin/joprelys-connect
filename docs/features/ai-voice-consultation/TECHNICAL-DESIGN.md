@@ -179,3 +179,66 @@ MINOR rétrocompatible lorsque l’incrément complet est activable. Aucun bump 
 | 2026-07-17 | Codex | Conception initiale sécurisée et séparation STT/extraction |
 | 2026-07-17 | ChatGPT | OpenAI par défaut, providers parole/brouillon indépendants, Gemini et Claude conservés |
 | 2026-07-28 | Antigravity | Spécification de l'isolation du bloc micro Soft UI et du conteneur de transcription scrollable fixe |
+| 2026-07-28 | Codex | Conception d’une surface d’écoute unique pour Dictée/Realtime et Consultation/Constantes |
+
+## 16. Surface d’écoute partagée
+
+### 16.1 Découpage
+
+```text
+VoiceListeningSurfaceComponent (présentation pure)
+  -> VoiceWaveVisualizerComponent (micro + animation audio)
+
+RealtimeVoiceControllerComponent
+  -> état WebRTC Consultation
+  -> VoiceListeningSurfaceComponent
+
+AiAssistantInputComponent
+  -> état MediaRecorder Consultation
+  -> VoiceListeningSurfaceComponent
+
+RealtimeVitalsControllerComponent
+  -> état WebRTC Constantes
+  -> VoiceListeningSurfaceComponent
+
+SmartVitalsAssistantComponent
+  -> état MediaRecorder Constantes
+  -> VoiceListeningSurfaceComponent
+```
+
+### 16.2 Contrat du composant
+
+La surface partagée reçoit uniquement des données de présentation :
+
+- `active`, `audioLevel`, `statusText` ;
+- `badgeText`, `stopText`, `tipText` ;
+- `stopDisabled`, `alertText`, `alertTone`.
+
+Elle émet uniquement `stop`. Elle n’injecte aucun service API, ne connaît ni la
+visite ni le moteur audio et ne porte aucune règle clinique.
+
+### 16.3 Isolation des moteurs
+
+- Realtime Consultation continue d’utiliser `RealtimeVoiceBridgeService` et le
+  pipeline clinique existant.
+- Dictée Consultation conserve `ClassicVoiceRecorderService`.
+- Realtime Constantes conserve son bridge et ses files durables.
+- Dictée Constantes conserve `MediaRecorder` et `AiVitalsApiService`.
+- L’intégration ne modifie que la composition des templates et les libellés
+  d’état présentés au professionnel.
+
+### 16.4 Stabilité et accessibilité
+
+- La carte d’écoute conserve une hauteur minimale stable.
+- Les ondes sont bornées et ne provoquent aucun layout shift.
+- L’historique Realtime reste dans un conteneur séparé à hauteur fixe.
+- L’action d’arrêt mesure au moins 44 px, possède un libellé accessible et un
+  focus visible.
+- `prefers-reduced-motion` désactive les pulsations non essentielles.
+
+### 16.5 Impact technique
+
+- Angular uniquement, sans nouvelle dépendance ni Angular Material.
+- Tailwind CSS v4 et tokens `DESIGN.md`.
+- Aucune API, DB, migration, configuration ou permission impactée.
+- PATCH rétrocompatible.

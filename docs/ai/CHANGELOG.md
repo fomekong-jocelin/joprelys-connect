@@ -8,6 +8,13 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **FIX-20260728-UNIFIED-VOICE-LISTENING-SURFACE — Surface d’écoute identique pour Consultation/Constantes en Dictée/Realtime** :
+  - **Composant partagé** : extraction de `VoiceListeningSurfaceComponent`, purement présentationnel, avec badge IA, arrêt, microphone central, halos, rubans d’ondes animés, état d’écoute et bandeau conseil contextualisé.
+  - **Quatre intégrations** : remplacement des variantes visuelles dans Consultation/Dictée, Consultation/Realtime, Constantes/Dictée et Constantes/Realtime sans modifier les moteurs audio ni les contrats API.
+  - **Design system et accessibilité** : tokens centralisés light/dark, rayons sobres, action tactile de 44 px minimum, focus visible, i18n FR/EN et réduction des animations selon la préférence système.
+  - **Anti-déformation** : l’historique Realtime Consultation reste séparé dans une zone fixe et scrollable.
+  - **Validation** : 46 tests ciblés, 507 tests Angular, contrôle i18n et build production verts ; comparaison visuelle interactive encore requise sur une session authentifiée.
+
 - **FEAT-20260728-UI-MOCKUPS-AI-VOICE-DICTATION — Intégration du composant Soft UI de dictée vocale IA avec zone de transcription fixe scrollable (anti-déformation)** :
   - **Composant carte vocale Soft UI (`RealtimeVoiceControllerComponent` & `VoiceWaveVisualizerComponent`)** : Implémentation fidèle de la carte de dictée vocale soft (`pasted-image-4.png`) intégrant le badge `✦ IA en cours...`, le bouton sobre `⏹ Arrêter`, l'icône micro à halo lumineux et le ruban d'ondes sinusoïdales fluides.
   - **Stabilité de mise en page anti-déformation (Anti-CLS)** : Le flux de transcription en direct s'affiche désormais sous le bloc du micro dans un conteneur à hauteur fixe bornée (`h-32 max-h-32 overflow-y-auto`) avec défilement automatique vers le bas (`scrollToBottom()`). L'écran ne s'allonge et ne se rétrécit plus pendant la dictée.

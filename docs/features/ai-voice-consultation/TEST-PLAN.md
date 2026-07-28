@@ -61,6 +61,42 @@ clavier/lecteur d’écran, permissions accordées/refusées/révoquées.
 | 2026-07-17 | compilation Maven offline avec cache local | SUCCESS | état amorcé uniquement |
 | 2026-07-17 | Maven avec dépôt sandbox par défaut | BLOCKED | réseau Maven refusé |
 | 2026-07-17 | `mvn -o -Dmaven.repo.local=… -Dtest=VisitControllerTest test` | SUCCESS | 16 tests, 0 échec ; QR décodé et cas 401/403/404/409 couverts |
+| 2026-07-28 | tests Angular ciblés surface vocale | SUCCESS | 7 fichiers, 46 tests |
+| 2026-07-28 | `npm run test -- --no-watch` | SUCCESS | 101 fichiers, 507 tests |
+| 2026-07-28 | `npm run i18n:check` | SUCCESS | 49 clés shell présentes en FR/EN |
+| 2026-07-28 | `npm run build` | SUCCESS | bundle initial 542,11 kB ; avertissement NG8113 préexistant |
+| 2026-07-28 | comparaison visuelle automatisée | BLOCKED | adresse locale refusée par la politique du navigateur ; recette authentifiée manuelle requise |
 
 La suite complète, les tests des adaptateurs IA, Angular et E2E restent à
 exécuter lorsque les stories correspondantes seront implémentées.
+
+## 8. Surface d’écoute vocale unifiée
+
+| ID | Scénario | Résultat attendu |
+|---|---|---|
+| UI-VOICE-01 | Consultation Realtime connectée | carte Soft UI partagée active |
+| UI-VOICE-02 | Consultation Dictée en enregistrement | même carte et arrêt de la dictée |
+| UI-VOICE-03 | Constantes Realtime connectées | même carte avec conseil Constantes |
+| UI-VOICE-04 | Constantes Dictée en enregistrement | même carte et arrêt de la dictée |
+| UI-VOICE-05 | Realtime en reconnexion ou bloqué | même carte, état accessible et sans perte des contrôles |
+| UI-VOICE-06 | Historique Consultation | zone séparée, fixe, scrollable et auto-scroll |
+| UI-VOICE-07 | Thèmes light/dark | tokens centraux, contraste et hiérarchie préservés |
+| UI-VOICE-08 | FR/EN | aucun libellé visible non traduit |
+| UI-VOICE-09 | Mobile 360 px | aucun débordement et action d’arrêt ≥ 44 px |
+| UI-VOICE-10 | Mouvement réduit | pulsations non essentielles désactivées |
+
+### Vérifications ciblées
+
+- test unitaire du composant partagé : rendu, état actif/inactif et événement
+  `stop` ;
+- tests d’intégration des quatre consommateurs ;
+- contrôle `npm run i18n:check` ;
+- suite `npm run test -- --no-watch` ;
+- build `npm run build` ;
+- comparaison visuelle avec
+  `docs/ai/mockups/exact_soft_voice_card_1785238037119.jpg`.
+
+La vérification fonctionnelle et structurelle de la surface unifiée est verte.
+La matrice visuelle interactive UI-VOICE-07/UI-VOICE-09 et la comparaison
+pixel à pixel restent à signer sur l’application authentifiée ; voir
+`design-qa.md`.

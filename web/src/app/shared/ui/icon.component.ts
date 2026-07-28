@@ -30,7 +30,11 @@ export type UiIconName =
   | 'shield-check'
   | 'clipboard-document-list'
   | 'syringe'
-  | 'bolt';
+  | 'bolt'
+  | 'light-bulb'
+  | 'microphone'
+  | 'sparkles'
+  | 'stop';
 
 @Component({
   selector: 'app-ui-icon',
@@ -199,6 +203,26 @@ export type UiIconName =
         @case ('bolt') {
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-[1em] h-[1em]">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l9-11.25-1.5 8.25h9l-9 11.25 1.5-8.25h-9z" />
+          </svg>
+        }
+        @case ('light-bulb') {
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-[1em] h-[1em]">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6c0-3.314-2.686-6-6-6s-6 2.686-6 6a6 6 0 006 6zm0 0v.75m-3.75 0h7.5M9.75 22.5h4.5M12 2.25v1.5m7.5 4.5l-1.3.75M4.5 8.25l1.3.75M19.5 16.5l-1.3-.75M4.5 16.5l1.3-.75" />
+          </svg>
+        }
+        @case ('microphone') {
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-[1em] h-[1em]">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z" />
+          </svg>
+        }
+        @case ('sparkles') {
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-[1em] h-[1em]">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.847-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.847a4.5 4.5 0 003.09 3.09L15.75 12l-2.847.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.456-2.456L14.25 6l1.035-.259a3.375 3.375 0 002.456-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+          </svg>
+        }
+        @case ('stop') {
+          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" class="w-[1em] h-[1em]">
+            <path d="M6.75 6.75h10.5v10.5H6.75z" />
           </svg>
         }
       }

@@ -160,8 +160,9 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
 
     expect(text).toContain('IA en cours...');
     expect(text).toContain('Écoute en cours... Parlez naturellement');
-    expect(text).toContain('Terminer');
+    expect(text).toContain('Arrêter');
     expect(text).toContain('Conseil');
+    expect(fixture.nativeElement.querySelector('app-voice-listening-surface')).not.toBeNull();
     expect(text).not.toContain('Capture de sécurité active');
     expect(text).not.toContain('Preuve clinique ambient');
     expect(text).not.toContain('Copilote Realtime sécurisé');

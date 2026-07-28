@@ -216,6 +216,7 @@
   "consultation.ai.vitalUnit.painScale": "/10",
   "consultation.ai.vitalUnit.bmi": "kg/m²",
   "consultation.ai.aiInProgress": "AI in progress...",
+  "consultation.ai.stopListening": "Stop",
   "consultation.ai.listenNaturally": "Listening... Speak naturally",
   "consultation.ai.tipDictateNaturally": "Tip: You can dictate your consultation notes naturally.",
   "consultation.ai.tipVitalsNaturally": "Tip: You can dictate your vital signs naturally."

@@ -179,6 +179,28 @@ La page publique de connexion suit les règles suivantes :
 - les composants IA utilisent les clés i18n de feature et les libellés partagés, en français et en anglais ;
 - l'intégration dans une modale Angular reste déclarative, sans `querySelector`, mutation de classes ni montage dynamique pour piloter le layout.
 
+#### Surface d’écoute vocale unifiée
+
+- Dictée et Realtime utilisent la même surface dans Consultation et Constantes.
+- La structure obligatoire est : badge d’activité en haut à gauche, action
+  d’arrêt en haut à droite, microphone circulaire central, halos concentriques,
+  ondes bleues, message d’écoute centré puis conseil contextuel.
+- La carte utilise `--app-surface`, `--app-border`, `--brand-primary`,
+  `--brand-primary-subtle`, `--text-primary`, `--text-muted` et
+  `--shadow-panel` ; aucune palette locale n’est autorisée.
+- Le rayon de la carte reste limité à `--radius-brand-lg` (8 px). Les cercles
+  sont autorisés uniquement pour le microphone, ses halos et les indicateurs
+  d’état.
+- Les dimensions et l’ordre des éléments restent identiques pour les quatre
+  parcours ; seul le conseil Consultation/Constantes peut varier.
+- Le composant est purement présentationnel et émet une intention d’arrêt. Les
+  moteurs Dictée et Realtime conservent leurs contrôleurs distincts.
+- L’historique de transcription reste une surface séparée, bornée et scrollable
+  afin de préserver la stabilité de la carte d’écoute.
+- Sous `640px`, le header reste sur une ligne, l’action d’arrêt mesure au moins
+  44 px et le visualiseur se réduit sans débordement.
+- `prefers-reduced-motion: reduce` neutralise les pulsations décoratives.
+
 ### Disponibilités médecin (STORY-2602)
 
 La page « Mes disponibilités » (`clinic/availability`) introduit la grille hebdomadaire `shared/ui/weekly-availability-grid` (7 colonnes Lun → Dim, défilement horizontal sur mobile) et l'aperçu des créneaux. Les plages horaires sont des cartes compactes à rayon sobre (≤ `8px`, tokens `--radius-brand-*`) avec ombre légère `var(--shadow-panel)` ; le jour sélectionné est souligné par `var(--brand-primary)` et les plages désactivées sont atténuées (`opacity-50`). Toutes les couleurs passent par les tokens centralisés (`--app-surface`, `--app-border`, `--brand-primary`, `--text-*`) — aucune couleur en dur, thèmes light/dark automatiques. La désactivation d'une plage et la suppression d'une indisponibilité passent par la modale de confirmation partagée.
