@@ -75,6 +75,11 @@ public class OpenAiSpeechSynthesisService {
             if (audio == null || audio.length == 0) {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI_SPEECH_EMPTY");
             }
+            log.info(
+                    "AI_USAGE provider=openai operation=tts model={} inputChars={} outputBytes={}",
+                    model,
+                    normalized.length(),
+                    audio.length);
             return audio;
         } catch (ResponseStatusException exception) {
             throw exception;
