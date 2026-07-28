@@ -1,5 +1,6 @@
 package com.joprelys.backend.ai.api;
 
+import com.joprelys.backend.ai.application.AiConsultationContract.SessionView;
 import com.joprelys.backend.ai.application.AiConsultationService;
 import com.joprelys.backend.ai.application.FinalClinicalReviewContract.ReviewView;
 import com.joprelys.backend.ai.application.FinalClinicalReviewService;
@@ -43,16 +44,7 @@ public class FinalClinicalReviewController {
             @PathVariable UUID visitId,
             Authentication authentication) {
         Identity identity = identity(authentication);
-        var session = consultationService.getSession(
-                        visitId, identity.userId(), identity.organizationId())
-                .orElseThrow(() -> conflict("AI_SESSION_EXPIRED"));
-        boolean pendingRevision = session.revisions().stream()
-                .anyMatch(revision -> "PENDING".equals(revision.status()));
-        if (session.pendingTranscript() != null
-                || session.needsClarification()
-                || pendingRevision) {
-            throw conflict("AI_FINAL_REVIEW_NOT_READY");
-        }
+        SessionView session = requireReadySession(visitId, identity);
         return reviewService.createReview(
                 visitId,
                 identity.userId(),
@@ -70,13 +62,15 @@ public class FinalClinicalReviewController {
             @Valid @RequestBody DecisionRequest request,
             Authentication authentication) {
         Identity identity = identity(authentication);
+        SessionView session = requireReadySession(visitId, identity);
         return reviewService.decideProposal(
                 visitId,
                 identity.userId(),
                 identity.organizationId(),
                 reviewId,
                 proposalId,
-                request.decision());
+                request.decision(),
+                session.draft());
     }
 
     @PostMapping("/{visitId}/final-review/{reviewId}/decision")
@@ -86,12 +80,28 @@ public class FinalClinicalReviewController {
             @Valid @RequestBody DecisionRequest request,
             Authentication authentication) {
         Identity identity = identity(authentication);
+        SessionView session = requireReadySession(visitId, identity);
         return reviewService.decideReview(
                 visitId,
                 identity.userId(),
                 identity.organizationId(),
                 reviewId,
-                request.decision());
+                request.decision(),
+                session.draft());
+    }
+
+    private SessionView requireReadySession(UUID visitId, Identity identity) {
+        SessionView session = consultationService.getSession(
+                        visitId, identity.userId(), identity.organizationId())
+                .orElseThrow(() -> conflict("AI_SESSION_EXPIRED"));
+        boolean pendingRevision = session.revisions().stream()
+                .anyMatch(revision -> "PENDING".equals(revision.status()));
+        if (session.pendingTranscript() != null
+                || session.needsClarification()
+                || pendingRevision) {
+            throw conflict("AI_FINAL_REVIEW_NOT_READY");
+        }
+        return session;
     }
 
     private Identity identity(Authentication authentication) {
