@@ -111,7 +111,7 @@ joprelys:
     storage-dir: ${JOPRELYS_DOCUMENTS_STORAGE_DIR:./storage/documents}
   storage:
     upload-dir: ${JOPRELYS_UPLOAD_DIR:./storage/uploads}
-    verification-base-url: ${JOPRELYS_WEB_BASE_URL:https://joprelys.com/verify}
+    verification-base-url: ${JOPRELYS_VERIFICATION_BASE_URL:https://joprelys.com/verify}
   lab-integration:
     api-key: ${JOPRELYS_LAB_INTEGRATION_API_KEY:}
   appointments:
