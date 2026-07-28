@@ -1,11 +1,13 @@
 import { Routes } from '@angular/router';
 import { roleGuard } from './auth/role.guard';
+import { loginGuard } from './auth/login.guard';
 import { PROFESSIONAL_ACCESS_POLICIES } from './auth/professional-access-policies';
 
 export const routes: Routes = [
   {
     path: '',
     loadComponent: () => import('./auth/login.component').then((module) => module.LoginComponent),
+    canActivate: [loginGuard],
   },
   {
     path: 'dashboard',
@@ -222,6 +224,7 @@ export const routes: Routes = [
   {
     path: 'patient/login',
     loadComponent: () => import('./auth/login.component').then((module) => module.LoginComponent),
+    canActivate: [loginGuard],
     data: { loginMode: 'patient' },
   },
   {

@@ -8,6 +8,10 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **BUG-20260728-LOGIN-FLASHING-SESSION-CARD-REMOVAL — Suppression de la carte temporaire de session/rôle au login et redirection directe dashboard** :
+  - **Suppression du flash UI (`login.component.html`)** : Elimination de la carte temporaire d'identité (`login-session-card`) qui affichait le nom, l'email et le rôle de l'utilisateur pendant les quelques millisecondes de redirection vers le tableau de bord.
+  - **Protection par guard (`web/src/app/auth/login.guard.ts`)** : Ajout du guard `loginGuard` sur les routes d'authentification (`path: ''` et `path: 'patient/login'`) dans `app.routes.ts` pour rediriger immédiatement tout utilisateur déjà connecté vers `/dashboard` (ou `/patient/dashboard`) sans charger ni faire flasher la page de login.
+
 - **BUG-20260728-LOGIN-PASSWORD-TOGGLE-EYE — Bouton d'affichage / masquage du mot de passe (Icône œil)** :
   - **Interactivité & Sécurité Visuelle (`LoginComponent`)** : Ajout du bouton réactif d'affichage/masquage du mot de passe avec le signal `showPassword` et bascule dynamique du type d'input (`password` / `text`).
   - **Accessibilité & i18n FR/EN** : Intégration d'un bouton accessible avec `aria-label` et `title` dynamiques ("Afficher le mot de passe" / "Masquer le mot de passe" en FR, "Show password" / "Hide password" en EN).

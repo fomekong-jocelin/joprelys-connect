@@ -134,202 +134,171 @@
         </div>
 
         @if (mode() === 'staff') {
-          @if (session(); as currentSession) {
-            <div class="login-section-heading">
-              <h2 id="login-title">{{ t('login.session.activeTitle') }}</h2>
-              <p>{{ t('login.session.activeSubtitle') }}</p>
-            </div>
-
-            <div class="login-session-card">
-              <div class="login-session-identity">
-                <div class="login-session-avatar">{{ currentSession.name.charAt(0) }}</div>
-                <div>
-                  <p class="login-session-name">{{ currentSession.name }}</p>
-                  <p class="login-session-email">{{ currentSession.email }}</p>
-                </div>
-              </div>
-              <span class="login-session-role">{{ currentSession.role }}</span>
-            </div>
-
-            <button
-              class="ui-button ui-button-primary login-submit-button"
-              type="button"
-              (click)="logout()"
-              [disabled]="loading()"
-            >
-              @if (loading()) {
-                {{ t('login.session.loggingOut') }}
+          <div class="login-section-heading login-desktop-form-heading">
+            <h2 id="login-title">{{ t('login.staff.title') }}</h2>
+            <p>
+              @if (staffStep() === 1) {
+                {{ t('login.staff.subtitleStep1') }}
               } @else {
-                {{ t('login.session.logoutButton') }}
+                {{ t('login.staff.subtitleStep2') }}
               }
-            </button>
-          } @else {
-            <div class="login-section-heading login-desktop-form-heading">
-              <h2 id="login-title">{{ t('login.staff.title') }}</h2>
-              <p>
-                @if (staffStep() === 1) {
-                  {{ t('login.staff.subtitleStep1') }}
-                } @else {
-                  {{ t('login.staff.subtitleStep2') }}
-                }
-              </p>
-            </div>
+            </p>
+          </div>
 
-            @if (staffStep() === 1) {
-              <form class="login-form" (submit)="$event.preventDefault(); submit()">
-                <div class="login-form-group">
-                  <label class="ui-label" for="staff-email">{{ t('login.staff.emailLabel') }}</label>
-                  <div class="login-field">
-                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                            d="M3 6.75A2.25 2.25 0 015.25 4.5h13.5A2.25 2.25 0 0121 6.75v10.5a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 17.25V6.75Z"/>
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                            d="m3.75 6 7.16 5.22a1.875 1.875 0 002.18 0L20.25 6"/>
-                    </svg>
-                    <input
-                      id="staff-email"
-                      type="email"
-                      autocomplete="username"
-                      inputmode="email"
-                      required
-                      aria-required="true"
-                      [value]="email()"
-                      (input)="updateEmail($event)"
-                      class="ui-input login-input"
-                      [placeholder]="t('login.staff.emailPlaceholder')"
-                    />
-                  </div>
-                </div>
-
-                <div class="login-form-group">
-                  <div class="login-label-row">
-                    <label class="ui-label" for="staff-password">{{ t('login.staff.passwordLabel') }}</label>
-                    <a routerLink="/forgot-password"
-                       class="ui-link login-forgot-link">{{ t('auth.forgotPassword.link') }}</a>
-                  </div>
-                  <div class="login-field">
-                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                            d="M16.5 10.5V6.75a4.5 4.5 0 00-9 0v3.75m-.75 0h10.5A2.25 2.25 0 0119.5 12.75v6A2.25 2.25 0 0117.25 21H6.75a2.25 2.25 0 01-2.25-2.25v-6a2.25 2.25 0 012.25-2.25Z"/>
-                    </svg>
-                    <input
-                      id="staff-password"
-                      [type]="showPassword() ? 'text' : 'password'"
-                      autocomplete="current-password"
-                      required
-                      aria-required="true"
-                      [value]="password()"
-                      (input)="updatePassword($event)"
-                      class="ui-input login-input login-password-input"
-                      placeholder="••••••••"
-                    />
-                    <button
-                      type="button"
-                      id="toggle-staff-password"
-                      class="login-password-toggle"
-                      (click)="toggleShowPassword()"
-                      [attr.aria-label]="showPassword() ? t('login.staff.hidePassword') : t('login.staff.showPassword')"
-                      [title]="showPassword() ? t('login.staff.hidePassword') : t('login.staff.showPassword')"
-                    >
-                      @if (showPassword()) {
-                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                                d="M3.98 8.223A10.477 10.477 0 001.934 12C3.326 16.17 7.26 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639a10.477 10.477 0 01-1.934 3.777m-3.826 3.826L3 3m9 9a3 3 0 100-6 3 3 0 000 6z"/>
-                        </svg>
-                      } @else {
-                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                                d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/>
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                      }
-                    </button>
-                  </div>
-                </div>
-
-                @if (error()) {
-                  <div class="ui-alert-danger" role="alert" aria-live="assertive">
-                    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                         aria-hidden="true">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                    </svg>
-                    <span class="font-medium">{{ error() }}</span>
-                  </div>
-                }
-
-                <button
-                  class="ui-button ui-button-primary login-submit-button"
-                  type="submit"
-                  [disabled]="!canSubmit()"
-                >
-                  <span>@if (loading()) {
-                    {{ t('login.staff.loggingIn') }}
-                  } @else {
-                    {{ t('login.staff.loginButton') }}
-                  }</span>
+          @if (staffStep() === 1) {
+            <form class="login-form" (submit)="$event.preventDefault(); submit()">
+              <div class="login-form-group">
+                <label class="ui-label" for="staff-email">{{ t('login.staff.emailLabel') }}</label>
+                <div class="login-field">
                   <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                          d="M3 6.75A2.25 2.25 0 015.25 4.5h13.5A2.25 2.25 0 0121 6.75v10.5a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 17.25V6.75Z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                          d="m3.75 6 7.16 5.22a1.875 1.875 0 002.18 0L20.25 6"/>
                   </svg>
-                </button>
-              </form>
-            } @else {
-              <form class="login-form" (submit)="$event.preventDefault(); verifyStaffOtp()">
-                <div class="login-form-group">
-                  <label class="ui-label" for="staff-otp">{{ t('login.staff.otpLabel') }}</label>
                   <input
-                    id="staff-otp"
-                    type="text"
+                    id="staff-email"
+                    type="email"
+                    autocomplete="username"
+                    inputmode="email"
                     required
                     aria-required="true"
-                    [value]="staffOtpCode()"
-                    (input)="updateStaffOtpCode($event)"
-                    maxlength="6"
-                    inputmode="numeric"
-                    autocomplete="one-time-code"
-                    class="ui-input login-otp-input"
-                    placeholder="······"
+                    [value]="email()"
+                    (input)="updateEmail($event)"
+                    class="ui-input login-input"
+                    [placeholder]="t('login.staff.emailPlaceholder')"
                   />
                 </div>
+              </div>
 
-                @if (error()) {
-                  <div class="ui-alert-danger" role="alert" aria-live="assertive">
-                    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                         aria-hidden="true">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                    </svg>
-                    <span class="font-medium">{{ error() }}</span>
-                  </div>
-                }
-
-                <button
-                  class="ui-button ui-button-primary login-submit-button"
-                  type="submit"
-                  [disabled]="loading() || staffOtpCode().length !== 6"
-                >
-                  <span>@if (loading()) {
-                    {{ t('login.staff.verifying') }}
-                  } @else {
-                    {{ t('login.staff.loginButton') }}
-                  }</span>
+              <div class="login-form-group">
+                <div class="login-label-row">
+                  <label class="ui-label" for="staff-password">{{ t('login.staff.passwordLabel') }}</label>
+                  <a routerLink="/forgot-password"
+                     class="ui-link login-forgot-link">{{ t('auth.forgotPassword.link') }}</a>
+                </div>
+                <div class="login-field">
                   <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                          d="M16.5 10.5V6.75a4.5 4.5 0 00-9 0v3.75m-.75 0h10.5A2.25 2.25 0 0119.5 12.75v6A2.25 2.25 0 0117.25 21H6.75a2.25 2.25 0 01-2.25-2.25v-6a2.25 2.25 0 012.25-2.25Z"/>
                   </svg>
-                </button>
+                  <input
+                    id="staff-password"
+                    [type]="showPassword() ? 'text' : 'password'"
+                    autocomplete="current-password"
+                    required
+                    aria-required="true"
+                    [value]="password()"
+                    (input)="updatePassword($event)"
+                    class="ui-input login-input login-password-input"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    id="toggle-staff-password"
+                    class="login-password-toggle"
+                    (click)="toggleShowPassword()"
+                    [attr.aria-label]="showPassword() ? t('login.staff.hidePassword') : t('login.staff.showPassword')"
+                    [title]="showPassword() ? t('login.staff.hidePassword') : t('login.staff.showPassword')"
+                  >
+                    @if (showPassword()) {
+                      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                              d="M3.98 8.223A10.477 10.477 0 001.934 12C3.326 16.17 7.26 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639a10.477 10.477 0 01-1.934 3.777m-3.826 3.826L3 3m9 9a3 3 0 100-6 3 3 0 000 6z"/>
+                      </svg>
+                    } @else {
+                      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                              d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      </svg>
+                    }
+                  </button>
+                </div>
+              </div>
 
-                <button
-                  type="button"
-                  (click)="staffStep.set(1); error.set(null)"
-                  class="login-back-button"
-                >
-                  {{ t('login.backToPreviousStep') }}
-                </button>
-              </form>
-            }
+              @if (error()) {
+                <div class="ui-alert-danger" role="alert" aria-live="assertive">
+                  <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                       aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                  </svg>
+                  <span class="font-medium">{{ error() }}</span>
+                </div>
+              }
+
+              <button
+                class="ui-button ui-button-primary login-submit-button"
+                type="submit"
+                [disabled]="!canSubmit()"
+              >
+                <span>@if (loading()) {
+                  {{ t('login.staff.loggingIn') }}
+                } @else {
+                  {{ t('login.staff.loginButton') }}
+                }</span>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
+                </svg>
+              </button>
+            </form>
+          } @else {
+            <form class="login-form" (submit)="$event.preventDefault(); verifyStaffOtp()">
+              <div class="login-form-group">
+                <label class="ui-label" for="staff-otp">{{ t('login.staff.otpLabel') }}</label>
+                <input
+                  id="staff-otp"
+                  type="text"
+                  required
+                  aria-required="true"
+                  [value]="staffOtpCode()"
+                  (input)="updateStaffOtpCode($event)"
+                  maxlength="6"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  class="ui-input login-otp-input"
+                  placeholder="······"
+                />
+              </div>
+
+              @if (error()) {
+                <div class="ui-alert-danger" role="alert" aria-live="assertive">
+                  <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                       aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                  </svg>
+                  <span class="font-medium">{{ error() }}</span>
+                </div>
+              }
+
+              <button
+                class="ui-button ui-button-primary login-submit-button"
+                type="submit"
+                [disabled]="loading() || staffOtpCode().length !== 6"
+              >
+                <span>@if (loading()) {
+                  {{ t('login.staff.verifying') }}
+                } @else {
+                  {{ t('login.staff.loginButton') }}
+                }</span>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
+                </svg>
+              </button>
+
+              <button
+                type="button"
+                (click)="staffStep.set(1); error.set(null)"
+                class="login-back-button"
+              >
+                {{ t('login.backToPreviousStep') }}
+              </button>
+            </form>
           }
         }
 
