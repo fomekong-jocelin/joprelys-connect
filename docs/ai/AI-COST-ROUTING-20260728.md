@@ -140,6 +140,10 @@ The deep final review must satisfy all of these conditions:
 
 `OpenAiRealtimeCallServiceTest` now asserts the low-cost Realtime model and `gpt-4o-mini-transcribe` live transcription configuration while preserving VAD and silent-response safety behavior.
 
+## CI gate
+
+The repository intentionally skips the heavy PR jobs while the PR is Draft. Once the final HEAD is ready, changing the PR to Ready triggers the complete change-detection gate and then Maven/Angular validation. Any later code commit makes that gate stale and requires Draft -> Ready again.
+
 ## Rollout validation
 
 Before merging to production:
