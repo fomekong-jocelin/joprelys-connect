@@ -131,6 +131,17 @@ export interface AiTranscriptionResponse {
   expiresAt: string;
 }
 
+export interface AiFinalReviewResponse {
+  reviewId: string;
+  visitId: string;
+  status: 'PENDING' | 'DECIDED' | 'NO_CHANGES';
+  model: string | null;
+  createdAt: string;
+  expiresAt: string;
+  revision: AiRevision;
+  acceptedPatch: AiConsultationDraft;
+}
+
 const REALTIME_CONFIDENCE_FLOOR = 0.35;
 
 @Injectable({ providedIn: 'root' })
@@ -244,6 +255,36 @@ export class AiConsultationApiService {
   ): Observable<AiSessionResponse> {
     return this.http.post<AiSessionResponse>(
       `/api/ai/consultations/${visitId}/revisions/${revisionId}/decision`,
+      { decision },
+    );
+  }
+
+  createFinalReview(visitId: string): Observable<AiFinalReviewResponse> {
+    return this.http.post<AiFinalReviewResponse>(
+      `/api/ai/consultations/${visitId}/final-review`,
+      {},
+    );
+  }
+
+  decideFinalReviewProposal(
+    visitId: string,
+    reviewId: string,
+    proposalId: string,
+    decision: AiDecision,
+  ): Observable<AiFinalReviewResponse> {
+    return this.http.post<AiFinalReviewResponse>(
+      `/api/ai/consultations/${visitId}/final-review/${reviewId}/proposals/${proposalId}/decision`,
+      { decision },
+    );
+  }
+
+  decideFinalReview(
+    visitId: string,
+    reviewId: string,
+    decision: AiDecision,
+  ): Observable<AiFinalReviewResponse> {
+    return this.http.post<AiFinalReviewResponse>(
+      `/api/ai/consultations/${visitId}/final-review/${reviewId}/decision`,
       { decision },
     );
   }
