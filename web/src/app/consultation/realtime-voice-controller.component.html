@@ -1,14 +1,5 @@
 @if (enabled) {
   <section class="ui-card overflow-hidden">
-    <header class="flex min-h-12 items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-3 py-2.5 sm:px-4">
-      <div class="flex min-w-0 items-center gap-2">
-        <span class="h-2.5 w-2.5 shrink-0 rounded-full" [ngClass]="statusDotClasses()" aria-hidden="true"></span>
-        <div class="min-w-0">
-          <p class="truncate text-sm font-bold text-[var(--text-primary)]">{{ statusLabel() }}</p>
-          <p class="truncate text-[10px] text-[var(--text-muted)] sm:text-[11px]">{{ statusHelp() }}</p>
-        </div>
-      </div>
-    </header>
 
     <div class="space-y-3 p-3 sm:p-4">
       <app-voice-wave-visualizer
