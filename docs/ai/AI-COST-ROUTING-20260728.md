@@ -146,14 +146,4 @@ The repository intentionally skips the heavy PR jobs while the PR is Draft. Once
 
 ## Rollout validation
 
-Before merging to production:
-
-- Run backend AI/OpenAI tests, including `FinalClinicalReviewServiceTest`.
-- Run voice/realtime frontend tests.
-- Validate a French consultation with silence, negations, drug names, numbers and vital signs.
-- Confirm Realtime creates sessions with `gpt-realtime-2.1-mini` and input transcription uses `gpt-4o-mini-transcribe`.
-- Confirm normal chat calls report `gpt-4o-mini` in `AI_USAGE`.
-- Confirm TTS reports `tts-1` and does not send unsupported voice instructions.
-- Confirm an explicit final review reports `gpt-5.6-terra` and does not mutate the session draft directly.
-- Confirm a changed draft causes `AI_FINAL_REVIEW_STALE` on review decision.
-- Compare transcript confidence and clinician proposal acceptance against the previous release.
+The PR gate must complete successfully before merge. Production smoke validation should then confirm the selected provider models, voice output and medical transcription behavior without bypassing clinician validation.
