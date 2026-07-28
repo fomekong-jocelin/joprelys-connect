@@ -129,24 +129,27 @@ après recette clinique représentative.
 
 ## 9. Sessions et scalabilité
 
-Le store mémoire est limité au pilote mono-instance. Le port
-`ConversationSessionPort` permet un adaptateur Redis ultérieur. Les sessions
-expirent et ne constituent pas le dossier médical. La clé logique est
-`(organizationId, visitId, doctorId)`.
+Le store mémoire est limité au pilote mono-instance. Le port `ConversationSessionPort` permet un adaptateur Redis ultérieur. Les sessions expirent et ne constituent pas le dossier médical. La clé logique est `(organizationId, visitId, doctorId)`.
 
-## 10. UI et dette préalable
+## 10. UI, composant Soft Voice Card et dette préalable
 
 - `DESIGN.md`, thèmes light/dark et i18n FR/EN obligatoires.
 - Rayons 4–6 px, 8 px max ; bottom sheet 12 px seulement en partie haute.
-- Scanner QR, panneau vocal et liste de changements sont partagés.
-- `consultation.component.html` (684 lignes) et `dashboard.component.html`
-  (973 lignes) doivent être découpés avant l’intégration UI.
+- **Isolateur de bloc micro Soft UI (`soft-voice-card`)** :
+  - Le bloc micro remplace exclusivement le widget d'enregistrement sans altérer la disposition externe de la page ni des formulaires.
+  - Utilisation stricte des variables CSS du thème (`--app-surface`, `--app-border`, `--brand-primary`, `--text-primary`, `--bg-input`).
+  - Badge haut-gauche `✦ IA en cours...` / `✦ AI in progress...`, bouton haut-droit `⏹ Arrêter` / `⏹ Stop`.
+  - Micro central à halo concentrique et ondes sinusoïdales bleues fluides (*sine wave ribbons*).
+  - Consigne centrale **« Écoute en cours... Parlez naturellement »** / **« Listening... Speak naturally »**.
+  - Pied de carte conseil **« 💡 Conseil : Vous pouvez dicter vos notes de consultation de façon naturelle. »**.
+- **Conteneur de transcription scrollable (stabilité de mise en page anti-layout shift)** :
+  - Le flux de transcription en direct s'affiche sous le bloc micro dans une zone scrollable à hauteur fixe/bornée (`max-h-48`, `overflow-y-auto` avec défilement automatique vers le bas).
+  - Interdiction absolue d'étirer ou de rétrécir la carte ou l'écran pendant la dictée : la hauteur totale du bloc reste constante (`CLS = 0`).
+- `consultation.component.html` (684 lignes) et `dashboard.component.html` (973 lignes) doivent être découpés avant l’intégration UI.
 
 ## 11. Observabilité
 
-Mesures autorisées : sessions, durée, résultat, provider, modèle, octets,
-tokens/coût agrégé et nombre de corrections. Les contenus et identifiants
-patient sont interdits.
+Mesures autorisées : sessions, durée, résultat, provider, modèle, octets, tokens/coût agrégé et nombre de corrections. Les contenus et identifiants patient sont interdits.
 
 ## 12. Tests prévus
 
@@ -160,8 +163,7 @@ patient sont interdits.
 
 ## 13. Impact SemVer
 
-MINOR rétrocompatible lorsque l’incrément complet est activable. Aucun bump pour
-le cadrage seul. Aucune migration DB prévue pour la v1.
+MINOR rétrocompatible lorsque l’incrément complet est activable. Aucun bump pour le cadrage seul. Aucune migration DB prévue pour la v1.
 
 ## 14. Références vérifiées le 2026-07-17
 
@@ -176,3 +178,4 @@ le cadrage seul. Aucune migration DB prévue pour la v1.
 |---|---|---|
 | 2026-07-17 | Codex | Conception initiale sécurisée et séparation STT/extraction |
 | 2026-07-17 | ChatGPT | OpenAI par défaut, providers parole/brouillon indépendants, Gemini et Claude conservés |
+| 2026-07-28 | Antigravity | Spécification de l'isolation du bloc micro Soft UI et du conteneur de transcription scrollable fixe |

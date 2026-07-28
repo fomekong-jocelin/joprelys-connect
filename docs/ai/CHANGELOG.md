@@ -8,6 +8,11 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **FEAT-20260728-UI-MOCKUPS-AI-VOICE-DICTATION — Intégration du composant Soft UI de dictée vocale IA avec zone de transcription fixe scrollable (anti-déformation)** :
+  - **Composant carte vocale Soft UI (`RealtimeVoiceControllerComponent` & `VoiceWaveVisualizerComponent`)** : Implémentation fidèle de la carte de dictée vocale soft (`pasted-image-4.png`) intégrant le badge `✦ IA en cours...`, le bouton sobre `⏹ Arrêter`, l'icône micro à halo lumineux et le ruban d'ondes sinusoïdales fluides.
+  - **Stabilité de mise en page anti-déformation (Anti-CLS)** : Le flux de transcription en direct s'affiche désormais sous le bloc du micro dans un conteneur à hauteur fixe bornée (`h-32 max-h-32 overflow-y-auto`) avec défilement automatique vers le bas (`scrollToBottom()`). L'écran ne s'allonge et ne se rétrécit plus pendant la dictée.
+  - **Thèmes CSS centralisés & i18n FR/EN** : Utilisation exclusive des tokens de `DESIGN.md` (`var(--app-surface)`, `var(--app-border)`, `var(--brand-primary)`, `var(--text-primary)`), compatibilité transparente avec les thèmes Light/Dark et clés de traduction `aiInProgress`, `listenNaturally`, `tipDictateNaturally`, `tipVitalsNaturally`.
+
 - **BUG-20260728-LOGIN-FLASHING-SESSION-CARD-REMOVAL — Suppression de la carte temporaire de session/rôle au login et redirection directe dashboard** :
   - **Suppression du flash UI (`login.component.html`)** : Elimination de la carte temporaire d'identité (`login-session-card`) qui affichait le nom, l'email et le rôle de l'utilisateur pendant les quelques millisecondes de redirection vers le tableau de bord.
   - **Protection par guard (`web/src/app/auth/login.guard.ts`)** : Ajout du guard `loginGuard` sur les routes d'authentification (`path: ''` et `path: 'patient/login'`) dans `app.routes.ts` pour rediriger immédiatement tout utilisateur déjà connecté vers `/dashboard` (ou `/patient/dashboard`) sans charger ni faire flasher la page de login.

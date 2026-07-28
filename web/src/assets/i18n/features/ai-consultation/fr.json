@@ -214,5 +214,9 @@
   "consultation.ai.vitalUnit.glycemia": "g/L",
   "consultation.ai.vitalUnit.respiratoryRate": "/min",
   "consultation.ai.vitalUnit.painScale": "/10",
-  "consultation.ai.vitalUnit.bmi": "kg/m²"
+  "consultation.ai.vitalUnit.bmi": "kg/m²",
+  "consultation.ai.aiInProgress": "IA en cours...",
+  "consultation.ai.listenNaturally": "Écoute en cours... Parlez naturellement",
+  "consultation.ai.tipDictateNaturally": "Conseil : Vous pouvez dicter vos notes de consultation de façon naturelle.",
+  "consultation.ai.tipVitalsNaturally": "Conseil : Vous pouvez dicter vos constantes de façon naturelle."
 }

@@ -1,12 +1,14 @@
 import { CommonModule } from '@angular/common';
 import {
   Component,
+  ElementRef,
   EventEmitter,
   Input,
   OnChanges,
   OnDestroy,
   Output,
   SimpleChanges,
+  ViewChild,
   inject,
   signal,
 } from '@angular/core';
@@ -96,6 +98,8 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   private connectionTransition: Promise<void> = Promise.resolve();
   private destroyed = false;
 
+  @ViewChild('transcriptContainer') transcriptContainer?: ElementRef<HTMLDivElement>;
+
   constructor() {
     this.pipeline.configure({
       visitId: () => this.visitId.trim(),
@@ -137,7 +141,13 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     }));
     this.subscriptions.add(this.ambientCapture.state$.subscribe(state => this.ambientState.set(state)));
     this.subscriptions.add(this.bridge.transcript$.subscribe(turn => this.pipeline.enqueue(turn)));
-    this.subscriptions.add(this.bridge.transcript$.subscribe(turn => { const text = turn.transcript.trim(); if (text) { this.transcriptHistory.update(h => [...h, { text, timestamp: Date.now() }]); } }));
+    this.subscriptions.add(this.bridge.transcript$.subscribe(turn => {
+      const text = turn.transcript.trim();
+      if (text) {
+        this.transcriptHistory.update(h => [...h, { text, timestamp: Date.now() }]);
+        setTimeout(() => this.scrollToBottom(), 50);
+      }
+    }));
     this.subscriptions.add(this.bridge.error$.subscribe(error => this.realtimeError.emit(error)));
     this.subscriptions.add(this.bridge.assistantTurnCompleted$.subscribe(() => {
       setTimeout(() => {
@@ -145,6 +155,13 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
         this.pipeline.resume();
       }, 120);
     }));
+  }
+
+  private scrollToBottom(): void {
+    if (this.transcriptContainer?.nativeElement) {
+      const el = this.transcriptContainer.nativeElement;
+      el.scrollTop = el.scrollHeight;
+    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
