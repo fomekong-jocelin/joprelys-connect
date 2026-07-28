@@ -21,7 +21,7 @@ class OpenAiRealtimeCallServiceTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void shouldUsePatientSemanticVadForNaturalConsultationSpeech() {
+    void shouldUseCostAwareSemanticVadForNaturalConsultationSpeech() {
         OpenAiRealtimeCallService service = service();
 
         Map<String, Object> session = service.buildSessionConfig("fr");
@@ -31,7 +31,7 @@ class OpenAiRealtimeCallServiceTest {
         Map<String, Object> transcription = (Map<String, Object>) input.get("transcription");
 
         assertEquals("realtime", session.get("type"));
-        assertEquals("gpt-realtime-2.1", session.get("model"));
+        assertEquals("gpt-realtime-2.1-mini", session.get("model"));
         assertEquals(List.of("text"), session.get("output_modalities"));
         assertEquals(
                 List.of("item.input_audio_transcription.logprobs"),
@@ -40,7 +40,7 @@ class OpenAiRealtimeCallServiceTest {
         assertEquals("low", turnDetection.get("eagerness"));
         assertEquals(Boolean.FALSE, turnDetection.get("create_response"));
         assertEquals(Boolean.TRUE, turnDetection.get("interrupt_response"));
-        assertEquals("gpt-4o-transcribe", transcription.get("model"));
+        assertEquals("gpt-4o-mini-transcribe", transcription.get("model"));
         assertEquals("fr", transcription.get("language"));
         assertTrue(transcription.get("prompt").toString().contains("texte vide"));
         assertEquals("near_field", ((Map<String, Object>) input.get("noise_reduction")).get("type"));
@@ -89,7 +89,7 @@ class OpenAiRealtimeCallServiceTest {
         OpenAiRealtimeCallService service = service();
 
         Map<String, Object> session = service.buildCompatibilitySessionConfig(
-                "fr", "gpt-realtime-2.1", RealtimePurpose.CONSULTATION);
+                "fr", "gpt-realtime-2.1-mini", RealtimePurpose.CONSULTATION);
         Map<String, Object> audio = (Map<String, Object>) session.get("audio");
         Map<String, Object> input = (Map<String, Object>) audio.get("input");
         Map<String, Object> turnDetection = (Map<String, Object>) input.get("turn_detection");
@@ -107,7 +107,7 @@ class OpenAiRealtimeCallServiceTest {
         OpenAiRealtimeCallService service = service();
 
         Map<String, Object> session = service.buildCompatibilitySessionConfig(
-                "fr", "gpt-realtime-2.1", RealtimePurpose.VITALS);
+                "fr", "gpt-realtime-2.1-mini", RealtimePurpose.VITALS);
         Map<String, Object> audio = (Map<String, Object>) session.get("audio");
         Map<String, Object> input = (Map<String, Object>) audio.get("input");
         Map<String, Object> turnDetection = (Map<String, Object>) input.get("turn_detection");
@@ -142,7 +142,8 @@ class OpenAiRealtimeCallServiceTest {
         String sessionJson = new String(sessionBytes, StandardCharsets.UTF_8);
         assertEquals(MediaType.APPLICATION_JSON, sessionPart.getHeaders().getContentType());
         assertTrue(sessionJson.contains("\"type\":\"realtime\""));
-        assertTrue(sessionJson.contains("\"model\":\"gpt-realtime-2.1\""));
+        assertTrue(sessionJson.contains("\"model\":\"gpt-realtime-2.1-mini\""));
+        assertTrue(sessionJson.contains("\"model\":\"gpt-4o-mini-transcribe\""));
     }
 
     private OpenAiRealtimeCallService service() {
@@ -156,7 +157,7 @@ class OpenAiRealtimeCallServiceTest {
                 "fr",
                 new AiProperties.OpenAiProperties(
                         "test-key",
-                        "gpt-4.1",
+                        "gpt-4o-mini",
                         "gpt-4o-mini-transcribe",
                         "medical",
                         0.8,
@@ -166,9 +167,9 @@ class OpenAiRealtimeCallServiceTest {
         return new OpenAiRealtimeCallService(
                 properties,
                 new ObjectMapper(),
-                "gpt-realtime-2.1",
                 "gpt-realtime-2.1-mini",
-                "gpt-4o-transcribe",
+                "gpt-realtime-2.1-mini",
+                "gpt-4o-mini-transcribe",
                 "medium",
                 "near_field");
     }
