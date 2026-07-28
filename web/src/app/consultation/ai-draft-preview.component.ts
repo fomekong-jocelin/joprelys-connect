@@ -18,49 +18,65 @@ import {
   imports: [CommonModule, AiProposalPanelComponent],
   template: `
     @if (entries().length > 0) {
-      <section class="ui-card-subtle space-y-3 p-3 sm:p-4">
-        <div>
-          <p class="ui-label">{{ i18n.t('consultation.ai.acceptedDraft') }}</p>
-          <p class="mt-1 text-[10px] leading-4 text-[var(--text-muted)]">
-            {{ i18n.t('consultation.ai.acceptedDraftGovernanceHelp') }}
-          </p>
-        </div>
+      <section class="border-t border-[var(--app-border)] pt-3">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="min-w-0">
+            <p class="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">
+              {{ i18n.t('consultation.ai.acceptedDraft', 'Brouillon prêt') }}
+            </p>
+            <p class="mt-0.5 text-xs leading-5 text-[var(--text-secondary)]">
+              {{ entries().length }} {{ i18n.t('consultation.ai.draftSectionsReady', 'élément(s) prêt(s) à vérifier') }}
+            </p>
+          </div>
 
-        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          @for (entry of entries(); track entry.key) {
-            <div class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3">
-              <p class="ui-label">{{ fieldLabel(entry.key) }}</p>
-              <p class="mt-1 line-clamp-5 whitespace-pre-wrap text-xs leading-5 text-[var(--text-primary)]">
-                {{ formatValue(entry.key, entry.value) }}
-              </p>
-            </div>
-          }
+          <div class="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              (click)="apply.emit()"
+              [disabled]="!canApply || finalReview()?.status === 'PENDING'"
+              class="ui-button ui-button-primary w-full sm:w-auto"
+            >
+              {{ i18n.t('consultation.ai.apply') }}
+            </button>
+            <button
+              type="button"
+              (click)="startFinalReview()"
+              [disabled]="!canApply || !canFinalReview || reviewing() || !visitId || finalReview()?.status === 'PENDING'"
+              class="ui-button ui-button-secondary w-full sm:w-auto"
+            >
+              {{ reviewing()
+                ? i18n.t('consultation.ai.finalReviewRunning', 'Revue en cours…')
+                : i18n.t('consultation.ai.finalReviewAction', 'Dernière revue IA') }}
+            </button>
+          </div>
         </div>
 
         @if (reviewError()) {
-          <div class="rounded-[var(--radius-brand-sm)] border border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] p-3 text-xs font-semibold text-[var(--brand-warning-text)]" role="status">
+          <div class="mt-3 border-l-2 border-[var(--brand-warning-border)] py-1.5 pl-3 text-xs font-semibold text-[var(--brand-warning-text)]" role="status">
             {{ reviewError() }}
           </div>
         }
 
         @if (finalReview()?.status === 'NO_CHANGES') {
-          <div class="rounded-[var(--radius-brand-sm)] border border-[var(--brand-success-muted)] bg-[var(--brand-success-subtle)] p-3 text-xs font-semibold text-[var(--brand-success-text)]" role="status">
+          <p class="mt-3 text-xs font-semibold text-[var(--brand-success-text)]" role="status">
             {{ i18n.t('consultation.ai.finalReviewNoChanges', 'Revue approfondie terminée : aucune modification sûre n’est nécessaire.') }}
-          </div>
+          </p>
         }
 
         @if (finalReview(); as review) {
           @if (review.revision.proposals.length > 0) {
-            <div class="space-y-2">
-              <div class="rounded-[var(--radius-brand-sm)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] p-3">
+            <div class="mt-3 border-t border-[var(--app-border)] pt-3">
+              <div class="mb-2 flex items-center justify-between gap-3">
                 <p class="text-xs font-bold text-[var(--text-primary)]">
                   {{ i18n.t('consultation.ai.finalReviewTitle', 'Revue clinique approfondie') }}
                 </p>
-                <p class="mt-1 text-[10px] leading-4 text-[var(--text-muted)]">
-                  {{ i18n.t('consultation.ai.finalReviewHelp', 'Ces propositions proviennent d’un second passage IA. Rien n’est appliqué sans votre validation explicite.') }}
-                  @if (review.model) { · {{ review.model }} }
-                </p>
+                @if (review.model) {
+                  <span class="text-[9px] font-medium text-[var(--text-muted)]">{{ review.model }}</span>
+                }
               </div>
+              <p class="mb-3 text-[10px] leading-4 text-[var(--text-muted)]">
+                {{ i18n.t('consultation.ai.finalReviewHelp', 'Les propositions restent sous votre contrôle et ne sont jamais appliquées automatiquement.') }}
+              </p>
               <app-ai-proposal-panel
                 [revisions]="[review.revision]"
                 [disabled]="reviewing() || !canApply || !canFinalReview"
@@ -70,27 +86,23 @@ import {
           }
         }
 
-        <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <button
-            type="button"
-            (click)="startFinalReview()"
-            [disabled]="!canApply || !canFinalReview || reviewing() || !visitId || finalReview()?.status === 'PENDING'"
-            class="ui-button ui-button-secondary w-full sm:w-auto"
-          >
-            {{ reviewing()
-              ? i18n.t('consultation.ai.finalReviewRunning', 'Revue approfondie en cours…')
-              : i18n.t('consultation.ai.finalReviewAction', 'Faire une dernière revue IA') }}
-          </button>
-
-          <button
-            type="button"
-            (click)="apply.emit()"
-            [disabled]="!canApply || finalReview()?.status === 'PENDING'"
-            class="ui-button ui-button-primary w-full sm:w-auto"
-          >
-            {{ i18n.t('consultation.ai.apply') }}
-          </button>
-        </div>
+        <details class="mt-3 border-t border-[var(--app-border)] pt-1">
+          <summary class="cursor-pointer py-2 text-xs font-semibold text-[var(--brand-primary)] hover:underline">
+            {{ i18n.t('consultation.ai.viewDraft', 'Voir le brouillon') }} ({{ entries().length }})
+          </summary>
+          <div class="divide-y divide-[var(--app-border)]">
+            @for (entry of entries(); track entry.key) {
+              <div class="grid gap-1 py-2.5 sm:grid-cols-[10rem_1fr] sm:gap-3">
+                <p class="text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+                  {{ fieldLabel(entry.key) }}
+                </p>
+                <p class="line-clamp-6 whitespace-pre-wrap text-xs leading-5 text-[var(--text-primary)]">
+                  {{ formatValue(entry.key, entry.value) }}
+                </p>
+              </div>
+            }
+          </div>
+        </details>
       </section>
     }
   `,
@@ -115,6 +127,7 @@ export class AiDraftPreviewComponent {
     return (Object.entries(this.draft) as Array<[AiField, string]>)
       .filter(([key, value]) => {
         if (!value?.trim()) return false;
+        if (key === 'vitals') return false;
         if (key === 'finalDiagnosis' && diagnosis && value.trim() === diagnosis) return false;
         return true;
       })
