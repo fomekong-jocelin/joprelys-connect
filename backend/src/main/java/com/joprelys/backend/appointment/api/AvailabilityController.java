@@ -21,25 +21,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import com.joprelys.backend.auth.security.JwtClaims;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -149,6 +130,12 @@ public class AvailabilityController {
 			@RequestParam(required = false) Instant to,
 			Authentication authentication) {
 		return availabilityService.listExceptions(doctorId, from, to, callerId(authentication), canManageAll(authentication));
+	}
+
+	@PostMapping({"/exceptions", "/exceptions/"})
+	@PreAuthorize("hasAuthority('AVAILABILITY_MANAGE')")
+	@Operation(summary = "Créer une indisponibilité",
+			description = "Déclare une indisponibilité ponctuelle (congé, absence) qui masque les créneaux correspondants.",
 			responses = {
 					@ApiResponse(responseCode = "200", description = "Indisponibilité créée"),
 					@ApiResponse(responseCode = "400", description = "Plage invalide"),
