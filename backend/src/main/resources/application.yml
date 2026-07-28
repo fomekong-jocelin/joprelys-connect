@@ -51,18 +51,28 @@ joprelys:
     locale: ${AI_LOCALE:fr}
     openai:
       api-key: ${OPENAI_API_KEY:}
-      model: ${OPENAI_MODEL:gpt-4.1}
+      # Fast path used for normal consultation turns and structured extraction.
+      # Keep the expensive clinical reasoning tier out of the continuous loop.
+      model: ${OPENAI_MODEL:gpt-4o-mini}
       transcribe-model: ${OPENAI_TRANSCRIBE_MODEL:gpt-4o-mini-transcribe}
       transcribe-prompt: ${OPENAI_TRANSCRIBE_PROMPT:Transcrire uniquement la parole effectivement intelligible. Retourner un texte vide en l'absence de parole distincte et ne jamais compléter ou inventer un propos. Consultation médicale en français entre un médecin et un patient, avec vocabulaire clinique, symptômes, examen, diagnostic, ordonnance, médicaments, posologies et constantes vitales. Conserver fidèlement les négations, nombres, unités, noms propres et noms de médicaments.}
       transcribe-vad-threshold: ${OPENAI_TRANSCRIBE_VAD_THRESHOLD:0.8}
+      # Durable ambient recovery keeps diarization quality as a safety mechanism.
       ambient-transcribe-model: ${OPENAI_AMBIENT_TRANSCRIBE_MODEL:gpt-4o-transcribe-diarize}
-      tts-model: ${OPENAI_TTS_MODEL:gpt-4o-mini-tts}
+      # Supported low-latency speech model; keep instructions for non-tts-1 overrides only.
+      tts-model: ${OPENAI_TTS_MODEL:tts-1}
       tts-voice: ${OPENAI_TTS_VOICE:marin}
       tts-instructions: ${OPENAI_TTS_INSTRUCTIONS:Voix médicale professionnelle, calme, chaleureuse, concise et naturelle. Prononcer clairement les nombres, unités et noms de médicaments sans dramatiser.}
-      realtime-model: ${OPENAI_REALTIME_MODEL:gpt-realtime-2.1}
+      # Explicit clinician-triggered deep review. Never runs in the continuous loop.
+      final-review-enabled: ${OPENAI_FINAL_REVIEW_ENABLED:true}
+      final-review-model: ${OPENAI_FINAL_REVIEW_MODEL:gpt-5.6-terra}
+      # Realtime is a transcription transport in the current Joprelys flow:
+      # automatic model responses are disabled server-side, so use the mini tier.
+      realtime-model: ${OPENAI_REALTIME_MODEL:gpt-realtime-2.1-mini}
+      # Same-model fallback disables accidental escalation to a costly/deprecated model.
       realtime-fallback-model: ${OPENAI_REALTIME_FALLBACK_MODEL:gpt-realtime-2.1-mini}
       realtime-voice: ${OPENAI_REALTIME_VOICE:marin}
-      realtime-transcribe-model: ${OPENAI_REALTIME_TRANSCRIBE_MODEL:gpt-4o-transcribe}
+      realtime-transcribe-model: ${OPENAI_REALTIME_TRANSCRIBE_MODEL:gpt-4o-mini-transcribe}
       realtime-vad-eagerness: ${OPENAI_REALTIME_VAD_EAGERNESS:medium}
       # Consultation Realtime is primarily captured from laptop/mobile room microphones.
       # OpenAI documents far_field for laptop/conference-room microphones; deployments

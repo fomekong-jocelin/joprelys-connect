@@ -1,20 +1,20 @@
 @if (enabled) {
-  <div class="space-y-3">
+  <div class="space-y-2.5">
     <app-voice-listening-surface
       [active]="state().connected && !effectiveMuted()"
       [audioLevel]="audioLevel()"
       [badgeText]="i18n.t('consultation.ai.aiInProgress', 'IA en cours...')"
       [stopText]="i18n.t('consultation.ai.stopListening', 'Arrêter')"
       [statusText]="listeningSurfaceStatus()"
-      [tipText]="i18n.t('consultation.ai.tipDictateNaturally', 'Conseil : Vous pouvez dicter vos notes de consultation de façon naturelle.')"
+      [tipText]="i18n.t('consultation.ai.tipDictateNaturally', 'Conseil : Vous pouvez dicter vos notes naturellement.')"
       [accessibleLabel]="i18n.t('consultation.ai.microphoneLevelLabel', 'Niveau réel du microphone')"
       [stopDisabled]="finishPending()"
       (stop)="requestFinish()"
     />
 
-    @if (showSafetyAlert() || backlogPaused || finishPending()) {
+    @if (showSafetyAlert() || backlogPaused) {
       <div
-        class="rounded-[var(--radius-brand-sm)] border px-3 py-2 text-center text-xs font-semibold leading-5"
+        class="border-l-2 py-1.5 pl-3 text-xs font-semibold leading-5"
         [ngClass]="connectionBannerClasses()"
         role="status"
       >

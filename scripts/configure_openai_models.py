@@ -4,12 +4,19 @@ Configuration des modèles OpenAI sur le serveur de production joprelys.com.
 
 Actions :
 1. Sauvegarde horodatée du .env dans /root/server-fix-backups/<ts>/
-2. OPENAI_TRANSCRIBE_MODEL=gpt-4o-transcribe (remplace whisper-1)
-3. OPENAI_MODEL=gpt-4.1 (remplace gpt-4o-mini ; gpt-5.6-terra réservé à après
-   redéploiement du jar avec la garde temperature)
-4. Ajout de OPENAI_TRANSCRIBE_PROMPT si absent (inerte tant que le jar actuel
-   ne l'envoie pas — actif après prochain redéploiement backend)
-5. Redémarrage du service et vérification (statut + port 8084 + logs)
+2. OPENAI_TRANSCRIBE_MODEL=gpt-4o-mini-transcribe
+3. OPENAI_MODEL=gpt-4o-mini pour les tours normaux / extractions
+4. OPENAI_REALTIME_MODEL=gpt-realtime-2.1-mini
+5. OPENAI_REALTIME_FALLBACK_MODEL=gpt-realtime-2.1-mini (pas d'escalade coûteuse)
+6. OPENAI_REALTIME_TRANSCRIBE_MODEL=gpt-4o-mini-transcribe
+7. OPENAI_TTS_MODEL=tts-1
+8. OPENAI_FINAL_REVIEW_ENABLED=true
+9. OPENAI_FINAL_REVIEW_MODEL=gpt-5.6-terra
+10. Ajout / mise à jour de OPENAI_TRANSCRIBE_PROMPT
+11. Redémarrage du service et vérification (statut + port 8084 + logs)
+
+Le modèle de diarisation ambiante n'est volontairement pas modifié : il reste
+un mécanisme de sécurité / récupération distinct du flux normal optimisé.
 
 Secrets lus depuis l'environnement, masqués dans la sortie.
 """
@@ -55,9 +62,26 @@ mkdir -p "$BACKUP_DIR"
 cp -a "$ENV_FILE" "$BACKUP_DIR/.env"
 echo "backup=$BACKUP_DIR/.env"
 
+set_env() {
+  KEY="$1"
+  VALUE="$2"
+  if grep -q "^${KEY}=" "$ENV_FILE"; then
+    sed -i -E "s|^${KEY}=.*|${KEY}=${VALUE}|" "$ENV_FILE"
+  else
+    printf '%s=%s\n' "$KEY" "$VALUE" >> "$ENV_FILE"
+  fi
+}
+
 echo "===2. MISE A JOUR==="
-sed -i -E 's|^OPENAI_TRANSCRIBE_MODEL=.*|OPENAI_TRANSCRIBE_MODEL=gpt-4o-transcribe|' "$ENV_FILE"
-sed -i -E 's|^OPENAI_MODEL=.*|OPENAI_MODEL=gpt-4.1|' "$ENV_FILE"
+set_env OPENAI_TRANSCRIBE_MODEL gpt-4o-mini-transcribe
+set_env OPENAI_MODEL gpt-4o-mini
+set_env OPENAI_REALTIME_MODEL gpt-realtime-2.1-mini
+set_env OPENAI_REALTIME_FALLBACK_MODEL gpt-realtime-2.1-mini
+set_env OPENAI_REALTIME_TRANSCRIBE_MODEL gpt-4o-mini-transcribe
+set_env OPENAI_TTS_MODEL tts-1
+set_env OPENAI_FINAL_REVIEW_ENABLED true
+set_env OPENAI_FINAL_REVIEW_MODEL gpt-5.6-terra
+
 if ! grep -q '^OPENAI_TRANSCRIBE_PROMPT=' "$ENV_FILE"; then
   printf '%s\n' 'OPENAI_TRANSCRIBE_PROMPT=__PROMPT__' >> "$ENV_FILE"
   echo "prompt=ajouté"

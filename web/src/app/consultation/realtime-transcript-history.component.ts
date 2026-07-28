@@ -23,12 +23,9 @@ export interface RealtimeTranscriptEntry {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <section
-      class="h-32 max-h-32 overflow-hidden rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)]"
-      aria-live="polite"
-    >
-      <header class="flex items-center justify-between gap-3 border-b border-[var(--app-border)] px-3 py-2">
-        <p class="text-xs font-bold text-[var(--text-primary)]">
+    <section class="border-t border-[var(--app-border)] pt-2" aria-live="polite">
+      <header class="flex items-center justify-between gap-3 px-0.5">
+        <p class="text-[11px] font-bold text-[var(--text-secondary)]">
           {{ i18n.t('consultation.ai.focusTranscriptTitle') }}
         </p>
         @if (queuedCount > 0 || processing) {
@@ -43,12 +40,12 @@ export interface RealtimeTranscriptEntry {
 
       <div
         #transcriptContainer
-        class="h-[calc(8rem-2.25rem)] space-y-1.5 overflow-y-auto overscroll-contain p-2.5 text-left scroll-smooth"
+        class="mt-1.5 max-h-24 space-y-1 overflow-y-auto overscroll-contain px-0.5 py-1 text-left scroll-smooth"
       >
         @if (entries.length > 0) {
           @for (entry of entries; track entry.id; let last = $last) {
             <div class="flex items-start gap-2 text-xs leading-5">
-              <span class="shrink-0 text-[10px] tabular-nums text-[var(--text-muted)]">
+              <span class="shrink-0 text-[9px] tabular-nums text-[var(--text-muted)]">
                 {{ formatTime(entry.timestamp) }}
               </span>
               <div class="min-w-0 flex-1">
@@ -59,14 +56,14 @@ export interface RealtimeTranscriptEntry {
                     type="button"
                     (click)="startCorrection(entry)"
                     [disabled]="correctionDisabled"
-                    class="mt-1 min-h-11 text-xs font-bold text-[var(--brand-primary)] underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                    class="mt-0.5 text-[10px] font-bold text-[var(--brand-primary)] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {{ i18n.t('consultation.ai.correctTranscript') }}
                   </button>
                 }
 
                 @if (last && editingId() === entry.id) {
-                  <div class="mt-2 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface)] p-2">
+                  <div class="mt-2 border-l-2 border-[var(--brand-primary-border)] pl-3">
                     <label class="ui-label" [for]="'realtime-transcript-correction-' + entry.id">
                       {{ i18n.t('consultation.ai.correctTranscriptLabel') }}
                     </label>
@@ -82,14 +79,14 @@ export interface RealtimeTranscriptEntry {
                         type="button"
                         (click)="submitCorrection()"
                         [disabled]="!correctionText().trim()"
-                        class="ui-button ui-button-primary min-h-11 w-full sm:w-auto"
+                        class="ui-button ui-button-primary min-h-10 w-full sm:w-auto"
                       >
                         {{ i18n.t('consultation.ai.submitTranscriptCorrection') }}
                       </button>
                       <button
                         type="button"
                         (click)="cancelCorrection()"
-                        class="ui-button ui-button-secondary min-h-11 w-full sm:w-auto"
+                        class="ui-button ui-button-secondary min-h-10 w-full sm:w-auto"
                       >
                         {{ i18n.t('consultation.ai.cancelTranscriptCorrection') }}
                       </button>
