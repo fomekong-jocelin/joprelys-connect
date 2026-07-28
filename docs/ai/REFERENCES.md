@@ -71,6 +71,10 @@ Ce fichier liste les sources à consulter lorsque les documents internes ne suff
 - OpenAI Realtime — événement
   `conversation.item.input_audio_transcription.completed` :
   https://developers.openai.com/api/reference/resources/realtime/server-events#conversation.item.input_audio_transcription.completed
+- OpenAI API Pricing — modèles texte, Realtime, transcription et TTS :
+  https://developers.openai.com/api/docs/pricing
+- OpenAI Realtime costs — tokens audio, coût par tour, cache et troncature :
+  https://developers.openai.com/api/docs/guides/realtime-costs
 
 ## Git, versions et changelog
 

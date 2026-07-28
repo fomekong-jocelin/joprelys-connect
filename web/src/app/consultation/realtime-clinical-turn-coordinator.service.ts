@@ -296,7 +296,8 @@ export class RealtimeClinicalTurnCoordinator {
         }
         if (reason === 'AI_REVISION_DECISION_REQUIRED'
           || reason === 'AI_TRANSCRIPT_REVIEW_REQUIRED'
-          || reason === 'AI_CLARIFICATION_REQUIRED') {
+          || reason === 'AI_CLARIFICATION_REQUIRED'
+          || reason === 'AI_CLARIFICATION_PENDING') {
           this.analysisBusy = false;
           this.updateProcessing();
           return;
@@ -349,7 +350,8 @@ export class RealtimeClinicalTurnCoordinator {
     const session = host.session();
     return host.blocked()
       || !!session?.pendingTranscript
-      || (session?.revisions.some(revision => revision.status === 'PENDING') ?? false);
+      || (session?.revisions.some(revision => revision.status === 'PENDING') ?? false)
+      || (session?.clarifications.some(clarification => clarification.status === 'PENDING') ?? false);
   }
 
   private isCurrent(visitId: string, generation: number): boolean {

@@ -36,6 +36,7 @@ du dossier médical à un modèle.
 | STORY-2506 | Docs/sécurité/observabilité | P0 | 5 | IN_PROGRESS | 2500 |
 | STORY-2507 | E2E/évaluation/pilote | P0 | 5 | TODO | toutes |
 | TASK-20260728-P0-VOICE-HOTFIX-B | Realtime conversationnel contrôlé, Dictée passive, correction et finalisation sans perte | P0 | 5 | IMPLEMENTED — RECETTE CLINIQUE REQUISE | 2502, 2504 |
+| ARCH-20260728-AI-COST-OPTIMIZATION | Observabilité et architecture de réduction des coûts IA | P0 | 2 | ANALYSE TERMINÉE — POC NON ENGAGÉ | 2501, 2506, export Usage |
 
 ## 4. Estimation globale
 
@@ -86,3 +87,22 @@ Le hotfix consomme 2 à 4 jours senior hors capacité fonctionnelle et bloque le
 i18n, build et Maven complet (816 tests) sont verts. Il ne modifie pas
 l'estimation historique de l'epic ; il représente une charge corrective
 distincte de 5 SP.
+
+## 10. Optimisation des coûts IA — décision du 2026-07-28
+
+L'analyse `ARCH-20260728-AI-COST-OPTIMIZATION` constate que le coût courant ne
+provient pas principalement d'une connexion Realtime laissée ouverte. Le HEAD
+`54cd05cc` désactive les réponses autonomes Realtime, mais cumule transcription
+Realtime, diarisation ambiante par chunks de 10 secondes, appel `gpt-4.1` par
+segment VAD et TTS séparé.
+
+Décision :
+
+- GO pour mesurer, benchmarker puis router les capacités vers des modèles adaptés ;
+- NO-GO pour appliquer directement le YAML proposé ou basculer globalement
+  `OPENAI_MODEL` vers Terra ;
+- aucun développement engagé dans SPRINT-0014 sans export Usage et arbitrage de
+  capacité.
+
+Découpage candidat non inclus dans les 42 SP historiques : COST-01 à COST-05,
+17 SP / environ 10 à 17 jours senior, hors corpus et validation clinique.

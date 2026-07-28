@@ -8,6 +8,11 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **TASK-20260728-P0-VOICE-CLARIFICATION-CONFLICT-HOTFIX — Correction du blocage de finalisation "Finalisation en cours..." et gestion des conflits 409** :
+  - **Résolution du blocage de finalisation** : la présence d'une clarification en attente ne bloque plus indéfiniment la finalisation d'une session lorsque le pipeline audio est inactif ; le clic sur "Terminer" force la cloture propre et l'application du brouillon.
+  - **Gestion résiliente des conflits 409** : ajout de `AI_CLARIFICATION_PENDING` dans les états suspendus non fatals du coordinateur de tours Angular, évitant les crashs réseau et les alertes d'erreur intempestives lors d'interactions simultanées avec l'assistant.
+  - **Support du double-clic de secours** : si la finalisation reste en cours en raison d'une revue bloquante, un second clic sur "Terminer" applique directement les données accumulées sans perdre l'état clinique.
+
 - **TASK-20260728-P0-VOICE-HOTFIX-B — Realtime conversationnel fiable et Dictée passive** :
   - **Suppression des aberrations vocales** : retrait de `response.create`, de la consigne « lisez le message approuvé mot pour mot » et du double canal `SpeechSynthesis`/Realtime. Le transport OpenAI Realtime ne produit plus de réponse assistant autonome ni d’audio.
   - **Conversation clinique Realtime** : une question courte de clarification ou un message clinique validé par le backend peut être lu une seule fois via le TTS Joprelys dédié. La reprise de parole du médecin interrompt la lecture sans couper le microphone.

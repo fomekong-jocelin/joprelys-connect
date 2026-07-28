@@ -422,7 +422,12 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   }
 
   requestFinish(): void {
-    if (this.finishPending() || this.destroyed) return;
+    if (this.destroyed) return;
+    if (this.finishPending()) {
+      this.finishEmitted = true;
+      this.endSession.emit();
+      return;
+    }
     this.finishPending.set(true);
     this.voicePlayback.stop();
     this.syncMute();
@@ -442,8 +447,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     if (!this.finishPending() || this.finishEmitted || this.destroyed || !this.pipeline.isIdle()) return;
     const hasPendingReview = !!this.session?.pendingTranscript;
     const hasPendingRevision = this.session?.revisions.some(item => item.status === 'PENDING') ?? false;
-    const hasPendingClarification = this.session?.clarifications.some(item => item.status === 'PENDING') ?? false;
-    if (this.blocked || hasPendingReview || hasPendingRevision || hasPendingClarification) return;
+    if (this.blocked || hasPendingReview || hasPendingRevision) return;
     this.finishEmitted = true;
     this.endSession.emit();
   }
