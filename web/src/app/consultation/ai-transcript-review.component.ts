@@ -8,30 +8,28 @@ import { I18nService } from '../core/i18n/i18n.service';
   imports: [CommonModule],
   template: `
     @if (sourceTranscript) {
-      <section class="rounded-[var(--radius-brand-md)] border border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] p-3 sm:p-4">
-        <div>
-          <p class="ui-label text-[var(--brand-warning-text)]">
-            {{ i18n.t('consultation.ai.pendingTranscript') }}
-          </p>
-          <p class="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
-            {{ i18n.t('consultation.ai.pendingTranscriptHelp') }}
-          </p>
-        </div>
+      <section class="border-l-2 border-[var(--brand-warning-border)] py-1 pl-3 sm:pl-4">
+        <p class="text-[10px] font-bold uppercase tracking-wide text-[var(--brand-warning-text)]">
+          {{ i18n.t('consultation.ai.pendingTranscript') }}
+        </p>
+        <p class="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
+          {{ i18n.t('consultation.ai.pendingTranscriptHelp') }}
+        </p>
 
         <textarea
-          rows="6"
+          rows="4"
           [value]="editableTranscript()"
           (input)="onInput($event)"
-          class="ui-textarea mt-3 w-full resize-y"
+          class="ui-textarea mt-2.5 w-full resize-y"
           [attr.aria-label]="i18n.t('consultation.ai.pendingTranscript')"
         ></textarea>
 
-        <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+        <div class="mt-2 flex flex-col gap-2 sm:flex-row">
           <button
             type="button"
             (click)="submit()"
             [disabled]="busy || !editableTranscript().trim()"
-            class="ui-button ui-button-primary min-h-11 w-full sm:w-auto"
+            class="ui-button ui-button-primary min-h-10 w-full sm:w-auto"
           >
             {{ busy ? i18n.t('consultation.ai.processing') : i18n.t('consultation.ai.confirmAnalyze') }}
           </button>
@@ -39,7 +37,7 @@ import { I18nService } from '../core/i18n/i18n.service';
             type="button"
             (click)="discard.emit()"
             [disabled]="busy"
-            class="ui-button ui-button-secondary min-h-11 w-full sm:w-auto"
+            class="ui-button ui-button-secondary min-h-10 w-full sm:w-auto"
           >
             {{ i18n.t('consultation.ai.discardTranscript') }}
           </button>
