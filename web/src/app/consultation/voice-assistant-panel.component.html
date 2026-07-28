@@ -114,7 +114,7 @@
             [canApply]="!hasPendingRevision()"
             [canFinalReview]="!realtimeActive() && !busy()"
             (apply)="applyCurrentDraft()"
-            (applyPatch)="applyDraft.emit($event)"
+            (applyPatch)="applyFinalReviewPatch($event)"
           />
         }
       } @else {
@@ -176,7 +176,7 @@
             [canApply]="!hasPendingRevision()"
             [canFinalReview]="!recording() && !busy()"
             (apply)="applyCurrentDraft()"
-            (applyPatch)="applyDraft.emit($event)"
+            (applyPatch)="applyFinalReviewPatch($event)"
           />
         }
       }
