@@ -29,6 +29,8 @@ import {
   RealtimeVoiceState,
 } from './realtime-voice-bridge.service';
 
+import { VoiceWaveVisualizerComponent } from './voice-wave-visualizer.component';
+
 interface TranscriptEntry { text: string; timestamp: number; }
 
 const LOW_CONFIDENCE_REVIEW_FLOOR = 0.35;
@@ -36,7 +38,7 @@ const LOW_CONFIDENCE_REVIEW_FLOOR = 0.35;
 @Component({
   selector: 'app-realtime-voice-controller',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, VoiceWaveVisualizerComponent],
   providers: [RealtimeClinicalTurnCoordinator],
   templateUrl: './realtime-voice-controller.component.html',
 })
@@ -81,6 +83,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   readonly lastTranscript = this.pipeline.lastTranscript;
   readonly lastTranscriptConfidence = this.pipeline.lastTranscriptConfidence;
   readonly transcriptHistory = signal<TranscriptEntry[]>([]);
+  readonly audioLevel = signal(0.4);
 
   private readonly subscriptions = new Subscription();
   manualMuted = false;

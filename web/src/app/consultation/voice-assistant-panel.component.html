@@ -169,5 +169,12 @@
     </div>
   </section>
 
-  <app-linked-evidence-note-panel [visitId]="visitId" />
+  <details class="ui-card-subtle mt-4">
+    <summary class="cursor-pointer px-4 py-3 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+      {{ i18n.t('consultation.ai.auditEvidenceTitle', 'Traçabilité & Preuves cliniques (Optionnel)') }}
+    </summary>
+    <div class="border-t border-[var(--app-border)] p-3">
+      <app-linked-evidence-note-panel [visitId]="visitId" />
+    </div>
+  </details>
 </div>

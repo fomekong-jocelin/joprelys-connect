@@ -11,6 +11,11 @@
     </header>
 
     <div class="space-y-3 p-3 sm:p-4">
+      <app-voice-wave-visualizer
+        [active]="state().connected && !manualMuted"
+        [audioLevel]="audioLevel()"
+      />
+
       <div class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3" aria-live="polite">
         <div class="flex items-center justify-between gap-3">
           <p class="ui-label">{{ i18n.t('consultation.ai.focusTranscriptTitle') }}</p>

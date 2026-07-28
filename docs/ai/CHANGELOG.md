@@ -8,6 +8,10 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **STORY-20260728-CLINICAL-VOICE-FLUIDITY — Ergonomie Clinique & Visualiseur d'Ondes Vocales Animées** :
+  - **Visualiseur d'Ondes Sonores Animées (`VoiceWaveVisualizerComponent`)** : Création d'un composant réactif affichant des vagues sonores organiques pulsatiles et fluides réagissant dynamiquement au volume sonore pendant l'écoute.
+  - **Validation Global "1-Clic" (`AiProposalPanelComponent`)** : Ajout du bouton principal *Tout valider (X modifications en 1 clic)* au sommet du panneau de propositions IA pour appliquer l'ensemble des révisions en attente d'un seul coup sans imposer de clics répétitifs.
+  - **Épurage de la Vue Consultation** : Isolation du bloc d'audit technique ("Note clinique sourcée / SHA-256") dans un accordéon pliable discret `<details>` intitulé *Traçabilité & Preuves cliniques (Optionnel)* pour désencombrer la surface de travail du médecin.
 - **FIX-20260728-TRANSCRIPTION-UX-SURGICAL — Correctifs chirurgicaux UX Dictée / Transcription Temps Réel (Constantes & Consultation)** :
   - **Historique & Feedback File d'attente (BUG-03 & BUG-08)** : Ajout d'un panneau d'historique scrollable horodaté (`transcriptHistory`) dans le contrôleur Realtime Consultation pour conserver la visibilité sur l'ensemble des phrases captées. Repositionnement du badge de file d'attente (`queuedCount`) et de traitement au cœur du composant de transcription avec animations visuelles (`pulse` / `spin`).
   - **Staging des Constantes (BUG-04 & ERG-02)** : Suppression de la sauvegarde automatique/directe en base de données lors de la détection de constantes dans le panneau consultation. Les constantes sont désormais présentées sous forme de proposition à valider/rejeter explicitement par le médecin (`pendingVitalsProposal`), et le message de confirmation liste le nombre de champs mis à jour.

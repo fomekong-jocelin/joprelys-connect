@@ -15,121 +15,128 @@ export interface AiProposalDecisionRequest {
   standalone: true,
   imports: [CommonModule],
   template: `
-    @if (pendingRevision(); as revision) {
+    @if (allPendingRevisions().length > 0) {
       <section class="ui-card-subtle space-y-3 border-[var(--brand-primary-border)] p-4">
-        <header class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <header class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p class="ui-label text-[var(--brand-primary)]">
-              {{ i18n.t('consultation.ai.revisionTitle') }}
+              {{ i18n.t('consultation.ai.revisionTitle', 'Modifications à valider') }}
             </p>
-            <p class="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
-              {{ i18n.t('consultation.ai.revisionGovernanceHelp') }}
+            <p class="mt-0.5 text-xs leading-5 text-[var(--text-secondary)]">
+              {{ totalPendingProposalsCount() }} {{ i18n.t('consultation.ai.pendingProposalsHelp', 'proposition(s) en attente sur l\'ensemble de votre dictée.') }}
             </p>
           </div>
-          <span class="w-fit rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2 py-1 text-[10px] font-semibold text-[var(--text-secondary)]">
-            #{{ revision.sequence }} · {{ pendingCount(revision) }}
-          </span>
-        </header>
 
-        <div class="space-y-3">
-          @for (proposal of revision.proposals; track proposal.id) {
-            <article
-              class="rounded-[var(--radius-brand-md)] border bg-[var(--app-surface)] p-3"
-              [ngClass]="proposal.status === 'PENDING'
-                ? 'border-[var(--brand-primary-border)]'
-                : proposal.status === 'ACCEPTED'
-                  ? 'border-[var(--brand-success-muted)] opacity-80'
-                  : 'border-[var(--app-border)] opacity-65'"
-            >
-              <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p class="text-xs font-bold text-[var(--text-primary)]">
-                    {{ fieldLabel(proposal.field) }}
-                  </p>
-                  <p class="mt-1 text-[10px] leading-4 text-[var(--text-muted)]">{{ proposal.reason }}</p>
-                </div>
-                <div class="flex items-center gap-2">
-                  <span class="rounded-[var(--radius-brand-xs)] border border-[var(--app-border)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                    {{ uncertaintyLabel(proposal.uncertainty) }}
-                  </span>
-                  @if (proposal.status !== 'PENDING') {
-                    <span
-                      class="rounded-[var(--radius-brand-xs)] border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
-                      [ngClass]="proposal.status === 'ACCEPTED'
-                        ? 'border-[var(--brand-success-muted)] bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]'
-                        : 'border-[var(--app-border)] bg-[var(--app-surface-muted)] text-[var(--text-secondary)]'"
-                    >
-                      {{ proposal.status === 'ACCEPTED'
-                        ? i18n.t('consultation.ai.proposalAccepted')
-                        : i18n.t('consultation.ai.proposalRejected') }}
-                    </span>
-                  }
-                </div>
-              </div>
-
-              <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <div class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-2.5">
-                  <p class="ui-label">{{ i18n.t('consultation.ai.previousValue') }}</p>
-                  <p class="mt-1 whitespace-pre-wrap text-xs leading-5 text-[var(--text-primary)]">
-                    {{ proposal.previousValue
-                      ? formatValue(proposal.field, proposal.previousValue)
-                      : i18n.t('consultation.ai.emptyValue') }}
-                  </p>
-                </div>
-                <div class="rounded-[var(--radius-brand-sm)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] p-2.5">
-                  <p class="ui-label text-[var(--brand-primary)]">{{ i18n.t('consultation.ai.proposedValue') }}</p>
-                  <p class="mt-1 whitespace-pre-wrap text-xs leading-5 text-[var(--text-primary)]">
-                    {{ proposal.operation === 'CLEAR'
-                      ? i18n.t('consultation.ai.clearValue')
-                      : formatValue(proposal.field, proposal.proposedValue || '') }}
-                  </p>
-                </div>
-              </div>
-
-              @if (proposal.status === 'PENDING') {
-                <div class="mt-3 flex flex-col gap-2 sm:flex-row">
-                  <button
-                    type="button"
-                    (click)="decideProposal(revision.id, proposal.id, 'ACCEPT')"
-                    [disabled]="disabled"
-                    class="ui-button ui-button-primary min-h-11 w-full sm:w-auto"
-                  >
-                    {{ i18n.t('consultation.ai.acceptProposal') }}
-                  </button>
-                  <button
-                    type="button"
-                    (click)="decideProposal(revision.id, proposal.id, 'REJECT')"
-                    [disabled]="disabled"
-                    class="ui-button ui-button-secondary min-h-11 w-full sm:w-auto"
-                  >
-                    {{ i18n.t('consultation.ai.rejectProposal') }}
-                  </button>
-                </div>
-              }
-            </article>
-          }
-        </div>
-
-        @if (pendingCount(revision) > 1) {
-          <div class="flex flex-col gap-2 border-t border-[var(--app-border)] pt-3 sm:flex-row">
+          <div class="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              (click)="decideRevision(revision.id, 'ACCEPT')"
+              (click)="acceptAllPending()"
               [disabled]="disabled"
-              class="ui-button ui-button-primary min-h-11 w-full sm:w-auto"
+              class="ui-button ui-button-primary min-h-11 w-full sm:w-auto font-bold shadow-xs"
             >
-              {{ i18n.t('consultation.ai.acceptAll') }}
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              {{ i18n.t('consultation.ai.acceptAllGlobal', 'Tout valider (' + totalPendingProposalsCount() + ' en 1 clic)') }}
             </button>
             <button
               type="button"
-              (click)="decideRevision(revision.id, 'REJECT')"
+              (click)="rejectAllPending()"
               [disabled]="disabled"
               class="ui-button ui-button-secondary min-h-11 w-full sm:w-auto"
             >
-              {{ i18n.t('consultation.ai.rejectAll') }}
+              {{ i18n.t('consultation.ai.rejectAllGlobal', 'Tout rejeter') }}
             </button>
           </div>
-        }
+        </header>
+
+        <div class="space-y-4">
+          @for (revision of allPendingRevisions(); track revision.id) {
+            <div class="space-y-2 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-[var(--text-muted)]">Révision #{{ revision.sequence }}</span>
+                <span class="text-[10px] font-semibold text-[var(--brand-primary)]">{{ pendingCount(revision) }} champ(s)</span>
+              </div>
+
+              @for (proposal of revision.proposals; track proposal.id) {
+                <article
+                  class="rounded-[var(--radius-brand-md)] border bg-[var(--app-surface)] p-3"
+                  [ngClass]="proposal.status === 'PENDING'
+                    ? 'border-[var(--brand-primary-border)]'
+                    : proposal.status === 'ACCEPTED'
+                      ? 'border-[var(--brand-success-muted)] opacity-80'
+                      : 'border-[var(--app-border)] opacity-65'"
+                >
+                  <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p class="text-xs font-bold text-[var(--text-primary)]">
+                        {{ fieldLabel(proposal.field) }}
+                      </p>
+                      <p class="mt-1 text-[10px] leading-4 text-[var(--text-muted)]">{{ proposal.reason }}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="rounded-[var(--radius-brand-xs)] border border-[var(--app-border)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                        {{ uncertaintyLabel(proposal.uncertainty) }}
+                      </span>
+                      @if (proposal.status !== 'PENDING') {
+                        <span
+                          class="rounded-[var(--radius-brand-xs)] border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+                          [ngClass]="proposal.status === 'ACCEPTED'
+                            ? 'border-[var(--brand-success-muted)] bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]'
+                            : 'border-[var(--app-border)] bg-[var(--app-surface-muted)] text-[var(--text-secondary)]'"
+                        >
+                          {{ proposal.status === 'ACCEPTED'
+                            ? i18n.t('consultation.ai.proposalAccepted')
+                            : i18n.t('consultation.ai.proposalRejected') }}
+                        </span>
+                      }
+                    </div>
+                  </div>
+
+                  <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <div class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-2.5">
+                      <p class="ui-label">{{ i18n.t('consultation.ai.previousValue') }}</p>
+                      <p class="mt-1 whitespace-pre-wrap text-xs leading-5 text-[var(--text-primary)]">
+                        {{ proposal.previousValue
+                          ? formatValue(proposal.field, proposal.previousValue)
+                          : i18n.t('consultation.ai.emptyValue') }}
+                      </p>
+                    </div>
+                    <div class="rounded-[var(--radius-brand-sm)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] p-2.5">
+                      <p class="ui-label text-[var(--brand-primary)]">{{ i18n.t('consultation.ai.proposedValue') }}</p>
+                      <p class="mt-1 whitespace-pre-wrap text-xs leading-5 text-[var(--text-primary)]">
+                        {{ proposal.operation === 'CLEAR'
+                          ? i18n.t('consultation.ai.clearValue')
+                          : formatValue(proposal.field, proposal.proposedValue || '') }}
+                      </p>
+                    </div>
+                  </div>
+
+                  @if (proposal.status === 'PENDING') {
+                    <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+                      <button
+                        type="button"
+                        (click)="decideProposal(revision.id, proposal.id, 'ACCEPT')"
+                        [disabled]="disabled"
+                        class="ui-button ui-button-primary min-h-11 w-full sm:w-auto"
+                      >
+                        {{ i18n.t('consultation.ai.acceptProposal') }}
+                      </button>
+                      <button
+                        type="button"
+                        (click)="decideProposal(revision.id, proposal.id, 'REJECT')"
+                        [disabled]="disabled"
+                        class="ui-button ui-button-secondary min-h-11 w-full sm:w-auto"
+                      >
+                        {{ i18n.t('consultation.ai.rejectProposal') }}
+                      </button>
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+          }
+        </div>
       </section>
     }
 
@@ -164,6 +171,31 @@ export class AiProposalPanelComponent {
 
   pendingRevision(): AiRevision | null {
     return [...this.revisions].reverse().find((revision) => revision.status === 'PENDING') ?? null;
+  }
+
+  allPendingRevisions(): AiRevision[] {
+    return this.revisions.filter((revision) => revision.status === 'PENDING');
+  }
+
+  totalPendingProposalsCount(): number {
+    return this.allPendingRevisions().reduce(
+      (acc, revision) => acc + this.pendingCount(revision),
+      0,
+    );
+  }
+
+  acceptAllPending(): void {
+    if (this.disabled) return;
+    for (const revision of this.allPendingRevisions()) {
+      this.decided.emit({ scope: 'REVISION', revisionId: revision.id, decision: 'ACCEPT' });
+    }
+  }
+
+  rejectAllPending(): void {
+    if (this.disabled) return;
+    for (const revision of this.allPendingRevisions()) {
+      this.decided.emit({ scope: 'REVISION', revisionId: revision.id, decision: 'REJECT' });
+    }
   }
 
   decidedRevisions(): AiRevision[] {
