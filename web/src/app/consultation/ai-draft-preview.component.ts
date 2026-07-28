@@ -63,7 +63,7 @@ import {
               </div>
               <app-ai-proposal-panel
                 [revisions]="[review.revision]"
-                [disabled]="reviewing() || !canApply"
+                [disabled]="reviewing() || !canApply || !canFinalReview"
                 (decided)="decideFinalReview($event)"
               />
             </div>
@@ -74,7 +74,7 @@ import {
           <button
             type="button"
             (click)="startFinalReview()"
-            [disabled]="!canApply || reviewing() || !visitId || finalReview()?.status === 'PENDING'"
+            [disabled]="!canApply || !canFinalReview || reviewing() || !visitId || finalReview()?.status === 'PENDING'"
             class="ui-button ui-button-secondary w-full sm:w-auto"
           >
             {{ reviewing()
@@ -102,6 +102,7 @@ export class AiDraftPreviewComponent {
   @Input() visitId = '';
   @Input() draft: AiConsultationDraft = {};
   @Input() canApply = true;
+  @Input() canFinalReview = true;
   @Output() readonly apply = new EventEmitter<void>();
   @Output() readonly applyPatch = new EventEmitter<AiConsultationDraft>();
 
@@ -121,7 +122,7 @@ export class AiDraftPreviewComponent {
   }
 
   startFinalReview(): void {
-    if (!this.visitId || !this.canApply || this.reviewing()) return;
+    if (!this.visitId || !this.canApply || !this.canFinalReview || this.reviewing()) return;
     this.reviewing.set(true);
     this.reviewError.set('');
     this.api.createFinalReview(this.visitId).subscribe({
@@ -141,7 +142,7 @@ export class AiDraftPreviewComponent {
 
   decideFinalReview(request: AiProposalDecisionRequest): void {
     const review = this.finalReview();
-    if (!review || this.reviewing()) return;
+    if (!review || !this.canFinalReview || this.reviewing()) return;
     this.reviewing.set(true);
     this.reviewError.set('');
     const operation = request.scope === 'PROPOSAL' && request.proposalId
