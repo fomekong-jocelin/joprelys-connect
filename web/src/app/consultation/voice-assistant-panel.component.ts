@@ -310,6 +310,33 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     }
   }
 
+  applyFinalReviewPatch(patch: AiConsultationDraft): void {
+    const draft = this.session()?.draft;
+    if (!draft || this.hasPendingRevision() || !patch || Object.keys(patch).length === 0) return;
+
+    const reviewedDraft: AiConsultationDraft = { ...draft, ...patch };
+    const current = this.currentDraft ?? {};
+    const plan = this.draftMerge.plan(
+      { baseDraft: this.cloneDraft(draft), draft: this.cloneDraft(reviewedDraft) },
+      current,
+    );
+    const safePatch: AiConsultationDraft = { ...plan.textPatch };
+
+    if (plan.conflicts.length > 0) {
+      this.errorMessage.set(this.i18n.t(
+        'consultation.ai.safeMergeConflict',
+        'Des saisies plus récentes du médecin ont été conservées. Vérifiez les champs signalés avant l\'enregistrement.',
+      ));
+    }
+    if (Object.keys(safePatch).length > 0) {
+      this.applyDraft.emit(safePatch);
+      this.session.update(currentSession => currentSession ? {
+        ...currentSession,
+        draft: { ...currentSession.draft, ...safePatch },
+      } : currentSession);
+    }
+  }
+
   finishRealtimeTranscription(response: AiTranscriptionResponse): void {
     this.session.update(current => current ? {
       ...current,
