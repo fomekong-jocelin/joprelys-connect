@@ -59,7 +59,8 @@ joprelys:
       transcribe-vad-threshold: ${OPENAI_TRANSCRIBE_VAD_THRESHOLD:0.8}
       # Durable ambient recovery keeps diarization quality as a safety mechanism.
       ambient-transcribe-model: ${OPENAI_AMBIENT_TRANSCRIBE_MODEL:gpt-4o-transcribe-diarize}
-      tts-model: ${OPENAI_TTS_MODEL:gpt-4o-mini-tts}
+      # Supported low-latency speech model; keep instructions for non-tts-1 overrides only.
+      tts-model: ${OPENAI_TTS_MODEL:tts-1}
       tts-voice: ${OPENAI_TTS_VOICE:marin}
       tts-instructions: ${OPENAI_TTS_INSTRUCTIONS:Voix médicale professionnelle, calme, chaleureuse, concise et naturelle. Prononcer clairement les nombres, unités et noms de médicaments sans dramatiser.}
       # Explicit clinician-triggered deep review. Never runs in the continuous loop.
