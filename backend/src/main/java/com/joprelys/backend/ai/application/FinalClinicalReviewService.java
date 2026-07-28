@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -30,6 +31,15 @@ import tools.jackson.databind.ObjectMapper;
 public class FinalClinicalReviewService {
 
     private static final long REVIEW_TTL_MINUTES = 30;
+    private static final Set<String> NARRATIVE_REVIEW_FIELDS = Set.of(
+            "symptoms",
+            "clinicalExam",
+            "suspectedDiagnosis",
+            "diagnosis",
+            "finalDiagnosis",
+            "conclusion",
+            "advice",
+            "followUp");
 
     private final FinalClinicalReviewGateway gateway;
     private final AiClinicalResponseParser responseParser;
@@ -154,7 +164,9 @@ public class FinalClinicalReviewService {
             List<ParsedChange> changes) {
         Map<String, ParsedChange> unique = new LinkedHashMap<>();
         for (ParsedChange change : changes) {
-            if (change != null && "SET".equals(change.operation())) {
+            if (change != null
+                    && "SET".equals(change.operation())
+                    && NARRATIVE_REVIEW_FIELDS.contains(change.field())) {
                 unique.put(change.field(), change);
             }
         }
