@@ -136,7 +136,7 @@ Correctif P0 `BUG-20260718-PATIENT-PROFESSIONAL-RBAC-CONTEXT-LEAK` :
 - `JwtAuthenticationFilter` ne crée que `ROLE_PATIENT` lorsqu'un token est classé patient, même en présence d'un claim de rôles mixte ;
 - les contrôleurs restent la source de vérité ; `/api/availabilities/**` exige `hasAuthority('AVAILABILITY_MANAGE')` et des tests de refus patient explicites.
 
-## 14. Ergonomie Mobile-First & Résilience des Endpoints (Correctif P0 du 2026-07-28)
+## 14. Ergonomie Mobile-First & Modale Unifiée (Correctifs P0 du 2026-07-28)
 
 Correctif `BUG-20260728-DOCTOR-AVAILABILITY-MOBILE-GRID-AND-WEEKDAY-BUG` :
 
@@ -144,7 +144,15 @@ Correctif `BUG-20260728-DOCTOR-AVAILABILITY-MOBILE-GRID-AND-WEEKDAY-BUG` :
 - **Grille Mobile-First `WeeklyAvailabilityGridComponent`** :
   - **Mobile (< 768px)** : Affichage d'un bandeau horizontal d'onglets pour naviguer entre les jours (Lun → Dim). Timeline verticale du jour avec boutons tactiles ergonomiques (hauteur min 38-44px), liste des cartes de plages actives/exceptions et raccourcis de création rapide (Matin 08h-12h, Après-midi 14h-18h, Journée 08h-17h).
   - **Desktop (≥ 768px)** : Grille 7 colonnes standard conservée dans un conteneur responsive.
-- **Formulaire de plage `AvailabilityPageComponent`** :
+- **Bouton & Modale d'ajout unifiée (`AvailabilityPageComponent`)** :
+  - Unification des boutons "+ Ajouter une plage" et "+ Ajouter une indisponibilité" en un bouton unique `+ Ajouter`.
+  - Modale unique de saisie pilotée par le signal `entryType` (`'rule' | 'exception'`) sélectionnable via boutons radio (`Disponibilité` / `Indisponibilité`).
   - Suppression des réinitialisations parasites (`resetRuleForm()`) lors des sélections de plages/jours.
   - Liaison bidirectionnelle réactive `onFormWeekdayChange` et `onFormValidFromChange` avec attribut `[selected]="day === formWeekday()"` sur l'élément HTML `<select>`.
+- **Internationalisation FR/EN 100%** :
+  - Extension de `WeeklyAvailabilityGridLabels` (`addRange`, `edit`, `deactivate`, `quickSlotsTitle`, `morningSlot`, `afternoonSlot`, `fullDaySlot`, `customSlot`, `rangesCount`).
+  - Remplacement de 100% des chaînes hardcodées dans `WeeklyAvailabilityGridComponent` par `labels().*`.
+  - Mettre à jour `fr.json` et `en.json` sous `web/src/assets/i18n/features/availability/`.
+- **Épurage de l'aperçu des créneaux libres** :
+  - Suppression du texte explicatif technique superflu dans la section d'accordéon des créneaux.
 

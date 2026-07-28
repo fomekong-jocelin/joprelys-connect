@@ -24,6 +24,11 @@
      - **Sous 768px (Mobile)** : Hôte `@Component` et conteneurs parent configurés avec `w-full min-w-0 max-w-full`. Bandeau d'onglets jours avec défilement horizontal fluide et `shrink-0`. Vue timeline verticale avec gros boutons tactiles (min 38-44px), liste des cartes de plages et raccourcis de création rapide ("Matin 08h-12h", "A-M 14h-18h", "Jour 08h-17h"). Modales adaptées avec `min-w-0` et padding `p-3 sm:p-4`.
      - **À partir de 768px (Desktop)** : Grille hebdomadaire 7 colonnes complète conservée dans un conteneur responsive.
 
+4. **Ergonomie UI/UX Unifiée, i18n FR/EN à 100% & Épurage du texte d'aperçu** :
+   - **Bouton & Modale d'ajout unifiée** : Remplacement des 2 boutons d'en-tête redondants par un seul bouton principal `+ Ajouter`. La modale intègre en haut un sélecteur d'enregistrement sous forme de boutons radio (`Disponibilité (Plage de consultation)` vs `Indisponibilité (Absence / Congé)`), basculant dynamiquement les champs requis sans encombrer la vue.
+   - **Internationalisation FR/EN 100%** : Suppression de toutes les chaînes en français codées en dur dans le template `WeeklyAvailabilityGridComponent` (onglets, boutons d'action "Modifier", "Désactiver", raccourcis rapides "Matin", "A-M", "Jour", "Personnalisé..."), déportées vers les fichiers i18n `features/availability/{fr,en}.json`.
+   - **Épurage de l'aperçu des créneaux** : Suppression du paragraphe explicatif technique (règle de calcul des 7 jours et durée de créneau) dans le panneau déroulant des créneaux libres pour ne conserver que l'affichage utile.
+
 ## Actions à réaliser
 
 - [x] Rédiger le ticket de suivi `docs/ai/tickets/BUG-20260728-DOCTOR-AVAILABILITY-MOBILE-GRID-AND-WEEKDAY-BUG.md`

@@ -31,6 +31,15 @@ export interface WeeklyAvailabilityGridLabels {
   readonly available?: string;
   readonly unavailable?: string;
   readonly clickToAdd?: string;
+  readonly addRange?: string;
+  readonly edit?: string;
+  readonly deactivate?: string;
+  readonly quickSlotsTitle?: string;
+  readonly morningSlot?: string;
+  readonly afternoonSlot?: string;
+  readonly fullDaySlot?: string;
+  readonly customSlot?: string;
+  readonly rangesCount?: string;
 }
 
 export interface WeeklyAvailabilityRangeSelection {
@@ -120,7 +129,7 @@ interface CalendarBlock {
                   {{ currentDay.label }} {{ currentDay.date.getDate() }}
                 </h3>
                 <p class="text-xs text-[var(--text-muted)] truncate">
-                  {{ currentDay.rules.length }} {{ labels().available || 'plage(s)' }}
+                  {{ currentDay.rules.length }} {{ labels().rangesCount || 'plage(s)' }}
                 </p>
               </div>
               <button
@@ -128,14 +137,14 @@ interface CalendarBlock {
                 class="ui-button ui-button-primary min-h-[38px] text-xs py-1.5 px-3 shrink-0"
                 (click)="addRuleForDay(currentDay)"
               >
-                + Ajouter une plage
+                {{ labels().addRange || '+ Ajouter une plage' }}
               </button>
             </div>
 
             <!-- Liste des plages du jour -->
             @if (currentDay.rules.length === 0 && currentDay.exceptions.length === 0) {
               <div class="py-6 text-center text-xs text-[var(--text-muted)] bg-[var(--app-surface-muted)] rounded-[var(--radius-brand-md)]">
-                {{ labels().emptyDay || 'Aucune plage configurée pour ce jour' }}
+                {{ labels().emptyDay || 'Aucune plage' }}
               </div>
             } @else {
               <div class="space-y-2 min-w-0">
@@ -151,14 +160,14 @@ interface CalendarBlock {
                         class="ui-button ui-button-secondary text-xs px-2.5 py-1.5 min-h-[36px]"
                         (click)="ruleSelected.emit(rule)"
                       >
-                        Éditer
+                        {{ labels().edit || 'Modifier' }}
                       </button>
                       <button
                         type="button"
                         class="ui-button ui-button-danger text-xs px-2.5 py-1.5 min-h-[36px]"
                         (click)="ruleDeactivateRequested.emit(rule)"
                       >
-                        Désactiver
+                        {{ labels().deactivate || 'Désactiver' }}
                       </button>
                     </div>
                   </div>
@@ -166,7 +175,7 @@ interface CalendarBlock {
 
                 @for (exception of currentDay.exceptions; track exception.id) {
                   <div class="rounded-[var(--radius-brand-md)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3 min-w-0">
-                    <span class="block text-xs font-black text-[var(--brand-danger-text)] truncate">{{ labels().unavailable || 'Indisponible' }}</span>
+                    <span class="block text-xs font-black text-[var(--brand-danger-text)]">{{ labels().unavailable || 'Indisponible' }}</span>
                     <span class="block text-xs text-[var(--text-secondary)] truncate">
                       {{ formatExceptionTimes(exception) }}
                     </span>
@@ -180,35 +189,35 @@ interface CalendarBlock {
 
             <!-- Créneaux rapides de la journée -->
             <div class="pt-2 min-w-0">
-              <h4 class="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Créer une plage rapide</h4>
+              <h4 class="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">{{ labels().quickSlotsTitle || 'Créer une plage rapide' }}</h4>
               <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 min-w-0">
                 <button
                   type="button"
                   class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] py-2 px-1 text-center text-[11px] sm:text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)] truncate min-h-[38px]"
                   (click)="addSlotForDay(currentDay, '08:00', '12:00')"
                 >
-                  Matin (08h - 12h)
+                  {{ labels().morningSlot || 'Matin (08h - 12h)' }}
                 </button>
                 <button
                   type="button"
                   class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] py-2 px-1 text-center text-[11px] sm:text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)] truncate min-h-[38px]"
                   (click)="addSlotForDay(currentDay, '14:00', '18:00')"
                 >
-                  A-M (14h - 18h)
+                  {{ labels().afternoonSlot || 'A-M (14h - 18h)' }}
                 </button>
                 <button
                   type="button"
                   class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] py-2 px-1 text-center text-[11px] sm:text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)] truncate min-h-[38px]"
                   (click)="addSlotForDay(currentDay, '08:00', '17:00')"
                 >
-                  Jour (08h - 17h)
+                  {{ labels().fullDaySlot || 'Jour (08h - 17h)' }}
                 </button>
                 <button
                   type="button"
                   class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] py-2 px-1 text-center text-[11px] sm:text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)] truncate min-h-[38px]"
                   (click)="addRuleForDay(currentDay)"
                 >
-                  Personnalisé...
+                  {{ labels().customSlot || 'Personnalisé...' }}
                 </button>
               </div>
             </div>

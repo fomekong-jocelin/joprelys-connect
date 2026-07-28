@@ -88,10 +88,13 @@ Offrir un parcours complet : le médecin publie ses disponibilités → le patie
 - Un patient utilise uniquement `/patient/**` et `/api/patient/**` pour les rendez-vous ; `/clinic/availability` et `/api/availabilities/**` exigent strictement `AVAILABILITY_MANAGE`.
 - Critère de non-régression : après le parcours médecin → déconnexion → patient, le menu ne contient que les entrées patient et une URL clinique directe est refusée.
 
-## 11. Ergonomie Mobile-First & Résilience du Calendrier (Correctif P0 du 2026-07-28)
+## 11. Ergonomie Mobile-First & Modale Unifiée (Correctifs UX P0 du 2026-07-28)
 
 - **Vue Mobile-First (< 768px)** : Affichage d'un bandeau d'onglets jour par jour (Lun → Dim) avec dates claires, évitant le défilement horizontal. La sélection d'un jour affiche les plages configurées sous forme de cartes d'action et permet l'ajout rapide de créneaux sans forcer l'usage du calendrier 7 colonnes.
 - **Grille Desktop (≥ 768px)** : Préservation de la grille hebdomadaire 7 colonnes type agenda.
+- **Bouton & Modale d'ajout unifiée par boutons radio** : Remplacement des boutons séparés "+ Ajouter une plage" et "+ Ajouter une indisponibilité" par un unique bouton principal `+ Ajouter`. La modale intègre un sélecteur par boutons radio (*Disponibilité* vs *Indisponibilité*) pour modifier dynamiquement les champs sans surcharger l'écran.
+- **Internationalisation FR/EN 100%** : Suppression de tous les textes hardcodés dans `WeeklyAvailabilityGridComponent` et `AvailabilityPageComponent` (onglets, actions, créneaux rapides "Matin", "A-M", "Jour", "Personnalisé..."), intégralement répertoriés dans les dictionnaires i18n `fr.json` et `en.json`.
+- **Épurage de l'aperçu des créneaux** : Retrait du paragraphe d'explications techniques sur la règle de calcul des créneaux.
 - **Synchronisation strict jour / date** : La sélection d'un jour ou d'un créneau dans l'agenda alimente et synchronise automatiquement le jour de la semaine (`weekday`) et la date de début de validité (`validFrom`), sans retour intempestif à « Lundi ».
 - **Résilience API** : Acceptation des requêtes HTTP `/api/availabilities` et `/api/availabilities/` pour parer aux normalisations d'URL de reverse proxy/Nginx.
 
