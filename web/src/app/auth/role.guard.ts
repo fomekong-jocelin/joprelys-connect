@@ -20,6 +20,7 @@ export const roleGuard: CanActivateFn = (route, state) => {
   const routePath = route.routeConfig?.path ?? '';
   const isBillingManagementRoute = routePath === 'clinic/billing'
     || routePath === 'clinic/billing/invoice/:invoiceId';
+  const isAccessRequestRoute = routePath === 'clinic/access-request';
   const isInternalEntryRoute = routePath === 'dashboard'
     || (routePath === 'profile' && !expectsPatient);
   const allowAnyInternalRole = route.data['allowAnyInternalRole'] === true || isInternalEntryRoute;
@@ -37,11 +38,14 @@ export const roleGuard: CanActivateFn = (route, state) => {
         : router.parseUrl('/unauthorized');
     }
 
-    // A valid professional session in this tab must not be mistaken for patient
-    // authentication. Send the user to the explicit patient login mode instead of
-    // importing/reusing clinician credentials on a patient route.
     if (expectsPatient) {
       return patientLoginTree();
+    }
+
+    // The access-request screen is a remediation workflow. Any authenticated
+    // professional may open it; the backend still enforces which roles may submit.
+    if (isAccessRequestRoute) {
+      return true;
     }
 
     if (expectedPermissions.length > 0 || allowAnyInternalRole || isBillingManagementRoute) {
@@ -77,14 +81,10 @@ export const roleGuard: CanActivateFn = (route, state) => {
     return authorizeSession(session);
   }
 
-  // Patient authentication is deliberately JWT/OTP only. Never attempt the
-  // professional refresh cookie while entering a patient route.
   if (expectsPatient || state.url.startsWith('/patient/')) {
     return patientLoginTree();
   }
 
-  // sessionStorage is per-tab while the professional refresh cookie is HttpOnly
-  // and shared by the origin. A professional tab may recover before login.
   return sessionRecovery.refreshAccessToken().pipe(
     switchMap(() => {
       const restored = tokenStorage.session();
