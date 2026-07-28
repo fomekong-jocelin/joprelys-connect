@@ -112,6 +112,7 @@
             [visitId]="visitId"
             [draft]="session()?.draft ?? {}"
             [canApply]="!hasPendingRevision()"
+            [canFinalReview]="!realtimeActive() && !busy()"
             (apply)="applyCurrentDraft()"
             (applyPatch)="applyDraft.emit($event)"
           />
@@ -173,6 +174,7 @@
             [visitId]="visitId"
             [draft]="session()?.draft ?? {}"
             [canApply]="!hasPendingRevision()"
+            [canFinalReview]="!recording() && !busy()"
             (apply)="applyCurrentDraft()"
             (applyPatch)="applyDraft.emit($event)"
           />
