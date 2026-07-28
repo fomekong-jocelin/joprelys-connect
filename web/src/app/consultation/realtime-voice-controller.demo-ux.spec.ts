@@ -158,11 +158,10 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
     fixture.detectChanges();
     const text = fixture.nativeElement.textContent as string;
 
-    expect(text).toContain('Niveau optimal');
-    expect(text).toContain('Transcription en direct');
-    expect(text).toContain('Pause');
-    expect(text).toContain('Passer en dictée');
+    expect(text).toContain('IA en cours...');
+    expect(text).toContain('Écoute en cours... Parlez naturellement');
     expect(text).toContain('Terminer');
+    expect(text).toContain('Conseil');
     expect(text).not.toContain('Capture de sécurité active');
     expect(text).not.toContain('Preuve clinique ambient');
     expect(text).not.toContain('Copilote Realtime sécurisé');
