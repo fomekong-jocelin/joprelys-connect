@@ -10,19 +10,23 @@ Joprelys uses a cost-aware model routing policy for the clinical voice assistant
 | Continuous Realtime transport | `gpt-realtime-2.1-mini` | Lower-cost Realtime tier; server-side automatic responses remain disabled |
 | Realtime input transcription | `gpt-4o-mini-transcribe` | Avoid paying the full transcription model on every live turn |
 | Normal consultation turns / structured extraction | `gpt-4o-mini` | High-volume fast path with Structured Outputs support |
-| TTS playback | `gpt-4o-mini-tts` | Existing low-cost speech playback path |
+| TTS playback | `gpt-4o-mini-tts` | Existing speech playback path; kept to preserve the current voice UX |
 | Durable ambient recovery / diarization | `gpt-4o-transcribe-diarize` | Safety/recovery path; preserved intentionally |
-| Deep final clinical review | `gpt-5.6-terra` | Reserved for an explicit clinician-triggered final review, not the continuous loop |
+| Deep final clinical review | `gpt-5.6-terra` | Explicit clinician-triggered second pass only; never part of the continuous loop |
 
-The deep final review is deliberately not auto-wired in this change. The current consultation workflow continuously builds a clinician-reviewable draft and applies explicit safety guards. Introducing an extra final model call that can rewrite the draft requires a separate contract, acceptance flow and regression suite before it is allowed to alter clinical content.
+The final review is now wired as a governed, optional second pass. It receives only the accepted draft, uses a strict Structured Output contract, passes proposed changes through the existing factuality/grounding/medication guards, and returns proposals only. It never writes clinical data directly. The clinician must explicitly accept proposals before the frontend emits an accepted patch.
+
+A final review becomes stale if the underlying accepted draft changes before the clinician decides. Stale reviews are rejected rather than being applied to a newer consultation state. The action is also disabled while Realtime listening or classic dictation capture is active.
 
 ## Cost-control principles
 
 1. Never use the flagship Realtime model as a passive transcription transport.
 2. Keep the continuous loop on the cheapest model that satisfies the workflow.
 3. Keep expensive reasoning out of every speech turn.
-4. Do not compromise the durable ambient safety path merely to reduce cost.
-5. Do not log transcript text, patient data, prompts or model responses in cost telemetry.
+4. Run `gpt-5.6-terra` only when the clinician explicitly asks for the final review.
+5. Do not compromise the durable ambient safety path merely to reduce cost.
+6. Do not log transcript text, patient data, prompts or model responses in cost telemetry.
+7. Never silently escalate a Realtime fallback to a more expensive or deprecated model.
 
 ## Measurement framework
 
@@ -31,7 +35,7 @@ The deep final review is deliberately not auto-wired in this change. The current
 **AI cost per completed consultation**
 
 - Grain: one consultation/visit.
-- Formula: sum of estimated provider cost for transcription, realtime, text generation and TTS calls attached to the visit.
+- Formula: sum of estimated provider cost for transcription, realtime, text generation, final review and TTS calls attached to the visit.
 - Decision: detect model-routing regressions and cost spikes.
 - Provisional target: normal 60-minute consultation at or below **US$0.80**; investigate sessions above **US$1.25** until production baselines are available.
 
@@ -45,14 +49,17 @@ The deep final review is deliberately not auto-wired in this change. The current
 
 - Formula: accepted proposals / decided proposals.
 - Decision: ensure cost reductions do not silently degrade clinical usefulness.
-- Segment by model and workflow, never by patient identity in analytics exports.
+- Segment normal-turn proposals and final-review proposals separately.
+- Never segment by patient identity in analytics exports.
 
 ### Driver metrics
 
 - Realtime connected duration per consultation.
-- Number of Realtime reconnects and fallback-model activations.
+- Number of Realtime reconnects and fallback attempts.
 - Total text tokens per consultation and model.
+- Final-review invocation rate and total tokens per review.
 - Number and bytes of classic transcription requests.
+- TTS input characters and output bytes.
 - Low-confidence transcription rejection rate.
 - P50/P95 response latency by operation.
 
@@ -60,20 +67,26 @@ The deep final review is deliberately not auto-wired in this change. The current
 
 - Low-confidence transcript rate must not worsen materially after routing changes.
 - Medication safety / factuality guard rejection rates must be monitored by release.
+- Final-review hallucinated facts, unsupported diagnosis and medication substitutions must remain fail-closed.
+- Stale final-review decisions must be rejected.
 - No reduction in the explicit clinician validation requirement.
 - No PHI in `AI_USAGE` telemetry.
 
 ## Telemetry introduced in this change
 
-`OpenAiProvider` emits privacy-safe structured log lines:
+Privacy-safe structured log lines:
 
 ```text
 AI_USAGE provider=openai operation=transcription model=<model> audioBytes=<bytes> locale=<locale>
 AI_USAGE provider=openai operation=chat model=<model> totalTokens=<tokens>
 AI_USAGE provider=openai operation=structured_chat model=<model> totalTokens=<tokens>
+AI_USAGE provider=openai operation=final_review model=<model> totalTokens=<tokens>
+AI_USAGE provider=openai operation=tts model=<model> inputChars=<chars> outputBytes=<bytes>
 ```
 
-Existing Realtime call logs already expose the selected model, compatibility mode and purpose without transcript content. These logs are sufficient for the first operational baseline; a durable per-visit cost ledger can be added after the baseline proves which dimensions are actually needed.
+No prompt, response, transcript, medication, diagnosis, patient identifier or other clinical content is written to these usage logs.
+
+Existing Realtime call logs expose the selected model, compatibility mode and purpose without transcript content. These logs are sufficient for the first operational baseline; a durable per-visit cost ledger can be added after the baseline proves which dimensions are actually needed.
 
 ## Current model price references
 
@@ -91,13 +104,29 @@ As of 2026-07-28, the verified published prices are:
 - `gpt-4o-mini`: US$0.15 / 1M text input tokens, US$0.60 / 1M text output tokens.
 - `gpt-5.6-terra`: US$2.50 / 1M text input tokens, US$15 / 1M text output tokens.
 
+## Final-review safety contract
+
+The deep final review must satisfy all of these conditions:
+
+- It is explicitly initiated by the clinician.
+- It runs only on an accepted, stable draft.
+- It cannot introduce a new diagnosis, medication, dose, route, frequency, duration, number, unit, laterality or negation.
+- Evidence must quote the accepted draft exactly.
+- Only `SET` proposals are accepted from Terra; no autonomous delete/clear operation is allowed.
+- Every output passes deterministic factuality, grounding and medication-safety guards.
+- A draft change after review creation invalidates the review.
+- Accept/reject decisions are explicit.
+- Accepted output is a patch emitted to the existing clinician-controlled form flow, never a direct database mutation.
+
 ## Rollout validation
 
 Before merging to production:
 
-- Run backend AI/OpenAI tests.
+- Run backend AI/OpenAI tests, including `FinalClinicalReviewServiceTest`.
 - Run voice/realtime frontend tests.
 - Validate a French consultation with silence, negations, drug names, numbers and vital signs.
 - Confirm Realtime creates sessions with `gpt-realtime-2.1-mini` and input transcription uses `gpt-4o-mini-transcribe`.
 - Confirm normal chat calls report `gpt-4o-mini` in `AI_USAGE`.
+- Confirm an explicit final review reports `gpt-5.6-terra` and does not mutate the session draft directly.
+- Confirm a changed draft causes `AI_FINAL_REVIEW_STALE` on review decision.
 - Compare transcript confidence and clinician proposal acceptance against the previous release.
