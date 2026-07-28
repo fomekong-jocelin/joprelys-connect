@@ -8,6 +8,9 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **FEAT-20260728-UNIVERSAL-VOICE-FUSION — Évolution R1 : Micro Ambiant Universel Unifié (Note Clinique + Constantes)** :
+  - **Unification du Flux Vocale Ambiant** : Élimination de la dualité des assistants vocaux sur la page de consultation. Le micro universel principal (`app-voice-assistant-panel`) gère désormais l'écoute unique et réalise l'extraction simultanée de la note clinique, des prescriptions, des examens ET des constantes vitales (`vitals`).
+  - **Routage Automatique Dual (Formulaire + Constantes)** : Mise à jour de `applyAiDraft` dans `consultation.component.ts` pour que la validation globale d'un brouillon applique à la fois les champs de la note et prépare le bloc de validation des constantes (`pendingVitalsProposal`).
 - **STORY-20260728-CLINICAL-VOICE-FLUIDITY — Ergonomie Clinique & Visualiseur d'Ondes Vocales Animées** :
   - **Visualiseur d'Ondes Sonores Animées (`VoiceWaveVisualizerComponent`)** : Création d'un composant réactif affichant des vagues sonores organiques pulsatiles et fluides réagissant dynamiquement au volume sonore pendant l'écoute.
   - **Validation Global "1-Clic" (`AiProposalPanelComponent`)** : Ajout du bouton principal *Tout valider (X modifications en 1 clic)* au sommet du panneau de propositions IA pour appliquer l'ensemble des révisions en attente d'un seul coup sans imposer de clics répétitifs.
