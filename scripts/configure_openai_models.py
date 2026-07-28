@@ -9,10 +9,11 @@ Actions :
 4. OPENAI_REALTIME_MODEL=gpt-realtime-2.1-mini
 5. OPENAI_REALTIME_FALLBACK_MODEL=gpt-realtime-2.1-mini (pas d'escalade coûteuse)
 6. OPENAI_REALTIME_TRANSCRIBE_MODEL=gpt-4o-mini-transcribe
-7. OPENAI_FINAL_REVIEW_ENABLED=true
-8. OPENAI_FINAL_REVIEW_MODEL=gpt-5.6-terra
-9. Ajout / mise à jour de OPENAI_TRANSCRIBE_PROMPT
-10. Redémarrage du service et vérification (statut + port 8084 + logs)
+7. OPENAI_TTS_MODEL=tts-1
+8. OPENAI_FINAL_REVIEW_ENABLED=true
+9. OPENAI_FINAL_REVIEW_MODEL=gpt-5.6-terra
+10. Ajout / mise à jour de OPENAI_TRANSCRIBE_PROMPT
+11. Redémarrage du service et vérification (statut + port 8084 + logs)
 
 Le modèle de diarisation ambiante n'est volontairement pas modifié : il reste
 un mécanisme de sécurité / récupération distinct du flux normal optimisé.
@@ -77,6 +78,7 @@ set_env OPENAI_MODEL gpt-4o-mini
 set_env OPENAI_REALTIME_MODEL gpt-realtime-2.1-mini
 set_env OPENAI_REALTIME_FALLBACK_MODEL gpt-realtime-2.1-mini
 set_env OPENAI_REALTIME_TRANSCRIBE_MODEL gpt-4o-mini-transcribe
+set_env OPENAI_TTS_MODEL tts-1
 set_env OPENAI_FINAL_REVIEW_ENABLED true
 set_env OPENAI_FINAL_REVIEW_MODEL gpt-5.6-terra
 
