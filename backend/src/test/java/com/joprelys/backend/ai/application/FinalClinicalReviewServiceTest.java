@@ -152,6 +152,44 @@ class FinalClinicalReviewServiceTest {
         assertTrue(review.revision().proposals().isEmpty());
     }
 
+    @Test
+    void shouldKeepVitalsAndLabOrdersReadOnlyDuringFinalReview() {
+        Map<String, String> draft = Map.of(
+                "vitals", "{\"temperature\":39.0}",
+                "labOrders", "[\"NFS\"]");
+        FinalClinicalReviewService service = serviceWithResponse("""
+                {
+                  "changes": [
+                    {
+                      "field": "vitals",
+                      "operation": "SET",
+                      "value": "{\"temperature\":37.0}",
+                      "reason": "Normalisation",
+                      "uncertainty": "LOW",
+                      "evidence": ["39.0"]
+                    },
+                    {
+                      "field": "labOrders",
+                      "operation": "SET",
+                      "value": "[\"NFS\",\"CRP\"]",
+                      "reason": "Ajout proposé",
+                      "uncertainty": "LOW",
+                      "evidence": ["NFS"]
+                    }
+                  ],
+                  "assistantMessage": "Modifications proposées.",
+                  "needsClarification": false,
+                  "clarification": null
+                }
+                """);
+
+        var review = service.createReview(
+                visitId, userId, organizationId, draft, "fr");
+
+        assertEquals("NO_CHANGES", review.status());
+        assertTrue(review.revision().proposals().isEmpty());
+    }
+
     private FinalClinicalReviewService serviceWithResponse(String content) {
         FinalClinicalReviewGateway gateway = (draft, locale) ->
                 new AiChatResponse(content, 321, "gpt-5.6-terra");
