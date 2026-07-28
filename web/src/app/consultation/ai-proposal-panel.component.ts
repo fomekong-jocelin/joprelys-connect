@@ -23,7 +23,7 @@ export interface AiProposalDecisionRequest {
               {{ i18n.t('consultation.ai.revisionTitle', 'Modifications à valider') }}
             </p>
             <p class="mt-0.5 text-xs leading-5 text-[var(--text-secondary)]">
-              {{ totalPendingProposalsCount() }} {{ i18n.t('consultation.ai.pendingProposalsHelp', 'proposition(s) en attente sur l\'ensemble de votre dictée.') }}
+              {{ totalPendingProposalsCount() }} {{ i18n.t('consultation.ai.pendingProposalsHelp', "proposition(s) en attente sur l'ensemble de votre dictée.") }}
             </p>
           </div>
 

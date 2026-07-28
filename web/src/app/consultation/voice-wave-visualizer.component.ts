@@ -34,7 +34,7 @@ import { I18nService } from '../core/i18n/i18n.service';
             {{ active ? i18n.t('consultation.ai.listeningActive', 'Écoute active...') : i18n.t('consultation.ai.listeningPaused', 'Écoute en pause') }}
           </p>
           <p class="text-[10px] leading-4 text-[var(--text-muted)]">
-            {{ active ? i18n.t('consultation.ai.speakNaturally', 'Parlez naturellement, l\'IA structure votre note') : i18n.t('consultation.ai.clickToResume', 'Cliquez pour reprendre') }}
+            {{ active ? i18n.t('consultation.ai.speakNaturally', "Parlez naturellement, l'IA structure votre note") : i18n.t('consultation.ai.clickToResume', 'Cliquez pour reprendre') }}
           </p>
         </div>
       </div>

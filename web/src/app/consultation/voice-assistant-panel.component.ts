@@ -102,14 +102,14 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   interactionBlocked(): boolean {
     return !!this.session()?.pendingTranscript
       || this.hasPendingClarification()
-      || this.hasPendingRevision();
+      || (!this.conversationMode() && this.hasPendingRevision());
   }
 
   recordingBlocked(): boolean {
-    return this.realtimeActive()
+    return (this.realtimeActive() && !this.conversationMode())
       || !!this.session()?.pendingTranscript
       || this.hasPendingClarification()
-      || this.hasPendingRevision();
+      || (!this.conversationMode() && this.hasPendingRevision());
   }
 
   hasPendingClarification(): boolean {
@@ -312,12 +312,16 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   finishRealtimeTranscription(response: AiTranscriptionResponse): void {
-    this.session.update(current => current ? {
-      ...current,
-      pendingTranscript: response.transcript,
-      transcriptStatus: response.status,
-      expiresAt: response.expiresAt,
-    } : current);
+    if (this.conversationMode() && response.transcript?.trim()) {
+      this.analyzeTranscript(response.transcript.trim());
+    } else {
+      this.session.update(current => current ? {
+        ...current,
+        pendingTranscript: response.transcript,
+        transcriptStatus: response.status,
+        expiresAt: response.expiresAt,
+      } : current);
+    }
   }
 
   finishRealtimeMessage(response: AiMessageResponse): void {
@@ -416,6 +420,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   private completeSessionUpdate(response: AiSessionResponse): void {
     this.session.set(response);
     this.busy.set(false);
+    this.applyCurrentDraft();
   }
 
   private pendingClarification(): AiClarification | null {
