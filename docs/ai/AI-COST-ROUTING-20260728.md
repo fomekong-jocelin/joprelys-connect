@@ -10,13 +10,15 @@ Joprelys uses a cost-aware model routing policy for the clinical voice assistant
 | Continuous Realtime transport | `gpt-realtime-2.1-mini` | Lower-cost Realtime tier; server-side automatic responses remain disabled |
 | Realtime input transcription | `gpt-4o-mini-transcribe` | Avoid paying the full transcription model on every live turn |
 | Normal consultation turns / structured extraction | `gpt-4o-mini` | High-volume fast path with Structured Outputs support |
-| TTS playback | `gpt-4o-mini-tts` | Existing speech playback path; kept to preserve the current voice UX |
+| TTS playback | `tts-1` | Supported low-latency speech model; replaces deprecated `gpt-4o-mini-tts` |
 | Durable ambient recovery / diarization | `gpt-4o-transcribe-diarize` | Safety/recovery path; preserved intentionally |
 | Deep final clinical review | `gpt-5.6-terra` | Explicit clinician-triggered second pass only; never part of the continuous loop |
 
-The final review is now wired as a governed, optional second pass. It receives only the accepted draft, uses a strict Structured Output contract, passes proposed changes through the existing factuality/grounding/medication guards, and returns proposals only. It never writes clinical data directly. The clinician must explicitly accept proposals before the frontend emits an accepted patch.
+The final review is wired as a governed, optional second pass. It receives only the accepted draft, uses a strict Structured Output contract, passes proposed changes through the existing factuality/grounding/medication guards, and returns proposals only. It never writes clinical data directly. The clinician must explicitly accept proposals before the frontend emits an accepted patch.
 
-A final review becomes stale if the underlying accepted draft changes before the clinician decides. Stale reviews are rejected rather than being applied to a newer consultation state. The action is also disabled while Realtime listening or classic dictation capture is active.
+Final-review changes are restricted twice: the provider schema only permits narrative clinical fields, and the server independently filters proposals to those same narrative fields. Prescription, laboratory orders and vital signs are read-only context for this final review.
+
+A final review becomes stale if the underlying accepted draft changes before the clinician decides. Stale reviews are rejected rather than being applied to a newer consultation state. The action is also disabled while Realtime listening or classic dictation capture is active. Accepted final-review patches pass through the existing frontend safe-merge logic so a more recent clinician edit always wins.
 
 ## Cost-control principles
 
@@ -27,6 +29,7 @@ A final review becomes stale if the underlying accepted draft changes before the
 5. Do not compromise the durable ambient safety path merely to reduce cost.
 6. Do not log transcript text, patient data, prompts or model responses in cost telemetry.
 7. Never silently escalate a Realtime fallback to a more expensive or deprecated model.
+8. Do not keep a deprecated speech-generation model in the production defaults.
 
 ## Measurement framework
 
@@ -59,7 +62,7 @@ A final review becomes stale if the underlying accepted draft changes before the
 - Total text tokens per consultation and model.
 - Final-review invocation rate and total tokens per review.
 - Number and bytes of classic transcription requests.
-- TTS input characters and output bytes.
+- TTS request count and input characters.
 - Low-confidence transcription rejection rate.
 - P50/P95 response latency by operation.
 
@@ -68,7 +71,9 @@ A final review becomes stale if the underlying accepted draft changes before the
 - Low-confidence transcript rate must not worsen materially after routing changes.
 - Medication safety / factuality guard rejection rates must be monitored by release.
 - Final-review hallucinated facts, unsupported diagnosis and medication substitutions must remain fail-closed.
+- Final review must never propose prescription, lab-order or vital-sign mutations.
 - Stale final-review decisions must be rejected.
+- More recent clinician edits must win over final-review patches.
 - No reduction in the explicit clinician validation requirement.
 - No PHI in `AI_USAGE` telemetry.
 
@@ -96,6 +101,7 @@ Pricing must be refreshed from OpenAI before changing hard cost thresholds:
 - `gpt-4o-mini-transcribe`: https://developers.openai.com/api/docs/models/gpt-4o-mini-transcribe
 - `gpt-4o-mini`: https://developers.openai.com/api/docs/models/gpt-4o-mini
 - `gpt-5.6-terra`: https://developers.openai.com/api/docs/models/gpt-5.6-terra
+- `tts-1`: https://developers.openai.com/api/docs/models/tts-1
 
 As of 2026-07-28, the verified published prices are:
 
@@ -103,6 +109,7 @@ As of 2026-07-28, the verified published prices are:
 - `gpt-4o-mini-transcribe`: US$1.25 / 1M audio input tokens, US$5 / 1M output tokens.
 - `gpt-4o-mini`: US$0.15 / 1M text input tokens, US$0.60 / 1M text output tokens.
 - `gpt-5.6-terra`: US$2.50 / 1M text input tokens, US$15 / 1M text output tokens.
+- `tts-1`: US$15 / 1M input characters for speech generation.
 
 ## Final-review safety contract
 
@@ -110,13 +117,15 @@ The deep final review must satisfy all of these conditions:
 
 - It is explicitly initiated by the clinician.
 - It runs only on an accepted, stable draft.
+- It proposes changes only to narrative clinical fields.
+- Prescription, laboratory orders and vital signs are immutable in this review path.
 - It cannot introduce a new diagnosis, medication, dose, route, frequency, duration, number, unit, laterality or negation.
 - Evidence must quote the accepted draft exactly.
 - Only `SET` proposals are accepted from Terra; no autonomous delete/clear operation is allowed.
 - Every output passes deterministic factuality, grounding and medication-safety guards.
 - A draft change after review creation invalidates the review.
 - Accept/reject decisions are explicit.
-- Accepted output is a patch emitted to the existing clinician-controlled form flow, never a direct database mutation.
+- Accepted output is passed through the existing safe merge and then emitted to the clinician-controlled form flow, never written directly to clinical persistence.
 
 ## Rollout validation
 
@@ -127,6 +136,7 @@ Before merging to production:
 - Validate a French consultation with silence, negations, drug names, numbers and vital signs.
 - Confirm Realtime creates sessions with `gpt-realtime-2.1-mini` and input transcription uses `gpt-4o-mini-transcribe`.
 - Confirm normal chat calls report `gpt-4o-mini` in `AI_USAGE`.
+- Confirm TTS reports `tts-1` and does not send unsupported voice instructions.
 - Confirm an explicit final review reports `gpt-5.6-terra` and does not mutate the session draft directly.
 - Confirm a changed draft causes `AI_FINAL_REVIEW_STALE` on review decision.
 - Compare transcript confidence and clinician proposal acceptance against the previous release.
