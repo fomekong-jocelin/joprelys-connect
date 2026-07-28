@@ -158,7 +158,7 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
     fixture.detectChanges();
     const text = fixture.nativeElement.textContent as string;
 
-    expect(text).toContain('Écoute active...');
+    expect(text).toContain('Niveau optimal');
     expect(text).toContain('Transcription en direct');
     expect(text).toContain('Pause');
     expect(text).toContain('Passer en dictée');

@@ -1,49 +1,33 @@
 @if (enabled) {
-  <section class="ui-card overflow-hidden">
+  <section class="ui-card overflow-hidden border-[var(--brand-primary-border)] shadow-sm">
+    <!-- Header minimaliste style MediVoice / Nabla -->
+    <header class="flex items-center justify-between border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-4 py-3">
+      <div class="flex items-center gap-2">
+        <span class="h-2.5 w-2.5 rounded-full bg-[var(--brand-primary)] animate-pulse"></span>
+        <span class="text-xs font-bold text-[var(--text-primary)]">
+          {{ i18n.t('consultation.ai.realtimeModeTitle', 'Consultation en cours') }}
+        </span>
+      </div>
+      <span class="rounded-[var(--radius-brand-xs)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand-primary)]">
+        🔒 {{ i18n.t('consultation.ai.dataConfidential', 'Données sécurisées') }}
+      </span>
+    </header>
 
-    <div class="space-y-3 p-3 sm:p-4">
+    <div class="space-y-4 p-4 text-center sm:p-6">
+      <!-- 1. Visualiseur d'ondes sonores fluides et micro circulaire central (MediVoice Style) -->
       <app-voice-wave-visualizer
         [active]="state().connected && !manualMuted"
         [audioLevel]="audioLevel()"
       />
 
-      <div class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3" aria-live="polite">
-        <div class="flex items-center justify-between gap-3">
-          <p class="ui-label">{{ i18n.t('consultation.ai.focusTranscriptTitle') }}</p>
-          <div class="flex items-center gap-2">
-            @if (queuedCount() > 0) {
-              <span class="inline-flex items-center gap-1 rounded-[var(--radius-brand-xs)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] px-2 py-0.5 text-[10px] font-bold text-[var(--brand-primary)]">
-                <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand-primary)]"></span>
-                {{ queuedCount() }} {{ i18n.t('consultation.ai.realtimeQueued') }}
-              </span>
-            }
-            @if (processing()) {
-              <span class="flex items-center gap-1 text-[10px] font-bold text-[var(--brand-primary)]">
-                <span class="h-3 w-3 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-[var(--brand-primary)]"></span>
-                {{ i18n.t('consultation.ai.processingBackground') }}
-              </span>
-            }
-          </div>
-        </div>
-        @if (transcriptHistory().length > 0) {
-          <div class="mt-2 max-h-36 space-y-1.5 overflow-y-auto overscroll-contain pr-1">
-            @for (entry of transcriptHistory(); track entry.timestamp) {
-              <div class="flex items-baseline gap-2 text-xs leading-5">
-                <span class="shrink-0 text-[10px] tabular-nums text-[var(--text-muted)]">{{ formatTime(entry.timestamp) }}</span>
-                <p class="min-w-0 text-[var(--text-primary)]">{{ entry.text }}</p>
-              </div>
-            }
-          </div>
-          @if (transcriptNeedsReview()) {
-            <p class="mt-1.5 text-[10px] leading-4 text-[var(--brand-warning-text)]">
-              {{ i18n.t('consultation.ai.focusTranscriptUnverified') }}
-            </p>
-          }
-        } @else {
-          <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-            {{ state().connected ? i18n.t('consultation.ai.focusTranscriptWaiting') : i18n.t('consultation.ai.focusTranscriptNoChannel') }}
-          </p>
-        }
+      <!-- 2. Chronomètre dynamique (00:01:24) -->
+      <div>
+        <span class="block text-2xl font-black tracking-tight tabular-nums text-[var(--text-primary)] sm:text-3xl">
+          {{ durationFormatted() }}
+        </span>
+        <span class="mt-0.5 block text-xs font-semibold text-[var(--text-muted)]">
+          {{ manualMuted ? i18n.t('consultation.ai.listeningPaused', 'Écoute en pause') : i18n.t('consultation.ai.recordingActive', 'Capture vocale continue') }}
+        </span>
       </div>
 
       @if (showSafetyAlert() || backlogPaused) {
@@ -56,33 +40,71 @@
         </div>
       }
 
-      <div class="grid grid-cols-2 gap-2">
+      <!-- 3. Bouton principal d'action unique (■ Arrêter / Pause) -->
+      <div class="flex items-center justify-center gap-3 pt-1">
         <button
           type="button"
           (click)="toggleMute()"
           [disabled]="!canToggleMute()"
-          class="ui-button ui-button-secondary min-h-11 w-full"
+          class="ui-button ui-button-secondary min-h-11 px-5 text-xs font-bold"
         >
           {{ manualMuted
-            ? i18n.t('consultation.ai.resumeListening')
-            : i18n.t('consultation.ai.pauseListeningShort') }}
+            ? '▶ ' + i18n.t('consultation.ai.resumeListening', 'Reprendre')
+            : '⏸ ' + i18n.t('consultation.ai.pauseListeningShort', 'Pause') }}
         </button>
+
         <button
           type="button"
           (click)="endSession.emit()"
-          class="ui-button ui-button-primary min-h-11 w-full"
+          class="ui-button bg-red-600 hover:bg-red-700 text-white border-transparent min-h-11 px-6 text-xs font-bold shadow-xs transition-all active:scale-95"
         >
-          {{ i18n.t('consultation.ai.finishListening') }}
+          ■ {{ i18n.t('consultation.ai.finishListening', 'Arrêter') }}
         </button>
       </div>
 
       <button
         type="button"
         (click)="switchToDictation.emit()"
-        class="ui-link min-h-10 w-full text-xs"
+        class="ui-link min-h-10 w-full text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
       >
-        {{ i18n.t('consultation.ai.switchToDictation') }}
+        {{ i18n.t('consultation.ai.switchToDictation', 'Passer en dictée') }}
       </button>
+
+      <!-- 4. Conteneur du Texte transcrit en direct -->
+      <div class="mt-4 rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3 text-left" aria-live="polite">
+        <div class="flex items-center justify-between gap-3 border-b border-[var(--app-border)] pb-2">
+          <p class="ui-label text-[11px]">{{ i18n.t('consultation.ai.focusTranscriptTitle', 'Texte dicté') }}</p>
+          <div class="flex items-center gap-2">
+            @if (queuedCount() > 0) {
+              <span class="inline-flex items-center gap-1 rounded-[var(--radius-brand-xs)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] px-2 py-0.5 text-[10px] font-bold text-[var(--brand-primary)]">
+                <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand-primary)]"></span>
+                {{ queuedCount() }} {{ i18n.t('consultation.ai.realtimeQueued', 'en attente') }}
+              </span>
+            }
+            @if (processing()) {
+              <span class="flex items-center gap-1 text-[10px] font-bold text-[var(--brand-primary)]">
+                <span class="h-3 w-3 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-[var(--brand-primary)]"></span>
+                {{ i18n.t('consultation.ai.processingBackground', 'Traitement en arrière-plan') }}
+              </span>
+            }
+          </div>
+        </div>
+
+        @if (transcriptHistory().length > 0) {
+          <div class="mt-2 max-h-36 space-y-1.5 overflow-y-auto overscroll-contain pr-1">
+            @for (entry of transcriptHistory(); track entry.timestamp) {
+              <div class="flex items-baseline gap-2 text-xs leading-5">
+                <span class="shrink-0 text-[10px] tabular-nums text-[var(--text-muted)]">{{ formatTime(entry.timestamp) }}</span>
+                <p class="min-w-0 text-[var(--text-primary)]">{{ entry.text }}</p>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="mt-2 text-xs leading-5 text-[var(--text-muted)]">
+            {{ state().connected ? i18n.t('consultation.ai.focusTranscriptWaiting', 'Parlez naturellement. La transcription apparaît dès qu\'une phrase est finalisée.') : i18n.t('consultation.ai.focusTranscriptNoChannel', 'Connexion audio en cours...') }}
+          </p>
+        }
+      </div>
     </div>
   </section>
 }

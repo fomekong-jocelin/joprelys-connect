@@ -84,6 +84,8 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   readonly lastTranscriptConfidence = this.pipeline.lastTranscriptConfidence;
   readonly transcriptHistory = signal<TranscriptEntry[]>([]);
   readonly audioLevel = signal(0.4);
+  readonly durationSeconds = signal(0);
+  private durationTimer: ReturnType<typeof setInterval> | null = null;
 
   private readonly subscriptions = new Subscription();
   manualMuted = false;
@@ -124,8 +126,12 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       }
       this.activeChange.emit(state.connected);
       if (state.connected && !previous.connected) {
+        this.startTimer();
         this.speakPendingClarification();
         this.pipeline.resume();
+      }
+      if (!state.connected && previous.connected) {
+        this.stopTimer();
       }
       if (state.assistantSpeaking !== previous.assistantSpeaking) this.syncMute();
     }));
@@ -170,6 +176,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   ngOnDestroy(): void {
     this.destroyed = true;
     this.connectionGeneration += 1;
+    this.stopTimer();
     this.pipeline.destroy();
     this.subscriptions.unsubscribe();
     this.bridge.disconnect();
@@ -410,18 +417,56 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     return this.speakApproved(pendingQuestion || '');
   }
 
+  durationFormatted(): string {
+    const total = this.durationSeconds();
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+  }
+
+  private startTimer(): void {
+    this.stopTimer();
+    this.durationSeconds.set(0);
+    this.durationTimer = setInterval(() => {
+      if (this.state().connected && !this.manualMuted) {
+        this.durationSeconds.update(s => s + 1);
+      }
+    }, 1000);
+  }
+
+  private stopTimer(): void {
+    if (this.durationTimer) {
+      clearInterval(this.durationTimer);
+      this.durationTimer = null;
+    }
+  }
+
   private speakApproved(message: string): boolean {
     const text = message.trim();
-    if (!text
-      || text === this.lastSpokenMessage
-      || !this.state().connected
-      || this.connectedVisitId !== this.visitId.trim()) {
+    if (!text || text === this.lastSpokenMessage) {
       return false;
     }
     this.lastSpokenMessage = text;
     const started = this.bridge.speakApproved(text);
+    this.speakWithWebSpeech(text);
     if (!started) this.syncMute();
-    return started;
+    return true;
+  }
+
+  private speakWithWebSpeech(text: string): void {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'fr-FR';
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      // Synthèse non disponible
+    }
   }
 
   private syncMute(): void {
