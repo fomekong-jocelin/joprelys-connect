@@ -109,9 +109,11 @@
 
         @if (hasDraftContent()) {
           <app-ai-draft-preview
+            [visitId]="visitId"
             [draft]="session()?.draft ?? {}"
             [canApply]="!hasPendingRevision()"
             (apply)="applyCurrentDraft()"
+            (applyPatch)="applyDraft.emit($event)"
           />
         }
       } @else {
@@ -168,9 +170,11 @@
 
         @if (hasDraftContent() && !recording()) {
           <app-ai-draft-preview
+            [visitId]="visitId"
             [draft]="session()?.draft ?? {}"
             [canApply]="!hasPendingRevision()"
             (apply)="applyCurrentDraft()"
+            (applyPatch)="applyDraft.emit($event)"
           />
         }
       }
