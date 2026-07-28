@@ -126,7 +126,7 @@ class FinalClinicalReviewServiceTest {
     }
 
     @Test
-    void shouldRejectMedicationSubstitutionNotPresentInAcceptedDraft() {
+    void shouldFailClosedWhenUpstreamReturnsForbiddenPrescriptionChange() {
         Map<String, String> draft = Map.of(
                 "prescription", "[{\"drugName\":\"Paracétamol\",\"dosage\":\"500 mg\"}]");
         FinalClinicalReviewService service = serviceWithResponse("""
@@ -145,15 +145,16 @@ class FinalClinicalReviewServiceTest {
                 }
                 """);
 
-        var review = service.createReview(
-                visitId, userId, organizationId, draft, "fr");
+        ResponseStatusException error = assertThrows(
+                ResponseStatusException.class,
+                () -> service.createReview(
+                        visitId, userId, organizationId, draft, "fr"));
 
-        assertEquals("NO_CHANGES", review.status());
-        assertTrue(review.revision().proposals().isEmpty());
+        assertEquals("AI_OUTPUT_INVALID", error.getReason());
     }
 
     @Test
-    void shouldKeepVitalsAndLabOrdersReadOnlyDuringFinalReview() {
+    void shouldFailClosedWhenUpstreamReturnsForbiddenVitalsOrLabChanges() {
         Map<String, String> draft = Map.of(
                 "vitals", "{\"temperature\":39.0}",
                 "labOrders", "[\"NFS\"]");
@@ -183,11 +184,12 @@ class FinalClinicalReviewServiceTest {
                 }
                 """);
 
-        var review = service.createReview(
-                visitId, userId, organizationId, draft, "fr");
+        ResponseStatusException error = assertThrows(
+                ResponseStatusException.class,
+                () -> service.createReview(
+                        visitId, userId, organizationId, draft, "fr"));
 
-        assertEquals("NO_CHANGES", review.status());
-        assertTrue(review.revision().proposals().isEmpty());
+        assertEquals("AI_OUTPUT_INVALID", error.getReason());
     }
 
     private FinalClinicalReviewService serviceWithResponse(String content) {
