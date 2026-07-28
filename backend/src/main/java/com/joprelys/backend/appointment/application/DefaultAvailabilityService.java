@@ -345,8 +345,11 @@ public class DefaultAvailabilityService implements AvailabilityService {
 	private UserAccountEntity loadDoctor(UUID doctorId, UUID organizationId) {
 		return userAccountRepository.findById(doctorId)
 				.filter(doctor -> organizationId == null || organizationId.equals(doctor.getOrganizationId()))
-				.filter(doctor -> doctor.hasRole("MEDECIN"))
-				.orElseThrow(() -> notFound("Médecin introuvable dans cette clinique."));
+				.filter(doctor -> doctor.hasRole("MEDECIN")
+						|| doctor.hasRole("ADMIN_CLINIQUE")
+						|| doctor.hasRole("ADMIN_JOPRELYS")
+						|| doctor.hasRole("SUPER_ADMIN"))
+				.orElseThrow(() -> notFound("Médecin ou administrateur introuvable dans cette clinique."));
 	}
 
 	private static RuleWindow toWindow(UpsertAvailabilityRuleRequest request) {
