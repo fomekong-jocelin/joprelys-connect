@@ -65,8 +65,11 @@ interface CalendarBlock {
 @Component({
   selector: 'app-weekly-availability-grid',
   standalone: true,
+  host: {
+    class: 'block w-full min-w-0 max-w-full',
+  },
   template: `
-    <div class="space-y-4">
+    <div class="space-y-4 w-full min-w-0 max-w-full">
       <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-[11px] font-semibold text-[var(--text-muted)]">
         <div class="flex items-center gap-3">
           <span class="inline-flex items-center gap-1.5">
@@ -83,14 +86,14 @@ interface CalendarBlock {
         }
       </div>
 
-      <!-- VUE MOBILE (< 768px) : Onglets jour par jour + timeline fluide -->
-      <div class="block md:hidden">
+      <!-- VUE MOBILE (< 768px) : Onglets jour par jour + timeline fluide sans overflow viewport -->
+      <div class="block md:hidden w-full min-w-0 max-w-full">
         <!-- Bandeau d'onglets pour les 7 jours de la semaine -->
-        <div class="flex overflow-x-auto rounded-[var(--radius-brand-lg)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-1 gap-1">
+        <div class="flex w-full min-w-0 max-w-full overflow-x-auto rounded-[var(--radius-brand-lg)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-1 gap-1">
           @for (day of days(); track day.dateKey) {
             <button
               type="button"
-              class="flex flex-1 min-w-[70px] flex-col items-center justify-center rounded-[var(--radius-brand-md)] py-2 px-1 text-center transition-colors border"
+              class="flex flex-1 shrink-0 min-w-[62px] sm:min-w-[70px] flex-col items-center justify-center rounded-[var(--radius-brand-md)] py-2 px-1 text-center transition-colors border"
               [class.bg-[var(--brand-primary)]]="selectedMobileWeekday() === day.weekday"
               [class.text-white]="selectedMobileWeekday() === day.weekday"
               [class.border-transparent]="selectedMobileWeekday() === day.weekday"
@@ -110,19 +113,19 @@ interface CalendarBlock {
 
         <!-- Détail du jour sélectionné sur mobile -->
         @if (selectedMobileDay(); as currentDay) {
-          <div class="mt-3 rounded-[var(--radius-brand-lg)] border border-[var(--app-border)] bg-[var(--app-surface)] p-4 space-y-3">
-            <div class="flex items-center justify-between border-b border-[var(--divider-subtle)] pb-3">
-              <div>
-                <h3 class="text-sm font-extrabold text-[var(--text-primary)]">
+          <div class="mt-3 w-full min-w-0 max-w-full rounded-[var(--radius-brand-lg)] border border-[var(--app-border)] bg-[var(--app-surface)] p-3 sm:p-4 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--divider-subtle)] pb-3">
+              <div class="min-w-0">
+                <h3 class="text-sm font-extrabold text-[var(--text-primary)] truncate">
                   {{ currentDay.label }} {{ currentDay.date.getDate() }}
                 </h3>
-                <p class="text-xs text-[var(--text-muted)]">
+                <p class="text-xs text-[var(--text-muted)] truncate">
                   {{ currentDay.rules.length }} {{ labels().available || 'plage(s)' }}
                 </p>
               </div>
               <button
                 type="button"
-                class="ui-button ui-button-primary min-h-[38px] text-xs py-1.5 px-3"
+                class="ui-button ui-button-primary min-h-[38px] text-xs py-1.5 px-3 shrink-0"
                 (click)="addRuleForDay(currentDay)"
               >
                 + Ajouter une plage
@@ -135,24 +138,24 @@ interface CalendarBlock {
                 {{ labels().emptyDay || 'Aucune plage configurée pour ce jour' }}
               </div>
             } @else {
-              <div class="space-y-2">
+              <div class="space-y-2 min-w-0">
                 @for (rule of currentDay.rules; track rule.id) {
-                  <div class="flex items-center justify-between rounded-[var(--radius-brand-md)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] p-3">
-                    <button type="button" class="text-left flex-1" (click)="ruleSelected.emit(rule)">
-                      <span class="block text-sm font-black text-[var(--brand-primary)]">{{ rule.startTime }} – {{ rule.endTime }}</span>
-                      <span class="block text-xs text-[var(--text-secondary)]">{{ labels().available || 'Disponible' }}</span>
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-[var(--radius-brand-md)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] p-3 min-w-0">
+                    <button type="button" class="text-left flex-1 min-w-0" (click)="ruleSelected.emit(rule)">
+                      <span class="block text-sm font-black text-[var(--brand-primary)] truncate">{{ rule.startTime }} – {{ rule.endTime }}</span>
+                      <span class="block text-xs text-[var(--text-secondary)] truncate">{{ labels().available || 'Disponible' }}</span>
                     </button>
-                    <div class="flex items-center gap-2 shrink-0">
+                    <div class="flex items-center gap-2 shrink-0 self-end sm:self-auto">
                       <button
                         type="button"
-                        class="ui-button ui-button-secondary text-xs px-2 py-1"
+                        class="ui-button ui-button-secondary text-xs px-2.5 py-1.5 min-h-[36px]"
                         (click)="ruleSelected.emit(rule)"
                       >
                         Éditer
                       </button>
                       <button
                         type="button"
-                        class="ui-button ui-button-danger text-xs px-2 py-1"
+                        class="ui-button ui-button-danger text-xs px-2.5 py-1.5 min-h-[36px]"
                         (click)="ruleDeactivateRequested.emit(rule)"
                       >
                         Désactiver
@@ -162,13 +165,13 @@ interface CalendarBlock {
                 }
 
                 @for (exception of currentDay.exceptions; track exception.id) {
-                  <div class="rounded-[var(--radius-brand-md)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3">
-                    <span class="block text-xs font-black text-[var(--brand-danger-text)]">{{ labels().unavailable || 'Indisponible' }}</span>
-                    <span class="block text-xs text-[var(--text-secondary)]">
+                  <div class="rounded-[var(--radius-brand-md)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3 min-w-0">
+                    <span class="block text-xs font-black text-[var(--brand-danger-text)] truncate">{{ labels().unavailable || 'Indisponible' }}</span>
+                    <span class="block text-xs text-[var(--text-secondary)] truncate">
                       {{ formatExceptionTimes(exception) }}
                     </span>
                     @if (exception.reason) {
-                      <span class="mt-1 block text-xs italic text-[var(--text-muted)]">{{ exception.reason }}</span>
+                      <span class="mt-1 block text-xs italic text-[var(--text-muted)] break-words">{{ exception.reason }}</span>
                     }
                   </div>
                 }
@@ -176,33 +179,33 @@ interface CalendarBlock {
             }
 
             <!-- Créneaux rapides de la journée -->
-            <div class="pt-2">
+            <div class="pt-2 min-w-0">
               <h4 class="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Créer une plage rapide</h4>
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 min-w-0">
                 <button
                   type="button"
-                  class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] py-2 text-center text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)]"
+                  class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] py-2 px-1 text-center text-[11px] sm:text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)] truncate min-h-[38px]"
                   (click)="addSlotForDay(currentDay, '08:00', '12:00')"
                 >
                   Matin (08h - 12h)
                 </button>
                 <button
                   type="button"
-                  class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] py-2 text-center text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)]"
+                  class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] py-2 px-1 text-center text-[11px] sm:text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)] truncate min-h-[38px]"
                   (click)="addSlotForDay(currentDay, '14:00', '18:00')"
                 >
-                  Après-midi (14h - 18h)
+                  A-M (14h - 18h)
                 </button>
                 <button
                   type="button"
-                  class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] py-2 text-center text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)]"
+                  class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] py-2 px-1 text-center text-[11px] sm:text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)] truncate min-h-[38px]"
                   (click)="addSlotForDay(currentDay, '08:00', '17:00')"
                 >
-                  Journée (08h - 17h)
+                  Jour (08h - 17h)
                 </button>
                 <button
                   type="button"
-                  class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] py-2 text-center text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)]"
+                  class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] py-2 px-1 text-center text-[11px] sm:text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)] truncate min-h-[38px]"
                   (click)="addRuleForDay(currentDay)"
                 >
                   Personnalisé...

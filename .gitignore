@@ -136,6 +136,30 @@ site/
 .local/
 exports/
 generated/
+cypress/screenshots/
+cypress/videos/
+allure-results/
+allure-report/
+
+# Build artifacts / Archives
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+*.war
+*.jar
+*.ear
+*.apk
+*.aab
+*.ipa
+
+# Generated docs / Local exports
+site/
+.public/
+.local/
+exports/
+generated/
 
 # AI / Local agent scratchpads
 .ai-cache/
@@ -145,6 +169,7 @@ generated/
 .claude/cache/
 .gemini/cache/
 *.scratch.md
+scratch/
 
 # Python diagnostic tooling
 __pycache__/

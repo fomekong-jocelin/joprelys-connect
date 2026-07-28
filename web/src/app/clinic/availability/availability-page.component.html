@@ -6,7 +6,7 @@
     [backLabel]="t('common.back')"
   />
 
-  <div class="app-container grid gap-6 pb-10">
+  <div class="app-container grid gap-6 pb-10 min-w-0 max-w-full">
     @if (pageError(); as error) {
       <app-ui-alert tone="error">{{ error }}</app-ui-alert>
     }
@@ -15,23 +15,23 @@
     }
 
     @if (loading()) {
-      <app-ui-card>
+      <app-ui-card class="min-w-0 max-w-full">
         <div class="py-10 text-center text-sm font-semibold text-[var(--text-secondary)]">
           {{ t('common.loading') }}
         </div>
       </app-ui-card>
     } @else {
       <!-- Vue principale : un seul calendrier, comme un agenda professionnel. -->
-      <app-ui-card>
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
+      <app-ui-card class="min-w-0 max-w-full">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between min-w-0">
+          <div class="min-w-0">
             <h2 class="ui-title text-lg">{{ t('availability.calendar.title') }}</h2>
             <p class="mt-1 max-w-3xl text-xs leading-5 text-[var(--text-secondary)]">
               {{ t('availability.calendar.help') }}
             </p>
           </div>
 
-          <div class="flex flex-col gap-2 sm:flex-row">
+          <div class="flex flex-col gap-2 sm:flex-row shrink-0">
             <app-ui-button variant="secondary" class="w-full sm:w-auto" (pressed)="toggleRuleForm()">
               {{ t('availability.rules.add') }}
             </app-ui-button>
@@ -41,8 +41,8 @@
           </div>
         </div>
 
-        <div class="mt-5 flex flex-col gap-3 border-y border-[var(--divider-subtle)] py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div class="flex items-center gap-2">
+        <div class="mt-5 flex flex-col gap-3 border-y border-[var(--divider-subtle)] py-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
+          <div class="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
             <button
               type="button"
               class="ui-button ui-button-secondary min-w-10 px-3"
@@ -54,7 +54,7 @@
             </button>
             <button
               type="button"
-              class="ui-button ui-button-secondary"
+              class="ui-button ui-button-secondary flex-1 sm:flex-initial"
               [disabled]="isCurrentWeek()"
               (click)="goToCurrentWeek()"
             >
@@ -71,11 +71,11 @@
             </button>
           </div>
 
-          <strong class="text-sm font-extrabold text-[var(--text-primary)]">{{ weekLabel() }}</strong>
+          <strong class="text-xs sm:text-sm font-extrabold text-[var(--text-primary)] text-center sm:text-left truncate min-w-0">{{ weekLabel() }}</strong>
         </div>
 
         <app-weekly-availability-grid
-          class="mt-4 block"
+          class="mt-4 block w-full min-w-0 max-w-full"
           [rules]="rules()"
           [exceptions]="exceptions()"
           [weekStart]="weekStart()"
@@ -90,16 +90,16 @@
 
       <!-- Création / modification d'une disponibilité : modal centrée, le calendrier reste en contexte derrière. -->
       @if (showRuleForm()) {
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4 backdrop-blur-xs">
           <div
-            class="ui-card max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto p-5 md:p-6"
+            class="ui-card max-h-[calc(100vh-1.5rem)] w-full max-w-2xl overflow-y-auto p-4 sm:p-6 min-w-0"
             role="dialog"
             aria-modal="true"
             aria-labelledby="availability-rule-dialog-title"
           >
-            <div class="mb-5 flex items-start justify-between gap-4 border-b border-[var(--app-border)] pb-4">
-              <div>
-                <h3 id="availability-rule-dialog-title" class="ui-title text-lg">{{ ruleFormTitle() }}</h3>
+            <div class="mb-4 sm:mb-5 flex items-start justify-between gap-4 border-b border-[var(--app-border)] pb-4 min-w-0">
+              <div class="min-w-0">
+                <h3 id="availability-rule-dialog-title" class="ui-title text-base sm:text-lg truncate">{{ ruleFormTitle() }}</h3>
                 <p class="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{{ t('availability.rules.help') }}</p>
               </div>
               <button
@@ -113,13 +113,13 @@
               </button>
             </div>
 
-            <form class="space-y-5" (submit)="$event.preventDefault(); submitRuleForm()">
+            <form class="space-y-4 sm:space-y-5 min-w-0" (submit)="$event.preventDefault(); submitRuleForm()">
               @if (ruleFormError(); as error) {
                 <app-ui-alert tone="error">{{ error }}</app-ui-alert>
               }
 
-              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <label class="space-y-1.5">
+              <div class="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 min-w-0">
+                <label class="space-y-1.5 min-w-0">
                   <span class="ui-label">{{ t('availability.form.weekday') }} <span class="text-[var(--brand-danger)]">*</span></span>
                   <select
                     class="ui-select"
@@ -133,7 +133,7 @@
                   </select>
                 </label>
 
-                <label class="space-y-1.5">
+                <label class="space-y-1.5 min-w-0">
                   <span class="ui-label">{{ t('availability.form.startTime') }} <span class="text-[var(--brand-danger)]">*</span></span>
                   <input
                     class="ui-input"
@@ -144,7 +144,7 @@
                   />
                 </label>
 
-                <label class="space-y-1.5">
+                <label class="space-y-1.5 min-w-0">
                   <span class="ui-label">{{ t('availability.form.endTime') }} <span class="text-[var(--brand-danger)]">*</span></span>
                   <input
                     class="ui-input"
@@ -155,7 +155,7 @@
                   />
                 </label>
 
-                <label class="space-y-1.5">
+                <label class="space-y-1.5 min-w-0">
                   <span class="ui-label">{{ t('availability.form.validFrom') }} <span class="text-[var(--brand-danger)]">*</span></span>
                   <input
                     class="ui-input"
@@ -166,7 +166,7 @@
                   />
                 </label>
 
-                <label class="space-y-1.5">
+                <label class="space-y-1.5 min-w-0">
                   <span class="ui-label">{{ t('availability.form.validTo') }}</span>
                   <input
                     class="ui-input"
@@ -178,7 +178,7 @@
                 </label>
               </div>
 
-              <div class="flex flex-col-reverse gap-3 border-t border-[var(--divider-subtle)] pt-4 sm:flex-row sm:justify-end">
+              <div class="flex flex-col-reverse gap-2.5 border-t border-[var(--divider-subtle)] pt-4 sm:flex-row sm:justify-end">
                 <app-ui-button variant="secondary" class="w-full sm:w-auto" [disabled]="ruleFormLoading()" (pressed)="cancelRuleForm()">
                   {{ t('common.cancel') }}
                 </app-ui-button>
@@ -193,16 +193,16 @@
 
       <!-- Création d'une indisponibilité : modal dédiée plutôt qu'un formulaire injecté sous l'agenda. -->
       @if (showExceptionForm()) {
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4 backdrop-blur-xs">
           <div
-            class="ui-card max-h-[calc(100vh-2rem)] w-full max-w-xl overflow-y-auto p-5 md:p-6"
+            class="ui-card max-h-[calc(100vh-1.5rem)] w-full max-w-xl overflow-y-auto p-4 sm:p-6 min-w-0"
             role="dialog"
             aria-modal="true"
             aria-labelledby="availability-exception-dialog-title"
           >
-            <div class="mb-5 flex items-start justify-between gap-4 border-b border-[var(--app-border)] pb-4">
-              <div>
-                <h3 id="availability-exception-dialog-title" class="ui-title text-lg">{{ t('availability.exceptions.addTitle') }}</h3>
+            <div class="mb-4 sm:mb-5 flex items-start justify-between gap-4 border-b border-[var(--app-border)] pb-4 min-w-0">
+              <div class="min-w-0">
+                <h3 id="availability-exception-dialog-title" class="ui-title text-base sm:text-lg truncate">{{ t('availability.exceptions.addTitle') }}</h3>
                 <p class="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{{ t('availability.exceptions.help') }}</p>
               </div>
               <button
@@ -216,13 +216,13 @@
               </button>
             </div>
 
-            <form class="space-y-5" (submit)="$event.preventDefault(); submitExceptionForm()">
+            <form class="space-y-4 sm:space-y-5 min-w-0" (submit)="$event.preventDefault(); submitExceptionForm()">
               @if (exceptionFormError(); as error) {
                 <app-ui-alert tone="error">{{ error }}</app-ui-alert>
               }
 
-              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label class="space-y-1.5">
+              <div class="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 min-w-0">
+                <label class="space-y-1.5 min-w-0">
                   <span class="ui-label">{{ t('availability.form.exceptionStart') }} <span class="text-[var(--brand-danger)]">*</span></span>
                   <input
                     class="ui-input"
@@ -233,7 +233,7 @@
                   />
                 </label>
 
-                <label class="space-y-1.5">
+                <label class="space-y-1.5 min-w-0">
                   <span class="ui-label">{{ t('availability.form.exceptionEnd') }} <span class="text-[var(--brand-danger)]">*</span></span>
                   <input
                     class="ui-input"
@@ -244,7 +244,7 @@
                   />
                 </label>
 
-                <label class="space-y-1.5 sm:col-span-2">
+                <label class="space-y-1.5 sm:col-span-2 min-w-0">
                   <span class="ui-label">{{ t('availability.form.reason') }}</span>
                   <input
                     class="ui-input"
@@ -256,7 +256,7 @@
                 </label>
               </div>
 
-              <div class="flex flex-col-reverse gap-3 border-t border-[var(--divider-subtle)] pt-4 sm:flex-row sm:justify-end">
+              <div class="flex flex-col-reverse gap-2.5 border-t border-[var(--divider-subtle)] pt-4 sm:flex-row sm:justify-end">
                 <app-ui-button variant="secondary" class="w-full sm:w-auto" [disabled]="exceptionFormLoading()" (pressed)="cancelExceptionForm()">
                   {{ t('common.cancel') }}
                 </app-ui-button>
