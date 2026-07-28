@@ -1,6 +1,7 @@
 package com.joprelys.backend.ai.infrastructure.openai;
 
 import com.joprelys.backend.ai.infrastructure.AiProperties;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +28,7 @@ public class OpenAiSpeechSynthesisService {
 
     public OpenAiSpeechSynthesisService(
             AiProperties properties,
-            @Value("${joprelys.ai.openai.tts-model:gpt-4o-mini-tts}") String model,
+            @Value("${joprelys.ai.openai.tts-model:tts-1}") String model,
             @Value("${joprelys.ai.openai.tts-voice:marin}") String voice,
             @Value("${joprelys.ai.openai.tts-instructions:Voix médicale professionnelle, calme, chaleureuse, concise et naturelle. Prononcer clairement les nombres, unités et noms de médicaments sans dramatiser.}") String instructions) {
         AiProperties.OpenAiProperties openAi = properties.openai();
@@ -41,9 +42,9 @@ public class OpenAiSpeechSynthesisService {
                         .baseUrl(openAi.baseUrl())
                         .defaultHeader("Authorization", "Bearer " + openAi.apiKey())
                         .build();
-        this.model = model;
-        this.voice = voice;
-        this.instructions = instructions;
+        this.model = normalize(model, "tts-1");
+        this.voice = normalize(voice, "marin");
+        this.instructions = instructions == null ? "" : instructions.trim();
     }
 
     public byte[] synthesize(String text) {
@@ -57,13 +58,16 @@ public class OpenAiSpeechSynthesisService {
         if (normalized.length() > MAX_TEXT_LENGTH) {
             normalized = normalized.substring(0, MAX_TEXT_LENGTH);
         }
-        Map<String, Object> body = Map.of(
-                "model", model,
-                "voice", voice,
-                "input", normalized,
-                "instructions", instructions,
-                "response_format", "mp3"
-        );
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("model", model);
+        body.put("voice", voice);
+        body.put("input", normalized);
+        body.put("response_format", "mp3");
+        if (supportsInstructions(model) && !instructions.isBlank()) {
+            body.put("instructions", instructions);
+        }
+
         try {
             byte[] audio = restClient.post()
                     .uri("/audio/speech")
@@ -90,5 +94,14 @@ public class OpenAiSpeechSynthesisService {
             log.warn("Échec synthèse vocale OpenAI", exception);
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI_SPEECH_UNAVAILABLE");
         }
+    }
+
+    private boolean supportsInstructions(String selectedModel) {
+        String normalized = selectedModel == null ? "" : selectedModel.toLowerCase();
+        return !normalized.equals("tts-1") && !normalized.equals("tts-1-hd");
+    }
+
+    private String normalize(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.trim();
     }
 }
