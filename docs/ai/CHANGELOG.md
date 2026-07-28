@@ -8,6 +8,12 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **BUG-20260728-LOGIN-PASSWORD-TOGGLE-EYE — Bouton d'affichage / masquage du mot de passe (Icône œil)** :
+  - **Interactivité & Sécurité Visuelle (`LoginComponent`)** : Ajout du bouton réactif d'affichage/masquage du mot de passe avec le signal `showPassword` et bascule dynamique du type d'input (`password` / `text`).
+  - **Accessibilité & i18n FR/EN** : Intégration d'un bouton accessible avec `aria-label` et `title` dynamiques ("Afficher le mot de passe" / "Masquer le mot de passe" en FR, "Show password" / "Hide password" en EN).
+  - **Design System & Responsive CSS** : Positionnement absolu propre de l'icône dans la zone d'input avec `padding-right: 2.85rem` pour éviter tout chevauchement du texte, gestion des états hover/focus-visible et intégration automatique aux thèmes light et dark.
+
+
 - **BUG-20260728-DOCTOR-AVAILABILITY-MOBILE-GRID-AND-WEEKDAY-BUG — Correctifs UX & Backend Disponibilités (Mobile-First, Sync Jour/Date & Trailing Slash API)** :
   - **Grille Calendrier Mobile-First (`WeeklyAvailabilityGridComponent`)** : Support responsive sous `768px` avec bandeau d'onglets jour par jour (Lun → Dim), timeline verticale fluide du jour avec boutons d'action tactiles (hauteur min 38-44px) et raccourcis de création rapide ("Matin 08h-12h", "Après-midi 14h-18h", "Journée 08h-17h"), évitant tout défilement horizontal forcé sur mobile. Grille 7 jours desktop conservée pour les écrans larges.
   - **Synchronisation strict jour / date (`AvailabilityPageComponent`)** : Élimination du désalignement entre le jour de semaine (`formWeekday`) et la date de début de validité (`formValidFrom`) lors de la sélection d'une date ou d'un créneau dans la grille (la sélection d'un mardi ou vendredi n'affiche plus "Lundi" dans la modale). Ajout de `[selected]="day === formWeekday()"` et liaison réactive `onFormWeekdayChange` / `onFormValidFromChange`.

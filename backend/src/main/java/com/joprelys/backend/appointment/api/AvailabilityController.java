@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
  * extraite du jeton JWT.
  */
 @RestController
-@RequestMapping({"/api/availabilities", "/api/availabilities/"})
+@RequestMapping("/api/availabilities")
 @Tag(name = "Disponibilités médecins", description = "Gestion des plages de disponibilité récurrentes et des indisponibilités ponctuelles des médecins")
 public class AvailabilityController {
 

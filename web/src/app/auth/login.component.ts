@@ -52,6 +52,7 @@ export class LoginComponent {
   // --- Staff login state ---
   readonly email = signal('');
   readonly password = signal('');
+  readonly showPassword = signal(false);
   readonly error = signal<string | null>(this.resolveInitialError());
   readonly loading = signal(false);
   readonly session = this.tokenStorage.session;
@@ -93,6 +94,10 @@ export class LoginComponent {
     this.themeService.setTheme(this.theme() === 'light' ? 'dark' : 'light');
   }
 
+  toggleShowPassword(): void {
+    this.showPassword.update((v) => !v);
+  }
+
   themeTooltip(): string {
     return this.theme() === 'dark'
       ? this.t('shell.theme.light')
@@ -104,6 +109,7 @@ export class LoginComponent {
     this.error.set(null);
     this.staffStep.set(1);
     this.staffOtpCode.set('');
+    this.showPassword.set(false);
     if (m === 'patient') {
       this.patientStep.set(1);
       this.patientNumber.set('');
@@ -123,6 +129,7 @@ export class LoginComponent {
     this.authApi.login({ email: this.email(), password: this.password() }).subscribe({
       next: (res) => {
         this.password.set('');
+        this.showPassword.set(false);
         this.loading.set(false);
         if (res.requiresOtp) {
           this.staffStep.set(2);

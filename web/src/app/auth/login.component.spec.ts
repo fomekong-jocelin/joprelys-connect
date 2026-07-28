@@ -311,4 +311,31 @@ describe('LoginComponent', () => {
 
     expect(component.error()).toBe('Code de sécurité incorrect.');
   });
+
+  it('should toggle password visibility when clicking the eye button', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const passwordInput = root.querySelector<HTMLInputElement>('#staff-password');
+    const toggleButton = root.querySelector<HTMLButtonElement>('#toggle-staff-password');
+
+    expect(passwordInput?.type).toBe('password');
+    expect(component.showPassword()).toBe(false);
+    expect(toggleButton?.getAttribute('aria-label')).toBe('login.staff.showPassword');
+
+    toggleButton?.click();
+    fixture.detectChanges();
+
+    expect(component.showPassword()).toBe(true);
+    expect(passwordInput?.type).toBe('text');
+    expect(toggleButton?.getAttribute('aria-label')).toBe('login.staff.hidePassword');
+
+    toggleButton?.click();
+    fixture.detectChanges();
+
+    expect(component.showPassword()).toBe(false);
+    expect(passwordInput?.type).toBe('password');
+  });
 });

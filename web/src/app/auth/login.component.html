@@ -214,15 +214,37 @@
                     </svg>
                     <input
                       id="staff-password"
-                      type="password"
+                      [type]="showPassword() ? 'text' : 'password'"
                       autocomplete="current-password"
                       required
                       aria-required="true"
                       [value]="password()"
                       (input)="updatePassword($event)"
-                      class="ui-input login-input"
+                      class="ui-input login-input login-password-input"
                       placeholder="••••••••"
                     />
+                    <button
+                      type="button"
+                      id="toggle-staff-password"
+                      class="login-password-toggle"
+                      (click)="toggleShowPassword()"
+                      [attr.aria-label]="showPassword() ? t('login.staff.hidePassword') : t('login.staff.showPassword')"
+                      [title]="showPassword() ? t('login.staff.hidePassword') : t('login.staff.showPassword')"
+                    >
+                      @if (showPassword()) {
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                d="M3.98 8.223A10.477 10.477 0 001.934 12C3.326 16.17 7.26 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639a10.477 10.477 0 01-1.934 3.777m-3.826 3.826L3 3m9 9a3 3 0 100-6 3 3 0 000 6z"/>
+                        </svg>
+                      } @else {
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                      }
+                    </button>
                   </div>
                 </div>
 

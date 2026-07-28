@@ -14,7 +14,7 @@ Renforcer la perception de confiance, de qualité clinique et de sécurité dès
 
 ### Personnel de santé
 
-1. Saisir l'adresse e-mail et le mot de passe.
+1. Saisir l'adresse e-mail et le mot de passe (avec possibilité d'afficher/masquer le mot de passe via un bouton icône d'œil).
 2. Déclencher la connexion.
 3. Lorsque l'API l'exige, saisir le code OTP professionnel.
 4. Revenir à l'étape précédente si nécessaire.

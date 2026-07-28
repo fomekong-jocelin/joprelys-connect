@@ -1159,6 +1159,8 @@
   "login.staff.emailLabel": "Email address",
   "login.staff.emailPlaceholder": "name@clinic.com",
   "login.staff.passwordLabel": "Password",
+  "login.staff.showPassword": "Show password",
+  "login.staff.hidePassword": "Hide password",
   "login.staff.loggingIn": "Logging in...",
   "login.staff.loginButton": "Log In",
   "login.staff.otpLabel": "Security code (6 digits)",

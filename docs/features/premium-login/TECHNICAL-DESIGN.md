@@ -2,7 +2,7 @@
 
 ## Architecture existante conservée
 
-- `LoginComponent` reste le composant de présentation et d'orchestration des formulaires.
+- `LoginComponent` reste le composant de présentation et d'orchestration des formulaires, gérant l'état d'affichage du mot de passe via un signal `showPassword`.
 - `AuthApiService`, `PatientPortalService` et `AuthTokenStorageService` restent inchangés.
 - `I18nService` continue de piloter FR/EN.
 - `ThemeService` devient disponible sur la page publique afin d'exposer le thème courant et de le modifier.

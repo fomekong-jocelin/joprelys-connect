@@ -327,6 +327,44 @@
   background: var(--bg-input);
 }
 
+.login-password-input {
+  padding-right: 2.85rem;
+}
+
+.login-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-brand-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.login-password-toggle:hover {
+  color: var(--brand-primary);
+  background: color-mix(in srgb, var(--brand-primary) 10%, transparent);
+}
+
+.login-password-toggle:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 1px;
+}
+
+.login-password-toggle svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
 .login-otp-input {
   min-height: 3.65rem;
   text-align: center;
