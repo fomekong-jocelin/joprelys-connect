@@ -58,7 +58,7 @@
             <button
               type="button"
               (click)="enableRealtime()"
-              [disabled]="disabled || busy() || recording() || speaking()"
+              [disabled]="disabled || busy() || recording()"
               [attr.aria-pressed]="realtimeEnabled()"
               class="min-h-11 rounded-[var(--radius-brand-sm)] border px-3 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50"
               [ngClass]="realtimeEnabled()
@@ -70,7 +70,7 @@
             <button
               type="button"
               (click)="disableRealtime()"
-              [disabled]="disabled || busy() || recording() || speaking()"
+              [disabled]="disabled || busy() || recording()"
               [attr.aria-pressed]="!realtimeEnabled()"
               class="min-h-11 rounded-[var(--radius-brand-sm)] border px-3 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50"
               [ngClass]="!realtimeEnabled()
@@ -88,7 +88,7 @@
             [currentVitals]="currentVitals"
             [disabled]="disabled"
             [enabled]="realtimeEnabled()"
-            (proposed)="handleProposal($event, false)"
+            (proposed)="handleProposal($event)"
             (activeChange)="realtimeActive.set($event)"
             (realtimeError)="errorMessage.set($event)"
             (stopListening)="disableRealtime()"
@@ -162,8 +162,25 @@
 
         @if (lastTranscript()) {
           <div class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface)] p-3">
-            <p class="ui-label">{{ i18n.t('vitals.assistant.heard', 'Dernière phrase entendue') }}</p>
-            <p class="mt-1 line-clamp-3 text-xs leading-5 text-[var(--text-primary)]">{{ lastTranscript() }}</p>
+            <label for="vitals-transcript-correction" class="ui-label">
+              {{ i18n.t('vitals.assistant.heard', 'Dernière phrase entendue') }}
+            </label>
+            <textarea
+              id="vitals-transcript-correction"
+              [(ngModel)]="correctionText"
+              [disabled]="disabled || busy()"
+              rows="3"
+              class="ui-input mt-2 w-full resize-y px-3 py-2 text-xs leading-5"
+              [attr.aria-label]="i18n.t('vitals.assistant.correctionLabel', 'Corriger la phrase entendue')"
+            ></textarea>
+            <button
+              type="button"
+              (click)="reanalyzeCorrection()"
+              [disabled]="disabled || busy() || !correctionText.trim()"
+              class="ui-button ui-button-secondary mt-2 min-h-11 w-full sm:w-auto"
+            >
+              {{ i18n.t('vitals.assistant.correctAndAnalyze', 'Corriger et réanalyser') }}
+            </button>
           </div>
         }
 

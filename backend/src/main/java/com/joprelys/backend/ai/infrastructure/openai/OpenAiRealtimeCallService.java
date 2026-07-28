@@ -39,7 +39,6 @@ public class OpenAiRealtimeCallService {
     private final ObjectMapper objectMapper;
     private final String model;
     private final String fallbackModel;
-    private final String voice;
     private final String transcriptionModel;
     private final String vadEagerness;
     private final String noiseReduction;
@@ -50,7 +49,6 @@ public class OpenAiRealtimeCallService {
             ObjectMapper objectMapper,
             @Value("${joprelys.ai.openai.realtime-model:gpt-realtime-2.1}") String model,
             @Value("${joprelys.ai.openai.realtime-fallback-model:gpt-realtime-2.1-mini}") String fallbackModel,
-            @Value("${joprelys.ai.openai.realtime-voice:marin}") String voice,
             @Value("${joprelys.ai.openai.realtime-transcribe-model:gpt-4o-transcribe}") String transcriptionModel,
             @Value("${joprelys.ai.openai.realtime-vad-eagerness:medium}") String vadEagerness,
             @Value("${joprelys.ai.openai.realtime-noise-reduction:near_field}") String noiseReduction) {
@@ -68,7 +66,6 @@ public class OpenAiRealtimeCallService {
         this.objectMapper = objectMapper;
         this.model = normalizeModel(model, "gpt-realtime-2.1");
         this.fallbackModel = normalizeModel(fallbackModel, "gpt-realtime-2.1-mini");
-        this.voice = voice;
         this.transcriptionModel = transcriptionModel;
         this.vadEagerness = normalizeEagerness(vadEagerness);
         this.noiseReduction = normalizeNoiseReduction(noiseReduction);
@@ -216,13 +213,8 @@ public class OpenAiRealtimeCallService {
         input.put("noise_reduction", Map.of("type", noiseReduction));
         input.put("turn_detection", turnDetection);
 
-        Map<String, Object> output = new LinkedHashMap<>();
-        output.put("voice", voice);
-        output.put("speed", 1.0);
-
         Map<String, Object> audio = new LinkedHashMap<>();
         audio.put("input", input);
-        audio.put("output", output);
 
         Map<String, Object> session = baseSession(locale, selectedModel);
         session.put("audio", audio);
@@ -259,7 +251,6 @@ public class OpenAiRealtimeCallService {
 
         Map<String, Object> audio = new LinkedHashMap<>();
         audio.put("input", input);
-        audio.put("output", Map.of("voice", voice));
 
         Map<String, Object> session = baseSession(locale, selectedModel);
         session.put("audio", audio);
@@ -270,7 +261,7 @@ public class OpenAiRealtimeCallService {
         Map<String, Object> session = new LinkedHashMap<>();
         session.put("type", "realtime");
         session.put("model", selectedModel);
-        session.put("output_modalities", List.of("audio"));
+        session.put("output_modalities", List.of("text"));
         session.put("include", List.of("item.input_audio_transcription.logprobs"));
         session.put("instructions", realtimeInstructions(locale));
         return session;
@@ -329,18 +320,16 @@ public class OpenAiRealtimeCallService {
 
     private String realtimeInstructions(String locale) {
         if ("en".equals(locale)) {
-            return "You are the real-time voice transport for Joprelys Clinical Copilot. "
+            return "You are the real-time transcription transport for Joprelys Clinical Copilot. "
+                    + "Never answer the speaker and never generate assistant content or audio. "
                     + "Never diagnose, prescribe, alter medication, invent clinical facts, or make a clinical decision. "
-                    + "Automatic answers are disabled. Only speak when the Joprelys client explicitly asks you to voice "
-                    + "a backend-approved message. Reproduce that approved message faithfully, naturally and concisely, "
-                    + "without adding medical content. Speak English unless the approved message is clearly in another language.";
+                    + "Automatic responses are disabled. The client consumes input audio transcription events only.";
         }
-        return "Vous êtes la couche vocale temps réel de Joprelys Clinical Copilot. "
+        return "Vous êtes le transport de transcription temps réel de Joprelys Clinical Copilot. "
+                + "Ne répondez jamais au locuteur et ne générez aucun contenu assistant ni audio. "
                 + "Ne diagnostiquez jamais, ne prescrivez jamais, ne modifiez aucun médicament, n'inventez aucun fait clinique "
-                + "et ne prenez aucune décision médicale. Les réponses automatiques sont désactivées. Parlez uniquement lorsque "
-                + "le client Joprelys vous demande explicitement de vocaliser un message approuvé par le backend. Reproduisez ce "
-                + "message fidèlement, naturellement et brièvement, sans ajouter de contenu médical. Parlez français sauf si le "
-                + "message approuvé est clairement dans une autre langue.";
+                + "et ne prenez aucune décision médicale. Les réponses automatiques sont désactivées. Le client consomme "
+                + "uniquement les événements de transcription de l'audio entrant.";
     }
 
     private String transcriptionPrompt(String locale) {

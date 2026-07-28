@@ -29,11 +29,10 @@ class OpenAiRealtimeCallServiceTest {
         Map<String, Object> input = (Map<String, Object>) audio.get("input");
         Map<String, Object> turnDetection = (Map<String, Object>) input.get("turn_detection");
         Map<String, Object> transcription = (Map<String, Object>) input.get("transcription");
-        Map<String, Object> output = (Map<String, Object>) audio.get("output");
 
         assertEquals("realtime", session.get("type"));
         assertEquals("gpt-realtime-2.1", session.get("model"));
-        assertEquals(List.of("audio"), session.get("output_modalities"));
+        assertEquals(List.of("text"), session.get("output_modalities"));
         assertEquals(
                 List.of("item.input_audio_transcription.logprobs"),
                 session.get("include"));
@@ -45,9 +44,10 @@ class OpenAiRealtimeCallServiceTest {
         assertEquals("fr", transcription.get("language"));
         assertTrue(transcription.get("prompt").toString().contains("texte vide"));
         assertEquals("near_field", ((Map<String, Object>) input.get("noise_reduction")).get("type"));
-        assertEquals("marin", output.get("voice"));
+        assertFalse(audio.containsKey("output"));
         assertEquals("none", session.get("tool_choice"));
         assertTrue(session.get("instructions").toString().contains("Ne diagnostiquez jamais"));
+        assertTrue(session.get("instructions").toString().contains("Ne répondez jamais"));
         assertFalse(session.get("instructions").toString().contains("prescrivez un traitement"));
     }
 
@@ -80,6 +80,7 @@ class OpenAiRealtimeCallServiceTest {
         assertEquals("en", transcription.get("language"));
         assertTrue(transcription.get("prompt").toString().contains("Preserve negations"));
         assertTrue(session.get("instructions").toString().contains("Never diagnose"));
+        assertTrue(session.get("instructions").toString().contains("Never answer"));
     }
 
     @Test
@@ -167,7 +168,6 @@ class OpenAiRealtimeCallServiceTest {
                 new ObjectMapper(),
                 "gpt-realtime-2.1",
                 "gpt-realtime-2.1-mini",
-                "marin",
                 "gpt-4o-transcribe",
                 "medium",
                 "near_field");

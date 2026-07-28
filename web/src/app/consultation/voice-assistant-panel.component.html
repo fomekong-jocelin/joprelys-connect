@@ -82,13 +82,36 @@
           (endSession)="finishRealtime()"
         />
 
+        @if (session()?.pendingTranscript) {
+          <app-ai-transcript-review
+            [transcript]="session()?.pendingTranscript"
+            [busy]="busy()"
+            (analyze)="analyzeTranscript($event)"
+            (discard)="discardPendingTranscript()"
+          />
+        }
 
+        @if (hasPendingClarification()) {
+          <app-ai-clarification-panel
+            [clarifications]="session()?.clarifications ?? []"
+            [disabled]="busy()"
+            (answered)="answerClarification($event)"
+          />
+        }
 
         @if (hasPendingRevision()) {
           <app-ai-proposal-panel
             [revisions]="session()?.revisions ?? []"
             [disabled]="busy()"
             (decided)="decideProposal($event)"
+          />
+        }
+
+        @if (hasDraftContent()) {
+          <app-ai-draft-preview
+            [draft]="session()?.draft ?? {}"
+            [canApply]="!hasPendingRevision()"
+            (apply)="applyCurrentDraft()"
           />
         }
       } @else {

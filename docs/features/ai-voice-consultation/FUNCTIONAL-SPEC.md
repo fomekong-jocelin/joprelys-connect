@@ -99,7 +99,7 @@ Un assistant conversationnel alimenté par l'IA qui :
 | 5 | Le médecin appuie sur le bouton microphone et dicte : *« Le patient présente une toux sèche depuis 3 jours avec fièvre modérée à 38.2°C. À l'examen, les poumons sont clairs, pas de râles. Je suspecte une rhinopharyngite virale. »* | L'enregistrement audio est capturé via `MediaRecorder`. |
 | 6 | Le médecin relâche le bouton microphone. | L'audio est envoyé à l'API `/message` en `multipart/form-data`. |
 | 7 | L'IA transcrit l'audio, analyse le contenu et extrait les champs. | La réponse contient : `symptoms` = « Toux sèche depuis 3 jours, fièvre modérée à 38.2°C », `clinicalExam` = « Poumons clairs, absence de râles », `suspectedDiagnosis` = « Rhinopharyngite virale ». |
-| 8 | Le panneau affiche les champs extraits avec un résumé vocal (TTS). | L'assistant dit : *« J'ai noté les symptômes, l'examen clinique et le diagnostic suspecté. Souhaitez-vous ajouter un diagnostic définitif ou des conseils ? »* |
+| 8 | Le panneau affiche les champs extraits. En Realtime uniquement, il peut restituer une question clinique par le canal TTS unique. | L'assistant peut demander : *« Souhaitez-vous préciser le diagnostic définitif ? »*. En Dictée, le message reste visuel. |
 | 9 | Le médecin dicte à nouveau : *« Le diagnostic est une rhinopharyngite aiguë. Conseils : repos, hydratation abondante, paracétamol si fièvre supérieure à 38.5°C. Suivi dans 5 jours si pas d'amélioration. »* | Nouvel envoi audio à l'API `/message`. |
 | 10 | L'IA complète les champs manquants. | `diagnosis` = « Rhinopharyngite aiguë », `advice` = « Repos, hydratation abondante, paracétamol si fièvre > 38.5°C », `followUp` = « Contrôle dans 5 jours si pas d'amélioration ». |
 | 11 | Le médecin valide les champs pré-remplis dans le formulaire de consultation. | Le formulaire est pré-rempli avec toutes les données extraites. Le médecin peut modifier avant de soumettre. |
@@ -209,7 +209,7 @@ Un assistant conversationnel alimenté par l'IA qui :
 
 | ID | Exigence | Priorité |
 |---|---|---|
-| **FR-19** | Le système doit lire à voix haute les réponses de l'IA via l'API `SpeechSynthesis` du navigateur. | P2 |
+| **FR-19** | En Realtime, le système restitue le seul `assistantMessage` validé par le backend via l'API TTS Joprelys. `SpeechSynthesis` et la voix OpenAI Realtime ne sont pas utilisés en parallèle. | P0 |
 | **FR-20** | Le TTS doit être désactivable par le médecin via un bouton mute dans le panneau. | P2 |
 
 ### 4.6 Pré-remplissage du formulaire
@@ -235,7 +235,7 @@ Un assistant conversationnel alimenté par l'IA qui :
 | **FR-27** | Le médecin doit relire et appliquer explicitement le brouillon avant toute sauvegarde clinique. | P0 |
 | **FR-28** | Le système doit afficher clairement que le contenu est une proposition IA à vérifier. | P0 |
 | **FR-29** | Le mode manuel doit rester utilisable lorsque l'IA, le micro ou la caméra sont indisponibles. | P0 |
-| **FR-30** | Le TTS doit être désactivé par défaut afin d'éviter une divulgation sonore involontaire. | P0 |
+| **FR-30** | La Dictée reste passive. En Realtime, une question ou réponse clinique courte peut être vocalisée par un canal TTS unique, sans instruction interne et sans couper la capture. | P0 |
 
 ---
 
@@ -341,7 +341,7 @@ Le panneau d'assistant vocal est un composant latéral (slide-over) qui s'ouvre 
 | **Indicateur de champs** | Checklist temps réel des champs remplis (✅) et manquants (⬜). Les champs obligatoires manquants sont marqués en orange. |
 | **Bouton microphone** | Mode « Push-to-Talk » : l'enregistrement démarre au press et s'arrête au release. Animation pulsante pendant l'enregistrement. |
 | **Champ texte** | Alternative à la voix. Champ de saisie avec bouton d'envoi. |
-| **Bouton mute (TTS)** | Active/désactive la lecture vocale des réponses IA ; désactivée par défaut. |
+| **Bouton mute (TTS)** | Évolution P2 : désactive la restitution conversationnelle Realtime sans couper le microphone. |
 | **Bouton « Appliquer au formulaire »** | Transfère les champs extraits dans le formulaire de consultation. Disponible uniquement quand au moins un champ est extrait. |
 
 ### 6.2 Scanner QR Code
@@ -450,7 +450,7 @@ Les éléments suivants sont **explicitement exclus** de cette version :
 | QR code sur la fiche d'admission patient | Interne | ✅ Disponible (EPIC-0003) |
 | Provider IA (OpenAI / Gemini / Claude) | Externe | 🔑 Clé API requise |
 | Navigateur avec support `MediaRecorder` | Client | ✅ Chrome 49+, Safari 14.1+, Firefox 25+ |
-| Navigateur avec support `SpeechSynthesis` | Client | ✅ Chrome 33+, Safari 7+, Firefox 49+ |
+| Navigateur avec lecture audio HTML5 | Client | ✅ requis pour la restitution Realtime |
 | HTTPS en production | Infrastructure | ✅ Requis (microphone) |
 
 ---
@@ -524,3 +524,62 @@ identique dans les quatre parcours.
 - Les thèmes light/dark et les viewports mobile/desktop conservent le même ordre
   visuel et des actions tactiles d’au moins 44 px.
 - Aucun moteur vocal, contrat API ou comportement clinique n’est modifié.
+
+## 14. Dictée Realtime continue, correction et finalisation sans perte
+
+### 14.1 Contrat conversationnel
+
+- OpenAI Realtime est un transport de transcription, pas un interlocuteur
+  vocal autonome.
+- La Dictée est passive. Le Realtime reste conversationnel : une clarification
+  ou réponse clinique courte validée par le backend peut être vocalisée.
+- Une seule voix est autorisée. Une instruction interne, un prompt ou une
+  explication métatechnique n'est jamais lue.
+- La restitution Realtime ne coupe pas le micro et s'interrompt si le médecin
+  reprend la parole.
+- Les messages et clarifications sont affichés visuellement, brièvement et sans
+  discours métatechnique sur le fonctionnement du modèle.
+- Chaque tour non vide apparaît immédiatement dans l'historique avant son
+  analyse clinique.
+
+### 14.2 Correction humaine
+
+- Une transcription dont la confiance est absente ou inférieure au seuil reste
+  visible et durable ; l'absence de confiance ne signifie jamais « absence de
+  texte ».
+- Même lorsque la confiance est annoncée comme suffisante, la dernière phrase
+  Realtime expose toujours l'action « Corriger ». Le médecin peut modifier
+  noms, nombres, doses, négations, unités et latéralité ; le texte visible est
+  remplacé par sa correction et celle-ci devient un nouveau tour
+  conversationnel explicite.
+- Lorsque la confiance est absente ou faible, le médecin dispose en plus dans
+  le mode Realtime du même éditeur bloquant que dans la Dictée.
+- L'analyse reprend uniquement après l'action explicite « Corriger et
+  analyser ». L'action « Écarter » est elle aussi explicite et n'efface pas le
+  journal durable d'origine.
+- La capture des tours suivants continue pendant la relecture et les conserve
+  dans l'ordre.
+
+### 14.3 Finalisation
+
+L'action « Terminer » suit l'ordre obligatoire suivant :
+
+1. arrêter l'envoi de nouveaux tours audio ;
+2. conserver le contrôleur et les files en mémoire ;
+3. attendre les accusés de réception durables et les analyses en cours ;
+4. présenter toute revue ou décision humaine encore nécessaire ;
+5. appliquer le brouillon par la fusion sûre existante ;
+6. seulement ensuite quitter le mode Realtime.
+
+Une finalisation ne vide jamais une file, un transcript visible ou un brouillon.
+La pause explicite, la finalisation explicite et l'échec de persistance durable
+fail-closed sont les seuls états autorisés à couper le sender WebRTC.
+
+### 14.4 Constantes
+
+- La dictée ponctuelle des constantes reste passive. En Realtime, une
+  clarification clinique peut être vocalisée par le canal TTS unique.
+- Le transcript entendu est éditable et peut être réanalysé avant
+  l'application.
+- Les valeurs détectées restent des propositions ; la persistance nécessite
+  toujours la validation explicite du professionnel.

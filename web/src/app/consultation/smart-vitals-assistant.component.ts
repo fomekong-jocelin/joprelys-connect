@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnDestroy, Output, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { I18nService } from '../core/i18n/i18n.service';
-import { AiConsultationApiService } from './ai-consultation-api.service';
 import { AiVitalField, AiVitalsApiService, AiVitalsProposal } from './ai-vitals-api.service';
 import { RealtimeVitalsControllerComponent } from './realtime-vitals-controller.component';
 import { VoiceListeningSurfaceComponent } from './voice-listening-surface.component';
@@ -20,7 +19,6 @@ import { VoiceListeningSurfaceComponent } from './voice-listening-surface.compon
 })
 export class SmartVitalsAssistantComponent implements OnDestroy {
   private readonly api = inject(AiVitalsApiService);
-  private readonly voiceApi = inject(AiConsultationApiService);
   readonly i18n = inject(I18nService);
 
   @Input({ required: true }) visitId = '';
@@ -33,7 +31,6 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   readonly expanded = signal(this.initiallyExpanded());
   readonly busy = signal(false);
   readonly recording = signal(false);
-  readonly speaking = signal(false);
   readonly realtimeEnabled = signal(false);
   readonly realtimeActive = signal(false);
   readonly audioLevel = signal(0);
@@ -46,6 +43,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   readonly errorMessage = signal('');
 
   textInput = '';
+  correctionText = '';
   readonly mediaRecorderSupported =
     typeof window !== 'undefined' &&
     'MediaRecorder' in window &&
@@ -57,13 +55,10 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private meterFrame: number | null = null;
-  private assistantAudio: HTMLAudioElement | null = null;
-  private assistantAudioUrl: string | null = null;
 
   ngOnDestroy(): void {
     this.disableRealtime();
     this.stopStream();
-    this.stopAssistantAudio();
   }
 
   toggleExpanded(): void {
@@ -79,7 +74,6 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
 
   enableRealtime(): void {
     if (this.disabled) return;
-    this.stopAssistantAudio();
     this.stopStream();
     this.recording.set(false);
     this.errorMessage.set('');
@@ -132,6 +126,19 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
     this.proposalApplied.set(true);
   }
 
+  reanalyzeCorrection(): void {
+    const corrected = this.correctionText.trim();
+    if (!corrected || !this.visitId || this.busy() || this.disabled) return;
+    this.busy.set(true);
+    this.errorMessage.set('');
+    this.api
+      .analyzeText(this.visitId, corrected, this.i18n.currentLanguage(), this.currentVitals)
+      .subscribe({
+        next: proposal => this.handleProposal({ ...proposal, transcript: corrected }),
+        error: () => this.handleError(),
+      });
+  }
+
   labelFor(field: AiVitalField): string {
     return this.i18n.t(`vitals.assistant.field.${field}`, field);
   }
@@ -152,18 +159,16 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
     return units[field];
   }
 
-  handleProposal(proposal: AiVitalsProposal, speakResponse = true): void {
+  handleProposal(proposal: AiVitalsProposal): void {
     this.busy.set(false);
     this.lastProposal.set(proposal);
     this.proposalApplied.set(false);
     this.lastTranscript.set(proposal.transcript || '');
+    this.correctionText = proposal.transcript || '';
     this.assistantMessage.set(proposal.assistantMessage || '');
     this.needsConfirmation.set(proposal.needsConfirmation);
     this.confirmationReason.set(proposal.confirmationReason || '');
     this.errorMessage.set('');
-    if (speakResponse && proposal.assistantMessage) {
-      this.speak(proposal.assistantMessage);
-    }
   }
 
   private initiallyExpanded(): boolean {
@@ -181,7 +186,6 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
       || this.disabled
       || !this.visitId
     ) return;
-    this.stopAssistantAudio();
     this.errorMessage.set('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -233,23 +237,6 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
         next: proposal => this.handleProposal(proposal),
         error: () => this.handleError(),
       });
-  }
-
-  private speak(text: string): void {
-    this.stopAssistantAudio();
-    this.speaking.set(true);
-    this.voiceApi.synthesizeSpeech(text).subscribe({
-      next: blob => {
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        this.assistantAudio = audio;
-        this.assistantAudioUrl = url;
-        audio.onended = () => this.stopAssistantAudio();
-        audio.onerror = () => this.stopAssistantAudio();
-        void audio.play().catch(() => this.stopAssistantAudio());
-      },
-      error: () => this.speaking.set(false),
-    });
   }
 
   private handleError(): void {
@@ -309,16 +296,4 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
     this.recorder = null;
   }
 
-  private stopAssistantAudio(): void {
-    if (this.assistantAudio) {
-      this.assistantAudio.pause();
-      this.assistantAudio.src = '';
-      this.assistantAudio = null;
-    }
-    if (this.assistantAudioUrl) {
-      URL.revokeObjectURL(this.assistantAudioUrl);
-      this.assistantAudioUrl = null;
-    }
-    this.speaking.set(false);
-  }
 }

@@ -65,6 +65,35 @@ describe('VoiceAssistantPanelComponent focused consultation flow', () => {
     expect(component.session()).not.toBeNull();
   });
 
+  it('should apply the current safe draft before leaving realtime', () => {
+    component.session.set({
+      ...activeSession(),
+      draft: { symptoms: 'Toux sèche depuis trois jours' },
+    });
+    const applied = vi.fn();
+    component.applyDraft.subscribe(applied);
+
+    component.finishRealtime();
+
+    expect(applied).toHaveBeenCalledWith({ symptoms: 'Toux sèche depuis trois jours' });
+    expect(component.conversationMode()).toBe(false);
+  });
+
+  it('should keep an uncertain realtime transcript editable instead of analyzing it immediately', () => {
+    component.conversationMode.set(true);
+    const analyze = vi.spyOn(component, 'analyzeTranscript');
+
+    component.finishRealtimeTranscription({
+      sessionId: 'session-1',
+      transcript: 'Le patient nie toute fièvre',
+      status: 'PENDING_REVIEW',
+      expiresAt: '2026-07-26T22:00:00Z',
+    });
+
+    expect(analyze).not.toHaveBeenCalled();
+    expect(component.session()?.pendingTranscript).toBe('Le patient nie toute fièvre');
+  });
+
   it('should block classic recording while a clarification is pending', () => {
     component.session.set({
       ...activeSession(),

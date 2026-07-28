@@ -31,7 +31,6 @@ describe('RealtimeVoiceControllerComponent connection stability', () => {
     disconnect: ReturnType<typeof vi.fn>;
     isSupported: ReturnType<typeof vi.fn>;
     setMuted: ReturnType<typeof vi.fn>;
-    speakApproved: ReturnType<typeof vi.fn>;
   };
   let ambient: {
     state$: BehaviorSubject<AmbientCaptureState>;
@@ -63,7 +62,6 @@ describe('RealtimeVoiceControllerComponent connection stability', () => {
       disconnect: vi.fn(),
       isSupported: vi.fn().mockReturnValue(true),
       setMuted: vi.fn(),
-      speakApproved: vi.fn().mockReturnValue(false),
     };
     ambient = {
       state$: ambientState,

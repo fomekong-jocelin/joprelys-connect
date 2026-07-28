@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AiVitalsApiService, AiVitalsProposal } from './ai-vitals-api.service';
+import { ClinicalVoicePlaybackService } from './clinical-voice-playback.service';
 import {
   RealtimeClinicalIntakeAck,
   RealtimeClinicalIntakeApiService,
@@ -36,10 +37,10 @@ describe('RealtimeVitalsControllerComponent clinical queue safety', () => {
     disconnect: ReturnType<typeof vi.fn>;
     isSupported: ReturnType<typeof vi.fn>;
     setMuted: ReturnType<typeof vi.fn>;
-    speakApproved: ReturnType<typeof vi.fn>;
   };
   let intake: { ingestVitals: ReturnType<typeof vi.fn> };
   let api: { analyzeText: ReturnType<typeof vi.fn> };
+  let playback: { play: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     vi.useFakeTimers();
@@ -54,23 +55,24 @@ describe('RealtimeVitalsControllerComponent clinical queue safety', () => {
       disconnect: vi.fn(),
       isSupported: vi.fn().mockReturnValue(true),
       setMuted: vi.fn(),
-      speakApproved: vi.fn().mockReturnValue(false),
     };
     intake = {
       ingestVitals: vi.fn().mockImplementation(
-        (visitId: string, text: string, confidence: number, eventId: string, itemId?: string) =>
+        (visitId: string, text: string, confidence: number | null, eventId: string, itemId?: string) =>
           of(ack(visitId, text, confidence, eventId, itemId)),
       ),
     };
     api = {
       analyzeText: vi.fn().mockImplementation((_visitId: string, text: string) => of(proposal(text))),
     };
+    playback = { play: vi.fn(), stop: vi.fn() };
 
     TestBed.configureTestingModule({
       imports: [RealtimeVitalsControllerComponent],
       providers: [
         { provide: AiVitalsApiService, useValue: api },
         { provide: RealtimeClinicalIntakeApiService, useValue: intake },
+        { provide: ClinicalVoicePlaybackService, useValue: playback },
         {
           provide: I18nService,
           useValue: {
@@ -139,6 +141,21 @@ describe('RealtimeVitalsControllerComponent clinical queue safety', () => {
       .toBeLessThan(api.analyzeText.mock.invocationCallOrder[0]);
   });
 
+  it('speaks a realtime clinical response once without muting the microphone', () => {
+    api.analyzeText.mockReturnValueOnce(of({
+      ...proposal('Tension douze sur huit'),
+      assistantMessage: 'Confirmez-vous une tension de 120 sur 80 mmHg ?',
+      needsConfirmation: true,
+    }));
+    bridge.setMuted.mockClear();
+
+    transcripts.next(turn('Tension douze sur huit', 0.91, 'event-question', 'item-question'));
+
+    expect(playback.play)
+      .toHaveBeenCalledWith('Confirmez-vous une tension de 120 sur 80 mmHg ?');
+    expect(bridge.setMuted).not.toHaveBeenCalledWith(true);
+  });
+
   it('uses the shared listening surface and delegates its stop action', () => {
     fixture.detectChanges();
     const stopped = vi.spyOn(component.stopListening, 'emit');
@@ -155,7 +172,7 @@ describe('RealtimeVitalsControllerComponent clinical queue safety', () => {
     expect(intake.ingestVitals).toHaveBeenCalledWith(
       'visit-a',
       'Saturation quatre-vingt-seize',
-      0,
+      null,
       'event-null',
       'item-null',
     );
@@ -183,7 +200,7 @@ describe('RealtimeVitalsControllerComponent clinical queue safety', () => {
     intake.ingestVitals
       .mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 503 })))
       .mockImplementation(
-        (visitId: string, text: string, confidence: number, eventId: string, itemId?: string) =>
+        (visitId: string, text: string, confidence: number | null, eventId: string, itemId?: string) =>
           of(ack(visitId, text, confidence, eventId, itemId)),
       );
 
@@ -213,6 +230,16 @@ describe('RealtimeVitalsControllerComponent clinical queue safety', () => {
     expect(api.analyzeText).not.toHaveBeenCalled();
     expect(bridge.setMuted).toHaveBeenCalledWith(true);
     expect(error).toHaveBeenCalled();
+  });
+
+  it('never mutes the clinician because an assistant audio state is reported', () => {
+    bridge.setMuted.mockClear();
+
+    state.next({ ...CONNECTED, assistantSpeaking: true });
+
+    expect(component.effectiveMuted()).toBe(false);
+    expect(bridge.setMuted).not.toHaveBeenCalledWith(true);
+    expect((bridge as any).speakApproved).toBeUndefined();
   });
 
   it('deduplicates the same OpenAI item before durable persistence', () => {
@@ -269,7 +296,7 @@ describe('RealtimeVitalsControllerComponent clinical queue safety', () => {
   function ack(
     visitId: string,
     transcript: string,
-    confidence: number,
+    confidence: number | null,
     eventId: string,
     itemId?: string,
   ): RealtimeClinicalIntakeAck {
@@ -281,7 +308,7 @@ describe('RealtimeVitalsControllerComponent clinical queue safety', () => {
       eventId,
       itemId: itemId ?? null,
       transcript,
-      confidence,
+      confidence: confidence ?? 0,
       receivedAt: '2026-07-27T21:00:00Z',
     };
   }

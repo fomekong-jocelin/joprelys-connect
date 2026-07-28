@@ -18,6 +18,7 @@ import {
   AiVitalsApiService,
   AiVitalsProposal,
 } from './ai-vitals-api.service';
+import { ClinicalVoicePlaybackService } from './clinical-voice-playback.service';
 import { RealtimeClinicalIntakeApiService } from './realtime-clinical-intake-api.service';
 import {
   RealtimeTranscriptTurn,
@@ -31,7 +32,7 @@ const RETRY_DELAY_MS = 1200;
 
 interface QueuedVitalsTurn {
   transcript: string;
-  confidence: number;
+  confidence: number | null;
   eventId: string;
   itemId?: string;
 }
@@ -40,13 +41,14 @@ interface QueuedVitalsTurn {
   selector: 'app-realtime-vitals-controller',
   standalone: true,
   imports: [CommonModule, VoiceListeningSurfaceComponent],
-  providers: [RealtimeVoiceBridgeService],
+  providers: [RealtimeVoiceBridgeService, ClinicalVoicePlaybackService],
   templateUrl: './realtime-vitals-controller.component.html',
 })
 export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
   private readonly api = inject(AiVitalsApiService);
   private readonly intake = inject(RealtimeClinicalIntakeApiService);
   private readonly bridge = inject(RealtimeVoiceBridgeService);
+  private readonly voicePlayback = inject(ClinicalVoicePlaybackService);
   readonly i18n = inject(I18nService);
 
   @Input({ required: true }) visitId = '';
@@ -87,7 +89,6 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
   constructor() {
     this.subscriptions.add(this.bridge.state$.subscribe(state => {
       const wasConnected = this.state().connected;
-      const wasAssistantSpeaking = this.state().assistantSpeaking;
       this.state.set(state);
       if (state.connected && this.enabled && this.visitId.trim()) {
         this.connectedVisitId = this.visitId.trim();
@@ -97,16 +98,10 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
         this.syncMute();
         this.resumePipeline();
       }
-      if (state.assistantSpeaking !== wasAssistantSpeaking) this.syncMute();
+      if (state.userSpeaking) this.voicePlayback.stop();
     }));
     this.subscriptions.add(this.bridge.transcript$.subscribe(turn => this.enqueueTranscript(turn)));
     this.subscriptions.add(this.bridge.error$.subscribe(message => this.realtimeError.emit(message)));
-    this.subscriptions.add(this.bridge.assistantTurnCompleted$.subscribe(() => {
-      setTimeout(() => {
-        this.syncMute();
-        this.resumePipeline();
-      }, 120);
-    }));
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -128,6 +123,7 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
     this.destroyed = true;
     this.resetTranscriptPipeline();
     this.subscriptions.unsubscribe();
+    this.voicePlayback.stop();
     this.bridge.disconnect();
   }
 
@@ -142,7 +138,6 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
     return this.disabled
       || this.manualMuted
       || this.durableBlocked()
-      || this.state().assistantSpeaking
       || this.state().muted;
   }
 
@@ -154,7 +149,6 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
     if (this.durableBlocked()) return this.i18n.t('vitals.assistant.realtimeDurableBlocked');
     if (this.state().connecting) return this.i18n.t('vitals.assistant.realtimeRecovering');
     if (!this.state().connected) return this.i18n.t('vitals.assistant.realtimeDisconnected');
-    if (this.state().assistantSpeaking) return this.i18n.t('vitals.assistant.speaking');
     if (this.effectiveMuted()) return this.i18n.t('consultation.ai.listeningPaused');
     return this.i18n.t(
       'consultation.ai.listenNaturally',
@@ -238,7 +232,7 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
       && turn.confidence >= 0
       && turn.confidence <= 1
       ? turn.confidence
-      : 0;
+      : null;
     this.intakeQueue.push({ transcript, confidence, eventId, itemId });
     this.drainIntakeQueue();
   }
@@ -294,7 +288,6 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
       || this.durableBlocked()
       || !this.enabled
       || !this.state().connected
-      || this.state().assistantSpeaking
       || !this.connectedVisitId
       || this.connectedVisitId !== this.visitId.trim()) {
       return;
@@ -333,17 +326,9 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
           this.pendingConfirmationContext.set('');
         }
         this.proposed.emit(userFacingProposal);
-        if (proposal.assistantMessage) {
-          this.bridge.setMuted(true);
-          const started = this.bridge.speakApproved(proposal.assistantMessage);
-          if (!started) {
-            this.syncMute();
-            this.drainAnalysisQueue();
-          }
-        } else {
-          this.syncMute();
-          this.drainAnalysisQueue();
-        }
+        this.voicePlayback.play(proposal.assistantMessage || '');
+        this.syncMute();
+        this.drainAnalysisQueue();
       },
       error: () => {
         if (!this.isCurrentTurnContext(visitId, generation)) return;
@@ -428,8 +413,7 @@ export class RealtimeVitalsControllerComponent implements OnChanges, OnDestroy {
     this.bridge.setMuted(
       this.disabled
       || this.manualMuted
-      || this.durableBlocked()
-      || this.state().assistantSpeaking,
+      || this.durableBlocked(),
     );
   }
 }

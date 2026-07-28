@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { BehaviorSubject, Subject, of } from 'rxjs';
+import { BehaviorSubject, NEVER, Subject, of } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AiConsultationApiService, AiSessionResponse } from './ai-consultation-api.service';
 import { AmbientAudioCaptureService, AmbientCaptureState } from './ambient-audio-capture.service';
@@ -33,6 +33,7 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
   let state: BehaviorSubject<RealtimeVoiceState>;
   let ambientState: BehaviorSubject<AmbientCaptureState>;
   let transcripts: Subject<any>;
+  let synthesizeSpeech: ReturnType<typeof vi.fn>;
   let bridge: {
     state$: BehaviorSubject<RealtimeVoiceState>;
     transcript$: Subject<any>;
@@ -42,7 +43,6 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
     disconnect: ReturnType<typeof vi.fn>;
     isSupported: ReturnType<typeof vi.fn>;
     setMuted: ReturnType<typeof vi.fn>;
-    speakApproved: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -66,6 +66,7 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
       lastError: null,
     });
     transcripts = new Subject();
+    synthesizeSpeech = vi.fn().mockReturnValue(NEVER);
     bridge = {
       state$: state,
       transcript$: transcripts,
@@ -75,7 +76,6 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
       disconnect: vi.fn(),
       isSupported: vi.fn().mockReturnValue(true),
       setMuted: vi.fn(),
-      speakApproved: vi.fn().mockReturnValue(true),
     };
 
     await TestBed.configureTestingModule({
@@ -100,6 +100,7 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
           useValue: {
             sendRealtimeTranscript: vi.fn().mockReturnValue(of(messageResponse())),
             answerRealtimeClarification: vi.fn().mockReturnValue(of(messageResponse())),
+            synthesizeSpeech,
           },
         },
         {
@@ -128,11 +129,12 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
   });
 
   it('should never vocalize the generic greeting when realtime connects', () => {
-    expect(bridge.speakApproved).not.toHaveBeenCalledWith('Bonjour docteur. Je vous écoute.');
-    expect(bridge.speakApproved).not.toHaveBeenCalled();
+    expect((component as any).speakPendingClarification).toBeUndefined();
+    expect((bridge as any).speakApproved).toBeUndefined();
+    expect(synthesizeSpeech).not.toHaveBeenCalled();
   });
 
-  it('should vocalize a real pending clarification only once', () => {
+  it('should vocalize a pending clinical clarification once through the dedicated TTS channel', () => {
     component.session = {
       ...sessionWithGreeting(),
       clarifications: [{
@@ -147,11 +149,27 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
       }],
     };
 
-    (component as any).speakPendingClarification();
-    (component as any).speakPendingClarification();
+    state.next({ ...state.value, connected: false });
+    state.next({ ...state.value, connected: true });
+    state.next({ ...state.value, connected: false });
+    state.next({ ...state.value, connected: true });
 
-    expect(bridge.speakApproved).toHaveBeenCalledTimes(1);
-    expect(bridge.speakApproved).toHaveBeenCalledWith('Depuis combien de jours la douleur évolue-t-elle ?');
+    expect(component.session.clarifications[0].question)
+      .toBe('Depuis combien de jours la douleur évolue-t-elle ?');
+    expect((component as any).speakApproved).toBeUndefined();
+    expect(synthesizeSpeech).toHaveBeenCalledTimes(1);
+    expect(synthesizeSpeech)
+      .toHaveBeenCalledWith('Depuis combien de jours la douleur évolue-t-elle ?');
+  });
+
+  it('should stop TTS on barge-in without muting realtime capture', () => {
+    const playbackStop = vi.spyOn((component as any).voicePlayback, 'stop');
+    bridge.setMuted.mockClear();
+
+    state.next({ ...state.value, userSpeaking: true });
+
+    expect(playbackStop).toHaveBeenCalled();
+    expect(bridge.setMuted).not.toHaveBeenCalledWith(true);
   });
 
   it('should show only the focus physician actions when healthy', () => {

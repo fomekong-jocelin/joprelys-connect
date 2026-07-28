@@ -1,8 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NEVER, of } from 'rxjs';
+import { of } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
-import { AiConsultationApiService } from './ai-consultation-api.service';
 import { AiVitalsApiService } from './ai-vitals-api.service';
 import { SmartVitalsAssistantComponent } from './smart-vitals-assistant.component';
 
@@ -10,7 +9,6 @@ describe('SmartVitalsAssistantComponent', () => {
   let fixture: ComponentFixture<SmartVitalsAssistantComponent>;
   let component: SmartVitalsAssistantComponent;
   let vitalsApi: { analyzeText: ReturnType<typeof vi.fn>; analyzeAudio: ReturnType<typeof vi.fn> };
-  let voiceApi: { synthesizeSpeech: ReturnType<typeof vi.fn> };
   const originalMatchMedia = window.matchMedia;
 
   beforeEach(async () => {
@@ -31,16 +29,11 @@ describe('SmartVitalsAssistantComponent', () => {
       analyzeText: vi.fn(),
       analyzeAudio: vi.fn(),
     };
-    voiceApi = {
-      synthesizeSpeech: vi.fn().mockReturnValue(NEVER),
-    };
-
     await TestBed.configureTestingModule({
       imports: [SmartVitalsAssistantComponent],
       providers: [
         provideHttpClient(),
         { provide: AiVitalsApiService, useValue: vitalsApi },
-        { provide: AiConsultationApiService, useValue: voiceApi },
         {
           provide: I18nService,
           useValue: {
@@ -172,14 +165,38 @@ describe('SmartVitalsAssistantComponent', () => {
     const emitted = vi.fn();
     component.proposed.subscribe(emitted);
 
-    component.handleProposal(proposal, false);
+    component.handleProposal(proposal);
 
     expect(emitted).not.toHaveBeenCalled();
     expect(component.lastProposal()).toEqual(proposal);
-    expect(voiceApi.synthesizeSpeech).not.toHaveBeenCalled();
 
     component.applyCurrentProposal();
     expect(emitted).toHaveBeenCalledWith(proposal);
+  });
+
+  it('should let the clinician correct the transcript and analyze the corrected sentence again', () => {
+    const initial = {
+      transcript: 'Température trente huit quatre',
+      vitals: { temperature: 38.4 },
+      assistantMessage: 'Température détectée.',
+      needsConfirmation: false,
+      confirmationReason: '',
+    };
+    const corrected = { ...initial, transcript: 'Température 38,4 degrés' };
+    vitalsApi.analyzeText.mockReturnValue(of(corrected));
+    component.handleProposal(initial);
+
+    component.correctionText = corrected.transcript;
+    component.reanalyzeCorrection();
+
+    expect(vitalsApi.analyzeText).toHaveBeenCalledWith(
+      'visit-1',
+      corrected.transcript,
+      'fr',
+      {},
+    );
+    expect(component.lastTranscript()).toBe(corrected.transcript);
+    expect(component.proposalApplied()).toBe(false);
   });
 
   it('uses the shared listening surface while classic vitals dictation records', () => {

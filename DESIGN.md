@@ -201,6 +201,23 @@ La page publique de connexion suit les règles suivantes :
   44 px et le visualiseur se réduit sans débordement.
 - `prefers-reduced-motion: reduce` neutralise les pulsations décoratives.
 
+#### Conversation, correction et finalisation
+
+- La Dictée est visuellement et vocalement passive. Le Realtime peut restituer
+  une question clinique courte par un canal TTS unique ; il ne lit jamais une
+  instruction interne.
+- La question reste aussi visible. La reprise de parole interrompt la lecture
+  sans changer l’état visuel actif du microphone.
+- Une transcription à relire utilise le composant d’édition partagé avec
+  `ui-input`, bordure fine et rayon `--radius-brand-sm`. Les actions « Corriger
+  et analyser » et « Écarter » restent accessibles sur mobile.
+- Pour les constantes, la dernière phrase entendue est un `textarea` éditable ;
+  la proposition chiffrée demeure séparée et ne s’applique qu’après validation.
+- Après « Terminer », la carte conserve sa place et affiche l’état de
+  finalisation tant que des phrases, corrections ou décisions restent en
+  attente. Aucun flash, effacement de transcript ou changement prématuré de
+  mode n’est autorisé.
+
 ### Disponibilités médecin (STORY-2602)
 
 La page « Mes disponibilités » (`clinic/availability`) introduit la grille hebdomadaire `shared/ui/weekly-availability-grid` (7 colonnes Lun → Dim, défilement horizontal sur mobile) et l'aperçu des créneaux. Les plages horaires sont des cartes compactes à rayon sobre (≤ `8px`, tokens `--radius-brand-*`) avec ombre légère `var(--shadow-panel)` ; le jour sélectionné est souligné par `var(--brand-primary)` et les plages désactivées sont atténuées (`opacity-50`). Toutes les couleurs passent par les tokens centralisés (`--app-surface`, `--app-border`, `--brand-primary`, `--text-*`) — aucune couleur en dur, thèmes light/dark automatiques. La désactivation d'une plage et la suppression d'une indisponibilité passent par la modale de confirmation partagée.

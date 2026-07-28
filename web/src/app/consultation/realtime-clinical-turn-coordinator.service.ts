@@ -12,13 +12,13 @@ import { RealtimeTranscriptTurn } from './realtime-voice-bridge.service';
 
 const HIGH_WATER_MARK = 32;
 const LOW_WATER_MARK = 8;
+const REALTIME_CONFIDENCE_FLOOR = 0.35;
 const MAX_SEEN_TRANSCRIPT_IDS = 512;
 const RETRY_DELAY_MS = 1200;
 
 interface DurableRealtimeTurn {
   transcript: string;
-  confidence: number;
-  originalConfidence: number | null;
+  confidence: number | null;
   eventId: string;
   itemId?: string;
 }
@@ -29,12 +29,11 @@ export interface RealtimeClinicalTurnHost {
   enabled: () => boolean;
   connected: () => boolean;
   manualMuted: () => boolean;
-  assistantSpeaking: () => boolean;
   blocked: () => boolean;
   onMessage: (response: AiMessageResponse) => void;
   onReview: (response: AiTranscriptionResponse) => void;
   onError: (message: string) => void;
-  speakApproved: (message: string) => boolean;
+  onPipelineStateChange: () => void;
   syncMute: () => void;
 }
 
@@ -48,6 +47,7 @@ export class RealtimeClinicalTurnCoordinator {
   readonly lastTranscript = signal('');
   readonly lastTranscriptConfidence = signal<number | null>(null);
   readonly backlogPaused = signal(false);
+  readonly durableBlocked = signal(false);
 
   private readonly intakeQueue: DurableRealtimeTurn[] = [];
   private readonly analysisQueue: DurableRealtimeTurn[] = [];
@@ -85,7 +85,7 @@ export class RealtimeClinicalTurnCoordinator {
       && turn.confidence >= 0
       && turn.confidence <= 1
       ? turn.confidence
-      : 0;
+      : null;
     const eventId = turn.eventId?.trim() || this.nextFallbackEventId();
     const itemId = turn.itemId?.trim() || undefined;
     const dedupeId = itemId ? `item:${itemId}` : `event:${eventId}`;
@@ -95,7 +95,6 @@ export class RealtimeClinicalTurnCoordinator {
     this.intakeQueue.push({
       transcript: text,
       confidence,
-      originalConfidence: turn.confidence,
       eventId,
       itemId,
     });
@@ -116,11 +115,13 @@ export class RealtimeClinicalTurnCoordinator {
     this.seenTranscriptIds.clear();
     this.seenTranscriptOrder.length = 0;
     this.backlogPaused.set(false);
+    this.durableBlocked.set(false);
     this.intakeBusy = false;
     this.analysisBusy = false;
     this.processing.set(false);
     this.lastTranscript.set('');
     this.lastTranscriptConfidence.set(null);
+    this.host?.onPipelineStateChange();
   }
 
   destroy(): void {
@@ -131,6 +132,51 @@ export class RealtimeClinicalTurnCoordinator {
 
   queuedCount(): number {
     return this.intakeQueue.length + this.analysisQueue.length;
+  }
+
+  isIdle(): boolean {
+    return !this.intakeBusy
+      && !this.analysisBusy
+      && this.intakeQueue.length === 0
+      && this.analysisQueue.length === 0;
+  }
+
+  submitManualCorrection(correction: string): void {
+    const host = this.host;
+    const normalized = correction.trim();
+    if (!host
+      || !normalized
+      || !this.isIdle()
+      || host.blocked()
+      || host.manualMuted()
+      || !host.enabled()
+      || !host.connected()) {
+      return;
+    }
+
+    const visitId = host.visitId();
+    const generation = this.generation;
+    const message = this.i18n.currentLanguage() === 'en'
+      ? `I am correcting my last transcribed statement: ${normalized}`
+      : `Je corrige mon dernier énoncé transcrit : ${normalized}`;
+    this.analysisBusy = true;
+    this.updateProcessing();
+    this.consultationApi.sendText(visitId, message).subscribe({
+      next: response => {
+        if (!this.isCurrent(visitId, generation)) return;
+        this.analysisBusy = false;
+        host.onMessage(response);
+        this.updateProcessing();
+        this.drainAnalysisQueue();
+      },
+      error: () => {
+        if (!this.isCurrent(visitId, generation)) return;
+        this.analysisBusy = false;
+        this.updateProcessing();
+        host.onError(this.i18n.t('consultation.ai.realtimeCorrectionFailed'));
+        this.drainAnalysisQueue();
+      },
+    });
   }
 
   /** Test/diagnostic only: number of turns waiting for durable ACK. */
@@ -147,6 +193,7 @@ export class RealtimeClinicalTurnCoordinator {
     const host = this.host;
     if (!host
       || this.intakeBusy
+      || this.durableBlocked()
       || host.manualMuted()
       || !host.session()
       || !host.enabled()
@@ -180,7 +227,7 @@ export class RealtimeClinicalTurnCoordinator {
           return;
         }
         // Never silently throw away a turn that has not received a durable ACK.
-        this.backlogPaused.set(true);
+        this.durableBlocked.set(true);
         host.syncMute();
         host.onError(this.i18n.t(
           'consultation.ai.realtimeDurableIntakeBlocked',
@@ -197,8 +244,7 @@ export class RealtimeClinicalTurnCoordinator {
       || this.analysisBlocked(host)
       || host.manualMuted()
       || !host.enabled()
-      || !host.connected()
-      || host.assistantSpeaking()) {
+      || !host.connected()) {
       return;
     }
     const session = host.session();
@@ -207,6 +253,12 @@ export class RealtimeClinicalTurnCoordinator {
 
     const visitId = host.visitId();
     const generation = this.generation;
+    if (turn.confidence === null || turn.confidence < REALTIME_CONFIDENCE_FLOOR) {
+      this.analysisBusy = true;
+      this.updateProcessing();
+      this.stageForHumanReview(visitId, turn, generation);
+      return;
+    }
     const pendingClarification = session.clarifications.find(item => item.status === 'PENDING');
     const request = pendingClarification
       ? this.consultationApi.answerRealtimeClarification(
@@ -233,14 +285,7 @@ export class RealtimeClinicalTurnCoordinator {
         host.onMessage(response);
         this.updateProcessing();
         this.releaseBackpressureIfPossible();
-
-        const pendingQuestion = response.clarifications
-          .find(item => item.status === 'PENDING')
-          ?.question
-          ?.trim();
-        const approvedVoice = pendingQuestion || response.assistantMessage?.trim() || '';
-        const spoken = approvedVoice ? host.speakApproved(approvedVoice) : false;
-        if (!spoken && !this.analysisBlocked(host)) this.drainAnalysisQueue();
+        if (!this.analysisBlocked(host)) this.drainAnalysisQueue();
       },
       error: error => {
         if (!this.isCurrent(visitId, generation)) return;
@@ -334,7 +379,6 @@ export class RealtimeClinicalTurnCoordinator {
     const host = this.host;
     if (!host || this.queuedCount() < HIGH_WATER_MARK || this.backlogPaused()) return;
     this.backlogPaused.set(true);
-    host.syncMute();
     host.onError(this.i18n.t('consultation.ai.realtimeBackpressure'));
   }
 
@@ -342,7 +386,6 @@ export class RealtimeClinicalTurnCoordinator {
     const host = this.host;
     if (!host || !this.backlogPaused() || this.queuedCount() > LOW_WATER_MARK) return;
     this.backlogPaused.set(false);
-    host.syncMute();
   }
 
   private scheduleRetry(): void {
@@ -360,6 +403,7 @@ export class RealtimeClinicalTurnCoordinator {
 
   private updateProcessing(): void {
     this.processing.set(this.intakeBusy || this.analysisBusy);
+    this.host?.onPipelineStateChange();
   }
 
   private shiftQueue<T>(queue: T[], item: T): void {

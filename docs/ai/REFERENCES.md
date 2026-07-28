@@ -66,6 +66,11 @@ Ce fichier liste les sources à consulter lorsque les documents internes ne suff
   https://platform.openai.com/docs/api-reference/audio
 - OpenAI Realtime API — VAD, transcription asynchrone et champs inclus :
   https://platform.openai.com/docs/api-reference/realtime
+- OpenAI Realtime VAD — production des tours et option `create_response` :
+  https://developers.openai.com/api/docs/guides/realtime-vad#overview
+- OpenAI Realtime — événement
+  `conversation.item.input_audio_transcription.completed` :
+  https://developers.openai.com/api/reference/resources/realtime/server-events#conversation.item.input_audio_transcription.completed
 
 ## Git, versions et changelog
 

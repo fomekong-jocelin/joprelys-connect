@@ -32,7 +32,6 @@ import {
   AiSessionResponse,
   AiTranscriptionResponse,
 } from './ai-consultation-api.service';
-import { AmbientSafetyPanelComponent } from './ambient-safety-panel.component';
 import {
   ClassicVoiceCapture,
   ClassicVoiceRecorderService,
@@ -52,7 +51,6 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
     AiProposalPanelComponent,
     AiTranscriptReviewComponent,
     AiDraftPreviewComponent,
-    AmbientSafetyPanelComponent,
     LinkedEvidenceNotePanelComponent,
     RealtimeVoiceControllerComponent,
   ],
@@ -169,6 +167,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   finishRealtime(): void {
+    this.applyCurrentDraft();
     this.switchToDictation();
   }
 
@@ -312,16 +311,12 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   finishRealtimeTranscription(response: AiTranscriptionResponse): void {
-    if (this.conversationMode() && response.transcript?.trim()) {
-      this.analyzeTranscript(response.transcript.trim());
-    } else {
-      this.session.update(current => current ? {
-        ...current,
-        pendingTranscript: response.transcript,
-        transcriptStatus: response.status,
-        expiresAt: response.expiresAt,
-      } : current);
-    }
+    this.session.update(current => current ? {
+      ...current,
+      pendingTranscript: response.transcript,
+      transcriptStatus: response.status,
+      expiresAt: response.expiresAt,
+    } : current);
   }
 
   finishRealtimeMessage(response: AiMessageResponse): void {

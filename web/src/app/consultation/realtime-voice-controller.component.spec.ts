@@ -52,7 +52,6 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
     disconnect: ReturnType<typeof vi.fn>;
     isSupported: ReturnType<typeof vi.fn>;
     setMuted: ReturnType<typeof vi.fn>;
-    speakApproved: ReturnType<typeof vi.fn>;
   };
   let ambient: {
     state$: BehaviorSubject<AmbientCaptureState>;
@@ -62,6 +61,7 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
   };
   let intake: { ingest: ReturnType<typeof vi.fn> };
   let consultationApi: {
+    sendText: ReturnType<typeof vi.fn>;
     sendRealtimeTranscript: ReturnType<typeof vi.fn>;
     answerRealtimeClarification: ReturnType<typeof vi.fn>;
     stageRealtimeTranscript: ReturnType<typeof vi.fn>;
@@ -93,7 +93,6 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
       disconnect: vi.fn(() => state.next({ ...DISCONNECTED_STATE })),
       isSupported: vi.fn().mockReturnValue(true),
       setMuted: vi.fn(),
-      speakApproved: vi.fn().mockReturnValue(false),
     };
     ambient = {
       state$: ambientState,
@@ -106,10 +105,11 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
       mediaStreamForVisit: vi.fn().mockReturnValue(sharedStream),
     };
     intake = {
-      ingest: vi.fn().mockImplementation((visitId: string, text: string, confidence: number, eventId: string, itemId?: string) =>
+      ingest: vi.fn().mockImplementation((visitId: string, text: string, confidence: number | null, eventId: string, itemId?: string) =>
         of(ack(visitId, text, confidence, eventId, itemId))),
     };
     consultationApi = {
+      sendText: vi.fn().mockImplementation((_visitId: string, text: string) => of(messageResponse(text))),
       sendRealtimeTranscript: vi.fn().mockImplementation((_visitId: string, text: string) => of(messageResponse(text))),
       answerRealtimeClarification: vi.fn().mockImplementation((_visitId: string, _clarificationId: string, text: string) => of(messageResponse(text))),
       stageRealtimeTranscript: vi.fn().mockImplementation((_visitId: string, text: string) => of(transcriptionResponse(text))),
@@ -174,7 +174,7 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
     const firstAck = new Subject<RealtimeClinicalIntakeAck>();
     intake.ingest
       .mockReturnValueOnce(firstAck)
-      .mockImplementation((visitId: string, text: string, confidence: number, eventId: string, itemId?: string) =>
+      .mockImplementation((visitId: string, text: string, confidence: number | null, eventId: string, itemId?: string) =>
         of(ack(visitId, text, confidence, eventId, itemId)));
 
     transcripts.next(turn('Première phrase clinique', 0.91, 'event-1', 'item-1'));
@@ -233,9 +233,6 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
   });
 
   it('persists a non-empty null-confidence transcript and stages it for human review instead of dropping it', () => {
-    consultationApi.sendRealtimeTranscript.mockReturnValueOnce(
-      throwError(() => ({ status: 422, error: { detail: 'AI_TRANSCRIPTION_LOW_CONFIDENCE' } })),
-    );
     const review = vi.spyOn(component.transcriptionReview, 'emit');
 
     transcripts.next(turn('Le patient nie toute fièvre', null, 'event-null', 'item-null'));
@@ -243,8 +240,9 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
     expect(component.lastTranscript()).toBe('Le patient nie toute fièvre');
     expect(component.transcriptNeedsReview()).toBe(true);
     expect(intake.ingest).toHaveBeenCalledWith(
-      'visit-1', 'Le patient nie toute fièvre', 0, 'event-null', 'item-null',
+      'visit-1', 'Le patient nie toute fièvre', null, 'event-null', 'item-null',
     );
+    expect(consultationApi.sendRealtimeTranscript).not.toHaveBeenCalled();
     expect(consultationApi.stageRealtimeTranscript).toHaveBeenCalledWith(
       'visit-1', 'Le patient nie toute fièvre',
     );
@@ -256,16 +254,13 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
   });
 
   it('keeps durable capture running while a transcript review is pending', () => {
-    consultationApi.sendRealtimeTranscript.mockReturnValueOnce(
-      throwError(() => ({ status: 422, error: { detail: 'AI_TRANSCRIPTION_LOW_CONFIDENCE' } })),
-    );
     transcripts.next(turn('Dose incertaine', 0.2, 'event-review', 'item-review'));
     expect(component.session?.pendingTranscript).toBe('Dose incertaine');
 
     transcripts.next(turn('Phrase suivante', 0.9, 'event-after', 'item-after'));
 
     expect(intake.ingest).toHaveBeenCalledTimes(2);
-    expect(consultationApi.sendRealtimeTranscript).toHaveBeenCalledTimes(1);
+    expect(consultationApi.sendRealtimeTranscript).not.toHaveBeenCalled();
     expect((component as any).pipeline.analysisQueueSize()).toBe(1);
     expect(bridge.setMuted).not.toHaveBeenCalledWith(true);
   });
@@ -287,7 +282,7 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
   it('keeps a transiently failed intake at the head and retries without duplicate clinical analysis', async () => {
     intake.ingest
       .mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 503 })))
-      .mockImplementation((visitId: string, text: string, confidence: number, eventId: string, itemId?: string) =>
+      .mockImplementation((visitId: string, text: string, confidence: number | null, eventId: string, itemId?: string) =>
         of(ack(visitId, text, confidence, eventId, itemId)));
 
     transcripts.next(turn('Tension cent vingt sur quatre-vingt', 0.94, 'event-retry', 'item-retry'));
@@ -315,7 +310,7 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
     expect(component.effectiveMuted()).toBe(false);
   });
 
-  it('pauses only realtime on queue backpressure while ambient safety continues', () => {
+  it('keeps realtime capture active on queue backpressure while ambient safety continues', () => {
     const slow = new Subject<RealtimeClinicalIntakeAck>();
     intake.ingest.mockReturnValue(slow);
     bridge.setMuted.mockClear();
@@ -325,9 +320,74 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
     }
 
     expect(component.backlogPaused).toBe(true);
-    expect(bridge.setMuted).toHaveBeenCalledWith(true);
+    expect(bridge.setMuted).not.toHaveBeenCalledWith(true);
+    expect(component.effectiveMuted()).toBe(false);
     expect(ambient.stop).not.toHaveBeenCalled();
     expect((component as any).pipeline.intakeQueueSize()).toBe(32);
+  });
+
+  it('submits an explicit correction of the latest transcript as a clinical conversation turn', () => {
+    component.transcriptHistory.set([{
+      id: 'item-correction',
+      text: 'Température trente-huit cinq',
+      timestamp: 1_700_000_000_000,
+    }]);
+
+    component.requestTranscriptCorrection('Température 38,5 degrés');
+
+    expect(consultationApi.sendText).toHaveBeenCalledWith(
+      'visit-1',
+      'Je corrige mon dernier énoncé transcrit : Température 38,5 degrés',
+    );
+    expect(component.transcriptHistory()[0].text).toBe('Température 38,5 degrés');
+  });
+
+  it('stops new capture but drains the durable pipeline before emitting finish', () => {
+    const slow = new Subject<RealtimeClinicalIntakeAck>();
+    intake.ingest.mockReturnValueOnce(slow);
+    const finished = vi.spyOn(component.endSession, 'emit');
+
+    transcripts.next(turn('Conclusion sans fièvre', 0.93, 'event-finish', 'item-finish'));
+    component.requestFinish();
+
+    expect(component.finishPending()).toBe(true);
+    expect(bridge.setMuted).toHaveBeenCalledWith(true);
+    expect(finished).not.toHaveBeenCalled();
+
+    slow.next(ack('visit-1', 'Conclusion sans fièvre', 0.93, 'event-finish', 'item-finish'));
+    slow.complete();
+
+    expect(consultationApi.sendRealtimeTranscript).toHaveBeenCalledWith(
+      'visit-1',
+      'Conclusion sans fièvre',
+      0.93,
+      'event-finish',
+    );
+    expect(component.queuedCount()).toBe(0);
+    expect(finished).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the realtime screen mounted until a staged transcript review is resolved', () => {
+    const finished = vi.spyOn(component.endSession, 'emit');
+    transcripts.next(turn('Dose à relire', null, 'event-review-finish', 'item-review-finish'));
+
+    component.requestFinish();
+
+    expect(component.session?.pendingTranscript).toBe('Dose à relire');
+    expect(finished).not.toHaveBeenCalled();
+
+    const previous = component.session;
+    component.session = previous ? { ...previous, pendingTranscript: null } : previous;
+    component.ngOnChanges({
+      session: {
+        previousValue: previous,
+        currentValue: component.session,
+        firstChange: false,
+        isFirstChange: () => false,
+      },
+    });
+
+    expect(finished).toHaveBeenCalledTimes(1);
   });
 
   it('resets queues and ignores late responses when navigating from visit A to B', async () => {
@@ -377,7 +437,7 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
   function ack(
     visitId: string,
     transcript: string,
-    confidence: number,
+    confidence: number | null,
     eventId: string,
     itemId?: string,
   ): RealtimeClinicalIntakeAck {
@@ -388,7 +448,7 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
       eventId,
       itemId: itemId ?? null,
       transcript,
-      confidence,
+      confidence: confidence ?? 0,
       receivedAt: '2026-07-26T18:00:00Z',
     };
   }

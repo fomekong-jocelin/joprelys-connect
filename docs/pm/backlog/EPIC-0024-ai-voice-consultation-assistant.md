@@ -35,6 +35,7 @@ du dossier médical à un modèle.
 | STORY-2505 | QR visite backend | P0 | 3 | DONE | aucune |
 | STORY-2506 | Docs/sécurité/observabilité | P0 | 5 | IN_PROGRESS | 2500 |
 | STORY-2507 | E2E/évaluation/pilote | P0 | 5 | TODO | toutes |
+| TASK-20260728-P0-VOICE-HOTFIX-B | Realtime conversationnel contrôlé, Dictée passive, correction et finalisation sans perte | P0 | 5 | IMPLEMENTED — RECETTE CLINIQUE REQUISE | 2502, 2504 |
 
 ## 4. Estimation globale
 
@@ -75,3 +76,13 @@ et les fondations désactivées n’imposent pas de bump.
 - Latence/coût/quota.
 - Composants Angular monolithiques.
 - Capacité sprint non disponible.
+- Perte d'un tour si la finalisation détruit une file non drainée.
+- Divulgation ou réinjection audio si une vocalisation automatique subsiste.
+
+## 9. Hotfix P0 du 2026-07-28
+
+Le hotfix consomme 2 à 4 jours senior hors capacité fonctionnelle et bloque les
+évolutions vocales non critiques jusqu'à la recette médecin. Les gates Angular,
+i18n, build et Maven complet (816 tests) sont verts. Il ne modifie pas
+l'estimation historique de l'epic ; il représente une charge corrective
+distincte de 5 SP.

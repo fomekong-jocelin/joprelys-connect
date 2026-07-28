@@ -57,5 +57,7 @@
   "vitals.assistant.field.glycemia": "Glycémie",
   "vitals.assistant.field.respiratoryRate": "Fréq. respiratoire",
   "vitals.assistant.field.painScale": "Douleur",
-  "vitals.assistant.unit.resp": "resp/min"
+  "vitals.assistant.unit.resp": "resp/min",
+  "vitals.assistant.correctionLabel": "Corriger la phrase entendue",
+  "vitals.assistant.correctAndAnalyze": "Corriger et réanalyser"
 }

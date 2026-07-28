@@ -21,7 +21,7 @@ export class RealtimeClinicalIntakeApiService {
   ingest(
     visitId: string,
     transcript: string,
-    confidence: number,
+    confidence: number | null,
     eventId: string,
     itemId?: string,
   ): Observable<RealtimeClinicalIntakeAck> {
@@ -37,7 +37,7 @@ export class RealtimeClinicalIntakeApiService {
   ingestVitals(
     visitId: string,
     transcript: string,
-    confidence: number,
+    confidence: number | null,
     eventId: string,
     itemId?: string,
   ): Observable<RealtimeClinicalIntakeAck> {
@@ -53,7 +53,7 @@ export class RealtimeClinicalIntakeApiService {
   private post(
     endpoint: string,
     transcript: string,
-    confidence: number,
+    confidence: number | null,
     eventId: string,
     itemId?: string,
   ): Observable<RealtimeClinicalIntakeAck> {

@@ -19,7 +19,7 @@ tenant, la validation médicale ni la confidentialité.
 | TC-008 | Provider indisponible | 503, mode manuel disponible |
 | TC-009 | Session expirée | redémarrage explicite |
 | TC-010 | Édition manuelle après application | valeur manuelle conservée |
-| TC-011 | TTS désactivé | aucune lecture vocale |
+| TC-011 | Dictée passive | aucune lecture vocale |
 | TC-012 | Permission refusée | alternative texte/manuelle |
 
 ## 3. Tests sécurité
@@ -66,6 +66,14 @@ clavier/lecteur d’écran, permissions accordées/refusées/révoquées.
 | 2026-07-28 | `npm run i18n:check` | SUCCESS | 49 clés shell présentes en FR/EN |
 | 2026-07-28 | `npm run build` | SUCCESS | bundle initial 542,11 kB ; avertissement NG8113 préexistant |
 | 2026-07-28 | comparaison visuelle automatisée | BLOCKED | adresse locale refusée par la politique du navigateur ; recette authentifiée manuelle requise |
+| 2026-07-28 | tests Angular ciblés hotfix vocal B | SUCCESS | 28 fichiers, 136 tests ; conversation Realtime, Dictée passive, correction, barge-in, backlog et finalisation |
+| 2026-07-28 | `npm test -- --no-watch` après hotfix vocal B | SUCCESS | 102 fichiers, 517 tests |
+| 2026-07-28 | `npm run i18n:check` après hotfix vocal B | SUCCESS | 49 clés shell présentes en FR/EN |
+| 2026-07-28 | `npm run build` après hotfix vocal B | SUCCESS | bundle initial 525,77 kB ; aucun avertissement Angular |
+| 2026-07-28 | `mvn -o -Dtest=OpenAiRealtimeCallServiceTest test` | SUCCESS | 6 tests, session texte uniquement et absence de sortie audio |
+| 2026-07-28 | `mvn verify` | ENVIRONMENT | 816 tests exécutés, 0 échec fonctionnel ; 4 erreurs JUnit de nettoyage `FileStorageServiceTest` dues à `AccessDeniedException` sur le répertoire temporaire Windows hors sandbox |
+| 2026-07-28 | `mvn -DargLine=-Djava.io.tmpdir=… -Dtest=FileStorageServiceTest test` | SUCCESS | 4 tests verts avec le répertoire temporaire placé dans le workspace |
+| 2026-07-28 | `mvn -DargLine=-Djava.io.tmpdir=… verify` | SUCCESS | 816 tests, 0 échec, 0 erreur, 8 ignorés ; JAR Spring Boot produit |
 
 La suite complète, les tests des adaptateurs IA, Angular et E2E restent à
 exécuter lorsque les stories correspondantes seront implémentées.
@@ -100,3 +108,30 @@ La vérification fonctionnelle et structurelle de la surface unifiée est verte.
 La matrice visuelle interactive UI-VOICE-07/UI-VOICE-09 et la comparaison
 pixel à pixel restent à signer sur l’application authentifiée ; voir
 `design-qa.md`.
+
+## 9. Non-régression P0 — correction et finalisation Realtime
+
+| ID | Scénario | Résultat attendu |
+|---|---|---|
+| RT-SAFE-01 | Session Realtime créée | sortie texte uniquement, aucune sortie audio |
+| RT-SAFE-02 | Clarification ou message IA reçu en Realtime | affichage + canal TTS backend unique ; aucun prompt lu |
+| RT-SAFE-02B | Réponse IA en Dictée | affichage uniquement, aucune vocalisation |
+| RT-SAFE-02C | Médecin reprend la parole pendant le TTS | lecture interrompue, sender jamais muté |
+| RT-SAFE-03 | Transcript non vide sans `logprobs` | intake durable puis éditeur visible, texte intact |
+| RT-SAFE-04 | Correction du transcript en Realtime | texte corrigé envoyé à l'analyse, revue ensuite libérée |
+| RT-SAFE-04B | Transcript jugé fiable mais incorrect | action « Corriger » disponible sur la dernière phrase ; texte édité envoyé comme correction conversationnelle |
+| RT-SAFE-05 | Nouveau tour pendant revue/révision | capture et persistance continuent dans l'ordre |
+| RT-SAFE-06 | Backlog supérieur au seuil haut | avertissement visible, sender non muté |
+| RT-SAFE-07 | Échec durable non transitoire | sender muté fail-closed, file non supprimée |
+| RT-SAFE-08 | « Terminer » pendant ACK lent | nouveaux tours stoppés, ACK attendu, aucune destruction |
+| RT-SAFE-09 | « Terminer » pendant revue | éditeur conservé ; sortie après décision et pipeline idle |
+| RT-SAFE-10 | Fin sans revue ni révision | brouillon fusionné puis passage en Dictée |
+| RT-SAFE-11 | Vingt tours rapides | intake/analyse ordonnés, aucune duplication/perte |
+| RT-SAFE-12 | Dictée Constantes corrigée | réanalyse du texte corrigé, application encore explicite |
+| RT-SAFE-13 | Parole pendant traitement IA | transcript conservé ; aucun mute `assistantSpeaking` |
+| RT-SAFE-14 | Suppression de session explicite | seule l'action de suppression dédiée efface la session |
+
+La recette réelle complète les tests automatiques sur Chrome desktop et
+Android, en FR/EN et light/dark. Elle doit inclure une correction de nombre ou
+de négation, une parole pendant traitement et un clic « Terminer » immédiatement
+après une phrase.

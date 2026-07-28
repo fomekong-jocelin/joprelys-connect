@@ -8,18 +8,12 @@ import { authTokenInterceptor } from './auth/auth-token.interceptor';
 import { I18nService } from './core/i18n/i18n.service';
 import { legalRoutes } from './legal/legal.routes';
 import { routes } from './app.routes';
-import { ClinicalRealtimeVoiceBridgeService } from './consultation/clinical-realtime-voice-bridge.service';
-import { RealtimeVoiceBridgeService } from './consultation/realtime-voice-bridge.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter([...legalRoutes, ...routes]),
     provideHttpClient(withFetch(), withInterceptors([authTokenInterceptor])),
-    {
-      provide: RealtimeVoiceBridgeService,
-      useClass: ClinicalRealtimeVoiceBridgeService,
-    },
     provideAppInitializer(() => {
       const i18n = inject(I18nService);
       return i18n.init();

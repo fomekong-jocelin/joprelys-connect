@@ -8,10 +8,11 @@
       [statusText]="listeningSurfaceStatus()"
       [tipText]="i18n.t('consultation.ai.tipDictateNaturally', 'Conseil : Vous pouvez dicter vos notes de consultation de façon naturelle.')"
       [accessibleLabel]="i18n.t('consultation.ai.microphoneLevelLabel', 'Niveau réel du microphone')"
-      (stop)="endSession.emit()"
+      [stopDisabled]="finishPending()"
+      (stop)="requestFinish()"
     />
 
-    @if (showSafetyAlert() || backlogPaused) {
+    @if (showSafetyAlert() || backlogPaused || finishPending()) {
       <div
         class="rounded-[var(--radius-brand-sm)] border px-3 py-2 text-center text-xs font-semibold leading-5"
         [ngClass]="connectionBannerClasses()"
@@ -21,45 +22,13 @@
       </div>
     }
 
-    <section
-      class="h-32 max-h-32 overflow-hidden rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)]"
-      aria-live="polite"
-    >
-      <header class="flex items-center justify-between gap-3 border-b border-[var(--app-border)] px-3 py-2">
-        <p class="text-xs font-bold text-[var(--text-primary)]">
-          {{ i18n.t('consultation.ai.focusTranscriptTitle', 'Transcription en direct') }}
-        </p>
-        @if (queuedCount() > 0 || processing()) {
-          <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-[var(--brand-primary)]">
-            @if (processing()) {
-              <span class="h-3 w-3 animate-spin rounded-full border-2 border-[var(--brand-primary-border)] border-t-[var(--brand-primary)]"></span>
-            }
-            {{ queuedCount() }} {{ i18n.t('consultation.ai.queuedShort') }}
-          </span>
-        }
-      </header>
-
-      <div
-        #transcriptContainer
-        class="h-[calc(8rem-2.25rem)] space-y-1.5 overflow-y-auto overscroll-contain p-2.5 text-left scroll-smooth"
-      >
-        @if (transcriptHistory().length > 0) {
-          @for (entry of transcriptHistory(); track entry.timestamp) {
-            <div class="flex items-baseline gap-2 text-xs leading-5">
-              <span class="shrink-0 text-[10px] tabular-nums text-[var(--text-muted)]">
-                {{ formatTime(entry.timestamp) }}
-              </span>
-              <p class="min-w-0 font-medium text-[var(--text-primary)]">{{ entry.text }}</p>
-            </div>
-          }
-        } @else {
-          <p class="text-xs italic leading-5 text-[var(--text-muted)]">
-            {{ state().connected
-              ? i18n.t('consultation.ai.focusTranscriptWaiting')
-              : i18n.t('consultation.ai.focusTranscriptNoChannel') }}
-          </p>
-        }
-      </div>
-    </section>
+    <app-realtime-transcript-history
+      [entries]="transcriptHistory()"
+      [processing]="processing()"
+      [queuedCount]="queuedCount()"
+      [connected]="state().connected"
+      [correctionDisabled]="blocked || finishPending() || processing() || queuedCount() > 0"
+      (correct)="requestTranscriptCorrection($event)"
+    />
   </div>
 }

@@ -124,7 +124,8 @@ après recette clinique représentative.
 - Pas de nom, DPU, téléphone, e-mail ou date de naissance envoyés au provider.
 - Aucun prompt, transcript, brouillon ou réponse clinique dans logs/metrics.
 - Rate limiting par utilisateur et tenant.
-- TTS désactivé par défaut pour éviter une divulgation sonore.
+- Dictée sans TTS. Realtime conversationnel via un canal TTS backend unique,
+  sans mute du sender et avec interruption lorsque le médecin reprend la parole.
 - Validation DPO/contrat/résidence/rétention obligatoire avant production.
 
 ## 9. Sessions et scalabilité
@@ -242,3 +243,78 @@ visite ni le moteur audio et ne porte aucune règle clinique.
 - Tailwind CSS v4 et tokens `DESIGN.md`.
 - Aucune API, DB, migration, configuration ou permission impactée.
 - PATCH rétrocompatible.
+
+## 17. Pipeline Realtime P0 sans voix automatique ni perte à la fin
+
+### 17.1 Session OpenAI
+
+`OpenAiRealtimeCallService` configure la session avec
+`output_modalities=["text"]`, `create_response=false` et aucune sortie
+`audio.output`. Les instructions limitent ce modèle au transport de
+transcription. Le client ne doit émettre aucun `response.create` et ne doit pas
+utiliser `SpeechSynthesis`.
+
+La conversation clinique reste active dans le pipeline Joprelys : le
+`assistantMessage` ou la question de clarification validée par le backend est
+envoyé une seule fois au service TTS dédié. `ClinicalVoicePlaybackService`
+possède l'unique lecteur audio, ne mute jamais le sender et stoppe la lecture
+sur reprise de parole (barge-in). Ce service n'est appelé qu'en Realtime.
+
+La transcription Realtime est asynchrone par rapport aux éventuelles réponses
+du modèle et ses `logprobs` sont optionnels. Le bridge conserve donc une
+confiance absente sous forme `null`; il est interdit de confondre ce cas avec
+un transcript vide.
+
+`RealtimeTranscriptHistoryComponent` présente l'historique dans la zone fixe et
+donne accès à « Corriger » sur la dernière phrase, quelle que soit la confiance
+ASR. La correction remplace immédiatement le texte visible puis
+`RealtimeClinicalTurnCoordinator` l'envoie comme un tour conversationnel
+explicite (« Je corrige mon dernier énoncé… »). La réponse suit ensuite le même
+chemin backend validé, proposition/révision et TTS Realtime que les autres
+tours ; aucun traitement métier n'est porté par le composant de présentation.
+
+### 17.2 Ordonnancement
+
+```text
+tour ASR non vide
+  -> affichage immédiat
+  -> intake durable append-only
+  -> ACK durable
+  -> confiance connue et suffisante ? analyse : revue éditable
+  -> proposition/clarification visuelle
+  -> décision humaine
+  -> fusion sûre dans le formulaire
+```
+
+Le backlog signale seulement un retard. Il ne mute jamais le sender. Un état
+`durableBlocked` distinct porte le fail-closed de persistance et est le seul
+blocage technique autorisé à couper la capture.
+
+### 17.3 Machine de finalisation
+
+Le contrôleur porte un état `finishPending`. Sur l'action utilisateur :
+
+- `finishPending=true` coupe les nouveaux tours ;
+- le coordinateur continue à vider les files intake/analyse ;
+- une revue de transcript ou une révision en attente maintient le composant
+  monté et les contrôles visibles ;
+- `endSession` n'est émis que lorsque le pipeline est idle et qu'aucune décision
+  humaine n'est en attente ;
+- le parent applique alors `applyCurrentDraft()` avant de quitter le Realtime.
+
+`ngOnDestroy()` reste un nettoyage de navigation, jamais le mécanisme normal de
+finalisation.
+
+### 17.4 Responsabilités
+
+- `RealtimeVoiceBridgeService` : transport WebRTC et événements ASR uniquement.
+- `RealtimeClinicalTurnCoordinator` : durabilité, ordre, déduplication, revue,
+  correction conversationnelle et signal d'idle.
+- `RealtimeVoiceControllerComponent` : cycle capture/finalisation et
+  orchestration de l'historique.
+- `RealtimeTranscriptHistoryComponent` : présentation, édition et émission de
+  la correction du dernier transcript.
+- `VoiceAssistantPanelComponent` : revue humaine, décisions et fusion sûre du
+  brouillon.
+- `SmartVitalsAssistantComponent` : édition/réanalyse d'une proposition de
+  constantes et application explicite.

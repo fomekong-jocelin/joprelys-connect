@@ -8,6 +8,16 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **TASK-20260728-P0-VOICE-HOTFIX-B — Realtime conversationnel fiable et Dictée passive** :
+  - **Suppression des aberrations vocales** : retrait de `response.create`, de la consigne « lisez le message approuvé mot pour mot » et du double canal `SpeechSynthesis`/Realtime. Le transport OpenAI Realtime ne produit plus de réponse assistant autonome ni d’audio.
+  - **Conversation clinique Realtime** : une question courte de clarification ou un message clinique validé par le backend peut être lu une seule fois via le TTS Joprelys dédié. La reprise de parole du médecin interrompt la lecture sans couper le microphone.
+  - **Dictée réellement passive** : aucun message IA n’est vocalisé en Dictée Consultation ou Constantes ; le texte entendu reste affiché pour relecture.
+  - **Correction sans perte** : une confiance ASR absente n’est plus transformée en zéro. Tout transcript non vide reste durable et visible ; la dernière phrase Realtime expose toujours « Corriger », y compris quand l’ASR se dit confiant. Les constantes dictées peuvent aussi être corrigées puis réanalysées.
+  - **Capture continue** : le backlog, l’analyse, une proposition, une clarification ou une restitution TTS ne coupent plus le sender WebRTC. Seules la pause explicite, la finalisation et une panne de persistance fail-closed peuvent l’arrêter.
+  - **Finalisation drainante** : « Terminer » bloque les nouveaux tours, conserve l’éditeur et les files, attend les ACK/analyses/décisions encore en cours, applique le brouillon au formulaire puis quitte le Realtime.
+  - **Architecture** : extraction du support de connexion WebRTC et création d’un service de restitution clinique unique ; les contrôleurs et le bridge restent sous la limite de 500 lignes par classe.
+  - **Validation** : 102 fichiers/517 tests Angular, 6 tests backend Realtime, 816 tests Maven complets, contrôle i18n et build production verts. Recette clinique réelle Chrome desktop/Android encore requise.
+
 - **FIX-20260728-UNIFIED-VOICE-LISTENING-SURFACE — Surface d’écoute identique pour Consultation/Constantes en Dictée/Realtime** :
   - **Composant partagé** : extraction de `VoiceListeningSurfaceComponent`, purement présentationnel, avec badge IA, arrêt, microphone central, halos, rubans d’ondes animés, état d’écoute et bandeau conseil contextualisé.
   - **Quatre intégrations** : remplacement des variantes visuelles dans Consultation/Dictée, Consultation/Realtime, Constantes/Dictée et Constantes/Realtime sans modifier les moteurs audio ni les contrats API.
