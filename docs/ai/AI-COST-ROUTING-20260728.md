@@ -127,6 +127,19 @@ The deep final review must satisfy all of these conditions:
 - Accept/reject decisions are explicit.
 - Accepted output is passed through the existing safe merge and then emitted to the clinician-controlled form flow, never written directly to clinical persistence.
 
+## Regression coverage added
+
+`FinalClinicalReviewServiceTest` covers at minimum:
+
+- explicit accept before an accepted patch exists;
+- preservation of the number `39` and the negation `sans` in a safe narrative reordering;
+- rejection of stale reviews after the draft changes;
+- rejection of an unsupported invented diagnosis;
+- rejection of medication substitution;
+- immutability of vital signs and laboratory orders during the final review.
+
+`OpenAiRealtimeCallServiceTest` now asserts the low-cost Realtime model and `gpt-4o-mini-transcribe` live transcription configuration while preserving VAD and silent-response safety behavior.
+
 ## Rollout validation
 
 Before merging to production:
