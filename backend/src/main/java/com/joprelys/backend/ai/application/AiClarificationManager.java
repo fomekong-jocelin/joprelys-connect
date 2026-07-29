@@ -69,6 +69,14 @@ final class AiClarificationManager {
     void append(
             AiConsultationSessionState state,
             ParsedClarification clarification) {
+        boolean duplicatePending = state.clarifications.stream()
+                .filter(item -> "PENDING".equals(item.status()))
+                .anyMatch(item -> item.field().equals(clarification.field())
+                        && normalize(item.question()).equals(normalize(clarification.question())));
+        if (duplicatePending) {
+            return;
+        }
+
         state.clarifications.add(new ClarificationView(
                 UUID.randomUUID(),
                 clarification.field(),
@@ -83,6 +91,10 @@ final class AiClarificationManager {
             int resolvedIndex = firstResolvedIndex(state.clarifications);
             state.clarifications.remove(resolvedIndex >= 0 ? resolvedIndex : 0);
         }
+    }
+
+    private String normalize(String value) {
+        return value == null ? "" : value.trim().toLowerCase(java.util.Locale.ROOT).replaceAll("\\s+", " ");
     }
 
     private int firstResolvedIndex(List<ClarificationView> clarifications) {
