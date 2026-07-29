@@ -1,18 +1,15 @@
 package com.joprelys.backend.common.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * DTO représentant le format d'erreur normalisé du CDC Module 16.
- * {
- *   "error": {
- *     "code": "ACCESS_DENIED",
- *     "message": "...",
- *     "trace_id": "trc_...",
- *     "action": "REQUEST_ACCESS",
- *     "required_scope": "medical_records"
- *   }
- * }
+ * Normalized API error envelope.
+ *
+ * <p>The nested {@code error} object is the canonical contract. The top-level
+ * {@code detail} property is intentionally retained during migration because older
+ * Joprelys screens and integrations still read it. Both values always carry the
+ * same human-readable message.</p>
  */
 public record ApiErrorResponse(ErrorDetails error) {
 
@@ -27,6 +24,11 @@ public record ApiErrorResponse(ErrorDetails error) {
             String action,
             String requiredScope) {
         this(new ErrorDetails(code, message, traceId, action, requiredScope));
+    }
+
+    @JsonProperty("detail")
+    public String detail() {
+        return error == null ? null : error.message();
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
