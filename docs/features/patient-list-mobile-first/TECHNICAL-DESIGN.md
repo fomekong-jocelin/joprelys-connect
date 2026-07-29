@@ -11,9 +11,10 @@ Aucun changement backend, DB ou contrat API.
 - `web/src/app/patient/patient-list.component.ts`
 - `web/src/app/patient/patient-list.component.html`
 - `web/src/app/patient/patient-list.component.spec.ts`
-- `web/src/assets/i18n/fr.json`
-- `web/src/assets/i18n/en.json`
-- documentation patient / changelog actif si nécessaire.
+- `web/src/app/core/i18n/i18n.service.ts`
+- `web/src/assets/i18n/features/patient-list/fr.json`
+- `web/src/assets/i18n/features/patient-list/en.json`
+- `docs/features/patient/FUNCTIONAL-SPEC.md`
 
 ## Structure cible
 
@@ -41,6 +42,7 @@ Workspace principal
 - `(keyup.enter)` appelle `load()` ;
 - recherche active : bouton iconique `X` à droite de l’input ;
 - `clearSearch()` remet le signal à vide puis appelle `load()` ;
+- `appliedSearchQuery` distingue la saisie en cours du filtre réellement soumis afin que le compteur ne décrive jamais une liste obsolète comme résultat de la nouvelle saisie ;
 - pas de debounce ni changement du contrat API dans ce correctif.
 
 ## Liste mobile
@@ -62,7 +64,13 @@ Le tableau existant est conservé dans une carte dédiée visible à partir de `
 
 ## i18n
 
-Les clés existantes `patients.title`, `patients.subtitle` et `patients.searchPlaceholder` sont modifiées car elles ne sont utilisées que par cette page.
+La feature possède son dictionnaire `features/patient-list/{fr,en}.json`, chargé après le dictionnaire de base par `I18nService`. Il surcharge uniquement les libellés de cette surface sans modifier les traductions historiques globales.
+
+Clés surchargées :
+
+- `patients.title`
+- `patients.subtitle`
+- `patients.searchPlaceholder`
 
 Ajouts :
 
