@@ -11,15 +11,16 @@ import com.joprelys.backend.patient.infrastructure.persistence.ExternalAccessReq
 import com.joprelys.backend.patient.infrastructure.persistence.ExternalAccessRequestRepository;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
+import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
 
 @Service
 public class ExternalAccessService {
@@ -57,19 +58,34 @@ public class ExternalAccessService {
 
         UUID requesterOrgId = actor.getOrganizationId();
 
-        // 1. Un établissement ne peut pas demander l'accès externe pour ses propres patients
         if (patient.getOrganizationId() != null && patient.getOrganizationId().equals(requesterOrgId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le patient appartient déjà à votre établissement.");
         }
 
-        // 2. Vérifier s'il y a déjà une demande en cours (EN_ATTENTE ou APPROUVEE non expirée)
-        List<ExternalAccessRequestEntity> existingRequests = externalAccessRequestRepository.findByPatientId(patient.getId());
-        boolean hasActiveRequest = existingRequests.stream()
-                .anyMatch(r -> "EN_ATTENTE".equals(r.getStatus()) ||
-                        ("APPROUVEE".equals(r.getStatus()) && r.getExpiresAt() != null && r.getExpiresAt().isAfter(Instant.now())));
+        Instant now = Instant.now();
+        List<ExternalAccessRequestEntity> requesterRequests = externalAccessRequestRepository.findByPatientId(patient.getId()).stream()
+                .filter(existing -> requesterOrgId.equals(existing.getRequesterOrganizationId()))
+                .toList();
 
-        if (hasActiveRequest) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Une demande d'accès est déjà active ou en attente pour ce patient.");
+        boolean pendingForRequester = requesterRequests.stream()
+                .anyMatch(existing -> "EN_ATTENTE".equals(existing.getStatus()));
+        if (pendingForRequester) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Une demande d'accès est déjà en attente pour ce patient et votre établissement.");
+        }
+
+        Set<String> requestedScopes = parseScopes(request.scopes());
+        Set<String> alreadyGrantedScopes = new LinkedHashSet<>();
+        requesterRequests.stream()
+                .filter(existing -> "APPROUVEE".equals(existing.getStatus()))
+                .filter(existing -> existing.getExpiresAt() != null && existing.getExpiresAt().isAfter(now))
+                .forEach(existing -> alreadyGrantedScopes.addAll(parseScopes(existing.getScopes())));
+
+        if (!requestedScopes.isEmpty() && alreadyGrantedScopes.containsAll(requestedScopes)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Les périmètres demandés sont déjà autorisés pour votre établissement.");
         }
 
         ExternalAccessRequestEntity newRequest = new ExternalAccessRequestEntity(
@@ -92,13 +108,15 @@ public class ExternalAccessService {
                 "EXTERNAL_ACCESS_REQUEST",
                 saved.getId(),
                 "REQUEST_EXTERNAL_ACCESS",
-                "Demande d'accès externe créée pour le patient : " + patient.getFullName() + " (Motif: " + saved.getReason() + ")"
+                "Demande d'accès externe créée pour le patient : " + patient.getFullName()
+                        + " (Motif: " + saved.getReason() + "; Scopes: " + saved.getScopes() + ")"
         );
 
         notificationService.sendNotification(
                 patient.getId(),
-                "Demande d'accès externe",
-                "L'établissement " + getOrganizationName(requesterOrgId) + " demande l'accès à votre dossier pour : " + request.reason(),
+                alreadyGrantedScopes.isEmpty() ? "Demande d'accès externe" : "Demande d'extension d'accès",
+                "L'établissement " + getOrganizationName(requesterOrgId)
+                        + " demande l'accès à votre dossier pour : " + request.reason(),
                 "INFO"
         );
 
@@ -137,7 +155,6 @@ public class ExternalAccessService {
         }
         ExternalAccessRequestEntity saved = externalAccessRequestRepository.save(request);
 
-        // Récupérer l'organisation du patient (si disponible) pour l'audit log, sinon celle de la demande
         UUID actorOrgId = request.getRequesterOrganizationId();
         PatientEntity patient = patientRepository.findByIdGlobally(patientId).orElse(null);
         if (patient != null && patient.getOrganizationId() != null) {
@@ -145,7 +162,7 @@ public class ExternalAccessService {
         }
 
         auditService.logSuccess(
-                patientId, // L'acteur de l'action est le patient
+                patientId,
                 actorOrgId,
                 patientId,
                 "EXTERNAL_ACCESS_REQUEST",
@@ -154,11 +171,11 @@ public class ExternalAccessService {
                 "Demande d'accès externe approuvée par le patient."
         );
 
-        // Notifier le médecin demandeur que sa demande a été approuvée
         notificationService.sendNotification(
                 patientId,
                 "Demande d'accès approuvée",
-                "Le patient a approuvé votre demande d'accès au dossier. Vous disposez maintenant d'un accès temporaire de " + saved.getRequestedDurationHours() + " heures.",
+                "Le patient a approuvé votre demande d'accès au dossier. Vous disposez maintenant d'un accès temporaire de "
+                        + saved.getRequestedDurationHours() + " heures.",
                 "SECURITY"
         );
 
@@ -181,7 +198,6 @@ public class ExternalAccessService {
         request.setStatus("REFUSEE");
         ExternalAccessRequestEntity saved = externalAccessRequestRepository.save(request);
 
-        // Récupérer l'organisation du patient (si disponible) pour l'audit log, sinon celle de la demande
         UUID actorOrgId = request.getRequesterOrganizationId();
         PatientEntity patient = patientRepository.findByIdGlobally(patientId).orElse(null);
         if (patient != null && patient.getOrganizationId() != null) {
@@ -189,7 +205,7 @@ public class ExternalAccessService {
         }
 
         auditService.logSuccess(
-                patientId, // L'acteur de l'action est le patient
+                patientId,
                 actorOrgId,
                 patientId,
                 "EXTERNAL_ACCESS_REQUEST",
@@ -198,7 +214,6 @@ public class ExternalAccessService {
                 "Demande d'accès externe rejetée par le patient."
         );
 
-        // Notifier le médecin demandeur que sa demande a été rejetée
         notificationService.sendNotification(
                 patientId,
                 "Demande d'accès rejetée",
@@ -215,10 +230,6 @@ public class ExternalAccessService {
                 .orElse("Établissement inconnu");
     }
 
-    /**
-     * STORY-1909 : Révocation d'un accès externe approuvé par le patient (FR-CONSENT-004).
-     * Passe le statut de APPROUVEE à REFUSEE et journalise l'action.
-     */
     @Transactional
     public ExternalAccessResponse revokeApprovedRequest(UUID patientId, UUID requestId) {
         ExternalAccessRequestEntity request = externalAccessRequestRepository.findById(requestId)
@@ -234,7 +245,7 @@ public class ExternalAccessService {
         }
 
         request.setStatus("REFUSEE");
-        request.setExpiresAt(Instant.now()); // Expire immédiatement
+        request.setExpiresAt(Instant.now());
         ExternalAccessRequestEntity saved = externalAccessRequestRepository.save(request);
 
         UUID actorOrgId = request.getRequesterOrganizationId();
@@ -258,6 +269,20 @@ public class ExternalAccessService {
         );
 
         return ExternalAccessResponse.fromEntity(saved, getOrganizationName(saved.getRequesterOrganizationId()));
+    }
+
+    private Set<String> parseScopes(String scopes) {
+        Set<String> result = new LinkedHashSet<>();
+        if (scopes == null || scopes.isBlank()) {
+            return result;
+        }
+        for (String scope : scopes.split(",")) {
+            String normalized = scope.trim().toLowerCase();
+            if (!normalized.isBlank()) {
+                result.add(normalized);
+            }
+        }
+        return result;
     }
 
     private UserAccountEntity getCurrentUser() {
