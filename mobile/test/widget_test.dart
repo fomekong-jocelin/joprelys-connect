@@ -7,9 +7,7 @@ import 'package:joprelys_mobile/core/config/app_config.dart';
 
 void main() {
   testWidgets('renders the Joprelys mobile foundation', (tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(child: JoprelysApp()),
-    );
+    await tester.pumpWidget(const ProviderScope(child: JoprelysApp()));
     await tester.pumpAndSettle();
 
     expect(find.text(AppConfig.appName), findsOneWidget);
