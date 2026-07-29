@@ -4,7 +4,6 @@ import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { RbacApiService } from '../../clinic/rbac/rbac-api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
-import { ActivePatientService } from '../../patient/active-patient.service';
 import { PatientApiService } from '../../patient/patient-api.service';
 import { AppShellNavComponent } from './app-shell-nav.component';
 
@@ -28,7 +27,6 @@ describe('AppShellNavComponent patient isolation', () => {
       providers: [
         provideRouter([]),
         { provide: I18nService, useValue: { t: (key: string) => key } },
-        { provide: ActivePatientService, useValue: { patient: signal(null) } },
         {
           provide: PatientApiService,
           useValue: { getPendingPreRegistrations: vi.fn().mockReturnValue(of({ totalElements: 0 })) },
@@ -91,6 +89,32 @@ describe('AppShellNavComponent patient isolation', () => {
     expect(paths).not.toContain('/patients');
     expect(paths).not.toContain('/clinic/availability');
     expect(paths).not.toContain('/clinic/emergencies');
+  });
+
+  it('should keep patient detail navigation out of the global sidebar', () => {
+    effectiveAccess.set({
+      userId: 'doctor-1',
+      roles: ['MEDECIN'],
+      permissions: [
+        'PATIENT_READ',
+        'CLINICAL_READ',
+        'LAB_ORDER_READ',
+        'HOSPITALIZATION_READ',
+        'AUDIT_READ',
+      ],
+    });
+    fixture.componentRef.setInput('session', {
+      role: 'MEDECIN',
+      name: 'Médecin Test',
+    });
+    fixture.detectChanges();
+
+    const items = fixture.componentInstance.menuItems();
+    const paths = items.map((item) => item.path);
+
+    expect(paths.filter((path) => path === '/patients')).toHaveLength(1);
+    expect(paths.some((path) => /^\/patients\/[^/]+\/(profile|consultations|lab-orders|hospitalizations|audit-trail)$/.test(path))).toBe(false);
+    expect(items.some((item) => item.isHeader || item.indent)).toBe(false);
   });
 
   it('should not expose billing or the global lab queue to a doctor without their exact permissions', () => {
