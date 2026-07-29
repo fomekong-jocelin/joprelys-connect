@@ -280,6 +280,10 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     return this.captureEntries().slice(-6);
   }
 
+  reviewRequiredCount(): number {
+    return this.captureEntries().filter(entry => entry.reviewRequired).length;
+  }
+
   formatCaptureTime(value: string): string {
     const timestamp = Date.parse(value);
     return Number.isFinite(timestamp)
