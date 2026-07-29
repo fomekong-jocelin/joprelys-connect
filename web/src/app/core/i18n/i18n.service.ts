@@ -72,6 +72,7 @@ export class I18nService {
         availability: this.optionalDictionary(`/assets/i18n/features/availability/${lang}.json`),
         appointments: this.optionalDictionary(`/assets/i18n/features/appointments/${lang}.json`),
         patientList: this.optionalDictionary(`/assets/i18n/features/patient-list/${lang}.json`),
+        dashboard: this.optionalDictionary(`/assets/i18n/features/dashboard/${lang}.json`),
         spatialServices: this.optionalDictionary(`/assets/i18n/features/spatial-services/${lang}.json`),
         legal: this.optionalDictionary(`/assets/i18n/features/legal/${lang}.json`),
         consent: this.optionalDictionary(`/assets/i18n/features/consent/${lang}.json`),
@@ -99,6 +100,7 @@ export class I18nService {
         ...dictionaries.availability,
         ...dictionaries.appointments,
         ...dictionaries.patientList,
+        ...dictionaries.dashboard,
         ...dictionaries.spatialServices,
         ...dictionaries.legal,
         ...dictionaries.consent,
@@ -132,7 +134,7 @@ export class I18nService {
         return stored;
       }
     } catch {
-      // Storage can be unavailable during SSR or in restricted browsers.
+      // Storage can be unavailable during SSR or restricted browsers.
     }
     return APP_BRAND_CONFIG.defaultLocale;
   }
