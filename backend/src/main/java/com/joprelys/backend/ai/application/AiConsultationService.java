@@ -127,7 +127,7 @@ public class AiConsultationService {
         return requireSession(visitId, userId, organizationId).locale;
     }
 
-    /** Interactive typed input remains decision-gated. */
+    /** Interactive/manual input keeps the explicit decision workflow for compatibility. */
     public MessageView processText(
             UUID visitId,
             UUID userId,
@@ -143,9 +143,10 @@ public class AiConsultationService {
     }
 
     /**
-     * Realtime microphone input is continuous capture, not an interactive wizard.
-     * Every phrase may enrich the in-memory working draft, but no per-phrase revision
-     * is left pending and no clarification is allowed to stop the next phrase.
+     * Continuous microphone/rebuild input never leaves a clarification or field
+     * decision pending. Any safe, grounded changes are accepted only into the
+     * recoverable AI working draft. The clinical form is untouched until the
+     * clinician validates the generated report.
      */
     public MessageView processRealtimeTranscript(
             UUID visitId,
@@ -213,7 +214,7 @@ public class AiConsultationService {
         }
     }
 
-    /** Legacy/manual staging endpoint. Capture itself no longer depends on this gate. */
+    /** Legacy/manual staging endpoint; the new capture path does not depend on it. */
     public TranscriptionView stageRealtimeTranscript(
             UUID visitId,
             UUID userId,
@@ -229,7 +230,6 @@ public class AiConsultationService {
         }
     }
 
-    /** Dictation analysis enriches the working draft and immediately frees capture for the next recording. */
     public MessageView analyzeTranscript(
             UUID visitId,
             UUID userId,
@@ -369,13 +369,13 @@ public class AiConsultationService {
             } else if (toolPlan.clarification() == null) {
                 revision = revisionManager.createRevision(state, toolPlan.changes());
                 if (continuousCapture && revision != null && "PENDING".equals(revision.status())) {
-                    // ACCEPT here means accepted into the recoverable AI working draft only.
-                    // The consultation itself is still untouched until the doctor applies/saves it.
-                    revisionManager.decideRevision(state, revision.id(), "ACCEPT");
+                    RevisionView createdRevision = revision;
+                    UUID acceptedRevisionId = createdRevision.id();
+                    revisionManager.decideRevision(state, acceptedRevisionId, "ACCEPT");
                     revision = state.revisions.stream()
-                            .filter(item -> item.id().equals(revision.id()))
+                            .filter(item -> item.id().equals(acceptedRevisionId))
                             .findFirst()
-                            .orElse(revision);
+                            .orElse(createdRevision);
                 }
             }
 
