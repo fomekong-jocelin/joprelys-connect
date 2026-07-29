@@ -7,6 +7,7 @@ import { of } from 'rxjs';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
 import { RbacApiService } from './rbac/rbac-api.service';
+import { Visit } from '../visit/visit.models';
 
 describe('DashboardComponent', () => {
   let component: DashboardComponent;
@@ -15,6 +16,17 @@ describe('DashboardComponent', () => {
   let mockVisitApi: any;
   let mockI18n: any;
   let mockRbacApi: any;
+
+  const translations: Record<string, string> = {
+    'dashboard.greeting': 'Bonjour',
+    'dashboard.welcomeSubtitle': 'Votre espace clinique est prêt pour la journée',
+    'dashboard.profileLabel': 'Profil',
+    'dashboard.queue.summary.active': 'visites actives',
+    'dashboard.queue.summary.vitalsPending': 'constantes à saisir',
+    'dashboard.queue.summary.vitalsRecorded': 'constantes saisies',
+    'dashboard.queue.summary.maxWait': 'attente max',
+    'role.MEDECIN': 'Médecin',
+  };
 
   beforeEach(async () => {
     mockAuthToken = {
@@ -34,7 +46,7 @@ describe('DashboardComponent', () => {
     };
 
     mockI18n = {
-      t: vi.fn().mockImplementation((key) => key),
+      t: vi.fn().mockImplementation((key: string, fallback?: string) => translations[key] ?? fallback ?? key),
       locale: signal('fr')
     };
     mockRbacApi = {
@@ -69,16 +81,86 @@ describe('DashboardComponent', () => {
     fixture.detectChanges();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+    fixture.destroy();
+  });
+
   it('should load active visits on init if clinical role', () => {
-    expect(mockVisitApi.getActiveVisits).toHaveBeenCalled();
+    expect(mockVisitApi.getActiveVisits).toHaveBeenCalledTimes(1);
     expect(component.isLoadingQueue()).toBe(false);
     expect(component.activeVisits()).toEqual([]);
+  });
+
+  it('should render a warmer localized welcome and a translated business role', () => {
+    expect(component.welcomeLabel()).toBe('Bonjour');
+    expect(component.authorizedLabel()).toBe('Votre espace clinique est prêt pour la journée');
+    expect(component.roleLabel()).toBe('Profil');
+    expect(component.session()?.role).toBe('Médecin');
+
+    const header = fixture.nativeElement.querySelector('.app-container > .mb-8');
+    expect(header?.textContent).toContain('Bonjour, Jean Medecin');
+    expect(header?.textContent).toContain('Médecin');
+  });
+
+  it('should keep the existing queue visually before module cards without a second queue request', () => {
+    const componentStyles = ((DashboardComponent as any).ɵcmp.styles as string[]).join('\n');
+
+    expect(componentStyles).toContain('.app-container > .mt-10');
+    expect(componentStyles).toContain('order: 2');
+    expect(componentStyles).toContain('.app-container > .grid');
+    expect(componentStyles).toContain('order: 3');
+    expect(mockVisitApi.getActiveVisits).toHaveBeenCalledTimes(1);
+  });
+
+  it('should summarize the real active queue without inventing additional statuses', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-29T17:00:00Z'));
+
+    component.activeVisits.set([
+      visit({ id: 'visit-1', createdAt: '2026-07-29T16:30:00Z' }),
+      visit({
+        id: 'visit-2',
+        createdAt: '2026-07-29T16:45:00Z',
+        vitals: { temperature: 37 },
+      }),
+    ]);
+
+    expect(component.queueWithoutVitalsCount()).toBe(1);
+    expect(component.queueWithVitalsCount()).toBe(1);
+    expect(component.queueSummaryLabel()).toBe(
+      '2 visites actives · 1 constantes à saisir · 1 constantes saisies · attente max 30 min',
+    );
+    expect(component.t('dashboard.queue.desc')).toBe(component.queueSummaryLabel());
+  });
+
+  it('should prioritize arrivalAt over creation time when ordering the existing queue', () => {
+    const laterCreatedButEarlierArrival = visit({
+      id: 'visit-early-arrival',
+      createdAt: '2026-07-29T16:50:00Z',
+      arrivalAt: '2026-07-29T16:10:00Z',
+    });
+    const earlierCreatedButLaterArrival = visit({
+      id: 'visit-late-arrival',
+      createdAt: '2026-07-29T16:20:00Z',
+      arrivalAt: '2026-07-29T16:40:00Z',
+    });
+    mockVisitApi.getActiveVisits.mockReturnValueOnce(
+      of([earlierCreatedButLaterArrival, laterCreatedButEarlierArrival]),
+    );
+
+    component.loadQueue();
+
+    expect(component.activeVisits().map((item) => item.id)).toEqual([
+      'visit-early-arrival',
+      'visit-late-arrival',
+    ]);
   });
 
   it('should calculate BMI correctly when weight and height are provided', () => {
     component.vitalsWeight = 70;
     component.vitalsHeight = 175;
-    expect(component.computedBmi).toBe(22.86); // 70 / 1.75^2 = 22.857 -> 22.86
+    expect(component.computedBmi).toBe(22.86);
   });
 
   it('should return null BMI if height or weight is missing', () => {
@@ -169,4 +251,19 @@ describe('DashboardComponent', () => {
     component.closeAuditSecurityModal();
     expect(component.showAuditSecurityModal()).toBe(false);
   });
+
+  function visit(overrides: Partial<Visit>): Visit {
+    return {
+      id: 'visit-default',
+      visitNumber: 'VIS-001',
+      patientId: 'patient-1',
+      patientName: 'Patient Test',
+      patientDpu: 'DPU-001',
+      reason: 'Motif',
+      orientation: 'Médecine générale',
+      status: 'EN_COURS',
+      createdAt: '2026-07-29T16:00:00Z',
+      ...overrides,
+    };
+  }
 });
