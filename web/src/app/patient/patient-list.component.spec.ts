@@ -68,7 +68,9 @@ describe('PatientListComponent', () => {
 
     expect(workspace).not.toBeNull();
     expect(search).not.toBeNull();
-    expect(search.type).toBe('search');
+    expect(search.type).toBe('text');
+    expect(search.getAttribute('inputmode')).toBe('search');
+    expect(search.getAttribute('enterkeyhint')).toBe('search');
     expect(search.getAttribute('placeholder')).toBe('patients.searchPlaceholder');
 
     const renderedButtons = Array.from(workspace.querySelectorAll('button')) as HTMLButtonElement[];
