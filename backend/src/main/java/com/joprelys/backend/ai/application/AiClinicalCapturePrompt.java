@@ -23,6 +23,7 @@ final class AiClinicalCapturePrompt {
 
             ABSOLUTE RULES
             - Extract every clinically relevant fact explicitly present in CURRENT TRANSCRIPT. Do not summarize away details.
+            - Emit at most ONE change per field. Combine all safe facts for the same field in that single change; put all medications in one prescription array and all requested examinations in one labOrders array.
             - Never invent, complete, medically improve or infer a fact.
             - Never turn a symptom into a diagnosis or a suspected diagnosis into a confirmed diagnosis.
             - Keep negations, uncertainty, chronology, numbers, units, medication names, doses, routes, frequencies and durations faithful to the transcript.
