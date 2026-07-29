@@ -72,7 +72,7 @@ Les valeurs longues utilisent `overflow-wrap:anywhere` / `break-words` sans tron
 - [x] la date de naissance et l’âge sont présentés comme une valeur compacte ;
 - [x] aucune valeur n’est volontairement tronquée ;
 - [x] contact d’urgence reste repliable ;
-- [ ] tests Angular + build production verts.
+- [x] tests Angular + build production verts sur CI #1907.
 
 ## Tests
 
@@ -83,7 +83,7 @@ Les valeurs longues utilisent `overflow-wrap:anywhere` / `break-words` sans tron
 - [x] identité : fiche alignée unique au lieu de la mosaïque de cartes ;
 - [x] identité : e-mail + adresse protégés contre les longues chaînes ;
 - [x] identité : contact d’urgence toujours repliable ;
-- [ ] gate frontend complet.
+- [x] gate frontend complet — CI #1907 SUCCESS.
 
 ## SemVer
 
