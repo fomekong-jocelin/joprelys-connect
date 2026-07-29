@@ -100,9 +100,7 @@ public class ConsultationControllerTest {
 
     @Test
     void givenMedecinA_whenSaveConsultation_thenSuccess() throws Exception {
-        String json = """
-                {"symptoms":"Fièvre à 39°C, frissons, maux de tête","clinicalExam":"Gorge rouge, amygdales hypertrophiées","diagnosis":"Angine bactérienne","advice":"Repos, hydratation, éviter les contacts","followUp":"Contrôle dans 7 jours"}
-                """;
+        String json = "{\"symptoms\":\"Fièvre à 39°C, frissons, maux de tête\",\"clinicalExam\":\"Gorge rouge, amygdales hypertrophiées\",\"diagnosis\":\"Angine bactérienne\",\"advice\":\"Repos, hydratation, éviter les contacts\",\"followUp\":\"Contrôle dans 7 jours\"}";
         mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
                         .header("Authorization", "Bearer " + tokenMedecinA)
                         .contentType(MediaType.APPLICATION_JSON).content(json))
@@ -117,12 +115,12 @@ public class ConsultationControllerTest {
 
     @Test
     void givenExistingConsultation_whenSaveAgain_thenUpsertSuccess() throws Exception {
-        String json1 = """{"symptoms":"Douleur thoracique","diagnosis":"Suspicion angine de poitrine"}""";
+        String json1 = "{\"symptoms\":\"Douleur thoracique\",\"diagnosis\":\"Suspicion angine de poitrine\"}";
         mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
                         .header("Authorization", "Bearer " + tokenMedecinA)
                         .contentType(MediaType.APPLICATION_JSON).content(json1))
                 .andExpect(status().isOk());
-        String json2 = """{"symptoms":"Douleur thoracique irradiant dans le bras gauche","clinicalExam":"ECG normal, auscultation normale","diagnosis":"Douleur musculo-squelettique","advice":"Repos, antalgiques","followUp":"Bilan cardiologique si récidive"}""";
+        String json2 = "{\"symptoms\":\"Douleur thoracique irradiant dans le bras gauche\",\"clinicalExam\":\"ECG normal, auscultation normale\",\"diagnosis\":\"Douleur musculo-squelettique\",\"advice\":\"Repos, antalgiques\",\"followUp\":\"Bilan cardiologique si récidive\"}";
         mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
                         .header("Authorization", "Bearer " + tokenMedecinA)
                         .contentType(MediaType.APPLICATION_JSON).content(json2))
@@ -149,7 +147,7 @@ public class ConsultationControllerTest {
 
     @Test
     void givenAgentAccueil_whenSaveConsultation_thenForbidden() throws Exception {
-        String json = """{"symptoms":"Tentative non autorisée","diagnosis":"Interdit"}""";
+        String json = "{\"symptoms\":\"Tentative non autorisée\",\"diagnosis\":\"Interdit\"}";
         mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
                         .header("Authorization", "Bearer " + tokenAgentA)
                         .contentType(MediaType.APPLICATION_JSON).content(json))
@@ -161,7 +159,7 @@ public class ConsultationControllerTest {
         mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
                         .header("Authorization", "Bearer " + tokenMedecinA)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"diagnosis":"Diagnostic sans symptômes"}"""))
+                        .content("{\"diagnosis\":\"Diagnostic sans symptômes\"}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -170,7 +168,7 @@ public class ConsultationControllerTest {
         mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
                         .header("Authorization", "Bearer " + tokenMedecinA)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"symptoms":"Symptômes sans diagnostic"}"""))
+                        .content("{\"symptoms\":\"Symptômes sans diagnostic\"}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -180,7 +178,7 @@ public class ConsultationControllerTest {
         mockMvc.perform(post("/api/visits/" + unknownId + "/consultation")
                         .header("Authorization", "Bearer " + tokenMedecinA)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"symptoms":"Symptômes valides","diagnosis":"Diagnostic valide"}"""))
+                        .content("{\"symptoms\":\"Symptômes valides\",\"diagnosis\":\"Diagnostic valide\"}"))
                 .andExpect(status().isNotFound());
     }
 
@@ -195,7 +193,7 @@ public class ConsultationControllerTest {
     void givenNoToken_whenSaveConsultation_thenUnauthorized() throws Exception {
         mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"symptoms":"Symptômes","diagnosis":"Diagnostic"}"""))
+                        .content("{\"symptoms\":\"Symptômes\",\"diagnosis\":\"Diagnostic\"}"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -204,7 +202,7 @@ public class ConsultationControllerTest {
         mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
                         .header("Authorization", "Bearer " + tokenMedecinB)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"symptoms":"Tentative cross-tenant","diagnosis":"Accès interdit"}"""))
+                        .content("{\"symptoms\":\"Tentative cross-tenant\",\"diagnosis\":\"Accès interdit\"}"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("CONSENT_REQUIRED"))
                 .andExpect(jsonPath("$.error.action").value("REQUEST_ACCESS"))
@@ -220,7 +218,7 @@ public class ConsultationControllerTest {
         mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
                         .header("Authorization", "Bearer " + tokenMedecinA)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"symptoms":"Symptômes sur visite clôturée","diagnosis":"Ne devrait pas passer"}"""))
+                        .content("{\"symptoms\":\"Symptômes sur visite clôturée\",\"diagnosis\":\"Ne devrait pas passer\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value(
                         "Une consultation ne peut être saisie que sur une visite active (EN_COURS)."));
