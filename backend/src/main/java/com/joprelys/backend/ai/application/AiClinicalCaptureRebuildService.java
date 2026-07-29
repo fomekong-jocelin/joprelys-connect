@@ -59,8 +59,6 @@ public class AiClinicalCaptureRebuildService {
                 locale);
 
         for (String chunk : chunks(capture)) {
-            // Confidence is deliberately not used as a discard gate here. The durable
-            // transcript is evidence and remains visible to the clinician for correction.
             MessageView result = consultationService.processRealtimeTranscript(
                     visitId,
                     userId,
@@ -75,7 +73,7 @@ public class AiClinicalCaptureRebuildService {
              * that ambiguity erase the safe facts. Only when the whole chunk yielded no
              * structured change do we retry its individual factual sentences.
              */
-            if (result.changedFields().isEmpty()) {
+            if (result != null && result.changedFields().isEmpty()) {
                 List<String> sentences = factualSentences(chunk);
                 if (sentences.size() > 1) {
                     for (String sentence : sentences) {
