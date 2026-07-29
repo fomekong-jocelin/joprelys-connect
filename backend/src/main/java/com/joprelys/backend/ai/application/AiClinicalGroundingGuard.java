@@ -192,14 +192,27 @@ final class AiClinicalGroundingGuard {
                 || normalized.matches(".*\\b\\d+(?:[.,]\\d+)?\\s*(mg|g|ml|mcg|ug|ui)\\b.*");
     }
 
-    /** Speaker-unverified realtime requires an explicit clinician prescribing act. */
+    /**
+     * Speaker-unverified realtime requires an unmistakable first-person clinician
+     * prescribing act. Generic words such as "prescrire", "ordonnance de" or
+     * "prescription" are intentionally insufficient because a patient can say them.
+     */
     private boolean hasExplicitPrescriptionIntent(String utterance) {
         String normalized = normalize(utterance);
         if (normalized.isBlank()) return false;
         return containsAny(normalized,
-                "je prescris", "je lui prescris", "nous prescrivons", "prescrire", "prescription de",
-                "j ordonne", "nous ordonnons", "ordonnance de", "mettre sur l ordonnance",
-                "i prescribe", "we prescribe", "prescribe", "prescription for", "order medication");
+                "je prescris",
+                "je lui prescris",
+                "nous prescrivons",
+                "j ordonne",
+                "nous ordonnons",
+                "je mets sur l ordonnance",
+                "j ajoute a l ordonnance",
+                "i prescribe",
+                "we prescribe",
+                "i am prescribing",
+                "we are prescribing",
+                "i add to the prescription");
     }
 
     private boolean hasExplicitPrescriptionCancellation(String utterance) {
