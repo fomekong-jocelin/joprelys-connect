@@ -17,7 +17,7 @@ import { AccessRequirementNoticeService } from './access-requirement-notice.serv
                 : i18n.t('access.remediation.consentTitle', 'Autorisation du patient requise') }}
             </p>
             <p class="mt-0.5 text-xs leading-5 text-[var(--text-secondary)]">
-              {{ notice.message || fallbackMessage(notice.code) }}
+              {{ localizedMessage(notice.code, notice.requiredScope) }}
             </p>
           </div>
           <div class="flex shrink-0 items-center gap-2">
@@ -47,16 +47,17 @@ export class AccessRequirementBannerComponent {
   readonly i18n = inject(I18nService);
   private readonly router = inject(Router);
 
-  fallbackMessage(code: 'CONSENT_REQUIRED' | 'SCOPE_REQUIRED'): string {
-    return code === 'CONSENT_REQUIRED'
-      ? this.i18n.t(
-          'access.remediation.consentMessage',
-          'Le patient n’a pas encore autorisé l’accès à cette partie de son dossier.',
-        )
-      : this.i18n.t(
-          'access.remediation.scopeMessage',
-          'L’accès existe, mais le périmètre demandé n’a pas été partagé.',
-        );
+  localizedMessage(code: 'CONSENT_REQUIRED' | 'SCOPE_REQUIRED', requiredScope?: string): string {
+    if (code === 'CONSENT_REQUIRED') {
+      return this.i18n.t(
+        'access.remediation.consentMessage',
+        'Le patient n’a pas encore autorisé l’accès à cette partie de son dossier.',
+      );
+    }
+    return this.i18n.t(
+      'access.remediation.scopeMessageWithScope',
+      'L’accès existe, mais le périmètre « {scope} » n’a pas été partagé.',
+    ).replace('{scope}', this.scopeLabel(requiredScope));
   }
 
   requestAccess(requiredScope?: string): void {
@@ -65,9 +66,15 @@ export class AccessRequirementBannerComponent {
       queryParams: {
         scope: requiredScope || undefined,
         reason: requiredScope
-          ? this.i18n.t('access.remediation.scopeReason', 'Accès requis au périmètre {scope}').replace('{scope}', requiredScope)
+          ? this.i18n.t('access.remediation.scopeReason', 'Accès requis au périmètre {scope}')
+              .replace('{scope}', this.scopeLabel(requiredScope))
           : this.i18n.t('access.remediation.recordReason', 'Accès au dossier patient requis'),
       },
     });
+  }
+
+  private scopeLabel(scope?: string): string {
+    if (!scope) return this.i18n.t('access.remediation.scope.generic', 'demandé');
+    return this.i18n.t(`access.remediation.scope.${scope}`, scope);
   }
 }
