@@ -1,6 +1,7 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { finalize } from 'rxjs';
+import { catchError, finalize, of, Subject, switchMap, timer } from 'rxjs';
 import { AdmissionCompleted, UnifiedAdmissionComponent } from '../admission/unified-admission.component';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
@@ -11,6 +12,11 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { PatientApiService } from './patient-api.service';
 import { Patient } from './patient.models';
+
+interface PatientSearchRequest {
+  query: string;
+  delayMs: number;
+}
 
 @Component({
   selector: 'app-patient-list',
@@ -29,6 +35,8 @@ export class PatientListComponent implements OnInit {
   private readonly api = inject(PatientApiService);
   private readonly i18n = inject(I18nService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly searchRequests = new Subject<PatientSearchRequest>();
 
   readonly list = signal<Patient[]>([]);
   readonly loading = signal(false);
@@ -59,6 +67,20 @@ export class PatientListComponent implements OnInit {
     return `${count} ${resultLabel}`;
   });
 
+  constructor() {
+    this.searchRequests.pipe(
+      switchMap(({ query, delayMs }) => {
+        if (delayMs === 0) {
+          return this.fetchPatients(query);
+        }
+        return timer(delayMs).pipe(
+          switchMap(() => this.fetchPatients(query)),
+        );
+      }),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(patients => this.list.set(patients));
+  }
+
   ngOnInit(): void {
     this.load();
   }
@@ -68,20 +90,12 @@ export class PatientListComponent implements OnInit {
   }
 
   load(): void {
-    const query = this.searchQuery().trim();
-    this.appliedSearchQuery.set(query);
-    this.loading.set(true);
-    this.error.set(null);
-    this.api.list(query).pipe(
-      finalize(() => this.loading.set(false))
-    ).subscribe({
-      next: (patients) => this.list.set(patients),
-      error: () => this.error.set(this.i18n.t('patients.loadError')),
-    });
+    this.queueSearch(0);
   }
 
   onSearchInput(event: Event): void {
     this.searchQuery.set((event.target as HTMLInputElement).value);
+    this.queueSearch(250);
   }
 
   clearSearch(): void {
@@ -89,7 +103,7 @@ export class PatientListComponent implements OnInit {
       return;
     }
     this.searchQuery.set('');
-    this.load();
+    this.queueSearch(0);
   }
 
   toggleCreateForm(): void {
@@ -140,5 +154,26 @@ export class PatientListComponent implements OnInit {
 
   patientDisplayName(patient: Patient): string {
     return patient.displayName || patient.fullName || patient.temporaryPatientNumber || patient.globalPatientNumber;
+  }
+
+  private queueSearch(delayMs: number): void {
+    this.searchRequests.next({
+      query: this.searchQuery().trim(),
+      delayMs,
+    });
+  }
+
+  private fetchPatients(query: string) {
+    this.appliedSearchQuery.set(query);
+    this.loading.set(true);
+    this.error.set(null);
+
+    return this.api.list(query).pipe(
+      catchError(() => {
+        this.error.set(this.i18n.t('patients.loadError'));
+        return of([] as Patient[]);
+      }),
+      finalize(() => this.loading.set(false)),
+    );
   }
 }

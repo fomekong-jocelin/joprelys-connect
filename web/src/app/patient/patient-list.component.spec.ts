@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { PatientApiService } from './patient-api.service';
 import { PatientListComponent } from './patient-list.component';
 import { Patient } from './patient.models';
@@ -56,10 +56,23 @@ describe('PatientListComponent', () => {
     fixture.detectChanges();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+    fixture.destroy();
+  });
+
   it('should load patients on init', () => {
     expect(mockApi.list).toHaveBeenCalledWith('');
     expect(component.list()).toEqual(mockPatients);
     expect(component.loading()).toBe(false);
+  });
+
+  it('should keep the patient header close to the search workspace on mobile', () => {
+    const headerSection = fixture.nativeElement.querySelector('app-page-header section');
+    const workspaceContainer = fixture.nativeElement.querySelector('app-page-header + .app-container');
+
+    expect(headerSection?.classList.contains('pb-2')).toBe(true);
+    expect(workspaceContainer?.classList.contains('pt-2')).toBe(true);
   });
 
   it('should render search as the primary workspace control without a separate search button', () => {
@@ -77,7 +90,52 @@ describe('PatientListComponent', () => {
     expect(renderedButtons.some(button => button.textContent?.includes('common.search'))).toBe(false);
   });
 
-  it('should trigger the existing search when Enter is pressed', () => {
+  it('should search progressively after a short debounce without requiring Enter', () => {
+    vi.useFakeTimers();
+    const initialCalls = mockApi.list.mock.calls.length;
+    const search = fixture.nativeElement.querySelector('[data-testid="patient-search-input"]') as HTMLInputElement;
+
+    search.value = 'Je';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(mockApi.list).toHaveBeenCalledTimes(initialCalls);
+
+    vi.advanceTimersByTime(249);
+    expect(mockApi.list).toHaveBeenCalledTimes(initialCalls);
+
+    vi.advanceTimersByTime(1);
+    expect(mockApi.list).toHaveBeenLastCalledWith('Je');
+    expect(component.appliedSearchQuery()).toBe('Je');
+  });
+
+  it('should cancel the previous in-flight search as soon as the user keeps typing', () => {
+    vi.useFakeTimers();
+    const cancelled = vi.fn();
+    mockApi.list.mockImplementation((query: string) => {
+      if (query === 'J') {
+        return new Observable<Patient[]>(() => () => cancelled());
+      }
+      return of(mockPatients);
+    });
+
+    const search = fixture.nativeElement.querySelector('[data-testid="patient-search-input"]') as HTMLInputElement;
+    search.value = 'J';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    vi.advanceTimersByTime(250);
+
+    expect(mockApi.list).toHaveBeenLastCalledWith('J');
+    expect(cancelled).not.toHaveBeenCalled();
+
+    search.value = 'Je';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(cancelled).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(250);
+    expect(mockApi.list).toHaveBeenLastCalledWith('Je');
+  });
+
+  it('should keep Enter compatible as an immediate search shortcut', () => {
     const loadSpy = vi.spyOn(component, 'load');
     const search = fixture.nativeElement.querySelector('[data-testid="patient-search-input"]') as HTMLInputElement;
 

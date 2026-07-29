@@ -6,7 +6,7 @@ import { RouterLink } from '@angular/router';
   standalone: true,
   imports: [RouterLink],
   template: `
-    <section class="app-container py-5 sm:py-7">
+    <section [class]="compact() ? 'app-container pt-5 pb-2 sm:pt-7 sm:pb-3' : 'app-container py-5 sm:py-7'">
       <div class="flex min-w-0 flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div class="min-w-0 max-w-3xl space-y-1">
           @if (backLink()) {
@@ -29,4 +29,5 @@ export class PageHeaderComponent {
   readonly subtitle = input<string | null>(null);
   readonly backLink = input<string | null>(null);
   readonly backLabel = input('Retour');
+  readonly compact = input(false);
 }
