@@ -173,6 +173,7 @@
         @let reportDraft = session()?.draft;
         @let missingClinicalExam = !reportDraft?.clinicalExam?.trim();
         @let missingDiagnosis = !(reportDraft?.diagnosis?.trim() || reportDraft?.finalDiagnosis?.trim() || reportDraft?.suspectedDiagnosis?.trim());
+        @let transcriptReviewCount = reviewRequiredCount();
         <div class="mx-auto w-full max-w-4xl py-2">
           <header class="flex flex-col gap-3 border-b border-[var(--app-border)] pb-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -190,7 +191,7 @@
           </header>
 
           @if (hasDraftContent()) {
-            @if (missingClinicalExam || missingDiagnosis) {
+            @if (missingClinicalExam || missingDiagnosis || transcriptReviewCount > 0) {
               <div class="mt-4 rounded-[var(--radius-brand-sm)] border border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] p-3">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div class="min-w-0">
@@ -211,16 +212,40 @@
                           {{ i18n.t('consultation.ai.missingDiagnosis', 'Diagnostic retenu') }}
                         </span>
                       }
+                      @if (transcriptReviewCount > 0) {
+                        <span class="rounded-[var(--radius-brand-xs)] border border-[var(--brand-warning-border)] bg-[var(--app-surface)] px-2 py-1 text-[10px] font-semibold text-[var(--brand-warning-text)]">
+                          {{ transcriptReviewCount }} {{ i18n.t('consultation.ai.transcriptPassagesStillToReview', 'passage(s) du transcript à vérifier') }}
+                        </span>
+                      }
                     </div>
+                    @if (transcriptReviewCount > 0) {
+                      <p class="mt-2 text-[11px] leading-4 text-[var(--text-secondary)]">
+                        {{ i18n.t('consultation.ai.transcriptReviewNonBlockingHelp', 'Ces passages restent conservés. Les faits sûrs du compte rendu peuvent être validés maintenant ; relisez seulement les passages incertains si nécessaire.') }}
+                      </p>
+                    }
                   </div>
-                  <button
-                    type="button"
-                    (click)="resumeCapture()"
-                    [disabled]="busy()"
-                    class="ui-button ui-button-secondary shrink-0"
-                  >
-                    {{ i18n.t('consultation.ai.completeRecording', 'Compléter par un nouvel enregistrement') }}
-                  </button>
+                  <div class="flex shrink-0 flex-col gap-2">
+                    @if (transcriptReviewCount > 0) {
+                      <button
+                        type="button"
+                        (click)="backToTranscript()"
+                        [disabled]="busy()"
+                        class="ui-button ui-button-secondary"
+                      >
+                        {{ i18n.t('consultation.ai.reviewUncertainPassages', 'Relire les passages à vérifier') }}
+                      </button>
+                    }
+                    @if (missingClinicalExam || missingDiagnosis) {
+                      <button
+                        type="button"
+                        (click)="resumeCapture()"
+                        [disabled]="busy()"
+                        class="ui-button ui-button-secondary"
+                      >
+                        {{ i18n.t('consultation.ai.completeRecording', 'Compléter par un nouvel enregistrement') }}
+                      </button>
+                    }
+                  </div>
                 </div>
               </div>
             }
