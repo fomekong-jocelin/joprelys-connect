@@ -17,12 +17,14 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.databind.ObjectMapper;
 
 @Component
 final class AiRevisionManager {
 
     private static final int MAX_REVISIONS = 10;
     private static final int MAX_EVIDENCE_ITEMS = 4;
+    private static final int MAX_STRUCTURED_DRAFT_CHARS = 12_000;
     private static final Set<String> ADDITIVE_TEXT_FIELDS = Set.of(
             "symptoms",
             "clinicalExam",
@@ -30,8 +32,12 @@ final class AiRevisionManager {
             "conclusion",
             "advice",
             "followUp");
+    private static final Set<String> ADDITIVE_STRUCTURED_FIELDS = Set.of(
+            "prescription",
+            "labOrders");
 
     private final AiClinicalMemoryManager memoryManager = new AiClinicalMemoryManager();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     RevisionView createRevision(
             AiConsultationSessionState state,
@@ -138,42 +144,77 @@ final class AiRevisionManager {
         ParsedChange first = group.getFirst();
 
         if (group.size() > 1) {
-            boolean additiveSetGroup = ADDITIVE_TEXT_FIELDS.contains(first.field())
-                    && group.stream().allMatch(item -> "SET".equals(item.operation()));
-            if (!additiveSetGroup) {
+            boolean allSets = group.stream().allMatch(item -> "SET".equals(item.operation()));
+            if (allSets && ADDITIVE_TEXT_FIELDS.contains(first.field())) {
+                first = mergeTextGroup(group);
+            } else if (allSets && ADDITIVE_STRUCTURED_FIELDS.contains(first.field())) {
+                first = mergeStructuredGroup(group);
+            } else {
+                /* Never resolve competing diagnostic/vital/clear operations by "last wins". */
                 throw invalid("AI_CHANGE_DUPLICATE_FIELD");
             }
-
-            String merged = "";
-            LinkedHashSet<String> evidence = new LinkedHashSet<>();
-            String uncertainty = "LOW";
-            for (ParsedChange item : group) {
-                merged = mergeNarrative(merged, item.proposedValue());
-                if (item.evidence() != null) evidence.addAll(item.evidence());
-                uncertainty = maxUncertainty(uncertainty, item.uncertainty());
-            }
-            first = new ParsedChange(
-                    first.field(),
-                    "SET",
-                    merged,
-                    first.reason(),
-                    uncertainty,
-                    evidence.stream().limit(MAX_EVIDENCE_ITEMS).toList());
         }
 
-        if (!"SET".equals(first.operation()) || !ADDITIVE_TEXT_FIELDS.contains(first.field())) {
+        if (!"SET".equals(first.operation())) {
             return first;
         }
 
         String previous = state.draft.get(first.field());
-        String mergedWithAccepted = mergeNarrative(previous, first.proposedValue());
+        if (ADDITIVE_TEXT_FIELDS.contains(first.field())) {
+            return withValue(first, mergeNarrative(previous, first.proposedValue()));
+        }
+        if (ADDITIVE_STRUCTURED_FIELDS.contains(first.field())) {
+            return withValue(first, mergeStructuredArrays(first.field(), previous, first.proposedValue()));
+        }
+        return first;
+    }
+
+    private ParsedChange mergeTextGroup(List<ParsedChange> group) {
+        ParsedChange first = group.getFirst();
+        String merged = "";
+        LinkedHashSet<String> evidence = new LinkedHashSet<>();
+        String uncertainty = "LOW";
+        for (ParsedChange item : group) {
+            merged = mergeNarrative(merged, item.proposedValue());
+            if (item.evidence() != null) evidence.addAll(item.evidence());
+            uncertainty = maxUncertainty(uncertainty, item.uncertainty());
+        }
         return new ParsedChange(
                 first.field(),
-                first.operation(),
-                mergedWithAccepted,
+                "SET",
+                merged,
                 first.reason(),
-                first.uncertainty(),
-                first.evidence());
+                uncertainty,
+                evidence.stream().limit(MAX_EVIDENCE_ITEMS).toList());
+    }
+
+    private ParsedChange mergeStructuredGroup(List<ParsedChange> group) {
+        ParsedChange first = group.getFirst();
+        String merged = null;
+        LinkedHashSet<String> evidence = new LinkedHashSet<>();
+        String uncertainty = "LOW";
+        for (ParsedChange item : group) {
+            merged = mergeStructuredArrays(first.field(), merged, item.proposedValue());
+            if (item.evidence() != null) evidence.addAll(item.evidence());
+            uncertainty = maxUncertainty(uncertainty, item.uncertainty());
+        }
+        return new ParsedChange(
+                first.field(),
+                "SET",
+                merged,
+                first.reason(),
+                uncertainty,
+                evidence.stream().limit(MAX_EVIDENCE_ITEMS).toList());
+    }
+
+    private ParsedChange withValue(ParsedChange source, String value) {
+        return new ParsedChange(
+                source.field(),
+                source.operation(),
+                value,
+                source.reason(),
+                source.uncertainty(),
+                source.evidence());
     }
 
     private String mergeNarrative(String left, String right) {
@@ -189,6 +230,62 @@ final class AiRevisionManager {
 
         String separator = endsWithSentencePunctuation(previous) ? " " : ". ";
         return previous + separator + proposed;
+    }
+
+    @SuppressWarnings("unchecked")
+    private String mergeStructuredArrays(String field, String left, String right) {
+        if (right == null || right.isBlank()) return left;
+        if (left == null || left.isBlank()) return right;
+        try {
+            Object rawLeft = objectMapper.readValue(left, Object.class);
+            Object rawRight = objectMapper.readValue(right, Object.class);
+            if (!(rawLeft instanceof List<?> leftList) || !(rawRight instanceof List<?> rightList)) {
+                throw invalid("AI_STRUCTURED_DRAFT_INVALID");
+            }
+            List<Object> merged = new ArrayList<>(leftList);
+            Set<String> seen = new LinkedHashSet<>();
+            for (Object item : leftList) seen.add(structuredKey(field, item));
+            for (Object item : rightList) {
+                String key = structuredKey(field, item);
+                if (seen.add(key)) merged.add(item);
+            }
+            String serialized = objectMapper.writeValueAsString(merged);
+            if (serialized.length() > MAX_STRUCTURED_DRAFT_CHARS) {
+                throw invalid("AI_STRUCTURED_DRAFT_TOO_LARGE");
+            }
+            return serialized;
+        } catch (ResponseStatusException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw invalid("AI_STRUCTURED_DRAFT_INVALID");
+        }
+    }
+
+    private String structuredKey(String field, Object item) {
+        if ("labOrders".equals(field)) {
+            if (!(item instanceof String value) || value.isBlank()) {
+                throw invalid("AI_STRUCTURED_DRAFT_INVALID");
+            }
+            return normalize(value);
+        }
+        if ("prescription".equals(field)) {
+            if (!(item instanceof Map<?, ?> map)
+                    || !(map.get("drugName") instanceof String drugName)
+                    || drugName.isBlank()) {
+                throw invalid("AI_STRUCTURED_DRAFT_INVALID");
+            }
+            try {
+                /*
+                 * Exact line signature: identical repeated medication lines are deduped;
+                 * different lines for the same drug are preserved for clinician review
+                 * instead of one silently overwriting the other.
+                 */
+                return normalize(drugName) + "|" + objectMapper.writeValueAsString(item);
+            } catch (Exception exception) {
+                throw invalid("AI_STRUCTURED_DRAFT_INVALID");
+            }
+        }
+        throw invalid("AI_STRUCTURED_DRAFT_INVALID");
     }
 
     private boolean endsWithSentencePunctuation(String value) {
