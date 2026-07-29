@@ -7,59 +7,69 @@ import { Patient } from '../patient.models';
   standalone: true,
   template: `
     @let currentPatient = patient();
-    <div class="grid gap-5">
-      <section>
-        @if (!isProvisional(currentPatient)) {
-          <div class="mb-3 flex justify-end">
-            <span class="rounded-sm bg-[var(--brand-success-subtle)] px-2 py-1 text-[10px] font-black uppercase tracking-wider text-[var(--brand-success-text)]">
-              {{ t('patient.urgTemp.admin.verified') }}
-            </span>
-          </div>
-        }
+    <div class="grid gap-4">
+      @if (!isProvisional(currentPatient)) {
+        <div class="flex justify-end">
+          <span class="rounded-sm bg-[var(--brand-success-subtle)] px-2 py-1 text-[10px] font-black uppercase tracking-wider text-[var(--brand-success-text)]">
+            {{ t('patient.urgTemp.admin.verified') }}
+          </span>
+        </div>
+      }
 
-        <dl class="grid grid-cols-2 gap-3 lg:grid-cols-3">
-          <div class="ui-card-muted p-3">
-            <dt class="ui-label block">{{ t('patient.urgTemp.admin.gender') }}</dt>
-            <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.gender) }}</dd>
-          </div>
-          <div class="ui-card-muted p-3">
-            <dt class="ui-label block">{{ t('patient.urgTemp.admin.birthDate') }}</dt>
-            <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ birthDateLabel(currentPatient.birthDate) }}</dd>
-          </div>
-          <div class="ui-card-muted p-3">
-            <dt class="ui-label block">{{ t('patient.urgTemp.admin.phone') }}</dt>
-            <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.phone) }}</dd>
-          </div>
-          <div class="ui-card-muted p-3">
-            <dt class="ui-label block">{{ t('patient.urgTemp.admin.bloodGroup') }}</dt>
-            <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.bloodGroup) }}</dd>
-          </div>
-          <div class="ui-card-muted col-span-2 p-3 lg:col-span-1">
-            <dt class="ui-label block">{{ t('patient.urgTemp.admin.email') }}</dt>
-            <dd class="break-words text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.email) }}</dd>
-          </div>
-          <div class="ui-card-muted p-3">
-            <dt class="ui-label block">{{ t('patient.urgTemp.admin.city') }}</dt>
-            <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.city) }}</dd>
-          </div>
-          <div class="ui-card-muted p-3">
-            <dt class="ui-label block">{{ t('patient.urgTemp.admin.district') }}</dt>
-            <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.district) }}</dd>
-          </div>
-          <div class="ui-card-muted col-span-2 p-3 lg:col-span-1">
-            <dt class="ui-label block">{{ t('patient.urgTemp.admin.address') }}</dt>
-            <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.address) }}</dd>
-          </div>
-        </dl>
-      </section>
+      <!-- One aligned information sheet is easier to scan on mobile than a mosaic of cards. -->
+      <dl
+        class="overflow-hidden rounded-md border border-[var(--app-border)] bg-[var(--app-surface)]"
+        data-testid="patient-identity-information-sheet"
+      >
+        <div class="grid grid-cols-[minmax(7rem,0.75fr)_minmax(0,1.25fr)] items-start gap-3 border-b border-[var(--divider-subtle)] px-4 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
+          <dt class="ui-label pt-0.5">{{ t('patient.urgTemp.admin.gender') }}</dt>
+          <dd class="min-w-0 text-sm font-extrabold leading-5 text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.gender) }}</dd>
+        </div>
+
+        <div class="grid grid-cols-[minmax(7rem,0.75fr)_minmax(0,1.25fr)] items-start gap-3 border-b border-[var(--divider-subtle)] px-4 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
+          <dt class="ui-label pt-0.5">{{ t('patient.urgTemp.admin.birthDate') }}</dt>
+          <dd class="min-w-0 text-sm font-extrabold leading-5 text-[var(--text-primary)]">{{ birthDateLabel(currentPatient.birthDate) }}</dd>
+        </div>
+
+        <div class="grid grid-cols-[minmax(7rem,0.75fr)_minmax(0,1.25fr)] items-start gap-3 border-b border-[var(--divider-subtle)] px-4 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
+          <dt class="ui-label pt-0.5">{{ t('patient.urgTemp.admin.phone') }}</dt>
+          <dd class="min-w-0 break-words text-sm font-extrabold leading-5 text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.phone) }}</dd>
+        </div>
+
+        <div class="grid grid-cols-[minmax(7rem,0.75fr)_minmax(0,1.25fr)] items-start gap-3 border-b border-[var(--divider-subtle)] px-4 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
+          <dt class="ui-label pt-0.5">{{ t('patient.urgTemp.admin.email') }}</dt>
+          <dd class="min-w-0 break-words text-sm font-extrabold leading-5 text-[var(--text-primary)] [overflow-wrap:anywhere]">{{ valueOrFallback(currentPatient.email) }}</dd>
+        </div>
+
+        <div class="grid grid-cols-[minmax(7rem,0.75fr)_minmax(0,1.25fr)] items-start gap-3 border-b border-[var(--divider-subtle)] px-4 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
+          <dt class="ui-label pt-0.5">{{ t('patient.urgTemp.admin.city') }}</dt>
+          <dd class="min-w-0 break-words text-sm font-extrabold leading-5 text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.city) }}</dd>
+        </div>
+
+        <div class="grid grid-cols-[minmax(7rem,0.75fr)_minmax(0,1.25fr)] items-start gap-3 border-b border-[var(--divider-subtle)] px-4 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
+          <dt class="ui-label pt-0.5">{{ t('patient.urgTemp.admin.district') }}</dt>
+          <dd class="min-w-0 break-words text-sm font-extrabold leading-5 text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.district) }}</dd>
+        </div>
+
+        <div class="grid grid-cols-[minmax(7rem,0.75fr)_minmax(0,1.25fr)] items-start gap-3 border-b border-[var(--divider-subtle)] px-4 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
+          <dt class="ui-label pt-0.5">{{ t('patient.urgTemp.admin.address') }}</dt>
+          <dd class="min-w-0 break-words text-sm font-extrabold leading-5 text-[var(--text-primary)] [overflow-wrap:anywhere]">{{ valueOrFallback(currentPatient.address) }}</dd>
+        </div>
+
+        <div class="grid grid-cols-[minmax(7rem,0.75fr)_minmax(0,1.25fr)] items-start gap-3 px-4 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
+          <dt class="ui-label pt-0.5">{{ t('patient.urgTemp.admin.bloodGroup') }}</dt>
+          <dd class="min-w-0 text-sm font-extrabold leading-5 text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.bloodGroup) }}</dd>
+        </div>
+      </dl>
 
       <!-- Emergency contact remains secondary inside the identity view. -->
-      <section class="border-t border-[var(--divider-subtle)] pt-4">
+      <section class="border-t border-[var(--divider-subtle)] pt-3">
         <button
           type="button"
           class="flex min-h-11 w-full items-center justify-between gap-3 text-left"
           [attr.aria-expanded]="contactExpanded()"
           (click)="toggleContact()"
+          data-testid="patient-emergency-contact-toggle"
         >
           <h3 class="whitespace-nowrap text-sm font-extrabold text-[var(--text-primary)]">
             {{ t('patient.urgTemp.contact.title') }}
@@ -78,14 +88,14 @@ import { Patient } from '../patient.models';
         </button>
 
         @if (contactExpanded()) {
-          <dl class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 animate-fade-in">
-            <div class="ui-card-muted p-3">
-              <dt class="ui-label block">{{ t('patient.urgTemp.contact.name') }}</dt>
-              <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.emergencyContactName) }}</dd>
+          <dl class="mt-2 overflow-hidden rounded-md border border-[var(--app-border)] bg-[var(--app-surface)] animate-fade-in">
+            <div class="grid grid-cols-[minmax(7rem,0.75fr)_minmax(0,1.25fr)] items-start gap-3 border-b border-[var(--divider-subtle)] px-4 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
+              <dt class="ui-label pt-0.5">{{ t('patient.urgTemp.contact.name') }}</dt>
+              <dd class="min-w-0 break-words text-sm font-extrabold leading-5 text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.emergencyContactName) }}</dd>
             </div>
-            <div class="ui-card-muted p-3">
-              <dt class="ui-label block">{{ t('patient.urgTemp.contact.phone') }}</dt>
-              <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.emergencyContactPhone) }}</dd>
+            <div class="grid grid-cols-[minmax(7rem,0.75fr)_minmax(0,1.25fr)] items-start gap-3 px-4 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
+              <dt class="ui-label pt-0.5">{{ t('patient.urgTemp.contact.phone') }}</dt>
+              <dd class="min-w-0 break-words text-sm font-extrabold leading-5 text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.emergencyContactPhone) }}</dd>
             </div>
           </dl>
         }
@@ -128,6 +138,6 @@ export class PatientAdministrativeSummaryComponent {
 
     const locale = this.i18n.locale() === 'en' ? 'en-GB' : 'fr-FR';
     const formattedDate = new Intl.DateTimeFormat(locale).format(birthDate);
-    return `${formattedDate} (${Math.max(age, 0)} ${this.t('patient.urgTemp.admin.ageUnit')})`;
+    return `${formattedDate} · ${Math.max(age, 0)} ${this.t('patient.urgTemp.admin.ageUnit')}`;
   }
 }
