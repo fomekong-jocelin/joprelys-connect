@@ -75,7 +75,7 @@ class FinalClinicalReviewServiceTest {
                     {
                       "field": "prescription",
                       "operation": "SET",
-                      "value": "[{\"drugName\":\"Paracétamol\",\"dosage\":\"1000 mg\",\"route\":\"voie orale\"}]",
+                      "value": [{"drugName":"Paracétamol","dosage":"1000 mg","route":"voie orale"}],
                       "reason": "Prescription explicitement présente dans le transcript mais absente du brouillon.",
                       "uncertainty": "LOW",
                       "evidence": ["Paracétamol 1000mg", "voie orale"]
@@ -83,7 +83,7 @@ class FinalClinicalReviewServiceTest {
                     {
                       "field": "labOrders",
                       "operation": "SET",
-                      "value": "[\"goutte épaisse\"]",
+                      "value": ["goutte épaisse"],
                       "reason": "Examen explicitement demandé dans le transcript.",
                       "uncertainty": "LOW",
                       "evidence": ["Examen goutte d'epaisse"]
@@ -199,7 +199,7 @@ class FinalClinicalReviewServiceTest {
                   "changes": [{
                     "field": "prescription",
                     "operation": "SET",
-                    "value": "[{\"drugName\":\"Amoxicilline\",\"dosage\":\"500 mg\"}]",
+                    "value": [{"drugName":"Amoxicilline","dosage":"500 mg"}],
                     "reason": "Substitution proposée",
                     "uncertainty": "LOW",
                     "evidence": ["Paracétamol"]
@@ -228,7 +228,7 @@ class FinalClinicalReviewServiceTest {
                     {
                       "field": "vitals",
                       "operation": "SET",
-                      "value": "{\"temperature\":37.0}",
+                      "value": {"temperature":37.0},
                       "reason": "Normalisation",
                       "uncertainty": "LOW",
                       "evidence": ["39.0"]
@@ -236,7 +236,7 @@ class FinalClinicalReviewServiceTest {
                     {
                       "field": "labOrders",
                       "operation": "SET",
-                      "value": "[\"NFS\",\"CRP\"]",
+                      "value": ["NFS","CRP"],
                       "reason": "Ajout proposé",
                       "uncertainty": "LOW",
                       "evidence": ["NFS"]
