@@ -45,6 +45,22 @@ final class AiConsultationMessageBuilder {
         }
     }
 
+    String buildCaptureExtractionMessage(
+            String transcript,
+            Map<String, String> draft,
+            String locale) {
+        try {
+            return "LOCALE: " + normalizeLocale(locale)
+                    + "\nACCEPTED DRAFT (deduplication context only): "
+                    + objectMapper.writeValueAsString(draft == null ? Map.of() : draft)
+                    + "\nCURRENT TRANSCRIPT:\n"
+                    + transcript;
+        } catch (Exception exception) {
+            throw new ResponseStatusException(
+                    HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
+        }
+    }
+
     String clarificationModelText(
             String locale,
             ClarificationView clarification,
