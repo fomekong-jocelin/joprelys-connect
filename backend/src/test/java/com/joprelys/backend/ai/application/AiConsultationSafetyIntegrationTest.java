@@ -1,7 +1,6 @@
 package com.joprelys.backend.ai.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -92,28 +91,27 @@ class AiConsultationSafetyIntegrationTest {
     }
 
     @Test
-    void shouldRejectDuplicateActionsOnSameFieldBeforeRevisionCreation() {
+    void compatibleRepeatedSymptomsMustConsolidateBeforeClinicianDecision() {
         when(provider.chat(anyList(), anyString())).thenReturn(new AiChatResponse("""
                 {
                   "changes": [
                     {"field":"symptoms","operation":"SET","value":"Fièvre","reason":"dicté","uncertainty":"LOW","evidence":["Fièvre"]},
                     {"field":"symptoms","operation":"SET","value":"Fièvre et céphalées","reason":"dicté","uncertainty":"LOW","evidence":["Fièvre avec céphalées"]}
                   ],
-                  "assistantMessage":"Deux versions.",
+                  "assistantMessage":"Deux faits compatibles.",
                   "needsClarification":false,
                   "clarification":null
                 }
                 """, 100, "test"));
 
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
-                () -> service.processText(
-                        visitId, userId, organizationId, "Fièvre avec céphalées."));
+        var response = service.processText(
+                visitId, userId, organizationId, "Fièvre avec céphalées.");
 
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, exception.getStatusCode());
-        assertEquals("AI_TOOL_DUPLICATE_FIELD", exception.getReason());
-        assertFalse(service.getSession(visitId, userId, organizationId)
-                .orElseThrow().revisions().stream().anyMatch(revision -> "PENDING".equals(revision.status())));
+        assertEquals(1, response.revisions().size());
+        assertEquals(1, response.revisions().getFirst().proposals().size());
+        assertEquals("symptoms", response.revisions().getFirst().proposals().getFirst().field());
+        assertTrue(response.revisions().getFirst().proposals().getFirst().proposedValue().contains("Fièvre"));
+        assertTrue(response.revisions().getFirst().proposals().getFirst().proposedValue().contains("céphalées"));
     }
 
     private AiChatResponse responseWithPrescription(String drugName) {
