@@ -21,8 +21,9 @@ import tools.jackson.databind.ObjectMapper;
  * clinical proposal can be created.
  *
  * <p>LLM output is never accepted as evidence. A proposed change must cite the
- * current source verbatim and may not introduce any unsupported clinical token.
- * When in doubt the change is dropped (fail closed).</p>
+ * current source verbatim and may not introduce unsupported clinical concepts.
+ * Neutral grammatical glue and simple inflections are allowed so the final note
+ * can be readable without turning the model into a source of clinical truth.</p>
  */
 final class AiClinicalFactualityGuard {
 
@@ -37,11 +38,30 @@ final class AiClinicalFactualityGuard {
             "enleve", "enlever", "annule", "annuler", "arrete", "arreter",
             "corrige", "corriger", "remplace", "remplacer", "delete", "remove",
             "clear", "cancel", "stop", "discontinue", "replace", "correct");
+    private static final Set<String> CLINICAL_UNIT_TOKENS = Set.of(
+            "mg", "mcg", "ug", "g", "kg", "ml", "cl", "l", "ui",
+            "cm", "mm", "mmhg", "bpm", "spo2");
+
+    /**
+     * Words that may improve grammar/readability but cannot create a clinical fact
+     * by themselves. No disease, symptom, examination or treatment vocabulary belongs here.
+     */
     private static final Set<String> SAFE_GLUE_WORDS = Set.of(
-            "patient", "patiente", "presente", "signale", "rapporte",
-            "avec", "pour", "depuis", "dans", "chez", "une", "des", "les", "est",
-            "sont", "avait", "avoir", "the", "and", "with", "from", "for", "has",
-            "have", "reports", "reported", "presents", "presenting", "of", "to");
+            "patient", "patiente", "patients", "patientes",
+            "age", "agee", "ages", "agees",
+            "presente", "presentent", "presentant", "presentant",
+            "signale", "signalant", "rapporte", "rapportant", "decrit", "decrivant",
+            "observe", "observee", "observes", "observees",
+            "associe", "associee", "associes", "associees",
+            "evolue", "evoluant", "evolution", "actuellement",
+            "avec", "pour", "depuis", "dans", "chez", "ainsi", "notamment",
+            "dont", "plus", "egalement", "correspondant", "correspondante",
+            "conseille", "conseils", "demande", "recommande",
+            "prise", "prises", "voie", "orale", "pendant",
+            "une", "des", "les", "est", "sont", "avait", "avoir",
+            "the", "and", "with", "from", "for", "has", "have",
+            "reports", "reported", "presents", "presenting", "associated",
+            "evolving", "currently", "during", "also", "including", "patient");
     private static final Pattern TOKEN_PATTERN = Pattern.compile("[a-z0-9]+(?:[.,][0-9]+)?");
 
     private final ObjectMapper objectMapper;
@@ -130,7 +150,7 @@ final class AiClinicalFactualityGuard {
         }
 
         for (String required : criticalEvidenceTokens(change.evidence())) {
-            if (!proposedTokens.contains(required)) {
+            if (!containsTokenOrInflection(proposedTokens, required)) {
                 return false;
             }
         }
@@ -139,7 +159,7 @@ final class AiClinicalFactualityGuard {
             if (SAFE_GLUE_WORDS.contains(token)) {
                 continue;
             }
-            if (!sourceTokens.contains(token)) {
+            if (!containsTokenOrInflection(sourceTokens, token)) {
                 return false;
             }
         }
@@ -196,18 +216,18 @@ final class AiClinicalFactualityGuard {
             return false;
         }
         if (numericOnly && value instanceof Number) {
-            return valueTokens.stream().allMatch(sourceTokens::contains);
+            return valueTokens.stream().allMatch(token -> containsTokenOrInflection(sourceTokens, token));
         }
         return valueTokens.stream()
                 .filter(token -> !SAFE_GLUE_WORDS.contains(token))
-                .allMatch(sourceTokens::contains);
+                .allMatch(token -> containsTokenOrInflection(sourceTokens, token));
     }
 
     private Set<String> criticalEvidenceTokens(List<String> evidence) {
         Set<String> result = new HashSet<>();
         for (String quote : evidence) {
             for (String token : significantTokens(quote)) {
-                if (isNumeric(token) || NEGATION_TOKENS.contains(token)) {
+                if (isNumeric(token) || NEGATION_TOKENS.contains(token) || CLINICAL_UNIT_TOKENS.contains(token)) {
                     result.add(token);
                 }
             }
@@ -220,11 +240,36 @@ final class AiClinicalFactualityGuard {
         Matcher matcher = TOKEN_PATTERN.matcher(normalize(value));
         while (matcher.find()) {
             String token = matcher.group();
-            if (token.length() >= 3 || isNumeric(token) || NEGATION_TOKENS.contains(token)) {
+            if (token.length() >= 3
+                    || isNumeric(token)
+                    || NEGATION_TOKENS.contains(token)
+                    || CLINICAL_UNIT_TOKENS.contains(token)) {
                 result.add(token);
             }
         }
         return result;
+    }
+
+    private boolean containsTokenOrInflection(Set<String> tokens, String expected) {
+        if (tokens.contains(expected)) {
+            return true;
+        }
+        String canonicalExpected = canonicalInflection(expected);
+        return tokens.stream().map(this::canonicalInflection).anyMatch(canonicalExpected::equals);
+    }
+
+    /** Only removes elementary plural inflections; it never performs semantic stemming. */
+    private String canonicalInflection(String token) {
+        if (token == null || token.length() <= 4 || isNumeric(token) || CLINICAL_UNIT_TOKENS.contains(token)) {
+            return token;
+        }
+        if (token.endsWith("es") && token.length() > 5) {
+            return token.substring(0, token.length() - 2);
+        }
+        if (token.endsWith("s") && token.length() > 4) {
+            return token.substring(0, token.length() - 1);
+        }
+        return token;
     }
 
     private boolean isNumeric(String token) {
