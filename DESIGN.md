@@ -222,6 +222,16 @@ La page publique de connexion suit les règles suivantes :
 
 La page « Mes disponibilités » (`clinic/availability`) introduit la grille hebdomadaire `shared/ui/weekly-availability-grid` (7 colonnes Lun → Dim, défilement horizontal sur mobile) et l'aperçu des créneaux. Les plages horaires sont des cartes compactes à rayon sobre (≤ `8px`, tokens `--radius-brand-*`) avec ombre légère `var(--shadow-panel)` ; le jour sélectionné est souligné par `var(--brand-primary)` et les plages désactivées sont atténuées (`opacity-50`). Toutes les couleurs passent par les tokens centralisés (`--app-surface`, `--app-border`, `--brand-primary`, `--text-*`) — aucune couleur en dur, thèmes light/dark automatiques. La désactivation d'une plage et la suppression d'une indisponibilité passent par la modale de confirmation partagée.
 
+### Dossier patient progressif mobile-first
+
+- La route `Fiche d’identité` est la surface unique de l’identité : elle affiche directement les informations administratives utiles et ne crée pas un second accordéon « Informations administratives ».
+- Les informations secondaires utilisent une divulgation progressive avec des titres courts : `Contexte d’urgence`, `Informations médicales`, `Contact d’urgence`.
+- Les titres d’accordéons restent sur une ligne à partir de `360px` ; réduire ou clarifier le libellé est préféré à diminuer excessivement la taille de police.
+- Les informations de sécurité critiques (allergies critiques, Break-Glass, urgence active) ne sont jamais masquées pour gagner de la place.
+- Sur mobile, l’action clinique principale (`Ouvrir une visite` ou `Démarrer la consultation`) occupe une ligne pleine largeur avant les actions secondaires. `Synthèse PDF` et `Retour` partagent ensuite une ligne lorsque les deux sont disponibles.
+- Sur desktop, le même groupe reste compact et aligné ; l’ordre visuel conserve une action primaire clairement identifiable.
+- Les libellés de boutons restent indivisibles et les cibles tactiles mesurent au moins `44px`.
+
 ## Do's and Don'ts
 
 ### Do
