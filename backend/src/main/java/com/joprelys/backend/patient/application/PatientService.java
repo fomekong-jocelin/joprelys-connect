@@ -19,6 +19,7 @@ import java.util.ArrayList;
 public class PatientService {
 
 	private final PatientRepository patientRepository;
+	private final PatientAccessPolicyService accessPolicy;
 	private final PatientNumberGenerator patientNumberGenerator;
 	private final AuditService auditService;
 	private final UserAccountRepository userAccountRepository;
@@ -48,6 +49,7 @@ public class PatientService {
 
 
 	public PatientService(PatientRepository patientRepository,
+						  PatientAccessPolicyService accessPolicy,
 						  PatientNumberGenerator patientNumberGenerator,
 						  AuditService auditService,
 						  UserAccountRepository userAccountRepository,
@@ -71,6 +73,7 @@ public class PatientService {
 						  com.joprelys.backend.notification.infrastructure.persistence.NotificationRepository notificationRepository,
 						  com.joprelys.backend.audit.infrastructure.persistence.AuditLogRepository auditLogRepository) {
 		this.patientRepository = patientRepository;
+		this.accessPolicy = accessPolicy;
 		this.patientNumberGenerator = patientNumberGenerator;
 		this.auditService = auditService;
 		this.userAccountRepository = userAccountRepository;
@@ -193,20 +196,12 @@ public class PatientService {
 
 	@Transactional(readOnly = true)
 	public PatientEntity getPatientById(UUID id) {
+		accessPolicy.validateAccess(id, "medical_records");
 		var patient = patientRepository.findByIdGlobally(id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé"));
 
 		var actor = getCurrentUser();
 		if (actor != null) {
-			UUID organizationId = actor.getOrganizationId();
-			boolean hasConsent = checkConsent(patient.getId(), organizationId);
-			if (!hasConsent) {
-				boolean hasEmergencyAccess = checkEmergencyAccess(patient.getId(), organizationId);
-				if (!hasEmergencyAccess) {
-					throw new ResponseStatusException(HttpStatus.FORBIDDEN, "CONSENT_REQUIRED");
-				}
-			}
-
 			auditService.logSuccess(
 					actor.getId(),
 					actor.getOrganizationId(),
@@ -221,90 +216,20 @@ public class PatientService {
 		return patient;
 	}
 
-	// WT1 (SCOPES): Validation granulaire des accès par scope
+	/**
+	 * Legacy entry point kept for callers that have not yet migrated. It delegates to
+	 * the single access-policy truth and can no longer implement its own scope logic.
+	 */
 	public void validateAccess(UUID patientId, String requiredScope) {
-		var actor = getCurrentUser();
-		if (actor == null) {
-			var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-			if (auth != null && auth.isAuthenticated()) {
-				boolean isPatientRole = auth.getAuthorities().stream()
-						.anyMatch(a -> a.getAuthority().equals("ROLE_PATIENT"));
-				if (isPatientRole) {
-					var patientOpt = patientRepository.findByGlobalPatientNumber(auth.getName());
-					if (patientOpt.isPresent() && patientOpt.get().getId().equals(patientId)) {
-						return; // Allowed!
-					}
-				}
-			}
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié.");
-		}
-
-		UUID organizationId = actor.getOrganizationId();
-
-		var patient = patientRepository.findByIdGlobally(patientId)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé"));
-		if (patient.getOrganizationId() != null && patient.getOrganizationId().equals(organizationId)) {
-			return; // Full access for own clinic
-		}
-
-		if (checkEmergencyAccess(patientId, organizationId)) {
-			return; // Full access during active emergency
-		}
-
-		var consentOpt = patientConsentRepository.findByPatientIdAndOrganizationId(patientId, organizationId);
-		if (consentOpt.isPresent()) {
-			var consent = consentOpt.get();
-			boolean isActive = "ACTIVE".equals(consent.getStatus()) || "APPROVED".equals(consent.getStatus());
-			// FR-CONSENT-003 : vérifier l'expiration
-			boolean notExpired = consent.getExpiresAt() == null || consent.getExpiresAt().isAfter(java.time.Instant.now());
-			if (isActive && notExpired) {
-				if (hasScope(consent.getScopes(), requiredScope)) {
-					return;
-				}
-				throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Scope manquant: " + requiredScope);
-			}
-		}
-
-		var activeRequest = externalAccessRequestRepository.findByPatientId(patientId).stream()
-				.filter(r -> organizationId.equals(r.getRequesterOrganizationId()) &&
-						"APPROUVEE".equals(r.getStatus()) &&
-						r.getExpiresAt() != null &&
-						r.getExpiresAt().isAfter(java.time.Instant.now()))
-				.findFirst();
-		if (activeRequest.isPresent()) {
-			var request = activeRequest.get();
-			if (hasScope(request.getScopes(), requiredScope)) {
-				return;
-			}
-			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Scope manquant: " + requiredScope);
-		}
-
-		throw new ResponseStatusException(HttpStatus.FORBIDDEN, "CONSENT_REQUIRED");
+		accessPolicy.validateAccess(patientId, requiredScope);
 	}
 
-	// WT1 (SCOPES): Validation d'accès pour les sous-ressources avec masquage d'existence (404 au lieu de 403)
+	/**
+	 * Historical sub-resource entry point. Access failures are intentionally no longer
+	 * rewritten as 404: callers receive the explicit 403 remediation from the policy.
+	 */
 	public void validateAccessForSubResource(UUID patientId, String requiredScope, String notFoundMessage) {
-		try {
-			validateAccess(patientId, requiredScope);
-		} catch (ResponseStatusException e) {
-			if (e.getStatusCode() == org.springframework.http.HttpStatus.FORBIDDEN && "CONSENT_REQUIRED".equals(e.getReason())) {
-				throw new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, notFoundMessage);
-			}
-			throw e;
-		}
-	}
-
-	// WT1 (SCOPES): Vérification de la présence d'un scope dans une liste de scopes
-	private boolean hasScope(String scopesStr, String requiredScope) {
-		if (scopesStr == null || scopesStr.isBlank()) {
-			return false;
-		}
-		for (String s : scopesStr.split(",")) {
-			if (s.trim().equalsIgnoreCase(requiredScope.trim())) {
-				return true;
-			}
-		}
-		return false;
+		accessPolicy.validateAccess(patientId, requiredScope);
 	}
 
 	private boolean checkConsent(UUID patientId, UUID organizationId) {
@@ -312,7 +237,6 @@ public class PatientService {
 		if (consent.isPresent()) {
 			var c = consent.get();
 			boolean isActive = "ACTIVE".equals(c.getStatus()) || "APPROVED".equals(c.getStatus());
-			// FR-CONSENT-003 : vérifier l'expiration
 			boolean notExpired = c.getExpiresAt() == null || c.getExpiresAt().isAfter(java.time.Instant.now());
 			return isActive && notExpired;
 		}
@@ -421,95 +345,81 @@ public class PatientService {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le patient secondaire doit être actif");
 		}
 
-		// 1. Reassign Visits
 		var visits = visitRepository.findByPatientId(secondaryId);
 		for (var v : visits) {
 			v.setPatient(primary);
 			visitRepository.save(v);
 		}
 
-		// 2. Reassign PatientConsents
 		var consents = patientConsentRepository.findByPatientId(secondaryId);
 		for (var c : consents) {
 			c.setPatientId(primaryId);
 			patientConsentRepository.save(c);
 		}
 
-		// 3. Reassign EmergencyAccessAuthorizations
 		var emergencyAccesses = emergencyAccessAuthorizationRepository.findByPatientId(secondaryId);
 		for (var ea : emergencyAccesses) {
 			ea.setPatientId(primaryId);
 			emergencyAccessAuthorizationRepository.save(ea);
 		}
 
-		// 4. Reassign ExternalAccessRequests
 		var externalRequests = externalAccessRequestRepository.findByPatientId(secondaryId);
 		for (var er : externalRequests) {
 			er.setPatientId(primaryId);
 			externalAccessRequestRepository.save(er);
 		}
 
-		// 5. Reassign PatientAllergies
 		var allergies = patientAllergyRepository.findAllByPatientId(secondaryId);
 		for (var al : allergies) {
 			al.setPatientId(primaryId);
 			patientAllergyRepository.save(al);
 		}
 
-		// 6. Reassign PatientMedicalHistories
 		var histories = patientMedicalHistoryRepository.findAllByPatientId(secondaryId);
 		for (var h : histories) {
 			h.setPatientId(primaryId);
 			patientMedicalHistoryRepository.save(h);
 		}
 
-		// 7. Reassign LabOrders
 		var labOrders = labOrderRepository.findByPatientIdOrderByCreatedAtDesc(secondaryId);
 		for (var lo : labOrders) {
 			lo.setPatient(primary);
 			labOrderRepository.save(lo);
 		}
 
-		// 8. Reassign LabResults
 		var labResults = labResultRepository.findByPatientIdOrderByCreatedAtDesc(secondaryId);
 		for (var lr : labResults) {
 			lr.setPatient(primary);
 			labResultRepository.save(lr);
 		}
 
-		// 9. Reassign Hospitalizations
 		var hospitalizations = hospitalizationRepository.findByPatientIdOrderByAdmittedAtDesc(secondaryId);
 		for (var hosp : hospitalizations) {
 			hosp.setPatientId(primaryId);
 			hospitalizationRepository.save(hosp);
 		}
 
-		// 10. Reassign Notifications
 		var notifs = notificationRepository.findByPatientIdOrderByCreatedAtDesc(secondaryId);
 		for (var n : notifs) {
 			n.setPatientId(primaryId);
 			notificationRepository.save(n);
 		}
 
-		// 11. Reassign AuditLogs
 		var audits = auditLogRepository.findByPatientIdOrderByCreatedAtDesc(secondaryId);
 		for (var a : audits) {
 			a.setPatientId(primaryId);
 			auditLogRepository.save(a);
 		}
 
-		// Mark duplicate candidate entries as RESOLVED
 		var candidate = duplicateCandidateRepository.findByPatientPair(primaryId, secondaryId).orElse(null);
 		if (candidate != null) {
 			candidate.setStatus("RESOLVED");
 			duplicateCandidateRepository.save(candidate);
 		}
 
-		// Mark secondary patient as MERGED
 		secondary.setStatus("MERGED");
 		patientRepository.save(secondary);
 
-		// Record merging history
 		var mergedHistory = new com.joprelys.backend.patient.infrastructure.persistence.PatientMergedHistoryEntity(
 				primary,
 				secondary.getId(),
@@ -518,7 +428,6 @@ public class PatientService {
 		);
 		mergedHistoryRepository.save(mergedHistory);
 
-		// Log security audit for merge action
 		auditService.logSuccess(
 				actorId,
 				primary.getOrganizationId(),
@@ -538,7 +447,6 @@ public class PatientService {
 		return null;
 	}
 
-	// WT1 (SCOPES): Utilitaire de conversion UUID
 	public static UUID convertToUuid(Object obj) {
 		if (obj == null) return null;
 		if (obj instanceof UUID) return (UUID) obj;
