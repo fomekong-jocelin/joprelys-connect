@@ -265,7 +265,7 @@ class AiConsultationContinuousCaptureTest {
                     {
                       "field": "prescription",
                       "operation": "SET",
-                      "value": "[{\"drugName\":\"Paracétamol\",\"dosage\":\"1000 mg\",\"frequency\":\"matin midi soir\",\"posology\":\"2 comprimé par prise\",\"route\":\"voie orale\"},{\"drugName\":\"Vitafer\",\"instructions\":\"1cuillerr a café\",\"frequency\":\"1 fois pas jour\",\"route\":\"voie orale\"}]",
+                      "value": [{"drugName":"Paracétamol","dosage":"1000 mg","frequency":"matin midi soir","posology":"2 comprimé par prise","route":"voie orale"},{"drugName":"Vitafer","instructions":"1cuillerr a café","frequency":"1 fois pas jour","route":"voie orale"}],
                       "reason": "Prescription explicitement dictée.",
                       "uncertainty": "MEDIUM",
                       "evidence": ["Paracétamol 1000mg", "2 comprimé par prise", "Vitafer", "1 fois pas jour voie orale"]
@@ -273,7 +273,7 @@ class AiConsultationContinuousCaptureTest {
                     {
                       "field": "labOrders",
                       "operation": "SET",
-                      "value": "[\"goutte épaisse\"]",
+                      "value": ["goutte épaisse"],
                       "reason": "Examen explicitement demandé.",
                       "uncertainty": "LOW",
                       "evidence": ["Examen goutte d'epaisse"]
