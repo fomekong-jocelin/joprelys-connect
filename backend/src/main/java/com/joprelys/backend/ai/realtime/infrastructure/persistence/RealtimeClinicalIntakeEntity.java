@@ -42,8 +42,29 @@ public class RealtimeClinicalIntakeEntity {
     @Column(name = "transcript_text", nullable = false, columnDefinition = "TEXT")
     private String transcriptText;
 
+    @Column(name = "original_transcript_text", columnDefinition = "TEXT")
+    private String originalTranscriptText;
+
     @Column(name = "confidence", nullable = false)
     private double confidence;
+
+    @Column(name = "correction_count", nullable = false)
+    private int correctionCount;
+
+    @Column(name = "corrected_by_user_id")
+    private UUID correctedByUserId;
+
+    @Column(name = "corrected_at")
+    private Instant correctedAt;
+
+    @Column(name = "capture_status", nullable = false, length = 16)
+    private String captureStatus = "PENDING";
+
+    @Column(name = "analyzed_at")
+    private Instant analyzedAt;
+
+    @Column(name = "consumed_at")
+    private Instant consumedAt;
 
     @Column(name = "created_by_user_id", nullable = false)
     private UUID createdByUserId;
@@ -74,11 +95,38 @@ public class RealtimeClinicalIntakeEntity {
         this.transcriptText = transcriptText;
         this.confidence = confidence;
         this.createdByUserId = createdByUserId;
+        this.captureStatus = "PENDING";
     }
 
     @PrePersist
     void prePersist() {
         if (receivedAt == null) receivedAt = Instant.now();
+        if (captureStatus == null || captureStatus.isBlank()) captureStatus = "PENDING";
+    }
+
+    public void correctTranscript(String correctedText, UUID correctedByUserId, Instant correctedAt) {
+        if (originalTranscriptText == null) {
+            originalTranscriptText = transcriptText;
+        }
+        transcriptText = correctedText;
+        correctionCount += 1;
+        this.correctedByUserId = correctedByUserId;
+        this.correctedAt = correctedAt;
+        captureStatus = "PENDING";
+        analyzedAt = null;
+        consumedAt = null;
+    }
+
+    public void markAnalyzed(Instant at) {
+        if (!"CONSUMED".equals(captureStatus)) {
+            captureStatus = "ANALYZED";
+            analyzedAt = at;
+        }
+    }
+
+    public void markConsumed(Instant at) {
+        captureStatus = "CONSUMED";
+        consumedAt = at;
     }
 
     public UUID getId() { return id; }
@@ -89,7 +137,14 @@ public class RealtimeClinicalIntakeEntity {
     public String getEventId() { return eventId; }
     public String getItemId() { return itemId; }
     public String getTranscriptText() { return transcriptText; }
+    public String getOriginalTranscriptText() { return originalTranscriptText; }
     public double getConfidence() { return confidence; }
+    public int getCorrectionCount() { return correctionCount; }
+    public UUID getCorrectedByUserId() { return correctedByUserId; }
+    public Instant getCorrectedAt() { return correctedAt; }
+    public String getCaptureStatus() { return captureStatus; }
+    public Instant getAnalyzedAt() { return analyzedAt; }
+    public Instant getConsumedAt() { return consumedAt; }
     public UUID getCreatedByUserId() { return createdByUserId; }
     public Instant getReceivedAt() { return receivedAt; }
 }
