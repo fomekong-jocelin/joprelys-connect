@@ -53,8 +53,8 @@ final class AiMedicationSafetyGuard {
             ParsedResponse parsed,
             Map<String, Object> clinicalContext,
             String locale) {
-        if (parsed == null || parsed.needsClarification()) {
-            return parsed;
+        if (parsed == null) {
+            return null;
         }
         ParsedChange prescriptionChange = parsed.changes().stream()
                 .filter(change -> PRESCRIPTION.equals(change.field()) && "SET".equals(change.operation()))
