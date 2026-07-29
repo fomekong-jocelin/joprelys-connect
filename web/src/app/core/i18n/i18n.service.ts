@@ -17,11 +17,6 @@ export class I18nService {
   readonly locale = signal<AppLocale>(this.loadStoredLocale());
   private readonly dictionary = signal<TranslationDictionary>({});
   private readonly loaded = signal<Record<AppLocale, boolean>>({ fr: false, en: false });
-  // Translation JSON files are copied as static assets and are not fingerprinted by
-  // Angular. A deployment can therefore serve the new JS bundle together with a
-  // browser/proxy-cached older dictionary. One revision per application bootstrap
-  // forces a fresh dictionary fetch while keeping all requests cacheable during the
-  // current page lifetime.
   private readonly translationAssetRevision = Date.now().toString(36);
 
   async init(): Promise<void> {
@@ -79,6 +74,7 @@ export class I18nService {
         spatialServices: this.optionalDictionary(`/assets/i18n/features/spatial-services/${lang}.json`),
         legal: this.optionalDictionary(`/assets/i18n/features/legal/${lang}.json`),
         consent: this.optionalDictionary(`/assets/i18n/features/consent/${lang}.json`),
+        accessRemediation: this.optionalDictionary(`/assets/i18n/features/access-remediation/${lang}.json`),
       }));
 
       this.dictionary.set({
@@ -104,6 +100,7 @@ export class I18nService {
         ...dictionaries.spatialServices,
         ...dictionaries.legal,
         ...dictionaries.consent,
+        ...dictionaries.accessRemediation,
       });
       this.loaded.update(state => ({ ...state, [lang]: true }));
     } catch {

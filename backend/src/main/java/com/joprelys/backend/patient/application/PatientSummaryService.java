@@ -3,6 +3,7 @@ package com.joprelys.backend.patient.application;
 import com.joprelys.backend.audit.application.AuditService;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import com.joprelys.backend.common.application.VerificationUrlProvider;
 import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationEntity;
 import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationRepository;
 import com.joprelys.backend.lab.infrastructure.persistence.LabResultEntity;
@@ -16,7 +17,6 @@ import com.joprelys.backend.prescription.infrastructure.persistence.Prescription
 import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
-import com.joprelys.backend.common.application.VerificationUrlProvider;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -36,7 +36,7 @@ public class PatientSummaryService {
     private final VisitRepository visitRepository;
     private final ConsultationRepository consultationRepository;
     private final LabResultRepository labResultRepository;
-    private final PatientService patientService;
+    private final PatientAccessPolicyService accessPolicy;
     private final AuditService auditService;
     private final UserAccountRepository userAccountRepository;
     private final com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository hospitalizationRepository;
@@ -54,7 +54,7 @@ public class PatientSummaryService {
             VisitRepository visitRepository,
             ConsultationRepository consultationRepository,
             LabResultRepository labResultRepository,
-            PatientService patientService,
+            PatientAccessPolicyService accessPolicy,
             AuditService auditService,
             UserAccountRepository userAccountRepository,
             com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository hospitalizationRepository,
@@ -70,7 +70,7 @@ public class PatientSummaryService {
         this.visitRepository = visitRepository;
         this.consultationRepository = consultationRepository;
         this.labResultRepository = labResultRepository;
-        this.patientService = patientService;
+        this.accessPolicy = accessPolicy;
         this.auditService = auditService;
         this.userAccountRepository = userAccountRepository;
         this.hospitalizationRepository = hospitalizationRepository;
@@ -83,7 +83,7 @@ public class PatientSummaryService {
 
     @Transactional(readOnly = true)
     public MedicalSummaryResponse getMedicalSummary(UUID patientId) {
-        patientService.validateAccess(patientId, "medical_records");
+        accessPolicy.validateAccess(patientId, "medical_records");
 
         PatientEntity patient = patientRepository.findByIdGlobally(patientId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé"));

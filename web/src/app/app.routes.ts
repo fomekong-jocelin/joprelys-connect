@@ -136,7 +136,7 @@ export const routes: Routes = [
     path: 'clinic/access-request',
     loadComponent: () => import('./clinic/external-access/clinic-access-request.component').then(m => m.ClinicAccessRequestComponent),
     canActivate: [roleGuard],
-    data: { expectedPermissions: ['PATIENT_EMERGENCY_ACCESS'] },
+    data: { expectedPermissions: ['PATIENT_READ', 'CLINICAL_READ', 'LAB_ORDER_READ', 'PHARMACY_PRESCRIPTION_READ'] },
   },
   {
     path: 'clinic/spatial',

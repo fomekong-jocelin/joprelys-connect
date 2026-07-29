@@ -1,6 +1,7 @@
 package com.joprelys.backend.patient.api;
 
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import com.joprelys.backend.patient.application.PatientAccessPolicyService;
 import com.joprelys.backend.patient.application.PatientService;
 import com.joprelys.backend.patient.application.PatientSummaryService;
 import com.joprelys.backend.patient.domain.PatientIdentityStatus;
@@ -34,6 +35,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class PatientController {
 
     private final PatientService patientService;
+    private final PatientAccessPolicyService accessPolicy;
     private final UserAccountRepository userAccountRepository;
     private final PatientSummaryService patientSummaryService;
     private final PatientCanonicalResolver canonicalResolver;
@@ -41,11 +43,13 @@ public class PatientController {
 
     public PatientController(
             PatientService patientService,
+            PatientAccessPolicyService accessPolicy,
             UserAccountRepository userAccountRepository,
             PatientSummaryService patientSummaryService,
             PatientCanonicalResolver canonicalResolver,
             LegacyPatientMergeCoordinator legacyPatientMergeCoordinator) {
         this.patientService = patientService;
+        this.accessPolicy = accessPolicy;
         this.userAccountRepository = userAccountRepository;
         this.patientSummaryService = patientSummaryService;
         this.canonicalResolver = canonicalResolver;
@@ -124,12 +128,14 @@ public class PatientController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PATIENT_READ')")
     public PatientResponse getById(@PathVariable UUID id) {
+        accessPolicy.validateAccess(id, "medical_records");
         return mapToResponse(resolveCanonicalIfMerged(patientService.getPatientById(id)));
     }
 
     @GetMapping("/{id}/summary-pdf")
     @PreAuthorize("hasAuthority('CLINICAL_READ')")
     public org.springframework.http.ResponseEntity<byte[]> downloadSummaryPdf(@PathVariable UUID id) {
+        accessPolicy.validateAccess(id, "medical_records");
         byte[] pdfBytes = patientSummaryService.generatePatientSummaryPdf(id);
         return org.springframework.http.ResponseEntity.ok()
                 .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"patient-summary-" + id + ".pdf\"")
@@ -141,6 +147,7 @@ public class PatientController {
     @PreAuthorize("hasAuthority('CLINICAL_READ')")
     @Operation(summary = "Obtenir la synthèse médicale d'un patient", description = "Retourne la synthèse médicale structurée d'un patient.")
     public MedicalSummaryResponse getMedicalSummary(@PathVariable UUID id) {
+        accessPolicy.validateAccess(id, "medical_records");
         return patientSummaryService.getMedicalSummary(id);
     }
 

@@ -1,9 +1,9 @@
 package com.joprelys.backend.consultation.api;
 
 import com.joprelys.backend.consultation.application.ConsultationService;
+import com.joprelys.backend.patient.application.PatientAccessPolicyService;
 import com.joprelys.backend.patient.application.PatientService;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
-import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,20 +30,17 @@ import org.springframework.web.server.ResponseStatusException;
 public class ConsultationController {
 
     private final ConsultationService consultationService;
-    private final MedicalDocumentRepository medicalDocumentRepository;
-    private final PatientService patientService;
+    private final PatientAccessPolicyService accessPolicy;
     private final PatientRepository patientRepository;
     private final VisitRepository visitRepository;
 
     public ConsultationController(
             ConsultationService consultationService,
-            MedicalDocumentRepository medicalDocumentRepository,
-            PatientService patientService,
+            PatientAccessPolicyService accessPolicy,
             PatientRepository patientRepository,
             VisitRepository visitRepository) {
         this.consultationService = consultationService;
-        this.medicalDocumentRepository = medicalDocumentRepository;
-        this.patientService = patientService;
+        this.accessPolicy = accessPolicy;
         this.patientRepository = patientRepository;
         this.visitRepository = visitRepository;
     }
@@ -52,17 +50,17 @@ public class ConsultationController {
     @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
     @Operation(summary = "Enregistrer une consultation", description = "Sauvegarde ou met à jour la consultation médicale d'une visite.", responses = {
             @ApiResponse(responseCode = "200", description = "Consultation enregistrée avec succès"),
-            @ApiResponse(responseCode = "404", description = "Introuvable")
+            @ApiResponse(responseCode = "403", description = "Consentement ou périmètre d'accès insuffisant"),
+            @ApiResponse(responseCode = "404", description = "Visite réellement introuvable")
     })
     public ConsultationResponse saveConsultation(
             @Parameter(description = "Identifiant de la visite") @PathVariable UUID id,
             @Valid @RequestBody SaveConsultationRequest request,
             Authentication authentication) {
-        UUID patientId = PatientService.convertToUuid(
-                visitRepository.findPatientIdByVisitId(id)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable.")));
-        patientService.validateAccessForSubResource(patientId, "medical_records", "Visite introuvable.");
-        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
+        UUID patientId = resolvePatientId(id);
+        accessPolicy.validateAccess(patientId, "medical_records");
+        var patient = patientRepository.findByIdGlobally(patientId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé."));
         UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
         try {
             com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
@@ -76,23 +74,32 @@ public class ConsultationController {
 
     @GetMapping("/{id}/consultation")
     @PreAuthorize("hasAuthority('CLINICAL_READ')")
-    @Operation(summary = "Récupérer une consultation", description = "Retourne la consultation médicale associée à une visite.", responses = {
+    @Operation(summary = "Récupérer une consultation", description = "Retourne la consultation médicale associée à une visite. Une visite valide sans consultation enregistrée retourne 204.", responses = {
             @ApiResponse(responseCode = "200", description = "Consultation trouvée"),
-            @ApiResponse(responseCode = "404", description = "Visite ou consultation introuvable")
+            @ApiResponse(responseCode = "204", description = "Visite valide, aucune consultation enregistrée"),
+            @ApiResponse(responseCode = "403", description = "Consentement ou périmètre d'accès insuffisant"),
+            @ApiResponse(responseCode = "404", description = "Visite réellement introuvable")
     })
-    public ConsultationResponse getConsultation(
+    public ResponseEntity<ConsultationResponse> getConsultation(
             @Parameter(description = "Identifiant de la visite") @PathVariable UUID id) {
-        UUID patientId = PatientService.convertToUuid(
-                visitRepository.findPatientIdByVisitId(id)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable.")));
-        patientService.validateAccessForSubResource(patientId, "medical_records", "Visite introuvable.");
-        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
+        UUID patientId = resolvePatientId(id);
+        accessPolicy.validateAccess(patientId, "medical_records");
+        var patient = patientRepository.findByIdGlobally(patientId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé."));
         UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
         try {
             com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-            return consultationService.getDetailedConsultationByVisitId(id);
+            return consultationService.findDetailedConsultationByVisitId(id)
+                    .map(ResponseEntity::ok)
+                    .orElseGet(() -> ResponseEntity.noContent().build());
         } finally {
             com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
         }
+    }
+
+    private UUID resolvePatientId(UUID visitId) {
+        return PatientService.convertToUuid(
+                visitRepository.findPatientIdByVisitId(visitId)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable.")));
     }
 }
