@@ -90,6 +90,8 @@ final class AiConsultationPrompt {
               concepts, nombres, négations, temporalités et niveaux de certitude du transcript.
             - Pour prescription, labOrders et vitals, reste structurel et conservateur : aucune information
               implicite, aucune dose calculée, aucune unité convertie, aucun médicament ou examen ajouté.
+            - Si plusieurs éléments structurés existent et qu'un seul est ambigu, conserve dans changes les
+              éléments indépendamment certains et demande une précision seulement sur l'élément ambigu.
             - Un compte rendu peut être incomplet. La complétude ne justifie jamais l'invention d'un fait.
 
             BROUILLON ACCEPTÉ
@@ -137,11 +139,19 @@ final class AiConsultationPrompt {
             - Si un seul élément est ambigu, needsClarification=true et clarification.field cible le champ
               concerné. Pour une ambiguïté médicamenteuse utilise prescription ; pour un examen labOrders ;
               pour une constante vitals.
-            - Dans ce cas, ne propose aucun changement pour le champ ambigu avant la réponse.
+            - Ne propose pas l'élément ambigu avant la réponse. En revanche, les autres faits sûrs, y compris
+              les autres éléments sûrs du même champ structuré, doivent rester dans changes.
             - Les options sont facultatives et ne doivent être proposées que si elles sont directement
               déductibles du contexte. N'invente jamais de choix thérapeutiques.
             - Ne crée jamais une clarification prescription si le nouveau tour ne contient aucune mention
               explicite d'un médicament ou si aucune clarification prescription n'était déjà en cours.
+
+            PREUVES OBLIGATOIRES
+            - Chaque objet de changes doit contenir evidence.
+            - evidence contient 1 à 4 extraits COURTS et EXACTS copiés du texte courant, jamais paraphrasés.
+            - Chaque nombre, unité, négation, médicament, examen ou fait clinique proposé doit être justifié
+              par au moins un de ces extraits.
+            - Si tu ne peux pas citer un extrait exact qui soutient le changement, n'émets pas ce changement.
 
             FORMAT DE SORTIE STRICT
             Retourne uniquement un objet JSON sans bloc Markdown :
@@ -150,9 +160,10 @@ final class AiConsultationPrompt {
                 {
                   "field": "symptoms",
                   "operation": "SET",
-                  "value": "nouvelle valeur",
+                  "value": "nouvelle valeur strictement fondée sur la dictée",
                   "reason": "raison courte et factuelle",
-                  "uncertainty": "LOW"
+                  "uncertainty": "LOW",
+                  "evidence": ["extrait exact de la dictée"]
                 }
               ],
               "assistantMessage": "phrase courte, naturelle et prononçable à voix haute",
