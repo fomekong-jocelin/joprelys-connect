@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.joprelys.backend.ai.application.AiClinicalResponseParser.ParsedChange;
+import com.joprelys.backend.ai.application.AiClinicalResponseParser.ParsedClarification;
 import com.joprelys.backend.ai.application.AiClinicalResponseParser.ParsedResponse;
 import com.joprelys.backend.medication.reference.MedicationConcept;
 import com.joprelys.backend.medication.reference.MedicationReferenceDuplicateDetector;
@@ -30,6 +31,27 @@ class AiMedicationSafetyGuardTest {
 
         assertTrue(result.needsClarification());
         assertEquals("prescription", result.clarification().field());
+        assertTrue(result.assistantMessage().contains("allergie"));
+        assertFalse(result.changes().stream().anyMatch(change -> "prescription".equals(change.field())));
+    }
+
+    @Test
+    void medicationSafetyMustStillRunWhenAnotherPrescriptionDetailNeedsClarification() {
+        ParsedResponse partial = new ParsedResponse(
+                responseWithDrug("Amoxicilline").changes(),
+                "Précisez la fréquence du second médicament.",
+                true,
+                new ParsedClarification(
+                        "prescription",
+                        "Pouvez-vous préciser la fréquence du second médicament ?",
+                        List.of()));
+
+        ParsedResponse result = guard.enforce(
+                partial,
+                Map.of("patient", Map.of("allergies", "Amoxicilline")),
+                "fr");
+
+        assertTrue(result.needsClarification());
         assertTrue(result.assistantMessage().contains("allergie"));
         assertFalse(result.changes().stream().anyMatch(change -> "prescription".equals(change.field())));
     }
