@@ -1,0 +1,9 @@
+{
+  "dashboard.greeting": "Bonjour",
+  "dashboard.welcomeSubtitle": "Votre espace clinique est prêt pour la journée",
+  "dashboard.profileLabel": "Profil",
+  "dashboard.queue.summary.active": "visites actives",
+  "dashboard.queue.summary.vitalsPending": "constantes à saisir",
+  "dashboard.queue.summary.vitalsRecorded": "constantes saisies",
+  "dashboard.queue.summary.maxWait": "attente max"
+}

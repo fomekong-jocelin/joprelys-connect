@@ -1,0 +1,9 @@
+{
+  "dashboard.greeting": "Hello",
+  "dashboard.welcomeSubtitle": "Your clinical workspace is ready for the day",
+  "dashboard.profileLabel": "Profile",
+  "dashboard.queue.summary.active": "active visits",
+  "dashboard.queue.summary.vitalsPending": "vitals to enter",
+  "dashboard.queue.summary.vitalsRecorded": "vitals recorded",
+  "dashboard.queue.summary.maxWait": "max wait"
+}
