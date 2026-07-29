@@ -1,0 +1,30 @@
+/*
+ * Consultation AI progressive workflow
+ *
+ * The clinical workspace must not compete with capture/review. The voice panel
+ * exposes its current workflow stage on its root element; while the stage is not
+ * FORM_READY, the surrounding consultation grid collapses to a single content
+ * column and the clinical form/vitals are removed from the visual flow.
+ *
+ * This deliberately targets the consultation grid structurally instead of any
+ * application-shell aside/navigation element.
+ */
+
+div:has(> main > app-voice-assistant-panel > [data-ai-workflow-stage]:not([data-ai-workflow-stage="FORM_READY"])) > aside {
+  display: none !important;
+}
+
+div:has(> main > app-voice-assistant-panel > [data-ai-workflow-stage]:not([data-ai-workflow-stage="FORM_READY"])) > main {
+  grid-column: 1 / -1 !important;
+  min-width: 0;
+}
+
+main:has(> app-voice-assistant-panel > [data-ai-workflow-stage]:not([data-ai-workflow-stage="FORM_READY"])) > form {
+  display: none !important;
+}
+
+/* Keep the active step visually focused even on very wide clinical workstations. */
+main:has(> app-voice-assistant-panel > [data-ai-workflow-stage]:not([data-ai-workflow-stage="FORM_READY"])) > app-voice-assistant-panel {
+  display: block;
+  width: 100%;
+}
