@@ -49,16 +49,12 @@ final class AiConsultationMessageBuilder {
             String transcript,
             Map<String, String> draft,
             String locale) {
-        try {
-            return "LOCALE: " + normalizeLocale(locale)
-                    + "\nACCEPTED DRAFT (deduplication context only): "
-                    + objectMapper.writeValueAsString(draft == null ? Map.of() : draft)
-                    + "\nCURRENT TRANSCRIPT:\n"
-                    + transcript;
-        } catch (Exception exception) {
-            throw new ResponseStatusException(
-                    HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
-        }
+        // The accepted draft is intentionally not serialized here. The deterministic
+        // merge layer already owns deduplication, and repeating an ever-growing draft
+        // in every long-transcript chunk would increase both latency and model cost.
+        return "LOCALE: " + normalizeLocale(locale)
+                + "\nCURRENT TRANSCRIPT:\n"
+                + transcript;
     }
 
     String clarificationModelText(
