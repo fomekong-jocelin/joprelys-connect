@@ -34,6 +34,7 @@ export class PatientListComponent implements OnInit {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly searchQuery = signal('');
+  readonly appliedSearchQuery = signal('');
   readonly selectedPatient = signal<Patient | null>(null);
   readonly showCreateForm = signal(false);
   readonly consentRequiredPatient = signal<Patient | null>(null);
@@ -43,11 +44,20 @@ export class PatientListComponent implements OnInit {
 
   readonly pageTitle = computed(() => this.i18n.t('patients.title'));
   readonly pageSubtitle = computed(() => this.i18n.t('patients.subtitle'));
-  readonly backLabel = computed(() => this.i18n.t('common.back'));
   readonly searchPlaceholder = computed(() => this.i18n.t('patients.searchPlaceholder'));
   readonly createLabel = computed(() => this.i18n.t('admission.title'));
   readonly loadingLabel = computed(() => this.i18n.t('common.loading'));
   readonly emptyLabel = computed(() => this.i18n.t('patients.empty'));
+  readonly hasSearchQuery = computed(() => this.searchQuery().trim().length > 0);
+  readonly listContextLabel = computed(() => {
+    if (!this.appliedSearchQuery()) {
+      return this.i18n.t('patients.listHeading');
+    }
+
+    const count = this.list().length;
+    const resultLabel = this.i18n.t(count === 1 ? 'patients.resultOne' : 'patients.resultsMany');
+    return `${count} ${resultLabel}`;
+  });
 
   ngOnInit(): void {
     this.load();
@@ -58,9 +68,11 @@ export class PatientListComponent implements OnInit {
   }
 
   load(): void {
+    const query = this.searchQuery().trim();
+    this.appliedSearchQuery.set(query);
     this.loading.set(true);
     this.error.set(null);
-    this.api.list(this.searchQuery()).pipe(
+    this.api.list(query).pipe(
       finalize(() => this.loading.set(false))
     ).subscribe({
       next: (patients) => this.list.set(patients),
@@ -70,6 +82,14 @@ export class PatientListComponent implements OnInit {
 
   onSearchInput(event: Event): void {
     this.searchQuery.set((event.target as HTMLInputElement).value);
+  }
+
+  clearSearch(): void {
+    if (!this.hasSearchQuery() && !this.appliedSearchQuery()) {
+      return;
+    }
+    this.searchQuery.set('');
+    this.load();
   }
 
   toggleCreateForm(): void {
