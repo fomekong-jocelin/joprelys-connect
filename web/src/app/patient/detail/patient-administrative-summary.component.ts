@@ -7,20 +7,17 @@ import { Patient } from '../patient.models';
   standalone: true,
   template: `
     @let currentPatient = patient();
-    <div class="grid gap-6">
+    <div class="grid gap-5">
       <section>
-        <div class="mb-4 flex items-center justify-between gap-3">
-          <h3 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
-            {{ t('patient.urgTemp.admin.title') }}
-          </h3>
-          @if (!isProvisional(currentPatient)) {
+        @if (!isProvisional(currentPatient)) {
+          <div class="mb-3 flex justify-end">
             <span class="rounded-sm bg-[var(--brand-success-subtle)] px-2 py-1 text-[10px] font-black uppercase tracking-wider text-[var(--brand-success-text)]">
               {{ t('patient.urgTemp.admin.verified') }}
             </span>
-          }
-        </div>
+          </div>
+        }
 
-        <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <dl class="grid grid-cols-2 gap-3 lg:grid-cols-3">
           <div class="ui-card-muted p-3">
             <dt class="ui-label block">{{ t('patient.urgTemp.admin.gender') }}</dt>
             <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.gender) }}</dd>
@@ -37,7 +34,7 @@ import { Patient } from '../patient.models';
             <dt class="ui-label block">{{ t('patient.urgTemp.admin.bloodGroup') }}</dt>
             <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.bloodGroup) }}</dd>
           </div>
-          <div class="ui-card-muted p-3">
+          <div class="ui-card-muted col-span-2 p-3 lg:col-span-1">
             <dt class="ui-label block">{{ t('patient.urgTemp.admin.email') }}</dt>
             <dd class="break-words text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.email) }}</dd>
           </div>
@@ -49,22 +46,22 @@ import { Patient } from '../patient.models';
             <dt class="ui-label block">{{ t('patient.urgTemp.admin.district') }}</dt>
             <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.district) }}</dd>
           </div>
-          <div class="ui-card-muted p-3">
+          <div class="ui-card-muted col-span-2 p-3 lg:col-span-1">
             <dt class="ui-label block">{{ t('patient.urgTemp.admin.address') }}</dt>
             <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.address) }}</dd>
           </div>
         </dl>
       </section>
 
-      <!-- Secondary information stays compact by default to reduce cognitive load. -->
-      <section class="border-t border-[var(--divider-subtle)] pt-5">
+      <!-- Emergency contact remains secondary inside the identity view. -->
+      <section class="border-t border-[var(--divider-subtle)] pt-4">
         <button
           type="button"
-          class="flex w-full items-center justify-between gap-3 text-left"
+          class="flex min-h-11 w-full items-center justify-between gap-3 text-left"
           [attr.aria-expanded]="contactExpanded()"
           (click)="toggleContact()"
         >
-          <h3 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
+          <h3 class="whitespace-nowrap text-sm font-extrabold text-[var(--text-primary)]">
             {{ t('patient.urgTemp.contact.title') }}
           </h3>
           <svg
@@ -81,7 +78,7 @@ import { Patient } from '../patient.models';
         </button>
 
         @if (contactExpanded()) {
-          <dl class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 animate-fade-in">
+          <dl class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 animate-fade-in">
             <div class="ui-card-muted p-3">
               <dt class="ui-label block">{{ t('patient.urgTemp.contact.name') }}</dt>
               <dd class="text-sm font-extrabold text-[var(--text-primary)]">{{ valueOrFallback(currentPatient.emergencyContactName) }}</dd>
