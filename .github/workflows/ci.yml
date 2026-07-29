@@ -48,13 +48,14 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      mobile: ${{ steps.filter.outputs.mobile }}
     steps:
       - name: Checkout code for change detection
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Detect backend and frontend changes
+      - name: Detect backend, frontend and mobile changes
         id: filter
         shell: bash
         env:
@@ -88,22 +89,18 @@ jobs:
           fi
 
           if ! is_valid_sha "$FROM_SHA" || ! is_valid_sha "$TO_SHA" || [[ "$FROM_SHA" == "$TO_SHA" ]]; then
-            if [[ "$EVENT_NAME" == "pull_request" ]]; then
-              echo "Invalid PR comparison range; forcing both stacks for safety."
-              echo "backend=true" >> "$GITHUB_OUTPUT"
-              echo "frontend=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            echo "Invalid push comparison range; forcing both stacks for safety."
+            echo "Invalid comparison range; forcing all stacks for safety."
             echo "backend=true" >> "$GITHUB_OUTPUT"
             echo "frontend=true" >> "$GITHUB_OUTPUT"
+            echo "mobile=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           if ! ensure_commit "$FROM_SHA" || ! ensure_commit "$TO_SHA"; then
-            echo "Comparison range unavailable; forcing both stacks for safety."
+            echo "Comparison range unavailable; forcing all stacks for safety."
             echo "backend=true" >> "$GITHUB_OUTPUT"
             echo "frontend=true" >> "$GITHUB_OUTPUT"
+            echo "mobile=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -115,10 +112,12 @@ jobs:
 
           BACKEND=false
           FRONTEND=false
+          MOBILE=false
 
           if grep -Eq '^\.github/workflows/ci\.yml$' <<< "$CHANGED_FILES"; then
             BACKEND=true
             FRONTEND=true
+            MOBILE=true
           else
             if grep -Eq '^backend/' <<< "$CHANGED_FILES"; then
               BACKEND=true
@@ -126,10 +125,14 @@ jobs:
             if grep -Eq '^web/' <<< "$CHANGED_FILES"; then
               FRONTEND=true
             fi
+            if grep -Eq '^mobile/' <<< "$CHANGED_FILES"; then
+              MOBILE=true
+            fi
           fi
 
           echo "backend=$BACKEND" >> "$GITHUB_OUTPUT"
           echo "frontend=$FRONTEND" >> "$GITHUB_OUTPUT"
+          echo "mobile=$MOBILE" >> "$GITHUB_OUTPUT"
 
   backend-build:
     name: Backend — Maven Build & Tests
@@ -216,3 +219,40 @@ jobs:
           retention-days: 7
       - name: Build Angular production
         run: npm run build
+
+  mobile-build:
+    name: Mobile Flutter — Format, Analyze, Tests & APK
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Flutter 3.44.6
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.6'
+          channel: 'stable'
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Upload resolved lockfile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-pubspec-lock
+          path: mobile/pubspec.lock
+          if-no-files-found: error
+          retention-days: 3
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed lib test
+      - name: Analyze
+        run: flutter analyze
+      - name: Run tests
+        run: flutter test
+      - name: Build debug APK
+        run: flutter build apk --debug
