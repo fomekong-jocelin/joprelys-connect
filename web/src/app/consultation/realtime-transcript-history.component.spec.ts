@@ -10,7 +10,14 @@ describe('RealtimeTranscriptHistoryComponent', () => {
   let component: RealtimeTranscriptHistoryComponent;
 
   const entries: RealtimeTranscriptEntry[] = [
-    { id: 'item-1', text: 'Température trente-huit cinq', timestamp: 1_700_000_000_000 },
+    {
+      id: 'item-1',
+      text: 'Température trente-huit cinq',
+      timestamp: 1_700_000_000_000,
+      durable: true,
+      reviewRequired: true,
+      correctionCount: 0,
+    },
   ];
 
   beforeEach(async () => {
@@ -18,7 +25,7 @@ describe('RealtimeTranscriptHistoryComponent', () => {
       imports: [RealtimeTranscriptHistoryComponent],
       providers: [{
         provide: I18nService,
-        useValue: { t: (key: string) => key },
+        useValue: { t: (key: string, fallback?: string) => fallback ?? key },
       }],
     }).compileComponents();
 
@@ -29,15 +36,17 @@ describe('RealtimeTranscriptHistoryComponent', () => {
     fixture.detectChanges();
   });
 
-  it('lets the clinician edit and submit the latest transcript', () => {
+  it('lets the clinician edit and submit an exact durable transcript segment', () => {
     const emitted = vi.fn();
     component.correct.subscribe(emitted);
 
-    const buttons = fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>;
-    buttons[0].click();
+    const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+    button.click();
     fixture.detectChanges();
 
     const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+    expect(textarea).not.toBeNull();
     textarea.value = 'Température 38,5 degrés';
     textarea.dispatchEvent(new Event('input'));
     fixture.detectChanges();
@@ -45,11 +54,14 @@ describe('RealtimeTranscriptHistoryComponent', () => {
     const actionButtons = fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>;
     actionButtons[0].click();
 
-    expect(emitted).toHaveBeenCalledWith('Température 38,5 degrés');
+    expect(emitted).toHaveBeenCalledWith({
+      id: 'item-1',
+      text: 'Température 38,5 degrés',
+    });
     expect(component.editingId()).toBeNull();
   });
 
-  it('does not open the correction editor while the pipeline is busy', () => {
+  it('does not open the correction editor while the persistence pipeline is busy', () => {
     fixture.componentRef.setInput('correctionDisabled', true);
     fixture.detectChanges();
 
@@ -59,5 +71,13 @@ describe('RealtimeTranscriptHistoryComponent', () => {
 
     expect(component.editingId()).toBeNull();
     expect(fixture.nativeElement.querySelector('textarea')).toBeNull();
+  });
+
+  it('does not offer a correction action for a transcript not yet durably acknowledged', () => {
+    fixture.componentRef.setInput('entries', [{ ...entries[0], durable: false }]);
+    fixture.detectChanges();
+
+    const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
   });
 });
