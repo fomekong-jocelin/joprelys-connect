@@ -1,0 +1,9 @@
+{
+  "patients.title": "Patients",
+  "patients.subtitle": "Search and manage patient records.",
+  "patients.searchPlaceholder": "Name, phone or DPU",
+  "patients.listHeading": "Patient list",
+  "patients.resultOne": "patient found",
+  "patients.resultsMany": "patients found",
+  "patients.clearSearch": "Clear search"
+}
