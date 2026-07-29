@@ -47,6 +47,7 @@ class AiClinicalGroundingGuardTest {
                 parsed,
                 "Le patient a une toux sèche depuis trois jours.",
                 null,
+                "DICTATION",
                 "fr");
 
         assertEquals(1, grounded.changes().size());
@@ -56,19 +57,33 @@ class AiClinicalGroundingGuardTest {
 
     @Test
     void shouldKeepMedicationExplicitlyDictatedByClinician() {
+        var parsed = prescription("Paracétamol", "1 g", "Paracétamol un gramme trois fois par jour");
+
+        var grounded = guard.enforce(
+                parsed,
+                "Je prescris du Paracétamol un gramme trois fois par jour.",
+                null,
+                "REALTIME",
+                "fr");
+
+        assertEquals(1, grounded.changes().size());
+        assertEquals("prescription", grounded.changes().getFirst().field());
+        assertEquals(parsed, grounded);
+    }
+
+    @Test
+    void dictationMayStructureExplicitMedicationWithoutRepeatingPrescriptionVerb() {
         var parsed = parser.parse("""
                 {
-                  "changes": [
-                    {
-                      "field": "prescription",
-                      "operation": "SET",
-                      "value": [{"drugName":"Paracétamol","dosage":"1 g","frequency":"3 fois par jour"}],
-                      "reason": "Prescription explicitement dictée.",
-                      "uncertainty": "LOW",
-                      "evidence": ["Paracétamol un gramme trois fois par jour"]
-                    }
-                  ],
-                  "assistantMessage": "Prescription préparée pour validation.",
+                  "changes": [{
+                    "field": "prescription",
+                    "operation": "SET",
+                    "value": [{"drugName":"Paracétamol","dosage":"1000 mg","frequency":"matin midi soir","route":"voie orale"}],
+                    "reason": "Médicament dicté par le médecin.",
+                    "uncertainty": "LOW",
+                    "evidence": ["Paracétamol 1000mg", "matin midi soir", "voie orale"]
+                  }],
+                  "assistantMessage": "Prescription structurée.",
                   "needsClarification": false,
                   "clarification": null
                 }
@@ -76,13 +91,40 @@ class AiClinicalGroundingGuardTest {
 
         var grounded = guard.enforce(
                 parsed,
-                "Je prescris du Paracétamol un gramme trois fois par jour.",
+                "Paracétamol 1000mg à prendre matin midi soir par voie orale.",
                 null,
+                "DICTATION",
                 "fr");
 
-        assertEquals(1, grounded.changes().size());
-        assertEquals("prescription", grounded.changes().getFirst().field());
-        assertEquals(parsed, grounded);
+        assertEquals(List.of("prescription"), grounded.changes().stream().map(change -> change.field()).toList());
+    }
+
+    @Test
+    void realtimeMedicationHistoryMustNotBecomePrescriptionWithoutPrescribingIntent() {
+        var parsed = parser.parse("""
+                {
+                  "changes": [{
+                    "field": "prescription",
+                    "operation": "SET",
+                    "value": [{"drugName":"Paracétamol","dosage":"1000 mg"}],
+                    "reason": "Médicament entendu.",
+                    "uncertainty": "LOW",
+                    "evidence": ["Paracétamol 1000 mg"]
+                  }],
+                  "assistantMessage": "Prescription structurée.",
+                  "needsClarification": false,
+                  "clarification": null
+                }
+                """);
+
+        var grounded = guard.enforce(
+                parsed,
+                "Le patient dit : je prends du Paracétamol 1000 mg depuis hier.",
+                null,
+                "REALTIME",
+                "fr");
+
+        assertTrue(grounded.changes().isEmpty());
     }
 
     @Test
@@ -104,6 +146,7 @@ class AiClinicalGroundingGuardTest {
                 parsed,
                 "La douleur est à droite depuis ce matin.",
                 null,
+                "REALTIME",
                 "fr");
 
         assertFalse(grounded.needsClarification());
@@ -135,6 +178,7 @@ class AiClinicalGroundingGuardTest {
                 parsed,
                 "Cinq cents milligrammes trois fois par jour.",
                 "prescription",
+                "CLARIFICATION",
                 "fr");
 
         assertEquals(List.of("prescription"), grounded.changes().stream().map(change -> change.field()).toList());
@@ -158,9 +202,27 @@ class AiClinicalGroundingGuardTest {
                 }
                 """);
 
-        var grounded = guard.enforce(parsed, "The patient has a dry cough.", null, "en");
+        var grounded = guard.enforce(parsed, "The patient has a dry cough.", null, "REALTIME", "en");
 
         assertTrue(grounded.changes().isEmpty());
         assertTrue(grounded.assistantMessage().contains("No medication"));
+    }
+
+    private AiClinicalResponseParser.ParsedResponse prescription(String drug, String dosage, String evidence) {
+        return parser.parse("""
+                {
+                  "changes": [{
+                    "field": "prescription",
+                    "operation": "SET",
+                    "value": [{"drugName":"%s","dosage":"%s","frequency":"3 fois par jour"}],
+                    "reason": "Prescription explicitement dictée.",
+                    "uncertainty": "LOW",
+                    "evidence": ["%s"]
+                  }],
+                  "assistantMessage": "Prescription préparée pour validation.",
+                  "needsClarification": false,
+                  "clarification": null
+                }
+                """.formatted(drug, dosage, evidence));
     }
 }
