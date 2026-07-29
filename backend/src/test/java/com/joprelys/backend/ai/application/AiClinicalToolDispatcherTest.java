@@ -1,15 +1,12 @@
 package com.joprelys.backend.ai.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.joprelys.backend.ai.application.AiClinicalResponseParser.ParsedChange;
 import com.joprelys.backend.ai.application.AiClinicalResponseParser.ParsedClarification;
 import com.joprelys.backend.ai.application.AiClinicalResponseParser.ParsedResponse;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 class AiClinicalToolDispatcherTest {
 
@@ -58,19 +55,19 @@ class AiClinicalToolDispatcherTest {
     }
 
     @Test
-    void shouldRejectTwoActionsForSameClinicalFieldInOneTurn() {
+    void repeatedFieldFactsMustReachRevisionLayerInsteadOfBeingDropped() {
         var response = new ParsedResponse(
                 List.of(change("symptoms"), change("symptoms")),
-                "Deux changements concurrents.",
+                "Deux faits du même champ.",
                 false,
                 null);
 
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
-                () -> dispatcher.dispatch(response));
+        var plan = dispatcher.dispatch(response);
 
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, exception.getStatusCode());
-        assertEquals("AI_TOOL_DUPLICATE_FIELD", exception.getReason());
+        assertEquals(2, plan.changes().size());
+        assertEquals(2, plan.invocations().size());
+        assertEquals("symptoms", plan.changes().get(0).field());
+        assertEquals("symptoms", plan.changes().get(1).field());
     }
 
     private ParsedChange change(String field) {
