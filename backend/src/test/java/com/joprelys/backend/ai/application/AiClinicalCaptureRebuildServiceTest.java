@@ -35,9 +35,9 @@ class AiClinicalCaptureRebuildServiceTest {
         SessionView session = mock(SessionView.class);
         when(intakeService.listActive(visitId, organizationId, RealtimeIntakeSource.CONSULTATION))
                 .thenReturn(List.of(
-                        entry(visitId, 1, "Le patient présente des céphalées sévères."),
-                        entry(visitId, 2, "Il n'a pas de fièvre."),
-                        entry(visitId, 3, "Je prescris du paracétamol 1000 mg matin et soir pendant 4 jours.")));
+                        realtimeEntry(visitId, 1, "Le patient présente des céphalées sévères."),
+                        realtimeEntry(visitId, 2, "Il n'a pas de fièvre."),
+                        realtimeEntry(visitId, 3, "Je prescris du paracétamol 1000 mg matin et soir pendant 4 jours.")));
         when(consultationService.getSession(visitId, userId, organizationId))
                 .thenReturn(Optional.of(session));
 
@@ -55,12 +55,13 @@ class AiClinicalCaptureRebuildServiceTest {
                 Map.of("clinicalExam", "Conscience normale"),
                 "fr");
         ArgumentCaptor<String> transcript = ArgumentCaptor.forClass(String.class);
-        verify(consultationService).processRealtimeTranscript(
+        verify(consultationService).processCaptureTranscript(
                 eq(visitId),
                 eq(userId),
                 eq(organizationId),
                 transcript.capture(),
-                eq(null));
+                eq(null),
+                eq("REALTIME"));
         org.assertj.core.api.Assertions.assertThat(transcript.getValue())
                 .containsSubsequence(
                         "Le patient présente des céphalées sévères.",
@@ -68,6 +69,31 @@ class AiClinicalCaptureRebuildServiceTest {
                         "Je prescris du paracétamol 1000 mg matin et soir pendant 4 jours.");
         verify(intakeService).markAnalyzed(
                 visitId, organizationId, RealtimeIntakeSource.CONSULTATION);
+    }
+
+    @Test
+    void dictationCaptureMustReachModelAsTrustedDictation() {
+        UUID visitId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+        SessionView session = mock(SessionView.class);
+        when(intakeService.listActive(visitId, organizationId, RealtimeIntakeSource.CONSULTATION))
+                .thenReturn(List.of(dictationEntry(
+                        visitId,
+                        1,
+                        "Paracétamol 1000mg matin midi soir 2 comprimés par prise par voie orale.")));
+        when(consultationService.getSession(visitId, userId, organizationId))
+                .thenReturn(Optional.of(session));
+
+        service.rebuild(visitId, userId, organizationId, Map.of(), "fr");
+
+        verify(consultationService).processCaptureTranscript(
+                eq(visitId),
+                eq(userId),
+                eq(organizationId),
+                eq("Paracétamol 1000mg matin midi soir 2 comprimés par prise par voie orale."),
+                eq(null),
+                eq("DICTATION"));
     }
 
     @Test
@@ -87,13 +113,21 @@ class AiClinicalCaptureRebuildServiceTest {
                 .hasMessageContaining("AI_CAPTURE_EMPTY");
     }
 
-    private IntakeView entry(UUID visitId, long sequence, String transcript) {
+    private IntakeView realtimeEntry(UUID visitId, long sequence, String transcript) {
+        return entry(visitId, sequence, "event-" + sequence, transcript);
+    }
+
+    private IntakeView dictationEntry(UUID visitId, long sequence, String transcript) {
+        return entry(visitId, sequence, "dictation:" + sequence, transcript);
+    }
+
+    private IntakeView entry(UUID visitId, long sequence, String eventId, String transcript) {
         return new IntakeView(
                 UUID.randomUUID(),
                 visitId,
                 RealtimeIntakeSource.CONSULTATION,
                 sequence,
-                "event-" + sequence,
+                eventId,
                 "item-" + sequence,
                 transcript,
                 null,
