@@ -54,8 +54,8 @@ import { PatientDetailComponent } from '../patient-detail.component';
                   </span>
 
                   <span class="min-w-0">
-                    <span class="block break-words text-sm font-extrabold leading-5 text-[var(--text-primary)]">
-                      {{ log.reason || log.action }}
+                    <span class="block break-words text-sm font-extrabold leading-5 text-[var(--text-primary)]" data-testid="patient-audit-title">
+                      {{ compactTitle(log) }}
                     </span>
                     <span class="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-4 text-[var(--text-muted)]">
                       <span class="min-w-0 break-words">
@@ -82,25 +82,25 @@ import { PatientDetailComponent } from '../patient-detail.component';
 
                 @if (isExpanded(log.id)) {
                   <div class="border-t border-[var(--divider-subtle)] bg-[var(--app-surface-muted)] p-3 sm:p-4 animate-fade-in" data-testid="patient-audit-details">
-                    <dl class="grid min-w-0 gap-3 sm:grid-cols-2">
-                      <div class="min-w-0">
-                        <dt class="ui-label">{{ i18n.t('patients.auditLogsAction') }}</dt>
-                        <dd class="mt-1 break-words font-mono text-xs font-bold text-[var(--text-primary)] [overflow-wrap:anywhere]">{{ log.action }}</dd>
+                    <dl class="grid min-w-0 gap-3">
+                      <div class="flex min-w-0 items-baseline gap-2 whitespace-nowrap" data-testid="patient-audit-action-row">
+                        <dt class="ui-label shrink-0">{{ i18n.t('patients.auditLogsAction') }}</dt>
+                        <dd class="min-w-0 font-mono text-xs font-bold text-[var(--text-primary)]">{{ log.action }}</dd>
+                      </div>
+
+                      <div class="flex min-w-0 items-baseline gap-2 whitespace-nowrap" data-testid="patient-audit-ip-row">
+                        <dt class="ui-label shrink-0">{{ i18n.t('patients.auditLogsIp') }}</dt>
+                        <dd class="min-w-0 font-mono text-xs text-[var(--text-primary)]">{{ log.ipAddress || '—' }}</dd>
                       </div>
 
                       <div class="min-w-0">
-                        <dt class="ui-label">{{ i18n.t('patients.auditLogsIp') }}</dt>
-                        <dd class="mt-1 break-words font-mono text-xs text-[var(--text-primary)] [overflow-wrap:anywhere]">{{ log.ipAddress || '—' }}</dd>
-                      </div>
-
-                      <div class="min-w-0 sm:col-span-2">
                         <dd class="rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-2 font-mono text-[11px] leading-4 text-[var(--text-secondary)] [overflow-wrap:anywhere]">
                           {{ log.resourceType }} · {{ log.resourceId }}
                         </dd>
                       </div>
 
                       @if (log.userAgent) {
-                        <div class="min-w-0 sm:col-span-2">
+                        <div class="min-w-0">
                           <dd class="break-words text-[11px] leading-4 text-[var(--text-muted)] [overflow-wrap:anywhere]">{{ log.userAgent }}</dd>
                         </div>
                       }
@@ -162,6 +162,10 @@ export class PatientAuditTrailTabComponent implements OnInit {
 
   isExpanded(logId: string): boolean {
     return this.expandedLogIds().has(logId);
+  }
+
+  compactTitle(log: AuditLog): string {
+    return this.i18n.t(`patient.audit.action.${log.action}`, log.reason || log.action);
   }
 
   formatDateTime(value: string): string {
