@@ -177,7 +177,7 @@ export class AiDraftMergeService {
   }
 
   private normalizePrescription(line: AiPrescriptionLine): AiPrescriptionLine {
-    return {
+    const normalized: AiPrescriptionLine = {
       drugName: line.drugName.trim(),
       dosage: line.dosage?.trim() ?? '',
       posology: line.posology?.trim() ?? '',
@@ -187,8 +187,11 @@ export class AiDraftMergeService {
       form: line.form?.trim() ?? '',
       route: line.route?.trim() ?? '',
       frequency: line.frequency?.trim() ?? '',
-      substitutionAllowed: line.substitutionAllowed !== false,
     };
+    if (typeof line.substitutionAllowed === 'boolean') {
+      normalized.substitutionAllowed = line.substitutionAllowed;
+    }
+    return normalized;
   }
 
   private drugKey(line: AiPrescriptionLine): string {
@@ -207,7 +210,7 @@ export class AiDraftMergeService {
       this.key(normalized.form ?? ''),
       this.key(normalized.route ?? ''),
       this.key(normalized.frequency ?? ''),
-      normalized.substitutionAllowed !== false,
+      normalized.substitutionAllowed ?? null,
     ]);
   }
 
