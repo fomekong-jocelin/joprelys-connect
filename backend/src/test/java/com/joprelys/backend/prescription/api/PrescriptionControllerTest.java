@@ -112,7 +112,7 @@ public class PrescriptionControllerTest {
 
     @Test
     void givenMedecinA_whenSavePrescription_thenSuccess() throws Exception {
-        String json = """{"items":[{"drugName":"Amoxicilline","dosage":"500mg","posology":"3x/jour","duration":"7 jours"},{"drugName":"Ibuprofène","dosage":"400mg"}]}""";
+        String json = "{\"items\":[{\"drugName\":\"Amoxicilline\",\"dosage\":\"500mg\",\"posology\":\"3x/jour\",\"duration\":\"7 jours\"},{\"drugName\":\"Ibuprofène\",\"dosage\":\"400mg\"}]}";
         mockMvc.perform(post("/api/consultations/" + consultationA.getId() + "/prescription")
                         .header("Authorization", "Bearer " + tokenMedecinA)
                         .contentType(MediaType.APPLICATION_JSON).content(json))
@@ -123,12 +123,12 @@ public class PrescriptionControllerTest {
 
     @Test
     void givenExistingPrescription_whenSaveAgain_thenUpsertSuccess() throws Exception {
-        String json1 = """{"items":[{"drugName":"Amoxicilline","dosage":"500mg"},{"drugName":"Ibuprofène","dosage":"400mg"}]}""";
+        String json1 = "{\"items\":[{\"drugName\":\"Amoxicilline\",\"dosage\":\"500mg\"},{\"drugName\":\"Ibuprofène\",\"dosage\":\"400mg\"}]}";
         mockMvc.perform(post("/api/consultations/" + consultationA.getId() + "/prescription")
                         .header("Authorization", "Bearer " + tokenMedecinA)
                         .contentType(MediaType.APPLICATION_JSON).content(json1))
                 .andExpect(status().isOk());
-        String json2 = """{"items":[{"drugName":"Paracétamol","dosage":"1g","posology":"3x/jour","duration":"5 jours"}]}""";
+        String json2 = "{\"items\":[{\"drugName\":\"Paracétamol\",\"dosage\":\"1g\",\"posology\":\"3x/jour\",\"duration\":\"5 jours\"}]}";
         mockMvc.perform(post("/api/consultations/" + consultationA.getId() + "/prescription")
                         .header("Authorization", "Bearer " + tokenMedecinA)
                         .contentType(MediaType.APPLICATION_JSON).content(json2))
@@ -156,7 +156,7 @@ public class PrescriptionControllerTest {
         mockMvc.perform(post("/api/consultations/" + consultationA.getId() + "/prescription")
                         .header("Authorization", "Bearer " + tokenAgentA)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"items":[{"drugName":"Amoxicilline","dosage":"500mg"}]}"""))
+                        .content("{\"items\":[{\"drugName\":\"Amoxicilline\",\"dosage\":\"500mg\"}]}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -164,7 +164,8 @@ public class PrescriptionControllerTest {
     void givenEmptyItems_whenSavePrescription_thenBadRequest() throws Exception {
         mockMvc.perform(post("/api/consultations/" + consultationA.getId() + "/prescription")
                         .header("Authorization", "Bearer " + tokenMedecinA)
-                        .contentType(MediaType.APPLICATION_JSON).content("""{"items":[]}"""))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"items\":[]}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -173,7 +174,7 @@ public class PrescriptionControllerTest {
         mockMvc.perform(post("/api/consultations/" + UUID.randomUUID() + "/prescription")
                         .header("Authorization", "Bearer " + tokenMedecinA)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"items":[{"drugName":"Amoxicilline","dosage":"500mg"}]}"""))
+                        .content("{\"items\":[{\"drugName\":\"Amoxicilline\",\"dosage\":\"500mg\"}]}"))
                 .andExpect(status().isNotFound());
     }
 
@@ -188,7 +189,7 @@ public class PrescriptionControllerTest {
     void givenNoToken_whenSavePrescription_thenUnauthorized() throws Exception {
         mockMvc.perform(post("/api/consultations/" + consultationA.getId() + "/prescription")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"items":[{"drugName":"Amoxicilline","dosage":"500mg"}]}"""))
+                        .content("{\"items\":[{\"drugName\":\"Amoxicilline\",\"dosage\":\"500mg\"}]}"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -197,7 +198,7 @@ public class PrescriptionControllerTest {
         mockMvc.perform(post("/api/consultations/" + consultationA.getId() + "/prescription")
                         .header("Authorization", "Bearer " + tokenMedecinB)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"items":[{"drugName":"Tentative","dosage":"cross-tenant"}]}"""))
+                        .content("{\"items\":[{\"drugName\":\"Tentative\",\"dosage\":\"cross-tenant\"}]}"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("CONSENT_REQUIRED"))
                 .andExpect(jsonPath("$.error.required_scope").value("prescriptions"));
