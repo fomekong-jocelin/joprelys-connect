@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, filter } from 'rxjs';
 import { Consultation, SaveConsultationRequest, Prescription, SavePrescriptionRequest } from './consultation.models';
 
 @Injectable({ providedIn: 'root' })
@@ -11,16 +11,20 @@ export class ConsultationApiService {
     return this.http.post<Consultation>(`/api/visits/${visitId}/consultation`, dto);
   }
 
-  getConsultation(visitId: string): Observable<Consultation | null> {
-    return this.http.get<Consultation | null>(`/api/visits/${visitId}/consultation`);
+  getConsultation(visitId: string): Observable<Consultation> {
+    return this.http.get<Consultation | null>(`/api/visits/${visitId}/consultation`).pipe(
+      filter((value): value is Consultation => value !== null),
+    );
   }
 
   savePrescription(consultationId: string, dto: SavePrescriptionRequest): Observable<Prescription> {
     return this.http.post<Prescription>(`/api/consultations/${consultationId}/prescription`, dto);
   }
 
-  getPrescription(consultationId: string): Observable<Prescription | null> {
-    return this.http.get<Prescription | null>(`/api/consultations/${consultationId}/prescription`);
+  getPrescription(consultationId: string): Observable<Prescription> {
+    return this.http.get<Prescription | null>(`/api/consultations/${consultationId}/prescription`).pipe(
+      filter((value): value is Prescription => value !== null),
+    );
   }
 
   getPatientConsultations(patientId: string): Observable<Consultation[]> {
