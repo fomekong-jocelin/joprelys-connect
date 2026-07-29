@@ -2,7 +2,6 @@ import { Component, computed, inject, input, OnDestroy, OnInit, output, signal }
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { RbacApiService } from '../../clinic/rbac/rbac-api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
-import { ActivePatientService } from '../../patient/active-patient.service';
 import { PatientApiService } from '../../patient/patient-api.service';
 import {
   canAccessBillingManagement,
@@ -63,7 +62,6 @@ export interface NavItem {
 })
 export class AppShellNavComponent implements OnInit, OnDestroy {
   private readonly i18n = inject(I18nService);
-  private readonly activePatientService = inject(ActivePatientService);
   private readonly patientApiService = inject(PatientApiService);
   private readonly rbacApi = inject(RbacApiService);
 
@@ -74,7 +72,6 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
   readonly linkClicked = output<void>();
 
   readonly pendingPreRegistrationsCount = signal(0);
-  readonly activePatient = this.activePatientService.patient;
 
   private intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -169,7 +166,6 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
       addUniqueItem(this.item('/pharmacy/stocks', 'menu.stocks', 'folder-open'));
     }
 
-    this.appendActivePatientItems(items, permissions);
     return items;
   });
 
@@ -200,65 +196,6 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
       next: (response) => this.pendingPreRegistrationsCount.set(response.totalElements),
       error: () => undefined,
     });
-  }
-
-  private appendActivePatientItems(
-    items: NavItem[],
-    permissions: Set<string>
-  ): void {
-    const patient = this.activePatient();
-    if (!patient) return;
-
-    const patientsIndex = items.findIndex((item) => item.path === '/patients');
-    if (patientsIndex === -1) return;
-
-    const displayName = patient.displayName
-      || patient.fullName
-      || patient.temporaryPatientNumber
-      || patient.globalPatientNumber;
-    const shortName = displayName.trim().split(/\s+/)[0];
-    const profileLabel = this.i18n.t('menu.patientDetail.profile');
-    const subItems: NavItem[] = [
-      {
-        path: '',
-        label: `${profileLabel}: ${shortName}`,
-        iconName: 'users',
-        isHeader: true,
-      },
-      this.item(`/patients/${patient.id}/profile`, 'menu.patientDetail.profile', 'users', true),
-    ];
-
-    if (permissions.has('CLINICAL_READ')) {
-      subItems.push(this.item(
-        `/patients/${patient.id}/consultations`,
-        'menu.patientDetail.consultations',
-        'document-text',
-        true,
-      ));
-    }
-    if (permissions.has('LAB_ORDER_READ')) {
-      subItems.push(this.item(
-        `/patients/${patient.id}/lab-orders`,
-        'menu.patientDetail.labOrders',
-        'clipboard-document-list',
-        true,
-      ));
-    }
-    if (permissions.has('HOSPITALIZATION_READ')) {
-      subItems.push(this.item(
-        `/patients/${patient.id}/hospitalizations`,
-        'menu.patientDetail.hospitalization',
-        'bed',
-        true,
-      ));
-    }
-
-    const hasAuditAccess = permissions.has('AUDIT_READ');
-    if (hasAuditAccess) {
-      subItems.push(this.item(`/patients/${patient.id}/audit-trail`, 'menu.patientDetail.audit', 'clipboard-document-list', true));
-    }
-
-    items.splice(patientsIndex + 1, 0, ...subItems);
   }
 
   private item(path: string, translationKey: string, iconName: UiIconName, indent = false): NavItem {
