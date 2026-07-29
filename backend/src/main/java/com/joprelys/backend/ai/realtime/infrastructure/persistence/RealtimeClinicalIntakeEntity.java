@@ -66,6 +66,12 @@ public class RealtimeClinicalIntakeEntity {
     @Column(name = "consumed_at")
     private Instant consumedAt;
 
+    @Column(name = "discarded_by_user_id")
+    private UUID discardedByUserId;
+
+    @Column(name = "discarded_at")
+    private Instant discardedAt;
+
     @Column(name = "created_by_user_id", nullable = false)
     private UUID createdByUserId;
 
@@ -115,18 +121,28 @@ public class RealtimeClinicalIntakeEntity {
         captureStatus = "PENDING";
         analyzedAt = null;
         consumedAt = null;
+        discardedByUserId = null;
+        discardedAt = null;
     }
 
     public void markAnalyzed(Instant at) {
-        if (!"CONSUMED".equals(captureStatus)) {
+        if (!"CONSUMED".equals(captureStatus) && !"DISCARDED".equals(captureStatus)) {
             captureStatus = "ANALYZED";
             analyzedAt = at;
         }
     }
 
     public void markConsumed(Instant at) {
-        captureStatus = "CONSUMED";
-        consumedAt = at;
+        if (!"DISCARDED".equals(captureStatus)) {
+            captureStatus = "CONSUMED";
+            consumedAt = at;
+        }
+    }
+
+    public void discard(UUID userId, Instant at) {
+        captureStatus = "DISCARDED";
+        discardedByUserId = userId;
+        discardedAt = at;
     }
 
     public UUID getId() { return id; }
@@ -145,6 +161,8 @@ public class RealtimeClinicalIntakeEntity {
     public String getCaptureStatus() { return captureStatus; }
     public Instant getAnalyzedAt() { return analyzedAt; }
     public Instant getConsumedAt() { return consumedAt; }
+    public UUID getDiscardedByUserId() { return discardedByUserId; }
+    public Instant getDiscardedAt() { return discardedAt; }
     public UUID getCreatedByUserId() { return createdByUserId; }
     public Instant getReceivedAt() { return receivedAt; }
 }
