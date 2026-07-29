@@ -10,13 +10,15 @@ Aucun changement Spring Boot, DB, API ou CI n’est requis.
 
 - `web/src/app/patient/patient-detail.component.ts`
 - `web/src/app/patient/detail/patient-profile-tab.component.ts`
+- `web/src/app/patient/detail/patient-administrative-summary.component.ts`
 - `web/src/app/patient/detail/patient-emergency-context.component.ts`
 - `web/src/app/patient/detail/patient-profile-tab.component.spec.ts`
-- `web/src/app/patient/patient-detail.component.spec.ts`
-- `web/src/assets/i18n/fr.json`
-- `web/src/assets/i18n/en.json`
+- `web/src/app/patient/detail/patient-emergency-context.component.spec.ts`
+- `web/src/app/patient/patient-detail-mobile-actions.component.spec.ts`
+- `web/src/assets/i18n/features/urg-temp/fr.json`
+- `web/src/assets/i18n/features/urg-temp/en.json`
 
-`PatientAdministrativeSummaryComponent` est conservé comme composant de présentation ; seule sa position dans le parcours change.
+`PatientAdministrativeSummaryComponent` est conservé comme composant de présentation ; son titre redondant est retiré et sa position dans le parcours devient directe sous la route `Fiche d’identité`.
 
 ## Architecture cible
 
@@ -31,18 +33,18 @@ Identité provisoire éventuelle
 → Informations médicales repliables
 ```
 
-L’état `activePanel` n’a plus besoin de gérer un panneau administratif. Il devient un simple `medicalExpanded` pour les informations médicales longitudinales.
+L’ancien état `activePanel` est supprimé. Un simple signal `medicalExpanded` pilote les informations médicales longitudinales.
 
 ### Contexte urgence
 
-Le composant garde sa logique de chargement et son auto-ouverture d’urgence active. Seul le libellé d’en-tête et la présentation mobile sont simplifiés.
+Le composant garde sa logique de chargement et son auto-ouverture d’urgence active. Seuls le libellé d’en-tête et la présentation mobile sont simplifiés ; le sous-titre détaillé passe dans le contenu déplié.
 
 ### Actions du shell patient
 
 Le conteneur d’actions utilise deux stratégies responsive dans le même DOM :
 
 - mobile `< lg` : grille avec action primaire pleine largeur en premier, puis actions secondaires ;
-- desktop `lg+` : groupe horizontal compact, ordre `primaire → synthèse → retour` ou équivalent visuellement hiérarchisé.
+- desktop `lg+` : groupe horizontal compact avec `Retour`, `Synthèse PDF`, puis l’action clinique primaire à droite.
 
 Aucune duplication d’action ou de handler métier.
 
@@ -74,10 +76,10 @@ Aucune duplication d’action ou de handler métier.
 
 ## i18n
 
-Deux libellés courts sont ajoutés/modifiés dans les catalogues FR/EN :
+Deux libellés courts sont ajoutés/modifiés dans les catalogues feature FR/EN :
 
 - `patient.urgTemp.emergency.title`
-- `patient.profile.medicalSection`
+- `patient.urgTemp.profile.medicalSection`
 
 Aucun texte visible nouveau n’est codé en dur.
 
@@ -100,9 +102,11 @@ Aucun nouvel événement nécessaire : le changement n’affecte ni le métier n
 - profil : résumé administratif présent immédiatement ;
 - profil : absence du bouton administratif ;
 - profil : informations médicales repliées puis ouvrables ;
-- contexte urgence : titre i18n court ;
-- shell : action primaire ordonnée avant les secondaires ;
+- contexte urgence : titre i18n court et sous-titre secondaire ;
+- contexte urgence : auto-ouverture de l’urgence active conservée ;
+- shell : action primaire ordonnée avant les secondaires sur mobile ;
 - shell : classes de grille mobile vérifiées ;
+- shell : Synthèse PDF reste soumise à `CLINICAL_READ` ;
 - suite Angular complète ;
 - build production.
 
