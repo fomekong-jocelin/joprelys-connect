@@ -10,7 +10,12 @@ export interface RealtimeClinicalIntakeAck {
   eventId: string;
   itemId: string | null;
   transcript: string;
+  originalTranscript: string | null;
   confidence: number;
+  reviewRequired: boolean;
+  correctionCount: number;
+  correctedAt: string | null;
+  captureStatus: 'PENDING' | 'ANALYZED' | 'CONSUMED';
   receivedAt: string;
 }
 
@@ -31,6 +36,30 @@ export class RealtimeClinicalIntakeApiService {
       confidence,
       eventId,
       itemId,
+    );
+  }
+
+  list(visitId: string): Observable<RealtimeClinicalIntakeAck[]> {
+    return this.http.get<RealtimeClinicalIntakeAck[]>(
+      `/api/ai/consultations/${visitId}/realtime-intake`,
+    );
+  }
+
+  correct(
+    visitId: string,
+    intakeId: string,
+    transcript: string,
+  ): Observable<RealtimeClinicalIntakeAck> {
+    return this.http.post<RealtimeClinicalIntakeAck>(
+      `/api/ai/consultations/${visitId}/realtime-intake/${intakeId}/correction`,
+      { transcript },
+    );
+  }
+
+  consume(visitId: string): Observable<void> {
+    return this.http.post<void>(
+      `/api/ai/consultations/${visitId}/realtime-intake/consume`,
+      {},
     );
   }
 
