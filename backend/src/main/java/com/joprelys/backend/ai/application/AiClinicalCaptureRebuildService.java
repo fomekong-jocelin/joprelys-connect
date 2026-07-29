@@ -24,7 +24,11 @@ import org.springframework.web.server.ResponseStatusException;
 @ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
 public class AiClinicalCaptureRebuildService {
 
-    private static final int MAX_MODEL_CHUNK_CHARS = 8_000;
+    /**
+     * Large enough to preserve a meaningful consultation span in one reasoning call,
+     * while still bounding request size for very long encounters.
+     */
+    private static final int MAX_MODEL_CHUNK_CHARS = 24_000;
     private static final Pattern SENTENCE_BOUNDARY = Pattern.compile("(?<=[.!?;:])\\s+|[\\r\\n]+");
 
     private final RealtimeClinicalIntakeService intakeService;
@@ -58,31 +62,32 @@ public class AiClinicalCaptureRebuildService {
                 clinicianDraft == null ? Map.of() : clinicianDraft,
                 locale);
 
-        for (String chunk : chunks(capture)) {
-            MessageView result = consultationService.processRealtimeTranscript(
+        for (CaptureChunk chunk : chunks(capture)) {
+            MessageView result = consultationService.processCaptureTranscript(
                     visitId,
                     userId,
                     organizationId,
-                    chunk,
-                    null);
+                    chunk.text(),
+                    null,
+                    chunk.source());
 
             /*
              * A provider can legitimately decide that one element of a mixed paragraph
-             * needs clarification (for example a medication) while another element is
-             * perfectly usable (for example a symptom). Continuous capture must never let
-             * that ambiguity erase the safe facts. Only when the whole chunk yielded no
-             * structured change do we retry its individual factual sentences.
+             * needs clarification while another is usable. If the whole chunk produced
+             * nothing, retry its factual sentences independently rather than discarding
+             * the corpus. Provenance remains unchanged during the retry.
              */
             if (result != null && result.changedFields().isEmpty()) {
-                List<String> sentences = factualSentences(chunk);
+                List<String> sentences = factualSentences(chunk.text());
                 if (sentences.size() > 1) {
                     for (String sentence : sentences) {
-                        consultationService.processRealtimeTranscript(
+                        consultationService.processCaptureTranscript(
                                 visitId,
                                 userId,
                                 organizationId,
                                 sentence,
-                                null);
+                                null,
+                                chunk.source());
                     }
                 }
             }
@@ -97,29 +102,44 @@ public class AiClinicalCaptureRebuildService {
                         HttpStatus.CONFLICT, "AI_SESSION_EXPIRED"));
     }
 
-    private List<String> chunks(List<IntakeView> capture) {
-        List<String> result = new ArrayList<>();
+    private List<CaptureChunk> chunks(List<IntakeView> capture) {
+        List<CaptureChunk> result = new ArrayList<>();
         StringBuilder current = new StringBuilder();
+        String currentSource = null;
+
         for (IntakeView item : capture) {
             String text = item.transcript() == null ? "" : item.transcript().trim();
             if (text.isBlank()) continue;
+            String source = captureSource(item);
+
+            if (current.length() > 0 && !source.equals(currentSource)) {
+                flush(result, current, currentSource);
+                currentSource = null;
+            }
+            if (currentSource == null) currentSource = source;
+
             if (current.length() > 0 && current.length() + 1 + text.length() > MAX_MODEL_CHUNK_CHARS) {
-                result.add(current.toString());
-                current.setLength(0);
+                flush(result, current, currentSource);
             }
             if (text.length() > MAX_MODEL_CHUNK_CHARS) {
-                flush(result, current);
-                splitLongText(result, text);
+                flush(result, current, currentSource);
+                splitLongText(result, text, source);
+                currentSource = null;
                 continue;
             }
             if (current.length() > 0) current.append('\n');
             current.append(text);
         }
-        flush(result, current);
+        flush(result, current, currentSource);
         if (result.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "AI_CAPTURE_EMPTY");
         }
         return List.copyOf(result);
+    }
+
+    private String captureSource(IntakeView item) {
+        String eventId = item.eventId();
+        return eventId != null && eventId.startsWith("dictation:") ? "DICTATION" : "REALTIME";
     }
 
     private List<String> factualSentences(String chunk) {
@@ -132,7 +152,7 @@ public class AiClinicalCaptureRebuildService {
         return List.copyOf(result);
     }
 
-    private void splitLongText(List<String> result, String text) {
+    private void splitLongText(List<CaptureChunk> result, String text, String source) {
         int offset = 0;
         while (offset < text.length()) {
             int end = Math.min(text.length(), offset + MAX_MODEL_CHUNK_CHARS);
@@ -140,16 +160,19 @@ public class AiClinicalCaptureRebuildService {
                 int boundary = text.lastIndexOf(' ', end);
                 if (boundary > offset + MAX_MODEL_CHUNK_CHARS / 2) end = boundary;
             }
-            result.add(text.substring(offset, end).trim());
+            result.add(new CaptureChunk(text.substring(offset, end).trim(), source));
             offset = end;
             while (offset < text.length() && Character.isWhitespace(text.charAt(offset))) offset++;
         }
     }
 
-    private void flush(List<String> result, StringBuilder current) {
+    private void flush(List<CaptureChunk> result, StringBuilder current, String source) {
         if (current.length() > 0) {
-            result.add(current.toString());
+            result.add(new CaptureChunk(current.toString(), source == null ? "REALTIME" : source));
             current.setLength(0);
         }
+    }
+
+    private record CaptureChunk(String text, String source) {
     }
 }
