@@ -152,10 +152,10 @@ class AiConsultationContinuousCaptureTest {
                     {
                       "field": "prescription",
                       "operation": "SET",
-                      "value": "[{\"drugName\":\"Amoxicilline\",\"dosage\":\"500 mg\"}]",
+                      "value": [{"drugName":"Amoxicilline","dosage":"500 mg"}],
                       "reason": "Prescription proposée par le modèle.",
                       "uncertainty": "LOW",
-                      "evidence": ["céphalées sévères"]
+                      "evidence": ["Amoxicilline"]
                     }
                   ],
                   "assistantMessage": "Compte rendu structuré.",
@@ -178,7 +178,7 @@ class AiConsultationContinuousCaptureTest {
                   "changes": [{
                     "field": "prescription",
                     "operation": "SET",
-                    "value": "[{\"drugName\":\"Paracétamol\",\"dosage\":\"1000 mg\",\"frequency\":\"matin et soir\",\"duration\":\"4 jours\"}]",
+                    "value": [{"drugName":"Paracétamol","dosage":"1000 mg","frequency":"matin et soir","duration":"4 jours"}],
                     "reason": "Prescription explicitement dictée.",
                     "uncertainty": "LOW",
                     "evidence": ["Paracétamol 1000 mg", "matin et soir", "4 jours"]
