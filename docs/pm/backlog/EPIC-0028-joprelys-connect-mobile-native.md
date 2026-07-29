@@ -50,7 +50,7 @@ ADR : `docs/ai/adr/ADR-0004-mobile-flutter-native-architecture.md`.
 
 ## Charge indicative
 
-Total initial : **94 SP** environ, à livrer sur plusieurs sprints et à réestimer après MOB-2801/MOB-2812.
+Total initial : **99 SP** environ, à livrer sur plusieurs sprints et à réestimer après MOB-2801/MOB-2812.
 
 Cette estimation couvre le produit mobile professionnel, pas uniquement les dix maquettes.
 
