@@ -3,8 +3,14 @@
   "access.remediation.consentTitle": "Autorisation du patient requise",
   "access.remediation.consentMessage": "Le patient n’a pas encore autorisé l’accès à cette partie de son dossier.",
   "access.remediation.scopeMessage": "L’accès existe, mais le périmètre demandé n’a pas été partagé.",
+  "access.remediation.scopeMessageWithScope": "L’accès existe, mais le périmètre « {scope} » n’a pas été partagé.",
   "access.remediation.requestAccess": "Demander l’accès",
   "access.remediation.scopeReason": "Accès requis au périmètre {scope}",
   "access.remediation.recordReason": "Accès au dossier patient requis",
-  "access.remediation.prefill": "Accès requis : {scope}. Le périmètre concerné a été présélectionné."
+  "access.remediation.prefill": "Accès requis : {scope}. Le périmètre concerné a été présélectionné.",
+  "access.remediation.scope.generic": "demandé",
+  "access.remediation.scope.medical_records": "dossier médical",
+  "access.remediation.scope.prescriptions": "ordonnances",
+  "access.remediation.scope.lab_results": "résultats de laboratoire",
+  "access.remediation.scope.allergies_history": "allergies et antécédents"
 }
