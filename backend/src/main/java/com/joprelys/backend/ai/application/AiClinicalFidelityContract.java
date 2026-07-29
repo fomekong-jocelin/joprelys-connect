@@ -25,6 +25,8 @@ final class AiClinicalFidelityContract {
             - assistantMessage must not introduce or summarize new clinical facts. Keep it operational and neutral.
             - Return AT MOST ONE change per field. When several explicit facts belong to the same narrative field, consolidate ALL of them into that single field value instead of keeping only the last one.
             - Never omit an earlier explicit fact merely because a later fact belongs to the same field.
+            - If several medications, exams or other structured items are present and only ONE item is ambiguous, keep every independently grounded safe item in the field value and ask clarification only for the ambiguous item. Never discard safe sibling items because one sibling needs clarification.
+            - Never include the ambiguous structured item itself in the proposed value until its ambiguity is resolved.
 
             Required change shape:
             {
