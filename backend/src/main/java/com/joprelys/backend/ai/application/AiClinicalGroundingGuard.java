@@ -31,16 +31,29 @@ final class AiClinicalGroundingGuard {
             String latestClinicianUtterance,
             String resolvedClarificationField,
             String locale) {
+        return enforce(parsed, latestClinicianUtterance, resolvedClarificationField, "LEGACY", locale);
+    }
+
+    ParsedResponse enforce(
+            ParsedResponse parsed,
+            String latestClinicianUtterance,
+            String resolvedClarificationField,
+            String inputSource,
+            String locale) {
         if (parsed == null) {
             return null;
         }
 
         boolean prescriptionClarification = PRESCRIPTION.equals(resolvedClarificationField);
+        boolean trustedClinicianSource = isTrustedClinicianSource(inputSource);
+        boolean medicationSignal = hasExplicitMedicationSignal(latestClinicianUtterance);
+        boolean prescriptionIntent = hasExplicitPrescriptionIntent(latestClinicianUtterance);
+        boolean clarificationGrounded = prescriptionClarification
+                || (trustedClinicianSource ? medicationSignal : prescriptionIntent);
         boolean ungroundedPrescriptionClarification = parsed.needsClarification()
                 && parsed.clarification() != null
                 && PRESCRIPTION.equals(parsed.clarification().field())
-                && !prescriptionClarification
-                && !hasExplicitMedicationSignal(latestClinicianUtterance);
+                && !clarificationGrounded;
 
         List<ParsedChange> grounded = new ArrayList<>();
         boolean prescriptionDropped = false;
@@ -51,9 +64,12 @@ final class AiClinicalGroundingGuard {
                 continue;
             }
 
+            boolean explicitDrug = hasExplicitDrugGrounding(change, latestClinicianUtterance);
+            boolean allowedSet = "SET".equals(change.operation())
+                    && explicitDrug
+                    && (trustedClinicianSource || prescriptionIntent);
             boolean allowed = prescriptionClarification
-                    || ("SET".equals(change.operation())
-                    && hasExplicitDrugGrounding(change, latestClinicianUtterance))
+                    || allowedSet
                     || ("CLEAR".equals(change.operation())
                     && hasExplicitPrescriptionCancellation(latestClinicianUtterance));
 
@@ -61,7 +77,11 @@ final class AiClinicalGroundingGuard {
                 grounded.add(change);
             } else {
                 prescriptionDropped = true;
-                log.warn("Blocked ungrounded AI prescription proposal; no explicit medication evidence in latest clinician utterance");
+                log.warn(
+                        "Blocked ungrounded AI prescription proposal source={} explicitDrug={} prescriptionIntent={}",
+                        inputSource,
+                        explicitDrug,
+                        prescriptionIntent);
             }
         }
 
@@ -70,17 +90,21 @@ final class AiClinicalGroundingGuard {
         }
 
         if (ungroundedPrescriptionClarification) {
-            log.warn("Blocked ungrounded AI prescription clarification; no explicit medication signal in latest clinician utterance");
+            log.warn(
+                    "Blocked ungrounded AI prescription clarification source={} medicationSignal={} prescriptionIntent={}",
+                    inputSource,
+                    medicationSignal,
+                    prescriptionIntent);
         }
 
         boolean english = "en".equalsIgnoreCase(locale);
         String safeMessage = grounded.isEmpty()
                 ? (english
-                        ? "I captured your dictation. No medication was added without an explicit prescription."
-                        : "J’ai pris en compte votre dictée. Aucun médicament n’a été ajouté sans prescription explicite.")
+                        ? "I captured your dictation. No medication was added without an explicit clinician prescription."
+                        : "J’ai pris en compte la dictée. Aucun médicament n’a été ajouté sans prescription explicite du médecin.")
                 : (english
-                        ? "I structured only what you explicitly dictated. No medication was added without an explicit prescription."
-                        : "J’ai structuré les éléments explicitement dictés. Aucun médicament n’a été ajouté sans prescription explicite.");
+                        ? "I structured only the explicitly grounded information. No medication was added without an explicit clinician prescription."
+                        : "J’ai structuré uniquement les éléments explicitement fondés. Aucun médicament n’a été ajouté sans prescription explicite du médecin.");
 
         return new ParsedResponse(
                 List.copyOf(grounded),
@@ -143,6 +167,19 @@ final class AiClinicalGroundingGuard {
         return meaningful > 0;
     }
 
+    /**
+     * Dictation is explicitly clinician-authored, so a medication mention may be
+     * structured even when the doctor omits the words "je prescris" on each line.
+     * Realtime conversation is speaker-unverified and is therefore excluded here.
+     */
+    private boolean isTrustedClinicianSource(String inputSource) {
+        if (inputSource == null) return false;
+        return switch (inputSource.toUpperCase(Locale.ROOT)) {
+            case "DICTATION", "TEXT", "AUDIO", "CLARIFICATION", "FINAL_REVIEW", "LEGACY" -> true;
+            default -> false;
+        };
+    }
+
     private boolean hasExplicitMedicationSignal(String utterance) {
         String normalized = normalize(utterance);
         if (normalized.isBlank()) {
@@ -153,6 +190,16 @@ final class AiClinicalGroundingGuard {
                 "comprime", "gelule", "sirop", "injection", "dose", "posologie", "voie orale",
                 "drug", "medication", "medicine", "tablet", "capsule", "syrup", "prescribe")
                 || normalized.matches(".*\\b\\d+(?:[.,]\\d+)?\\s*(mg|g|ml|mcg|ug|ui)\\b.*");
+    }
+
+    /** Speaker-unverified realtime requires an explicit clinician prescribing act. */
+    private boolean hasExplicitPrescriptionIntent(String utterance) {
+        String normalized = normalize(utterance);
+        if (normalized.isBlank()) return false;
+        return containsAny(normalized,
+                "je prescris", "je lui prescris", "nous prescrivons", "prescrire", "prescription de",
+                "j ordonne", "nous ordonnons", "ordonnance de", "mettre sur l ordonnance",
+                "i prescribe", "we prescribe", "prescribe", "prescription for", "order medication");
     }
 
     private boolean hasExplicitPrescriptionCancellation(String utterance) {
@@ -181,6 +228,8 @@ final class AiClinicalGroundingGuard {
         String normalized = Normalizer.normalize(value, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
                 .toLowerCase(Locale.ROOT)
+                .replaceAll("(?<=\\d)(?=[a-z])", " ")
+                .replaceAll("(?<=[a-z])(?=\\d)", " ")
                 .replaceAll("[^a-z0-9.,]+", " ")
                 .trim();
         return normalized.replaceAll("\\s+", " ");
