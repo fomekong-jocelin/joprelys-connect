@@ -16,7 +16,7 @@ export interface RealtimeClinicalIntakeAck {
   reviewRequired: boolean;
   correctionCount: number;
   correctedAt: string | null;
-  captureStatus: 'PENDING' | 'ANALYZED' | 'CONSUMED';
+  captureStatus: 'PENDING' | 'ANALYZED' | 'CONSUMED' | 'DISCARDED';
   receivedAt: string;
 }
 
@@ -67,6 +67,18 @@ export class RealtimeClinicalIntakeApiService {
     return this.http.post<RealtimeClinicalIntakeAck>(
       `/api/ai/consultations/${visitId}/realtime-intake/${intakeId}/correction`,
       { transcript },
+    );
+  }
+
+  discard(visitId: string, intakeId: string): Observable<void> {
+    return this.http.delete<void>(
+      `/api/ai/consultations/${visitId}/realtime-intake/${intakeId}`,
+    );
+  }
+
+  discardAll(visitId: string): Observable<void> {
+    return this.http.delete<void>(
+      `/api/ai/consultations/${visitId}/realtime-intake`,
     );
   }
 
