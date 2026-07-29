@@ -45,6 +45,18 @@ final class AiConsultationMessageBuilder {
         }
     }
 
+    String buildCaptureExtractionMessage(
+            String transcript,
+            Map<String, String> draft,
+            String locale) {
+        // The accepted draft is intentionally not serialized here. The deterministic
+        // merge layer already owns deduplication, and repeating an ever-growing draft
+        // in every long-transcript chunk would increase both latency and model cost.
+        return "LOCALE: " + normalizeLocale(locale)
+                + "\nCURRENT TRANSCRIPT:\n"
+                + transcript;
+    }
+
     String clarificationModelText(
             String locale,
             ClarificationView clarification,

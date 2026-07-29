@@ -13,8 +13,9 @@ import tools.jackson.databind.ObjectMapper;
 
 class AiClinicalFactualityGuardTest {
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final AiClinicalFactualityGuard guard =
-            new AiClinicalFactualityGuard(new ObjectMapper());
+            new AiClinicalFactualityGuard(objectMapper);
 
     @Test
     void shouldKeepExactGroundedSymptom() {
@@ -174,6 +175,56 @@ class AiClinicalFactualityGuardTest {
                 "fr");
 
         assertEquals(1, checked.changes().size());
+    }
+
+    @Test
+    void shouldAcceptHarmlessNumberUnitSpacingFromMedicalAsr() {
+        ParsedResponse response = response(new ParsedChange(
+                "prescription",
+                "SET",
+                "[{\"drugName\":\"Paracétamol\",\"dosage\":\"1000 mg\"}]",
+                "Explicit prescription",
+                "LOW",
+                List.of("Paracétamol 1000mg")));
+
+        ParsedResponse checked = guard.enforce(
+                response,
+                "Je lui prescris du Paracétamol 1000mg par voie orale.",
+                Map.of(),
+                "CAPTURE",
+                "fr");
+
+        assertEquals(1, checked.changes().size());
+        assertTrue(checked.changes().getFirst().proposedValue().contains("1000 mg"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldKeepSafeMedicationFactsWhenOneFrequencyWasOverNormalized() throws Exception {
+        ParsedResponse response = response(new ParsedChange(
+                "prescription",
+                "SET",
+                "[{\"drugName\":\"Paracétamol\",\"dosage\":\"1000 mg\"},"
+                        + "{\"drugName\":\"Vitafer\",\"frequency\":\"1 fois par jour\",\"route\":\"voie orale\"}]",
+                "Explicit prescriptions",
+                "MEDIUM",
+                List.of("Paracétamol 1000mg", "Vitafer", "1 fois pas jour", "voie orale")));
+
+        ParsedResponse checked = guard.enforce(
+                response,
+                "Je lui prescris du Paracétamol 1000mg. Vitafer 1 fois pas jour voie orale.",
+                Map.of(),
+                "CAPTURE",
+                "fr");
+
+        assertEquals(1, checked.changes().size());
+        Object raw = objectMapper.readValue(checked.changes().getFirst().proposedValue(), Object.class);
+        List<Map<String, Object>> lines = (List<Map<String, Object>>) raw;
+        assertEquals(2, lines.size());
+        assertEquals("1000 mg", lines.getFirst().get("dosage"));
+        assertEquals("Vitafer", lines.get(1).get("drugName"));
+        assertEquals("voie orale", lines.get(1).get("route"));
+        assertFalse(lines.get(1).containsKey("frequency"));
     }
 
     @Test

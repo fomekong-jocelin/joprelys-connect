@@ -6,6 +6,7 @@ import com.joprelys.backend.ai.application.AiClinicalResponseParser.ParsedRespon
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -21,8 +22,9 @@ import tools.jackson.databind.ObjectMapper;
  * clinical proposal can be created.
  *
  * <p>LLM output is never accepted as evidence. A proposed change must cite the
- * current source verbatim and may not introduce any unsupported clinical token.
- * When in doubt the change is dropped (fail closed).</p>
+ * current source and may not introduce unsupported clinical tokens. Structured
+ * fields are sanitized leaf-by-leaf so one noisy ASR attribute cannot erase an
+ * independently grounded medication, examination or vital sign.</p>
  */
 final class AiClinicalFactualityGuard {
 
@@ -62,12 +64,13 @@ final class AiClinicalFactualityGuard {
         String current = latestSource == null ? "" : latestSource.trim();
         List<ParsedChange> grounded = new ArrayList<>();
         for (ParsedChange change : parsed.changes()) {
-            if (isGrounded(change, current, acceptedDraft)) {
-                grounded.add(change);
+            ParsedChange safeChange = groundedChange(change, current, acceptedDraft);
+            if (safeChange != null) {
+                grounded.add(safeChange);
             } else {
                 log.warn(
                         "Blocked ungrounded clinical proposal field={} source={}",
-                        change.field(),
+                        change == null ? "unknown" : change.field(),
                         inputSource);
             }
         }
@@ -85,32 +88,32 @@ final class AiClinicalFactualityGuard {
                 clarification);
     }
 
-    private boolean isGrounded(
+    private ParsedChange groundedChange(
             ParsedChange change,
             String current,
             Map<String, String> acceptedDraft) {
         if (change == null || change.evidence() == null || change.evidence().isEmpty()) {
-            return false;
+            return null;
         }
         String normalizedCurrent = normalize(current);
         for (String quote : change.evidence()) {
             String normalizedQuote = normalize(quote);
             if (normalizedQuote.isBlank() || !normalizedCurrent.contains(normalizedQuote)) {
-                return false;
+                return null;
             }
         }
 
         if ("CLEAR".equals(change.operation())) {
-            return hasExplicitClearIntent(normalizedCurrent);
+            return hasExplicitClearIntent(normalizedCurrent) ? change : null;
         }
         String previous = acceptedDraft == null
                 ? ""
                 : acceptedDraft.getOrDefault(change.field(), "");
         String authorizedSource = previous + " " + current;
         if (STRUCTURED_FIELDS.contains(change.field())) {
-            return structuredValueSupported(change, authorizedSource);
+            return sanitizeStructuredChange(change, authorizedSource);
         }
-        return textValueSupported(change, authorizedSource);
+        return textValueSupported(change, authorizedSource) ? change : null;
     }
 
     private boolean hasExplicitClearIntent(String normalizedCurrent) {
@@ -146,47 +149,95 @@ final class AiClinicalFactualityGuard {
         return true;
     }
 
-    private boolean structuredValueSupported(ParsedChange change, String authorizedSource) {
+    private ParsedChange sanitizeStructuredChange(ParsedChange change, String authorizedSource) {
         if (change.proposedValue() == null || change.proposedValue().isBlank()) {
-            return false;
+            return null;
         }
         try {
             Object value = objectMapper.readValue(change.proposedValue(), Object.class);
-            return switch (change.field()) {
-                case "vitals" -> valuesSupported(value, authorizedSource, true);
-                case "labOrders", "prescription" -> valuesSupported(value, authorizedSource, false);
-                default -> false;
+            Object safeValue = switch (change.field()) {
+                case "prescription" -> sanitizePrescription(value, authorizedSource);
+                case "labOrders" -> sanitizeLabOrders(value, authorizedSource);
+                case "vitals" -> sanitizeVitals(value, authorizedSource);
+                default -> null;
             };
+            if (safeValue == null) {
+                return null;
+            }
+            String serialized = objectMapper.writeValueAsString(safeValue);
+            return new ParsedChange(
+                    change.field(),
+                    change.operation(),
+                    serialized,
+                    change.reason(),
+                    change.uncertainty(),
+                    change.evidence());
         } catch (Exception exception) {
-            return false;
+            return null;
         }
     }
 
-    private boolean valuesSupported(Object value, String authorizedSource, boolean numericOnly) {
-        if (value instanceof Map<?, ?> map) {
-            for (Object item : map.values()) {
-                if (!leafSupported(item, authorizedSource, numericOnly)) {
-                    return false;
+    private List<Map<String, Object>> sanitizePrescription(Object value, String authorizedSource) {
+        if (!(value instanceof List<?> list)) {
+            return null;
+        }
+        List<Map<String, Object>> safeLines = new ArrayList<>();
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> line)) {
+                continue;
+            }
+            Object rawDrugName = line.get("drugName");
+            if (!(rawDrugName instanceof String drugName)
+                    || !leafSupported(drugName, authorizedSource, false)) {
+                continue;
+            }
+            Map<String, Object> safeLine = new LinkedHashMap<>();
+            safeLine.put("drugName", drugName);
+            for (Map.Entry<?, ?> entry : line.entrySet()) {
+                String key = entry.getKey() == null ? "" : entry.getKey().toString();
+                if ("drugName".equals(key) || "substitutionAllowed".equals(key)) {
+                    continue;
+                }
+                Object itemValue = entry.getValue();
+                if (itemValue != null && leafSupported(itemValue, authorizedSource, false)) {
+                    safeLine.put(key, itemValue);
                 }
             }
-            return !map.isEmpty();
+            safeLines.add(safeLine);
         }
-        if (value instanceof List<?> list) {
-            for (Object item : list) {
-                if (!valuesSupported(item, authorizedSource, numericOnly)) {
-                    return false;
-                }
+        return safeLines.isEmpty() ? null : List.copyOf(safeLines);
+    }
+
+    private List<String> sanitizeLabOrders(Object value, String authorizedSource) {
+        if (!(value instanceof List<?> list)) {
+            return null;
+        }
+        List<String> safeOrders = new ArrayList<>();
+        for (Object item : list) {
+            if (item instanceof String exam && leafSupported(exam, authorizedSource, false)) {
+                safeOrders.add(exam);
             }
-            return !list.isEmpty();
         }
-        return leafSupported(value, authorizedSource, numericOnly);
+        return safeOrders.isEmpty() ? null : List.copyOf(safeOrders);
+    }
+
+    private Map<String, Number> sanitizeVitals(Object value, String authorizedSource) {
+        if (!(value instanceof Map<?, ?> map)) {
+            return null;
+        }
+        Map<String, Number> safeVitals = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            if (entry.getKey() != null
+                    && entry.getValue() instanceof Number number
+                    && leafSupported(number, authorizedSource, true)) {
+                safeVitals.put(entry.getKey().toString(), number);
+            }
+        }
+        return safeVitals.isEmpty() ? null : Map.copyOf(safeVitals);
     }
 
     private boolean leafSupported(Object value, String authorizedSource, boolean numericOnly) {
-        if (value == null) {
-            return true;
-        }
-        if (value instanceof Boolean) {
+        if (value == null || value instanceof Boolean) {
             return false;
         }
         String text = value.toString();
@@ -259,6 +310,9 @@ final class AiClinicalFactualityGuard {
         return Normalizer.normalize(value, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
                 .toLowerCase(Locale.ROOT)
+                // Harmless ASR typography normalization: 1000mg == 1000 mg and
+                // 1cuillere == 1 cuillere. This changes formatting, never meaning.
+                .replaceAll("(?<=\\d)(?=[a-z])|(?<=[a-z])(?=\\d)", " ")
                 .replaceAll("[^a-z0-9.,]+", " ")
                 .trim()
                 .replaceAll("\\s+", " ");

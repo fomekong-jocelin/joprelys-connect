@@ -82,6 +82,32 @@ describe('AiProposalPanelComponent', () => {
     expect(text).toContain('Symptômes');
   });
 
+  it('affiche tous les détails utiles d’une prescription avant validation', () => {
+    const formatted = fixture.componentInstance.formatValue(
+      'prescription',
+      JSON.stringify([{
+        drugName: 'Paracétamol',
+        dosage: '1000 mg',
+        form: 'comprimé',
+        posology: '2 comprimés par prise',
+        frequency: 'matin midi soir',
+        route: 'voie orale',
+        duration: '4 jours',
+        quantity: '24 comprimés',
+        instructions: 'après repas',
+      }]),
+    );
+
+    expect(formatted).toContain('Paracétamol');
+    expect(formatted).toContain('1000 mg');
+    expect(formatted).toContain('2 comprimés par prise');
+    expect(formatted).toContain('matin midi soir');
+    expect(formatted).toContain('voie orale');
+    expect(formatted).toContain('4 jours');
+    expect(formatted).toContain('24 comprimés');
+    expect(formatted).toContain('après repas');
+  });
+
   it('émet une décision liée à la révision et à la proposition', () => {
     let emitted: AiProposalDecisionRequest | undefined;
     fixture.componentInstance.decided.subscribe(value => emitted = value);

@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +50,7 @@ public class AiConsultationService {
     private final AiRepeatedClarificationGuard repeatedClarificationGuard = new AiRepeatedClarificationGuard();
     private final AiClinicalMemoryManager memoryManager = new AiClinicalMemoryManager();
     private final AiClinicalToolDispatcher toolDispatcher = new AiClinicalToolDispatcher();
+    private final AiContinuousCaptureMerge continuousCaptureMerge;
     private final AiRevisionManager revisionManager;
     private final AiClarificationManager clarificationManager;
     private final AiTranscriptionWorkflow transcriptionWorkflow;
@@ -72,6 +74,7 @@ public class AiConsultationService {
         this.factualityGuard = new AiClinicalFactualityGuard(objectMapper);
         this.groundingGuard = new AiClinicalGroundingGuard(objectMapper);
         this.medicationSafetyGuard = new AiMedicationSafetyGuard(objectMapper);
+        this.continuousCaptureMerge = new AiContinuousCaptureMerge(objectMapper);
         this.revisionManager = revisionManager;
         this.clarificationManager = clarificationManager;
         this.transcriptionWorkflow = new AiTranscriptionWorkflow(aiProvider, properties);
@@ -165,6 +168,33 @@ public class AiConsultationService {
                     "REALTIME",
                     null,
                     null,
+                    true);
+        }
+    }
+
+    /**
+     * Finalization/recovery extraction for the durable clinician-reviewed transcript.
+     * Uses a compact non-conversational prompt and strict structured output when the
+     * configured provider supports it. This prevents a long consultation from paying
+     * the cost of the full conversational prompt for every rebuild chunk.
+     */
+    public MessageView processCaptureTranscript(
+            UUID visitId,
+            UUID userId,
+            UUID organizationId,
+            String transcript) {
+        AiConsultationInputValidator.validateText(transcript);
+        AiConsultationSessionState state = requireSession(visitId, userId, organizationId);
+        synchronized (state) {
+            return processMessageLocked(
+                    state,
+                    transcript.trim(),
+                    transcript.trim(),
+                    transcript.trim(),
+                    "CAPTURE",
+                    null,
+                    null,
+                    true,
                     true);
         }
     }
@@ -323,6 +353,28 @@ public class AiConsultationService {
             UUID resolvedClarificationId,
             String clarificationAnswer,
             boolean continuousCapture) {
+        return processMessageLocked(
+                state,
+                modelText,
+                visibleText,
+                transcript,
+                source,
+                resolvedClarificationId,
+                clarificationAnswer,
+                continuousCapture,
+                false);
+    }
+
+    private MessageView processMessageLocked(
+            AiConsultationSessionState state,
+            String modelText,
+            String visibleText,
+            String transcript,
+            String source,
+            UUID resolvedClarificationId,
+            String clarificationAnswer,
+            boolean continuousCapture,
+            boolean captureExtraction) {
         ClarificationView resolvedClarification = resolvedClarificationId == null
                 ? null
                 : clarificationManager.findPending(state, resolvedClarificationId);
@@ -335,18 +387,33 @@ public class AiConsultationService {
         Map<String, Object> clinicalContext = loadClinicalContext(state.visitId);
 
         List<AiMessage> providerMessages = new ArrayList<>();
-        state.providerMessages.stream()
-                .filter(message -> message.role() == AiMessage.Role.SYSTEM)
-                .forEach(providerMessages::add);
+        if (!captureExtraction) {
+            state.providerMessages.stream()
+                    .filter(message -> message.role() == AiMessage.Role.SYSTEM)
+                    .forEach(providerMessages::add);
+        }
         providerMessages.add(AiMessage.system(AiClinicalFidelityContract.SYSTEM_INSTRUCTION));
-        providerMessages.add(AiMessage.user(messageBuilder.buildUserMessage(
-                "Input source: " + source + "\n" + modelText,
-                state.draft,
-                state.locale,
-                clinicalContext)));
+        String userMessage = captureExtraction
+                ? messageBuilder.buildCaptureExtractionMessage(modelText, state.draft, state.locale)
+                : messageBuilder.buildUserMessage(
+                        "Input source: " + source + "\n" + modelText,
+                        state.draft,
+                        state.locale,
+                        clinicalContext);
+        providerMessages.add(AiMessage.user(userMessage));
 
+        long modelStarted = System.nanoTime();
         try {
-            AiChatResponse response = aiProvider.chat(List.copyOf(providerMessages), SYSTEM_PROMPT);
+            AiChatResponse response = captureExtraction
+                    ? captureModelResponse(List.copyOf(providerMessages))
+                    : aiProvider.chat(List.copyOf(providerMessages), SYSTEM_PROMPT);
+            long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - modelStarted);
+            log.info(
+                    "AI_USAGE provider={} operation={} durationMs={} inputChars={}",
+                    properties.provider(),
+                    captureExtraction ? "capture_rebuild" : "consultation_chat",
+                    durationMs,
+                    modelText.length());
             if (response == null || response.content() == null) {
                 throw new ResponseStatusException(
                         org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
@@ -367,11 +434,17 @@ public class AiConsultationService {
                 clarificationManager.resolve(state, resolvedClarificationId, clarificationAnswer);
             }
 
+            var revisionChanges = continuousCapture
+                    ? continuousCaptureMerge.merge(state.draft, toolPlan.changes())
+                    : toolPlan.changes();
             RevisionView revision = null;
             if (!continuousCapture && toolPlan.clarification() != null) {
                 clarificationManager.append(state, toolPlan.clarification());
-            } else if (toolPlan.clarification() == null) {
-                revision = revisionManager.createRevision(state, toolPlan.changes());
+            } else {
+                // Continuous capture never lets an ambiguous item erase independent safe
+                // facts from the same chunk. Clarifications stay a human review concern;
+                // grounded changes are accumulated immediately in the working draft.
+                revision = revisionManager.createRevision(state, revisionChanges);
                 if (continuousCapture && revision != null && "PENDING".equals(revision.status())) {
                     RevisionView createdRevision = revision;
                     UUID acceptedRevisionId = createdRevision.id();
@@ -408,6 +481,19 @@ public class AiConsultationService {
         } catch (RuntimeException exception) {
             log.warn("Échec génération brouillon IA provider={}", properties.provider());
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI_UNAVAILABLE");
+        }
+    }
+
+    private AiChatResponse captureModelResponse(List<AiMessage> providerMessages) {
+        try {
+            return aiProvider.chatStructured(
+                    providerMessages,
+                    AiClinicalCapturePrompt.SYSTEM_PROMPT,
+                    AiClinicalCapturePrompt.SCHEMA_NAME,
+                    AiClinicalCapturePrompt.schema());
+        } catch (UnsupportedOperationException unsupported) {
+            log.debug("Structured capture output unavailable for provider={}, falling back to strict JSON chat", properties.provider());
+            return aiProvider.chat(providerMessages, AiClinicalCapturePrompt.SYSTEM_PROMPT);
         }
     }
 

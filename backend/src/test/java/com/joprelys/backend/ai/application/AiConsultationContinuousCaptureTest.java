@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -112,6 +113,40 @@ class AiConsultationContinuousCaptureTest {
     }
 
     @Test
+    void continuousCaptureMustKeepSafeFactsEvenWhenAnotherFieldNeedsClarification() {
+        when(aiProvider.chat(anyList(), anyString())).thenReturn(chatResponse("""
+                {
+                  "changes": [{
+                    "field": "symptoms",
+                    "operation": "SET",
+                    "value": "Céphalée aiguë depuis trois jours",
+                    "reason": "Symptôme explicite.",
+                    "uncertainty": "LOW",
+                    "evidence": ["céphalée aiguë depuis trois jours"]
+                  }],
+                  "assistantMessage": "Précision médicament nécessaire.",
+                  "needsClarification": true,
+                  "clarification": {
+                    "field": "prescription",
+                    "question": "Pouvez-vous préciser la fréquence ?",
+                    "options": []
+                  }
+                }
+                """));
+
+        var result = service.processRealtimeTranscript(
+                visitId,
+                userId,
+                organizationId,
+                "Céphalée aiguë depuis trois jours. Vitafer une fois pas jour.",
+                0.9);
+
+        assertEquals("Céphalée aiguë depuis trois jours", result.draft().get("symptoms"));
+        assertFalse(result.needsClarification());
+        assertTrue(result.clarifications().isEmpty());
+    }
+
+    @Test
     void rebuildWithoutAsrConfidenceMustRemainStructurableAfterDurableReview() {
         when(aiProvider.chat(anyList(), anyString())).thenReturn(chatResponse("""
                 {
@@ -198,6 +233,70 @@ class AiConsultationContinuousCaptureTest {
 
         assertTrue(result.draft().get("prescription").contains("Paracétamol"));
         assertTrue(result.draft().get("prescription").contains("1000 mg"));
+    }
+
+    @Test
+    void durableCaptureMustStructureTheMessyRecetteTranscriptInOneModelCall() {
+        String transcript = """
+                Je reçois aujourd'hui un patient âgé de 12 ans qui se plaint d'une céphalée aiguë depuis trois jours.
+                Il n'arrive plus à se lever. Quatre jours, je lui demande également de beaucoup boire et de se reposer.
+                Je lui prescrit du Paracétamol 1000mg a prendre matin midi soir 2 comprimé par prise par voie orale
+                Vitafer 1cuillerr a café 1 fois pas jour voie orale Examen goutte d'epaisse
+                """.trim();
+        when(aiProvider.chatStructured(anyList(), anyString(), anyString(), anyMap())).thenReturn(chatResponse("""
+                {
+                  "changes": [
+                    {
+                      "field": "symptoms",
+                      "operation": "SET",
+                      "value": "céphalée aiguë depuis trois jours. Il n'arrive plus à se lever",
+                      "reason": "Symptômes explicitement dictés.",
+                      "uncertainty": "LOW",
+                      "evidence": ["céphalée aiguë depuis trois jours", "Il n'arrive plus à se lever"]
+                    },
+                    {
+                      "field": "advice",
+                      "operation": "SET",
+                      "value": "beaucoup boire et se reposer",
+                      "reason": "Conseils explicitement dictés.",
+                      "uncertainty": "LOW",
+                      "evidence": ["beaucoup boire et de se reposer"]
+                    },
+                    {
+                      "field": "prescription",
+                      "operation": "SET",
+                      "value": [{"drugName":"Paracétamol","dosage":"1000 mg","frequency":"matin midi soir","posology":"2 comprimé par prise","route":"voie orale"},{"drugName":"Vitafer","instructions":"1cuillerr a café","frequency":"1 fois pas jour","route":"voie orale"}],
+                      "reason": "Prescription explicitement dictée.",
+                      "uncertainty": "MEDIUM",
+                      "evidence": ["Paracétamol 1000mg", "2 comprimé par prise", "Vitafer", "1 fois pas jour voie orale"]
+                    },
+                    {
+                      "field": "labOrders",
+                      "operation": "SET",
+                      "value": ["goutte épaisse"],
+                      "reason": "Examen explicitement demandé.",
+                      "uncertainty": "LOW",
+                      "evidence": ["Examen goutte d'epaisse"]
+                    }
+                  ],
+                  "assistantMessage": "Capture structurée.",
+                  "needsClarification": false,
+                  "clarification": null
+                }
+                """));
+
+        var result = service.processCaptureTranscript(visitId, userId, organizationId, transcript);
+
+        assertTrue(result.draft().get("symptoms").contains("céphalée aiguë depuis trois jours"));
+        assertTrue(result.draft().get("symptoms").contains("n'arrive plus à se lever"));
+        assertTrue(result.draft().get("advice").contains("boire"));
+        assertTrue(result.draft().get("prescription").contains("Paracétamol"));
+        assertTrue(result.draft().get("prescription").contains("1000 mg"));
+        assertTrue(result.draft().get("prescription").contains("Vitafer"));
+        assertTrue(result.draft().get("labOrders").contains("goutte épaisse"));
+        assertFalse(result.draft().containsKey("clinicalExam"));
+        assertFalse(result.draft().containsKey("diagnosis"));
+        verify(aiProvider, times(1)).chatStructured(anyList(), anyString(), anyString(), anyMap());
     }
 
     private AiChatResponse chatResponse(String content) {

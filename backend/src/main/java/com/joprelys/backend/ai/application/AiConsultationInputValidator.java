@@ -6,7 +6,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 final class AiConsultationInputValidator {
 
-    static final int MAX_TRANSCRIPT_LENGTH = 12000;
+    // Public API DTOs keep their own smaller request limits. The larger internal
+    // bound lets durable consultation rebuilds process fewer model chunks.
+    static final int MAX_TRANSCRIPT_LENGTH = 32000;
     private static final int MAX_AUDIO_BYTES = 10 * 1024 * 1024;
     private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
             "audio/webm", "audio/mp4", "audio/mpeg", "audio/wav");

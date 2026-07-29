@@ -221,8 +221,18 @@ export class AiProposalPanelComponent {
       if (field === 'prescription' && Array.isArray(parsed)) {
         return parsed
           .map((line: Record<string, unknown>) =>
-            [line['drugName'], line['dosage'], line['frequency'], line['duration'], line['route']]
-              .filter(Boolean)
+            [
+              line['drugName'],
+              line['dosage'],
+              line['form'],
+              line['posology'],
+              line['frequency'],
+              line['route'],
+              line['duration'],
+              line['quantity'],
+              line['instructions'],
+            ]
+              .filter(item => typeof item === 'string' && !!item.trim())
               .join(' · '),
           )
           .join('\n');
