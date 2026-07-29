@@ -9,12 +9,7 @@ final class AiConsultationInputValidator {
     static final int MAX_TRANSCRIPT_LENGTH = 12000;
     private static final int MAX_AUDIO_BYTES = 10 * 1024 * 1024;
     private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
-            "audio/webm",
-            "audio/ogg",
-            "audio/mp4",
-            "audio/mpeg",
-            "audio/wav",
-            "application/octet-stream");
+            "audio/webm", "audio/mp4", "audio/mpeg", "audio/wav");
 
     private AiConsultationInputValidator() {
     }
