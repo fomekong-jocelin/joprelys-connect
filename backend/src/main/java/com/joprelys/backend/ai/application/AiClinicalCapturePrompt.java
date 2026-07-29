@@ -32,7 +32,7 @@ final class AiClinicalCapturePrompt {
             - One ambiguous medication must never remove another medication.
             - One ambiguous sentence must never remove safe facts from another sentence.
             - Do not ask clarification in this batch-rebuild path. needsClarification is always false and clarification is always null.
-            - Return only facts from CURRENT TRANSCRIPT. ACCEPTED DRAFT is context for deduplication only; do not copy it into changes. Joprelys merges chunks deterministically after safety checks.
+            - Return only facts from CURRENT TRANSCRIPT. Joprelys merges chunks and deduplicates them deterministically after safety checks.
             - For every change, evidence is mandatory and contains 1 to 4 short exact contiguous quotes copied from CURRENT TRANSCRIPT.
             - If a clinical fact cannot be supported by an exact quote, do not emit it.
 
