@@ -1,5 +1,6 @@
 package com.joprelys.backend.ai.realtime.api;
 
+import com.joprelys.backend.ai.realtime.application.RealtimeClinicalIntakeDiscardService;
 import com.joprelys.backend.ai.realtime.application.RealtimeClinicalIntakeService;
 import com.joprelys.backend.ai.realtime.application.RealtimeClinicalIntakeService.IntakeView;
 import com.joprelys.backend.ai.realtime.application.RealtimeIntakeSource;
@@ -12,6 +13,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,12 +29,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class RealtimeClinicalIntakeController {
 
     private final RealtimeClinicalIntakeService service;
+    private final RealtimeClinicalIntakeDiscardService discardService;
     private final RealtimeIntakeIdentityResolver identityResolver;
 
     public RealtimeClinicalIntakeController(
             RealtimeClinicalIntakeService service,
+            RealtimeClinicalIntakeDiscardService discardService,
             RealtimeIntakeIdentityResolver identityResolver) {
         this.service = service;
+        this.discardService = discardService;
         this.identityResolver = identityResolver;
     }
 
@@ -52,7 +57,7 @@ public class RealtimeClinicalIntakeController {
                 request.confidence());
     }
 
-    /** Returns only capture items that have not yet been committed into a saved consultation. */
+    /** Returns only capture items that still belong to the clinician working set. */
     @GetMapping
     @PreAuthorize("hasAuthority('CLINICAL_READ') or hasAuthority('CLINICAL_WRITE')")
     public List<IntakeView> list(
@@ -78,6 +83,37 @@ public class RealtimeClinicalIntakeController {
                 identity.userId(),
                 identity.organizationId(),
                 request.transcript());
+    }
+
+    /**
+     * Removes one passage from the current AI working set while keeping an audited
+     * DISCARDED row in storage.
+     */
+    @DeleteMapping("/{intakeId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void discardOne(
+            @PathVariable UUID visitId,
+            @PathVariable UUID intakeId,
+            Authentication authentication) {
+        var identity = identityResolver.resolve(authentication);
+        discardService.discardOne(
+                visitId,
+                intakeId,
+                identity.userId(),
+                identity.organizationId());
+    }
+
+    /** Discards all currently recoverable consultation transcript passages in one action. */
+    @DeleteMapping
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void discardAll(
+            @PathVariable UUID visitId,
+            Authentication authentication) {
+        var identity = identityResolver.resolve(authentication);
+        discardService.discardAll(
+                visitId,
+                identity.userId(),
+                identity.organizationId());
     }
 
     /**

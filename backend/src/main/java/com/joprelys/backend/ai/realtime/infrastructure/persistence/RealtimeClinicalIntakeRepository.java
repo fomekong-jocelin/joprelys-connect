@@ -29,10 +29,19 @@ public interface RealtimeClinicalIntakeRepository extends JpaRepository<Realtime
             UUID visitId,
             RealtimeIntakeSource source);
 
+    /** Working-set transcript only: consumed and clinician-discarded rows are excluded. */
+    @Query("""
+            select item from RealtimeClinicalIntakeEntity item
+            where item.visitId = :visitId
+              and item.source = :source
+              and item.captureStatus <> :captureStatus
+              and item.captureStatus <> 'DISCARDED'
+            order by item.sequenceNo asc
+            """)
     List<RealtimeClinicalIntakeEntity> findByVisitIdAndSourceAndCaptureStatusNotOrderBySequenceNoAsc(
-            UUID visitId,
-            RealtimeIntakeSource source,
-            String captureStatus);
+            @Param("visitId") UUID visitId,
+            @Param("source") RealtimeIntakeSource source,
+            @Param("captureStatus") String captureStatus);
 
     @Query("select coalesce(max(item.sequenceNo), 0) from RealtimeClinicalIntakeEntity item where item.visitId = :visitId")
     long findMaximumSequence(@Param("visitId") UUID visitId);
