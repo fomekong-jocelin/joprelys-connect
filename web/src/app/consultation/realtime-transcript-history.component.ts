@@ -42,7 +42,7 @@ export interface RealtimeTranscriptCorrection {
             @if (processing) {
               <span class="h-3 w-3 animate-spin rounded-full border-2 border-[var(--brand-primary-border)] border-t-[var(--brand-primary)]"></span>
             }
-            {{ queuedCount }} {{ i18n.t('consultation.ai.queuedShort') }}
+            {{ queuedCount }} {{ i18n.t('consultation.ai.capturePendingShort', 'à sécuriser') }}
           </span>
         }
       </header>
