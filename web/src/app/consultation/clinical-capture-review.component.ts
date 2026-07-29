@@ -157,6 +157,7 @@ export class ClinicalCaptureReviewComponent {
 
   @Input() entries: RealtimeClinicalIntakeAck[] = [];
   @Input() busy = false;
+  @Output() readonly entriesChange = new EventEmitter<RealtimeClinicalIntakeAck[]>();
   @Output() readonly corrected = new EventEmitter<ClinicalCaptureCorrection>();
   @Output() readonly resume = new EventEmitter<void>();
   @Output() readonly generate = new EventEmitter<void>();
@@ -201,7 +202,9 @@ export class ClinicalCaptureReviewComponent {
     this.deleting.set(true);
     this.intakeApi.discard(entry.visitId, entry.id).subscribe({
       next: () => {
-        this.entries = this.entries.filter(item => item.id !== entry.id);
+        const nextEntries = this.entries.filter(item => item.id !== entry.id);
+        this.entries = nextEntries;
+        this.entriesChange.emit(nextEntries);
         this.confirmDeleteId.set(null);
         this.deleting.set(false);
       },
@@ -224,6 +227,7 @@ export class ClinicalCaptureReviewComponent {
     this.intakeApi.discardAll(visitId).subscribe({
       next: () => {
         this.entries = [];
+        this.entriesChange.emit([]);
         this.confirmDeleteAll.set(false);
         this.confirmDeleteId.set(null);
         this.deleting.set(false);
