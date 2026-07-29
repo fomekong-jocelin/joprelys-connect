@@ -22,7 +22,7 @@ import {
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div class="min-w-0">
             <p class="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">
-              {{ i18n.t('consultation.ai.acceptedDraft', 'Brouillon prêt') }}
+              {{ i18n.t('consultation.ai.proposedReport', 'Compte rendu proposé') }}
             </p>
             <p class="mt-0.5 text-xs leading-5 text-[var(--text-secondary)]">
               {{ entries().length }} {{ i18n.t('consultation.ai.draftSectionsReady', 'élément(s) prêt(s) à vérifier') }}
@@ -143,7 +143,7 @@ export class AiDraftPreviewComponent {
         this.reviewing.set(false);
         this.reviewError.set(this.i18n.t(
           'consultation.ai.finalReviewError',
-          'La revue approfondie n’a pas pu être exécutée. Le brouillon actuel reste inchangé.',
+          'La revue approfondie n’a pas pu être exécutée. Le compte rendu proposé reste inchangé.',
         ));
       },
     });
@@ -186,11 +186,8 @@ export class AiDraftPreviewComponent {
       const parsed = JSON.parse(value);
       if (field === 'prescription' && Array.isArray(parsed)) {
         return parsed
-          .map((line: Record<string, unknown>) =>
-            [line['drugName'], line['dosage'], line['frequency'], line['duration']]
-              .filter(Boolean)
-              .join(' · '),
-          )
+          .map((line: Record<string, unknown>) => this.formatPrescriptionLine(line))
+          .filter(Boolean)
           .join('\n');
       }
       if (field === 'labOrders' && Array.isArray(parsed)) return parsed.join(', ');
@@ -220,6 +217,30 @@ export class AiDraftPreviewComponent {
       vitals: this.i18n.t('consultation.ai.field.vitals'),
     };
     return labels[field];
+  }
+
+  private formatPrescriptionLine(line: Record<string, unknown>): string {
+    const orderedKeys = [
+      'drugName',
+      'dosage',
+      'form',
+      'posology',
+      'frequency',
+      'duration',
+      'route',
+      'quantity',
+      'instructions',
+    ] as const;
+    const parts: string[] = [];
+    for (const key of orderedKeys) {
+      const raw = line[key];
+      if (typeof raw !== 'string' || !raw.trim()) continue;
+      const value = raw.trim();
+      if (!parts.some(existing => existing.toLocaleLowerCase() === value.toLocaleLowerCase())) {
+        parts.push(value);
+      }
+    }
+    return parts.join(' · ');
   }
 
   private vitalLabel(key: string): string {
