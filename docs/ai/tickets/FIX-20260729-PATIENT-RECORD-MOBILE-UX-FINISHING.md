@@ -34,16 +34,16 @@ Réduire encore la charge cognitive et la hauteur de page mobile sans modifier l
 
 ## Critères d’acceptation
 
-- [ ] Aucun accordéon `Informations administratives` n’est rendu.
-- [ ] Le contenu administratif est visible directement dans `Fiche d’identité`.
-- [ ] Les titres d’accordéons restent sur une ligne sur un viewport mobile de 360 px ou plus.
-- [ ] Le contexte d’urgence conserve le badge de sécurité et son auto-ouverture en cas d’urgence active.
-- [ ] Le regroupement allergies / antécédents / vaccinations reste replié par défaut.
-- [ ] Sur mobile, `Ouvrir une visite` ou `Démarrer la consultation` occupe la ligne principale en pleine largeur.
-- [ ] `Synthèse PDF` et `Retour` sont regroupés sur une ligne secondaire lorsque les droits permettent le PDF.
-- [ ] Sur desktop, les trois actions restent compactes, alignées et ordonnées.
-- [ ] Aucun texte utilisateur nouveau n’est codé en dur ; FR/EN sont présents.
-- [ ] Aucun Angular Material / Tailwind v3 / URL backend hardcodée n’est introduit.
+- [x] Aucun accordéon `Informations administratives` n’est rendu.
+- [x] Le contenu administratif est visible directement dans `Fiche d’identité`.
+- [x] Les titres d’accordéons utilisent des libellés courts et des classes one-line pour un viewport mobile de 360 px ou plus.
+- [x] Le contexte d’urgence conserve le badge de sécurité et son auto-ouverture en cas d’urgence active.
+- [x] Le regroupement allergies / antécédents / vaccinations reste replié par défaut sous `Informations médicales`.
+- [x] Sur mobile, `Ouvrir une visite` ou `Démarrer la consultation` occupe la ligne principale en pleine largeur.
+- [x] `Synthèse PDF` et `Retour` sont regroupés sur une ligne secondaire lorsque les droits permettent le PDF.
+- [x] Sur desktop, les trois actions restent compactes, alignées et ordonnées.
+- [x] Aucun texte utilisateur nouveau n’est codé en dur ; FR/EN sont présents.
+- [x] Aucun Angular Material / Tailwind v3 / URL backend hardcodée n’est introduit.
 - [ ] Tests Angular et build production verts.
 
 ## Action plan
@@ -51,26 +51,29 @@ Réduire encore la charge cognitive et la hauteur de page mobile sans modifier l
 - [x] Lire la gouvernance, `DESIGN.md` et les standards UI.
 - [x] Inspecter le shell patient, le profil, le contexte urgence et les tests existants.
 - [x] Créer l’issue #227 et la documentation initiale.
-- [ ] Modifier le profil patient.
-- [ ] Modifier la hiérarchie d’actions du shell patient.
-- [ ] Adapter les libellés FR/EN.
-- [ ] Ajouter / adapter les tests.
+- [x] Modifier le profil patient.
+- [x] Modifier la hiérarchie d’actions du shell patient.
+- [x] Adapter les libellés FR/EN.
+- [x] Ajouter / adapter les tests.
 - [ ] Exécuter le gate Angular complet.
-- [ ] Mettre à jour `PROJECT-TRACKING.md` et `CHANGELOG.md`.
+- [x] Mettre à jour `DESIGN.md`, `PROJECT-TRACKING.md` et `CHANGELOG.md`.
 - [ ] Passer la PR Ready uniquement après le dernier commit.
 
 ## Risques
 
-- Régression de hauteur ou débordement à 360 px si un libellé reste trop long.
-- Régression de tests qui supposaient l’accordéon administratif.
-- Duplication potentielle de DPU / identifiant établissement entre bandeau et fiche : accepter la présence dans le bandeau de contexte mais ne pas les répéter inutilement dans la grille administrative.
+- Régression de hauteur ou débordement à 360 px si un libellé ou un badge externe devient plus long dans une future traduction.
+- La preuve automatisée couvre les contraintes de classes/hiérarchie ; la validation visuelle physique 360–430 px reste nécessaire en recette après fusion.
+- Duplication potentielle de DPU / identifiant établissement entre bandeau et fiche : les identifiants restent dans le bandeau de contexte et ne sont pas répétés dans la grille administrative.
 
 ## Tests attendus
 
 - test du profil : résumé administratif rendu sans clic ;
 - test du profil : aucun bouton `Informations administratives` ;
 - test du profil : informations médicales repliées par défaut ;
+- test urgence : en-tête compact + sous-titre visible seulement après ouverture ;
+- test urgence : auto-ouverture d’une urgence active ;
 - test shell : ordre et classes de layout des actions mobile ;
+- test shell : Synthèse PDF reste permission-gated ;
 - `npm run test` ;
 - `npm run build` ;
 - validation CI de la stack frontend.
