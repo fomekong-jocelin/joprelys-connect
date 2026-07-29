@@ -176,8 +176,12 @@ export class AiDraftMergeService {
     return typeof line['drugName'] === 'string' && !!line['drugName'].trim();
   }
 
+  /**
+   * The AI never decides substitution policy. New AI-created medication lines are
+   * deliberately conservative until the clinician changes that business field.
+   */
   private normalizePrescription(line: AiPrescriptionLine): AiPrescriptionLine {
-    const normalized: AiPrescriptionLine = {
+    return {
       drugName: line.drugName.trim(),
       dosage: line.dosage?.trim() ?? '',
       posology: line.posology?.trim() ?? '',
@@ -187,11 +191,8 @@ export class AiDraftMergeService {
       form: line.form?.trim() ?? '',
       route: line.route?.trim() ?? '',
       frequency: line.frequency?.trim() ?? '',
+      substitutionAllowed: false,
     };
-    if (typeof line.substitutionAllowed === 'boolean') {
-      normalized.substitutionAllowed = line.substitutionAllowed;
-    }
-    return normalized;
   }
 
   private drugKey(line: AiPrescriptionLine): string {
@@ -210,7 +211,7 @@ export class AiDraftMergeService {
       this.key(normalized.form ?? ''),
       this.key(normalized.route ?? ''),
       this.key(normalized.frequency ?? ''),
-      normalized.substitutionAllowed ?? null,
+      normalized.substitutionAllowed,
     ]);
   }
 
