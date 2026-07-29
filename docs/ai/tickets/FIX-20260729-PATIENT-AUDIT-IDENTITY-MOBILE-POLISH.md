@@ -30,22 +30,27 @@ Chaque événement devient une carte/accordéon indépendant.
 - action technique ;
 - adresse IP ;
 - identifiants de ressource disponibles ;
-- user-agent lorsqu’il est fourni ;
-- statut et horodatage complet.
+- user-agent lorsqu’il est fourni.
 
-La timeline verticale décorative est supprimée.
+La timeline verticale décorative est supprimée. La date est formatée avec la locale produit afin d’éviter le format US observé sur la recette FR.
 
 ### Fiche d’identité
 
-La vue est organisée en groupes cohérents :
+La mosaïque de cartes est remplacée par une fiche unique label/valeur à alignement constant. Ce format réduit les différences de hauteur et exploite mieux la largeur mobile.
 
-1. identité et naissance ;
-2. contact ;
-3. localisation ;
-4. groupe sanguin / informations secondaires ;
-5. contact d’urgence repliable.
+Ordre de lecture :
 
-Les valeurs courtes utilisent des cellules compactes. Les valeurs longues (e-mail, adresse) occupent toute la largeur utile et utilisent `overflow-wrap:anywhere` / `break-words` sans troncature sémantique.
+1. sexe ;
+2. naissance / âge ;
+3. téléphone ;
+4. e-mail ;
+5. ville ;
+6. quartier / district ;
+7. adresse ;
+8. groupe sanguin ;
+9. contact d’urgence repliable.
+
+Les valeurs longues utilisent `overflow-wrap:anywhere` / `break-words` sans troncature sémantique.
 
 ## Contraintes
 
@@ -59,25 +64,26 @@ Les valeurs courtes utilisent des cellules compactes. Les valeurs longues (e-mai
 
 ## Critères d’acceptation
 
-- [ ] chaque audit est ouvrable/refermable indépendamment ;
-- [ ] aucun rail/timeline verticale ne comprime le mobile ;
-- [ ] titre, acteur et date restent lisibles sans scroll horizontal ;
-- [ ] les détails techniques ne sont visibles qu’après ouverture ;
-- [ ] la fiche identité ne force plus e-mail/adresse dans de petites colonnes ;
-- [ ] la date de naissance et l’âge restent lisibles sans empilement artificiel ;
-- [ ] aucune valeur n’est perdue ou tronquée ;
-- [ ] contact d’urgence reste repliable ;
+- [x] chaque audit est ouvrable/refermable indépendamment ;
+- [x] aucun rail/timeline verticale ne comprime le mobile ;
+- [x] titre, acteur et date utilisent un layout sans concurrence de colonnes rigides ;
+- [x] les détails techniques ne sont visibles qu’après ouverture ;
+- [x] la fiche identité ne force plus e-mail/adresse dans de petites cartes ;
+- [x] la date de naissance et l’âge sont présentés comme une valeur compacte ;
+- [x] aucune valeur n’est volontairement tronquée ;
+- [x] contact d’urgence reste repliable ;
 - [ ] tests Angular + build production verts.
 
 ## Tests
 
-- audit : tous les événements fermés au chargement ;
-- audit : toggle par `log.id`, sans ouvrir les autres ;
-- audit : détails techniques absents fermé / présents ouvert ;
-- identité : e-mail + adresse en largeur complète ;
-- identité : grille mobile 1 colonne puis 2 colonnes à partir de `sm` ;
-- identité : contact d’urgence toujours repliable ;
-- gate frontend complet.
+- [x] audit : tous les événements fermés au chargement ;
+- [x] audit : toggle par `log.id`, sans ouvrir les autres ;
+- [x] audit : détails techniques absents fermé / présents ouvert ;
+- [x] audit : format de date lié à la locale produit ;
+- [x] identité : fiche alignée unique au lieu de la mosaïque de cartes ;
+- [x] identité : e-mail + adresse protégés contre les longues chaînes ;
+- [x] identité : contact d’urgence toujours repliable ;
+- [ ] gate frontend complet.
 
 ## SemVer
 
