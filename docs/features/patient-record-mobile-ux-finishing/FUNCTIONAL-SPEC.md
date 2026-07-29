@@ -70,7 +70,7 @@ Libellés cibles :
 | Clé | FR | EN |
 |---|---|---|
 | `patient.urgTemp.emergency.title` | Contexte d’urgence | Emergency context |
-| `patient.profile.medicalSection` | Informations médicales | Medical information |
+| `patient.urgTemp.profile.medicalSection` | Informations médicales | Medical information |
 
 Les autres libellés existants sont réutilisés.
 
