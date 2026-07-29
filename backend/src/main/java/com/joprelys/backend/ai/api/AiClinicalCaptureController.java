@@ -13,7 +13,6 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -62,11 +61,9 @@ public class AiClinicalCaptureController {
 
     @PostMapping(value = "/dictation", consumes = {
             "audio/webm",
-            "audio/ogg",
             "audio/wav",
             "audio/mpeg",
-            "audio/mp4",
-            MediaType.APPLICATION_OCTET_STREAM_VALUE
+            "audio/mp4"
     })
     public IntakeView captureDictation(
             @PathVariable UUID visitId,
@@ -80,7 +77,7 @@ public class AiClinicalCaptureController {
                 identity.userId(),
                 identity.organizationId(),
                 audio,
-                contentType == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : contentType,
+                contentType,
                 locale);
     }
 
