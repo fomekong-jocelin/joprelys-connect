@@ -164,8 +164,9 @@ public class AiConsultationService {
     }
 
     /**
-     * Continuous reconstruction input never leaves a clarification or field decision
-     * pending. Capture provenance is carried all the way to deterministic safety guards.
+     * Continuous reconstruction auto-accepts independently safe facts while retaining
+     * unresolved model clarifications as non-blocking report-review points. Capture
+     * provenance is carried all the way to deterministic safety guards.
      */
     public MessageView processCaptureTranscript(
             UUID visitId,
@@ -396,7 +397,7 @@ public class AiConsultationService {
                 /*
                  * Continuous report reconstruction keeps every independently safe change
                  * even when another item in the same model response still needs clarification.
-                 * The unresolved item is simply not auto-applied.
+                 * The unresolved item is not auto-applied and is retained below for review.
                  */
                 revision = revisionManager.createRevision(state, toolPlan.changes());
                 if (continuousCapture && revision != null && "PENDING".equals(revision.status())) {
@@ -410,6 +411,10 @@ public class AiConsultationService {
                 }
             }
 
+            if (continuousCapture && toolPlan.clarification() != null) {
+                clarificationManager.append(state, toolPlan.clarification());
+            }
+
             List<String> changedFields = revision == null
                     ? List.of()
                     : revision.proposals().stream()
@@ -418,6 +423,7 @@ public class AiConsultationService {
             state.assistantMessage = continuousCapture
                     ? captureMessage(changedFields.size(), state.locale)
                     : parsed.assistantMessage();
+            /* Pending capture clarifications are report-review metadata, not a workflow lock. */
             state.needsClarification = !continuousCapture && toolPlan.clarification() != null;
             if (transcript != null) state.transcript = transcript;
             state.expiresAt = expiry();
