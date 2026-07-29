@@ -1,6 +1,7 @@
 package com.joprelys.backend.ai.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -45,6 +46,57 @@ class AiClinicalResponseParserStructuredTest {
         assertTrue(parsed.changes().get(0).proposedValue().contains("Medication-A"));
         assertEquals(1, parsed.changes().get(0).evidence().size());
         assertTrue(parsed.changes().get(1).proposedValue().contains("\"pulse\":72"));
+    }
+
+    @Test
+    void shouldIgnoreAiSubstitutionPolicyWithoutDroppingMedication() {
+        var parsed = parser.parse("""
+                {
+                  "changes": [{
+                    "field":"prescription",
+                    "operation":"SET",
+                    "value":[{"drugName":"Paracétamol","dosage":"1000 mg","substitutionAllowed":true}],
+                    "reason":"Explicitly dictated medication.",
+                    "uncertainty":"LOW",
+                    "evidence":["Paracétamol 1000mg"]
+                  }],
+                  "assistantMessage":"Test",
+                  "needsClarification":false,
+                  "clarification":null
+                }
+                """);
+
+        assertEquals(1, parsed.changes().size());
+        assertTrue(parsed.changes().getFirst().proposedValue().contains("Paracétamol"));
+        assertFalse(parsed.changes().getFirst().proposedValue().contains("substitutionAllowed"));
+    }
+
+    @Test
+    void safePrescriptionLineMustSurviveClarificationForAnotherMedicationDetail() {
+        var parsed = parser.parse("""
+                {
+                  "changes": [{
+                    "field":"prescription",
+                    "operation":"SET",
+                    "value":[{"drugName":"Paracétamol","dosage":"1000 mg","frequency":"matin midi soir"}],
+                    "reason":"Paracétamol clairement dicté.",
+                    "uncertainty":"LOW",
+                    "evidence":["Paracétamol 1000mg", "matin midi soir"]
+                  }],
+                  "assistantMessage":"Précisez Vitafer.",
+                  "needsClarification":true,
+                  "clarification":{
+                    "field":"prescription",
+                    "question":"Pouvez-vous préciser la fréquence de Vitafer ?",
+                    "options":[]
+                  }
+                }
+                """);
+
+        assertTrue(parsed.needsClarification());
+        assertEquals("prescription", parsed.clarification().field());
+        assertEquals(1, parsed.changes().size());
+        assertTrue(parsed.changes().getFirst().proposedValue().contains("Paracétamol"));
     }
 
     @Test
