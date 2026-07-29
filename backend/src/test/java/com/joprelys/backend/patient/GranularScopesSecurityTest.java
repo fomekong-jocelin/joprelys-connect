@@ -98,9 +98,8 @@ public class GranularScopesSecurityTest {
         visitB.setStatus("EN_COURS");
         visitB = visitRepository.save(visitB);
 
-        consultationB = new ConsultationEntity(
-                visitB, doctorA, "DOC-CONS-123", "symptoms", "exam", "diagnosis", "advice", "followup");
-        consultationB = consultationRepository.save(consultationB);
+        consultationB = consultationRepository.save(new ConsultationEntity(
+                visitB, doctorA, "DOC-CONS-123", "symptoms", "exam", "diagnosis", "advice", "followup"));
 
         prescriptionB = new PrescriptionEntity(consultationB);
         prescriptionB.setPrescriptionNumber("TX-DOC-GOOD");
@@ -113,7 +112,6 @@ public class GranularScopesSecurityTest {
     }
 
     @Test
-    @DisplayName("No consent returns an explicit 403 with access-request remediation")
     void getConsultation_noConsent_isExplicitForbidden() throws Exception {
         mockMvc.perform(get("/api/visits/" + visitB.getId() + "/consultation")
                         .header("Authorization", "Bearer " + tokenDoctorA))
@@ -124,12 +122,10 @@ public class GranularScopesSecurityTest {
     }
 
     @Test
-    @DisplayName("Existing consent without medical_records returns SCOPE_REQUIRED")
     void getConsultation_consentWithoutScope_isExplicitForbidden() throws Exception {
         PatientConsentEntity consent = new PatientConsentEntity(patientB.getId(), orgA.getId(), "ACTIVE");
         consent.setScopes("prescriptions,lab_results");
         patientConsentRepository.save(consent);
-
         mockMvc.perform(get("/api/visits/" + visitB.getId() + "/consultation")
                         .header("Authorization", "Bearer " + tokenDoctorA))
                 .andExpect(status().isForbidden())
@@ -138,76 +134,66 @@ public class GranularScopesSecurityTest {
     }
 
     @Test
-    @DisplayName("Standing consent and approved external access grants are cumulative")
     void externalGrantCanCompleteStandingConsent() throws Exception {
         PatientConsentEntity consent = new PatientConsentEntity(patientB.getId(), orgA.getId(), "ACTIVE");
         consent.setScopes("prescriptions");
         patientConsentRepository.save(consent);
-
         externalAccessRequestRepository.save(approvedExternalAccess("medical_records"));
-
         mockMvc.perform(get("/api/visits/" + visitB.getId() + "/consultation")
                         .header("Authorization", "Bearer " + tokenDoctorA))
                 .andExpect(status().isOk());
     }
 
     @Test
-    @DisplayName("Any matching approved external grant can provide the required scope")
     void laterExternalGrantCanProvideRequiredScope() throws Exception {
         externalAccessRequestRepository.save(approvedExternalAccess("prescriptions"));
         externalAccessRequestRepository.save(approvedExternalAccess("medical_records"));
-
         mockMvc.perform(get("/api/visits/" + visitB.getId() + "/consultation")
                         .header("Authorization", "Bearer " + tokenDoctorA))
                 .andExpect(status().isOk());
     }
 
     @Test
-    @DisplayName("Valid visit without persisted consultation returns 204, not 404")
     void validVisitWithoutConsultation_returnsNoContent() throws Exception {
-        prescriptionRepository.delete(prescriptionB);
-        consultationRepository.delete(consultationB);
+        prescriptionRepository.deleteById(prescriptionB.getId());
+        prescriptionRepository.flush();
+        consultationRepository.deleteById(consultationB.getId());
+        consultationRepository.flush();
         PatientConsentEntity consent = new PatientConsentEntity(patientB.getId(), orgA.getId(), "ACTIVE");
         consent.setScopes("medical_records");
         patientConsentRepository.save(consent);
-
         mockMvc.perform(get("/api/visits/" + visitB.getId() + "/consultation")
                         .header("Authorization", "Bearer " + tokenDoctorA))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    @DisplayName("Valid consultation without prescription returns 204, not 404")
     void validConsultationWithoutPrescription_returnsNoContent() throws Exception {
-        prescriptionRepository.delete(prescriptionB);
+        prescriptionRepository.deleteById(prescriptionB.getId());
+        prescriptionRepository.flush();
         PatientConsentEntity consent = new PatientConsentEntity(patientB.getId(), orgA.getId(), "ACTIVE");
         consent.setScopes("prescriptions");
         patientConsentRepository.save(consent);
-
         mockMvc.perform(get("/api/consultations/" + consultationB.getId() + "/prescription")
                         .header("Authorization", "Bearer " + tokenDoctorA))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    @DisplayName("Consultation succeeds when medical_records scope is present")
     void getConsultation_consentWithScope_succeeds() throws Exception {
         PatientConsentEntity consent = new PatientConsentEntity(patientB.getId(), orgA.getId(), "ACTIVE");
         consent.setScopes("medical_records,prescriptions");
         patientConsentRepository.save(consent);
-
         mockMvc.perform(get("/api/visits/" + visitB.getId() + "/consultation")
                         .header("Authorization", "Bearer " + tokenDoctorA))
                 .andExpect(status().isOk());
     }
 
     @Test
-    @DisplayName("Prescription returns SCOPE_REQUIRED when prescriptions scope is missing")
     void getPrescription_consentWithoutScope_fails() throws Exception {
         PatientConsentEntity consent = new PatientConsentEntity(patientB.getId(), orgA.getId(), "ACTIVE");
         consent.setScopes("medical_records,lab_results");
         patientConsentRepository.save(consent);
-
         mockMvc.perform(get("/api/consultations/" + consultationB.getId() + "/prescription")
                         .header("Authorization", "Bearer " + tokenDoctorA))
                 .andExpect(status().isForbidden())
@@ -216,24 +202,20 @@ public class GranularScopesSecurityTest {
     }
 
     @Test
-    @DisplayName("Prescription succeeds when prescriptions scope is present")
     void getPrescription_consentWithScope_succeeds() throws Exception {
         PatientConsentEntity consent = new PatientConsentEntity(patientB.getId(), orgA.getId(), "ACTIVE");
         consent.setScopes("prescriptions");
         patientConsentRepository.save(consent);
-
         mockMvc.perform(get("/api/consultations/" + consultationB.getId() + "/prescription")
                         .header("Authorization", "Bearer " + tokenDoctorA))
                 .andExpect(status().isOk());
     }
 
     @Test
-    @DisplayName("Allergies require allergies_history scope")
     void getAllergies_consentWithoutScope_fails() throws Exception {
         PatientConsentEntity consent = new PatientConsentEntity(patientB.getId(), orgA.getId(), "ACTIVE");
         consent.setScopes("medical_records,prescriptions");
         patientConsentRepository.save(consent);
-
         mockMvc.perform(get("/api/patients/" + patientB.getId() + "/allergies")
                         .header("Authorization", "Bearer " + tokenDoctorA))
                 .andExpect(status().isForbidden())
@@ -241,12 +223,10 @@ public class GranularScopesSecurityTest {
     }
 
     @Test
-    @DisplayName("Allergies succeed when allergies_history scope is present")
     void getAllergies_consentWithScope_succeeds() throws Exception {
         PatientConsentEntity consent = new PatientConsentEntity(patientB.getId(), orgA.getId(), "ACTIVE");
         consent.setScopes("allergies_history");
         patientConsentRepository.save(consent);
-
         mockMvc.perform(get("/api/patients/" + patientB.getId() + "/allergies")
                         .header("Authorization", "Bearer " + tokenDoctorA))
                 .andExpect(status().isOk());
