@@ -66,8 +66,17 @@ final class AiClinicalResponseParser {
                     : null;
             List<ParsedChange> changes = parseChanges(root.get("changes"));
             if (needsClarification && clarification != null) {
+                /*
+                 * A clarification is item-specific, not a licence to erase every safe fact
+                 * from the same broad field. Keep only LOW-uncertainty SET proposals for
+                 * that field; ambiguous/high-risk content must stay out until clarified.
+                 * Example: a clear Paracetamol line may survive while an unclear Vitafer
+                 * frequency is held for confirmation.
+                 */
                 changes = changes.stream()
-                        .filter(change -> !change.field().equals(clarification.field()))
+                        .filter(change -> !change.field().equals(clarification.field())
+                                || ("SET".equals(change.operation())
+                                && "LOW".equals(change.uncertainty())))
                         .toList();
             }
             return new ParsedResponse(
@@ -216,11 +225,6 @@ final class AiClinicalResponseParser {
                 if (!PRESCRIPTION_FIELDS.contains(key)) {
                     throw invalidChange();
                 }
-                /*
-                 * The AI is never allowed to decide substitution policy. Older model
-                 * responses may still emit the optional field, so ignore it rather
-                 * than rejecting an otherwise grounded medication line.
-                 */
                 if ("substitutionAllowed".equals(key)) {
                     continue;
                 }
