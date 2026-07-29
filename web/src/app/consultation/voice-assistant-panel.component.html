@@ -174,6 +174,7 @@
         @let missingClinicalExam = !reportDraft?.clinicalExam?.trim();
         @let missingDiagnosis = !(reportDraft?.diagnosis?.trim() || reportDraft?.finalDiagnosis?.trim() || reportDraft?.suspectedDiagnosis?.trim());
         @let transcriptReviewCount = reviewRequiredCount();
+        @let semanticClarifications = session()?.clarifications ?? [];
         <div class="mx-auto w-full max-w-4xl py-2">
           <header class="flex flex-col gap-3 border-b border-[var(--app-border)] pb-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -191,10 +192,10 @@
           </header>
 
           @if (hasDraftContent()) {
-            @if (missingClinicalExam || missingDiagnosis || transcriptReviewCount > 0) {
+            @if (missingClinicalExam || missingDiagnosis || transcriptReviewCount > 0 || semanticClarifications.length > 0) {
               <div class="mt-4 rounded-[var(--radius-brand-sm)] border border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] p-3">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div class="min-w-0">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div class="min-w-0 flex-1">
                     <p class="text-xs font-extrabold text-[var(--text-primary)]">
                       {{ i18n.t('consultation.ai.reportPartialTitle', 'Compte rendu exploitable mais incomplet') }}
                     </p>
@@ -217,25 +218,42 @@
                           {{ transcriptReviewCount }} {{ i18n.t('consultation.ai.transcriptPassagesStillToReview', 'passage(s) du transcript à vérifier') }}
                         </span>
                       }
+                      @if (semanticClarifications.length > 0) {
+                        <span class="rounded-[var(--radius-brand-xs)] border border-[var(--brand-warning-border)] bg-[var(--app-surface)] px-2 py-1 text-[10px] font-semibold text-[var(--brand-warning-text)]">
+                          {{ semanticClarifications.length }} {{ i18n.t('consultation.ai.semanticPointsToClarify', 'point(s) clinique(s) à préciser') }}
+                        </span>
+                      }
                     </div>
                     @if (transcriptReviewCount > 0) {
                       <p class="mt-2 text-[11px] leading-4 text-[var(--text-secondary)]">
                         {{ i18n.t('consultation.ai.transcriptReviewNonBlockingHelp', 'Ces passages restent conservés. Les faits sûrs du compte rendu peuvent être validés maintenant ; relisez seulement les passages incertains si nécessaire.') }}
                       </p>
                     }
+                    @if (semanticClarifications.length > 0) {
+                      <div class="mt-3 border-t border-[var(--brand-warning-border)] pt-2">
+                        <p class="text-[10px] font-bold uppercase tracking-wide text-[var(--brand-warning-text)]">
+                          {{ i18n.t('consultation.ai.pointsToClarifyTitle', 'Points à préciser') }}
+                        </p>
+                        <ul class="mt-1.5 space-y-1 text-xs leading-5 text-[var(--text-primary)]">
+                          @for (clarification of semanticClarifications; track clarification.id) {
+                            <li>• {{ clarification.question }}</li>
+                          }
+                        </ul>
+                      </div>
+                    }
                   </div>
                   <div class="flex shrink-0 flex-col gap-2">
-                    @if (transcriptReviewCount > 0) {
+                    @if (transcriptReviewCount > 0 || semanticClarifications.length > 0) {
                       <button
                         type="button"
                         (click)="backToTranscript()"
                         [disabled]="busy()"
                         class="ui-button ui-button-secondary"
                       >
-                        {{ i18n.t('consultation.ai.reviewUncertainPassages', 'Relire les passages à vérifier') }}
+                        {{ i18n.t('consultation.ai.reviewUncertainPassages', 'Relire / corriger le transcript') }}
                       </button>
                     }
-                    @if (missingClinicalExam || missingDiagnosis) {
+                    @if (missingClinicalExam || missingDiagnosis || semanticClarifications.length > 0) {
                       <button
                         type="button"
                         (click)="resumeCapture()"
