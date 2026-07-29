@@ -96,8 +96,27 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   startRealtime(): void {
     if (!this.visitId || this.busy()) return;
     this.errorMessage.set('');
-    this.stage.set('CAPTURE_REALTIME');
     this.formReadyChange.emit(false);
+
+    // The current WebRTC controller still uses the session identity to open the
+    // transport. The session is transport-only here: no per-phrase proposal,
+    // clarification or form mutation is exposed during capture.
+    if (!this.session()) {
+      this.startBusy();
+      this.api.startSession(this.visitId, this.sanitizedCurrentDraft()).subscribe({
+        next: response => {
+          this.session.set(response);
+          this.busy.set(false);
+          this.stage.set('CAPTURE_REALTIME');
+        },
+        error: error => this.handleError(
+          error,
+          this.i18n.t('consultation.ai.errorStartSession', 'Le canal vocal n’a pas pu être initialisé.'),
+        ),
+      });
+      return;
+    }
+    this.stage.set('CAPTURE_REALTIME');
   }
 
   startDictation(): void {
@@ -109,6 +128,9 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
 
   openManualForm(): void {
     if (this.busy() || this.recording() || this.realtimeActive()) return;
+    // An empty accepted draft still marks the parent form as clinician-owned and
+    // unlocks manual entry without inventing any content.
+    this.applyDraft.emit({});
     this.stage.set('FORM_READY');
     this.formReadyChange.emit(true);
   }
