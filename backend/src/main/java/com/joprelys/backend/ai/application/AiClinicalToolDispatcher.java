@@ -4,9 +4,7 @@ import com.joprelys.backend.ai.application.AiClinicalResponseParser.ParsedChange
 import com.joprelys.backend.ai.application.AiClinicalResponseParser.ParsedClarification;
 import com.joprelys.backend.ai.application.AiClinicalResponseParser.ParsedResponse;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -19,6 +17,11 @@ import org.springframework.web.server.ResponseStatusException;
  * a business capability. This dispatcher converts already parsed model output
  * into the finite set of clinical tools Joprelys permits. The resulting tools
  * still create proposals only; they never persist clinical data.</p>
+ *
+ * <p>Repeated fields are intentionally transported unchanged. The revision layer
+ * owns the clinical merge policy: additive narrative/structured facts are merged,
+ * while incompatible repeated fields fail closed. Silently choosing the last model
+ * value is never allowed.</p>
  */
 final class AiClinicalToolDispatcher {
 
@@ -31,13 +34,8 @@ final class AiClinicalToolDispatcher {
 
         List<ClinicalToolInvocation> invocations = new ArrayList<>();
         List<ParsedChange> changes = new ArrayList<>();
-        Set<String> seenFields = new HashSet<>();
 
         for (ParsedChange change : response.changes()) {
-            if (!seenFields.add(change.field())) {
-                throw new ResponseStatusException(
-                        HttpStatus.UNPROCESSABLE_ENTITY, "AI_TOOL_DUPLICATE_FIELD");
-            }
             ClinicalToolType type = toolTypeFor(change.field());
             invocations.add(new ClinicalToolInvocation(
                     type,
