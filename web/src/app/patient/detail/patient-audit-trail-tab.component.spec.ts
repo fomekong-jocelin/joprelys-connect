@@ -60,7 +60,7 @@ describe('PatientAuditTrailTabComponent mobile disclosure', () => {
         {
           provide: I18nService,
           useValue: {
-            t: (key: string) => key,
+            t: (key: string, fallback?: string) => key === 'patient.audit.action.READ_AUDIT' ? 'Lecture audit' : (fallback ?? key),
             locale: signal<'fr' | 'en'>('fr'),
           },
         },
@@ -77,6 +77,13 @@ describe('PatientAuditTrailTabComponent mobile disclosure', () => {
     expect(fixture.nativeElement.querySelectorAll('[data-audit-id]').length).toBe(2);
     expect(fixture.nativeElement.querySelector('.flow-root')).toBeNull();
     expect(fixture.nativeElement.querySelector('.h-full.w-0\\.5')).toBeNull();
+  });
+
+  it('uses the short localized action label instead of the long audit reason', () => {
+    const firstTitle = fixture.nativeElement.querySelector('[data-audit-id="audit-1"] [data-testid="patient-audit-title"]');
+
+    expect(firstTitle?.textContent.trim()).toBe('Lecture audit');
+    expect(firstTitle?.textContent).not.toContain("Consultation de l'historique d'audit du patient");
   });
 
   it('keeps every audit row collapsed by default', () => {
@@ -100,6 +107,21 @@ describe('PatientAuditTrailTabComponent mobile disclosure', () => {
 
     expect(fixture.componentInstance.isExpanded('audit-1')).toBe(false);
     expect(fixture.nativeElement.querySelector('[data-testid="patient-audit-details"]')).toBeNull();
+  });
+
+  it('keeps action and IP labels with their values on one visual row', () => {
+    fixture.componentInstance.toggleLog('audit-1');
+    fixture.detectChanges();
+
+    const actionRow = fixture.nativeElement.querySelector('[data-testid="patient-audit-action-row"]');
+    const ipRow = fixture.nativeElement.querySelector('[data-testid="patient-audit-ip-row"]');
+
+    expect(actionRow?.classList.contains('flex')).toBe(true);
+    expect(actionRow?.classList.contains('whitespace-nowrap')).toBe(true);
+    expect(actionRow?.textContent).toContain('READ_AUDIT');
+    expect(ipRow?.classList.contains('flex')).toBe(true);
+    expect(ipRow?.classList.contains('whitespace-nowrap')).toBe(true);
+    expect(ipRow?.textContent).toContain('143.105.152.106');
   });
 
   it('formats dates according to the active product locale instead of the browser default', () => {
