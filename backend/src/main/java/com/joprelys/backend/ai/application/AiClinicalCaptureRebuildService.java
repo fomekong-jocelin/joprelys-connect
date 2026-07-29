@@ -1,6 +1,5 @@
 package com.joprelys.backend.ai.application;
 
-import com.joprelys.backend.ai.application.AiConsultationContract.MessageView;
 import com.joprelys.backend.ai.application.AiConsultationContract.SessionView;
 import com.joprelys.backend.ai.realtime.application.RealtimeClinicalIntakeService;
 import com.joprelys.backend.ai.realtime.application.RealtimeClinicalIntakeService.IntakeView;
@@ -9,7 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Pattern;
+import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,8 +25,12 @@ import org.springframework.web.server.ResponseStatusException;
 @ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
 public class AiClinicalCaptureRebuildService {
 
-    private static final int MAX_MODEL_CHUNK_CHARS = 8_000;
-    private static final Pattern SENTENCE_BOUNDARY = Pattern.compile("(?<=[.!?;:])\\s+|[\\r\\n]+");
+    private static final Logger log = LoggerFactory.getLogger(AiClinicalCaptureRebuildService.class);
+
+    // Keep enough headroom under AiConsultationInputValidator.MAX_TRANSCRIPT_LENGTH.
+    // A normal consultation now requires far fewer serial model round-trips than the
+    // historical 8k chunks, while still keeping each extraction request bounded.
+    private static final int MAX_MODEL_CHUNK_CHARS = 30_000;
 
     private final RealtimeClinicalIntakeService intakeService;
     private final AiConsultationService consultationService;
@@ -43,6 +48,7 @@ public class AiClinicalCaptureRebuildService {
             UUID organizationId,
             Map<String, String> clinicianDraft,
             String locale) {
+        long started = System.nanoTime();
         List<IntakeView> capture = intakeService.listActive(
                 visitId,
                 organizationId,
@@ -58,43 +64,31 @@ public class AiClinicalCaptureRebuildService {
                 clinicianDraft == null ? Map.of() : clinicianDraft,
                 locale);
 
-        for (String chunk : chunks(capture)) {
-            MessageView result = consultationService.processRealtimeTranscript(
+        List<String> chunks = chunks(capture);
+        int transcriptChars = 0;
+        for (String chunk : chunks) {
+            transcriptChars += chunk.length();
+            consultationService.processCaptureTranscript(
                     visitId,
                     userId,
                     organizationId,
-                    chunk,
-                    null);
-
-            /*
-             * A provider can legitimately decide that one element of a mixed paragraph
-             * needs clarification (for example a medication) while another element is
-             * perfectly usable (for example a symptom). Continuous capture must never let
-             * that ambiguity erase the safe facts. Only when the whole chunk yielded no
-             * structured change do we retry its individual factual sentences.
-             */
-            if (result != null && result.changedFields().isEmpty()) {
-                List<String> sentences = factualSentences(chunk);
-                if (sentences.size() > 1) {
-                    for (String sentence : sentences) {
-                        consultationService.processRealtimeTranscript(
-                                visitId,
-                                userId,
-                                organizationId,
-                                sentence,
-                                null);
-                    }
-                }
-            }
+                    chunk);
         }
 
         intakeService.markAnalyzed(
                 visitId,
                 organizationId,
                 RealtimeIntakeSource.CONSULTATION);
-        return consultationService.getSession(visitId, userId, organizationId)
+        SessionView result = consultationService.getSession(visitId, userId, organizationId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.CONFLICT, "AI_SESSION_EXPIRED"));
+        log.info(
+                "AI_CAPTURE_REBUILD chunks={} transcriptChars={} durationMs={} fields={}",
+                chunks.size(),
+                transcriptChars,
+                TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started),
+                result.draft().size());
+        return result;
     }
 
     private List<String> chunks(List<IntakeView> capture) {
@@ -118,16 +112,6 @@ public class AiClinicalCaptureRebuildService {
         flush(result, current);
         if (result.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "AI_CAPTURE_EMPTY");
-        }
-        return List.copyOf(result);
-    }
-
-    private List<String> factualSentences(String chunk) {
-        if (chunk == null || chunk.isBlank()) return List.of();
-        List<String> result = new ArrayList<>();
-        for (String sentence : SENTENCE_BOUNDARY.split(chunk.trim())) {
-            String normalized = sentence.trim();
-            if (!normalized.isBlank()) result.add(normalized);
         }
         return List.copyOf(result);
     }
