@@ -63,14 +63,17 @@ describe('AiConsultationApiService', () => {
     request.flush(messageResponse());
   });
 
-  it('refuse localement une transcription Realtime sous le seuil', () => {
-    let reason = '';
-    service.sendRealtimeTranscript('visit-1', 'texte incertain', 0.1).subscribe({
-      error: error => reason = error.error.detail,
-    });
+  it('transmet aussi une transcription Realtime sous le seuil au lieu de la perdre', () => {
+    service.sendRealtimeTranscript('visit-1', 'texte incertain', 0.1).subscribe();
 
-    expect(reason).toBe('AI_TRANSCRIPTION_LOW_CONFIDENCE');
-    http.expectNone('/api/ai/consultations/visit-1/messages/realtime');
+    const request = http.expectOne('/api/ai/consultations/visit-1/messages/realtime');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      transcript: 'texte incertain',
+      confidence: 0.1,
+      eventId: null,
+    });
+    request.flush(messageResponse());
   });
 
   it('transcrit un audio sans lancer l analyse clinique', () => {
@@ -129,6 +132,18 @@ describe('AiConsultationApiService', () => {
     request.flush(messageResponse());
   });
 
+  it('reconstruit le compte rendu depuis la capture durable complète', () => {
+    service.rebuildCapture('visit-1', { clinicalExam: 'Conscience normale' }).subscribe();
+
+    const request = http.expectOne('/api/ai/consultations/visit-1/capture/rebuild');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      draft: { clinicalExam: 'Conscience normale' },
+      locale: 'fr',
+    });
+    request.flush(sessionResponse());
+  });
+
   it('répond à une clarification avec son identifiant', () => {
     service.answerClarification(
       'visit-1',
@@ -165,21 +180,23 @@ describe('AiConsultationApiService', () => {
     request.flush(messageResponse());
   });
 
-  it('refuse localement une clarification Realtime sous le seuil', () => {
-    let reason = '';
+  it('ne détruit pas une clarification Realtime de faible confiance', () => {
     service.answerRealtimeClarification(
       'visit-1',
       'clarification-1',
       'réponse incertaine',
       0.2,
-    ).subscribe({
-      error: error => reason = error.error.detail,
-    });
+    ).subscribe();
 
-    expect(reason).toBe('AI_TRANSCRIPTION_LOW_CONFIDENCE');
-    http.expectNone(
+    const request = http.expectOne(
       '/api/ai/consultations/visit-1/clarifications/clarification-1/answer/realtime',
     );
+    expect(request.request.body).toEqual({
+      answer: 'réponse incertaine',
+      confidence: 0.2,
+      eventId: null,
+    });
+    request.flush(messageResponse());
   });
 
   it('accepte une proposition avec son identifiant', () => {
@@ -220,7 +237,7 @@ describe('AiConsultationApiService', () => {
     request.flush(response);
   });
 
-  it('permet d abandonner une transcription en attente', () => {
+  it('permet d abandonner une transcription legacy en attente', () => {
     service.discardPendingTranscript('visit-1').subscribe();
 
     const request = http.expectOne('/api/ai/consultations/visit-1/transcriptions/pending');
