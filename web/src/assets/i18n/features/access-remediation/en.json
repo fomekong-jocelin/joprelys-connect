@@ -1,0 +1,10 @@
+{
+  "access.remediation.scopeTitle": "Patient scope not shared",
+  "access.remediation.consentTitle": "Patient authorization required",
+  "access.remediation.consentMessage": "The patient has not yet authorized access to this part of their record.",
+  "access.remediation.scopeMessage": "Access exists, but the requested scope has not been shared.",
+  "access.remediation.requestAccess": "Request access",
+  "access.remediation.scopeReason": "Access required for scope {scope}",
+  "access.remediation.recordReason": "Access to the patient record is required",
+  "access.remediation.prefill": "Required access: {scope}. The relevant scope has been preselected."
+}
