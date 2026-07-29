@@ -57,9 +57,31 @@ describe('AiDraftMergeService clinical safety', () => {
     );
 
     expect(plan.prescriptionAdds).toEqual([
-      expect.objectContaining({ drugName: 'Spasfon', dosage: '80 mg' }),
+      expect.objectContaining({ drugName: 'Spasfon', dosage: '80 mg', substitutionAllowed: false }),
     ]);
     expect(plan.conflicts).not.toContain('prescription');
+  });
+
+  it('forces AI-created prescription lines to non-substitutable until clinician changes it', () => {
+    const plan = service.plan(
+      {
+        baseDraft: {},
+        draft: {
+          prescription: JSON.stringify([
+            { drugName: 'Paracétamol', dosage: '1000 mg', substitutionAllowed: true },
+          ]),
+        },
+      },
+      { prescription: [] },
+    );
+
+    expect(plan.prescriptionAdds).toEqual([
+      expect.objectContaining({
+        drugName: 'Paracétamol',
+        dosage: '1000 mg',
+        substitutionAllowed: false,
+      }),
+    ]);
   });
 
   it('preserves an existing drug when AI proposes a conflicting dosage', () => {
