@@ -300,6 +300,7 @@ describe('RealtimeVitalsControllerComponent clinical queue safety', () => {
     eventId: string,
     itemId?: string,
   ): RealtimeClinicalIntakeAck {
+    const normalizedConfidence = confidence ?? 0;
     return {
       id: `ack-${eventId}`,
       visitId,
@@ -308,7 +309,12 @@ describe('RealtimeVitalsControllerComponent clinical queue safety', () => {
       eventId,
       itemId: itemId ?? null,
       transcript,
-      confidence: confidence ?? 0,
+      originalTranscript: null,
+      confidence: normalizedConfidence,
+      reviewRequired: confidence === null || normalizedConfidence < 0.35,
+      correctionCount: 0,
+      correctedAt: null,
+      captureStatus: 'PENDING',
       receivedAt: '2026-07-27T21:00:00Z',
     };
   }
