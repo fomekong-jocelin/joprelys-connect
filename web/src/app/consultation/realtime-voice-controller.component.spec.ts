@@ -2,12 +2,6 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
-import {
-  AiConsultationApiService,
-  AiMessageResponse,
-  AiSessionResponse,
-  AiTranscriptionResponse,
-} from './ai-consultation-api.service';
 import { AmbientAudioCaptureService, AmbientCaptureState } from './ambient-audio-capture.service';
 import {
   RealtimeClinicalIntakeAck,
@@ -30,13 +24,13 @@ const DISCONNECTED_STATE: RealtimeVoiceState = {
 
 const FR: Record<string, string> = {
   'consultation.ai.realtimeBackpressure': 'Joprelys sécurise les dernières secondes avant de reprendre automatiquement.',
-  'consultation.ai.realtimeConversationAnalysisFailed': 'La phrase a bien été sauvegardée, mais l’assistant n’a pas pu l’analyser.',
   'consultation.ai.realtimeUnavailable': 'Le temps réel est momentanément indisponible.',
   'consultation.ai.realtimeUnsupported': 'Ce navigateur ne prend pas en charge la connexion audio temps réel.',
   'consultation.ai.ambientRequired': 'La protection audio n’est pas disponible.',
+  'consultation.ai.realtimeDurableIntakeBlocked': 'La sauvegarde sécurisée est interrompue.',
 };
 
-describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
+describe('RealtimeVoiceControllerComponent durable clinical capture', () => {
   let fixture: ComponentFixture<RealtimeVoiceControllerComponent>;
   let component: RealtimeVoiceControllerComponent;
   let state: BehaviorSubject<RealtimeVoiceState>;
@@ -59,12 +53,10 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
     stop: ReturnType<typeof vi.fn>;
     mediaStreamForVisit: ReturnType<typeof vi.fn>;
   };
-  let intake: { ingest: ReturnType<typeof vi.fn> };
-  let consultationApi: {
-    sendText: ReturnType<typeof vi.fn>;
-    sendRealtimeTranscript: ReturnType<typeof vi.fn>;
-    answerRealtimeClarification: ReturnType<typeof vi.fn>;
-    stageRealtimeTranscript: ReturnType<typeof vi.fn>;
+  let intake: {
+    ingest: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+    correct: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -105,14 +97,13 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
       mediaStreamForVisit: vi.fn().mockReturnValue(sharedStream),
     };
     intake = {
-      ingest: vi.fn().mockImplementation((visitId: string, text: string, confidence: number | null, eventId: string, itemId?: string) =>
-        of(ack(visitId, text, confidence, eventId, itemId))),
-    };
-    consultationApi = {
-      sendText: vi.fn().mockImplementation((_visitId: string, text: string) => of(messageResponse(text))),
-      sendRealtimeTranscript: vi.fn().mockImplementation((_visitId: string, text: string) => of(messageResponse(text))),
-      answerRealtimeClarification: vi.fn().mockImplementation((_visitId: string, _clarificationId: string, text: string) => of(messageResponse(text))),
-      stageRealtimeTranscript: vi.fn().mockImplementation((_visitId: string, text: string) => of(transcriptionResponse(text))),
+      ingest: vi.fn().mockImplementation(
+        (visitId: string, text: string, confidence: number | null, eventId: string, itemId?: string) =>
+          of(ack(visitId, text, confidence, eventId, itemId)),
+      ),
+      list: vi.fn().mockReturnValue(of([])),
+      correct: vi.fn().mockImplementation((_visitId: string, id: string, text: string) =>
+        of({ ...ack('visit-1', text, 0.95, `correct-${id}`), id, correctionCount: 1, originalTranscript: 'ancien texte' })),
     };
 
     await TestBed.configureTestingModule({
@@ -121,7 +112,6 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
         { provide: RealtimeVoiceBridgeService, useValue: bridge },
         { provide: AmbientAudioCaptureService, useValue: ambient },
         { provide: RealtimeClinicalIntakeApiService, useValue: intake },
-        { provide: AiConsultationApiService, useValue: consultationApi },
         {
           provide: I18nService,
           useValue: {
@@ -161,33 +151,10 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
     expect(ambient.start.mock.invocationCallOrder[0]).toBeLessThan(bridge.connect.mock.invocationCallOrder[0]);
   });
 
-  it('persists a realtime turn before asking the clinical assistant to analyze it', () => {
-    transcripts.next(turn('Douleur depuis trois jours', 0.91, 'event-order', 'item-order'));
-
-    expect(intake.ingest).toHaveBeenCalledTimes(1);
-    expect(consultationApi.sendRealtimeTranscript).toHaveBeenCalledTimes(1);
-    expect(intake.ingest.mock.invocationCallOrder[0])
-      .toBeLessThan(consultationApi.sendRealtimeTranscript.mock.invocationCallOrder[0]);
-  });
-
-  it('queues final ASR turns while the first durable ACK is slow and persists all in order', () => {
-    const firstAck = new Subject<RealtimeClinicalIntakeAck>();
-    intake.ingest
-      .mockReturnValueOnce(firstAck)
-      .mockImplementation((visitId: string, text: string, confidence: number | null, eventId: string, itemId?: string) =>
-        of(ack(visitId, text, confidence, eventId, itemId)));
-
+  it('persists every final ASR turn and never waits for an AI proposal', () => {
     transcripts.next(turn('Première phrase clinique', 0.91, 'event-1', 'item-1'));
     transcripts.next(turn('Deuxième phrase clinique', 0.92, 'event-2', 'item-2'));
     transcripts.next(turn('Troisième phrase clinique', 0.93, 'event-3', 'item-3'));
-
-    expect(intake.ingest).toHaveBeenCalledTimes(1);
-    expect((component as any).pipeline.intakeQueueSize()).toBe(3);
-    expect(consultationApi.sendRealtimeTranscript).not.toHaveBeenCalled();
-    expect(bridge.setMuted).not.toHaveBeenCalledWith(true);
-
-    firstAck.next(ack('visit-1', 'Première phrase clinique', 0.91, 'event-1', 'item-1'));
-    firstAck.complete();
 
     expect(intake.ingest).toHaveBeenCalledTimes(3);
     expect(intake.ingest.mock.calls.map(call => call[1])).toEqual([
@@ -195,221 +162,139 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
       'Deuxième phrase clinique',
       'Troisième phrase clinique',
     ]);
-    expect(consultationApi.sendRealtimeTranscript).toHaveBeenCalledTimes(3);
+    expect((component as any).pipeline.analysisQueueSize()).toBe(0);
+    expect(component.queuedCount()).toBe(0);
+    expect(component.transcriptHistory()).toHaveLength(3);
+  });
+
+  it('queues later phrases while the first durable ACK is slow and preserves their order', () => {
+    const firstAck = new Subject<RealtimeClinicalIntakeAck>();
+    intake.ingest
+      .mockReturnValueOnce(firstAck)
+      .mockImplementation(
+        (visitId: string, text: string, confidence: number | null, eventId: string, itemId?: string) =>
+          of(ack(visitId, text, confidence, eventId, itemId)),
+      );
+
+    transcripts.next(turn('Phrase une', 0.91, 'event-a', 'item-a'));
+    transcripts.next(turn('Phrase deux', 0.92, 'event-b', 'item-b'));
+    transcripts.next(turn('Phrase trois', 0.93, 'event-c', 'item-c'));
+
+    expect(intake.ingest).toHaveBeenCalledTimes(1);
+    expect(component.queuedCount()).toBe(3);
+
+    firstAck.next(ack('visit-1', 'Phrase une', 0.91, 'event-a', 'item-a'));
+    firstAck.complete();
+
+    expect(intake.ingest).toHaveBeenCalledTimes(3);
+    expect(intake.ingest.mock.calls.map(call => call[1])).toEqual(['Phrase une', 'Phrase deux', 'Phrase trois']);
     expect(component.queuedCount()).toBe(0);
   });
 
-  it('persists 21 turns while a revision blocks analysis, then analyzes all in order after unblock', () => {
-    component.blocked = true;
-    bridge.setMuted.mockClear();
-
-    for (let index = 0; index < 21; index += 1) {
-      transcripts.next(turn(`Phrase ${index}`, 0.9, `event-${index}`, `item-${index}`));
-    }
-
-    expect(intake.ingest).toHaveBeenCalledTimes(21);
-    expect(intake.ingest.mock.calls.map(call => call[1])).toEqual(
-      Array.from({ length: 21 }, (_, index) => `Phrase ${index}`),
-    );
-    expect(consultationApi.sendRealtimeTranscript).not.toHaveBeenCalled();
-    expect((component as any).pipeline.analysisQueueSize()).toBe(21);
-    expect(bridge.setMuted).not.toHaveBeenCalledWith(true);
-
-    component.blocked = false;
-    component.ngOnChanges({
-      blocked: {
-        previousValue: true,
-        currentValue: false,
-        firstChange: false,
-        isFirstChange: () => false,
-      },
-    });
-
-    expect(consultationApi.sendRealtimeTranscript).toHaveBeenCalledTimes(21);
-    expect(consultationApi.sendRealtimeTranscript.mock.calls.map(call => call[1])).toEqual(
-      Array.from({ length: 21 }, (_, index) => `Phrase ${index}`),
-    );
-    expect(component.queuedCount()).toBe(0);
-  });
-
-  it('persists a non-empty null-confidence transcript and stages it for human review instead of dropping it', () => {
-    const review = vi.spyOn(component.transcriptionReview, 'emit');
-
+  it('keeps low or missing confidence transcript as reviewable evidence', () => {
     transcripts.next(turn('Le patient nie toute fièvre', null, 'event-null', 'item-null'));
 
-    expect(component.lastTranscript()).toBe('Le patient nie toute fièvre');
-    expect(component.transcriptNeedsReview()).toBe(true);
     expect(intake.ingest).toHaveBeenCalledWith(
       'visit-1', 'Le patient nie toute fièvre', null, 'event-null', 'item-null',
     );
-    expect(consultationApi.sendRealtimeTranscript).not.toHaveBeenCalled();
-    expect(consultationApi.stageRealtimeTranscript).toHaveBeenCalledWith(
-      'visit-1', 'Le patient nie toute fièvre',
-    );
-    expect(review).toHaveBeenCalledWith(expect.objectContaining({
-      transcript: 'Le patient nie toute fièvre',
-      status: 'PENDING_REVIEW',
-    }));
-    expect(component.queuedCount()).toBe(0);
+    expect(component.transcriptHistory()).toHaveLength(1);
+    expect(component.transcriptHistory()[0].reviewRequired).toBe(true);
+    expect(component.transcriptNeedsReview()).toBe(true);
   });
 
-  it('keeps durable capture running while a transcript review is pending', () => {
-    transcripts.next(turn('Dose incertaine', 0.2, 'event-review', 'item-review'));
-    expect(component.session?.pendingTranscript).toBe('Dose incertaine');
-
-    transcripts.next(turn('Phrase suivante', 0.9, 'event-after', 'item-after'));
-
-    expect(intake.ingest).toHaveBeenCalledTimes(2);
-    expect(consultationApi.sendRealtimeTranscript).not.toHaveBeenCalled();
-    expect((component as any).pipeline.analysisQueueSize()).toBe(1);
-    expect(bridge.setMuted).not.toHaveBeenCalledWith(true);
-  });
-
-  it('generates a safe client event id when OpenAI omits event_id instead of losing the transcript', () => {
+  it('generates a safe client event id when OpenAI omits event_id', () => {
     transcripts.next(turn('Saturation quatre-vingt-seize', 0.92, undefined, 'item-without-event'));
 
     expect(intake.ingest).toHaveBeenCalledTimes(1);
     expect(intake.ingest.mock.calls[0][3] as string).toMatch(/^client:\d+:\d+$/);
-    expect(consultationApi.sendRealtimeTranscript).toHaveBeenCalledTimes(1);
   });
 
   it('deduplicates the same OpenAI item even if a second event id is received', () => {
     transcripts.next(turn('Patient sans fièvre', 0.9, 'event-a', 'item-same'));
     transcripts.next(turn('Patient sans fièvre', 0.9, 'event-b', 'item-same'));
+
     expect(intake.ingest).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps a transiently failed intake at the head and retries without duplicate clinical analysis', async () => {
+  it('retries transient durable persistence failures without dropping the phrase', async () => {
     intake.ingest
       .mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 503 })))
-      .mockImplementation((visitId: string, text: string, confidence: number | null, eventId: string, itemId?: string) =>
-        of(ack(visitId, text, confidence, eventId, itemId)));
+      .mockImplementation(
+        (visitId: string, text: string, confidence: number | null, eventId: string, itemId?: string) =>
+          of(ack(visitId, text, confidence, eventId, itemId)),
+      );
 
     transcripts.next(turn('Tension cent vingt sur quatre-vingt', 0.94, 'event-retry', 'item-retry'));
-
-    expect((component as any).pipeline.intakeQueueSize()).toBe(1);
-    expect(intake.ingest).toHaveBeenCalledTimes(1);
-    expect(consultationApi.sendRealtimeTranscript).not.toHaveBeenCalled();
+    expect(component.queuedCount()).toBe(1);
 
     await vi.advanceTimersByTimeAsync(1200);
 
     expect(intake.ingest).toHaveBeenCalledTimes(2);
-    expect(consultationApi.sendRealtimeTranscript).toHaveBeenCalledTimes(1);
     expect(component.queuedCount()).toBe(0);
+    expect(component.transcriptHistory()[0].text).toContain('Tension');
   });
 
-  it('does not mute realtime merely because durable intake or analysis is in progress', () => {
-    const slow = new Subject<RealtimeClinicalIntakeAck>();
-    intake.ingest.mockReturnValue(slow);
-    bridge.setMuted.mockClear();
+  it('fails closed only when durable persistence cannot be guaranteed', () => {
+    intake.ingest.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 422 })));
+    const error = vi.spyOn(component.realtimeError, 'emit');
 
-    transcripts.next(turn('Douleur depuis trois jours', 0.9, 'event-live', 'item-live'));
+    transcripts.next(turn('Phrase à protéger', 0.9, 'event-hard', 'item-hard'));
 
-    expect(component.processing()).toBe(true);
-    expect(bridge.setMuted).not.toHaveBeenCalledWith(true);
-    expect(component.effectiveMuted()).toBe(false);
-  });
-
-  it('keeps realtime capture active on queue backpressure while ambient safety continues', () => {
-    const slow = new Subject<RealtimeClinicalIntakeAck>();
-    intake.ingest.mockReturnValue(slow);
-    bridge.setMuted.mockClear();
-
-    for (let index = 0; index < 32; index += 1) {
-      transcripts.next(turn(`Phrase ${index}`, 0.9, `event-${index}`, `item-${index}`));
-    }
-
-    expect(component.backlogPaused).toBe(true);
-    expect(bridge.setMuted).not.toHaveBeenCalledWith(true);
-    expect(component.effectiveMuted()).toBe(false);
-    expect(ambient.stop).not.toHaveBeenCalled();
-    expect((component as any).pipeline.intakeQueueSize()).toBe(32);
-  });
-
-  it('submits an explicit correction of the latest transcript as a clinical conversation turn', () => {
-    component.transcriptHistory.set([{
-      id: 'item-correction',
-      text: 'Température trente-huit cinq',
-      timestamp: 1_700_000_000_000,
-    }]);
-
-    component.requestTranscriptCorrection('Température 38,5 degrés');
-
-    expect(consultationApi.sendText).toHaveBeenCalledWith(
-      'visit-1',
-      'Je corrige mon dernier énoncé transcrit : Température 38,5 degrés',
-    );
-    expect(component.transcriptHistory()[0].text).toBe('Température 38,5 degrés');
-  });
-
-  it('stops new capture but drains the durable pipeline before emitting finish', () => {
-    const slow = new Subject<RealtimeClinicalIntakeAck>();
-    intake.ingest.mockReturnValueOnce(slow);
-    const finished = vi.spyOn(component.endSession, 'emit');
-
-    transcripts.next(turn('Conclusion sans fièvre', 0.93, 'event-finish', 'item-finish'));
-    component.requestFinish();
-
-    expect(component.finishPending()).toBe(true);
+    expect((component as any).pipeline.durableBlocked()).toBe(true);
     expect(bridge.setMuted).toHaveBeenCalledWith(true);
-    expect(finished).not.toHaveBeenCalled();
-
-    slow.next(ack('visit-1', 'Conclusion sans fièvre', 0.93, 'event-finish', 'item-finish'));
-    slow.complete();
-
-    expect(consultationApi.sendRealtimeTranscript).toHaveBeenCalledWith(
-      'visit-1',
-      'Conclusion sans fièvre',
-      0.93,
-      'event-finish',
-    );
-    expect(component.queuedCount()).toBe(0);
-    expect(finished).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalled();
+    expect(component.queuedCount()).toBe(1);
   });
 
-  it('keeps the realtime screen mounted until a staged transcript review is resolved', () => {
-    const finished = vi.spyOn(component.endSession, 'emit');
-    transcripts.next(turn('Dose à relire', null, 'event-review-finish', 'item-review-finish'));
+  it('loads recoverable durable transcript when the consultation screen is reopened', () => {
+    intake.list.mockReturnValue(of([
+      ack('visit-1', 'Phrase sauvegardée avant navigation', 0.9, 'event-old', 'item-old'),
+    ]));
 
-    component.requestFinish();
-
-    expect(component.session?.pendingTranscript).toBe('Dose à relire');
-    expect(finished).not.toHaveBeenCalled();
-
-    const previous = component.session;
-    component.session = previous ? { ...previous, pendingTranscript: null } : previous;
     component.ngOnChanges({
-      session: {
-        previousValue: previous,
-        currentValue: component.session,
-        firstChange: false,
-        isFirstChange: () => false,
+      visitId: {
+        previousValue: '',
+        currentValue: 'visit-1',
+        firstChange: true,
+        isFirstChange: () => true,
       },
     });
 
-    expect(finished).toHaveBeenCalledTimes(1);
+    expect(intake.list).toHaveBeenCalledWith('visit-1');
+    expect(component.transcriptHistory()[0].text).toBe('Phrase sauvegardée avant navigation');
   });
 
-  it('resets queues and ignores late responses when navigating from visit A to B', async () => {
-    const slow = new Subject<RealtimeClinicalIntakeAck>();
-    intake.ingest.mockReturnValue(slow);
-    transcripts.next(turn('Tour A', 0.9, 'event-a', 'item-a'));
-    transcripts.next(turn('Tour A deux', 0.9, 'event-a2', 'item-a2'));
-    expect((component as any).pipeline.intakeQueueSize()).toBe(2);
+  it('corrects the exact durable segment instead of creating a new clinical utterance', () => {
+    const existing = ack('visit-1', 'Il a mal au bra.', 0.5, 'event-old', 'item-old');
+    intake.list.mockReturnValue(of([existing]));
+    component.ngOnChanges({
+      visitId: {
+        previousValue: '',
+        currentValue: 'visit-1',
+        firstChange: true,
+        isFirstChange: () => true,
+      },
+    });
 
-    bridge.connect.mockResolvedValue(undefined);
-    component.visitId = 'visit-2';
-    component.session = activeSession('visit-2');
-    await (component as any).syncConnection(0, true);
+    component.requestTranscriptCorrection({ id: existing.id, text: 'Il a mal au bras.' });
 
-    expect(component.queuedCount()).toBe(0);
-    expect((component as any).connectedVisitId).toBe('visit-2');
+    expect(intake.correct).toHaveBeenCalledWith('visit-1', existing.id, 'Il a mal au bras.');
+    expect(component.transcriptHistory()[0].text).toBe('Il a mal au bras.');
+  });
 
-    slow.next(ack('visit-1', 'Tour A', 0.9, 'event-a', 'item-a'));
-    slow.complete();
-    expect(consultationApi.sendRealtimeTranscript).not.toHaveBeenCalledWith(
-      'visit-2', 'Tour A', expect.anything(), expect.anything(),
-    );
+  it('waits for the last durable ACK before ending the capture step', () => {
+    const delayed = new Subject<RealtimeClinicalIntakeAck>();
+    intake.ingest.mockReturnValueOnce(delayed);
+    const ended = vi.spyOn(component.endSession, 'emit');
+
+    transcripts.next(turn('Dernière phrase', 0.9, 'event-last', 'item-last'));
+    component.requestFinish();
+    expect(ended).not.toHaveBeenCalled();
+
+    delayed.next(ack('visit-1', 'Dernière phrase', 0.9, 'event-last', 'item-last'));
+    delayed.complete();
+
+    expect(ended).toHaveBeenCalledTimes(1);
   });
 
   it('hard-stops realtime and ambient only on explicit clinician pause, then reconnects both', async () => {
@@ -417,20 +302,23 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
 
     component.toggleMute();
     await (component as any).connectionTransition;
-
     expect(component.manualMuted).toBe(true);
     expect(bridge.disconnect).toHaveBeenCalled();
     expect(ambient.stop).toHaveBeenCalled();
 
     component.toggleMute();
     await (component as any).connectionTransition;
-
     expect(component.manualMuted).toBe(false);
     expect(ambient.start).toHaveBeenCalledWith('visit-1', 'fr');
     expect(bridge.connect).toHaveBeenCalledWith('visit-1', 'consultation', expect.any(Function));
   });
 
-  function turn(transcript: string, confidence: number | null, eventId?: string, itemId?: string): RealtimeTranscriptTurn {
+  function turn(
+    transcript: string,
+    confidence: number | null,
+    eventId?: string,
+    itemId?: string,
+  ): RealtimeTranscriptTurn {
     return { transcript, confidence, eventId, itemId };
   }
 
@@ -441,52 +329,35 @@ describe('RealtimeVoiceControllerComponent clinical safety pipeline', () => {
     eventId: string,
     itemId?: string,
   ): RealtimeClinicalIntakeAck {
+    const normalizedConfidence = confidence ?? 0;
     return {
       id: `ack-${eventId}`,
       visitId,
+      source: 'CONSULTATION',
       sequence: 1,
       eventId,
       itemId: itemId ?? null,
       transcript,
-      confidence: confidence ?? 0,
-      receivedAt: '2026-07-26T18:00:00Z',
+      originalTranscript: null,
+      confidence: normalizedConfidence,
+      reviewRequired: confidence === null || normalizedConfidence < 0.35,
+      correctionCount: 0,
+      correctedAt: null,
+      captureStatus: 'PENDING',
+      receivedAt: '2026-07-29T18:00:00Z',
     };
   }
 
-  function messageResponse(transcript: string): AiMessageResponse {
-    return {
-      sessionId: 'session-1',
-      transcript,
-      draft: {},
-      changedFields: [],
-      assistantMessage: '',
-      needsClarification: false,
-      conversation: [],
-      clarifications: [],
-      revisions: [],
-      expiresAt: '2026-07-26T20:00:00Z',
-    };
-  }
-
-  function transcriptionResponse(transcript: string): AiTranscriptionResponse {
-    return {
-      sessionId: 'session-1',
-      transcript,
-      status: 'PENDING_REVIEW',
-      expiresAt: '2026-07-26T20:00:00Z',
-    };
-  }
-
-  function activeSession(visitId: string): AiSessionResponse {
+  function activeSession(visitId: string) {
     return {
       sessionId: 'session-1',
       visitId,
       status: 'ACTIVE',
-      expiresAt: '2026-07-26T20:00:00Z',
+      expiresAt: '2026-07-29T20:00:00Z',
       draft: {},
       transcript: null,
       pendingTranscript: null,
-      transcriptStatus: 'NONE',
+      transcriptStatus: 'NONE' as const,
       conversation: [],
       clarifications: [],
       revisions: [],
