@@ -1,0 +1,9 @@
+{
+  "patients.title": "Patients",
+  "patients.subtitle": "Rechercher et gérer les dossiers patients.",
+  "patients.searchPlaceholder": "Nom, téléphone ou DPU",
+  "patients.listHeading": "Liste des patients",
+  "patients.resultOne": "patient trouvé",
+  "patients.resultsMany": "patients trouvés",
+  "patients.clearSearch": "Effacer la recherche"
+}
