@@ -2,9 +2,10 @@
   <app-page-header
     [title]="pageTitle()"
     [subtitle]="pageSubtitle()"
+    [compact]="true"
   ></app-page-header>
 
-  <div class="app-container py-5 sm:py-8">
+  <div class="app-container pt-2 pb-5 sm:pt-3 sm:pb-8">
     @if (error(); as err) {
       <app-ui-alert tone="error" class="mb-6">{{ err }}</app-ui-alert>
     }
