@@ -44,7 +44,8 @@ final class AiClinicalFactualityGuard {
 
     /**
      * Words that may improve grammar/readability but cannot create a clinical fact
-     * by themselves. No disease, symptom, examination or treatment vocabulary belongs here.
+     * by themselves. No disease, symptom, examination, treatment, medication route,
+     * dosage instruction or therapeutic action belongs here.
      */
     private static final Set<String> SAFE_GLUE_WORDS = Set.of(
             "patient", "patiente", "patients", "patientes",
@@ -56,9 +57,7 @@ final class AiClinicalFactualityGuard {
             "evolue", "evoluant", "evolution", "actuellement",
             "avec", "pour", "depuis", "dans", "chez", "ainsi", "notamment",
             "dont", "plus", "egalement", "correspondant", "correspondante",
-            "conseille", "conseils", "demande", "recommande",
-            "prise", "prises", "voie", "orale", "pendant",
-            "une", "des", "les", "est", "sont", "avait", "avoir",
+            "pendant", "une", "des", "les", "est", "sont", "avait", "avoir",
             "the", "and", "with", "from", "for", "has", "have",
             "reports", "reported", "presents", "presenting", "associated",
             "evolving", "currently", "during", "also", "including", "patient");
