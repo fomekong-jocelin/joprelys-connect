@@ -113,7 +113,9 @@ export class RealtimeClinicalTurnCoordinator {
   }
 
   queuedCount(): number {
-    return this.intakeQueue.length + (this.intakeBusy ? 1 : 0);
+    // The active turn remains at index 0 until its durable ACK arrives, so adding
+    // intakeBusy would double-count the same clinical phrase.
+    return this.intakeQueue.length;
   }
 
   isIdle(): boolean {
