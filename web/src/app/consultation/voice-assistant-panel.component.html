@@ -1,5 +1,5 @@
-<div class="space-y-3">
-  <section class="space-y-3">
+<div class="space-y-4">
+  <section class="space-y-4">
     <header class="flex items-start justify-between gap-3 px-1">
       <div class="flex min-w-0 items-center gap-2.5">
         <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary-subtle)] text-[var(--brand-primary)]">
@@ -9,17 +9,11 @@
         </span>
         <div class="min-w-0">
           <h2 class="text-sm font-bold text-[var(--text-primary)] sm:text-base">{{ i18n.t('consultation.ai.simpleTitle') }}</h2>
-          <p class="mt-0.5 line-clamp-1 text-[11px] leading-4 text-[var(--text-muted)] sm:text-xs">
-            {{ i18n.t('consultation.ai.simpleSubtitle') }}
+          <p class="mt-0.5 text-[11px] leading-4 text-[var(--text-muted)] sm:text-xs">
+            {{ i18n.t('consultation.ai.progressiveSubtitle', 'Écouter, relire, générer puis remplir la consultation. Une étape à la fois.') }}
           </p>
         </div>
       </div>
-
-      @if (session()) {
-        <span class="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-          {{ conversationMode() ? i18n.t('consultation.ai.realtimeMode') : i18n.t('consultation.ai.dictationMode') }}
-        </span>
-      }
     </header>
 
     @if (errorMessage()) {
@@ -30,9 +24,6 @@
 
     @if (vitalsWarning()) {
       <div class="flex items-start gap-2 border-l-2 border-[var(--brand-primary-border)] py-1.5 pl-3" role="alert">
-        <svg class="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
         <p class="min-w-0 flex-1 text-xs font-medium leading-5 text-[var(--text-secondary)]">{{ vitalsWarning() }}</p>
         <button type="button" (click)="dismissVitalsWarning()" class="shrink-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]" [attr.aria-label]="i18n.t('common.dismiss', 'Fermer')">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -42,130 +33,164 @@
       </div>
     }
 
-    @if (!session()) {
-      <div class="pt-1">
-        <p class="text-sm font-bold text-[var(--text-primary)]">{{ i18n.t('consultation.ai.chooseHowToWork') }}</p>
-        <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">{{ i18n.t('consultation.ai.chooseHowToWorkHelp') }}</p>
+    @switch (stage()) {
+      @case ('PREPARE') {
+        <div class="mx-auto w-full max-w-3xl py-4 sm:py-8">
+          <div class="text-center">
+            <div class="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-primary-subtle)] text-[var(--brand-primary)]">
+              <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z"/>
+              </svg>
+            </div>
+            <p class="mt-4 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--brand-primary)]">
+              {{ i18n.t('consultation.ai.captureStepEyebrow', 'Étape 1 · Enregistrement') }}
+            </p>
+            <h3 class="mt-1 text-xl font-extrabold text-[var(--text-primary)]">
+              {{ i18n.t('consultation.ai.captureStepTitle', 'Commencer la consultation') }}
+            </h3>
+            <p class="mx-auto mt-2 max-w-xl text-xs leading-5 text-[var(--text-muted)]">
+              {{ i18n.t('consultation.ai.captureStepHelp', 'Pendant l’échange, Joprelys conserve la transcription au fil de l’eau. Le formulaire clinique apparaîtra seulement après votre validation du compte rendu.') }}
+            </p>
+          </div>
 
-        <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <button
-            type="button"
-            (click)="startRealtime()"
-            [disabled]="busy() || !visitId"
-            class="min-h-14 rounded-[var(--radius-brand-sm)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] px-4 py-3 text-left transition hover:border-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span class="block text-sm font-bold text-[var(--text-primary)]">
-              {{ busy() ? i18n.t('consultation.ai.starting') : i18n.t('consultation.ai.realtimeMode') }}
-            </span>
-            <span class="mt-0.5 block text-xs leading-4 text-[var(--text-muted)]">{{ i18n.t('consultation.ai.realtimeSimpleHelp') }}</span>
-          </button>
+          <div class="mt-6 grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              (click)="startRealtime()"
+              [disabled]="busy() || !visitId"
+              class="rounded-[var(--radius-brand-md)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] px-5 py-5 text-left transition hover:border-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span class="block text-sm font-extrabold text-[var(--text-primary)]">{{ i18n.t('consultation.ai.realtimeMode') }}</span>
+              <span class="mt-1 block text-xs leading-5 text-[var(--text-muted)]">{{ i18n.t('consultation.ai.realtimeSimpleHelp') }}</span>
+            </button>
 
-          <button
-            type="button"
-            (click)="startDictation()"
-            [disabled]="busy() || !visitId || !mediaRecorderSupported"
-            class="min-h-14 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] px-4 py-3 text-left transition hover:border-[var(--brand-primary-border)] hover:bg-[var(--app-surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span class="block text-sm font-bold text-[var(--text-primary)]">{{ i18n.t('consultation.ai.dictationMode') }}</span>
-            <span class="mt-0.5 block text-xs leading-4 text-[var(--text-muted)]">{{ i18n.t('consultation.ai.dictationSimpleHelp') }}</span>
-          </button>
+            <button
+              type="button"
+              (click)="startDictation()"
+              [disabled]="busy() || !visitId || !mediaRecorderSupported"
+              class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface)] px-5 py-5 text-left transition hover:border-[var(--brand-primary-border)] hover:bg-[var(--app-surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span class="block text-sm font-extrabold text-[var(--text-primary)]">{{ i18n.t('consultation.ai.dictationMode') }}</span>
+              <span class="mt-1 block text-xs leading-5 text-[var(--text-muted)]">{{ i18n.t('consultation.ai.dictationSimpleHelp') }}</span>
+            </button>
+          </div>
+
+          <div class="mt-5 text-center">
+            <button type="button" (click)="openManualForm()" [disabled]="busy()" class="text-xs font-bold text-[var(--text-muted)] hover:text-[var(--brand-primary)] hover:underline">
+              {{ i18n.t('consultation.ai.manualEntry', 'Saisir la consultation manuellement') }}
+            </button>
+          </div>
         </div>
-      </div>
-    } @else if (conversationMode()) {
-      <app-realtime-voice-controller
-        [visitId]="visitId"
-        [session]="session()"
-        [enabled]="true"
-        [blocked]="busy() || !!session()?.pendingTranscript || hasPendingRevision()"
-        (message)="finishRealtimeMessage($event)"
-        (transcriptionReview)="finishRealtimeTranscription($event)"
-        (activeChange)="realtimeActive.set($event); errorMessage.set($event ? '' : errorMessage())"
-        (realtimeError)="handleRealtimeError($event)"
-        (switchToDictation)="switchToDictation()"
-        (endSession)="finishRealtime()"
-      />
+      }
 
-      @if (session()?.pendingTranscript) {
-        <app-ai-transcript-review
-          [transcript]="session()?.pendingTranscript"
-          [busy]="busy()"
-          (analyze)="analyzeTranscript($event)"
-          (discard)="discardPendingTranscript()"
-        />
-      } @else if (hasPendingClarification()) {
-        <app-ai-clarification-panel
-          [clarifications]="session()?.clarifications ?? []"
-          [disabled]="busy()"
-          (answered)="answerClarification($event)"
-        />
-      } @else if (hasPendingRevision()) {
-        <app-ai-proposal-panel
-          [revisions]="session()?.revisions ?? []"
-          [disabled]="busy()"
-          (decided)="decideProposal($event)"
-        />
-      } @else if (hasDraftContent()) {
-        <app-ai-draft-preview
+      @case ('CAPTURE_REALTIME') {
+        <app-realtime-voice-controller
           [visitId]="visitId"
-          [draft]="session()?.draft ?? {}"
-          [canApply]="true"
-          [canFinalReview]="!realtimeActive() && !busy()"
-          (apply)="applyCurrentDraft()"
-          (applyPatch)="applyFinalReviewPatch($event)"
+          [session]="session()"
+          [enabled]="true"
+          [blocked]="false"
+          (activeChange)="realtimeActive.set($event); errorMessage.set($event ? '' : errorMessage())"
+          (realtimeError)="handleRealtimeError($event)"
+          (endSession)="finishRealtime()"
         />
       }
-    } @else {
-      <div class="flex items-center justify-between gap-3 border-b border-[var(--app-border)] pb-2">
-        <p class="text-xs leading-5 text-[var(--text-muted)]">{{ i18n.t('consultation.ai.dictationFocusedHelp') }}</p>
-        <button type="button" (click)="switchToRealtime()" [disabled]="recording() || busy()" class="shrink-0 text-xs font-bold text-[var(--brand-primary)] hover:underline disabled:opacity-50">
-          {{ i18n.t('consultation.ai.switchToRealtime') }}
-        </button>
-      </div>
 
-      <app-ai-assistant-input
-        [busy]="busy()"
-        [recording]="recording()"
-        [speaking]="false"
-        [conversationMode]="false"
-        [audioLevel]="audioLevel()"
-        [mediaRecorderSupported]="mediaRecorderSupported"
-        [blocked]="recordingBlocked()"
-        [resetToken]="composerResetToken()"
-        [showModePicker]="false"
-        [showTextFallback]="false"
-        [showEndSession]="true"
-        (toggleRecording)="toggleRecording()"
-        (endSession)="deleteSession()"
-      />
+      @case ('CAPTURE_DICTATION') {
+        <div class="mx-auto w-full max-w-4xl py-2">
+          <div class="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--brand-primary)]">
+                {{ i18n.t('consultation.ai.captureStepEyebrow', 'Étape 1 · Enregistrement') }}
+              </p>
+              <h3 class="mt-1 text-lg font-extrabold text-[var(--text-primary)]">{{ i18n.t('consultation.ai.dictationMode') }}</h3>
+              <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                {{ i18n.t('consultation.ai.dictationProgressiveHelp', 'Dictez un passage, arrêtez pour le sauvegarder, puis continuez autant de fois que nécessaire.') }}
+              </p>
+            </div>
+            <button type="button" (click)="finishDictation()" [disabled]="busy() || recording()" class="ui-button ui-button-secondary shrink-0">
+              {{ i18n.t('consultation.ai.reviewTranscriptAction', 'Relire la transcription') }}
+            </button>
+          </div>
 
-      @if (session()?.pendingTranscript) {
-        <app-ai-transcript-review
-          [transcript]="session()?.pendingTranscript"
+          <app-ai-assistant-input
+            [busy]="busy()"
+            [recording]="recording()"
+            [speaking]="false"
+            [conversationMode]="false"
+            [audioLevel]="audioLevel()"
+            [mediaRecorderSupported]="mediaRecorderSupported"
+            [blocked]="busy()"
+            [showModePicker]="false"
+            [showTextFallback]="false"
+            [showEndSession]="false"
+            (toggleRecording)="toggleRecording()"
+          />
+
+          @if (latestDictationEntries().length > 0) {
+            <div class="mt-4 border-t border-[var(--app-border)] pt-3">
+              <div class="mb-2 flex items-center justify-between gap-3">
+                <p class="text-xs font-bold text-[var(--text-secondary)]">{{ i18n.t('consultation.ai.savedTranscript', 'Transcription sauvegardée') }}</p>
+                <span class="text-[10px] font-semibold text-[var(--brand-success-text)]">{{ captureEntries().length }} {{ i18n.t('consultation.ai.savedSegments', 'passage(s)') }}</span>
+              </div>
+              <div class="max-h-52 space-y-2 overflow-y-auto">
+                @for (entry of latestDictationEntries(); track entry.id) {
+                  <div class="flex gap-3 text-xs leading-5">
+                    <span class="shrink-0 text-[9px] tabular-nums text-[var(--text-muted)]">{{ formatCaptureTime(entry.receivedAt) }}</span>
+                    <p class="text-[var(--text-primary)]">{{ entry.transcript }}</p>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      @case ('TRANSCRIPT_REVIEW') {
+        <app-clinical-capture-review
+          [entries]="captureEntries()"
           [busy]="busy()"
-          (analyze)="analyzeTranscript($event)"
-          (discard)="discardPendingTranscript()"
+          (corrected)="correctCapture($event)"
+          (resume)="resumeCapture()"
+          (generate)="generateReport()"
         />
-      } @else if (hasPendingClarification()) {
-        <app-ai-clarification-panel
-          [clarifications]="session()?.clarifications ?? []"
-          [disabled]="busy() || recording()"
-          (answered)="answerClarification($event)"
-        />
-      } @else if (hasPendingRevision()) {
-        <app-ai-proposal-panel
-          [revisions]="session()?.revisions ?? []"
-          [disabled]="busy() || recording()"
-          (decided)="decideProposal($event)"
-        />
-      } @else if (hasDraftContent() && !recording()) {
-        <app-ai-draft-preview
-          [visitId]="visitId"
-          [draft]="session()?.draft ?? {}"
-          [canApply]="true"
-          [canFinalReview]="!recording() && !busy()"
-          (apply)="applyCurrentDraft()"
-          (applyPatch)="applyFinalReviewPatch($event)"
-        />
+      }
+
+      @case ('REPORT_REVIEW') {
+        <div class="mx-auto w-full max-w-4xl py-2">
+          <header class="flex flex-col gap-3 border-b border-[var(--app-border)] pb-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--brand-primary)]">
+                {{ i18n.t('consultation.ai.reportStepEyebrow', 'Étape 3 · Compte rendu') }}
+              </p>
+              <h3 class="mt-1 text-lg font-extrabold text-[var(--text-primary)]">{{ i18n.t('consultation.ai.reportStepTitle', 'Vérifiez la proposition de Joprelys') }}</h3>
+              <p class="mt-1 max-w-2xl text-xs leading-5 text-[var(--text-muted)]">
+                {{ i18n.t('consultation.ai.reportStepHelp', 'Le formulaire n’est toujours pas modifié. Relisez le compte rendu, puis validez-le pour remplir la consultation.') }}
+              </p>
+            </div>
+            <button type="button" (click)="backToTranscript()" [disabled]="busy()" class="ui-button ui-button-secondary shrink-0">
+              {{ i18n.t('consultation.ai.backToTranscript', 'Revenir au transcript') }}
+            </button>
+          </header>
+
+          @if (hasDraftContent()) {
+            <app-ai-draft-preview
+              [visitId]="visitId"
+              [draft]="session()?.draft ?? {}"
+              [canApply]="!busy()"
+              [canFinalReview]="!busy()"
+              [applyLabel]="i18n.t('consultation.ai.validateAndFillForm', 'Valider et remplir la consultation')"
+              (apply)="applyCurrentDraft()"
+              (applyPatch)="applyFinalReviewPatch($event)"
+            />
+          }
+        </div>
+      }
+
+      @case ('FORM_READY') {
+        <div class="border-l-2 border-[var(--brand-success-muted)] py-2 pl-3 text-xs leading-5 text-[var(--brand-success-text)]">
+          <p class="font-bold">{{ i18n.t('consultation.ai.formReadyTitle', 'Compte rendu validé') }}</p>
+          <p>{{ i18n.t('consultation.ai.formReadyHelp', 'Les champs de la consultation sont maintenant disponibles ci-dessous pour votre dernière vérification avant sauvegarde.') }}</p>
+        </div>
       }
     }
   </section>
