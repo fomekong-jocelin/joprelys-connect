@@ -41,20 +41,35 @@ Transformer la page en poste de travail mobile-first : recherche prioritaire, ad
 
 ## Critères d’acceptation
 
-- [ ] Le PageHeader affiche `Patients` sans lien Retour local.
-- [ ] Le sous-titre est court et orienté tâche.
-- [ ] La recherche affiche `Nom, téléphone ou DPU` et accepte Enter.
-- [ ] Une action accessible permet d’effacer une recherche active et recharge la liste.
-- [ ] Aucun gros bouton `Rechercher` n’est rendu.
-- [ ] `Nouvelle admission` est sous la recherche sur mobile et compacte à droite sur desktop.
-- [ ] Hors recherche, la liste est identifiée comme `Liste des patients`.
-- [ ] Pendant une recherche, le nombre de patients trouvés est affiché.
-- [ ] Une carte mobile affiche nom, sexe, DPU, téléphone et ville dans une hauteur réduite.
-- [ ] Toute la carte mobile ouvre le dossier ; le bouton `Voir le dossier` disparaît sur mobile.
-- [ ] Les cartes mobile ne sont plus enfermées dans une grande carte parent.
-- [ ] Le tableau desktop et ses identifiants non wrap sont préservés.
-- [ ] Aucun changement de contrat API ou de logique admission.
+- [x] Le PageHeader affiche `Patients` sans lien Retour local.
+- [x] Le sous-titre est court et orienté tâche.
+- [x] La recherche affiche `Nom, téléphone ou DPU` et accepte Enter.
+- [x] Une action accessible permet d’effacer une recherche active et recharge la liste.
+- [x] Aucun gros bouton `Rechercher` n’est rendu.
+- [x] `Nouvelle admission` est sous la recherche sur mobile et compacte à droite sur desktop.
+- [x] Hors recherche, la liste est identifiée comme `Liste des patients`.
+- [x] Pendant une recherche, le nombre de patients trouvés est affiché.
+- [x] Une carte mobile affiche nom, sexe, DPU, téléphone et ville dans une hauteur réduite.
+- [x] Toute la carte mobile ouvre le dossier ; le bouton `Voir le dossier` disparaît sur mobile.
+- [x] Les cartes mobile ne sont plus enfermées dans une grande carte parent.
+- [x] Le tableau desktop et ses identifiants non wrap sont préservés.
+- [x] Aucun changement de contrat API ou de logique admission.
 - [ ] Tests Angular et build production verts.
+
+## Implémentation
+
+- `PatientListComponent` distingue la saisie courante du filtre réellement appliqué pour fiabiliser le compteur de résultats.
+- La recherche conserve l’API existante et utilise `inputmode="search"` / `enterkeyhint="search"` pour le clavier mobile.
+- Le bouton d’effacement est explicite et accessible ; aucun contrôle natif concurrent n’est affiché.
+- Les cartes mobiles sont des boutons uniques sans action imbriquée.
+- Les libellés FR/EN sont isolés dans `assets/i18n/features/patient-list/` et chargés par `I18nService`.
+- La spécification fonctionnelle patient canonique a été alignée.
+
+## Validation
+
+- Tests ciblés ajoutés pour recherche, effacement, admission, cartes mobiles, routage et tableau desktop.
+- Gate CI frontend complet : en attente avant passage Ready/fusion.
+- Recette visuelle physique 360–430 px : à effectuer après mise à disposition en recette.
 
 ## Estimation
 
