@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { EMPTY, Observable, catchError, throwError } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Observable, filter } from 'rxjs';
 import { Consultation, SaveConsultationRequest, Prescription, SavePrescriptionRequest } from './consultation.models';
 
 @Injectable({ providedIn: 'root' })
@@ -12,13 +12,8 @@ export class ConsultationApiService {
   }
 
   getConsultation(visitId: string): Observable<Consultation> {
-    return this.http.get<Consultation>(`/api/visits/${visitId}/consultation`).pipe(
-      catchError((error: HttpErrorResponse) => {
-        if (error.status === 404) {
-          return EMPTY;
-        }
-        return throwError(() => error);
-      }),
+    return this.http.get<Consultation | null>(`/api/visits/${visitId}/consultation`).pipe(
+      filter((value): value is Consultation => value !== null),
     );
   }
 
@@ -27,7 +22,9 @@ export class ConsultationApiService {
   }
 
   getPrescription(consultationId: string): Observable<Prescription> {
-    return this.http.get<Prescription>(`/api/consultations/${consultationId}/prescription`);
+    return this.http.get<Prescription | null>(`/api/consultations/${consultationId}/prescription`).pipe(
+      filter((value): value is Prescription => value !== null),
+    );
   }
 
   getPatientConsultations(patientId: string): Observable<Consultation[]> {
