@@ -8,6 +8,8 @@ import { PatientEmergencyContextComponent } from './patient-emergency-context.co
 import { PatientIdentityRegularizationDialogComponent } from './patient-identity-regularization-dialog.component';
 import { PatientProvisionalIdentityCardComponent } from './patient-provisional-identity-card.component';
 
+type ProfilePanel = 'administrative' | 'medical';
+
 @Component({
   selector: 'app-patient-profile-tab',
   standalone: true,
@@ -20,12 +22,6 @@ import { PatientProvisionalIdentityCardComponent } from './patient-provisional-i
   ],
   template: `
     @if (parent.patient(); as patient) {
-      <!--
-        Grid is intentional here instead of space-y-*.
-        Angular component hosts are custom elements and can otherwise behave like
-        inline boxes, making vertical margins between profile cards unreliable.
-        DESIGN.md defines 24 px as the large section spacing.
-      -->
       <div class="grid gap-6 animate-fade-in">
         @if (isProvisional()) {
           <app-patient-provisional-identity-card
@@ -35,28 +31,44 @@ import { PatientProvisionalIdentityCardComponent } from './patient-provisional-i
           />
         }
 
-        <app-patient-administrative-summary class="block" [patient]="patient" />
+        <!-- Emergency history is independently collapsible and auto-opens only when safety requires it. -->
         <app-patient-emergency-context class="block" [patientId]="patient.id" />
 
-        <!--
-          Longitudinal medical details are secondary on the identity/profile view.
-          They stay folded until requested; the critical-allergy warning remains
-          permanently visible in PatientDetailComponent when applicable.
-        -->
-        <div class="grid gap-4">
+        <!-- Progressive disclosure: the user explicitly opens one information family at a time. -->
+        <div class="grid gap-3 sm:grid-cols-2">
           <button
             type="button"
-            class="ui-card flex w-full items-center justify-between gap-4 p-4 text-left sm:p-5"
-            [attr.aria-expanded]="medicalExpanded()"
-            (click)="toggleMedicalInformation()"
+            class="ui-card flex min-h-[72px] w-full items-center justify-between gap-4 p-4 text-left sm:p-5"
+            [attr.aria-expanded]="administrativeExpanded()"
+            (click)="togglePanel('administrative')"
           >
-            <div>
-              <h3 class="font-display text-sm font-black uppercase tracking-wider text-[var(--text-primary)]">
-                {{ i18n.t('patients.medicalInfo.allergies') }} ·
-                {{ i18n.t('patients.medicalInfo.history') }} ·
-                {{ i18n.t('patients.medicalInfo.vaccinations.title') }}
-              </h3>
-            </div>
+            <h3 class="font-display text-sm font-black uppercase tracking-wider text-[var(--text-primary)]">
+              {{ i18n.t('patient.urgTemp.admin.title') }}
+            </h3>
+            <svg
+              class="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform"
+              [class.rotate-180]="administrativeExpanded()"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            class="ui-card flex min-h-[72px] w-full items-center justify-between gap-4 p-4 text-left sm:p-5"
+            [attr.aria-expanded]="medicalExpanded()"
+            (click)="togglePanel('medical')"
+          >
+            <h3 class="font-display text-sm font-black uppercase tracking-wider text-[var(--text-primary)]">
+              {{ i18n.t('patients.medicalInfo.allergies') }} ·
+              {{ i18n.t('patients.medicalInfo.history') }} ·
+              {{ i18n.t('patients.medicalInfo.vaccinations.title') }}
+            </h3>
             <svg
               class="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform"
               [class.rotate-180]="medicalExpanded()"
@@ -69,11 +81,19 @@ import { PatientProvisionalIdentityCardComponent } from './patient-provisional-i
               <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
             </svg>
           </button>
-
-          @if (medicalExpanded()) {
-            <app-patient-medical-info class="block animate-fade-in" [patientId]="patient.id" />
-          }
         </div>
+
+        @if (administrativeExpanded()) {
+          <div class="animate-fade-in">
+            <app-patient-administrative-summary class="block" [patient]="patient" />
+          </div>
+        }
+
+        @if (medicalExpanded()) {
+          <div class="animate-fade-in">
+            <app-patient-medical-info class="block" [patientId]="patient.id" />
+          </div>
+        }
       </div>
 
       @if (identityDialogOpen()) {
@@ -90,7 +110,10 @@ export class PatientProfileTabComponent {
   readonly parent = inject(PatientDetailComponent);
   readonly i18n = inject(I18nService);
   readonly identityDialogOpen = signal(false);
-  readonly medicalExpanded = signal(false);
+  readonly activePanel = signal<ProfilePanel | null>(null);
+
+  readonly administrativeExpanded = computed(() => this.activePanel() === 'administrative');
+  readonly medicalExpanded = computed(() => this.activePanel() === 'medical');
 
   readonly isProvisional = computed(() => {
     const status = this.parent.patient()?.identityStatus;
@@ -113,8 +136,17 @@ export class PatientProfileTabComponent {
     return Math.max(age, 0);
   });
 
+  togglePanel(panel: ProfilePanel): void {
+    this.activePanel.update(current => current === panel ? null : panel);
+  }
+
+  // Compatibility helper kept for existing callers/specs while the UI now enforces one panel at a time.
   toggleMedicalInformation(): void {
-    this.medicalExpanded.update(value => !value);
+    this.togglePanel('medical');
+  }
+
+  toggleAdministrativeInformation(): void {
+    this.togglePanel('administrative');
   }
 
   openIdentityDialog(): void {
