@@ -17,12 +17,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * Durable source of truth for clinician microphone transcripts.
+ *
+ * <p>Capture and clinical interpretation are deliberately separated. Every non-empty
+ * transcript is persisted first, even when confidence is low or unavailable. A low
+ * confidence score is metadata for human review; it never authorizes data loss and
+ * never blocks subsequent capture.</p>
+ */
 @Service
 public class RealtimeClinicalIntakeService {
 
     private static final Logger log = LoggerFactory.getLogger(RealtimeClinicalIntakeService.class);
     private static final double DEFAULT_CONFIDENCE_FLOOR = 0.35;
     private static final int MAX_TRANSCRIPT_LENGTH = 12_000;
+    private static final String CONSUMED = "CONSUMED";
 
     private final RealtimeClinicalIntakeRepository repository;
     private final VisitRepository visitRepository;
@@ -137,7 +146,7 @@ public class RealtimeClinicalIntakeService {
 
     @Transactional(readOnly = true)
     public List<IntakeView> list(UUID visitId, UUID organizationId) {
-        return list(visitId, organizationId, RealtimeIntakeSource.CONSULTATION);
+        return listActive(visitId, organizationId, RealtimeIntakeSource.CONSULTATION);
     }
 
     @Transactional(readOnly = true)
@@ -146,13 +155,79 @@ public class RealtimeClinicalIntakeService {
             UUID organizationId,
             RealtimeIntakeSource source) {
         requireAuthorizedVisit(visitId, organizationId);
-        if (source == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_REALTIME_INTAKE_SOURCE_INVALID");
-        }
+        requireSource(source);
         return repository.findByVisitIdAndSourceOrderBySequenceNoAsc(visitId, source)
                 .stream()
                 .map(this::view)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<IntakeView> listActive(
+            UUID visitId,
+            UUID organizationId,
+            RealtimeIntakeSource source) {
+        requireAuthorizedVisit(visitId, organizationId);
+        requireSource(source);
+        return repository.findByVisitIdAndSourceAndCaptureStatusNotOrderBySequenceNoAsc(
+                        visitId, source, CONSUMED)
+                .stream()
+                .map(this::view)
+                .toList();
+    }
+
+    @Transactional
+    public IntakeView correct(
+            UUID visitId,
+            UUID intakeId,
+            UUID userId,
+            UUID organizationId,
+            String correctedTranscript) {
+        requireIdentity(visitId, userId, organizationId, RealtimeIntakeSource.CONSULTATION);
+        lockAuthorizedVisit(visitId, organizationId);
+        RealtimeClinicalIntakeEntity entity = repository
+                .findByIdAndVisitIdAndSource(intakeId, visitId, RealtimeIntakeSource.CONSULTATION)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "AI_REALTIME_INTAKE_NOT_FOUND"));
+        if (CONSUMED.equals(entity.getCaptureStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "AI_REALTIME_INTAKE_ALREADY_CONSUMED");
+        }
+        String normalized = normalizeTranscript(correctedTranscript);
+        if (!normalized.equals(entity.getTranscriptText())) {
+            entity.correctTranscript(normalized, userId, Instant.now());
+            repository.save(entity);
+        }
+        return view(entity);
+    }
+
+    @Transactional
+    public void markAnalyzed(
+            UUID visitId,
+            UUID organizationId,
+            RealtimeIntakeSource source) {
+        requireAuthorizedVisit(visitId, organizationId);
+        requireSource(source);
+        Instant now = Instant.now();
+        List<RealtimeClinicalIntakeEntity> active = repository
+                .findByVisitIdAndSourceAndCaptureStatusNotOrderBySequenceNoAsc(
+                        visitId, source, CONSUMED);
+        active.forEach(item -> item.markAnalyzed(now));
+        repository.saveAll(active);
+    }
+
+    @Transactional
+    public void consume(
+            UUID visitId,
+            UUID organizationId,
+            RealtimeIntakeSource source) {
+        requireAuthorizedVisit(visitId, organizationId);
+        requireSource(source);
+        Instant now = Instant.now();
+        List<RealtimeClinicalIntakeEntity> active = repository
+                .findByVisitIdAndSourceAndCaptureStatusNotOrderBySequenceNoAsc(
+                        visitId, source, CONSUMED);
+        active.forEach(item -> item.markConsumed(now));
+        repository.saveAll(active);
     }
 
     private void requireSameEventPayload(
@@ -163,7 +238,7 @@ public class RealtimeClinicalIntakeService {
             double confidence) {
         boolean same = existing.getEventId().equals(eventId)
                 && Objects.equals(existing.getItemId(), itemId)
-                && sameContent(existing, transcript, confidence);
+                && sameOriginalContent(existing, transcript, confidence);
         if (!same) throw reusedId();
     }
 
@@ -173,15 +248,19 @@ public class RealtimeClinicalIntakeService {
             String transcript,
             double confidence) {
         boolean same = Objects.equals(existing.getItemId(), itemId)
-                && sameContent(existing, transcript, confidence);
+                && sameOriginalContent(existing, transcript, confidence);
         if (!same) throw reusedId();
     }
 
-    private boolean sameContent(
+    /** Retries must be compared with the immutable ASR text, not a later human correction. */
+    private boolean sameOriginalContent(
             RealtimeClinicalIntakeEntity existing,
             String transcript,
             double confidence) {
-        return existing.getTranscriptText().equals(transcript)
+        String immutableOriginal = existing.getOriginalTranscriptText() == null
+                ? existing.getTranscriptText()
+                : existing.getOriginalTranscriptText();
+        return immutableOriginal.equals(transcript)
                 && Math.abs(existing.getConfidence() - confidence) < 0.000001d;
     }
 
@@ -216,7 +295,7 @@ public class RealtimeClinicalIntakeService {
         if (transcript == null || transcript.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_REALTIME_TRANSCRIPT_REQUIRED");
         }
-        String normalized = transcript.trim();
+        String normalized = transcript.trim().replaceAll("\\s+", " ");
         if (normalized.length() > MAX_TRANSCRIPT_LENGTH) {
             throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "AI_REALTIME_TRANSCRIPT_TOO_LARGE");
         }
@@ -244,7 +323,7 @@ public class RealtimeClinicalIntakeService {
         double configured = properties.minimumTranscriptionConfidence();
         double minimum = configured > 0.0 ? configured : DEFAULT_CONFIDENCE_FLOOR;
         if (confidence == null) {
-            log.warn("Realtime transcript persisted without ASR confidence; clinician review remains required");
+            log.warn("Realtime transcript persisted without ASR confidence; capture continues and text remains reviewable");
             return 0.0d;
         }
         if (!Double.isFinite(confidence) || confidence < 0.0 || confidence > 1.0) {
@@ -254,7 +333,7 @@ public class RealtimeClinicalIntakeService {
         }
         if (confidence < minimum) {
             log.warn(
-                    "Low-confidence realtime transcript persisted confidence={} minimum={}",
+                    "Low-confidence realtime transcript preserved confidence={} minimum={}",
                     String.format("%.3f", confidence),
                     String.format("%.3f", minimum));
         }
@@ -271,8 +350,16 @@ public class RealtimeClinicalIntakeService {
         }
     }
 
+    private void requireSource(RealtimeIntakeSource source) {
+        if (source == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_REALTIME_INTAKE_SOURCE_INVALID");
+        }
+    }
+
     private IntakeView view(RealtimeClinicalIntakeEntity entity) {
-        Instant receivedAt = entity.getReceivedAt();
+        double minimum = properties.minimumTranscriptionConfidence() > 0.0
+                ? properties.minimumTranscriptionConfidence()
+                : DEFAULT_CONFIDENCE_FLOOR;
         return new IntakeView(
                 entity.getId(),
                 entity.getVisitId(),
@@ -281,8 +368,13 @@ public class RealtimeClinicalIntakeService {
                 entity.getEventId(),
                 entity.getItemId(),
                 entity.getTranscriptText(),
+                entity.getOriginalTranscriptText(),
                 entity.getConfidence(),
-                receivedAt);
+                entity.getConfidence() <= 0.0 || entity.getConfidence() < minimum,
+                entity.getCorrectionCount(),
+                entity.getCorrectedAt(),
+                entity.getCaptureStatus(),
+                entity.getReceivedAt());
     }
 
     public record IntakeView(
@@ -293,7 +385,12 @@ public class RealtimeClinicalIntakeService {
             String eventId,
             String itemId,
             String transcript,
+            String originalTranscript,
             double confidence,
+            boolean reviewRequired,
+            int correctionCount,
+            Instant correctedAt,
+            String captureStatus,
             Instant receivedAt) {
     }
 }

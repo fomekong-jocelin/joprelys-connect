@@ -1,9 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { BehaviorSubject, NEVER, Subject, of } from 'rxjs';
+import { BehaviorSubject, Subject, of } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
-import { AiConsultationApiService, AiSessionResponse } from './ai-consultation-api.service';
 import { AmbientAudioCaptureService, AmbientCaptureState } from './ambient-audio-capture.service';
-import { RealtimeClinicalIntakeApiService } from './realtime-clinical-intake-api.service';
+import {
+  RealtimeClinicalIntakeAck,
+  RealtimeClinicalIntakeApiService,
+} from './realtime-clinical-intake-api.service';
 import {
   RealtimeVoiceBridgeService,
   RealtimeVoiceState,
@@ -11,29 +13,19 @@ import {
 import { RealtimeVoiceControllerComponent } from './realtime-voice-controller.component';
 
 const FR: Record<string, string> = {
-  'consultation.ai.focusSecureListening': 'Écoute sécurisée',
-  'consultation.ai.focusSafetyActive': 'Sauvegarde audio active',
-  'consultation.ai.simpleListening': 'Je vous écoute',
-  'consultation.ai.simpleListeningHelp': 'Parlez naturellement. La transcription apparaît dès qu’une phrase est finalisée.',
   'consultation.ai.focusTranscriptTitle': 'Transcription en direct',
   'consultation.ai.focusTranscriptWaiting': 'Parlez normalement. La dernière phrase réellement reconnue apparaîtra ici.',
-  'consultation.ai.pauseListeningShort': 'Pause',
-  'consultation.ai.finishListening': 'Terminer',
-  'consultation.ai.switchToDictation': 'Passer en dictée',
-  'consultation.ai.focusAudioUnavailable': 'Audio non confirmé',
-  'consultation.ai.reconnectingSimple': 'Reconnexion audio…',
-  'consultation.ai.reconnectingProtectedHelp': 'Votre consultation reste protégée pendant la reconnexion.',
   'consultation.ai.focusTranscriptNoChannel': 'La transcription commencera dès que le canal audio sera confirmé.',
   'consultation.ai.realtimeProtectedReconnectSimple': 'Temps réel interrompu. La consultation reste enregistrée localement et sera synchronisée automatiquement.',
+  'consultation.ai.correctTranscript': 'Corriger',
 };
 
-describe('RealtimeVoiceControllerComponent demo UX', () => {
+describe('RealtimeVoiceControllerComponent focused capture UX', () => {
   let fixture: ComponentFixture<RealtimeVoiceControllerComponent>;
   let component: RealtimeVoiceControllerComponent;
   let state: BehaviorSubject<RealtimeVoiceState>;
   let ambientState: BehaviorSubject<AmbientCaptureState>;
   let transcripts: Subject<any>;
-  let synthesizeSpeech: ReturnType<typeof vi.fn>;
   let bridge: {
     state$: BehaviorSubject<RealtimeVoiceState>;
     transcript$: Subject<any>;
@@ -43,6 +35,11 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
     disconnect: ReturnType<typeof vi.fn>;
     isSupported: ReturnType<typeof vi.fn>;
     setMuted: ReturnType<typeof vi.fn>;
+  };
+  let intake: {
+    ingest: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+    correct: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -66,7 +63,6 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
       lastError: null,
     });
     transcripts = new Subject();
-    synthesizeSpeech = vi.fn().mockReturnValue(NEVER);
     bridge = {
       state$: state,
       transcript$: transcripts,
@@ -76,6 +72,14 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
       disconnect: vi.fn(),
       isSupported: vi.fn().mockReturnValue(true),
       setMuted: vi.fn(),
+    };
+    intake = {
+      ingest: vi.fn().mockImplementation(
+        (visitId: string, transcript: string, confidence: number | null, eventId: string, itemId?: string) =>
+          of(ack(visitId, transcript, confidence, eventId, itemId)),
+      ),
+      list: vi.fn().mockReturnValue(of([])),
+      correct: vi.fn(),
     };
 
     await TestBed.configureTestingModule({
@@ -91,18 +95,7 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
             mediaStreamForVisit: vi.fn().mockReturnValue({} as MediaStream),
           },
         },
-        {
-          provide: RealtimeClinicalIntakeApiService,
-          useValue: { ingest: vi.fn().mockReturnValue(of({})) },
-        },
-        {
-          provide: AiConsultationApiService,
-          useValue: {
-            sendRealtimeTranscript: vi.fn().mockReturnValue(of(messageResponse())),
-            answerRealtimeClarification: vi.fn().mockReturnValue(of(messageResponse())),
-            synthesizeSpeech,
-          },
-        },
+        { provide: RealtimeClinicalIntakeApiService, useValue: intake },
         {
           provide: I18nService,
           useValue: {
@@ -117,7 +110,7 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
     component = fixture.componentInstance;
     component.visitId = 'visit-1';
     component.enabled = true;
-    component.session = sessionWithGreeting();
+    component.session = activeSession();
     (component as any).connectedVisitId = 'visit-1';
     state.next({ ...state.value, connected: true });
     fixture.detectChanges();
@@ -128,15 +121,21 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
     TestBed.resetTestingModule();
   });
 
-  it('should never vocalize the generic greeting when realtime connects', () => {
-    expect((component as any).speakPendingClarification).toBeUndefined();
-    expect((bridge as any).speakApproved).toBeUndefined();
-    expect(synthesizeSpeech).not.toHaveBeenCalled();
+  it('shows only secure recording controls and transcript while healthy', () => {
+    const text = fixture.nativeElement.textContent as string;
+
+    expect(text).toContain('Enregistrement sécurisé');
+    expect(text).toContain('Écoute en cours... Parlez naturellement');
+    expect(text).toContain('Arrêter');
+    expect(text).toContain('Transcription en direct');
+    expect(text).not.toContain('Voulez-vous appliquer');
+    expect(text).not.toContain('Précision demandée');
+    expect(text).not.toContain('Modifications à valider');
   });
 
-  it('should vocalize a pending clinical clarification once through the dedicated TTS channel', () => {
+  it('never vocalizes a pending clarification during continuous capture', () => {
     component.session = {
-      ...sessionWithGreeting(),
+      ...activeSession(),
       clarifications: [{
         id: 'clar-1',
         field: 'symptoms',
@@ -151,42 +150,13 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
 
     state.next({ ...state.value, connected: false });
     state.next({ ...state.value, connected: true });
-    state.next({ ...state.value, connected: false });
-    state.next({ ...state.value, connected: true });
-
-    expect(component.session.clarifications[0].question)
-      .toBe('Depuis combien de jours la douleur évolue-t-elle ?');
-    expect((component as any).speakApproved).toBeUndefined();
-    expect(synthesizeSpeech).toHaveBeenCalledTimes(1);
-    expect(synthesizeSpeech)
-      .toHaveBeenCalledWith('Depuis combien de jours la douleur évolue-t-elle ?');
-  });
-
-  it('should stop TTS on barge-in without muting realtime capture', () => {
-    const playbackStop = vi.spyOn((component as any).voicePlayback, 'stop');
-    bridge.setMuted.mockClear();
-
-    state.next({ ...state.value, userSpeaking: true });
-
-    expect(playbackStop).toHaveBeenCalled();
-    expect(bridge.setMuted).not.toHaveBeenCalledWith(true);
-  });
-
-  it('should show only the focus physician actions when healthy', () => {
     fixture.detectChanges();
-    const text = fixture.nativeElement.textContent as string;
 
-    expect(text).toContain('IA en cours...');
-    expect(text).toContain('Écoute en cours... Parlez naturellement');
-    expect(text).toContain('Arrêter');
-    expect(text).toContain('Conseil');
-    expect(fixture.nativeElement.querySelector('app-voice-listening-surface')).not.toBeNull();
-    expect(text).not.toContain('Capture de sécurité active');
-    expect(text).not.toContain('Preuve clinique ambient');
-    expect(text).not.toContain('Copilote Realtime sécurisé');
+    expect(fixture.nativeElement.textContent).not.toContain('Depuis combien de jours');
+    expect((component as any).voicePlayback).toBeUndefined();
   });
 
-  it('should display the last transcript really received from realtime', () => {
+  it('displays the exact transcript after its durable ACK', () => {
     transcripts.next({
       transcript: 'Patient sans fièvre depuis trois jours',
       confidence: 0.91,
@@ -195,10 +165,25 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
     });
     fixture.detectChanges();
 
+    expect(intake.ingest).toHaveBeenCalledTimes(1);
     expect(fixture.nativeElement.textContent).toContain('Patient sans fièvre depuis trois jours');
   });
 
-  it('should expose safety information only when realtime is actually degraded', () => {
+  it('marks low-confidence transcript for review instead of hiding it', () => {
+    transcripts.next({
+      transcript: 'Le patient nie toute fièvre',
+      confidence: 0.2,
+      eventId: 'event-low',
+      itemId: 'item-low',
+    });
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Le patient nie toute fièvre');
+    expect(text).toContain('À vérifier');
+  });
+
+  it('shows safety information only when realtime is actually degraded', () => {
     state.next({ ...state.value, connected: false });
     fixture.detectChanges();
 
@@ -206,22 +191,33 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
     expect(fixture.nativeElement.textContent).toContain('reste enregistrée localement');
   });
 
-  function messageResponse() {
+  function ack(
+    visitId: string,
+    transcript: string,
+    confidence: number | null,
+    eventId: string,
+    itemId?: string,
+  ): RealtimeClinicalIntakeAck {
+    const normalizedConfidence = confidence ?? 0;
     return {
-      sessionId: 'session-1',
-      transcript: 'Patient sans fièvre depuis trois jours',
-      draft: {},
-      changedFields: [],
-      assistantMessage: '',
-      needsClarification: false,
-      conversation: [],
-      clarifications: [],
-      revisions: [],
-      expiresAt: '2026-07-26T22:00:00Z',
+      id: `ack-${eventId}`,
+      visitId,
+      source: 'CONSULTATION',
+      sequence: 1,
+      eventId,
+      itemId: itemId ?? null,
+      transcript,
+      originalTranscript: null,
+      confidence: normalizedConfidence,
+      reviewRequired: confidence === null || normalizedConfidence < 0.35,
+      correctionCount: 0,
+      correctedAt: null,
+      captureStatus: 'PENDING',
+      receivedAt: '2026-07-26T22:00:00Z',
     };
   }
 
-  function sessionWithGreeting(): AiSessionResponse {
+  function activeSession() {
     return {
       sessionId: 'session-1',
       visitId: 'visit-1',
@@ -230,7 +226,7 @@ describe('RealtimeVoiceControllerComponent demo UX', () => {
       draft: {},
       transcript: null,
       pendingTranscript: null,
-      transcriptStatus: 'NONE',
+      transcriptStatus: 'NONE' as const,
       conversation: [],
       clarifications: [],
       revisions: [],

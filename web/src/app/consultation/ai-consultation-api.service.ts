@@ -1,6 +1,6 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, throwError } from 'rxjs';
+import { Observable } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 
 export type AiField =
@@ -142,8 +142,6 @@ export interface AiFinalReviewResponse {
   acceptedPatch: AiConsultationDraft;
 }
 
-const REALTIME_CONFIDENCE_FLOOR = 0.35;
-
 @Injectable({ providedIn: 'root' })
 export class AiConsultationApiService {
   private readonly http = inject(HttpClient);
@@ -157,8 +155,13 @@ export class AiConsultationApiService {
   }
 
   getSession(visitId: string): Observable<AiSessionResponse | null> {
-    return this.http.get<AiSessionResponse | null>(
-      `/api/ai/consultations/${visitId}/session`,
+    return this.http.get<AiSessionResponse | null>(`/api/ai/consultations/${visitId}/session`);
+  }
+
+  rebuildCapture(visitId: string, draft: AiConsultationDraft): Observable<AiSessionResponse> {
+    return this.http.post<AiSessionResponse>(
+      `/api/ai/consultations/${visitId}/capture/rebuild`,
+      { draft, locale: this.i18n.currentLanguage() },
     );
   }
 
@@ -172,15 +175,16 @@ export class AiConsultationApiService {
   sendRealtimeTranscript(
     visitId: string,
     transcript: string,
-    confidence: number,
+    confidence: number | null,
     eventId?: string,
   ): Observable<AiMessageResponse> {
-    if (!this.acceptableRealtimeConfidence(confidence)) {
-      return this.lowConfidenceError();
-    }
     return this.http.post<AiMessageResponse>(
       `/api/ai/consultations/${visitId}/messages/realtime`,
-      { transcript, confidence, eventId: eventId || null },
+      {
+        transcript,
+        confidence: this.transportConfidence(confidence),
+        eventId: eventId || null,
+      },
     );
   }
 
@@ -208,15 +212,16 @@ export class AiConsultationApiService {
     visitId: string,
     clarificationId: string,
     answer: string,
-    confidence: number,
+    confidence: number | null,
     eventId?: string,
   ): Observable<AiMessageResponse> {
-    if (!this.acceptableRealtimeConfidence(confidence)) {
-      return this.lowConfidenceError();
-    }
     return this.http.post<AiMessageResponse>(
       `/api/ai/consultations/${visitId}/clarifications/${clarificationId}/answer/realtime`,
-      { answer, confidence, eventId: eventId || null },
+      {
+        answer,
+        confidence: this.transportConfidence(confidence),
+        eventId: eventId || null,
+      },
     );
   }
 
@@ -260,10 +265,7 @@ export class AiConsultationApiService {
   }
 
   createFinalReview(visitId: string): Observable<AiFinalReviewResponse> {
-    return this.http.post<AiFinalReviewResponse>(
-      `/api/ai/consultations/${visitId}/final-review`,
-      {},
-    );
+    return this.http.post<AiFinalReviewResponse>(`/api/ai/consultations/${visitId}/final-review`, {});
   }
 
   decideFinalReviewProposal(
@@ -298,10 +300,7 @@ export class AiConsultationApiService {
     );
   }
 
-  stageRealtimeTranscript(
-    visitId: string,
-    transcript: string,
-  ): Observable<AiTranscriptionResponse> {
+  stageRealtimeTranscript(visitId: string, transcript: string): Observable<AiTranscriptionResponse> {
     return this.http.post<AiTranscriptionResponse>(
       `/api/ai/consultations/${visitId}/transcriptions/realtime`,
       { transcript },
@@ -316,9 +315,7 @@ export class AiConsultationApiService {
   }
 
   discardPendingTranscript(visitId: string): Observable<void> {
-    return this.http.delete<void>(
-      `/api/ai/consultations/${visitId}/transcriptions/pending`,
-    );
+    return this.http.delete<void>(`/api/ai/consultations/${visitId}/transcriptions/pending`);
   }
 
   synthesizeSpeech(text: string): Observable<Blob> {
@@ -333,16 +330,9 @@ export class AiConsultationApiService {
     return this.http.get(`/api/visits/${visitId}/qrcode`, { responseType: 'blob' });
   }
 
-  private acceptableRealtimeConfidence(confidence: number): boolean {
-    return Number.isFinite(confidence)
-      && confidence >= REALTIME_CONFIDENCE_FLOOR
-      && confidence <= 1;
-  }
-
-  private lowConfidenceError<T>(): Observable<T> {
-    return throwError(() => ({
-      status: 422,
-      error: { detail: 'AI_TRANSCRIPTION_LOW_CONFIDENCE' },
-    }));
+  private transportConfidence(confidence: number | null): number {
+    return confidence !== null && Number.isFinite(confidence) && confidence >= 0 && confidence <= 1
+      ? confidence
+      : 0;
   }
 }

@@ -1,6 +1,8 @@
 package com.joprelys.backend.visit.application;
 
 import tools.jackson.databind.ObjectMapper;
+import com.joprelys.backend.ai.realtime.application.RealtimeClinicalIntakeService;
+import com.joprelys.backend.ai.realtime.application.RealtimeIntakeSource;
 import com.joprelys.backend.audit.application.AuditService;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
@@ -40,6 +42,7 @@ public class VisitService {
 	private final ConsultationRepository consultationRepository;
 	private final PrescriptionRepository prescriptionRepository;
 	private final UserAccountRepository userAccountRepository;
+	private final RealtimeClinicalIntakeService realtimeClinicalIntakeService;
 
 	@SuppressWarnings("checkstyle:ParameterNumber")
 	public VisitService(
@@ -53,7 +56,8 @@ public class VisitService {
 			ObjectMapper objectMapper,
 			ConsultationRepository consultationRepository,
 			PrescriptionRepository prescriptionRepository,
-			UserAccountRepository userAccountRepository) {
+			UserAccountRepository userAccountRepository,
+			RealtimeClinicalIntakeService realtimeClinicalIntakeService) {
 		this.visitRepository = visitRepository;
 		this.patientRepository = patientRepository;
 		this.visitNumberGenerator = visitNumberGenerator;
@@ -65,6 +69,7 @@ public class VisitService {
 		this.consultationRepository = consultationRepository;
 		this.prescriptionRepository = prescriptionRepository;
 		this.userAccountRepository = userAccountRepository;
+		this.realtimeClinicalIntakeService = realtimeClinicalIntakeService;
 	}
 
 	@Transactional
@@ -120,7 +125,6 @@ public class VisitService {
 					prescription.setIssuedAt(Instant.now());
 					prescriptionRepository.save(prescription);
 
-					// Get actor user ID from SecurityContextHolder
 					UUID actorUserId = null;
 					var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
 					if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
@@ -135,6 +139,15 @@ public class VisitService {
 		});
 
 		documentService.generateAndSaveDocument(savedVisit);
+
+		// The voice transcript remains recoverable for every draft save. It is removed
+		// from the recovery queue only when the whole visit closure has succeeded.
+		if (savedVisit.getOrganizationId() != null) {
+			realtimeClinicalIntakeService.consume(
+					visitId,
+					savedVisit.getOrganizationId(),
+					RealtimeIntakeSource.CONSULTATION);
+		}
 
 		return savedVisit;
 	}

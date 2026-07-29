@@ -16,7 +16,13 @@ final class AiConsultationSessionState {
     final UUID sessionId;
     final UUID visitId;
     final String locale;
+
+    /** Latest clinician-owned form state used as the immutable base of capture analysis. */
+    final Map<String, String> baselineDraft = new LinkedHashMap<>();
+
+    /** Working AI draft. It is never a persisted consultation until the clinician saves the form. */
     final Map<String, String> draft = new LinkedHashMap<>();
+
     final List<AiMessage> providerMessages = new ArrayList<>();
     final List<ConversationMessageView> conversation = new ArrayList<>();
     final List<ClarificationView> clarifications = new ArrayList<>();

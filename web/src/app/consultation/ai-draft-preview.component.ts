@@ -18,7 +18,7 @@ import {
   imports: [CommonModule, AiProposalPanelComponent],
   template: `
     @if (entries().length > 0) {
-      <section class="border-t border-[var(--app-border)] pt-3">
+      <section class="pt-4">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div class="min-w-0">
             <p class="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">
@@ -36,7 +36,7 @@ import {
               [disabled]="!canApply || finalReview()?.status === 'PENDING'"
               class="ui-button ui-button-primary w-full sm:w-auto"
             >
-              {{ i18n.t('consultation.ai.apply') }}
+              {{ applyLabel || i18n.t('consultation.ai.apply') }}
             </button>
             <button
               type="button"
@@ -86,23 +86,18 @@ import {
           }
         }
 
-        <details class="mt-3 border-t border-[var(--app-border)] pt-1">
-          <summary class="cursor-pointer py-2 text-xs font-semibold text-[var(--brand-primary)] hover:underline">
-            {{ i18n.t('consultation.ai.viewDraft', 'Voir le brouillon') }} ({{ entries().length }})
-          </summary>
-          <div class="divide-y divide-[var(--app-border)]">
-            @for (entry of entries(); track entry.key) {
-              <div class="grid gap-1 py-2.5 sm:grid-cols-[10rem_1fr] sm:gap-3">
-                <p class="text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-                  {{ fieldLabel(entry.key) }}
-                </p>
-                <p class="line-clamp-6 whitespace-pre-wrap text-xs leading-5 text-[var(--text-primary)]">
-                  {{ formatValue(entry.key, entry.value) }}
-                </p>
-              </div>
-            }
-          </div>
-        </details>
+        <div class="mt-4 divide-y divide-[var(--app-border)] border-y border-[var(--app-border)]">
+          @for (entry of entries(); track entry.key) {
+            <div class="grid gap-1 py-3 sm:grid-cols-[11rem_1fr] sm:gap-4">
+              <p class="text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+                {{ fieldLabel(entry.key) }}
+              </p>
+              <p class="whitespace-pre-wrap text-sm leading-6 text-[var(--text-primary)]">
+                {{ formatValue(entry.key, entry.value) }}
+              </p>
+            </div>
+          }
+        </div>
       </section>
     }
   `,
@@ -115,6 +110,7 @@ export class AiDraftPreviewComponent {
   @Input() draft: AiConsultationDraft = {};
   @Input() canApply = true;
   @Input() canFinalReview = true;
+  @Input() applyLabel = '';
   @Output() readonly apply = new EventEmitter<void>();
   @Output() readonly applyPatch = new EventEmitter<AiConsultationDraft>();
 
@@ -197,9 +193,7 @@ export class AiDraftPreviewComponent {
           )
           .join('\n');
       }
-      if (field === 'labOrders' && Array.isArray(parsed)) {
-        return parsed.join(', ');
-      }
+      if (field === 'labOrders' && Array.isArray(parsed)) return parsed.join(', ');
       if (field === 'vitals' && parsed && typeof parsed === 'object') {
         return Object.entries(parsed as Record<string, unknown>)
           .map(([key, item]) => `${this.vitalLabel(key)}: ${this.vitalValue(key, item)}`)

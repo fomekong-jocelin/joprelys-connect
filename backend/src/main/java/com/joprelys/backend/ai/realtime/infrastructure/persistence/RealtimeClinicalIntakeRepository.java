@@ -20,9 +20,19 @@ public interface RealtimeClinicalIntakeRepository extends JpaRepository<Realtime
             RealtimeIntakeSource source,
             String itemId);
 
+    Optional<RealtimeClinicalIntakeEntity> findByIdAndVisitIdAndSource(
+            UUID id,
+            UUID visitId,
+            RealtimeIntakeSource source);
+
     List<RealtimeClinicalIntakeEntity> findByVisitIdAndSourceOrderBySequenceNoAsc(
             UUID visitId,
             RealtimeIntakeSource source);
+
+    List<RealtimeClinicalIntakeEntity> findByVisitIdAndSourceAndCaptureStatusNotOrderBySequenceNoAsc(
+            UUID visitId,
+            RealtimeIntakeSource source,
+            String captureStatus);
 
     @Query("select coalesce(max(item.sequenceNo), 0) from RealtimeClinicalIntakeEntity item where item.visitId = :visitId")
     long findMaximumSequence(@Param("visitId") UUID visitId);

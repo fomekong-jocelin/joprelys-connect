@@ -3,10 +3,10 @@
     <app-voice-listening-surface
       [active]="state().connected && !effectiveMuted()"
       [audioLevel]="audioLevel()"
-      [badgeText]="i18n.t('consultation.ai.aiInProgress', 'IA en cours...')"
+      [badgeText]="i18n.t('consultation.ai.secureCaptureInProgress', 'Enregistrement sécurisé')"
       [stopText]="i18n.t('consultation.ai.stopListening', 'Arrêter')"
       [statusText]="listeningSurfaceStatus()"
-      [tipText]="i18n.t('consultation.ai.tipDictateNaturally', 'Conseil : Vous pouvez dicter vos notes naturellement.')"
+      [tipText]="i18n.t('consultation.ai.tipDictateNaturally', 'Conseil : parlez naturellement, les phrases sont conservées au fil de l’eau.')"
       [accessibleLabel]="i18n.t('consultation.ai.microphoneLevelLabel', 'Niveau réel du microphone')"
       [stopDisabled]="finishPending()"
       (stop)="requestFinish()"
@@ -27,7 +27,7 @@
       [processing]="processing()"
       [queuedCount]="queuedCount()"
       [connected]="state().connected"
-      [correctionDisabled]="blocked || finishPending() || processing() || queuedCount() > 0"
+      [correctionDisabled]="processing() || queuedCount() > 0"
       (correct)="requestTranscriptCorrection($event)"
     />
   </div>

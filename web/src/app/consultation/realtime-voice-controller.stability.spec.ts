@@ -2,7 +2,7 @@ import { SimpleChange } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { BehaviorSubject, Subject, of } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
-import { AiConsultationApiService, AiSessionResponse } from './ai-consultation-api.service';
+import { AiSessionResponse } from './ai-consultation-api.service';
 import { AmbientAudioCaptureService, AmbientCaptureState } from './ambient-audio-capture.service';
 import { RealtimeClinicalIntakeApiService } from './realtime-clinical-intake-api.service';
 import {
@@ -38,6 +38,11 @@ describe('RealtimeVoiceControllerComponent connection stability', () => {
     stop: ReturnType<typeof vi.fn>;
     mediaStreamForVisit: ReturnType<typeof vi.fn>;
   };
+  let intake: {
+    ingest: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+    correct: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     state = new BehaviorSubject<RealtimeVoiceState>({ ...DISCONNECTED });
@@ -69,20 +74,18 @@ describe('RealtimeVoiceControllerComponent connection stability', () => {
       stop: vi.fn().mockResolvedValue(undefined),
       mediaStreamForVisit: vi.fn().mockReturnValue({} as MediaStream),
     };
+    intake = {
+      ingest: vi.fn(),
+      list: vi.fn().mockReturnValue(of([])),
+      correct: vi.fn(),
+    };
 
     await TestBed.configureTestingModule({
       imports: [RealtimeVoiceControllerComponent],
       providers: [
         { provide: RealtimeVoiceBridgeService, useValue: bridge },
         { provide: AmbientAudioCaptureService, useValue: ambient },
-        { provide: RealtimeClinicalIntakeApiService, useValue: { ingest: vi.fn().mockReturnValue(of({})) } },
-        {
-          provide: AiConsultationApiService,
-          useValue: {
-            sendRealtimeTranscript: vi.fn().mockReturnValue(of(messageResponse())),
-            answerRealtimeClarification: vi.fn().mockReturnValue(of(messageResponse())),
-          },
-        },
+        { provide: RealtimeClinicalIntakeApiService, useValue: intake },
         {
           provide: I18nService,
           useValue: {
@@ -96,7 +99,7 @@ describe('RealtimeVoiceControllerComponent connection stability', () => {
 
   afterEach(() => TestBed.resetTestingModule());
 
-  it('does not restart WebRTC when polling returns the same session identity', () => {
+  it('does not restart WebRTC when only the transient session expiry changes', () => {
     const fixture = TestBed.createComponent(RealtimeVoiceControllerComponent);
     const component = fixture.componentInstance;
     component.visitId = 'visit-1';
@@ -110,6 +113,7 @@ describe('RealtimeVoiceControllerComponent connection stability', () => {
     });
 
     expect(queueSpy).not.toHaveBeenCalled();
+    expect(intake.list).toHaveBeenCalledWith('visit-1');
     component.ngOnDestroy();
   });
 
@@ -156,21 +160,6 @@ describe('RealtimeVoiceControllerComponent connection stability', () => {
       revisions: [],
       assistantMessage: null,
       needsClarification: false,
-    };
-  }
-
-  function messageResponse() {
-    return {
-      sessionId: 'session-1',
-      transcript: null,
-      draft: {},
-      changedFields: [],
-      assistantMessage: '',
-      needsClarification: false,
-      conversation: [],
-      clarifications: [],
-      revisions: [],
-      expiresAt: '2026-07-27T20:00:00Z',
     };
   }
 });

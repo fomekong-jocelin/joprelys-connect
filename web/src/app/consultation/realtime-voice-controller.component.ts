@@ -14,15 +14,17 @@ import {
   AmbientAudioCaptureService,
   AmbientCaptureState,
 } from './ambient-audio-capture.service';
-import { ClinicalVoicePlaybackService } from './clinical-voice-playback.service';
 import {
-  RealtimeClinicalTurnCoordinator,
-} from './realtime-clinical-turn-coordinator.service';
+  RealtimeClinicalIntakeAck,
+  RealtimeClinicalIntakeApiService,
+} from './realtime-clinical-intake-api.service';
+import { RealtimeClinicalTurnCoordinator } from './realtime-clinical-turn-coordinator.service';
 import {
   RealtimeVoiceBridgeService,
   RealtimeVoiceState,
 } from './realtime-voice-bridge.service';
 import {
+  RealtimeTranscriptCorrection,
   RealtimeTranscriptEntry,
   RealtimeTranscriptHistoryComponent,
 } from './realtime-transcript-history.component';
@@ -34,20 +36,20 @@ const LOW_CONFIDENCE_REVIEW_FLOOR = 0.35;
   selector: 'app-realtime-voice-controller',
   standalone: true,
   imports: [CommonModule, RealtimeTranscriptHistoryComponent, VoiceListeningSurfaceComponent],
-  providers: [RealtimeClinicalTurnCoordinator, ClinicalVoicePlaybackService],
+  providers: [RealtimeClinicalTurnCoordinator],
   templateUrl: './realtime-voice-controller.component.html',
 })
 export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   private readonly bridge = inject(RealtimeVoiceBridgeService);
   private readonly ambientCapture = inject(AmbientAudioCaptureService);
+  private readonly intakeApi = inject(RealtimeClinicalIntakeApiService);
   private readonly pipeline = inject(RealtimeClinicalTurnCoordinator);
-  private readonly voicePlayback = inject(ClinicalVoicePlaybackService);
   readonly i18n = inject(I18nService);
 
   @Input({ required: true }) visitId = '';
   @Input() session: AiSessionResponse | null = null;
   @Input() enabled = false;
-  /** Blocks clinical analysis only. Durable capture keeps running. */
+  /** Kept for API compatibility; capture itself never blocks on AI review state. */
   @Input() blocked = false;
   @Output() readonly message = new EventEmitter<AiMessageResponse>();
   @Output() readonly transcriptionReview = new EventEmitter<AiTranscriptionResponse>();
@@ -82,9 +84,9 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   readonly finishPending = signal(false);
   readonly audioLevel = signal(0.4);
   readonly durationSeconds = signal(0);
-  private durationTimer: ReturnType<typeof setInterval> | null = null;
 
   private readonly subscriptions = new Subscription();
+  private durationTimer: ReturnType<typeof setInterval> | null = null;
   manualMuted = false;
   private finishEmitted = false;
   private connectingForVisit = '';
@@ -92,24 +94,15 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   private connectionGeneration = 0;
   private connectionTransition: Promise<void> = Promise.resolve();
   private destroyed = false;
+  private historyLoadGeneration = 0;
 
   constructor() {
     this.pipeline.configure({
       visitId: () => this.visitId.trim(),
-      session: () => this.session,
       enabled: () => this.enabled,
       connected: () => this.state().connected && this.connectedVisitId === this.visitId.trim(),
       manualMuted: () => this.manualMuted,
-      blocked: () => this.blocked,
-      onMessage: response => {
-        this.applyRealtimeResponseLocally(response);
-        this.message.emit(response);
-        this.playAssistantResponse(response);
-      },
-      onReview: response => {
-        this.applyRealtimeReviewLocally(response);
-        this.transcriptionReview.emit(response);
-      },
+      onPersisted: entry => this.upsertTranscript(entry),
       onError: error => this.realtimeError.emit(error),
       onPipelineStateChange: () => this.tryCompleteFinish(),
       syncMute: () => this.syncMute(),
@@ -124,29 +117,12 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       this.activeChange.emit(state.connected);
       if (state.connected && !previous.connected) {
         this.startTimer();
-        this.playPendingClarification();
         this.pipeline.resume();
       }
-      if (!state.connected && previous.connected) {
-        this.stopTimer();
-      }
-      if (state.userSpeaking && !previous.userSpeaking) this.voicePlayback.stop();
+      if (!state.connected && previous.connected) this.stopTimer();
     }));
     this.subscriptions.add(this.ambientCapture.state$.subscribe(state => this.ambientState.set(state)));
     this.subscriptions.add(this.bridge.transcript$.subscribe(turn => this.pipeline.enqueue(turn)));
-    this.subscriptions.add(this.bridge.transcript$.subscribe(turn => {
-      const text = turn.transcript.trim();
-      if (text) {
-        this.transcriptHistory.update(history => {
-          const timestamp = Date.now();
-          return [...history, {
-            id: turn.itemId?.trim() || turn.eventId?.trim() || `local-${timestamp}-${history.length}`,
-            text,
-            timestamp,
-          }];
-        });
-      }
-    }));
     this.subscriptions.add(this.bridge.error$.subscribe(error => this.realtimeError.emit(error)));
   }
 
@@ -161,6 +137,8 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       this.transcriptHistory.set([]);
     }
 
+    if (changes['visitId'] || changes['session']) this.loadDurableHistory();
+
     const sessionChange = changes['session'];
     const previousSession = sessionChange?.previousValue as AiSessionResponse | null | undefined;
     const currentSession = sessionChange?.currentValue as AiSessionResponse | null | undefined;
@@ -173,7 +151,6 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     if (changes['enabled'] || changes['visitId'] || sessionIdentityChanged) {
       this.queueConnectionSync(visitChanged);
     }
-    if (changes['blocked'] && !this.blocked) this.pipeline.resume();
     if (changes['session'] && this.state().connected && this.connectedVisitId === this.visitId.trim()) {
       this.pipeline.resume();
       this.tryCompleteFinish();
@@ -183,10 +160,10 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   ngOnDestroy(): void {
     this.destroyed = true;
     this.connectionGeneration += 1;
+    this.historyLoadGeneration += 1;
     this.stopTimer();
     this.pipeline.destroy();
     this.subscriptions.unsubscribe();
-    this.voicePlayback.stop();
     this.bridge.disconnect();
     void this.ambientCapture.stop();
   }
@@ -218,8 +195,9 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   }
 
   transcriptNeedsReview(): boolean {
-    const confidence = this.lastTranscriptConfidence();
-    return confidence === null || confidence < LOW_CONFIDENCE_REVIEW_FLOOR;
+    return this.transcriptHistory().some(entry => entry.reviewRequired)
+      || this.lastTranscriptConfidence() === null
+      || (this.lastTranscriptConfidence() ?? 1) < LOW_CONFIDENCE_REVIEW_FLOOR;
   }
 
   listeningSurfaceStatus(): string {
@@ -230,10 +208,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       return this.i18n.t('consultation.ai.reconnectingSimple');
     }
     if (this.state().connected) {
-      return this.i18n.t(
-        'consultation.ai.listenNaturally',
-        'Écoute en cours... Parlez naturellement',
-      );
+      return this.i18n.t('consultation.ai.listenNaturally', 'Écoute en cours... Parlez naturellement');
     }
     return this.i18n.t('consultation.ai.audioUnavailableSimple');
   }
@@ -247,9 +222,7 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
   }
 
   connectionBannerText(): string {
-    if (this.pipeline.durableBlocked()) {
-      return this.i18n.t('consultation.ai.realtimeDurableIntakeBlocked');
-    }
+    if (this.pipeline.durableBlocked()) return this.i18n.t('consultation.ai.realtimeDurableIntakeBlocked');
     if (this.finishPending()) return this.i18n.t('consultation.ai.realtimeFinishingHelp');
     if (this.ambientState().storagePressure) return this.i18n.t('consultation.ai.storageCriticalSimple');
     if (!this.state().connected && this.ambientState().active) {
@@ -264,6 +237,63 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
       return 'border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] text-[var(--brand-danger-text)]';
     }
     return 'border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]';
+  }
+
+  requestFinish(): void {
+    if (this.destroyed || this.finishPending()) return;
+    this.finishPending.set(true);
+    this.syncMute();
+    this.pipeline.resume();
+    this.tryCompleteFinish();
+  }
+
+  requestTranscriptCorrection(correction: RealtimeTranscriptCorrection): void {
+    if (!correction.id || !correction.text.trim() || this.pipeline.processing()) return;
+    this.pipeline.submitManualCorrection(correction.id, correction.text);
+  }
+
+  private loadDurableHistory(): void {
+    const visitId = this.visitId.trim();
+    if (!visitId) return;
+    const generation = ++this.historyLoadGeneration;
+    this.intakeApi.list(visitId).subscribe({
+      next: entries => {
+        if (generation !== this.historyLoadGeneration || visitId !== this.visitId.trim()) return;
+        this.transcriptHistory.set(entries.map(entry => this.toTranscriptEntry(entry)));
+      },
+      error: () => {
+        // Capture can still start. A hard persistence error will fail closed on the first ACK.
+      },
+    });
+  }
+
+  private upsertTranscript(entry: RealtimeClinicalIntakeAck): void {
+    this.transcriptHistory.update(history => {
+      const mapped = this.toTranscriptEntry(entry);
+      const existing = history.findIndex(item => item.id === mapped.id);
+      const next = existing >= 0
+        ? history.map((item, index) => index === existing ? mapped : item)
+        : [...history, mapped];
+      return next.sort((a, b) => a.timestamp - b.timestamp);
+    });
+  }
+
+  private toTranscriptEntry(entry: RealtimeClinicalIntakeAck): RealtimeTranscriptEntry {
+    return {
+      id: entry.id,
+      text: entry.transcript,
+      timestamp: Date.parse(entry.receivedAt) || Date.now(),
+      confidence: entry.confidence,
+      reviewRequired: entry.reviewRequired,
+      correctionCount: entry.correctionCount,
+      durable: true,
+    };
+  }
+
+  private tryCompleteFinish(): void {
+    if (!this.finishPending() || this.finishEmitted || this.destroyed || !this.pipeline.isIdle()) return;
+    this.finishEmitted = true;
+    this.endSession.emit();
   }
 
   private queueConnectionSync(forceVisitReset: boolean): void {
@@ -360,7 +390,6 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     } catch (error) {
       if (generation !== this.connectionGeneration || this.destroyed) return;
       this.connectedVisitId = '';
-      // The bridge owns its bounded reconnect policy. Do not cancel it here.
       throw error;
     } finally {
       if (this.connectingForVisit === targetVisitId) this.connectingForVisit = '';
@@ -378,94 +407,18 @@ export class RealtimeVoiceControllerComponent implements OnChanges, OnDestroy {
     }
   }
 
-  private applyRealtimeResponseLocally(response: AiMessageResponse): void {
-    if (!this.session) return;
-    this.session = {
-      ...this.session,
-      expiresAt: response.expiresAt,
-      draft: response.draft,
-      transcript: response.transcript ?? this.session.transcript,
-      transcriptStatus: response.transcript ? 'ANALYZED' : this.session.transcriptStatus,
-      conversation: response.conversation,
-      clarifications: response.clarifications,
-      revisions: response.revisions,
-      assistantMessage: response.assistantMessage,
-      needsClarification: response.needsClarification,
-    };
-  }
-
-  private applyRealtimeReviewLocally(response: AiTranscriptionResponse): void {
-    if (!this.session) return;
-    this.session = {
-      ...this.session,
-      pendingTranscript: response.transcript,
-      transcriptStatus: response.status,
-      expiresAt: response.expiresAt,
-    };
-  }
-
   private startTimer(): void {
     this.stopTimer();
     this.durationSeconds.set(0);
     this.durationTimer = setInterval(() => {
-      if (this.state().connected && !this.manualMuted) {
-        this.durationSeconds.update(s => s + 1);
-      }
+      if (this.state().connected && !this.manualMuted) this.durationSeconds.update(seconds => seconds + 1);
     }, 1000);
   }
 
   private stopTimer(): void {
-    if (this.durationTimer) {
-      clearInterval(this.durationTimer);
-      this.durationTimer = null;
-    }
-  }
-
-  requestFinish(): void {
-    if (this.destroyed) return;
-    if (this.finishPending()) {
-      this.finishEmitted = true;
-      this.endSession.emit();
-      return;
-    }
-    this.finishPending.set(true);
-    this.voicePlayback.stop();
-    this.syncMute();
-    this.pipeline.resume();
-    this.tryCompleteFinish();
-  }
-
-  requestTranscriptCorrection(correction: string): void {
-    const normalized = correction.trim();
-    if (!normalized || this.finishPending() || this.blocked || this.pipeline.processing()) return;
-    this.transcriptHistory.update(history => history.map((entry, index) =>
-      index === history.length - 1 ? { ...entry, text: normalized } : entry));
-    this.pipeline.submitManualCorrection(normalized);
-  }
-
-  private tryCompleteFinish(): void {
-    if (!this.finishPending() || this.finishEmitted || this.destroyed || !this.pipeline.isIdle()) return;
-    const hasPendingReview = !!this.session?.pendingTranscript;
-    const hasPendingRevision = this.session?.revisions.some(item => item.status === 'PENDING') ?? false;
-    if (this.blocked || hasPendingReview || hasPendingRevision) return;
-    this.finishEmitted = true;
-    this.endSession.emit();
-  }
-
-  private playAssistantResponse(response: AiMessageResponse): void {
-    const pendingQuestion = response.clarifications
-      .find(item => item.status === 'PENDING')
-      ?.question
-      ?.trim();
-    this.voicePlayback.play(pendingQuestion || response.assistantMessage?.trim() || '');
-  }
-
-  private playPendingClarification(): void {
-    const pendingQuestion = this.session?.clarifications
-      .find(item => item.status === 'PENDING')
-      ?.question
-      ?.trim();
-    this.voicePlayback.play(pendingQuestion || '');
+    if (!this.durationTimer) return;
+    clearInterval(this.durationTimer);
+    this.durationTimer = null;
   }
 
   private syncMute(): void {

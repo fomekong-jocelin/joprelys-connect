@@ -46,15 +46,13 @@ public class AiConsultationService {
     private final AiClinicalFactualityGuard factualityGuard;
     private final AiClinicalGroundingGuard groundingGuard;
     private final AiMedicationSafetyGuard medicationSafetyGuard;
-    private final AiRepeatedClarificationGuard repeatedClarificationGuard =
-            new AiRepeatedClarificationGuard();
+    private final AiRepeatedClarificationGuard repeatedClarificationGuard = new AiRepeatedClarificationGuard();
     private final AiClinicalMemoryManager memoryManager = new AiClinicalMemoryManager();
     private final AiClinicalToolDispatcher toolDispatcher = new AiClinicalToolDispatcher();
     private final AiRevisionManager revisionManager;
     private final AiClarificationManager clarificationManager;
     private final AiTranscriptionWorkflow transcriptionWorkflow;
-    private final ConcurrentMap<SessionKey, AiConsultationSessionState> sessions =
-            new ConcurrentHashMap<>();
+    private final ConcurrentMap<SessionKey, AiConsultationSessionState> sessions = new ConcurrentHashMap<>();
 
     public AiConsultationService(
             AiProvider aiProvider,
@@ -80,9 +78,8 @@ public class AiConsultationService {
     }
 
     @Autowired(required = false)
-    void setMedicationReferenceDuplicateDetector(
-            MedicationReferenceDuplicateDetector referenceDuplicateDetector) {
-        this.medicationSafetyGuard.setReferenceDuplicateDetector(referenceDuplicateDetector);
+    void setMedicationReferenceDuplicateDetector(MedicationReferenceDuplicateDetector detector) {
+        this.medicationSafetyGuard.setReferenceDuplicateDetector(detector);
     }
 
     public SessionView startSession(
@@ -90,12 +87,7 @@ public class AiConsultationService {
             UUID userId,
             UUID organizationId,
             Map<String, String> initialDraft) {
-        return startSession(
-                visitId,
-                userId,
-                organizationId,
-                initialDraft,
-                properties.locale());
+        return startSession(visitId, userId, organizationId, initialDraft, properties.locale());
     }
 
     public SessionView startSession(
@@ -106,27 +98,22 @@ public class AiConsultationService {
             String requestedLocale) {
         ensureActiveVisit(visitId);
         String locale = messageBuilder.normalizeLocale(requestedLocale);
-        SessionKey key = sessionKey(visitId, userId, organizationId);
         AiConsultationSessionState state = new AiConsultationSessionState(
                 UUID.randomUUID(), visitId, expiry(), locale);
-        AiConsultationSessionSupport.mergeInitialDraft(state.draft, initialDraft);
+        AiConsultationSessionSupport.mergeInitialDraft(state.baselineDraft, initialDraft);
+        state.draft.putAll(state.baselineDraft);
         memoryManager.synchronizeAcceptedDraft(state);
         state.assistantMessage = messageBuilder.initialAssistantMessage(locale);
         appendVisibleMessage(state, "ASSISTANT", state.assistantMessage, "SYSTEM", false);
-        sessions.put(key, state);
+        sessions.put(sessionKey(visitId, userId, organizationId), state);
         return toSessionView(visitId, state);
     }
 
-    public Optional<SessionView> getSession(
-            UUID visitId,
-            UUID userId,
-            UUID organizationId) {
+    public Optional<SessionView> getSession(UUID visitId, UUID userId, UUID organizationId) {
         ensureActiveVisit(visitId);
         SessionKey key = sessionKey(visitId, userId, organizationId);
         AiConsultationSessionState state = sessions.get(key);
-        if (state == null) {
-            return Optional.empty();
-        }
+        if (state == null) return Optional.empty();
         synchronized (state) {
             if (state.expiresAt.isBefore(Instant.now())) {
                 sessions.remove(key, state);
@@ -136,34 +123,30 @@ public class AiConsultationService {
         }
     }
 
-    public String sessionLocale(
-            UUID visitId,
-            UUID userId,
-            UUID organizationId) {
+    public String sessionLocale(UUID visitId, UUID userId, UUID organizationId) {
         return requireSession(visitId, userId, organizationId).locale;
     }
 
+    /** Interactive/manual input keeps the explicit decision workflow for compatibility. */
     public MessageView processText(
             UUID visitId,
             UUID userId,
             UUID organizationId,
             String text) {
         AiConsultationInputValidator.validateText(text);
-        AiConsultationSessionState state = requireSession(
-                visitId, userId, organizationId);
+        AiConsultationSessionState state = requireSession(visitId, userId, organizationId);
         synchronized (state) {
-            ensureReadyForNewInput(state);
+            ensureReadyForInteractiveInput(state);
             return processMessageLocked(
-                    state,
-                    text.trim(),
-                    text.trim(),
-                    null,
-                    "TEXT",
-                    null,
-                    null);
+                    state, text.trim(), text.trim(), null, "TEXT", null, null, false);
         }
     }
 
+    /**
+     * Continuous reconstruction input never leaves a clarification or field decision
+     * pending. The live browser capture no longer calls this method per phrase: it
+     * persists first and rebuilds later from the durable transcript.
+     */
     public MessageView processRealtimeTranscript(
             UUID visitId,
             UUID userId,
@@ -172,10 +155,8 @@ public class AiConsultationService {
             Double confidence) {
         AiConsultationInputValidator.validateText(transcript);
         validateRealtimeConfidence(confidence);
-        AiConsultationSessionState state = requireSession(
-                visitId, userId, organizationId);
+        AiConsultationSessionState state = requireSession(visitId, userId, organizationId);
         synchronized (state) {
-            ensureReadyForNewInput(state);
             return processMessageLocked(
                     state,
                     transcript.trim(),
@@ -183,7 +164,8 @@ public class AiConsultationService {
                     transcript.trim(),
                     "REALTIME",
                     null,
-                    null);
+                    null,
+                    true);
         }
     }
 
@@ -194,18 +176,15 @@ public class AiConsultationService {
             UUID clarificationId,
             String answer) {
         AiConsultationInputValidator.validateText(answer);
-        AiConsultationSessionState state = requireSession(
-                visitId, userId, organizationId);
+        AiConsultationSessionState state = requireSession(visitId, userId, organizationId);
         synchronized (state) {
             revisionManager.ensureNoPendingRevision(state);
-            ClarificationView clarification = clarificationManager.findPending(
-                    state, clarificationId);
+            ClarificationView clarification = clarificationManager.findPending(state, clarificationId);
             String originalUtterance = latestUserUtterance(state);
             String modelText = "Original clinician utterance:\n"
                     + originalUtterance
                     + "\n\n"
-                    + messageBuilder.clarificationModelText(
-                            state.locale, clarification, answer.trim());
+                    + messageBuilder.clarificationModelText(state.locale, clarification, answer.trim());
             return processMessageLocked(
                     state,
                     modelText,
@@ -213,7 +192,8 @@ public class AiConsultationService {
                     null,
                     "CLARIFICATION",
                     clarificationId,
-                    answer.trim());
+                    answer.trim(),
+                    false);
         }
     }
 
@@ -224,42 +204,47 @@ public class AiConsultationService {
             byte[] audio,
             String contentType) {
         AiConsultationInputValidator.validateAudio(audio, contentType);
-        AiConsultationSessionState state = requireSession(
-                visitId, userId, organizationId);
+        AiConsultationSessionState state = requireSession(visitId, userId, organizationId);
         synchronized (state) {
-            ensureReadyForNewInput(state);
+            if (state.pendingTranscript != null) {
+                throw conflict("AI_TRANSCRIPT_REVIEW_REQUIRED");
+            }
             return transcriptionWorkflow.transcribe(state, audio, contentType);
         }
     }
 
+    /** Legacy/manual staging endpoint; the new capture path does not depend on it. */
     public TranscriptionView stageRealtimeTranscript(
             UUID visitId,
             UUID userId,
             UUID organizationId,
             String transcript) {
         AiConsultationInputValidator.validateText(transcript);
-        AiConsultationSessionState state = requireSession(
-                visitId, userId, organizationId);
+        AiConsultationSessionState state = requireSession(visitId, userId, organizationId);
         synchronized (state) {
-            ensureReadyForNewInput(state);
+            if (state.pendingTranscript != null) {
+                throw conflict("AI_TRANSCRIPT_REVIEW_REQUIRED");
+            }
             return transcriptionWorkflow.stage(state, transcript);
         }
     }
 
+    /**
+     * Legacy/manual transcription review remains explicitly decision-gated. The new
+     * progressive dictation path persists directly into the durable capture ledger
+     * and never uses this endpoint between recording segments.
+     */
     public MessageView analyzeTranscript(
             UUID visitId,
             UUID userId,
             UUID organizationId,
             String transcript) {
         AiConsultationInputValidator.validateText(transcript);
-        AiConsultationSessionState state = requireSession(
-                visitId, userId, organizationId);
+        AiConsultationSessionState state = requireSession(visitId, userId, organizationId);
         synchronized (state) {
             if (state.pendingTranscript == null) {
                 throw conflict("AI_TRANSCRIPT_REVIEW_REQUIRED");
             }
-            clarificationManager.ensureNoPending(state);
-            revisionManager.ensureNoPendingRevision(state);
             MessageView response = processMessageLocked(
                     state,
                     transcript.trim(),
@@ -267,7 +252,8 @@ public class AiConsultationService {
                     transcript.trim(),
                     "AUDIO",
                     null,
-                    null);
+                    null,
+                    false);
             state.pendingTranscript = null;
             state.transcriptStatus = "ANALYZED";
             state.expiresAt = expiry();
@@ -283,16 +269,11 @@ public class AiConsultationService {
             String contentType) {
         TranscriptionView transcription = transcribeAudio(
                 visitId, userId, organizationId, audio, contentType);
-        return analyzeTranscript(
-                visitId, userId, organizationId, transcription.transcript());
+        return analyzeTranscript(visitId, userId, organizationId, transcription.transcript());
     }
 
-    public void discardPendingTranscript(
-            UUID visitId,
-            UUID userId,
-            UUID organizationId) {
-        AiConsultationSessionState state = requireSession(
-                visitId, userId, organizationId);
+    public void discardPendingTranscript(UUID visitId, UUID userId, UUID organizationId) {
+        AiConsultationSessionState state = requireSession(visitId, userId, organizationId);
         synchronized (state) {
             state.pendingTranscript = null;
             state.transcriptStatus = "NONE";
@@ -307,11 +288,9 @@ public class AiConsultationService {
             UUID revisionId,
             UUID proposalId,
             String decision) {
-        AiConsultationSessionState state = requireSession(
-                visitId, userId, organizationId);
+        AiConsultationSessionState state = requireSession(visitId, userId, organizationId);
         synchronized (state) {
-            revisionManager.decideProposal(
-                    state, revisionId, proposalId, decision);
+            revisionManager.decideProposal(state, revisionId, proposalId, decision);
             state.expiresAt = expiry();
             return toSessionView(visitId, state);
         }
@@ -323,8 +302,7 @@ public class AiConsultationService {
             UUID organizationId,
             UUID revisionId,
             String decision) {
-        AiConsultationSessionState state = requireSession(
-                visitId, userId, organizationId);
+        AiConsultationSessionState state = requireSession(visitId, userId, organizationId);
         synchronized (state) {
             revisionManager.decideRevision(state, revisionId, decision);
             state.expiresAt = expiry();
@@ -343,7 +321,8 @@ public class AiConsultationService {
             String transcript,
             String source,
             UUID resolvedClarificationId,
-            String clarificationAnswer) {
+            String clarificationAnswer,
+            boolean continuousCapture) {
         ClarificationView resolvedClarification = resolvedClarificationId == null
                 ? null
                 : clarificationManager.findPending(state, resolvedClarificationId);
@@ -355,8 +334,6 @@ public class AiConsultationService {
                 : visibleText;
         Map<String, Object> clinicalContext = loadClinicalContext(state.visitId);
 
-        // Only governed system memory is allowed to survive between turns. Raw model
-        // output and rejected proposals are deliberately excluded from future context.
         List<AiMessage> providerMessages = new ArrayList<>();
         state.providerMessages.stream()
                 .filter(message -> message.role() == AiMessage.Role.SYSTEM)
@@ -369,8 +346,7 @@ public class AiConsultationService {
                 clinicalContext)));
 
         try {
-            AiChatResponse response = aiProvider.chat(
-                    List.copyOf(providerMessages), SYSTEM_PROMPT);
+            AiChatResponse response = aiProvider.chat(List.copyOf(providerMessages), SYSTEM_PROMPT);
             if (response == null || response.content() == null) {
                 throw new ResponseStatusException(
                         org.springframework.http.HttpStatusCode.valueOf(422), "AI_OUTPUT_INVALID");
@@ -388,61 +364,83 @@ public class AiConsultationService {
             var toolPlan = toolDispatcher.dispatch(parsed);
 
             if (resolvedClarificationId != null) {
-                clarificationManager.resolve(
-                        state, resolvedClarificationId, clarificationAnswer);
+                clarificationManager.resolve(state, resolvedClarificationId, clarificationAnswer);
             }
-            if (toolPlan.clarification() != null) {
+
+            RevisionView revision = null;
+            if (!continuousCapture && toolPlan.clarification() != null) {
                 clarificationManager.append(state, toolPlan.clarification());
+            } else if (toolPlan.clarification() == null) {
+                revision = revisionManager.createRevision(state, toolPlan.changes());
+                if (continuousCapture && revision != null && "PENDING".equals(revision.status())) {
+                    RevisionView createdRevision = revision;
+                    UUID acceptedRevisionId = createdRevision.id();
+                    revisionManager.decideRevision(state, acceptedRevisionId, "ACCEPT");
+                    revision = state.revisions.stream()
+                            .filter(item -> item.id().equals(acceptedRevisionId))
+                            .findFirst()
+                            .orElse(createdRevision);
+                }
             }
-            RevisionView revision = toolPlan.clarification() != null
-                    ? null
-                    : revisionManager.createRevision(state, toolPlan.changes());
+
             List<String> changedFields = revision == null
                     ? List.of()
                     : revision.proposals().stream()
                             .map(AiConsultationContract.FieldProposalView::field)
                             .toList();
-            state.assistantMessage = parsed.assistantMessage();
-            state.needsClarification = toolPlan.clarification() != null;
-            if (transcript != null) {
-                state.transcript = transcript;
-            }
+            state.assistantMessage = continuousCapture
+                    ? captureMessage(changedFields.size(), state.locale)
+                    : parsed.assistantMessage();
+            state.needsClarification = !continuousCapture && toolPlan.clarification() != null;
+            if (transcript != null) state.transcript = transcript;
             state.expiresAt = expiry();
             if (resolvedClarification != null) {
-                memoryManager.recordResolvedClarification(
-                        state, resolvedClarification, clarificationAnswer);
+                memoryManager.recordResolvedClarification(state, resolvedClarification, clarificationAnswer);
             }
             appendVisibleMessage(state, "USER", visibleText, source, false);
-            appendVisibleMessage(
-                    state,
-                    "ASSISTANT",
-                    state.assistantMessage,
-                    "AI",
-                    state.needsClarification);
+            if (!continuousCapture) {
+                appendVisibleMessage(
+                        state, "ASSISTANT", state.assistantMessage, "AI", state.needsClarification);
+            }
             return AiConsultationSessionSupport.toMessageView(state, changedFields);
         } catch (ResponseStatusException exception) {
             throw exception;
         } catch (RuntimeException exception) {
             log.warn("Échec génération brouillon IA provider={}", properties.provider());
-            throw new ResponseStatusException(
-                    HttpStatus.SERVICE_UNAVAILABLE, "AI_UNAVAILABLE");
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI_UNAVAILABLE");
         }
     }
 
+    /**
+     * Explicit direct realtime-analysis calls keep the legacy confidence contract.
+     * The P0 capture path does not use this as a discard gate: low-confidence audio
+     * is first stored in RealtimeClinicalIntakeService and later rebuilt with a null
+     * confidence after clinician review.
+     */
     private void validateRealtimeConfidence(Double confidence) {
-        if (confidence == null || !Double.isFinite(confidence) || confidence < 0.0 || confidence > 1.0) {
+        if (confidence == null) {
+            return;
+        }
+        if (!Double.isFinite(confidence) || confidence < 0.0 || confidence > 1.0) {
             throw new ResponseStatusException(
                     HttpStatus.UNPROCESSABLE_ENTITY, "AI_REALTIME_TRANSCRIPTION_UNVERIFIED");
         }
         double minimum = properties.minimumTranscriptionConfidence();
         if (minimum > 0.0 && confidence < minimum) {
-            log.warn(
-                    "Realtime transcription rejected for low confidence confidence={} minimum={}",
-                    String.format("%.3f", confidence),
-                    String.format("%.3f", minimum));
             throw new ResponseStatusException(
                     HttpStatus.UNPROCESSABLE_ENTITY, "AI_TRANSCRIPTION_LOW_CONFIDENCE");
         }
+    }
+
+    private String captureMessage(int changedFieldCount, String locale) {
+        if ("en".equalsIgnoreCase(locale)) {
+            return changedFieldCount == 0
+                    ? "Transcript preserved. No safe structured change was added from this segment."
+                    : "Transcript preserved and the working draft was updated.";
+        }
+        return changedFieldCount == 0
+                ? "Transcription conservée. Aucun changement structuré sûr n'a été ajouté pour ce passage."
+                : "Transcription conservée et brouillon de travail mis à jour.";
     }
 
     private String latestUserUtterance(AiConsultationSessionState state) {
@@ -458,12 +456,8 @@ public class AiConsultationService {
     private String joinSources(String first, String second) {
         String left = first == null ? "" : first.trim();
         String right = second == null ? "" : second.trim();
-        if (left.isBlank()) {
-            return right;
-        }
-        if (right.isBlank()) {
-            return left;
-        }
+        if (left.isBlank()) return right;
+        if (right.isBlank()) return left;
         return left + "\n" + right;
     }
 
@@ -477,16 +471,11 @@ public class AiConsultationService {
         }
     }
 
-    private AiConsultationSessionState requireSession(
-            UUID visitId,
-            UUID userId,
-            UUID organizationId) {
+    private AiConsultationSessionState requireSession(UUID visitId, UUID userId, UUID organizationId) {
         ensureActiveVisit(visitId);
         SessionKey key = sessionKey(visitId, userId, organizationId);
         AiConsultationSessionState state = sessions.get(key);
-        if (state == null) {
-            throw conflict("AI_SESSION_EXPIRED");
-        }
+        if (state == null) throw conflict("AI_SESSION_EXPIRED");
         synchronized (state) {
             if (state.expiresAt.isBefore(Instant.now())) {
                 sessions.remove(key, state);
@@ -496,19 +485,15 @@ public class AiConsultationService {
         return state;
     }
 
-    private void ensureReadyForNewInput(AiConsultationSessionState state) {
-        if (state.pendingTranscript != null) {
-            throw conflict("AI_TRANSCRIPT_REVIEW_REQUIRED");
-        }
+    private void ensureReadyForInteractiveInput(AiConsultationSessionState state) {
+        if (state.pendingTranscript != null) throw conflict("AI_TRANSCRIPT_REVIEW_REQUIRED");
         clarificationManager.ensureNoPending(state);
         revisionManager.ensureNoPendingRevision(state);
     }
 
     private void ensureActiveVisit(UUID visitId) {
         var visit = visitService.getVisit(visitId);
-        if (!"EN_COURS".equals(visit.getStatus())) {
-            throw conflict("VISIT_NOT_ACTIVE");
-        }
+        if (!"EN_COURS".equals(visit.getStatus())) throw conflict("VISIT_NOT_ACTIVE");
     }
 
     private void appendVisibleMessage(
@@ -518,24 +503,14 @@ public class AiConsultationService {
             String source,
             boolean needsClarification) {
         AiConsultationSessionSupport.appendVisibleMessage(
-                state,
-                role,
-                content,
-                source,
-                needsClarification,
-                properties.maxConversationTurns());
+                state, role, content, source, needsClarification, properties.maxConversationTurns());
     }
 
-    private SessionView toSessionView(
-            UUID visitId,
-            AiConsultationSessionState state) {
+    private SessionView toSessionView(UUID visitId, AiConsultationSessionState state) {
         return AiConsultationSessionSupport.toSessionView(visitId, state);
     }
 
-    private SessionKey sessionKey(
-            UUID visitId,
-            UUID userId,
-            UUID organizationId) {
+    private SessionKey sessionKey(UUID visitId, UUID userId, UUID organizationId) {
         return new SessionKey(visitId, userId, organizationKey(organizationId));
     }
 
