@@ -9,37 +9,40 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { Subscription, interval } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AiAssistantInputComponent } from './ai-assistant-input.component';
-import {
-  AiClarificationAnswer,
-  AiClarificationPanelComponent,
-} from './ai-clarification-panel.component';
 import { AiDraftMergeService } from './ai-draft-merge.service';
 import { AiDraftPreviewComponent } from './ai-draft-preview.component';
 import {
-  AiProposalDecisionRequest,
-  AiProposalPanelComponent,
-} from './ai-proposal-panel.component';
-import { AiTranscriptReviewComponent } from './ai-transcript-review.component';
-import {
-  AiClarification,
   AiConsultationApiService,
   AiConsultationDraft,
   AiField,
-  AiMessageResponse,
   AiSessionResponse,
-  AiTranscriptionResponse,
 } from './ai-consultation-api.service';
+import {
+  ClinicalCaptureCorrection,
+  ClinicalCaptureReviewComponent,
+} from './clinical-capture-review.component';
 import {
   ClassicVoiceCapture,
   ClassicVoiceRecorderService,
 } from './classic-voice-recorder.service';
 import { LinkedEvidenceNotePanelComponent } from './linked-evidence-note-panel.component';
+import {
+  RealtimeClinicalIntakeAck,
+  RealtimeClinicalIntakeApiService,
+} from './realtime-clinical-intake-api.service';
 import { RealtimeVoiceControllerComponent } from './realtime-voice-controller.component';
 
 export type { AiConsultationDraft } from './ai-consultation-api.service';
+
+type AiWorkflowStage =
+  | 'PREPARE'
+  | 'CAPTURE_REALTIME'
+  | 'CAPTURE_DICTATION'
+  | 'TRANSCRIPT_REVIEW'
+  | 'REPORT_REVIEW'
+  | 'FORM_READY';
 
 @Component({
   selector: 'app-voice-assistant-panel',
@@ -47,10 +50,8 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
   imports: [
     CommonModule,
     AiAssistantInputComponent,
-    AiClarificationPanelComponent,
-    AiProposalPanelComponent,
-    AiTranscriptReviewComponent,
     AiDraftPreviewComponent,
+    ClinicalCaptureReviewComponent,
     LinkedEvidenceNotePanelComponent,
     RealtimeVoiceControllerComponent,
   ],
@@ -58,6 +59,7 @@ export type { AiConsultationDraft } from './ai-consultation-api.service';
 })
 export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   private readonly api = inject(AiConsultationApiService);
+  private readonly intakeApi = inject(RealtimeClinicalIntakeApiService);
   private readonly voiceRecorder = inject(ClassicVoiceRecorderService);
   private readonly draftMerge = inject(AiDraftMergeService);
   readonly i18n = inject(I18nService);
@@ -65,119 +67,79 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   @Input({ required: true }) visitId = '';
   @Input() currentDraft: Record<string, unknown> | null = null;
   @Output() readonly applyDraft = new EventEmitter<AiConsultationDraft>();
+  @Output() readonly formReadyChange = new EventEmitter<boolean>();
 
+  readonly stage = signal<AiWorkflowStage>('PREPARE');
   readonly session = signal<AiSessionResponse | null>(null);
+  readonly captureEntries = signal<RealtimeClinicalIntakeAck[]>([]);
   readonly busy = signal(false);
   readonly recording = signal(false);
-  readonly speaking = signal(false);
-  readonly conversationMode = signal(true);
   readonly realtimeActive = signal(false);
   readonly audioLevel = signal(0);
   readonly errorMessage = signal('');
   readonly vitalsWarning = signal('');
-  readonly composerResetToken = signal(0);
-
   readonly mediaRecorderSupported = this.voiceRecorder.supported;
-  private pollingSubscription: Subscription | null = null;
+
   private sessionBaseDraft: AiConsultationDraft = {};
-  private sessionBaseReady = false;
+  private destroyed = false;
 
   ngOnInit(): void {
     if (!this.visitId) return;
-    this.refreshSession();
-    this.pollingSubscription = interval(4000).subscribe(() => {
-      if (this.session() && !this.conversationMode() && !this.recording() && !this.busy()) {
-        this.refreshSession(true);
-      }
-    });
+    this.loadRecoverableCapture(true);
   }
 
   ngOnDestroy(): void {
-    this.pollingSubscription?.unsubscribe();
+    this.destroyed = true;
     this.voiceRecorder.dispose();
   }
 
-  interactionBlocked(): boolean {
-    return !!this.session()?.pendingTranscript
-      || this.hasPendingClarification()
-      || (!this.conversationMode() && this.hasPendingRevision());
-  }
-
-  recordingBlocked(): boolean {
-    return (this.realtimeActive() && !this.conversationMode())
-      || !!this.session()?.pendingTranscript
-      || this.hasPendingClarification()
-      || (!this.conversationMode() && this.hasPendingRevision());
-  }
-
-  hasPendingClarification(): boolean {
-    return this.pendingClarification() !== null;
-  }
-
-  hasPendingRevision(): boolean {
-    return this.session()?.revisions.some(revision => revision.status === 'PENDING') ?? false;
-  }
-
-  hasDraftContent(): boolean {
-    const draft = this.session()?.draft;
-    return !!draft && Object.values(draft).some(value => typeof value === 'string' && value.trim());
-  }
-
   startRealtime(): void {
-    if (this.busy()) return;
-    this.conversationMode.set(true);
-    if (this.session()) return;
-    this.startSession();
+    if (!this.visitId || this.busy()) return;
+    this.errorMessage.set('');
+    this.stage.set('CAPTURE_REALTIME');
+    this.formReadyChange.emit(false);
   }
 
   startDictation(): void {
-    if (this.busy() || !this.mediaRecorderSupported) return;
-    this.conversationMode.set(false);
-    this.realtimeActive.set(false);
-    if (this.session()) return;
-    this.startSession();
-  }
-
-  startSession(): void {
-    if (!this.visitId || this.busy()) return;
-    const baseDraft = this.sanitizedCurrentDraft();
-    this.sessionBaseDraft = this.cloneDraft(baseDraft);
-    this.sessionBaseReady = true;
-    this.startBusy();
-    this.api.startSession(this.visitId, baseDraft).subscribe({
-      next: response => this.completeSessionUpdate(response),
-      error: error => {
-        this.sessionBaseReady = false;
-        this.handleError(error, this.i18n.t('consultation.ai.errorStartSession'));
-      },
-    });
-  }
-
-  switchToDictation(): void {
-    if (this.recording() || this.busy()) return;
-    this.conversationMode.set(false);
-    this.realtimeActive.set(false);
+    if (!this.visitId || this.busy() || !this.mediaRecorderSupported) return;
     this.errorMessage.set('');
+    this.stage.set('CAPTURE_DICTATION');
+    this.formReadyChange.emit(false);
   }
 
-  switchToRealtime(): void {
-    if (this.recording() || this.busy()) return;
-    this.conversationMode.set(true);
-    this.errorMessage.set('');
+  openManualForm(): void {
+    if (this.busy() || this.recording() || this.realtimeActive()) return;
+    this.stage.set('FORM_READY');
+    this.formReadyChange.emit(true);
   }
 
   finishRealtime(): void {
-    this.applyCurrentDraft();
-    this.switchToDictation();
+    this.realtimeActive.set(false);
+    this.loadRecoverableCapture(false, () => this.stage.set('TRANSCRIPT_REVIEW'));
   }
 
-  toggleConversationMode(): void {
-    if (this.conversationMode()) this.switchToDictation();
-    else this.switchToRealtime();
+  finishDictation(): void {
+    if (this.recording()) {
+      this.voiceRecorder.stop();
+      return;
+    }
+    if (this.busy()) return;
+    this.loadRecoverableCapture(false, () => this.stage.set('TRANSCRIPT_REVIEW'));
+  }
+
+  resumeCapture(): void {
+    if (this.busy()) return;
+    this.startRealtime();
+  }
+
+  backToTranscript(): void {
+    if (this.busy()) return;
+    this.session.set(null);
+    this.stage.set('TRANSCRIPT_REVIEW');
   }
 
   toggleRecording(): void {
-    if (this.realtimeActive()) return;
+    if (this.busy() || !this.mediaRecorderSupported) return;
     if (this.recording()) {
       this.voiceRecorder.stop();
       return;
@@ -185,94 +147,59 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     void this.startRecording();
   }
 
-  sendText(text: string): void {
-    if (!text.trim() || this.busy() || this.interactionBlocked()) return;
+  correctCapture(request: ClinicalCaptureCorrection): void {
+    if (this.busy() || !request.transcript.trim()) return;
     this.startBusy();
-    this.api.sendText(this.visitId, text.trim()).subscribe({
-      next: response => this.finishMessageResponse(response),
-      error: error => this.handleError(error, this.i18n.t('consultation.ai.errorAnalyzeMessage')),
-    });
-  }
-
-  answerClarification(request: AiClarificationAnswer): void {
-    if (this.busy()) return;
-    this.startBusy();
-    this.api.answerClarification(this.visitId, request.clarificationId, request.answer).subscribe({
-      next: response => this.finishMessageResponse(response),
-      error: error => this.handleError(error, this.i18n.t('consultation.ai.errorAnalyzeClarification')),
-    });
-  }
-
-  decideProposal(request: AiProposalDecisionRequest): void {
-    if (this.busy()) return;
-    this.startBusy();
-    const operation = request.scope === 'PROPOSAL' && request.proposalId
-      ? this.api.decideProposal(
-          this.visitId,
-          request.revisionId,
-          request.proposalId,
-          request.decision,
-        )
-      : this.api.decideRevision(this.visitId, request.revisionId, request.decision);
-    operation.subscribe({
-      next: response => this.completeSessionUpdate(response),
-      error: error => this.handleError(error, this.i18n.t('consultation.ai.errorSaveDecision')),
-    });
-  }
-
-  analyzeTranscript(transcript: string): void {
-    if (!transcript.trim() || this.busy()) return;
-    this.startBusy();
-    this.api.analyzeTranscript(this.visitId, transcript.trim()).subscribe({
-      next: response => this.finishMessageResponse(response),
-      error: error => this.handleError(error, this.i18n.t('consultation.ai.errorAnalyzeTranscript')),
-    });
-  }
-
-  discardPendingTranscript(): void {
-    if (!this.session()?.pendingTranscript || this.busy()) return;
-    this.startBusy();
-    this.api.discardPendingTranscript(this.visitId).subscribe({
-      next: () => {
-        this.session.update(current => current ? {
-          ...current,
-          pendingTranscript: null,
-          transcriptStatus: 'NONE',
-        } : current);
+    this.intakeApi.correct(this.visitId, request.id, request.transcript.trim()).subscribe({
+      next: corrected => {
+        this.upsertCapture(corrected);
         this.busy.set(false);
       },
-      error: error => this.handleError(error, this.i18n.t('consultation.ai.errorDiscardTranscript')),
+      error: error => this.handleError(
+        error,
+        this.i18n.t(
+          'consultation.ai.realtimeCorrectionFailed',
+          'La correction n’a pas pu être enregistrée. La transcription précédente reste conservée.',
+        ),
+      ),
     });
   }
 
-  deleteSession(): void {
-    if (!this.session() || this.busy()) return;
+  generateReport(): void {
+    if (this.busy() || this.captureEntries().length === 0) return;
     this.startBusy();
-    this.api.deleteSession(this.visitId).subscribe({
-      next: () => {
-        this.session.set(null);
-        this.sessionBaseDraft = {};
-        this.sessionBaseReady = false;
-        this.realtimeActive.set(false);
-        this.recording.set(false);
-        this.composerResetToken.update(value => value + 1);
+    this.sessionBaseDraft = this.sanitizedCurrentDraft();
+    this.api.rebuildCapture(this.visitId, this.sessionBaseDraft).subscribe({
+      next: response => {
+        this.session.set(response);
         this.busy.set(false);
+        this.stage.set('REPORT_REVIEW');
+        if (!this.hasDraftContent()) {
+          this.errorMessage.set(this.i18n.t(
+            'consultation.ai.reportEmpty',
+            'La transcription est conservée, mais aucun élément clinique suffisamment fondé n’a pu être structuré. Relisez le transcript ou complétez l’enregistrement.',
+          ));
+        }
       },
-      error: error => this.handleError(error, this.i18n.t('consultation.ai.errorEndSession')),
+      error: error => this.handleError(
+        error,
+        this.i18n.t(
+          'consultation.ai.reportGenerationFailed',
+          'Le compte rendu n’a pas pu être généré. La transcription complète reste sauvegardée.',
+        ),
+      ),
     });
   }
 
-  dismissVitalsWarning(): void {
-    this.vitalsWarning.set('');
+  hasDraftContent(): boolean {
+    const draft = this.session()?.draft;
+    return !!draft && Object.entries(draft).some(([field, value]) =>
+      field !== 'vitals' && typeof value === 'string' && !!value.trim());
   }
 
   applyCurrentDraft(): void {
     const draft = this.session()?.draft;
-    if (!draft || this.hasPendingRevision()) return;
-    if (!this.sessionBaseReady) {
-      this.sessionBaseDraft = this.sanitizedCurrentDraft();
-      this.sessionBaseReady = true;
-    }
+    if (!draft || !this.hasDraftContent()) return;
 
     const current = this.currentDraft ?? {};
     const plan = this.draftMerge.plan(
@@ -295,59 +222,31 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     if (plan.conflicts.length > 0) {
       this.errorMessage.set(this.i18n.t(
         'consultation.ai.safeMergeConflict',
-        'Des saisies plus récentes du médecin ont été conservées. Vérifiez les champs signalés avant l\'enregistrement.',
+        'Des saisies plus récentes du médecin ont été conservées. Vérifiez les champs signalés avant l’enregistrement.',
       ));
     }
     if (plan.vitalsProposal) {
       this.vitalsWarning.set(this.i18n.t(
         'consultation.ai.vitalsRequireDedicatedValidation',
-        'Les constantes détectées ne sont pas enregistrées depuis le brouillon de consultation. Validez-les dans le bloc Constantes.',
+        'Les constantes détectées restent à confirmer dans le bloc Constantes.',
       ));
     }
 
-    if (Object.keys(safeDraft).length > 0) {
-      this.applyDraft.emit(safeDraft);
-    }
+    this.applyDraft.emit(safeDraft);
+    this.stage.set('FORM_READY');
+    this.formReadyChange.emit(true);
   }
 
   applyFinalReviewPatch(patch: AiConsultationDraft): void {
-    const draft = this.session()?.draft;
-    if (!draft || this.hasPendingRevision() || !patch || Object.keys(patch).length === 0) return;
-
-    const reviewedDraft: AiConsultationDraft = { ...draft, ...patch };
-    const current = this.currentDraft ?? {};
-    const plan = this.draftMerge.plan(
-      { baseDraft: this.cloneDraft(draft), draft: this.cloneDraft(reviewedDraft) },
-      current,
-    );
-    const safePatch: AiConsultationDraft = { ...plan.textPatch };
-
-    if (plan.conflicts.length > 0) {
-      this.errorMessage.set(this.i18n.t(
-        'consultation.ai.safeMergeConflict',
-        'Des saisies plus récentes du médecin ont été conservées. Vérifiez les champs signalés avant l\'enregistrement.',
-      ));
-    }
-    if (Object.keys(safePatch).length > 0) {
-      this.applyDraft.emit(safePatch);
-      this.session.update(currentSession => currentSession ? {
-        ...currentSession,
-        draft: { ...currentSession.draft, ...safePatch },
-      } : currentSession);
-    }
-  }
-
-  finishRealtimeTranscription(response: AiTranscriptionResponse): void {
+    if (!patch || Object.keys(patch).length === 0) return;
     this.session.update(current => current ? {
       ...current,
-      pendingTranscript: response.transcript,
-      transcriptStatus: response.status,
-      expiresAt: response.expiresAt,
+      draft: { ...current.draft, ...patch },
     } : current);
   }
 
-  finishRealtimeMessage(response: AiMessageResponse): void {
-    this.finishMessageResponse(response);
+  dismissVitalsWarning(): void {
+    this.vitalsWarning.set('');
   }
 
   handleRealtimeError(message: string): void {
@@ -355,13 +254,19 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     this.errorMessage.set(message.trim());
   }
 
+  latestDictationEntries(): RealtimeClinicalIntakeAck[] {
+    return this.captureEntries().slice(-6);
+  }
+
+  formatCaptureTime(value: string): string {
+    const timestamp = Date.parse(value);
+    return Number.isFinite(timestamp)
+      ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : '';
+  }
+
   private async startRecording(): Promise<void> {
-    if (this.realtimeActive() || !this.mediaRecorderSupported || this.busy() || this.recordingBlocked()) return;
-    if (!this.session()) {
-      this.startDictation();
-      this.errorMessage.set(this.i18n.t('consultation.ai.errorStartBeforeDictation'));
-      return;
-    }
+    if (this.busy() || this.recording() || this.stage() !== 'CAPTURE_DICTATION') return;
     try {
       this.errorMessage.set('');
       await this.voiceRecorder.start(
@@ -382,71 +287,55 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
       return;
     }
     this.startBusy();
-    this.api.transcribeAudio(this.visitId, capture.audio).subscribe({
-      next: response => {
-        this.session.update(current => current ? {
-          ...current,
-          pendingTranscript: response.transcript,
-          transcriptStatus: response.status,
-          expiresAt: response.expiresAt,
-        } : current);
+    this.intakeApi.captureDictation(this.visitId, capture.audio).subscribe({
+      next: entry => {
+        this.upsertCapture(entry);
         this.busy.set(false);
       },
-      error: error => this.handleError(error, this.i18n.t('consultation.ai.errorTranscribeDictation')),
+      error: error => this.handleError(
+        error,
+        this.i18n.t(
+          'consultation.ai.errorTranscribeDictation',
+          'La dictée n’a pas pu être transcrite. Aucun élément déjà sauvegardé n’a été supprimé.',
+        ),
+      ),
     });
   }
 
-  private finishMessageResponse(response: AiMessageResponse): void {
-    this.updateSessionFromMessage(response);
-    this.composerResetToken.update(value => value + 1);
-    this.busy.set(false);
-  }
-
-  private refreshSession(silent = false): void {
-    this.api.getSession(this.visitId).subscribe({
-      next: response => {
-        if (!response) return;
-        if (!this.sessionBaseReady) {
-          this.sessionBaseDraft = this.sanitizedCurrentDraft();
-          this.sessionBaseReady = true;
+  private loadRecoverableCapture(initial: boolean, afterLoad?: () => void): void {
+    const visitId = this.visitId;
+    this.intakeApi.list(visitId).subscribe({
+      next: entries => {
+        if (this.destroyed || visitId !== this.visitId) return;
+        this.captureEntries.set([...entries].sort((a, b) => a.sequence - b.sequence));
+        if (initial && entries.length > 0) {
+          this.stage.set('TRANSCRIPT_REVIEW');
+          this.formReadyChange.emit(false);
         }
-        this.session.set(response);
+        afterLoad?.();
       },
       error: error => {
-        if (!silent && error.status !== 404) {
-          this.handleError(error, this.i18n.t('consultation.ai.errorAssistantUnavailable'));
+        if (!initial) {
+          this.handleError(
+            error,
+            this.i18n.t(
+              'consultation.ai.captureLoadFailed',
+              'La transcription sauvegardée n’a pas pu être rechargée. Ne poursuivez pas avant d’avoir rétabli l’accès aux données.',
+            ),
+          );
         }
       },
     });
   }
 
-  private updateSessionFromMessage(response: AiMessageResponse): void {
-    const previous = this.session();
-    this.session.set({
-      sessionId: response.sessionId,
-      visitId: this.visitId,
-      status: 'ACTIVE',
-      expiresAt: response.expiresAt,
-      draft: response.draft,
-      transcript: response.transcript ?? previous?.transcript ?? null,
-      pendingTranscript: null,
-      transcriptStatus: response.transcript ? 'ANALYZED' : previous?.transcriptStatus ?? 'NONE',
-      conversation: response.conversation,
-      clarifications: response.clarifications,
-      revisions: response.revisions,
-      assistantMessage: response.assistantMessage,
-      needsClarification: response.needsClarification,
+  private upsertCapture(entry: RealtimeClinicalIntakeAck): void {
+    this.captureEntries.update(entries => {
+      const found = entries.findIndex(item => item.id === entry.id);
+      const next = found >= 0
+        ? entries.map((item, index) => index === found ? entry : item)
+        : [...entries, entry];
+      return next.sort((a, b) => a.sequence - b.sequence);
     });
-  }
-
-  private completeSessionUpdate(response: AiSessionResponse): void {
-    this.session.set(response);
-    this.busy.set(false);
-    this.applyCurrentDraft();
-  }
-
-  private pendingClarification(): AiClarification | null {
-    return this.session()?.clarifications.find(clarification => clarification.status === 'PENDING') ?? null;
   }
 
   private sanitizedCurrentDraft(): AiConsultationDraft {
@@ -492,13 +381,12 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   private handleError(
-    error: { status?: number; error?: { detail?: string; title?: string } },
+    error: { status?: number; error?: { error?: { message?: string }; detail?: string; title?: string } },
     fallback: string,
   ): void {
     this.busy.set(false);
     this.recording.set(false);
-    this.voiceRecorder.dispose();
-    const detail = error.error?.detail || error.error?.title;
+    const detail = error.error?.error?.message || error.error?.detail || error.error?.title;
     this.errorMessage.set(detail && !detail.startsWith('AI_') ? detail : fallback);
   }
 }
