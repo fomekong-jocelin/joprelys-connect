@@ -1,6 +1,7 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { I18nService } from '../core/i18n/i18n.service';
 
 export interface RealtimeClinicalIntakeAck {
   id: string;
@@ -22,6 +23,7 @@ export interface RealtimeClinicalIntakeAck {
 @Injectable({ providedIn: 'root' })
 export class RealtimeClinicalIntakeApiService {
   private readonly http = inject(HttpClient);
+  private readonly i18n = inject(I18nService);
 
   ingest(
     visitId: string,
@@ -36,6 +38,18 @@ export class RealtimeClinicalIntakeApiService {
       confidence,
       eventId,
       itemId,
+    );
+  }
+
+  captureDictation(visitId: string, audio: Blob): Observable<RealtimeClinicalIntakeAck> {
+    const headers = new HttpHeaders({
+      'Content-Type': audio.type || 'application/octet-stream',
+      'X-Joprelys-Locale': this.i18n.currentLanguage(),
+    });
+    return this.http.post<RealtimeClinicalIntakeAck>(
+      `/api/ai/consultations/${visitId}/capture/dictation`,
+      audio,
+      { headers },
     );
   }
 
