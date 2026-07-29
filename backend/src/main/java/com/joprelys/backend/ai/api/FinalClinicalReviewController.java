@@ -4,12 +4,15 @@ import com.joprelys.backend.ai.application.AiConsultationContract.SessionView;
 import com.joprelys.backend.ai.application.AiConsultationService;
 import com.joprelys.backend.ai.application.FinalClinicalReviewContract.ReviewView;
 import com.joprelys.backend.ai.application.FinalClinicalReviewService;
+import com.joprelys.backend.ai.realtime.application.RealtimeClinicalIntakeService;
+import com.joprelys.backend.ai.realtime.application.RealtimeIntakeSource;
 import com.joprelys.backend.auth.security.JwtClaims;
 import com.joprelys.backend.auth.security.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,12 +34,15 @@ public class FinalClinicalReviewController {
 
     private final AiConsultationService consultationService;
     private final FinalClinicalReviewService reviewService;
+    private final RealtimeClinicalIntakeService intakeService;
 
     public FinalClinicalReviewController(
             AiConsultationService consultationService,
-            FinalClinicalReviewService reviewService) {
+            FinalClinicalReviewService reviewService,
+            RealtimeClinicalIntakeService intakeService) {
         this.consultationService = consultationService;
         this.reviewService = reviewService;
+        this.intakeService = intakeService;
     }
 
     @PostMapping("/{visitId}/final-review")
@@ -45,11 +51,20 @@ public class FinalClinicalReviewController {
             Authentication authentication) {
         Identity identity = identity(authentication);
         SessionView session = requireReadySession(visitId, identity);
+        String sourceTranscript = intakeService.listActive(
+                        visitId,
+                        identity.organizationId(),
+                        RealtimeIntakeSource.CONSULTATION)
+                .stream()
+                .map(RealtimeClinicalIntakeService.IntakeView::transcript)
+                .filter(value -> value != null && !value.isBlank())
+                .collect(Collectors.joining("\n"));
         return reviewService.createReview(
                 visitId,
                 identity.userId(),
                 identity.organizationId(),
                 session.draft(),
+                sourceTranscript,
                 consultationService.sessionLocale(
                         visitId, identity.userId(), identity.organizationId()));
     }
