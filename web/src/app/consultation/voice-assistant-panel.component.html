@@ -1,20 +1,33 @@
-<div class="space-y-4">
+@let existingClinicalDraft = !!(
+  currentDraft?.['symptoms']
+  || currentDraft?.['clinicalExam']
+  || currentDraft?.['diagnosis']
+  || currentDraft?.['finalDiagnosis']
+  || currentDraft?.['conclusion']
+  || currentDraft?.['advice']
+  || currentDraft?.['followUp']
+);
+@let effectiveStage = stage() === 'PREPARE' && existingClinicalDraft ? 'FORM_READY' : stage();
+
+<div class="space-y-4" [attr.data-ai-workflow-stage]="effectiveStage">
   <section class="space-y-4">
-    <header class="flex items-start justify-between gap-3 px-1">
-      <div class="flex min-w-0 items-center gap-2.5">
-        <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary-subtle)] text-[var(--brand-primary)]">
-          <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z"/>
-          </svg>
-        </span>
-        <div class="min-w-0">
-          <h2 class="text-sm font-bold text-[var(--text-primary)] sm:text-base">{{ i18n.t('consultation.ai.simpleTitle') }}</h2>
-          <p class="mt-0.5 text-[11px] leading-4 text-[var(--text-muted)] sm:text-xs">
-            {{ i18n.t('consultation.ai.progressiveSubtitle', 'Écouter, relire, générer puis remplir la consultation. Une étape à la fois.') }}
-          </p>
+    @if (effectiveStage !== 'FORM_READY') {
+      <header class="flex items-start justify-between gap-3 px-1">
+        <div class="flex min-w-0 items-center gap-2.5">
+          <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary-subtle)] text-[var(--brand-primary)]">
+            <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z"/>
+            </svg>
+          </span>
+          <div class="min-w-0">
+            <h2 class="text-sm font-bold text-[var(--text-primary)] sm:text-base">{{ i18n.t('consultation.ai.simpleTitle') }}</h2>
+            <p class="mt-0.5 text-[11px] leading-4 text-[var(--text-muted)] sm:text-xs">
+              {{ i18n.t('consultation.ai.progressiveSubtitle', 'Écouter, relire, générer puis remplir la consultation. Une étape à la fois.') }}
+            </p>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+    }
 
     @if (errorMessage()) {
       <div class="border-l-2 border-[var(--brand-warning-border)] py-1.5 pl-3 text-xs font-semibold leading-5 text-[var(--brand-warning-text)]" role="status">
@@ -33,7 +46,7 @@
       </div>
     }
 
-    @switch (stage()) {
+    @switch (effectiveStage) {
       @case ('PREPARE') {
         <div class="mx-auto w-full max-w-3xl py-4 sm:py-8">
           <div class="text-center">
@@ -187,20 +200,32 @@
       }
 
       @case ('FORM_READY') {
-        <div class="border-l-2 border-[var(--brand-success-muted)] py-2 pl-3 text-xs leading-5 text-[var(--brand-success-text)]">
-          <p class="font-bold">{{ i18n.t('consultation.ai.formReadyTitle', 'Compte rendu validé') }}</p>
-          <p>{{ i18n.t('consultation.ai.formReadyHelp', 'Les champs de la consultation sont maintenant disponibles ci-dessous pour votre dernière vérification avant sauvegarde.') }}</p>
+        <div class="flex flex-col gap-3 border-l-2 border-[var(--brand-success-muted)] py-2 pl-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="min-w-0 text-xs leading-5 text-[var(--brand-success-text)]">
+            <p class="font-bold">{{ i18n.t('consultation.ai.formReadyTitle', 'Compte rendu validé') }}</p>
+            <p class="text-[var(--text-secondary)]">{{ i18n.t('consultation.ai.formReadyHelp', 'Le formulaire clinique est disponible pour votre dernière vérification avant sauvegarde.') }}</p>
+          </div>
+          <button
+            type="button"
+            (click)="startRealtime()"
+            [disabled]="busy() || !visitId"
+            class="shrink-0 text-xs font-bold text-[var(--brand-primary)] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {{ i18n.t('consultation.ai.resumeWithAssistant', 'Reprendre l’enregistrement IA') }}
+          </button>
         </div>
       }
     }
   </section>
 
-  <details class="border-t border-[var(--app-border)] pt-1">
-    <summary class="cursor-pointer py-2 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)]">
-      {{ i18n.t('consultation.ai.auditEvidenceTitle', 'Traçabilité & Preuves cliniques (Optionnel)') }}
-    </summary>
-    <div class="pt-2">
-      <app-linked-evidence-note-panel [visitId]="visitId" />
-    </div>
-  </details>
+  @if (effectiveStage === 'TRANSCRIPT_REVIEW' || effectiveStage === 'REPORT_REVIEW') {
+    <details class="border-t border-[var(--app-border)] pt-1">
+      <summary class="cursor-pointer py-2 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+        {{ i18n.t('consultation.ai.auditEvidenceTitle', 'Traçabilité & Preuves cliniques (Optionnel)') }}
+      </summary>
+      <div class="pt-2">
+        <app-linked-evidence-note-panel [visitId]="visitId" />
+      </div>
+    </details>
+  }
 </div>
