@@ -1,7 +1,6 @@
 package com.joprelys.backend.ai.realtime.infrastructure.persistence;
 
 import com.joprelys.backend.ai.realtime.application.RealtimeIntakeSource;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,10 +29,22 @@ public interface RealtimeClinicalIntakeRepository extends JpaRepository<Realtime
             UUID visitId,
             RealtimeIntakeSource source);
 
-    List<RealtimeClinicalIntakeEntity> findByVisitIdAndSourceAndCaptureStatusInOrderBySequenceNoAsc(
-            UUID visitId,
-            RealtimeIntakeSource source,
-            Collection<String> captureStatuses);
+    /**
+     * Historical method name kept to avoid churn in the capture service. The explicit
+     * query is the source of truth: only working-set transcript rows are returned.
+     * CONSUMED and DISCARDED rows are intentionally excluded from future AI rebuilds.
+     */
+    @Query("""
+            select item from RealtimeClinicalIntakeEntity item
+            where item.visitId = :visitId
+              and item.source = :source
+              and item.captureStatus in ('PENDING', 'ANALYZED')
+            order by item.sequenceNo asc
+            """)
+    List<RealtimeClinicalIntakeEntity> findByVisitIdAndSourceAndCaptureStatusNotOrderBySequenceNoAsc(
+            @Param("visitId") UUID visitId,
+            @Param("source") RealtimeIntakeSource source,
+            @Param("captureStatus") String ignoredStatus);
 
     @Query("select coalesce(max(item.sequenceNo), 0) from RealtimeClinicalIntakeEntity item where item.visitId = :visitId")
     long findMaximumSequence(@Param("visitId") UUID visitId);
