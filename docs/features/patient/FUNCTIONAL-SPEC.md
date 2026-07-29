@@ -59,4 +59,17 @@ Critères complémentaires :
 1. Les colonnes `N° DPU (National)` et `N° Local` ne doivent pas couper les identifiants sur deux lignes.
 2. L'action `Voir le dossier` doit rester lisible sur une seule ligne.
 3. En cas de largeur insuffisante, le conteneur desktop doit conserver le défilement horizontal existant plutôt que compresser les données critiques.
-4. La vue mobile en cartes n'est pas modifiée par cette correction.
+4. La vue mobile en cartes n'est pas modifiée par cette correction desktop historique.
+
+## 7. Refonte UI — Poste de travail Patients mobile-first (2026-07-29)
+
+La liste Patients privilégie désormais la tâche opérationnelle : retrouver un dossier et l'ouvrir rapidement.
+
+1. Le titre visible est `Patients`; le breadcrumb global remplace le lien Retour redondant du PageHeader.
+2. La recherche `Nom, téléphone ou DPU` est l'action dominante et peut être lancée avec Enter.
+3. Une recherche active peut être effacée en un geste ; le bouton texte `Rechercher` séparé n'est plus nécessaire.
+4. `Nouvelle admission` reste immédiatement accessible mais n'occupe plus le hero de la page.
+5. Sur mobile, chaque patient est une carte compacte et entièrement cliquable avec nom, sexe, DPU, téléphone et ville ; le bouton interne `Voir le dossier` est supprimé.
+6. Les cartes mobiles sont indépendantes et ne sont plus enfermées dans une grande carte parent.
+7. Pendant une recherche, la page affiche le nombre de résultats ; hors recherche, elle affiche simplement `Liste des patients` sans prétendre à un tri par récence.
+8. Sur desktop, le tableau comparatif, les identifiants non wrap et l'action `Voir le dossier` sont conservés.
