@@ -136,7 +136,7 @@ export const routes: Routes = [
     path: 'clinic/access-request',
     loadComponent: () => import('./clinic/external-access/clinic-access-request.component').then(m => m.ClinicAccessRequestComponent),
     canActivate: [roleGuard],
-    data: { expectedPermissions: ['PATIENT_EMERGENCY_ACCESS'] },
+    data: { expectedPermissions: ['PATIENT_READ', 'CLINICAL_READ', 'LAB_ORDER_READ', 'PHARMACY_PRESCRIPTION_READ'] },
   },
   {
     path: 'clinic/spatial',
@@ -218,91 +218,6 @@ export const routes: Routes = [
   },
   {
     path: 'public/register',
-    loadComponent: () => import('./patient/self-registration/patient-self-registration.component').then(m => m.PatientSelfRegistrationComponent),
-    data: { title: 'title.public.selfRegistration' }
-  },
-  {
-    path: 'patient/login',
-    loadComponent: () => import('./auth/login.component').then((module) => module.LoginComponent),
-    canActivate: [loginGuard],
-    data: { loginMode: 'patient' },
-  },
-  {
-    path: 'patient/dashboard',
-    loadComponent: () => import('./patient/portal/patient-dashboard.component').then(m => m.PatientDashboardComponent),
-    canActivate: [roleGuard],
-    data: { expectedRoles: ['PATIENT'] },
-  },
-  {
-    path: 'patient/appointments',
-    loadComponent: () => import('./patient/portal/appointments/patient-appointments-page.component').then(m => m.PatientAppointmentsPageComponent),
-    canActivate: [roleGuard],
-    data: { expectedRoles: ['PATIENT'], title: 'title.patient.appointments' },
-  },
-  {
-    path: 'patient/profile',
-    loadComponent: () => import('./patient/portal/pages/patient-profile-page.component').then(m => m.PatientProfilePageComponent),
-    canActivate: [roleGuard],
-    data: { expectedRoles: ['PATIENT'], title: 'title.patient.profile' },
-  },
-  {
-    path: 'patient/summary',
-    loadComponent: () => import('./patient/portal/pages/patient-summary-page.component').then(m => m.PatientSummaryPageComponent),
-    canActivate: [roleGuard],
-    data: { expectedRoles: ['PATIENT'], title: 'title.patient.summary' },
-  },
-  {
-    path: 'patient/prescriptions',
-    loadComponent: () => import('./patient/portal/pages/patient-prescriptions-page.component').then(m => m.PatientPrescriptionsPageComponent),
-    canActivate: [roleGuard],
-    data: { expectedRoles: ['PATIENT'], title: 'title.patient.prescriptions' },
-  },
-  {
-    path: 'patient/results',
-    loadComponent: () => import('./patient/portal/pages/patient-results-page.component').then(m => m.PatientResultsPageComponent),
-    canActivate: [roleGuard],
-    data: { expectedRoles: ['PATIENT'], title: 'title.patient.results' },
-  },
-  {
-    path: 'patient/documents',
-    loadComponent: () => import('./patient/portal/pages/patient-documents-page.component').then(m => m.PatientDocumentsPageComponent),
-    canActivate: [roleGuard],
-    data: { expectedRoles: ['PATIENT'], title: 'title.patient.documents' },
-  },
-  {
-    path: 'patient/qr-code',
-    loadComponent: () => import('./patient/portal/pages/patient-qr-code-page.component').then(m => m.PatientQrCodePageComponent),
-    canActivate: [roleGuard],
-    data: { expectedRoles: ['PATIENT'], title: 'title.patient.qrCode' },
-  },
-  {
-    path: 'patient/consents',
-    loadComponent: () => import('./patient/portal/pages/patient-consents-page.component').then(m => m.PatientConsentsPageComponent),
-    canActivate: [roleGuard],
-    data: { expectedRoles: ['PATIENT'], title: 'title.patient.consents' },
-  },
-  {
-    path: 'patient/privacy',
-    loadComponent: () => import('./patient/portal/pages/patient-privacy-page.component').then(m => m.PatientPrivacyPageComponent),
-    canActivate: [roleGuard],
-    data: { expectedRoles: ['PATIENT'], title: 'title.patient.privacy' },
-  },
-  {
-    path: 'patient/audit',
-    loadComponent: () => import('./patient/portal/pages/patient-audit-page.component').then(m => m.PatientAuditPageComponent),
-    canActivate: [roleGuard],
-    data: { expectedRoles: ['PATIENT'], title: 'title.patient.audit' },
-  },
-  {
-    path: 'patient/requests',
-    loadComponent: () => import('./patient/portal/pages/patient-requests-page.component').then(m => m.PatientRequestsPageComponent),
-    canActivate: [roleGuard],
-    data: { expectedRoles: ['PATIENT'], title: 'title.patient.requests' },
-  },
-  {
-    path: 'patient/notifications',
-    loadComponent: () => import('./patient/portal/pages/patient-notifications-page.component').then(m => m.PatientNotificationsPageComponent),
-    canActivate: [roleGuard],
-    data: { expectedRoles: ['PATIENT'], title: 'title.patient.notifications' },
+    loadComponent: () => import('./auth/public-register.component').then((module) => module.PublicRegisterComponent),
   },
 ];
