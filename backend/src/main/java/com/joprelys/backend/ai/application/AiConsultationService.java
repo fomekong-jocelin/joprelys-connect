@@ -143,10 +143,9 @@ public class AiConsultationService {
     }
 
     /**
-     * Continuous microphone/rebuild input never leaves a clarification or field
-     * decision pending. Any safe, grounded changes are accepted only into the
-     * recoverable AI working draft. The clinical form is untouched until the
-     * clinician validates the generated report.
+     * Continuous reconstruction input never leaves a clarification or field decision
+     * pending. The live browser capture no longer calls this method per phrase: it
+     * persists first and rebuilds later from the durable transcript.
      */
     public MessageView processRealtimeTranscript(
             UUID visitId,
@@ -155,7 +154,7 @@ public class AiConsultationService {
             String transcript,
             Double confidence) {
         AiConsultationInputValidator.validateText(transcript);
-        validateRealtimeConfidenceWithoutBlocking(confidence);
+        validateRealtimeConfidence(confidence);
         AiConsultationSessionState state = requireSession(visitId, userId, organizationId);
         synchronized (state) {
             return processMessageLocked(
@@ -230,6 +229,11 @@ public class AiConsultationService {
         }
     }
 
+    /**
+     * Legacy/manual transcription review remains explicitly decision-gated. The new
+     * progressive dictation path persists directly into the durable capture ledger
+     * and never uses this endpoint between recording segments.
+     */
     public MessageView analyzeTranscript(
             UUID visitId,
             UUID userId,
@@ -249,7 +253,7 @@ public class AiConsultationService {
                     "AUDIO",
                     null,
                     null,
-                    true);
+                    false);
             state.pendingTranscript = null;
             state.transcriptStatus = "ANALYZED";
             state.expiresAt = expiry();
@@ -407,9 +411,14 @@ public class AiConsultationService {
         }
     }
 
-    private void validateRealtimeConfidenceWithoutBlocking(Double confidence) {
+    /**
+     * Explicit direct realtime-analysis calls keep the legacy confidence contract.
+     * The P0 capture path does not use this as a discard gate: low-confidence audio
+     * is first stored in RealtimeClinicalIntakeService and later rebuilt with a null
+     * confidence after clinician review.
+     */
+    private void validateRealtimeConfidence(Double confidence) {
         if (confidence == null) {
-            log.debug("Realtime transcript without confidence preserved for later review");
             return;
         }
         if (!Double.isFinite(confidence) || confidence < 0.0 || confidence > 1.0) {
@@ -418,10 +427,8 @@ public class AiConsultationService {
         }
         double minimum = properties.minimumTranscriptionConfidence();
         if (minimum > 0.0 && confidence < minimum) {
-            log.warn(
-                    "Realtime transcription below confidence floor preserved confidence={} minimum={}",
-                    String.format("%.3f", confidence),
-                    String.format("%.3f", minimum));
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY, "AI_TRANSCRIPTION_LOW_CONFIDENCE");
         }
     }
 
