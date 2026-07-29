@@ -17,6 +17,7 @@ import com.joprelys.backend.visit.application.VisitService;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -143,9 +144,9 @@ public class AiConsultationService {
     }
 
     /**
-     * Continuous reconstruction input never leaves a clarification or field decision
-     * pending. The live browser capture no longer calls this method per phrase: it
-     * persists first and rebuilds later from the durable transcript.
+     * Compatibility entry point for direct Realtime transcript analysis. Progressive
+     * reconstruction calls {@link #processCaptureTranscript} so dictation and
+     * speaker-unverified realtime retain different medication authority.
      */
     public MessageView processRealtimeTranscript(
             UUID visitId,
@@ -153,8 +154,29 @@ public class AiConsultationService {
             UUID organizationId,
             String transcript,
             Double confidence) {
+        return processCaptureTranscript(
+                visitId,
+                userId,
+                organizationId,
+                transcript,
+                confidence,
+                "REALTIME");
+    }
+
+    /**
+     * Continuous reconstruction input never leaves a clarification or field decision
+     * pending. Capture provenance is carried all the way to deterministic safety guards.
+     */
+    public MessageView processCaptureTranscript(
+            UUID visitId,
+            UUID userId,
+            UUID organizationId,
+            String transcript,
+            Double confidence,
+            String captureSource) {
         AiConsultationInputValidator.validateText(transcript);
         validateRealtimeConfidence(confidence);
+        String source = normalizeCaptureSource(captureSource);
         AiConsultationSessionState state = requireSession(visitId, userId, organizationId);
         synchronized (state) {
             return processMessageLocked(
@@ -162,7 +184,7 @@ public class AiConsultationService {
                     transcript.trim(),
                     transcript.trim(),
                     transcript.trim(),
-                    "REALTIME",
+                    source,
                     null,
                     null,
                     true);
@@ -355,7 +377,7 @@ public class AiConsultationService {
             ParsedResponse factChecked = factualityGuard.enforce(
                     rawParsed, factualSource, state.draft, source, state.locale);
             ParsedResponse grounded = groundingGuard.enforce(
-                    factChecked, factualSource, resolvedClarificationField, state.locale);
+                    factChecked, factualSource, resolvedClarificationField, source, state.locale);
             ParsedResponse medicationChecked = "prescription".equals(resolvedClarificationField)
                     ? grounded
                     : medicationSafetyGuard.enforce(grounded, clinicalContext, state.locale);
@@ -370,7 +392,12 @@ public class AiConsultationService {
             RevisionView revision = null;
             if (!continuousCapture && toolPlan.clarification() != null) {
                 clarificationManager.append(state, toolPlan.clarification());
-            } else if (toolPlan.clarification() == null) {
+            } else if (toolPlan.clarification() == null || continuousCapture) {
+                /*
+                 * Continuous report reconstruction keeps every independently safe change
+                 * even when another item in the same model response still needs clarification.
+                 * The unresolved item is simply not auto-applied.
+                 */
                 revision = revisionManager.createRevision(state, toolPlan.changes());
                 if (continuousCapture && revision != null && "PENDING".equals(revision.status())) {
                     RevisionView createdRevision = revision;
@@ -430,6 +457,11 @@ public class AiConsultationService {
             throw new ResponseStatusException(
                     HttpStatus.UNPROCESSABLE_ENTITY, "AI_TRANSCRIPTION_LOW_CONFIDENCE");
         }
+    }
+
+    private String normalizeCaptureSource(String source) {
+        if (source == null) return "REALTIME";
+        return "DICTATION".equals(source.trim().toUpperCase(Locale.ROOT)) ? "DICTATION" : "REALTIME";
     }
 
     private String captureMessage(int changedFieldCount, String locale) {
