@@ -112,7 +112,7 @@ class AiConsultationContinuousCaptureTest {
     }
 
     @Test
-    void lowConfidencePhraseMustStillBeStructurableAndNeverBeRejectedByConfidenceGate() {
+    void rebuildWithoutAsrConfidenceMustRemainStructurableAfterDurableReview() {
         when(aiProvider.chat(anyList(), anyString())).thenReturn(chatResponse("""
                 {
                   "changes": [{
@@ -130,7 +130,7 @@ class AiConsultationContinuousCaptureTest {
                 """));
 
         var result = service.processRealtimeTranscript(
-                visitId, userId, organizationId, "Le patient signale une douleur du bras.", 0.2);
+                visitId, userId, organizationId, "Le patient signale une douleur du bras.", null);
 
         assertEquals("Douleur du bras", result.draft().get("symptoms"));
         assertFalse(result.needsClarification());
