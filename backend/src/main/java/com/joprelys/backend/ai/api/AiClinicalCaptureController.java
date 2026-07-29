@@ -1,7 +1,9 @@
 package com.joprelys.backend.ai.api;
 
 import com.joprelys.backend.ai.application.AiClinicalCaptureRebuildService;
+import com.joprelys.backend.ai.application.AiClinicalDictationCaptureService;
 import com.joprelys.backend.ai.application.AiConsultationContract.SessionView;
+import com.joprelys.backend.ai.realtime.application.RealtimeClinicalIntakeService.IntakeView;
 import com.joprelys.backend.auth.security.JwtClaims;
 import com.joprelys.backend.auth.security.TenantContext;
 import jakarta.validation.Valid;
@@ -11,11 +13,13 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -27,9 +31,13 @@ import org.springframework.web.server.ResponseStatusException;
 public class AiClinicalCaptureController {
 
     private final AiClinicalCaptureRebuildService rebuildService;
+    private final AiClinicalDictationCaptureService dictationCaptureService;
 
-    public AiClinicalCaptureController(AiClinicalCaptureRebuildService rebuildService) {
+    public AiClinicalCaptureController(
+            AiClinicalCaptureRebuildService rebuildService,
+            AiClinicalDictationCaptureService dictationCaptureService) {
         this.rebuildService = rebuildService;
+        this.dictationCaptureService = dictationCaptureService;
     }
 
     @PostMapping("/rebuild")
@@ -49,6 +57,30 @@ public class AiClinicalCaptureController {
                 identity.userId(),
                 identity.organizationId(),
                 draft,
+                locale);
+    }
+
+    @PostMapping(value = "/dictation", consumes = {
+            "audio/webm",
+            "audio/ogg",
+            "audio/wav",
+            "audio/mpeg",
+            "audio/mp4",
+            MediaType.APPLICATION_OCTET_STREAM_VALUE
+    })
+    public IntakeView captureDictation(
+            @PathVariable UUID visitId,
+            @RequestBody byte[] audio,
+            @RequestHeader(value = "Content-Type", required = false) String contentType,
+            @RequestHeader(value = "X-Joprelys-Locale", required = false) String locale,
+            Authentication authentication) {
+        Identity identity = identity(authentication);
+        return dictationCaptureService.capture(
+                visitId,
+                identity.userId(),
+                identity.organizationId(),
+                audio,
+                contentType == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : contentType,
                 locale);
     }
 
