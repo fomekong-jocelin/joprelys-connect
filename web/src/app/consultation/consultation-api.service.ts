@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { EMPTY, Observable, catchError, throwError } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { Consultation, SaveConsultationRequest, Prescription, SavePrescriptionRequest } from './consultation.models';
 
 @Injectable({ providedIn: 'root' })
@@ -11,23 +11,16 @@ export class ConsultationApiService {
     return this.http.post<Consultation>(`/api/visits/${visitId}/consultation`, dto);
   }
 
-  getConsultation(visitId: string): Observable<Consultation> {
-    return this.http.get<Consultation>(`/api/visits/${visitId}/consultation`).pipe(
-      catchError((error: HttpErrorResponse) => {
-        if (error.status === 404) {
-          return EMPTY;
-        }
-        return throwError(() => error);
-      }),
-    );
+  getConsultation(visitId: string): Observable<Consultation | null> {
+    return this.http.get<Consultation | null>(`/api/visits/${visitId}/consultation`);
   }
 
   savePrescription(consultationId: string, dto: SavePrescriptionRequest): Observable<Prescription> {
     return this.http.post<Prescription>(`/api/consultations/${consultationId}/prescription`, dto);
   }
 
-  getPrescription(consultationId: string): Observable<Prescription> {
-    return this.http.get<Prescription>(`/api/consultations/${consultationId}/prescription`);
+  getPrescription(consultationId: string): Observable<Prescription | null> {
+    return this.http.get<Prescription | null>(`/api/consultations/${consultationId}/prescription`);
   }
 
   getPatientConsultations(patientId: string): Observable<Consultation[]> {
