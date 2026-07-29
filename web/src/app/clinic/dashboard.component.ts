@@ -25,6 +25,93 @@ import { SmartVitalsAssistantComponent } from '../consultation/smart-vitals-assi
     FormsModule,
     SmartVitalsAssistantComponent,
   ],
+  styles: [`
+    :host .app-container {
+      display: flex;
+      flex-direction: column;
+      padding-top: 1.5rem;
+      padding-bottom: 2rem;
+    }
+
+    :host .app-container > .mb-8 {
+      order: 1;
+      margin-bottom: 0;
+      padding: 1rem;
+      border: 1px solid var(--app-border);
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--brand-primary-subtle), var(--app-surface));
+      box-shadow: var(--shadow-panel);
+    }
+
+    :host .app-container > .mb-8 h1 {
+      line-height: 1.25;
+    }
+
+    :host .app-container > .mb-8 p {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem;
+      line-height: 1.5;
+    }
+
+    :host .app-container > .mb-8 p::before {
+      content: '';
+      width: 0.45rem;
+      height: 0.45rem;
+      flex: 0 0 auto;
+      border-radius: 9999px;
+      background: var(--brand-success);
+      box-shadow: 0 0 0 3px var(--brand-success-subtle);
+    }
+
+    :host .app-container > .mb-8 p span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.75rem;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid var(--brand-primary-border);
+      border-radius: 4px;
+      background: var(--app-surface);
+      color: var(--brand-primary);
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+
+    :host .app-container > .grid {
+      order: 3;
+      margin-top: 1.5rem;
+    }
+
+    :host .app-container > .mt-10 {
+      order: 2;
+      margin-top: 1rem;
+      border-radius: 8px !important;
+      border-color: var(--brand-primary-border) !important;
+      box-shadow: var(--shadow-panel);
+    }
+
+    :host .app-container > .mt-10 > div:first-child p {
+      max-width: 64rem;
+      color: var(--text-secondary) !important;
+      font-weight: 600;
+      line-height: 1.55;
+    }
+
+    @media (min-width: 640px) {
+      :host .app-container {
+        padding-top: 2rem;
+      }
+
+      :host .app-container > .mb-8 {
+        padding: 1.25rem 1.5rem;
+      }
+
+      :host .app-container > .mt-10 {
+        margin-top: 1.25rem;
+      }
+    }
+  `],
 })
 export class DashboardComponent implements OnInit {
   private readonly tokenStorage = inject(AuthTokenStorageService);
@@ -33,14 +120,33 @@ export class DashboardComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly rbacApi = inject(RbacApiService);
 
-  readonly session = this.tokenStorage.session;
-  readonly welcomeLabel = computed(() => this.i18n.t('dashboard.welcome'));
-  readonly authorizedLabel = computed(() => this.i18n.t('dashboard.authorized'));
-  readonly roleLabel = computed(() => this.i18n.t('dashboard.role'));
+  readonly session = computed(() => {
+    const currentSession = this.tokenStorage.session();
+    if (!currentSession) return null;
+    return {
+      ...currentSession,
+      role: this.localizeRoles(currentSession.role),
+    };
+  });
+  readonly welcomeLabel = computed(() =>
+    this.i18n.t('dashboard.greeting', this.i18n.t('dashboard.welcome')),
+  );
+  readonly authorizedLabel = computed(() =>
+    this.i18n.t('dashboard.welcomeSubtitle', this.i18n.t('dashboard.authorized')),
+  );
+  readonly roleLabel = computed(() =>
+    this.i18n.t('dashboard.profileLabel', this.i18n.t('dashboard.role')),
+  );
 
   activeVisits = signal<Visit[]>([]);
   isLoadingQueue = signal(false);
   queueError = signal('');
+  readonly queueWithVitalsCount = computed(() =>
+    this.activeVisits().filter((visit) => Boolean(visit.vitals)).length,
+  );
+  readonly queueWithoutVitalsCount = computed(() =>
+    this.activeVisits().filter((visit) => !visit.vitals).length,
+  );
 
   showVisitDrawer = signal(false);
   selectedVisitForDrawer = signal<Visit | null>(null);
@@ -88,7 +194,7 @@ export class DashboardComponent implements OnInit {
       next: (data) => {
         this.activeVisits.set(
           [...data].sort(
-            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+            (a, b) => this.visitArrivalTimestamp(a) - this.visitArrivalTimestamp(b),
           ),
         );
         this.isLoadingQueue.set(false);
@@ -152,6 +258,9 @@ export class DashboardComponent implements OnInit {
   }
 
   t(key: string): string {
+    if (key === 'dashboard.queue.desc' && this.activeVisits().length > 0) {
+      return this.queueSummaryLabel();
+    }
     return this.i18n.t(key);
   }
 
@@ -376,5 +485,57 @@ export class DashboardComponent implements OnInit {
     return Object.fromEntries(
       values.filter((entry): entry is [AiVitalField, number] => typeof entry[1] === 'number'),
     );
+  }
+
+  queueSummaryLabel(): string {
+    const total = this.activeVisits().length;
+    const pendingVitals = this.queueWithoutVitalsCount();
+    const recordedVitals = this.queueWithVitalsCount();
+    const longestWait = this.longestQueueWaitMinutes();
+
+    const parts = [
+      `${total} ${this.i18n.t('dashboard.queue.summary.active')}`,
+      `${pendingVitals} ${this.i18n.t('dashboard.queue.summary.vitalsPending')}`,
+      `${recordedVitals} ${this.i18n.t('dashboard.queue.summary.vitalsRecorded')}`,
+    ];
+
+    if (longestWait > 0) {
+      parts.push(
+        `${this.i18n.t('dashboard.queue.summary.maxWait')} ${this.formatWaitDuration(longestWait)}`,
+      );
+    }
+
+    return parts.join(' · ');
+  }
+
+  longestQueueWaitMinutes(): number {
+    const now = Date.now();
+    return this.activeVisits().reduce((longest, visit) => {
+      const timestamp = this.visitArrivalTimestamp(visit);
+      if (!Number.isFinite(timestamp)) return longest;
+      const waitingMinutes = Math.max(0, Math.floor((now - timestamp) / 60_000));
+      return Math.max(longest, waitingMinutes);
+    }, 0);
+  }
+
+  private localizeRoles(rawRoles: string): string {
+    return rawRoles
+      .split(',')
+      .map((role) => role.trim())
+      .filter(Boolean)
+      .map((role) => this.i18n.t(`role.${role}`, role))
+      .join(' · ');
+  }
+
+  private visitArrivalTimestamp(visit: Visit): number {
+    const timestamp = Date.parse(visit.arrivalAt || visit.createdAt);
+    return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp;
+  }
+
+  private formatWaitDuration(minutes: number): string {
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0 ? `${hours} h ${remainingMinutes} min` : `${hours} h`;
   }
 }
