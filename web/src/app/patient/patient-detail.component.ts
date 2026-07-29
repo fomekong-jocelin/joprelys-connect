@@ -108,34 +108,55 @@ import { PatientVisitAdmissionDialogComponent } from './detail/patient-visit-adm
                   </p>
                 </div>
 
-                <div class="flex w-full flex-wrap items-stretch gap-2 lg:w-auto lg:justify-end">
-                  <app-ui-button variant="secondary" (pressed)="goBack()" class="grow text-xs sm:grow-0">
-                    {{ i18n.t('common.back') }}
-                  </app-ui-button>
+                <!-- Mobile: primary clinical action first, then secondary actions. Desktop: compact right-aligned group. -->
+                <div
+                  class="grid w-full grid-cols-2 gap-2 lg:flex lg:w-auto lg:items-center lg:justify-end"
+                  data-testid="patient-header-actions"
+                >
+                  @if (canStartConsultation()) {
+                    <app-ui-button
+                      variant="primary"
+                      (pressed)="goToConsultation()"
+                      class="order-1 col-span-2 w-full text-xs lg:order-3 lg:col-span-1 lg:w-auto"
+                      data-testid="patient-primary-action"
+                    >
+                      {{ i18n.t('patient.detail.startConsultation') }}
+                    </app-ui-button>
+                  } @else if (canAdmit()) {
+                    <app-ui-button
+                      variant="primary"
+                      (pressed)="openModal()"
+                      class="order-1 col-span-2 w-full text-xs lg:order-3 lg:col-span-1 lg:w-auto"
+                      data-testid="patient-primary-action"
+                    >
+                      {{ i18n.t('patient.detail.openVisit') }}
+                    </app-ui-button>
+                  }
 
                   @if (canDownloadSummary()) {
                     <button
                       type="button"
                       (click)="downloadSummaryPdf()"
-                      class="flex min-h-[42px] grow items-center justify-center gap-1.5 rounded-md border border-[var(--app-border)] px-4 py-2.5 text-xs font-bold text-[var(--text-secondary)] shadow-xs transition-colors hover:bg-[var(--app-surface-muted)] sm:grow-0"
+                      class="order-2 flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--app-border)] px-3 py-2.5 text-xs font-bold text-[var(--text-secondary)] shadow-xs transition-colors hover:bg-[var(--app-surface-muted)] lg:px-4"
                       [title]="i18n.t('patient.detail.downloadSummaryTitle')"
+                      data-testid="patient-summary-action"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-4 w-4 text-brand-primary" aria-hidden="true">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-4 w-4 shrink-0 text-brand-primary" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                       </svg>
                       <span>{{ i18n.t('patient.detail.downloadSummaryLabel') }}</span>
                     </button>
                   }
 
-                  @if (canStartConsultation()) {
-                    <app-ui-button variant="primary" (pressed)="goToConsultation()" class="basis-full text-xs sm:basis-auto sm:grow-0">
-                      {{ i18n.t('patient.detail.startConsultation') }}
-                    </app-ui-button>
-                  } @else if (canAdmit()) {
-                    <app-ui-button variant="primary" (pressed)="openModal()" class="basis-full text-xs sm:basis-auto sm:grow-0">
-                      {{ i18n.t('patient.detail.openVisit') }}
-                    </app-ui-button>
-                  }
+                  <app-ui-button
+                    variant="secondary"
+                    (pressed)="goBack()"
+                    class="order-3 text-xs lg:order-1"
+                    [class.col-span-2]="!canDownloadSummary()"
+                    data-testid="patient-back-action"
+                  >
+                    {{ i18n.t('common.back') }}
+                  </app-ui-button>
                 </div>
               </div>
             </section>
