@@ -8,29 +8,28 @@ import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Durable source of truth for clinician microphone transcripts.
+ * Durable source of truth for finalized clinical voice transcript items.
  *
- * <p>Capture and clinical interpretation are deliberately separated. Every non-empty
- * transcript is persisted first, even when confidence is low or unavailable. A low
- * confidence score is metadata for human review; it never authorizes data loss and
- * never blocks subsequent capture.</p>
+ * <p>Every final transcript is stored before downstream AI analysis. Client event ids
+ * are idempotency keys: retries with identical content are acknowledged; reuse with
+ * different content fails closed.</p>
  */
 @Service
 public class RealtimeClinicalIntakeService {
 
     private static final Logger log = LoggerFactory.getLogger(RealtimeClinicalIntakeService.class);
-    private static final double DEFAULT_CONFIDENCE_FLOOR = 0.35;
-    private static final int MAX_TRANSCRIPT_LENGTH = 12_000;
+    private static final int MAX_TRANSCRIPT_LENGTH = 12000;
+    private static final double DEFAULT_CONFIDENCE_FLOOR = 0.35d;
     private static final String CONSUMED = "CONSUMED";
 
     private final RealtimeClinicalIntakeRepository repository;
@@ -77,89 +76,42 @@ public class RealtimeClinicalIntakeService {
             String transcript,
             Double confidence) {
         requireIdentity(visitId, userId, organizationId, source);
-        String normalizedEventId = requiredId(eventId, "AI_REALTIME_EVENT_ID_REQUIRED");
+        String normalizedEventId = requiredId(eventId, "AI_REALTIME_INTAKE_EVENT_ID_REQUIRED");
         String normalizedItemId = optionalId(itemId);
         String normalizedTranscript = normalizeTranscript(transcript);
         double normalizedConfidence = normalizeConfidence(confidence);
 
-        lockAuthorizedVisit(visitId, organizationId);
-
-        RealtimeClinicalIntakeEntity byEvent = repository
-                .findByVisitIdAndSourceAndEventId(visitId, source, normalizedEventId)
-                .orElse(null);
-        if (byEvent != null) {
-            requireSameEventPayload(byEvent, normalizedEventId, normalizedItemId, normalizedTranscript, normalizedConfidence);
-            return view(byEvent);
+        Optional<RealtimeClinicalIntakeEntity> duplicate = repository
+                .findByVisitIdAndSourceAndEventId(visitId, source, normalizedEventId);
+        if (duplicate.isPresent()) {
+            RealtimeClinicalIntakeEntity existing = duplicate.orElseThrow();
+            requireSameRetry(existing, normalizedItemId, normalizedTranscript, normalizedConfidence);
+            return view(existing);
         }
 
+        VisitEntity visit = lockAuthorizedVisit(visitId, organizationId);
         if (normalizedItemId != null) {
-            RealtimeClinicalIntakeEntity byItem = repository
-                    .findByVisitIdAndSourceAndItemId(visitId, source, normalizedItemId)
-                    .orElse(null);
-            if (byItem != null) {
-                requireSameItemPayload(byItem, normalizedItemId, normalizedTranscript, normalizedConfidence);
-                return view(byItem);
+            Optional<RealtimeClinicalIntakeEntity> itemDuplicate = repository
+                    .findByVisitIdAndSourceAndItemId(visitId, source, normalizedItemId);
+            if (itemDuplicate.isPresent()) {
+                RealtimeClinicalIntakeEntity existing = itemDuplicate.orElseThrow();
+                requireSameRetry(existing, normalizedItemId, normalizedTranscript, normalizedConfidence);
+                return view(existing);
             }
         }
 
-        long sequence = repository.findMaximumSequence(visitId) + 1;
+        long nextSequence = repository.findMaximumSequence(visitId) + 1L;
         RealtimeClinicalIntakeEntity entity = new RealtimeClinicalIntakeEntity(
                 organizationId,
-                visitId,
+                visit.getId(),
                 source,
-                sequence,
+                nextSequence,
                 normalizedEventId,
                 normalizedItemId,
                 normalizedTranscript,
                 normalizedConfidence,
                 userId);
-        try {
-            return view(repository.saveAndFlush(entity));
-        } catch (DataIntegrityViolationException exception) {
-            RealtimeClinicalIntakeEntity racedByEvent = repository
-                    .findByVisitIdAndSourceAndEventId(visitId, source, normalizedEventId)
-                    .orElse(null);
-            if (racedByEvent != null) {
-                requireSameEventPayload(
-                        racedByEvent,
-                        normalizedEventId,
-                        normalizedItemId,
-                        normalizedTranscript,
-                        normalizedConfidence);
-                return view(racedByEvent);
-            }
-            if (normalizedItemId != null) {
-                RealtimeClinicalIntakeEntity racedByItem = repository
-                        .findByVisitIdAndSourceAndItemId(visitId, source, normalizedItemId)
-                        .orElse(null);
-                if (racedByItem != null) {
-                    requireSameItemPayload(racedByItem, normalizedItemId, normalizedTranscript, normalizedConfidence);
-                    return view(racedByItem);
-                }
-            }
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "AI_REALTIME_INTAKE_CONCURRENT_CONFLICT",
-                    exception);
-        }
-    }
-
-    @Transactional(readOnly = true)
-    public List<IntakeView> list(UUID visitId, UUID organizationId) {
-        return listActive(visitId, organizationId, RealtimeIntakeSource.CONSULTATION);
-    }
-
-    @Transactional(readOnly = true)
-    public List<IntakeView> list(
-            UUID visitId,
-            UUID organizationId,
-            RealtimeIntakeSource source) {
-        requireAuthorizedVisit(visitId, organizationId);
-        requireSource(source);
-        return repository.findByVisitIdAndSourceOrderBySequenceNoAsc(visitId, source)
-                .stream()
-                .map(this::view)
-                .toList();
+        return view(repository.save(entity));
     }
 
     @Transactional(readOnly = true)
@@ -167,10 +119,13 @@ public class RealtimeClinicalIntakeService {
             UUID visitId,
             UUID organizationId,
             RealtimeIntakeSource source) {
-        requireAuthorizedVisit(visitId, organizationId);
         requireSource(source);
-        return repository.findByVisitIdAndSourceAndCaptureStatusNotOrderBySequenceNoAsc(
-                        visitId, source, CONSUMED)
+        requireAuthorizedVisit(visitId, organizationId);
+        return repository
+                .findByVisitIdAndSourceAndCaptureStatusNotOrderBySequenceNoAsc(
+                        visitId,
+                        source,
+                        CONSUMED)
                 .stream()
                 .map(this::view)
                 .toList();
@@ -184,20 +139,21 @@ public class RealtimeClinicalIntakeService {
             UUID organizationId,
             String correctedTranscript) {
         requireIdentity(visitId, userId, organizationId, RealtimeIntakeSource.CONSULTATION);
+        if (intakeId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_REALTIME_INTAKE_IDENTITY_INVALID");
+        }
+        String normalized = normalizeTranscript(correctedTranscript);
         lockAuthorizedVisit(visitId, organizationId);
         RealtimeClinicalIntakeEntity entity = repository
                 .findByIdAndVisitIdAndSource(intakeId, visitId, RealtimeIntakeSource.CONSULTATION)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "AI_REALTIME_INTAKE_NOT_FOUND"));
         if (CONSUMED.equals(entity.getCaptureStatus())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "AI_REALTIME_INTAKE_ALREADY_CONSUMED");
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "AI_REALTIME_INTAKE_ALREADY_CONSUMED");
         }
-        String normalized = normalizeTranscript(correctedTranscript);
-        if (!normalized.equals(entity.getTranscriptText())) {
-            entity.correctTranscript(normalized, userId, Instant.now());
-            repository.save(entity);
-        }
-        return view(entity);
+        entity.correctTranscript(normalized, userId, Instant.now());
+        return view(repository.save(entity));
     }
 
     @Transactional
@@ -205,12 +161,14 @@ public class RealtimeClinicalIntakeService {
             UUID visitId,
             UUID organizationId,
             RealtimeIntakeSource source) {
-        requireAuthorizedVisit(visitId, organizationId);
         requireSource(source);
+        requireAuthorizedVisit(visitId, organizationId);
         Instant now = Instant.now();
         List<RealtimeClinicalIntakeEntity> active = repository
                 .findByVisitIdAndSourceAndCaptureStatusNotOrderBySequenceNoAsc(
-                        visitId, source, CONSUMED);
+                        visitId,
+                        source,
+                        CONSUMED);
         active.forEach(item -> item.markAnalyzed(now));
         repository.saveAll(active);
     }
@@ -220,29 +178,19 @@ public class RealtimeClinicalIntakeService {
             UUID visitId,
             UUID organizationId,
             RealtimeIntakeSource source) {
-        requireAuthorizedVisit(visitId, organizationId);
         requireSource(source);
+        requireAuthorizedVisit(visitId, organizationId);
         Instant now = Instant.now();
         List<RealtimeClinicalIntakeEntity> active = repository
                 .findByVisitIdAndSourceAndCaptureStatusNotOrderBySequenceNoAsc(
-                        visitId, source, CONSUMED);
+                        visitId,
+                        source,
+                        CONSUMED);
         active.forEach(item -> item.markConsumed(now));
         repository.saveAll(active);
     }
 
-    private void requireSameEventPayload(
-            RealtimeClinicalIntakeEntity existing,
-            String eventId,
-            String itemId,
-            String transcript,
-            double confidence) {
-        boolean same = existing.getEventId().equals(eventId)
-                && Objects.equals(existing.getItemId(), itemId)
-                && sameOriginalContent(existing, transcript, confidence);
-        if (!same) throw reusedId();
-    }
-
-    private void requireSameItemPayload(
+    private void requireSameRetry(
             RealtimeClinicalIntakeEntity existing,
             String itemId,
             String transcript,
@@ -360,6 +308,8 @@ public class RealtimeClinicalIntakeService {
         double minimum = properties.minimumTranscriptionConfidence() > 0.0
                 ? properties.minimumTranscriptionConfidence()
                 : DEFAULT_CONFIDENCE_FLOOR;
+        boolean machineReviewRequired = entity.getConfidence() <= 0.0 || entity.getConfidence() < minimum;
+        boolean reviewRequired = entity.getCorrectionCount() == 0 && machineReviewRequired;
         return new IntakeView(
                 entity.getId(),
                 entity.getVisitId(),
@@ -370,7 +320,7 @@ public class RealtimeClinicalIntakeService {
                 entity.getTranscriptText(),
                 entity.getOriginalTranscriptText(),
                 entity.getConfidence(),
-                entity.getConfidence() <= 0.0 || entity.getConfidence() < minimum,
+                reviewRequired,
                 entity.getCorrectionCount(),
                 entity.getCorrectedAt(),
                 entity.getCaptureStatus(),
