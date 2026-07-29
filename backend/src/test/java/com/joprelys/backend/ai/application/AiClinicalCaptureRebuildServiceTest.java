@@ -3,6 +3,7 @@ package com.joprelys.backend.ai.application;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,11 +29,12 @@ class AiClinicalCaptureRebuildServiceTest {
             consultationService);
 
     @Test
-    void rebuildMustUseEveryRecoverableTranscriptSegmentInOrder() {
+    void rebuildMustUseEveryRecoverableTranscriptSegmentInOneBoundedCallWhenSmall() {
         UUID visitId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         UUID organizationId = UUID.randomUUID();
         SessionView session = mock(SessionView.class);
+        when(session.draft()).thenReturn(Map.of());
         when(intakeService.listActive(visitId, organizationId, RealtimeIntakeSource.CONSULTATION))
                 .thenReturn(List.of(
                         entry(visitId, 1, "Le patient présente des céphalées sévères."),
@@ -55,12 +57,11 @@ class AiClinicalCaptureRebuildServiceTest {
                 Map.of("clinicalExam", "Conscience normale"),
                 "fr");
         ArgumentCaptor<String> transcript = ArgumentCaptor.forClass(String.class);
-        verify(consultationService).processRealtimeTranscript(
+        verify(consultationService).processCaptureTranscript(
                 eq(visitId),
                 eq(userId),
                 eq(organizationId),
-                transcript.capture(),
-                eq(null));
+                transcript.capture());
         org.assertj.core.api.Assertions.assertThat(transcript.getValue())
                 .containsSubsequence(
                         "Le patient présente des céphalées sévères.",
@@ -68,6 +69,31 @@ class AiClinicalCaptureRebuildServiceTest {
                         "Je prescris du paracétamol 1000 mg matin et soir pendant 4 jours.");
         verify(intakeService).markAnalyzed(
                 visitId, organizationId, RealtimeIntakeSource.CONSULTATION);
+    }
+
+    @Test
+    void longTranscriptMustStayBoundedInsteadOfRetryingEverySentence() {
+        UUID visitId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+        SessionView session = mock(SessionView.class);
+        when(session.draft()).thenReturn(Map.of());
+        String longTranscript = "céphalée persistante. ".repeat(2_400);
+        when(intakeService.listActive(visitId, organizationId, RealtimeIntakeSource.CONSULTATION))
+                .thenReturn(List.of(entry(visitId, 1, longTranscript)));
+        when(consultationService.getSession(visitId, userId, organizationId))
+                .thenReturn(Optional.of(session));
+
+        service.rebuild(visitId, userId, organizationId, Map.of(), "fr");
+
+        ArgumentCaptor<String> chunks = ArgumentCaptor.forClass(String.class);
+        verify(consultationService, times(2)).processCaptureTranscript(
+                eq(visitId),
+                eq(userId),
+                eq(organizationId),
+                chunks.capture());
+        org.assertj.core.api.Assertions.assertThat(chunks.getAllValues())
+                .allSatisfy(chunk -> org.assertj.core.api.Assertions.assertThat(chunk.length()).isLessThanOrEqualTo(30_000));
     }
 
     @Test
