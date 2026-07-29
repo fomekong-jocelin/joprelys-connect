@@ -1,14 +1,23 @@
 package com.joprelys.backend.patient.api;
 
+import com.joprelys.backend.patient.application.PatientAccessPolicyService;
 import com.joprelys.backend.patient.application.PatientMedicalInfoService;
-import com.joprelys.backend.patient.application.PatientService;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/patients/{patientId}")
@@ -16,29 +25,22 @@ import java.util.UUID;
 public class PatientMedicalInfoController {
 
     private final PatientMedicalInfoService patientMedicalInfoService;
-    private final PatientService patientService;
+    private final PatientAccessPolicyService accessPolicy;
     private final PatientRepository patientRepository;
 
     public PatientMedicalInfoController(
             PatientMedicalInfoService patientMedicalInfoService,
-            PatientService patientService,
+            PatientAccessPolicyService accessPolicy,
             PatientRepository patientRepository) {
         this.patientMedicalInfoService = patientMedicalInfoService;
-        this.patientService = patientService;
+        this.accessPolicy = accessPolicy;
         this.patientRepository = patientRepository;
     }
 
     @GetMapping("/allergies")
     public List<PatientAllergyResponse> getAllergies(@PathVariable UUID patientId) {
-        patientService.validateAccess(patientId, "allergies_history");
-        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
-        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
-        try {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-            return patientMedicalInfoService.listAllergies(patientId);
-        } finally {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
-        }
+        var patient = prepareAccess(patientId);
+        return withTenant(patient, () -> patientMedicalInfoService.listAllergies(patientId));
     }
 
     @PostMapping("/allergies")
@@ -47,15 +49,8 @@ public class PatientMedicalInfoController {
     public PatientAllergyResponse addAllergy(
             @PathVariable UUID patientId,
             @Valid @RequestBody CreatePatientAllergyRequest request) {
-        patientService.validateAccess(patientId, "allergies_history");
-        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
-        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
-        try {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-            return patientMedicalInfoService.addAllergy(patientId, request);
-        } finally {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
-        }
+        var patient = prepareAccess(patientId);
+        return withTenant(patient, () -> patientMedicalInfoService.addAllergy(patientId, request));
     }
 
     @PutMapping("/allergies/{allergyId}")
@@ -64,28 +59,14 @@ public class PatientMedicalInfoController {
             @PathVariable UUID patientId,
             @PathVariable UUID allergyId,
             @Valid @RequestBody CreatePatientAllergyRequest request) {
-        patientService.validateAccess(patientId, "allergies_history");
-        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
-        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
-        try {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-            return patientMedicalInfoService.updateAllergy(patientId, allergyId, request);
-        } finally {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
-        }
+        var patient = prepareAccess(patientId);
+        return withTenant(patient, () -> patientMedicalInfoService.updateAllergy(patientId, allergyId, request));
     }
 
     @GetMapping("/medical-history")
     public List<PatientMedicalHistoryResponse> getMedicalHistory(@PathVariable UUID patientId) {
-        patientService.validateAccess(patientId, "allergies_history");
-        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
-        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
-        try {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-            return patientMedicalInfoService.listMedicalHistory(patientId);
-        } finally {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
-        }
+        var patient = prepareAccess(patientId);
+        return withTenant(patient, () -> patientMedicalInfoService.listMedicalHistory(patientId));
     }
 
     @PostMapping("/medical-history")
@@ -94,15 +75,8 @@ public class PatientMedicalInfoController {
     public PatientMedicalHistoryResponse addMedicalHistory(
             @PathVariable UUID patientId,
             @Valid @RequestBody CreatePatientMedicalHistoryRequest request) {
-        patientService.validateAccess(patientId, "allergies_history");
-        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
-        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
-        try {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-            return patientMedicalInfoService.addMedicalHistory(patientId, request);
-        } finally {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
-        }
+        var patient = prepareAccess(patientId);
+        return withTenant(patient, () -> patientMedicalInfoService.addMedicalHistory(patientId, request));
     }
 
     @PutMapping("/medical-history/{historyId}")
@@ -111,28 +85,14 @@ public class PatientMedicalInfoController {
             @PathVariable UUID patientId,
             @PathVariable UUID historyId,
             @Valid @RequestBody CreatePatientMedicalHistoryRequest request) {
-        patientService.validateAccess(patientId, "allergies_history");
-        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
-        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
-        try {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-            return patientMedicalInfoService.updateMedicalHistory(patientId, historyId, request);
-        } finally {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
-        }
+        var patient = prepareAccess(patientId);
+        return withTenant(patient, () -> patientMedicalInfoService.updateMedicalHistory(patientId, historyId, request));
     }
 
     @GetMapping("/vaccinations")
     public List<PatientVaccinationResponse> getVaccinations(@PathVariable UUID patientId) {
-        patientService.validateAccess(patientId, "allergies_history");
-        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
-        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
-        try {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-            return patientMedicalInfoService.listVaccinations(patientId);
-        } finally {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
-        }
+        var patient = prepareAccess(patientId);
+        return withTenant(patient, () -> patientMedicalInfoService.listVaccinations(patientId));
     }
 
     @PostMapping("/vaccinations")
@@ -141,15 +101,8 @@ public class PatientMedicalInfoController {
     public PatientVaccinationResponse addVaccination(
             @PathVariable UUID patientId,
             @Valid @RequestBody CreatePatientVaccinationRequest request) {
-        patientService.validateAccess(patientId, "allergies_history");
-        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
-        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
-        try {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-            return patientMedicalInfoService.addVaccination(patientId, request);
-        } finally {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
-        }
+        var patient = prepareAccess(patientId);
+        return withTenant(patient, () -> patientMedicalInfoService.addVaccination(patientId, request));
     }
 
     @PutMapping("/vaccinations/{vaccinationId}")
@@ -158,15 +111,8 @@ public class PatientMedicalInfoController {
             @PathVariable UUID patientId,
             @PathVariable UUID vaccinationId,
             @Valid @RequestBody CreatePatientVaccinationRequest request) {
-        patientService.validateAccess(patientId, "allergies_history");
-        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
-        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
-        try {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-            return patientMedicalInfoService.updateVaccination(patientId, vaccinationId, request);
-        } finally {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
-        }
+        var patient = prepareAccess(patientId);
+        return withTenant(patient, () -> patientMedicalInfoService.updateVaccination(patientId, vaccinationId, request));
     }
 
     @DeleteMapping("/allergies/{allergyId}")
@@ -175,15 +121,11 @@ public class PatientMedicalInfoController {
     public void deleteAllergy(
             @PathVariable UUID patientId,
             @PathVariable UUID allergyId) {
-        patientService.validateAccess(patientId, "allergies_history");
-        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
-        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
-        try {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
+        var patient = prepareAccess(patientId);
+        withTenant(patient, () -> {
             patientMedicalInfoService.deleteAllergy(patientId, allergyId);
-        } finally {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
-        }
+            return null;
+        });
     }
 
     @DeleteMapping("/medical-history/{historyId}")
@@ -192,12 +134,26 @@ public class PatientMedicalInfoController {
     public void deleteMedicalHistory(
             @PathVariable UUID patientId,
             @PathVariable UUID historyId) {
-        patientService.validateAccess(patientId, "allergies_history");
-        var patient = patientRepository.findByIdGlobally(patientId).orElseThrow();
+        var patient = prepareAccess(patientId);
+        withTenant(patient, () -> {
+            patientMedicalInfoService.deleteMedicalHistory(patientId, historyId);
+            return null;
+        });
+    }
+
+    private com.joprelys.backend.patient.infrastructure.persistence.PatientEntity prepareAccess(UUID patientId) {
+        accessPolicy.validateAccess(patientId, "allergies_history");
+        return patientRepository.findByIdGlobally(patientId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé."));
+    }
+
+    private <T> T withTenant(
+            com.joprelys.backend.patient.infrastructure.persistence.PatientEntity patient,
+            java.util.function.Supplier<T> action) {
         UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
         try {
             com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-            patientMedicalInfoService.deleteMedicalHistory(patientId, historyId);
+            return action.get();
         } finally {
             com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
         }
