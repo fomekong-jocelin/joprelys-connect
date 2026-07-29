@@ -31,7 +31,7 @@ import tools.jackson.databind.ObjectMapper;
 public class FinalClinicalReviewService {
 
     private static final long REVIEW_TTL_MINUTES = 30;
-    private static final Set<String> NARRATIVE_REVIEW_FIELDS = Set.of(
+    private static final Set<String> REVIEW_FIELDS = Set.of(
             "symptoms",
             "clinicalExam",
             "suspectedDiagnosis",
@@ -39,7 +39,9 @@ public class FinalClinicalReviewService {
             "finalDiagnosis",
             "conclusion",
             "advice",
-            "followUp");
+            "followUp",
+            "prescription",
+            "labOrders");
 
     private final FinalClinicalReviewGateway gateway;
     private final AiClinicalResponseParser responseParser;
@@ -68,11 +70,33 @@ public class FinalClinicalReviewService {
         this.medicationSafetyGuard.setReferenceDuplicateDetector(referenceDuplicateDetector);
     }
 
+    /** Backward-compatible narrative-only entry point used by existing callers/tests. */
     public ReviewView createReview(
             UUID visitId,
             UUID userId,
             UUID organizationId,
             Map<String, String> acceptedDraft,
+            String locale) {
+        return createReview(
+                visitId,
+                userId,
+                organizationId,
+                acceptedDraft,
+                "",
+                locale);
+    }
+
+    /**
+     * Explicit deep reconciliation. The durable transcript is factual evidence only:
+     * it enables Terra to surface an explicitly dictated omission but never grants
+     * permission to infer a new diagnosis, medication, examination or numeric value.
+     */
+    public ReviewView createReview(
+            UUID visitId,
+            UUID userId,
+            UUID organizationId,
+            Map<String, String> acceptedDraft,
+            String sourceTranscript,
             String locale) {
         if (visitId == null || userId == null || organizationId == null) {
             throw invalid("AI_FINAL_REVIEW_IDENTITY_INVALID");
@@ -81,10 +105,11 @@ public class FinalClinicalReviewService {
         if (draft.isEmpty()) {
             throw invalid("AI_FINAL_REVIEW_DRAFT_EMPTY");
         }
+        String transcript = sourceTranscript == null ? "" : sourceTranscript.trim();
 
-        var response = gateway.review(draft, locale);
+        var response = gateway.review(draft, transcript, locale);
         ParsedResponse parsed = responseParser.parse(response.content());
-        String factualSource = String.join("\n", draft.values());
+        String factualSource = joinFactualSource(transcript, draft);
         ParsedResponse factChecked = factualityGuard.enforce(
                 parsed, factualSource, draft, "FINAL_REVIEW", locale);
         ParsedResponse grounded = groundingGuard.enforce(
@@ -166,7 +191,7 @@ public class FinalClinicalReviewService {
         for (ParsedChange change : changes) {
             if (change != null
                     && "SET".equals(change.operation())
-                    && NARRATIVE_REVIEW_FIELDS.contains(change.field())) {
+                    && REVIEW_FIELDS.contains(change.field())) {
                 unique.put(change.field(), change);
             }
         }
@@ -195,6 +220,13 @@ public class FinalClinicalReviewService {
                 proposals.isEmpty() ? "DECIDED" : "PENDING",
                 createdAt,
                 List.copyOf(proposals));
+    }
+
+    private String joinFactualSource(String transcript, Map<String, String> draft) {
+        String draftSource = String.join("\n", draft.values());
+        if (transcript == null || transcript.isBlank()) return draftSource;
+        if (draftSource.isBlank()) return transcript;
+        return transcript + "\n" + draftSource;
     }
 
     private ReviewState requireState(
