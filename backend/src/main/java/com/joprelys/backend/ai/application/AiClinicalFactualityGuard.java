@@ -49,7 +49,7 @@ final class AiClinicalFactualityGuard {
     private static final Set<String> SAFE_GLUE_WORDS = Set.of(
             "patient", "patiente", "patients", "patientes",
             "age", "agee", "ages", "agees",
-            "presente", "presentent", "presentant", "presentant",
+            "presente", "presentent", "presentant",
             "signale", "signalant", "rapporte", "rapportant", "decrit", "decrivant",
             "observe", "observee", "observes", "observees",
             "associe", "associee", "associes", "associees",
@@ -301,11 +301,14 @@ final class AiClinicalFactualityGuard {
         if (value == null) {
             return "";
         }
-        return Normalizer.normalize(value, Normalizer.Form.NFD)
+        String normalized = Normalizer.normalize(value, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
                 .toLowerCase(Locale.ROOT)
+                .replaceAll("(?<=\\d)(?=[a-z])", " ")
+                .replaceAll("(?<=[a-z])(?=\\d)", " ")
                 .replaceAll("[^a-z0-9.,]+", " ")
                 .trim()
                 .replaceAll("\\s+", " ");
+        return normalized;
     }
 }
