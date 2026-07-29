@@ -8,8 +8,6 @@ import { PatientEmergencyContextComponent } from './patient-emergency-context.co
 import { PatientIdentityRegularizationDialogComponent } from './patient-identity-regularization-dialog.component';
 import { PatientProvisionalIdentityCardComponent } from './patient-provisional-identity-card.component';
 
-type ProfilePanel = 'administrative' | 'medical';
-
 @Component({
   selector: 'app-patient-profile-tab',
   standalone: true,
@@ -31,63 +29,37 @@ type ProfilePanel = 'administrative' | 'medical';
           />
         }
 
-        <!-- Emergency history is independently collapsible and auto-opens only when safety requires it. -->
+        <!-- The identity route owns these details: no redundant administrative accordion. -->
+        <section class="ui-card p-4 sm:p-5" data-testid="patient-identity-details">
+          <app-patient-administrative-summary class="block" [patient]="patient" />
+        </section>
+
+        <!-- Emergency history stays independently collapsible and auto-opens only when safety requires it. -->
         <app-patient-emergency-context class="block" [patientId]="patient.id" />
 
-        <!-- Progressive disclosure: the user explicitly opens one information family at a time. -->
-        <div class="grid gap-3 sm:grid-cols-2">
-          <button
-            type="button"
-            class="ui-card flex min-h-[72px] w-full items-center justify-between gap-4 p-4 text-left sm:p-5"
-            [attr.aria-expanded]="administrativeExpanded()"
-            (click)="togglePanel('administrative')"
+        <!-- Longitudinal medical information remains secondary and folded by default. -->
+        <button
+          type="button"
+          class="ui-card flex min-h-14 w-full items-center justify-between gap-3 p-4 text-left"
+          [attr.aria-expanded]="medicalExpanded()"
+          (click)="toggleMedicalInformation()"
+          data-testid="patient-medical-information-toggle"
+        >
+          <h3 class="min-w-0 whitespace-nowrap font-display text-sm font-extrabold text-[var(--text-primary)] sm:text-base">
+            {{ i18n.t('patient.urgTemp.profile.medicalSection') }}
+          </h3>
+          <svg
+            class="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform"
+            [class.rotate-180]="medicalExpanded()"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
           >
-            <h3 class="font-display text-sm font-black uppercase tracking-wider text-[var(--text-primary)]">
-              {{ i18n.t('patient.urgTemp.admin.title') }}
-            </h3>
-            <svg
-              class="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform"
-              [class.rotate-180]="administrativeExpanded()"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              aria-hidden="true"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
-            </svg>
-          </button>
-
-          <button
-            type="button"
-            class="ui-card flex min-h-[72px] w-full items-center justify-between gap-4 p-4 text-left sm:p-5"
-            [attr.aria-expanded]="medicalExpanded()"
-            (click)="togglePanel('medical')"
-          >
-            <h3 class="font-display text-sm font-black uppercase tracking-wider text-[var(--text-primary)]">
-              {{ i18n.t('patients.medicalInfo.allergies') }} ·
-              {{ i18n.t('patients.medicalInfo.history') }} ·
-              {{ i18n.t('patients.medicalInfo.vaccinations.title') }}
-            </h3>
-            <svg
-              class="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform"
-              [class.rotate-180]="medicalExpanded()"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              aria-hidden="true"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
-            </svg>
-          </button>
-        </div>
-
-        @if (administrativeExpanded()) {
-          <div class="animate-fade-in">
-            <app-patient-administrative-summary class="block" [patient]="patient" />
-          </div>
-        }
+            <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
 
         @if (medicalExpanded()) {
           <div class="animate-fade-in">
@@ -110,10 +82,7 @@ export class PatientProfileTabComponent {
   readonly parent = inject(PatientDetailComponent);
   readonly i18n = inject(I18nService);
   readonly identityDialogOpen = signal(false);
-  readonly activePanel = signal<ProfilePanel | null>(null);
-
-  readonly administrativeExpanded = computed(() => this.activePanel() === 'administrative');
-  readonly medicalExpanded = computed(() => this.activePanel() === 'medical');
+  readonly medicalExpanded = signal(false);
 
   readonly isProvisional = computed(() => {
     const status = this.parent.patient()?.identityStatus;
@@ -136,17 +105,8 @@ export class PatientProfileTabComponent {
     return Math.max(age, 0);
   });
 
-  togglePanel(panel: ProfilePanel): void {
-    this.activePanel.update(current => current === panel ? null : panel);
-  }
-
-  // Compatibility helper kept for existing callers/specs while the UI now enforces one panel at a time.
   toggleMedicalInformation(): void {
-    this.togglePanel('medical');
-  }
-
-  toggleAdministrativeInformation(): void {
-    this.togglePanel('administrative');
+    this.medicalExpanded.update(value => !value);
   }
 
   openIdentityDialog(): void {

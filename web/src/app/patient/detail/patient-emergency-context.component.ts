@@ -13,24 +13,20 @@ import { PatientEmergencyMedicoLegalSummaryComponent } from './patient-emergency
     <section class="ui-card overflow-hidden">
       <button
         type="button"
-        class="flex w-full items-start justify-between gap-3 p-4 text-left sm:p-5"
+        class="flex min-h-14 w-full items-center justify-between gap-3 p-4 text-left"
         [attr.aria-expanded]="expanded()"
         (click)="toggleExpanded()"
+        data-testid="patient-emergency-context-toggle"
       >
-        <div>
-          <h3 class="font-display text-sm font-black uppercase tracking-wider text-[var(--text-primary)]">
-            {{ t('patient.urgTemp.emergency.title') }}
-          </h3>
-          <p class="mt-1 text-xs text-[var(--text-muted)]">
-            {{ t('patient.urgTemp.emergency.subtitle') }}
-          </p>
-        </div>
+        <h3 class="min-w-0 whitespace-nowrap font-display text-sm font-extrabold text-[var(--text-primary)] sm:text-base">
+          {{ t('patient.urgTemp.emergency.title') }}
+        </h3>
         <div class="flex shrink-0 items-center gap-2">
-          <span class="rounded-sm bg-[var(--brand-warning-subtle)] px-2 py-1 text-[10px] font-black uppercase tracking-wider text-[var(--brand-warning-text)]">
+          <span class="whitespace-nowrap rounded-sm bg-[var(--brand-warning-subtle)] px-2 py-1 text-[9px] font-black uppercase tracking-wide text-[var(--brand-warning-text)] sm:text-[10px]">
             {{ t('patient.urgTemp.emergency.historyPreserved') }}
           </span>
           <svg
-            class="h-4 w-4 text-[var(--text-muted)] transition-transform"
+            class="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform"
             [class.rotate-180]="expanded()"
             viewBox="0 0 24 24"
             fill="none"
@@ -45,6 +41,10 @@ import { PatientEmergencyMedicoLegalSummaryComponent } from './patient-emergency
 
       @if (expanded()) {
         <div class="border-t border-[var(--divider-subtle)] px-4 pb-4 sm:px-5 sm:pb-5 animate-fade-in">
+          <p class="pt-4 text-xs leading-relaxed text-[var(--text-muted)]">
+            {{ t('patient.urgTemp.emergency.subtitle') }}
+          </p>
+
           @if (loading()) {
             <p class="py-6 text-center text-sm text-[var(--text-muted)]">{{ t('patient.urgTemp.emergency.loading') }}</p>
           } @else if (error(); as message) {

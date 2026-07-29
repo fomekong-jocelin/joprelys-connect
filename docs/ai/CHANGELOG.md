@@ -8,6 +8,12 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **FIX-20260729-PATIENT-RECORD-MOBILE-UX-FINISHING — Finition de la hiérarchie mobile du dossier patient** :
+  - **Fiche d’identité unifiée** : les informations administratives sont désormais rendues directement dans la Fiche d’identité ; l’accordéon redondant « Informations administratives » disparaît sans suppression de donnée.
+  - **Accordéons compacts** : les intitulés deviennent `Contexte d’urgence`, `Informations médicales` et `Contact d’urgence`, avec titres courts sur une ligne et sous-titre d’urgence déplacé dans le contenu déplié.
+  - **Actions hiérarchisées** : sur mobile, `Ouvrir une visite` / `Démarrer la consultation` occupe la première ligne complète ; `Synthèse PDF` et `Retour` deviennent les actions secondaires. Les permissions existantes restent inchangées.
+  - **Design / tests** : alignement de `DESIGN.md`, FR/EN et ajout de tests ciblés sur la divulgation progressive, l’urgence active et la hiérarchie des actions. Gate frontend final requis avant fusion de la PR #228.
+
 - **TASK-20260728-P0-VOICE-CLARIFICATION-CONFLICT-HOTFIX — Correction du blocage de finalisation "Finalisation en cours..." et gestion des conflits 409** :
   - **Résolution du blocage de finalisation** : la présence d'une clarification en attente ne bloque plus indéfiniment la finalisation d'une session lorsque le pipeline audio est inactif ; le clic sur "Terminer" force la cloture propre et l'application du brouillon.
   - **Gestion résiliente des conflits 409** : ajout de `AI_CLARIFICATION_PENDING` dans les états suspendus non fatals du coordinateur de tours Angular, évitant les crashs réseau et les alertes d'erreur intempestives lors d'interactions simultanées avec l'assistant.

@@ -54,14 +54,32 @@ describe('PatientProfileTabComponent design hierarchy', () => {
     expect(layout).not.toBeNull();
   });
 
+  it('should render identity administrative details immediately without a redundant accordion', () => {
+    expect(fixture.nativeElement.querySelector('[data-testid="patient-identity-details"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-patient-administrative-summary')).not.toBeNull();
+
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    expect(buttons.some(button => button.textContent?.includes('patient.urgTemp.admin.title'))).toBe(false);
+  });
+
   it('should keep longitudinal medical sections folded on the initial profile view', () => {
     expect(fixture.componentInstance.medicalExpanded()).toBe(false);
     expect(fixture.nativeElement.querySelector('app-patient-medical-info')).toBeNull();
   });
 
+  it('should keep the medical accordion title on one line', () => {
+    const toggle = fixture.nativeElement.querySelector('[data-testid="patient-medical-information-toggle"]');
+    const title = toggle?.querySelector('h3');
+
+    expect(title?.classList.contains('whitespace-nowrap')).toBe(true);
+    expect(title?.textContent).toContain('patient.urgTemp.profile.medicalSection');
+  });
+
   it('should allow the user to expand medical sections explicitly', () => {
     fixture.componentInstance.toggleMedicalInformation();
+    fixture.detectChanges();
 
     expect(fixture.componentInstance.medicalExpanded()).toBe(true);
+    expect(fixture.nativeElement.querySelector('app-patient-medical-info')).not.toBeNull();
   });
 });

@@ -1,0 +1,93 @@
+# FIX-20260729 — Finition UX mobile du dossier patient
+
+GitHub issue : #227
+
+## Contexte
+
+La PR #226 a introduit une navigation progressive et mobile-first du dossier patient. La recette mobile réelle montre encore trois écarts de finition :
+
+1. `Informations administratives` est un accordéon supplémentaire alors que ces données appartiennent déjà à la rubrique `Fiche d’identité` ;
+2. certains titres d’accordéons sont trop longs et reviennent sur plusieurs lignes ;
+3. les actions d’en-tête `Retour`, `Synthèse PDF` et `Ouvrir une visite` sont visuellement au même niveau et se placent de manière désordonnée sur petit écran.
+
+## Objectif
+
+Réduire encore la charge cognitive et la hauteur de page mobile sans modifier le métier, les permissions, les API ou les données.
+
+## Périmètre inclus
+
+- intégrer le résumé administratif directement dans la vue `Fiche d’identité` ;
+- supprimer l’accordéon `Informations administratives` ;
+- raccourcir les titres d’accordéons restants et garantir un rendu sur une ligne sur 360–430 px ;
+- utiliser un libellé court pour le contexte d’urgence ;
+- utiliser un libellé court et non ambigu pour allergies / antécédents / vaccinations ;
+- hiérarchiser les actions du bandeau patient : action métier principale d’abord, actions secondaires ensuite ;
+- préserver FR/EN, light/dark et accessibilité tactile.
+
+## Hors périmètre
+
+- backend ;
+- contrats API ;
+- modèle de données ;
+- permissions/RBAC ;
+- déploiement recette ou production.
+
+## Critères d’acceptation
+
+- [x] Aucun accordéon `Informations administratives` n’est rendu.
+- [x] Le contenu administratif est visible directement dans `Fiche d’identité`.
+- [x] Les titres d’accordéons utilisent des libellés courts et des classes one-line pour un viewport mobile de 360 px ou plus.
+- [x] Le contexte d’urgence conserve le badge de sécurité et son auto-ouverture en cas d’urgence active.
+- [x] Le regroupement allergies / antécédents / vaccinations reste replié par défaut sous `Informations médicales`.
+- [x] Sur mobile, `Ouvrir une visite` ou `Démarrer la consultation` occupe la ligne principale en pleine largeur.
+- [x] `Synthèse PDF` et `Retour` sont regroupés sur une ligne secondaire lorsque les droits permettent le PDF.
+- [x] Sur desktop, les trois actions restent compactes, alignées et ordonnées.
+- [x] Aucun texte utilisateur nouveau n’est codé en dur ; FR/EN sont présents.
+- [x] Aucun Angular Material / Tailwind v3 / URL backend hardcodée n’est introduit.
+- [ ] Tests Angular et build production verts.
+
+## Action plan
+
+- [x] Lire la gouvernance, `DESIGN.md` et les standards UI.
+- [x] Inspecter le shell patient, le profil, le contexte urgence et les tests existants.
+- [x] Créer l’issue #227 et la documentation initiale.
+- [x] Modifier le profil patient.
+- [x] Modifier la hiérarchie d’actions du shell patient.
+- [x] Adapter les libellés FR/EN.
+- [x] Ajouter / adapter les tests.
+- [ ] Exécuter le gate Angular complet.
+- [x] Mettre à jour `DESIGN.md`, `PROJECT-TRACKING.md` et `CHANGELOG.md`.
+- [ ] Passer la PR Ready uniquement après le dernier commit.
+
+## Risques
+
+- Régression de hauteur ou débordement à 360 px si un libellé ou un badge externe devient plus long dans une future traduction.
+- La preuve automatisée couvre les contraintes de classes/hiérarchie ; la validation visuelle physique 360–430 px reste nécessaire en recette après fusion.
+- Duplication potentielle de DPU / identifiant établissement entre bandeau et fiche : les identifiants restent dans le bandeau de contexte et ne sont pas répétés dans la grille administrative.
+
+## Tests attendus
+
+- test du profil : résumé administratif rendu sans clic ;
+- test du profil : aucun bouton `Informations administratives` ;
+- test du profil : informations médicales repliées par défaut ;
+- test urgence : en-tête compact + sous-titre visible seulement après ouverture ;
+- test urgence : auto-ouverture d’une urgence active ;
+- test shell : ordre et classes de layout des actions mobile ;
+- test shell : Synthèse PDF reste permission-gated ;
+- `npm run test` ;
+- `npm run build` ;
+- validation CI de la stack frontend.
+
+## Estimation / planning
+
+- 1 SP ;
+- 0,5 jour senior frontend + QA visuelle ;
+- pas d’impact backend ni DB.
+
+## Reviewer
+
+Tech Lead + QA UX mobile.
+
+## SemVer
+
+PATCH recommandé : finition UI rétrocompatible, aucun contrat cassé.

@@ -40,6 +40,25 @@ describe('PatientEmergencyContextComponent disclosure', () => {
     expect(fixture.nativeElement.querySelector('button')?.getAttribute('aria-expanded')).toBe('false');
   });
 
+  it('should keep the collapsed emergency header compact and one-line', () => {
+    emergencyApi.getPatientEmergencies.mockReturnValue(of([]));
+    fixture = TestBed.createComponent(PatientEmergencyContextComponent);
+    fixture.componentRef.setInput('patientId', 'patient-1');
+    fixture.detectChanges();
+
+    const toggle = fixture.nativeElement.querySelector('[data-testid="patient-emergency-context-toggle"]');
+    const title = toggle?.querySelector('h3');
+
+    expect(title?.classList.contains('whitespace-nowrap')).toBe(true);
+    expect(title?.textContent).toContain('patient.urgTemp.emergency.title');
+    expect(fixture.nativeElement.textContent).not.toContain('patient.urgTemp.emergency.subtitle');
+
+    fixture.componentInstance.toggleExpanded();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('patient.urgTemp.emergency.subtitle');
+  });
+
   it('should automatically reveal an active emergency because it is safety-critical', () => {
     const activeEmergency: EmergencyRecord = {
       id: 'emergency-1',
