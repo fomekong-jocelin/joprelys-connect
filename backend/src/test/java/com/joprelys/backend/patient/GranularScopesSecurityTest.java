@@ -155,10 +155,8 @@ public class GranularScopesSecurityTest {
 
     @Test
     void validVisitWithoutConsultation_returnsNoContent() throws Exception {
-        prescriptionRepository.deleteById(prescriptionB.getId());
-        prescriptionRepository.flush();
-        consultationRepository.deleteById(consultationB.getId());
-        consultationRepository.flush();
+        jdbcTemplate.update("DELETE FROM prescriptions WHERE id = ?", prescriptionB.getId());
+        jdbcTemplate.update("DELETE FROM consultations WHERE id = ?", consultationB.getId());
         PatientConsentEntity consent = new PatientConsentEntity(patientB.getId(), orgA.getId(), "ACTIVE");
         consent.setScopes("medical_records");
         patientConsentRepository.save(consent);
@@ -169,8 +167,7 @@ public class GranularScopesSecurityTest {
 
     @Test
     void validConsultationWithoutPrescription_returnsNoContent() throws Exception {
-        prescriptionRepository.deleteById(prescriptionB.getId());
-        prescriptionRepository.flush();
+        jdbcTemplate.update("DELETE FROM prescriptions WHERE id = ?", prescriptionB.getId());
         PatientConsentEntity consent = new PatientConsentEntity(patientB.getId(), orgA.getId(), "ACTIVE");
         consent.setScopes("prescriptions");
         patientConsentRepository.save(consent);
