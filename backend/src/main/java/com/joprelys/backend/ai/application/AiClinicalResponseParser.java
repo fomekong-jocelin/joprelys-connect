@@ -216,13 +216,16 @@ final class AiClinicalResponseParser {
                 if (!PRESCRIPTION_FIELDS.contains(key)) {
                     throw invalidChange();
                 }
-                Object itemValue = entry.getValue();
+                /*
+                 * The AI is never allowed to decide substitution policy. Older model
+                 * responses may still emit the optional field, so ignore it rather
+                 * than rejecting an otherwise grounded medication line.
+                 */
                 if ("substitutionAllowed".equals(key)) {
-                    if (!(itemValue instanceof Boolean)) {
-                        throw invalidChange();
-                    }
-                    line.put(key, itemValue);
-                } else if (itemValue instanceof String text && !text.isBlank()) {
+                    continue;
+                }
+                Object itemValue = entry.getValue();
+                if (itemValue instanceof String text && !text.isBlank()) {
                     line.put(key, limit(text.trim(), 500));
                 } else if (itemValue != null) {
                     throw invalidChange();
