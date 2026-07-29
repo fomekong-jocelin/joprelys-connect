@@ -61,7 +61,9 @@
       <section class="mb-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center" data-testid="patient-workspace-actions">
         <div class="relative min-w-0">
           <input
-            type="search"
+            type="text"
+            inputmode="search"
+            enterkeyhint="search"
             class="ui-input min-h-12 w-full pl-10 pr-12"
             [placeholder]="searchPlaceholder()"
             [attr.aria-label]="searchPlaceholder()"
@@ -117,7 +119,7 @@
           @for (patient of list(); track patient.id) {
             <button
               type="button"
-              class="ui-card grid min-h-28 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4 text-left transition-colors hover:bg-[var(--app-surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
+              class="ui-card grid min-h-24 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4 text-left transition-colors hover:bg-[var(--app-surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
               [attr.aria-label]="t('patient.list.viewRecord') + ' — ' + patientDisplayName(patient)"
               (click)="viewDetail(patient)"
               data-testid="patient-mobile-card"
