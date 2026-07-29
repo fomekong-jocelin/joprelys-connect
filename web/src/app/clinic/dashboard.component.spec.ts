@@ -106,10 +106,8 @@ describe('DashboardComponent', () => {
   it('should keep the existing queue visually before module cards without a second queue request', () => {
     const componentStyles = ((DashboardComponent as any).ɵcmp.styles as string[]).join('\n');
 
-    expect(componentStyles).toContain('.app-container > .mt-10');
-    expect(componentStyles).toContain('order: 2');
-    expect(componentStyles).toContain('.app-container > .grid');
-    expect(componentStyles).toContain('order: 3');
+    expect(componentStyles).toMatch(/\.mt-10[^\{]*\{[^}]*order:\s*2;/s);
+    expect(componentStyles).toMatch(/\.grid[^\{]*\{[^}]*order:\s*3;/s);
     expect(mockVisitApi.getActiveVisits).toHaveBeenCalledTimes(1);
   });
 
