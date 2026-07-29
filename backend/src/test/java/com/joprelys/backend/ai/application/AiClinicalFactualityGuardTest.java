@@ -37,6 +37,72 @@ class AiClinicalFactualityGuardTest {
     }
 
     @Test
+    void shouldAllowNeutralClinicalRewritingWithoutNewFacts() {
+        String source = "Je reçois aujourd'hui un patient âgé de 12 ans qui se plaint d'une céphalée aiguë depuis trois jours. Il n'arrive plus à se lever.";
+        ParsedResponse response = response(new ParsedChange(
+                "symptoms",
+                "SET",
+                "Patient âgé de 12 ans présentant une céphalée aiguë depuis trois jours. Il n'arrive plus à se lever.",
+                "Reformulation clinique fidèle.",
+                "LOW",
+                List.of(
+                        "patient âgé de 12 ans qui se plaint d'une céphalée aiguë depuis trois jours",
+                        "Il n'arrive plus à se lever")));
+
+        ParsedResponse checked = guard.enforce(
+                response,
+                source,
+                Map.of(),
+                "DICTATION",
+                "fr");
+
+        assertEquals(1, checked.changes().size());
+        assertTrue(checked.changes().getFirst().proposedValue().contains("céphalée aiguë depuis trois jours"));
+        assertTrue(checked.changes().getFirst().proposedValue().contains("Il n'arrive plus à se lever"));
+    }
+
+    @Test
+    void shouldStillBlockClinicalConceptAddedDuringRewriting() {
+        String source = "Patient âgé de 12 ans avec une céphalée aiguë depuis trois jours.";
+        ParsedResponse response = response(new ParsedChange(
+                "symptoms",
+                "SET",
+                "Patient âgé de 12 ans présentant une migraine aiguë depuis trois jours.",
+                "Unsafe clinical enrichment.",
+                "LOW",
+                List.of("céphalée aiguë depuis trois jours")));
+
+        ParsedResponse checked = guard.enforce(
+                response,
+                source,
+                Map.of(),
+                "DICTATION",
+                "fr");
+
+        assertTrue(checked.changes().isEmpty());
+    }
+
+    @Test
+    void shouldAcceptFormatting1000MgWhenTranscriptContainsGlued1000mg() {
+        ParsedResponse response = response(new ParsedChange(
+                "prescription",
+                "SET",
+                "[{\"drugName\":\"Paracétamol\",\"dosage\":\"1000 mg\",\"route\":\"voie orale\"}]",
+                "Prescription explicitement dictée.",
+                "LOW",
+                List.of("Paracétamol 1000mg", "voie orale")));
+
+        ParsedResponse checked = guard.enforce(
+                response,
+                "Je lui prescris du Paracétamol 1000mg par voie orale.",
+                Map.of(),
+                "DICTATION",
+                "fr");
+
+        assertEquals(1, checked.changes().size());
+    }
+
+    @Test
     void shouldBlockInventedDiagnosisEvenWithValidJson() {
         ParsedResponse response = response(new ParsedChange(
                 "diagnosis",
