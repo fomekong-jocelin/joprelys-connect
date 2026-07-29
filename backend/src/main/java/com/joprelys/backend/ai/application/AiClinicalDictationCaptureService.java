@@ -6,6 +6,7 @@ import com.joprelys.backend.ai.realtime.application.RealtimeClinicalIntakeServic
 import com.joprelys.backend.ai.realtime.application.RealtimeClinicalIntakeService.IntakeView;
 import com.joprelys.backend.ai.realtime.application.RealtimeIntakeSource;
 import java.util.UUID;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -15,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
  * A dictation segment becomes durable evidence before any clinical structuring happens.
  */
 @Service
+@ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
 public class AiClinicalDictationCaptureService {
 
     private final AiProvider provider;
