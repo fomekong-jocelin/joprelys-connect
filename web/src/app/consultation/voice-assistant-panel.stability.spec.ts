@@ -1,38 +1,66 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
-import { AiConsultationApiService, AiSessionResponse } from './ai-consultation-api.service';
+import { AiConsultationApiService } from './ai-consultation-api.service';
 import { ClassicVoiceRecorderService } from './classic-voice-recorder.service';
+import {
+  RealtimeClinicalIntakeAck,
+  RealtimeClinicalIntakeApiService,
+} from './realtime-clinical-intake-api.service';
 import { VoiceAssistantPanelComponent } from './voice-assistant-panel.component';
 
-describe('VoiceAssistantPanelComponent stability', () => {
-  let api: {
-    getSession: ReturnType<typeof vi.fn>;
-    transcribeAudio: ReturnType<typeof vi.fn>;
+describe('VoiceAssistantPanelComponent durable capture stability', () => {
+  let aiApi: {
+    startSession: ReturnType<typeof vi.fn>;
+    rebuildCapture: ReturnType<typeof vi.fn>;
+  };
+  let intakeApi: {
+    list: ReturnType<typeof vi.fn>;
+    captureDictation: ReturnType<typeof vi.fn>;
+    correct: ReturnType<typeof vi.fn>;
   };
   let recorder: {
     supported: boolean;
     dispose: ReturnType<typeof vi.fn>;
+    start: ReturnType<typeof vi.fn>;
+    stop: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
-    api = {
-      getSession: vi.fn().mockReturnValue(of(activeSession())),
-      transcribeAudio: vi.fn().mockReturnValue(of({
+    aiApi = {
+      startSession: vi.fn().mockReturnValue(of({
         sessionId: 'session-1',
-        transcript: 'Le patient présente une douleur abdominale depuis trois jours.',
-        status: 'PENDING_REVIEW',
-        expiresAt: '2026-07-27T20:00:00Z',
+        visitId: 'visit-1',
+        status: 'ACTIVE',
+        expiresAt: '2026-07-29T20:00:00Z',
+        draft: {},
+        transcript: null,
+        pendingTranscript: null,
+        transcriptStatus: 'NONE',
+        conversation: [],
+        clarifications: [],
+        revisions: [],
+        assistantMessage: null,
+        needsClarification: false,
       })),
+      rebuildCapture: vi.fn(),
+    };
+    intakeApi = {
+      list: vi.fn().mockReturnValue(of([])),
+      captureDictation: vi.fn(),
+      correct: vi.fn(),
     };
     recorder = {
       supported: true,
       dispose: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
     };
 
     TestBed.configureTestingModule({
       providers: [
-        { provide: AiConsultationApiService, useValue: api },
+        { provide: AiConsultationApiService, useValue: aiApi },
+        { provide: RealtimeClinicalIntakeApiService, useValue: intakeApi },
         { provide: ClassicVoiceRecorderService, useValue: recorder },
         {
           provide: I18nService,
@@ -45,57 +73,54 @@ describe('VoiceAssistantPanelComponent stability', () => {
     });
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-    TestBed.resetTestingModule();
-  });
+  afterEach(() => TestBed.resetTestingModule());
 
-  it('sends every non-empty dictation to transcription even if browser VAD says no speech', () => {
+  it('sends every non-empty dictation to durable capture even if browser VAD says no speech', () => {
     const component = TestBed.runInInjectionContext(() => new VoiceAssistantPanelComponent());
     component.visitId = 'visit-1';
-    component.session.set(activeSession());
+    const entry = captureEntry('dictation-1', 'Le patient présente une douleur abdominale depuis trois jours.');
+    intakeApi.captureDictation.mockReturnValue(of(entry));
 
     (component as any).handleClassicCapture({
       audio: new Blob(['recorded-audio'], { type: 'audio/webm' }),
       hasSpeech: false,
     });
 
-    expect(api.transcribeAudio).toHaveBeenCalledTimes(1);
-    expect(component.session()?.pendingTranscript)
-      .toBe('Le patient présente une douleur abdominale depuis trois jours.');
-    expect(component.session()?.transcriptStatus).toBe('PENDING_REVIEW');
+    expect(intakeApi.captureDictation).toHaveBeenCalledTimes(1);
+    expect(component.captureEntries()).toEqual([entry]);
   });
 
-  it('does not poll the server session while realtime mode owns the connection lifecycle', async () => {
-    vi.useFakeTimers();
+  it('loads durable recovery state once instead of polling a transient AI session', () => {
     const component = TestBed.runInInjectionContext(() => new VoiceAssistantPanelComponent());
     component.visitId = 'visit-1';
-    component.conversationMode.set(true);
+    intakeApi.list.mockReturnValue(of([
+      captureEntry('capture-1', 'Patient sans fièvre.'),
+    ]));
 
     component.ngOnInit();
-    expect(api.getSession).toHaveBeenCalledTimes(1);
 
-    await vi.advanceTimersByTimeAsync(12000);
-
-    expect(api.getSession).toHaveBeenCalledTimes(1);
+    expect(intakeApi.list).toHaveBeenCalledTimes(1);
+    expect(component.stage()).toBe('TRANSCRIPT_REVIEW');
+    expect(aiApi.startSession).not.toHaveBeenCalled();
     component.ngOnDestroy();
   });
 
-  function activeSession(): AiSessionResponse {
+  function captureEntry(id: string, transcript: string): RealtimeClinicalIntakeAck {
     return {
-      sessionId: 'session-1',
+      id,
       visitId: 'visit-1',
-      status: 'ACTIVE',
-      expiresAt: '2026-07-27T20:00:00Z',
-      draft: {},
-      transcript: null,
-      pendingTranscript: null,
-      transcriptStatus: 'NONE',
-      conversation: [],
-      clarifications: [],
-      revisions: [],
-      assistantMessage: null,
-      needsClarification: false,
+      source: 'CONSULTATION',
+      sequence: 1,
+      eventId: 'event-1',
+      itemId: null,
+      transcript,
+      originalTranscript: null,
+      confidence: 0.9,
+      reviewRequired: false,
+      correctionCount: 0,
+      correctedAt: null,
+      captureStatus: 'PENDING',
+      receivedAt: '2026-07-29T10:00:00Z',
     };
   }
 });
