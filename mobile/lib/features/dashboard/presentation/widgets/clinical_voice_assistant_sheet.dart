@@ -59,11 +59,11 @@ class _ClinicalVoiceAssistantSheetState
   late AnimationController _haloController;
   late AnimationController _waveController;
 
-  static const _presetDictations = [
-    'Température 38.5°C, tension 120/80 mmHg, pouls 75 bpm, SpO2 98%',
-    'Poids 75kg, taille 175cm, glycémie 1.10 g/L, douleur EVA 3/10',
-    'Pris du paracétamol 1000 mg 2 fois par jour. Revenir dans deux semaines.',
-  ];
+  List<String> _getPresetDictations(AppLocalizations l10n) => [
+        l10n.assistantPresetDictation1,
+        l10n.assistantPresetDictation2,
+        l10n.assistantPresetDictation3,
+      ];
 
   @override
   void initState() {
@@ -224,13 +224,14 @@ class _ClinicalVoiceAssistantSheetState
                         haloController: _haloController,
                         waveController: _waveController,
                         badgeText: isListening
-                            ? 'Enregistrement sécurisé'
-                            : 'Assistant en pause',
+                            ? l10n.assistantSecuredRecording
+                            : l10n.assistantPaused,
                         statusText: isListening
-                            ? 'Écoute en cours… Parlez naturellement'
-                            : 'Appuyez sur le micro pour démarrer l’écoute',
-                        tipText:
-                            'Conseil : parlez naturellement, les phrases sont conservées au fil de l’eau.',
+                            ? l10n.assistantListeningStatusText
+                            : l10n.assistantTapToListen,
+                        tipText: l10n.assistantTipNaturalDictation,
+                        stopLabel: l10n.assistantStopDictationButton,
+                        startLabel: l10n.assistantStartDictation,
                         onToggleListening: _toggleListening,
                       ),
                       const SizedBox(height: 16),
@@ -239,7 +240,7 @@ class _ClinicalVoiceAssistantSheetState
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           children: [
-                            for (final text in _presetDictations) ...[
+                            for (final text in _getPresetDictations(l10n)) ...[
                               Padding(
                                 padding: const EdgeInsets.only(right: 8),
                                 child: ActionChip(
@@ -376,6 +377,8 @@ class _WebAlignedVoiceListeningSurface extends StatelessWidget {
     required this.badgeText,
     required this.statusText,
     required this.tipText,
+    required this.stopLabel,
+    required this.startLabel,
     required this.onToggleListening,
   });
 
@@ -386,6 +389,8 @@ class _WebAlignedVoiceListeningSurface extends StatelessWidget {
   final String badgeText;
   final String statusText;
   final String tipText;
+  final String stopLabel;
+  final String startLabel;
   final VoidCallback onToggleListening;
 
   @override
@@ -440,7 +445,7 @@ class _WebAlignedVoiceListeningSurface extends StatelessWidget {
                   color: active ? AppDesignTokens.error : primaryColor,
                 ),
                 label: Text(
-                  active ? 'Arrêter' : 'Démarrer',
+                  active ? stopLabel : startLabel,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: active ? AppDesignTokens.error : primaryColor,
                     fontWeight: FontWeight.w800,

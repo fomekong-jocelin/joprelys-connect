@@ -262,4 +262,40 @@ extension DashboardLocalizations on AppLocalizations {
   String get assistantApplyLiveVitals => _isFrench
       ? 'Valider & pré-remplir les constantes'
       : 'Validate & pre-fill vitals';
+
+  String get assistantSecuredRecording =>
+      _isFrench ? 'Enregistrement sécurisé' : 'Secured recording';
+
+  String get assistantPaused =>
+      _isFrench ? 'Assistant en pause' : 'Assistant paused';
+
+  String get assistantListeningStatusText => _isFrench
+      ? 'Écoute en cours… Parlez naturellement'
+      : 'Listening in progress… Speak naturally';
+
+  String get assistantTapToListen => _isFrench
+      ? 'Appuyez sur le micro pour démarrer l’écoute'
+      : 'Tap the microphone to start listening';
+
+  String get assistantTipNaturalDictation => _isFrench
+      ? 'Conseil : parlez naturellement, les phrases sont conservées au fil de l’eau.'
+      : 'Tip: speak naturally, phrases are preserved as you talk.';
+
+  String get assistantStartDictation =>
+      _isFrench ? 'Démarrer' : 'Start';
+
+  String get assistantStopDictationButton =>
+      _isFrench ? 'Arrêter' : 'Stop';
+
+  String get assistantPresetDictation1 => _isFrench
+      ? 'Température 38.5°C, tension 120/80 mmHg, pouls 75 bpm, SpO2 98%'
+      : 'Temperature 38.5°C, BP 120/80 mmHg, pulse 75 bpm, SpO2 98%';
+
+  String get assistantPresetDictation2 => _isFrench
+      ? 'Poids 75kg, taille 175cm, glycémie 1.10 g/L, douleur EVA 3/10'
+      : 'Weight 75kg, height 175cm, glycemia 1.10 g/L, pain scale 3/10';
+
+  String get assistantPresetDictation3 => _isFrench
+      ? 'Pris du paracétamol 1000 mg 2 fois par jour. Revenir dans deux semaines.'
+      : 'Took paracetamol 1000 mg twice daily. Return in two weeks.';
 }
