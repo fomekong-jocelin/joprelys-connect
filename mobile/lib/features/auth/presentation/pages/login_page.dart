@@ -20,7 +20,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  String? _localError;
+  String? _emailError;
+  String? _passwordError;
 
   @override
   void dispose() {
@@ -34,10 +35,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final l10n = AppLocalizations.of(context);
     final auth = ref.watch(authControllerProvider);
     final state = auth.value;
-    final error = _localError ?? authErrorMessage(l10n, state?.errorCode);
+    final serverError = authErrorMessage(l10n, state?.errorCode);
 
     return AuthShell(
-      icon: Icons.health_and_safety_outlined,
       title: l10n.authLoginTitle,
       subtitle: l10n.authLoginSubtitle,
       child: AutofillGroup(
@@ -47,18 +47,50 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             AppTextField(
               controller: _emailController,
               label: l10n.authEmailLabel,
+              labelPosition: AppTextFieldLabelPosition.above,
+              minimumHeight: 52,
+              hint: l10n.authEmailHint,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
+              autofillHints: const [
+                AutofillHints.username,
+                AutofillHints.email,
+              ],
+              autocorrect: false,
+              enableSuggestions: false,
               enabled: !auth.isLoading,
-              prefixIcon: const Icon(Icons.alternate_email),
+              errorText: _emailError,
+              onChanged: (_) {
+                if (_emailError != null) {
+                  setState(() => _emailError = null);
+                }
+              },
+              prefixIcon: const Icon(Icons.mail_outline),
             ),
             const SizedBox(height: AppDesignTokens.spaceMd),
             AppTextField(
               controller: _passwordController,
               label: l10n.authPasswordLabel,
+              labelPosition: AppTextFieldLabelPosition.above,
+              minimumHeight: 52,
+              hint: l10n.authPasswordHint,
               textInputAction: TextInputAction.done,
+              autofillHints: const [AutofillHints.password],
+              autocorrect: false,
+              enableSuggestions: false,
               enabled: !auth.isLoading,
               obscureText: _obscurePassword,
+              errorText: _passwordError,
+              onChanged: (_) {
+                if (_passwordError != null) {
+                  setState(() => _passwordError = null);
+                }
+              },
+              onSubmitted: (_) {
+                if (!auth.isLoading) {
+                  _submit();
+                }
+              },
               prefixIcon: const Icon(Icons.lock_outline),
               suffixIcon: IconButton(
                 tooltip: _obscurePassword
@@ -75,18 +107,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
               ),
             ),
-            if (error != null) ...[
+            if (serverError != null) ...[
               const SizedBox(height: AppDesignTokens.spaceMd),
-              Text(
-                error,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
+              _AuthErrorBanner(message: serverError),
             ],
             const SizedBox(height: AppDesignTokens.spaceLg),
             AppButton(
               label: l10n.authSignIn,
-              icon: Icons.login,
+              icon: Icons.arrow_forward,
               expand: true,
               loading: auth.isLoading,
               onPressed: auth.isLoading ? null : _submit,
@@ -103,19 +131,58 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final password = _passwordController.text;
     final emailValid = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
 
-    if (!emailValid) {
-      setState(() => _localError = l10n.authInvalidEmail);
-      return;
-    }
-    if (password.isEmpty) {
-      setState(() => _localError = l10n.authPasswordRequired);
+    final emailError = emailValid ? null : l10n.authInvalidEmail;
+    final passwordError = password.isEmpty ? l10n.authPasswordRequired : null;
+
+    if (emailError != null || passwordError != null) {
+      setState(() {
+        _emailError = emailError;
+        _passwordError = passwordError;
+      });
       return;
     }
 
-    setState(() => _localError = null);
+    setState(() {
+      _emailError = null;
+      _passwordError = null;
+    });
     await ref
         .read(authControllerProvider.notifier)
         .login(email: email, password: password);
     _passwordController.clear();
+  }
+}
+
+class _AuthErrorBanner extends StatelessWidget {
+  const _AuthErrorBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.errorContainer,
+        border: Border.all(color: colors.error.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(AppDesignTokens.radiusMd),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_outline, size: 20, color: colors.onErrorContainer),
+          const SizedBox(width: AppDesignTokens.spaceSm),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onErrorContainer),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

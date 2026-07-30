@@ -12,13 +12,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Joprelys Connect';
 
   @override
-  String get foundationBadge => 'MOB-2805';
-
-  @override
   String get foundationLanguageTitle => 'Language';
 
   @override
   String get foundationThemeTitle => 'Appearance';
+
+  @override
+  String foundationWelcomeTitle(String name) {
+    return 'Welcome, $name';
+  }
+
+  @override
+  String get foundationWelcomeSubtitle =>
+      'Your secure professional workspace is ready.';
+
+  @override
+  String get foundationIdentityTitle => 'Professional account';
+
+  @override
+  String get foundationSecurityTitle => 'Application security';
+
+  @override
+  String get foundationBiometricEnabled =>
+      'Biometric lock is enabled on this device.';
+
+  @override
+  String get foundationBiometricDisabled =>
+      'Protect local access with this device’s biometrics.';
 
   @override
   String get languageFrench => 'Français';
@@ -39,17 +59,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authLoadingTitle => 'Securely restoring your session…';
 
   @override
-  String get authLoginTitle => 'Professional sign-in';
+  String get authLoginTitle => 'Professional access';
 
   @override
   String get authLoginSubtitle =>
-      'Access your Joprelys Connect workspace with your professional credentials.';
+      'Sign in to your secure Joprelys Connect workspace.';
 
   @override
   String get authEmailLabel => 'Email address';
 
   @override
+  String get authEmailHint => 'first.last@clinic.com';
+
+  @override
   String get authPasswordLabel => 'Password';
+
+  @override
+  String get authPasswordHint => 'Enter your password';
 
   @override
   String get authShowPassword => 'Show password';

@@ -59,7 +59,7 @@ final class SecureCookieStorage extends Storage {
 
   Future<void> _enqueue(Future<void> Function() operation) {
     final result = _serial.then((_) => operation());
-    _serial = result.catchError((Object _, StackTrace __) {});
+    _serial = result.catchError((Object _, StackTrace _) {});
     return result;
   }
 

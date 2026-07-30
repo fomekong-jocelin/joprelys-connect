@@ -168,6 +168,19 @@ La page publique de connexion suit les règles suivantes :
 - le contenu de vitrine est du HTML réel alimenté par les catalogues FR/EN ; aucun texte visible ne doit être généré avec `content:` ou sélectionné selon la langue via `:has(...)` ;
 - le logo posé sur le panneau institutionnel utilise explicitement l'apparence `on-dark` et l'asset officiel prévu pour ce fond, sans filtre d'inversion hérité du thème global.
 
+### Authentification Flutter native
+
+- la connexion Flutter reprend la hiérarchie mobile du web : thème compact à gauche, segment `FR | EN` à droite, marque, titre/sous-titre puis carte actionnable ;
+- la carte d’authentification ne contient ni logo secondaire ni titre répété ;
+- les libellés de champs restent visibles au-dessus des zones de saisie et les icônes sont purement indicatives ;
+- l’asset officiel conserve son ratio : aucun logo ne doit être comprimé dans une boîte trop horizontale ;
+- le bouton principal reste pleine largeur et mesure au moins `44px` ;
+- les pages OTP, recovery et unlock utilisent le même shell et la même densité ;
+- l’accueil professionnel n’expose aucun identifiant technique de ticket ou de build ;
+- l’identité et la sécurité sont séparées en surfaces compactes ; la déconnexion destructive utilise une variante secondaire afin de ne pas dominer l’écran ;
+- les réglages langue/thème ne sont jamais dupliqués dans le contenu lorsque l’en-tête les expose déjà ;
+- les thèmes light/dark, les libellés FR/EN, les rayons de `4px` à `8px` et les ombres sobres restent obligatoires.
+
 ### Interfaces IA et assistant de constantes
 
 - mobile d'abord : sous `640px`, l'assistant de constantes démarre replié et ne monopolise pas la modale ;

@@ -123,9 +123,7 @@ class AuthController extends AsyncNotifier<AuthState> {
       state = const AsyncData(AuthState.unauthenticated());
     } catch (_) {
       state = const AsyncData(
-        AuthState.unauthenticated(
-          errorCode: 'AUTH_LOCAL_SESSION_CLEAR_FAILED',
-        ),
+        AuthState.unauthenticated(errorCode: 'AUTH_LOCAL_SESSION_CLEAR_FAILED'),
       );
     }
   }

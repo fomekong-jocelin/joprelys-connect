@@ -191,6 +191,19 @@ L’échec distant est absorbé volontairement. Le `finally` supprime toujours s
 
 L’`AsyncValue` encadre le chargement initial et les opérations en cours. Les erreurs attendues sont converties en codes stables traduits par la présentation.
 
+## Composition UI alignée web/mobile
+
+La correction visuelle reste strictement dans la présentation :
+
+- `AuthPreferencesBar` expose le thème à gauche et un segment FR/EN à droite ;
+- `AppBrandLockup` centralise le lockup logo + `Connect` pour les pages publiques et protégées ;
+- `AuthShell` place marque, titre et sous-titre hors de la surface actionnable ;
+- `AppTextField` fournit un mode de libellé externe réutilisable, sans logique d’authentification ;
+- `AppButton` fournit une variante destructive secondaire pour les sorties de session ;
+- `FoundationPage` compose des surfaces identité et sécurité à partir de la session déjà validée.
+
+Les widgets ne calculent ni rôle, ni permission, ni validité de session. Ils rendent l’état produit par `AuthController` et émettent uniquement les intentions existantes.
+
 ## Navigation
 
 `GoRouter` écoute `authControllerProvider` via un `ChangeNotifier` dédié. Le redirect calcule une destination canonique par état et évite les boucles en retournant `null` lorsque la route courante est déjà correcte.

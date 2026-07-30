@@ -20,7 +20,6 @@ class UnlockPage extends ConsumerWidget {
     final error = authErrorMessage(l10n, authState?.errorCode);
 
     return AuthShell(
-      icon: Icons.fingerprint,
       title: l10n.authUnlockTitle,
       subtitle: l10n.authUnlockSubtitle(session?.name ?? ''),
       child: Column(

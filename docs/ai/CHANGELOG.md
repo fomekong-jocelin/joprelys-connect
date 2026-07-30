@@ -8,6 +8,12 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **FIX-20260730-MOBILE-AUTH-WEB-VISUAL-ALIGNMENT — Auth Flutter alignée sur l’expérience web** :
+  - **Composition** : préférences compactes, lockup de marque réutilisable, titre hors carte, libellés de champs stables et CTA pleine largeur selon les tokens Joprelys.
+  - **Accueil professionnel** : suppression du badge technique `MOB-2805` et des réglages dupliqués ; identité, rôle, biométrie et déconnexion sont hiérarchisés dans des surfaces sobres.
+  - **Design system / i18n** : ajout du bouton destructif secondaire, du champ à label externe et des textes FR/EN de l’accueil sans nouveau contrat API ni logique métier frontend.
+  - **Qualité** : 53 tests Flutter verts, analyse `lib`/`test` sans erreur, build web réussi et goldens sombres `393 × 852` validées dans `design-qa.md`. Le build APK reste à confirmer sur CI, le sandbox local ne pouvant ni verrouiller le cache Gradle utilisateur ni télécharger Gradle 8.14.
+
 - **MOB-2804 — Client API Flutter, erreurs, corrélation et résilience réseau** :
   - **Configuration** : ajout de `APP_ENV` / `API_BASE_URL`, validation stricte de la base URL et HTTPS obligatoire en recette/production ; aucune valeur sensible n’est placée dans `--dart-define`.
   - **Client central** : Dio est encapsulé par `ApiClient` et injecté via Riverpod ; headers JSON, locale, bearer conditionnel, idempotence et `X-Trace-Id` sont gérés hors des widgets et des features métier.

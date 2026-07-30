@@ -12,13 +12,33 @@ class AppLocalizationsFr extends AppLocalizations {
   String get appTitle => 'Joprelys Connect';
 
   @override
-  String get foundationBadge => 'MOB-2805';
-
-  @override
   String get foundationLanguageTitle => 'Langue';
 
   @override
   String get foundationThemeTitle => 'Apparence';
+
+  @override
+  String foundationWelcomeTitle(String name) {
+    return 'Bienvenue, $name';
+  }
+
+  @override
+  String get foundationWelcomeSubtitle =>
+      'Votre espace professionnel sécurisé est prêt.';
+
+  @override
+  String get foundationIdentityTitle => 'Compte professionnel';
+
+  @override
+  String get foundationSecurityTitle => 'Sécurité de l’application';
+
+  @override
+  String get foundationBiometricEnabled =>
+      'Le verrouillage biométrique est activé sur cet appareil.';
+
+  @override
+  String get foundationBiometricDisabled =>
+      'Protégez l’accès local avec la biométrie de cet appareil.';
 
   @override
   String get languageFrench => 'Français';
@@ -43,13 +63,19 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get authLoginSubtitle =>
-      'Accédez à votre espace Joprelys Connect avec vos identifiants professionnels.';
+      'Connectez-vous à votre espace professionnel sécurisé.';
 
   @override
   String get authEmailLabel => 'Adresse e-mail';
 
   @override
+  String get authEmailHint => 'prenom.nom@clinique.com';
+
+  @override
   String get authPasswordLabel => 'Mot de passe';
+
+  @override
+  String get authPasswordHint => 'Saisissez votre mot de passe';
 
   @override
   String get authShowPassword => 'Afficher le mot de passe';

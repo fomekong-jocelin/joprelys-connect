@@ -7,15 +7,26 @@ import '../data/auth_session_store.dart';
 import '../domain/professional_session.dart';
 
 final class AuthSessionManager implements ApiSessionAccess {
-  AuthSessionManager({
+  factory AuthSessionManager({
     required AuthSessionStore store,
     required AuthGateway authApi,
     required CookieJar cookieJar,
     DateTime Function()? clock,
-  }) : _store = store,
-       _authApi = authApi,
-       _cookieJar = cookieJar,
-       _clock = clock ?? DateTime.now;
+  }) {
+    return AuthSessionManager._(
+      store,
+      authApi,
+      cookieJar,
+      clock ?? DateTime.now,
+    );
+  }
+
+  AuthSessionManager._(
+    this._store,
+    this._authApi,
+    this._cookieJar,
+    this._clock,
+  );
 
   final AuthSessionStore _store;
   final AuthGateway _authApi;

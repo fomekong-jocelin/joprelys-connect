@@ -432,3 +432,20 @@ Règles minimales :
 - [x] Tests Maven ciblés : 20/20.
 - [x] Suite Maven complète : 637/637 ; JAR Spring Boot généré.
 - [ ] Recette clinique réelle silence/voix faible/bruit après déploiement avec les modèles 2.1.
+
+## Exécution — FIX-20260730-MOBILE-AUTH-WEB-VISUAL-ALIGNMENT
+
+- [x] Documentation First : ticket, spécification fonctionnelle, conception technique et plan de test mis à jour avant clôture.
+- [x] `DESIGN.md`, thème central, rayons 4–8 px et ombres sobres appliqués.
+- [x] Composants Flutter réutilisables ; aucune page ou classe modifiée ne dépasse 300 lignes.
+- [x] Textes utilisateur FR/EN ; branding et configuration restent centralisés.
+- [x] Light/dark/system et sélection de locale restent pilotés par leurs contrôleurs Riverpod.
+- [x] Contrats API, RBAC, stockage sécurisé, cookies et logique biométrique inchangés.
+- [x] Aucun ticket technique, secret, token, OTP ou donnée réelle ajouté à l’interface ou aux fixtures.
+- [x] `.gitignore` vérifié : `build/`, `.dart_tool/`, caches, logs, APK et secrets sont ignorés.
+- [x] Analyse Dart de `lib` et `test` sans erreur.
+- [x] Suite Flutter complète : 53 tests réussis.
+- [x] Build web Flutter réussi.
+- [x] Goldens login/accueil sombre `393 × 852` et comparaison visuelle validées (`design-qa.md` : `passed`).
+- [ ] Build APK debug sur CI ou poste autorisé à utiliser/télécharger Gradle 8.14.
+- [ ] Recette Android réelle FR/EN, light/dark, texte agrandi, clavier et biométrie.

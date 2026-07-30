@@ -35,7 +35,6 @@ class _OtpPageState extends ConsumerState<OtpPage> {
     final error = _localError ?? authErrorMessage(l10n, authState?.errorCode);
 
     return AuthShell(
-      icon: Icons.verified_user_outlined,
       title: l10n.authOtpTitle,
       subtitle: l10n.authOtpSubtitle(email),
       child: Column(

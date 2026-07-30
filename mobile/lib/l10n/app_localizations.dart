@@ -104,12 +104,6 @@ abstract class AppLocalizations {
   /// **'Joprelys Connect'**
   String get appTitle;
 
-  /// No description provided for @foundationBadge.
-  ///
-  /// In fr, this message translates to:
-  /// **'MOB-2805'**
-  String get foundationBadge;
-
   /// No description provided for @foundationLanguageTitle.
   ///
   /// In fr, this message translates to:
@@ -121,6 +115,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Apparence'**
   String get foundationThemeTitle;
+
+  /// No description provided for @foundationWelcomeTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bienvenue, {name}'**
+  String foundationWelcomeTitle(String name);
+
+  /// No description provided for @foundationWelcomeSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre espace professionnel sécurisé est prêt.'**
+  String get foundationWelcomeSubtitle;
+
+  /// No description provided for @foundationIdentityTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compte professionnel'**
+  String get foundationIdentityTitle;
+
+  /// No description provided for @foundationSecurityTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sécurité de l’application'**
+  String get foundationSecurityTitle;
+
+  /// No description provided for @foundationBiometricEnabled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le verrouillage biométrique est activé sur cet appareil.'**
+  String get foundationBiometricEnabled;
+
+  /// No description provided for @foundationBiometricDisabled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Protégez l’accès local avec la biométrie de cet appareil.'**
+  String get foundationBiometricDisabled;
 
   /// No description provided for @languageFrench.
   ///
@@ -167,7 +197,7 @@ abstract class AppLocalizations {
   /// No description provided for @authLoginSubtitle.
   ///
   /// In fr, this message translates to:
-  /// **'Accédez à votre espace Joprelys Connect avec vos identifiants professionnels.'**
+  /// **'Connectez-vous à votre espace professionnel sécurisé.'**
   String get authLoginSubtitle;
 
   /// No description provided for @authEmailLabel.
@@ -176,11 +206,23 @@ abstract class AppLocalizations {
   /// **'Adresse e-mail'**
   String get authEmailLabel;
 
+  /// No description provided for @authEmailHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'prenom.nom@clinique.com'**
+  String get authEmailHint;
+
   /// No description provided for @authPasswordLabel.
   ///
   /// In fr, this message translates to:
   /// **'Mot de passe'**
   String get authPasswordLabel;
+
+  /// No description provided for @authPasswordHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisissez votre mot de passe'**
+  String get authPasswordHint;
 
   /// No description provided for @authShowPassword.
   ///

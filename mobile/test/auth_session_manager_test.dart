@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:flutter_test/flutter_test.dart';
 

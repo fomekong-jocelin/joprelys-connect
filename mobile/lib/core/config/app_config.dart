@@ -3,7 +3,14 @@ import 'package:flutter/widgets.dart';
 import 'app_environment.dart';
 
 abstract final class AppConfig {
-  static const String appName = 'Joprelys Connect';
+  static const String appShortName = 'Joprelys';
+  static const String productName = 'Connect';
+  static const String appName = '$appShortName $productName';
+
+  static const String logoAsset = 'assets/branding/logo_principal.png';
+  static const String logoOnDarkAsset =
+      'assets/branding/logo_white_blue_bg.png';
+  static const String logoIconAsset = 'assets/branding/logo_icon.png';
 
   static const Locale defaultLocale = Locale('fr');
   static const List<Locale> supportedLocales = <Locale>[
@@ -11,14 +18,16 @@ abstract final class AppConfig {
     Locale('en'),
   ];
 
+  // Les APK de validation doivent cibler la recette par défaut. Le développement
+  // local reste disponible en passant explicitement APP_ENV=dev et API_BASE_URL.
   static final AppRuntimeConfig runtime = AppRuntimeConfig.fromValues(
     environmentName: const String.fromEnvironment(
       'APP_ENV',
-      defaultValue: 'dev',
+      defaultValue: 'recette',
     ),
     apiBaseUrl: const String.fromEnvironment(
       'API_BASE_URL',
-      defaultValue: 'http://10.0.2.2:8080',
+      defaultValue: 'https://recette.joprelys.com',
     ),
   );
 

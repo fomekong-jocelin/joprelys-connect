@@ -106,6 +106,19 @@ Aucune page protégée n’est accessible sans session utilisable et déverrouil
 
 Tous les libellés sont fournis en français et en anglais via ARB. Les pages utilisent les thèmes light/dark/system et les primitives du design system existant sans modifier `AppTheme` ou `AppDesignTokens`.
 
+### Alignement visuel avec l’application web
+
+Le parcours mobile reprend la hiérarchie de la connexion web sans copier son panneau desktop :
+
+- le thème reste accessible par un contrôle compact à gauche ;
+- la langue est sélectionnée par un segment visible `FR | EN` à droite ;
+- la marque, le titre et le sous-titre précèdent la carte ;
+- la carte est réservée au formulaire ou aux actions du parcours courant ;
+- les champs affichent un libellé stable au-dessus de la zone de saisie ;
+- les actions principales restent pleine largeur et accessibles au clavier ouvert.
+
+L’accueil professionnel temporaire ne doit afficher aucun identifiant de ticket ou de build. Il présente l’identité de session, le rôle, la protection biométrique et une déconnexion secondaire, tandis que langue et apparence restent dans l’en-tête.
+
 ## Sécurité et confidentialité
 
 - aucun mot de passe ou OTP persistant ;
@@ -140,4 +153,6 @@ Tous les libellés sont fournis en français et en anglais via ARB. Les pages ut
 - [x] séparation professionnelle/patient ;
 - [x] FR/EN et light/dark/system ;
 - [x] aucun changement du thème global ;
+- [x] composition mobile alignée sur la connexion web et l’accueil professionnel ;
+- [x] aucun identifiant technique affiché à l’utilisateur ;
 - [ ] gate Flutter complet sur le HEAD final.

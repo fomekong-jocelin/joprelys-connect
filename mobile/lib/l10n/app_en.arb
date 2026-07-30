@@ -1,19 +1,33 @@
 {
   "@@locale": "en",
   "appTitle": "Joprelys Connect",
-  "foundationBadge": "MOB-2805",
   "foundationLanguageTitle": "Language",
   "foundationThemeTitle": "Appearance",
+  "foundationWelcomeTitle": "Welcome, {name}",
+  "@foundationWelcomeTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "foundationWelcomeSubtitle": "Your secure professional workspace is ready.",
+  "foundationIdentityTitle": "Professional account",
+  "foundationSecurityTitle": "Application security",
+  "foundationBiometricEnabled": "Biometric lock is enabled on this device.",
+  "foundationBiometricDisabled": "Protect local access with this device’s biometrics.",
   "languageFrench": "Français",
   "languageEnglish": "English",
   "themeSystem": "System",
   "themeLight": "Light",
   "themeDark": "Dark",
   "authLoadingTitle": "Securely restoring your session…",
-  "authLoginTitle": "Professional sign-in",
-  "authLoginSubtitle": "Access your Joprelys Connect workspace with your professional credentials.",
+  "authLoginTitle": "Professional access",
+  "authLoginSubtitle": "Sign in to your secure Joprelys Connect workspace.",
   "authEmailLabel": "Email address",
+  "authEmailHint": "first.last@clinic.com",
   "authPasswordLabel": "Password",
+  "authPasswordHint": "Enter your password",
   "authShowPassword": "Show password",
   "authHidePassword": "Hide password",
   "authInvalidEmail": "Enter a valid email address.",
