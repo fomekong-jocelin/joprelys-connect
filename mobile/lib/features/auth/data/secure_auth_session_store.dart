@@ -37,10 +37,7 @@ final class SecureAuthSessionStore implements AuthSessionStore {
 
   @override
   Future<void> write(ProfessionalSession session) {
-    return _storage.write(
-      key: storageKey,
-      value: jsonEncode(session.toJson()),
-    );
+    return _storage.write(key: storageKey, value: jsonEncode(session.toJson()));
   }
 
   @override

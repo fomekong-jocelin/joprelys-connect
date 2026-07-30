@@ -22,7 +22,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final auth = ref.read(authControllerProvider);
       return auth.when(
-        loading: () => _redirectTo(state.matchedLocation, AppRoutePath.authLoading),
+        loading: () =>
+            _redirectTo(state.matchedLocation, AppRoutePath.authLoading),
         error: (error, stackTrace) =>
             _redirectTo(state.matchedLocation, AppRoutePath.login),
         data: (authState) {

@@ -66,9 +66,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     : l10n.authHidePassword,
                 onPressed: auth.isLoading
                     ? null
-                    : () => setState(
-                        () => _obscurePassword = !_obscurePassword,
-                      ),
+                    : () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                 icon: Icon(
                   _obscurePassword
                       ? Icons.visibility_outlined

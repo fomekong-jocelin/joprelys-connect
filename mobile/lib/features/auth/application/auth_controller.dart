@@ -36,11 +36,7 @@ final class AuthState {
     : this(status: AuthStatus.authenticated, session: session);
 
   const AuthState.locked(ProfessionalSession session, {String? errorCode})
-    : this(
-        status: AuthStatus.locked,
-        session: session,
-        errorCode: errorCode,
-      );
+    : this(status: AuthStatus.locked, session: session, errorCode: errorCode);
 
   const AuthState.recoveryError(
     ProfessionalSession session, {
@@ -76,9 +72,7 @@ class AuthController extends AsyncNotifier<AuthState> {
       final session = result.session;
       state = session == null
           ? const AsyncData(
-              AuthState.unauthenticated(
-                errorCode: 'AUTH_RESPONSE_INVALID',
-              ),
+              AuthState.unauthenticated(errorCode: 'AUTH_RESPONSE_INVALID'),
             )
           : AsyncData(AuthState.authenticated(session));
     } on ApiException catch (error) {
@@ -157,9 +151,7 @@ class AuthController extends AsyncNotifier<AuthState> {
     final result = await authenticator.authenticate(reason: reason);
     if (result != BiometricUnlockResult.success) {
       state = AsyncData(
-        AuthState.authenticated(session).withError(
-          _biometricErrorCode(result),
-        ),
+        AuthState.authenticated(session).withError(_biometricErrorCode(result)),
       );
       return false;
     }
@@ -187,8 +179,7 @@ class AuthController extends AsyncNotifier<AuthState> {
   void lock() {
     final current = state.value;
     final session = current?.session;
-    if (current?.isAuthenticated == true &&
-        session?.biometricEnabled == true) {
+    if (current?.isAuthenticated == true && session?.biometricEnabled == true) {
       state = AsyncData(AuthState.locked(session!));
     }
   }
@@ -252,5 +243,6 @@ extension on AuthState {
   }
 }
 
-final authControllerProvider =
-    AsyncNotifierProvider<AuthController, AuthState>(AuthController.new);
+final authControllerProvider = AsyncNotifierProvider<AuthController, AuthState>(
+  AuthController.new,
+);

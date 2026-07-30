@@ -12,7 +12,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get appTitle => 'Joprelys Connect';
 
   @override
-  String get foundationBadge => 'MOB-2803';
+  String get foundationBadge => 'MOB-2805';
 
   @override
   String get foundationLanguageTitle => 'Langue';
@@ -34,4 +34,151 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get themeDark => 'Sombre';
+
+  @override
+  String get authLoadingTitle => 'Restauration sécurisée de la session…';
+
+  @override
+  String get authLoginTitle => 'Connexion professionnelle';
+
+  @override
+  String get authLoginSubtitle =>
+      'Accédez à votre espace Joprelys Connect avec vos identifiants professionnels.';
+
+  @override
+  String get authEmailLabel => 'Adresse e-mail';
+
+  @override
+  String get authPasswordLabel => 'Mot de passe';
+
+  @override
+  String get authShowPassword => 'Afficher le mot de passe';
+
+  @override
+  String get authHidePassword => 'Masquer le mot de passe';
+
+  @override
+  String get authInvalidEmail => 'Saisissez une adresse e-mail valide.';
+
+  @override
+  String get authPasswordRequired => 'Le mot de passe est requis.';
+
+  @override
+  String get authSignIn => 'Se connecter';
+
+  @override
+  String get authOtpTitle => 'Vérification de sécurité';
+
+  @override
+  String authOtpSubtitle(String email) {
+    return 'Saisissez le code envoyé pour $email.';
+  }
+
+  @override
+  String get authOtpLabel => 'Code de vérification';
+
+  @override
+  String get authOtpRequired => 'Le code de vérification est requis.';
+
+  @override
+  String get authVerifyOtp => 'Vérifier le code';
+
+  @override
+  String get authBackToLogin => 'Revenir à la connexion';
+
+  @override
+  String get authUnlockTitle => 'Application verrouillée';
+
+  @override
+  String authUnlockSubtitle(String name) {
+    return 'Déverrouillez la session de $name avec la biométrie de cet appareil.';
+  }
+
+  @override
+  String get authUnlockAction => 'Déverrouiller';
+
+  @override
+  String get authLogout => 'Se déconnecter';
+
+  @override
+  String get authBiometricUnlockReason =>
+      'Déverrouiller votre session Joprelys Connect';
+
+  @override
+  String get authRecoveryTitle => 'Session temporairement indisponible';
+
+  @override
+  String get authRecoverySubtitle =>
+      'La session locale est conservée, mais le serveur ne peut pas être joint pour le moment.';
+
+  @override
+  String get authRetry => 'Réessayer';
+
+  @override
+  String get authForgetSession => 'Supprimer cette session';
+
+  @override
+  String get authRecoveryUnavailable =>
+      'Impossible de restaurer la session actuellement. Vérifiez votre connexion puis réessayez.';
+
+  @override
+  String get authBiometricCancelled =>
+      'Le déverrouillage biométrique a été annulé.';
+
+  @override
+  String get authBiometricUnavailable =>
+      'La biométrie n’est pas disponible ou configurée sur cet appareil.';
+
+  @override
+  String get authBiometricLocked =>
+      'La biométrie est temporairement verrouillée. Utilisez les options de sécurité de l’appareil.';
+
+  @override
+  String get authBiometricFailed => 'Le contrôle biométrique a échoué.';
+
+  @override
+  String get authOtpContextMissing =>
+      'La vérification a expiré. Recommencez la connexion.';
+
+  @override
+  String get authOtpInvalid =>
+      'Le code de vérification est invalide ou expiré.';
+
+  @override
+  String get authInvalidCredentials =>
+      'Adresse e-mail ou mot de passe incorrect.';
+
+  @override
+  String get authRateLimited =>
+      'Trop de tentatives. Patientez avant de réessayer.';
+
+  @override
+  String get authNetworkUnavailable => 'Aucune connexion réseau disponible.';
+
+  @override
+  String get authRequestTimeout =>
+      'Le serveur met trop de temps à répondre. Réessayez.';
+
+  @override
+  String get authGenericError => 'Une erreur empêche la connexion. Réessayez.';
+
+  @override
+  String authSignedInAs(String name) {
+    return 'Connecté en tant que $name';
+  }
+
+  @override
+  String authRoleLabel(String role) {
+    return 'Rôle : $role';
+  }
+
+  @override
+  String get authEnableBiometrics => 'Activer le verrouillage biométrique';
+
+  @override
+  String get authDisableBiometrics => 'Désactiver le verrouillage biométrique';
+
+  @override
+  String get authBiometricEnableReason =>
+      'Confirmer l’activation du verrouillage biométrique Joprelys Connect';
 }

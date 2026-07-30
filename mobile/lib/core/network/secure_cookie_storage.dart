@@ -4,10 +4,7 @@ import 'package:cookie_jar/cookie_jar.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 final class SecureCookieStorage extends Storage {
-  SecureCookieStorage(
-    this._storage, {
-    this.namespace = 'joprelys.cookie',
-  });
+  SecureCookieStorage(this._storage, {this.namespace = 'joprelys.cookie'});
 
   final FlutterSecureStorage _storage;
   final String namespace;

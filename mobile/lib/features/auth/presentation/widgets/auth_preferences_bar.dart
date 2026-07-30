@@ -46,14 +46,8 @@ class AuthPreferencesBar extends ConsumerWidget {
               value: ThemeMode.system,
               child: Text(l10n.themeSystem),
             ),
-            PopupMenuItem(
-              value: ThemeMode.light,
-              child: Text(l10n.themeLight),
-            ),
-            PopupMenuItem(
-              value: ThemeMode.dark,
-              child: Text(l10n.themeDark),
-            ),
+            PopupMenuItem(value: ThemeMode.light, child: Text(l10n.themeLight)),
+            PopupMenuItem(value: ThemeMode.dark, child: Text(l10n.themeDark)),
           ],
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

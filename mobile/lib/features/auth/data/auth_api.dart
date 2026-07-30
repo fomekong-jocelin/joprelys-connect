@@ -82,10 +82,7 @@ final class AuthApi implements AuthGateway {
     );
   }
 
-  AuthExchangeResult _parseExchange(
-    Object? payload, {
-    String? fallbackEmail,
-  }) {
+  AuthExchangeResult _parseExchange(Object? payload, {String? fallbackEmail}) {
     final data = _asMap(payload);
     final requiresOtp = data['requiresOtp'] == true;
     final email = _optionalString(data['email']) ?? fallbackEmail?.trim();
