@@ -346,4 +346,33 @@ extension DashboardLocalizations on AppLocalizations {
   String get consultationPlanHelp => _isFrench
       ? 'Détaillez la conduite à tenir : traitement, examens complémentaires, suivi.'
       : 'Detail the action plan: treatment, complementary exams, follow-up.';
+
+  // ── Annuaire des patients i18n ──
+
+  String get directorySearchHint => _isFrench
+      ? 'Rechercher par nom, DPU, téléphone…'
+      : 'Search by name, DPU, phone…';
+
+  String get directoryTabActiveQueue =>
+      _isFrench ? 'File d\'attente active' : 'Active queue';
+
+  String get directoryTabAllPatients =>
+      _isFrench ? 'Annuaire (Tous les patients)' : 'Directory (All patients)';
+
+  String get directoryEmptyText =>
+      _isFrench ? 'Aucun patient trouvé dans l\'annuaire' : 'No patient found in directory';
+
+  String get directoryOpenHistory =>
+      _isFrench ? 'Dossier médical' : 'Medical record';
+
+  // ── Action Chips i18n ──
+
+  String get dashboardQueueActionVitals =>
+      _isFrench ? 'Constantes' : 'Vitals';
+
+  String get dashboardQueueActionConsultation =>
+      _isFrench ? 'SOAP' : 'SOAP';
+
+  String get dashboardQueueActionHistory =>
+      _isFrench ? 'Historique' : 'History';
 }
