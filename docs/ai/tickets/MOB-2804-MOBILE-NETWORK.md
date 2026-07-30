@@ -4,7 +4,7 @@
 
 IN_REVIEW — issue #252 / PR #253. Branche créée depuis `main` au commit `43e3d0538e5af7873954b49ea273e4ee0e9cf726`, après fusion de MOB-2803.
 
-Gate runtime #2046 vert sur `0c2670a3545bedc60d2f241e9452bc7a6a594de8`. Clôture documentaire et gate final exact-HEAD requis avant fusion.
+Gate runtime #2046 vert sur `0c2670a3545bedc60d2f241e9452bc7a6a594de8`. Clôture documentaire terminée ; gate final exact-HEAD requis avant fusion.
 
 ## Objectif
 
@@ -35,7 +35,7 @@ Fournir la fondation réseau Flutter centralisée et testable nécessaire à MOB
 - [x] tests d’environnement, erreurs, headers, refresh, concurrence, patient, 403 et retry ;
 - [x] format/analyze/tests/APK verts dans le gate runtime #2046 ;
 - [x] documentation fonctionnelle, technique et tests ;
-- [ ] suivi central et changelog ;
+- [x] suivi central et changelog ;
 - [ ] gate final exact-HEAD.
 
 ## Contrat backend vérifié
