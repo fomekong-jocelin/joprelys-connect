@@ -116,8 +116,18 @@ class AuthController extends AsyncNotifier<AuthState> {
     }
   }
 
-  void cancelOtp() {
-    state = const AsyncData(AuthState.unauthenticated());
+  Future<void> cancelOtp() async {
+    state = const AsyncLoading();
+    try {
+      await ref.read(authSessionManagerProvider).clearLocalSession();
+      state = const AsyncData(AuthState.unauthenticated());
+    } catch (_) {
+      state = const AsyncData(
+        AuthState.unauthenticated(
+          errorCode: 'AUTH_LOCAL_SESSION_CLEAR_FAILED',
+        ),
+      );
+    }
   }
 
   Future<void> retryRestore() async {
@@ -126,11 +136,48 @@ class AuthController extends AsyncNotifier<AuthState> {
   }
 
   Future<void> logout() async {
+    final previous = state.value;
     state = const AsyncLoading();
     try {
       await ref.read(authSessionManagerProvider).logout();
-    } finally {
       state = const AsyncData(AuthState.unauthenticated());
+    } catch (_) {
+      final session = previous?.session;
+      state = session == null
+          ? const AsyncData(
+              AuthState.unauthenticated(
+                errorCode: 'AUTH_LOCAL_SESSION_CLEAR_FAILED',
+              ),
+            )
+          : AsyncData(
+              AuthState.recoveryError(
+                session,
+                errorCode: 'AUTH_LOCAL_SESSION_CLEAR_FAILED',
+              ),
+            );
+    }
+  }
+
+  Future<void> forgetSession() async {
+    final previous = state.value;
+    state = const AsyncLoading();
+    try {
+      await ref.read(authSessionManagerProvider).clearLocalSession();
+      state = const AsyncData(AuthState.unauthenticated());
+    } catch (_) {
+      final session = previous?.session;
+      state = session == null
+          ? const AsyncData(
+              AuthState.unauthenticated(
+                errorCode: 'AUTH_LOCAL_SESSION_CLEAR_FAILED',
+              ),
+            )
+          : AsyncData(
+              AuthState.recoveryError(
+                session,
+                errorCode: 'AUTH_LOCAL_SESSION_CLEAR_FAILED',
+              ),
+            );
     }
   }
 
