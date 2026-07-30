@@ -16,11 +16,7 @@ abstract final class AppLocaleFormatters {
     return '${formatDate(value, locale)} · ${formatTime(value, locale)}';
   }
 
-  static String formatNumber(
-    num value,
-    Locale locale, {
-    int? decimalDigits,
-  }) {
+  static String formatNumber(num value, Locale locale, {int? decimalDigits}) {
     final formatter = NumberFormat.decimalPattern(_intlLocale(locale));
     if (decimalDigits != null) {
       formatter.minimumFractionDigits = decimalDigits;

@@ -21,10 +21,7 @@ void main() {
     expect(french, contains('2026'));
     expect(english, contains('2026'));
     expect(french, isNot(equals(english)));
-    expect(
-      AppLocaleFormatters.formatTime(value, const Locale('fr')),
-      '16:05',
-    );
+    expect(AppLocaleFormatters.formatTime(value, const Locale('fr')), '16:05');
   });
 
   test('formats decimal numbers according to the active locale', () {

@@ -9,9 +9,7 @@ import 'package:joprelys_mobile/core/i18n/locale_controller.dart';
 void main() {
   Widget buildFrenchApp() {
     return ProviderScope(
-      overrides: [
-        platformLocaleProvider.overrideWithValue(const Locale('fr')),
-      ],
+      overrides: [platformLocaleProvider.overrideWithValue(const Locale('fr'))],
       child: const JoprelysApp(),
     );
   }

@@ -24,22 +24,25 @@ void main() {
     );
   });
 
-  test('initializes from the supported device locale and switches explicitly', () {
-    final container = ProviderContainer(
-      overrides: [
-        platformLocaleProvider.overrideWithValue(const Locale('en', 'US')),
-      ],
-    );
-    addTearDown(container.dispose);
+  test(
+    'initializes from the supported device locale and switches explicitly',
+    () {
+      final container = ProviderContainer(
+        overrides: [
+          platformLocaleProvider.overrideWithValue(const Locale('en', 'US')),
+        ],
+      );
+      addTearDown(container.dispose);
 
-    expect(container.read(appLocaleProvider), const Locale('en'));
+      expect(container.read(appLocaleProvider), const Locale('en'));
 
-    container.read(appLocaleProvider.notifier).useFrench();
-    expect(container.read(appLocaleProvider), const Locale('fr'));
+      container.read(appLocaleProvider.notifier).useFrench();
+      expect(container.read(appLocaleProvider), const Locale('fr'));
 
-    container.read(appLocaleProvider.notifier).useEnglish();
-    expect(container.read(appLocaleProvider), const Locale('en'));
-  });
+      container.read(appLocaleProvider.notifier).useEnglish();
+      expect(container.read(appLocaleProvider), const Locale('en'));
+    },
+  );
 
   test('uses French when the device locale is unsupported', () {
     final container = ProviderContainer(
