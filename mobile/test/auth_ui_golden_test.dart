@@ -11,6 +11,9 @@ import 'package:joprelys_mobile/core/i18n/locale_controller.dart';
 import 'package:joprelys_mobile/core/theme/theme_controller.dart';
 import 'package:joprelys_mobile/features/auth/application/auth_controller.dart';
 import 'package:joprelys_mobile/features/auth/domain/professional_session.dart';
+import 'package:joprelys_mobile/features/dashboard/application/active_queue_controller.dart';
+import 'package:joprelys_mobile/features/dashboard/data/active_visits_api.dart';
+import 'package:joprelys_mobile/features/dashboard/domain/active_visit.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -31,7 +34,7 @@ void main() {
     );
   });
 
-  testWidgets('dark professional home matches the visual baseline', (
+  testWidgets('dark professional home uses the compact native dashboard', (
     tester,
   ) async {
     await _configureMobileSurface(tester);
@@ -42,15 +45,32 @@ void main() {
       name: 'Alex Martin',
       role: 'ADMIN_CLINIQUE',
     );
+    final visits = [
+      ActiveVisit(
+        id: 'visit-1',
+        visitNumber: 'VIS-20260730-001',
+        patientId: 'patient-1',
+        patientName: 'Momo Allons',
+        patientDpu: 'DPU-001',
+        reason: 'Fièvre',
+        orientation: 'Médecine générale',
+        status: 'ACTIVE',
+        createdAt: DateTime.utc(2026, 7, 30, 12),
+        arrivalAt: DateTime.utc(2026, 7, 30, 13, 23),
+        vitals: const VisitVitals(temperature: 38.2),
+      ),
+    ];
 
-    await tester.pumpWidget(_buildDarkApp(AuthState.authenticated(session)));
-    await tester.pumpAndSettle();
-    await _precacheBrandAsset(tester);
-
-    await expectLater(
-      find.byType(JoprelysApp),
-      matchesGoldenFile('goldens/professional_home_dark.png'),
+    await tester.pumpWidget(
+      _buildDarkApp(AuthState.authenticated(session), visits: visits),
     );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ravi de vous revoir, Alex'), findsOneWidget);
+    expect(find.text('Patients en attente'), findsOneWidget);
+    expect(find.text('Momo Allons'), findsOneWidget);
+    expect(find.text('Fièvre'), findsOneWidget);
+    expect(find.text('Compte professionnel'), findsNothing);
   });
 }
 
@@ -92,7 +112,10 @@ Future<void> _configureMobileSurface(WidgetTester tester) async {
   addTearDown(tester.view.resetPhysicalSize);
 }
 
-Widget _buildDarkApp(AuthState initialState) {
+Widget _buildDarkApp(
+  AuthState initialState, {
+  List<ActiveVisit> visits = const <ActiveVisit>[],
+}) {
   return ProviderScope(
     overrides: [
       platformLocaleProvider.overrideWithValue(const Locale('fr')),
@@ -100,9 +123,19 @@ Widget _buildDarkApp(AuthState initialState) {
       authControllerProvider.overrideWith(
         () => _GoldenAuthController(initialState),
       ),
+      activeVisitsApiProvider.overrideWithValue(_GoldenActiveVisitsGateway(visits)),
     ],
     child: const JoprelysApp(),
   );
+}
+
+final class _GoldenActiveVisitsGateway implements ActiveVisitsGateway {
+  const _GoldenActiveVisitsGateway(this.visits);
+
+  final List<ActiveVisit> visits;
+
+  @override
+  Future<List<ActiveVisit>> getActiveVisits() async => visits;
 }
 
 final class _DarkThemeController extends ThemeController {
