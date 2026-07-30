@@ -16,9 +16,9 @@
   "foundationSecurityTitle": "Sécurité de l’application",
   "foundationBiometricEnabled": "Le verrouillage biométrique est activé sur cet appareil.",
   "foundationBiometricDisabled": "Protégez l’accès local avec la biométrie de cet appareil.",
-  "dashboardQueueTitle": "File d’attente active",
-  "dashboardQueueSubtitleLoading": "Actualisation de l’activité clinique…",
-  "dashboardQueueSubtitle": "{count, plural, =0{Aucun patient en attente} =1{1 patient à prendre en charge} other{{count} patients à prendre en charge}}",
+  "dashboardQueueTitle": "Patients en attente",
+  "dashboardQueueSubtitleLoading": "Actualisation de la file…",
+  "dashboardQueueSubtitle": "{count, plural, =0{Aucun patient dans la file} =1{1 patient dans la file} other{{count} patients dans la file}}",
   "@dashboardQueueSubtitle": {
     "placeholders": {
       "count": {
@@ -28,15 +28,18 @@
   },
   "dashboardQueueRefresh": "Actualiser la file d’attente",
   "dashboardQueueTotal": "Patients actifs",
+  "dashboardQueueTotalCompact": "En attente",
   "dashboardQueueWithVitals": "Constantes saisies",
+  "dashboardQueueWithVitalsCompact": "Prêts",
   "dashboardQueueWithoutVitals": "À évaluer",
-  "dashboardQueueEmptyTitle": "La file est à jour",
+  "dashboardQueueEmptyTitle": "Tout est à jour",
   "dashboardQueueEmptyBody": "Aucun patient n’attend actuellement une prise en charge.",
   "dashboardQueueLoadError": "La file d’attente ne peut pas être chargée pour le moment.",
   "dashboardQueueRetry": "Réessayer",
   "dashboardQueueVitalsReady": "Constantes OK",
+  "dashboardQueueVitalsReadyCompact": "Prêt",
   "dashboardQueueVitalsPending": "À évaluer",
-  "dashboardQueueVisitReference": "Visite {visitNumber} · DPU {patientDpu}",
+  "dashboardQueueVisitReference": "{visitNumber} · DPU {patientDpu}",
   "@dashboardQueueVisitReference": {
     "placeholders": {
       "visitNumber": {
@@ -47,7 +50,7 @@
       }
     }
   },
-  "dashboardQueueArrivedAt": "Arrivée à {time}",
+  "dashboardQueueArrivedAt": "Arrivée {time}",
   "@dashboardQueueArrivedAt": {
     "placeholders": {
       "time": {
