@@ -3,15 +3,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:joprelys_mobile/core/config/app_environment.dart';
 
 void main() {
-  test('accepts an HTTP development endpoint and normalizes trailing slash', () {
-    final config = AppRuntimeConfig.fromValues(
-      environmentName: 'dev',
-      apiBaseUrl: 'http://10.0.2.2:8080/',
-    );
+  test(
+    'accepts an HTTP development endpoint and normalizes trailing slash',
+    () {
+      final config = AppRuntimeConfig.fromValues(
+        environmentName: 'dev',
+        apiBaseUrl: 'http://10.0.2.2:8080/',
+      );
 
-    expect(config.environment, AppEnvironment.dev);
-    expect(config.apiBaseUri.toString(), 'http://10.0.2.2:8080');
-  });
+      expect(config.environment, AppEnvironment.dev);
+      expect(config.apiBaseUri.toString(), 'http://10.0.2.2:8080');
+    },
+  );
 
   test('requires HTTPS for recette and production', () {
     expect(

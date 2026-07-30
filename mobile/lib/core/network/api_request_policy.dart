@@ -1,14 +1,6 @@
-enum ApiAuthenticationMode {
-  none,
-  optional,
-  required,
-}
+enum ApiAuthenticationMode { none, optional, required }
 
-enum ApiRetryMode {
-  never,
-  safeMethod,
-  idempotencyKey,
-}
+enum ApiRetryMode { never, safeMethod, idempotencyKey }
 
 final class ApiRequestPolicy {
   const ApiRequestPolicy({

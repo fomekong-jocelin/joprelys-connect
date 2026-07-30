@@ -3,10 +3,8 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
-typedef QueueResponseHandler = FutureOr<ResponseBody> Function(
-  RequestOptions options,
-  int callIndex,
-);
+typedef QueueResponseHandler =
+    FutureOr<ResponseBody> Function(RequestOptions options, int callIndex);
 
 final class QueueHttpClientAdapter implements HttpClientAdapter {
   QueueHttpClientAdapter(this._handler);

@@ -50,7 +50,9 @@ void main() {
     final response = Response<dynamic>(
       requestOptions: request,
       statusCode: 401,
-      headers: Headers.fromMap({ApiHeaders.traceId: ['trc_response']}),
+      headers: Headers.fromMap({
+        ApiHeaders.traceId: ['trc_response'],
+      }),
       data: {
         'title': 'Invalid authentication session',
         'detail': 'AUTH_SESSION_INVALID',

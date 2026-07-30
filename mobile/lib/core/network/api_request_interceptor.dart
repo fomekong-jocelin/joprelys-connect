@@ -33,13 +33,13 @@ final class ApiRequestInterceptor extends Interceptor {
       ApiHeaders.acceptLanguage,
       () => _localeReader().languageCode,
     );
-    options.headers.putIfAbsent(
-      ApiHeaders.traceId,
-      _traceIdFactory.create,
-    );
+    options.headers.putIfAbsent(ApiHeaders.traceId, _traceIdFactory.create);
 
     if (options.data != null) {
-      options.headers.putIfAbsent(ApiHeaders.contentType, () => ApiHeaders.json);
+      options.headers.putIfAbsent(
+        ApiHeaders.contentType,
+        () => ApiHeaders.json,
+      );
     }
 
     final idempotencyKey = policy.idempotencyKey?.trim();

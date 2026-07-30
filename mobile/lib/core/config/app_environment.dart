@@ -20,10 +20,7 @@ enum AppEnvironment {
 }
 
 final class AppRuntimeConfig {
-  const AppRuntimeConfig({
-    required this.environment,
-    required this.apiBaseUri,
-  });
+  const AppRuntimeConfig({required this.environment, required this.apiBaseUri});
 
   final AppEnvironment environment;
   final Uri apiBaseUri;

@@ -1,7 +1,4 @@
-enum ApiSessionKind {
-  professional,
-  patient,
-}
+enum ApiSessionKind { professional, patient }
 
 final class ApiSessionSnapshot {
   const ApiSessionSnapshot({

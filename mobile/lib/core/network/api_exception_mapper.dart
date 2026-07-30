@@ -24,7 +24,8 @@ final class ApiExceptionMapper {
       detail: detail,
       statusCode: statusCode,
     );
-    final traceId = _string(nestedError?['trace_id']) ??
+    final traceId =
+        _string(nestedError?['trace_id']) ??
         response?.headers.value(ApiHeaders.traceId) ??
         _string(exception.requestOptions.headers[ApiHeaders.traceId]);
 

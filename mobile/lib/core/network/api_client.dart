@@ -5,11 +5,9 @@ import 'api_exception_mapper.dart';
 import 'api_request_policy.dart';
 
 final class ApiClient {
-  ApiClient({
-    required Dio dio,
-    required ApiExceptionMapper exceptionMapper,
-  }) : _dio = dio,
-       _exceptionMapper = exceptionMapper;
+  ApiClient({required Dio dio, required ApiExceptionMapper exceptionMapper})
+    : _dio = dio,
+      _exceptionMapper = exceptionMapper;
 
   final Dio _dio;
   final ApiExceptionMapper _exceptionMapper;
