@@ -15,19 +15,23 @@
           <button
             type="button"
             (click)="setLang('fr')"
-            [class]="i18n.locale() === 'fr' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'"
+            [class]="i18n.locale() === 'fr' ? 'inline-flex items-center gap-1 text-brand-cyan font-extrabold pointer-events-none' : 'inline-flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'"
             [attr.aria-pressed]="i18n.locale() === 'fr'"
+            [attr.aria-label]="i18n.t('shell.language.label') + ' FR'"
           >
-            FR
+            <span aria-hidden="true">🇫🇷</span>
+            <span>FR</span>
           </button>
           <span style="color:var(--divider)">|</span>
           <button
             type="button"
             (click)="setLang('en')"
-            [class]="i18n.locale() === 'en' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'"
+            [class]="i18n.locale() === 'en' ? 'inline-flex items-center gap-1 text-brand-cyan font-extrabold pointer-events-none' : 'inline-flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'"
             [attr.aria-pressed]="i18n.locale() === 'en'"
+            [attr.aria-label]="i18n.t('shell.language.label') + ' EN'"
           >
-            EN
+            <span aria-hidden="true">🇬🇧</span>
+            <span>EN</span>
           </button>
         </div>
 
@@ -329,35 +333,45 @@
                 <p class="mt-1 text-xs text-[var(--text-muted)]">{{ i18n.t('selfRegistration.validationHelp') }}</p>
               </div>
 
-              <div class="space-y-4 p-4 rounded-[6px] border bg-[var(--app-surface-muted)] dark:bg-slate-900/50" style="border-color: var(--border-color)">
-                <div class="flex justify-between items-center gap-3 border-b pb-2">
-                  <h3 class="text-xs font-bold uppercase tracking-wider" style="color: var(--brand-primary)">
-                    {{ i18n.t('selfRegistration.captchaTitle') }}
-                  </h3>
-                  <button
-                    type="button"
-                    (click)="loadCaptcha()"
-                    [disabled]="captchaLoading()"
-                    class="text-xxs font-semibold hover:underline flex items-center gap-1 disabled:opacity-50"
-                    style="color: var(--brand-primary)"
-                  >
-                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M9 11l3 3L22 4" />
+              <div class="rounded-[8px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-4">
+                <div class="flex items-start gap-3">
+                  <div class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] text-brand-cyan" aria-hidden="true">
+                    <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3.75 5.25 6v5.25c0 4.23 2.75 7.86 6.75 9 4-1.14 6.75-4.77 6.75-9V6L12 3.75Z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9.75 12 1.5 1.5 3-3" />
                     </svg>
-                    {{ i18n.t('selfRegistration.captchaRefresh') }}
-                  </button>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <h3 class="text-xs font-bold text-[var(--text-secondary)]">{{ i18n.t('selfRegistration.captchaTitle') }}</h3>
+                    <p class="mt-1 text-xs text-[var(--text-muted)]">{{ i18n.t('selfRegistration.captchaHelp') }}</p>
+                  </div>
                 </div>
 
-                <p class="text-xs text-[var(--text-muted)]">{{ i18n.t('selfRegistration.captchaHelp') }}</p>
-
                 @if (captchaLoading()) {
-                  <div class="flex items-center justify-center py-4">
-                    <div class="h-5 w-5 border-2 border-[var(--brand-primary)] border-t-transparent rounded-full animate-spin"></div>
+                  <div class="mt-4 flex items-center justify-center rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] py-5" aria-live="polite">
+                    <div class="h-5 w-5 border-2 border-[var(--brand-primary)] border-t-transparent rounded-full animate-spin" aria-hidden="true"></div>
                   </div>
                 } @else if (captchaQuestion()) {
-                  <div class="space-y-3">
-                    <div class="p-3 bg-[var(--app-surface)] border rounded-[4px] text-xs font-semibold text-[var(--text-secondary)]" style="border-color: var(--border-color)">
-                      {{ captchaQuestion() }}
+                  <div class="mt-4 space-y-4">
+                    <div class="rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface)] p-3.5">
+                      <div class="flex items-start gap-3">
+                        <p class="min-w-0 flex-1 text-sm font-semibold text-[var(--text-secondary)]">
+                          {{ captchaQuestion() }}
+                        </p>
+                        <button
+                          type="button"
+                          (click)="loadCaptcha()"
+                          [disabled]="captchaLoading()"
+                          [title]="i18n.t('selfRegistration.captchaRefresh')"
+                          [attr.aria-label]="i18n.t('selfRegistration.captchaRefresh')"
+                          class="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-[6px] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2.5 py-2 text-xxs font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--brand-primary)] hover:text-brand-cyan disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 11a8 8 0 10-2.34 5.66M20 11V5m0 6h-6" />
+                          </svg>
+                          <span class="hidden sm:inline">{{ i18n.t('selfRegistration.captchaRefresh') }}</span>
+                        </button>
+                      </div>
                     </div>
 
                     <app-ui-input
