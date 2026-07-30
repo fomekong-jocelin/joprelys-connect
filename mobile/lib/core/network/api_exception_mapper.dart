@@ -50,7 +50,8 @@ final class ApiExceptionMapper {
       ),
       DioExceptionType.connectionTimeout ||
       DioExceptionType.sendTimeout ||
-      DioExceptionType.receiveTimeout => ApiException(
+      DioExceptionType.receiveTimeout ||
+      DioExceptionType.transformTimeout => ApiException(
         kind: ApiFailureKind.timeout,
         code: 'REQUEST_TIMEOUT',
         message: 'REQUEST_TIMEOUT',
@@ -115,7 +116,7 @@ final class ApiExceptionMapper {
       408 => ApiFailureKind.timeout,
       409 => ApiFailureKind.conflict,
       429 => ApiFailureKind.rateLimited,
-      >= 500 => ApiFailureKind.server,
+      int value when value >= 500 => ApiFailureKind.server,
       _ => ApiFailureKind.unknown,
     };
   }
