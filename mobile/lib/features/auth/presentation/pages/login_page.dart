@@ -47,9 +47,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             AppTextField(
               controller: _emailController,
               label: l10n.authEmailLabel,
+              labelPosition: AppTextFieldLabelPosition.above,
+              minimumHeight: 52,
+              hint: l10n.authEmailHint,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.username, AutofillHints.email],
+              autofillHints: const [
+                AutofillHints.username,
+                AutofillHints.email,
+              ],
               autocorrect: false,
               enableSuggestions: false,
               enabled: !auth.isLoading,
@@ -65,6 +71,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             AppTextField(
               controller: _passwordController,
               label: l10n.authPasswordLabel,
+              labelPosition: AppTextFieldLabelPosition.above,
+              minimumHeight: 52,
+              hint: l10n.authPasswordHint,
               textInputAction: TextInputAction.done,
               autofillHints: const [AutofillHints.password],
               autocorrect: false,
@@ -167,9 +176,9 @@ class _AuthErrorBanner extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colors.onErrorContainer,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onErrorContainer),
             ),
           ),
         ],

@@ -41,13 +41,16 @@ void main() {
     );
   });
 
-  test('authenticated users leave auth routes and keep protected locations', () {
-    final state = AuthState.authenticated(professionalSession());
+  test(
+    'authenticated users leave auth routes and keep protected locations',
+    () {
+      final state = AuthState.authenticated(professionalSession());
 
-    expect(authRedirect(state, AppRoutePath.login), AppRoutePath.foundation);
-    expect(authRedirect(state, AppRoutePath.foundation), isNull);
-    expect(authRedirect(state, '/future-protected-route'), isNull);
-  });
+      expect(authRedirect(state, AppRoutePath.login), AppRoutePath.foundation);
+      expect(authRedirect(state, AppRoutePath.foundation), isNull);
+      expect(authRedirect(state, '/future-protected-route'), isNull);
+    },
+  );
 }
 
 ProfessionalSession professionalSession() {

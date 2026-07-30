@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_design_tokens.dart';
 
-enum AppButtonVariant { primary, secondary, destructive }
+enum AppButtonVariant { primary, secondary, destructive, destructiveSecondary }
 
 class AppButton extends StatelessWidget {
   const AppButton({
@@ -29,9 +29,13 @@ class AppButton extends StatelessWidget {
       label: label,
       icon: icon,
       loading: loading,
-      foregroundColor: variant == AppButtonVariant.secondary
-          ? Theme.of(context).colorScheme.primary
-          : AppDesignTokens.onStrongColor,
+      foregroundColor: switch (variant) {
+        AppButtonVariant.secondary => Theme.of(context).colorScheme.primary,
+        AppButtonVariant.destructiveSecondary => Theme.of(
+          context,
+        ).colorScheme.error,
+        _ => AppDesignTokens.onStrongColor,
+      },
     );
 
     final button = switch (variant) {
@@ -54,6 +58,20 @@ class AppButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
           ),
           elevation: 0,
+        ),
+        child: child,
+      ),
+      AppButtonVariant.destructiveSecondary => OutlinedButton(
+        onPressed: action,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Theme.of(context).colorScheme.error,
+          side: BorderSide(
+            color: Theme.of(context).colorScheme.error.withValues(alpha: 0.45),
+            width: AppDesignTokens.borderWidth,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
+          ),
         ),
         child: child,
       ),
@@ -95,7 +113,14 @@ class _ButtonContent extends StatelessWidget {
           const SizedBox(width: AppDesignTokens.spaceSm),
         ],
         Flexible(
-          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(color: foregroundColor),
+          ),
         ),
       ],
     );

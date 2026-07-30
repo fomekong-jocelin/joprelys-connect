@@ -6,7 +6,10 @@ READY_FOR_REVIEW — issue #254 / PR #255.
 
 Branche créée depuis `main` au commit `301734a6dc575555c5c1278c4790425c0389ce56`, fusion squash de MOB-2804.
 
-L’implémentation et la documentation détaillée sont présentes. Le gate Flutter complet et le gate final exact-HEAD restent requis avant fusion.
+L’implémentation, la documentation détaillée et le correctif visuel
+`FIX-20260730-MOBILE-AUTH-WEB-VISUAL-ALIGNMENT` sont présents. L’analyse statique,
+les 53 tests Flutter, les goldens et le build web sont verts. Le build APK, la
+recette Android et le gate final exact-HEAD restent requis avant fusion.
 
 ## Objectif
 
@@ -54,8 +57,9 @@ Aucun nouvel endpoint, refresh token lisible ou contrat alternatif n’est intro
 - [x] configuration Android et iOS ;
 - [x] tests API et cycle de session ;
 - [x] documentation fonctionnelle, technique et plan de test ;
+- [x] alignement visuel mobile/web, accueil professionnel et goldens ;
 - [ ] gate Flutter complet ;
-- [ ] changelog et suivi central après preuve runtime ;
+- [x] changelog et suivi central après preuve runtime locale ;
 - [ ] gate final exact-HEAD.
 
 ## Décisions de sécurité

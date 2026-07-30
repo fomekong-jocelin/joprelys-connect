@@ -166,6 +166,16 @@ Tester les pages login, OTP, unlock et recovery :
 - taille de police système augmentée ;
 - lecteur d’écran sur boutons, champs et erreurs.
 
+Vérifications visuelles supplémentaires :
+
+- thème compact à gauche et segment FR/EN à droite ;
+- marque lisible sans écrasement de l’asset officiel ;
+- titre et sous-titre hors de la carte ;
+- libellés de champs stables et focus visible ;
+- absence de l’identifiant `MOB-2805` dans l’accueil ;
+- identité, rôle, biométrie et déconnexion lisibles sans bouton destructif dominant ;
+- absence de débordement à 360 px et avec une taille de texte augmentée.
+
 ## Contrôles de confidentialité
 
 - rechercher toute occurrence de valeurs réelles de mot de passe, OTP, JWT ou cookie dans le dépôt ;
@@ -193,5 +203,9 @@ flutter build apk --debug
 - [x] préparation iOS ajoutée ;
 - [x] scénarios manuels documentés ;
 - [x] contrôles de confidentialité documentés ;
-- [ ] format, analyse, tests et APK debug verts sur le HEAD final ;
+- [x] format, analyse et 53 tests Flutter verts sur le HEAD local ;
+- [x] build web Flutter vert ;
+- [x] goldens login/accueil sombre à `393 × 852` validées dans `design-qa.md` ;
+- [ ] APK debug vert sur le HEAD final ; exécution locale bloquée par l’accès
+  sandbox au cache Gradle 8.14 et par l’absence de réseau ;
 - [ ] recette réelle Android avec backend recette après autorisation explicite de déploiement/configuration.

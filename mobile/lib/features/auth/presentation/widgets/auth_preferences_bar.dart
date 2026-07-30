@@ -16,42 +16,8 @@ class AuthPreferencesBar extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
 
     return Row(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        PopupMenuButton<String>(
-          tooltip: l10n.foundationLanguageTitle,
-          onSelected: (value) {
-            final controller = ref.read(appLocaleProvider.notifier);
-            value == 'fr' ? controller.useFrench() : controller.useEnglish();
-          },
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: 'fr',
-              child: Row(
-                children: [
-                  const Text('🇫🇷'),
-                  const SizedBox(width: AppDesignTokens.spaceSm),
-                  Text(l10n.languageFrench),
-                ],
-              ),
-            ),
-            PopupMenuItem(
-              value: 'en',
-              child: Row(
-                children: [
-                  const Text('🇬🇧'),
-                  const SizedBox(width: AppDesignTokens.spaceSm),
-                  Text(l10n.languageEnglish),
-                ],
-              ),
-            ),
-          ],
-          child: _PreferenceControl(
-            label: locale.languageCode.toUpperCase(),
-            leading: Text(locale.languageCode == 'fr' ? '🇫🇷' : '🇬🇧'),
-          ),
-        ),
-        const SizedBox(width: AppDesignTokens.spaceSm),
         PopupMenuButton<ThemeMode>(
           tooltip: l10n.foundationThemeTitle,
           initialValue: themeMode,
@@ -79,11 +45,17 @@ class AuthPreferencesBar extends ConsumerWidget {
               ),
             ),
           ],
-          child: _PreferenceControl(
-            label: l10n.foundationThemeTitle,
-            leading: Icon(_themeIcon(themeMode), size: 18),
-            compact: true,
+          child: _ThemeControl(
+            icon: _themeIcon(themeMode),
+            tooltip: l10n.foundationThemeTitle,
           ),
+        ),
+        _LanguageSegment(
+          activeLanguageCode: locale.languageCode,
+          frenchLabel: l10n.languageFrench,
+          englishLabel: l10n.languageEnglish,
+          onFrenchSelected: ref.read(appLocaleProvider.notifier).useFrench,
+          onEnglishSelected: ref.read(appLocaleProvider.notifier).useEnglish,
         ),
       ],
     );
@@ -96,45 +68,128 @@ class AuthPreferencesBar extends ConsumerWidget {
   };
 }
 
-class _PreferenceControl extends StatelessWidget {
-  const _PreferenceControl({
-    required this.label,
-    required this.leading,
-    this.compact = false,
-  });
+class _ThemeControl extends StatelessWidget {
+  const _ThemeControl({required this.icon, required this.tooltip});
 
-  final String label;
-  final Widget leading;
-  final bool compact;
+  final IconData icon;
+  final String tooltip;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Container(
-      constraints: const BoxConstraints(minHeight: AppDesignTokens.minTouchTarget),
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? AppDesignTokens.spaceSm : 12,
-        vertical: AppDesignTokens.spaceSm,
-      ),
+      width: AppDesignTokens.minTouchTarget,
+      height: AppDesignTokens.minTouchTarget,
+      alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: colors.surface.withValues(alpha: 0.78),
+        color: colors.surface.withValues(alpha: 0.92),
         border: Border.all(color: colors.outlineVariant),
         borderRadius: BorderRadius.circular(AppDesignTokens.radiusMd),
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? AppDesignTokens.darkPanelShadow
+            : AppDesignTokens.lightPanelShadow,
+      ),
+      child: Tooltip(message: tooltip, child: Icon(icon, size: 20)),
+    );
+  }
+}
+
+class _LanguageSegment extends StatelessWidget {
+  const _LanguageSegment({
+    required this.activeLanguageCode,
+    required this.frenchLabel,
+    required this.englishLabel,
+    required this.onFrenchSelected,
+    required this.onEnglishSelected,
+  });
+
+  final String activeLanguageCode;
+  final String frenchLabel;
+  final String englishLabel;
+  final VoidCallback onFrenchSelected;
+  final VoidCallback onEnglishSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(AppDesignTokens.spaceXs),
+      decoration: BoxDecoration(
+        color: colors.surface.withValues(alpha: 0.92),
+        border: Border.all(color: colors.outlineVariant),
+        borderRadius: BorderRadius.circular(AppDesignTokens.radiusMd),
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? AppDesignTokens.darkPanelShadow
+            : AppDesignTokens.lightPanelShadow,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          leading,
-          if (!compact) ...[
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-          ],
-          const SizedBox(width: 2),
-          const Icon(Icons.arrow_drop_down, size: 18),
+          _LanguageButton(
+            code: 'FR',
+            tooltip: frenchLabel,
+            selected: activeLanguageCode == 'fr',
+            onPressed: onFrenchSelected,
+          ),
+          const SizedBox(width: AppDesignTokens.spaceXs),
+          _LanguageButton(
+            code: 'EN',
+            tooltip: englishLabel,
+            selected: activeLanguageCode == 'en',
+            onPressed: onEnglishSelected,
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _LanguageButton extends StatelessWidget {
+  const _LanguageButton({
+    required this.code,
+    required this.tooltip,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  final String code;
+  final String tooltip;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: tooltip,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          constraints: const BoxConstraints(minWidth: 48, minHeight: 36),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDesignTokens.spaceSm,
+          ),
+          decoration: BoxDecoration(
+            color: selected ? colors.surface : Colors.transparent,
+            border: Border.all(
+              color: selected ? colors.primary : Colors.transparent,
+            ),
+            borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
+          ),
+          child: Center(
+            child: Text(
+              code,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: selected ? colors.primary : colors.onSurfaceVariant,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

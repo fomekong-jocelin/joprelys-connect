@@ -7,8 +7,7 @@ abstract final class AppConfig {
   static const String productName = 'Connect';
   static const String appName = '$appShortName $productName';
 
-  static const String logoAsset =
-      'assets/branding/logo_principal.png';
+  static const String logoAsset = 'assets/branding/logo_principal.png';
   static const String logoOnDarkAsset =
       'assets/branding/logo_white_blue_bg.png';
   static const String logoIconAsset = 'assets/branding/logo_icon.png';

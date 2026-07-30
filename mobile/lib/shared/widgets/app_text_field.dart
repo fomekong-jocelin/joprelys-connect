@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_design_tokens.dart';
+
+enum AppTextFieldLabelPosition { inline, above }
+
 class AppTextField extends StatelessWidget {
   const AppTextField({
     this.controller,
@@ -20,6 +24,8 @@ class AppTextField extends StatelessWidget {
     this.minLines,
     this.prefixIcon,
     this.suffixIcon,
+    this.labelPosition = AppTextFieldLabelPosition.inline,
+    this.minimumHeight,
     super.key,
   });
 
@@ -41,10 +47,12 @@ class AppTextField extends StatelessWidget {
   final int? minLines;
   final Widget? prefixIcon;
   final Widget? suffixIcon;
+  final AppTextFieldLabelPosition labelPosition;
+  final double? minimumHeight;
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    final textField = TextField(
       controller: controller,
       enabled: enabled,
       obscureText: obscureText,
@@ -58,13 +66,31 @@ class AppTextField extends StatelessWidget {
       maxLines: obscureText ? 1 : maxLines,
       minLines: obscureText ? 1 : minLines,
       decoration: InputDecoration(
-        labelText: label,
+        labelText: labelPosition == AppTextFieldLabelPosition.inline
+            ? label
+            : null,
         hintText: hint,
         errorText: errorText,
         helperText: helperText,
         prefixIcon: prefixIcon,
         suffixIcon: suffixIcon,
+        constraints: minimumHeight == null
+            ? null
+            : BoxConstraints(minHeight: minimumHeight!),
       ),
+    );
+
+    if (label == null || labelPosition == AppTextFieldLabelPosition.inline) {
+      return textField;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(label!, style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: AppDesignTokens.spaceSm),
+        Semantics(label: label, textField: true, child: textField),
+      ],
     );
   }
 }

@@ -16,8 +16,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   ref.listen(authControllerProvider, (previous, next) => refresh.notify());
   ref.onDispose(refresh.dispose);
 
-  final router = GoRouter(
-    initialLocation: AppRoutePath.foundation,
+  final router = createAppRouter(
     refreshListenable: refresh,
     redirect: (context, state) {
       final auth = ref.read(authControllerProvider);
@@ -29,6 +28,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         data: (authState) => authRedirect(authState, state.matchedLocation),
       );
     },
+  );
+  ref.onDispose(router.dispose);
+  return router;
+});
+
+GoRouter createAppRouter({
+  Listenable? refreshListenable,
+  GoRouterRedirect? redirect,
+}) {
+  return GoRouter(
+    initialLocation: AppRoutePath.foundation,
+    refreshListenable: refreshListenable,
+    redirect: redirect,
     routes: [
       GoRoute(
         path: AppRoutePath.foundation,
@@ -62,9 +74,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
-  ref.onDispose(router.dispose);
-  return router;
-});
+}
 
 String authRouteFor(AuthStatus status) {
   return switch (status) {
