@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'app/app.dart';
+import 'core/network/api_client_providers.dart';
+import 'features/auth/application/auth_providers.dart';
 
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,5 +12,14 @@ Future<void> bootstrap() async {
     initializeDateFormatting('fr_FR'),
     initializeDateFormatting('en_GB'),
   ]);
-  runApp(const ProviderScope(child: JoprelysApp()));
+  runApp(
+    ProviderScope(
+      overrides: [
+        apiSessionAccessProvider.overrideWith(
+          (ref) => ref.watch(authSessionManagerProvider),
+        ),
+      ],
+      child: const JoprelysApp(),
+    ),
+  );
 }
