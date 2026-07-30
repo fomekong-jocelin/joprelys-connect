@@ -101,13 +101,16 @@ describe('PatientSelfRegistrationComponent', () => {
     expect(mockI18n.setLocale).toHaveBeenCalledWith('en');
   });
 
-  it('should expose exits to the public site and patient login before filling the form', () => {
+  it('should expose environment-aware exits, login and language flags before filling the form', () => {
     const element: HTMLElement = fixture.nativeElement;
-    const publicSiteLink = element.querySelector('a[href="https://joprelys.com"]');
+    const publicSiteLinks = element.querySelectorAll(`a[href="${component.publicSiteUrl}"]`);
     const patientLoginLink = element.querySelector('a[href="/patient/login"]');
 
-    expect(publicSiteLink).not.toBeNull();
+    expect(component.publicSiteUrl).toBe(window.location.origin);
+    expect(publicSiteLinks.length).toBeGreaterThan(0);
     expect(patientLoginLink).not.toBeNull();
+    expect(element.textContent).toContain('🇫🇷');
+    expect(element.textContent).toContain('🇬🇧');
   });
 
   it('should block step 1 progression while required identity fields are missing', () => {
