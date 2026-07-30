@@ -7,15 +7,26 @@ import 'api_session.dart';
 import 'trace_id_factory.dart';
 
 final class ApiRequestInterceptor extends Interceptor {
-  ApiRequestInterceptor({
+  factory ApiRequestInterceptor({
     required ApiSessionAccess sessionAccess,
     required Locale Function() localeReader,
     required TraceIdFactory traceIdFactory,
     DateTime Function()? clock,
-  }) : _sessionAccess = sessionAccess,
-       _localeReader = localeReader,
-       _traceIdFactory = traceIdFactory,
-       _clock = clock ?? DateTime.now;
+  }) {
+    return ApiRequestInterceptor._(
+      sessionAccess,
+      localeReader,
+      traceIdFactory,
+      clock ?? DateTime.now,
+    );
+  }
+
+  ApiRequestInterceptor._(
+    this._sessionAccess,
+    this._localeReader,
+    this._traceIdFactory,
+    this._clock,
+  );
 
   final ApiSessionAccess _sessionAccess;
   final Locale Function() _localeReader;
