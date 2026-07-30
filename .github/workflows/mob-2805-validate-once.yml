@@ -45,9 +45,9 @@ jobs:
           cd "$GITHUB_WORKSPACE"
 
           rm .github/workflows/mob-2805-validate-once.yml
+          mkdir -p .ci
           rm -f .ci/mob-2805-validation.log
           if [ "$STATUS" -ne 0 ]; then
-            mkdir -p .ci
             mv "$LOG" .ci/mob-2805-validation.log
           else
             rm -f "$LOG"
@@ -55,7 +55,7 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/workflows/mob-2805-validate-once.yml .ci/mob-2805-validation.log
+          git add -A .github/workflows .ci
           if [ "$STATUS" -eq 0 ]; then
             git commit -m "test(mobile): valider le runtime MOB-2805"
           else
