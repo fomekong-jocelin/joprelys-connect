@@ -1,0 +1,18 @@
+{
+  "selfRegistration.stepLabel": "Étape",
+  "selfRegistration.step1Short": "Admission & identité",
+  "selfRegistration.step2Short": "Coordonnées",
+  "selfRegistration.step3Short": "Contact d'urgence",
+  "selfRegistration.step4Short": "Validation",
+  "selfRegistration.continue": "Continuer",
+  "selfRegistration.previous": "Précédent",
+  "selfRegistration.publicSite": "Retour au site",
+  "selfRegistration.login": "Se connecter",
+  "selfRegistration.exitHint": "Vous pouvez quitter ce formulaire à tout moment.",
+  "selfRegistration.progressHelp": "Complétez une étape à la fois.",
+  "selfRegistration.identityHelp": "Commençons par les informations indispensables à votre admission.",
+  "selfRegistration.contactHelp": "Ces informations sont facultatives mais facilitent votre prise en charge.",
+  "selfRegistration.emergencyHelp": "Ajoutez un proche à contacter en cas de besoin.",
+  "selfRegistration.validationHelp": "Dernière étape : répondez à la vérification de sécurité puis envoyez votre demande.",
+  "selfRegistration.successActions": "Que souhaitez-vous faire maintenant ?"
+}
