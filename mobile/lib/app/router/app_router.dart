@@ -23,24 +23,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final auth = ref.read(authControllerProvider);
       return auth.when(
         loading: () =>
-            _redirectTo(state.matchedLocation, AppRoutePath.authLoading),
+            redirectToRoute(state.matchedLocation, AppRoutePath.authLoading),
         error: (error, stackTrace) =>
-            _redirectTo(state.matchedLocation, AppRoutePath.login),
-        data: (authState) {
-          final destination = switch (authState.status) {
-            AuthStatus.unauthenticated => AppRoutePath.login,
-            AuthStatus.otpRequired => AppRoutePath.otp,
-            AuthStatus.authenticated => AppRoutePath.foundation,
-            AuthStatus.locked => AppRoutePath.unlock,
-            AuthStatus.recoveryError => AppRoutePath.recovery,
-          };
-
-          if (authState.status == AuthStatus.authenticated &&
-              !AppRoutePath.isAuthPath(state.matchedLocation)) {
-            return null;
-          }
-          return _redirectTo(state.matchedLocation, destination);
-        },
+            redirectToRoute(state.matchedLocation, AppRoutePath.login),
+        data: (authState) => authRedirect(authState, state.matchedLocation),
       );
     },
     routes: [
@@ -80,7 +66,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return router;
 });
 
-String? _redirectTo(String currentLocation, String destination) {
+String authRouteFor(AuthStatus status) {
+  return switch (status) {
+    AuthStatus.unauthenticated => AppRoutePath.login,
+    AuthStatus.otpRequired => AppRoutePath.otp,
+    AuthStatus.authenticated => AppRoutePath.foundation,
+    AuthStatus.locked => AppRoutePath.unlock,
+    AuthStatus.recoveryError => AppRoutePath.recovery,
+  };
+}
+
+String? authRedirect(AuthState authState, String currentLocation) {
+  final destination = authRouteFor(authState.status);
+  if (authState.status == AuthStatus.authenticated &&
+      !AppRoutePath.isAuthPath(currentLocation)) {
+    return null;
+  }
+  return redirectToRoute(currentLocation, destination);
+}
+
+String? redirectToRoute(String currentLocation, String destination) {
   return currentLocation == destination ? null : destination;
 }
 
