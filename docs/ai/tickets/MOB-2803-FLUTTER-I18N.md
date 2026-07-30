@@ -40,7 +40,7 @@ Le principe reste aligné sur le web :
 - [x] versionner le lockfile régénéré par Flutter 3.44.6 ;
 - [x] obtenir format/analyze/tests/APK verts dans le gate runtime #2019 ;
 - [x] finaliser la documentation feature ;
-- [ ] mettre à jour suivi central et changelog ;
+- [x] mettre à jour suivi central et changelog ;
 - [ ] obtenir le gate final exact-HEAD vert.
 
 ## Décisions
