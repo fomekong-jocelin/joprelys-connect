@@ -21,11 +21,51 @@ final class PatientHistoryApi implements PatientHistoryGateway {
   @override
   Future<PatientMedicalHistory> getMedicalHistory(String patientId) async {
     try {
-      final response = await _client.get('/api/patients/$patientId/medical-history');
-      final data = response.data as Map<String, dynamic>;
-      return PatientMedicalHistory.fromJson(data);
+      final results = await Future.wait([
+        _client.get('/api/patients/$patientId/allergies'),
+        _client.get('/api/patients/$patientId/medical-history'),
+        _client.get('/api/patients/$patientId/consultations'),
+      ]);
+
+      final allergiesData = (results[0].data as List<dynamic>?) ?? [];
+      final historyData = (results[1].data as List<dynamic>?) ?? [];
+      final consultationsData = (results[2].data as List<dynamic>?) ?? [];
+
+      final allergies = allergiesData
+          .map((e) => PatientAllergy.fromJson(e as Map<String, dynamic>))
+          .toList();
+      final antecedents = historyData
+          .map((e) => MedicalAntecedent.fromJson(e as Map<String, dynamic>))
+          .toList();
+      final pastVisits = consultationsData.map((e) {
+        final m = e as Map<String, dynamic>;
+        final vitalsMap = m['vitals'] as Map<String, dynamic>?;
+        return PastVisitSummary(
+          id: (m['visitId'] ?? m['id'] ?? '') as String,
+          visitNumber: (m['visitNumber'] ?? '') as String,
+          date: m['createdAt'] != null
+              ? DateTime.parse(m['createdAt'] as String)
+              : DateTime.now(),
+          practitionerName: (m['doctorName'] ?? '') as String,
+          chiefComplaint:
+              (m['symptoms'] ?? m['suspectedDiagnosis'] ?? '') as String,
+          temperature: (vitalsMap?['temperature'] as num?)?.toDouble(),
+          systolic: (vitalsMap?['systolic'] as num?)?.toInt(),
+          diastolic: (vitalsMap?['diastolic'] as num?)?.toInt(),
+          pulse: (vitalsMap?['pulse'] as num?)?.toInt(),
+        );
+      }).toList();
+
+      return PatientMedicalHistory(
+        patientId: patientId,
+        patientName: '',
+        patientDpu: '',
+        antecedents: antecedents,
+        allergies: allergies,
+        pastVisits: pastVisits,
+      );
     } catch (_) {
-      // Stub fallback d'historique médical clinique pour démo & tests hors-ligne
+      // Fallback de prévisualisation si le serveur backend n'est pas accessible en local
       return PatientMedicalHistory(
         patientId: patientId,
         patientName: 'Patient',

@@ -100,6 +100,9 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   void _commitCurrentPartial() {
     final text = _currentPartial.trim();
     if (text.isNotEmpty) {
+      if (_accumulatedTurns.isNotEmpty && text.startsWith(_accumulatedTurns.last)) {
+        _accumulatedTurns.removeLast();
+      }
       if (!_accumulatedTurns.contains(text)) {
         _accumulatedTurns.add(text);
       }
@@ -141,6 +144,9 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
         await _speech!.listen(
           onResult: (result) {
             _currentPartial = result.recognizedWords;
+            if (result.finalResult) {
+              _commitCurrentPartial();
+            }
             _updateFullTranscript();
           },
           onSoundLevelChange: (level) {
@@ -163,9 +169,15 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   }
 
   void _updateFullTranscript() {
-    final parts = [..._accumulatedTurns];
-    if (_currentPartial.trim().isNotEmpty) {
-      parts.add(_currentPartial.trim());
+    final parts = List<String>.from(_accumulatedTurns);
+    final cur = _currentPartial.trim();
+    if (cur.isNotEmpty) {
+      if (parts.isNotEmpty && cur.startsWith(parts.last)) {
+        parts.removeLast();
+      }
+      if (!parts.contains(cur)) {
+        parts.add(cur);
+      }
     }
     final fullText = parts.join('. ');
     updateTranscript(fullText);
