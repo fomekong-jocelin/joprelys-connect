@@ -26,37 +26,16 @@ class ActiveQueueSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.dashboardQueueTitle,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  const SizedBox(height: AppDesignTokens.spaceXs),
-                  Text(
-                    visits == null
-                        ? l10n.dashboardQueueSubtitleLoading
-                        : l10n.dashboardQueueSubtitle(visits.length),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-            _RefreshAction(
-              loading: queue.isLoading,
-              tooltip: l10n.dashboardQueueRefresh,
-              onPressed: onRefresh,
-            ),
-          ],
+        _SectionHeader(
+          title: l10n.dashboardQueueTitle,
+          subtitle: visits == null
+              ? l10n.dashboardQueueSubtitleLoading
+              : l10n.dashboardQueueSubtitle(visits.length),
+          loading: queue.isLoading,
+          refreshTooltip: l10n.dashboardQueueRefresh,
+          onRefresh: onRefresh,
         ),
-        const SizedBox(height: AppDesignTokens.spaceMd),
+        const SizedBox(height: 12),
         queue.when(
           data: (data) => _QueueContent(visits: data),
           loading: () => const _QueueLoading(),
@@ -67,44 +46,87 @@ class ActiveQueueSection extends StatelessWidget {
   }
 }
 
-class _RefreshAction extends StatelessWidget {
-  const _RefreshAction({
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    required this.subtitle,
     required this.loading,
-    required this.tooltip,
-    required this.onPressed,
+    required this.refreshTooltip,
+    required this.onRefresh,
   });
 
+  final String title;
+  final String subtitle;
   final bool loading;
-  final String tooltip;
-  final Future<void> Function() onPressed;
+  final String refreshTooltip;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: colors.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
-        child: InkWell(
-          onTap: loading ? null : () => onPressed(),
-          borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
-          child: SizedBox.square(
-            dimension: AppDesignTokens.minTouchTarget,
-            child: Center(
-              child: loading
-                  ? SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: colors.primary,
-                      ),
-                    )
-                  : Icon(Icons.refresh_rounded, size: 21, color: colors.primary),
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.onSurfaceVariant,
+                  height: 1.25,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Tooltip(
+          message: refreshTooltip,
+          child: Material(
+            color: colors.primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
+            child: InkWell(
+              onTap: loading ? null : () => onRefresh(),
+              borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
+              child: SizedBox.square(
+                dimension: AppDesignTokens.minTouchTarget,
+                child: Center(
+                  child: loading
+                      ? SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colors.primary,
+                          ),
+                        )
+                      : Icon(
+                          Icons.refresh_rounded,
+                          size: 21,
+                          color: colors.primary,
+                        ),
+                ),
+              ),
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -132,12 +154,11 @@ class _QueueContent extends StatelessWidget {
           withoutVitals: withoutVitals,
         ),
         const SizedBox(height: AppDesignTokens.spaceMd),
-        ...visits.map(
-          (visit) => Padding(
-            padding: const EdgeInsets.only(bottom: AppDesignTokens.spaceSm),
-            child: _ActiveVisitCard(visit: visit),
-          ),
-        ),
+        for (var index = 0; index < visits.length; index++) ...[
+          _ActiveVisitCard(visit: visits[index]),
+          if (index != visits.length - 1)
+            const SizedBox(height: AppDesignTokens.spaceSm),
+        ],
       ],
     );
   }
@@ -159,48 +180,50 @@ class _QueueSummary extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDesignTokens.spaceMd,
-        vertical: 14,
-      ),
-      decoration: BoxDecoration(
-        color: colors.primary.withValues(alpha: 0.075),
-        borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _MetricItem(
-              value: total,
-              label: l10n.dashboardQueueTotalCompact,
-              accent: colors.primary,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 8.0;
+        final columns = constraints.maxWidth < 340 ? 2 : 3;
+        final itemWidth =
+            (constraints.maxWidth - gap * (columns - 1)) / columns;
+
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            SizedBox(
+              width: itemWidth,
+              child: _MetricCard(
+                value: total,
+                label: l10n.dashboardQueueTotalCompact,
+                accent: colors.primary,
+              ),
             ),
-          ),
-          _MetricDivider(color: colors.outlineVariant),
-          Expanded(
-            child: _MetricItem(
-              value: withVitals,
-              label: l10n.dashboardQueueWithVitalsCompact,
-              accent: AppDesignTokens.success,
+            SizedBox(
+              width: itemWidth,
+              child: _MetricCard(
+                value: withVitals,
+                label: l10n.dashboardQueueWithVitalsCompact,
+                accent: AppDesignTokens.success,
+              ),
             ),
-          ),
-          _MetricDivider(color: colors.outlineVariant),
-          Expanded(
-            child: _MetricItem(
-              value: withoutVitals,
-              label: l10n.dashboardQueueWithoutVitals,
-              accent: AppDesignTokens.warning,
+            SizedBox(
+              width: itemWidth,
+              child: _MetricCard(
+                value: withoutVitals,
+                label: l10n.dashboardQueueWithoutVitals,
+                accent: AppDesignTokens.warning,
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 }
 
-class _MetricItem extends StatelessWidget {
-  const _MetricItem({
+class _MetricCard extends StatelessWidget {
+  const _MetricCard({
     required this.value,
     required this.label,
     required this.accent,
@@ -212,45 +235,40 @@ class _MetricItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          '$value',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: accent,
-            fontWeight: FontWeight.w900,
-            height: 1,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
-    );
-  }
-}
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
-class _MetricDivider extends StatelessWidget {
-  const _MetricDivider({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
-      width: 1,
-      height: 34,
-      margin: const EdgeInsets.symmetric(horizontal: AppDesignTokens.spaceSm),
-      color: color.withValues(alpha: 0.7),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$value',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: accent,
+              fontWeight: FontWeight.w900,
+              height: 1,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colors.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -277,115 +295,122 @@ class _ActiveVisitCard extends StatelessWidget {
         : AppDesignTokens.warning;
 
     return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
         boxShadow: theme.brightness == Brightness.dark
             ? const [
                 BoxShadow(
-                  color: Color(0x28000000),
-                  blurRadius: 14,
-                  offset: Offset(0, 5),
+                  color: Color(0x24000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
                 ),
               ]
             : const [
                 BoxShadow(
                   color: Color(0x0D0A1D3D),
-                  blurRadius: 14,
-                  offset: Offset(0, 5),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
                 ),
               ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(width: 4, color: statusColor),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(AppDesignTokens.spaceMd),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 4,
+            child: ColoredBox(color: statusColor),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundColor: colors.primary.withValues(alpha: 0.11),
-                          foregroundColor: colors.primary,
-                          child: Text(
-                            _initials(visit.patientName),
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: colors.primary,
-                              fontWeight: FontWeight.w900,
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: colors.primary.withValues(alpha: 0.11),
+                      foregroundColor: colors.primary,
+                      child: Text(
+                        _initials(visit.patientName),
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: colors.primary,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            visit.patientName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                visit.patientName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                visit.reason,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: colors.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
+                          const SizedBox(height: 3),
+                          Text(
+                            l10n.dashboardQueueVisitReference(
+                              visit.visitNumber,
+                              visit.patientDpu,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: AppDesignTokens.spaceSm),
-                        _VitalsBadge(hasVitals: visit.hasVitals),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      l10n.dashboardQueueVisitReference(
-                        visit.visitNumber,
-                        visit.patientDpu,
+                        ],
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 14,
-                      runSpacing: 8,
-                      children: [
-                        _Metadata(
-                          icon: Icons.schedule_rounded,
-                          label: l10n.dashboardQueueArrivedAt(arrivalLabel),
-                        ),
-                        if (careUnit.isNotEmpty)
-                          _Metadata(
-                            icon: Icons.medical_services_outlined,
-                            label: careUnit,
-                          ),
-                      ],
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 12),
+                Text(
+                  visit.reason,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _InfoChip(
+                      icon: Icons.schedule_rounded,
+                      label: l10n.dashboardQueueArrivedAt(arrivalLabel),
+                    ),
+                    if (careUnit.isNotEmpty)
+                      _InfoChip(
+                        icon: Icons.medical_services_outlined,
+                        label: careUnit,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: _VitalsBadge(hasVitals: visit.hasVitals),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -404,33 +429,44 @@ class _ActiveVisitCard extends StatelessWidget {
   }
 }
 
-class _Metadata extends StatelessWidget {
-  const _Metadata({required this.icon, required this.label});
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({required this.icon, required this.label});
 
   final IconData icon;
   final String label;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 15, color: colors.onSurfaceVariant),
-        const SizedBox(width: 5),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 230),
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: colors.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 270),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        decoration: BoxDecoration(
+          color: colors.surfaceContainerHighest.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
         ),
-      ],
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: colors.onSurfaceVariant),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -446,10 +482,10 @@ class _VitalsBadge extends StatelessWidget {
     final accent = hasVitals ? AppDesignTokens.success : AppDesignTokens.warning;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppDesignTokens.radiusMd),
+        color: accent.withValues(alpha: 0.11),
+        borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
       ),
       child: Text(
         hasVitals
@@ -470,22 +506,15 @@ class _QueueLoading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Column(
-      children: List.generate(
-        2,
-        (index) => Container(
-          height: 118,
-          margin: const EdgeInsets.only(bottom: AppDesignTokens.spaceSm),
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
-          ),
-          alignment: Alignment.center,
-          child: index == 0
-              ? const CircularProgressIndicator(strokeWidth: 2)
-              : null,
-        ),
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 132),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
       ),
+      child: const CircularProgressIndicator(),
     );
   }
 }
@@ -501,37 +530,31 @@ class _QueueEmpty extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppDesignTokens.spaceLg),
       decoration: BoxDecoration(
-        color: colors.primary.withValues(alpha: 0.065),
+        color: colors.primary.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: colors.primary.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.check_rounded, color: colors.primary),
+          Icon(
+            Icons.check_circle_outline_rounded,
+            size: 36,
+            color: colors.primary,
           ),
-          const SizedBox(width: AppDesignTokens.spaceMd),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.dashboardQueueEmptyTitle,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: AppDesignTokens.spaceXs),
-                Text(
-                  l10n.dashboardQueueEmptyBody,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
+          const SizedBox(height: AppDesignTokens.spaceMd),
+          Text(
+            l10n.dashboardQueueEmptyTitle,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: AppDesignTokens.spaceSm),
+          Text(
+            l10n.dashboardQueueEmptyBody,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: colors.onSurfaceVariant,
             ),
           ),
         ],
@@ -557,8 +580,9 @@ class _QueueError extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.cloud_off_outlined, color: colors.onErrorContainer),
+          Icon(Icons.cloud_off_rounded, color: colors.onErrorContainer),
           const SizedBox(height: AppDesignTokens.spaceSm),
           Text(
             l10n.dashboardQueueLoadError,
