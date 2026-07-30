@@ -9,7 +9,7 @@ import '../domain/professional_session.dart';
 final class AuthSessionManager implements ApiSessionAccess {
   AuthSessionManager({
     required AuthSessionStore store,
-    required AuthApi authApi,
+    required AuthGateway authApi,
     required CookieJar cookieJar,
     DateTime Function()? clock,
   }) : _store = store,
@@ -18,7 +18,7 @@ final class AuthSessionManager implements ApiSessionAccess {
        _clock = clock ?? DateTime.now;
 
   final AuthSessionStore _store;
-  final AuthApi _authApi;
+  final AuthGateway _authApi;
   final CookieJar _cookieJar;
   final DateTime Function() _clock;
 
