@@ -23,7 +23,7 @@ final class RealtimeSpeechState {
   final String transcript;
   final PatientVitals vitals;
   final ConsultationNote note;
-  final double soundLevel; // Niveau sonore en décibels pour faire vibrer les ondes !
+  final double soundLevel; // Amplitude vocale réelle pour l'égaliseur d'ondes !
   final String? errorMessage;
 
   RealtimeSpeechState copyWith({
@@ -45,6 +45,10 @@ final class RealtimeSpeechState {
   }
 }
 
+/// Pipeline de captation vocale continue non bloquant (Capture Pipeline).
+/// Conforme à la logique Web Angular (RealtimeClinicalTurnCoordinator) :
+/// Le flux de dictée ne s'arrête jamais après une phrase et ne requiert aucune
+/// validation intermédiaire pour poursuivre l'écoute.
 class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   ClinicalSpeechService()
       : super(const RealtimeSpeechState(
@@ -57,6 +61,11 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   final _parser = const ClinicalDictationParser();
   stt.SpeechToText? _speech;
   bool _isInitialized = false;
+  bool _shouldKeepListening = false;
+
+  final List<String> _accumulatedTurns = [];
+  String _currentPartial = '';
+  Timer? _reconnectLoopTimer;
 
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -64,17 +73,23 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       _speech = stt.SpeechToText();
       _isInitialized = await _speech!.initialize(
         onStatus: (status) {
+          // Relance automatique immédiate du flux d'écoute si l'OS coupe après une pause
           if (status == 'done' || status == 'notListening') {
-            if (value.status == SpeechStatus.listening) {
-              value = value.copyWith(status: SpeechStatus.done);
+            if (_shouldKeepListening && value.status == SpeechStatus.listening) {
+              _commitCurrentPartial();
+              _restartListeningLoop();
             }
           }
         },
         onError: (errorNotification) {
-          value = value.copyWith(
-            status: SpeechStatus.error,
-            errorMessage: errorNotification.errorMsg,
-          );
+          if (_shouldKeepListening && value.status == SpeechStatus.listening) {
+            _restartListeningLoop();
+          } else {
+            value = value.copyWith(
+              status: SpeechStatus.error,
+              errorMessage: errorNotification.errorMsg,
+            );
+          }
         },
       );
     } catch (e) {
@@ -82,33 +97,78 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     }
   }
 
+  void _commitCurrentPartial() {
+    final text = _currentPartial.trim();
+    if (text.isNotEmpty) {
+      if (!_accumulatedTurns.contains(text)) {
+        _accumulatedTurns.add(text);
+      }
+      _currentPartial = '';
+    }
+  }
+
+  void _restartListeningLoop() {
+    _reconnectLoopTimer?.cancel();
+    _reconnectLoopTimer = Timer(const Duration(milliseconds: 150), () {
+      if (_shouldKeepListening) {
+        _listenInternal();
+      }
+    });
+  }
+
   Future<void> startRealtimeListening() async {
-    await initialize();
+    _shouldKeepListening = true;
+    _accumulatedTurns.clear();
+    _currentPartial = '';
 
     value = value.copyWith(
       status: SpeechStatus.listening,
       transcript: '',
       vitals: const PatientVitals(),
       note: const ConsultationNote(),
-      soundLevel: 10.0,
+      soundLevel: 12.0,
     );
 
+    await initialize();
+    await _listenInternal();
+  }
+
+  Future<void> _listenInternal() async {
+    if (!_shouldKeepListening) return;
+
     if (_isInitialized && _speech != null) {
-      await _speech!.listen(
-        onResult: (result) {
-          final words = result.recognizedWords;
-          updateTranscript(words);
-        },
-        onSoundLevelChange: (level) {
-          // Transmission du niveau sonore réel au peintre d'ondes !
-          final normalized = (level + 2.0).clamp(0.0, 50.0);
-          value = value.copyWith(soundLevel: normalized);
-        },
-        cancelOnError: true,
-        partialResults: true,
-        localeId: 'fr_FR',
-      );
+      try {
+        await _speech!.listen(
+          onResult: (result) {
+            _currentPartial = result.recognizedWords;
+            _updateFullTranscript();
+          },
+          onSoundLevelChange: (level) {
+            // Decibel dynamic sound level mapping
+            final normalized = (level + 2.0).clamp(5.0, 60.0);
+            value = value.copyWith(soundLevel: normalized);
+          },
+          listenFor: const Duration(hours: 1),
+          pauseFor: const Duration(seconds: 10),
+          partialResults: true,
+          cancelOnError: false,
+          listenMode: stt.ListenMode.dictation,
+          localeId: 'fr_FR',
+        );
+      } catch (_) {
+        // Safe fallback retry
+        _restartListeningLoop();
+      }
     }
+  }
+
+  void _updateFullTranscript() {
+    final parts = [..._accumulatedTurns];
+    if (_currentPartial.trim().isNotEmpty) {
+      parts.add(_currentPartial.trim());
+    }
+    final fullText = parts.join('. ');
+    updateTranscript(fullText);
   }
 
   void updateTranscript(String text) {
@@ -122,9 +182,16 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   }
 
   Future<void> stopListening() async {
+    _shouldKeepListening = false;
+    _reconnectLoopTimer?.cancel();
+
     if (_isInitialized && _speech != null && _speech!.isListening) {
       await _speech!.stop();
     }
+
+    _commitCurrentPartial();
+    _updateFullTranscript();
+
     value = value.copyWith(
       status: SpeechStatus.done,
       soundLevel: 0.0,
@@ -132,9 +199,16 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   }
 
   Future<void> cancelListening() async {
+    _shouldKeepListening = false;
+    _reconnectLoopTimer?.cancel();
+
     if (_isInitialized && _speech != null && _speech!.isListening) {
       await _speech!.cancel();
     }
+
+    _accumulatedTurns.clear();
+    _currentPartial = '';
+
     value = const RealtimeSpeechState(
       status: SpeechStatus.idle,
       transcript: '',
@@ -146,6 +220,8 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
 
   @override
   void dispose() {
+    _shouldKeepListening = false;
+    _reconnectLoopTimer?.cancel();
     if (_isInitialized && _speech != null) {
       _speech!.cancel();
     }
