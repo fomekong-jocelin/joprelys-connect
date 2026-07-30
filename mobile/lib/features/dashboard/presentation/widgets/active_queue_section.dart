@@ -179,9 +179,10 @@ class _SummaryTile extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 21, color: accent),
-          const Spacer(),
+          const SizedBox(height: 12),
           Text(
             '$value',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
