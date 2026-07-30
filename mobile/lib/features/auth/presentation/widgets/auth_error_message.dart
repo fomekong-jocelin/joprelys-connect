@@ -6,6 +6,7 @@ String? authErrorMessage(AppLocalizations l10n, String? code) {
   }
   return switch (code) {
     'AUTH_SESSION_RECOVERY_UNAVAILABLE' => l10n.authRecoveryUnavailable,
+    'AUTH_LOCAL_SESSION_CLEAR_FAILED' => l10n.authGenericError,
     'BIOMETRIC_CANCELLED' => l10n.authBiometricCancelled,
     'BIOMETRIC_UNAVAILABLE' => l10n.authBiometricUnavailable,
     'BIOMETRIC_LOCKED' => l10n.authBiometricLocked,
