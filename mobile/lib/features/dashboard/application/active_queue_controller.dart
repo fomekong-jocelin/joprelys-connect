@@ -4,7 +4,7 @@ import '../../../core/network/api_client_providers.dart';
 import '../data/active_visits_api.dart';
 import '../domain/active_visit.dart';
 
-final activeVisitsApiProvider = Provider<ActiveVisitsApi>((ref) {
+final activeVisitsApiProvider = Provider<ActiveVisitsGateway>((ref) {
   return ActiveVisitsApi(ref.watch(apiClientProvider));
 });
 
