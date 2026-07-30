@@ -325,4 +325,25 @@ extension DashboardLocalizations on AppLocalizations {
 
   String get historyNoVisits =>
       _isFrench ? 'Aucune visite antérieure' : 'No past visits';
+
+  // ── SOAP section help texts (matching Angular clinical-note-editor) ──
+
+  String get voiceAssistantTitle =>
+      _isFrench ? 'Assistant vocal clinique' : 'Clinical voice assistant';
+
+  String get consultationSubjectiveHelp => _isFrench
+      ? 'Recueillez les plaintes, symptômes et histoire de la maladie rapportés par le patient.'
+      : 'Collect complaints, symptoms and illness history reported by the patient.';
+
+  String get consultationObjectiveHelp => _isFrench
+      ? 'Consignez les résultats de l\'examen physique et les observations cliniques objectives.'
+      : 'Record physical exam findings and objective clinical observations.';
+
+  String get consultationAssessmentHelp => _isFrench
+      ? 'Formulez le diagnostic différentiel et le diagnostic retenu.'
+      : 'Formulate the differential diagnosis and the retained diagnosis.';
+
+  String get consultationPlanHelp => _isFrench
+      ? 'Détaillez la conduite à tenir : traitement, examens complémentaires, suivi.'
+      : 'Detail the action plan: treatment, complementary exams, follow-up.';
 }
