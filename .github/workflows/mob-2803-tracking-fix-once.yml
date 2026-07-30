@@ -17,14 +17,14 @@ jobs:
         with:
           ref: feat/mob-2803-mobile-i18n
           fetch-depth: 0
-      - name: Restore unrelated EPIC-0027 tracking row
+      - name: Restore unrelated HOS-RBAC tracking row
         shell: python
         run: |
           from pathlib import Path
           path = Path('docs/ai/PROJECT-TRACKING.md')
           text = path.read_text(encoding='utf-8')
-          wrong = "| EPIC-0027 | HOSPITAL_ORGANIZATION_CAPACITY_PATIENT_FLOW | Epic | Référentiels, géographie, capacité, séjours, personnel, ressources et pilotage | Spring Boot / Angular / PostgreSQL / RBAC / Data | IN_PROGRESS — HOS-ORG + HOS-LOC fusionnés ; HOS-STAFF validé techniquement dans #140 | P0/P1 | 147–149 | Architecte + seniors full-stack/DB/sécurité + QA santé | 107.0j | 149.0j | À redécouper | Équipe phase 0 | Tech Lead + sécurité/DPO + clinique | À planifier | Fondation + design system + i18n partiels | Finaliser MOB-2803 puis réseau/auth et audio natif P0 | Élevé jusqu’au pilote audio | 2026-07-30 |"
-          correct = "| EPIC-0027 | HOSPITAL_ORGANIZATION_CAPACITY_PATIENT_FLOW | Epic | Référentiels, géographie, capacité, séjours, personnel, ressources et pilotage | Spring Boot / Angular / PostgreSQL / RBAC / Data | IN_PROGRESS — HOS-ORG + HOS-LOC fusionnés ; HOS-STAFF validé techniquement dans #140 | P0/P1 | 147–149 | Architecte + seniors full-stack/DB/sécurité + QA santé | 107.0j | 149.0j | À redécouper | Équipe phase 0 | Médecin + cadre + admissions + biomédical + DPO/RSSI + DBA | SPRINT-0014 puis planification dédiée | Partiel | Finaliser #140/#132 puis #127 ; autres lots après jalon client selon risques | Moyen/Élevé | 2026-07-24 |"
+          wrong = "| HOS-RBAC-001-D | EPIC-0027 / HOS-RBAC-001 | Breaking cleanup sécurité + migration DB | Supprimer définitivement `HOSPITALIZATION_MANAGE` | Spring Boot / Flyway / PostgreSQL / Angular QA | DONE — issue #121 / PR #122 / Flyway V86 / CI #1027 verte | P0 | 2 | Senior backend sécurité + DBA | 0.5–1.0j | 1.0–1.5j | Non recommandé seul | GPT-5.6 Thinking | Tech Lead + RSSI/DBA | SPRINT-0014 | Terminé | Suivi post-fusion ; aucune réintroduction legacy | Faible | 2026-07-23 |"
+          correct = "| HOS-RBAC-001-D | EPIC-0027 / HOS-RBAC-001 | Breaking cleanup sécurité + migration DB | Supprimer définitivement `HOSPITALIZATION_MANAGE` | Spring Boot / Flyway / PostgreSQL / Angular QA | DONE — issue #121 / PR #122 / Flyway V86 / CI #1027 verte | P0 | 2 | Senior backend sécurité + DBA | 0.5–1.0j | 1.0–1.5j | Non recommandé seul | GPT-5.6 Thinking | Tech Lead + RSSI/DBA | SPRINT-0014 (phase 0) | Terminé | Suivi post-fusion ; aucune réintroduction legacy | Faible | 2026-07-23 |"
           if wrong not in text:
               raise SystemExit('Expected erroneous row not found; refusing broad rewrite')
           path.write_text(text.replace(wrong, correct, 1), encoding='utf-8')
@@ -34,5 +34,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/ai/PROJECT-TRACKING.md
-          git commit -m "docs: restaurer le suivi EPIC-0027 inchangé"
+          git commit -m "docs: restaurer le suivi HOS-RBAC inchangé"
           git push origin HEAD:feat/mob-2803-mobile-i18n
