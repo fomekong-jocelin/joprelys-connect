@@ -24,11 +24,12 @@ class FoundationPage extends ConsumerWidget {
     final auth = ref.watch(authControllerProvider);
     final authState = auth.value;
     final session = authState?.session;
-    final queue = ref.watch(activeQueueControllerProvider);
 
     if (session == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+
+    final queue = ref.watch(activeQueueControllerProvider);
 
     return _ProfessionalHome(
       session: session,
