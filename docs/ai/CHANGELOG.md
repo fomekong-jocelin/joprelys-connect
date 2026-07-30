@@ -14,12 +14,19 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - **Navigation de sortie** : accès permanent au site Joprelys et à `/patient/login`, y compris sur l'écran de succès, sans modification du contrat API, du captcha, du `orgId`, de la DB ni du RBAC.
   - **Validation** : tests Angular ciblés ajoutés ; gate frontend et recette visuelle mobile/desktop requis avant fusion.
 
+- **MOB-2802 — Design system Flutter Joprelys, thèmes light/dark/system et widgets partagés** :
+  - **Tokens centralisés** : création de `AppDesignTokens` pour les couleurs sémantiques, espacements, rayons, tailles tactiles et ombres, avec `DESIGN.md` comme source de vérité commune web/mobile.
+  - **Thèmes** : `AppTheme.light` / `AppTheme.dark` et `ThemeController` Riverpod `system | light | dark` branchés dans `JoprelysApp` ; aucun chargement réseau de police n’est ajouté.
+  - **Primitives UI** : `AppButton`, `AppTextField`, `AppCard`, `AppBadge`, `AppPageHeader`, états loading/empty/error et `AppConfirmDialog`, avec rayons sobres et actions tactiles principales >= 44 px.
+  - **Sécurité fonctionnelle** : aucun faux contenu clinique, aucune donnée patient, aucun secret, aucun appel réseau et aucune permission native ajoutés dans ce lot.
+  - **Validation runtime** : run GitHub Actions #1983 (`30512157357`) vert sur `ab44982d286c2a4e9638aa85c5a704f480385a3f` : format, analyze, 9 tests Flutter et build APK debug. Gate final post-documentation requis avant fusion de la PR #246.
+
 - **MOB-2801 — Première fondation runtime Flutter & CI mobile** :
   - **Bootstrap applicatif** : remplacement du compteur Flutter généré par le flux `main -> bootstrap -> ProviderScope -> JoprelysApp`, avec configuration minimale centralisée et aucune logique métier clinique dans la présentation.
   - **Navigation** : intégration de Riverpod et `go_router` avec une seule route de fondation neutre `/` ; aucun faux écran clinique ni donnée patient n’est exposé avant livraison des stories métier correspondantes.
   - **Baseline mobile** : CI pinée sur Flutter `3.44.6` / Dart `3.12.2`, `flutter_riverpod` résolu en `3.4.2`, `go_router` en `17.3.0`, et `pubspec.lock` applicatif versionné.
   - **CI mobile** : détection dédiée de `mobile/**` et gate `flutter pub get`, Dart format, `flutter analyze`, `flutter test`, puis `flutter build apk --debug` ; une modification du workflow partagé force aussi les gates backend et frontend.
-  - **Validation runtime** : run GitHub Actions #1962 (`30501163481`) entièrement vert sur le HEAD `476191772ef368bec0fa9346a13d723d9e7e08d6` : backend Maven, Angular tests/build et Flutter format/analyze/tests/APK. Gate final post-documentation requis avant fusion de la PR #244.
+  - **Validation finale MOB-2801** : run #1972 (`30502470416`) vert sur le HEAD exact `92fc92eb7c95ac1a7d33769cf57c658d6558579d`, puis fusion squash de la PR #244 dans `main` au commit `ca245a74`.
 
 - **FIX-20260729-PATIENT-RECORD-MOBILE-UX-FINISHING — Finition de la hiérarchie mobile du dossier patient** :
   - **Fiche d’identité unifiée** : les informations administratives sont désormais rendues directement dans la Fiche d’identité ; l’accordéon redondant « Informations administratives » disparaît sans suppression de donnée.
