@@ -40,7 +40,7 @@ class AuthPreferencesBar extends ConsumerWidget {
         PopupMenuButton<ThemeMode>(
           tooltip: l10n.foundationThemeTitle,
           initialValue: themeMode,
-          onSelected: ref.read(themeModeProvider.notifier).setThemeMode,
+          onSelected: ref.read(themeModeProvider.notifier).setMode,
           itemBuilder: (context) => [
             PopupMenuItem(
               value: ThemeMode.system,
