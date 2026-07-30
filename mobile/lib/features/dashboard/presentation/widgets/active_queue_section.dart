@@ -6,6 +6,7 @@ import '../../../../core/theme/app_design_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../domain/active_visit.dart';
+import '../dashboard_localizations.dart';
 
 class ActiveQueueSection extends StatelessWidget {
   const ActiveQueueSection({
