@@ -62,7 +62,7 @@ class _ClinicalVoiceAssistantSheetState
   static const _presetDictations = [
     'Température 38.5°C, tension 120/80 mmHg, pouls 75 bpm, SpO2 98%',
     'Poids 75kg, taille 175cm, glycémie 1.10 g/L, douleur EVA 3/10',
-    'Patient fiévreux, TA 130/85, pouls 82, fréq resp 18 c/min',
+    'Pris du paracétamol 1000 mg 2 fois par jour. Revenir dans deux semaines.',
   ];
 
   @override
@@ -220,16 +220,17 @@ class _ClinicalVoiceAssistantSheetState
                       // Surface d'écoute Web-aligned (VoiceListeningSurfaceComponent)
                       _WebAlignedVoiceListeningSurface(
                         active: isListening,
+                        soundLevel: state.soundLevel,
                         haloController: _haloController,
                         waveController: _waveController,
                         badgeText: isListening
-                            ? 'IA en cours…'
+                            ? 'Enregistrement sécurisé'
                             : 'Assistant en pause',
                         statusText: isListening
                             ? 'Écoute en cours… Parlez naturellement'
                             : 'Appuyez sur le micro pour démarrer l’écoute',
                         tipText:
-                            'Conseil : Vous pouvez dicter vos constantes et vos notes cliniques de façon fluide et naturelle.',
+                            'Conseil : parlez naturellement, les phrases sont conservées au fil de l’eau.',
                         onToggleListening: _toggleListening,
                       ),
                       const SizedBox(height: 16),
@@ -369,6 +370,7 @@ class _ClinicalVoiceAssistantSheetState
 class _WebAlignedVoiceListeningSurface extends StatelessWidget {
   const _WebAlignedVoiceListeningSurface({
     required this.active,
+    required this.soundLevel,
     required this.haloController,
     required this.waveController,
     required this.badgeText,
@@ -378,6 +380,7 @@ class _WebAlignedVoiceListeningSurface extends StatelessWidget {
   });
 
   final bool active;
+  final double soundLevel;
   final AnimationController haloController;
   final AnimationController waveController;
   final String badgeText;
@@ -454,7 +457,7 @@ class _WebAlignedVoiceListeningSurface extends StatelessWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Canvas des ondes sinusoïdales (exactement comme le canvas Web)
+                // Canvas des ondes sinusoïdales (dynamiquement réactives au niveau décibel réel)
                 Positioned.fill(
                   child: AnimatedBuilder(
                     animation: waveController,
@@ -464,6 +467,7 @@ class _WebAlignedVoiceListeningSurface extends StatelessWidget {
                           phase: waveController.value * math.pi * 2,
                           color: primaryColor,
                           active: active,
+                          soundLevel: soundLevel,
                         ),
                       );
                     },
@@ -475,7 +479,8 @@ class _WebAlignedVoiceListeningSurface extends StatelessWidget {
                     animation: haloController,
                     builder: (context, child) {
                       final val = haloController.value;
-                      final size = 124.0 + (math.sin(val * math.pi * 2) * 8.0);
+                      final levelBonus = (soundLevel * 0.8).clamp(0.0, 20.0);
+                      final size = 124.0 + (math.sin(val * math.pi * 2) * 8.0) + levelBonus;
                       final opacity = 0.2 + (math.sin(val * math.pi * 2) * 0.15);
 
                       return Container(
@@ -497,7 +502,8 @@ class _WebAlignedVoiceListeningSurface extends StatelessWidget {
                     animation: haloController,
                     builder: (context, child) {
                       final val = (haloController.value + 0.4) % 1.0;
-                      final size = 104.0 + (math.sin(val * math.pi * 2) * 6.0);
+                      final levelBonus = (soundLevel * 0.5).clamp(0.0, 14.0);
+                      final size = 104.0 + (math.sin(val * math.pi * 2) * 6.0) + levelBonus;
                       final opacity = 0.3 + (math.sin(val * math.pi * 2) * 0.2);
 
                       return Container(
@@ -547,8 +553,8 @@ class _WebAlignedVoiceListeningSurface extends StatelessWidget {
                           ? [
                               BoxShadow(
                                 color: primaryColor.withValues(alpha: 0.38),
-                                blurRadius: 20,
-                                spreadRadius: 4,
+                                blurRadius: 20 + (soundLevel * 0.5).clamp(0.0, 15.0),
+                                spreadRadius: 4 + (soundLevel * 0.2).clamp(0.0, 8.0),
                               ),
                             ]
                           : [
@@ -603,23 +609,27 @@ class _SineWavePainter extends CustomPainter {
     required this.phase,
     required this.color,
     required this.active,
+    required this.soundLevel,
   });
 
   final double phase;
   final Color color;
   final bool active;
+  final double soundLevel;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (!active) return;
 
+    final baseAmp = (soundLevel > 0) ? (14.0 + (soundLevel * 1.2)) : 16.0;
+
     final paint1 = Paint()
-      ..color = color.withValues(alpha: 0.35)
+      ..color = color.withValues(alpha: 0.45)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
     final paint2 = Paint()
-      ..color = color.withValues(alpha: 0.20)
+      ..color = color.withValues(alpha: 0.25)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
@@ -630,13 +640,13 @@ class _SineWavePainter extends CustomPainter {
     path1.moveTo(0, midY);
     path2.moveTo(0, midY);
 
-    for (double x = 0; x <= size.width; x += 3) {
+    for (double x = 0; x <= size.width; x += 2) {
       final normX = x / size.width;
       final envelope = math.sin(normX * math.pi); // 0 aux bords, 1 au centre
 
-      final y1 = midY + math.sin((normX * 4 * math.pi) + phase) * 22 * envelope;
+      final y1 = midY + math.sin((normX * 4 * math.pi) + phase) * baseAmp * envelope;
       final y2 =
-          midY + math.sin((normX * 6 * math.pi) - (phase * 1.4)) * 14 * envelope;
+          midY + math.sin((normX * 6 * math.pi) - (phase * 1.4)) * (baseAmp * 0.7) * envelope;
 
       path1.lineTo(x, y1);
       path2.lineTo(x, y2);
@@ -648,7 +658,9 @@ class _SineWavePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SineWavePainter oldDelegate) {
-    return oldDelegate.phase != phase || oldDelegate.active != active;
+    return oldDelegate.phase != phase ||
+        oldDelegate.active != active ||
+        oldDelegate.soundLevel != soundLevel;
   }
 }
 

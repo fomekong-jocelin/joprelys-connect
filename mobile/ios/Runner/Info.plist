@@ -28,6 +28,10 @@
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Joprelys Connect utilise Face ID uniquement pour déverrouiller localement une session professionnelle déjà authentifiée.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Joprelys Connect nécessite l'accès au microphone pour la dictée vocale des notes cliniques et constantes vitales.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Joprelys Connect utilise la reconnaissance vocale pour transcrire en direct vos dictées médicales.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
