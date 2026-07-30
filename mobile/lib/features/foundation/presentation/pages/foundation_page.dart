@@ -79,81 +79,98 @@ class _ProfessionalHome extends ConsumerWidget {
     final queueCount = queue.value?.length;
 
     return Scaffold(
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              colors.primary.withValues(alpha: 0.1),
-              theme.scaffoldBackgroundColor,
-              theme.scaffoldBackgroundColor,
-            ],
-            stops: const [0, 0.24, 1],
-          ),
-        ),
-        child: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: onQueueRefresh,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _DashboardTopBar(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: onQueueRefresh,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _DashboardTopBar(
+                      session: session,
+                      onProfilePressed: () => _openProfessionalSheet(
+                        context,
                         session: session,
-                        onProfilePressed: () => _openProfessionalSheet(
-                          context,
-                          session: session,
-                          loading: loading,
-                          authError: authError,
-                          onBiometricsPressed: onBiometricsPressed,
-                          onLogoutPressed: onLogoutPressed,
+                        loading: loading,
+                        authError: authError,
+                        onBiometricsPressed: onBiometricsPressed,
+                        onLogoutPressed: onLogoutPressed,
+                      ),
+                    ),
+                    const SizedBox(height: AppDesignTokens.spaceLg),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(
+                            AppDesignTokens.radiusSm,
+                          ),
+                          border: Border.all(
+                            color: colors.primary.withValues(alpha: 0.25),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.local_hospital_rounded,
+                              size: 13,
+                              color: colors.primary,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              l10n.dashboardWorkspaceLabel,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: colors.primary,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: AppDesignTokens.spaceXl),
-                      Text(
-                        l10n.dashboardWorkspaceLabel,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: colors.primary,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
-                        ),
+                    ),
+                    const SizedBox(height: AppDesignTokens.spaceSm),
+                    Text(
+                      l10n.dashboardGreeting(preferredName),
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                        height: 1.15,
                       ),
-                      const SizedBox(height: AppDesignTokens.spaceSm),
-                      Text(
-                        l10n.dashboardGreeting(preferredName),
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.7,
-                          height: 1.15,
-                        ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      queueCount == null
+                          ? l10n.foundationWelcomeSubtitle
+                          : l10n.dashboardOverviewSubtitle(queueCount),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
+                        height: 1.4,
                       ),
-                      const SizedBox(height: AppDesignTokens.spaceSm),
-                      Text(
-                        queueCount == null
-                            ? l10n.foundationWelcomeSubtitle
-                            : l10n.dashboardOverviewSubtitle(queueCount),
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colors.onSurfaceVariant,
-                          height: 1.45,
-                        ),
-                      ),
-                      if (authError != null) ...[
-                        const SizedBox(height: AppDesignTokens.spaceMd),
-                        _InlineError(message: authError!),
-                      ],
-                      const SizedBox(height: AppDesignTokens.spaceXl),
-                      ActiveQueueSection(
-                        queue: queue,
-                        onRefresh: onQueueRefresh,
-                      ),
+                    ),
+                    if (authError != null) ...[
+                      const SizedBox(height: AppDesignTokens.spaceMd),
+                      _InlineError(message: authError!),
                     ],
-                  ),
+                    const SizedBox(height: AppDesignTokens.spaceLg),
+                    ActiveQueueSection(
+                      queue: queue,
+                      onRefresh: onQueueRefresh,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -454,7 +471,11 @@ class _ToolbarControl extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: colors.surface.withValues(alpha: 0.76),
+        color: colors.surface,
+        border: Border.all(
+          color: colors.outline.withValues(alpha: 0.6),
+          width: 1,
+        ),
         borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
       ),
       alignment: Alignment.center,

@@ -8,6 +8,29 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **MOB-2815 — Assistant Vocal Clinique & Dictée Intelligente** :
+  - **Moteur d'extraction** : création de `ClinicalDictationParser` capable d'extraire automatiquement en Regex/NLP les 10 constantes médicales (°C, mmHg, bpm, kg, cm, %, g/L, c/min, EVA) et la note SOAP depuis le langage naturel.
+  - **Interface utilisateur** : création du composant modal `ClinicalVoiceAssistantSheet` et ajout du bouton `[🎙️ Assistant vocal]` dans la modale des constantes.
+  - **Tests & Conformité** : création de `clinical_dictation_parser_test.dart` et validation de la suite avec 66/66 tests Flutter verts.
+
+- **MOB-2814 — Saisie & consultation mobile des notes cliniques (SOAP)** :
+  - **Gateway & REST** : création de `ConsultationGateway` et `ConsultationApi` consommant `GET /api/visits/{id}/consultation-notes` et `POST /api/visits/{id}/consultation-notes`.
+  - **Interface SOAP** : création du composant modal `ConsultationNotesSheet` structuré en 4 rubriques cliniques (Subjectif, Objectif, Évaluation, Plan) avec retour d'enregistrement.
+  - **i18n & Thèmes** : support complet FR/EN et Thèmes Sombre/Clair sans aucun texte dur.
+  - **Tests** : création de `consultation_api_test.dart` (sérialisation, détection de note vide) et validation de la suite complète avec 63/63 tests verts.
+
+- **MOB-2807 — Saisie & consultation mobile des constantes patient** :
+  - **Gateway & API** : création de `VitalsGateway` et `VitalsApi` consommant `GET /api/visits/{id}/vitals` et `POST /api/visits/{id}/vitals`.
+  - **Composant UI** : création de `PatientVitalsSheet` (modale de saisie 10 constantes vitales, calcul d'IMC à chaud, validation et messages d'erreur).
+  - **Raccordement Dashboard** : clic sur la carte patient (`_ActiveVisitCard`) déclenchant la modale et actualisant la file d'attente à l'enregistrement.
+  - **Tests** : ajouts des tests unitaires `vitals_api_test.dart` (validation JSON, calcul d'IMC).
+
+- **BUG-20260730-MOBILE-DASHBOARD-UI-REDESIGN — Refonte visuelle du dashboard mobile Flutter** :
+  - **En-tête & Ambiance** : suppression du dégradé radial avec spot bleu dur ; ajout du marqueur d'espace clinique médical `[+] ESPACE CLINIQUE` et hiérarchisation fluide des titres.
+  - **Cartes métriques** : refonte des conteneurs `En attente`, `Prêts`, `À évaluer` avec bordures subtiles (`accent.withValues(alpha: 0.3)`), micro-icônes d'état et typographie Montserrat bold.
+  - **Cartes de visite patient** : réarchitecturation de `_ActiveVisitCard` avec avatar patient, badge de constantes en haut à droite, motif de consultation lisible et correction de la répétition du préfixe DPU (`DPU DPU-` -> `DPU-`).
+  - **Conformité & Tests** : 58 tests Flutter et goldens verts, aucune régression sur le routing, l'i18n FR/EN ou la logique métier.
+
 - **FIX-20260730-MOBILE-AUTH-WEB-VISUAL-ALIGNMENT — Auth Flutter alignée sur l’expérience web** :
   - **Composition** : préférences compactes, lockup de marque réutilisable, titre hors carte, libellés de champs stables et CTA pleine largeur selon les tokens Joprelys.
   - **Accueil professionnel** : suppression du badge technique `MOB-2805` et des réglages dupliqués ; identité, rôle, biométrie et déconnexion sont hiérarchisés dans des surfaces sobres.

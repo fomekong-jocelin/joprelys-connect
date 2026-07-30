@@ -7,6 +7,8 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../domain/active_visit.dart';
 import '../dashboard_localizations.dart';
+import 'consultation_notes_sheet.dart';
+import 'patient_vitals_sheet.dart';
 
 class ActiveQueueSection extends StatelessWidget {
   const ActiveQueueSection({
@@ -37,7 +39,7 @@ class ActiveQueueSection extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         queue.when(
-          data: (data) => _QueueContent(visits: data),
+          data: (data) => _QueueContent(visits: data, onRefresh: onRefresh),
           loading: () => const _QueueLoading(),
           error: (error, stackTrace) => _QueueError(onRetry: onRefresh),
         ),
@@ -132,9 +134,10 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _QueueContent extends StatelessWidget {
-  const _QueueContent({required this.visits});
+  const _QueueContent({required this.visits, required this.onRefresh});
 
   final List<ActiveVisit> visits;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -155,7 +158,15 @@ class _QueueContent extends StatelessWidget {
         ),
         const SizedBox(height: AppDesignTokens.spaceMd),
         for (var index = 0; index < visits.length; index++) ...[
-          _ActiveVisitCard(visit: visits[index]),
+          _ActiveVisitCard(
+            visit: visits[index],
+            onRefresh: () => onRefresh(),
+            onTap: () => PatientVitalsSheet.show(
+              context,
+              visit: visits[index],
+              onSaved: onRefresh,
+            ),
+          ),
           if (index != visits.length - 1)
             const SizedBox(height: AppDesignTokens.spaceSm),
         ],
@@ -197,6 +208,7 @@ class _QueueSummary extends StatelessWidget {
                 value: total,
                 label: l10n.dashboardQueueTotalCompact,
                 accent: colors.primary,
+                icon: Icons.people_alt_outlined,
               ),
             ),
             SizedBox(
@@ -205,6 +217,7 @@ class _QueueSummary extends StatelessWidget {
                 value: withVitals,
                 label: l10n.dashboardQueueWithVitalsCompact,
                 accent: AppDesignTokens.success,
+                icon: Icons.check_circle_outline_rounded,
               ),
             ),
             SizedBox(
@@ -213,6 +226,7 @@ class _QueueSummary extends StatelessWidget {
                 value: withoutVitals,
                 label: l10n.dashboardQueueWithoutVitals,
                 accent: AppDesignTokens.warning,
+                icon: Icons.hourglass_empty_rounded,
               ),
             ),
           ],
@@ -227,11 +241,13 @@ class _MetricCard extends StatelessWidget {
     required this.value,
     required this.label,
     required this.accent,
+    this.icon,
   });
 
   final int value;
   final String label;
   final Color accent;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -239,32 +255,48 @@ class _MetricCard extends StatelessWidget {
     final colors = theme.colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.09),
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
+        border: Border.all(
+          color: accent.withValues(alpha: 0.3),
+          width: 1,
+        ),
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? AppDesignTokens.darkPanelShadow
+            : AppDesignTokens.lightPanelShadow,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '$value',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: accent,
-              fontWeight: FontWeight.w900,
-              height: 1,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 15, color: accent),
+                const SizedBox(width: 5),
+              ],
+              Text(
+                '$value',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: accent,
+                  fontWeight: FontWeight.w900,
+                  height: 1,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 5),
           Text(
             label,
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: theme.textTheme.labelSmall?.copyWith(
               color: colors.onSurfaceVariant,
               fontWeight: FontWeight.w700,
-              height: 1.2,
+              fontSize: 11,
             ),
           ),
         ],
@@ -274,9 +306,15 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _ActiveVisitCard extends StatelessWidget {
-  const _ActiveVisitCard({required this.visit});
+  const _ActiveVisitCard({
+    required this.visit,
+    this.onTap,
+    this.onRefresh,
+  });
 
   final ActiveVisit visit;
+  final VoidCallback? onTap;
+  final VoidCallback? onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -299,43 +337,31 @@ class _ActiveVisitCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
+        border: Border.all(
+          color: colors.outline.withValues(alpha: 0.6),
+          width: 1,
+        ),
         boxShadow: theme.brightness == Brightness.dark
-            ? const [
-                BoxShadow(
-                  color: Color(0x24000000),
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-              ]
-            : const [
-                BoxShadow(
-                  color: Color(0x0D0A1D3D),
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-              ],
+            ? AppDesignTokens.darkPanelShadow
+            : AppDesignTokens.lightPanelShadow,
       ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: 4,
-            child: ColoredBox(color: statusColor),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     CircleAvatar(
                       radius: 20,
-                      backgroundColor: colors.primary.withValues(alpha: 0.11),
+                      backgroundColor: colors.primary.withValues(alpha: 0.12),
                       foregroundColor: colors.primary,
                       child: Text(
                         _initials(visit.patientName),
@@ -357,6 +383,7 @@ class _ActiveVisitCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w800,
+                              height: 1.15,
                             ),
                           ),
                           const SizedBox(height: 3),
@@ -369,11 +396,14 @@ class _ActiveVisitCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: colors.onSurfaceVariant,
+                              fontSize: 11,
                             ),
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    _VitalsBadge(hasVitals: visit.hasVitals),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -386,7 +416,7 @@ class _ActiveVisitCard extends StatelessWidget {
                     height: 1.3,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -400,17 +430,21 @@ class _ActiveVisitCard extends StatelessWidget {
                         icon: Icons.medical_services_outlined,
                         label: careUnit,
                       ),
+                    _ActionChip(
+                      icon: Icons.assignment_outlined,
+                      label: l10n.consultationNotesTitle,
+                      onTap: () => ConsultationNotesSheet.show(
+                        context,
+                        visit: visit,
+                        onSaved: onRefresh,
+                      ),
+                    ),
                   ],
-                ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: _VitalsBadge(hasVitals: visit.hasVitals),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -443,28 +477,85 @@ class _InfoChip extends StatelessWidget {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 270),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
           color: colors.surfaceContainerHighest.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
+          borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
+          border: Border.all(
+            color: colors.outline.withValues(alpha: 0.4),
+            width: 1,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 15, color: colors.onSurfaceVariant),
+            Icon(icon, size: 14, color: colors.onSurfaceVariant),
             const SizedBox(width: 5),
             Flexible(
               child: Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelMedium?.copyWith(
+                style: theme.textTheme.labelSmall?.copyWith(
                   color: colors.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
+                  fontSize: 11,
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionChip extends StatelessWidget {
+  const _ActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Material(
+      color: colors.primary.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
+            border: Border.all(
+              color: colors.primary.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: colors.primary),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colors.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -482,19 +573,37 @@ class _VitalsBadge extends StatelessWidget {
     final accent = hasVitals ? AppDesignTokens.success : AppDesignTokens.warning;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.11),
-        borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
-      ),
-      child: Text(
-        hasVitals
-            ? l10n.dashboardQueueVitalsReadyCompact
-            : l10n.dashboardQueueVitalsPending,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: accent,
-          fontWeight: FontWeight.w800,
+        color: accent.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
+        border: Border.all(
+          color: accent.withValues(alpha: 0.35),
+          width: 1,
         ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            hasVitals
+                ? Icons.check_circle_outline_rounded
+                : Icons.hourglass_empty_rounded,
+            size: 13,
+            color: accent,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            hasVitals
+                ? l10n.dashboardQueueVitalsReadyCompact
+                : l10n.dashboardQueueVitalsPending,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: accent,
+              fontWeight: FontWeight.w800,
+              fontSize: 11,
+            ),
+          ),
+        ],
       ),
     );
   }

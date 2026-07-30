@@ -41,6 +41,75 @@ class AppLocalizationsFr extends AppLocalizations {
       'Protégez l’accès local avec la biométrie de cet appareil.';
 
   @override
+  String get dashboardQueueTitle => 'Patients en attente';
+
+  @override
+  String get dashboardQueueSubtitleLoading => 'Actualisation de la file…';
+
+  @override
+  String dashboardQueueSubtitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count patients dans la file',
+      one: '1 patient dans la file',
+      zero: 'Aucun patient dans la file',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dashboardQueueRefresh => 'Actualiser la file d’attente';
+
+  @override
+  String get dashboardQueueTotal => 'Patients actifs';
+
+  @override
+  String get dashboardQueueTotalCompact => 'En attente';
+
+  @override
+  String get dashboardQueueWithVitals => 'Constantes saisies';
+
+  @override
+  String get dashboardQueueWithVitalsCompact => 'Prêts';
+
+  @override
+  String get dashboardQueueWithoutVitals => 'À évaluer';
+
+  @override
+  String get dashboardQueueEmptyTitle => 'Tout est à jour';
+
+  @override
+  String get dashboardQueueEmptyBody =>
+      'Aucun patient n’attend actuellement une prise en charge.';
+
+  @override
+  String get dashboardQueueLoadError =>
+      'La file d’attente ne peut pas être chargée pour le moment.';
+
+  @override
+  String get dashboardQueueRetry => 'Réessayer';
+
+  @override
+  String get dashboardQueueVitalsReady => 'Constantes OK';
+
+  @override
+  String get dashboardQueueVitalsReadyCompact => 'Prêt';
+
+  @override
+  String get dashboardQueueVitalsPending => 'À évaluer';
+
+  @override
+  String dashboardQueueVisitReference(String visitNumber, String patientDpu) {
+    return '$visitNumber · DPU $patientDpu';
+  }
+
+  @override
+  String dashboardQueueArrivedAt(String time) {
+    return 'Arrivée $time';
+  }
+
+  @override
   String get languageFrench => 'Français';
 
   @override

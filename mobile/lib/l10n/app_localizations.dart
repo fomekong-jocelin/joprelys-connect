@@ -152,6 +152,114 @@ abstract class AppLocalizations {
   /// **'Protégez l’accès local avec la biométrie de cet appareil.'**
   String get foundationBiometricDisabled;
 
+  /// No description provided for @dashboardQueueTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Patients en attente'**
+  String get dashboardQueueTitle;
+
+  /// No description provided for @dashboardQueueSubtitleLoading.
+  ///
+  /// In fr, this message translates to:
+  /// **'Actualisation de la file…'**
+  String get dashboardQueueSubtitleLoading;
+
+  /// No description provided for @dashboardQueueSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucun patient dans la file} =1{1 patient dans la file} other{{count} patients dans la file}}'**
+  String dashboardQueueSubtitle(int count);
+
+  /// No description provided for @dashboardQueueRefresh.
+  ///
+  /// In fr, this message translates to:
+  /// **'Actualiser la file d’attente'**
+  String get dashboardQueueRefresh;
+
+  /// No description provided for @dashboardQueueTotal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Patients actifs'**
+  String get dashboardQueueTotal;
+
+  /// No description provided for @dashboardQueueTotalCompact.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente'**
+  String get dashboardQueueTotalCompact;
+
+  /// No description provided for @dashboardQueueWithVitals.
+  ///
+  /// In fr, this message translates to:
+  /// **'Constantes saisies'**
+  String get dashboardQueueWithVitals;
+
+  /// No description provided for @dashboardQueueWithVitalsCompact.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prêts'**
+  String get dashboardQueueWithVitalsCompact;
+
+  /// No description provided for @dashboardQueueWithoutVitals.
+  ///
+  /// In fr, this message translates to:
+  /// **'À évaluer'**
+  String get dashboardQueueWithoutVitals;
+
+  /// No description provided for @dashboardQueueEmptyTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout est à jour'**
+  String get dashboardQueueEmptyTitle;
+
+  /// No description provided for @dashboardQueueEmptyBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun patient n’attend actuellement une prise en charge.'**
+  String get dashboardQueueEmptyBody;
+
+  /// No description provided for @dashboardQueueLoadError.
+  ///
+  /// In fr, this message translates to:
+  /// **'La file d’attente ne peut pas être chargée pour le moment.'**
+  String get dashboardQueueLoadError;
+
+  /// No description provided for @dashboardQueueRetry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get dashboardQueueRetry;
+
+  /// No description provided for @dashboardQueueVitalsReady.
+  ///
+  /// In fr, this message translates to:
+  /// **'Constantes OK'**
+  String get dashboardQueueVitalsReady;
+
+  /// No description provided for @dashboardQueueVitalsReadyCompact.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prêt'**
+  String get dashboardQueueVitalsReadyCompact;
+
+  /// No description provided for @dashboardQueueVitalsPending.
+  ///
+  /// In fr, this message translates to:
+  /// **'À évaluer'**
+  String get dashboardQueueVitalsPending;
+
+  /// No description provided for @dashboardQueueVisitReference.
+  ///
+  /// In fr, this message translates to:
+  /// **'{visitNumber} · DPU {patientDpu}'**
+  String dashboardQueueVisitReference(String visitNumber, String patientDpu);
+
+  /// No description provided for @dashboardQueueArrivedAt.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrivée {time}'**
+  String dashboardQueueArrivedAt(String time);
+
   /// No description provided for @languageFrench.
   ///
   /// In fr, this message translates to:
