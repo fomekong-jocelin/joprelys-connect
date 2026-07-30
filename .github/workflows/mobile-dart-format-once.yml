@@ -1,0 +1,38 @@
+name: MOB-2803 one-shot Dart format
+
+on:
+  push:
+    branches:
+      - feat/mob-2803-mobile-i18n
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/mob-2803-mobile-i18n
+          fetch-depth: 0
+      - name: Set up Flutter 3.44.6
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.6'
+          channel: stable
+      - name: Format Dart sources
+        run: dart format mobile/lib mobile/test
+      - name: Commit formatting when needed
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No formatting changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile/lib mobile/test
+          git commit -m "style(mobile): appliquer dart format MOB-2803"
+          git push origin HEAD:feat/mob-2803-mobile-i18n
