@@ -2,7 +2,7 @@
 
 ## Statut
 
-IN_PROGRESS — issue #250 / PR #251 ; branche créée depuis le `main` courant `5bf45b5c71d530e0fd73bfe28e9857a474e0b59f` après fusion de MOB-2802.
+IN_REVIEW — issue #250 / PR #251 ; branche créée depuis le `main` courant `5bf45b5c71d530e0fd73bfe28e9857a474e0b59f` après fusion de MOB-2802. Gate runtime #2019 vert sur `b242cbcd0c21f48b153fdfe28cabd52de5250a8e` ; gate final exact-HEAD requis après clôture documentaire.
 
 ## Objectif
 
@@ -37,10 +37,11 @@ Le principe reste aligné sur le web :
 - [x] localiser la page de fondation ;
 - [x] ajouter les formats date/heure/nombre ;
 - [x] ajouter les tests locale et formats ;
-- [x] versionner le lockfile résolu par Flutter 3.44.6 ;
-- [ ] obtenir format/analyze/tests/APK verts ;
-- [ ] finaliser le suivi et le changelog ;
-- [ ] gate final exact-HEAD vert.
+- [x] versionner le lockfile régénéré par Flutter 3.44.6 ;
+- [x] obtenir format/analyze/tests/APK verts dans le gate runtime #2019 ;
+- [x] finaliser la documentation feature ;
+- [ ] mettre à jour suivi central et changelog ;
+- [ ] obtenir le gate final exact-HEAD vert.
 
 ## Décisions
 
@@ -59,6 +60,20 @@ La sélection utilisateur change la locale sans redémarrage. La persistance dur
 - API de formatage centralisée uniquement pour éviter les divergences de date/heure/nombre ;
 - aucun format monétaire métier n’est introduit dans ce ticket.
 
+## Preuves runtime
+
+Run GitHub Actions #2019 / ID `30516924571` sur `b242cbcd0c21f48b153fdfe28cabd52de5250a8e` :
+
+- détection des stacks : verte ;
+- `flutter pub get` : vert ;
+- Dart format : vert ;
+- `flutter analyze` : vert ;
+- tests Flutter : verts ;
+- `flutter build apk --debug` : vert ;
+- backend et frontend non concernés, donc correctement ignorés.
+
+Le lockfile final a été régénéré avec Flutter 3.44.6 ; `intl` est résolu en `0.20.2` sous la contrainte du SDK.
+
 ## Critères d’acceptation
 
 - [x] FR/EN déclarés dans ARB ;
@@ -69,7 +84,8 @@ La sélection utilisateur change la locale sans redémarrage. La persistance dur
 - [x] `AppTheme` inchangé ;
 - [x] `AppDesignTokens` inchangé ;
 - [x] aucun secret/PII ;
-- [ ] CI mobile finale verte sur HEAD exact.
+- [x] gate runtime mobile complet vert ;
+- [ ] gate final mobile vert sur HEAD documentaire exact.
 
 ## Estimation
 
