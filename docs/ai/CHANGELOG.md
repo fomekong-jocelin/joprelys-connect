@@ -8,6 +8,13 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **MOB-2801 — Première fondation runtime Flutter & CI mobile** :
+  - **Bootstrap applicatif** : remplacement du compteur Flutter généré par le flux `main -> bootstrap -> ProviderScope -> JoprelysApp`, avec configuration minimale centralisée et aucune logique métier clinique dans la présentation.
+  - **Navigation** : intégration de Riverpod et `go_router` avec une seule route de fondation neutre `/` ; aucun faux écran clinique ni donnée patient n’est exposé avant livraison des stories métier correspondantes.
+  - **Baseline mobile** : CI pinée sur Flutter `3.44.6` / Dart `3.12.2`, `flutter_riverpod` résolu en `3.4.2`, `go_router` en `17.3.0`, et `pubspec.lock` applicatif versionné.
+  - **CI mobile** : détection dédiée de `mobile/**` et gate `flutter pub get`, Dart format, `flutter analyze`, `flutter test`, puis `flutter build apk --debug` ; une modification du workflow partagé force aussi les gates backend et frontend.
+  - **Validation runtime** : run GitHub Actions #1962 (`30501163481`) entièrement vert sur le HEAD `476191772ef368bec0fa9346a13d723d9e7e08d6` : backend Maven, Angular tests/build et Flutter format/analyze/tests/APK. Gate final post-documentation requis avant fusion de la PR #244.
+
 - **FIX-20260729-PATIENT-RECORD-MOBILE-UX-FINISHING — Finition de la hiérarchie mobile du dossier patient** :
   - **Fiche d’identité unifiée** : les informations administratives sont désormais rendues directement dans la Fiche d’identité ; l’accordéon redondant « Informations administratives » disparaît sans suppression de donnée.
   - **Accordéons compacts** : les intitulés deviennent `Contexte d’urgence`, `Informations médicales` et `Contact d’urgence`, avec titres courts sur une ligne et sous-titre d’urgence déplacé dans le contenu déplié.
