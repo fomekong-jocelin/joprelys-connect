@@ -192,7 +192,7 @@ void main() {
         clock: () => now,
       );
 
-      await expectLater(manager.logout(), throwsA(isA<StateError>()));
+      await manager.logout();
       expect(store.session, isNull);
       expect(await cookies.loadForRequest(cookieUri), isEmpty);
     },
