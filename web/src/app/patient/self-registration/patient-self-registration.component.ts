@@ -25,7 +25,7 @@ export class PatientSelfRegistrationComponent implements OnInit {
   readonly i18n = inject(I18nService);
   private readonly themeService = inject(ThemeService);
   readonly theme = this.themeService.theme;
-  readonly publicSiteUrl = APP_BRAND_CONFIG.publicSiteUrl;
+  readonly publicSiteUrl = this.resolvePublicSiteUrl();
   readonly totalSteps = 4;
 
   // Identifiant d'organisation extrait de l'URL
@@ -226,6 +226,13 @@ export class PatientSelfRegistrationComponent implements OnInit {
     this.registrationSuccess.set(false);
     this.errorMessage.set(null);
     this.loadCaptcha();
+  }
+
+  private resolvePublicSiteUrl(): string {
+    if (typeof window === 'undefined' || !window.location?.origin) {
+      return APP_BRAND_CONFIG.publicSiteUrl;
+    }
+    return window.location.origin;
   }
 
   private hasRequiredIdentity(): boolean {
