@@ -12,8 +12,7 @@ class AppBrandLockup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final logoAspectRatio = isDark ? 1800 / 1012 : 946 / 506;
+    final colors = theme.colorScheme;
 
     return Semantics(
       label: AppConfig.appName,
@@ -21,18 +20,25 @@ class AppBrandLockup extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
-            child: SizedBox(
-              width: logoWidth,
-              child: AspectRatio(
-                aspectRatio: logoAspectRatio,
-                child: Image.asset(
-                  isDark ? AppConfig.logoOnDarkAsset : AppConfig.logoAsset,
-                  fit: BoxFit.cover,
-                  filterQuality: FilterQuality.high,
-                ),
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 6 : AppDesignTokens.spaceSm,
+              vertical: compact ? 4 : 6,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(
+                color: colors.outlineVariant.withValues(alpha: 0.7),
               ),
+              borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
+            ),
+            child: Image.asset(
+              AppConfig.logoAsset,
+              width: logoWidth,
+              fit: BoxFit.contain,
+              alignment: Alignment.centerLeft,
+              filterQuality: FilterQuality.high,
+              gaplessPlayback: true,
             ),
           ),
           SizedBox(
@@ -45,7 +51,7 @@ class AppBrandLockup extends StatelessWidget {
                         ? theme.textTheme.titleLarge
                         : theme.textTheme.headlineMedium)
                     ?.copyWith(
-                      color: theme.colorScheme.onSurface,
+                      color: colors.onSurface,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
                     ),
