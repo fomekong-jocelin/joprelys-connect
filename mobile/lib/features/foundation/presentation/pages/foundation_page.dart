@@ -6,6 +6,9 @@ import '../../../../features/auth/application/auth_controller.dart';
 import '../../../../features/auth/domain/professional_session.dart';
 import '../../../../features/auth/presentation/widgets/auth_error_message.dart';
 import '../../../../features/auth/presentation/widgets/auth_preferences_bar.dart';
+import '../../../../features/dashboard/application/active_queue_controller.dart';
+import '../../../../features/dashboard/domain/active_visit.dart';
+import '../../../../features/dashboard/presentation/widgets/active_queue_section.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_brand_lockup.dart';
 import '../../../../shared/widgets/app_button.dart';
@@ -21,6 +24,7 @@ class FoundationPage extends ConsumerWidget {
     final auth = ref.watch(authControllerProvider);
     final authState = auth.value;
     final session = authState?.session;
+    final queue = ref.watch(activeQueueControllerProvider);
 
     if (session == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -28,8 +32,12 @@ class FoundationPage extends ConsumerWidget {
 
     return _ProfessionalHome(
       session: session,
+      queue: queue,
       authError: authErrorMessage(l10n, authState?.errorCode),
       loading: auth.isLoading,
+      onQueueRefresh: ref
+          .read(activeQueueControllerProvider.notifier)
+          .refreshQueue,
       onBiometricsPressed: session.biometricEnabled
           ? ref.read(authControllerProvider.notifier).disableBiometrics
           : () => ref
@@ -43,15 +51,19 @@ class FoundationPage extends ConsumerWidget {
 class _ProfessionalHome extends StatelessWidget {
   const _ProfessionalHome({
     required this.session,
+    required this.queue,
     required this.loading,
+    required this.onQueueRefresh,
     required this.onBiometricsPressed,
     required this.onLogoutPressed,
     this.authError,
   });
 
   final ProfessionalSession session;
+  final AsyncValue<List<ActiveVisit>> queue;
   final String? authError;
   final bool loading;
+  final Future<void> Function() onQueueRefresh;
   final VoidCallback onBiometricsPressed;
   final VoidCallback onLogoutPressed;
 
@@ -74,17 +86,23 @@ class _ProfessionalHome extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 480),
-                child: _ProfessionalHomeContent(
-                  session: session,
-                  authError: authError,
-                  loading: loading,
-                  onBiometricsPressed: onBiometricsPressed,
-                  onLogoutPressed: onLogoutPressed,
+          child: RefreshIndicator(
+            onRefresh: onQueueRefresh,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: _ProfessionalHomeContent(
+                    session: session,
+                    queue: queue,
+                    authError: authError,
+                    loading: loading,
+                    onQueueRefresh: onQueueRefresh,
+                    onBiometricsPressed: onBiometricsPressed,
+                    onLogoutPressed: onLogoutPressed,
+                  ),
                 ),
               ),
             ),
@@ -98,15 +116,19 @@ class _ProfessionalHome extends StatelessWidget {
 class _ProfessionalHomeContent extends StatelessWidget {
   const _ProfessionalHomeContent({
     required this.session,
+    required this.queue,
     required this.loading,
+    required this.onQueueRefresh,
     required this.onBiometricsPressed,
     required this.onLogoutPressed,
     this.authError,
   });
 
   final ProfessionalSession session;
+  final AsyncValue<List<ActiveVisit>> queue;
   final String? authError;
   final bool loading;
+  final Future<void> Function() onQueueRefresh;
   final VoidCallback onBiometricsPressed;
   final VoidCallback onLogoutPressed;
 
@@ -137,7 +159,11 @@ class _ProfessionalHomeContent extends StatelessWidget {
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
-        const SizedBox(height: AppDesignTokens.spaceLg),
+        const SizedBox(height: AppDesignTokens.spaceXl),
+        ActiveQueueSection(queue: queue, onRefresh: onQueueRefresh),
+        const SizedBox(height: AppDesignTokens.spaceXl),
+        Divider(color: Theme.of(context).colorScheme.outlineVariant),
+        const SizedBox(height: AppDesignTokens.spaceMd),
         ProfessionalIdentityCard(session: session),
         const SizedBox(height: AppDesignTokens.spaceMd),
         ProfessionalSecurityCard(
