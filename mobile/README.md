@@ -12,7 +12,7 @@ Le socle Flutter comprend désormais :
 - client réseau central Dio, corrélation, erreurs et résilience bornée ;
 - authentification professionnelle, OTP, session sécurisée, refresh par cookie HttpOnly, biométrie locale et guards de navigation.
 
-MOB-2805 est implémenté dans la PR #255 ; le gate Flutter complet et la recette réelle restent requis avant fusion.
+MOB-2805 est fusionné dans `main`. Les APK de validation ciblent la recette par défaut ; les builds de développement et de production doivent toujours fournir explicitement leur environnement.
 
 Documentation principale :
 
@@ -75,7 +75,16 @@ packages/
 
 ## Configuration réseau
 
-La configuration publique est injectée au build :
+La configuration publique est injectée au build.
+
+Par défaut, un APK lancé sans `--dart-define` cible la recette :
+
+```text
+APP_ENV=recette
+API_BASE_URL=https://recette.joprelys.com
+```
+
+Développement local explicite :
 
 ```bash
 flutter run \
@@ -83,18 +92,19 @@ flutter run \
   --dart-define=API_BASE_URL=http://10.0.2.2:8080
 ```
 
-Exemple recette :
+Build de validation recette explicite :
 
 ```bash
-flutter run \
+flutter build apk --debug \
   --dart-define=APP_ENV=recette \
-  --dart-define=API_BASE_URL=https://recette-api.joprelys.com
+  --dart-define=API_BASE_URL=https://recette.joprelys.com
 ```
 
 Règles :
 
 - `APP_ENV` accepte `dev`, `recette`, `prod` ;
 - HTTPS est obligatoire en recette et prod ;
+- ne jamais utiliser l’URL de production dans un APK de validation ;
 - ces valeurs sont publiques : ne jamais y placer token, clé API ou secret ;
 - `apiClientProvider` est consommé par les data sources/repositories, pas par la présentation ;
 - `apiSessionAccessProvider` est branché sur `AuthSessionManager` au bootstrap.
@@ -119,7 +129,9 @@ flutter pub get
 dart format --output=none --set-exit-if-changed lib test
 flutter analyze
 flutter test
-flutter build apk --debug
+flutter build apk --debug \
+  --dart-define=APP_ENV=recette \
+  --dart-define=API_BASE_URL=https://recette.joprelys.com
 ```
 
 ## Références
