@@ -8,12 +8,15 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: mob-2805-runtime-validation
+  cancel-in-progress: true
+
 jobs:
   validate:
-    if: contains(github.event.head_commit.message, 'trigger runtime validation MOB-2805')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout exact trigger commit
+      - name: Checkout exact commit
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
