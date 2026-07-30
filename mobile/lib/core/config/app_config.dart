@@ -11,14 +11,16 @@ abstract final class AppConfig {
     Locale('en'),
   ];
 
+  // Les APK de validation doivent cibler la recette par défaut. Le développement
+  // local reste disponible en passant explicitement APP_ENV=dev et API_BASE_URL.
   static final AppRuntimeConfig runtime = AppRuntimeConfig.fromValues(
     environmentName: const String.fromEnvironment(
       'APP_ENV',
-      defaultValue: 'dev',
+      defaultValue: 'recette',
     ),
     apiBaseUrl: const String.fromEnvironment(
       'API_BASE_URL',
-      defaultValue: 'http://10.0.2.2:8080',
+      defaultValue: 'https://recette.joprelys.com',
     ),
   );
 
