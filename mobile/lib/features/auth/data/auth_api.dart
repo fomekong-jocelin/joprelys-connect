@@ -3,11 +3,28 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_request_policy.dart';
 import '../domain/professional_session.dart';
 
-final class AuthApi {
+abstract interface class AuthGateway {
+  Future<AuthExchangeResult> login({
+    required String email,
+    required String password,
+  });
+
+  Future<AuthExchangeResult> verifyOtp({
+    required String email,
+    required String otpCode,
+  });
+
+  Future<ProfessionalSession> refresh();
+
+  Future<void> logout();
+}
+
+final class AuthApi implements AuthGateway {
   const AuthApi(this._client);
 
   final ApiClient _client;
 
+  @override
   Future<AuthExchangeResult> login({
     required String email,
     required String password,
@@ -20,6 +37,7 @@ final class AuthApi {
     return _parseExchange(response.data, fallbackEmail: email);
   }
 
+  @override
   Future<AuthExchangeResult> verifyOtp({
     required String email,
     required String otpCode,
@@ -32,6 +50,7 @@ final class AuthApi {
     return _parseExchange(response.data, fallbackEmail: email);
   }
 
+  @override
   Future<ProfessionalSession> refresh() async {
     final response = await _client.post<Map<String, dynamic>>(
       '/api/auth/refresh',
@@ -50,6 +69,7 @@ final class AuthApi {
     return session;
   }
 
+  @override
   Future<void> logout() async {
     await _client.post<void>(
       '/api/auth/logout',
