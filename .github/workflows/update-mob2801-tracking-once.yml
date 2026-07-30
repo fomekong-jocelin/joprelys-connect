@@ -1,0 +1,72 @@
+name: Update MOB-2801 tracking once
+
+on:
+  push:
+    branches:
+      - feat/mob-2801-flutter-bootstrap
+
+permissions:
+  contents: write
+
+jobs:
+  update-tracking:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/mob-2801-flutter-bootstrap
+          fetch-depth: 0
+      - name: Patch project tracking safely
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('docs/ai/PROJECT-TRACKING.md')
+          text = path.read_text(encoding='utf-8')
+
+          replacements = {
+              '| Dernière mise à jour | 2026-07-30 — ARCH-20260730-MOBILE-FLUTTER-FOUNDATION : architecture mobile native Flutter cadrée via issue #241, ADR-0004 et EPIC-0028 ; documentation prête pour review, aucun code mobile fonctionnel encore livré. |':
+              '| Dernière mise à jour | 2026-07-30 — MOB-2801 : première fondation runtime Flutter implémentée dans la PR #244 ; bootstrap, Riverpod/go_router, lockfile et CI mobile sont en place. Le gate runtime #1962 est vert ; gate final post-documentation requis avant fusion. |',
+              '| État global | Le chantier mobile natif est désormais cadré Android-first / iOS-ready avec architecture feature-first, design system commun, FR/EN, light/dark/system, sécurité et audio clinique natif isolé. Le dossier `mobile/` reste pour l’instant un squelette Flutter généré ; les parcours vocaux web existants ne sont pas remplacés par ce cadrage. |':
+              '| État global | Le mobile n’est plus le compteur Flutter généré : `main -> bootstrap -> ProviderScope -> JoprelysApp` et une navigation `go_router` minimale sont opérationnels. Le design system complet, l’i18n FR/EN, le client API, l’auth et l’audio natif restent volontairement dans les stories suivantes. |',
+              '| Risques majeurs | P0 mobile : le contrat backend audio actuel n’expose pas encore séquence/idempotence/checksum/ACK nécessaires à une reprise fiable des segments ; la rétention locale chiffrée des audios/brouillons doit être validée DPO. Côté IA web, la mesure des coûts et la recette clinique réelle restent des risques ouverts. |':
+              '| Risques majeurs | P0 mobile : le contrat backend audio segmenté/idempotent reste à construire avant le pilote longue durée et la rétention locale chiffrée doit être validée DPO. Les thèmes/design tokens, i18n, réseau/session et auth ne sont pas encore fonctionnels dans la fondation MOB-2801. |',
+              '| Prochaine priorité | Faire valider ADR-0004 puis lancer MOB-2801 (bootstrap Flutter) ; en parallèle préparer MOB-2814, contrat backend audio segmenté/idempotent, avant le pilote de consultation native longue durée. |':
+              '| Prochaine priorité | Obtenir le gate final vert de la PR #244, puis engager MOB-2802 (design system), MOB-2803 (i18n), MOB-2804 (réseau) et MOB-2805 (auth). En parallèle, préparer MOB-2814 avant tout engagement sur la consultation audio native longue durée. |',
+              '| Capacité sprint | Architecture mobile MOB-2800 : 3 SP / 1–1,5 j senior ; EPIC-0028 : 99 SP multi-sprint à planifier sans charger l’équipe à 100 %. Les engagements historiques du sprint restent inchangés tant qu’un sprint mobile dédié n’est pas validé. |':
+              '| Capacité sprint | MOB-2800 : 3 SP livré ; MOB-2801 : 5 SP en review ; EPIC-0028 : 99 SP multi-sprint à planifier sans charger l’équipe à 100 %. Les engagements historiques du sprint restent inchangés tant qu’un sprint mobile dédié n’est pas validé. |',
+              '| Charge engagée | Cadrage EPIC-0028 engagé uniquement : documentation/ADR/backlog, sans implémentation fonctionnelle. La fondation MOB-2801 et le contrat audio MOB-2814 ne sont pas encore démarrés. Les charges historiques web/backend restent suivies séparément. |':
+              '| Charge engagée | Fondation MOB-2801 implémentée et techniquement validée par le gate #1962 ; seule la validation finale post-documentation de la PR #244 reste à obtenir. MOB-2802+ et MOB-2814 ne sont pas encore démarrés. Les charges historiques web/backend restent suivies séparément. |',
+              '| Dérive globale | Aucun dépassement mobile constaté à ce stade. L’estimation EPIC-0028 est initiale et devra être recalibrée après la fondation Flutter et le prototype foreground microphone sur appareils physiques Android. |':
+              '| Dérive globale | MOB-2801 reste dans son enveloppe de 5 SP. Deux itérations CI ont corrigé un formatage Dart puis une copie de lockfile sans baisse de couverture ni suppression de test. L’estimation EPIC-0028 sera recalibrée après le prototype foreground microphone sur appareils physiques Android. |',
+              '| ARCH-20260730-MOBILE-FLUTTER-FOUNDATION | EPIC-0028 / MOBILE_NATIVE | Architecture + PM | Architecture Flutter native Android-first / iOS-ready | Flutter / Android / iOS / Spring Boot / CI | IN_REVIEW — issue #241, ADR-0004 proposé, docs feature + test plan + epic créés | P0 | 3 | Architecte mobile senior | 1–1.5j | 2j | Non recommandé seul | GPT-5.6 Thinking | Tech Lead + sécurité mobile + médecin référent | Hors sprint / cadrage | 1j cadrage | Review ADR puis lancer MOB-2801 ; aucun code fonctionnel encore | Moyen | 2026-07-30 |':
+              '| ARCH-20260730-MOBILE-FLUTTER-FOUNDATION | EPIC-0028 / MOBILE_NATIVE | Architecture + PM | Architecture Flutter native Android-first / iOS-ready | Flutter / Android / iOS / Spring Boot / CI | DONE — issue #241 / PR #242 fusionnée sur `main` au commit `ee0688ed` | P0 | 3 | Architecte mobile senior | 1–1.5j | 2j | Non recommandé seul | GPT-5.6 Thinking | Tech Lead + sécurité mobile + médecin référent | Hors sprint / cadrage | 1j cadrage | Suivi post-fusion ; architecture appliquée par MOB-2801 | Faible | 2026-07-30 |',
+              '| EPIC-0028 | MOBILE_NATIVE | Epic | Application mobile native Joprelys Connect | Flutter / Android / iOS / Spring Boot | PLANNED — architecture en review, 21 stories découpées | P0/P1 | 99 | Senior Flutter + Android/Kotlin + backend + QA mobile | Multi-sprint | Multi-sprint | Non recommandé | Équipe mobile | Tech Lead + sécurité/DPO + clinique | À planifier | 0j implémentation | Fondation, audio natif P0, features cliniques, hardening | Élevé jusqu’au pilote audio | 2026-07-30 |':
+              '| EPIC-0028 | MOBILE_NATIVE | Epic | Application mobile native Joprelys Connect | Flutter / Android / iOS / Spring Boot | IN_PROGRESS — architecture fusionnée ; MOB-2801 en review, 20 stories suivantes planifiées | P0/P1 | 99 | Senior Flutter + Android/Kotlin + backend + QA mobile | Multi-sprint | Multi-sprint | Non recommandé | Équipe mobile | Tech Lead + sécurité/DPO + clinique | À planifier | Fondation partielle | Finaliser MOB-2801 puis design/i18n/réseau/auth et audio natif P0 | Élevé jusqu’au pilote audio | 2026-07-30 |',
+          }
+
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'Expected tracking text not found: {old[:100]}')
+              text = text.replace(old, new, 1)
+
+          row = '| MOB-2801 | EPIC-0028 / MOBILE_NATIVE | Feature / Fondation runtime | Bootstrap Flutter, Riverpod/go_router et CI mobile | Flutter / Dart / GitHub Actions | IN_REVIEW — PR #244 ; gate runtime #1962 vert, gate final post-doc pending | P0 | 5 | Senior Flutter | 2–3j | 3–4j | Non recommandé seul | GPT-5.6 Thinking | Tech Lead + QA mobile | Hors sprint / fondation | ~1j implémentation | Gate final post-doc puis fusion uniquement après validation | Faible | 2026-07-30 |'
+          separator = '|---|---|---|---|---|---|---|---|---:|---|---:|---:|---:|---|---|---|---:|---|---|---|'
+          if row not in text:
+              if separator not in text:
+                  raise SystemExit('Tracking table separator not found')
+              text = text.replace(separator, separator + '\n' + row, 1)
+
+          path.write_text(text, encoding='utf-8')
+      - name: Remove one-shot workflow and commit tracking
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/update-mob2801-tracking-once.yml
+          git config user.name 'joprelys-ci'
+          git config user.email 'actions@users.noreply.github.com'
+          git add docs/ai/PROJECT-TRACKING.md .github/workflows/update-mob2801-tracking-once.yml
+          git commit -m 'docs(mobile): mettre à jour le suivi MOB-2801'
+          git push origin HEAD:feat/mob-2801-flutter-bootstrap
