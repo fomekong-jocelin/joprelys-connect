@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_client_providers.dart';
+import '../../../core/network/api_exception.dart';
 import '../domain/patient_vitals.dart';
 
 abstract interface class VitalsGateway {
@@ -21,13 +22,18 @@ final class VitalsApi implements VitalsGateway {
 
   @override
   Future<PatientVitals?> getVitals(String visitId) async {
-    final response = await _client.get<dynamic>('/api/visits/$visitId/vitals');
-    final data = response.data;
-    if (data == null) return null;
-    if (data is! Map) {
-      throw const FormatException('Invalid vitals response format');
+    try {
+      final response = await _client.get<dynamic>('/api/visits/$visitId/vitals');
+      final data = response.data;
+      if (data == null) return null;
+      if (data is! Map) {
+        throw const FormatException('Invalid vitals response format');
+      }
+      return PatientVitals.fromJson(Map<String, dynamic>.from(data));
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) return null;
+      rethrow;
     }
-    return PatientVitals.fromJson(Map<String, dynamic>.from(data));
   }
 
   @override

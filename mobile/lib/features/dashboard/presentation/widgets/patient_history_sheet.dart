@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/app_locale_formatters.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_design_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/patient_history_api.dart';
@@ -70,7 +71,7 @@ class _PatientHistorySheetState extends ConsumerState<PatientHistorySheet>
 
     try {
       final gateway = ref.read(patientHistoryApiProvider);
-      final res = await gateway.getMedicalHistory(widget.visit.id);
+      final res = await gateway.getMedicalHistory(widget.visit.patientId);
       if (mounted) {
         setState(() {
           _history = res;
@@ -79,8 +80,11 @@ class _PatientHistorySheetState extends ConsumerState<PatientHistorySheet>
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         setState(() {
-          _error = e.toString();
+          _error = e is ApiException && e.message.isNotEmpty && !e.message.startsWith('ApiException')
+              ? e.message
+              : l10n.dashboardQueueLoadError;
           _loading = false;
         });
       }
@@ -155,7 +159,6 @@ class _PatientHistorySheetState extends ConsumerState<PatientHistorySheet>
                         '${widget.visit.patientName} (${_formattedReference(widget.visit.visitNumber, widget.visit.patientDpu)})',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colors.onSurfaceVariant,
-                          height: 1.3,
                         ),
                       ),
                     ],
@@ -175,7 +178,7 @@ class _PatientHistorySheetState extends ConsumerState<PatientHistorySheet>
             indicatorColor: colors.primary,
             tabs: [
               Tab(
-                icon: const Icon(Icons.medical_services_outlined, size: 18),
+                icon: const Icon(Icons.badge_rounded, size: 18),
                 text: l10n.historyTabAntecedents,
               ),
               Tab(
@@ -190,9 +193,29 @@ class _PatientHistorySheetState extends ConsumerState<PatientHistorySheet>
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
                     ? Center(
-                        child: Text(
-                          _error!,
-                          style: TextStyle(color: colors.error),
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.cloud_off_rounded,
+                                  size: 44, color: colors.error),
+                              const SizedBox(height: 12),
+                              Text(
+                                _error!,
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: colors.onSurfaceVariant,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              OutlinedButton.icon(
+                                onPressed: _loadHistory,
+                                icon: const Icon(Icons.refresh_rounded),
+                                label: Text(l10n.dashboardQueueRetry),
+                              ),
+                            ],
+                          ),
                         ),
                       )
                     : TabBarView(

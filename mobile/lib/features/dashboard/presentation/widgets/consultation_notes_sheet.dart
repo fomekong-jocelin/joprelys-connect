@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_design_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_button.dart';
@@ -123,8 +124,11 @@ class _ConsultationNotesSheetState
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         setState(() {
-          _error = e.toString();
+          _error = e is ApiException && e.message.isNotEmpty && !e.message.startsWith('ApiException')
+              ? e.message
+              : l10n.dashboardQueueLoadError;
         });
       }
     } finally {
