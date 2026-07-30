@@ -8,12 +8,20 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **MOB-2804 — Client API Flutter, erreurs, corrélation et résilience réseau** :
+  - **Configuration** : ajout de `APP_ENV` / `API_BASE_URL`, validation stricte de la base URL et HTTPS obligatoire en recette/production ; aucune valeur sensible n’est placée dans `--dart-define`.
+  - **Client central** : Dio est encapsulé par `ApiClient` et injecté via Riverpod ; headers JSON, locale, bearer conditionnel, idempotence et `X-Trace-Id` sont gérés hors des widgets et des features métier.
+  - **Sessions** : port `ApiSessionAccess`, distinction professionnel/patient, coordination d’un seul refresh concurrent et replay borné ; un `403` ne déclenche jamais de refresh/logout et le patient n’utilise jamais le refresh professionnel.
+  - **Résilience / erreurs** : retry unique limité aux requêtes sûres ou explicitement idempotentes, mapping de l’enveloppe Joprelys, de `ProblemDetail` et des erreurs Dio, sans log de token, cookie, PII ou body clinique.
+  - **Frontière thème préservée** : aucun changement de `AppTheme`, `AppDesignTokens` ou widget partagé ; `core/network` reste non visuel et les DTO métier restent feature-scoped.
+  - **Validation runtime** : run #2046 (`30522369209`) vert sur `0c2670a3545bedc60d2f241e9452bc7a6a594de8` : pub get, format, analyze, tests Flutter et APK debug. Gate final exact-HEAD requis après clôture documentaire.
+
 - **MOB-2803 — Internationalisation Flutter FR/EN et formats locale** :
   - **i18n native** : activation de `flutter_localizations`, `gen_l10n` et ARB FR/EN avec français comme fallback produit ; la locale système FR/EN est reconnue et la langue peut être changée à chaud via Riverpod.
   - **Formats cohérents** : ajout d’un formateur central limité aux dates, heures et nombres ; `fr_FR` et `en_GB` sont initialisés au bootstrap et `intl 0.20.2` est verrouillé par le lockfile Flutter 3.44.6.
   - **Fondation localisée** : suppression des libellés utilisateur codés en dur de la page de fondation et branchement des delegates/locales sur `MaterialApp.router`.
   - **Frontière thème préservée** : `AppTheme` et `AppDesignTokens` sont volontairement inchangés ; l’i18n ne transforme pas le thème en registre de styles métier et les futures compositions visuelles restent feature-scoped, comme sur le web.
-  - **Validation runtime** : run #2019 (`30516924571`) vert sur `b242cbcd0c21f48b153fdfe28cabd52de5250a8e` : pub get, format, analyze, tests Flutter et APK debug. Gate final exact-HEAD requis après clôture documentaire.
+  - **Validation finale** : run #2030 (`30517927222`) vert sur le HEAD exact `5363c491585b0f4944f941a2576730c28c9c9775`, puis fusion squash de la PR #251 dans `main` au commit `43e3d053`.
 
 - **FIX-20260730-PUBLIC-SELF-REGISTRATION-UX / #247 — Pré-enregistrement public progressif et sorties explicites** :
   - **Charge cognitive mobile** : remplacement du formulaire monolithique de cinq sections par un parcours progressif en quatre étapes, avec une seule étape affichée à la fois et conservation des valeurs lors des retours arrière.
