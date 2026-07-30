@@ -46,6 +46,7 @@ jobs:
 
           rm .github/workflows/mob-2805-validate-once.yml
           mkdir -p .ci
+          rm -f .ci/mob-2805-validation-trigger
           rm -f .ci/mob-2805-validation.log
           if [ "$STATUS" -ne 0 ]; then
             mv "$LOG" .ci/mob-2805-validation.log
