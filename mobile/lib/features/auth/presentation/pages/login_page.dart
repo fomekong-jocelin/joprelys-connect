@@ -38,7 +38,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final serverError = authErrorMessage(l10n, state?.errorCode);
 
     return AuthShell(
-      icon: Icons.badge_outlined,
       title: l10n.authLoginTitle,
       subtitle: l10n.authLoginSubtitle,
       child: AutofillGroup(

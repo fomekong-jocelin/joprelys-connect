@@ -30,3 +30,7 @@ dev_dependencies:
 flutter:
   generate: true
   uses-material-design: true
+  assets:
+    - assets/branding/logo_principal.png
+    - assets/branding/logo_white_blue_bg.png
+    - assets/branding/logo_icon.png

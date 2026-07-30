@@ -18,7 +18,6 @@ class RecoveryPage extends ConsumerWidget {
     final error = authErrorMessage(l10n, auth.value?.errorCode);
 
     return AuthShell(
-      icon: Icons.cloud_off_outlined,
       title: l10n.authRecoveryTitle,
       subtitle: l10n.authRecoverySubtitle,
       child: Column(
