@@ -10,7 +10,8 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 - **MOB-2814 / MOB-2816 — Alignment UI SOAP Web Angular & Connexion Backend Réelle** :
   - **Interface SOAP (ConsultationNotesSheet)** : refonte complète de la modale SOAP pour s'aligner sur l'éditeur Web Angular `clinical-note-editor` (sections numérotées 1, 2, 3, 4 avec sous-titres d'aide i18n, badge motif de consultation, accès rapide à l'assistant vocal et zone de texte clinique stylisée).
-  - **Historique Médical (PatientHistoryApi)** : suppression définitive de tout le fallback de données factices/mocks (Dr. Dupont 2026, etc.), garantissant une communication 100% réelle avec le backend Spring Boot.
+  - **Historique Médical (PatientHistoryApi & Sheet)** : correction du paramètre d'appel (`patientId` au lieu de `visitId`), élimination des exceptions brutes 404 affichées en rouge à l'utilisateur, et ajout d'un écran d'erreur ergonomique avec bouton de réessai.
+  - **Gestion REST 404** : `ConsultationApi`, `VitalsApi` et `PatientHistoryApi` gèrent désormais les réponses 404 comme l'absence de données créées sans lever d'exception technique.
 
 - **MOB-2816 — Historique Médical & Chronologie des Visites Patient** :
   - **Domaine & Gateway** : création de `PatientMedicalHistory`, `MedicalAntecedent`, `PatientAllergy`, `PastVisitSummary` et `PatientHistoryApi`.
