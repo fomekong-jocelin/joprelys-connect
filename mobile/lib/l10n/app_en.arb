@@ -16,6 +16,45 @@
   "foundationSecurityTitle": "Application security",
   "foundationBiometricEnabled": "Biometric lock is enabled on this device.",
   "foundationBiometricDisabled": "Protect local access with this device’s biometrics.",
+  "dashboardQueueTitle": "Active waiting queue",
+  "dashboardQueueSubtitleLoading": "Refreshing clinical activity…",
+  "dashboardQueueSubtitle": "{count, plural, =0{No patients are waiting} =1{1 patient to care for} other{{count} patients to care for}}",
+  "@dashboardQueueSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardQueueRefresh": "Refresh the waiting queue",
+  "dashboardQueueTotal": "Active patients",
+  "dashboardQueueWithVitals": "Vitals recorded",
+  "dashboardQueueWithoutVitals": "To assess",
+  "dashboardQueueEmptyTitle": "The queue is clear",
+  "dashboardQueueEmptyBody": "No patient is currently waiting for care.",
+  "dashboardQueueLoadError": "The waiting queue cannot be loaded right now.",
+  "dashboardQueueRetry": "Retry",
+  "dashboardQueueVitalsReady": "Vitals ready",
+  "dashboardQueueVitalsPending": "To assess",
+  "dashboardQueueVisitReference": "Visit {visitNumber} · DPU {patientDpu}",
+  "@dashboardQueueVisitReference": {
+    "placeholders": {
+      "visitNumber": {
+        "type": "String"
+      },
+      "patientDpu": {
+        "type": "String"
+      }
+    }
+  },
+  "dashboardQueueArrivedAt": "Arrived at {time}",
+  "@dashboardQueueArrivedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "languageFrench": "Français",
   "languageEnglish": "English",
   "themeSystem": "System",
