@@ -6,6 +6,9 @@ import 'package:joprelys_mobile/app/app.dart';
 import 'package:joprelys_mobile/core/i18n/locale_controller.dart';
 import 'package:joprelys_mobile/features/auth/application/auth_controller.dart';
 import 'package:joprelys_mobile/features/auth/domain/professional_session.dart';
+import 'package:joprelys_mobile/features/dashboard/application/active_queue_controller.dart';
+import 'package:joprelys_mobile/features/dashboard/data/active_visits_api.dart';
+import 'package:joprelys_mobile/features/dashboard/domain/active_visit.dart';
 import 'package:joprelys_mobile/shared/widgets/app_brand_lockup.dart';
 import 'package:joprelys_mobile/shared/widgets/app_text_field.dart';
 
@@ -93,43 +96,82 @@ void main() {
     expect(find.text('Connexion professionnelle'), findsOneWidget);
   });
 
-  testWidgets(
-    'authenticated home exposes account and security without ticket id',
-    (tester) async {
-      final session = ProfessionalSession(
-        accessToken: 'fixture-access-token',
-        expiresAt: DateTime.utc(2030),
-        email: 'professionnel@example.test',
-        name: 'Alex Martin',
-        role: 'ADMIN_CLINIQUE',
-      );
+  testWidgets('authenticated home is a compact clinical dashboard', (
+    tester,
+  ) async {
+    final session = ProfessionalSession(
+      accessToken: 'fixture-access-token',
+      expiresAt: DateTime.utc(2030),
+      email: 'professionnel@example.test',
+      name: 'Alex Martin',
+      role: 'ADMIN_CLINIQUE',
+    );
 
-      await tester.pumpWidget(_buildApp(AuthState.authenticated(session)));
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(
+      _buildApp(
+        AuthState.authenticated(session),
+        visits: [
+          ActiveVisit(
+            id: 'visit-1',
+            visitNumber: 'VIS-20260730-001',
+            patientId: 'patient-1',
+            patientName: 'Momo Allons',
+            patientDpu: 'DPU-001',
+            reason: 'Fièvre',
+            orientation: 'Médecine générale',
+            status: 'ACTIVE',
+            createdAt: DateTime.utc(2026, 7, 30, 12),
+            arrivalAt: DateTime.utc(2026, 7, 30, 13, 23),
+            vitals: const VisitVitals(temperature: 38.2),
+          ),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      expect(find.text('Bienvenue, Alex Martin'), findsOneWidget);
-      expect(find.text('Compte professionnel'), findsOneWidget);
-      expect(find.text('Sécurité de l’application'), findsOneWidget);
-      expect(find.text('professionnel@example.test'), findsOneWidget);
-      expect(find.text('ADMIN_CLINIQUE'), findsOneWidget);
-      expect(find.text('Se déconnecter'), findsOneWidget);
-      expect(find.text('MOB-2805'), findsNothing);
-      expect(find.text('Langue'), findsNothing);
-      expect(find.text('Apparence'), findsNothing);
-    },
-  );
+    expect(find.text('Ravi de vous revoir, Alex'), findsOneWidget);
+    expect(find.text('Patients en attente'), findsOneWidget);
+    expect(find.text('Momo Allons'), findsOneWidget);
+    expect(find.text('Fièvre'), findsOneWidget);
+    expect(find.text('Compte professionnel'), findsNothing);
+    expect(find.text('Sécurité de l’application'), findsNothing);
+    expect(find.text('MOB-2805'), findsNothing);
+
+    await tester.tap(find.text('AM'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mon espace professionnel'), findsOneWidget);
+    expect(find.text('Compte professionnel'), findsOneWidget);
+    expect(find.text('Sécurité de l’application'), findsOneWidget);
+    expect(find.text('professionnel@example.test'), findsOneWidget);
+    expect(find.text('ADMIN_CLINIQUE'), findsOneWidget);
+    expect(find.text('Se déconnecter'), findsOneWidget);
+  });
 }
 
-Widget _buildApp(AuthState initialState) {
+Widget _buildApp(
+  AuthState initialState, {
+  List<ActiveVisit> visits = const <ActiveVisit>[],
+}) {
   return ProviderScope(
     overrides: [
       platformLocaleProvider.overrideWithValue(const Locale('fr')),
       authControllerProvider.overrideWith(
         () => _FakeAuthController(initialState),
       ),
+      activeVisitsApiProvider.overrideWithValue(_FakeActiveVisitsGateway(visits)),
     ],
     child: const JoprelysApp(),
   );
+}
+
+final class _FakeActiveVisitsGateway implements ActiveVisitsGateway {
+  const _FakeActiveVisitsGateway(this.visits);
+
+  final List<ActiveVisit> visits;
+
+  @override
+  Future<List<ActiveVisit>> getActiveVisits() async => visits;
 }
 
 final class _FakeAuthController extends AuthController {
