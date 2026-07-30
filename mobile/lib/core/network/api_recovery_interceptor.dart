@@ -8,17 +8,29 @@ import 'api_session.dart';
 import 'session_refresh_coordinator.dart';
 
 final class ApiRecoveryInterceptor extends Interceptor {
-  ApiRecoveryInterceptor({
+  factory ApiRecoveryInterceptor({
     required Dio dio,
     required ApiSessionAccess sessionAccess,
     required SessionRefreshCoordinator refreshCoordinator,
     DateTime Function()? clock,
     Duration transientRetryDelay = const Duration(milliseconds: 250),
-  }) : _dio = dio,
-       _sessionAccess = sessionAccess,
-       _refreshCoordinator = refreshCoordinator,
-       _clock = clock ?? DateTime.now,
-       _transientRetryDelay = transientRetryDelay;
+  }) {
+    return ApiRecoveryInterceptor._(
+      dio,
+      sessionAccess,
+      refreshCoordinator,
+      clock ?? DateTime.now,
+      transientRetryDelay,
+    );
+  }
+
+  ApiRecoveryInterceptor._(
+    this._dio,
+    this._sessionAccess,
+    this._refreshCoordinator,
+    this._clock,
+    this._transientRetryDelay,
+  );
 
   final Dio _dio;
   final ApiSessionAccess _sessionAccess;
@@ -27,14 +39,14 @@ final class ApiRecoveryInterceptor extends Interceptor {
   final Duration _transientRetryDelay;
 
   @override
-  void onError(DioException error, ErrorInterceptorHandler handler) async {
-    if (await _trySessionRecovery(error, handler)) {
+  void onError(DioException err, ErrorInterceptorHandler handler) async {
+    if (await _trySessionRecovery(err, handler)) {
       return;
     }
-    if (await _tryTransientRetry(error, handler)) {
+    if (await _tryTransientRetry(err, handler)) {
       return;
     }
-    handler.next(error);
+    handler.next(err);
   }
 
   Future<bool> _trySessionRecovery(
@@ -208,7 +220,8 @@ final class ApiRecoveryInterceptor extends Interceptor {
     if (error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.sendTimeout ||
-        error.type == DioExceptionType.receiveTimeout) {
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.transformTimeout) {
       return true;
     }
     final status = error.response?.statusCode;
