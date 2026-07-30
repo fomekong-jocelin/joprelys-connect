@@ -1,0 +1,12 @@
+{
+  "@@locale": "fr",
+  "appTitle": "Joprelys Connect",
+  "foundationBadge": "MOB-2803",
+  "foundationLanguageTitle": "Langue",
+  "foundationThemeTitle": "Apparence",
+  "languageFrench": "Français",
+  "languageEnglish": "English",
+  "themeSystem": "Système",
+  "themeLight": "Clair",
+  "themeDark": "Sombre"
+}

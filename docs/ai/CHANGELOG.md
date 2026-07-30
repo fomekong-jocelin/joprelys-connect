@@ -8,6 +8,13 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **MOB-2803 — Internationalisation Flutter FR/EN et formats locale** :
+  - **i18n native** : activation de `flutter_localizations`, `gen_l10n` et ARB FR/EN avec français comme fallback produit ; la locale système FR/EN est reconnue et la langue peut être changée à chaud via Riverpod.
+  - **Formats cohérents** : ajout d’un formateur central limité aux dates, heures et nombres ; `fr_FR` et `en_GB` sont initialisés au bootstrap et `intl 0.20.2` est verrouillé par le lockfile Flutter 3.44.6.
+  - **Fondation localisée** : suppression des libellés utilisateur codés en dur de la page de fondation et branchement des delegates/locales sur `MaterialApp.router`.
+  - **Frontière thème préservée** : `AppTheme` et `AppDesignTokens` sont volontairement inchangés ; l’i18n ne transforme pas le thème en registre de styles métier et les futures compositions visuelles restent feature-scoped, comme sur le web.
+  - **Validation runtime** : run #2019 (`30516924571`) vert sur `b242cbcd0c21f48b153fdfe28cabd52de5250a8e` : pub get, format, analyze, tests Flutter et APK debug. Gate final exact-HEAD requis après clôture documentaire.
+
 - **FIX-20260730-PUBLIC-SELF-REGISTRATION-UX / #247 — Pré-enregistrement public progressif et sorties explicites** :
   - **Charge cognitive mobile** : remplacement du formulaire monolithique de cinq sections par un parcours progressif en quatre étapes, avec une seule étape affichée à la fois et conservation des valeurs lors des retours arrière.
   - **Cohérence Joprelys Connect** : topbar alignée sur le shell applicatif, sélection explicite `FR | EN`, thème clair/sombre et dictionnaire i18n de feature dédié.
@@ -19,7 +26,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - **Thèmes** : `AppTheme.light` / `AppTheme.dark` et `ThemeController` Riverpod `system | light | dark` branchés dans `JoprelysApp` ; aucun chargement réseau de police n’est ajouté.
   - **Primitives UI** : `AppButton`, `AppTextField`, `AppCard`, `AppBadge`, `AppPageHeader`, états loading/empty/error et `AppConfirmDialog`, avec rayons sobres et actions tactiles principales >= 44 px.
   - **Sécurité fonctionnelle** : aucun faux contenu clinique, aucune donnée patient, aucun secret, aucun appel réseau et aucune permission native ajoutés dans ce lot.
-  - **Validation runtime** : run GitHub Actions #1983 (`30512157357`) vert sur `ab44982d286c2a4e9638aa85c5a704f480385a3f` : format, analyze, 9 tests Flutter et build APK debug. Gate final post-documentation requis avant fusion de la PR #246.
+  - **Validation finale** : run #1994 (`30514193739`) vert sur le HEAD exact `f851926981d3526f26f47389afe0897437ba7928`, puis fusion squash de la PR #246 dans `main` au commit `311f60a1`.
 
 - **MOB-2801 — Première fondation runtime Flutter & CI mobile** :
   - **Bootstrap applicatif** : remplacement du compteur Flutter généré par le flux `main -> bootstrap -> ProviderScope -> JoprelysApp`, avec configuration minimale centralisée et aucune logique métier clinique dans la présentation.
