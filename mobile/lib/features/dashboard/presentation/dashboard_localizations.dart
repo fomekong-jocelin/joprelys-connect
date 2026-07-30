@@ -5,29 +5,63 @@ import '../../../l10n/app_localizations.dart';
 extension DashboardLocalizations on AppLocalizations {
   bool get _isFrench => localeName.startsWith('fr');
 
+  String dashboardGreeting(String name) {
+    return _isFrench ? 'Ravi de vous revoir, $name' : 'Good to see you, $name';
+  }
+
+  String dashboardOverviewSubtitle(int count) {
+    if (_isFrench) {
+      return intl.Intl.pluralLogic(
+        count,
+        locale: localeName,
+        zero: 'La file est vide. Vous êtes à jour.',
+        one: '1 patient attend votre prise en charge.',
+        other: '$count patients attendent votre prise en charge.',
+      );
+    }
+    return intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      zero: 'The queue is clear. You are up to date.',
+      one: '1 patient is waiting for your care.',
+      other: '$count patients are waiting for your care.',
+    );
+  }
+
+  String get dashboardWorkspaceLabel =>
+      _isFrench ? 'ESPACE CLINIQUE' : 'CLINICAL WORKSPACE';
+
+  String get dashboardProfileTooltip =>
+      _isFrench ? 'Compte et sécurité' : 'Account and security';
+
+  String get dashboardProfileTitle =>
+      _isFrench ? 'Mon espace professionnel' : 'My professional workspace';
+
+  String get dashboardClose => _isFrench ? 'Fermer' : 'Close';
+
   String get dashboardQueueTitle =>
-      _isFrench ? 'File d’attente active' : 'Active waiting queue';
+      _isFrench ? 'Patients en attente' : 'Patients waiting';
 
   String get dashboardQueueSubtitleLoading => _isFrench
-      ? 'Actualisation de l’activité clinique…'
-      : 'Refreshing clinical activity…';
+      ? 'Actualisation de la file…'
+      : 'Refreshing the queue…';
 
   String dashboardQueueSubtitle(int count) {
     if (_isFrench) {
       return intl.Intl.pluralLogic(
         count,
         locale: localeName,
-        zero: 'Aucun patient en attente',
-        one: '1 patient à prendre en charge',
-        other: '$count patients à prendre en charge',
+        zero: 'Aucun patient dans la file',
+        one: '1 patient dans la file',
+        other: '$count patients dans la file',
       );
     }
     return intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      zero: 'No patients are waiting',
-      one: '1 patient to care for',
-      other: '$count patients to care for',
+      zero: 'No patients in the queue',
+      one: '1 patient in the queue',
+      other: '$count patients in the queue',
     );
   }
 
@@ -38,14 +72,20 @@ extension DashboardLocalizations on AppLocalizations {
   String get dashboardQueueTotal =>
       _isFrench ? 'Patients actifs' : 'Active patients';
 
+  String get dashboardQueueTotalCompact =>
+      _isFrench ? 'En attente' : 'Waiting';
+
   String get dashboardQueueWithVitals =>
       _isFrench ? 'Constantes saisies' : 'Vitals recorded';
+
+  String get dashboardQueueWithVitalsCompact =>
+      _isFrench ? 'Prêts' : 'Ready';
 
   String get dashboardQueueWithoutVitals =>
       _isFrench ? 'À évaluer' : 'To assess';
 
   String get dashboardQueueEmptyTitle =>
-      _isFrench ? 'La file est à jour' : 'The queue is clear';
+      _isFrench ? 'Tout est à jour' : 'Everything is up to date';
 
   String get dashboardQueueEmptyBody => _isFrench
       ? 'Aucun patient n’attend actuellement une prise en charge.'
@@ -60,16 +100,19 @@ extension DashboardLocalizations on AppLocalizations {
   String get dashboardQueueVitalsReady =>
       _isFrench ? 'Constantes OK' : 'Vitals ready';
 
+  String get dashboardQueueVitalsReadyCompact =>
+      _isFrench ? 'Prêt' : 'Ready';
+
   String get dashboardQueueVitalsPending =>
       _isFrench ? 'À évaluer' : 'To assess';
 
   String dashboardQueueVisitReference(String visitNumber, String patientDpu) {
     return _isFrench
-        ? 'Visite $visitNumber · DPU $patientDpu'
-        : 'Visit $visitNumber · DPU $patientDpu';
+        ? '$visitNumber · DPU $patientDpu'
+        : '$visitNumber · DPU $patientDpu';
   }
 
   String dashboardQueueArrivedAt(String time) {
-    return _isFrench ? 'Arrivée à $time' : 'Arrived at $time';
+    return _isFrench ? 'Arrivée $time' : 'Arrived $time';
   }
 }
