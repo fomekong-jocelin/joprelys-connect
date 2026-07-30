@@ -1,0 +1,18 @@
+{
+  "selfRegistration.stepLabel": "Step",
+  "selfRegistration.step1Short": "Admission & identity",
+  "selfRegistration.step2Short": "Contact details",
+  "selfRegistration.step3Short": "Emergency contact",
+  "selfRegistration.step4Short": "Validation",
+  "selfRegistration.continue": "Continue",
+  "selfRegistration.previous": "Previous",
+  "selfRegistration.publicSite": "Back to website",
+  "selfRegistration.login": "Sign in",
+  "selfRegistration.exitHint": "You can leave this form at any time.",
+  "selfRegistration.progressHelp": "Complete one step at a time.",
+  "selfRegistration.identityHelp": "Start with the essential information needed for your admission.",
+  "selfRegistration.contactHelp": "These details are optional but help the care team prepare your admission.",
+  "selfRegistration.emergencyHelp": "Add a relative or trusted person we can contact if needed.",
+  "selfRegistration.validationHelp": "Final step: answer the security check and submit your request.",
+  "selfRegistration.successActions": "What would you like to do next?"
+}

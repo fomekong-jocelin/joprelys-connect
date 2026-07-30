@@ -8,6 +8,12 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **FIX-20260730-PUBLIC-SELF-REGISTRATION-UX / #247 — Pré-enregistrement public progressif et sorties explicites** :
+  - **Charge cognitive mobile** : remplacement du formulaire monolithique de cinq sections par un parcours progressif en quatre étapes, avec une seule étape affichée à la fois et conservation des valeurs lors des retours arrière.
+  - **Cohérence Joprelys Connect** : topbar alignée sur le shell applicatif, sélection explicite `FR | EN`, thème clair/sombre et dictionnaire i18n de feature dédié.
+  - **Navigation de sortie** : accès permanent au site Joprelys et à `/patient/login`, y compris sur l'écran de succès, sans modification du contrat API, du captcha, du `orgId`, de la DB ni du RBAC.
+  - **Validation** : tests Angular ciblés ajoutés ; gate frontend et recette visuelle mobile/desktop requis avant fusion.
+
 - **MOB-2801 — Première fondation runtime Flutter & CI mobile** :
   - **Bootstrap applicatif** : remplacement du compteur Flutter généré par le flux `main -> bootstrap -> ProviderScope -> JoprelysApp`, avec configuration minimale centralisée et aucune logique métier clinique dans la présentation.
   - **Navigation** : intégration de Riverpod et `go_router` avec une seule route de fondation neutre `/` ; aucun faux écran clinique ni donnée patient n’est exposé avant livraison des stories métier correspondantes.

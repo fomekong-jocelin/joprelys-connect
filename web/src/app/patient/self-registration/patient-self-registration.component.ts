@@ -1,5 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AlertComponent } from '../../shared/ui/alert.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
 import { CardComponent } from '../../shared/ui/card.component';
@@ -8,12 +8,15 @@ import { AppLogoComponent } from '../../shared/ui/app-logo.component';
 import { ThemeService } from '../../core/theme/theme.service';
 import { PatientApiService } from '../patient-api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { APP_BRAND_CONFIG, AppLocale } from '../../core/config/app-brand.config';
 import { PatientPreRegistrationRequest } from '../patient.models';
+
+type RegistrationStep = 1 | 2 | 3 | 4;
 
 @Component({
   selector: 'app-patient-self-registration',
   standalone: true,
-  imports: [AlertComponent, ButtonComponent, CardComponent, InputComponent, AppLogoComponent],
+  imports: [AlertComponent, ButtonComponent, CardComponent, InputComponent, AppLogoComponent, RouterLink],
   templateUrl: './patient-self-registration.component.html',
 })
 export class PatientSelfRegistrationComponent implements OnInit {
@@ -22,10 +25,15 @@ export class PatientSelfRegistrationComponent implements OnInit {
   readonly i18n = inject(I18nService);
   private readonly themeService = inject(ThemeService);
   readonly theme = this.themeService.theme;
+  readonly publicSiteUrl = APP_BRAND_CONFIG.publicSiteUrl;
+  readonly totalSteps = 4;
 
   // Identifiant d'organisation extrait de l'URL
   organizationId = signal<string | null>(null);
   organizationIdMissing = signal(false);
+
+  // Navigation progressive du formulaire
+  currentStep = signal<RegistrationStep>(1);
 
   // État du cycle de vie du captcha
   captchaId = signal<string | null>(null);
@@ -95,8 +103,8 @@ export class PatientSelfRegistrationComponent implements OnInit {
     });
   }
 
-  toggleLanguage(): void {
-    this.i18n.toggle();
+  setLang(lang: AppLocale): void {
+    void this.i18n.setLocale(lang);
   }
 
   toggleTheme(): void {
@@ -104,25 +112,54 @@ export class PatientSelfRegistrationComponent implements OnInit {
     this.themeService.setTheme(nextTheme);
   }
 
+  themeTooltip(): string {
+    return this.theme() === 'dark'
+      ? this.i18n.t('shell.theme.light')
+      : this.i18n.t('shell.theme.dark');
+  }
+
+  stepTitle(): string {
+    return this.i18n.t(`selfRegistration.step${this.currentStep()}Short`);
+  }
+
   setAdmissionType(isNew: boolean): void {
     this.isNewAdmission.set(isNew);
+  }
+
+  nextStep(): void {
+    this.errorMessage.set(null);
+
+    const step = this.currentStep();
+    if (step === 1 && !this.hasRequiredIdentity()) {
+      this.errorMessage.set(this.i18n.t('selfRegistration.errorRequired'));
+      return;
+    }
+
+    if (step < this.totalSteps) {
+      this.currentStep.set((step + 1) as RegistrationStep);
+    }
+  }
+
+  previousStep(): void {
+    this.errorMessage.set(null);
+    const step = this.currentStep();
+    if (step > 1) {
+      this.currentStep.set((step - 1) as RegistrationStep);
+    }
   }
 
   submitForm(): void {
     this.errorMessage.set(null);
 
     // Validation des champs requis
-    if (
-      !this.firstName().trim() ||
-      !this.lastName().trim() ||
-      !this.gender() ||
-      !this.birthDate()
-    ) {
+    if (!this.hasRequiredIdentity()) {
+      this.currentStep.set(1);
       this.errorMessage.set(this.i18n.t('selfRegistration.errorRequired'));
       return;
     }
 
     if (!this.captchaId() || !this.captchaAnswer().trim()) {
+      this.currentStep.set(4);
       this.errorMessage.set(this.i18n.t('selfRegistration.errorCaptcha'));
       return;
     }
@@ -185,8 +222,18 @@ export class PatientSelfRegistrationComponent implements OnInit {
     this.emergencyContactPhone.set('');
     this.emergencyContactRelation.set('');
     this.captchaAnswer.set('');
+    this.currentStep.set(1);
     this.registrationSuccess.set(false);
     this.errorMessage.set(null);
     this.loadCaptcha();
+  }
+
+  private hasRequiredIdentity(): boolean {
+    return Boolean(
+      this.firstName().trim() &&
+      this.lastName().trim() &&
+      this.gender() &&
+      this.birthDate()
+    );
   }
 }

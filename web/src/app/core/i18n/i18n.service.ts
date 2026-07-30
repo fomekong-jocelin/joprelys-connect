@@ -77,6 +77,7 @@ export class I18nService {
         legal: this.optionalDictionary(`/assets/i18n/features/legal/${lang}.json`),
         consent: this.optionalDictionary(`/assets/i18n/features/consent/${lang}.json`),
         accessRemediation: this.optionalDictionary(`/assets/i18n/features/access-remediation/${lang}.json`),
+        publicSelfRegistration: this.optionalDictionary(`/assets/i18n/features/public-self-registration/${lang}.json`),
       }));
 
       this.dictionary.set({
@@ -105,6 +106,7 @@ export class I18nService {
         ...dictionaries.legal,
         ...dictionaries.consent,
         ...dictionaries.accessRemediation,
+        ...dictionaries.publicSelfRegistration,
       });
       this.loaded.update(state => ({ ...state, [lang]: true }));
     } catch {
