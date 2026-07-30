@@ -48,7 +48,7 @@ class RecoveryPage extends ConsumerWidget {
             expand: true,
             onPressed: auth.isLoading
                 ? null
-                : ref.read(authControllerProvider.notifier).logout,
+                : ref.read(authControllerProvider.notifier).forgetSession,
           ),
         ],
       ),
