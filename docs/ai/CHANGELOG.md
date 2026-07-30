@@ -8,6 +8,10 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **MOB-2817 — Annuaire & Recherche Globale des Patients Mobile** :
+  - **Recherche en temps réel & API** : création de `PatientDirectoryItem` et `PatientDirectoryApi` consommant `GET /api/patients?q={query}` pour rechercher n'importe quel patient de l'établissement par nom, numéro DPU, téléphone ou numéro temporaire.
+  - **Interface utilisateur** : ajout d'une barre de recherche dynamique et d'un sélecteur d'onglets à deux vues (*File d'attente active* vs *Annuaire global de tous les patients*) avec cartes récapitulatives et accès direct au dossier médical (`PatientHistorySheet`).
+
 - **MOB-2814 / MOB-2816 — Alignment UI SOAP Web Angular & Connexion Backend Réelle** :
   - **Interface SOAP (ConsultationNotesSheet)** : refonte complète de la modale SOAP pour s'aligner sur l'éditeur Web Angular `clinical-note-editor` (sections numérotées 1, 2, 3, 4 avec sous-titres d'aide i18n, badge motif de consultation, accès rapide à l'assistant vocal et zone de texte clinique stylisée).
   - **Historique Médical (PatientHistoryApi & Sheet)** : correction du paramètre d'appel (`patientId` au lieu de `visitId`), élimination des exceptions brutes 404 affichées en rouge à l'utilisateur, et ajout d'un écran d'erreur ergonomique avec bouton de réessai.
