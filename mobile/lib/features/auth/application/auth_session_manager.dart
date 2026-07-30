@@ -83,6 +83,8 @@ final class AuthSessionManager implements ApiSessionAccess {
       if (stored != null) {
         await _authApi.logout();
       }
+    } catch (error) {
+      _ignoreRemoteLogoutFailure(error);
     } finally {
       await clearLocalSession();
     }
@@ -144,6 +146,10 @@ final class AuthSessionManager implements ApiSessionAccess {
     );
     await _store.write(persisted);
     return persisted;
+  }
+
+  void _ignoreRemoteLogoutFailure(Object error) {
+    // Local session and cookies remain authoritative for mobile sign-out.
   }
 }
 
