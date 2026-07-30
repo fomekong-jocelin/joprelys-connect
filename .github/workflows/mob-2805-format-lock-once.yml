@@ -1,0 +1,41 @@
+name: MOB-2805 format and lock once
+
+on:
+  push:
+    branches:
+      - feat/mob-2805-mobile-auth
+
+permissions:
+  contents: write
+
+jobs:
+  format-and-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/mob-2805-mobile-auth
+          fetch-depth: 0
+      - name: Set up Flutter 3.44.6
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.6'
+          channel: stable
+          cache: true
+      - name: Resolve and format
+        run: |
+          cd mobile
+          flutter pub get
+          dart format lib test
+      - name: Remove workflow and commit exact generated files
+        run: |
+          rm .github/workflows/mob-2805-format-lock-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile/lib mobile/test mobile/pubspec.lock .github/workflows/mob-2805-format-lock-once.yml
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "chore(mobile): formatter MOB-2805 et verrouiller les dépendances"
+          git push origin HEAD:feat/mob-2805-mobile-auth
