@@ -8,6 +8,11 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **MOB-2816 — Historique Médical & Chronologie des Visites Patient** :
+  - **Domaine & Gateway** : création de `PatientMedicalHistory`, `MedicalAntecedent`, `PatientAllergy`, `PastVisitSummary` et `PatientHistoryApi`.
+  - **Interface utilisateur** : création du composant modal `PatientHistorySheet` avec onglets séparés pour les antécédents/allergies (avec badges de sévérité) et la chronologie des consultations passées.
+  - **Tests & Conformité** : création de `patient_history_api_test.dart` et validation de la suite avec 68/68 tests Flutter verts.
+
 - **MOB-2815 — Assistant Vocal Clinique & Dictée Intelligente** :
   - **Moteur d'extraction** : création de `ClinicalDictationParser` capable d'extraire automatiquement en Regex/NLP les 10 constantes médicales (°C, mmHg, bpm, kg, cm, %, g/L, c/min, EVA) et la note SOAP depuis le langage naturel.
   - **Interface utilisateur** : création du composant modal `ClinicalVoiceAssistantSheet` et ajout du bouton `[🎙️ Assistant vocal]` dans la modale des constantes.

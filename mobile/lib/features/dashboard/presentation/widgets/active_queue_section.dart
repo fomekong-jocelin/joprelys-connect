@@ -8,6 +8,7 @@ import '../../../../shared/widgets/app_button.dart';
 import '../../domain/active_visit.dart';
 import '../dashboard_localizations.dart';
 import 'consultation_notes_sheet.dart';
+import 'patient_history_sheet.dart';
 import 'patient_vitals_sheet.dart';
 
 class ActiveQueueSection extends StatelessWidget {
@@ -439,6 +440,14 @@ class _ActiveVisitCard extends StatelessWidget {
                         onSaved: onRefresh,
                       ),
                     ),
+                    _ActionChip(
+                      icon: Icons.folder_shared_outlined,
+                      label: l10n.historyTitle,
+                      onTap: () => PatientHistorySheet.show(
+                        context,
+                        visit: visit,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -526,35 +535,42 @@ class _ActionChip extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
 
-    return Material(
-      color: colors.primary.withValues(alpha: 0.1),
-      borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
-      child: InkWell(
-        onTap: onTap,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 240),
+      child: Material(
+        color: colors.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
-            border: Border.all(
-              color: colors.primary.withValues(alpha: 0.3),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 14, color: colors.primary),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: colors.primary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 11,
-                ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
+              border: Border.all(
+                color: colors.primary.withValues(alpha: 0.3),
+                width: 1,
               ),
-            ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 14, color: colors.primary),
+                const SizedBox(width: 5),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colors.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

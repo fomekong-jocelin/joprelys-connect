@@ -298,4 +298,31 @@ extension DashboardLocalizations on AppLocalizations {
   String get assistantPresetDictation3 => _isFrench
       ? 'Pris du paracétamol 1000 mg 2 fois par jour. Revenir dans deux semaines.'
       : 'Took paracetamol 1000 mg twice daily. Return in two weeks.';
+
+  String get historyTitle =>
+      _isFrench ? 'Dossier & Historique Médical' : 'Medical File & History';
+
+  String get historyTabAntecedents =>
+      _isFrench ? 'Antécédents & Allergies' : 'Antecedents & Allergies';
+
+  String get historyTabVisits =>
+      _isFrench ? 'Chronologie des Visites' : 'Visit Timeline';
+
+  String get historyAntecedentsHeader =>
+      _isFrench ? 'Antécédents connus' : 'Known antecedents';
+
+  String get historyAllergiesHeader =>
+      _isFrench ? 'Allergies déclarées' : 'Declared allergies';
+
+  String get historyNoAntecedents =>
+      _isFrench ? 'Aucun antécédent répertorié' : 'No antecedents listed';
+
+  String get historyNoAllergies =>
+      _isFrench ? 'Aucune allergie connue' : 'No known allergies';
+
+  String get historyVisitsHeader =>
+      _isFrench ? 'Historique des consultations' : 'Consultation history';
+
+  String get historyNoVisits =>
+      _isFrench ? 'Aucune visite antérieure' : 'No past visits';
 }
