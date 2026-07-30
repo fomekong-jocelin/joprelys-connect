@@ -1,12 +1,82 @@
 {
   "@@locale": "en",
   "appTitle": "Joprelys Connect",
-  "foundationBadge": "MOB-2803",
+  "foundationBadge": "MOB-2805",
   "foundationLanguageTitle": "Language",
   "foundationThemeTitle": "Appearance",
   "languageFrench": "Français",
   "languageEnglish": "English",
   "themeSystem": "System",
   "themeLight": "Light",
-  "themeDark": "Dark"
+  "themeDark": "Dark",
+  "authLoadingTitle": "Securely restoring your session…",
+  "authLoginTitle": "Professional sign-in",
+  "authLoginSubtitle": "Access your Joprelys Connect workspace with your professional credentials.",
+  "authEmailLabel": "Email address",
+  "authPasswordLabel": "Password",
+  "authShowPassword": "Show password",
+  "authHidePassword": "Hide password",
+  "authInvalidEmail": "Enter a valid email address.",
+  "authPasswordRequired": "Password is required.",
+  "authSignIn": "Sign in",
+  "authOtpTitle": "Security verification",
+  "authOtpSubtitle": "Enter the code sent for {email}.",
+  "@authOtpSubtitle": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "authOtpLabel": "Verification code",
+  "authOtpRequired": "The verification code is required.",
+  "authVerifyOtp": "Verify code",
+  "authBackToLogin": "Back to sign-in",
+  "authUnlockTitle": "Application locked",
+  "authUnlockSubtitle": "Unlock {name}’s session using this device’s biometrics.",
+  "@authUnlockSubtitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "authUnlockAction": "Unlock",
+  "authLogout": "Sign out",
+  "authBiometricUnlockReason": "Unlock your Joprelys Connect session",
+  "authRecoveryTitle": "Session temporarily unavailable",
+  "authRecoverySubtitle": "The local session is preserved, but the server cannot currently be reached.",
+  "authRetry": "Retry",
+  "authForgetSession": "Remove this session",
+  "authRecoveryUnavailable": "The session cannot be restored right now. Check your connection and retry.",
+  "authBiometricCancelled": "Biometric unlock was cancelled.",
+  "authBiometricUnavailable": "Biometrics are unavailable or not configured on this device.",
+  "authBiometricLocked": "Biometrics are temporarily locked. Use the device security options.",
+  "authBiometricFailed": "Biometric verification failed.",
+  "authOtpContextMissing": "The verification session expired. Start sign-in again.",
+  "authOtpInvalid": "The verification code is invalid or expired.",
+  "authInvalidCredentials": "Incorrect email address or password.",
+  "authRateLimited": "Too many attempts. Wait before trying again.",
+  "authNetworkUnavailable": "No network connection is available.",
+  "authRequestTimeout": "The server is taking too long to respond. Try again.",
+  "authGenericError": "An error is preventing sign-in. Try again.",
+  "authSignedInAs": "Signed in as {name}",
+  "@authSignedInAs": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "authRoleLabel": "Role: {role}",
+  "@authRoleLabel": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "authEnableBiometrics": "Enable biometric lock",
+  "authDisableBiometrics": "Disable biometric lock",
+  "authBiometricEnableReason": "Confirm enabling Joprelys Connect biometric lock"
 }

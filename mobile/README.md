@@ -9,7 +9,10 @@ Le socle Flutter comprend désormais :
 - bootstrap, Riverpod, `go_router` et CI ;
 - design system light/dark/system ;
 - internationalisation FR/EN ;
-- client réseau central Dio, corrélation, erreurs et résilience bornée.
+- client réseau central Dio, corrélation, erreurs et résilience bornée ;
+- authentification professionnelle, OTP, session sécurisée, refresh par cookie HttpOnly, biométrie locale et guards de navigation.
+
+MOB-2805 est implémenté dans la PR #255 ; le gate Flutter complet et la recette réelle restent requis avant fusion.
 
 Documentation principale :
 
@@ -19,6 +22,9 @@ Documentation principale :
 - `../docs/features/mobile-native-network/FUNCTIONAL-SPEC.md`
 - `../docs/features/mobile-native-network/TECHNICAL-DESIGN.md`
 - `../docs/features/mobile-native-network/TEST-PLAN.md`
+- `../docs/features/mobile-native-auth/FUNCTIONAL-SPEC.md`
+- `../docs/features/mobile-native-auth/TECHNICAL-DESIGN.md`
+- `../docs/features/mobile-native-auth/TEST-PLAN.md`
 - `../docs/ai/adr/ADR-0004-mobile-flutter-native-architecture.md`
 - `../docs/pm/backlog/EPIC-0028-joprelys-connect-mobile-native.md`
 
@@ -34,6 +40,10 @@ Ne pas développer les features directement dans `main.dart` et ne pas appeler D
 - aucun texte utilisateur hardcodé ;
 - aucun secret dans le code ou `--dart-define` ;
 - données sensibles uniquement dans un stockage sécurisé ;
+- mot de passe et OTP jamais persistés ;
+- refresh token exclusivement dans le cookie HttpOnly ;
+- biométrie limitée au déverrouillage local ;
+- séparation stricte des sessions professionnelle et patient ;
 - aucun cache local générique du DPU ;
 - design system aligné avec `../DESIGN.md` ;
 - audio clinique natif isolé du reste de l’application ;
@@ -48,12 +58,14 @@ lib/
     config/
     i18n/
     network/
+    security/
     theme/
   shared/
   features/
     <feature>/
       domain/
       data/
+      application/
       presentation/
   l10n/
 
@@ -85,13 +97,26 @@ Règles :
 - HTTPS est obligatoire en recette et prod ;
 - ces valeurs sont publiques : ne jamais y placer token, clé API ou secret ;
 - `apiClientProvider` est consommé par les data sources/repositories, pas par la présentation ;
-- la session sécurisée réelle sera branchée dans MOB-2805.
+- `apiSessionAccessProvider` est branché sur `AuthSessionManager` au bootstrap.
+
+## Authentification professionnelle
+
+Contrats consommés :
+
+- `POST /api/auth/login` ;
+- `POST /api/auth/verify-otp` ;
+- `POST /api/auth/refresh` ;
+- `POST /api/auth/logout`.
+
+La session et les cookies sont persistés via `flutter_secure_storage`. Les features n’accèdent jamais au refresh token. Le Dio d’authentification ne contient pas l’intercepteur de recovery afin d’éviter toute récursion du refresh.
+
+La biométrie est optionnelle. Elle verrouille localement une session déjà authentifiée lorsque l’application passe en arrière-plan ; elle ne remplace jamais le login serveur.
 
 ## Vérifications standard
 
 ```bash
 flutter pub get
-dart format --output=none --set-exit-if-changed .
+dart format --output=none --set-exit-if-changed lib test
 flutter analyze
 flutter test
 flutter build apk --debug

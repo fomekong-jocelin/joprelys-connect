@@ -5,6 +5,8 @@ import '../../../../core/config/app_config.dart';
 import '../../../../core/i18n/locale_controller.dart';
 import '../../../../core/theme/app_design_tokens.dart';
 import '../../../../core/theme/theme_controller.dart';
+import '../../../../features/auth/application/auth_controller.dart';
+import '../../../../features/auth/presentation/widgets/auth_error_message.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_badge.dart';
 import '../../../../shared/widgets/app_button.dart';
@@ -20,6 +22,10 @@ class FoundationPage extends ConsumerWidget {
     final localeController = ref.read(appLocaleProvider.notifier);
     final themeMode = ref.watch(themeModeProvider);
     final themeController = ref.read(themeModeProvider.notifier);
+    final auth = ref.watch(authControllerProvider);
+    final authState = auth.value;
+    final session = authState?.session;
+    final authError = authErrorMessage(l10n, authState?.errorCode);
 
     return Scaffold(
       body: SafeArea(
@@ -50,6 +56,72 @@ class FoundationPage extends ConsumerWidget {
                         label: l10n.foundationBadge,
                         tone: AppSemanticTone.info,
                       ),
+                      const SizedBox(height: AppDesignTokens.spaceLg),
+                      if (session == null)
+                        const CircularProgressIndicator()
+                      else ...[
+                        Text(
+                          l10n.authSignedInAs(session.name),
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: AppDesignTokens.spaceXs),
+                        Text(
+                          session.email,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: AppDesignTokens.spaceXs),
+                        Text(
+                          l10n.authRoleLabel(session.role),
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: AppDesignTokens.spaceMd),
+                        AppButton(
+                          label: session.biometricEnabled
+                              ? l10n.authDisableBiometrics
+                              : l10n.authEnableBiometrics,
+                          icon: Icons.fingerprint,
+                          variant: AppButtonVariant.secondary,
+                          expand: true,
+                          loading: auth.isLoading,
+                          onPressed: auth.isLoading
+                              ? null
+                              : session.biometricEnabled
+                              ? ref
+                                    .read(authControllerProvider.notifier)
+                                    .disableBiometrics
+                              : () => ref
+                                    .read(authControllerProvider.notifier)
+                                    .enableBiometrics(
+                                      reason: l10n.authBiometricEnableReason,
+                                    ),
+                        ),
+                        const SizedBox(height: AppDesignTokens.spaceSm),
+                        AppButton(
+                          label: l10n.authLogout,
+                          icon: Icons.logout,
+                          variant: AppButtonVariant.destructive,
+                          expand: true,
+                          loading: auth.isLoading,
+                          onPressed: auth.isLoading
+                              ? null
+                              : ref
+                                    .read(authControllerProvider.notifier)
+                                    .logout,
+                        ),
+                      ],
+                      if (authError != null) ...[
+                        const SizedBox(height: AppDesignTokens.spaceMd),
+                        Text(
+                          authError,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: AppDesignTokens.spaceLg),
                       Text(
                         l10n.foundationLanguageTitle,

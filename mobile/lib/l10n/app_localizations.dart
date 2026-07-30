@@ -107,7 +107,7 @@ abstract class AppLocalizations {
   /// No description provided for @foundationBadge.
   ///
   /// In fr, this message translates to:
-  /// **'MOB-2803'**
+  /// **'MOB-2805'**
   String get foundationBadge;
 
   /// No description provided for @foundationLanguageTitle.
@@ -151,6 +151,258 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Sombre'**
   String get themeDark;
+
+  /// No description provided for @authLoadingTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Restauration sécurisée de la session…'**
+  String get authLoadingTitle;
+
+  /// No description provided for @authLoginTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion professionnelle'**
+  String get authLoginTitle;
+
+  /// No description provided for @authLoginSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accédez à votre espace Joprelys Connect avec vos identifiants professionnels.'**
+  String get authLoginSubtitle;
+
+  /// No description provided for @authEmailLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse e-mail'**
+  String get authEmailLabel;
+
+  /// No description provided for @authPasswordLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe'**
+  String get authPasswordLabel;
+
+  /// No description provided for @authShowPassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Afficher le mot de passe'**
+  String get authShowPassword;
+
+  /// No description provided for @authHidePassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Masquer le mot de passe'**
+  String get authHidePassword;
+
+  /// No description provided for @authInvalidEmail.
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisissez une adresse e-mail valide.'**
+  String get authInvalidEmail;
+
+  /// No description provided for @authPasswordRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le mot de passe est requis.'**
+  String get authPasswordRequired;
+
+  /// No description provided for @authSignIn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Se connecter'**
+  String get authSignIn;
+
+  /// No description provided for @authOtpTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérification de sécurité'**
+  String get authOtpTitle;
+
+  /// No description provided for @authOtpSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisissez le code envoyé pour {email}.'**
+  String authOtpSubtitle(String email);
+
+  /// No description provided for @authOtpLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code de vérification'**
+  String get authOtpLabel;
+
+  /// No description provided for @authOtpRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le code de vérification est requis.'**
+  String get authOtpRequired;
+
+  /// No description provided for @authVerifyOtp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifier le code'**
+  String get authVerifyOtp;
+
+  /// No description provided for @authBackToLogin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Revenir à la connexion'**
+  String get authBackToLogin;
+
+  /// No description provided for @authUnlockTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Application verrouillée'**
+  String get authUnlockTitle;
+
+  /// No description provided for @authUnlockSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déverrouillez la session de {name} avec la biométrie de cet appareil.'**
+  String authUnlockSubtitle(String name);
+
+  /// No description provided for @authUnlockAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déverrouiller'**
+  String get authUnlockAction;
+
+  /// No description provided for @authLogout.
+  ///
+  /// In fr, this message translates to:
+  /// **'Se déconnecter'**
+  String get authLogout;
+
+  /// No description provided for @authBiometricUnlockReason.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déverrouiller votre session Joprelys Connect'**
+  String get authBiometricUnlockReason;
+
+  /// No description provided for @authRecoveryTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Session temporairement indisponible'**
+  String get authRecoveryTitle;
+
+  /// No description provided for @authRecoverySubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'La session locale est conservée, mais le serveur ne peut pas être joint pour le moment.'**
+  String get authRecoverySubtitle;
+
+  /// No description provided for @authRetry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get authRetry;
+
+  /// No description provided for @authForgetSession.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer cette session'**
+  String get authForgetSession;
+
+  /// No description provided for @authRecoveryUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de restaurer la session actuellement. Vérifiez votre connexion puis réessayez.'**
+  String get authRecoveryUnavailable;
+
+  /// No description provided for @authBiometricCancelled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le déverrouillage biométrique a été annulé.'**
+  String get authBiometricCancelled;
+
+  /// No description provided for @authBiometricUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'La biométrie n’est pas disponible ou configurée sur cet appareil.'**
+  String get authBiometricUnavailable;
+
+  /// No description provided for @authBiometricLocked.
+  ///
+  /// In fr, this message translates to:
+  /// **'La biométrie est temporairement verrouillée. Utilisez les options de sécurité de l’appareil.'**
+  String get authBiometricLocked;
+
+  /// No description provided for @authBiometricFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le contrôle biométrique a échoué.'**
+  String get authBiometricFailed;
+
+  /// No description provided for @authOtpContextMissing.
+  ///
+  /// In fr, this message translates to:
+  /// **'La vérification a expiré. Recommencez la connexion.'**
+  String get authOtpContextMissing;
+
+  /// No description provided for @authOtpInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le code de vérification est invalide ou expiré.'**
+  String get authOtpInvalid;
+
+  /// No description provided for @authInvalidCredentials.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse e-mail ou mot de passe incorrect.'**
+  String get authInvalidCredentials;
+
+  /// No description provided for @authRateLimited.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop de tentatives. Patientez avant de réessayer.'**
+  String get authRateLimited;
+
+  /// No description provided for @authNetworkUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune connexion réseau disponible.'**
+  String get authNetworkUnavailable;
+
+  /// No description provided for @authRequestTimeout.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le serveur met trop de temps à répondre. Réessayez.'**
+  String get authRequestTimeout;
+
+  /// No description provided for @authGenericError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une erreur empêche la connexion. Réessayez.'**
+  String get authGenericError;
+
+  /// No description provided for @authSignedInAs.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connecté en tant que {name}'**
+  String authSignedInAs(String name);
+
+  /// No description provided for @authRoleLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rôle : {role}'**
+  String authRoleLabel(String role);
+
+  /// No description provided for @authEnableBiometrics.
+  ///
+  /// In fr, this message translates to:
+  /// **'Activer le verrouillage biométrique'**
+  String get authEnableBiometrics;
+
+  /// No description provided for @authDisableBiometrics.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactiver le verrouillage biométrique'**
+  String get authDisableBiometrics;
+
+  /// No description provided for @authBiometricEnableReason.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmer l’activation du verrouillage biométrique Joprelys Connect'**
+  String get authBiometricEnableReason;
 }
 
 class _AppLocalizationsDelegate

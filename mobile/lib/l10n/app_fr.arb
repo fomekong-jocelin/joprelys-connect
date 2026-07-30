@@ -1,12 +1,82 @@
 {
   "@@locale": "fr",
   "appTitle": "Joprelys Connect",
-  "foundationBadge": "MOB-2803",
+  "foundationBadge": "MOB-2805",
   "foundationLanguageTitle": "Langue",
   "foundationThemeTitle": "Apparence",
   "languageFrench": "Français",
   "languageEnglish": "English",
   "themeSystem": "Système",
   "themeLight": "Clair",
-  "themeDark": "Sombre"
+  "themeDark": "Sombre",
+  "authLoadingTitle": "Restauration sécurisée de la session…",
+  "authLoginTitle": "Connexion professionnelle",
+  "authLoginSubtitle": "Accédez à votre espace Joprelys Connect avec vos identifiants professionnels.",
+  "authEmailLabel": "Adresse e-mail",
+  "authPasswordLabel": "Mot de passe",
+  "authShowPassword": "Afficher le mot de passe",
+  "authHidePassword": "Masquer le mot de passe",
+  "authInvalidEmail": "Saisissez une adresse e-mail valide.",
+  "authPasswordRequired": "Le mot de passe est requis.",
+  "authSignIn": "Se connecter",
+  "authOtpTitle": "Vérification de sécurité",
+  "authOtpSubtitle": "Saisissez le code envoyé pour {email}.",
+  "@authOtpSubtitle": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "authOtpLabel": "Code de vérification",
+  "authOtpRequired": "Le code de vérification est requis.",
+  "authVerifyOtp": "Vérifier le code",
+  "authBackToLogin": "Revenir à la connexion",
+  "authUnlockTitle": "Application verrouillée",
+  "authUnlockSubtitle": "Déverrouillez la session de {name} avec la biométrie de cet appareil.",
+  "@authUnlockSubtitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "authUnlockAction": "Déverrouiller",
+  "authLogout": "Se déconnecter",
+  "authBiometricUnlockReason": "Déverrouiller votre session Joprelys Connect",
+  "authRecoveryTitle": "Session temporairement indisponible",
+  "authRecoverySubtitle": "La session locale est conservée, mais le serveur ne peut pas être joint pour le moment.",
+  "authRetry": "Réessayer",
+  "authForgetSession": "Supprimer cette session",
+  "authRecoveryUnavailable": "Impossible de restaurer la session actuellement. Vérifiez votre connexion puis réessayez.",
+  "authBiometricCancelled": "Le déverrouillage biométrique a été annulé.",
+  "authBiometricUnavailable": "La biométrie n’est pas disponible ou configurée sur cet appareil.",
+  "authBiometricLocked": "La biométrie est temporairement verrouillée. Utilisez les options de sécurité de l’appareil.",
+  "authBiometricFailed": "Le contrôle biométrique a échoué.",
+  "authOtpContextMissing": "La vérification a expiré. Recommencez la connexion.",
+  "authOtpInvalid": "Le code de vérification est invalide ou expiré.",
+  "authInvalidCredentials": "Adresse e-mail ou mot de passe incorrect.",
+  "authRateLimited": "Trop de tentatives. Patientez avant de réessayer.",
+  "authNetworkUnavailable": "Aucune connexion réseau disponible.",
+  "authRequestTimeout": "Le serveur met trop de temps à répondre. Réessayez.",
+  "authGenericError": "Une erreur empêche la connexion. Réessayez.",
+  "authSignedInAs": "Connecté en tant que {name}",
+  "@authSignedInAs": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "authRoleLabel": "Rôle : {role}",
+  "@authRoleLabel": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "authEnableBiometrics": "Activer le verrouillage biométrique",
+  "authDisableBiometrics": "Désactiver le verrouillage biométrique",
+  "authBiometricEnableReason": "Confirmer l’activation du verrouillage biométrique Joprelys Connect"
 }

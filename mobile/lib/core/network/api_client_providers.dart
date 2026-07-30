@@ -5,12 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/app_config.dart';
 import '../i18n/locale_controller.dart';
+import '../security/secure_storage.dart';
 import 'api_client.dart';
 import 'api_exception_mapper.dart';
 import 'api_network_config.dart';
 import 'api_recovery_interceptor.dart';
 import 'api_request_interceptor.dart';
 import 'api_session.dart';
+import 'secure_cookie_storage.dart';
 import 'session_refresh_coordinator.dart';
 import 'trace_id_factory.dart';
 
@@ -23,9 +25,11 @@ final apiSessionAccessProvider = Provider<ApiSessionAccess>((ref) {
 });
 
 final apiCookieJarProvider = Provider<CookieJar>((ref) {
-  // Le refresh professionnel actuel est un cookie HttpOnly. MOB-2804 le garde
-  // uniquement en mémoire ; MOB-2805 fournira la persistance sécurisée.
-  return CookieJar(ignoreExpires: false);
+  return PersistCookieJar(
+    persistSession: true,
+    ignoreExpires: false,
+    storage: SecureCookieStorage(ref.watch(secureStorageProvider)),
+  );
 });
 
 final apiExceptionMapperProvider = Provider<ApiExceptionMapper>((ref) {
