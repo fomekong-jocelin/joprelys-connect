@@ -1,0 +1,38 @@
+name: MOB-2803 one-shot tracking fix
+
+on:
+  push:
+    branches:
+      - feat/mob-2803-mobile-i18n
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/mob-2803-mobile-i18n
+          fetch-depth: 0
+      - name: Restore unrelated EPIC-0027 tracking row
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('docs/ai/PROJECT-TRACKING.md')
+          text = path.read_text(encoding='utf-8')
+          wrong = "| EPIC-0027 | HOSPITAL_ORGANIZATION_CAPACITY_PATIENT_FLOW | Epic | Référentiels, géographie, capacité, séjours, personnel, ressources et pilotage | Spring Boot / Angular / PostgreSQL / RBAC / Data | IN_PROGRESS — HOS-ORG + HOS-LOC fusionnés ; HOS-STAFF validé techniquement dans #140 | P0/P1 | 147–149 | Architecte + seniors full-stack/DB/sécurité + QA santé | 107.0j | 149.0j | À redécouper | Équipe phase 0 | Tech Lead + sécurité/DPO + clinique | À planifier | Fondation + design system + i18n partiels | Finaliser MOB-2803 puis réseau/auth et audio natif P0 | Élevé jusqu’au pilote audio | 2026-07-30 |"
+          correct = "| EPIC-0027 | HOSPITAL_ORGANIZATION_CAPACITY_PATIENT_FLOW | Epic | Référentiels, géographie, capacité, séjours, personnel, ressources et pilotage | Spring Boot / Angular / PostgreSQL / RBAC / Data | IN_PROGRESS — HOS-ORG + HOS-LOC fusionnés ; HOS-STAFF validé techniquement dans #140 | P0/P1 | 147–149 | Architecte + seniors full-stack/DB/sécurité + QA santé | 107.0j | 149.0j | À redécouper | Équipe phase 0 | Médecin + cadre + admissions + biomédical + DPO/RSSI + DBA | SPRINT-0014 puis planification dédiée | Partiel | Finaliser #140/#132 puis #127 ; autres lots après jalon client selon risques | Moyen/Élevé | 2026-07-24 |"
+          if wrong not in text:
+              raise SystemExit('Expected erroneous row not found; refusing broad rewrite')
+          path.write_text(text.replace(wrong, correct, 1), encoding='utf-8')
+      - name: Commit correction
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/ai/PROJECT-TRACKING.md
+          git commit -m "docs: restaurer le suivi EPIC-0027 inchangé"
+          git push origin HEAD:feat/mob-2803-mobile-i18n
