@@ -2,11 +2,11 @@
 
 ## Statut
 
-IN_PROGRESS — issue #254 / PR #255 Draft.
+READY_FOR_REVIEW — issue #254 / PR #255.
 
 Branche créée depuis `main` au commit `301734a6dc575555c5c1278c4790425c0389ce56`, fusion squash de MOB-2804.
 
-L’implémentation et la documentation détaillée sont présentes. Le gate Flutter complet reste requis avant passage final en review.
+L’implémentation et la documentation détaillée sont présentes. Le gate Flutter complet et le gate final exact-HEAD restent requis avant fusion.
 
 ## Objectif
 
