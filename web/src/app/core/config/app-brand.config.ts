@@ -9,6 +9,7 @@ export interface AppBrandConfig {
   readonly logoPath: string;
   readonly logoOnDarkPath: string;
   readonly publisherName: string;
+  readonly publicSiteUrl: string;
   readonly defaultLocale: AppLocale;
   readonly supportedLocales: readonly AppLocale[];
   readonly defaultTheme: AppTheme;
@@ -28,6 +29,7 @@ export const APP_BRAND_CONFIG: AppBrandConfig = {
   logoPath: 'assets/branding/logo_principal.png',
   logoOnDarkPath: 'assets/branding/logo_white_blue_bg.png',
   publisherName: 'JOPRELYS SARL',
+  publicSiteUrl: 'https://joprelys.com',
   defaultLocale: 'fr',
   supportedLocales: ['fr', 'en'],
   defaultTheme: 'light',
