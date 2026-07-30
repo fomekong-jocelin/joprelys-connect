@@ -1,11 +1,16 @@
 import '../../../core/network/api_client.dart';
 import '../domain/active_visit.dart';
 
-final class ActiveVisitsApi {
+abstract interface class ActiveVisitsGateway {
+  Future<List<ActiveVisit>> getActiveVisits();
+}
+
+final class ActiveVisitsApi implements ActiveVisitsGateway {
   const ActiveVisitsApi(this._client);
 
   final ApiClient _client;
 
+  @override
   Future<List<ActiveVisit>> getActiveVisits() async {
     final response = await _client.get<dynamic>('/api/visits/active');
     final data = response.data;
