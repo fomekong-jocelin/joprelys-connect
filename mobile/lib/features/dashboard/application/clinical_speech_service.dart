@@ -158,9 +158,9 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
             final normalized = (level + 2.0).clamp(5.0, 60.0);
             value = value.copyWith(soundLevel: normalized);
           },
-          listenOptions: const stt.SpeechListenOptions(
-            listenFor: Duration(hours: 1),
-            pauseFor: Duration(seconds: 10),
+          listenOptions: stt.SpeechListenOptions(
+            listenFor: const Duration(hours: 1),
+            pauseFor: const Duration(seconds: 10),
             partialResults: true,
             cancelOnError: false,
             listenMode: stt.ListenMode.dictation,
