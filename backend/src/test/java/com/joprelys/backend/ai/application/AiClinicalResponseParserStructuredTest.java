@@ -48,10 +48,66 @@ class AiClinicalResponseParserStructuredTest {
     }
 
     @Test
-    void shouldRejectChangeWithoutEvidence() {
+    void runtimeParserMustKeepSafeChangesWhenOneProposalIsInvalid() {
+        var parsed = parser.parse("""
+                {
+                  "changes": [
+                    {
+                      "field":"symptoms",
+                      "operation":"SET",
+                      "value":"Céphalée depuis trois jours",
+                      "reason":"Explicitement dicté",
+                      "uncertainty":"LOW",
+                      "evidence":["céphalée depuis trois jours"]
+                    },
+                    {
+                      "field":"vitals",
+                      "operation":"SET",
+                      "value":{"spo2":150},
+                      "reason":"Valeur physiologiquement invalide",
+                      "uncertainty":"LOW",
+                      "evidence":["SpO2 150"]
+                    }
+                  ],
+                  "assistantMessage":"Capture structurée",
+                  "needsClarification":false,
+                  "clarification":null
+                }
+                """);
+
+        assertEquals(1, parsed.changes().size());
+        assertEquals("symptoms", parsed.changes().get(0).field());
+        assertEquals("Céphalée depuis trois jours", parsed.changes().get(0).proposedValue());
+    }
+
+    @Test
+    void shouldNormalizeCommonBloodPressureShorthand() {
+        var parsed = parser.parse("""
+                {
+                  "changes": [{
+                    "field":"vitals",
+                    "operation":"SET",
+                    "value":{"systolic":15,"diastolic":9},
+                    "reason":"Tension explicitement dictée",
+                    "uncertainty":"LOW",
+                    "evidence":["tension 15 sur 9"]
+                  }],
+                  "assistantMessage":"Capture structurée",
+                  "needsClarification":false,
+                  "clarification":null
+                }
+                """);
+
+        assertEquals(1, parsed.changes().size());
+        assertTrue(parsed.changes().get(0).proposedValue().contains("\"systolic\":150"));
+        assertTrue(parsed.changes().get(0).proposedValue().contains("\"diastolic\":90"));
+    }
+
+    @Test
+    void shouldRejectChangeWithoutEvidenceInStrictMode() {
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> parser.parse("""
+                () -> parser.parseStrict("""
                         {
                           "changes": [{
                             "field":"symptoms",
@@ -72,7 +128,7 @@ class AiClinicalResponseParserStructuredTest {
     void shouldRejectLegacyDraftFallback() {
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> parser.parse("""
+                () -> parser.parseStrict("""
                         {
                           "draft":{"symptoms":"Example"},
                           "assistantMessage":"Test",
@@ -84,10 +140,10 @@ class AiClinicalResponseParserStructuredTest {
     }
 
     @Test
-    void shouldRejectUnknownPrescriptionAttribute() {
+    void shouldRejectUnknownPrescriptionAttributeInStrictMode() {
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> parser.parse("""
+                () -> parser.parseStrict("""
                         {
                           "changes": [{
                             "field":"prescription",
@@ -106,10 +162,10 @@ class AiClinicalResponseParserStructuredTest {
     }
 
     @Test
-    void shouldRejectUnknownVitalAttribute() {
+    void shouldRejectUnknownVitalAttributeInStrictMode() {
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> parser.parse("""
+                () -> parser.parseStrict("""
                         {
                           "changes": [{
                             "field":"vitals",
@@ -128,10 +184,10 @@ class AiClinicalResponseParserStructuredTest {
     }
 
     @Test
-    void shouldRejectPhysiologicallyInvalidVitalInGeneralConsultation() {
+    void shouldRejectPhysiologicallyInvalidVitalInStrictMode() {
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> parser.parse("""
+                () -> parser.parseStrict("""
                         {
                           "changes": [{
                             "field":"vitals",
