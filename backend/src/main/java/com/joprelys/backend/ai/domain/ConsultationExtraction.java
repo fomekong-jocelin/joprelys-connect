@@ -11,8 +11,7 @@ import java.util.Map;
  *
  * @param extractedFields       les champs extraits sous forme de paires clé-valeur,
  *                              les clés possibles sont : symptoms, clinicalExam,
- *                              suspectedDiagnosis, diagnosis, finalDiagnosis,
- *                              conclusion, advice, followUp
+ *                              diagnosis, conclusion, advice, followUp
  * @param message               le message en langage naturel destiné au médecin
  * @param needsClarification    indique si l'IA a besoin de précisions supplémentaires
  * @param clarificationQuestion la question de clarification posée par l'IA, null si non applicable

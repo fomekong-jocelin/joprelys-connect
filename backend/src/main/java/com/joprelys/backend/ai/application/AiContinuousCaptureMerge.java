@@ -20,7 +20,7 @@ import tools.jackson.databind.ObjectMapper;
 final class AiContinuousCaptureMerge {
 
     private static final Set<String> APPEND_TEXT_FIELDS = Set.of(
-            "symptoms", "clinicalExam", "suspectedDiagnosis", "advice", "followUp");
+            "symptoms", "clinicalExam", "advice", "followUp");
 
     private final ObjectMapper objectMapper;
 
@@ -68,8 +68,8 @@ final class AiContinuousCaptureMerge {
         if (newKey.contains(oldKey)) return newValue;
 
         if (!APPEND_TEXT_FIELDS.contains(field)) {
-            // Diagnosis/final diagnosis/conclusion are semantic conclusions rather than
-            // additive ledgers. A later explicit statement is allowed to supersede them.
+            // Diagnosis and conclusion are semantic decisions rather than additive
+            // ledgers. A later explicit statement is allowed to supersede them.
             return newValue;
         }
         return oldValue + "\n" + newValue;

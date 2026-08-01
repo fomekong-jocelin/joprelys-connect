@@ -23,7 +23,7 @@ L'assistant IA vocal pour consultations médicales permet à un médecin de remp
 
 ### 1.2 Problème adressé
 
-Actuellement, le médecin doit saisir manuellement l'ensemble des champs du formulaire de consultation (symptômes, examen clinique, diagnostic suspecté, diagnostic, diagnostic final, conclusion, conseils, suivi). Cette saisie :
+Actuellement, le médecin doit saisir manuellement l'ensemble des champs du formulaire de consultation (symptômes, examen clinique, diagnostic, conclusion, conseils, suivi). Cette saisie :
 
 - **Ralentit la consultation** : le médecin alterne entre l'examen du patient et la saisie clavier.
 - **Réduit la qualité du contenu** : par manque de temps, les champs optionnels sont souvent laissés vides.
@@ -98,7 +98,7 @@ Un assistant conversationnel alimenté par l'IA qui :
 | 4 | Une session IA est automatiquement créée côté serveur. | L'API `/start` retourne un `sessionId` et les métadonnées de la visite. |
 | 5 | Le médecin appuie sur le bouton microphone et dicte : *« Le patient présente une toux sèche depuis 3 jours avec fièvre modérée à 38.2°C. À l'examen, les poumons sont clairs, pas de râles. Je suspecte une rhinopharyngite virale. »* | L'enregistrement audio est capturé via `MediaRecorder`. |
 | 6 | Le médecin relâche le bouton microphone. | L'audio est envoyé à l'API `/message` en `multipart/form-data`. |
-| 7 | L'IA transcrit l'audio, analyse le contenu et extrait les champs. | La réponse contient : `symptoms` = « Toux sèche depuis 3 jours, fièvre modérée à 38.2°C », `clinicalExam` = « Poumons clairs, absence de râles », `suspectedDiagnosis` = « Rhinopharyngite virale ». |
+| 7 | L'IA transcrit l'audio, analyse le contenu et extrait les champs. | La réponse contient : `symptoms` = « Toux sèche depuis 3 jours, fièvre modérée à 38.2°C », `clinicalExam` = « Poumons clairs, absence de râles », `diagnosis` = « Rhinopharyngite virale suspectée ». |
 | 8 | Le panneau affiche les champs extraits. En Realtime uniquement, il peut restituer une question clinique par le canal TTS unique. | L'assistant peut demander : *« Souhaitez-vous préciser le diagnostic définitif ? »*. En Dictée, le message reste visuel. |
 | 9 | Le médecin dicte à nouveau : *« Le diagnostic est une rhinopharyngite aiguë. Conseils : repos, hydratation abondante, paracétamol si fièvre supérieure à 38.5°C. Suivi dans 5 jours si pas d'amélioration. »* | Nouvel envoi audio à l'API `/message`. |
 | 10 | L'IA complète les champs manquants. | `diagnosis` = « Rhinopharyngite aiguë », `advice` = « Repos, hydratation abondante, paracétamol si fièvre > 38.5°C », `followUp` = « Contrôle dans 5 jours si pas d'amélioration ». |
@@ -199,7 +199,7 @@ Un assistant conversationnel alimenté par l'IA qui :
 | ID | Exigence | Priorité |
 |---|---|---|
 | **FR-13** | Le système doit transcrire l'audio en texte (Speech-to-Text) puis analyser le texte pour en extraire les champs de consultation structurés. | P0 |
-| **FR-14** | Les champs extraits doivent correspondre au modèle `SaveConsultationRequest` : `symptoms`, `clinicalExam`, `suspectedDiagnosis`, `diagnosis`, `finalDiagnosis`, `conclusion`, `advice`, `followUp`. | P0 |
+| **FR-14** | Les champs extraits doivent correspondre au modèle `SaveConsultationRequest` : `symptoms`, `clinicalExam`, `diagnosis`, `conclusion`, `advice`, `followUp`. | P0 |
 | **FR-15** | L'IA doit accumuler les informations au fil de la conversation. Chaque nouveau message enrichit ou affine les champs déjà extraits sans les écraser sauf correction explicite du médecin. | P0 |
 | **FR-16** | Si les champs obligatoires (`symptoms`, `diagnosis`) ne sont pas encore remplis, l'IA doit poser une question de clarification ciblée. | P1 |
 | **FR-17** | L'IA doit supporter le français comme langue principale de transcription et d'analyse. | P0 |
@@ -371,9 +371,7 @@ Le panneau d'assistant vocal est un composant latéral (slide-over) qui s'ouvre 
 |---|---|---|
 | `symptoms` | « symptômes », « se plaint de », « présente », « depuis X jours », « douleur », « fièvre », « toux » | ✅ Oui |
 | `clinicalExam` | « à l'examen », « examen clinique », « auscultation », « palpation », « tension », « pouls » | Non |
-| `suspectedDiagnosis` | « je suspecte », « hypothèse diagnostique », « probablement », « compatible avec » | Non |
-| `diagnosis` | « diagnostic », « le diagnostic est », « il s'agit de », « diagnostic retenu » | ✅ Oui |
-| `finalDiagnosis` | « diagnostic final », « diagnostic définitif », « confirmé par » | Non |
+| `diagnosis` | « je suspecte », « hypothèse », « diagnostic », « il s'agit de », « diagnostic retenu », « confirmé par » ; l'IA conserve le niveau de certitude exprimé dans la valeur | ✅ Oui |
 | `conclusion` | « en conclusion », « pour conclure », « synthèse » | Non |
 | `advice` | « conseils », « recommandations », « je conseille », « il est recommandé de » | Non |
 | `followUp` | « suivi », « contrôle dans », « revoir dans », « rendez-vous de suivi » | Non |
@@ -404,7 +402,7 @@ L'IA doit demander des clarifications dans les cas suivants :
 
 - [ ] **AC-01** : Le scan QR ouvre le panneau d'assistant avec le bon patient et numéro de visite.
 - [ ] **AC-02** : L'enregistrement vocal fonctionne en mode Push-to-Talk avec indicateur visuel.
-- [ ] **AC-03** : L'audio est transcrit et les champs `symptoms`, `clinicalExam`, `suspectedDiagnosis` sont correctement extraits d'une description combinée.
+- [ ] **AC-03** : L'audio est transcrit et les champs `symptoms`, `clinicalExam`, `diagnosis` sont correctement extraits d'une description combinée.
 - [ ] **AC-04** : L'IA pose une question de clarification pour le champ `diagnosis` manquant.
 - [ ] **AC-05** : Un second message vocal complète les champs `diagnosis`, `advice`, `followUp`.
 - [ ] **AC-06** : Le bouton « Appliquer au formulaire » pré-remplit correctement tous les champs extraits.

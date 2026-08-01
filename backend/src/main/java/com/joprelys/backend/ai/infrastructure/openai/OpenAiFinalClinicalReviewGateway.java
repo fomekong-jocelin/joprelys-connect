@@ -188,8 +188,8 @@ public class OpenAiFinalClinicalReviewGateway implements FinalClinicalReviewGate
                         "field", Map.of(
                                 "type", "string",
                                 "enum", List.of(
-                                        "symptoms", "clinicalExam", "suspectedDiagnosis", "diagnosis",
-                                        "finalDiagnosis", "conclusion", "advice", "followUp",
+                                        "symptoms", "clinicalExam", "diagnosis", "conclusion",
+                                        "advice", "followUp",
                                         "prescription", "labOrders")),
                         "operation", Map.of("type", "string", "enum", List.of("SET")),
                         "value", Map.of("type", "string"),

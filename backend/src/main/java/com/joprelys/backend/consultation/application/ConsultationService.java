@@ -63,16 +63,13 @@ public class ConsultationService {
 					String docNumber = generateDocumentNumber();
 					return new ConsultationEntity(visit, doctor, docNumber,
 							request.symptoms(), request.clinicalExam(),
-							request.suspectedDiagnosis(), request.diagnosis(),
-							request.finalDiagnosis(), request.conclusion(),
+							request.diagnosis(), request.conclusion(),
 							request.advice(), request.followUp());
 				});
 
 		consultation.setSymptoms(request.symptoms());
 		consultation.setClinicalExam(request.clinicalExam());
-		consultation.setSuspectedDiagnosis(request.suspectedDiagnosis());
 		consultation.setDiagnosis(request.diagnosis());
-		consultation.setFinalDiagnosis(request.finalDiagnosis());
 		consultation.setConclusion(request.conclusion());
 		consultation.setAdvice(request.advice());
 		consultation.setFollowUp(request.followUp());

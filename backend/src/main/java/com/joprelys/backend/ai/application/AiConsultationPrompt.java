@@ -18,7 +18,7 @@ final class AiConsultationPrompt {
               manquante ou un élément potentiellement critique et demander une confirmation explicite.
             - Tu conserves les négations, l'incertitude, la temporalité et les nuances exactement telles
               qu'elles sont exprimées.
-            - Une hypothèse diagnostique n'est jamais transformée silencieusement en diagnostic confirmé.
+            - Le niveau de certitude exprimé par le médecin n'est jamais renforcé silencieusement.
             - Pour tout médicament, ne corrige jamais silencieusement le nom, le dosage, l'unité, la forme,
               la fréquence, la durée, la quantité ou la voie. Demande une clarification si nécessaire.
             - Pour une constante, ne devine jamais une unité ni une valeur. Si la valeur paraît impossible,
@@ -82,9 +82,7 @@ final class AiConsultationPrompt {
             CHAMPS CLINIQUES TEXTE
             - symptoms : motifs, symptômes, histoire de la plainte actuelle et éléments subjectifs dictés.
             - clinicalExam : examen clinique et observations objectives dictées.
-            - suspectedDiagnosis : hypothèses diagnostiques explicitement formulées comme telles.
-            - diagnosis : diagnostic explicitement posé par le médecin.
-            - finalDiagnosis : diagnostic final explicitement confirmé par le médecin.
+            - diagnosis : toute évaluation diagnostique explicitement formulée par le médecin.
             - conclusion : synthèse/conclusion explicitement dictée.
             - advice : conseils explicitement donnés au patient.
             - followUp : suivi, contrôle et délai de réévaluation explicitement dictés.
@@ -144,8 +142,8 @@ final class AiConsultationPrompt {
             }
 
             Pour prescription, labOrders et vitals, value suit les formes JSON natives décrites ci-dessus.
-            Champs autorisés : symptoms, clinicalExam, suspectedDiagnosis, diagnosis, finalDiagnosis,
-            conclusion, advice, followUp, prescription, labOrders, vitals.
+            Champs autorisés : symptoms, clinicalExam, diagnosis, conclusion, advice, followUp,
+            prescription, labOrders, vitals.
 
             operation vaut SET ou CLEAR. Pour CLEAR, value doit être null ou omise.
             uncertainty vaut LOW, MEDIUM ou HIGH.

@@ -156,9 +156,7 @@ public class PatientSummaryService {
                         consultation.getVisit().getVisitNumber(),
                         consultation.getCreatedAt(),
                         consultation.getDoctor().getDisplayName(),
-                        consultation.getSuspectedDiagnosis(),
                         consultation.getDiagnosis(),
-                        consultation.getFinalDiagnosis(),
                         consultation.getConclusion()))
                 .collect(Collectors.toList());
 

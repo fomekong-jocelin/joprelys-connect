@@ -20,10 +20,9 @@ describe('ConsultationApiService', () => {
 
     service.getConsultation('visit-123').subscribe({ next, complete });
 
-    http.expectOne('/api/visits/visit-123/consultation').flush(
-      null,
-      { status: 204, statusText: 'No Content' },
-    );
+    http
+      .expectOne('/api/visits/visit-123/consultation')
+      .flush(null, { status: 204, statusText: 'No Content' });
 
     expect(next).not.toHaveBeenCalled();
     expect(complete).toHaveBeenCalledOnce();
@@ -36,10 +35,12 @@ describe('ConsultationApiService', () => {
 
     service.getConsultation('missing-visit').subscribe({ error });
 
-    http.expectOne('/api/visits/missing-visit/consultation').flush(
-      { error: { code: 'NOT_FOUND', message: 'Visite introuvable.' } },
-      { status: 404, statusText: 'Not Found' },
-    );
+    http
+      .expectOne('/api/visits/missing-visit/consultation')
+      .flush(
+        { error: { code: 'NOT_FOUND', message: 'Visite introuvable.' } },
+        { status: 404, statusText: 'Not Found' },
+      );
 
     expect(error).toHaveBeenCalledOnce();
     expect(error.mock.calls[0][0].status).toBe(404);
@@ -52,12 +53,33 @@ describe('ConsultationApiService', () => {
 
     service.getConsultation('visit-123').subscribe({ error });
 
-    http.expectOne('/api/visits/visit-123/consultation').flush(
-      { detail: 'Database unavailable' },
-      { status: 500, statusText: 'Internal Server Error' },
-    );
+    http
+      .expectOne('/api/visits/visit-123/consultation')
+      .flush(
+        { detail: 'Database unavailable' },
+        { status: 500, statusText: 'Internal Server Error' },
+      );
 
     expect(error).toHaveBeenCalledOnce();
     expect(error.mock.calls[0][0].status).toBe(500);
+  });
+
+  it('should send one diagnosis without legacy assessment fields', () => {
+    const service = TestBed.inject(ConsultationApiService);
+    const http = TestBed.inject(HttpTestingController);
+    const dto = {
+      symptoms: 'Douleur thoracique',
+      diagnosis: 'Reflux gastro-œsophagien',
+      conclusion: 'Absence de signe de gravité immédiat',
+    };
+
+    service.saveConsultation('visit-123', dto).subscribe();
+
+    const request = http.expectOne('/api/visits/visit-123/consultation');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual(dto);
+    expect(request.request.body).not.toHaveProperty('suspectedDiagnosis');
+    expect(request.request.body).not.toHaveProperty('finalDiagnosis');
+    request.flush({ ...dto, id: 'consultation-1', visitId: 'visit-123' });
   });
 });

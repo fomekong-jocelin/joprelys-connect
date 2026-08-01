@@ -114,6 +114,39 @@ public class ConsultationControllerTest {
     }
 
     @Test
+    void givenSoapAssessment_whenSaveAndRead_thenExposesOnlyOneDiagnosisField() throws Exception {
+        String json = """
+                {
+                  "symptoms": "Douleur thoracique depuis deux heures",
+                  "clinicalExam": "Auscultation normale",
+                  "diagnosis": "Reflux gastro-œsophagien",
+                  "conclusion": "Absence de signe de gravité immédiat",
+                  "advice": "Consulter en urgence si aggravation",
+                  "followUp": "Contrôle dans 48 heures"
+                }
+                """;
+
+        mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
+                        .header("Authorization", "Bearer " + tokenMedecinA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.diagnosis").value("Reflux gastro-œsophagien"))
+                .andExpect(jsonPath("$.suspectedDiagnosis").doesNotExist())
+                .andExpect(jsonPath("$.finalDiagnosis").doesNotExist())
+                .andExpect(jsonPath("$.conclusion").value("Absence de signe de gravité immédiat"));
+
+        mockMvc.perform(get("/api/visits/" + visitA.getId() + "/consultation")
+                        .header("Authorization", "Bearer " + tokenMedecinA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.diagnosis").value("Reflux gastro-œsophagien"))
+                .andExpect(jsonPath("$.suspectedDiagnosis").doesNotExist())
+                .andExpect(jsonPath("$.finalDiagnosis").doesNotExist())
+                .andExpect(jsonPath("$.advice").value("Consulter en urgence si aggravation"))
+                .andExpect(jsonPath("$.followUp").value("Contrôle dans 48 heures"));
+    }
+
+    @Test
     void givenExistingConsultation_whenSaveAgain_thenUpsertSuccess() throws Exception {
         String json1 = "{\"symptoms\":\"Douleur thoracique\",\"diagnosis\":\"Suspicion angine de poitrine\"}";
         mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")

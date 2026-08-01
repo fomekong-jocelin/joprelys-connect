@@ -134,12 +134,7 @@ export class AiClarificationPanelComponent {
     const labels: Record<AiField, string> = {
       symptoms: this.i18n.t('consultation.symptoms.label', 'Symptômes'),
       clinicalExam: this.i18n.t('consultation.clinicalExam.label', 'Examen clinique'),
-      suspectedDiagnosis: this.i18n.t(
-        'consultation.suspectedDiagnosis.label',
-        'Hypothèse diagnostique',
-      ),
       diagnosis: this.i18n.t('consultation.diagnosis.label', 'Diagnostic'),
-      finalDiagnosis: this.i18n.t('consultation.finalDiagnosis.label', 'Diagnostic final'),
       conclusion: this.i18n.t('consultation.conclusion.label', 'Conclusion'),
       advice: this.i18n.t('consultation.advice.label', 'Conseils au patient'),
       followUp: this.i18n.t('consultation.followUp.label', 'Suivi recommandé'),

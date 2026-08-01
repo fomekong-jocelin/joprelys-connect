@@ -330,7 +330,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                       @for (d of summary()?.recentDiagnostics; track d.id) {
                         <li class="py-2.5">
                           <div class="flex justify-between items-center">
-                            <span class="font-semibold text-[var(--text-primary)]">{{ d.finalDiagnosis || d.diagnosis }}</span>
+                            <span class="font-semibold text-[var(--text-primary)]">{{ d.diagnosis }}</span>
                             <span class="text-xs text-[var(--text-muted)]">{{ d.createdAt | date:'dd/MM/yyyy' }}</span>
                           </div>
                           <p class="text-xs text-[var(--text-muted)] mt-0.5">{{ i18n.t('patient.visits.doctor') }}: {{ d.doctorName }}</p>

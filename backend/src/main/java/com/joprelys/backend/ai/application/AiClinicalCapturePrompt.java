@@ -25,7 +25,7 @@ final class AiClinicalCapturePrompt {
             - Extract every clinically relevant fact explicitly present in CURRENT TRANSCRIPT. Do not summarize away details.
             - Emit at most ONE change per field. Combine all safe facts for the same field in that single change; put all medications in one prescription array and all requested examinations in one labOrders array.
             - Never invent, complete, medically improve or infer a fact.
-            - Never turn a symptom into a diagnosis or a suspected diagnosis into a confirmed diagnosis.
+            - Never turn a symptom into a diagnosis or strengthen the clinician's stated certainty.
             - Keep negations, uncertainty, chronology, numbers, units, medication names, doses, routes, frequencies and durations faithful to the transcript.
             - A malformed or uncertain attribute must never make another safe fact disappear.
             - For a medication with one uncertain attribute, keep the medication and every independently supported attribute; omit the unsupported attribute or preserve its literal wording when it is explicitly spoken.
@@ -39,9 +39,7 @@ final class AiClinicalCapturePrompt {
             FIELD MAPPING
             - symptoms: complaint, symptoms, history of present illness and subjective facts.
             - clinicalExam: physical examination and objective observations explicitly dictated.
-            - suspectedDiagnosis: explicitly stated diagnostic hypotheses only.
-            - diagnosis: explicitly stated diagnosis only.
-            - finalDiagnosis: explicitly confirmed final diagnosis only.
+            - diagnosis: any diagnostic assessment explicitly stated by the clinician.
             - conclusion: explicitly dictated conclusion.
             - advice: explicit patient advice such as hydration, rest or precautions.
             - followUp: explicit follow-up, review or reassessment plan.
@@ -70,8 +68,8 @@ final class AiClinicalCapturePrompt {
                         "field", Map.of(
                                 "type", "string",
                                 "enum", List.of(
-                                        "symptoms", "clinicalExam", "suspectedDiagnosis", "diagnosis",
-                                        "finalDiagnosis", "conclusion", "advice", "followUp",
+                                        "symptoms", "clinicalExam", "diagnosis", "conclusion",
+                                        "advice", "followUp",
                                         "prescription", "labOrders", "vitals")),
                         "operation", Map.of("type", "string", "enum", List.of("SET")),
                         "value", Map.of("type", "string"),

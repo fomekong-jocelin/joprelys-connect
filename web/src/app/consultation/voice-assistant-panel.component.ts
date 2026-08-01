@@ -364,9 +364,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     const fields: AiField[] = [
       'symptoms',
       'clinicalExam',
-      'suspectedDiagnosis',
       'diagnosis',
-      'finalDiagnosis',
       'conclusion',
       'advice',
       'followUp',

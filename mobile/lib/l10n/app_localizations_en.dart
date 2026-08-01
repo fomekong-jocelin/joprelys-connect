@@ -41,6 +41,75 @@ class AppLocalizationsEn extends AppLocalizations {
       'Protect local access with this device’s biometrics.';
 
   @override
+  String get dashboardQueueTitle => 'Patients waiting';
+
+  @override
+  String get dashboardQueueSubtitleLoading => 'Refreshing the queue…';
+
+  @override
+  String dashboardQueueSubtitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count patients in the queue',
+      one: '1 patient in the queue',
+      zero: 'No patients in the queue',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dashboardQueueRefresh => 'Refresh the waiting queue';
+
+  @override
+  String get dashboardQueueTotal => 'Active patients';
+
+  @override
+  String get dashboardQueueTotalCompact => 'Waiting';
+
+  @override
+  String get dashboardQueueWithVitals => 'Vitals recorded';
+
+  @override
+  String get dashboardQueueWithVitalsCompact => 'Ready';
+
+  @override
+  String get dashboardQueueWithoutVitals => 'To assess';
+
+  @override
+  String get dashboardQueueEmptyTitle => 'Everything is up to date';
+
+  @override
+  String get dashboardQueueEmptyBody =>
+      'No patient is currently waiting for care.';
+
+  @override
+  String get dashboardQueueLoadError =>
+      'The waiting queue cannot be loaded right now.';
+
+  @override
+  String get dashboardQueueRetry => 'Retry';
+
+  @override
+  String get dashboardQueueVitalsReady => 'Vitals ready';
+
+  @override
+  String get dashboardQueueVitalsReadyCompact => 'Ready';
+
+  @override
+  String get dashboardQueueVitalsPending => 'To assess';
+
+  @override
+  String dashboardQueueVisitReference(String visitNumber, String patientDpu) {
+    return '$visitNumber · DPU $patientDpu';
+  }
+
+  @override
+  String dashboardQueueArrivedAt(String time) {
+    return 'Arrived $time';
+  }
+
+  @override
   String get languageFrench => 'Français';
 
   @override

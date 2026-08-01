@@ -83,9 +83,7 @@ public record MedicalSummaryResponse(
             String visitNumber,
             java.time.Instant createdAt,
             String doctorName,
-            String suspectedDiagnosis,
             String diagnosis,
-            String finalDiagnosis,
             String conclusion
     ) {}
 

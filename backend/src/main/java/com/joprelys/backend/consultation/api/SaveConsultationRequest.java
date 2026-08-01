@@ -12,15 +12,9 @@ public record SaveConsultationRequest(
 		@Size(max = 5000, message = "L'examen clinique ne doit pas dépasser 5000 caractères.")
 		String clinicalExam,
 
-		@Size(max = 5000, message = "L'hypothèse diagnostique ne doit pas dépasser 5000 caractères.")
-		String suspectedDiagnosis,
-
 		@NotBlank(message = "Le diagnostic est obligatoire.")
 		@Size(max = 5000, message = "Le diagnostic ne doit pas dépasser 5000 caractères.")
 		String diagnosis,
-
-		@Size(max = 5000, message = "Le diagnostic final ne doit pas dépasser 5000 caractères.")
-		String finalDiagnosis,
 
 		@Size(max = 5000, message = "La conclusion ne doit pas dépasser 5000 caractères.")
 		String conclusion,

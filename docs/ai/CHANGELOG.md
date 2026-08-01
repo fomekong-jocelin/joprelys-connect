@@ -8,6 +8,50 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **TASK-20260801 / ADR-0005 — Contrat SOAP unifié Angular, Flutter et Spring Boot** :
+  - **Contrat canonique simplifié** : Flutter consomme désormais `GET/POST /api/visits/{id}/consultation` avec `symptoms`, `clinicalExam`, `diagnosis`, `conclusion`, `advice`, `followUp` ; un vrai `404` n'est plus masqué comme une note absente.
+  - **Diagnostic unique** : Angular, Flutter, Spring et l'assistant IA n'exposent plus `suspectedDiagnosis` ni `finalDiagnosis`. V109 archive les anciennes valeurs, retient la valeur la plus aboutie disponible, puis supprime les deux colonnes actives redondantes. L'orchestration Angular des prescriptions, feedbacks et libellés a été extraite en services/facade dédiés afin de ramener `ConsultationComponent` sous 500 lignes.
+  - **Sécurité clinique** : la dictée locale mobile ne fabrique plus de diagnostic ni de plan de soins à partir d'une simple mention de fièvre ; elle conserve uniquement le texte dicté et les constantes explicitement reconnues.
+  - **Découpage Flutter** : `consultation_notes_sheet.dart` passe de 573 à 236 lignes avec extraction de l'en-tête, du formulaire, des contrôleurs et des champs cliniques réutilisables. L'assistant vocal de 819 lignes est séparé en orchestration (379), surface d'écoute (326) et transcription (152), sans fichier au-dessus de la limite dure de 500.
+  - **Vérifications** : 9 tests Angular ciblés et le build production sont verts ; l'analyse Dart ciblée ne remonte aucun diagnostic. Les tests Maven sont bloqués par le parent Spring Boot absent du cache et le réseau sandbox ; les tests Flutter runtime restent bloqués par le verrou SDK non inscriptible.
+
+- **MOB-2817 — Annuaire & Recherche Globale des Patients Mobile** :
+  - **Recherche en temps réel & API** : création de `PatientDirectoryItem` et `PatientDirectoryApi` consommant `GET /api/patients?q={query}` pour rechercher n'importe quel patient de l'établissement par nom, numéro DPU, téléphone ou numéro temporaire.
+  - **Interface utilisateur** : ajout d'une barre de recherche dynamique et d'un sélecteur d'onglets à deux vues (*File d'attente active* vs *Annuaire global de tous les patients*) avec cartes récapitulatives et accès direct au dossier médical (`PatientHistorySheet`).
+
+- **MOB-2814 / MOB-2816 — Alignment UI SOAP Web Angular & Connexion Backend Réelle** :
+  - **Interface SOAP (ConsultationNotesSheet)** : refonte complète de la modale SOAP pour s'aligner sur l'éditeur Web Angular `clinical-note-editor` (sections numérotées 1, 2, 3, 4 avec sous-titres d'aide i18n, badge motif de consultation, accès rapide à l'assistant vocal et zone de texte clinique stylisée).
+  - **Historique Médical (PatientHistoryApi & Sheet)** : correction du paramètre d'appel (`patientId` au lieu de `visitId`), élimination des exceptions brutes 404 affichées en rouge à l'utilisateur, et ajout d'un écran d'erreur ergonomique avec bouton de réessai.
+  - **Gestion REST** : `ConsultationApi` distingue désormais le `204` (visite valide sans consultation) du `404` (visite introuvable) ; les autres gateways conservent leur politique documentée propre.
+
+- **MOB-2816 — Historique Médical & Chronologie des Visites Patient** :
+  - **Domaine & Gateway** : création de `PatientMedicalHistory`, `MedicalAntecedent`, `PatientAllergy`, `PastVisitSummary` et `PatientHistoryApi`.
+  - **Interface utilisateur** : création du composant modal `PatientHistorySheet` avec onglets séparés pour les antécédents/allergies (avec badges de sévérité) et la chronologie des consultations passées.
+  - **Tests & Conformité** : création de `patient_history_api_test.dart` et validation de la suite avec 68/68 tests Flutter verts.
+
+- **MOB-2815 — Assistant Vocal Clinique & Dictée Intelligente** :
+  - **Moteur d'extraction** : création de `ClinicalDictationParser` capable d'extraire automatiquement en Regex les constantes médicales explicitement dictées et de conserver le texte clinique sans inférer de diagnostic ou de plan de soins.
+  - **Interface utilisateur** : création du composant modal `ClinicalVoiceAssistantSheet` et ajout du bouton `[🎙️ Assistant vocal]` dans la modale des constantes.
+  - **Tests & Conformité** : création de `clinical_dictation_parser_test.dart` et validation de la suite avec 66/66 tests Flutter verts.
+
+- **MOB-2814 — Saisie & consultation mobile des notes cliniques (SOAP)** :
+  - **Gateway & REST** : création de `ConsultationGateway` et `ConsultationApi`, désormais alignés sur les endpoints canoniques `GET/POST /api/visits/{id}/consultation`.
+  - **Interface SOAP** : création du composant modal `ConsultationNotesSheet` structuré en quatre rubriques cliniques et enrichi avec les huit sous-champs du contrat backend.
+  - **i18n & Thèmes** : support complet FR/EN et Thèmes Sombre/Clair sans aucun texte dur.
+  - **Tests** : création de `consultation_api_test.dart`, ensuite étendu à la sérialisation détaillée, aux endpoints, au `204` et à la propagation du `404` ; la preuve 63/63 reste historique et doit être remplacée par un gate exact-HEAD.
+
+- **MOB-2807 — Saisie & consultation mobile des constantes patient** :
+  - **Gateway & API** : création de `VitalsGateway` et `VitalsApi` consommant `GET /api/visits/{id}/vitals` et `POST /api/visits/{id}/vitals`.
+  - **Composant UI** : création de `PatientVitalsSheet` (modale de saisie 10 constantes vitales, calcul d'IMC à chaud, validation et messages d'erreur).
+  - **Raccordement Dashboard** : clic sur la carte patient (`_ActiveVisitCard`) déclenchant la modale et actualisant la file d'attente à l'enregistrement.
+  - **Tests** : ajouts des tests unitaires `vitals_api_test.dart` (validation JSON, calcul d'IMC).
+
+- **BUG-20260730-MOBILE-DASHBOARD-UI-REDESIGN — Refonte visuelle du dashboard mobile Flutter** :
+  - **En-tête & Ambiance** : suppression du dégradé radial avec spot bleu dur ; ajout du marqueur d'espace clinique médical `[+] ESPACE CLINIQUE` et hiérarchisation fluide des titres.
+  - **Cartes métriques** : refonte des conteneurs `En attente`, `Prêts`, `À évaluer` avec bordures subtiles (`accent.withValues(alpha: 0.3)`), micro-icônes d'état et typographie Montserrat bold.
+  - **Cartes de visite patient** : réarchitecturation de `_ActiveVisitCard` avec avatar patient, badge de constantes en haut à droite, motif de consultation lisible et correction de la répétition du préfixe DPU (`DPU DPU-` -> `DPU-`).
+  - **Conformité & Tests** : 58 tests Flutter et goldens verts, aucune régression sur le routing, l'i18n FR/EN ou la logique métier.
+
 - **FIX-20260730-MOBILE-AUTH-WEB-VISUAL-ALIGNMENT — Auth Flutter alignée sur l’expérience web** :
   - **Composition** : préférences compactes, lockup de marque réutilisable, titre hors carte, libellés de champs stables et CTA pleine largeur selon les tokens Joprelys.
   - **Accueil professionnel** : suppression du badge technique `MOB-2805` et des réglages dupliqués ; identité, rôle, biométrie et déconnexion sont hiérarchisés dans des surfaces sobres.

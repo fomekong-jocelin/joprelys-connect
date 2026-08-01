@@ -16,9 +16,9 @@
   "foundationSecurityTitle": "Application security",
   "foundationBiometricEnabled": "Biometric lock is enabled on this device.",
   "foundationBiometricDisabled": "Protect local access with this device’s biometrics.",
-  "dashboardQueueTitle": "Active waiting queue",
-  "dashboardQueueSubtitleLoading": "Refreshing clinical activity…",
-  "dashboardQueueSubtitle": "{count, plural, =0{No patients are waiting} =1{1 patient to care for} other{{count} patients to care for}}",
+  "dashboardQueueTitle": "Patients waiting",
+  "dashboardQueueSubtitleLoading": "Refreshing the queue…",
+  "dashboardQueueSubtitle": "{count, plural, =0{No patients in the queue} =1{1 patient in the queue} other{{count} patients in the queue}}",
   "@dashboardQueueSubtitle": {
     "placeholders": {
       "count": {
@@ -28,15 +28,18 @@
   },
   "dashboardQueueRefresh": "Refresh the waiting queue",
   "dashboardQueueTotal": "Active patients",
+  "dashboardQueueTotalCompact": "Waiting",
   "dashboardQueueWithVitals": "Vitals recorded",
+  "dashboardQueueWithVitalsCompact": "Ready",
   "dashboardQueueWithoutVitals": "To assess",
-  "dashboardQueueEmptyTitle": "The queue is clear",
+  "dashboardQueueEmptyTitle": "Everything is up to date",
   "dashboardQueueEmptyBody": "No patient is currently waiting for care.",
   "dashboardQueueLoadError": "The waiting queue cannot be loaded right now.",
   "dashboardQueueRetry": "Retry",
   "dashboardQueueVitalsReady": "Vitals ready",
+  "dashboardQueueVitalsReadyCompact": "Ready",
   "dashboardQueueVitalsPending": "To assess",
-  "dashboardQueueVisitReference": "Visit {visitNumber} · DPU {patientDpu}",
+  "dashboardQueueVisitReference": "{visitNumber} · DPU {patientDpu}",
   "@dashboardQueueVisitReference": {
     "placeholders": {
       "visitNumber": {
@@ -47,7 +50,7 @@
       }
     }
   },
-  "dashboardQueueArrivedAt": "Arrived at {time}",
+  "dashboardQueueArrivedAt": "Arrived {time}",
   "@dashboardQueueArrivedAt": {
     "placeholders": {
       "time": {

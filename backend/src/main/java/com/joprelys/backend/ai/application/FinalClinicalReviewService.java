@@ -34,9 +34,7 @@ public class FinalClinicalReviewService {
     private static final Set<String> REVIEW_FIELDS = Set.of(
             "symptoms",
             "clinicalExam",
-            "suspectedDiagnosis",
             "diagnosis",
-            "finalDiagnosis",
             "conclusion",
             "advice",
             "followUp",

@@ -190,6 +190,23 @@ La page publique de connexion suit les règles suivantes :
 - replier ou détruire l'assistant coupe le microphone et la session Realtime ;
 - une proposition IA ne modifie que le brouillon visible ; l'enregistrement clinique reste une action explicite du professionnel ;
 - les composants IA utilisent les clés i18n de feature et les libellés partagés, en français et en anglais ;
+
+### Notes cliniques SOAP cross-stack
+
+- Angular et Flutter utilisent la même hiérarchie `S — Subjectif`, `O — Objectif`,
+  `A — Évaluation`, `P — Plan`, dans cet ordre ;
+- la parité porte sur les champs, libellés, validations et états, pas sur une copie
+  pixel à pixel : Angular peut utiliser une grille desktop et Flutter une feuille
+  native empilée ;
+- l'évaluation expose un seul champ `Diagnostic` ; le niveau de certitude reste
+  exprimé dans le texte clinique sans créer de statuts artificiels dans l'UI ;
+- le plan distingue synthèse, conseils et suivi ; prescriptions, examens et
+  constantes restent des ressources structurées et ne sont pas remplacés par un
+  champ texte libre ;
+- les champs utilisent les rayons sobres du design system, les thèmes light/dark,
+  les libellés FR/EN et une limite visible cohérente avec le contrat backend ;
+- l'action d'enregistrement reste explicite et les erreurs `204`, `400`, `403` et
+  `404` conservent leur sens métier sur desktop comme sur mobile.
 - l'intégration dans une modale Angular reste déclarative, sans `querySelector`, mutation de classes ni montage dynamique pour piloter le layout.
 
 #### Surface d’écoute vocale unifiée

@@ -74,8 +74,7 @@ final class AiClinicalToolDispatcher {
 
     private ClinicalToolType toolTypeFor(String field) {
         return switch (field) {
-            case "symptoms", "clinicalExam", "suspectedDiagnosis", "diagnosis",
-                    "finalDiagnosis", "conclusion", "advice", "followUp" ->
+            case "symptoms", "clinicalExam", "diagnosis", "conclusion", "advice", "followUp" ->
                     ClinicalToolType.PROPOSE_CLINICAL_NOTE;
             case "prescription" -> ClinicalToolType.PROPOSE_PRESCRIPTION;
             case "labOrders" -> ClinicalToolType.PROPOSE_LAB_ORDERS;

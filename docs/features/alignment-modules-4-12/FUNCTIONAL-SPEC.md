@@ -64,7 +64,7 @@ Aligner le code backend/frontend de Joprelys Connect avec les exigences des modu
 - Une visite est liée à un patient, un établissement, un service, un praticien principal et un motif.
 - Une visite terminée ne peut être modifiée sans trace de correction.
 - Les constantes vitales doivent avoir des unités cohérentes.
-- Le diagnostic est découpé en `suspected_diagnosis`, `final_diagnosis` et `conclusion`.
+- Le diagnostic actif est porté par l'unique champ `diagnosis` ; `conclusion` reste séparée. Les deux anciens niveaux diagnostiques ajoutés par V31 sont retirés par V109 conformément à ADR-0005.
 
 ### Allergies et antécédents (Module 6)
 

@@ -42,6 +42,7 @@ Component UI → Facade / Service → HttpClient → API
 |---|---|
 | V30 | `patient_medical_history.important BOOLEAN` |
 | V31 | `visits.service`, `visits.main_practitioner_id`, `visits.arrival_at` ; `consultations.suspected_diagnosis`, `consultations.final_diagnosis`, `consultations.conclusion` ; `vital_signs.pain_scale` |
+| V109 | Archive de migration des valeurs diagnostiques, consolidation vers `consultations.diagnosis`, puis suppression de `suspected_diagnosis` et `final_diagnosis` |
 | V32 | `patient_medical_history.deleted_at`, `deleted_by` ; `patient_allergies.deleted_at`, `deleted_by` |
 | V33 | `prescriptions.issued_at`, `prescriptions.visit_id`, `prescriptions.document_id` ; `prescription_items.form`, `route`, `frequency`, `substitution_allowed` |
 | V34 | `lab_order_items` (table fille) ; `lab_orders.source_organization_id` ; enum statuts |
