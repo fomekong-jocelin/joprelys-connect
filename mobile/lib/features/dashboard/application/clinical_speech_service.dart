@@ -80,17 +80,14 @@ final class RealtimeSpeechState {
 /// le praticien peut la corriger, puis l'IA génère uniquement des propositions.
 /// Aucune donnée n'est appliquée au formulaire depuis ce service.
 class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
-  ClinicalSpeechService({
-    required ClinicalVoiceAiGateway gateway,
-    required String visitId,
-    required Map<String, String> initialDraft,
-    required String locale,
+  ClinicalSpeechService(
+    this._gateway,
+    this._visitId,
+    Map<String, String> initialDraft,
+    this._locale, {
     AudioRecorder? recorder,
     Future<Directory> Function()? temporaryDirectoryProvider,
-  }) : _gateway = gateway,
-       _visitId = visitId,
-       _initialDraft = Map<String, String>.unmodifiable(initialDraft),
-       _locale = locale,
+  }) : _initialDraft = Map<String, String>.unmodifiable(initialDraft),
        _recorder = recorder ?? AudioRecorder(),
        _temporaryDirectoryProvider =
            temporaryDirectoryProvider ?? getTemporaryDirectory,
@@ -113,7 +110,6 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   final ClinicalDictationParser _parser = const ClinicalDictationParser();
 
   StreamSubscription<Amplitude>? _amplitudeSubscription;
-  ClinicalAiState? _aiState;
   String? _recordingPath;
   bool _sessionReady = false;
   bool _serverHasPendingTranscript = false;
@@ -123,7 +119,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     if (_sessionReady || _disposed) return;
     value = value.copyWith(status: SpeechStatus.processing, clearError: true);
     try {
-      _aiState = await _gateway.startSession(
+      await _gateway.startSession(
         _visitId,
         _initialDraft,
         locale: _locale,
@@ -153,7 +149,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
 
       final directory = await _temporaryDirectoryProvider();
       final path =
-          '${directory.path}/joprelys-${_visitId}-${DateTime.now().microsecondsSinceEpoch}.wav';
+          '${directory.path}/joprelys-$_visitId-${DateTime.now().microsecondsSinceEpoch}.wav';
       _recordingPath = path;
 
       await _recorder.start(
@@ -178,7 +174,6 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
             value = value.copyWith(soundLevel: normalized);
           });
 
-      _aiState = null;
       value = const RealtimeSpeechState(
         status: SpeechStatus.listening,
         transcript: '',
@@ -297,7 +292,6 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   }
 
   void _applyAiState(ClinicalAiState state, {required bool includePending}) {
-    _aiState = state;
     final aiVitals = state.vitalsFrom(includePending: includePending);
     final explicitVitals = _parser.parse(value.transcript).vitals;
     final resolvedVitals = aiVitals.isEmpty ? explicitVitals : aiVitals;
@@ -329,7 +323,6 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     } catch (_) {
       // Best effort cleanup: cancellation must never apply clinical data.
     }
-    _aiState = null;
     value = const RealtimeSpeechState(
       status: SpeechStatus.idle,
       transcript: '',
