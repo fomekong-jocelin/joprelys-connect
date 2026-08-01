@@ -25,6 +25,10 @@ class I18nStub {
   t(key: string, defaultValue?: string): string {
     return this.translations[key] ?? defaultValue ?? key;
   }
+
+  currentLanguage(): 'fr' {
+    return 'fr';
+  }
 }
 
 describe('AiProposalPanelComponent', () => {
@@ -106,6 +110,8 @@ describe('AiProposalPanelComponent', () => {
     expect(formatted).toContain('4 jours');
     expect(formatted).toContain('24 comprimés');
     expect(formatted).toContain('après repas');
+    expect(formatted).not.toContain('drugName');
+    expect(formatted).not.toContain('{');
   });
 
   it('émet une décision liée à la révision et à la proposition', () => {
