@@ -1,0 +1,562 @@
+name: Mobile realtime transcription quality fix
+
+on:
+  pull_request:
+    types: [ready_for_review]
+
+permissions:
+  contents: write
+
+jobs:
+  apply-quality-fix:
+    if: github.event.pull_request.number == 266
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/p0-265-realtime-transcription
+          fetch-depth: 0
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Set up Flutter 3.44.6
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+
+      - name: Apply transcription quality corrections
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import re
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'Expected block not found in {path}: {old[:160]!r}')
+              file.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          def replace_regex(path: str, pattern: str, replacement: str) -> None:
+              file = Path(path)
+              text = file.read_text(encoding='utf-8')
+              updated, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+              if count != 1:
+                  raise SystemExit(f'Expected one regex match in {path}, got {count}: {pattern[:160]!r}')
+              file.write_text(updated, encoding='utf-8')
+
+          realtime = 'backend/src/main/java/com/joprelys/backend/ai/infrastructure/openai/OpenAiRealtimeCallService.java'
+          realtime_test = 'backend/src/test/java/com/joprelys/backend/ai/infrastructure/openai/OpenAiRealtimeCallServiceTest.java'
+          application_yml = 'backend/src/main/resources/application.yml'
+          capture_prompt = 'backend/src/main/java/com/joprelys/backend/ai/application/AiClinicalCapturePrompt.java'
+          bridge = 'mobile/lib/features/dashboard/application/clinical_realtime_transcription_bridge.dart'
+          speech = 'mobile/lib/features/dashboard/application/clinical_speech_service.dart'
+          speech_test = 'mobile/test/clinical_realtime_speech_service_test.dart'
+
+          replace_once(
+              realtime,
+              '@Value("${joprelys.ai.openai.realtime-transcribe-model:gpt-4o-mini-transcribe}") String transcriptionModel,',
+              '@Value("${joprelys.ai.openai.realtime-transcribe-model:gpt-4o-transcribe-diarize}") String transcriptionModel,',
+          )
+          replace_once(
+              realtime,
+              '@Value("${joprelys.ai.openai.realtime-noise-reduction:near_field}") String noiseReduction)',
+              '@Value("${joprelys.ai.openai.realtime-noise-reduction:far_field}") String noiseReduction)',
+          )
+          replace_once(
+              realtime,
+              'this.transcriptionModel = normalizeModel(transcriptionModel, "gpt-4o-mini-transcribe");',
+              'this.transcriptionModel = normalizeModel(transcriptionModel, "gpt-4o-transcribe-diarize");',
+          )
+          replace_once(
+              realtime,
+              'openAi == null ? 0.8 : openAi.transcribeVadThreshold());',
+              'openAi == null ? 0.5 : openAi.transcribeVadThreshold());',
+          )
+
+          replace_regex(
+              realtime,
+              r'''    private Map<String, Object> buildSessionConfig\(\n            String requestedLocale,\n            String selectedModel,\n            RealtimePurpose purpose\) \{.*?\n    \}\n\n    Map<String, Object> buildCompatibilitySessionConfig''',
+              '''    private Map<String, Object> buildSessionConfig(
+            String requestedLocale,
+            String selectedModel,
+            RealtimePurpose purpose) {
+        String locale = normalizeLocale(requestedLocale);
+        Map<String, Object> input = new LinkedHashMap<>();
+        input.put("transcription", transcription(locale, purpose, false));
+        input.put("noise_reduction", Map.of("type", noiseReductionFor(purpose)));
+        input.put("turn_detection", serverVad(purpose, false));
+
+        Map<String, Object> audio = new LinkedHashMap<>();
+        audio.put("input", input);
+
+        Map<String, Object> session = baseSession(locale, selectedModel);
+        session.put("audio", audio);
+        session.put("tool_choice", "none");
+        session.put("max_output_tokens", 450);
+        return session;
+    }
+
+    private Map<String, Object> serverVad(
+            RealtimePurpose purpose,
+            boolean compatibilityMode) {
+        boolean consultation = purpose == RealtimePurpose.CONSULTATION;
+        Map<String, Object> turnDetection = new LinkedHashMap<>();
+        turnDetection.put("type", "server_vad");
+        turnDetection.put("create_response", false);
+        turnDetection.put("interrupt_response", true);
+        turnDetection.put(
+                "silence_duration_ms",
+                consultation ? (compatibilityMode ? 1100 : 900) : (compatibilityMode ? 650 : 550));
+        turnDetection.put("prefix_padding_ms", consultation ? 700 : 350);
+        turnDetection.put("threshold", serverVadThreshold(purpose));
+        return turnDetection;
+    }
+
+    Map<String, Object> buildCompatibilitySessionConfig''',
+          )
+
+          replace_regex(
+              realtime,
+              r'''    Map<String, Object> buildCompatibilitySessionConfig\(\n            String requestedLocale,\n            String selectedModel\) \{.*?\n    \}\n\n    private Map<String, Object> baseSession''',
+              '''    Map<String, Object> buildCompatibilitySessionConfig(
+            String requestedLocale,
+            String selectedModel) {
+        return buildCompatibilitySessionConfig(
+                requestedLocale,
+                selectedModel,
+                RealtimePurpose.CONSULTATION);
+    }
+
+    Map<String, Object> buildCompatibilitySessionConfig(
+            String requestedLocale,
+            String selectedModel,
+            RealtimePurpose purpose) {
+        String locale = normalizeLocale(requestedLocale);
+        Map<String, Object> input = new LinkedHashMap<>();
+        input.put("transcription", transcription(locale, purpose, true));
+        input.put("noise_reduction", Map.of("type", noiseReductionFor(purpose)));
+        input.put("turn_detection", serverVad(purpose, true));
+
+        Map<String, Object> audio = new LinkedHashMap<>();
+        audio.put("input", input);
+
+        Map<String, Object> session = baseSession(locale, selectedModel);
+        session.put("audio", audio);
+        return session;
+    }
+
+    private Map<String, Object> baseSession''',
+          )
+
+          replace_regex(
+              realtime,
+              r'''    private Map<String, Object> transcription\(String locale\) \{.*?\n    \}\n\n    private boolean isRetryableConfigurationFailure''',
+              '''    private Map<String, Object> transcription(
+            String locale,
+            RealtimePurpose purpose,
+            boolean compatibilityMode) {
+        String selectedModel = transcriptionModelFor(purpose, compatibilityMode);
+        Map<String, Object> transcription = new LinkedHashMap<>();
+        transcription.put("model", selectedModel);
+        transcription.put("language", locale);
+        if (!selectedModel.endsWith("-diarize")) {
+            transcription.put("prompt", transcriptionPrompt(locale));
+        }
+        return transcription;
+    }
+
+    private String transcriptionModelFor(
+            RealtimePurpose purpose,
+            boolean compatibilityMode) {
+        if (transcriptionModel.endsWith("-diarize")
+                && (purpose == RealtimePurpose.VITALS || compatibilityMode)) {
+            return "gpt-4o-transcribe";
+        }
+        return transcriptionModel;
+    }
+
+    private String noiseReductionFor(RealtimePurpose purpose) {
+        return purpose == RealtimePurpose.CONSULTATION ? noiseReduction : "near_field";
+    }
+
+    private double serverVadThreshold(RealtimePurpose purpose) {
+        double maximum = purpose == RealtimePurpose.CONSULTATION ? 0.5 : 0.6;
+        return Math.min(vadThreshold, maximum);
+    }
+
+    private boolean isRetryableConfigurationFailure''',
+          )
+
+          replace_once(
+              application_yml,
+              'transcribe-vad-threshold: ${OPENAI_TRANSCRIBE_VAD_THRESHOLD:0.8}',
+              'transcribe-vad-threshold: ${OPENAI_TRANSCRIBE_VAD_THRESHOLD:0.5}',
+          )
+          replace_once(
+              application_yml,
+              'realtime-transcribe-model: ${OPENAI_REALTIME_TRANSCRIBE_MODEL:gpt-4o-mini-transcribe}',
+              'realtime-transcribe-model: ${OPENAI_REALTIME_TRANSCRIBE_MODEL:gpt-4o-transcribe-diarize}',
+          )
+          replace_once(
+              application_yml,
+              '# Realtime is a transcription transport in the current Joprelys flow:\n      # automatic model responses are disabled server-side, so use the mini tier.',
+              '# Realtime is a transcription transport in the current Joprelys flow.\n      # The consultation path favors accuracy and speaker separation; automatic model\n      # responses remain disabled server-side.',
+          )
+
+          replace_once(
+              capture_prompt,
+              '- Treat CURRENT TRANSCRIPT as a clinical dialogue even when speaker labels are absent, repeated or noisy. Patient complaints, answers and denials remain subjective clinical facts and belong in symptoms.\n',
+              '- Treat CURRENT TRANSCRIPT as a clinical dialogue even when speaker labels are absent, repeated or noisy. Patient complaints, answers and denials remain subjective clinical facts and belong in symptoms.\n'
+              '            - Speaker labels such as "Locuteur A" or "Speaker B" are context markers. Use them to keep turns separate, but never infer a clinical role solely from the label.\n'
+              '            - A clinician question is not evidence that the patient has the mentioned symptom. Extract a complaint or denial only when it is stated in a patient answer or explicitly summarized/assessed by the clinician.\n',
+          )
+
+          replace_once(
+              bridge,
+              "import 'package:flutter_webrtc/flutter_webrtc.dart';\n",
+              "import 'package:flutter_webrtc/flutter_webrtc.dart';\nimport 'package:permission_handler/permission_handler.dart';\n",
+          )
+          replace_once(
+              bridge,
+              '  static const Duration _iceTimeout = Duration(seconds: 10);\n  static const Duration _channelTimeout = Duration(seconds: 10);',
+              '  static const Duration _iceTimeout = Duration(seconds: 5);\n  static const Duration _channelTimeout = Duration(seconds: 15);',
+          )
+          replace_once(
+              bridge,
+              '  int _reconnectAttempts = 0;\n',
+              '  int _reconnectAttempts = 0;\n  final Set<String> _segmentedItemIds = <String>{};\n',
+          )
+          replace_once(
+              bridge,
+              '    _reconnectAttempts = 0;\n    _reconnectTimer?.cancel();',
+              '    _reconnectAttempts = 0;\n    _segmentedItemIds.clear();\n    _reconnectTimer?.cancel();',
+          )
+          replace_once(
+              bridge,
+              "    try {\n      final stream = await navigator.mediaDevices.getUserMedia(",
+              "    try {\n      final permission = await Permission.microphone.request();\n      if (!permission.isGranted) {\n        throw StateError('MICROPHONE_PERMISSION_DENIED');\n      }\n\n      final stream = await navigator.mediaDevices.getUserMedia(",
+          )
+          replace_once(
+              bridge,
+              "            'echoCancellation': true,\n            'noiseSuppression': true,\n            'autoGainControl': true,",
+              "            // Le serveur applique déjà un filtre far_field adapté à la\n            // consultation en salle. Le double traitement Android supprimait des\n            // syllabes et les voix jouées à distance pendant la recette.\n            'echoCancellation': false,\n            'noiseSuppression': false,\n            'autoGainControl': false,",
+          )
+          replace_once(
+              bridge,
+              "    await completer.future.timeout(\n      _iceTimeout,\n      onTimeout: () => throw TimeoutException('AI_REALTIME_ICE_TIMEOUT'),\n    );",
+              "    try {\n      await completer.future.timeout(_iceTimeout);\n    } on TimeoutException {\n      // Comme sur Angular, poursuivre avec le SDP déjà collecté. Certains\n      // moteurs WebRTC Android ne signalent jamais explicitement l'état complete.\n    }",
+          )
+
+          replace_once(
+              bridge,
+              "      case 'conversation.item.input_audio_transcription.completed':\n        final transcript = event['transcript']?.toString().trim();\n        if (transcript != null && transcript.isNotEmpty) {\n          _emit(\n            ClinicalRealtimeEvent(\n              ClinicalRealtimeEventType.transcriptCompleted,\n              text: transcript,\n              eventId: event['event_id']?.toString(),\n              itemId: event['item_id']?.toString(),\n              confidence: _confidence(event['logprobs']),\n            ),\n          );\n        }\n        final completer = _finalTranscriptCompleter;\n        if (completer != null && !completer.isCompleted) completer.complete();\n        break;\n      case 'error':",
+              "      case 'conversation.item.input_audio_transcription.segment':\n        final text = event['text']?.toString().trim();\n        final itemId = event['item_id']?.toString();\n        final segmentId = event['id']?.toString();\n        final speaker = event['speaker']?.toString();\n        if (text != null && text.isNotEmpty) {\n          if (itemId != null && itemId.isNotEmpty) {\n            _segmentedItemIds.add(itemId);\n          }\n          _emit(\n            ClinicalRealtimeEvent(\n              ClinicalRealtimeEventType.transcriptCompleted,\n              text: _speakerText(speaker, text),\n              eventId: event['event_id']?.toString() ?? segmentId,\n              itemId: itemId,\n            ),\n          );\n        }\n        break;\n      case 'conversation.item.input_audio_transcription.completed':\n        final itemId = event['item_id']?.toString();\n        if (itemId == null || !_segmentedItemIds.contains(itemId)) {\n          final transcript = event['transcript']?.toString().trim();\n          if (transcript != null && transcript.isNotEmpty) {\n            _emit(\n              ClinicalRealtimeEvent(\n                ClinicalRealtimeEventType.transcriptCompleted,\n                text: transcript,\n                eventId: event['event_id']?.toString(),\n                itemId: itemId,\n                confidence: _confidence(event['logprobs']),\n              ),\n            );\n          }\n        }\n        final completer = _finalTranscriptCompleter;\n        if (completer != null && !completer.isCompleted) completer.complete();\n        break;\n      case 'conversation.item.input_audio_transcription.failed':\n        final rawError = event['error'];\n        final message = rawError is Map\n            ? rawError['message']?.toString()\n            : 'AI_REALTIME_TRANSCRIPTION_FAILED';\n        _emit(\n          ClinicalRealtimeEvent(\n            ClinicalRealtimeEventType.error,\n            error: StateError(message ?? 'AI_REALTIME_TRANSCRIPTION_FAILED'),\n          ),\n        );\n        break;\n      case 'error':",
+          )
+          replace_once(
+              bridge,
+              '  double? _confidence(Object? rawLogprobs) {',
+              "  String _speakerText(String? speaker, String text) {\n    final normalized = speaker?.trim();\n    if (normalized == null || normalized.isEmpty) return text;\n    final label = _locale == 'en' ? 'Speaker' : 'Locuteur';\n    return '$label $normalized : $text';\n  }\n\n  double? _confidence(Object? rawLogprobs) {",
+          )
+
+          replace_once(
+              speech,
+              "  String _partialTranscript = '';\n",
+              "  String _partialTranscript = '';\n  String? _partialItemId;\n",
+          )
+          replace_once(
+              speech,
+              '      final live = await _gateway.getLiveTranscript(_visitId);',
+              '      final live = await _getLiveTranscriptIfSupported();',
+          )
+          replace_once(
+              speech,
+              '  void _restoreTranscript(\n',
+              "  Future<ClinicalLiveTranscript?> _getLiveTranscriptIfSupported() async {\n    try {\n      return await _gateway.getLiveTranscript(_visitId);\n    } on ApiException catch (error) {\n      // Déploiement progressif : l'absence temporaire du nouveau tampon live\n      // ne doit jamais empêcher l'ouverture du microphone.\n      if (error.kind == ApiFailureKind.notFound) return null;\n      rethrow;\n    }\n  }\n\n  void _restoreTranscript(\n",
+          )
+          replace_once(
+              speech,
+              "    _partialTranscript = '';\n    _liveSequence = sequence;",
+              "    _partialTranscript = '';\n    _partialItemId = null;\n    _liveSequence = sequence;",
+          )
+          replace_once(
+              speech,
+              "      case ClinicalRealtimeEventType.transcriptDelta:\n        final delta = event.text;\n        if (delta == null || delta.isEmpty) return;\n        _partialTranscript += delta;",
+              "      case ClinicalRealtimeEventType.transcriptDelta:\n        final delta = event.text;\n        if (delta == null || delta.isEmpty) return;\n        final itemId = event.itemId ?? event.eventId ?? 'active-turn';\n        if (_partialItemId != itemId) {\n          _partialItemId = itemId;\n          _partialTranscript = '';\n        }\n        _partialTranscript += delta;",
+          )
+          replace_once(
+              speech,
+              "    _confirmedTranscript = _joinTranscript(_confirmedTranscript, transcript);\n    _partialTranscript = '';\n    _liveSequence++;",
+              "    _confirmedTranscript = _joinTranscript(_confirmedTranscript, transcript);\n    if (_partialItemId == null || _partialItemId == event.itemId) {\n      _partialTranscript = '';\n      _partialItemId = null;\n    }\n    _liveSequence++;",
+          )
+          replace_once(
+              speech,
+              "    final candidate = event.itemId?.trim().isNotEmpty == true\n        ? event.itemId!.trim()\n        : event.eventId?.trim().isNotEmpty == true\n        ? event.eventId!.trim()",
+              "    final candidate = event.eventId?.trim().isNotEmpty == true\n        ? event.eventId!.trim()\n        : event.itemId?.trim().isNotEmpty == true\n        ? event.itemId!.trim()",
+          )
+          replace_once(
+              speech,
+              "    _partialTranscript = '';\n    final parsed = _parser.parse(text);",
+              "    _partialTranscript = '';\n    _partialItemId = null;\n    final parsed = _parser.parse(text);",
+          )
+          replace_once(
+              speech,
+              "    _partialTranscript = '';\n    _liveSequence = 0;",
+              "    _partialTranscript = '';\n    _partialItemId = null;\n    _liveSequence = 0;",
+          )
+          replace_once(
+              speech,
+              '      ApiException exception => exception.code,',
+              "      ApiException exception => '${exception.code} ${exception.message}',",
+          )
+          replace_once(
+              speech,
+              "    if (code.contains('MICROPHONE') || code.contains('PERMISSION')) {",
+              "    final normalizedCode = code.toUpperCase();\n    if (normalizedCode.contains('MICROPHONE') ||\n        normalizedCode.contains('PERMISSION') ||\n        normalizedCode.contains('NOTALLOWED') ||\n        normalizedCode.contains('GETUSERMEDIA')) {",
+          )
+
+          Path(realtime_test).write_text(r'''package com.joprelys.backend.ai.infrastructure.openai;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.joprelys.backend.ai.infrastructure.AiProperties;
+import com.joprelys.backend.ai.infrastructure.openai.OpenAiRealtimeCallService.RealtimePurpose;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.MediaType;
+import org.springframework.util.MultiValueMap;
+import tools.jackson.databind.ObjectMapper;
+
+class OpenAiRealtimeCallServiceTest {
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldUseHighAccuracyDiarizedServerVadForRoomConsultations() {
+        OpenAiRealtimeCallService service = service();
+
+        Map<String, Object> session = service.buildSessionConfig("fr");
+        Map<String, Object> audio = (Map<String, Object>) session.get("audio");
+        Map<String, Object> input = (Map<String, Object>) audio.get("input");
+        Map<String, Object> turnDetection = (Map<String, Object>) input.get("turn_detection");
+        Map<String, Object> transcription = (Map<String, Object>) input.get("transcription");
+
+        assertEquals("realtime", session.get("type"));
+        assertEquals("gpt-realtime-2.1-mini", session.get("model"));
+        assertEquals(List.of("text"), session.get("output_modalities"));
+        assertEquals(
+                List.of("item.input_audio_transcription.logprobs"),
+                session.get("include"));
+        assertEquals("server_vad", turnDetection.get("type"));
+        assertEquals(0.5, turnDetection.get("threshold"));
+        assertEquals(900, turnDetection.get("silence_duration_ms"));
+        assertEquals(700, turnDetection.get("prefix_padding_ms"));
+        assertEquals(Boolean.FALSE, turnDetection.get("create_response"));
+        assertEquals(Boolean.TRUE, turnDetection.get("interrupt_response"));
+        assertEquals("gpt-4o-transcribe-diarize", transcription.get("model"));
+        assertEquals("fr", transcription.get("language"));
+        assertFalse(transcription.containsKey("prompt"));
+        assertEquals(
+                "far_field",
+                ((Map<String, Object>) input.get("noise_reduction")).get("type"));
+        assertFalse(audio.containsKey("output"));
+        assertEquals("none", session.get("tool_choice"));
+        assertTrue(session.get("instructions").toString().contains("Ne diagnostiquez jamais"));
+        assertTrue(session.get("instructions").toString().contains("Ne répondez jamais"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldKeepVitalsCaptureCloseFieldAndPrompted() {
+        OpenAiRealtimeCallService service = service();
+
+        Map<String, Object> session = service.buildSessionConfig("fr", RealtimePurpose.VITALS);
+        Map<String, Object> audio = (Map<String, Object>) session.get("audio");
+        Map<String, Object> input = (Map<String, Object>) audio.get("input");
+        Map<String, Object> turnDetection = (Map<String, Object>) input.get("turn_detection");
+        Map<String, Object> transcription = (Map<String, Object>) input.get("transcription");
+
+        assertEquals("server_vad", turnDetection.get("type"));
+        assertEquals(0.5, turnDetection.get("threshold"));
+        assertEquals(550, turnDetection.get("silence_duration_ms"));
+        assertEquals(350, turnDetection.get("prefix_padding_ms"));
+        assertEquals("gpt-4o-transcribe", transcription.get("model"));
+        assertTrue(transcription.get("prompt").toString().contains("négations"));
+        assertEquals(
+                "near_field",
+                ((Map<String, Object>) input.get("noise_reduction")).get("type"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldLocalizePromptForNonDiarizedVitalsCapture() {
+        OpenAiRealtimeCallService service = service();
+
+        Map<String, Object> session = service.buildSessionConfig("en-US", RealtimePurpose.VITALS);
+        Map<String, Object> audio = (Map<String, Object>) session.get("audio");
+        Map<String, Object> input = (Map<String, Object>) audio.get("input");
+        Map<String, Object> transcription = (Map<String, Object>) input.get("transcription");
+
+        assertEquals("en", transcription.get("language"));
+        assertTrue(transcription.get("prompt").toString().contains("Preserve negations"));
+        assertTrue(session.get("instructions").toString().contains("Never diagnose"));
+        assertTrue(session.get("instructions").toString().contains("Never answer"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldFallBackToFullNonDiarizedTranscriptionWhenNeeded() {
+        OpenAiRealtimeCallService service = service();
+
+        Map<String, Object> session = service.buildCompatibilitySessionConfig(
+                "fr", "gpt-realtime-2.1-mini", RealtimePurpose.CONSULTATION);
+        Map<String, Object> audio = (Map<String, Object>) session.get("audio");
+        Map<String, Object> input = (Map<String, Object>) audio.get("input");
+        Map<String, Object> turnDetection = (Map<String, Object>) input.get("turn_detection");
+        Map<String, Object> transcription = (Map<String, Object>) input.get("transcription");
+
+        assertEquals("server_vad", turnDetection.get("type"));
+        assertEquals(0.5, turnDetection.get("threshold"));
+        assertEquals(1100, turnDetection.get("silence_duration_ms"));
+        assertEquals(700, turnDetection.get("prefix_padding_ms"));
+        assertEquals(Boolean.FALSE, turnDetection.get("create_response"));
+        assertEquals("gpt-4o-transcribe", transcription.get("model"));
+        assertTrue(transcription.get("prompt").toString().contains("texte vide"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldKeepVitalsCompatibilityModeResponsive() {
+        OpenAiRealtimeCallService service = service();
+
+        Map<String, Object> session = service.buildCompatibilitySessionConfig(
+                "fr", "gpt-realtime-2.1-mini", RealtimePurpose.VITALS);
+        Map<String, Object> audio = (Map<String, Object>) session.get("audio");
+        Map<String, Object> input = (Map<String, Object>) audio.get("input");
+        Map<String, Object> turnDetection = (Map<String, Object>) input.get("turn_detection");
+
+        assertEquals("server_vad", turnDetection.get("type"));
+        assertEquals(0.5, turnDetection.get("threshold"));
+        assertEquals(650, turnDetection.get("silence_duration_ms"));
+        assertEquals(350, turnDetection.get("prefix_padding_ms"));
+        assertEquals(Boolean.FALSE, turnDetection.get("create_response"));
+    }
+
+    @Test
+    void shouldPreserveRawSdpAndMultipartContentTypes() {
+        OpenAiRealtimeCallService service = service();
+        String sdp = "v=0\r\n"
+                + "o=- 123 456 IN IP4 127.0.0.1\r\n"
+                + "s=-\r\n"
+                + "t=0 0\r\n"
+                + "m=audio 9 UDP/TLS/RTP/SAVPF 111\r\n";
+
+        MultiValueMap<String, Object> multipart = service.buildMultipartBody(
+                sdp,
+                service.buildSessionConfig("fr"));
+
+        HttpEntity<?> sdpPart = assertInstanceOf(HttpEntity.class, multipart.getFirst("sdp"));
+        byte[] sdpBytes = assertInstanceOf(byte[].class, sdpPart.getBody());
+        assertArrayEquals(sdp.getBytes(StandardCharsets.UTF_8), sdpBytes);
+        assertEquals(MediaType.valueOf("application/sdp"), sdpPart.getHeaders().getContentType());
+
+        HttpEntity<?> sessionPart = assertInstanceOf(HttpEntity.class, multipart.getFirst("session"));
+        byte[] sessionBytes = assertInstanceOf(byte[].class, sessionPart.getBody());
+        String sessionJson = new String(sessionBytes, StandardCharsets.UTF_8);
+        assertEquals(MediaType.APPLICATION_JSON, sessionPart.getHeaders().getContentType());
+        assertTrue(sessionJson.contains("\"type\":\"realtime\""));
+        assertTrue(sessionJson.contains("\"model\":\"gpt-realtime-2.1-mini\""));
+        assertTrue(sessionJson.contains("\"model\":\"gpt-4o-transcribe-diarize\""));
+    }
+
+    private OpenAiRealtimeCallService service() {
+        AiProperties properties = new AiProperties(
+                true,
+                "openai",
+                "openai",
+                30,
+                20,
+                0.35,
+                "fr",
+                new AiProperties.OpenAiProperties(
+                        "test-key",
+                        "gpt-4o-mini",
+                        "gpt-4o-mini-transcribe",
+                        "medical",
+                        0.5,
+                        "https://api.openai.com/v1"),
+                null,
+                null);
+        return new OpenAiRealtimeCallService(
+                properties,
+                new ObjectMapper(),
+                "gpt-realtime-2.1-mini",
+                "gpt-realtime-2.1-mini",
+                "gpt-4o-transcribe-diarize",
+                "medium",
+                "far_field");
+    }
+}
+''', encoding='utf-8')
+
+          replace_once(
+              speech_test,
+              "import 'package:flutter_test/flutter_test.dart';\n",
+              "import 'package:flutter_test/flutter_test.dart';\nimport 'package:joprelys_mobile/core/network/api_exception.dart';\n",
+          )
+          replace_once(
+              speech_test,
+              "  test('duplicate completed items are not appended twice', () async {",
+              "  test('missing live buffer endpoint does not block microphone startup', () async {\n    final gateway = _FakeGateway()\n      ..liveTranscriptError = const ApiException(\n        kind: ApiFailureKind.notFound,\n        code: 'NOT_FOUND',\n        message: 'Route not deployed yet',\n        statusCode: 404,\n      );\n    final transport = _FakeTransport();\n    final service = ClinicalSpeechService(\n      gateway: gateway,\n      visitId: 'visit-compatible',\n      initialDraft: const <String, String>{},\n      locale: 'fr',\n      transport: transport,\n    );\n    addTearDown(service.dispose);\n\n    await service.restoreOrStart();\n\n    expect(service.value.status, SpeechStatus.listening);\n    expect(transport.connectCalls, 1);\n  });\n\n  test('partial deltas from two items are never concatenated together', () async {\n    final gateway = _FakeGateway();\n    final transport = _FakeTransport();\n    final service = ClinicalSpeechService(\n      gateway: gateway,\n      visitId: 'visit-partials',\n      initialDraft: const <String, String>{},\n      locale: 'fr',\n      transport: transport,\n    );\n    addTearDown(service.dispose);\n\n    await service.restoreOrStart();\n    transport.emit(\n      const ClinicalRealtimeEvent(\n        ClinicalRealtimeEventType.transcriptDelta,\n        text: 'Bonjour docteur',\n        itemId: 'item-1',\n      ),\n    );\n    transport.emit(\n      const ClinicalRealtimeEvent(\n        ClinicalRealtimeEventType.transcriptDelta,\n        text: 'Pas de vertiges.',\n        itemId: 'item-2',\n      ),\n    );\n\n    expect(service.value.transcript, 'Pas de vertiges.');\n  });\n\n  test('speaker-labelled segments are preserved and persisted independently', () async {\n    final gateway = _FakeGateway();\n    final transport = _FakeTransport();\n    final service = ClinicalSpeechService(\n      gateway: gateway,\n      visitId: 'visit-speakers',\n      initialDraft: const <String, String>{},\n      locale: 'fr',\n      transport: transport,\n    );\n    addTearDown(service.dispose);\n\n    await service.restoreOrStart();\n    transport.emit(\n      const ClinicalRealtimeEvent(\n        ClinicalRealtimeEventType.transcriptCompleted,\n        text: 'Locuteur A : Avez-vous des vertiges ?',\n        eventId: 'segment-1',\n        itemId: 'item-dialogue',\n      ),\n    );\n    transport.emit(\n      const ClinicalRealtimeEvent(\n        ClinicalRealtimeEventType.transcriptCompleted,\n        text: 'Locuteur B : Non, pas de vertiges.',\n        eventId: 'segment-2',\n        itemId: 'item-dialogue',\n      ),\n    );\n    await _flushAsyncWork();\n\n    expect(\n      service.value.transcript,\n      'Locuteur A : Avez-vous des vertiges ?\\n'\n      'Locuteur B : Non, pas de vertiges.',\n    );\n    expect(gateway.liveSequence, 2);\n  });\n\n  test('duplicate completed items are not appended twice', () async {",
+          )
+          replace_once(
+              speech_test,
+              '  int analyzeCalls = 0;\n',
+              '  int analyzeCalls = 0;\n  ApiException? liveTranscriptError;\n',
+          )
+          replace_once(
+              speech_test,
+              '  Future<ClinicalLiveTranscript?> getLiveTranscript(String visitId) async {\n    final transcript = liveTranscript;',
+              '  Future<ClinicalLiveTranscript?> getLiveTranscript(String visitId) async {\n    final error = liveTranscriptError;\n    if (error != null) throw error;\n    final transcript = liveTranscript;',
+          )
+          PY
+
+      - name: Validate backend quality rules
+        working-directory: backend
+        run: |
+          chmod +x mvnw
+          ./mvnw -q -Dtest=OpenAiRealtimeCallServiceTest,AiClinicalFactualityGuardTest test
+
+      - name: Validate Flutter realtime flow
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart format lib test
+          flutter analyze --no-pub
+          flutter test --no-pub
+
+      - name: Commit validated quality fix and remove workflow
+        shell: bash
+        run: |
+          rm .github/workflows/mobile-realtime-quality-fix.yml
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend mobile .github/workflows/mobile-realtime-quality-fix.yml
+          git commit -m "fix(ai-voice): improve mobile room transcription quality"
+          git push origin HEAD:feat/p0-265-realtime-transcription
