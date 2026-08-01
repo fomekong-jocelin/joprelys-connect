@@ -3,7 +3,6 @@ package com.joprelys.backend.ai.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.joprelys.backend.ai.infrastructure.AiProperties;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,17 +17,7 @@ class AiLiveTranscriptBufferServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AiLiveTranscriptBufferService(new AiProperties(
-                true,
-                "openai",
-                "openai",
-                180,
-                20,
-                0.35,
-                "fr",
-                null,
-                null,
-                null));
+        service = new AiLiveTranscriptBufferService(180);
     }
 
     @Test
