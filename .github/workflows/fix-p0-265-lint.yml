@@ -1,0 +1,71 @@
+name: Temporary P0-265 Lint Fix
+
+on:
+  pull_request:
+    branches: [main]
+    types: [synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: ${{ github.event.pull_request.head.ref == 'feat/p0-265-realtime-transcription' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/p0-265-realtime-transcription
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Apply deterministic lint fix
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('mobile/lib/features/dashboard/application/clinical_speech_service.dart')
+          text = path.read_text()
+          old = """      var existing = await _gateway.getSession(_visitId);
+                if (existing == null) {
+                  existing = await _gateway.startSession(
+                    _visitId,
+                    _initialDraft,
+                    locale: _locale,
+                  );
+                }
+          """
+          # Source is formatted with six spaces before the inner block.
+          old = """      var existing = await _gateway.getSession(_visitId);
+                if (existing == null) {
+                  existing = await _gateway.startSession(
+                    _visitId,
+                    _initialDraft,
+                    locale: _locale,
+                  );
+                }
+          """.replace('              if', '      if').replace('                existing', '        existing').replace('                  _visitId', '          _visitId').replace('                  _initialDraft', '          _initialDraft').replace('                  locale', '          locale').replace('                );', '        );').replace('              }', '      }')
+          new = """      var existing = await _gateway.getSession(_visitId);
+                existing ??= await _gateway.startSession(
+                  _visitId,
+                  _initialDraft,
+                  locale: _locale,
+                );
+          """.replace('              existing', '      existing').replace('                _visitId', '        _visitId').replace('                _initialDraft', '        _initialDraft').replace('                locale', '        locale').replace('              );', '      );')
+          if old not in text:
+              raise SystemExit('Expected initialization block not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+
+      - name: Format, self-delete and push
+        shell: bash
+        run: |
+          set -euo pipefail
+          dart format mobile/lib/features/dashboard/application/clinical_speech_service.dart
+          git rm .github/workflows/fix-p0-265-lint.yml
+          git add mobile/lib/features/dashboard/application/clinical_speech_service.dart
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m "fix(mobile): simplifier l'initialisation de session realtime"
+          git push origin HEAD:feat/p0-265-realtime-transcription
