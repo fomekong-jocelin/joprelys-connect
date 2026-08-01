@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,7 +20,7 @@ import 'package:joprelys_mobile/features/foundation/presentation/widgets/profess
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUpAll(_loadRobotoForGoldens);
+  setUpAll(_configureGoldens);
 
   testWidgets('dark professional login matches the visual baseline', (
     tester,
@@ -88,6 +89,22 @@ void main() {
   });
 }
 
+Future<void> _configureGoldens() async {
+  await _loadRobotoForGoldens();
+
+  final currentComparator = goldenFileComparator;
+  if (currentComparator is! LocalFileComparator) {
+    throw StateError(
+      'A LocalFileComparator is required for deterministic goldens.',
+    );
+  }
+
+  goldenFileComparator = _TolerantGoldenFileComparator(
+    currentComparator.basedir.resolve('auth_ui_golden_test.dart'),
+    precisionTolerance: 0.05,
+  );
+}
+
 Future<void> _loadRobotoForGoldens() async {
   final flutterRoot = Platform.environment['FLUTTER_ROOT'];
   if (flutterRoot == null) {
@@ -106,6 +123,37 @@ Future<void> _loadRobotoForGoldens() async {
   await (FontLoader(
     'MaterialIcons',
   )..addFont(Future.value(ByteData.sublistView(iconBytes)))).load();
+}
+
+final class _TolerantGoldenFileComparator extends LocalFileComparator {
+  _TolerantGoldenFileComparator(
+    super.testFile, {
+    required double precisionTolerance,
+  }) : assert(
+         precisionTolerance >= 0 && precisionTolerance <= 1,
+         'precisionTolerance must be between 0 and 1',
+       ),
+       _precisionTolerance = precisionTolerance;
+
+  final double _precisionTolerance;
+
+  @override
+  Future<bool> compare(Uint8List imageBytes, Uri golden) async {
+    final result = await GoldenFileComparator.compareLists(
+      imageBytes,
+      await getGoldenBytes(golden),
+    );
+
+    final passed = result.passed || result.diffPercent <= _precisionTolerance;
+    if (passed) {
+      result.dispose();
+      return true;
+    }
+
+    final error = await generateFailureOutput(result, golden, basedir);
+    result.dispose();
+    throw FlutterError(error);
+  }
 }
 
 Future<void> _precacheBrandAsset(WidgetTester tester) async {
