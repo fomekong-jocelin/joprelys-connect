@@ -121,10 +121,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
 
   Future<void> initialize() async {
     if (_sessionReady || _disposed) return;
-    value = value.copyWith(
-      status: SpeechStatus.processing,
-      clearError: true,
-    );
+    value = value.copyWith(status: SpeechStatus.processing, clearError: true);
     try {
       _aiState = await _gateway.startSession(
         _visitId,
@@ -251,10 +248,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     final transcript = value.transcript.trim();
     if (_disposed || transcript.isEmpty || !_serverHasPendingTranscript) return;
 
-    value = value.copyWith(
-      status: SpeechStatus.processing,
-      clearError: true,
-    );
+    value = value.copyWith(status: SpeechStatus.processing, clearError: true);
     try {
       final state = await _gateway.analyzeTranscript(_visitId, transcript);
       _serverHasPendingTranscript = false;
@@ -355,7 +349,10 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     }
   }
 
-  void _setError(Object error, {SpeechStatus fallbackStatus = SpeechStatus.error}) {
+  void _setError(
+    Object error, {
+    SpeechStatus fallbackStatus = SpeechStatus.error,
+  }) {
     if (_disposed) return;
     value = value.copyWith(
       status: fallbackStatus,
