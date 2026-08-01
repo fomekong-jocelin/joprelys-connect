@@ -119,12 +119,10 @@ export class AiDraftPreviewComponent {
   readonly reviewError = signal('');
 
   entries(): Array<{ key: AiField; value: string }> {
-    const diagnosis = this.draft.diagnosis?.trim();
     return (Object.entries(this.draft) as Array<[AiField, string]>)
       .filter(([key, value]) => {
         if (!value?.trim()) return false;
         if (key === 'vitals') return false;
-        if (key === 'finalDiagnosis' && diagnosis && value.trim() === diagnosis) return false;
         return true;
       })
       .map(([key, value]) => ({ key, value }));
@@ -219,9 +217,7 @@ export class AiDraftPreviewComponent {
     const labels: Record<AiField, string> = {
       symptoms: this.i18n.t('consultation.symptoms.label'),
       clinicalExam: this.i18n.t('consultation.clinicalExam.label'),
-      suspectedDiagnosis: this.i18n.t('consultation.suspectedDiagnosis.label'),
       diagnosis: this.i18n.t('consultation.diagnosis.label'),
-      finalDiagnosis: this.i18n.t('consultation.finalDiagnosis.label'),
       conclusion: this.i18n.t('consultation.conclusion.label'),
       advice: this.i18n.t('consultation.advice.label'),
       followUp: this.i18n.t('consultation.followUp.label'),

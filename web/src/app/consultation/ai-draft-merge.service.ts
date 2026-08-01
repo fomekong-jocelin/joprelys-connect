@@ -18,7 +18,7 @@ export interface AiDraftMergePlan {
 const TEXT_FIELDS: Array<keyof AiConsultationDraft> = [
   'symptoms',
   'clinicalExam',
-  'suspectedDiagnosis',
+  'diagnosis',
   'conclusion',
   'advice',
   'followUp',
@@ -39,18 +39,6 @@ export class AiDraftMergeService {
         textPatch[field] = proposed;
       } else {
         conflicts.add(field as AiField);
-      }
-    }
-
-    const proposedDiagnosis = this.firstText(request.draft.finalDiagnosis, request.draft.diagnosis);
-    if (proposedDiagnosis) {
-      const baseDiagnosis = this.firstText(request.baseDraft.finalDiagnosis, request.baseDraft.diagnosis);
-      const currentDiagnosis = this.text(current['diagnosis']);
-      if (currentDiagnosis === baseDiagnosis || currentDiagnosis === proposedDiagnosis) {
-        textPatch['diagnosis'] = proposedDiagnosis;
-        textPatch['finalDiagnosis'] = proposedDiagnosis;
-      } else {
-        conflicts.add('diagnosis');
       }
     }
 
@@ -209,14 +197,6 @@ export class AiDraftMergeService {
       this.key(normalized.frequency ?? ''),
       normalized.substitutionAllowed !== false,
     ]);
-  }
-
-  private firstText(...values: unknown[]): string {
-    for (const value of values) {
-      const text = this.text(value);
-      if (text) return text;
-    }
-    return '';
   }
 
   private text(value: unknown): string {

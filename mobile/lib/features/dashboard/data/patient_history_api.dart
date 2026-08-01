@@ -62,9 +62,9 @@ final class PatientHistoryApi implements PatientHistoryGateway {
         date: map['createdAt'] != null
             ? (DateTime.tryParse(map['createdAt'] as String) ?? DateTime.now())
             : DateTime.now(),
-        practitionerName: (map['doctorName'] ?? map['practitionerName'] ?? '') as String,
-        chiefComplaint:
-            (map['symptoms'] ?? map['suspectedDiagnosis'] ?? map['reason'] ?? '') as String,
+        practitionerName:
+            (map['doctorName'] ?? map['practitionerName'] ?? '') as String,
+        chiefComplaint: (map['symptoms'] ?? map['reason'] ?? '') as String,
         temperature: (vitalsMap?['temperature'] as num?)?.toDouble(),
         systolic: (vitalsMap?['systolic'] as num?)?.toInt(),
         diastolic: (vitalsMap?['diastolic'] as num?)?.toInt(),

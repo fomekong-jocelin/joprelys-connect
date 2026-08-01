@@ -1,11 +1,12 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'clinical_voice_listening_surface.dart';
+import 'clinical_voice_transcript_widgets.dart';
 
 import '../../../../core/theme/app_design_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_button.dart';
-import '../../../../shared/widgets/app_text_field.dart';
 import '../../application/clinical_dictation_parser.dart';
 import '../../application/clinical_speech_service.dart';
 import '../../domain/active_visit.dart';
@@ -60,10 +61,10 @@ class _ClinicalVoiceAssistantSheetState
   late AnimationController _waveController;
 
   List<String> _getPresetDictations(AppLocalizations l10n) => [
-        l10n.assistantPresetDictation1,
-        l10n.assistantPresetDictation2,
-        l10n.assistantPresetDictation3,
-      ];
+    l10n.assistantPresetDictation1,
+    l10n.assistantPresetDictation2,
+    l10n.assistantPresetDictation3,
+  ];
 
   @override
   void initState() {
@@ -119,10 +120,7 @@ class _ClinicalVoiceAssistantSheetState
 
   void _applyResult() {
     final state = _speechService.value;
-    final result = DictationParseResult(
-      vitals: state.vitals,
-      note: state.note,
-    );
+    final result = DictationParseResult(vitals: state.vitals, note: state.note);
     widget.onExtracted(result);
     Navigator.of(context).pop();
   }
@@ -182,7 +180,11 @@ class _ClinicalVoiceAssistantSheetState
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.mic_rounded, color: colors.primary, size: 22),
+                              Icon(
+                                Icons.mic_rounded,
+                                color: colors.primary,
+                                size: 22,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 l10n.assistantTitle,
@@ -218,7 +220,7 @@ class _ClinicalVoiceAssistantSheetState
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Surface d'écoute Web-aligned (VoiceListeningSurfaceComponent)
-                      _WebAlignedVoiceListeningSurface(
+                      ClinicalVoiceListeningSurface(
                         active: isListening,
                         soundLevel: state.soundLevel,
                         haloController: _haloController,
@@ -254,10 +256,13 @@ class _ClinicalVoiceAssistantSheetState
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                  backgroundColor:
-                                      colors.primary.withValues(alpha: 0.1),
+                                  backgroundColor: colors.primary.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   side: BorderSide(
-                                    color: colors.primary.withValues(alpha: 0.3),
+                                    color: colors.primary.withValues(
+                                      alpha: 0.3,
+                                    ),
                                   ),
                                   onPressed: () => _applyPreset(text),
                                 ),
@@ -268,7 +273,7 @@ class _ClinicalVoiceAssistantSheetState
                       ),
                       const SizedBox(height: 16),
                       // Zone de transcription vocale en direct (Web-aligned with timestamp & Corriger action)
-                      _TranscriptCardWidget(
+                      ClinicalTranscriptCard(
                         transcript: state.transcript,
                         controller: _dictationController,
                         onChanged: _onTextChanged,
@@ -277,7 +282,8 @@ class _ClinicalVoiceAssistantSheetState
                       ),
                       const SizedBox(height: 16),
                       // Synthèse d'extraction des constantes en direct
-                      if (!state.vitals.isEmpty || state.note.subjective != null) ...[
+                      if (!state.vitals.isEmpty ||
+                          state.note.symptoms != null) ...[
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(14),
@@ -307,38 +313,42 @@ class _ClinicalVoiceAssistantSheetState
                                   runSpacing: 8,
                                   children: [
                                     if (state.vitals.temperature != null)
-                                      _VitalExtractPill(
-                                        label: 'T°: ${state.vitals.temperature}°C',
+                                      VitalExtractPill(
+                                        label:
+                                            'T°: ${state.vitals.temperature}°C',
                                       ),
                                     if (state.vitals.systolic != null &&
                                         state.vitals.diastolic != null)
-                                      _VitalExtractPill(
+                                      VitalExtractPill(
                                         label:
                                             'TA: ${state.vitals.systolic}/${state.vitals.diastolic} mmHg',
                                       ),
                                     if (state.vitals.pulse != null)
-                                      _VitalExtractPill(
-                                        label: 'Pouls: ${state.vitals.pulse} bpm',
+                                      VitalExtractPill(
+                                        label:
+                                            'Pouls: ${state.vitals.pulse} bpm',
                                       ),
                                     if (state.vitals.spo2 != null)
-                                      _VitalExtractPill(
+                                      VitalExtractPill(
                                         label: 'SpO2: ${state.vitals.spo2}%',
                                       ),
                                     if (state.vitals.weight != null)
-                                      _VitalExtractPill(
-                                        label: 'Poids: ${state.vitals.weight} kg',
+                                      VitalExtractPill(
+                                        label:
+                                            'Poids: ${state.vitals.weight} kg',
                                       ),
                                     if (state.vitals.height != null)
-                                      _VitalExtractPill(
-                                        label: 'Taille: ${state.vitals.height} cm',
+                                      VitalExtractPill(
+                                        label:
+                                            'Taille: ${state.vitals.height} cm',
                                       ),
                                     if (state.vitals.glycemia != null)
-                                      _VitalExtractPill(
+                                      VitalExtractPill(
                                         label:
                                             'Glycémie: ${state.vitals.glycemia} g/L',
                                       ),
                                     if (state.vitals.painScale != null)
-                                      _VitalExtractPill(
+                                      VitalExtractPill(
                                         label:
                                             'Douleur: EVA ${state.vitals.painScale}/10',
                                       ),
@@ -364,456 +374,6 @@ class _ClinicalVoiceAssistantSheetState
           ),
         );
       },
-    );
-  }
-}
-
-class _WebAlignedVoiceListeningSurface extends StatelessWidget {
-  const _WebAlignedVoiceListeningSurface({
-    required this.active,
-    required this.soundLevel,
-    required this.haloController,
-    required this.waveController,
-    required this.badgeText,
-    required this.statusText,
-    required this.tipText,
-    required this.stopLabel,
-    required this.startLabel,
-    required this.onToggleListening,
-  });
-
-  final bool active;
-  final double soundLevel;
-  final AnimationController haloController;
-  final AnimationController waveController;
-  final String badgeText;
-  final String statusText;
-  final String tipText;
-  final String stopLabel;
-  final String startLabel;
-  final VoidCallback onToggleListening;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final primaryColor = colors.primary;
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
-        border: Border.all(
-          color: colors.outline.withValues(alpha: 0.5),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          // En-tête de la surface avec Sparkles & Bouton Arrêter/Démarrer
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.auto_awesome_rounded, color: primaryColor, size: 18),
-                  const SizedBox(width: 6),
-                  Text(
-                    badgeText,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: primaryColor,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-              OutlinedButton.icon(
-                onPressed: onToggleListening,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  side: BorderSide(
-                    color: active ? AppDesignTokens.error : primaryColor,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
-                  ),
-                ),
-                icon: Icon(
-                  active ? Icons.stop_rounded : Icons.mic_rounded,
-                  size: 16,
-                  color: active ? AppDesignTokens.error : primaryColor,
-                ),
-                label: Text(
-                  active ? stopLabel : startLabel,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: active ? AppDesignTokens.error : primaryColor,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Surface visuelle centrale Web (Canvas Wave + Triple Halos + Micro Orb)
-          SizedBox(
-            height: 160,
-            width: double.infinity,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Canvas des ondes sinusoïdales (dynamiquement réactives au niveau décibel réel)
-                Positioned.fill(
-                  child: AnimatedBuilder(
-                    animation: waveController,
-                    builder: (context, child) {
-                      return CustomPaint(
-                        painter: _SineWavePainter(
-                          phase: waveController.value * math.pi * 2,
-                          color: primaryColor,
-                          active: active,
-                          soundLevel: soundLevel,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                // Halo Extérieur
-                if (active)
-                  AnimatedBuilder(
-                    animation: haloController,
-                    builder: (context, child) {
-                      final val = haloController.value;
-                      final levelBonus = (soundLevel * 0.8).clamp(0.0, 20.0);
-                      final size = 124.0 + (math.sin(val * math.pi * 2) * 8.0) + levelBonus;
-                      final opacity = 0.2 + (math.sin(val * math.pi * 2) * 0.15);
-
-                      return Container(
-                        width: size,
-                        height: size,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: primaryColor.withValues(alpha: opacity),
-                            width: 1.5,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                // Halo Intermédiaire
-                if (active)
-                  AnimatedBuilder(
-                    animation: haloController,
-                    builder: (context, child) {
-                      final val = (haloController.value + 0.4) % 1.0;
-                      final levelBonus = (soundLevel * 0.5).clamp(0.0, 14.0);
-                      final size = 104.0 + (math.sin(val * math.pi * 2) * 6.0) + levelBonus;
-                      final opacity = 0.3 + (math.sin(val * math.pi * 2) * 0.2);
-
-                      return Container(
-                        width: size,
-                        height: size,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: primaryColor.withValues(alpha: opacity),
-                            width: 1.5,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                // Halo Intérieur
-                Container(
-                  width: 84,
-                  height: 84,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: primaryColor.withValues(alpha: active ? 0.18 : 0.08),
-                  ),
-                ),
-                // Micro Orb Central (Identique au composant voice-micro Web)
-                GestureDetector(
-                  onTap: onToggleListening,
-                  child: Container(
-                    width: 66,
-                    height: 66,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: active
-                            ? [
-                                primaryColor,
-                                primaryColor.withValues(alpha: 0.85),
-                              ]
-                            : [
-                                colors.surfaceContainerHighest,
-                                colors.surface,
-                              ],
-                      ),
-                      boxShadow: active
-                          ? [
-                              BoxShadow(
-                                color: primaryColor.withValues(alpha: 0.38),
-                                blurRadius: 20 + (soundLevel * 0.5).clamp(0.0, 15.0),
-                                spreadRadius: 4 + (soundLevel * 0.2).clamp(0.0, 8.0),
-                              ),
-                            ]
-                          : [
-                              BoxShadow(
-                                color: colors.shadow.withValues(alpha: 0.1),
-                                blurRadius: 8,
-                              ),
-                            ],
-                      border: Border.all(
-                        color: active
-                            ? primaryColor.withValues(alpha: 0.8)
-                            : colors.outline.withValues(alpha: 0.4),
-                        width: 1,
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.mic_rounded,
-                      size: 34,
-                      color: active ? Colors.white : colors.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            statusText,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            tipText,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colors.onSurfaceVariant,
-              fontSize: 11,
-              height: 1.3,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SineWavePainter extends CustomPainter {
-  _SineWavePainter({
-    required this.phase,
-    required this.color,
-    required this.active,
-    required this.soundLevel,
-  });
-
-  final double phase;
-  final Color color;
-  final bool active;
-  final double soundLevel;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (!active) return;
-
-    final baseAmp = (soundLevel > 0) ? (14.0 + (soundLevel * 1.2)) : 16.0;
-
-    final paint1 = Paint()
-      ..color = color.withValues(alpha: 0.45)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
-
-    final paint2 = Paint()
-      ..color = color.withValues(alpha: 0.25)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-
-    final path1 = Path();
-    final path2 = Path();
-
-    final midY = size.height / 2;
-    path1.moveTo(0, midY);
-    path2.moveTo(0, midY);
-
-    for (double x = 0; x <= size.width; x += 2) {
-      final normX = x / size.width;
-      final envelope = math.sin(normX * math.pi); // 0 aux bords, 1 au centre
-
-      final y1 = midY + math.sin((normX * 4 * math.pi) + phase) * baseAmp * envelope;
-      final y2 =
-          midY + math.sin((normX * 6 * math.pi) - (phase * 1.4)) * (baseAmp * 0.7) * envelope;
-
-      path1.lineTo(x, y1);
-      path2.lineTo(x, y2);
-    }
-
-    canvas.drawPath(path1, paint1);
-    canvas.drawPath(path2, paint2);
-  }
-
-  @override
-  bool shouldRepaint(_SineWavePainter oldDelegate) {
-    return oldDelegate.phase != phase ||
-        oldDelegate.active != active ||
-        oldDelegate.soundLevel != soundLevel;
-  }
-}
-
-class _VitalExtractPill extends StatelessWidget {
-  const _VitalExtractPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: colors.primary.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
-        border: Border.all(
-          color: colors.primary.withValues(alpha: 0.4),
-        ),
-      ),
-      child: Text(
-        label,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: colors.primary,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
-  }
-}
-
-class _TranscriptCardWidget extends StatefulWidget {
-  const _TranscriptCardWidget({
-    required this.transcript,
-    required this.controller,
-    required this.onChanged,
-    required this.label,
-    required this.hint,
-  });
-
-  final String transcript;
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-  final String label;
-  final String hint;
-
-  @override
-  State<_TranscriptCardWidget> createState() => _TranscriptCardWidgetState();
-}
-
-class _TranscriptCardWidgetState extends State<_TranscriptCardWidget> {
-  bool _isEditing = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final primaryColor = colors.primary;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          widget.label,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 8),
-        if (_isEditing) ...[
-          AppTextField(
-            label: '',
-            hint: widget.hint,
-            controller: widget.controller,
-            onChanged: widget.onChanged,
-            maxLines: 4,
-          ),
-          const SizedBox(height: 6),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: () => setState(() => _isEditing = false),
-              icon: const Icon(Icons.check_rounded, size: 16),
-              label: const Text('Terminer la modification'),
-            ),
-          ),
-        ] else ...[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: colors.primary.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
-              border: Border.all(
-                color: colors.primary.withValues(alpha: 0.2),
-              ),
-            ),
-            child: widget.transcript.trim().isEmpty
-                ? Text(
-                    widget.hint,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colors.onSurfaceVariant,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '00:20',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: colors.onSurfaceVariant.withValues(alpha: 0.7),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              widget.transcript,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                height: 1.4,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      GestureDetector(
-                        onTap: () => setState(() => _isEditing = true),
-                        child: Text(
-                          'Corriger',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: primaryColor,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ],
-      ],
     );
   }
 }

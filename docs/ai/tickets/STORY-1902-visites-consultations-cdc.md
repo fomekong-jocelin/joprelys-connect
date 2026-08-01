@@ -24,6 +24,11 @@
 
 Le CDC définit précisément les données d’une visite (`visit_number`, `patient_id`, `organization_id`, `service`, `main_practitioner_id`, `arrival_at`, `closed_at`, `reason`, `status`) et d’une consultation (`symptoms`, `clinical_exam`, `suspected_diagnosis`, `final_diagnosis`, `conclusion`, `advice`, `follow_up`). Actuellement, plusieurs champs sont absents ou approximatifs.
 
+> Décision ultérieure ADR-0005 (2026-08-01) : le produit ne disposant d'aucun
+> cycle de vie permettant de distinguer ces niveaux, `suspected_diagnosis` et
+> `final_diagnosis` sont retirés du modèle actif par V109 au profit du seul
+> `diagnosis`. Les cases ci-dessous conservent la trace historique de V31.
+
 ---
 
 ## 2. Critères d’acceptation

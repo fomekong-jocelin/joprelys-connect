@@ -1,42 +1,55 @@
-# Contrat API — Notes de Consultation Clinique (MOB-2814)
+# Contrat API — Note clinique SOAP unifiée
 
-## Endpoints
+> Source de vérité proposée par ADR-0005. Le même contrat est consommé par
+> Angular et Flutter.
 
-### 1. Récupérer la note de consultation
+## Sémantique SOAP
 
-- **GET** `/api/visits/{id}/consultation-notes`
-- **Headers** : `Authorization: Bearer <token>`, `Accept-Language: fr|en`
-- **Response 200 OK** :
+| Section | Champs API |
+|---|---|
+| S — Subjectif | `symptoms` |
+| O — Objectif | `clinicalExam` |
+| A — Évaluation | `diagnosis` |
+| P — Plan | `conclusion`, `advice`, `followUp` |
+
+`diagnosis` est l'unique diagnostic obligatoire documenté par le praticien.
+Le contrat ne qualifie pas artificiellement cette valeur comme hypothèse,
+diagnostic principal ou diagnostic final en l'absence de workflow métier dédié.
+
+## Lire une consultation
+
+- **GET** `/api/visits/{id}/consultation`
+- Permission : `CLINICAL_READ`
+- `200 OK` : consultation détaillée.
+- `204 No Content` : visite valide sans consultation.
+- `403 Forbidden` : permission ou périmètre clinique insuffisant.
+- `404 Not Found` : visite introuvable.
+
+## Enregistrer une consultation
+
+- **POST** `/api/visits/{id}/consultation`
+- Permission : `CLINICAL_WRITE`
+- Visite requise au statut `EN_COURS`.
+
 ```json
 {
-  "subjective": "Douleurs abdominales intenses depuis 2h.",
-  "objective": "Abdomen souple mais douloureux en fosse iliaque droite.",
-  "assessment": "Suspicion d'appendicite aiguë.",
-  "plan": "Demande d'échographie abdominale + bilan sanguin.",
-  "updatedAt": "2026-07-30T22:30:00Z"
+  "symptoms": "Douleurs abdominales intenses depuis deux heures.",
+  "clinicalExam": "Abdomen souple, douleur de la fosse iliaque droite.",
+  "diagnosis": "Appendicite aiguë suspectée au vu du tableau clinique.",
+  "conclusion": "Tableau compatible avec une urgence chirurgicale.",
+  "advice": "Rester à jeun et consulter immédiatement en cas d'aggravation.",
+  "followUp": "Avis chirurgical et réévaluation après imagerie."
 }
 ```
 
-### 2. Enregistrer la note de consultation
+- `200 OK` : consultation enregistrée.
+- `400 Bad Request` : validation ou visite non active.
+- `403 Forbidden` : permission ou périmètre clinique insuffisant.
+- `404 Not Found` : visite ou praticien introuvable.
 
-- **POST** `/api/visits/{id}/consultation-notes`
-- **Headers** : `Authorization: Bearer <token>`, `Content-Type: application/json`
-- **Request Body** :
-```json
-{
-  "subjective": "Douleurs abdominales intenses depuis 2h.",
-  "objective": "Abdomen souple mais douloureux en fosse iliaque droite.",
-  "assessment": "Suspicion d'appendicite aiguë.",
-  "plan": "Demande d'échographie abdominale + bilan sanguin."
-}
-```
-- **Response 200 OK** :
-```json
-{
-  "subjective": "Douleurs abdominales intenses depuis 2h.",
-  "objective": "Abdomen souple mais douloureux en fosse iliaque droite.",
-  "assessment": "Suspicion d'appendicite aiguë.",
-  "plan": "Demande d'échographie abdominale + bilan sanguin.",
-  "updatedAt": "2026-07-30T22:30:00Z"
-}
-```
+## Données associées
+
+Les constantes, prescriptions et demandes d'examens restent structurées dans
+leurs contrats dédiés. Elles peuvent être affichées dans le parcours SOAP, mais
+ne doivent pas être dupliquées dans un champ `plan` libre comme seule source de
+vérité.

@@ -143,8 +143,7 @@ public class InvoiceControllerTest {
 
         consultation = new ConsultationEntity(
                 visit, admin, "DOC-2026-0001", "Fievre, Courbatures", "39°C",
-                "Paludisme suspecte", "Paludisme", "Paludisme severe", "Conclusion",
-                "Prendre du repos", "Suivi 3j");
+                "Paludisme", "Conclusion", "Prendre du repos", "Suivi 3j");
         consultation.setOrganizationId(org.getId());
         consultation = consultationRepository.save(consultation);
 

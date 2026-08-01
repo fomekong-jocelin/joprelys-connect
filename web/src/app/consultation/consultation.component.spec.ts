@@ -57,4 +57,14 @@ describe('ConsultationComponent AI draft application', () => {
     expect(component.form.dirty).toBe(true);
     expect(component.form.invalid).toBe(false);
   });
+
+  it('applique un unique diagnostic sans contrôles legacy', () => {
+    component.applyAiDraft({
+      diagnosis: 'Diagnostic documenté',
+    });
+
+    expect(component.form.get('diagnosis')?.value).toBe('Diagnostic documenté');
+    expect(component.form.contains('suspectedDiagnosis')).toBe(false);
+    expect(component.form.contains('finalDiagnosis')).toBe(false);
+  });
 });

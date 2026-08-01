@@ -14,8 +14,7 @@ import tools.jackson.databind.ObjectMapper;
 final class AiClinicalResponseParser {
 
     static final Set<String> ALLOWED_FIELDS = Set.of(
-            "symptoms", "clinicalExam", "suspectedDiagnosis", "diagnosis",
-            "finalDiagnosis", "conclusion", "advice", "followUp",
+            "symptoms", "clinicalExam", "diagnosis", "conclusion", "advice", "followUp",
             "prescription", "labOrders", "vitals");
 
     private static final Set<String> ROOT_FIELDS = Set.of(

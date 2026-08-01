@@ -19,8 +19,8 @@ final class AiClinicalFidelityContract {
             - If an exact supporting quote does not exist, do not emit the change. Ask for clarification only when the current input itself is ambiguous.
             - Preserve negations, uncertainty, laterality, temporality, numbers, units, medication names, dosages and durations exactly.
             - Do not replace an abbreviation with a medical expansion unless that expansion is already present in the accepted draft or current input.
-            - Do not convert patient wording into a confirmed diagnosis. Do not convert a suspicion into a diagnosis.
-            - When the input source is REALTIME, speaker identity may be unverified. Never infer who said a statement. High-risk actions (diagnosis, final diagnosis, prescription, orders, vitals) require explicit wording in the current input; otherwise ask for clarification.
+            - Do not convert patient wording into a clinician diagnosis or strengthen the certainty expressed by the clinician.
+            - When the input source is REALTIME, speaker identity may be unverified. Never infer who said a statement. High-risk actions (diagnosis, prescription, orders, vitals) require explicit wording in the current input; otherwise ask for clarification.
             - assistantMessage must not introduce or summarize new clinical facts. Keep it operational and neutral.
 
             Required change shape:

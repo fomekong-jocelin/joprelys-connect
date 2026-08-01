@@ -2,10 +2,7 @@ import '../domain/consultation_note.dart';
 import '../domain/patient_vitals.dart';
 
 final class DictationParseResult {
-  const DictationParseResult({
-    required this.vitals,
-    required this.note,
-  });
+  const DictationParseResult({required this.vitals, required this.note});
 
   final PatientVitals vitals;
   final ConsultationNote note;
@@ -129,14 +126,11 @@ final class ClinicalDictationParser {
       painScale: pain,
     );
 
-    // Extraction des notes cliniques (Subjectif/Objective/Assessment/Plan)
+    // La dictée locale conserve uniquement les faits explicitement prononcés.
+    // Les diagnostics et le plan restent sous validation du praticien.
     final note = ConsultationNote(
-      subjective: text,
-      objective: _buildObjectiveSummary(vitals),
-      assessment: lower.contains('fièvre') || lower.contains('fievre')
-          ? 'Syndrome fébrile à évaluer'
-          : null,
-      plan: 'Prendre les constantes de contrôle, surveillance clinique.',
+      symptoms: text,
+      clinicalExam: _buildObjectiveSummary(vitals),
     );
 
     return DictationParseResult(vitals: vitals, note: note);

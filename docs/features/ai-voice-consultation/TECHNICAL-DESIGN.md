@@ -67,9 +67,7 @@ Le remplacement définitif du port combiné `AiProvider` relève de STORY-2501.
 ```text
 symptoms            5000
 clinicalExam        5000
-suspectedDiagnosis  5000
 diagnosis           5000
-finalDiagnosis      5000
 conclusion          5000
 advice              3000
 followUp            1000

@@ -2,7 +2,6 @@
   currentDraft?.['symptoms']
   || currentDraft?.['clinicalExam']
   || currentDraft?.['diagnosis']
-  || currentDraft?.['finalDiagnosis']
   || currentDraft?.['conclusion']
   || currentDraft?.['advice']
   || currentDraft?.['followUp']
@@ -172,7 +171,7 @@
       @case ('REPORT_REVIEW') {
         @let reportDraft = session()?.draft;
         @let missingClinicalExam = !reportDraft?.clinicalExam?.trim();
-        @let missingDiagnosis = !(reportDraft?.diagnosis?.trim() || reportDraft?.finalDiagnosis?.trim() || reportDraft?.suspectedDiagnosis?.trim());
+        @let missingDiagnosis = !reportDraft?.diagnosis?.trim();
         <div class="mx-auto w-full max-w-4xl py-2">
           <header class="flex flex-col gap-3 border-b border-[var(--app-border)] pb-3 sm:flex-row sm:items-start sm:justify-between">
             <div>

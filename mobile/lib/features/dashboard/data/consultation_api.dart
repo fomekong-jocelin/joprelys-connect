@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_client_providers.dart';
-import '../../../core/network/api_exception.dart';
 import '../domain/consultation_note.dart';
 
 abstract interface class ConsultationGateway {
@@ -25,18 +24,15 @@ final class ConsultationApi implements ConsultationGateway {
 
   @override
   Future<ConsultationNote?> getConsultationNote(String visitId) async {
-    try {
-      final response = await _client.get<dynamic>('/api/visits/$visitId/consultation-notes');
-      final data = response.data;
-      if (data == null) return null;
-      if (data is! Map) {
-        throw const FormatException('Invalid consultation note format');
-      }
-      return ConsultationNote.fromJson(Map<String, dynamic>.from(data));
-    } on ApiException catch (e) {
-      if (e.statusCode == 404) return null;
-      rethrow;
+    final response = await _client.get<dynamic>(
+      '/api/visits/$visitId/consultation',
+    );
+    final data = response.data;
+    if (data == null) return null;
+    if (data is! Map) {
+      throw const FormatException('Invalid consultation note format');
     }
+    return ConsultationNote.fromJson(Map<String, dynamic>.from(data));
   }
 
   @override
@@ -45,7 +41,7 @@ final class ConsultationApi implements ConsultationGateway {
     ConsultationNote note,
   ) async {
     final response = await _client.post<dynamic>(
-      '/api/visits/$visitId/consultation-notes',
+      '/api/visits/$visitId/consultation',
       data: note.toJson(),
     );
     final data = response.data;

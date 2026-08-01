@@ -6,9 +6,7 @@ import { I18nService } from '../core/i18n/i18n.service';
 export type AiField =
   | 'symptoms'
   | 'clinicalExam'
-  | 'suspectedDiagnosis'
   | 'diagnosis'
-  | 'finalDiagnosis'
   | 'conclusion'
   | 'advice'
   | 'followUp'

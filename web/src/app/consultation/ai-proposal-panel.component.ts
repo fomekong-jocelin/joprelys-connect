@@ -253,9 +253,7 @@ export class AiProposalPanelComponent {
     const labels: Record<AiField, string> = {
       symptoms: this.i18n.t('consultation.symptoms.label'),
       clinicalExam: this.i18n.t('consultation.clinicalExam.label'),
-      suspectedDiagnosis: this.i18n.t('consultation.suspectedDiagnosis.label'),
       diagnosis: this.i18n.t('consultation.diagnosis.label'),
-      finalDiagnosis: this.i18n.t('consultation.finalDiagnosis.label'),
       conclusion: this.i18n.t('consultation.conclusion.label'),
       advice: this.i18n.t('consultation.advice.label'),
       followUp: this.i18n.t('consultation.followUp.label'),

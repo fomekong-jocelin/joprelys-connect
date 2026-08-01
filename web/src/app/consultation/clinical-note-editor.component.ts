@@ -2,11 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, Input, inject } from '@angular/core';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { I18nService } from '../core/i18n/i18n.service';
-import {
-  Patient,
-  PatientAllergy,
-  PatientMedicalHistory,
-} from '../patient/patient.models';
+import { Patient, PatientAllergy, PatientMedicalHistory } from '../patient/patient.models';
 
 @Component({
   selector: 'app-clinical-note-editor',
@@ -14,31 +10,49 @@ import {
   imports: [CommonModule, ReactiveFormsModule],
   template: `
     <section class="ui-card overflow-hidden">
-      <header class="border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-4 py-3 sm:px-5 sm:py-4">
+      <header
+        class="border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-4 py-3 sm:px-5 sm:py-4"
+      >
         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div class="min-w-0">
             <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h2 class="ui-title truncate text-base sm:text-lg">
-                {{ patient?.displayName || patient?.fullName || i18n.t('consultation.clinicalNote.patient') }}
+                {{
+                  patient?.displayName ||
+                    patient?.fullName ||
+                    i18n.t('consultation.clinicalNote.patient')
+                }}
               </h2>
               @if (patient?.birthDate) {
-                <span class="text-xs font-semibold text-[var(--text-secondary)]">{{ ageLabel() }}</span>
+                <span class="text-xs font-semibold text-[var(--text-secondary)]">{{
+                  ageLabel()
+                }}</span>
               }
               @if (patient?.gender) {
                 <span class="text-xs text-[var(--text-muted)]">{{ genderLabel() }}</span>
               }
             </div>
-            <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-semibold text-[var(--text-muted)]">
+            <div
+              class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-semibold text-[var(--text-muted)]"
+            >
               @if (patient?.localPatientNumber || patient?.globalPatientNumber) {
-                <span>{{ i18n.t('consultation.clinicalNote.dpu') }} {{ patient?.localPatientNumber || patient?.globalPatientNumber }}</span>
+                <span
+                  >{{ i18n.t('consultation.clinicalNote.dpu') }}
+                  {{ patient?.localPatientNumber || patient?.globalPatientNumber }}</span
+                >
               }
               @if (patient?.bloodGroup) {
-                <span>{{ i18n.t('consultation.clinicalNote.bloodGroup') }} : {{ patient?.bloodGroup }}</span>
+                <span
+                  >{{ i18n.t('consultation.clinicalNote.bloodGroup') }} :
+                  {{ patient?.bloodGroup }}</span
+                >
               }
             </div>
           </div>
 
-          <div class="rounded-[var(--radius-brand-md)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] px-3 py-2 lg:max-w-[44%]">
+          <div
+            class="rounded-[var(--radius-brand-md)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] px-3 py-2 lg:max-w-[44%]"
+          >
             <p class="ui-label text-[var(--brand-primary)]">
               {{ i18n.t('consultation.clinicalNote.reason') }}
             </p>
@@ -49,10 +63,15 @@ import {
         </div>
       </header>
 
-      <div class="grid grid-cols-1 border-b border-[var(--app-border)] lg:grid-cols-[minmax(0,1fr)_280px]">
+      <div
+        class="grid grid-cols-1 border-b border-[var(--app-border)] lg:grid-cols-[minmax(0,1fr)_280px]"
+      >
         <div class="px-4 py-4 sm:px-5">
           <div class="flex items-start gap-3">
-            <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary-subtle)] text-xs font-extrabold text-[var(--brand-primary)]">1</span>
+            <span
+              class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary-subtle)] text-xs font-extrabold text-[var(--brand-primary)]"
+              >1</span
+            >
             <div>
               <h3 class="text-sm font-bold text-[var(--text-primary)]">
                 {{ i18n.t('consultation.clinicalNote.historyTitle') }}
@@ -79,7 +98,9 @@ import {
           </div>
         </div>
 
-        <aside class="border-t border-[var(--app-border)] bg-[var(--app-surface-muted)] px-4 py-4 lg:border-l lg:border-t-0">
+        <aside
+          class="border-t border-[var(--app-border)] bg-[var(--app-surface-muted)] px-4 py-4 lg:border-l lg:border-t-0"
+        >
           <h3 class="ui-label text-[var(--text-secondary)]">
             {{ i18n.t('consultation.clinicalNote.patientContext') }}
           </h3>
@@ -89,7 +110,9 @@ import {
             @if (activeAllergies().length > 0) {
               <div class="mt-2 flex flex-wrap gap-1.5">
                 @for (allergy of activeAllergies(); track allergy.id || allergy.substance) {
-                  <span class="inline-flex rounded-[var(--radius-brand-sm)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] px-2 py-1 text-[11px] font-semibold text-[var(--brand-danger-text)]">
+                  <span
+                    class="inline-flex rounded-[var(--radius-brand-sm)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] px-2 py-1 text-[11px] font-semibold text-[var(--brand-danger-text)]"
+                  >
                     {{ allergy.substance }}
                     @if (allergy.severity === 'CRITICAL' || allergy.severity === 'HIGH') {
                       · {{ allergy.severity }}
@@ -110,13 +133,17 @@ import {
               <ul class="mt-1.5 space-y-1.5">
                 @for (item of relevantHistory(); track item.id || item.description) {
                   <li class="text-xs leading-5 text-[var(--text-secondary)]">
-                    <span class="font-semibold text-[var(--text-primary)]">{{ historyCategory(item.category) }}</span>
+                    <span class="font-semibold text-[var(--text-primary)]">{{
+                      historyCategory(item.category)
+                    }}</span>
                     · {{ item.description }}
                   </li>
                 }
               </ul>
             } @else if (patient?.medicalHistory) {
-              <p class="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{{ patient?.medicalHistory }}</p>
+              <p class="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
+                {{ patient?.medicalHistory }}
+              </p>
             } @else {
               <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">
                 {{ i18n.t('consultation.clinicalNote.noHistory') }}
@@ -129,7 +156,10 @@ import {
       <div class="space-y-5 px-4 py-4 sm:px-5 sm:py-5" [formGroup]="form">
         <section>
           <div class="flex items-start gap-3">
-            <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary-subtle)] text-xs font-extrabold text-[var(--brand-primary)]">2</span>
+            <span
+              class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary-subtle)] text-xs font-extrabold text-[var(--brand-primary)]"
+              >2</span
+            >
             <div>
               <h3 class="text-sm font-bold text-[var(--text-primary)]">
                 {{ i18n.t('consultation.clinicalNote.examTitle') }}
@@ -151,7 +181,10 @@ import {
 
         <section>
           <div class="flex items-start gap-3">
-            <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary-subtle)] text-xs font-extrabold text-[var(--brand-primary)]">3</span>
+            <span
+              class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary-subtle)] text-xs font-extrabold text-[var(--brand-primary)]"
+              >3</span
+            >
             <div>
               <h3 class="text-sm font-bold text-[var(--text-primary)]">
                 {{ i18n.t('consultation.clinicalNote.assessmentTitle') }}
@@ -162,30 +195,20 @@ import {
             </div>
           </div>
 
-          <div class="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div class="mt-3">
             <div>
               <label class="ui-label">
-                {{ i18n.t('consultation.clinicalNote.differential') }}
-              </label>
-              <textarea
-                formControlName="suspectedDiagnosis"
-                rows="4"
-                [placeholder]="i18n.t('consultation.clinicalNote.differentialPlaceholder')"
-                class="ui-textarea mt-1.5 resize-y"
-              ></textarea>
-            </div>
-
-            <div>
-              <label class="ui-label">
-                {{ i18n.t('consultation.clinicalNote.retainedDiagnosis') }}
+                {{ i18n.t('consultation.clinicalNote.diagnosis') }}
                 <span class="text-[var(--brand-danger-text)]">*</span>
               </label>
               <textarea
                 formControlName="diagnosis"
                 rows="4"
-                [placeholder]="i18n.t('consultation.clinicalNote.retainedDiagnosisPlaceholder')"
+                [placeholder]="i18n.t('consultation.clinicalNote.diagnosisPlaceholder')"
                 class="ui-textarea mt-1.5 resize-y"
-                [attr.aria-invalid]="form.get('diagnosis')?.invalid && form.get('diagnosis')?.touched"
+                [attr.aria-invalid]="
+                  form.get('diagnosis')?.invalid && form.get('diagnosis')?.touched
+                "
               ></textarea>
               @if (form.get('diagnosis')?.invalid && form.get('diagnosis')?.touched) {
                 <p class="mt-1 text-xs font-semibold text-[var(--brand-danger-text)]">
@@ -200,7 +223,10 @@ import {
 
         <section>
           <div class="flex items-start gap-3">
-            <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary-subtle)] text-xs font-extrabold text-[var(--brand-primary)]">4</span>
+            <span
+              class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary-subtle)] text-xs font-extrabold text-[var(--brand-primary)]"
+              >4</span
+            >
             <div>
               <h3 class="text-sm font-bold text-[var(--text-primary)]">
                 {{ i18n.t('consultation.clinicalNote.summaryTitle') }}
@@ -224,7 +250,9 @@ import {
 
             <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <div>
-                <label class="ui-label">{{ i18n.t('consultation.clinicalNote.instructions') }}</label>
+                <label class="ui-label">{{
+                  i18n.t('consultation.clinicalNote.instructions')
+                }}</label>
                 <textarea
                   formControlName="advice"
                   rows="3"
@@ -282,9 +310,7 @@ export class ClinicalNoteEditorComponent {
   }
 
   activeAllergies(): PatientAllergy[] {
-    return this.allergies
-      .filter(item => item.status === 'ACTIVE')
-      .slice(0, 6);
+    return this.allergies.filter((item) => item.status === 'ACTIVE').slice(0, 6);
   }
 
   relevantHistory(): PatientMedicalHistory[] {

@@ -4,7 +4,8 @@
 - Mode: Engineering
 - Date: 2026-07-30
 - Priorité: P1 - Clinical Continuity
-- Statut: DONE
+- Statut: REVIEW_BLOCKED — ID en collision, widget au-dessus de 500 lignes et
+  recette backend/appareil absente ; voir TASK-20260801
 - Target Release: MINOR (v1.1.0)
 
 ## Description
@@ -22,4 +23,8 @@ Implémentation de la vue synthétique et chronologique complète du dossier pat
 - [x] Mise à jour `PROJECT-TRACKING.md` et `CHANGELOG.md`
 
 ## Reste à faire
+- Réconcilier l'historique avec le dossier patient canonique ou un nouvel ID ;
+  MOB-2816 est réservé à la consultation IA mobile dans EPIC-0028.
+- Découper `patient_history_sheet.dart` sous 500 lignes.
 - Valider l'affichage sur appareil physique.
+- Obtenir les gates Flutter, APK et intégration backend sur le HEAD exact.

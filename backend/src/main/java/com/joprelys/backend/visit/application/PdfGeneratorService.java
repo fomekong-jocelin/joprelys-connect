@@ -799,22 +799,16 @@ public class PdfGeneratorService {
                 diagTable.getDefaultCell().setPadding(5f);
 
                 diagTable.addCell(new Phrase("Date", fontTableHead));
-                diagTable.addCell(new Phrase("Diagnostic Suspecté", fontTableHead));
-                diagTable.addCell(new Phrase("Diagnostic Final / Conclusion", fontTableHead));
+                diagTable.addCell(new Phrase("Diagnostic", fontTableHead));
+                diagTable.addCell(new Phrase("Conclusion", fontTableHead));
                 diagTable.addCell(new Phrase("Médecin", fontTableHead));
 
                 for (var d : summary.recentDiagnostics()) {
                     diagTable.addCell(new Phrase(DATE_FORMATTER.format(d.createdAt()), fontTableCell));
-                    diagTable.addCell(new Phrase(d.suspectedDiagnosis() != null ? d.suspectedDiagnosis() : "-", fontTableCell));
-                    
-                    String mainDiag = d.diagnosis();
-                    if (d.finalDiagnosis() != null && !d.finalDiagnosis().isBlank()) {
-                        mainDiag = d.finalDiagnosis();
-                    }
-                    if (d.conclusion() != null && !d.conclusion().isBlank()) {
-                        mainDiag += " (" + d.conclusion() + ")";
-                    }
-                    diagTable.addCell(new Phrase(mainDiag, fontTableCell));
+                    diagTable.addCell(new Phrase(d.diagnosis(), fontTableCell));
+                    diagTable.addCell(new Phrase(
+                            d.conclusion() != null && !d.conclusion().isBlank() ? d.conclusion() : "-",
+                            fontTableCell));
                     diagTable.addCell(new Phrase(d.doctorName(), fontTableCell));
                 }
                 document.add(diagTable);

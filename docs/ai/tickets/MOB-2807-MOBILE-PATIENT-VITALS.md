@@ -4,7 +4,8 @@
 - Mode: Engineering
 - Date: 2026-07-30
 - Priorité: P1 - Clinical Flow
-- Statut: DONE
+- Statut: REVIEW_BLOCKED — ID en collision avec l'agenda canonique et preuves
+  d'intégration exact-HEAD manquantes ; voir TASK-20260801
 - Target Release: MINOR (v1.1.0)
 
 ## Description
@@ -21,4 +22,6 @@ Raccordement de la carte patient de la file active mobile (`_ActiveVisitCard`) a
 - [x] Mise à jour du suivi `PROJECT-TRACKING.md` et `CHANGELOG.md`
 
 ## Reste à faire
+- Réconcilier cette capacité avec l'ID canonique MOB-2811.
 - Valider le flux réel lors du prochain test d'intégration backend/mobile.
+- Obtenir `flutter analyze`, `flutter test`, APK exact-HEAD et recette Android.

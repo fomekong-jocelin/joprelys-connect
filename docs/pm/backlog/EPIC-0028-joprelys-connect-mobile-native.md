@@ -18,6 +18,32 @@ P0 pour fondation + audio clinique.
 
 P1 pour l’élargissement progressif des autres modules.
 
+## Audit de livraison du 2026-08-01
+
+Le développement de nouvelles fonctionnalités est temporairement gelé sur la
+branche `fix/mobile-dashboard-layout-overflow`. Cette branche cumule 16 commits
+et plusieurs capacités distinctes sans respecter le découpage canonique
+ci-dessous.
+
+| ID réutilisé | Sens canonique dans cet epic | Sens utilisé sur la branche | Décision attendue |
+|---|---|---|---|
+| MOB-2807 | Agenda / rendez-vous | Constantes patient | Réattribuer la livraison au lot MOB-2811 ou créer une transition documentée |
+| MOB-2814 | Contrat backend audio segmenté | Notes de consultation SOAP | Réattribuer les notes à un ID clinique distinct |
+| MOB-2815 | File locale audio chiffrée | Assistant vocal UI | Distinguer surface UI, capture native et reprise durable |
+| MOB-2816 | Consultation IA mobile | Historique médical patient | Rattacher l'historique au dossier patient ou à un ID distinct |
+| MOB-2817 | Propositions et validation médecin | Annuaire patient | Rattacher l'annuaire à MOB-2809 et créer le ticket manquant |
+
+Le ticket
+`docs/ai/tickets/TASK-20260801-MOBILE-DELIVERY-CONSOLIDATION.md` est le gate P0
+avant reprise. Il impose également l'alignement du contrat Consultation, le
+découpage des widgets de plus de 500 lignes et une preuve CI/Appareil Android sur
+le même HEAD.
+
+Au 2026-08-01, l'alignement SOAP Angular/Flutter/backend, sa simplification à un
+seul diagnostic et le découpage de la surface Consultation sont implémentés. Ils
+restent non acceptés tant que V109/ADR-0005, les gates Maven/Flutter et la recette
+cross-stack ne sont pas validés.
+
 ## Architecture de référence
 
 ADR : `docs/ai/adr/ADR-0004-mobile-flutter-native-architecture.md`.
@@ -91,6 +117,8 @@ Cette estimation couvre le produit mobile professionnel, pas uniquement les dix 
 
 ## Dépendances critiques
 
+0. La consolidation TASK-20260801 doit être terminée avant toute nouvelle feature
+   ou déclaration DONE des capacités présentes sur la branche cumulée.
 1. MOB-2801 doit être fini avant les écrans métier.
 2. MOB-2802/MOB-2803 sont bloquants pour toute UI considérée DONE.
 3. MOB-2812 ne doit pas être mélangé à l’écran consultation.

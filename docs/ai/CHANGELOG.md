@@ -8,6 +8,13 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **TASK-20260801 / ADR-0005 — Contrat SOAP unifié Angular, Flutter et Spring Boot** :
+  - **Contrat canonique simplifié** : Flutter consomme désormais `GET/POST /api/visits/{id}/consultation` avec `symptoms`, `clinicalExam`, `diagnosis`, `conclusion`, `advice`, `followUp` ; un vrai `404` n'est plus masqué comme une note absente.
+  - **Diagnostic unique** : Angular, Flutter, Spring et l'assistant IA n'exposent plus `suspectedDiagnosis` ni `finalDiagnosis`. V109 archive les anciennes valeurs, retient la valeur la plus aboutie disponible, puis supprime les deux colonnes actives redondantes. L'orchestration Angular des prescriptions, feedbacks et libellés a été extraite en services/facade dédiés afin de ramener `ConsultationComponent` sous 500 lignes.
+  - **Sécurité clinique** : la dictée locale mobile ne fabrique plus de diagnostic ni de plan de soins à partir d'une simple mention de fièvre ; elle conserve uniquement le texte dicté et les constantes explicitement reconnues.
+  - **Découpage Flutter** : `consultation_notes_sheet.dart` passe de 573 à 236 lignes avec extraction de l'en-tête, du formulaire, des contrôleurs et des champs cliniques réutilisables. L'assistant vocal de 819 lignes est séparé en orchestration (379), surface d'écoute (326) et transcription (152), sans fichier au-dessus de la limite dure de 500.
+  - **Vérifications** : 9 tests Angular ciblés et le build production sont verts ; l'analyse Dart ciblée ne remonte aucun diagnostic. Les tests Maven sont bloqués par le parent Spring Boot absent du cache et le réseau sandbox ; les tests Flutter runtime restent bloqués par le verrou SDK non inscriptible.
+
 - **MOB-2817 — Annuaire & Recherche Globale des Patients Mobile** :
   - **Recherche en temps réel & API** : création de `PatientDirectoryItem` et `PatientDirectoryApi` consommant `GET /api/patients?q={query}` pour rechercher n'importe quel patient de l'établissement par nom, numéro DPU, téléphone ou numéro temporaire.
   - **Interface utilisateur** : ajout d'une barre de recherche dynamique et d'un sélecteur d'onglets à deux vues (*File d'attente active* vs *Annuaire global de tous les patients*) avec cartes récapitulatives et accès direct au dossier médical (`PatientHistorySheet`).
@@ -15,7 +22,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 - **MOB-2814 / MOB-2816 — Alignment UI SOAP Web Angular & Connexion Backend Réelle** :
   - **Interface SOAP (ConsultationNotesSheet)** : refonte complète de la modale SOAP pour s'aligner sur l'éditeur Web Angular `clinical-note-editor` (sections numérotées 1, 2, 3, 4 avec sous-titres d'aide i18n, badge motif de consultation, accès rapide à l'assistant vocal et zone de texte clinique stylisée).
   - **Historique Médical (PatientHistoryApi & Sheet)** : correction du paramètre d'appel (`patientId` au lieu de `visitId`), élimination des exceptions brutes 404 affichées en rouge à l'utilisateur, et ajout d'un écran d'erreur ergonomique avec bouton de réessai.
-  - **Gestion REST 404** : `ConsultationApi`, `VitalsApi` et `PatientHistoryApi` gèrent désormais les réponses 404 comme l'absence de données créées sans lever d'exception technique.
+  - **Gestion REST** : `ConsultationApi` distingue désormais le `204` (visite valide sans consultation) du `404` (visite introuvable) ; les autres gateways conservent leur politique documentée propre.
 
 - **MOB-2816 — Historique Médical & Chronologie des Visites Patient** :
   - **Domaine & Gateway** : création de `PatientMedicalHistory`, `MedicalAntecedent`, `PatientAllergy`, `PastVisitSummary` et `PatientHistoryApi`.
@@ -23,15 +30,15 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
   - **Tests & Conformité** : création de `patient_history_api_test.dart` et validation de la suite avec 68/68 tests Flutter verts.
 
 - **MOB-2815 — Assistant Vocal Clinique & Dictée Intelligente** :
-  - **Moteur d'extraction** : création de `ClinicalDictationParser` capable d'extraire automatiquement en Regex/NLP les 10 constantes médicales (°C, mmHg, bpm, kg, cm, %, g/L, c/min, EVA) et la note SOAP depuis le langage naturel.
+  - **Moteur d'extraction** : création de `ClinicalDictationParser` capable d'extraire automatiquement en Regex les constantes médicales explicitement dictées et de conserver le texte clinique sans inférer de diagnostic ou de plan de soins.
   - **Interface utilisateur** : création du composant modal `ClinicalVoiceAssistantSheet` et ajout du bouton `[🎙️ Assistant vocal]` dans la modale des constantes.
   - **Tests & Conformité** : création de `clinical_dictation_parser_test.dart` et validation de la suite avec 66/66 tests Flutter verts.
 
 - **MOB-2814 — Saisie & consultation mobile des notes cliniques (SOAP)** :
-  - **Gateway & REST** : création de `ConsultationGateway` et `ConsultationApi` consommant `GET /api/visits/{id}/consultation-notes` et `POST /api/visits/{id}/consultation-notes`.
-  - **Interface SOAP** : création du composant modal `ConsultationNotesSheet` structuré en 4 rubriques cliniques (Subjectif, Objectif, Évaluation, Plan) avec retour d'enregistrement.
+  - **Gateway & REST** : création de `ConsultationGateway` et `ConsultationApi`, désormais alignés sur les endpoints canoniques `GET/POST /api/visits/{id}/consultation`.
+  - **Interface SOAP** : création du composant modal `ConsultationNotesSheet` structuré en quatre rubriques cliniques et enrichi avec les huit sous-champs du contrat backend.
   - **i18n & Thèmes** : support complet FR/EN et Thèmes Sombre/Clair sans aucun texte dur.
-  - **Tests** : création de `consultation_api_test.dart` (sérialisation, détection de note vide) et validation de la suite complète avec 63/63 tests verts.
+  - **Tests** : création de `consultation_api_test.dart`, ensuite étendu à la sérialisation détaillée, aux endpoints, au `204` et à la propagation du `404` ; la preuve 63/63 reste historique et doit être remplacée par un gate exact-HEAD.
 
 - **MOB-2807 — Saisie & consultation mobile des constantes patient** :
   - **Gateway & API** : création de `VitalsGateway` et `VitalsApi` consommant `GET /api/visits/{id}/vitals` et `POST /api/visits/{id}/vitals`.

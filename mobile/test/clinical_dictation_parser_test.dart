@@ -18,12 +18,15 @@ void main() {
       expect(vitals.pulse, 75);
       expect(vitals.spo2, 98);
 
-      expect(result.note.subjective, contains('patient fiévreux'));
-      expect(result.note.objective, contains('T°: 38.5°C'));
+      expect(result.note.symptoms, contains('patient fiévreux'));
+      expect(result.note.clinicalExam, contains('T°: 38.5°C'));
+      expect(result.note.diagnosis, isNull);
+      expect(result.note.followUp, isNull);
     });
 
     test('extracts weight, height, glycemia and pain scale correctly', () {
-      const dictation = 'Poids 75.5 kg, taille 175 cm, glycémie 1.10, douleur 4';
+      const dictation =
+          'Poids 75.5 kg, taille 175 cm, glycémie 1.10, douleur 4';
 
       final result = parser.parse(dictation);
       final vitals = result.vitals;
