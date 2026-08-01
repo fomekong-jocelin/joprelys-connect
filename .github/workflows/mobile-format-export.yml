@@ -1,4 +1,4 @@
-name: Temporary mobile format export
+name: Temporary mobile format commit
 
 on:
   pull_request:
@@ -6,35 +6,41 @@ on:
     types: [synchronize]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  format-export:
+  format-commit:
     if: github.head_ref == 'fix/mobile-voice-clinical-safety'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    defaults:
-      run:
-        working-directory: mobile
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.44.6'
           channel: stable
           cache: true
-      - run: flutter pub get
-      - run: dart format lib test
-      - uses: actions/upload-artifact@v4
-        with:
-          name: mobile-formatted-voice-safety
-          path: |
-            mobile/lib/features/dashboard/application/clinical_speech_service.dart
-            mobile/lib/features/dashboard/data/clinical_voice_ai_api.dart
-            mobile/lib/features/dashboard/presentation/widgets/clinical_voice_assistant_sheet.dart
-            mobile/lib/features/dashboard/presentation/widgets/consultation_note_form_controllers.dart
-            mobile/lib/features/dashboard/presentation/widgets/patient_vitals_sheet.dart
-            mobile/test/voice_clinical_safety_test.dart
-            mobile/pubspec.lock
-          if-no-files-found: error
-          retention-days: 1
+      - name: Resolve and format mobile sources
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart format lib test
+      - name: Remove temporary CI helpers
+        run: |
+          rm -f .github/workflows/mobile-format-export.yml
+          rm -f mobile/.voice-safety-ci-trigger
+      - name: Commit formatted sources and lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile .github/workflows/mobile-format-export.yml
+          if git diff --cached --quiet; then
+            echo "Nothing to commit."
+            exit 0
+          fi
+          git commit -m "style(mobile): formater le correctif vocal et verrouiller les dépendances"
+          git push origin "HEAD:${{ github.head_ref }}"
