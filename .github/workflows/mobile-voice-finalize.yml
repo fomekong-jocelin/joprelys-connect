@@ -1,0 +1,50 @@
+name: Finalize mobile voice safety
+
+on:
+  pull_request:
+    branches: [main]
+    types: [synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  format-analyze-test:
+    if: github.head_ref == 'fix/mobile-voice-clinical-safety'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.6'
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        working-directory: mobile
+        run: flutter pub get
+      - name: Format
+        working-directory: mobile
+        run: dart format lib test
+      - name: Analyze formatted sources
+        working-directory: mobile
+        run: flutter analyze --no-pub
+      - name: Run tests on formatted sources
+        working-directory: mobile
+        run: flutter test --no-pub
+      - name: Remove temporary workflow and commit validated formatting
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/mobile-voice-finalize.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile .github/workflows/mobile-voice-finalize.yml
+          if git diff --cached --quiet; then
+            echo "Nothing to commit."
+            exit 0
+          fi
+          git commit -m "style(mobile): appliquer le formatage vocal validé"
+          git push origin "HEAD:${{ github.head_ref }}"
