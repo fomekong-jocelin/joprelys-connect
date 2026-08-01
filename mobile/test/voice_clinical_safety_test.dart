@@ -1,9 +1,12 @@
 import 'dart:convert';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:joprelys_mobile/features/dashboard/data/clinical_voice_ai_api.dart';
 import 'package:joprelys_mobile/features/dashboard/domain/consultation_note.dart';
+import 'package:joprelys_mobile/features/dashboard/domain/patient_vitals.dart';
 import 'package:joprelys_mobile/features/dashboard/presentation/widgets/consultation_note_form_controllers.dart';
+import 'package:joprelys_mobile/features/dashboard/presentation/widgets/vitals_form_merge.dart';
 
 void main() {
   test(
@@ -73,7 +76,7 @@ void main() {
     expect(state.vitalsFrom(includePending: true).pulse, 92);
   });
 
-  test('only server-accepted proposals unlock form application', () {
+  test('server-accepted proposals remain applicable', () {
     final state = ClinicalAiState.fromJson({
       'draft': {
         'symptoms': 'Céphalée aiguë depuis trois jours',
@@ -105,5 +108,45 @@ void main() {
     expect(state.hasPendingProposals, isFalse);
     expect(state.hasAcceptedChanges, isTrue);
     expect(state.noteFrom().diagnosis, 'Céphalée aiguë à explorer');
+  });
+
+  test('partial AI vitals never erase other explicitly dictated values', () {
+    const explicit = PatientVitals(
+      temperature: 38.5,
+      pulse: 92,
+      systolic: 150,
+      diastolic: 90,
+    );
+    const ai = PatientVitals(pulse: 88);
+
+    final merged = explicit.mergePrefer(ai);
+
+    expect(merged.temperature, 38.5);
+    expect(merged.pulse, 88);
+    expect(merged.systolic, 150);
+    expect(merged.diastolic, 90);
+  });
+
+  test('an explicitly confirmed vital replaces the displayed form value', () {
+    final controller = TextEditingController(text: '37');
+    addTearDown(controller.dispose);
+
+    final changed = applyAcceptedVitalValue(controller, 38.5);
+
+    expect(changed, 1);
+    expect(controller.text, '38.5');
+  });
+
+  test('AI session payload restores a pending reviewed transcript', () {
+    final state = ClinicalAiState.fromJson({
+      'draft': <String, String>{},
+      'pendingTranscript': 'Température trente-huit virgule cinq.',
+      'transcriptStatus': 'PENDING_REVIEW',
+      'revisions': <Object>[],
+      'needsClarification': false,
+    });
+
+    expect(state.pendingTranscript, 'Température trente-huit virgule cinq.');
+    expect(state.transcriptStatus, 'PENDING_REVIEW');
   });
 }
