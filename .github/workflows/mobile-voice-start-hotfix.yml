@@ -1,0 +1,192 @@
+name: Mobile voice startup hotfix
+
+on:
+  push:
+    branches:
+      - feat/p0-265-realtime-transcription
+    paths:
+      - .github/workflows/mobile-voice-start-hotfix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  hotfix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/p0-265-realtime-transcription
+          fetch-depth: 0
+
+      - name: Set up Flutter 3.44.6
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+
+      - name: Apply Android recording startup fix
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'Expected block not found in {path}: {old[:120]!r}')
+              file.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          bridge = 'mobile/lib/features/dashboard/application/clinical_realtime_transcription_bridge.dart'
+          service = 'mobile/lib/features/dashboard/application/clinical_speech_service.dart'
+          test = 'mobile/test/clinical_realtime_speech_service_test.dart'
+
+          replace_once(
+              bridge,
+              "import 'package:flutter_webrtc/flutter_webrtc.dart';\n",
+              "import 'package:flutter_webrtc/flutter_webrtc.dart';\nimport 'package:permission_handler/permission_handler.dart';\n",
+          )
+          replace_once(
+              bridge,
+              "  static const Duration _iceTimeout = Duration(seconds: 10);\n  static const Duration _channelTimeout = Duration(seconds: 10);",
+              "  static const Duration _iceTimeout = Duration(seconds: 5);\n  static const Duration _channelTimeout = Duration(seconds: 15);",
+          )
+          replace_once(
+              bridge,
+              "    try {\n      final stream = await navigator.mediaDevices.getUserMedia(",
+              "    try {\n      final permission = await Permission.microphone.request();\n      if (!permission.isGranted) {\n        throw StateError('MICROPHONE_PERMISSION_DENIED');\n      }\n\n      final stream = await navigator.mediaDevices.getUserMedia(",
+          )
+          replace_once(
+              bridge,
+              "    await completer.future.timeout(\n      _iceTimeout,\n      onTimeout: () => throw TimeoutException('AI_REALTIME_ICE_TIMEOUT'),\n    );",
+              "    try {\n      await completer.future.timeout(_iceTimeout);\n    } on TimeoutException {\n      // Certains moteurs WebRTC Android gardent ICE en cours alors que le SDP\n      // contient déjà les candidats utilisables. Comme sur Angular, on poursuit\n      // la négociation au lieu de bloquer entièrement l'ouverture du micro.\n    }",
+          )
+
+          replace_once(
+              service,
+              "import 'dart:async';\n\nimport 'package:flutter/foundation.dart';\n",
+              "import 'dart:async';\nimport 'dart:io';\n\nimport 'package:flutter/foundation.dart';\nimport 'package:path_provider/path_provider.dart';\nimport 'package:record/record.dart';\n",
+          )
+          replace_once(
+              service,
+              "class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {\n",
+              "class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {\n  static const double _voiceFrameThresholdDb = -48;\n  static const int _minimumVoiceFrames = 3;\n  static const Duration _minimumRecordingDuration = Duration(milliseconds: 450);\n\n",
+          )
+          replace_once(
+              service,
+              "    ClinicalRealtimeTranscriptionTransport? transport,\n  }) {",
+              "    ClinicalRealtimeTranscriptionTransport? transport,\n    AudioRecorder? fallbackRecorder,\n    Future<Directory> Function()? temporaryDirectoryProvider,\n  }) {",
+          )
+          replace_once(
+              service,
+              "      locale,\n      transport: transport,\n    );",
+              "      locale,\n      transport: transport,\n      fallbackRecorder: fallbackRecorder,\n      temporaryDirectoryProvider: temporaryDirectoryProvider,\n    );",
+          )
+          replace_once(
+              service,
+              "    this._locale, {\n    ClinicalRealtimeTranscriptionTransport? transport,\n  }) : _initialDraft = Map<String, String>.unmodifiable(initialDraft),\n       _transport =\n           transport ?? WebRtcClinicalRealtimeTranscriptionTransport(_gateway),",
+              "    this._locale, {\n    ClinicalRealtimeTranscriptionTransport? transport,\n    AudioRecorder? fallbackRecorder,\n    Future<Directory> Function()? temporaryDirectoryProvider,\n  }) : _initialDraft = Map<String, String>.unmodifiable(initialDraft),\n       _transport =\n           transport ?? WebRtcClinicalRealtimeTranscriptionTransport(_gateway),\n       _fallbackRecorder = fallbackRecorder,\n       _temporaryDirectoryProvider =\n           temporaryDirectoryProvider ?? getTemporaryDirectory,",
+          )
+          replace_once(
+              service,
+              "  final ClinicalRealtimeTranscriptionTransport _transport;\n  final ClinicalDictationParser _parser = const ClinicalDictationParser();\n",
+              "  final ClinicalRealtimeTranscriptionTransport _transport;\n  AudioRecorder? _fallbackRecorder;\n  final Future<Directory> Function() _temporaryDirectoryProvider;\n  final ClinicalDictationParser _parser = const ClinicalDictationParser();\n\n  AudioRecorder get _recorder => _fallbackRecorder ??= AudioRecorder();\n",
+          )
+          replace_once(
+              service,
+              "  Object? _lastPersistenceError;\n  bool _sessionReady = false;",
+              "  Object? _lastPersistenceError;\n  StreamSubscription<Amplitude>? _fallbackAmplitudeSubscription;\n  String? _fallbackRecordingPath;\n  DateTime? _fallbackRecordingStartedAt;\n  int _fallbackVoiceFrames = 0;\n  bool _usingFallbackRecorder = false;\n  bool _sessionReady = false;",
+          )
+          replace_once(
+              service,
+              "      final live = await _gateway.getLiveTranscript(_visitId);",
+              "      final live = await _getLiveTranscriptIfSupported();",
+          )
+          replace_once(
+              service,
+              "  void _restoreTranscript(\n",
+              "  Future<ClinicalLiveTranscript?> _getLiveTranscriptIfSupported() async {\n    try {\n      return await _gateway.getLiveTranscript(_visitId);\n    } on ApiException catch (error) {\n      // Compatibilité pendant le déploiement progressif : l'absence du nouveau\n      // tampon live ne doit jamais empêcher l'ouverture du microphone.\n      if (error.kind == ApiFailureKind.notFound) return null;\n      rethrow;\n    }\n  }\n\n  void _restoreTranscript(\n",
+          )
+          replace_once(
+              service,
+              "    } catch (error) {\n      _setError(error);\n    }\n  }\n\n  void _handleRealtimeEvent",
+              "    } catch (_) {\n      await _transport.disconnect();\n      try {\n        await _startFallbackRecording();\n      } catch (fallbackError) {\n        _setError(fallbackError);\n      }\n    }\n  }\n\n  Future<void> _startFallbackRecording() async {\n    await _cleanupFallbackRecording();\n    final recorder = _recorder;\n    final hasPermission = await recorder.hasPermission();\n    if (!hasPermission) {\n      throw StateError('MICROPHONE_PERMISSION_DENIED');\n    }\n\n    final directory = await _temporaryDirectoryProvider();\n    final path =\n        '${directory.path}/joprelys-$_visitId-${DateTime.now().microsecondsSinceEpoch}.wav';\n    _fallbackRecordingPath = path;\n    _fallbackRecordingStartedAt = DateTime.now();\n    _fallbackVoiceFrames = 0;\n\n    try {\n      await recorder.start(\n        const RecordConfig(\n          encoder: AudioEncoder.wav,\n          sampleRate: 16000,\n          numChannels: 1,\n          autoGain: true,\n          noiseSuppress: true,\n        ),\n        path: path,\n      );\n      _usingFallbackRecorder = true;\n      await _fallbackAmplitudeSubscription?.cancel();\n      _fallbackAmplitudeSubscription = recorder\n          .onAmplitudeChanged(const Duration(milliseconds: 100))\n          .listen((amplitude) {\n            if (_disposed ||\n                !_usingFallbackRecorder ||\n                value.status != SpeechStatus.listening) {\n              return;\n            }\n            if (amplitude.current >= _voiceFrameThresholdDb) {\n              _fallbackVoiceFrames++;\n            }\n            final normalized = (((amplitude.current + 60) / 60) * 55 + 5)\n                .clamp(5.0, 60.0)\n                .toDouble();\n            value = value.copyWith(soundLevel: normalized);\n          });\n      value = value.copyWith(\n        status: SpeechStatus.listening,\n        soundLevel: 8,\n        clearError: true,\n        assistantMessage: _isFrench\n            ? 'Microphone actif en mode sécurisé de secours. La transcription sera générée à la fin.'\n            : 'Microphone active in secure fallback mode. Transcription will be generated when you stop.',\n      );\n    } catch (_) {\n      await _cleanupFallbackRecording();\n      rethrow;\n    }\n  }\n\n  void _handleRealtimeEvent",
+          )
+          replace_once(
+              service,
+              "  Future<void> stopListening() async {\n    if (_disposed || value.status != SpeechStatus.listening) return;\n    value = value.copyWith(",
+              "  Future<void> stopListening() async {\n    if (_disposed || value.status != SpeechStatus.listening) return;\n    if (_usingFallbackRecorder) {\n      await _stopFallbackRecording();\n      return;\n    }\n    value = value.copyWith(",
+          )
+          replace_once(
+              service,
+              "  void updateTranscript(String text) {",
+              "  Future<void> _stopFallbackRecording() async {\n    value = value.copyWith(\n      status: SpeechStatus.processing,\n      soundLevel: 0,\n      clearError: true,\n      assistantMessage: _isFrench\n          ? 'Transcription sécurisée de l’enregistrement…'\n          : 'Securely transcribing the recording…',\n    );\n\n    try {\n      await _fallbackAmplitudeSubscription?.cancel();\n      _fallbackAmplitudeSubscription = null;\n      final recorder = _fallbackRecorder;\n      final path = await recorder?.stop() ?? _fallbackRecordingPath;\n      _usingFallbackRecorder = false;\n      if (path == null || path.isEmpty) {\n        throw StateError('AUDIO_RECORDING_EMPTY');\n      }\n\n      final duration = DateTime.now().difference(\n        _fallbackRecordingStartedAt ?? DateTime.now(),\n      );\n      if (_fallbackVoiceFrames < _minimumVoiceFrames ||\n          duration < _minimumRecordingDuration) {\n        final fallback = _confirmedTranscript.trim().isEmpty\n            ? SpeechStatus.idle\n            : SpeechStatus.transcriptReview;\n        _setError(\n          StateError('AI_AUDIO_SILENCE'),\n          fallbackStatus: fallback,\n        );\n        return;\n      }\n\n      final file = File(path);\n      final bytes = await file.readAsBytes();\n      if (bytes.length < 44) {\n        throw StateError('AUDIO_RECORDING_EMPTY');\n      }\n\n      final segment = await _gateway.transcribeAudio(_visitId, bytes);\n      _confirmedTranscript = _joinTranscript(_confirmedTranscript, segment);\n      _partialTranscript = '';\n      _serverHasPendingTranscript = true;\n      _lastPersistenceError = null;\n      final parsed = _parser.parse(_confirmedTranscript);\n      value = RealtimeSpeechState(\n        status: SpeechStatus.transcriptReview,\n        transcript: _confirmedTranscript,\n        vitals: parsed.vitals,\n        note: const ConsultationNote(),\n        revisions: const <ClinicalAiRevision>[],\n        assistantMessage: _isFrench\n            ? 'Transcription obtenue en mode de secours. Relisez-la avant de générer le compte rendu.'\n            : 'Fallback transcription completed. Review it before generating the clinical note.',\n      );\n    } catch (error) {\n      final fallback = _confirmedTranscript.trim().isEmpty\n          ? SpeechStatus.error\n          : SpeechStatus.transcriptReview;\n      _setError(error, fallbackStatus: fallback);\n    } finally {\n      _fallbackRecordingStartedAt = null;\n      _fallbackVoiceFrames = 0;\n      _usingFallbackRecorder = false;\n      await _deleteFallbackRecordingFile();\n    }\n  }\n\n  void updateTranscript(String text) {",
+          )
+          replace_once(
+              service,
+              "    try {\n      await _transport.disconnect();\n      await _gateway.clearLiveTranscript(_visitId);",
+              "    try {\n      await _transport.disconnect();\n      await _cleanupFallbackRecording();\n      await _gateway.clearLiveTranscript(_visitId);",
+          )
+          replace_once(
+              service,
+              "  void _setError(\n",
+              "  Future<void> _cleanupFallbackRecording() async {\n    await _fallbackAmplitudeSubscription?.cancel();\n    _fallbackAmplitudeSubscription = null;\n    final recorder = _fallbackRecorder;\n    if (recorder != null) {\n      try {\n        await recorder.cancel();\n      } catch (_) {\n        // Nettoyage best effort.\n      }\n    }\n    _usingFallbackRecorder = false;\n    _fallbackRecordingStartedAt = null;\n    _fallbackVoiceFrames = 0;\n    await _deleteFallbackRecordingFile();\n  }\n\n  Future<void> _deleteFallbackRecordingFile() async {\n    final path = _fallbackRecordingPath;\n    _fallbackRecordingPath = null;\n    if (path == null || path.isEmpty) return;\n    final file = File(path);\n    if (await file.exists()) await file.delete();\n  }\n\n  void _setError(\n",
+          )
+          replace_once(
+              service,
+              "      ApiException exception => exception.code,",
+              "      ApiException exception => '${exception.code} ${exception.message}',",
+          )
+          replace_once(
+              service,
+              "    if (code.contains('MICROPHONE') || code.contains('PERMISSION')) {",
+              "    if (code.contains('MICROPHONE') ||\n        code.contains('PERMISSION') ||\n        code.toUpperCase().contains('NOTALLOWED') ||\n        code.toUpperCase().contains('GETUSERMEDIA')) {",
+          )
+          replace_once(
+              service,
+              "  void dispose() {\n    _disposed = true;\n    unawaited(_transportSubscription.cancel());\n    unawaited(_transport.dispose());\n    super.dispose();",
+              "  void dispose() {\n    _disposed = true;\n    unawaited(_transportSubscription.cancel());\n    unawaited(_transport.dispose());\n    unawaited(_cleanupFallbackRecording());\n    final recorder = _fallbackRecorder;\n    if (recorder != null) unawaited(recorder.dispose());\n    super.dispose();",
+          )
+
+          replace_once(
+              test,
+              "import 'package:flutter_test/flutter_test.dart';\n",
+              "import 'package:flutter_test/flutter_test.dart';\nimport 'package:joprelys_mobile/core/network/api_exception.dart';\n",
+          )
+          replace_once(
+              test,
+              "  test('duplicate completed items are not appended twice', () async {",
+              "  test('missing live buffer endpoint does not block recording', () async {\n    final gateway = _FakeGateway()\n      ..liveTranscriptError = const ApiException(\n        kind: ApiFailureKind.notFound,\n        code: 'NOT_FOUND',\n        message: 'Route not deployed yet',\n        statusCode: 404,\n      );\n    final transport = _FakeTransport();\n    final service = ClinicalSpeechService(\n      gateway: gateway,\n      visitId: 'visit-compatible',\n      initialDraft: const <String, String>{},\n      locale: 'fr',\n      transport: transport,\n    );\n    addTearDown(service.dispose);\n\n    await service.restoreOrStart();\n\n    expect(service.value.status, SpeechStatus.listening);\n    expect(transport.connectCalls, 1);\n  });\n\n  test('duplicate completed items are not appended twice', () async {",
+          )
+          replace_once(
+              test,
+              "  int analyzeCalls = 0;\n",
+              "  int analyzeCalls = 0;\n  ApiException? liveTranscriptError;\n",
+          )
+          replace_once(
+              test,
+              "  Future<ClinicalLiveTranscript?> getLiveTranscript(String visitId) async {\n    final transcript = liveTranscript;",
+              "  Future<ClinicalLiveTranscript?> getLiveTranscript(String visitId) async {\n    final error = liveTranscriptError;\n    if (error != null) throw error;\n    final transcript = liveTranscript;",
+          )
+          PY
+
+      - name: Resolve and validate Flutter
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart format lib test
+          flutter analyze --no-pub
+          flutter test --no-pub
+
+      - name: Commit validated hotfix and remove temporary workflow
+        shell: bash
+        run: |
+          rm .github/workflows/mobile-voice-start-hotfix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile .github/workflows/mobile-voice-start-hotfix.yml
+          git commit -m "fix(mobile): restore voice recording startup with fallback"
+          git push origin HEAD:feat/p0-265-realtime-transcription
