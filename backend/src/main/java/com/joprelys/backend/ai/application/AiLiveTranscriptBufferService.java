@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ public class AiLiveTranscriptBufferService {
     private final ConcurrentMap<Key, Entry> entries = new ConcurrentHashMap<>();
     private final int sessionTtlMinutes;
 
+    @Autowired
     public AiLiveTranscriptBufferService(AiProperties properties) {
         this(properties.sessionTtlMinutes());
     }
