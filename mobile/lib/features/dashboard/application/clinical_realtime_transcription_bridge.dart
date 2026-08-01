@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
@@ -41,6 +42,8 @@ abstract interface class ClinicalRealtimeTranscriptionTransport {
   Future<void> finalize();
 
   Future<void> disconnect();
+
+  Future<void> dispose();
 }
 
 /// Transport audio temps réel du copilote clinique mobile.
@@ -59,7 +62,7 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
 
   final ClinicalVoiceAiGateway _gateway;
   final StreamController<ClinicalRealtimeEvent> _eventsController =
-      StreamController<ClinicalRealtimeEvent>.broadcast();
+      StreamController<ClinicalRealtimeEvent>.broadcast(sync: true);
 
   RTCPeerConnection? _peerConnection;
   RTCDataChannel? _dataChannel;
@@ -237,7 +240,8 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
       ));
       return;
     }
-    final delaySeconds = 1 << _reconnectAttempts.clamp(0, 3);
+    final exponent = _reconnectAttempts.clamp(0, 3).toInt();
+    final delaySeconds = 1 << exponent;
     _reconnectAttempts++;
     _emit(const ClinicalRealtimeEvent(ClinicalRealtimeEventType.reconnecting));
     _reconnectTimer = Timer(Duration(seconds: delaySeconds), () async {
@@ -320,31 +324,11 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
       final raw = rawEntry['logprob'];
       if (raw is! num || !raw.toDouble().isFinite) continue;
       final bounded = raw.toDouble().clamp(-20.0, 0.0);
-      probabilities.add(_exp(bounded));
+      probabilities.add(math.exp(bounded));
     }
     if (probabilities.isEmpty) return null;
     probabilities.sort();
     return probabilities[((probabilities.length - 1) * 0.2).floor()];
-  }
-
-  double _exp(double value) {
-    // Approximation suffisante pour le tri de confiance sans dépendance externe.
-    const e = 2.718281828459045;
-    return _pow(e, value);
-  }
-
-  double _pow(double base, double exponent) {
-    if (exponent == 0) return 1;
-    var result = 1.0;
-    final whole = exponent.floor();
-    for (var i = 0; i < -whole; i++) {
-      result /= base;
-    }
-    final fraction = exponent - whole;
-    if (fraction == 0) return result;
-    // Les logprobs sont seulement utilisés comme indicateur de revue. Une
-    // interpolation monotone suffit pour la fraction restante.
-    return result * (1 + fraction * (base - 1));
   }
 
   @override
@@ -425,10 +409,11 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
     }
   }
 
+  @override
   Future<void> dispose() async {
     if (_disposed) return;
-    _disposed = true;
     await disconnect();
+    _disposed = true;
     await _eventsController.close();
   }
 }
