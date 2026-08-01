@@ -27,11 +27,27 @@ jobs:
         run: |
           python <<'PY'
           from pathlib import Path
+          import re
           workflow = Path('.github/workflows/apply-ai-voice-surgical-fix.yml').read_text(encoding='utf-8')
           start = workflow.index("          python <<'PY'\n") + len("          python <<'PY'\n")
           end = workflow.index("\n          PY\n", start)
           lines = workflow[start:end].splitlines()
           script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines)
+          function_start = script.index('def replace_once(path, old, new):')
+          function_end = script.index('\n\n# ------------------------------------------------------------------', function_start)
+          flexible = '''def replace_once(path, old, new):
+    content = read(path)
+    if old in content:
+        write(path, content.replace(old, new, 1))
+        return
+    tokens = re.split(r'\\s+', old.strip())
+    pattern = r'\\s+'.join(re.escape(token) for token in tokens)
+    match = re.search(pattern, content, flags=re.S)
+    if match is None:
+        raise SystemExit(f'Pattern not found in {path}: {old[:120]!r}')
+    write(path, content[:match.start()] + new + content[match.end():])
+'''
+          script = script[:function_start] + flexible + script[function_end:]
           exec(compile(script, 'embedded-ai-voice-fix.py', 'exec'))
           PY
       - name: Format Dart
