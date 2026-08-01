@@ -22,10 +22,7 @@ abstract interface class ClinicalVoiceAiGateway {
 
   Future<String> transcribeAudio(String visitId, Uint8List audioBytes);
 
-  Future<ClinicalAiState> analyzeTranscript(
-    String visitId,
-    String transcript,
-  );
+  Future<ClinicalAiState> analyzeTranscript(String visitId, String transcript);
 
   Future<ClinicalAiState> decideProposal(
     String visitId,
@@ -182,7 +179,9 @@ final class ClinicalAiState {
   Map<String, String> get proposedDraft {
     final result = Map<String, String>.from(draft);
     for (final revision in pendingRevisions) {
-      for (final proposal in revision.proposals.where((item) => item.isPending)) {
+      for (final proposal in revision.proposals.where(
+        (item) => item.isPending,
+      )) {
         if (proposal.operation == 'CLEAR') {
           result.remove(proposal.field);
         } else {
