@@ -38,6 +38,9 @@ class ClinicalTranscriptCard extends StatefulWidget {
     required this.onChanged,
     required this.label,
     required this.hint,
+    required this.editLabel,
+    required this.doneLabel,
+    this.editable = true,
     super.key,
   });
 
@@ -46,6 +49,9 @@ class ClinicalTranscriptCard extends StatefulWidget {
   final ValueChanged<String> onChanged;
   final String label;
   final String hint;
+  final String editLabel;
+  final String doneLabel;
+  final bool editable;
 
   @override
   State<ClinicalTranscriptCard> createState() => _ClinicalTranscriptCardState();
@@ -53,6 +59,14 @@ class ClinicalTranscriptCard extends StatefulWidget {
 
 class _ClinicalTranscriptCardState extends State<ClinicalTranscriptCard> {
   bool _isEditing = false;
+
+  @override
+  void didUpdateWidget(covariant ClinicalTranscriptCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.editable && _isEditing) {
+      _isEditing = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,13 +84,13 @@ class _ClinicalTranscriptCardState extends State<ClinicalTranscriptCard> {
           ),
         ),
         const SizedBox(height: 8),
-        if (_isEditing) ...[
+        if (_isEditing && widget.editable) ...[
           AppTextField(
             label: '',
             hint: widget.hint,
             controller: widget.controller,
             onChanged: widget.onChanged,
-            maxLines: 4,
+            maxLines: 5,
           ),
           const SizedBox(height: 6),
           Align(
@@ -84,7 +98,7 @@ class _ClinicalTranscriptCardState extends State<ClinicalTranscriptCard> {
             child: TextButton.icon(
               onPressed: () => setState(() => _isEditing = false),
               icon: const Icon(Icons.check_rounded, size: 16),
-              label: const Text('Terminer la modification'),
+              label: Text(widget.doneLabel),
             ),
           ),
         ] else ...[
@@ -107,41 +121,26 @@ class _ClinicalTranscriptCardState extends State<ClinicalTranscriptCard> {
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '00:20',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: colors.onSurfaceVariant.withValues(
-                                alpha: 0.7,
-                              ),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              widget.transcript,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                height: 1.4,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      GestureDetector(
-                        onTap: () => setState(() => _isEditing = true),
-                        child: Text(
-                          'Corriger',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: primaryColor,
-                            fontWeight: FontWeight.w800,
-                          ),
+                      Text(
+                        widget.transcript,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          height: 1.4,
                         ),
                       ),
+                      if (widget.editable) ...[
+                        const SizedBox(height: 10),
+                        GestureDetector(
+                          onTap: () => setState(() => _isEditing = true),
+                          child: Text(
+                            widget.editLabel,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: primaryColor,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
           ),
