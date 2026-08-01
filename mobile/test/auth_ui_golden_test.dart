@@ -93,18 +93,15 @@ Future<void> _loadRobotoForGoldens() async {
   if (flutterRoot == null) {
     throw StateError('FLUTTER_ROOT is required for deterministic goldens.');
   }
-  final fontFile = File(
-    '$flutterRoot/bin/cache/artifacts/material_fonts/roboto-regular.ttf',
-  );
+  final materialFontsDirectory =
+      '$flutterRoot/bin/cache/artifacts/material_fonts';
+  final fontFile = File('$materialFontsDirectory/Roboto-Regular.ttf');
   final fontBytes = await fontFile.readAsBytes();
   await (FontLoader(
     'Roboto',
   )..addFont(Future.value(ByteData.sublistView(fontBytes)))).load();
 
-  final iconsFile = File(
-    '$flutterRoot/bin/cache/artifacts/material_fonts/'
-    'materialicons-regular.otf',
-  );
+  final iconsFile = File('$materialFontsDirectory/MaterialIcons-Regular.otf');
   final iconBytes = await iconsFile.readAsBytes();
   await (FontLoader(
     'MaterialIcons',
