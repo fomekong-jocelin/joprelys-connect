@@ -12,7 +12,7 @@ jobs:
   fix:
     if: ${{ github.event.pull_request.head.ref == 'feat/p0-265-realtime-transcription' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
@@ -20,11 +20,19 @@ jobs:
           ref: feat/p0-265-realtime-transcription
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up Flutter 3.44.6
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+
       - name: Apply deterministic lint fix
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
+
           path = Path('mobile/lib/features/dashboard/application/clinical_speech_service.dart')
           text = path.read_text()
           old = """      var existing = await _gateway.getSession(_visitId);
@@ -36,23 +44,27 @@ jobs:
                   );
                 }
           """
-          # Source is formatted with six spaces before the inner block.
-          old = """      var existing = await _gateway.getSession(_visitId);
-                if (existing == null) {
-                  existing = await _gateway.startSession(
-                    _visitId,
-                    _initialDraft,
-                    locale: _locale,
-                  );
-                }
-          """.replace('              if', '      if').replace('                existing', '        existing').replace('                  _visitId', '          _visitId').replace('                  _initialDraft', '          _initialDraft').replace('                  locale', '          locale').replace('                );', '        );').replace('              }', '      }')
+          old = old.replace('              if', '      if')
+          old = old.replace('                existing', '        existing')
+          old = old.replace('                  _visitId', '          _visitId')
+          old = old.replace('                  _initialDraft', '          _initialDraft')
+          old = old.replace('                  locale', '          locale')
+          old = old.replace('                );', '        );')
+          old = old.replace('              }', '      }')
+
           new = """      var existing = await _gateway.getSession(_visitId);
                 existing ??= await _gateway.startSession(
                   _visitId,
                   _initialDraft,
                   locale: _locale,
                 );
-          """.replace('              existing', '      existing').replace('                _visitId', '        _visitId').replace('                _initialDraft', '        _initialDraft').replace('                locale', '        locale').replace('              );', '      );')
+          """
+          new = new.replace('              existing', '      existing')
+          new = new.replace('                _visitId', '        _visitId')
+          new = new.replace('                _initialDraft', '        _initialDraft')
+          new = new.replace('                locale', '        locale')
+          new = new.replace('              );', '      );')
+
           if old not in text:
               raise SystemExit('Expected initialization block not found')
           path.write_text(text.replace(old, new, 1))
