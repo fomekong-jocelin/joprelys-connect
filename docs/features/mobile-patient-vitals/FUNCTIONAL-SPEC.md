@@ -1,4 +1,4 @@
-# Functional Spec — Saisie & Consultation des Constantes Patient (Mobile Flutter)
+# Functional Spec — Saisie & Consultation des Constantes Patient (Mobile Flutter) (MOB-2811)
 
 ## 1. Contexte & Besoin Métier
 Dans l'application mobile Flutter pour praticiens et soignants, le professionnel doit pouvoir consulter et saisir rapidement les constantes vitales d'un patient en attente depuis la file active du tableau de bord.

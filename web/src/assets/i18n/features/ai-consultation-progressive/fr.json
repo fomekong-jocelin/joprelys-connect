@@ -24,7 +24,7 @@
   "consultation.ai.reportPartialTitle": "Compte rendu exploitable mais incomplet",
   "consultation.ai.reportPartialHelp": "Joprelys a conservé les faits suffisamment fondés. Vous pouvez les valider maintenant ou compléter les éléments manquants avant de remplir le formulaire.",
   "consultation.ai.missingClinicalExam": "Examen clinique",
-  "consultation.ai.missingDiagnosis": "Diagnostic retenu",
+  "consultation.ai.missingDiagnosis": "Diagnostic",
   "consultation.ai.completeRecording": "Compléter par un nouvel enregistrement",
   "consultation.ai.backToTranscript": "Revenir au transcript",
   "consultation.ai.validateAndFillForm": "Valider et remplir la consultation",

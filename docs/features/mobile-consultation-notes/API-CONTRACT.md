@@ -1,4 +1,4 @@
-# Contrat API — Note clinique SOAP unifiée
+# Contrat API — Note clinique SOAP unifiée (MOB-2821)
 
 > Source de vérité proposée par ADR-0005. Le même contrat est consommé par
 > Angular et Flutter.

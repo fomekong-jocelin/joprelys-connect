@@ -18,20 +18,20 @@ P0 pour fondation + audio clinique.
 
 P1 pour l’élargissement progressif des autres modules.
 
-## Audit de livraison du 2026-08-01
+## Réconciliation de livraison du 2026-08-01
 
-Le développement de nouvelles fonctionnalités est temporairement gelé sur la
-branche `fix/mobile-dashboard-layout-overflow`. Cette branche cumule 16 commits
-et plusieurs capacités distinctes sans respecter le découpage canonique
-ci-dessous.
+La branche cumulative `fix/mobile-dashboard-layout-overflow` a été fusionnée par
+la PR #258 dans `main` au merge commit `e6f7a348`, puis supprimée localement et
+sur `origin`. Les anciens identifiants restent uniquement comme traces
+historiques de transition.
 
-| ID réutilisé | Sens canonique dans cet epic | Sens utilisé sur la branche | Décision attendue |
+| Ancien usage | Capacité livrée | ID canonique après réconciliation | Statut |
 |---|---|---|---|
-| MOB-2807 | Agenda / rendez-vous | Constantes patient | Réattribuer la livraison au lot MOB-2811 ou créer une transition documentée |
-| MOB-2814 | Contrat backend audio segmenté | Notes de consultation SOAP | Réattribuer les notes à un ID clinique distinct |
-| MOB-2815 | File locale audio chiffrée | Assistant vocal UI | Distinguer surface UI, capture native et reprise durable |
-| MOB-2816 | Consultation IA mobile | Historique médical patient | Rattacher l'historique au dossier patient ou à un ID distinct |
-| MOB-2817 | Propositions et validation médecin | Annuaire patient | Rattacher l'annuaire à MOB-2809 et créer le ticket manquant |
+| MOB-2807 | Constantes patient | MOB-2811 | Réattribué |
+| MOB-2814 | Notes de consultation SOAP | MOB-2821 | Nouvelle story clinique distincte |
+| MOB-2815 | Assistant vocal UI/capture/transcription | MOB-2816 | Réattribué ; ne couvre pas la file chiffrée MOB-2815 |
+| MOB-2816 | Historique médical patient | MOB-2810 | Réattribué au dossier patient |
+| MOB-2817 | Annuaire patient | MOB-2809 | Réattribué ; ticket canonique créé |
 
 Le ticket
 `docs/ai/tickets/TASK-20260801-MOBILE-DELIVERY-CONSOLIDATION.md` est le gate P0
@@ -73,10 +73,11 @@ ADR : `docs/ai/adr/ADR-0004-mobile-flutter-native-architecture.md`.
 | MOB-2818 | Prescription & examens | P1 | 5 | 2–3j | 3–4j | Flutter intermédiaire/senior | MOB-2810, MOB-2804 |
 | MOB-2819 | Laboratoire mobile | P1 | 5 | 2–3j | 3–4j | Flutter intermédiaire/senior | MOB-2810, MOB-2804 |
 | MOB-2820 | Hardening sécurité, observabilité, builds signés et pilote Android | P0 | 5 | 3–5j | 5–7j | Mobile security/DevOps senior | fondation + parcours pilote |
+| MOB-2821 | Notes cliniques SOAP unifiées web/mobile/backend | P0 | 5 | 2–3j | 3–4j | Senior full-stack clinique | MOB-2810, MOB-2804 |
 
 ## Charge indicative
 
-Total initial : **99 SP** environ, à livrer sur plusieurs sprints et à réestimer après MOB-2801/MOB-2812.
+Total réconcilié : **104 SP** environ, à livrer sur plusieurs sprints et à réestimer après MOB-2801/MOB-2812.
 
 Cette estimation couvre le produit mobile professionnel, pas uniquement les dix maquettes.
 
@@ -98,6 +99,7 @@ Cette estimation couvre le produit mobile professionnel, pas uniquement les dix 
 - MOB-2810
 - MOB-2811
 - MOB-2807
+- MOB-2821
 
 ### Phase C — P0 audio natif
 
@@ -117,8 +119,9 @@ Cette estimation couvre le produit mobile professionnel, pas uniquement les dix 
 
 ## Dépendances critiques
 
-0. La consolidation TASK-20260801 doit être terminée avant toute nouvelle feature
-   ou déclaration DONE des capacités présentes sur la branche cumulée.
+0. La réconciliation TASK-20260801/A est terminée. Les gates et dettes restantes
+   de TASK-20260801/C-D doivent être fermées avant toute déclaration DONE des
+   capacités fusionnées par la PR #258.
 1. MOB-2801 doit être fini avant les écrans métier.
 2. MOB-2802/MOB-2803 sont bloquants pour toute UI considérée DONE.
 3. MOB-2812 ne doit pas être mélangé à l’écran consultation.

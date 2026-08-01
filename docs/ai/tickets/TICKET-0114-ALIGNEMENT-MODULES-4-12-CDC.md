@@ -109,7 +109,7 @@ cd backend && ./mvnw test
 | `service` dans la visite | Champ absent ; `orientation` utilisé à la place | P0 |
 | `main_practitioner_id` | Champ absent | P0 |
 | `arrival_at` | Champ absent ; `created_at` utilisé | P0 |
-| Diagnostic | Un seul champ `diagnosis` ; manquent `suspected_diagnosis`, `final_diagnosis`, `conclusion` | P0 |
+| Diagnostic unique | ✅ `diagnosis` et `conclusion` alignés ; anciens champs archivés puis retirés par V109 | — |
 | FR-VISIT-005 : correction traçable | Visite terminée bloquée en écriture, mais pas de mécanisme de trace de correction | P1 |
 | Constantes : douleur 0-10 | Absente | P1 |
 | FR-VISIT-003 : PDF consultation | ✅ OK | — |

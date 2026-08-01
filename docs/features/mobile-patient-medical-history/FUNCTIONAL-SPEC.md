@@ -1,4 +1,4 @@
-# Spécifications Fonctionnelles — Historique Médical & Chronologie des Visites Patient (MOB-2816)
+# Spécifications Fonctionnelles — Historique Médical & Chronologie des Visites Patient (MOB-2810)
 
 ## 1. Objectif
 Fournir aux praticiens de santé sur l'application mobile Joprelys Connect une vue synthétique et chronologique complète du dossier du patient sélectionné : antécédents médicaux/chirurgicaux, allergies déclarées, traitements chroniques et l'historique de l'ensemble des consultations et visites passées avec leurs constantes et notes SOAP associés.

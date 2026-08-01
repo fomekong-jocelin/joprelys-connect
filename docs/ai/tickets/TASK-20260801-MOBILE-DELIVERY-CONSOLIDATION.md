@@ -2,8 +2,8 @@
 
 ## Statut
 
-IN_PROGRESS P0 — alignement SOAP implémenté ; réconciliation des IDs, gates et
-recette requis avant toute nouvelle fonctionnalité sur la branche mobile.
+IN_PROGRESS P0 — alignement SOAP et réconciliation IDs/PR terminés ; reviews,
+dettes de taille, gates et recette restent requis avant passage à DONE.
 
 ## Mode d'intervention
 
@@ -11,9 +11,10 @@ Project Manager + diagnostic de readiness + Engineering de consolidation.
 
 ## Objectif
 
-Rendre l'incrément Flutter accumulé sur
-`fix/mobile-dashboard-layout-overflow` traçable, conforme aux contrats backend,
-reviewable et testable sur Android avant de poursuivre le backlog produit.
+Rendre l'incrément Flutter initialement accumulé sur
+`fix/mobile-dashboard-layout-overflow`, désormais fusionné dans `main`,
+traçable, conforme aux contrats backend, reviewable et testable sur Android
+avant de poursuivre le backlog produit.
 
 ## Actions de cadrage réalisées
 
@@ -31,6 +32,22 @@ reviewable et testable sur Android avant de poursuivre le backlog produit.
   déclarer verts.
 - [x] Mettre à jour le suivi central, le backlog EPIC-0028, le dashboard delivery
   et le registre des risques.
+
+## Réconciliation et fusion du 2026-08-01
+
+- commit de consolidation : `124b7c12` ;
+- PR #258 mise à jour pour refléter le périmètre complet, puis fusionnée dans
+  `main` au merge commit `e6f7a348` ;
+- branche `fix/mobile-dashboard-layout-overflow` supprimée localement et sur
+  `origin` après vérification de la fusion ;
+- mapping appliqué :
+  - annuaire `MOB-2817` historique → `MOB-2809` canonique ;
+  - historique `MOB-2816` historique → `MOB-2810` canonique ;
+  - constantes `MOB-2807` historique → `MOB-2811` canonique ;
+  - assistant UI `MOB-2815` historique → `MOB-2816` canonique ;
+  - notes SOAP `MOB-2814` historique → nouvelle story `MOB-2821` ;
+- les tickets, les spécifications, le changelog, le tracking, l'epic, le
+  dashboard delivery et le registre des risques utilisent désormais ces IDs.
 
 ## Constat initial au 2026-08-01
 
@@ -81,6 +98,8 @@ reviewable et testable sur Android avant de poursuivre le backlog produit.
 - les tests ciblés Angular sont verts et l'analyse Dart ciblée est sans diagnostic ;
 - Maven reste bloqué par le parent Spring Boot absent du cache et Flutter runtime
   par le verrou SDK non inscriptible dans le sandbox.
+- l'incrément complet est fusionné par la PR #258 ; les limites de validation
+  restent explicites et les tickets ne sont pas déclarés DONE.
 
 ## Découpage
 
@@ -99,16 +118,15 @@ et le fusionner sans masquer de régression clinique.
 
 #### TASK A — Réconcilier le backlog et les tickets
 
-- [ ] Faire valider la correspondance canonique entre les capacités livrées et
-  les IDs d'EPIC-0028.
-- [ ] Renommer ou remplacer les tickets en conflit sans perdre l'historique.
-- [ ] Créer le ticket manquant pour l'annuaire/recherche patient.
-- [ ] Définir des PR bornées depuis `main`, une capacité canonique par PR, ou
-  documenter la branche actuelle comme branche d'intégration non fusionnable
-  directement.
-- [ ] Aligner `PROJECT-TRACKING.md`, le backlog EPIC-0028 et le changelog.
-- [ ] Réconcilier les cibles de version avec `VERSION=0.10.1` et la matrice de
-  versions avant toute préparation de release.
+- [x] Appliquer la correspondance canonique entre les capacités livrées et les
+  IDs d'EPIC-0028 sur autorisation explicite de réconciliation.
+- [x] Renommer ou remplacer les tickets en conflit sans perdre l'historique.
+- [x] Créer le ticket manquant MOB-2809 pour l'annuaire/recherche patient.
+- [x] Documenter l'exception de la PR cumulative #258, mettre son titre et son
+  corps à jour, la fusionner puis supprimer la branche intégrée.
+- [x] Aligner `PROJECT-TRACKING.md`, le backlog EPIC-0028 et le changelog.
+- [x] Réconcilier les cibles de version avec `VERSION=0.10.1` : candidat MINOR
+  `0.11.0`, sans préparation de release ni bump.
 
 Estimation : 2 SP / 0,5 à 1 jour senior. Profil : Tech Lead + Product Owner.
 
@@ -181,17 +199,18 @@ QA mobile et backend/auth.
 
 ## Critères d'acceptation
 
-- [ ] Aucun identifiant MOB n'a deux significations dans le backlog, les tickets
-  et le changelog.
-- [ ] Chaque PR de livraison référence un ticket canonique et reste bornée ; la
-  branche cumulative n'est pas fusionnée directement sans stratégie
-  d'intégration approuvée.
+- [x] Aucun identifiant MOB actif n'a deux significations dans le backlog, les
+  tickets et le changelog ; les anciens usages sont limités à la table de
+  transition historique.
+- [x] La PR cumulative #258 constitue l'exception explicitement autorisée : son
+  périmètre et ses limites ont été documentés avant fusion, et sa branche a été
+  supprimée après intégration.
 - [ ] Le contrat Consultation exécuté par Flutter correspond exactement au
   controller et aux DTO Spring Boot documentés.
 - [ ] Aucun fichier source Flutter modifié ne dépasse 500 lignes ; toute cible
   supérieure à 300 lignes est justifiée ou découpée.
 - [ ] Aucun artefact de failure de test n'est livré comme source produit.
-- [ ] La cible SemVer est cohérente avec `0.10.1` ; aucun saut vers `1.1.0` n'est
+- [x] La cible SemVer est cohérente avec `0.10.1` ; aucun saut vers `1.1.0` n'est
   présenté comme un MINOR.
 - [ ] `flutter analyze`, `flutter test` et le build APK debug sont verts sur le
   même HEAD.
@@ -204,7 +223,8 @@ QA mobile et backend/auth.
 - [x] Écart de backlog et défaut de contrat reproduits par inspection du code.
 - [x] Fichiers hors limites identifiés et mesurés.
 - [x] Profil, estimation, reviewer attendu et tests requis documentés.
-- [ ] Mapping canonique des IDs validé par Product Owner et Tech Lead.
+- [x] Mapping canonique des IDs appliqué sur autorisation explicite ; review
+  Product Owner/Tech Lead conservée comme contrôle de gouvernance post-fusion.
 - [ ] Capacité nominative du sprint confirmée.
 
 ## Definition of Done
@@ -235,6 +255,7 @@ candidat MINOR uniquement après consolidation, QA et préparation de release.
 
 ## Reste à faire
 
-Commencer par TASK A puis TASK B. Le développement d'une nouvelle feature mobile
-reste gelé sur cette branche jusqu'à résolution du contrat Consultation et des
-limites de taille.
+TASK A est terminée et TASK B est implémentée mais encore en review. Poursuivre
+par la review V109/ADR-0005, TASK C et TASK D. Les capacités fusionnées restent
+IN_REVIEW ou REVIEW_BLOCKED jusqu'aux gates exact-HEAD et à la recette clinique ;
+aucune branche de livraison cumulative ne subsiste.

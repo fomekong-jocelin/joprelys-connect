@@ -171,7 +171,7 @@
   "consultation.clinicalNote.examHelp": "Relevant physical examination findings and important negative signs.",
   "consultation.clinicalNote.examPlaceholder": "Example: soft abdomen, right lower quadrant tenderness without guarding, bowel sounds present…",
   "consultation.clinicalNote.assessmentTitle": "A — Diagnostic assessment",
-  "consultation.clinicalNote.assessmentHelp": "Document the diagnosis retained by the practitioner.",
+  "consultation.clinicalNote.assessmentHelp": "Document the diagnosis made by the practitioner.",
   "consultation.clinicalNote.diagnosis": "Diagnosis",
   "consultation.clinicalNote.diagnosisPlaceholder": "Example: acute appendicitis suspected from the clinical presentation…",
   "consultation.clinicalNote.diagnosisRequired": "The diagnosis is required.",

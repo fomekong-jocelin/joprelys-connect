@@ -1,4 +1,4 @@
-# Spécification Fonctionnelle — Assistant Vocal Clinique & Extraction Intelligente (MOB-2815)
+# Spécification Fonctionnelle — Assistant Vocal Clinique & Extraction Intelligente (MOB-2816)
 
 ## 1. Contexte & Objectifs
 

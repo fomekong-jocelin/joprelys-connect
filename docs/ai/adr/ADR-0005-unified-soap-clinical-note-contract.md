@@ -50,7 +50,7 @@ La note clinique canonique est organisée ainsi :
 |---|---|---|
 | S — Subjectif | `symptoms` | Histoire de la maladie, plainte et symptômes ; obligatoire |
 | O — Objectif | `clinicalExam` | Examen clinique ; les constantes restent des données structurées associées |
-| A — Évaluation | `diagnosis` | Diagnostic retenu et documenté par le praticien ; obligatoire |
+| A — Évaluation | `diagnosis` | Diagnostic documenté par le praticien ; obligatoire |
 | P — Plan | `conclusion`, `advice`, `followUp` | Synthèse, consignes et suivi séparés ; prescriptions et examens restent des ressources dédiées |
 
 SOAP définit l'organisation clinique et l'expérience de saisie. Il ne doit pas

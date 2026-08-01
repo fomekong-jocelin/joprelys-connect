@@ -584,8 +584,7 @@ Enregistrer chaque passage médical du patient.
 |---|---|
 | symptoms | Symptômes |
 | clinical_exam | Examen clinique |
-| suspected_diagnosis | Hypothèse diagnostique |
-| final_diagnosis | Diagnostic final |
+| diagnosis | Diagnostic clinique ; le niveau de certitude est conservé dans le texte |
 | conclusion | Conclusion |
 | advice | Conseils |
 | follow_up | Suivi recommandé |

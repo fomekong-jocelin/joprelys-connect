@@ -208,8 +208,8 @@ extension DashboardLocalizations on AppLocalizations {
       _isFrench ? 'Diagnostic' : 'Diagnosis';
 
   String get consultationDiagnosisHint => _isFrench
-      ? 'Diagnostic retenu au vu des éléments disponibles…'
-      : 'Diagnosis retained from the available evidence…';
+      ? 'Diagnostic au vu des éléments disponibles…'
+      : 'Diagnosis based on the available evidence…';
 
   String get consultationConclusionLabel =>
       _isFrench ? 'Synthèse clinique' : 'Clinical summary';
@@ -361,8 +361,8 @@ extension DashboardLocalizations on AppLocalizations {
       : 'Record physical exam findings and objective clinical observations.';
 
   String get consultationAssessmentHelp => _isFrench
-      ? 'Documentez le diagnostic retenu par le praticien.'
-      : 'Document the diagnosis retained by the practitioner.';
+      ? 'Documentez le diagnostic posé par le praticien.'
+      : 'Document the diagnosis made by the practitioner.';
 
   String get consultationPlanHelp => _isFrench
       ? 'Documentez la synthèse, les conseils et le suivi ; prescriptions et examens restent structurés séparément.'

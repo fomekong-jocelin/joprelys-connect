@@ -16,18 +16,18 @@
 | **Sprint cible** | SPRINT-0011 |
 | **Assigné** | Antigravity |
 | **Reviewer** | Lead Developer |
-| **Dernière MAJ** | 2026-07-05 |
+| **Dernière MAJ** | 2026-08-01 |
 
 ---
 
 ## 1. Contexte
 
-Le CDC définit précisément les données d’une visite (`visit_number`, `patient_id`, `organization_id`, `service`, `main_practitioner_id`, `arrival_at`, `closed_at`, `reason`, `status`) et d’une consultation (`symptoms`, `clinical_exam`, `suspected_diagnosis`, `final_diagnosis`, `conclusion`, `advice`, `follow_up`). Actuellement, plusieurs champs sont absents ou approximatifs.
+Le CDC définit précisément les données d’une visite (`visit_number`, `patient_id`, `organization_id`, `service`, `main_practitioner_id`, `arrival_at`, `closed_at`, `reason`, `status`). Le contrat de consultation actif expose `symptoms`, `clinical_exam`, `diagnosis`, `conclusion`, `advice` et `follow_up`.
 
 > Décision ultérieure ADR-0005 (2026-08-01) : le produit ne disposant d'aucun
 > cycle de vie permettant de distinguer ces niveaux, `suspected_diagnosis` et
 > `final_diagnosis` sont retirés du modèle actif par V109 au profit du seul
-> `diagnosis`. Les cases ci-dessous conservent la trace historique de V31.
+> `diagnosis`. V109 archive les anciennes valeurs avant suppression des colonnes.
 
 ---
 
@@ -36,7 +36,7 @@ Le CDC définit précisément les données d’une visite (`visit_number`, `pati
 ### Backend
 
 - [x] `VisitEntity` contient les champs `service`, `main_practitioner_id`, `arrival_at` (en plus de `created_at`).
-- [x] `ConsultationEntity` contient `suspected_diagnosis`, `final_diagnosis`, `conclusion` (en plus de `diagnosis`).
+- [x] `ConsultationEntity` contient un seul `diagnosis` et les champs distincts `conclusion`, `advice` et `follow_up`.
 - [x] Les DTOs `CreateVisitRequest`, `VisitResponse`, `SaveConsultationRequest`, `ConsultationResponse` sont mis à jour.
 - [x] L’échelle de douleur 0-10 est ajoutée aux constantes vitales.
 - [x] FR-VISIT-005 : une visite terminée peut être corrigée uniquement via un mécanisme de trace de correction (table `visit_corrections` ou log d’audit explicite avant modification).
@@ -45,7 +45,7 @@ Le CDC définit précisément les données d’une visite (`visit_number`, `pati
 ### Frontend
 
 - [x] Formulaire de création de visite avec `service`, `main_practitioner_id`, `arrival_at`.
-- [x] Formulaire de consultation avec `suspected_diagnosis`, `final_diagnosis`, `conclusion`.
+- [x] Formulaire de consultation avec un seul champ `diagnosis` et une section Plan distincte.
 - [x] Saisie de la douleur (0-10) dans les constantes vitales.
 - [x] Internationalisation FR/EN.
 
@@ -55,7 +55,7 @@ Le CDC définit précisément les données d’une visite (`visit_number`, `pati
 
 ### Backend
 
-1. [x] Migration Flyway additive V31 : ajouter `service`, `main_practitioner_id`, `arrival_at` à `visits` ; `suspected_diagnosis`, `final_diagnosis`, `conclusion` à `consultations` ; `pain_scale` à `vital_signs`.
+1. [x] Migration Flyway V31 pour les champs de visite et la douleur, puis V109 pour archiver et consolider les anciens diagnostics vers `diagnosis`.
 2. [x] Mettre à jour `VisitEntity`, `ConsultationEntity`, `VitalsEntity`.
 3. [x] Mettre à jour DTOs et mappers.
 4. [x] Implémenter la logique de correction traçable : créer `VisitCorrectionEntity` ou log `VISIT_CORRECTION` avant toute modification d’une visite `TERMINEE`.
@@ -102,7 +102,7 @@ Le CDC définit précisément les données d’une visite (`visit_number`, `pati
 
 - [x] Backend : test de création de visite avec tous les nouveaux champs.
 - [x] Backend : test de correction d’une visite terminée avec log d’audit.
-- [x] Backend : test de consultation avec `suspected_diagnosis` / `final_diagnosis`.
+- [x] Backend : tests vérifiant le diagnostic unique et l'absence des anciens champs dans la réponse.
 - [x] Frontend : test des formulaires mis à jour.
 - [x] Frontend : build production OK.
 

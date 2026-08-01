@@ -1,11 +1,12 @@
-# TICKET: MOB-2815 — Assistant Vocal Clinique (Alignement Web Angular)
+# TICKET: MOB-2816 — Assistant Vocal Clinique (Capture, transcription et corrections)
 
 ## Infos
 - Mode: Engineering
 - Date: 2026-07-30
-- Priorité: P1 - Web/Mobile Parity & UX Excellence
-- Statut: IN_REVIEW — widget sous 500 lignes ; ID, cible 300, tests runtime et
-  recette micro/appareil restent ouverts ; voir TASK-20260801
+- Priorité: P0 - Web/Mobile Parity & UX Excellence
+- Statut: IN_REVIEW — ID canonique réconcilié et livraison fusionnée par la PR
+  `#258` ; dépendance MOB-2815, cible 300, tests runtime et recette micro/appareil
+  restent ouverts ; voir TASK-20260801
 - Target Release: candidat MINOR `0.11.0` ; aucune release préparée
 
 ## Description
@@ -26,10 +27,13 @@ Portage et alignement rigoureux du composant d'écoute vocale Angular Web (`Voic
 - [x] Découpage en orchestration (379 lignes), surface d'écoute (326 lignes) et
   widgets de transcription (152 lignes)
 - [x] Analyse Dart ciblée sans diagnostic
+- [x] Réattribution de l'ancien ticket MOB-2815 à MOB-2816, conformément au lot
+  canonique capture/transcription/corrections d'EPIC-0028
 - [ ] Exécution runtime Flutter et recette appareil exact-HEAD
 
 ## Reste à faire
-- Réconcilier l'ID avec la file audio chiffrée MOB-2815 prévue par EPIC-0028.
+- Ne pas déclarer la reprise audio durable disponible avant livraison de la file
+  locale chiffrée canonique MOB-2815 et du contrat segmenté MOB-2814.
 - Poursuivre le découpage de l'orchestration (379) et de la surface d'écoute
   (326) vers la cible d'alerte de 300 lignes.
 - Valider le rendu final sur appareil physique.

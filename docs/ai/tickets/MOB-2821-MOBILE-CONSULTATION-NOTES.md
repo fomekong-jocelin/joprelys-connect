@@ -1,11 +1,12 @@
-# TICKET: MOB-2814 — Saisie & consultation mobile des notes cliniques
+# TICKET: MOB-2821 — Saisie & consultation mobile des notes cliniques
 
 ## Infos
 - Mode: Engineering
 - Date: 2026-07-30
-- Priorité: P1 - Clinical Flow
-- Statut: IN_REVIEW — contrat et UI SOAP alignés ; gates Flutter, Maven et recette
-  cross-stack encore requis avant DONE
+- Priorité: P0 - Clinical Flow
+- Statut: IN_REVIEW — ID canonique créé, contrat et UI SOAP alignés, livraison
+  fusionnée par la PR #258 ; gates Flutter, Maven et recette cross-stack encore
+  requis avant DONE
 - Target Release: candidat MINOR `0.11.0` ; aucune release préparée
 
 ## Description
@@ -30,6 +31,8 @@ Implémentation de l'interface mobile de consultation et saisie des notes cliniq
 - [x] `consultation_notes_sheet.dart` découpé de 573 à 236 lignes
 - [x] Analyse Dart ciblée : aucun diagnostic remonté
 - [x] Migration V109 vérifiée sur H2 2.4.240 : archive alimentée, valeur finale retenue et zéro colonne legacy active
+- [x] Réattribution de l'ancien ticket MOB-2814 à MOB-2821 dans le backlog,
+  les spécifications, le suivi et la PR #258
 - [ ] Exécution runtime des tests Flutter et Maven dans un environnement inscriptible/connecté
 - [ ] Recette Angular ↔ Flutter sur la même consultation
 
@@ -52,8 +55,6 @@ Implémentation de l'interface mobile de consultation et saisie des notes cliniq
 
 ## Reste à faire
 - Faire reviewer la migration ADR-0005 par le Tech Lead backend.
-- Réconcilier l'ID, car MOB-2814 est réservé au contrat backend audio dans
-  EPIC-0028.
 - Exécuter les gates Maven/Flutter dans un environnement autorisé, puis valider
   le flux complet en CI exact-HEAD et recette cross-stack.
 - Planifier le découpage Angular restant sous le seuil d'alerte de 300 lignes.

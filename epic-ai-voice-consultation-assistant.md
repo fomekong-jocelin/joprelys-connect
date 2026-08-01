@@ -58,12 +58,15 @@ sequenceDiagram
 |---|---|---|---|
 | `symptoms` | ✅ Oui | TEXT (5000 max) | "Céphalées intenses depuis 48h avec nausées" |
 | `clinicalExam` | Non | TEXT (5000 max) | "Patient conscient, orienté, tension 14/8, température 37.2" |
-| `suspectedDiagnosis` | Non | TEXT (5000 max) | "Suspicion de migraine avec aura" |
-| `diagnosis` | ✅ Oui | TEXT (5000 max) | "Migraine sans aura, épisode aigu" |
-| `finalDiagnosis` | Non | TEXT (5000 max) | "Migraine épisodique confirmée" |
+| `diagnosis` | ✅ Oui | TEXT (5000 max) | "Migraine sans aura suspectée au vu du tableau clinique" |
 | `conclusion` | Non | TEXT (5000 max) | "Amélioration attendue sous traitement" |
 | `advice` | Non | TEXT (3000 max) | "Repos, hydratation, éviter les écrans" |
 | `followUp` | Non | TEXT (1000 max) | "Contrôle dans 7 jours si persistance" |
+
+Le niveau de certitude est conservé dans le texte de `diagnosis`. Le produit
+n’expose pas de champs distincts « hypothèse », « diagnostic principal » ou
+« diagnostic final » sans workflow clinique formel permettant de les faire
+évoluer.
 
 ---
 

@@ -171,7 +171,7 @@
   "consultation.clinicalNote.examHelp": "Constatations pertinentes de l’examen physique et signes négatifs importants.",
   "consultation.clinicalNote.examPlaceholder": "Ex : abdomen souple, sensibilité en FID sans défense, bruits hydro-aériques présents…",
   "consultation.clinicalNote.assessmentTitle": "A — Évaluation diagnostique",
-  "consultation.clinicalNote.assessmentHelp": "Documentez le diagnostic retenu par le praticien.",
+  "consultation.clinicalNote.assessmentHelp": "Documentez le diagnostic posé par le praticien.",
   "consultation.clinicalNote.diagnosis": "Diagnostic",
   "consultation.clinicalNote.diagnosisPlaceholder": "Ex : appendicite aiguë suspectée au vu du tableau clinique…",
   "consultation.clinicalNote.diagnosisRequired": "Le diagnostic est requis.",

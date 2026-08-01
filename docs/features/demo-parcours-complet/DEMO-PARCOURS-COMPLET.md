@@ -105,7 +105,6 @@ Se connecter en `ADMIN_JOPRELYS` et créer :
 |---|---|
 | Symptômes | Fièvre à 38.7 °C, céphalées, frissons, fatigue |
 | Examen clinique | Conjonctives roses, auscultation pulmonaire normale, abdomen souple |
-| Hypothèse diagnostique | Syndrome palustre |
 | Diagnostic | Paludisme simple confirmé par TDR |
 | Conclusion | Patient stable, traitement antipaludique prescrit |
 | Conseils | Repos, hydratation abondante, revenir en urgence si vomissements |

@@ -24,7 +24,7 @@
   "consultation.ai.reportPartialTitle": "Usable but incomplete clinical report",
   "consultation.ai.reportPartialHelp": "Joprelys preserved the sufficiently grounded facts. You can validate them now or complete missing information before filling the form.",
   "consultation.ai.missingClinicalExam": "Clinical examination",
-  "consultation.ai.missingDiagnosis": "Retained diagnosis",
+  "consultation.ai.missingDiagnosis": "Diagnosis",
   "consultation.ai.completeRecording": "Complete with a new recording",
   "consultation.ai.backToTranscript": "Back to transcript",
   "consultation.ai.validateAndFillForm": "Validate and fill consultation",
