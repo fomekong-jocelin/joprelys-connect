@@ -80,14 +80,21 @@ final class RealtimeSpeechState {
 /// le praticien peut la corriger, puis l'IA génère uniquement des propositions.
 /// Aucune donnée n'est appliquée au formulaire depuis ce service.
 class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
-  ClinicalSpeechService(
-    this._gateway,
-    this._visitId,
-    Map<String, String> initialDraft,
-    this._locale, {
+  ClinicalSpeechService({
+    required ClinicalVoiceAiGateway gateway,
+    required String visitId,
+    required Map<String, String> initialDraft,
+    required String locale,
     AudioRecorder? recorder,
     Future<Directory> Function()? temporaryDirectoryProvider,
-  }) : _initialDraft = Map<String, String>.unmodifiable(initialDraft),
+  }) : // Named public arguments are retained for call-site readability.
+       // ignore: prefer_initializing_formals
+       _gateway = gateway,
+       // ignore: prefer_initializing_formals
+       _visitId = visitId,
+       _initialDraft = Map<String, String>.unmodifiable(initialDraft),
+       // ignore: prefer_initializing_formals
+       _locale = locale,
        _recorder = recorder ?? AudioRecorder(),
        _temporaryDirectoryProvider =
            temporaryDirectoryProvider ?? getTemporaryDirectory,
