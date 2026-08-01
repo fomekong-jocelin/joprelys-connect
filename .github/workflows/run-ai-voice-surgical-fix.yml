@@ -3,7 +3,7 @@ name: Run AI voice surgical fix
 on:
   pull_request:
     branches: [main]
-    types: [synchronize]
+    types: [synchronize, ready_for_review]
 
 permissions:
   contents: write
