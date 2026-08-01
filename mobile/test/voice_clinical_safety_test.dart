@@ -6,24 +6,27 @@ import 'package:joprelys_mobile/features/dashboard/domain/consultation_note.dart
 import 'package:joprelys_mobile/features/dashboard/presentation/widgets/consultation_note_form_controllers.dart';
 
 void main() {
-  test('accepted voice content never overwrites a manual consultation field', () {
-    final controllers = ConsultationNoteFormControllers();
-    addTearDown(controllers.dispose);
+  test(
+    'accepted voice content never overwrites a manual consultation field',
+    () {
+      final controllers = ConsultationNoteFormControllers();
+      addTearDown(controllers.dispose);
 
-    controllers.symptoms.text = 'Saisie manuelle récente';
+      controllers.symptoms.text = 'Saisie manuelle récente';
 
-    final changed = controllers.applyAcceptedToEmptyFields(
-      const ConsultationNote(
-        symptoms: 'Proposition vocale obsolète',
-        diagnosis: 'Paludisme simple',
-      ),
-    );
+      final changed = controllers.applyAcceptedToEmptyFields(
+        const ConsultationNote(
+          symptoms: 'Proposition vocale obsolète',
+          diagnosis: 'Paludisme simple',
+        ),
+      );
 
-    expect(changed, isTrue);
-    expect(controllers.symptoms.text, 'Saisie manuelle récente');
-    expect(controllers.diagnosis.text, 'Paludisme simple');
-    expect(controllers.toAiDraft()['symptoms'], 'Saisie manuelle récente');
-  });
+      expect(changed, isTrue);
+      expect(controllers.symptoms.text, 'Saisie manuelle récente');
+      expect(controllers.diagnosis.text, 'Paludisme simple');
+      expect(controllers.toAiDraft()['symptoms'], 'Saisie manuelle récente');
+    },
+  );
 
   test('pending AI proposals stay separate from the accepted draft', () {
     final state = ClinicalAiState.fromJson({
@@ -52,10 +55,7 @@ void main() {
               'field': 'vitals',
               'operation': 'SET',
               'previousValue': null,
-              'proposedValue': jsonEncode({
-                'temperature': 38.5,
-                'pulse': 92,
-              }),
+              'proposedValue': jsonEncode({'temperature': 38.5, 'pulse': 92}),
               'reason': 'Valeurs explicitement dictées',
               'uncertainty': 'LOW',
               'status': 'PENDING',
