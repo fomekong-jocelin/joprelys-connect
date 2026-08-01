@@ -62,10 +62,9 @@ String? _formatPrescription(Object? decoded, bool isFrench) {
     ];
 
     final title = name ?? (isFrench ? 'Médicament' : 'Medication');
-    lines.add(<String>[
-      title,
-      for (final detail in details) '• $detail',
-    ].join('\n'));
+    lines.add(
+      <String>[title, for (final detail in details) '• $detail'].join('\n'),
+    );
   }
   return lines.isEmpty ? null : lines.join('\n\n');
 }
@@ -91,14 +90,15 @@ String? _formatVitals(Object? decoded, bool isFrench) {
     'diastolic': isFrench ? 'Diastolique' : 'Diastolic',
     'spo2': 'SpO₂',
     'glycemia': isFrench ? 'Glycémie' : 'Glycemia',
-    'respiratoryRate': isFrench
-        ? 'Fréquence respiratoire'
-        : 'Respiratory rate',
+    'respiratoryRate': isFrench ? 'Fréquence respiratoire' : 'Respiratory rate',
     'painScale': isFrench ? 'Douleur' : 'Pain scale',
   };
   final items = decoded.entries
       .where((entry) => entry.value != null)
-      .map((entry) => '${labels[entry.key.toString()] ?? entry.key}: ${entry.value}')
+      .map(
+        (entry) =>
+            '${labels[entry.key.toString()] ?? entry.key}: ${entry.value}',
+      )
       .toList(growable: false);
   return items.isEmpty ? null : items.join(' · ');
 }

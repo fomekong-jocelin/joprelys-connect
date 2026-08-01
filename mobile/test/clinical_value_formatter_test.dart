@@ -34,9 +34,6 @@ void main() {
   test('keeps an invalid legacy value visible instead of losing it', () {
     const raw = '{drugName: Doliprane, dosage: 100 mg}';
 
-    expect(
-      formatClinicalValue('prescription', raw, isFrench: true),
-      raw,
-    );
+    expect(formatClinicalValue('prescription', raw, isFrench: true), raw);
   });
 }
