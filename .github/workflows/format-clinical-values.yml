@@ -1,0 +1,38 @@
+name: Format clinical Flutter values
+
+on:
+  push:
+    branches:
+      - fix/mobile-voice-clinical-safety
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/mobile-voice-clinical-safety
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+      - name: Format targeted Dart files
+        working-directory: mobile
+        run: dart format lib/features/dashboard/application/clinical_value_formatter.dart test/clinical_value_formatter_test.dart
+      - name: Commit formatted files and remove workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/format-clinical-values.yml
+          git add mobile/lib/features/dashboard/application/clinical_value_formatter.dart \
+                  mobile/test/clinical_value_formatter_test.dart \
+                  .github/workflows/format-clinical-values.yml
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "style(mobile): formater le rendu clinique"
+          git push origin HEAD:fix/mobile-voice-clinical-safety
