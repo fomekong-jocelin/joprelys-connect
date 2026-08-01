@@ -1,15 +1,16 @@
 name: Format clinical Flutter values
 
 on:
-  push:
-    branches:
-      - fix/mobile-voice-clinical-safety
+  pull_request:
+    types:
+      - ready_for_review
 
 permissions:
   contents: write
 
 jobs:
   format:
+    if: github.event.pull_request.number == 260
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,8 +32,5 @@ jobs:
           git add mobile/lib/features/dashboard/application/clinical_value_formatter.dart \
                   mobile/test/clinical_value_formatter_test.dart \
                   .github/workflows/format-clinical-values.yml
-          if git diff --cached --quiet; then
-            exit 0
-          fi
           git commit -m "style(mobile): formater le rendu clinique"
           git push origin HEAD:fix/mobile-voice-clinical-safety
