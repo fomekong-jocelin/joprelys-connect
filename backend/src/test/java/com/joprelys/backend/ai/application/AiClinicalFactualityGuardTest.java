@@ -38,6 +38,52 @@ class AiClinicalFactualityGuardTest {
     }
 
     @Test
+    void shouldRetainExactSymptomsWhenModelUsesUnspokenMedicalSynonym() {
+        ParsedResponse response = response(new ParsedChange(
+                "symptoms",
+                "SET",
+                "céphalées depuis trois jours",
+                "Medical reformulation",
+                "LOW",
+                List.of("maux de tête depuis trois jours")));
+
+        ParsedResponse checked = guard.enforce(
+                response,
+                "Le patient décrit des maux de tête depuis trois jours.",
+                Map.of(),
+                "CAPTURE",
+                "fr");
+
+        assertEquals(1, checked.changes().size());
+        assertEquals(
+                "maux de tête depuis trois jours",
+                checked.changes().getFirst().proposedValue());
+    }
+
+    @Test
+    void shouldRetainAllSymptomEvidenceWhenModelSummaryOmitsOne() {
+        ParsedResponse response = response(new ParsedChange(
+                "symptoms",
+                "SET",
+                "maux de tête depuis trois jours",
+                "Incomplete summary",
+                "LOW",
+                List.of("maux de tête depuis trois jours", "pas de vertiges")));
+
+        ParsedResponse checked = guard.enforce(
+                response,
+                "Le patient a des maux de tête depuis trois jours et ne présente pas de vertiges.",
+                Map.of(),
+                "CAPTURE",
+                "fr");
+
+        assertEquals(1, checked.changes().size());
+        assertEquals(
+                "maux de tête depuis trois jours\npas de vertiges",
+                checked.changes().getFirst().proposedValue());
+    }
+
+    @Test
     void shouldBlockInventedDiagnosisEvenWithValidJson() {
         ParsedResponse response = response(new ParsedChange(
                 "diagnosis",
@@ -58,7 +104,7 @@ class AiClinicalFactualityGuardTest {
     }
 
     @Test
-    void shouldBlockUnsupportedTermEvenInAdviceField() {
+    void shouldKeepExactAdviceEvidenceWhenModelAddsUnsupportedTerm() {
         ParsedResponse response = response(new ParsedChange(
                 "advice",
                 "SET",
@@ -74,11 +120,12 @@ class AiClinicalFactualityGuardTest {
                 "TEXT",
                 "fr");
 
-        assertTrue(checked.changes().isEmpty());
+        assertEquals(1, checked.changes().size());
+        assertEquals("hydratation", checked.changes().getFirst().proposedValue());
     }
 
     @Test
-    void shouldBlockNegationReversal() {
+    void shouldRetainExactNegatedSymptomWhenModelReversesIt() {
         ParsedResponse response = response(new ParsedChange(
                 "symptoms",
                 "SET",
@@ -94,7 +141,10 @@ class AiClinicalFactualityGuardTest {
                 "REALTIME",
                 "fr");
 
-        assertTrue(checked.changes().isEmpty());
+        assertEquals(1, checked.changes().size());
+        assertEquals(
+                "patient sans fievre",
+                checked.changes().getFirst().proposedValue());
     }
 
     @Test
