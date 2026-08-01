@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -20,6 +21,25 @@ abstract interface class ClinicalVoiceAiGateway {
     Map<String, String> draft, {
     required String locale,
   });
+
+  Future<String> createRealtimeCall(
+    String visitId,
+    String locale,
+    String sdpOffer,
+  );
+
+  Future<ClinicalLiveTranscript?> getLiveTranscript(String visitId);
+
+  Future<void> upsertLiveTranscript(
+    String visitId, {
+    required String transcript,
+    required int sequence,
+    required String eventId,
+  });
+
+  Future<void> clearLiveTranscript(String visitId);
+
+  Future<void> stageRealtimeTranscript(String visitId, String transcript);
 
   Future<String> transcribeAudio(String visitId, Uint8List audioBytes);
 
@@ -48,6 +68,27 @@ extension ClinicalAiDecisionWire on ClinicalAiDecision {
     ClinicalAiDecision.accept => 'ACCEPT',
     ClinicalAiDecision.reject => 'REJECT',
   };
+}
+
+@immutable
+final class ClinicalLiveTranscript {
+  const ClinicalLiveTranscript({
+    required this.transcript,
+    required this.sequence,
+    required this.eventId,
+  });
+
+  factory ClinicalLiveTranscript.fromJson(Map<String, dynamic> json) {
+    return ClinicalLiveTranscript(
+      transcript: json['transcript']?.toString().trim() ?? '',
+      sequence: (json['sequence'] as num?)?.toInt() ?? 0,
+      eventId: json['eventId']?.toString() ?? '',
+    );
+  }
+
+  final String transcript;
+  final int sequence;
+  final String eventId;
 }
 
 @immutable
@@ -262,6 +303,80 @@ final class ClinicalVoiceAiApi implements ClinicalVoiceAiGateway {
       data: <String, dynamic>{'draft': draft, 'locale': locale},
     );
     return _stateFrom(response.data, 'Invalid AI session response');
+  }
+
+  @override
+  Future<String> createRealtimeCall(
+    String visitId,
+    String locale,
+    String sdpOffer,
+  ) async {
+    final response = await _client.post<String>(
+      '/api/ai/realtime/consultations/$visitId/calls',
+      queryParameters: <String, dynamic>{'locale': locale},
+      data: sdpOffer,
+      headers: const <String, dynamic>{
+        'Content-Type': 'application/sdp',
+        'Accept': 'application/sdp',
+      },
+      responseType: ResponseType.plain,
+    );
+    final answer = response.data?.trim();
+    if (answer == null || answer.isEmpty) {
+      throw const FormatException('Empty realtime SDP response');
+    }
+    return answer;
+  }
+
+  @override
+  Future<ClinicalLiveTranscript?> getLiveTranscript(String visitId) async {
+    final response = await _client.get<dynamic>(
+      '/api/ai/consultations/$visitId/transcriptions/live',
+    );
+    final data = response.data;
+    if (data == null) return null;
+    if (data is! Map) {
+      throw const FormatException('Invalid live transcript response');
+    }
+    final snapshot = ClinicalLiveTranscript.fromJson(
+      Map<String, dynamic>.from(data),
+    );
+    return snapshot.transcript.isEmpty ? null : snapshot;
+  }
+
+  @override
+  Future<void> upsertLiveTranscript(
+    String visitId, {
+    required String transcript,
+    required int sequence,
+    required String eventId,
+  }) async {
+    await _client.put<dynamic>(
+      '/api/ai/consultations/$visitId/transcriptions/live',
+      data: <String, dynamic>{
+        'transcript': transcript,
+        'sequence': sequence,
+        'eventId': eventId,
+      },
+    );
+  }
+
+  @override
+  Future<void> clearLiveTranscript(String visitId) async {
+    await _client.delete<void>(
+      '/api/ai/consultations/$visitId/transcriptions/live',
+    );
+  }
+
+  @override
+  Future<void> stageRealtimeTranscript(
+    String visitId,
+    String transcript,
+  ) async {
+    await _client.post<dynamic>(
+      '/api/ai/consultations/$visitId/transcriptions/realtime',
+      data: <String, dynamic>{'transcript': transcript},
+    );
   }
 
   @override
