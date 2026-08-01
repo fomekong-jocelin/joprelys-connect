@@ -137,11 +137,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     if (_sessionReady || _disposed) return;
     value = value.copyWith(status: SpeechStatus.processing, clearError: true);
     try {
-      await _gateway.startSession(
-        _visitId,
-        _initialDraft,
-        locale: _locale,
-      );
+      await _gateway.startSession(_visitId, _initialDraft, locale: _locale);
       _sessionReady = true;
       value = value.copyWith(status: SpeechStatus.idle, clearError: true);
     } catch (error) {
