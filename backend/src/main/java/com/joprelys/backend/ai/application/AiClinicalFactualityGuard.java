@@ -168,7 +168,8 @@ final class AiClinicalFactualityGuard {
     }
 
     private ParsedChange exactEvidenceFallback(ParsedChange change) {
-        if (!EVIDENCE_FALLBACK_FIELDS.contains(change.field())) {
+        if (!EVIDENCE_FALLBACK_FIELDS.contains(change.field())
+                || !hasMeaningfulEvidenceOverlap(change)) {
             return null;
         }
         Map<String, String> exactQuotes = new LinkedHashMap<>();
@@ -189,6 +190,22 @@ final class AiClinicalFactualityGuard {
                 change.reason(),
                 change.uncertainty(),
                 change.evidence());
+    }
+
+    private boolean hasMeaningfulEvidenceOverlap(ParsedChange change) {
+        Set<String> proposedTokens = significantTokens(change.proposedValue());
+        proposedTokens.removeAll(SAFE_GLUE_WORDS);
+        if (proposedTokens.isEmpty()) {
+            return false;
+        }
+        for (String quote : change.evidence()) {
+            Set<String> evidenceTokens = significantTokens(quote);
+            evidenceTokens.removeAll(SAFE_GLUE_WORDS);
+            if (proposedTokens.stream().anyMatch(evidenceTokens::contains)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private ParsedChange sanitizeStructuredChange(ParsedChange change, String authorizedSource) {
