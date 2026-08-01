@@ -28,6 +28,7 @@ final class AiTranscriptionWorkflow {
             byte[] audio,
             String contentType) {
         String normalizedMime = AiConsultationInputValidator.normalizeMimeType(contentType);
+        AiAudioSilenceGuard.rejectSilentPcmWav(audio, normalizedMime);
         try {
             AiTranscription transcription = aiProvider.transcribeAudio(
                     audio, normalizedMime, state.locale);
