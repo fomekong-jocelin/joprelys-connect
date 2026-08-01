@@ -18,11 +18,7 @@ void main() {
         'arrivalAt': '2026-07-30T08:15:00Z',
         'createdAt': '2026-07-30T08:10:00Z',
         'closedAt': null,
-        'vitals': {
-          'temperature': 38.2,
-          'pulse': 92,
-          'spo2': 98,
-        },
+        'vitals': {'temperature': 38.2, 'pulse': 92, 'spo2': 98},
       });
 
       expect(visit.id, 'visit-1');

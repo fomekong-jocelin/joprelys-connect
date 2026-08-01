@@ -23,7 +23,9 @@ final class VitalsApi implements VitalsGateway {
   @override
   Future<PatientVitals?> getVitals(String visitId) async {
     try {
-      final response = await _client.get<dynamic>('/api/visits/$visitId/vitals');
+      final response = await _client.get<dynamic>(
+        '/api/visits/$visitId/vitals',
+      );
       final data = response.data;
       if (data == null) return null;
       if (data is! Map) {

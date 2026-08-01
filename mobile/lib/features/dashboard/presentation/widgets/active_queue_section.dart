@@ -50,7 +50,9 @@ class _ActiveQueueSectionState extends ConsumerState<ActiveQueueSection> {
 
     try {
       final gateway = ref.read(patientDirectoryApiProvider);
-      final results = await gateway.searchPatients(query: query ?? _searchController.text);
+      final results = await gateway.searchPatients(
+        query: query ?? _searchController.text,
+      );
       if (mounted) {
         setState(() {
           _directoryResults = results;
@@ -61,7 +63,10 @@ class _ActiveQueueSectionState extends ConsumerState<ActiveQueueSection> {
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         setState(() {
-          _directoryError = e is ApiException && e.message.isNotEmpty && !e.message.startsWith('ApiException')
+          _directoryError =
+              e is ApiException &&
+                  e.message.isNotEmpty &&
+                  !e.message.startsWith('ApiException')
               ? e.message
               : l10n.dashboardQueueLoadError;
           _directoryLoading = false;
@@ -122,8 +127,10 @@ class _ActiveQueueSectionState extends ConsumerState<ActiveQueueSection> {
                 : null,
             filled: true,
             fillColor: colors.surfaceContainerHighest.withValues(alpha: 0.35),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppDesignTokens.radiusMd),
               borderSide: BorderSide(
@@ -159,7 +166,8 @@ class _ActiveQueueSectionState extends ConsumerState<ActiveQueueSection> {
             children: [
               Expanded(
                 child: _TabSegmentButton(
-                  label: '${l10n.directoryTabActiveQueue} (${filteredVisits.length})',
+                  label:
+                      '${l10n.directoryTabActiveQueue} (${filteredVisits.length})',
                   icon: Icons.people_alt_rounded,
                   selected: _selectedTabIndex == 0,
                   onTap: () {
@@ -332,8 +340,11 @@ class _DirectoryContent extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(Icons.search_off_rounded,
-                size: 40, color: colors.onSurfaceVariant),
+            Icon(
+              Icons.search_off_rounded,
+              size: 40,
+              color: colors.onSurfaceVariant,
+            ),
             const SizedBox(height: 8),
             Text(
               l10n.directoryEmptyText,
@@ -426,8 +437,7 @@ class _PatientDirectoryCard extends StatelessWidget {
                 height: 38,
                 decoration: BoxDecoration(
                   color: colors.primary.withValues(alpha: 0.1),
-                  borderRadius:
-                      BorderRadius.circular(AppDesignTokens.radiusSm),
+                  borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
                 ),
                 alignment: Alignment.center,
                 child: Text(
@@ -466,12 +476,15 @@ class _PatientDirectoryCard extends StatelessWidget {
               // Queue badge if active
               if (isCurrentlyInQueue)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: colors.primary.withValues(alpha: 0.1),
-                    borderRadius:
-                        BorderRadius.circular(AppDesignTokens.radiusSm),
+                    borderRadius: BorderRadius.circular(
+                      AppDesignTokens.radiusSm,
+                    ),
                     border: Border.all(
                       color: colors.primary.withValues(alpha: 0.3),
                     ),
@@ -499,8 +512,11 @@ class _PatientDirectoryCard extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.phone_rounded,
-                        size: 13, color: colors.onSurfaceVariant),
+                    Icon(
+                      Icons.phone_rounded,
+                      size: 13,
+                      color: colors.onSurfaceVariant,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       patient.phone!,
@@ -515,8 +531,11 @@ class _PatientDirectoryCard extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.bloodtype_rounded,
-                        size: 13, color: colors.error),
+                    Icon(
+                      Icons.bloodtype_rounded,
+                      size: 13,
+                      color: colors.error,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Groupe ${patient.bloodGroup}',
@@ -867,7 +886,9 @@ class _ActiveVisitCard extends StatelessWidget {
     final colors = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
 
-    final arrivalFormatted = DateFormat.Hm(l10n.localeName).format(visit.queueSince.toLocal());
+    final arrivalFormatted = DateFormat.Hm(
+      l10n.localeName,
+    ).format(visit.queueSince.toLocal());
     final isVitalsDone = visit.hasVitals;
     final badgeColor = isVitalsDone ? AppDesignTokens.success : colors.tertiary;
 
@@ -900,8 +921,9 @@ class _ActiveVisitCard extends StatelessWidget {
                       height: 40,
                       decoration: BoxDecoration(
                         color: colors.primary.withValues(alpha: 0.1),
-                        borderRadius:
-                            BorderRadius.circular(AppDesignTokens.radiusSm),
+                        borderRadius: BorderRadius.circular(
+                          AppDesignTokens.radiusSm,
+                        ),
                       ),
                       alignment: Alignment.center,
                       child: Text(
@@ -946,8 +968,9 @@ class _ActiveVisitCard extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: badgeColor.withValues(alpha: 0.12),
-                        borderRadius:
-                            BorderRadius.circular(AppDesignTokens.radiusSm),
+                        borderRadius: BorderRadius.circular(
+                          AppDesignTokens.radiusSm,
+                        ),
                         border: Border.all(
                           color: badgeColor.withValues(alpha: 0.3),
                         ),
@@ -1034,10 +1057,8 @@ class _ActiveVisitCard extends StatelessWidget {
                           label: l10n.dashboardQueueActionHistory,
                           color: colors.tertiary,
                           compact: isCompactWidth,
-                          onTap: () => PatientHistorySheet.show(
-                            context,
-                            visit: visit,
-                          ),
+                          onTap: () =>
+                              PatientHistorySheet.show(context, visit: visit),
                         ),
                       ),
                     ];
@@ -1145,17 +1166,17 @@ class _QueueEmpty extends StatelessWidget {
           const SizedBox(height: AppDesignTokens.spaceSm),
           Text(
             l10n.dashboardQueueEmptyTitle,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 4),
           Text(
             l10n.dashboardQueueEmptyBody,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: colors.onSurfaceVariant,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
           ),
         ],
       ),
@@ -1187,9 +1208,9 @@ class _QueueError extends StatelessWidget {
           Text(
             l10n.dashboardQueueLoadError,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: colors.onErrorContainer,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.onErrorContainer),
           ),
           const SizedBox(height: AppDesignTokens.spaceMd),
           AppButton(

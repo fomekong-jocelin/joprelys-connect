@@ -191,15 +191,18 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
       visit: widget.visit,
       onExtracted: (result) {
         final v = result.vitals;
-        if (v.temperature != null) _tempController.text = v.temperature.toString();
+        if (v.temperature != null)
+          _tempController.text = v.temperature.toString();
         if (v.pulse != null) _pulseController.text = v.pulse.toString();
         if (v.weight != null) _weightController.text = v.weight.toString();
         if (v.height != null) _heightController.text = v.height.toString();
         if (v.systolic != null) _sysController.text = v.systolic.toString();
         if (v.diastolic != null) _diaController.text = v.diastolic.toString();
         if (v.spo2 != null) _spo2Controller.text = v.spo2.toString();
-        if (v.glycemia != null) _glycemiaController.text = v.glycemia.toString();
-        if (v.respiratoryRate != null) _respController.text = v.respiratoryRate.toString();
+        if (v.glycemia != null)
+          _glycemiaController.text = v.glycemia.toString();
+        if (v.respiratoryRate != null)
+          _respController.text = v.respiratoryRate.toString();
         if (v.painScale != null) _painController.text = v.painScale.toString();
         _recalculateBmi();
       },
@@ -208,7 +211,10 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
 
   String _formattedReference(String visitNum, String rawDpu) {
     var cleaned = rawDpu.trim();
-    cleaned = cleaned.replaceAll(RegExp(r'^(DPU[\s\-]*)+', caseSensitive: false), 'DPU-');
+    cleaned = cleaned.replaceAll(
+      RegExp(r'^(DPU[\s\-]*)+', caseSensitive: false),
+      'DPU-',
+    );
     if (!cleaned.toUpperCase().startsWith('DPU-')) {
       cleaned = 'DPU-$cleaned';
     }
@@ -313,17 +319,17 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
                                     l10n.vitalsBmiLabel,
                                     style: theme.textTheme.labelMedium
                                         ?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      color: colors.primary,
-                                    ),
+                                          fontWeight: FontWeight.w700,
+                                          color: colors.primary,
+                                        ),
                                   ),
                                   Text(
                                     '${_calculatedBmi!.toStringAsFixed(1)} kg/m²',
                                     style: theme.textTheme.titleMedium
                                         ?.copyWith(
-                                      fontWeight: FontWeight.w900,
-                                      color: colors.primary,
-                                    ),
+                                          fontWeight: FontWeight.w900,
+                                          color: colors.primary,
+                                        ),
                                   ),
                                 ],
                               ),
@@ -339,8 +345,8 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
                                   controller: _tempController,
                                   keyboardType:
                                       const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
+                                        decimal: true,
+                                      ),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -364,8 +370,8 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
                                   controller: _weightController,
                                   keyboardType:
                                       const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
+                                        decimal: true,
+                                      ),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -420,8 +426,8 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
                                   controller: _glycemiaController,
                                   keyboardType:
                                       const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
+                                        decimal: true,
+                                      ),
                                 ),
                               ),
                             ],

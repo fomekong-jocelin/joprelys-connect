@@ -22,12 +22,13 @@ final class PatientDirectoryItem {
   final String? medicalHistory;
 
   factory PatientDirectoryItem.fromJson(Map<String, dynamic> json) {
-    final dpu = (json['localPatientNumber'] ??
-            json['globalPatientNumber'] ??
-            json['temporaryPatientNumber'] ??
-            '')
-        .toString()
-        .trim();
+    final dpu =
+        (json['localPatientNumber'] ??
+                json['globalPatientNumber'] ??
+                json['temporaryPatientNumber'] ??
+                '')
+            .toString()
+            .trim();
     final name = (json['displayName'] ?? json['fullName'] ?? '')
         .toString()
         .trim();

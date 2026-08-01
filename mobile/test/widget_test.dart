@@ -31,6 +31,10 @@ void main() {
     expect(find.text('EN'), findsOneWidget);
     expect(find.text('MOB-2805'), findsNothing);
     expect(find.byType(AppTextField), findsNWidgets(2));
+    expect(
+      find.byKey(const ValueKey('app-brand-wordmark-light')),
+      findsOneWidget,
+    );
 
     final themeControl = tester.getCenter(
       find.byIcon(Icons.brightness_auto_outlined),
@@ -159,7 +163,9 @@ Widget _buildApp(
       authControllerProvider.overrideWith(
         () => _FakeAuthController(initialState),
       ),
-      activeVisitsApiProvider.overrideWithValue(_FakeActiveVisitsGateway(visits)),
+      activeVisitsApiProvider.overrideWithValue(
+        _FakeActiveVisitsGateway(visits),
+      ),
     ],
     child: const JoprelysApp(),
   );

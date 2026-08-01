@@ -51,8 +51,16 @@ abstract final class AppTheme {
               : AppDesignTokens.brandNight,
           surface: surface,
           onSurface: text,
-          error: AppDesignTokens.error,
+          error: brightness == Brightness.light
+              ? AppDesignTokens.error
+              : AppDesignTokens.errorDark,
           onError: AppDesignTokens.onStrongColor,
+          errorContainer: brightness == Brightness.light
+              ? const Color(0xFFFEE2E2)
+              : const Color(0xFF3B1219),
+          onErrorContainer: brightness == Brightness.light
+              ? const Color(0xFF991B1B)
+              : const Color(0xFFFCA5A5),
           outline: outline,
         );
 

@@ -166,6 +166,8 @@ class _ConsultationNotesSheetState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        ConsultationReasonBanner(reason: widget.visit.reason),
+                        const SizedBox(height: 12),
                         ConsultationNotesForm(
                           formKey: _formKey,
                           controllers: _controllers,
@@ -208,11 +210,11 @@ class _ErrorNotice extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: colors.error.withValues(alpha: 0.08),
+        color: colors.errorContainer,
         borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
-        border: Border.all(color: colors.error.withValues(alpha: 0.3)),
+        border: Border.all(color: colors.error.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,15 +222,27 @@ class _ErrorNotice extends StatelessWidget {
           Text(
             message,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: colors.error,
+              color: colors.onErrorContainer,
               fontWeight: FontWeight.w600,
             ),
           ),
-          if (onRetry != null)
+          if (onRetry != null) ...[
+            const SizedBox(height: 4),
             TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: colors.onErrorContainer,
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(0, 32),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                alignment: Alignment.centerLeft,
+              ),
               onPressed: onRetry,
-              child: Text(AppLocalizations.of(context).dashboardQueueRetry),
+              child: Text(
+                AppLocalizations.of(context).dashboardQueueRetry,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
+          ],
         ],
       ),
     );

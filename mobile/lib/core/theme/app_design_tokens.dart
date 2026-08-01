@@ -29,6 +29,7 @@ abstract final class AppDesignTokens {
   static const Color success = brandGreen;
   static const Color warning = Color(0xFFD97706);
   static const Color error = Color(0xFFDC2626);
+  static const Color errorDark = Color(0xFFFCA5A5);
   static const Color info = Color(0xFF2563EB);
   static const Color onStrongColor = Color(0xFFFFFFFF);
 

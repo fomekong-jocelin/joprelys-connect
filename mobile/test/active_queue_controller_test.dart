@@ -36,11 +36,11 @@ void main() {
       _visit('first', DateTime.utc(2026, 7, 30, 8)),
     ];
 
-    await container
-        .read(activeQueueControllerProvider.notifier)
-        .refreshQueue();
+    await container.read(activeQueueControllerProvider.notifier).refreshQueue();
 
-    final refreshed = container.read(activeQueueControllerProvider).requireValue;
+    final refreshed = container
+        .read(activeQueueControllerProvider)
+        .requireValue;
     expect(refreshed.map((visit) => visit.id), ['first', 'second']);
     expect(gateway.calls, 2);
   });

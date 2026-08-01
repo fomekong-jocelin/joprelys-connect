@@ -10,62 +10,87 @@ import 'package:joprelys_mobile/features/auth/domain/professional_session.dart';
 import 'package:joprelys_mobile/features/dashboard/application/active_queue_controller.dart';
 import 'package:joprelys_mobile/features/dashboard/data/active_visits_api.dart';
 import 'package:joprelys_mobile/features/dashboard/domain/active_visit.dart';
+import 'package:joprelys_mobile/features/foundation/presentation/widgets/professional_app_bar.dart';
 
 void main() {
-  testWidgets('dashboard renders the queue without overlap on a phone viewport', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(393, 852);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    addTearDown(tester.view.resetPhysicalSize);
+  testWidgets(
+    'dashboard renders the queue without overlap on a phone viewport',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(360, 800);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
 
-    final session = ProfessionalSession(
-      accessToken: 'fixture-access-token',
-      expiresAt: DateTime.utc(2030),
-      email: 'charmande@example.test',
-      name: 'NOUPOUE Charmande',
-      role: 'MEDECIN',
-    );
+      final session = ProfessionalSession(
+        accessToken: 'fixture-access-token',
+        expiresAt: DateTime.utc(2030),
+        email: 'charmande@example.test',
+        name: 'NOUPOUE Charmande',
+        role: 'MEDECIN',
+      );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          platformLocaleProvider.overrideWithValue(const Locale('fr')),
-          themeModeProvider.overrideWith(_DarkThemeController.new),
-          authControllerProvider.overrideWith(
-            () => _FakeAuthController(AuthState.authenticated(session)),
-          ),
-          activeVisitsApiProvider.overrideWithValue(
-            _FakeActiveVisitsGateway([
-              ActiveVisit(
-                id: 'visit-1',
-                visitNumber: 'VIS-20260725-001',
-                patientId: 'patient-1',
-                patientName: 'MOMO Allons',
-                patientDpu: 'DPU-001',
-                reason: 'Fièvre',
-                orientation: 'Médecine générale',
-                service: 'Médecine générale',
-                status: 'ACTIVE',
-                arrivalAt: DateTime.utc(2026, 7, 30, 13, 23),
-                createdAt: DateTime.utc(2026, 7, 30, 13, 20),
-                vitals: const VisitVitals(temperature: 38.2),
-              ),
-            ]),
-          ),
-        ],
-        child: const JoprelysApp(),
-      ),
-    );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            platformLocaleProvider.overrideWithValue(const Locale('fr')),
+            themeModeProvider.overrideWith(_DarkThemeController.new),
+            authControllerProvider.overrideWith(
+              () => _FakeAuthController(AuthState.authenticated(session)),
+            ),
+            activeVisitsApiProvider.overrideWithValue(
+              _FakeActiveVisitsGateway([
+                _visit(1, 'MOMO Allons', 'Fièvre'),
+                _visit(2, 'MANI Alime', 'Contrôle'),
+                _visit(3, 'Patient Test', 'Consultation'),
+              ]),
+            ),
+          ],
+          child: const JoprelysApp(),
+        ),
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
-    expect(find.text('MOMO Allons'), findsOneWidget);
-    expect(find.text('Fièvre'), findsOneWidget);
-    expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
-  });
+      expect(tester.takeException(), isNull);
+      expect(find.text('MOMO Allons'), findsOneWidget);
+      expect(find.text('Fièvre'), findsOneWidget);
+      expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
+      expect(find.byType(ProfessionalAppBar), findsOneWidget);
+      expect(find.byKey(const ValueKey('app-brand-mark-dark')), findsOneWidget);
+
+      final appBarTop = tester.getTopLeft(find.byType(ProfessionalAppBar));
+      final greeting = find.byKey(
+        const ValueKey('professional-dashboard-greeting'),
+      );
+      final greetingTop = tester.getTopLeft(greeting);
+
+      await tester.drag(
+        find.byKey(const ValueKey('professional-dashboard-scroll')),
+        const Offset(0, -260),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.getTopLeft(find.byType(ProfessionalAppBar)), appBarTop);
+      expect(tester.getTopLeft(greeting).dy, lessThan(greetingTop.dy));
+    },
+  );
+}
+
+ActiveVisit _visit(int index, String patientName, String reason) {
+  return ActiveVisit(
+    id: 'visit-$index',
+    visitNumber: 'VIS-20260725-00$index',
+    patientId: 'patient-$index',
+    patientName: patientName,
+    patientDpu: 'DPU-00$index',
+    reason: reason,
+    orientation: 'Médecine générale',
+    service: 'Médecine générale',
+    status: 'ACTIVE',
+    arrivalAt: DateTime.utc(2026, 7, 30, 13, 20 + index),
+    createdAt: DateTime.utc(2026, 7, 30, 13, 20),
+    vitals: index == 1 ? const VisitVitals(temperature: 38.2) : null,
+  );
 }
 
 final class _DarkThemeController extends ThemeController {

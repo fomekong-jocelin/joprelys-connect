@@ -7,10 +7,10 @@ abstract final class AppConfig {
   static const String productName = 'Connect';
   static const String appName = '$appShortName $productName';
 
-  static const String logoAsset = 'assets/branding/logo_principal.png';
-  static const String logoOnDarkAsset =
-      'assets/branding/logo_white_blue_bg.png';
-  static const String logoIconAsset = 'assets/branding/logo_icon.png';
+  static const String logoOnLightAsset = 'assets/branding/logo_principal.png';
+  static const String logoOnDarkAsset = 'assets/branding/logo_principal.png';
+  static const String logoIconOnLightAsset = 'assets/branding/logo_icon.png';
+  static const String logoIconOnDarkAsset = 'assets/branding/logo_icon.png';
 
   static const Locale defaultLocale = Locale('fr');
   static const List<Locale> supportedLocales = <Locale>[

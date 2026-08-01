@@ -23,10 +23,10 @@ final class MedicalAntecedent {
   }
 
   Map<String, dynamic> toJson() => {
-        'type': type,
-        'description': description,
-        if (diagnosedYear != null) 'diagnosedYear': diagnosedYear,
-      };
+    'type': type,
+    'description': description,
+    if (diagnosedYear != null) 'diagnosedYear': diagnosedYear,
+  };
 }
 
 @immutable
@@ -57,10 +57,10 @@ final class PatientAllergy {
   }
 
   Map<String, dynamic> toJson() => {
-        'allergen': allergen,
-        'severity': severity.name.toUpperCase(),
-        if (reaction != null) 'reaction': reaction,
-      };
+    'allergen': allergen,
+    'severity': severity.name.toUpperCase(),
+    if (reaction != null) 'reaction': reaction,
+  };
 }
 
 @immutable
@@ -102,16 +102,16 @@ final class PastVisitSummary {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'visitNumber': visitNumber,
-        'date': date.toIso8601String(),
-        'practitionerName': practitionerName,
-        'chiefComplaint': chiefComplaint,
-        if (temperature != null) 'temperature': temperature,
-        if (systolic != null) 'systolic': systolic,
-        if (diastolic != null) 'diastolic': diastolic,
-        if (pulse != null) 'pulse': pulse,
-      };
+    'id': id,
+    'visitNumber': visitNumber,
+    'date': date.toIso8601String(),
+    'practitionerName': practitionerName,
+    'chiefComplaint': chiefComplaint,
+    if (temperature != null) 'temperature': temperature,
+    if (systolic != null) 'systolic': systolic,
+    if (diastolic != null) 'diastolic': diastolic,
+    if (pulse != null) 'pulse': pulse,
+  };
 }
 
 @immutable
@@ -133,17 +133,20 @@ final class PatientMedicalHistory {
   final List<PastVisitSummary> pastVisits;
 
   factory PatientMedicalHistory.fromJson(Map<String, dynamic> json) {
-    final antecedentsList = (json['antecedents'] as List<dynamic>?)
+    final antecedentsList =
+        (json['antecedents'] as List<dynamic>?)
             ?.map((e) => MedicalAntecedent.fromJson(e as Map<String, dynamic>))
             .toList() ??
         [];
 
-    final allergiesList = (json['allergies'] as List<dynamic>?)
+    final allergiesList =
+        (json['allergies'] as List<dynamic>?)
             ?.map((e) => PatientAllergy.fromJson(e as Map<String, dynamic>))
             .toList() ??
         [];
 
-    final visitsList = (json['pastVisits'] as List<dynamic>?)
+    final visitsList =
+        (json['pastVisits'] as List<dynamic>?)
             ?.map((e) => PastVisitSummary.fromJson(e as Map<String, dynamic>))
             .toList() ??
         [];
@@ -159,11 +162,11 @@ final class PatientMedicalHistory {
   }
 
   Map<String, dynamic> toJson() => {
-        'patientId': patientId,
-        'patientName': patientName,
-        'patientDpu': patientDpu,
-        'antecedents': antecedents.map((e) => e.toJson()).toList(),
-        'allergies': allergies.map((e) => e.toJson()).toList(),
-        'pastVisits': pastVisits.map((e) => e.toJson()).toList(),
-      };
+    'patientId': patientId,
+    'patientName': patientName,
+    'patientDpu': patientDpu,
+    'antecedents': antecedents.map((e) => e.toJson()).toList(),
+    'allergies': allergies.map((e) => e.toJson()).toList(),
+    'pastVisits': pastVisits.map((e) => e.toJson()).toList(),
+  };
 }

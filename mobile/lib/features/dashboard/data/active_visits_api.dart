@@ -18,11 +18,13 @@ final class ActiveVisitsApi implements ActiveVisitsGateway {
       throw const FormatException('Invalid active visits response');
     }
 
-    return data.map((item) {
-      if (item is! Map) {
-        throw const FormatException('Invalid active visit item');
-      }
-      return ActiveVisit.fromJson(Map<String, dynamic>.from(item));
-    }).toList(growable: false);
+    return data
+        .map((item) {
+          if (item is! Map) {
+            throw const FormatException('Invalid active visit item');
+          }
+          return ActiveVisit.fromJson(Map<String, dynamic>.from(item));
+        })
+        .toList(growable: false);
   }
 }

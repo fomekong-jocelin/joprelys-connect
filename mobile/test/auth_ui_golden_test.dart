@@ -14,6 +14,7 @@ import 'package:joprelys_mobile/features/auth/domain/professional_session.dart';
 import 'package:joprelys_mobile/features/dashboard/application/active_queue_controller.dart';
 import 'package:joprelys_mobile/features/dashboard/data/active_visits_api.dart';
 import 'package:joprelys_mobile/features/dashboard/domain/active_visit.dart';
+import 'package:joprelys_mobile/features/foundation/presentation/widgets/professional_app_bar.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +28,11 @@ void main() {
     await tester.pumpWidget(_buildDarkApp(const AuthState.unauthenticated()));
     await tester.pumpAndSettle();
     await _precacheBrandAsset(tester);
+
+    expect(
+      find.byKey(const ValueKey('app-brand-wordmark-dark')),
+      findsOneWidget,
+    );
 
     await expectLater(
       find.byType(JoprelysApp),
@@ -65,12 +71,20 @@ void main() {
       _buildDarkApp(AuthState.authenticated(session), visits: visits),
     );
     await tester.pumpAndSettle();
+    await _precacheBrandAsset(tester);
 
     expect(find.text('Ravi de vous revoir, Alex'), findsOneWidget);
     expect(find.text('Patients en attente'), findsOneWidget);
     expect(find.text('Momo Allons'), findsOneWidget);
     expect(find.text('Fièvre'), findsOneWidget);
     expect(find.text('Compte professionnel'), findsNothing);
+    expect(find.byType(ProfessionalAppBar), findsOneWidget);
+    expect(find.byKey(const ValueKey('app-brand-mark-dark')), findsOneWidget);
+
+    await expectLater(
+      find.byType(JoprelysApp),
+      matchesGoldenFile('goldens/professional_home_dark.png'),
+    );
   });
 }
 
@@ -99,9 +113,13 @@ Future<void> _loadRobotoForGoldens() async {
 
 Future<void> _precacheBrandAsset(WidgetTester tester) async {
   final context = tester.element(find.byType(JoprelysApp));
-  await tester.runAsync(
-    () => precacheImage(const AssetImage(AppConfig.logoOnDarkAsset), context),
-  );
+  await tester.runAsync(() async {
+    await precacheImage(const AssetImage(AppConfig.logoOnDarkAsset), context);
+    await precacheImage(
+      const AssetImage(AppConfig.logoIconOnDarkAsset),
+      context,
+    );
+  });
   await tester.pumpAndSettle();
 }
 
@@ -123,7 +141,9 @@ Widget _buildDarkApp(
       authControllerProvider.overrideWith(
         () => _GoldenAuthController(initialState),
       ),
-      activeVisitsApiProvider.overrideWithValue(_GoldenActiveVisitsGateway(visits)),
+      activeVisitsApiProvider.overrideWithValue(
+        _GoldenActiveVisitsGateway(visits),
+      ),
     ],
     child: const JoprelysApp(),
   );

@@ -33,7 +33,9 @@ final class PatientDirectoryApi implements PatientDirectoryGateway {
 
       return data
           .whereType<Map>()
-          .map((m) => PatientDirectoryItem.fromJson(Map<String, dynamic>.from(m)))
+          .map(
+            (m) => PatientDirectoryItem.fromJson(Map<String, dynamic>.from(m)),
+          )
           .toList();
     } on ApiException catch (e) {
       if (e.statusCode == 404) return [];

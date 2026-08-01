@@ -4,10 +4,7 @@ import 'package:joprelys_mobile/features/dashboard/domain/patient_vitals.dart';
 void main() {
   group('PatientVitals', () {
     test('calculates BMI accurately from weight and height', () {
-      const vitals = PatientVitals(
-        weight: 70,
-        height: 175,
-      );
+      const vitals = PatientVitals(weight: 70, height: 175);
 
       final bmi = vitals.calculatedBmi;
       expect(bmi, isNotNull);

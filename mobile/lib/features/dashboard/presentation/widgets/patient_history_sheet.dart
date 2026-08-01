@@ -11,17 +11,11 @@ import '../../domain/patient_history.dart';
 import '../dashboard_localizations.dart';
 
 class PatientHistorySheet extends ConsumerStatefulWidget {
-  const PatientHistorySheet({
-    required this.visit,
-    super.key,
-  });
+  const PatientHistorySheet({required this.visit, super.key});
 
   final ActiveVisit visit;
 
-  static Future<void> show(
-    BuildContext context, {
-    required ActiveVisit visit,
-  }) {
+  static Future<void> show(BuildContext context, {required ActiveVisit visit}) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -82,7 +76,10 @@ class _PatientHistorySheetState extends ConsumerState<PatientHistorySheet>
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         setState(() {
-          _error = e is ApiException && e.message.isNotEmpty && !e.message.startsWith('ApiException')
+          _error =
+              e is ApiException &&
+                  e.message.isNotEmpty &&
+                  !e.message.startsWith('ApiException')
               ? e.message
               : l10n.dashboardQueueLoadError;
           _loading = false;
@@ -192,45 +189,45 @@ class _PatientHistorySheetState extends ConsumerState<PatientHistorySheet>
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.cloud_off_rounded,
-                                  size: 44, color: colors.error),
-                              const SizedBox(height: 12),
-                              Text(
-                                _error!,
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: colors.onSurfaceVariant,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              OutlinedButton.icon(
-                                onPressed: _loadHistory,
-                                icon: const Icon(Icons.refresh_rounded),
-                                label: Text(l10n.dashboardQueueRetry),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : TabBarView(
-                        controller: _tabController,
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          _AntecedentsAndAllergiesTab(
-                            history: _history!,
-                            l10n: l10n,
+                          Icon(
+                            Icons.cloud_off_rounded,
+                            size: 44,
+                            color: colors.error,
                           ),
-                          _VisitsTimelineTab(
-                            history: _history!,
-                            l10n: l10n,
+                          const SizedBox(height: 12),
+                          Text(
+                            _error!,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          OutlinedButton.icon(
+                            onPressed: _loadHistory,
+                            icon: const Icon(Icons.refresh_rounded),
+                            label: Text(l10n.dashboardQueueRetry),
                           ),
                         ],
                       ),
+                    ),
+                  )
+                : TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _AntecedentsAndAllergiesTab(
+                        history: _history!,
+                        l10n: l10n,
+                      ),
+                      _VisitsTimelineTab(history: _history!, l10n: l10n),
+                    ],
+                  ),
           ),
         ],
       ),
@@ -288,8 +285,12 @@ class _AntecedentsAndAllergiesTab extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
+                      color: colors.surfaceContainerHighest.withValues(
+                        alpha: 0.5,
+                      ),
+                      borderRadius: BorderRadius.circular(
+                        AppDesignTokens.radiusSm,
+                      ),
                       border: Border.all(
                         color: colors.outline.withValues(alpha: 0.3),
                       ),
@@ -298,11 +299,14 @@ class _AntecedentsAndAllergiesTab extends StatelessWidget {
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: colors.primary.withValues(alpha: 0.12),
-                            borderRadius:
-                                BorderRadius.circular(AppDesignTokens.radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              AppDesignTokens.radiusSm,
+                            ),
                           ),
                           child: Text(
                             ant.type,
@@ -337,8 +341,11 @@ class _AntecedentsAndAllergiesTab extends StatelessWidget {
           // Section Allergies
           Row(
             children: [
-              Icon(Icons.warning_amber_rounded,
-                  color: AppDesignTokens.error, size: 20),
+              Icon(
+                Icons.warning_amber_rounded,
+                color: AppDesignTokens.error,
+                size: 20,
+              ),
               const SizedBox(width: 6),
               Text(
                 l10n.historyAllergiesHeader,
@@ -367,7 +374,9 @@ class _AntecedentsAndAllergiesTab extends StatelessWidget {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: AppDesignTokens.error.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
+                      borderRadius: BorderRadius.circular(
+                        AppDesignTokens.radiusSm,
+                      ),
                       border: Border.all(
                         color: AppDesignTokens.error.withValues(alpha: 0.3),
                       ),
@@ -409,10 +418,7 @@ class _AntecedentsAndAllergiesTab extends StatelessWidget {
 }
 
 class _VisitsTimelineTab extends StatelessWidget {
-  const _VisitsTimelineTab({
-    required this.history,
-    required this.l10n,
-  });
+  const _VisitsTimelineTab({required this.history, required this.l10n});
 
   final PatientMedicalHistory history;
   final AppLocalizations l10n;
@@ -458,8 +464,12 @@ class _VisitsTimelineTab extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: colors.surfaceContainerHighest.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
+                      color: colors.surfaceContainerHighest.withValues(
+                        alpha: 0.4,
+                      ),
+                      borderRadius: BorderRadius.circular(
+                        AppDesignTokens.radiusLg,
+                      ),
                       border: Border.all(
                         color: colors.outline.withValues(alpha: 0.3),
                       ),
@@ -479,7 +489,9 @@ class _VisitsTimelineTab extends StatelessWidget {
                             ),
                             Text(
                               AppLocaleFormatters.formatDate(
-                                  visit.date, locale),
+                                visit.date,
+                                locale,
+                              ),
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: colors.onSurfaceVariant,
                               ),
@@ -508,9 +520,11 @@ class _VisitsTimelineTab extends StatelessWidget {
                               _MiniVitalChip(
                                 label: 'T°: ${visit.temperature}°C',
                               ),
-                            if (visit.systolic != null && visit.diastolic != null)
+                            if (visit.systolic != null &&
+                                visit.diastolic != null)
                               _MiniVitalChip(
-                                label: 'TA: ${visit.systolic}/${visit.diastolic}',
+                                label:
+                                    'TA: ${visit.systolic}/${visit.diastolic}',
                               ),
                             if (visit.pulse != null)
                               _MiniVitalChip(

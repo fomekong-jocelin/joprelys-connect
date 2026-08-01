@@ -28,7 +28,11 @@ final class ConsultationApi implements ConsultationGateway {
       '/api/visits/$visitId/consultation',
     );
     final data = response.data;
-    if (data == null) return null;
+    if (response.statusCode == 204 ||
+        data == null ||
+        (data is String && data.trim().isEmpty)) {
+      return null;
+    }
     if (data is! Map) {
       throw const FormatException('Invalid consultation note format');
     }
