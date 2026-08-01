@@ -161,11 +161,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
 
       final pending = existing.pendingTranscript?.trim();
       if (pending != null && pending.isNotEmpty) {
-        _restoreTranscript(
-          pending,
-          sequence: 0,
-          serverPending: true,
-        );
+        _restoreTranscript(pending, sequence: 0, serverPending: true);
         return;
       }
 
@@ -290,7 +286,9 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
         break;
       case ClinicalRealtimeEventType.error:
         value = value.copyWith(
-          errorMessage: _friendlyError(event.error ?? StateError('AI_REALTIME_ERROR')),
+          errorMessage: _friendlyError(
+            event.error ?? StateError('AI_REALTIME_ERROR'),
+          ),
           soundLevel: 5,
         );
         break;

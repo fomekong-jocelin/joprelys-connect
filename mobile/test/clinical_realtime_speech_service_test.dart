@@ -22,17 +22,21 @@ void main() {
     await service.restoreOrStart();
     expect(service.value.status, SpeechStatus.listening);
 
-    transport.emit(const ClinicalRealtimeEvent(
-      ClinicalRealtimeEventType.transcriptDelta,
-      text: 'Le patient signale ',
-    ));
+    transport.emit(
+      const ClinicalRealtimeEvent(
+        ClinicalRealtimeEventType.transcriptDelta,
+        text: 'Le patient signale ',
+      ),
+    );
     expect(service.value.transcript, 'Le patient signale');
 
-    transport.emit(const ClinicalRealtimeEvent(
-      ClinicalRealtimeEventType.transcriptCompleted,
-      text: 'Le patient signale une fièvre depuis quatre jours.',
-      itemId: 'item-1',
-    ));
+    transport.emit(
+      const ClinicalRealtimeEvent(
+        ClinicalRealtimeEventType.transcriptCompleted,
+        text: 'Le patient signale une fièvre depuis quatre jours.',
+        itemId: 'item-1',
+      ),
+    );
     await _flushAsyncWork();
 
     expect(
@@ -42,11 +46,13 @@ void main() {
     expect(gateway.liveTranscript, service.value.transcript);
     expect(gateway.liveSequence, 1);
 
-    transport.emit(const ClinicalRealtimeEvent(
-      ClinicalRealtimeEventType.transcriptCompleted,
-      text: 'Il présente aussi une toux sèche.',
-      itemId: 'item-2',
-    ));
+    transport.emit(
+      const ClinicalRealtimeEvent(
+        ClinicalRealtimeEventType.transcriptCompleted,
+        text: 'Il présente aussi une toux sèche.',
+        itemId: 'item-2',
+      ),
+    );
     await _flushAsyncWork();
 
     expect(
@@ -70,11 +76,13 @@ void main() {
     addTearDown(service.dispose);
 
     await service.restoreOrStart();
-    transport.emit(const ClinicalRealtimeEvent(
-      ClinicalRealtimeEventType.transcriptCompleted,
-      text: 'La température est de trente-huit virgule cinq degrés.',
-      itemId: 'item-vitals',
-    ));
+    transport.emit(
+      const ClinicalRealtimeEvent(
+        ClinicalRealtimeEventType.transcriptCompleted,
+        text: 'La température est de trente-huit virgule cinq degrés.',
+        itemId: 'item-vitals',
+      ),
+    );
     await _flushAsyncWork();
 
     await service.stopListening();
@@ -86,47 +94,53 @@ void main() {
     expect(service.value.status, SpeechStatus.transcriptReview);
   });
 
-  test('a silent live session never stages or analyzes clinical content', () async {
-    final gateway = _FakeGateway();
-    final transport = _FakeTransport();
-    final service = ClinicalSpeechService(
-      gateway: gateway,
-      visitId: 'visit-3',
-      initialDraft: const <String, String>{},
-      locale: 'fr',
-      transport: transport,
-    );
-    addTearDown(service.dispose);
+  test(
+    'a silent live session never stages or analyzes clinical content',
+    () async {
+      final gateway = _FakeGateway();
+      final transport = _FakeTransport();
+      final service = ClinicalSpeechService(
+        gateway: gateway,
+        visitId: 'visit-3',
+        initialDraft: const <String, String>{},
+        locale: 'fr',
+        transport: transport,
+      );
+      addTearDown(service.dispose);
 
-    await service.restoreOrStart();
-    await service.stopListening();
+      await service.restoreOrStart();
+      await service.stopListening();
 
-    expect(gateway.stagedTranscript, isNull);
-    expect(gateway.analyzeCalls, 0);
-    expect(service.value.status, SpeechStatus.idle);
-    expect(service.value.errorMessage, contains('Aucune parole'));
-  });
+      expect(gateway.stagedTranscript, isNull);
+      expect(gateway.analyzeCalls, 0);
+      expect(service.value.status, SpeechStatus.idle);
+      expect(service.value.errorMessage, contains('Aucune parole'));
+    },
+  );
 
-  test('a live transcript is restored after closing the mobile sheet', () async {
-    final gateway = _FakeGateway()
-      ..liveTranscript = 'Céphalées et fatigue depuis lundi.'
-      ..liveSequence = 4;
-    final transport = _FakeTransport();
-    final service = ClinicalSpeechService(
-      gateway: gateway,
-      visitId: 'visit-4',
-      initialDraft: const <String, String>{},
-      locale: 'fr',
-      transport: transport,
-    );
-    addTearDown(service.dispose);
+  test(
+    'a live transcript is restored after closing the mobile sheet',
+    () async {
+      final gateway = _FakeGateway()
+        ..liveTranscript = 'Céphalées et fatigue depuis lundi.'
+        ..liveSequence = 4;
+      final transport = _FakeTransport();
+      final service = ClinicalSpeechService(
+        gateway: gateway,
+        visitId: 'visit-4',
+        initialDraft: const <String, String>{},
+        locale: 'fr',
+        transport: transport,
+      );
+      addTearDown(service.dispose);
 
-    await service.restoreOrStart();
+      await service.restoreOrStart();
 
-    expect(service.value.status, SpeechStatus.transcriptReview);
-    expect(service.value.transcript, gateway.liveTranscript);
-    expect(transport.connectCalls, 0);
-  });
+      expect(service.value.status, SpeechStatus.transcriptReview);
+      expect(service.value.transcript, gateway.liveTranscript);
+      expect(transport.connectCalls, 0);
+    },
+  );
 
   test('duplicate completed items are not appended twice', () async {
     final gateway = _FakeGateway();
@@ -160,8 +174,7 @@ Future<void> _flushAsyncWork() async {
   await Future<void>.delayed(Duration.zero);
 }
 
-final class _FakeTransport
-    implements ClinicalRealtimeTranscriptionTransport {
+final class _FakeTransport implements ClinicalRealtimeTranscriptionTransport {
   final StreamController<ClinicalRealtimeEvent> _controller =
       StreamController<ClinicalRealtimeEvent>.broadcast(sync: true);
 
@@ -174,7 +187,10 @@ final class _FakeTransport
   void emit(ClinicalRealtimeEvent event) => _controller.add(event);
 
   @override
-  Future<void> connect({required String visitId, required String locale}) async {
+  Future<void> connect({
+    required String visitId,
+    required String locale,
+  }) async {
     connectCalls++;
     emit(const ClinicalRealtimeEvent(ClinicalRealtimeEventType.connected));
   }

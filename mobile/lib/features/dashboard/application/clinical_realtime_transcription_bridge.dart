@@ -82,7 +82,10 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
   Stream<ClinicalRealtimeEvent> get events => _eventsController.stream;
 
   @override
-  Future<void> connect({required String visitId, required String locale}) async {
+  Future<void> connect({
+    required String visitId,
+    required String locale,
+  }) async {
     if (_disposed) throw StateError('AI_REALTIME_TRANSPORT_DISPOSED');
     _visitId = visitId;
     _locale = locale == 'en' ? 'en' : 'fr';
@@ -120,9 +123,9 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
       }
       _mediaStream = stream;
 
-      final peerConnection = await createPeerConnection(
-        const <String, dynamic>{'sdpSemantics': 'unified-plan'},
-      );
+      final peerConnection = await createPeerConnection(const <String, dynamic>{
+        'sdpSemantics': 'unified-plan',
+      });
       _peerConnection = peerConnection;
       peerConnection.onConnectionState = _handleConnectionState;
       peerConnection.onIceConnectionState = _handleIceConnectionState;
@@ -146,12 +149,10 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
         }
       };
 
-      final offer = await peerConnection.createOffer(
-        const <String, dynamic>{
-          'offerToReceiveAudio': false,
-          'offerToReceiveVideo': false,
-        },
-      );
+      final offer = await peerConnection.createOffer(const <String, dynamic>{
+        'offerToReceiveAudio': false,
+        'offerToReceiveVideo': false,
+      });
       await peerConnection.setLocalDescription(offer);
       await _waitForIceGathering(peerConnection);
       final localDescription = await peerConnection.getLocalDescription();
@@ -175,10 +176,9 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
     } catch (error) {
       await _teardownTransport();
       if (_shouldStayConnected) {
-        _emit(ClinicalRealtimeEvent(
-          ClinicalRealtimeEventType.error,
-          error: error,
-        ));
+        _emit(
+          ClinicalRealtimeEvent(ClinicalRealtimeEventType.error, error: error),
+        );
         _scheduleReconnect();
       }
       rethrow;
@@ -234,10 +234,12 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
   void _scheduleReconnect() {
     if (_disposed || !_shouldStayConnected || _reconnectTimer != null) return;
     if (_reconnectAttempts >= _maximumReconnectAttempts) {
-      _emit(ClinicalRealtimeEvent(
-        ClinicalRealtimeEventType.error,
-        error: StateError('AI_REALTIME_RECONNECT_EXHAUSTED'),
-      ));
+      _emit(
+        ClinicalRealtimeEvent(
+          ClinicalRealtimeEventType.error,
+          error: StateError('AI_REALTIME_RECONNECT_EXHAUSTED'),
+        ),
+      );
       return;
     }
     final exponent = _reconnectAttempts.clamp(0, 3).toInt();
@@ -269,36 +271,40 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
     final type = event['type']?.toString();
     switch (type) {
       case 'input_audio_buffer.speech_started':
-        _emit(const ClinicalRealtimeEvent(
-          ClinicalRealtimeEventType.speechStarted,
-        ));
+        _emit(
+          const ClinicalRealtimeEvent(ClinicalRealtimeEventType.speechStarted),
+        );
         break;
       case 'input_audio_buffer.speech_stopped':
-        _emit(const ClinicalRealtimeEvent(
-          ClinicalRealtimeEventType.speechStopped,
-        ));
+        _emit(
+          const ClinicalRealtimeEvent(ClinicalRealtimeEventType.speechStopped),
+        );
         break;
       case 'conversation.item.input_audio_transcription.delta':
         final delta = event['delta']?.toString();
         if (delta != null && delta.isNotEmpty) {
-          _emit(ClinicalRealtimeEvent(
-            ClinicalRealtimeEventType.transcriptDelta,
-            text: delta,
-            eventId: event['event_id']?.toString(),
-            itemId: event['item_id']?.toString(),
-          ));
+          _emit(
+            ClinicalRealtimeEvent(
+              ClinicalRealtimeEventType.transcriptDelta,
+              text: delta,
+              eventId: event['event_id']?.toString(),
+              itemId: event['item_id']?.toString(),
+            ),
+          );
         }
         break;
       case 'conversation.item.input_audio_transcription.completed':
         final transcript = event['transcript']?.toString().trim();
         if (transcript != null && transcript.isNotEmpty) {
-          _emit(ClinicalRealtimeEvent(
-            ClinicalRealtimeEventType.transcriptCompleted,
-            text: transcript,
-            eventId: event['event_id']?.toString(),
-            itemId: event['item_id']?.toString(),
-            confidence: _confidence(event['logprobs']),
-          ));
+          _emit(
+            ClinicalRealtimeEvent(
+              ClinicalRealtimeEventType.transcriptCompleted,
+              text: transcript,
+              eventId: event['event_id']?.toString(),
+              itemId: event['item_id']?.toString(),
+              confidence: _confidence(event['logprobs']),
+            ),
+          );
         }
         final completer = _finalTranscriptCompleter;
         if (completer != null && !completer.isCompleted) completer.complete();
@@ -308,10 +314,12 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
         final message = rawError is Map
             ? rawError['message']?.toString()
             : event['message']?.toString();
-        _emit(ClinicalRealtimeEvent(
-          ClinicalRealtimeEventType.error,
-          error: StateError(message ?? 'AI_REALTIME_ERROR'),
-        ));
+        _emit(
+          ClinicalRealtimeEvent(
+            ClinicalRealtimeEventType.error,
+            error: StateError(message ?? 'AI_REALTIME_ERROR'),
+          ),
+        );
         break;
     }
   }
@@ -341,9 +349,9 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
     if (channel?.state == RTCDataChannelState.RTCDataChannelOpen) {
       _finalTranscriptCompleter = Completer<void>();
       await channel!.send(
-        RTCDataChannelMessage(jsonEncode(<String, dynamic>{
-          'type': 'input_audio_buffer.commit',
-        })),
+        RTCDataChannelMessage(
+          jsonEncode(<String, dynamic>{'type': 'input_audio_buffer.commit'}),
+        ),
       );
       try {
         await _finalTranscriptCompleter!.future.timeout(
