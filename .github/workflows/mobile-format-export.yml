@@ -1,0 +1,40 @@
+name: Temporary mobile format export
+
+on:
+  pull_request:
+    branches: [main]
+    types: [synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  format-export:
+    if: github.head_ref == 'fix/mobile-voice-clinical-safety'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.6'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format lib test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-formatted-voice-safety
+          path: |
+            mobile/lib/features/dashboard/application/clinical_speech_service.dart
+            mobile/lib/features/dashboard/data/clinical_voice_ai_api.dart
+            mobile/lib/features/dashboard/presentation/widgets/clinical_voice_assistant_sheet.dart
+            mobile/lib/features/dashboard/presentation/widgets/consultation_note_form_controllers.dart
+            mobile/lib/features/dashboard/presentation/widgets/patient_vitals_sheet.dart
+            mobile/test/voice_clinical_safety_test.dart
+            mobile/pubspec.lock
+          if-no-files-found: error
+          retention-days: 1
