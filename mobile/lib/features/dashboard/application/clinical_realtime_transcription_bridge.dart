@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../data/clinical_voice_ai_api.dart';
 
@@ -55,8 +56,8 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
     implements ClinicalRealtimeTranscriptionTransport {
   WebRtcClinicalRealtimeTranscriptionTransport(this._gateway);
 
-  static const Duration _iceTimeout = Duration(seconds: 10);
-  static const Duration _channelTimeout = Duration(seconds: 10);
+  static const Duration _iceTimeout = Duration(seconds: 5);
+  static const Duration _channelTimeout = Duration(seconds: 15);
   static const Duration _finalTranscriptTimeout = Duration(milliseconds: 2800);
   static const int _maximumReconnectAttempts = 5;
 
@@ -77,6 +78,7 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
   bool _connecting = false;
   bool _disposed = false;
   int _reconnectAttempts = 0;
+  final Set<String> _segmentedItemIds = <String>{};
 
   @override
   Stream<ClinicalRealtimeEvent> get events => _eventsController.stream;
@@ -91,6 +93,7 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
     _locale = locale == 'en' ? 'en' : 'fr';
     _shouldStayConnected = true;
     _reconnectAttempts = 0;
+    _segmentedItemIds.clear();
     _reconnectTimer?.cancel();
     await _establishConnection();
   }
@@ -101,17 +104,26 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
     await _teardownTransport();
 
     try {
-      final stream = await navigator.mediaDevices.getUserMedia(
-        const <String, dynamic>{
-          'audio': <String, dynamic>{
-            'channelCount': 1,
-            'echoCancellation': true,
-            'noiseSuppression': true,
-            'autoGainControl': true,
-          },
-          'video': false,
+      final permission = await Permission.microphone.request();
+      if (!permission.isGranted) {
+        throw StateError('MICROPHONE_PERMISSION_DENIED');
+      }
+
+      final stream = await navigator.mediaDevices.getUserMedia(const <
+        String,
+        dynamic
+      >{
+        'audio': <String, dynamic>{
+          'channelCount': 1,
+          // Le serveur applique déjà un filtre far_field adapté à la
+          // consultation en salle. Le double traitement Android supprimait des
+          // syllabes et les voix jouées à distance pendant la recette.
+          'echoCancellation': false,
+          'noiseSuppression': false,
+          'autoGainControl': false,
         },
-      );
+        'video': false,
+      });
       if (!_shouldStayConnected) {
         await _disposeStream(stream);
         return;
@@ -198,10 +210,12 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
         completer.complete();
       }
     };
-    await completer.future.timeout(
-      _iceTimeout,
-      onTimeout: () => throw TimeoutException('AI_REALTIME_ICE_TIMEOUT'),
-    );
+    try {
+      await completer.future.timeout(_iceTimeout);
+    } on TimeoutException {
+      // Comme sur Angular, poursuivre avec le SDP déjà collecté. Certains
+      // moteurs WebRTC Android ne signalent jamais explicitement l'état complete.
+    }
   }
 
   Future<void> _waitForDataChannel() async {
@@ -293,21 +307,55 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
           );
         }
         break;
-      case 'conversation.item.input_audio_transcription.completed':
-        final transcript = event['transcript']?.toString().trim();
-        if (transcript != null && transcript.isNotEmpty) {
+      case 'conversation.item.input_audio_transcription.segment':
+        final text = event['text']?.toString().trim();
+        final itemId = event['item_id']?.toString();
+        final segmentId = event['id']?.toString();
+        final speaker = event['speaker']?.toString();
+        if (text != null && text.isNotEmpty) {
+          if (itemId != null && itemId.isNotEmpty) {
+            _segmentedItemIds.add(itemId);
+          }
           _emit(
             ClinicalRealtimeEvent(
               ClinicalRealtimeEventType.transcriptCompleted,
-              text: transcript,
-              eventId: event['event_id']?.toString(),
-              itemId: event['item_id']?.toString(),
-              confidence: _confidence(event['logprobs']),
+              text: _speakerText(speaker, text),
+              eventId: event['event_id']?.toString() ?? segmentId,
+              itemId: itemId,
             ),
           );
         }
+        break;
+      case 'conversation.item.input_audio_transcription.completed':
+        final itemId = event['item_id']?.toString();
+        if (itemId == null || !_segmentedItemIds.contains(itemId)) {
+          final transcript = event['transcript']?.toString().trim();
+          if (transcript != null && transcript.isNotEmpty) {
+            _emit(
+              ClinicalRealtimeEvent(
+                ClinicalRealtimeEventType.transcriptCompleted,
+                text: transcript,
+                eventId: event['event_id']?.toString(),
+                itemId: itemId,
+                confidence: _confidence(event['logprobs']),
+              ),
+            );
+          }
+        }
         final completer = _finalTranscriptCompleter;
         if (completer != null && !completer.isCompleted) completer.complete();
+        break;
+      case 'conversation.item.input_audio_transcription.failed':
+        final rawError = event['error'];
+        final message = rawError is Map
+            ? rawError['message']?.toString()
+            : 'AI_REALTIME_TRANSCRIPTION_FAILED';
+        _emit(
+          ClinicalRealtimeEvent(
+            ClinicalRealtimeEventType.error,
+            error: StateError(message ?? 'AI_REALTIME_TRANSCRIPTION_FAILED'),
+          ),
+        );
         break;
       case 'error':
         final rawError = event['error'];
@@ -322,6 +370,13 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
         );
         break;
     }
+  }
+
+  String _speakerText(String? speaker, String text) {
+    final normalized = speaker?.trim();
+    if (normalized == null || normalized.isEmpty) return text;
+    final label = _locale == 'en' ? 'Speaker' : 'Locuteur';
+    return '$label $normalized : $text';
   }
 
   double? _confidence(Object? rawLogprobs) {

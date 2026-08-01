@@ -49,9 +49,9 @@ public class OpenAiRealtimeCallService {
             ObjectMapper objectMapper,
             @Value("${joprelys.ai.openai.realtime-model:gpt-realtime-2.1-mini}") String model,
             @Value("${joprelys.ai.openai.realtime-fallback-model:gpt-realtime-2.1-mini}") String fallbackModel,
-            @Value("${joprelys.ai.openai.realtime-transcribe-model:gpt-4o-mini-transcribe}") String transcriptionModel,
+            @Value("${joprelys.ai.openai.realtime-transcribe-model:gpt-4o-transcribe-diarize}") String transcriptionModel,
             @Value("${joprelys.ai.openai.realtime-vad-eagerness:medium}") String vadEagerness,
-            @Value("${joprelys.ai.openai.realtime-noise-reduction:near_field}") String noiseReduction) {
+            @Value("${joprelys.ai.openai.realtime-noise-reduction:far_field}") String noiseReduction) {
         AiProperties.OpenAiProperties openAi = properties.openai();
         this.restClient = openAi == null
                 || openAi.apiKey() == null
@@ -66,11 +66,11 @@ public class OpenAiRealtimeCallService {
         this.objectMapper = objectMapper;
         this.model = normalizeModel(model, "gpt-realtime-2.1-mini");
         this.fallbackModel = normalizeModel(fallbackModel, "gpt-realtime-2.1-mini");
-        this.transcriptionModel = normalizeModel(transcriptionModel, "gpt-4o-mini-transcribe");
+        this.transcriptionModel = normalizeModel(transcriptionModel, "gpt-4o-transcribe-diarize");
         this.vadEagerness = normalizeEagerness(vadEagerness);
         this.noiseReduction = normalizeNoiseReduction(noiseReduction);
         this.vadThreshold = normalizeVadThreshold(
-                openAi == null ? 0.8 : openAi.transcribeVadThreshold());
+                openAi == null ? 0.5 : openAi.transcribeVadThreshold());
     }
 
     public String createCall(String sdpOffer, String locale) {
@@ -196,22 +196,14 @@ public class OpenAiRealtimeCallService {
     }
 
     private Map<String, Object> buildSessionConfig(
-            String requestedLocale,
-            String selectedModel,
-            RealtimePurpose purpose) {
+  String requestedLocale,
+  String selectedModel,
+  RealtimePurpose purpose) {
         String locale = normalizeLocale(requestedLocale);
-        Map<String, Object> transcription = transcription(locale);
-
-        Map<String, Object> turnDetection = new LinkedHashMap<>();
-        turnDetection.put("type", "semantic_vad");
-        turnDetection.put("eagerness", semanticVadEagerness(purpose));
-        turnDetection.put("create_response", false);
-        turnDetection.put("interrupt_response", true);
-
         Map<String, Object> input = new LinkedHashMap<>();
-        input.put("transcription", transcription);
-        input.put("noise_reduction", Map.of("type", noiseReduction));
-        input.put("turn_detection", turnDetection);
+        input.put("transcription", transcription(locale, purpose, false));
+        input.put("noise_reduction", Map.of("type", noiseReductionFor(purpose)));
+        input.put("turn_detection", serverVad(purpose, false));
 
         Map<String, Object> audio = new LinkedHashMap<>();
         audio.put("input", input);
@@ -223,31 +215,40 @@ public class OpenAiRealtimeCallService {
         return session;
     }
 
-    Map<String, Object> buildCompatibilitySessionConfig(
-            String requestedLocale,
-            String selectedModel) {
-        return buildCompatibilitySessionConfig(
-                requestedLocale,
-                selectedModel,
-                RealtimePurpose.CONSULTATION);
-    }
-
-    Map<String, Object> buildCompatibilitySessionConfig(
-            String requestedLocale,
-            String selectedModel,
-            RealtimePurpose purpose) {
-        String locale = normalizeLocale(requestedLocale);
+    private Map<String, Object> serverVad(
+  RealtimePurpose purpose,
+  boolean compatibilityMode) {
+        boolean consultation = purpose == RealtimePurpose.CONSULTATION;
         Map<String, Object> turnDetection = new LinkedHashMap<>();
         turnDetection.put("type", "server_vad");
         turnDetection.put("create_response", false);
         turnDetection.put("interrupt_response", true);
-        turnDetection.put("silence_duration_ms", purpose == RealtimePurpose.CONSULTATION ? 1200 : 650);
-        turnDetection.put("prefix_padding_ms", purpose == RealtimePurpose.CONSULTATION ? 500 : 300);
-        turnDetection.put("threshold", vadThreshold);
+        turnDetection.put(
+      "silence_duration_ms",
+      consultation ? (compatibilityMode ? 1100 : 900) : (compatibilityMode ? 650 : 550));
+        turnDetection.put("prefix_padding_ms", consultation ? 700 : 350);
+        turnDetection.put("threshold", serverVadThreshold(purpose));
+        return turnDetection;
+    }
 
+    Map<String, Object> buildCompatibilitySessionConfig(
+  String requestedLocale,
+  String selectedModel) {
+        return buildCompatibilitySessionConfig(
+      requestedLocale,
+      selectedModel,
+      RealtimePurpose.CONSULTATION);
+    }
+
+    Map<String, Object> buildCompatibilitySessionConfig(
+  String requestedLocale,
+  String selectedModel,
+  RealtimePurpose purpose) {
+        String locale = normalizeLocale(requestedLocale);
         Map<String, Object> input = new LinkedHashMap<>();
-        input.put("transcription", transcription(locale));
-        input.put("turn_detection", turnDetection);
+        input.put("transcription", transcription(locale, purpose, true));
+        input.put("noise_reduction", Map.of("type", noiseReductionFor(purpose)));
+        input.put("turn_detection", serverVad(purpose, true));
 
         Map<String, Object> audio = new LinkedHashMap<>();
         audio.put("input", input);
@@ -267,12 +268,37 @@ public class OpenAiRealtimeCallService {
         return session;
     }
 
-    private Map<String, Object> transcription(String locale) {
+    private Map<String, Object> transcription(
+  String locale,
+  RealtimePurpose purpose,
+  boolean compatibilityMode) {
+        String selectedModel = transcriptionModelFor(purpose, compatibilityMode);
         Map<String, Object> transcription = new LinkedHashMap<>();
-        transcription.put("model", transcriptionModel);
+        transcription.put("model", selectedModel);
         transcription.put("language", locale);
-        transcription.put("prompt", transcriptionPrompt(locale));
+        if (!selectedModel.endsWith("-diarize")) {
+  transcription.put("prompt", transcriptionPrompt(locale));
+        }
         return transcription;
+    }
+
+    private String transcriptionModelFor(
+  RealtimePurpose purpose,
+  boolean compatibilityMode) {
+        if (transcriptionModel.endsWith("-diarize")
+      && (purpose == RealtimePurpose.VITALS || compatibilityMode)) {
+  return "gpt-4o-transcribe";
+        }
+        return transcriptionModel;
+    }
+
+    private String noiseReductionFor(RealtimePurpose purpose) {
+        return purpose == RealtimePurpose.CONSULTATION ? noiseReduction : "near_field";
+    }
+
+    private double serverVadThreshold(RealtimePurpose purpose) {
+        double maximum = purpose == RealtimePurpose.CONSULTATION ? 0.5 : 0.6;
+        return Math.min(vadThreshold, maximum);
     }
 
     private boolean isRetryableConfigurationFailure(RestClientResponseException exception) {

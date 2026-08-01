@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:joprelys_mobile/core/network/api_exception.dart';
 import 'package:joprelys_mobile/features/dashboard/application/clinical_realtime_transcription_bridge.dart';
 import 'package:joprelys_mobile/features/dashboard/application/clinical_speech_service.dart';
 import 'package:joprelys_mobile/features/dashboard/data/clinical_voice_ai_api.dart';
@@ -142,6 +143,109 @@ void main() {
     },
   );
 
+  test(
+    'missing live buffer endpoint does not block microphone startup',
+    () async {
+      final gateway = _FakeGateway()
+        ..liveTranscriptError = const ApiException(
+          kind: ApiFailureKind.notFound,
+          code: 'NOT_FOUND',
+          message: 'Route not deployed yet',
+          statusCode: 404,
+        );
+      final transport = _FakeTransport();
+      final service = ClinicalSpeechService(
+        gateway: gateway,
+        visitId: 'visit-compatible',
+        initialDraft: const <String, String>{},
+        locale: 'fr',
+        transport: transport,
+      );
+      addTearDown(service.dispose);
+
+      await service.restoreOrStart();
+
+      expect(service.value.status, SpeechStatus.listening);
+      expect(transport.connectCalls, 1);
+    },
+  );
+
+  test(
+    'partial deltas from two items are never concatenated together',
+    () async {
+      final gateway = _FakeGateway();
+      final transport = _FakeTransport();
+      final service = ClinicalSpeechService(
+        gateway: gateway,
+        visitId: 'visit-partials',
+        initialDraft: const <String, String>{},
+        locale: 'fr',
+        transport: transport,
+      );
+      addTearDown(service.dispose);
+
+      await service.restoreOrStart();
+      transport.emit(
+        const ClinicalRealtimeEvent(
+          ClinicalRealtimeEventType.transcriptDelta,
+          text: 'Bonjour docteur',
+          itemId: 'item-1',
+        ),
+      );
+      transport.emit(
+        const ClinicalRealtimeEvent(
+          ClinicalRealtimeEventType.transcriptDelta,
+          text: 'Pas de vertiges.',
+          itemId: 'item-2',
+        ),
+      );
+
+      expect(service.value.transcript, 'Pas de vertiges.');
+    },
+  );
+
+  test(
+    'speaker-labelled segments are preserved and persisted independently',
+    () async {
+      final gateway = _FakeGateway();
+      final transport = _FakeTransport();
+      final service = ClinicalSpeechService(
+        gateway: gateway,
+        visitId: 'visit-speakers',
+        initialDraft: const <String, String>{},
+        locale: 'fr',
+        transport: transport,
+      );
+      addTearDown(service.dispose);
+
+      await service.restoreOrStart();
+      transport.emit(
+        const ClinicalRealtimeEvent(
+          ClinicalRealtimeEventType.transcriptCompleted,
+          text: 'Locuteur A : Avez-vous des vertiges ?',
+          eventId: 'segment-1',
+          itemId: 'item-dialogue',
+        ),
+      );
+      transport.emit(
+        const ClinicalRealtimeEvent(
+          ClinicalRealtimeEventType.transcriptCompleted,
+          text: 'Locuteur B : Non, pas de vertiges.',
+          eventId: 'segment-2',
+          itemId: 'item-dialogue',
+        ),
+      );
+      await _flushAsyncWork();
+
+      expect(
+        service.value.transcript,
+        'Locuteur A : Avez-vous des vertiges ?\n'
+        'Locuteur B : Non, pas de vertiges.',
+      );
+      expect(gateway.liveSequence, 2);
+    },
+  );
+
   test('duplicate completed items are not appended twice', () async {
     final gateway = _FakeGateway();
     final transport = _FakeTransport();
@@ -213,6 +317,7 @@ final class _FakeGateway implements ClinicalVoiceAiGateway {
   String? stagedTranscript;
   int transcribeAudioCalls = 0;
   int analyzeCalls = 0;
+  ApiException? liveTranscriptError;
 
   ClinicalAiState get _emptyState => const ClinicalAiState(
     draft: <String, String>{},
@@ -234,6 +339,8 @@ final class _FakeGateway implements ClinicalVoiceAiGateway {
 
   @override
   Future<ClinicalLiveTranscript?> getLiveTranscript(String visitId) async {
+    final error = liveTranscriptError;
+    if (error != null) throw error;
     final transcript = liveTranscript;
     if (transcript == null) return null;
     return ClinicalLiveTranscript(

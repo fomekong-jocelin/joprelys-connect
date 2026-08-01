@@ -24,6 +24,8 @@ final class AiClinicalCapturePrompt {
             ABSOLUTE RULES
             - Extract every clinically relevant fact explicitly present in CURRENT TRANSCRIPT. Do not summarize away details.
             - Treat CURRENT TRANSCRIPT as a clinical dialogue even when speaker labels are absent, repeated or noisy. Patient complaints, answers and denials remain subjective clinical facts and belong in symptoms.
+            - Speaker labels such as "Locuteur A" or "Speaker B" are context markers. Use them to keep turns separate, but never infer a clinical role solely from the label.
+            - A clinician question is not evidence that the patient has the mentioned symptom. Extract a complaint or denial only when it is stated in a patient answer or explicitly summarized/assessed by the clinician.
             - Symptoms include the chief complaint, duration, chronology, severity, associated or denied symptoms, treatment adherence, functional impact and any subjective history explicitly stated by the patient or clinician.
             - A prescription, advice or follow-up plan never justifies omitting symptoms or examination findings from the same transcript.
             - Emit at most ONE change per field. Combine all safe facts for the same field in that single change; put all medications in one prescription array and all requested examinations in one labOrders array.

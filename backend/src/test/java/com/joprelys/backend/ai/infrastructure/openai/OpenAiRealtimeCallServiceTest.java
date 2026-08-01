@@ -21,7 +21,7 @@ class OpenAiRealtimeCallServiceTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void shouldUseCostAwareSemanticVadForNaturalConsultationSpeech() {
+    void shouldUseHighAccuracyDiarizedServerVadForRoomConsultations() {
         OpenAiRealtimeCallService service = service();
 
         Map<String, Object> session = service.buildSessionConfig("fr");
@@ -34,45 +34,54 @@ class OpenAiRealtimeCallServiceTest {
         assertEquals("gpt-realtime-2.1-mini", session.get("model"));
         assertEquals(List.of("text"), session.get("output_modalities"));
         assertEquals(
-                List.of("item.input_audio_transcription.logprobs"),
-                session.get("include"));
-        assertEquals("semantic_vad", turnDetection.get("type"));
-        assertEquals("low", turnDetection.get("eagerness"));
+      List.of("item.input_audio_transcription.logprobs"),
+      session.get("include"));
+        assertEquals("server_vad", turnDetection.get("type"));
+        assertEquals(0.5, turnDetection.get("threshold"));
+        assertEquals(900, turnDetection.get("silence_duration_ms"));
+        assertEquals(700, turnDetection.get("prefix_padding_ms"));
         assertEquals(Boolean.FALSE, turnDetection.get("create_response"));
         assertEquals(Boolean.TRUE, turnDetection.get("interrupt_response"));
-        assertEquals("gpt-4o-mini-transcribe", transcription.get("model"));
+        assertEquals("gpt-4o-transcribe-diarize", transcription.get("model"));
         assertEquals("fr", transcription.get("language"));
-        assertTrue(transcription.get("prompt").toString().contains("texte vide"));
-        assertEquals("near_field", ((Map<String, Object>) input.get("noise_reduction")).get("type"));
+        assertFalse(transcription.containsKey("prompt"));
+        assertEquals(
+      "far_field",
+      ((Map<String, Object>) input.get("noise_reduction")).get("type"));
         assertFalse(audio.containsKey("output"));
         assertEquals("none", session.get("tool_choice"));
         assertTrue(session.get("instructions").toString().contains("Ne diagnostiquez jamais"));
         assertTrue(session.get("instructions").toString().contains("Ne répondez jamais"));
-        assertFalse(session.get("instructions").toString().contains("prescrivez un traitement"));
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void shouldKeepVitalsSemanticVadResponsive() {
+    void shouldKeepVitalsCaptureCloseFieldAndPrompted() {
         OpenAiRealtimeCallService service = service();
 
         Map<String, Object> session = service.buildSessionConfig("fr", RealtimePurpose.VITALS);
         Map<String, Object> audio = (Map<String, Object>) session.get("audio");
         Map<String, Object> input = (Map<String, Object>) audio.get("input");
         Map<String, Object> turnDetection = (Map<String, Object>) input.get("turn_detection");
+        Map<String, Object> transcription = (Map<String, Object>) input.get("transcription");
 
-        assertEquals("semantic_vad", turnDetection.get("type"));
-        assertEquals("medium", turnDetection.get("eagerness"));
-        assertEquals(Boolean.FALSE, turnDetection.get("create_response"));
-        assertEquals(Boolean.TRUE, turnDetection.get("interrupt_response"));
+        assertEquals("server_vad", turnDetection.get("type"));
+        assertEquals(0.5, turnDetection.get("threshold"));
+        assertEquals(550, turnDetection.get("silence_duration_ms"));
+        assertEquals(350, turnDetection.get("prefix_padding_ms"));
+        assertEquals("gpt-4o-transcribe", transcription.get("model"));
+        assertTrue(transcription.get("prompt").toString().contains("négations"));
+        assertEquals(
+      "near_field",
+      ((Map<String, Object>) input.get("noise_reduction")).get("type"));
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void shouldLocalizeRealtimeTranscriptionAndSafetyInstructions() {
+    void shouldLocalizePromptForNonDiarizedVitalsCapture() {
         OpenAiRealtimeCallService service = service();
 
-        Map<String, Object> session = service.buildSessionConfig("en-US");
+        Map<String, Object> session = service.buildSessionConfig("en-US", RealtimePurpose.VITALS);
         Map<String, Object> audio = (Map<String, Object>) session.get("audio");
         Map<String, Object> input = (Map<String, Object>) audio.get("input");
         Map<String, Object> transcription = (Map<String, Object>) input.get("transcription");
@@ -85,37 +94,40 @@ class OpenAiRealtimeCallServiceTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void shouldUseLongerServerVadSilenceForConsultationCompatibilityMode() {
+    void shouldFallBackToFullNonDiarizedTranscriptionWhenNeeded() {
         OpenAiRealtimeCallService service = service();
 
         Map<String, Object> session = service.buildCompatibilitySessionConfig(
-                "fr", "gpt-realtime-2.1-mini", RealtimePurpose.CONSULTATION);
+      "fr", "gpt-realtime-2.1-mini", RealtimePurpose.CONSULTATION);
         Map<String, Object> audio = (Map<String, Object>) session.get("audio");
         Map<String, Object> input = (Map<String, Object>) audio.get("input");
         Map<String, Object> turnDetection = (Map<String, Object>) input.get("turn_detection");
+        Map<String, Object> transcription = (Map<String, Object>) input.get("transcription");
 
         assertEquals("server_vad", turnDetection.get("type"));
-        assertEquals(0.8, turnDetection.get("threshold"));
-        assertEquals(1200, turnDetection.get("silence_duration_ms"));
-        assertEquals(500, turnDetection.get("prefix_padding_ms"));
+        assertEquals(0.5, turnDetection.get("threshold"));
+        assertEquals(1100, turnDetection.get("silence_duration_ms"));
+        assertEquals(700, turnDetection.get("prefix_padding_ms"));
         assertEquals(Boolean.FALSE, turnDetection.get("create_response"));
+        assertEquals("gpt-4o-transcribe", transcription.get("model"));
+        assertTrue(transcription.get("prompt").toString().contains("texte vide"));
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void shouldKeepVitalsServerVadCompatibilityModeFast() {
+    void shouldKeepVitalsCompatibilityModeResponsive() {
         OpenAiRealtimeCallService service = service();
 
         Map<String, Object> session = service.buildCompatibilitySessionConfig(
-                "fr", "gpt-realtime-2.1-mini", RealtimePurpose.VITALS);
+      "fr", "gpt-realtime-2.1-mini", RealtimePurpose.VITALS);
         Map<String, Object> audio = (Map<String, Object>) session.get("audio");
         Map<String, Object> input = (Map<String, Object>) audio.get("input");
         Map<String, Object> turnDetection = (Map<String, Object>) input.get("turn_detection");
 
         assertEquals("server_vad", turnDetection.get("type"));
-        assertEquals(0.8, turnDetection.get("threshold"));
+        assertEquals(0.5, turnDetection.get("threshold"));
         assertEquals(650, turnDetection.get("silence_duration_ms"));
-        assertEquals(300, turnDetection.get("prefix_padding_ms"));
+        assertEquals(350, turnDetection.get("prefix_padding_ms"));
         assertEquals(Boolean.FALSE, turnDetection.get("create_response"));
     }
 
@@ -123,14 +135,14 @@ class OpenAiRealtimeCallServiceTest {
     void shouldPreserveRawSdpAndMultipartContentTypes() {
         OpenAiRealtimeCallService service = service();
         String sdp = "v=0\r\n"
-                + "o=- 123 456 IN IP4 127.0.0.1\r\n"
-                + "s=-\r\n"
-                + "t=0 0\r\n"
-                + "m=audio 9 UDP/TLS/RTP/SAVPF 111\r\n";
+      + "o=- 123 456 IN IP4 127.0.0.1\r\n"
+      + "s=-\r\n"
+      + "t=0 0\r\n"
+      + "m=audio 9 UDP/TLS/RTP/SAVPF 111\r\n";
 
         MultiValueMap<String, Object> multipart = service.buildMultipartBody(
-                sdp,
-                service.buildSessionConfig("fr"));
+      sdp,
+      service.buildSessionConfig("fr"));
 
         HttpEntity<?> sdpPart = assertInstanceOf(HttpEntity.class, multipart.getFirst("sdp"));
         byte[] sdpBytes = assertInstanceOf(byte[].class, sdpPart.getBody());
@@ -143,34 +155,34 @@ class OpenAiRealtimeCallServiceTest {
         assertEquals(MediaType.APPLICATION_JSON, sessionPart.getHeaders().getContentType());
         assertTrue(sessionJson.contains("\"type\":\"realtime\""));
         assertTrue(sessionJson.contains("\"model\":\"gpt-realtime-2.1-mini\""));
-        assertTrue(sessionJson.contains("\"model\":\"gpt-4o-mini-transcribe\""));
+        assertTrue(sessionJson.contains("\"model\":\"gpt-4o-transcribe-diarize\""));
     }
 
     private OpenAiRealtimeCallService service() {
         AiProperties properties = new AiProperties(
-                true,
-                "openai",
-                "openai",
-                30,
-                20,
-                0.35,
-                "fr",
-                new AiProperties.OpenAiProperties(
-                        "test-key",
-                        "gpt-4o-mini",
-                        "gpt-4o-mini-transcribe",
-                        "medical",
-                        0.8,
-                        "https://api.openai.com/v1"),
-                null,
-                null);
+      true,
+      "openai",
+      "openai",
+      30,
+      20,
+      0.35,
+      "fr",
+      new AiProperties.OpenAiProperties(
+              "test-key",
+              "gpt-4o-mini",
+              "gpt-4o-mini-transcribe",
+              "medical",
+              0.5,
+              "https://api.openai.com/v1"),
+      null,
+      null);
         return new OpenAiRealtimeCallService(
-                properties,
-                new ObjectMapper(),
-                "gpt-realtime-2.1-mini",
-                "gpt-realtime-2.1-mini",
-                "gpt-4o-mini-transcribe",
-                "medium",
-                "near_field");
+      properties,
+      new ObjectMapper(),
+      "gpt-realtime-2.1-mini",
+      "gpt-realtime-2.1-mini",
+      "gpt-4o-transcribe-diarize",
+      "medium",
+      "far_field");
     }
 }

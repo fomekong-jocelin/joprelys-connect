@@ -129,6 +129,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   Future<void> _persistenceTail = Future<void>.value();
   String _confirmedTranscript = '';
   String _partialTranscript = '';
+  String? _partialItemId;
   int _liveSequence = 0;
   final Set<String> _completedTurnIds = <String>{};
   Object? _lastPersistenceError;
@@ -163,7 +164,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
         return;
       }
 
-      final live = await _gateway.getLiveTranscript(_visitId);
+      final live = await _getLiveTranscriptIfSupported();
       if (live != null && live.transcript.isNotEmpty) {
         _restoreTranscript(
           live.transcript,
@@ -185,6 +186,17 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     }
   }
 
+  Future<ClinicalLiveTranscript?> _getLiveTranscriptIfSupported() async {
+    try {
+      return await _gateway.getLiveTranscript(_visitId);
+    } on ApiException catch (error) {
+      // Déploiement progressif : l'absence temporaire du nouveau tampon live
+      // ne doit jamais empêcher l'ouverture du microphone.
+      if (error.kind == ApiFailureKind.notFound) return null;
+      rethrow;
+    }
+  }
+
   void _restoreTranscript(
     String transcript, {
     required int sequence,
@@ -192,6 +204,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   }) {
     _confirmedTranscript = transcript.trim();
     _partialTranscript = '';
+    _partialItemId = null;
     _liveSequence = sequence;
     _serverHasPendingTranscript = serverPending;
     final parsed = _parser.parse(_confirmedTranscript);
@@ -264,6 +277,11 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       case ClinicalRealtimeEventType.transcriptDelta:
         final delta = event.text;
         if (delta == null || delta.isEmpty) return;
+        final itemId = event.itemId ?? event.eventId ?? 'active-turn';
+        if (_partialItemId != itemId) {
+          _partialItemId = itemId;
+          _partialTranscript = '';
+        }
         _partialTranscript += delta;
         _publishTranscript(
           _joinTranscript(_confirmedTranscript, _partialTranscript),
@@ -300,17 +318,20 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     if (!_completedTurnIds.add(turnId)) return;
 
     _confirmedTranscript = _joinTranscript(_confirmedTranscript, transcript);
-    _partialTranscript = '';
+    if (_partialItemId == null || _partialItemId == event.itemId) {
+      _partialTranscript = '';
+      _partialItemId = null;
+    }
     _liveSequence++;
     _publishTranscript(_confirmedTranscript, soundLevel: 10);
     _queueLivePersistence(turnId);
   }
 
   String _safeEventId(ClinicalRealtimeEvent event, String transcript) {
-    final candidate = event.itemId?.trim().isNotEmpty == true
-        ? event.itemId!.trim()
-        : event.eventId?.trim().isNotEmpty == true
+    final candidate = event.eventId?.trim().isNotEmpty == true
         ? event.eventId!.trim()
+        : event.itemId?.trim().isNotEmpty == true
+        ? event.itemId!.trim()
         : 'mobile-${_liveSequence + 1}-${transcript.hashCode.abs()}';
     return candidate.replaceAll(RegExp(r'[^A-Za-z0-9._:-]'), '_');
   }
@@ -404,6 +425,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   void updateTranscript(String text) {
     _confirmedTranscript = text.trim();
     _partialTranscript = '';
+    _partialItemId = null;
     final parsed = _parser.parse(text);
     value = value.copyWith(
       transcript: text,
@@ -515,6 +537,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     _serverHasPendingTranscript = false;
     _confirmedTranscript = '';
     _partialTranscript = '';
+    _partialItemId = null;
     _liveSequence = 0;
     _completedTurnIds.clear();
     _lastPersistenceError = null;
@@ -541,7 +564,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
 
   String _friendlyError(Object error) {
     final code = switch (error) {
-      ApiException exception => exception.code,
+      ApiException exception => '${exception.code} ${exception.message}',
       StateError state => state.message.toString(),
       TimeoutException timeout => timeout.message ?? 'AI_REALTIME_TIMEOUT',
       _ => error.toString(),
@@ -556,7 +579,11 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
           ? 'Une transcription est déjà en attente. Relisez-la avant de reprendre le micro.'
           : 'A transcript is already awaiting review. Review it before recording again.';
     }
-    if (code.contains('MICROPHONE') || code.contains('PERMISSION')) {
+    final normalizedCode = code.toUpperCase();
+    if (normalizedCode.contains('MICROPHONE') ||
+        normalizedCode.contains('PERMISSION') ||
+        normalizedCode.contains('NOTALLOWED') ||
+        normalizedCode.contains('GETUSERMEDIA')) {
       return _isFrench
           ? 'Le microphone n’est pas disponible. Vérifiez son autorisation puis réessayez.'
           : 'The microphone is unavailable. Check its permission and try again.';
