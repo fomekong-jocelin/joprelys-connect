@@ -117,7 +117,26 @@ class _ConsultationNotesSheetState
     ClinicalVoiceAssistantSheet.show(
       context,
       visit: widget.visit,
-      onExtracted: (result) => _controllers.applyExtracted(result.note),
+      initialDraft: _controllers.toAiDraft(),
+      onExtracted: (result) {
+        final changed = _controllers.applyAcceptedToEmptyFields(result.note);
+        if (!mounted) return;
+        setState(() {});
+        final isFrench = Localizations.localeOf(context).languageCode != 'en';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              changed
+                  ? (isFrench
+                        ? 'Les éléments acceptés ont rempli uniquement les champs vides.'
+                        : 'Accepted items filled empty fields only.')
+                  : (isFrench
+                        ? 'Aucun champ vide à compléter. Votre saisie a été conservée.'
+                        : 'No empty field to fill. Your entries were preserved.'),
+            ),
+          ),
+        );
+      },
     );
   }
 
