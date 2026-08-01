@@ -11,6 +11,10 @@ import {
 } from '@angular/core';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AiAssistantInputComponent } from './ai-assistant-input.component';
+import {
+  clinicalAiErrorMessage,
+  extractClinicalAiErrorCode,
+} from './ai-clinical-error';
 import { AiDraftMergeService } from './ai-draft-merge.service';
 import { AiDraftPreviewComponent } from './ai-draft-preview.component';
 import {
@@ -128,8 +132,6 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
 
   openManualForm(): void {
     if (this.busy() || this.recording() || this.realtimeActive()) return;
-    // An empty accepted draft still marks the parent form as clinician-owned and
-    // unlocks manual entry without inventing any content.
     this.applyDraft.emit({});
     this.stage.set('FORM_READY');
     this.formReadyChange.emit(true);
@@ -203,13 +205,16 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
           ));
         }
       },
-      error: error => this.handleError(
-        error,
-        this.i18n.t(
-          'consultation.ai.reportGenerationFailed',
-          'Le compte rendu n’a pas pu être généré. La transcription complète reste sauvegardée.',
-        ),
-      ),
+      error: error => {
+        this.stage.set('TRANSCRIPT_REVIEW');
+        this.handleError(
+          error,
+          this.i18n.t(
+            'consultation.ai.reportGenerationFailed',
+            'Le compte rendu n’a pas pu être généré. La transcription complète reste sauvegardée.',
+          ),
+        );
+      },
     });
   }
 
@@ -400,13 +405,14 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     this.errorMessage.set('');
   }
 
-  private handleError(
-    error: { status?: number; error?: { error?: { message?: string }; detail?: string; title?: string } },
-    fallback: string,
-  ): void {
+  private handleError(error: unknown, fallback: string): void {
     this.busy.set(false);
     this.recording.set(false);
-    const detail = error.error?.error?.message || error.error?.detail || error.error?.title;
-    this.errorMessage.set(detail && !detail.startsWith('AI_') ? detail : fallback);
+    const code = extractClinicalAiErrorCode(error);
+    this.errorMessage.set(clinicalAiErrorMessage(
+      code,
+      this.i18n.currentLanguage(),
+      fallback,
+    ));
   }
 }
