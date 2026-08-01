@@ -260,7 +260,8 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       await _amplitudeSubscription?.cancel();
       _amplitudeSubscription = null;
       final path = await _recorder.stop() ?? _recordingPath;
-      if (path == null || path.isEmpty) throw StateError('AUDIO_RECORDING_EMPTY');
+      if (path == null || path.isEmpty)
+        throw StateError('AUDIO_RECORDING_EMPTY');
 
       final duration = DateTime.now().difference(
         _recordingStartedAt ?? DateTime.now(),
@@ -385,7 +386,8 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   Future<bool> prepareForClose() async {
     if (_disposed || value.status == SpeechStatus.processing) return false;
     if (value.status == SpeechStatus.listening) await stopListening();
-    if (_recordingPath != null && value.status == SpeechStatus.error) return false;
+    if (_recordingPath != null && value.status == SpeechStatus.error)
+      return false;
     return true;
   }
 

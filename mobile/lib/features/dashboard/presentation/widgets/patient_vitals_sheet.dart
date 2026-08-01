@@ -213,10 +213,7 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
     changed += applyAcceptedVitalValue(_diaController, vitals.diastolic);
     changed += applyAcceptedVitalValue(_spo2Controller, vitals.spo2);
     changed += applyAcceptedVitalValue(_glycemiaController, vitals.glycemia);
-    changed += applyAcceptedVitalValue(
-      _respController,
-      vitals.respiratoryRate,
-    );
+    changed += applyAcceptedVitalValue(_respController, vitals.respiratoryRate);
     changed += applyAcceptedVitalValue(_painController, vitals.painScale);
     return changed;
   }

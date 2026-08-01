@@ -335,9 +335,7 @@ class _ClinicalVoiceAssistantSheetState
                       ],
                       if (state.errorMessage != null) ...[
                         const SizedBox(height: 12),
-                        _ErrorNotice(
-                          message: _errorText(state.errorMessage!),
-                        ),
+                        _ErrorNotice(message: _errorText(state.errorMessage!)),
                       ],
                       if (state.assistantMessage?.trim().isNotEmpty ==
                           true) ...[
@@ -367,7 +365,8 @@ class _ClinicalVoiceAssistantSheetState
                               : 'The summary is incomplete. Correct the transcript before running the analysis again.',
                         ),
                       ],
-                      if (!state.hasPendingProposals && hasApplicableResult) ...[
+                      if (!state.hasPendingProposals &&
+                          hasApplicableResult) ...[
                         const SizedBox(height: 16),
                         ClinicalAcceptedPreview(
                           note: state.note,
