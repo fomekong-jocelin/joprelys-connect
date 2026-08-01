@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,24 +11,35 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../application/clinical_dictation_parser.dart';
 import '../../application/clinical_speech_service.dart';
+import '../../data/clinical_voice_ai_api.dart';
 import '../../domain/active_visit.dart';
+import '../../domain/consultation_note.dart';
+import '../../domain/patient_vitals.dart';
 import '../dashboard_localizations.dart';
 
 class ClinicalVoiceAssistantSheet extends ConsumerStatefulWidget {
   const ClinicalVoiceAssistantSheet({
     required this.visit,
     required this.onExtracted,
+    required this.initialDraft,
+    required this.locale,
     super.key,
   });
 
   final ActiveVisit visit;
   final ValueChanged<DictationParseResult> onExtracted;
+  final Map<String, String> initialDraft;
+  final String locale;
 
   static Future<void> show(
     BuildContext context, {
     required ActiveVisit visit,
     required ValueChanged<DictationParseResult> onExtracted,
+    Map<String, String> initialDraft = const <String, String>{},
   }) {
+    final locale = Localizations.localeOf(context).languageCode == 'en'
+        ? 'en'
+        : 'fr';
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -36,10 +49,12 @@ class ClinicalVoiceAssistantSheet extends ConsumerStatefulWidget {
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
         child: FractionallySizedBox(
-          heightFactor: 0.90,
+          heightFactor: 0.94,
           child: ClinicalVoiceAssistantSheet(
             visit: visit,
             onExtracted: onExtracted,
+            initialDraft: initialDraft,
+            locale: locale,
           ),
         ),
       ),
@@ -54,17 +69,13 @@ class ClinicalVoiceAssistantSheet extends ConsumerStatefulWidget {
 class _ClinicalVoiceAssistantSheetState
     extends ConsumerState<ClinicalVoiceAssistantSheet>
     with TickerProviderStateMixin {
-  final _speechService = ClinicalSpeechService();
+  late final ClinicalSpeechService _speechService;
   final _dictationController = TextEditingController();
 
   late AnimationController _haloController;
   late AnimationController _waveController;
 
-  List<String> _getPresetDictations(AppLocalizations l10n) => [
-    l10n.assistantPresetDictation1,
-    l10n.assistantPresetDictation2,
-    l10n.assistantPresetDictation3,
-  ];
+  bool get _isFrench => widget.locale == 'fr';
 
   @override
   void initState() {
@@ -73,15 +84,19 @@ class _ClinicalVoiceAssistantSheetState
       vsync: this,
       duration: const Duration(milliseconds: 2800),
     )..repeat();
-
     _waveController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
 
-    // Lancement immédiat de l'écoute vocale en direct
-    _speechService.startRealtimeListening();
+    _speechService = ClinicalSpeechService(
+      gateway: ref.read(clinicalVoiceAiApiProvider),
+      visitId: widget.visit.id,
+      initialDraft: widget.initialDraft,
+      locale: widget.locale,
+    );
     _speechService.addListener(_onSpeechStateChanged);
+    Future<void>.microtask(_speechService.startRealtimeListening);
   }
 
   @override
@@ -97,7 +112,10 @@ class _ClinicalVoiceAssistantSheetState
   void _onSpeechStateChanged() {
     final state = _speechService.value;
     if (_dictationController.text != state.transcript) {
-      _dictationController.text = state.transcript;
+      _dictationController.value = TextEditingValue(
+        text: state.transcript,
+        selection: TextSelection.collapsed(offset: state.transcript.length),
+      );
     }
   }
 
@@ -105,23 +123,57 @@ class _ClinicalVoiceAssistantSheetState
     _speechService.updateTranscript(text);
   }
 
-  void _toggleListening() {
-    if (_speechService.value.status == SpeechStatus.listening) {
-      _speechService.stopListening();
+  Future<void> _toggleListening() async {
+    final status = _speechService.value.status;
+    if (status == SpeechStatus.processing) return;
+    if (status == SpeechStatus.listening) {
+      await _speechService.stopListening();
     } else {
-      _speechService.startRealtimeListening();
+      await _speechService.startRealtimeListening();
     }
   }
 
-  void _applyPreset(String text) {
-    _speechService.startRealtimeListening();
-    _speechService.updateTranscript(text);
-  }
-
-  void _applyResult() {
+  Future<void> _applyResult() async {
     final state = _speechService.value;
-    final result = DictationParseResult(vitals: state.vitals, note: state.note);
-    widget.onExtracted(result);
+    final hasAccepted = state.revisions.any(
+      (revision) => revision.hasAcceptedProposals,
+    );
+    if (state.hasPendingProposals ||
+        state.needsClarification ||
+        !hasAccepted) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          _isFrench
+              ? 'Appliquer les éléments acceptés ?'
+              : 'Apply accepted items?',
+        ),
+        content: Text(
+          _isFrench
+              ? 'Seuls les éléments que vous avez explicitement acceptés seront proposés au formulaire. Les champs déjà saisis seront conservés.'
+              : 'Only items you explicitly accepted will be proposed to the form. Existing entries will be preserved.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(_isFrench ? 'Annuler' : 'Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(_isFrench ? 'Appliquer' : 'Apply'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    widget.onExtracted(
+      DictationParseResult(vitals: state.vitals, note: state.note),
+    );
     Navigator.of(context).pop();
   }
 
@@ -138,6 +190,49 @@ class _ClinicalVoiceAssistantSheetState
     return '$visitNum · $nonBreakingDpu';
   }
 
+  String _fieldLabel(AppLocalizations l10n, String field) {
+    return switch (field) {
+      'symptoms' => l10n.consultationSubjectiveLabel,
+      'clinicalExam' => l10n.consultationObjectiveLabel,
+      'diagnosis' => l10n.consultationDiagnosisLabel,
+      'conclusion' => l10n.consultationConclusionLabel,
+      'advice' => l10n.consultationAdviceLabel,
+      'followUp' => l10n.consultationFollowUpLabel,
+      'vitals' => _isFrench ? 'Constantes vitales' : 'Vital signs',
+      'prescription' => _isFrench ? 'Prescription' : 'Prescription',
+      'labOrders' => _isFrench ? 'Examens demandés' : 'Lab orders',
+      _ => field,
+    };
+  }
+
+  String _formatProposalValue(String field, String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return _isFrench ? 'Vide' : 'Empty';
+    }
+    if (!const <String>{'vitals', 'prescription', 'labOrders'}.contains(field)) {
+      return value;
+    }
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is Map) {
+        return decoded.entries.map((item) => '${item.key}: ${item.value}').join(' · ');
+      }
+      if (decoded is List) {
+        return decoded.map((item) {
+          if (item is Map) {
+            return item.values
+                .where((part) => part != null && part.toString().trim().isNotEmpty)
+                .join(' · ');
+          }
+          return item.toString();
+        }).join('\n');
+      }
+    } catch (_) {
+      return value;
+    }
+    return value;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -148,6 +243,12 @@ class _ClinicalVoiceAssistantSheetState
       valueListenable: _speechService,
       builder: (context, state, child) {
         final isListening = state.status == SpeechStatus.listening;
+        final isProcessing = state.status == SpeechStatus.processing;
+        final canEditTranscript =
+            state.status == SpeechStatus.transcriptReview;
+        final hasAccepted = state.revisions.any(
+          (revision) => revision.hasAcceptedProposals,
+        );
 
         return Container(
           decoration: BoxDecoration(
@@ -169,7 +270,6 @@ class _ClinicalVoiceAssistantSheetState
                   ),
                 ),
               ),
-              // En-tête de la modale avec identité du patient
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                 child: Row(
@@ -206,7 +306,9 @@ class _ClinicalVoiceAssistantSheetState
                       ),
                     ),
                     IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: isProcessing
+                          ? null
+                          : () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.close_rounded),
                     ),
                   ],
@@ -219,149 +321,311 @@ class _ClinicalVoiceAssistantSheetState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Surface d'écoute Web-aligned (VoiceListeningSurfaceComponent)
                       ClinicalVoiceListeningSurface(
                         active: isListening,
                         soundLevel: state.soundLevel,
                         haloController: _haloController,
                         waveController: _waveController,
-                        badgeText: isListening
+                        badgeText: isProcessing
+                            ? (_isFrench ? 'Traitement sécurisé' : 'Secure processing')
+                            : isListening
                             ? l10n.assistantSecuredRecording
                             : l10n.assistantPaused,
-                        statusText: isListening
+                        statusText: isProcessing
+                            ? (_isFrench
+                                  ? 'Transcription et analyse en cours…'
+                                  : 'Transcription and analysis in progress…')
+                            : isListening
                             ? l10n.assistantListeningStatusText
-                            : l10n.assistantTapToListen,
-                        tipText: l10n.assistantTipNaturalDictation,
+                            : (_isFrench
+                                  ? 'Enregistrez une dictée, puis vérifiez-la avant analyse.'
+                                  : 'Record a dictation, then review it before analysis.'),
+                        tipText: _isFrench
+                            ? 'Aucune donnée ne sera appliquée sans validation explicite.'
+                            : 'No data will be applied without explicit approval.',
                         stopLabel: l10n.assistantStopDictationButton,
                         startLabel: l10n.assistantStartDictation,
                         onToggleListening: _toggleListening,
                       ),
-                      const SizedBox(height: 16),
-                      // Puces de dictée rapide pour tests instantanés
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            for (final text in _getPresetDictations(l10n)) ...[
-                              Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: ActionChip(
-                                  avatar: const Icon(
-                                    Icons.auto_awesome_rounded,
-                                    size: 14,
+                      if (isProcessing) ...[
+                        const SizedBox(height: 16),
+                        const Center(child: CircularProgressIndicator()),
+                      ],
+                      if (state.transcript.trim().isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        ClinicalTranscriptCard(
+                          transcript: state.transcript,
+                          controller: _dictationController,
+                          onChanged: _onTextChanged,
+                          label: _isFrench
+                              ? 'Transcription à vérifier'
+                              : 'Transcript to review',
+                          hint: l10n.assistantDictationHint,
+                          editLabel: _isFrench ? 'Corriger' : 'Edit',
+                          doneLabel: _isFrench
+                              ? 'Terminer la correction'
+                              : 'Finish editing',
+                          editable: canEditTranscript,
+                        ),
+                      ],
+                      if (state.status == SpeechStatus.transcriptReview) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: colors.tertiaryContainer.withValues(alpha: 0.55),
+                            borderRadius: BorderRadius.circular(
+                              AppDesignTokens.radiusSm,
+                            ),
+                          ),
+                          child: Text(
+                            _isFrench
+                                ? 'Relisez et corrigez le texte. L’IA travaillera uniquement sur cette version validée.'
+                                : 'Review and correct the text. The AI will only use this approved version.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colors.onTertiaryContainer,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        AppButton(
+                          label: _isFrench
+                              ? 'Analyser et proposer le compte rendu'
+                              : 'Analyze and propose the clinical note',
+                          icon: Icons.auto_awesome_rounded,
+                          expand: true,
+                          onPressed: state.transcript.trim().isEmpty
+                              ? null
+                              : _speechService.analyzeTranscript,
+                        ),
+                      ],
+                      if (state.errorMessage != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: colors.errorContainer,
+                            borderRadius: BorderRadius.circular(
+                              AppDesignTokens.radiusSm,
+                            ),
+                          ),
+                          child: Text(
+                            state.errorMessage!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colors.onErrorContainer,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (state.assistantMessage?.trim().isNotEmpty == true) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          state.assistantMessage!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                      if (state.revisions.isNotEmpty) ...[
+                        const SizedBox(height: 18),
+                        Text(
+                          _isFrench
+                              ? 'Modifications proposées à valider'
+                              : 'Proposed changes to review',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        for (final revision in state.revisions.where(
+                          (item) => item.isPending,
+                        )) ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _isFrench
+                                      ? 'Proposition #${revision.sequence}'
+                                      : 'Proposal #${revision.sequence}',
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
                                   ),
-                                  label: Text(
-                                    text,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: isProcessing
+                                    ? null
+                                    : () => _speechService.decideRevision(
+                                        revision,
+                                        ClinicalAiDecision.reject,
+                                      ),
+                                child: Text(_isFrench ? 'Tout rejeter' : 'Reject all'),
+                              ),
+                              FilledButton.tonal(
+                                onPressed: isProcessing
+                                    ? null
+                                    : () => _speechService.decideRevision(
+                                        revision,
+                                        ClinicalAiDecision.accept,
+                                      ),
+                                child: Text(_isFrench ? 'Tout accepter' : 'Accept all'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          for (final proposal in revision.proposals) ...[
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: colors.surfaceContainerLow,
+                                borderRadius: BorderRadius.circular(
+                                  AppDesignTokens.radiusSm,
+                                ),
+                                border: Border.all(color: colors.outlineVariant),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          _fieldLabel(l10n, proposal.field),
+                                          style: theme.textTheme.labelLarge?.copyWith(
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                      ),
+                                      Text(
+                                        proposal.uncertainty,
+                                        style: theme.textTheme.labelSmall?.copyWith(
+                                          color: colors.onSurfaceVariant,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (proposal.reason.trim().isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      proposal.reason,
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: colors.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _isFrench ? 'Valeur actuelle' : 'Current value',
                                     style: theme.textTheme.labelSmall?.copyWith(
+                                      color: colors.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  Text(
+                                    _formatProposalValue(
+                                      proposal.field,
+                                      proposal.previousValue,
+                                    ),
+                                    style: theme.textTheme.bodySmall,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _isFrench ? 'Valeur proposée' : 'Proposed value',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: colors.primary,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  Text(
+                                    proposal.operation == 'CLEAR'
+                                        ? (_isFrench ? 'Effacer' : 'Clear')
+                                        : _formatProposalValue(
+                                            proposal.field,
+                                            proposal.proposedValue,
+                                          ),
+                                    style: theme.textTheme.bodyMedium?.copyWith(
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                  backgroundColor: colors.primary.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  side: BorderSide(
-                                    color: colors.primary.withValues(
-                                      alpha: 0.3,
+                                  if (proposal.isPending) ...[
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        TextButton(
+                                          onPressed: isProcessing
+                                              ? null
+                                              : () => _speechService.decideProposal(
+                                                  revision,
+                                                  proposal,
+                                                  ClinicalAiDecision.reject,
+                                                ),
+                                          child: Text(
+                                            _isFrench ? 'Rejeter' : 'Reject',
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        FilledButton(
+                                          onPressed: isProcessing
+                                              ? null
+                                              : () => _speechService.decideProposal(
+                                                  revision,
+                                                  proposal,
+                                                  ClinicalAiDecision.accept,
+                                                ),
+                                          child: Text(
+                                            _isFrench ? 'Accepter' : 'Accept',
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                  onPressed: () => _applyPreset(text),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Zone de transcription vocale en direct (Web-aligned with timestamp & Corriger action)
-                      ClinicalTranscriptCard(
-                        transcript: state.transcript,
-                        controller: _dictationController,
-                        onChanged: _onTextChanged,
-                        label: l10n.assistantLiveTranscript,
-                        hint: l10n.assistantDictationHint,
-                      ),
-                      const SizedBox(height: 16),
-                      // Synthèse d'extraction des constantes en direct
-                      if (!state.vitals.isEmpty ||
-                          state.note.symptoms != null) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: colors.primary.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(
-                              AppDesignTokens.radiusLg,
-                            ),
-                            border: Border.all(
-                              color: colors.primary.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.assistantExtractedSummary,
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  color: colors.primary,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              if (!state.vitals.isEmpty) ...[
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: [
-                                    if (state.vitals.temperature != null)
-                                      VitalExtractPill(
-                                        label:
-                                            'T°: ${state.vitals.temperature}°C',
-                                      ),
-                                    if (state.vitals.systolic != null &&
-                                        state.vitals.diastolic != null)
-                                      VitalExtractPill(
-                                        label:
-                                            'TA: ${state.vitals.systolic}/${state.vitals.diastolic} mmHg',
-                                      ),
-                                    if (state.vitals.pulse != null)
-                                      VitalExtractPill(
-                                        label:
-                                            'Pouls: ${state.vitals.pulse} bpm',
-                                      ),
-                                    if (state.vitals.spo2 != null)
-                                      VitalExtractPill(
-                                        label: 'SpO2: ${state.vitals.spo2}%',
-                                      ),
-                                    if (state.vitals.weight != null)
-                                      VitalExtractPill(
-                                        label:
-                                            'Poids: ${state.vitals.weight} kg',
-                                      ),
-                                    if (state.vitals.height != null)
-                                      VitalExtractPill(
-                                        label:
-                                            'Taille: ${state.vitals.height} cm',
-                                      ),
-                                    if (state.vitals.glycemia != null)
-                                      VitalExtractPill(
-                                        label:
-                                            'Glycémie: ${state.vitals.glycemia} g/L',
-                                      ),
-                                    if (state.vitals.painScale != null)
-                                      VitalExtractPill(
-                                        label:
-                                            'Douleur: EVA ${state.vitals.painScale}/10',
-                                      ),
                                   ],
-                                ),
-                              ],
-                            ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ],
+                      if (!state.vitals.isEmpty) ...[
+                        const SizedBox(height: 12),
+                        _VitalsPreview(vitals: state.vitals),
+                      ],
+                      if (!state.note.isEmpty && !state.hasPendingProposals) ...[
+                        const SizedBox(height: 12),
+                        _ClinicalNotePreview(note: state.note),
+                      ],
+                      if (state.needsClarification) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: colors.errorContainer,
+                            borderRadius: BorderRadius.circular(
+                              AppDesignTokens.radiusSm,
+                            ),
+                          ),
+                          child: Text(
+                            _isFrench
+                                ? 'Une clarification clinique est nécessaire. Rien ne peut être appliqué pour le moment.'
+                                : 'Clinical clarification is required. Nothing can be applied yet.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colors.onErrorContainer,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                      ],
+                      if (state.status == SpeechStatus.done &&
+                          hasAccepted &&
+                          !state.needsClarification) ...[
+                        const SizedBox(height: 18),
                         AppButton(
-                          label: l10n.assistantApplyLiveVitals,
-                          icon: Icons.check_circle_rounded,
+                          label: _isFrench
+                              ? 'Appliquer les éléments acceptés'
+                              : 'Apply accepted items',
+                          icon: Icons.fact_check_rounded,
                           expand: true,
                           onPressed: _applyResult,
                         ),
@@ -374,6 +638,83 @@ class _ClinicalVoiceAssistantSheetState
           ),
         );
       },
+    );
+  }
+}
+
+class _VitalsPreview extends StatelessWidget {
+  const _VitalsPreview({required this.vitals});
+
+  final PatientVitals vitals;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final pills = <Widget>[
+      if (vitals.temperature != null)
+        VitalExtractPill(label: 'T°: ${vitals.temperature}°C'),
+      if (vitals.systolic != null && vitals.diastolic != null)
+        VitalExtractPill(
+          label: 'TA: ${vitals.systolic}/${vitals.diastolic} mmHg',
+        ),
+      if (vitals.pulse != null)
+        VitalExtractPill(label: 'Pouls: ${vitals.pulse} bpm'),
+      if (vitals.spo2 != null)
+        VitalExtractPill(label: 'SpO2: ${vitals.spo2}%'),
+      if (vitals.weight != null)
+        VitalExtractPill(label: 'Poids: ${vitals.weight} kg'),
+      if (vitals.height != null)
+        VitalExtractPill(label: 'Taille: ${vitals.height} cm'),
+      if (vitals.glycemia != null)
+        VitalExtractPill(label: 'Glycémie: ${vitals.glycemia} g/L'),
+      if (vitals.painScale != null)
+        VitalExtractPill(label: 'Douleur: EVA ${vitals.painScale}/10'),
+    ];
+    if (pills.isEmpty) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
+      ),
+      child: Wrap(spacing: 8, runSpacing: 8, children: pills),
+    );
+  }
+}
+
+class _ClinicalNotePreview extends StatelessWidget {
+  const _ClinicalNotePreview({required this.note});
+
+  final ConsultationNote note;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final rows = <(String, String?)>[
+      (l10n.consultationSubjectiveLabel, note.symptoms),
+      (l10n.consultationObjectiveLabel, note.clinicalExam),
+      (l10n.consultationDiagnosisLabel, note.diagnosis),
+      (l10n.consultationConclusionLabel, note.conclusion),
+      (l10n.consultationAdviceLabel, note.advice),
+      (l10n.consultationFollowUpLabel, note.followUp),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final row in rows)
+          if (row.$2?.trim().isNotEmpty == true) ...[
+            Text(
+              row.$1,
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(row.$2!, style: theme.textTheme.bodyMedium),
+            const SizedBox(height: 10),
+          ],
+      ],
     );
   }
 }
