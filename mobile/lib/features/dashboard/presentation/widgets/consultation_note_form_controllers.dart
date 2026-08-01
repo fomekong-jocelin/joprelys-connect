@@ -79,11 +79,7 @@ final class ConsultationNoteFormControllers {
     return true;
   }
 
-  void _putWhenPresent(
-    Map<String, String> target,
-    String field,
-    String value,
-  ) {
+  void _putWhenPresent(Map<String, String> target, String field, String value) {
     final trimmed = value.trim();
     if (trimmed.isNotEmpty) {
       target[field] = trimmed;
