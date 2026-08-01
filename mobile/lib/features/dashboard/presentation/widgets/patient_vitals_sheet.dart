@@ -92,7 +92,9 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
 
   Future<void> _fetchExistingVitals() async {
     try {
-      final existing = await ref.read(vitalsApiProvider).getVitals(widget.visit.id);
+      final existing = await ref
+          .read(vitalsApiProvider)
+          .getVitals(widget.visit.id);
       if (existing != null && mounted) _populateFields(existing);
     } catch (_) {
       // Un formulaire vide reste utilisable si aucune constante n'est disponible.
@@ -152,10 +154,9 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
       _error = null;
     });
     try {
-      await ref.read(vitalsApiProvider).saveVitals(
-        widget.visit.id,
-        _currentVitals(),
-      );
+      await ref
+          .read(vitalsApiProvider)
+          .saveVitals(widget.visit.id, _currentVitals());
       if (!mounted) return;
       Navigator.of(context).pop();
       widget.onSaved();
@@ -342,21 +343,24 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
                                 ),
                               ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     l10n.vitalsBmiLabel,
-                                    style: theme.textTheme.labelMedium?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      color: colors.primary,
-                                    ),
+                                    style: theme.textTheme.labelMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: colors.primary,
+                                        ),
                                   ),
                                   Text(
                                     '${_calculatedBmi!.toStringAsFixed(1)} kg/m²',
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w900,
-                                      color: colors.primary,
-                                    ),
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w900,
+                                          color: colors.primary,
+                                        ),
                                   ),
                                 ],
                               ),
