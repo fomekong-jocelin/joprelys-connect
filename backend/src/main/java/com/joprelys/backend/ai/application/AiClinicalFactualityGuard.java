@@ -31,6 +31,8 @@ final class AiClinicalFactualityGuard {
     private static final Logger log = LoggerFactory.getLogger(AiClinicalFactualityGuard.class);
     private static final Set<String> STRUCTURED_FIELDS = Set.of(
             "prescription", "labOrders", "vitals");
+    private static final Set<String> EVIDENCE_FALLBACK_FIELDS = Set.of(
+            "symptoms", "clinicalExam", "advice", "followUp");
     private static final Set<String> NEGATION_TOKENS = Set.of(
             "pas", "sans", "aucun", "aucune", "non", "nie", "negation",
             "not", "no", "without", "denies", "denied");
@@ -113,7 +115,11 @@ final class AiClinicalFactualityGuard {
         if (STRUCTURED_FIELDS.contains(change.field())) {
             return sanitizeStructuredChange(change, authorizedSource);
         }
-        return textValueSupported(change, authorizedSource) ? change : null;
+        if (textValueSupported(change, authorizedSource)
+                && textValueCoversEvidence(change)) {
+            return change;
+        }
+        return exactEvidenceFallback(change);
     }
 
     private boolean hasExplicitClearIntent(String normalizedCurrent) {
@@ -147,6 +153,42 @@ final class AiClinicalFactualityGuard {
             }
         }
         return true;
+    }
+
+    private boolean textValueCoversEvidence(ParsedChange change) {
+        Set<String> proposedTokens = significantTokens(change.proposedValue());
+        for (String quote : change.evidence()) {
+            Set<String> evidenceTokens = significantTokens(quote);
+            evidenceTokens.removeAll(SAFE_GLUE_WORDS);
+            if (!proposedTokens.containsAll(evidenceTokens)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private ParsedChange exactEvidenceFallback(ParsedChange change) {
+        if (!EVIDENCE_FALLBACK_FIELDS.contains(change.field())) {
+            return null;
+        }
+        Map<String, String> exactQuotes = new LinkedHashMap<>();
+        for (String quote : change.evidence()) {
+            if (quote == null || quote.isBlank()) {
+                continue;
+            }
+            String cleaned = quote.trim();
+            exactQuotes.putIfAbsent(normalize(cleaned), cleaned);
+        }
+        if (exactQuotes.isEmpty()) {
+            return null;
+        }
+        return new ParsedChange(
+                change.field(),
+                change.operation(),
+                String.join("\n", exactQuotes.values()),
+                change.reason(),
+                change.uncertainty(),
+                change.evidence());
     }
 
     private ParsedChange sanitizeStructuredChange(ParsedChange change, String authorizedSource) {
