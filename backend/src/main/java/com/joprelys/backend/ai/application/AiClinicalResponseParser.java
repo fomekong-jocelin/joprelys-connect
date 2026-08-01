@@ -39,15 +39,19 @@ final class AiClinicalResponseParser {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Runtime parsing keeps every independently grounded and valid change. A single
+     * malformed proposal must never erase an otherwise usable clinical report.
+     */
     ParsedResponse parse(String content) {
+        return parse(content, true);
+    }
+
+    /** Strict entry point kept for contract and security regression tests. */
+    ParsedResponse parseStrict(String content) {
         return parse(content, false);
     }
 
-    /**
-     * Parse a clinician-reviewed capture. The root contract remains strict, while one
-     * malformed field proposal cannot erase independent, grounded changes from the
-     * same transcript.
-     */
     ParsedResponse parseCapture(String content) {
         return parse(content, true);
     }
