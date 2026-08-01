@@ -39,6 +39,8 @@ class ClinicalVoiceAssistantSheet extends ConsumerStatefulWidget {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => Padding(
         padding: EdgeInsets.only(
@@ -89,7 +91,7 @@ class _ClinicalVoiceAssistantSheetState
       initialDraft: widget.initialDraft,
       locale: widget.locale,
     )..addListener(_synchronizeTranscript);
-    Future.microtask(_speechService.startRealtimeListening);
+    Future.microtask(_speechService.restoreOrStart);
   }
 
   @override
@@ -125,16 +127,15 @@ class _ClinicalVoiceAssistantSheetState
   }
 
   Future<void> _close() async {
-    await _speechService.cancelListening();
-    if (mounted) Navigator.of(context).pop();
+    final safeToClose = await _speechService.prepareForClose();
+    if (safeToClose && mounted) Navigator.of(context).pop();
   }
 
   Future<void> _applyAcceptedResult() async {
     final state = _speechService.value;
-    final accepted = state.revisions.any(
-      (revision) => revision.hasAcceptedProposals,
-    );
-    if (!accepted || state.hasPendingProposals || state.needsClarification) {
+    if (!state.hasApplicableResult ||
+        state.hasPendingProposals ||
+        state.needsClarification) {
       return;
     }
 
@@ -143,13 +144,13 @@ class _ClinicalVoiceAssistantSheetState
       builder: (dialogContext) => AlertDialog(
         title: Text(
           _isFrench
-              ? 'Appliquer les éléments acceptés ?'
-              : 'Apply accepted items?',
+              ? 'Appliquer les éléments vérifiés ?'
+              : 'Apply reviewed items?',
         ),
         content: Text(
           _isFrench
-              ? 'Seuls les éléments explicitement acceptés seront proposés. Les champs déjà renseignés resteront inchangés.'
-              : 'Only explicitly accepted items will be proposed. Existing fields will remain unchanged.',
+              ? 'Seuls les éléments relus et confirmés seront appliqués. Les autres champs resteront inchangés.'
+              : 'Only reviewed and confirmed items will be applied. Other fields will remain unchanged.',
         ),
         actions: [
           TextButton(
@@ -219,6 +220,20 @@ class _ClinicalVoiceAssistantSheetState
     };
   }
 
+  String _errorText(String raw) {
+    if (raw.contains('AI_AUDIO_SILENCE')) {
+      return _isFrench
+          ? 'Aucune parole n’a été détectée. Recommencez l’enregistrement en parlant près du microphone.'
+          : 'No speech was detected. Record again while speaking near the microphone.';
+    }
+    if (raw.contains('AI_TRANSCRIPT_REVIEW_REQUIRED')) {
+      return _isFrench
+          ? 'Une transcription est déjà en attente. Relisez-la avant de reprendre le micro.'
+          : 'A transcript is already waiting. Review it before recording again.';
+    }
+    return raw;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -230,9 +245,7 @@ class _ClinicalVoiceAssistantSheetState
       builder: (context, state, child) {
         final listening = state.status == SpeechStatus.listening;
         final processing = state.status == SpeechStatus.processing;
-        final accepted = state.revisions.any(
-          (revision) => revision.hasAcceptedProposals,
-        );
+        final hasApplicableResult = state.hasApplicableResult;
 
         return Container(
           decoration: BoxDecoration(
@@ -322,7 +335,9 @@ class _ClinicalVoiceAssistantSheetState
                       ],
                       if (state.errorMessage != null) ...[
                         const SizedBox(height: 12),
-                        _ErrorNotice(message: state.errorMessage!),
+                        _ErrorNotice(
+                          message: _errorText(state.errorMessage!),
+                        ),
                       ],
                       if (state.assistantMessage?.trim().isNotEmpty ==
                           true) ...[
@@ -348,12 +363,11 @@ class _ClinicalVoiceAssistantSheetState
                         const SizedBox(height: 12),
                         _ErrorNotice(
                           message: _isFrench
-                              ? 'Une clarification clinique est nécessaire. Rien ne peut être appliqué.'
-                              : 'Clinical clarification is required. Nothing can be applied.',
+                              ? 'La synthèse est incomplète. Corrigez la transcription avant de relancer l’analyse.'
+                              : 'The summary is incomplete. Correct the transcript before running the analysis again.',
                         ),
                       ],
-                      if (!state.hasPendingProposals &&
-                          (!state.note.isEmpty || !state.vitals.isEmpty)) ...[
+                      if (!state.hasPendingProposals && hasApplicableResult) ...[
                         const SizedBox(height: 16),
                         ClinicalAcceptedPreview(
                           note: state.note,
@@ -361,13 +375,13 @@ class _ClinicalVoiceAssistantSheetState
                         ),
                       ],
                       if (state.status == SpeechStatus.done &&
-                          accepted &&
+                          hasApplicableResult &&
                           !state.needsClarification) ...[
                         const SizedBox(height: 18),
                         AppButton(
                           label: _isFrench
-                              ? 'Appliquer les éléments acceptés'
-                              : 'Apply accepted items',
+                              ? 'Appliquer les éléments vérifiés'
+                              : 'Apply reviewed items',
                           icon: Icons.fact_check_rounded,
                           expand: true,
                           onPressed: _applyAcceptedResult,
