@@ -13,6 +13,8 @@ final clinicalVoiceAiApiProvider = Provider<ClinicalVoiceAiGateway>((ref) {
 });
 
 abstract interface class ClinicalVoiceAiGateway {
+  Future<ClinicalAiState?> getSession(String visitId);
+
   Future<ClinicalAiState> startSession(
     String visitId,
     Map<String, String> draft, {
@@ -133,6 +135,8 @@ final class ClinicalAiState {
     required this.transcript,
     required this.assistantMessage,
     required this.needsClarification,
+    this.pendingTranscript,
+    this.transcriptStatus = 'NONE',
   });
 
   factory ClinicalAiState.fromJson(Map<String, dynamic> json) {
@@ -157,6 +161,8 @@ final class ClinicalAiState {
       transcript: json['transcript']?.toString(),
       assistantMessage: json['assistantMessage']?.toString(),
       needsClarification: json['needsClarification'] == true,
+      pendingTranscript: json['pendingTranscript']?.toString(),
+      transcriptStatus: json['transcriptStatus']?.toString() ?? 'NONE',
     );
   }
 
@@ -165,6 +171,8 @@ final class ClinicalAiState {
   final String? transcript;
   final String? assistantMessage;
   final bool needsClarification;
+  final String? pendingTranscript;
+  final String transcriptStatus;
 
   List<ClinicalAiRevision> get pendingRevisions =>
       revisions.where((revision) => revision.isPending).toList(growable: false);
@@ -235,6 +243,15 @@ final class ClinicalVoiceAiApi implements ClinicalVoiceAiGateway {
   final ApiClient _client;
 
   @override
+  Future<ClinicalAiState?> getSession(String visitId) async {
+    final response = await _client.get<dynamic>(
+      '/api/ai/consultations/$visitId/session',
+    );
+    if (response.data == null) return null;
+    return _stateFrom(response.data, 'Invalid AI session response');
+  }
+
+  @override
   Future<ClinicalAiState> startSession(
     String visitId,
     Map<String, String> draft, {
@@ -271,8 +288,12 @@ final class ClinicalVoiceAiApi implements ClinicalVoiceAiGateway {
     String transcript,
   ) async {
     final response = await _client.post<dynamic>(
-      '/api/ai/consultations/$visitId/transcriptions/analyze',
-      data: <String, dynamic>{'transcript': transcript},
+      '/api/ai/consultations/$visitId/messages/realtime',
+      data: <String, dynamic>{
+        'transcript': transcript,
+        'confidence': 1.0,
+        'eventId': 'mobile-reviewed-${DateTime.now().microsecondsSinceEpoch}',
+      },
     );
     return _stateFrom(response.data, 'Invalid AI analysis response');
   }
