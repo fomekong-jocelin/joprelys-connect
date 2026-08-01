@@ -1,9 +1,8 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_design_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../application/clinical_value_formatter.dart';
 import '../../data/clinical_voice_ai_api.dart';
 import '../../domain/consultation_note.dart';
 import '../../domain/patient_vitals.dart';
@@ -245,26 +244,7 @@ class _ProposalCard extends StatelessWidget {
   }
 
   String _formatValue(String field, String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return isFrench ? 'Vide' : 'Empty';
-    }
-    if (!const {'vitals', 'prescription', 'labOrders'}.contains(field)) {
-      return value;
-    }
-    try {
-      final decoded = jsonDecode(value);
-      if (decoded is Map) {
-        return decoded.entries
-            .map((item) => '${item.key}: ${item.value}')
-            .join(' · ');
-      }
-      if (decoded is List) {
-        return decoded.map((item) => item.toString()).join('\n');
-      }
-    } catch (_) {
-      return value;
-    }
-    return value;
+    return formatClinicalValue(field, value, isFrench: isFrench);
   }
 }
 
