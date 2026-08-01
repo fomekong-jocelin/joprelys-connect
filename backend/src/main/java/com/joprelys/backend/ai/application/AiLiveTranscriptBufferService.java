@@ -27,7 +27,11 @@ public class AiLiveTranscriptBufferService {
     private final int sessionTtlMinutes;
 
     public AiLiveTranscriptBufferService(AiProperties properties) {
-        this.sessionTtlMinutes = Math.max(5, properties.sessionTtlMinutes());
+        this(properties.sessionTtlMinutes());
+    }
+
+    AiLiveTranscriptBufferService(int sessionTtlMinutes) {
+        this.sessionTtlMinutes = Math.max(5, sessionTtlMinutes);
     }
 
     public Snapshot upsert(
