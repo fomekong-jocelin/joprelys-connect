@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -71,91 +73,65 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
 
   @override
   void dispose() {
-    _tempController.dispose();
-    _weightController.dispose();
-    _heightController.dispose();
-    _pulseController.dispose();
-    _sysController.dispose();
-    _diaController.dispose();
-    _spo2Controller.dispose();
-    _glycemiaController.dispose();
-    _respController.dispose();
-    _painController.dispose();
+    for (final controller in <TextEditingController>[
+      _tempController,
+      _weightController,
+      _heightController,
+      _pulseController,
+      _sysController,
+      _diaController,
+      _spo2Controller,
+      _glycemiaController,
+      _respController,
+      _painController,
+    ]) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
   Future<void> _fetchExistingVitals() async {
     try {
-      final gateway = ref.read(vitalsApiProvider);
-      final existing = await gateway.getVitals(widget.visit.id);
-      if (existing != null && mounted) {
-        _populateFields(existing);
-      }
+      final existing = await ref.read(vitalsApiProvider).getVitals(widget.visit.id);
+      if (existing != null && mounted) _populateFields(existing);
     } catch (_) {
-      // Keep empty form if initial fetch fails or has no vitals yet
+      // Un formulaire vide reste utilisable si aucune constante n'est disponible.
     } finally {
-      if (mounted) {
-        setState(() => _fetchingInitial = false);
-      }
+      if (mounted) setState(() => _fetchingInitial = false);
     }
   }
 
   void _populateFields(PatientVitals vitals) {
-    if (vitals.temperature != null) {
-      _tempController.text = vitals.temperature.toString();
-    }
-    if (vitals.weight != null) {
-      _weightController.text = vitals.weight.toString();
-    }
-    if (vitals.height != null) {
-      _heightController.text = vitals.height.toString();
-    }
-    if (vitals.pulse != null) {
-      _pulseController.text = vitals.pulse.toString();
-    }
-    if (vitals.systolic != null) {
-      _sysController.text = vitals.systolic.toString();
-    }
-    if (vitals.diastolic != null) {
-      _diaController.text = vitals.diastolic.toString();
-    }
-    if (vitals.spo2 != null) {
-      _spo2Controller.text = vitals.spo2.toString();
-    }
-    if (vitals.glycemia != null) {
-      _glycemiaController.text = vitals.glycemia.toString();
-    }
-    if (vitals.respiratoryRate != null) {
-      _respController.text = vitals.respiratoryRate.toString();
-    }
-    if (vitals.painScale != null) {
-      _painController.text = vitals.painScale.toString();
-    }
+    _setValue(_tempController, vitals.temperature);
+    _setValue(_weightController, vitals.weight);
+    _setValue(_heightController, vitals.height);
+    _setValue(_pulseController, vitals.pulse);
+    _setValue(_sysController, vitals.systolic);
+    _setValue(_diaController, vitals.diastolic);
+    _setValue(_spo2Controller, vitals.spo2);
+    _setValue(_glycemiaController, vitals.glycemia);
+    _setValue(_respController, vitals.respiratoryRate);
+    _setValue(_painController, vitals.painScale);
     _recalculateBmi();
   }
 
+  void _setValue(TextEditingController controller, num? value) {
+    if (value != null) controller.text = value.toString();
+  }
+
   void _recalculateBmi() {
-    final w = double.tryParse(_weightController.text.trim());
-    final h = double.tryParse(_heightController.text.trim());
-    if (w != null && h != null && h > 0) {
-      final hMeters = h / 100.0;
-      setState(() => _calculatedBmi = w / (hMeters * hMeters));
-    } else {
-      if (_calculatedBmi != null) {
-        setState(() => _calculatedBmi = null);
-      }
+    final weight = double.tryParse(_weightController.text.trim());
+    final height = double.tryParse(_heightController.text.trim());
+    final next = weight != null && height != null && height > 0
+        ? weight / ((height / 100) * (height / 100))
+        : null;
+    if (next != _calculatedBmi && mounted) {
+      setState(() => _calculatedBmi = next);
     }
   }
 
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    final payload = PatientVitals(
+  PatientVitals _currentVitals() {
+    return PatientVitals(
       temperature: double.tryParse(_tempController.text.trim()),
       weight: double.tryParse(_weightController.text.trim()),
       height: int.tryParse(_heightController.text.trim()),
@@ -167,62 +143,114 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
       respiratoryRate: int.tryParse(_respController.text.trim()),
       painScale: int.tryParse(_painController.text.trim()),
     );
+  }
 
+  Future<void> _submit() async {
+    if (_formKey.currentState?.validate() != true) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
-      final gateway = ref.read(vitalsApiProvider);
-      await gateway.saveVitals(widget.visit.id, payload);
-      if (mounted) {
-        Navigator.of(context).pop();
-        widget.onSaved();
-      }
-    } catch (e) {
+      await ref.read(vitalsApiProvider).saveVitals(
+        widget.visit.id,
+        _currentVitals(),
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      widget.onSaved();
+    } catch (error) {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = e.toString();
+          _error = error.toString();
         });
       }
     }
   }
 
   void _launchAssistant() {
+    final current = _currentVitals();
     ClinicalVoiceAssistantSheet.show(
       context,
       visit: widget.visit,
+      initialDraft: current.isEmpty
+          ? const <String, String>{}
+          : <String, String>{'vitals': jsonEncode(current.toJson())},
       onExtracted: (result) {
-        final v = result.vitals;
-        if (v.temperature != null) {
-          _tempController.text = v.temperature.toString();
-        }
-        if (v.pulse != null) _pulseController.text = v.pulse.toString();
-        if (v.weight != null) _weightController.text = v.weight.toString();
-        if (v.height != null) _heightController.text = v.height.toString();
-        if (v.systolic != null) _sysController.text = v.systolic.toString();
-        if (v.diastolic != null) _diaController.text = v.diastolic.toString();
-        if (v.spo2 != null) _spo2Controller.text = v.spo2.toString();
-        if (v.glycemia != null) {
-          _glycemiaController.text = v.glycemia.toString();
-        }
-        if (v.respiratoryRate != null) {
-          _respController.text = v.respiratoryRate.toString();
-        }
-        if (v.painScale != null) _painController.text = v.painScale.toString();
+        final changed = _fillEmptyVitals(result.vitals);
+        if (!mounted) return;
         _recalculateBmi();
+        final isFrench = Localizations.localeOf(context).languageCode != 'en';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              changed > 0
+                  ? (isFrench
+                        ? '$changed constante(s) acceptée(s) ont rempli uniquement les champs vides.'
+                        : '$changed accepted vital(s) filled empty fields only.')
+                  : (isFrench
+                        ? 'Aucun champ vide à compléter. Les constantes saisies ont été conservées.'
+                        : 'No empty field to fill. Existing vitals were preserved.'),
+            ),
+          ),
+        );
       },
     );
   }
 
+  int _fillEmptyVitals(PatientVitals vitals) {
+    var changed = 0;
+    changed += _fillWhenEmpty(_tempController, vitals.temperature);
+    changed += _fillWhenEmpty(_weightController, vitals.weight);
+    changed += _fillWhenEmpty(_heightController, vitals.height);
+    changed += _fillWhenEmpty(_pulseController, vitals.pulse);
+    changed += _fillWhenEmpty(_sysController, vitals.systolic);
+    changed += _fillWhenEmpty(_diaController, vitals.diastolic);
+    changed += _fillWhenEmpty(_spo2Controller, vitals.spo2);
+    changed += _fillWhenEmpty(_glycemiaController, vitals.glycemia);
+    changed += _fillWhenEmpty(_respController, vitals.respiratoryRate);
+    changed += _fillWhenEmpty(_painController, vitals.painScale);
+    return changed;
+  }
+
+  int _fillWhenEmpty(TextEditingController controller, num? value) {
+    if (controller.text.trim().isNotEmpty || value == null) return 0;
+    controller.text = value.toString();
+    return 1;
+  }
+
   String _formattedReference(String visitNum, String rawDpu) {
-    var cleaned = rawDpu.trim();
-    cleaned = cleaned.replaceAll(
+    var cleaned = rawDpu.trim().replaceAll(
       RegExp(r'^(DPU[\s\-]*)+', caseSensitive: false),
       'DPU-',
     );
-    if (!cleaned.toUpperCase().startsWith('DPU-')) {
-      cleaned = 'DPU-$cleaned';
-    }
-    final nonBreakingDpu = cleaned.replaceAll('-', '\u2011');
-    return '$visitNum · $nonBreakingDpu';
+    if (!cleaned.toUpperCase().startsWith('DPU-')) cleaned = 'DPU-$cleaned';
+    return '$visitNum · ${cleaned.replaceAll('-', '\u2011')}';
+  }
+
+  Widget _numberField({
+    required String label,
+    required String hint,
+    required TextEditingController controller,
+    bool decimal = false,
+  }) {
+    return AppTextField(
+      label: label,
+      hint: hint,
+      controller: controller,
+      keyboardType: TextInputType.numberWithOptions(decimal: decimal),
+    );
+  }
+
+  Widget _fieldRow(Widget first, Widget second) {
+    return Row(
+      children: [
+        Expanded(child: first),
+        const SizedBox(width: 12),
+        Expanded(child: second),
+      ],
+    );
   }
 
   @override
@@ -273,7 +301,6 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
                         ),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colors.onSurfaceVariant,
-                          height: 1.3,
                         ),
                       ),
                     ],
@@ -315,147 +342,93 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
                                 ),
                               ),
                               child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     l10n.vitalsBmiLabel,
-                                    style: theme.textTheme.labelMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          color: colors.primary,
-                                        ),
+                                    style: theme.textTheme.labelMedium?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      color: colors.primary,
+                                    ),
                                   ),
                                   Text(
                                     '${_calculatedBmi!.toStringAsFixed(1)} kg/m²',
-                                    style: theme.textTheme.titleMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w900,
-                                          color: colors.primary,
-                                        ),
+                                    style: theme.textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w900,
+                                      color: colors.primary,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                             const SizedBox(height: 16),
                           ],
-                          Row(
-                            children: [
-                              Expanded(
-                                child: AppTextField(
-                                  label: l10n.vitalsTemperatureLabel,
-                                  hint: l10n.vitalsTemperatureHint,
-                                  controller: _tempController,
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
-                                      ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: AppTextField(
-                                  label: l10n.vitalsPulseLabel,
-                                  hint: l10n.vitalsPulseHint,
-                                  controller: _pulseController,
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                            ],
+                          _fieldRow(
+                            _numberField(
+                              label: l10n.vitalsTemperatureLabel,
+                              hint: l10n.vitalsTemperatureHint,
+                              controller: _tempController,
+                              decimal: true,
+                            ),
+                            _numberField(
+                              label: l10n.vitalsPulseLabel,
+                              hint: l10n.vitalsPulseHint,
+                              controller: _pulseController,
+                            ),
                           ),
                           const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: AppTextField(
-                                  label: l10n.vitalsWeightLabel,
-                                  hint: l10n.vitalsWeightHint,
-                                  controller: _weightController,
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
-                                      ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: AppTextField(
-                                  label: l10n.vitalsHeightLabel,
-                                  hint: l10n.vitalsHeightHint,
-                                  controller: _heightController,
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                            ],
+                          _fieldRow(
+                            _numberField(
+                              label: l10n.vitalsWeightLabel,
+                              hint: l10n.vitalsWeightHint,
+                              controller: _weightController,
+                              decimal: true,
+                            ),
+                            _numberField(
+                              label: l10n.vitalsHeightLabel,
+                              hint: l10n.vitalsHeightHint,
+                              controller: _heightController,
+                            ),
                           ),
                           const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: AppTextField(
-                                  label: l10n.vitalsSystolicLabel,
-                                  hint: l10n.vitalsSystolicHint,
-                                  controller: _sysController,
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: AppTextField(
-                                  label: l10n.vitalsDiastolicLabel,
-                                  hint: l10n.vitalsDiastolicHint,
-                                  controller: _diaController,
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                            ],
+                          _fieldRow(
+                            _numberField(
+                              label: l10n.vitalsSystolicLabel,
+                              hint: l10n.vitalsSystolicHint,
+                              controller: _sysController,
+                            ),
+                            _numberField(
+                              label: l10n.vitalsDiastolicLabel,
+                              hint: l10n.vitalsDiastolicHint,
+                              controller: _diaController,
+                            ),
                           ),
                           const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: AppTextField(
-                                  label: l10n.vitalsSpo2Label,
-                                  hint: l10n.vitalsSpo2Hint,
-                                  controller: _spo2Controller,
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: AppTextField(
-                                  label: l10n.vitalsGlycemiaLabel,
-                                  hint: l10n.vitalsGlycemiaHint,
-                                  controller: _glycemiaController,
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
-                                      ),
-                                ),
-                              ),
-                            ],
+                          _fieldRow(
+                            _numberField(
+                              label: l10n.vitalsSpo2Label,
+                              hint: l10n.vitalsSpo2Hint,
+                              controller: _spo2Controller,
+                            ),
+                            _numberField(
+                              label: l10n.vitalsGlycemiaLabel,
+                              hint: l10n.vitalsGlycemiaHint,
+                              controller: _glycemiaController,
+                              decimal: true,
+                            ),
                           ),
                           const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: AppTextField(
-                                  label: l10n.vitalsRespiratoryRateLabel,
-                                  hint: l10n.vitalsRespiratoryRateHint,
-                                  controller: _respController,
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: AppTextField(
-                                  label: l10n.vitalsPainScaleLabel,
-                                  hint: l10n.vitalsPainScaleHint,
-                                  controller: _painController,
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                            ],
+                          _fieldRow(
+                            _numberField(
+                              label: l10n.vitalsRespiratoryRateLabel,
+                              hint: l10n.vitalsRespiratoryRateHint,
+                              controller: _respController,
+                            ),
+                            _numberField(
+                              label: l10n.vitalsPainScaleLabel,
+                              hint: l10n.vitalsPainScaleHint,
+                              controller: _painController,
+                            ),
                           ),
                           if (_error != null) ...[
                             const SizedBox(height: 12),
