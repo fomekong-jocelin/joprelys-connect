@@ -10,16 +10,18 @@ import '../../domain/patient_vitals.dart';
 import '../dashboard_localizations.dart';
 import 'clinical_voice_transcript_widgets.dart';
 
-typedef ProposalDecisionCallback = Future<void> Function(
-  ClinicalAiRevision revision,
-  ClinicalAiFieldProposal proposal,
-  ClinicalAiDecision decision,
-);
+typedef ProposalDecisionCallback =
+    Future<void> Function(
+      ClinicalAiRevision revision,
+      ClinicalAiFieldProposal proposal,
+      ClinicalAiDecision decision,
+    );
 
-typedef RevisionDecisionCallback = Future<void> Function(
-  ClinicalAiRevision revision,
-  ClinicalAiDecision decision,
-);
+typedef RevisionDecisionCallback =
+    Future<void> Function(
+      ClinicalAiRevision revision,
+      ClinicalAiDecision decision,
+    );
 
 class ClinicalProposalReviewList extends StatelessWidget {
   const ClinicalProposalReviewList({
@@ -99,9 +101,9 @@ class _RevisionHeader extends StatelessWidget {
             isFrench
                 ? 'Proposition #${revision.sequence}'
                 : 'Proposal #${revision.sequence}',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
         ),
         TextButton(
@@ -327,8 +329,7 @@ class ClinicalAcceptedPreview extends StatelessWidget {
         ),
       if (vitals.pulse != null)
         VitalExtractPill(label: 'Pouls: ${vitals.pulse} bpm'),
-      if (vitals.spo2 != null)
-        VitalExtractPill(label: 'SpO2: ${vitals.spo2}%'),
+      if (vitals.spo2 != null) VitalExtractPill(label: 'SpO2: ${vitals.spo2}%'),
     ];
     final rows = <(String, String?)>[
       (l10n.consultationSubjectiveLabel, note.symptoms),

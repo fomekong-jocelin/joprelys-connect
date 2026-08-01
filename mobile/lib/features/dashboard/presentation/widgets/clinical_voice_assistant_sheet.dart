@@ -182,8 +182,9 @@ class _ClinicalVoiceAssistantSheetState
 
   String _badge(RealtimeSpeechState state) {
     return switch (state.status) {
-      SpeechStatus.listening =>
-        AppLocalizations.of(context).assistantSecuredRecording,
+      SpeechStatus.listening => AppLocalizations.of(
+        context,
+      ).assistantSecuredRecording,
       SpeechStatus.processing =>
         _isFrench ? 'Traitement sécurisé' : 'Secure processing',
       SpeechStatus.transcriptReview =>
@@ -196,20 +197,25 @@ class _ClinicalVoiceAssistantSheetState
 
   String _status(RealtimeSpeechState state) {
     return switch (state.status) {
-      SpeechStatus.listening =>
-        AppLocalizations.of(context).assistantListeningStatusText,
-      SpeechStatus.processing => _isFrench
-          ? 'Transcription et analyse en cours…'
-          : 'Transcription and analysis in progress…',
-      SpeechStatus.transcriptReview => _isFrench
-          ? 'Relisez et corrigez avant de demander le compte rendu.'
-          : 'Review and correct before requesting the clinical note.',
-      SpeechStatus.proposalReview => _isFrench
-          ? 'Acceptez ou rejetez chaque modification proposée.'
-          : 'Accept or reject each proposed change.',
-      _ => _isFrench
-          ? 'Enregistrez une nouvelle dictée clinique.'
-          : 'Record a new clinical dictation.',
+      SpeechStatus.listening => AppLocalizations.of(
+        context,
+      ).assistantListeningStatusText,
+      SpeechStatus.processing =>
+        _isFrench
+            ? 'Transcription et analyse en cours…'
+            : 'Transcription and analysis in progress…',
+      SpeechStatus.transcriptReview =>
+        _isFrench
+            ? 'Relisez et corrigez avant de demander le compte rendu.'
+            : 'Review and correct before requesting the clinical note.',
+      SpeechStatus.proposalReview =>
+        _isFrench
+            ? 'Acceptez ou rejetez chaque modification proposée.'
+            : 'Accept or reject each proposed change.',
+      _ =>
+        _isFrench
+            ? 'Enregistrez une nouvelle dictée clinique.'
+            : 'Record a new clinical dictation.',
     };
   }
 
@@ -318,7 +324,8 @@ class _ClinicalVoiceAssistantSheetState
                         const SizedBox(height: 12),
                         _ErrorNotice(message: state.errorMessage!),
                       ],
-                      if (state.assistantMessage?.trim().isNotEmpty == true) ...[
+                      if (state.assistantMessage?.trim().isNotEmpty ==
+                          true) ...[
                         const SizedBox(height: 12),
                         Text(
                           state.assistantMessage!,
