@@ -48,6 +48,8 @@ final class RealtimeSpeechState {
     (revision) => revision.isPending && revision.hasPendingProposals,
   );
 
+  bool get hasApplicableResult => !note.isEmpty || !vitals.isEmpty;
+
   RealtimeSpeechState copyWith({
     SpeechStatus? status,
     String? transcript,
@@ -76,9 +78,8 @@ final class RealtimeSpeechState {
 
 /// Capture vocale clinique mobile sécurisée.
 ///
-/// Le téléphone enregistre un fichier WAV, le backend produit la transcription,
-/// le praticien peut la corriger, puis l'IA génère uniquement des propositions.
-/// Aucune donnée n'est appliquée au formulaire depuis ce service.
+/// Le WAV est contrôlé localement, transcrit par le serveur, relu par le
+/// praticien puis structuré par le chemin continu sans clarification bloquante.
 class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   factory ClinicalSpeechService({
     required ClinicalVoiceAiGateway gateway,
@@ -119,6 +120,10 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
          ),
        );
 
+  static const double _voiceFrameThresholdDb = -48;
+  static const int _minimumVoiceFrames = 3;
+  static const Duration _minimumRecordingDuration = Duration(milliseconds: 450);
+
   final ClinicalVoiceAiGateway _gateway;
   final String _visitId;
   final Map<String, String> _initialDraft;
@@ -129,14 +134,50 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
 
   StreamSubscription<Amplitude>? _amplitudeSubscription;
   String? _recordingPath;
+  DateTime? _recordingStartedAt;
+  int _activeVoiceFrames = 0;
   bool _sessionReady = false;
   bool _serverHasPendingTranscript = false;
   bool _disposed = false;
+
+  Future<void> restoreOrStart() async {
+    await initialize();
+    if (!_disposed && value.status == SpeechStatus.idle) {
+      await startRealtimeListening();
+    }
+  }
 
   Future<void> initialize() async {
     if (_sessionReady || _disposed) return;
     value = value.copyWith(status: SpeechStatus.processing, clearError: true);
     try {
+      final existing = await _gateway.getSession(_visitId);
+      if (existing != null) {
+        _sessionReady = true;
+        final pending = existing.pendingTranscript?.trim();
+        if (pending != null && pending.isNotEmpty) {
+          _serverHasPendingTranscript = true;
+          final parsed = _parser.parse(pending);
+          value = RealtimeSpeechState(
+            status: SpeechStatus.transcriptReview,
+            transcript: pending,
+            vitals: parsed.vitals,
+            note: const ConsultationNote(),
+            revisions: existing.revisions,
+            assistantMessage: existing.assistantMessage,
+          );
+          return;
+        }
+        if (existing.hasAcceptedChanges ||
+            !existing.noteFrom().isEmpty ||
+            !existing.vitalsFrom().isEmpty) {
+          _applyAiState(existing, includePending: false);
+          return;
+        }
+        value = value.copyWith(status: SpeechStatus.idle, clearError: true);
+        return;
+      }
+
       await _gateway.startSession(_visitId, _initialDraft, locale: _locale);
       _sessionReady = true;
       value = value.copyWith(status: SpeechStatus.idle, clearError: true);
@@ -149,22 +190,25 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     if (_disposed || value.status == SpeechStatus.listening) return;
     await initialize();
     if (!_sessionReady || _disposed) return;
+    if (_serverHasPendingTranscript) {
+      _setError(
+        StateError('AI_TRANSCRIPT_REVIEW_REQUIRED'),
+        fallbackStatus: SpeechStatus.transcriptReview,
+      );
+      return;
+    }
 
     try {
-      if (_serverHasPendingTranscript) {
-        await _gateway.discardPendingTranscript(_visitId);
-        _serverHasPendingTranscript = false;
-      }
-
+      if (_recordingPath != null) await _cleanupRecording();
       final hasPermission = await _recorder.hasPermission();
-      if (!hasPermission) {
-        throw StateError('MICROPHONE_PERMISSION_DENIED');
-      }
+      if (!hasPermission) throw StateError('MICROPHONE_PERMISSION_DENIED');
 
       final directory = await _temporaryDirectoryProvider();
       final path =
           '${directory.path}/joprelys-$_visitId-${DateTime.now().microsecondsSinceEpoch}.wav';
       _recordingPath = path;
+      _recordingStartedAt = DateTime.now();
+      _activeVoiceFrames = 0;
 
       await _recorder.start(
         const RecordConfig(
@@ -182,6 +226,9 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
           .onAmplitudeChanged(const Duration(milliseconds: 100))
           .listen((amplitude) {
             if (_disposed || value.status != SpeechStatus.listening) return;
+            if (amplitude.current >= _voiceFrameThresholdDb) {
+              _activeVoiceFrames++;
+            }
             final normalized = (((amplitude.current + 60) / 60) * 55 + 5)
                 .clamp(5.0, 60.0)
                 .toDouble();
@@ -213,21 +260,28 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       await _amplitudeSubscription?.cancel();
       _amplitudeSubscription = null;
       final path = await _recorder.stop() ?? _recordingPath;
-      _recordingPath = null;
-      if (path == null || path.isEmpty) {
-        throw StateError('AUDIO_RECORDING_EMPTY');
+      if (path == null || path.isEmpty) throw StateError('AUDIO_RECORDING_EMPTY');
+
+      final duration = DateTime.now().difference(
+        _recordingStartedAt ?? DateTime.now(),
+      );
+      if (_activeVoiceFrames < _minimumVoiceFrames ||
+          duration < _minimumRecordingDuration) {
+        await _cleanupRecording();
+        _setError(
+          StateError('AI_AUDIO_SILENCE'),
+          fallbackStatus: SpeechStatus.idle,
+        );
+        return;
       }
 
       final file = File(path);
       final bytes = await file.readAsBytes();
-      if (await file.exists()) {
-        await file.delete();
-      }
-      if (bytes.length < 44) {
-        throw StateError('AUDIO_RECORDING_EMPTY');
-      }
+      if (bytes.length < 44) throw StateError('AUDIO_RECORDING_EMPTY');
 
       final transcript = await _gateway.transcribeAudio(_visitId, bytes);
+      if (await file.exists()) await file.delete();
+      _recordingPath = null;
       _serverHasPendingTranscript = true;
       final parsed = _parser.parse(transcript);
       value = RealtimeSpeechState(
@@ -238,8 +292,10 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
         revisions: const <ClinicalAiRevision>[],
       );
     } catch (error) {
-      await _cleanupRecording();
       _setError(error);
+    } finally {
+      _recordingStartedAt = null;
+      _activeVoiceFrames = 0;
     }
   }
 
@@ -260,6 +316,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     value = value.copyWith(status: SpeechStatus.processing, clearError: true);
     try {
       final state = await _gateway.analyzeTranscript(_visitId, transcript);
+      await _gateway.discardPendingTranscript(_visitId);
       _serverHasPendingTranscript = false;
       _applyAiState(state, includePending: true);
     } catch (error) {
@@ -308,7 +365,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   void _applyAiState(ClinicalAiState state, {required bool includePending}) {
     final aiVitals = state.vitalsFrom(includePending: includePending);
     final explicitVitals = _parser.parse(value.transcript).vitals;
-    final resolvedVitals = aiVitals.isEmpty ? explicitVitals : aiVitals;
+    final resolvedVitals = explicitVitals.mergePrefer(aiVitals);
     final hasPending = state.hasPendingProposals;
     value = RealtimeSpeechState(
       status: hasPending ? SpeechStatus.proposalReview : SpeechStatus.done,
@@ -319,11 +376,21 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       note: state.noteFrom(includePending: includePending),
       revisions: state.revisions,
       assistantMessage: state.assistantMessage,
-      needsClarification: state.needsClarification,
+      needsClarification: false,
     );
   }
 
-  Future<void> cancelListening() async {
+  /// Closing preserves the server-side transcript. If recording is active, the
+  /// segment is stopped and secured before the sheet can close.
+  Future<bool> prepareForClose() async {
+    if (_disposed || value.status == SpeechStatus.processing) return false;
+    if (value.status == SpeechStatus.listening) await stopListening();
+    if (_recordingPath != null && value.status == SpeechStatus.error) return false;
+    return true;
+  }
+
+  /// Destructive action kept separate from closing. No UI invokes it implicitly.
+  Future<void> discardCurrentCapture() async {
     if (_disposed) return;
     try {
       await _amplitudeSubscription?.cancel();
@@ -335,7 +402,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
         _serverHasPendingTranscript = false;
       }
     } catch (_) {
-      // Best effort cleanup: cancellation must never apply clinical data.
+      // Explicit discard is best effort and never applies clinical data.
     }
     value = const RealtimeSpeechState(
       status: SpeechStatus.idle,
@@ -351,9 +418,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     _recordingPath = null;
     if (path == null || path.isEmpty) return;
     final file = File(path);
-    if (await file.exists()) {
-      await file.delete();
-    }
+    if (await file.exists()) await file.delete();
   }
 
   void _setError(
