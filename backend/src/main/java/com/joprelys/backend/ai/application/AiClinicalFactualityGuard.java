@@ -283,8 +283,17 @@ final class AiClinicalFactualityGuard {
             return false;
         }
         String text = value.toString();
-        Set<String> sourceTokens = significantTokens(authorizedSource);
-        Set<String> valueTokens = significantTokens(text);
+        String normalizedValue = normalize(text);
+        String normalizedSource = normalize(authorizedSource);
+        if (normalizedValue.isBlank()) {
+            return false;
+        }
+        if (compact(normalizedSource).contains(compact(normalizedValue))) {
+            return true;
+        }
+
+        Set<String> sourceTokens = significantTokens(normalizedSource);
+        Set<String> valueTokens = significantTokens(normalizedValue);
         if (valueTokens.isEmpty()) {
             return false;
         }
@@ -294,6 +303,10 @@ final class AiClinicalFactualityGuard {
         return valueTokens.stream()
                 .filter(token -> !SAFE_GLUE_WORDS.contains(token))
                 .allMatch(sourceTokens::contains);
+    }
+
+    private String compact(String normalizedValue) {
+        return normalizedValue.replace(" ", "");
     }
 
     private Set<String> criticalEvidenceTokens(List<String> evidence) {
