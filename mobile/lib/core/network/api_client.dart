@@ -41,6 +41,7 @@ final class ApiClient {
     Map<String, dynamic>? headers,
     ApiRequestPolicy policy = const ApiRequestPolicy.protectedWrite(),
     CancelToken? cancelToken,
+    ResponseType? responseType,
   }) {
     return request<T>(
       path,
@@ -50,6 +51,7 @@ final class ApiClient {
       headers: headers,
       policy: policy,
       cancelToken: cancelToken,
+      responseType: responseType,
     );
   }
 
