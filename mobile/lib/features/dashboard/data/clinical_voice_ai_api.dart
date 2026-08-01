@@ -88,6 +88,7 @@ final class ClinicalAiFieldProposal {
   final String status;
 
   bool get isPending => status == 'PENDING';
+  bool get isAccepted => status == 'ACCEPTED';
 }
 
 @immutable
@@ -125,6 +126,7 @@ final class ClinicalAiRevision {
 
   bool get isPending => status == 'PENDING';
   bool get hasPendingProposals => proposals.any((item) => item.isPending);
+  bool get hasAcceptedProposals => proposals.any((item) => item.isAccepted);
 }
 
 @immutable
@@ -173,6 +175,9 @@ final class ClinicalAiState {
 
   bool get hasPendingProposals =>
       pendingRevisions.any((revision) => revision.hasPendingProposals);
+
+  bool get hasAcceptedChanges =>
+      revisions.any((revision) => revision.hasAcceptedProposals);
 
   Map<String, String> get proposedDraft {
     final result = Map<String, String>.from(draft);
