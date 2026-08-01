@@ -12,6 +12,7 @@ import '../../domain/active_visit.dart';
 import '../../domain/patient_vitals.dart';
 import '../dashboard_localizations.dart';
 import 'clinical_voice_assistant_sheet.dart';
+import 'vitals_form_merge.dart';
 
 class PatientVitalsSheet extends ConsumerStatefulWidget {
   const PatientVitalsSheet({
@@ -118,7 +119,8 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
   }
 
   void _setValue(TextEditingController controller, num? value) {
-    if (value != null) controller.text = value.toString();
+    if (value == null) return;
+    applyAcceptedVitalValue(controller, value);
   }
 
   void _recalculateBmi() {
@@ -154,10 +156,11 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
       _error = null;
     });
     try {
-      await ref
+      final saved = await ref
           .read(vitalsApiProvider)
           .saveVitals(widget.visit.id, _currentVitals());
       if (!mounted) return;
+      _populateFields(saved);
       Navigator.of(context).pop();
       widget.onSaved();
     } catch (error) {
@@ -179,7 +182,7 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
           ? const <String, String>{}
           : <String, String>{'vitals': jsonEncode(current.toJson())},
       onExtracted: (result) {
-        final changed = _fillEmptyVitals(result.vitals);
+        final changed = _applyAcceptedVitals(result.vitals);
         if (!mounted) return;
         _recalculateBmi();
         final isFrench = Localizations.localeOf(context).languageCode != 'en';
@@ -188,11 +191,11 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
             content: Text(
               changed > 0
                   ? (isFrench
-                        ? '$changed constante(s) acceptée(s) ont rempli uniquement les champs vides.'
-                        : '$changed accepted vital(s) filled empty fields only.')
+                        ? '$changed constante(s) confirmée(s) ont été appliquée(s) au formulaire.'
+                        : '$changed confirmed vital(s) were applied to the form.')
                   : (isFrench
-                        ? 'Aucun champ vide à compléter. Les constantes saisies ont été conservées.'
-                        : 'No empty field to fill. Existing vitals were preserved.'),
+                        ? 'Les constantes confirmées sont déjà présentes dans le formulaire.'
+                        : 'The confirmed vitals are already present in the form.'),
             ),
           ),
         );
@@ -200,25 +203,22 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
     );
   }
 
-  int _fillEmptyVitals(PatientVitals vitals) {
+  int _applyAcceptedVitals(PatientVitals vitals) {
     var changed = 0;
-    changed += _fillWhenEmpty(_tempController, vitals.temperature);
-    changed += _fillWhenEmpty(_weightController, vitals.weight);
-    changed += _fillWhenEmpty(_heightController, vitals.height);
-    changed += _fillWhenEmpty(_pulseController, vitals.pulse);
-    changed += _fillWhenEmpty(_sysController, vitals.systolic);
-    changed += _fillWhenEmpty(_diaController, vitals.diastolic);
-    changed += _fillWhenEmpty(_spo2Controller, vitals.spo2);
-    changed += _fillWhenEmpty(_glycemiaController, vitals.glycemia);
-    changed += _fillWhenEmpty(_respController, vitals.respiratoryRate);
-    changed += _fillWhenEmpty(_painController, vitals.painScale);
+    changed += applyAcceptedVitalValue(_tempController, vitals.temperature);
+    changed += applyAcceptedVitalValue(_weightController, vitals.weight);
+    changed += applyAcceptedVitalValue(_heightController, vitals.height);
+    changed += applyAcceptedVitalValue(_pulseController, vitals.pulse);
+    changed += applyAcceptedVitalValue(_sysController, vitals.systolic);
+    changed += applyAcceptedVitalValue(_diaController, vitals.diastolic);
+    changed += applyAcceptedVitalValue(_spo2Controller, vitals.spo2);
+    changed += applyAcceptedVitalValue(_glycemiaController, vitals.glycemia);
+    changed += applyAcceptedVitalValue(
+      _respController,
+      vitals.respiratoryRate,
+    );
+    changed += applyAcceptedVitalValue(_painController, vitals.painScale);
     return changed;
-  }
-
-  int _fillWhenEmpty(TextEditingController controller, num? value) {
-    if (controller.text.trim().isNotEmpty || value == null) return 0;
-    controller.text = value.toString();
-    return 1;
   }
 
   String _formattedReference(String visitNum, String rawDpu) {
