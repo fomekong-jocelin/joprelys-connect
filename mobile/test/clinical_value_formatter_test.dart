@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:joprelys_connect/features/dashboard/application/clinical_value_formatter.dart';
+import 'package:joprelys_mobile/features/dashboard/application/clinical_value_formatter.dart';
 
 void main() {
   test('formats a structured prescription without exposing JSON syntax', () {
