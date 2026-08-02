@@ -49,6 +49,14 @@ jobs:
               line[10:] if line.startswith('          ') else line
               for line in block.splitlines()
           )
+          script = script.replace(
+              'restore_pattern.subn(restore_replacement, service, count=1)',
+              'restore_pattern.subn(lambda _: restore_replacement, service, count=1)',
+          )
+          script = script.replace(
+              'segment_pattern.subn(segment_replacement, service, count=1)',
+              'segment_pattern.subn(lambda _: segment_replacement, service, count=1)',
+          )
           exec(compile(dedent(script), 'clinical_voice_ux_hotfix.py', 'exec'))
 
       - name: Validate Flutter application
