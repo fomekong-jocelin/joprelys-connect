@@ -1,4 +1,4 @@
-import '../../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations.dart';
 
 extension ClinicalVoiceLocalizations on AppLocalizations {
   bool get _voiceIsFrench => localeName.startsWith('fr');
