@@ -79,6 +79,47 @@ void main() {
     });
   });
 
+  group('ClinicalVoiceAiApi durable transcript', () {
+    test('replaces the pending transcript with one PUT request', () async {
+      final adapter = QueueHttpClientAdapter((options, _) {
+        expect(options.method, 'PUT');
+        expect(
+          options.path,
+          '/api/ai/consultations/visit-123/transcriptions/pending',
+        );
+        expect(
+          Map<String, dynamic>.from(options.data as Map),
+          <String, dynamic>{'transcript': 'Texte corrigé et complet'},
+        );
+        return jsonResponse(200, transcriptionViewJson());
+      });
+      final api = buildApi(adapter);
+
+      await api.savePendingTranscript(
+        'visit-123',
+        'Texte corrigé et complet',
+      );
+
+      expect(adapter.requests, hasLength(1));
+    });
+
+    test('deletes the pending transcript when the reviewed text is empty', () async {
+      final adapter = QueueHttpClientAdapter((options, _) {
+        expect(options.method, 'DELETE');
+        expect(
+          options.path,
+          '/api/ai/consultations/visit-123/transcriptions/pending',
+        );
+        return ResponseBody.fromString('', 204);
+      });
+      final api = buildApi(adapter);
+
+      await api.savePendingTranscript('visit-123', '   ');
+
+      expect(adapter.requests, hasLength(1));
+    });
+  });
+
   group('ClinicalVoiceAiApi progressive analysis', () {
     test(
       'keeps using the realtime endpoint and decodes MessageView strings',
@@ -135,6 +176,15 @@ ResponseBody stringResponse(int statusCode, String payload) {
       Headers.contentTypeHeader: ['text/plain; charset=utf-8'],
     },
   );
+}
+
+Map<String, dynamic> transcriptionViewJson() {
+  return <String, dynamic>{
+    'sessionId': 'session-123',
+    'transcript': 'Texte corrigé et complet',
+    'status': 'PENDING_REVIEW',
+    'expiresAt': '2026-08-02T15:00:00Z',
+  };
 }
 
 Map<String, dynamic> sessionViewJson() {
