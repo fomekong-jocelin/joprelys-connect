@@ -303,6 +303,7 @@ class _ClinicalVoiceAssistantSheetState
                           onToggleListening: _toggleListening,
                           onClearAll: _clearAll,
                           onAnalyze: _speechService.analyzeTranscript,
+                          onRetrySave: _speechService.retryDraftSave,
                           onSegmentChanged: _speechService.updateSegment,
                           onSegmentDeleted: _speechService.deleteSegment,
                         )
@@ -334,6 +335,7 @@ class _CapturePhase extends StatelessWidget {
     required this.onToggleListening,
     required this.onClearAll,
     required this.onAnalyze,
+    required this.onRetrySave,
     required this.onSegmentChanged,
     required this.onSegmentDeleted,
     super.key,
@@ -347,6 +349,7 @@ class _CapturePhase extends StatelessWidget {
   final VoidCallback onToggleListening;
   final VoidCallback onClearAll;
   final VoidCallback onAnalyze;
+  final VoidCallback onRetrySave;
   final Future<bool> Function(String segmentId, String text) onSegmentChanged;
   final Future<bool> Function(String segmentId) onSegmentDeleted;
 
@@ -398,13 +401,15 @@ class _CapturePhase extends StatelessWidget {
                     body: l10n.voiceAnalyzingBody,
                   ),
                 ],
-                if (state.errorMessage != null) ...[
+                if (state.errorMessage != null &&
+                    !state.hasTranscriptSyncFailure) ...[
                   const SizedBox(height: 12),
                   _ErrorNotice(message: state.errorMessage!),
                 ],
-                if (state.hasTranscript) ...[
+                if (state.isSynchronizingTranscript ||
+                    state.hasTranscriptSyncFailure) ...[
                   const SizedBox(height: 12),
-                  _TranscriptSyncNotice(state: state),
+                  _TranscriptSyncNotice(state: state, onRetry: onRetrySave),
                 ],
               ],
             ),
@@ -415,6 +420,7 @@ class _CapturePhase extends StatelessWidget {
             state: state,
             onClearAll: onClearAll,
             onAnalyze: onAnalyze,
+            onRetrySave: onRetrySave,
           ),
       ],
     );
@@ -426,17 +432,20 @@ class _CaptureActionBar extends StatelessWidget {
     required this.state,
     required this.onClearAll,
     required this.onAnalyze,
+    required this.onRetrySave,
   });
 
   final RealtimeSpeechState state;
   final VoidCallback onClearAll;
   final VoidCallback onAnalyze;
+  final VoidCallback onRetrySave;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
-    final disabled = state.isSynchronizingTranscript;
+    final disabled =
+        state.isSynchronizingTranscript || state.hasTranscriptSyncFailure;
 
     return SafeArea(
       top: false,
@@ -477,6 +486,14 @@ class _CaptureActionBar extends StatelessWidget {
                 ),
               ),
             ),
+            if (state.hasTranscriptSyncFailure) ...[
+              const SizedBox(height: 6),
+              OutlinedButton.icon(
+                onPressed: onRetrySave,
+                icon: const Icon(Icons.sync_rounded, size: 18),
+                label: Text(l10n.voiceRetrySave),
+              ),
+            ],
             const SizedBox(height: 4),
             TextButton.icon(
               onPressed: disabled ? null : onClearAll,
@@ -492,9 +509,10 @@ class _CaptureActionBar extends StatelessWidget {
 }
 
 class _TranscriptSyncNotice extends StatelessWidget {
-  const _TranscriptSyncNotice({required this.state});
+  const _TranscriptSyncNotice({required this.state, required this.onRetry});
 
   final RealtimeSpeechState state;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -530,15 +548,25 @@ class _TranscriptSyncNotice extends StatelessWidget {
         Icon(icon, size: 17, color: color),
         const SizedBox(width: 7),
         Expanded(
-          child: Text(
-            message,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: color,
-              height: 1.35,
-              fontWeight: state.hasTranscriptSyncFailure
-                  ? FontWeight.w700
-                  : FontWeight.w500,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                message,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: color,
+                  height: 1.35,
+                  fontWeight: state.hasTranscriptSyncFailure
+                      ? FontWeight.w700
+                      : FontWeight.w500,
+                ),
+              ),
+              if (state.hasTranscriptSyncFailure)
+                TextButton(
+                  onPressed: onRetry,
+                  child: Text(l10n.voiceRetrySave),
+                ),
+            ],
           ),
         ),
       ],

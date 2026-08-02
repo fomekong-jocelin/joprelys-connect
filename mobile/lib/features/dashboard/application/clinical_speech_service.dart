@@ -7,6 +7,7 @@ import 'package:record/record.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../data/clinical_transcript_draft_store.dart';
 import '../data/clinical_voice_ai_api.dart';
 import '../domain/consultation_note.dart';
 import '../domain/patient_vitals.dart';
@@ -30,6 +31,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     AudioRecorder? recorder,
     Future<Directory> Function()? temporaryDirectoryProvider,
     stt.SpeechToText? speech,
+    ClinicalTranscriptDraftGateway? draftStore,
   }) {
     // Ces paramètres restent acceptés afin de ne pas casser les anciens points
     // d'injection pendant la migration vers la transcription native continue.
@@ -39,6 +41,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       initialDraft,
       locale,
       speech: speech,
+      draftStore: draftStore,
     );
   }
 
@@ -48,8 +51,10 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     Map<String, String> initialDraft,
     this._locale, {
     stt.SpeechToText? speech,
+    ClinicalTranscriptDraftGateway? draftStore,
   }) : _initialDraft = Map<String, String>.unmodifiable(initialDraft),
        _speech = speech ?? stt.SpeechToText(),
+       _draftStore = draftStore ?? const SecureClinicalTranscriptDraftStore(),
        super(
          const RealtimeSpeechState(
            status: SpeechStatus.idle,
@@ -64,36 +69,45 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
          ),
        );
 
-  static const Duration _stableHypothesisDelay = Duration(milliseconds: 1300);
+  static const Duration _draftDebounce = Duration(milliseconds: 700);
 
   final ClinicalVoiceAiGateway _gateway;
   final String _visitId;
   final Map<String, String> _initialDraft;
   final String _locale;
   final stt.SpeechToText _speech;
+  final ClinicalTranscriptDraftGateway _draftStore;
   final ClinicalDictationParser _parser = const ClinicalDictationParser();
 
   final List<ClinicalTranscriptSegment> _segments =
       <ClinicalTranscriptSegment>[];
   String _currentPartial = '';
   Duration _currentPartialOffset = Duration.zero;
+  bool _currentPartialFinalized = false;
   DateTime? _captureStartedAt;
   bool _sessionReady = false;
   bool _speechReady = false;
+  bool _localDraftRestored = false;
+  bool _hasLocalDraftSnapshot = false;
   bool _shouldKeepListening = false;
   bool _appActive = true;
   bool _resumeAfterLifecycle = false;
   bool _disposed = false;
   Timer? _restartTimer;
-  Timer? _stabilityTimer;
+  Timer? _localDraftTimer;
   double _minimumSoundLevel = double.infinity;
   double _maximumSoundLevel = -double.infinity;
   Future<void> _draftPersistence = Future<void>.value();
-  int _draftVersion = 0;
 
   Future<void> restoreOrStart() async {
     await initialize();
-    if (_disposed || value.stage != ClinicalVoiceStage.capture) return;
+    if (_disposed ||
+        value.stage != ClinicalVoiceStage.capture ||
+        !_speechReady) {
+      return;
+    }
+
+    unawaited(_ensureSessionReady(silent: true));
     if (value.status == SpeechStatus.idle && !value.hasTranscript) {
       await startRealtimeListening();
     }
@@ -101,25 +115,15 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
 
   Future<void> initialize() async {
     if (_disposed) return;
-    if (!_sessionReady) {
-      value = value.copyWith(status: SpeechStatus.processing, clearError: true);
-      try {
-        final existing = await _gateway.getSession(_visitId);
-        if (existing == null) {
-          await _gateway.startSession(_visitId, _initialDraft, locale: _locale);
-        } else {
-          _restoreExistingSession(existing);
-        }
-        _sessionReady = true;
-      } catch (error) {
-        _setError(error);
-        return;
-      }
-    }
+    await _restoreLocalDraft();
 
     if (_speechReady) {
       _leaveInitializationState();
       return;
+    }
+
+    if (!value.hasTranscript) {
+      value = value.copyWith(status: SpeechStatus.processing, clearError: true);
     }
 
     try {
@@ -129,16 +133,22 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
           if (_disposed) return;
           final raw = error.errorMsg;
           if (_isRecoverableSpeechGap(raw) && _shouldKeepListening) {
-            _commitCurrentPartial();
+            _currentPartialFinalized = true;
+            _publishCaptureState();
+            _scheduleDraftSave();
             _restartListeningLoop();
             return;
           }
-          if (_shouldKeepListening) {
-            value = value.copyWith(errorMessage: _userMessage(raw));
-            _restartListeningLoop();
-          } else {
-            _setError(raw);
-          }
+
+          _shouldKeepListening = false;
+          _resumeAfterLifecycle = false;
+          unawaited(_setAwake(false));
+          _setError(
+            raw,
+            fallbackStatus: value.hasTranscript
+                ? SpeechStatus.transcriptReview
+                : SpeechStatus.idle,
+          );
         },
       );
       if (!_speechReady) {
@@ -147,14 +157,94 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       _leaveInitializationState();
     } catch (error) {
       _speechReady = false;
-      _setError(error);
+      _setError(
+        error,
+        fallbackStatus: value.hasTranscript
+            ? SpeechStatus.transcriptReview
+            : SpeechStatus.idle,
+      );
+    }
+  }
+
+  Future<bool> _ensureSessionReady({bool silent = false}) async {
+    if (_disposed) return false;
+    if (_sessionReady) return true;
+
+    try {
+      final existing = await _gateway.getSession(_visitId);
+      if (existing == null) {
+        await _gateway.startSession(_visitId, _initialDraft, locale: _locale);
+      } else if (!_hasLocalDraftSnapshot) {
+        _restoreExistingSession(existing);
+      }
+      _sessionReady = true;
+      return true;
+    } catch (error) {
+      if (!silent) {
+        _setError(
+          error,
+          fallbackStatus: value.hasTranscript
+              ? SpeechStatus.transcriptReview
+              : SpeechStatus.idle,
+        );
+      }
+      return false;
+    }
+  }
+
+  Future<void> _restoreLocalDraft() async {
+    if (_localDraftRestored || _disposed) return;
+    _localDraftRestored = true;
+
+    try {
+      final draft = await _draftStore.read(_visitId);
+      if (draft == null) return;
+      _hasLocalDraftSnapshot = true;
+      _segments
+        ..clear()
+        ..addAll(draft.segments);
+
+      final partial = draft.partialTranscript.trim();
+      if (partial.isNotEmpty) {
+        _segments.add(
+          ClinicalTranscriptSegment(
+            id: 'restored-local-partial-${DateTime.now().microsecondsSinceEpoch}',
+            offset: draft.partialOffset,
+            text: partial,
+          ),
+        );
+      }
+
+      _currentPartial = '';
+      _currentPartialOffset = Duration.zero;
+      _currentPartialFinalized = false;
+      _captureStartedAt = _segments.isEmpty ? null : DateTime.now();
+      final transcript = clinicalTranscriptFromSegments(_segments);
+      value = value.copyWith(
+        status: transcript.isEmpty
+            ? SpeechStatus.idle
+            : SpeechStatus.transcriptReview,
+        stage: ClinicalVoiceStage.capture,
+        transcript: transcript,
+        segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
+        transcriptSyncStatus: TranscriptSyncStatus.synced,
+        clearPartial: true,
+        clearError: true,
+      );
+    } catch (_) {
+      value = value.copyWith(transcriptSyncStatus: TranscriptSyncStatus.failed);
     }
   }
 
   void _leaveInitializationState() {
     if (value.status == SpeechStatus.processing &&
         value.stage == ClinicalVoiceStage.capture) {
-      value = value.copyWith(status: SpeechStatus.idle, clearError: true);
+      value = value.copyWith(
+        status: value.hasTranscript
+            ? SpeechStatus.transcriptReview
+            : SpeechStatus.idle,
+        clearError: true,
+      );
     }
   }
 
@@ -218,7 +308,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     if (_disposed || value.status == SpeechStatus.listening) return;
     if (value.stage == ClinicalVoiceStage.review) return;
     await initialize();
-    if (!_sessionReady || !_speechReady || _disposed) return;
+    if (!_speechReady || _disposed) return;
 
     _captureStartedAt ??= DateTime.now();
     _minimumSoundLevel = double.infinity;
@@ -260,7 +350,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
         onSoundLevelChange: _publishSoundLevel,
         listenOptions: stt.SpeechListenOptions(
           listenFor: const Duration(hours: 1),
-          pauseFor: const Duration(seconds: 2),
+          pauseFor: const Duration(seconds: 4),
           partialResults: true,
           cancelOnError: false,
           listenMode: stt.ListenMode.dictation,
@@ -268,12 +358,15 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
         ),
       );
     } catch (error) {
-      if (_shouldKeepListening) {
-        value = value.copyWith(errorMessage: _userMessage(error));
-        _restartListeningLoop();
-      } else {
-        _setError(error);
-      }
+      _shouldKeepListening = false;
+      _resumeAfterLifecycle = false;
+      unawaited(_setAwake(false));
+      _setError(
+        error,
+        fallbackStatus: value.hasTranscript
+            ? SpeechStatus.transcriptReview
+            : SpeechStatus.idle,
+      );
     }
   }
 
@@ -288,7 +381,11 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     ).trim();
 
     if (incoming.isEmpty) {
-      if (finalResult) _commitCurrentPartial();
+      if (finalResult && _currentPartial.isNotEmpty) {
+        _currentPartialFinalized = true;
+        _publishCaptureState();
+        _scheduleDraftSave();
+      }
       return;
     }
 
@@ -296,7 +393,11 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       _currentPartialOffset = _elapsedCaptureTime();
       _currentPartial = incoming;
     } else {
-      final merged = mergeClinicalSpeechHypothesis(_currentPartial, incoming);
+      final merged = mergeClinicalSpeechHypothesis(
+        _currentPartial,
+        incoming,
+        currentFinalized: _currentPartialFinalized,
+      );
       if (merged.startsNewSegment) {
         _commitCurrentPartial();
         _currentPartialOffset = _elapsedCaptureTime();
@@ -306,13 +407,9 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       }
     }
 
+    _currentPartialFinalized = finalResult;
     _publishCaptureState();
-    _stabilityTimer?.cancel();
-    if (finalResult) {
-      _commitCurrentPartial();
-    } else {
-      _stabilityTimer = Timer(_stableHypothesisDelay, _commitCurrentPartial);
-    }
+    _scheduleDraftSave();
   }
 
   void _publishSoundLevel(double rawLevel) {
@@ -336,7 +433,11 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   void _handleSpeechStatus(String status) {
     if (_disposed || !_shouldKeepListening) return;
     if (status == 'done' || status == 'notListening') {
-      _commitCurrentPartial();
+      if (_currentPartial.isNotEmpty) {
+        _currentPartialFinalized = true;
+        _publishCaptureState();
+        _scheduleDraftSave();
+      }
       _restartListeningLoop();
     }
   }
@@ -386,7 +487,6 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   }
 
   void _commitCurrentPartial() {
-    _stabilityTimer?.cancel();
     var text = _currentPartial.trim();
     if (text.isEmpty) return;
 
@@ -396,10 +496,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     ).trim();
     var changed = false;
     if (text.isNotEmpty) {
-      final duplicate =
-          _segments.isNotEmpty &&
-          _foldForComparison(_segments.last.text) == _foldForComparison(text);
-      if (!duplicate) {
+      if (_segments.isEmpty) {
         _segments.add(
           ClinicalTranscriptSegment(
             id: 'segment-${DateTime.now().microsecondsSinceEpoch}',
@@ -408,15 +505,37 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
           ),
         );
         changed = true;
+      } else {
+        final last = _segments.last;
+        final merged = mergeClinicalSpeechHypothesis(
+          last.text,
+          text,
+          currentFinalized: true,
+        );
+        if (!merged.startsNewSegment) {
+          if (_foldForComparison(last.text) !=
+              _foldForComparison(merged.text)) {
+            _segments[_segments.length - 1] = last.copyWith(text: merged.text);
+            changed = true;
+          }
+        } else {
+          _segments.add(
+            ClinicalTranscriptSegment(
+              id: 'segment-${DateTime.now().microsecondsSinceEpoch}',
+              offset: _currentPartialOffset,
+              text: text,
+            ),
+          );
+          changed = true;
+        }
       }
     }
 
     _currentPartial = '';
     _currentPartialOffset = Duration.zero;
+    _currentPartialFinalized = false;
     _publishCaptureState();
-    if (changed && _sessionReady) {
-      unawaited(_persistCurrentTranscript());
-    }
+    if (changed) _scheduleDraftSave();
   }
 
   String _foldForComparison(String text) {
@@ -427,36 +546,53 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
         .replaceAll(RegExp(r'\s+'), ' ');
   }
 
-  Future<bool> _persistCurrentTranscript() {
-    if (_disposed || !_sessionReady) return Future<bool>.value(false);
-    final snapshot = clinicalTranscriptFromSegments(_segments);
-    final version = ++_draftVersion;
+  ClinicalTranscriptDraft _currentDraft({bool explicitlyCleared = false}) {
+    return ClinicalTranscriptDraft(
+      segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
+      partialTranscript: _currentPartial.trim(),
+      partialOffset: _currentPartialOffset,
+      explicitlyCleared: explicitlyCleared,
+    );
+  }
+
+  void _scheduleDraftSave() {
+    if (_disposed) return;
+    _localDraftTimer?.cancel();
+    _localDraftTimer = Timer(_draftDebounce, () {
+      unawaited(_persistCurrentTranscript(silent: true));
+    });
+  }
+
+  Future<bool> _persistCurrentTranscript({
+    bool silent = false,
+    bool explicitlyCleared = false,
+  }) {
+    if (_disposed) return Future<bool>.value(false);
+    _localDraftTimer?.cancel();
+    final snapshot = _currentDraft(explicitlyCleared: explicitlyCleared);
     final completion = Completer<bool>();
 
-    value = value.copyWith(
-      transcriptSyncStatus: TranscriptSyncStatus.syncing,
-      clearError: true,
-    );
+    if (!silent) {
+      value = value.copyWith(
+        transcriptSyncStatus: TranscriptSyncStatus.syncing,
+        clearError: true,
+      );
+    }
 
     _draftPersistence = _draftPersistence.then((_) async {
-      if (version != _draftVersion) {
-        completion.complete(true);
-        return;
-      }
       try {
-        await _gateway.savePendingTranscript(_visitId, snapshot);
-        if (!_disposed && version == _draftVersion) {
+        await _draftStore.write(_visitId, snapshot);
+        _hasLocalDraftSnapshot = true;
+        if (!_disposed) {
           value = value.copyWith(
             transcriptSyncStatus: TranscriptSyncStatus.synced,
-            clearError: true,
           );
         }
         completion.complete(true);
-      } catch (error) {
-        if (!_disposed && version == _draftVersion) {
+      } catch (_) {
+        if (!_disposed) {
           value = value.copyWith(
             transcriptSyncStatus: TranscriptSyncStatus.failed,
-            errorMessage: _userMessage(error),
           );
         }
         completion.complete(false);
@@ -467,24 +603,24 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   }
 
   Future<bool> _ensureTranscriptPersisted() async {
+    _localDraftTimer?.cancel();
     await _draftPersistence;
     if (_disposed) return false;
-    if (value.transcriptSyncStatus == TranscriptSyncStatus.failed) {
-      return _persistCurrentTranscript();
-    }
-    return true;
+    return _persistCurrentTranscript();
   }
+
+  Future<bool> retryDraftSave() => _persistCurrentTranscript();
 
   Future<void> stopListening() async {
     if (_disposed || value.status != SpeechStatus.listening) return;
     _shouldKeepListening = false;
     _resumeAfterLifecycle = false;
     _restartTimer?.cancel();
-    _stabilityTimer?.cancel();
+    _localDraftTimer?.cancel();
 
     if (_speech.isListening) await _speech.stop();
     _commitCurrentPartial();
-    await _draftPersistence;
+    await _persistCurrentTranscript();
     await _setAwake(false);
 
     value = value.copyWith(
@@ -564,6 +700,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     _segments.clear();
     _currentPartial = '';
     _currentPartialOffset = Duration.zero;
+    _currentPartialFinalized = false;
     _captureStartedAt = null;
     value = const RealtimeSpeechState(
       status: SpeechStatus.idle,
@@ -578,7 +715,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       transcriptSyncStatus: TranscriptSyncStatus.syncing,
     );
 
-    final saved = await _persistCurrentTranscript();
+    final saved = await _persistCurrentTranscript(explicitlyCleared: true);
     if (!saved && !_disposed) {
       _segments.addAll(previous);
       _publishReviewedTranscript(clearError: false);
@@ -641,7 +778,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     _shouldKeepListening = false;
     _resumeAfterLifecycle = false;
     _restartTimer?.cancel();
-    _stabilityTimer?.cancel();
+    _localDraftTimer?.cancel();
     unawaited(_speech.cancel());
     unawaited(_setAwake(false));
     super.dispose();
@@ -656,8 +793,8 @@ extension ClinicalSpeechAnalysis on ClinicalSpeechService {
     if (transcript.isEmpty) return;
 
     await initialize();
-    if (!_sessionReady || _disposed) return;
     if (!await _ensureTranscriptPersisted()) return;
+    if (!await _ensureSessionReady() || _disposed) return;
     value = value.copyWith(
       status: SpeechStatus.processing,
       stage: ClinicalVoiceStage.capture,
@@ -717,7 +854,7 @@ extension ClinicalSpeechLifecycle on ClinicalSpeechService {
     if (_disposed) return;
     _appActive = false;
     _restartTimer?.cancel();
-    _stabilityTimer?.cancel();
+    _localDraftTimer?.cancel();
     if (!_shouldKeepListening) return;
 
     _resumeAfterLifecycle = true;
@@ -727,7 +864,7 @@ extension ClinicalSpeechLifecycle on ClinicalSpeechService {
       // La plateforme peut déjà avoir arrêté le moteur lors du verrouillage.
     }
     _commitCurrentPartial();
-    await _draftPersistence;
+    await _persistCurrentTranscript();
     await _setAwake(false);
     value = value.copyWith(soundLevel: 0);
   }
