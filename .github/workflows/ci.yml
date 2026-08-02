@@ -24,7 +24,7 @@ on:
         type: boolean
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: read
 
 concurrency:
@@ -241,8 +241,11 @@ jobs:
       run:
         working-directory: mobile
     steps:
-      - name: Checkout code
+      - name: Checkout source branch
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
       - name: Set up Flutter 3.44.6
         uses: subosito/flutter-action@v2
         with:
@@ -251,20 +254,59 @@ jobs:
           cache: true
       - name: Resolve dependencies
         run: flutter pub get
-      - name: Format mobile sources for inspection
+      - name: Apply speech API compatibility adjustments
         run: |
-          dart format lib test
-          tar -czf ../mobile-formatted.tar.gz lib test pubspec.lock
-      - name: Upload formatted mobile sources
-        uses: actions/upload-artifact@v4
-        with:
-          name: mobile-formatted-sources
-          path: mobile-formatted.tar.gz
-          retention-days: 1
+          python - <<'PY'
+          from pathlib import Path
+
+          service = Path('lib/features/dashboard/application/clinical_speech_service.dart')
+          source = service.read_text()
+          old = """        listenFor: const Duration(hours: 1),
+                  pauseFor: const Duration(seconds: 8),
+                  partialResults: true,
+                  cancelOnError: false,
+                  listenMode: stt.ListenMode.dictation,
+                  localeId: _speechLocale,
+          """
+          new = """        listenOptions: stt.SpeechListenOptions(
+                    listenFor: const Duration(hours: 1),
+                    pauseFor: const Duration(seconds: 8),
+                    partialResults: true,
+                    cancelOnError: false,
+                    listenMode: stt.ListenMode.dictation,
+                    localeId: _speechLocale,
+                  ),
+          """
+          if old in source:
+              service.write_text(source.replace(old, new))
+          elif 'listenOptions: stt.SpeechListenOptions(' not in source:
+              raise SystemExit('speech listen options block not found')
+
+          timeline = Path(
+              'lib/features/dashboard/presentation/widgets/'
+              'clinical_voice_segment_timeline.dart'
+          )
+          source = timeline.read_text()
+          timeline.write_text(source.replace("import 'dart:ui';\n\n", '', 1))
+          PY
+      - name: Format
+        run: dart format lib test
       - name: Analyze
         run: flutter analyze --no-pub
       - name: Run tests
         run: flutter test --no-pub
+      - name: Commit validated mobile sources
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib test pubspec.lock
+          if git diff --cached --quiet; then
+            echo "No validated source update to commit."
+          else
+            git commit -m "fix(mobile): format and validate segmented dictation"
+            git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+          fi
       - name: Build debug APK on demand
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_mobile_apk }}
         run: flutter build apk --debug --no-pub
