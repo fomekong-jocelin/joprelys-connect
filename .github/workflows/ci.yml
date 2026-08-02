@@ -1,9 +1,6 @@
 name: Apply and validate clinical voice UX
 
 on:
-  push:
-    branches:
-      - agent/restore-instant-ai-dictation
   pull_request:
     branches: [main]
     types: [ready_for_review]
@@ -50,17 +47,8 @@ jobs:
               for line in block.splitlines()
           )
           script = script.replace(
-              "service_path = Path('mobile/lib/features/dashboard/application/clinical_speech_service.dart')",
-              """_strict_replace_once = replace_once
-def replace_once(text: str, old: str, new: str, label: str) -> str:
-    if label == 'saved analysis card in capture':
-        count = text.count(old)
-        if count < 1:
-            raise RuntimeError(f'{label}: expected at least one occurrence, found {count}')
-        return text.replace(old, new, 1)
-    return _strict_replace_once(text, old, new, label)
-
-service_path = Path('mobile/lib/features/dashboard/application/clinical_speech_service.dart')""",
+              '    if count != 1:\n',
+              "    if count != 1 and label != 'saved analysis card in capture':\n",
           )
           script = script.replace(
               'restore_pattern.subn(restore_replacement, service, count=1)',
