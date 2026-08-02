@@ -95,7 +95,8 @@ extension MobileWorkspaceLocalizations on AppLocalizations {
       : 'This section is not available with your permissions.';
   String get recordRefresh => _workspaceFrench ? 'Actualiser' : 'Refresh';
   String get recordClose => _workspaceFrench ? 'Fermer' : 'Close';
-  String get recordUnknown => _workspaceFrench ? 'Non renseigné' : 'Not provided';
+  String get recordUnknown =>
+      _workspaceFrench ? 'Non renseigné' : 'Not provided';
   String get recordDateOfBirth =>
       _workspaceFrench ? 'Date de naissance' : 'Date of birth';
   String get recordGender => _workspaceFrench ? 'Sexe' : 'Gender';
@@ -114,18 +115,15 @@ extension MobileWorkspaceLocalizations on AppLocalizations {
   String get recordSeverityLow => _workspaceFrench ? 'Faible' : 'Low';
   String get recordSeverityModerate =>
       _workspaceFrench ? 'Modérée' : 'Moderate';
-  String get recordSeveritySevere =>
-      _workspaceFrench ? 'Sévère' : 'Severe';
+  String get recordSeveritySevere => _workspaceFrench ? 'Sévère' : 'Severe';
   String get recordLabOrders =>
       _workspaceFrench ? 'Demandes d’examens' : 'Lab orders';
   String get recordLabResults =>
       _workspaceFrench ? 'Résultats biologiques' : 'Lab results';
   String get recordHospitalizationStatus =>
       _workspaceFrench ? 'État du séjour' : 'Stay status';
-  String get recordAuditActor =>
-      _workspaceFrench ? 'Utilisateur' : 'User';
-  String get recordAuditAction =>
-      _workspaceFrench ? 'Action' : 'Action';
+  String get recordAuditActor => _workspaceFrench ? 'Utilisateur' : 'User';
+  String get recordAuditAction => _workspaceFrench ? 'Action' : 'Action';
   String get recordAuditDate => _workspaceFrench ? 'Date' : 'Date';
 
   String get profileWorkspaceTitle =>

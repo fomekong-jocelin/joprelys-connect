@@ -34,14 +34,13 @@ final class PatientRecordApi implements PatientRecordGateway {
     required EffectiveAccess access,
   }) async {
     final patientPayload = await _getMap('/api/patients/${target.patientId}');
-    final identity = PatientIdentity.fromJson(
-      patientPayload,
-      fallback: target,
-    );
+    final identity = PatientIdentity.fromJson(patientPayload, fallback: target);
 
     final canReadClinical = access.hasPermission('CLINICAL_READ');
     final canReadLabs = access.hasPermission('LAB_ORDER_READ');
-    final canReadHospitalizations = access.hasPermission('HOSPITALIZATION_READ');
+    final canReadHospitalizations = access.hasPermission(
+      'HOSPITALIZATION_READ',
+    );
     final canReadAudit = access.hasPermission('AUDIT_READ');
 
     final results = await Future.wait<List<dynamic>>([
@@ -87,9 +86,7 @@ final class PatientRecordApi implements PatientRecordGateway {
         .map(MedicalAntecedent.fromJson)
         .where((item) => item.description.isNotEmpty)
         .toList(growable: false);
-    final visits = _maps(results[2])
-        .map(_pastVisit)
-        .toList(growable: false)
+    final visits = _maps(results[2]).map(_pastVisit).toList(growable: false)
       ..sort((left, right) => right.date.compareTo(left.date));
 
     return PatientRecordBundle(
@@ -106,18 +103,18 @@ final class PatientRecordApi implements PatientRecordGateway {
           .map(PatientVaccinationSummary.fromJson)
           .where((item) => item.label.isNotEmpty)
           .toList(growable: false),
-      labOrders: _maps(results[4])
-          .map(PatientLabOrderSummary.fromJson)
-          .toList(growable: false),
-      labResults: _maps(results[5])
-          .map(PatientLabResultSummary.fromJson)
-          .toList(growable: false),
-      hospitalizations: _maps(results[6])
-          .map(PatientHospitalizationSummary.fromJson)
-          .toList(growable: false),
-      auditLogs: _maps(results[7])
-          .map(PatientAuditSummary.fromJson)
-          .toList(growable: false),
+      labOrders: _maps(
+        results[4],
+      ).map(PatientLabOrderSummary.fromJson).toList(growable: false),
+      labResults: _maps(
+        results[5],
+      ).map(PatientLabResultSummary.fromJson).toList(growable: false),
+      hospitalizations: _maps(
+        results[6],
+      ).map(PatientHospitalizationSummary.fromJson).toList(growable: false),
+      auditLogs: _maps(
+        results[7],
+      ).map(PatientAuditSummary.fromJson).toList(growable: false),
     );
   }
 
@@ -180,10 +177,11 @@ final class PatientRecordApi implements PatientRecordGateway {
     return PastVisitSummary(
       id: (map['visitId'] ?? map['id'] ?? '').toString(),
       visitNumber: (map['visitNumber'] ?? '').toString(),
-      date: DateTime.tryParse(rawDate?.toString() ?? '')?.toLocal() ??
+      date:
+          DateTime.tryParse(rawDate?.toString() ?? '')?.toLocal() ??
           DateTime.fromMillisecondsSinceEpoch(0),
-      practitionerName:
-          (map['doctorName'] ?? map['practitionerName'] ?? '').toString(),
+      practitionerName: (map['doctorName'] ?? map['practitionerName'] ?? '')
+          .toString(),
       chiefComplaint:
           (map['diagnosis'] ?? map['symptoms'] ?? map['reason'] ?? '')
               .toString(),

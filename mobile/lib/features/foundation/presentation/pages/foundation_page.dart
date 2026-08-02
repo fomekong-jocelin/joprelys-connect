@@ -68,9 +68,7 @@ class FoundationPage extends ConsumerWidget {
             onLogoutPressed: ref.read(authControllerProvider.notifier).logout,
           ),
         ),
-        body: _AccessLoadError(
-          onRetry: () => refreshEffectiveAccess(ref),
-        ),
+        body: _AccessLoadError(onRetry: () => refreshEffectiveAccess(ref)),
       ),
       data: (effectiveAccess) {
         final canViewQueue = effectiveAccess.hasPermission('VISIT_READ');
@@ -194,7 +192,9 @@ class _ProfessionalWorkspaceState extends State<_ProfessionalWorkspace> {
   Widget build(BuildContext context) {
     final destinations = _destinations(context);
     final safeIndex = _selectedIndex.clamp(0, destinations.length - 1).toInt();
-    final pages = destinations.map((item) => item.child).toList(growable: false);
+    final pages = destinations
+        .map((item) => item.child)
+        .toList(growable: false);
     final colors = Theme.of(context).colorScheme;
 
     return LayoutBuilder(
@@ -361,7 +361,11 @@ class _AccessLoadError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.admin_panel_settings_outlined, size: 48, color: colors.error),
+            Icon(
+              Icons.admin_panel_settings_outlined,
+              size: 48,
+              color: colors.error,
+            ),
             const SizedBox(height: 16),
             Text(l10n.recordLoadError, textAlign: TextAlign.center),
             const SizedBox(height: 16),
@@ -394,9 +398,9 @@ class _InlineError extends StatelessWidget {
       child: Text(
         message,
         textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: colors.onErrorContainer,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: colors.onErrorContainer),
       ),
     );
   }

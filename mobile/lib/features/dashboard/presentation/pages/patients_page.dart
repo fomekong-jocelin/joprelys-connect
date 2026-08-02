@@ -61,9 +61,9 @@ class _PatientsPageState extends ConsumerState<PatientsPage>
       _error = null;
     });
     try {
-      final patients = await ref.read(patientDirectoryApiProvider).searchPatients(
-            query: _searchController.text,
-          );
+      final patients = await ref
+          .read(patientDirectoryApiProvider)
+          .searchPatients(query: _searchController.text);
       if (!mounted) return;
       setState(() {
         _patients = patients;
@@ -94,7 +94,8 @@ class _PatientsPageState extends ConsumerState<PatientsPage>
       return _PermissionDenied(message: l10n.patientsDirectoryForbidden);
     }
 
-    final activeVisits = ref.watch(activeQueueControllerProvider).value ?? const [];
+    final activeVisits =
+        ref.watch(activeQueueControllerProvider).value ?? const [];
 
     return RefreshIndicator(
       onRefresh: _search,
@@ -111,16 +112,16 @@ class _PatientsPageState extends ConsumerState<PatientsPage>
                   Text(
                     l10n.patientsTitle,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                   const SizedBox(height: 5),
                   Text(
                     l10n.patientsSubtitle,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: colors.onSurfaceVariant,
-                          height: 1.4,
-                        ),
+                      color: colors.onSurfaceVariant,
+                      height: 1.4,
+                    ),
                   ),
                   const SizedBox(height: 18),
                   TextField(
@@ -244,9 +245,9 @@ class _PatientDirectoryCard extends StatelessWidget {
                 child: Text(
                   initial,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: colors.onPrimaryContainer,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: colors.onPrimaryContainer,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -259,8 +260,8 @@ class _PatientDirectoryCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w900,
-                          ),
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -268,17 +269,17 @@ class _PatientDirectoryCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: colors.onSurfaceVariant,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        color: colors.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     if (patient.phone?.trim().isNotEmpty == true) ...[
                       const SizedBox(height: 3),
                       Text(
                         patient.phone!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: colors.onSurfaceVariant,
-                            ),
+                          color: colors.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ],
@@ -298,13 +299,16 @@ class _PatientDirectoryCard extends StatelessWidget {
                       ),
                     ),
                   const SizedBox(height: 8),
-                  Icon(Icons.chevron_right_rounded, color: colors.onSurfaceVariant),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: colors.onSurfaceVariant,
+                  ),
                   Text(
                     l10n.patientsOpenRecord,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: colors.primary,
-                          fontWeight: FontWeight.w800,
-                        ),
+                      color: colors.primary,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ],
               ),
@@ -400,17 +404,17 @@ class _DirectoryEmpty extends StatelessWidget {
             const SizedBox(height: 18),
             Text(
               l10n.patientsEmptyTitle,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 6),
             Text(
               l10n.patientsEmptyBody,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
             ),
             const SizedBox(height: 16),
             OutlinedButton.icon(

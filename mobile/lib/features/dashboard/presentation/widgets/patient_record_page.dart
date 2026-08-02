@@ -91,10 +91,9 @@ class _PatientRecordPageState extends ConsumerState<PatientRecordPage> {
       _emergencyError = null;
     });
     try {
-      final record = await ref.read(patientRecordApiProvider).getRecord(
-            target: widget.target,
-            access: widget.access,
-          );
+      final record = await ref
+          .read(patientRecordApiProvider)
+          .getRecord(target: widget.target, access: widget.access);
       if (!mounted) return;
       setState(() {
         _record = record;
@@ -124,7 +123,9 @@ class _PatientRecordPageState extends ConsumerState<PatientRecordPage> {
       _emergencyError = null;
     });
     try {
-      await ref.read(patientRecordApiProvider).activateEmergencyAccess(
+      await ref
+          .read(patientRecordApiProvider)
+          .activateEmergencyAccess(
             patientId: widget.target.patientId,
             reason: reason,
           );
@@ -141,7 +142,9 @@ class _PatientRecordPageState extends ConsumerState<PatientRecordPage> {
       if (!mounted) return;
       setState(() {
         _emergencyLoading = false;
-        _emergencyError = AppLocalizations.of(context).recordEmergencyAccessError;
+        _emergencyError = AppLocalizations.of(
+          context,
+        ).recordEmergencyAccessError;
       });
     }
   }
@@ -164,9 +167,9 @@ class _PatientRecordPageState extends ConsumerState<PatientRecordPage> {
         titleSpacing: 0,
         title: Text(
           l10n.recordTitle,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w900,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
         ),
         actions: [
           IconButton(
@@ -176,10 +179,7 @@ class _PatientRecordPageState extends ConsumerState<PatientRecordPage> {
           ),
         ],
       ),
-      body: SafeArea(
-        top: false,
-        child: _body(l10n),
-      ),
+      body: SafeArea(top: false, child: _body(l10n)),
     );
   }
 
@@ -197,10 +197,7 @@ class _PatientRecordPageState extends ConsumerState<PatientRecordPage> {
     }
     final record = _record;
     if (_error != null || record == null) {
-      return PatientRecordError(
-        message: _friendlyError(l10n),
-        onRetry: _load,
-      );
+      return PatientRecordError(message: _friendlyError(l10n), onRetry: _load);
     }
     return PatientRecordContent(
       record: record,

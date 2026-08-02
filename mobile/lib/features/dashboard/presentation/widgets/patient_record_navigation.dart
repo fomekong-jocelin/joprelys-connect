@@ -47,10 +47,7 @@ class PatientRecordContent extends StatelessWidget {
             ),
           ),
         ),
-        Divider(
-          height: 1,
-          color: colors.outlineVariant.withValues(alpha: 0.5),
-        ),
+        Divider(height: 1, color: colors.outlineVariant.withValues(alpha: 0.5)),
         Expanded(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 220),
@@ -102,10 +99,7 @@ class _SectionChip extends StatelessWidget {
         l10n.recordHospitalizations,
         Icons.local_hospital_rounded,
       ),
-      PatientRecordSection.audit => (
-        l10n.recordAudit,
-        Icons.shield_outlined,
-      ),
+      PatientRecordSection.audit => (l10n.recordAudit, Icons.shield_outlined),
     };
 
     return Semantics(
@@ -113,9 +107,7 @@ class _SectionChip extends StatelessWidget {
       button: true,
       label: label,
       child: Material(
-        color: selected
-            ? colors.primaryContainer
-            : colors.surfaceContainerLow,
+        color: selected ? colors.primaryContainer : colors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(AppDesignTokens.radiusLg),
         child: InkWell(
           onTap: onTap,
@@ -137,11 +129,11 @@ class _SectionChip extends StatelessWidget {
                   label,
                   maxLines: 1,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: selected
-                            ? colors.onPrimaryContainer
-                            : colors.onSurfaceVariant,
-                      ),
+                    fontWeight: FontWeight.w800,
+                    color: selected
+                        ? colors.onPrimaryContainer
+                        : colors.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),

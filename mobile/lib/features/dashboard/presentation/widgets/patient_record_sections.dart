@@ -41,9 +41,9 @@ class PatientRecordHero extends StatelessWidget {
               child: Text(
                 initials.isEmpty ? 'P' : initials,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: colors.onPrimaryContainer,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  color: colors.onPrimaryContainer,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -56,8 +56,8 @@ class PatientRecordHero extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Wrap(
@@ -110,10 +110,13 @@ class PatientRecordSectionView extends StatelessWidget {
     return switch (section) {
       PatientRecordSection.overview => _OverviewSection(record: record),
       PatientRecordSection.medical => _MedicalSection(record: record),
-      PatientRecordSection.consultations => _ConsultationsSection(record: record),
+      PatientRecordSection.consultations => _ConsultationsSection(
+        record: record,
+      ),
       PatientRecordSection.laboratory => _LaboratorySection(record: record),
-      PatientRecordSection.hospitalizations =>
-        _HospitalizationsSection(record: record),
+      PatientRecordSection.hospitalizations => _HospitalizationsSection(
+        record: record,
+      ),
       PatientRecordSection.audit => _AuditSection(record: record),
     };
   }
@@ -146,7 +149,10 @@ class _OverviewSection extends StatelessWidget {
                 label: l10n.recordDateOfBirth,
                 value: identity.birthDate == null
                     ? l10n.recordUnknown
-                    : AppLocaleFormatters.formatDate(identity.birthDate!, locale),
+                    : AppLocaleFormatters.formatDate(
+                        identity.birthDate!,
+                        locale,
+                      ),
               ),
               _DetailRow(
                 icon: Icons.wc_rounded,
@@ -239,7 +245,8 @@ class _MedicalSection extends StatelessWidget {
                         children: [
                           Text(
                             item.type,
-                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(
                                   color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.w900,
                                 ),
@@ -247,9 +254,8 @@ class _MedicalSection extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             item.description,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                         ],
                       ),
@@ -328,9 +334,9 @@ class _ConsultationsSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context);
     if (record.history.pastVisits.isEmpty) {
-      return _SectionScroll(children: [
-        _EmptyCard(message: l10n.recordNoConsultations),
-      ]);
+      return _SectionScroll(
+        children: [_EmptyCard(message: l10n.recordNoConsultations)],
+      );
     }
 
     return ListView.separated(
@@ -354,8 +360,8 @@ class _ConsultationsSection extends StatelessWidget {
                   Text(
                     AppLocaleFormatters.formatDate(visit.date, locale),
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -365,9 +371,9 @@ class _ConsultationsSection extends StatelessWidget {
                     ? l10n.recordUnknown
                     : visit.chiefComplaint,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      height: 1.3,
-                    ),
+                  fontWeight: FontWeight.w900,
+                  height: 1.3,
+                ),
               ),
               const SizedBox(height: 8),
               Row(
@@ -466,9 +472,8 @@ class _LaboratorySection extends StatelessWidget {
                       children: [
                         Text(
                           '${result.value}${result.unit == null ? '' : ' ${result.unit}'}',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w900,
-                              ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w900),
                         ),
                         if (result.interpretation != null)
                           _SmallBadge(label: result.interpretation!),
@@ -497,12 +502,17 @@ class _LaboratorySection extends StatelessWidget {
                     Row(
                       children: [
                         _SmallBadge(
-                          label: order.number.isEmpty ? order.status : order.number,
+                          label: order.number.isEmpty
+                              ? order.status
+                              : order.number,
                         ),
                         const Spacer(),
                         if (order.createdAt != null)
                           Text(
-                            AppLocaleFormatters.formatDate(order.createdAt!, locale),
+                            AppLocaleFormatters.formatDate(
+                              order.createdAt!,
+                              locale,
+                            ),
                             style: Theme.of(context).textTheme.labelMedium,
                           ),
                       ],
@@ -516,7 +526,9 @@ class _LaboratorySection extends StatelessWidget {
                     ),
                     if (order.practitioner != null) ...[
                       const SizedBox(height: 6),
-                      Text('${l10n.recordPractitioner} · ${order.practitioner}'),
+                      Text(
+                        '${l10n.recordPractitioner} · ${order.practitioner}',
+                      ),
                     ],
                   ],
                 ),
@@ -537,9 +549,9 @@ class _HospitalizationsSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context);
     if (record.hospitalizations.isEmpty) {
-      return _SectionScroll(children: [
-        _EmptyCard(message: l10n.recordNoHospitalizations),
-      ]);
+      return _SectionScroll(
+        children: [_EmptyCard(message: l10n.recordNoHospitalizations)],
+      );
     }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
@@ -559,8 +571,8 @@ class _HospitalizationsSection extends StatelessWidget {
                     child: Text(
                       stay.service ?? l10n.recordHospitalizations,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w900,
-                          ),
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
                   _SmallBadge(label: stay.status),
@@ -575,8 +587,8 @@ class _HospitalizationsSection extends StatelessWidget {
                 Text(
                   AppLocaleFormatters.formatDate(stay.admittedAt!, locale),
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ],
@@ -596,9 +608,9 @@ class _AuditSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context);
     if (record.auditLogs.isEmpty) {
-      return _SectionScroll(children: [
-        _EmptyCard(message: l10n.recordNoAudit),
-      ]);
+      return _SectionScroll(
+        children: [_EmptyCard(message: l10n.recordNoAudit)],
+      );
     }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
@@ -612,7 +624,9 @@ class _AuditSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _LeadingIcon(
-                icon: success ? Icons.verified_outlined : Icons.warning_amber_rounded,
+                icon: success
+                    ? Icons.verified_outlined
+                    : Icons.warning_amber_rounded,
                 error: !success,
               ),
               const SizedBox(width: 12),
@@ -655,10 +669,7 @@ class _SectionScroll extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: children,
-    );
+    return ListView(padding: const EdgeInsets.all(16), children: children);
   }
 }
 
@@ -712,9 +723,9 @@ class _SectionTitle extends StatelessWidget {
             child: Text(
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w900,
-                  ),
+                color: color,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],
@@ -750,8 +761,8 @@ class _DetailRow extends StatelessWidget {
                 child: Text(
                   label,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
+                    color: colors.onSurfaceVariant,
+                  ),
                 ),
               ),
               Flexible(
@@ -790,8 +801,12 @@ class _SafetyCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            hasRisk ? Icons.warning_amber_rounded : Icons.verified_user_outlined,
-            color: hasRisk ? colors.onErrorContainer : colors.onSecondaryContainer,
+            hasRisk
+                ? Icons.warning_amber_rounded
+                : Icons.verified_user_outlined,
+            color: hasRisk
+                ? colors.onErrorContainer
+                : colors.onSecondaryContainer,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -887,9 +902,9 @@ class _MetricCard extends StatelessWidget {
           const SizedBox(height: 7),
           Text(
             value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 2),
           Text(
@@ -897,9 +912,9 @@ class _MetricCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: colors.onSurfaceVariant),
           ),
         ],
       ),
@@ -926,9 +941,9 @@ class _EmptyCard extends StatelessWidget {
         message,
         textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: colors.onSurfaceVariant,
-              fontStyle: FontStyle.italic,
-            ),
+          color: colors.onSurfaceVariant,
+          fontStyle: FontStyle.italic,
+        ),
       ),
     );
   }
@@ -943,7 +958,9 @@ class _LeadingIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final background = error ? colors.errorContainer : colors.primaryContainer;
-    final foreground = error ? colors.onErrorContainer : colors.onPrimaryContainer;
+    final foreground = error
+        ? colors.onErrorContainer
+        : colors.onPrimaryContainer;
     return Container(
       width: 40,
       height: 40,
@@ -975,9 +992,9 @@ class _SmallBadge extends StatelessWidget {
         label,
         maxLines: 1,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: error ? colors.onErrorContainer : colors.onPrimaryContainer,
-              fontWeight: FontWeight.w900,
-            ),
+          color: error ? colors.onErrorContainer : colors.onPrimaryContainer,
+          fontWeight: FontWeight.w900,
+        ),
       ),
     );
   }
@@ -1005,9 +1022,9 @@ class _VitalChip extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: colors.onSecondaryContainer,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: colors.onSecondaryContainer,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),
@@ -1031,9 +1048,9 @@ class _MetaBadge extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: colors.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
-              ),
+            color: colors.onSurfaceVariant,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ],
     );
@@ -1058,8 +1075,9 @@ class _StatusBadge extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: (emergency ? colors.error : colors.primary)
-                  .withValues(alpha: 0.35),
+              color: (emergency ? colors.error : colors.primary).withValues(
+                alpha: 0.35,
+              ),
               blurRadius: 8,
             ),
           ],

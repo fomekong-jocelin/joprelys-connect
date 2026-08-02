@@ -91,8 +91,7 @@ final class PatientVaccinationSummary {
 
   factory PatientVaccinationSummary.fromJson(Map<String, dynamic> json) {
     return PatientVaccinationSummary(
-      label:
-          _firstString(json, const ['vaccineName', 'vaccine', 'name']) ?? '',
+      label: _firstString(json, const ['vaccineName', 'vaccine', 'name']) ?? '',
       date: _date(json['administrationDate'] ?? json['date']),
       status: _firstString(json, const ['status']),
     );

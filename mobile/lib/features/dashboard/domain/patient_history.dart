@@ -55,9 +55,8 @@ final class PatientAllergy {
     };
 
     return PatientAllergy(
-      allergen:
-          (json['allergen'] ?? json['substance'] ?? json['name'] ?? '')
-              .toString(),
+      allergen: (json['allergen'] ?? json['substance'] ?? json['name'] ?? '')
+          .toString(),
       severity: severity,
       reaction: _optionalString(json['reaction'] ?? json['reactionType']),
     );
@@ -144,9 +143,8 @@ final class PatientMedicalHistory {
         (json['antecedents'] as List<dynamic>?)
             ?.whereType<Map>()
             .map(
-              (item) => MedicalAntecedent.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
+              (item) =>
+                  MedicalAntecedent.fromJson(Map<String, dynamic>.from(item)),
             )
             .toList() ??
         [];
@@ -155,9 +153,8 @@ final class PatientMedicalHistory {
         (json['allergies'] as List<dynamic>?)
             ?.whereType<Map>()
             .map(
-              (item) => PatientAllergy.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
+              (item) =>
+                  PatientAllergy.fromJson(Map<String, dynamic>.from(item)),
             )
             .toList() ??
         [];
@@ -166,9 +163,8 @@ final class PatientMedicalHistory {
         (json['pastVisits'] as List<dynamic>?)
             ?.whereType<Map>()
             .map(
-              (item) => PastVisitSummary.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
+              (item) =>
+                  PastVisitSummary.fromJson(Map<String, dynamic>.from(item)),
             )
             .toList() ??
         [];

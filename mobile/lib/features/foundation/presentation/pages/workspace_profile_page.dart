@@ -35,16 +35,16 @@ class WorkspaceProfilePage extends StatelessWidget {
       children: [
         Text(
           l10n.profileWorkspaceTitle,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w900,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 5),
         Text(
           l10n.profileWorkspaceSubtitle,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
         ),
         const SizedBox(height: 20),
         Container(
@@ -67,29 +67,32 @@ class WorkspaceProfilePage extends StatelessWidget {
                 child: Text(
                   initials.isEmpty ? 'P' : initials,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: colors.onPrimaryContainer,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: colors.onPrimaryContainer,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
               Text(
                 session.name,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 4),
               Text(
                 session.email,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
+                  color: colors.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 11,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: colors.secondaryContainer,
                   borderRadius: BorderRadius.circular(999),
@@ -97,9 +100,9 @@ class WorkspaceProfilePage extends StatelessWidget {
                 child: Text(
                   session.role,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: colors.onSecondaryContainer,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: colors.onSecondaryContainer,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
               const SizedBox(height: 18),
@@ -117,9 +120,9 @@ class WorkspaceProfilePage extends StatelessWidget {
         const SizedBox(height: 20),
         Text(
           l10n.profilePermissionsTitle,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w900,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 10),
         Container(
@@ -151,7 +154,8 @@ class WorkspaceProfilePage extends StatelessWidget {
                           ),
                           child: Text(
                             permission,
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
                                   color: colors.onPrimaryContainer,
                                   fontWeight: FontWeight.w800,
                                 ),

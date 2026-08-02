@@ -11,10 +11,10 @@ void main() {
   );
 
   test('uses directory target as identity fallback', () {
-    final identity = PatientIdentity.fromJson(
-      {'id': 'patient-1', 'status': 'ACTIVE'},
-      fallback: target,
-    );
+    final identity = PatientIdentity.fromJson({
+      'id': 'patient-1',
+      'status': 'ACTIVE',
+    }, fallback: target);
 
     expect(identity.fullName, 'Patient Test');
     expect(identity.globalPatientNumber, 'DPU-001');
