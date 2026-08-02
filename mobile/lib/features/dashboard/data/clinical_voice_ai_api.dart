@@ -135,6 +135,10 @@ final class ClinicalAiState {
     required this.transcript,
     required this.assistantMessage,
     required this.needsClarification,
+    this.sessionId,
+    this.visitId,
+    this.sessionStatus,
+    this.expiresAt,
     this.pendingTranscript,
     this.transcriptStatus = 'NONE',
   });
@@ -143,6 +147,10 @@ final class ClinicalAiState {
     final rawDraft = json['draft'];
     final rawRevisions = json['revisions'];
     return ClinicalAiState(
+      sessionId: json['sessionId']?.toString(),
+      visitId: json['visitId']?.toString(),
+      sessionStatus: json['status']?.toString(),
+      expiresAt: json['expiresAt']?.toString(),
       draft: rawDraft is Map
           ? rawDraft.map(
               (key, value) => MapEntry(key.toString(), value?.toString() ?? ''),
@@ -166,6 +174,10 @@ final class ClinicalAiState {
     );
   }
 
+  final String? sessionId;
+  final String? visitId;
+  final String? sessionStatus;
+  final String? expiresAt;
   final Map<String, String> draft;
   final List<ClinicalAiRevision> revisions;
   final String? transcript;
@@ -247,8 +259,12 @@ final class ClinicalVoiceAiApi implements ClinicalVoiceAiGateway {
     final response = await _client.get<dynamic>(
       '/api/ai/consultations/$visitId/session',
     );
-    if (response.data == null) return null;
-    return _stateFrom(response.data, 'Invalid AI session response');
+    if (response.statusCode == 204) return null;
+    final json = _optionalObjectFrom(
+      response.data,
+      'Invalid AI session response',
+    );
+    return json == null ? null : ClinicalAiState.fromJson(json);
   }
 
   @override
@@ -271,10 +287,10 @@ final class ClinicalVoiceAiApi implements ClinicalVoiceAiGateway {
       data: audioBytes,
       headers: const <String, dynamic>{'Content-Type': 'audio/wav'},
     );
-    final data = response.data;
-    if (data is! Map) {
-      throw const FormatException('Invalid AI transcription response');
-    }
+    final data = _objectFrom(
+      response.data,
+      'Invalid AI transcription response',
+    );
     final transcript = data['transcript']?.toString().trim();
     if (transcript == null || transcript.isEmpty) {
       throw const FormatException('Empty AI transcription response');
@@ -333,9 +349,45 @@ final class ClinicalVoiceAiApi implements ClinicalVoiceAiGateway {
   }
 
   ClinicalAiState _stateFrom(Object? data, String message) {
-    if (data is! Map) {
+    return ClinicalAiState.fromJson(_objectFrom(data, message));
+  }
+
+  Map<String, dynamic> _objectFrom(Object? data, String message) {
+    final decoded = _decodeResponse(data, message, allowEmpty: false);
+    if (decoded is! Map) throw FormatException(message);
+    return Map<String, dynamic>.from(decoded);
+  }
+
+  Map<String, dynamic>? _optionalObjectFrom(Object? data, String message) {
+    final decoded = _decodeResponse(data, message, allowEmpty: true);
+    if (decoded == null) return null;
+    if (decoded is! Map) throw FormatException(message);
+    return Map<String, dynamic>.from(decoded);
+  }
+
+  Object? _decodeResponse(
+    Object? data,
+    String message, {
+    required bool allowEmpty,
+  }) {
+    if (data == null) {
+      if (allowEmpty) return null;
       throw FormatException(message);
     }
-    return ClinicalAiState.fromJson(Map<String, dynamic>.from(data));
+    if (data is! String) return data;
+
+    final body = data.trim();
+    if (body.isEmpty) {
+      if (allowEmpty) return null;
+      throw FormatException(message);
+    }
+
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded == null && allowEmpty) return null;
+      return decoded;
+    } on FormatException {
+      throw FormatException(message);
+    }
   }
 }
