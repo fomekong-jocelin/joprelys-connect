@@ -16,6 +16,8 @@ void main() {
     expect(restoration, isNot(contains('_applyAiState(existing)')));
     expect(restoration, contains('SpeechStatus.transcriptReview'));
     expect(restoration, contains('ClinicalVoiceStage.capture'));
+    expect(restoration, contains("transcriptStatus.toUpperCase() == 'NONE'"));
+    expect(restoration, contains("transcript: ''"));
   });
 
   test('capture screen keeps edit, delete, clear and microphone actions', () {
@@ -23,10 +25,23 @@ void main() {
       'lib/features/dashboard/presentation/widgets/clinical_voice_assistant_sheet.dart',
     ).readAsStringSync();
     expect(source, contains('ClinicalTranscriptTimeline('));
-    expect(source, contains('editable: !listening && !processing'));
+    expect(source, contains('!state.isSynchronizingTranscript'));
     expect(source, contains('onSegmentChanged: onSegmentChanged'));
     expect(source, contains('onSegmentDeleted: onSegmentDeleted'));
-    expect(source, contains('onPressed: onClearAll'));
+    expect(source, contains('onPressed: disabled ? null : onClearAll'));
     expect(source, contains('onToggleListening: onToggleListening'));
+    expect(source, contains('class _CaptureActionBar'));
+  });
+
+  test('reviewed transcript mutations are persisted before closing', () {
+    final source = File(
+      'lib/features/dashboard/application/clinical_speech_service.dart',
+    ).readAsStringSync();
+
+    expect(source, contains('Future<bool> updateSegment'));
+    expect(source, contains('Future<bool> deleteSegment'));
+    expect(source, contains('Future<bool> clearTranscript'));
+    expect(source, contains('_gateway.savePendingTranscript'));
+    expect(source, contains('return _ensureTranscriptPersisted();'));
   });
 }
