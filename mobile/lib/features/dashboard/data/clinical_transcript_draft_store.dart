@@ -97,8 +97,8 @@ abstract interface class ClinicalTranscriptDraftGateway {
 final class SecureClinicalTranscriptDraftStore
     implements ClinicalTranscriptDraftGateway {
   const SecureClinicalTranscriptDraftStore({
-    FlutterSecureStorage storage = const FlutterSecureStorage(),
-  }) : _storage = storage;
+    this._storage = const FlutterSecureStorage(),
+  });
 
   static const String _keyPrefix = 'joprelys.clinical-voice.draft.v2.';
   final FlutterSecureStorage _storage;
