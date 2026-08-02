@@ -101,6 +101,14 @@ final class RealtimeSpeechState {
   bool get hasTranscriptSyncFailure =>
       transcriptSyncStatus == TranscriptSyncStatus.failed;
 
+  bool get isTranscriptReadyForAnalysis =>
+      stage == ClinicalVoiceStage.capture &&
+      status == SpeechStatus.transcriptReview &&
+      hasTranscript &&
+      partialTranscript.trim().isEmpty &&
+      transcriptSyncStatus == TranscriptSyncStatus.synced &&
+      errorMessage == null;
+
   RealtimeSpeechState copyWith({
     SpeechStatus? status,
     ClinicalVoiceStage? stage,
