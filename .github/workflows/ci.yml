@@ -252,7 +252,11 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
       - name: Check formatting
-        run: dart format --output=none --set-exit-if-changed lib test
+        shell: bash
+        run: |
+          dart format lib test
+          git diff -- lib/features/dashboard/presentation/widgets/clinical_voice_listening_surface.dart
+          git diff --exit-code
       - name: Analyze
         run: flutter analyze --no-pub
       - name: Run tests
