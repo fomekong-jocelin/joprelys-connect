@@ -129,8 +129,7 @@ String stripCommittedClinicalTranscriptPrefix(
   String incoming,
   String committed, {
   bool allowRecentReplay = false,
-}
-) {
+}) {
   final incomingText = _normalizeWhitespace(incoming);
   final committedText = _normalizeWhitespace(committed);
   if (incomingText.isEmpty || committedText.isEmpty) return incomingText;
