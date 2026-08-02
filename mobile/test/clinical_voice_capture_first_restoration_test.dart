@@ -50,6 +50,43 @@ void main() {
     );
   });
 
+  test('capture waits for an explicit tap on the central microphone', () {
+    final sheet = File(
+      'lib/features/dashboard/presentation/widgets/clinical_voice_assistant_sheet.dart',
+    ).readAsStringSync();
+    final surface = File(
+      'lib/features/dashboard/presentation/widgets/clinical_voice_listening_surface.dart',
+    ).readAsStringSync();
+
+    expect(sheet, contains('Future.microtask(_speechService.initialize)'));
+    expect(
+      sheet,
+      isNot(contains('Future.microtask(_speechService.restoreOrStart)')),
+    );
+    expect(surface, isNot(contains('OutlinedButton.icon(')));
+    expect(surface, contains('InkResponse('));
+    expect(
+      surface,
+      contains('active ? Icons.stop_rounded : Icons.mic_rounded'),
+    );
+    expect(surface, contains('onTap: onToggleListening'));
+  });
+
+  test('a new voice capture starts from a clean SOAP draft', () {
+    final source = File(
+      'lib/features/dashboard/presentation/widgets/consultation_notes_sheet.dart',
+    ).readAsStringSync();
+    final launchStart = source.indexOf('void _launchAssistant()');
+    final retryStart = source.indexOf('Future<void> _retryLoad()', launchStart);
+    expect(launchStart, greaterThanOrEqualTo(0));
+    expect(retryStart, greaterThan(launchStart));
+
+    final launch = source.substring(launchStart, retryStart);
+    expect(launch, contains('initialDraft: const <String, String>{}'));
+    expect(launch, isNot(contains('_controllers.toAiDraft()')));
+    expect(launch, contains('applyAcceptedDraft(result.note)'));
+  });
+
   test('capture screen saves before exposing clinical synthesis', () {
     final source = File(
       'lib/features/dashboard/presentation/widgets/clinical_voice_assistant_sheet.dart',
