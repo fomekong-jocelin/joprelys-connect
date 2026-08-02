@@ -10,15 +10,20 @@ final class MedicalAntecedent {
     this.diagnosedYear,
   });
 
-  final String type; // MEDICAL, SURGICAL, FAMILY
+  final String type;
   final String description;
   final int? diagnosedYear;
 
   factory MedicalAntecedent.fromJson(Map<String, dynamic> json) {
+    final rawYear = json['diagnosedYear'] ?? json['year'];
     return MedicalAntecedent(
-      type: json['type'] as String? ?? 'MEDICAL',
-      description: json['description'] as String? ?? '',
-      diagnosedYear: json['diagnosedYear'] as int?,
+      type: (json['type'] ?? json['category'] ?? 'MEDICAL').toString(),
+      description:
+          (json['description'] ?? json['condition'] ?? json['label'] ?? '')
+              .toString(),
+      diagnosedYear: rawYear is num
+          ? rawYear.toInt()
+          : int.tryParse(rawYear?.toString() ?? ''),
     );
   }
 
@@ -42,17 +47,19 @@ final class PatientAllergy {
   final String? reaction;
 
   factory PatientAllergy.fromJson(Map<String, dynamic> json) {
-    final sevStr = (json['severity'] as String? ?? 'LOW').toUpperCase();
-    final severity = switch (sevStr) {
-      'SEVERE' => AllergySeverity.severe,
-      'MODERATE' => AllergySeverity.moderate,
+    final severityValue = (json['severity'] ?? 'LOW').toString().toUpperCase();
+    final severity = switch (severityValue) {
+      'SEVERE' || 'HIGH' || 'CRITICAL' => AllergySeverity.severe,
+      'MODERATE' || 'MEDIUM' => AllergySeverity.moderate,
       _ => AllergySeverity.low,
     };
 
     return PatientAllergy(
-      allergen: json['allergen'] as String? ?? '',
+      allergen:
+          (json['allergen'] ?? json['substance'] ?? json['name'] ?? '')
+              .toString(),
       severity: severity,
-      reaction: json['reaction'] as String?,
+      reaction: _optionalString(json['reaction'] ?? json['reactionType']),
     );
   }
 
@@ -95,9 +102,9 @@ final class PastVisitSummary {
       practitionerName: json['practitionerName'] as String? ?? '',
       chiefComplaint: json['chiefComplaint'] as String? ?? '',
       temperature: (json['temperature'] as num?)?.toDouble(),
-      systolic: json['systolic'] as int?,
-      diastolic: json['diastolic'] as int?,
-      pulse: json['pulse'] as int?,
+      systolic: (json['systolic'] as num?)?.toInt(),
+      diastolic: (json['diastolic'] as num?)?.toInt(),
+      pulse: (json['pulse'] as num?)?.toInt(),
     );
   }
 
@@ -135,19 +142,34 @@ final class PatientMedicalHistory {
   factory PatientMedicalHistory.fromJson(Map<String, dynamic> json) {
     final antecedentsList =
         (json['antecedents'] as List<dynamic>?)
-            ?.map((e) => MedicalAntecedent.fromJson(e as Map<String, dynamic>))
+            ?.whereType<Map>()
+            .map(
+              (item) => MedicalAntecedent.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
             .toList() ??
         [];
 
     final allergiesList =
         (json['allergies'] as List<dynamic>?)
-            ?.map((e) => PatientAllergy.fromJson(e as Map<String, dynamic>))
+            ?.whereType<Map>()
+            .map(
+              (item) => PatientAllergy.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
             .toList() ??
         [];
 
     final visitsList =
         (json['pastVisits'] as List<dynamic>?)
-            ?.map((e) => PastVisitSummary.fromJson(e as Map<String, dynamic>))
+            ?.whereType<Map>()
+            .map(
+              (item) => PastVisitSummary.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
             .toList() ??
         [];
 
@@ -165,8 +187,14 @@ final class PatientMedicalHistory {
     'patientId': patientId,
     'patientName': patientName,
     'patientDpu': patientDpu,
-    'antecedents': antecedents.map((e) => e.toJson()).toList(),
-    'allergies': allergies.map((e) => e.toJson()).toList(),
-    'pastVisits': pastVisits.map((e) => e.toJson()).toList(),
+    'antecedents': antecedents.map((item) => item.toJson()).toList(),
+    'allergies': allergies.map((item) => item.toJson()).toList(),
+    'pastVisits': pastVisits.map((item) => item.toJson()).toList(),
   };
+}
+
+String? _optionalString(Object? value) {
+  if (value == null) return null;
+  final text = value.toString().trim();
+  return text.isEmpty ? null : text;
 }
