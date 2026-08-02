@@ -335,7 +335,9 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       1.0,
     );
     final boosted = 12.0 + math.pow(normalized, 0.45).toDouble() * 88.0;
-    value = value.copyWith(soundLevel: boosted.clamp(12.0, 100.0));
+    value = value.copyWith(
+      soundLevel: boosted.clamp(12.0, 100.0).toDouble(),
+    );
   }
 
   void _handleSpeechStatus(String status) {
@@ -371,10 +373,11 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   void _publishCaptureState() {
     final committed = clinicalTranscriptFromSegments(_segments);
     final partial = _currentPartial.trim();
+    final separator = RegExp(r'[.!?;:]$').hasMatch(committed) ? ' ' : '. ';
     final transcript = <String>[
       if (committed.isNotEmpty) committed,
       if (partial.isNotEmpty) partial,
-    ].join(committed.endsWith(RegExp(r'[.!?;:]$')) ? ' ' : '. ').trim();
+    ].join(separator).trim();
 
     value = value.copyWith(
       status: _shouldKeepListening
@@ -385,7 +388,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
       partialTranscript: partial,
       partialOffset: _currentPartialOffset,
-      clearError: true,
+      clearError: !value.hasTranscriptSyncFailure,
     );
   }
 
@@ -524,10 +527,11 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
 
   Future<bool> deleteSegment(String segmentId) async {
     if (_disposed || value.status == SpeechStatus.listening) return false;
-    final previous = List<ClinicalTranscriptSegment>.from(_segments);
-    final removed = _segments.removeWhere((segment) => segment.id == segmentId);
-    if (removed == 0) return false;
+    final index = _segments.indexWhere((segment) => segment.id == segmentId);
+    if (index < 0) return false;
 
+    final previous = List<ClinicalTranscriptSegment>.from(_segments);
+    _segments.removeAt(index);
     _publishReviewedTranscript();
     final saved = await _persistCurrentTranscript();
     if (!saved && !_disposed) {
