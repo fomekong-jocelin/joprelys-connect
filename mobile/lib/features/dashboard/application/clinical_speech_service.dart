@@ -157,7 +157,10 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     try {
       _speechReady = await _speech.initialize(
         onStatus: _handleSpeechStatus,
-        onError: _handleSpeechError,
+        onError: (error) => _handleSpeechError(
+          error.errorMsg,
+          permanent: error.permanent,
+        ),
       );
       if (!_speechReady) {
         throw StateError('SPEECH_RECOGNITION_UNAVAILABLE');
@@ -452,14 +455,10 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     }
   }
 
-  void _handleSpeechError(stt.SpeechRecognitionError error) {
+  void _handleSpeechError(String raw, {required bool permanent}) {
     if (_disposed) return;
-    final raw = error.errorMsg;
     if (_shouldKeepListening &&
-        shouldRestartClinicalSpeechRecognition(
-          raw,
-          permanent: error.permanent,
-        )) {
+        shouldRestartClinicalSpeechRecognition(raw, permanent: permanent)) {
       if (_currentPartial.isNotEmpty) {
         _currentPartialFinalized = true;
         _publishCaptureState();
