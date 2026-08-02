@@ -135,8 +135,7 @@ final class RealtimeSpeechState {
       note: note ?? this.note,
       revisions: revisions ?? this.revisions,
       soundLevel: soundLevel ?? this.soundLevel,
-      transcriptSyncStatus:
-          transcriptSyncStatus ?? this.transcriptSyncStatus,
+      transcriptSyncStatus: transcriptSyncStatus ?? this.transcriptSyncStatus,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       assistantMessage: clearAssistant
           ? null

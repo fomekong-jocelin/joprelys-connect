@@ -142,8 +142,7 @@ class ClinicalVoiceListeningSurface extends StatelessWidget {
                               builder: (context, child) {
                                 return CustomPaint(
                                   painter: _SineWavePainter(
-                                    phase:
-                                        waveController.value * math.pi * 2,
+                                    phase: waveController.value * math.pi * 2,
                                     color: colors.primary,
                                     soundLevel: soundLevel,
                                   ),

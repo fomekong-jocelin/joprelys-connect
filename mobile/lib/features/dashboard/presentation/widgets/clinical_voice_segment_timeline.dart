@@ -299,7 +299,9 @@ class _TranscriptSegmentCardState extends State<_TranscriptSegmentCard> {
                   onPressed: _delete,
                   style: IconButton.styleFrom(
                     foregroundColor: colors.error,
-                    backgroundColor: colors.errorContainer.withValues(alpha: 0.55),
+                    backgroundColor: colors.errorContainer.withValues(
+                      alpha: 0.55,
+                    ),
                   ),
                   icon: const Icon(Icons.delete_outline_rounded, size: 17),
                 ),

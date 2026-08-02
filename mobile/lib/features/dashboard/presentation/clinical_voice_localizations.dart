@@ -18,8 +18,7 @@ extension ClinicalVoiceLocalizations on AppLocalizations {
   String get voiceCaptureTip => _voiceIsFrench
       ? 'Les paroles déjà captées sont conservées. Une pause stable crée automatiquement un nouveau segment.'
       : 'Previously captured speech is preserved. A stable pause automatically creates a new segment.';
-  String get voiceResumeDictation =>
-      _voiceIsFrench ? 'Reprendre' : 'Resume';
+  String get voiceResumeDictation => _voiceIsFrench ? 'Reprendre' : 'Resume';
 
   String get voiceSegmentsTitle =>
       _voiceIsFrench ? 'Transcription' : 'Transcript';
@@ -60,9 +59,8 @@ extension ClinicalVoiceLocalizations on AppLocalizations {
       ? 'L’IA reformule uniquement si nécessaire, puis classe les informations dans les champs cliniques adaptés.'
       : 'AI rewrites only when needed, then places information in the appropriate clinical fields.';
 
-  String get voiceTranscriptSaving => _voiceIsFrench
-      ? 'Sauvegarde de la transcription…'
-      : 'Saving transcript…';
+  String get voiceTranscriptSaving =>
+      _voiceIsFrench ? 'Sauvegarde de la transcription…' : 'Saving transcript…';
   String get voiceTranscriptSaved => _voiceIsFrench
       ? 'Transcription sauvegardée dans la session.'
       : 'Transcript saved to the session.';

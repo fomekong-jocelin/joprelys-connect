@@ -20,10 +20,7 @@ void main() {
       );
 
       expect(result.startsNewSegment, isFalse);
-      expect(
-        result.text,
-        'Le patient présente une toux sèche surtout le soir',
-      );
+      expect(result.text, 'Le patient présente une toux sèche surtout le soir');
     });
 
     test('merges an overlapping recognition window', () {
@@ -46,10 +43,7 @@ void main() {
       );
 
       expect(result.startsNewSegment, isTrue);
-      expect(
-        result.text,
-        'À l auscultation il existe un sifflement à droite',
-      );
+      expect(result.text, 'À l auscultation il existe un sifflement à droite');
     });
 
     test('removes a cumulative replay of committed speech', () {

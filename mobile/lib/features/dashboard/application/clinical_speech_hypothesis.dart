@@ -81,10 +81,7 @@ ClinicalSpeechHypothesisMerge mergeClinicalSpeechHypothesis(
       ...currentTokens,
       ...incomingTokens.skip(overlap),
     ].join(' ');
-    return ClinicalSpeechHypothesisMerge(
-      text: merged,
-      startsNewSegment: false,
-    );
+    return ClinicalSpeechHypothesisMerge(text: merged, startsNewSegment: false);
   }
 
   if (currentTokens.length <= 2 && incomingTokens.length <= 2) {

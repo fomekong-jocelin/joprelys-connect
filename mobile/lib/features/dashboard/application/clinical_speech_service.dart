@@ -64,9 +64,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
          ),
        );
 
-  static const Duration _stableHypothesisDelay = Duration(
-    milliseconds: 1300,
-  );
+  static const Duration _stableHypothesisDelay = Duration(milliseconds: 1300);
 
   final ClinicalVoiceAiGateway _gateway;
   final String _visitId;
@@ -313,10 +311,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     if (finalResult) {
       _commitCurrentPartial();
     } else {
-      _stabilityTimer = Timer(
-        _stableHypothesisDelay,
-        _commitCurrentPartial,
-      );
+      _stabilityTimer = Timer(_stableHypothesisDelay, _commitCurrentPartial);
     }
   }
 
@@ -335,9 +330,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       1.0,
     );
     final boosted = 12.0 + math.pow(normalized, 0.45).toDouble() * 88.0;
-    value = value.copyWith(
-      soundLevel: boosted.clamp(12.0, 100.0).toDouble(),
-    );
+    value = value.copyWith(soundLevel: boosted.clamp(12.0, 100.0).toDouble());
   }
 
   void _handleSpeechStatus(String status) {
@@ -403,7 +396,8 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     ).trim();
     var changed = false;
     if (text.isNotEmpty) {
-      final duplicate = _segments.isNotEmpty &&
+      final duplicate =
+          _segments.isNotEmpty &&
           _foldForComparison(_segments.last.text) == _foldForComparison(text);
       if (!duplicate) {
         _segments.add(

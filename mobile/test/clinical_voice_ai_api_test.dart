@@ -95,29 +95,29 @@ void main() {
       });
       final api = buildApi(adapter);
 
-      await api.savePendingTranscript(
-        'visit-123',
-        'Texte corrigé et complet',
-      );
+      await api.savePendingTranscript('visit-123', 'Texte corrigé et complet');
 
       expect(adapter.requests, hasLength(1));
     });
 
-    test('deletes the pending transcript when the reviewed text is empty', () async {
-      final adapter = QueueHttpClientAdapter((options, _) {
-        expect(options.method, 'DELETE');
-        expect(
-          options.path,
-          '/api/ai/consultations/visit-123/transcriptions/pending',
-        );
-        return ResponseBody.fromString('', 204);
-      });
-      final api = buildApi(adapter);
+    test(
+      'deletes the pending transcript when the reviewed text is empty',
+      () async {
+        final adapter = QueueHttpClientAdapter((options, _) {
+          expect(options.method, 'DELETE');
+          expect(
+            options.path,
+            '/api/ai/consultations/visit-123/transcriptions/pending',
+          );
+          return ResponseBody.fromString('', 204);
+        });
+        final api = buildApi(adapter);
 
-      await api.savePendingTranscript('visit-123', '   ');
+        await api.savePendingTranscript('visit-123', '   ');
 
-      expect(adapter.requests, hasLength(1));
-    });
+        expect(adapter.requests, hasLength(1));
+      },
+    );
   });
 
   group('ClinicalVoiceAiApi progressive analysis', () {

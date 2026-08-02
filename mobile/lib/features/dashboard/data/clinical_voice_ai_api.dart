@@ -301,10 +301,7 @@ final class ClinicalVoiceAiApi implements ClinicalVoiceAiGateway {
   }
 
   @override
-  Future<void> savePendingTranscript(
-    String visitId,
-    String transcript,
-  ) async {
+  Future<void> savePendingTranscript(String visitId, String transcript) async {
     final normalized = transcript.trim();
     if (normalized.isEmpty) {
       await discardPendingTranscript(visitId);

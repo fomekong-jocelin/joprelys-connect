@@ -384,7 +384,8 @@ class _CapturePhase extends StatelessWidget {
                   segments: state.segments,
                   partialTranscript: state.partialTranscript,
                   partialOffset: state.partialOffset,
-                  editable: !listening &&
+                  editable:
+                      !listening &&
                       !processing &&
                       !state.isSynchronizingTranscript,
                   onSegmentChanged: onSegmentChanged,
@@ -502,25 +503,25 @@ class _TranscriptSyncNotice extends StatelessWidget {
     final colors = theme.colorScheme;
     final (icon, message, color) = switch (state.transcriptSyncStatus) {
       TranscriptSyncStatus.syncing => (
-          Icons.sync_rounded,
-          l10n.voiceTranscriptSaving,
-          colors.primary,
-        ),
+        Icons.sync_rounded,
+        l10n.voiceTranscriptSaving,
+        colors.primary,
+      ),
       TranscriptSyncStatus.failed => (
-          Icons.cloud_off_rounded,
-          l10n.voiceTranscriptSaveFailed,
-          colors.error,
-        ),
+        Icons.cloud_off_rounded,
+        l10n.voiceTranscriptSaveFailed,
+        colors.error,
+      ),
       TranscriptSyncStatus.synced => (
-          Icons.cloud_done_outlined,
-          l10n.voiceTranscriptSaved,
-          colors.onSurfaceVariant,
-        ),
+        Icons.cloud_done_outlined,
+        l10n.voiceTranscriptSaved,
+        colors.onSurfaceVariant,
+      ),
       TranscriptSyncStatus.idle => (
-          Icons.verified_user_outlined,
-          l10n.voicePrivacyNotice,
-          colors.onSurfaceVariant,
-        ),
+        Icons.verified_user_outlined,
+        l10n.voicePrivacyNotice,
+        colors.onSurfaceVariant,
+      ),
     };
 
     return Row(
