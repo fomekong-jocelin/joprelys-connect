@@ -316,7 +316,7 @@ class _DashboardScrollBody extends StatelessWidget {
       child: RefreshIndicator(
         onRefresh: onRefresh,
         child: SingleChildScrollView(
-          key: const PageStorageKey('professional-dashboard-scroll'),
+          key: const ValueKey('professional-dashboard-scroll'),
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
           child: Center(
